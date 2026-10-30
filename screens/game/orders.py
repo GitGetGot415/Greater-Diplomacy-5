@@ -607,7 +607,7 @@ class Orders_Screen(GameState):
             if len(eligible) == 1:
                 self.open_air_transport(*eligible[0])
             elif eligible:
-                items = [(f"{unit.get('custom_name') or unit['type']} (tile {base['id']})", (unit, base))
+                items = [(f"{unit.get('custom_name') or queries.get_unit_display_name(unit['type'], context=self.map_screen)} (tile {base['id']})", (unit, base))
                          for unit, base in eligible]
                 screen_runner._run_pygame_sub_screen(self.map_screen, ListSelectScreen(
                     self.map_screen, "Select transport aircraft", "Choose an aircraft", items,
@@ -1343,7 +1343,7 @@ class Orders_Screen(GameState):
             "refund": {}
         })
         self._mark_draft_changed()
-        self.map_screen.show_feedback(f"Upgrade to {target_type} ordered (1 turn).")
+        self.map_screen.show_feedback(f"Upgrade to {queries.get_unit_display_name(target_type, self.unit_library)} ordered (1 turn).")
         self.refresh_ui()
 
     def start_bombard_targeting(self, index, province=None, row_key=None):
@@ -1433,7 +1433,7 @@ class Orders_Screen(GameState):
                 return
             unit_actions.apply_action(self.map_screen, unit["owner"], province, unit, {"type": "DISBAND", "turns_left": 1})
             self._mark_draft_changed()
-            self.map_screen.show_feedback(f"Disbanding {unit.get('type')} (1 turn)")
+            self.map_screen.show_feedback(f"Disbanding {queries.get_unit_display_name(unit.get('type'), self.unit_library)} (1 turn)")
             self.refresh_ui()
 
     def convert_unit(self, index, province=None):
@@ -1546,9 +1546,9 @@ class Orders_Screen(GameState):
 
         def picker_items():
             cargo = plane.get("air_cargo", [])
-            items = [(f"Release: {unit.get('custom_name') or unit['type']}", ("RELEASE", unit["unit_id"]))
+            items = [(f"Release: {unit.get('custom_name') or queries.get_unit_display_name(unit['type'], context=self.map_screen)}", ("RELEASE", unit["unit_id"]))
                      for unit in cargo]
-            items.extend((f"Load: {unit.get('custom_name') or unit['type']}", ("LOAD", unit["unit_id"]))
+            items.extend((f"Load: {unit.get('custom_name') or queries.get_unit_display_name(unit['type'], context=self.map_screen)}", ("LOAD", unit["unit_id"]))
                          for unit in province.get("units", []) if queries.air_cargo_is_eligible(plane, unit, context=self.map_screen)
                          and not self._command_blocked_silent(unit))
             if queries.air_unit_can_air_drop(plane, context=self.map_screen):
@@ -2000,7 +2000,7 @@ class Orders_Screen(GameState):
         if order_type == "CONVERT":
             return f"Convert to {order.get('to', '?')}{turn_suffix}", (100, 180, 255)
         if order_type == "UPGRADE":
-            return f"Upgrade to {order.get('target_type', '?')}{turn_suffix}", (255, 170, 70)
+            return f"Upgrade to {queries.get_unit_display_name(order.get('target_type', '?'))}{turn_suffix}", (255, 170, 70)
         if order_type == "REPAIR":
             return f"Repairing{turn_suffix}", (100, 255, 120)
         if order_type == "DISBAND":
@@ -2080,7 +2080,7 @@ class Orders_Screen(GameState):
         else:
             name_color = (245, 245, 245) if selectable else c.UI_TEXT_MUTED
             name = fit_text(
-                unit.get("custom_name", unit.get("type", "Unit")),
+                unit.get("custom_name") or queries.get_unit_display_name(unit.get("type", "Unit"), self.unit_library),
                 small_font, text_width)
             name_surf = small_font.render(name, True, name_color)
             surface.blit(name_surf,

@@ -605,7 +605,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -826,7 +826,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -1111,7 +1111,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -2251,7 +2251,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -2400,7 +2400,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United States of America",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -2554,7 +2554,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -2936,7 +2936,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -4515,7 +4515,7 @@
         "owner": "Magowan's Infinite Mirror Maze",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Magowan's Infinite Mirror Maze",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -4735,7 +4735,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -4991,7 +4991,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -5134,7 +5134,7 @@
         "owner": "Sweden",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Sweden",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -5355,7 +5355,7 @@
         "owner": "Norway",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Norway",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -5576,7 +5576,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -5937,7 +5937,7 @@
         "owner": "Norway",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Norway",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -6480,7 +6480,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -6754,7 +6754,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -6899,7 +6899,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -7020,7 +7020,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -7280,7 +7280,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -7398,7 +7398,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -7657,7 +7657,7 @@
         "owner": "Sweden",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Sweden",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -7707,7 +7707,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -7878,7 +7878,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -8537,7 +8537,7 @@
         "owner": "Dominion of Canada",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Dominion of Canada",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -8597,7 +8597,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -8615,7 +8615,7 @@
                 "unit_id": "453595d8464445c09a40aa325d0781df"
             },
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -8702,7 +8702,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -8772,7 +8772,7 @@
         "owner": "Denmark",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Denmark",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -8823,7 +8823,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -8914,7 +8914,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -9065,7 +9065,7 @@
         "owner": "Dominion of Canada",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Dominion of Canada",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -9122,7 +9122,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -9140,7 +9140,7 @@
                 "unit_id": "dc3e82d1c2454960a81deaed6b26a58b"
             },
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -9389,7 +9389,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -9575,7 +9575,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -9763,7 +9763,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "Russia",
                 "health": 100.0,
                 "max_health": 100,
@@ -9781,7 +9781,7 @@
                 "unit_id": "b16e3fa5145c4b0bb158a3939f1e4892"
             },
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "Russia",
                 "health": 100.0,
                 "max_health": 100,
@@ -9960,7 +9960,7 @@
         "owner": "Sweden",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Sweden",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -10048,7 +10048,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -10066,7 +10066,7 @@
                 "unit_id": "7c37f75548a14aed8e949564f82afca2"
             },
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -10154,7 +10154,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -10245,7 +10245,7 @@
         "owner": "Dominion of Canada",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Dominion of Canada",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -10305,7 +10305,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -10357,7 +10357,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -10707,7 +10707,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -10830,7 +10830,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -10848,7 +10848,7 @@
                 "unit_id": "230a09866dc7480985801bcf0f750a64"
             },
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "German Empire",
                 "health": 100.0,
                 "max_health": 100,
@@ -10866,7 +10866,7 @@
                 "unit_id": "a4a71db9a96f4cdc9026336c9f148279"
             },
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "German Empire",
                 "health": 100.0,
                 "max_health": 100,
@@ -11219,7 +11219,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -11271,7 +11271,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -11395,7 +11395,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -11501,7 +11501,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -11627,7 +11627,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -11779,7 +11779,7 @@
         "owner": "Nowa Polska",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nowa Polska",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -11866,7 +11866,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United States of America",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -12057,7 +12057,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -12135,7 +12135,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -12253,7 +12253,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -12306,7 +12306,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -12381,7 +12381,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -12455,7 +12455,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -12510,7 +12510,7 @@
         "owner": "Netherlands",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Netherlands",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -12858,7 +12858,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -12946,7 +12946,7 @@
         "owner": "Netherlands",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Netherlands",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -13036,7 +13036,7 @@
         "owner": "Nowa Polska",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nowa Polska",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -13122,7 +13122,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -13213,7 +13213,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -13266,7 +13266,7 @@
         "owner": "Dominion of Canada",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Dominion of Canada",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -13423,7 +13423,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -13648,7 +13648,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -13935,7 +13935,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "German Empire",
                 "health": 100.0,
                 "max_health": 100,
@@ -13953,7 +13953,7 @@
                 "unit_id": "88e0428411e944adaec2e973abb5949e"
             },
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "German Empire",
                 "health": 100.0,
                 "max_health": 100,
@@ -14079,7 +14079,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -14293,7 +14293,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -14376,7 +14376,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -14450,7 +14450,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -14508,7 +14508,7 @@
         "owner": "Nowa Polska",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nowa Polska",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -14864,7 +14864,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -15151,7 +15151,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -15206,7 +15206,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -15224,7 +15224,7 @@
                 "unit_id": "6511a520cd084273a0d1eb3bf422a861"
             },
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "German Empire",
                 "health": 100.0,
                 "max_health": 100,
@@ -15242,7 +15242,7 @@
                 "unit_id": "cb5bd61618764c5aad6f99daa1b82f12"
             },
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "German Empire",
                 "health": 100.0,
                 "max_health": 100,
@@ -15399,7 +15399,7 @@
         "owner": "Nowa Polska",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nowa Polska",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -15849,7 +15849,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United States of America",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -16005,7 +16005,7 @@
         "owner": "Belgium",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Belgium",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -16186,7 +16186,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -16310,7 +16310,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -16401,7 +16401,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -16557,7 +16557,7 @@
         "owner": "Nowa Polska",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nowa Polska",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -16679,7 +16679,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United States of America",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -16734,7 +16734,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United States of America",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -16988,7 +16988,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -17039,7 +17039,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "Russia",
                 "health": 100.0,
                 "max_health": 100,
@@ -17057,7 +17057,7 @@
                 "unit_id": "4ed90300678d435c929b222b704920e0"
             },
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "Russia",
                 "health": 100.0,
                 "max_health": 100,
@@ -17284,7 +17284,7 @@
         "owner": "Nowa Polska",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nowa Polska",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -17406,7 +17406,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -17570,7 +17570,7 @@
         "owner": "Belgium",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Belgium",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -17626,7 +17626,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -17854,7 +17854,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "German Empire",
                 "health": 100.0,
                 "max_health": 100,
@@ -17872,7 +17872,7 @@
                 "unit_id": "d1b99e7bb53f43318d238a549ffeffcb"
             },
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "German Empire",
                 "health": 100.0,
                 "max_health": 100,
@@ -17928,7 +17928,7 @@
         "owner": "Nowa Polska",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nowa Polska",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -18019,7 +18019,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -18124,7 +18124,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -18276,7 +18276,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -18398,7 +18398,7 @@
         "owner": "Austria-Hungary",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Austria-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -18457,7 +18457,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -18518,7 +18518,7 @@
         "owner": "Nowa Polska",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nowa Polska",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -18627,7 +18627,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -18645,7 +18645,7 @@
                 "unit_id": "4ff52e93dc4944cbb636d97d72f49924"
             },
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -18766,7 +18766,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -18824,7 +18824,7 @@
         "owner": "Austria-Hungary",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Austria-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -18978,7 +18978,7 @@
         "owner": "Austria-Hungary",
         "units": [
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "Austria-Hungary",
                 "health": 100.0,
                 "max_health": 100,
@@ -19032,7 +19032,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -19050,7 +19050,7 @@
                 "unit_id": "0542878f6dbe44bb9634d23ac96fa95b"
             },
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -19104,7 +19104,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -19196,7 +19196,7 @@
         "owner": "Luxembourg",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Luxembourg",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -19357,7 +19357,7 @@
         "owner": "Austria-Hungary",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Austria-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -19410,7 +19410,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -19428,7 +19428,7 @@
                 "unit_id": "efaa433302c748959985aee76fbdd1fd"
             },
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -19478,7 +19478,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -19806,7 +19806,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -19824,7 +19824,7 @@
                 "unit_id": "2f7312cf22174e0c9a10b52e31b1c4fa"
             },
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -19950,7 +19950,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -20295,7 +20295,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -20448,7 +20448,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "France",
                 "health": 100.0,
                 "max_health": 100,
@@ -20466,7 +20466,7 @@
                 "unit_id": "54b312f8a3cd4c0e8f8211ecf8c7a2f3"
             },
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "France",
                 "health": 100.0,
                 "max_health": 100,
@@ -20520,7 +20520,7 @@
         "owner": "Austria-Hungary",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Austria-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -20676,7 +20676,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -20729,7 +20729,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -20819,7 +20819,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -20837,7 +20837,7 @@
                 "unit_id": "2d81a3a3797a41c19752f948318f3adf"
             },
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -20855,7 +20855,7 @@
                 "unit_id": "1b860f35a16a4269a580a78c9f8c7958"
             },
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -20914,7 +20914,7 @@
         "owner": "Austria-Hungary",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Austria-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -21113,7 +21113,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -21167,7 +21167,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -21185,7 +21185,7 @@
                 "unit_id": "6c66e0dad3534a089ebdd1100d6e96c3"
             },
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -21347,7 +21347,7 @@
         "owner": "Australia-Hungary",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Australia-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -21506,7 +21506,7 @@
         "owner": "Australia-Hungary",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Australia-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -21561,7 +21561,7 @@
         "owner": "Austria-Hungary",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Austria-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -21788,7 +21788,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -21806,7 +21806,7 @@
                 "unit_id": "cce0314ac83441019a847d0cdce3c760"
             },
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -21824,7 +21824,7 @@
                 "unit_id": "d5c0b053216f4215bffdaf145ad5901c"
             },
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -21951,7 +21951,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "German Empire",
                 "health": 100.0,
                 "max_health": 100,
@@ -21969,7 +21969,7 @@
                 "unit_id": "9200e50c417c4ab4877582a583be2b49"
             },
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "German Empire",
                 "health": 100.0,
                 "max_health": 100,
@@ -22023,7 +22023,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -22041,7 +22041,7 @@
                 "unit_id": "50a4ef25652e4febb5785bf5600f7161"
             },
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -22127,7 +22127,7 @@
         "owner": "Australia-Hungary",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Australia-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -22218,7 +22218,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -22724,7 +22724,7 @@
         "owner": "Austria-Hungary",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Austria-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -22919,7 +22919,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -22937,7 +22937,7 @@
                 "unit_id": "075081a6604a406c89fc744e78610d7f"
             },
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -23094,7 +23094,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -23321,7 +23321,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -23377,7 +23377,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -23432,7 +23432,7 @@
         "owner": "Australia-Hungary",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Australia-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -23488,7 +23488,7 @@
         "owner": "Romania",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Romania",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -23539,7 +23539,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -23625,7 +23625,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -23819,7 +23819,7 @@
         "owner": "Dominion of Canada",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Dominion of Canada",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -23906,7 +23906,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -24025,7 +24025,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -24148,7 +24148,7 @@
         "owner": "Dominion of Canada",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Dominion of Canada",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -24333,7 +24333,7 @@
         "owner": "Australia-Hungary",
         "units": [
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "Australia-Hungary",
                 "health": 100.0,
                 "max_health": 100,
@@ -24387,7 +24387,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -24633,7 +24633,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -24689,7 +24689,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "France",
                 "health": 100.0,
                 "max_health": 100,
@@ -24707,7 +24707,7 @@
                 "unit_id": "6974066b8bab4799bd993b538c92dfb8"
             },
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "France",
                 "health": 100.0,
                 "max_health": 100,
@@ -24934,7 +24934,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -25058,7 +25058,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -25076,7 +25076,7 @@
                 "unit_id": "7b15446426fc4e049ca432f62932d18e"
             },
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -25131,7 +25131,7 @@
         "owner": "Austria-Hungary",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Austria-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -25185,7 +25185,7 @@
         "owner": "Austria-Hungary",
         "units": [
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "Austria-Hungary",
                 "health": 100.0,
                 "max_health": 100,
@@ -25516,7 +25516,7 @@
         "owner": "Australia-Hungary",
         "units": [
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "Australia-Hungary",
                 "health": 100.0,
                 "max_health": 100,
@@ -25570,7 +25570,7 @@
         "owner": "Australia-Hungary",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Australia-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -25749,7 +25749,7 @@
         "owner": "Switzerland",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Switzerland",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -25870,7 +25870,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -25998,7 +25998,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United States of America",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -26052,7 +26052,7 @@
         "owner": "Austria-Hungary",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Austria-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -26242,7 +26242,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -26401,7 +26401,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -26459,7 +26459,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -26511,7 +26511,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -26566,7 +26566,7 @@
         "owner": "Australia-Hungary",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Australia-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -26720,7 +26720,7 @@
         "owner": "Austria-Hungary",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Austria-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -26914,7 +26914,7 @@
         "owner": "Austria-Hungary",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Austria-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -26970,7 +26970,7 @@
         "owner": "Australia-Hungary",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Australia-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -27263,7 +27263,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United States of America",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -27318,7 +27318,7 @@
         "owner": "Switzerland",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Switzerland",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -27547,7 +27547,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -28043,7 +28043,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -28132,7 +28132,7 @@
         "owner": "Australia-Hungary",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Australia-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -28182,7 +28182,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -28256,7 +28256,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -28310,7 +28310,7 @@
         "owner": "Mongolia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Mongolia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -28328,7 +28328,7 @@
                 "unit_id": "7fe627e58d394eac89304ae187a38b65"
             },
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Mongolia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -28452,7 +28452,7 @@
         "owner": "Austria-Hungary",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Austria-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -28507,7 +28507,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -28763,7 +28763,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "France",
                 "health": 100.0,
                 "max_health": 100,
@@ -28781,7 +28781,7 @@
                 "unit_id": "4e0a78878b194ac9b5c1074bb60207c6"
             },
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "France",
                 "health": 100.0,
                 "max_health": 100,
@@ -28835,7 +28835,7 @@
         "owner": "Romania",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Romania",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -28889,7 +28889,7 @@
         "owner": "Romania",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Romania",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -29048,7 +29048,7 @@
         "owner": "Australia-Hungary",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Australia-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -29103,7 +29103,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -29158,7 +29158,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -29243,7 +29243,7 @@
         "owner": "Mongolia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Mongolia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -29367,7 +29367,7 @@
         "owner": "Serbia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Serbia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -29385,7 +29385,7 @@
                 "unit_id": "d57eade148bf4e469068ecee94de3b3f"
             },
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Serbia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -29500,7 +29500,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -29585,7 +29585,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -29639,7 +29639,7 @@
         "owner": "Dominion of Canada",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Dominion of Canada",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -29734,7 +29734,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -29791,7 +29791,7 @@
         "owner": "Austria-Hungary",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Austria-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -29938,7 +29938,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -29956,7 +29956,7 @@
                 "unit_id": "eb100728fec54bdebc706da26c7c9091"
             },
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "Italy",
                 "health": 100.0,
                 "max_health": 100,
@@ -30075,7 +30075,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -30093,7 +30093,7 @@
                 "unit_id": "3caa022123c44b908d464816c3aa0a9e"
             },
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -30111,7 +30111,7 @@
                 "unit_id": "4f7fdba808654162bfc83c0532a808ef"
             },
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "Italy",
                 "health": 100.0,
                 "max_health": 100,
@@ -30372,7 +30372,7 @@
         "owner": "Bulgaria",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Bulgaria",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -30497,7 +30497,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United States of America",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -30584,7 +30584,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "Russia",
                 "health": 100.0,
                 "max_health": 100,
@@ -30739,7 +30739,7 @@
         "owner": "Austria-Hungary",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Austria-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -30897,7 +30897,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United States of America",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -31123,7 +31123,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -31176,7 +31176,7 @@
         "owner": "Austria-Hungary",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Austria-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -31264,7 +31264,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -31383,7 +31383,7 @@
         "owner": "Spain",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Spain",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -31571,7 +31571,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -31826,7 +31826,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -31882,7 +31882,7 @@
         "owner": "Serbia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Serbia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -31900,7 +31900,7 @@
                 "unit_id": "02dab323f7574c6b9d7a8f52e05b4e5c"
             },
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Serbia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -31954,7 +31954,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -32180,7 +32180,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -32233,7 +32233,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -32288,7 +32288,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "Russia",
                 "health": 100.0,
                 "max_health": 100,
@@ -32345,7 +32345,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -32363,7 +32363,7 @@
                 "unit_id": "cc0121bbefd24f6191f12ff60b064e76"
             },
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -32701,7 +32701,7 @@
         "owner": "Portugal",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Portugal",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -32873,7 +32873,7 @@
         "owner": "Austria-Hungary",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Austria-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -33196,7 +33196,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -33348,7 +33348,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -33535,7 +33535,7 @@
         "owner": "Bulgaria",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Bulgaria",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -33758,7 +33758,7 @@
         "owner": "Mongolia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Mongolia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -33846,7 +33846,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -34005,7 +34005,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -34023,7 +34023,7 @@
                 "unit_id": "c90775c198034af98b26ecdb706acada"
             },
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "Italy",
                 "health": 100.0,
                 "max_health": 100,
@@ -34077,7 +34077,7 @@
         "owner": "Montenegro",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Montenegro",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -34131,7 +34131,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -34188,7 +34188,7 @@
         "owner": "Australia-Hungary",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Australia-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -34262,7 +34262,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -34345,7 +34345,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -34634,7 +34634,7 @@
         "owner": "Spain",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Spain",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -34687,7 +34687,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -34831,7 +34831,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -34884,7 +34884,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -34939,7 +34939,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -35222,7 +35222,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -35345,7 +35345,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -35363,7 +35363,7 @@
                 "unit_id": "705bdacae341415cac487b464f4dcb5f"
             },
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "Nationalist China",
                 "health": 100.0,
                 "max_health": 100,
@@ -35581,7 +35581,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -35635,7 +35635,7 @@
         "owner": "Mongolia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Mongolia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -35977,7 +35977,7 @@
         "owner": "Mongolia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Mongolia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -36065,7 +36065,7 @@
         "owner": "Australia-Hungary",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Australia-Hungary",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -36150,7 +36150,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -36275,7 +36275,7 @@
         "owner": "Serbia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Serbia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -36332,7 +36332,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -36350,7 +36350,7 @@
                 "unit_id": "3b1c964d910c41709355a34eeadb2327"
             },
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "Ottoman Empire",
                 "health": 100.0,
                 "max_health": 100,
@@ -36368,7 +36368,7 @@
                 "unit_id": "7a626bba322e48cc903d004dd9656df6"
             },
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "Ottoman Empire",
                 "health": 100.0,
                 "max_health": 100,
@@ -36424,7 +36424,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -36477,7 +36477,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "Ottoman Empire",
                 "health": 100.0,
                 "max_health": 100,
@@ -36634,7 +36634,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -36839,7 +36839,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -36892,7 +36892,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -37014,7 +37014,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -37072,7 +37072,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -37162,7 +37162,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -37249,7 +37249,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -37356,7 +37356,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -37374,7 +37374,7 @@
                 "unit_id": "983d2a02b58942a191938f444d5d5250"
             },
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -37460,7 +37460,7 @@
         "owner": "Bulgaria",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Bulgaria",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -37551,7 +37551,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -37711,7 +37711,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -38036,7 +38036,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United States of America",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -38191,7 +38191,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -38276,7 +38276,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -38332,7 +38332,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -38424,7 +38424,7 @@
         "owner": "Portugal",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Portugal",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -38544,7 +38544,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -38668,7 +38668,7 @@
         "owner": "Albania",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Albania",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -38928,7 +38928,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -38946,7 +38946,7 @@
                 "unit_id": "fc1e4f7f15a34f67b24f1d1c01d02660"
             },
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -38997,7 +38997,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -39015,7 +39015,7 @@
                 "unit_id": "dacb99da854d43f5896594b568fd603b"
             },
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "Japan",
                 "health": 100.0,
                 "max_health": 100,
@@ -39068,7 +39068,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United States of America",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -39193,7 +39193,7 @@
         "owner": "Greece",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Greece",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -39285,7 +39285,7 @@
         "owner": "Mongolia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Mongolia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -39303,7 +39303,7 @@
                 "unit_id": "4525144216c643fa8785ec496207259f"
             },
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Mongolia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -39361,7 +39361,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United States of America",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -39722,7 +39722,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -40052,7 +40052,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -40143,7 +40143,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -40337,7 +40337,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -40392,7 +40392,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -40676,7 +40676,7 @@
         "owner": "Iran",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Iran",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -40730,7 +40730,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -40748,7 +40748,7 @@
                 "unit_id": "7a5c8dd6d31146ca8cd0032eb6cdca46"
             },
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "Japan",
                 "health": 100.0,
                 "max_health": 100,
@@ -40800,7 +40800,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United States of America",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -40883,7 +40883,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -40901,7 +40901,7 @@
                 "unit_id": "0af59270bf4140a595b99391ed6cb697"
             },
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -40951,7 +40951,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United States of America",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -41039,7 +41039,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United States of America",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -41196,7 +41196,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -41480,7 +41480,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -41676,7 +41676,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -41730,7 +41730,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -41748,7 +41748,7 @@
                 "unit_id": "f81a0380ad2444c8a2b72dde640c71c1"
             },
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "Nationalist China",
                 "health": 100.0,
                 "max_health": 100,
@@ -42008,7 +42008,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -42097,7 +42097,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "Ottoman Empire",
                 "health": 100.0,
                 "max_health": 100,
@@ -42316,7 +42316,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -42404,7 +42404,7 @@
         "owner": "Spain",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Spain",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -42458,7 +42458,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -42531,7 +42531,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -42791,7 +42791,7 @@
         "owner": "Iran",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Iran",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -42846,7 +42846,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -43080,7 +43080,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -43098,7 +43098,7 @@
                 "unit_id": "3065b8a58d1949a4bec66a378a17d38b"
             },
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "Nationalist China",
                 "health": 100.0,
                 "max_health": 100,
@@ -43153,7 +43153,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -43207,7 +43207,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -43225,7 +43225,7 @@
                 "unit_id": "b8383a5ea8b04696afec93029507b9a5"
             },
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -43280,7 +43280,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -43367,7 +43367,7 @@
         "owner": "Spain",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Spain",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -43552,7 +43552,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -43804,7 +43804,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -44319,7 +44319,7 @@
         "owner": "Greece",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Greece",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -44372,7 +44372,7 @@
         "owner": "Iran",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Iran",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -44456,7 +44456,7 @@
         "owner": "Sinaloa",
         "units": [
             {
-                "type": "Modern Militia",
+                "type": "Modern Militia I",
                 "owner": "Sinaloa",
                 "health": 500.0,
                 "max_health": 500,
@@ -44474,7 +44474,7 @@
                 "unit_id": "eb7750615ef34374a510476905a4decc"
             },
             {
-                "type": "Modern Militia",
+                "type": "Modern Militia I",
                 "owner": "Sinaloa",
                 "health": 500.0,
                 "max_health": 500,
@@ -44599,7 +44599,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -44652,7 +44652,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -44740,7 +44740,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -44795,7 +44795,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -44932,7 +44932,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -45116,7 +45116,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -45169,7 +45169,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -45318,7 +45318,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -45371,7 +45371,7 @@
         "owner": "Russia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Russia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -45486,7 +45486,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -45929,7 +45929,7 @@
         "owner": "Iran",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Iran",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -46407,7 +46407,7 @@
         "owner": "German Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -46459,7 +46459,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -46651,7 +46651,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -46880,7 +46880,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -47069,7 +47069,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United States of America",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -47492,7 +47492,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -47833,7 +47833,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -48408,7 +48408,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -48510,7 +48510,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -49014,7 +49014,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -49683,7 +49683,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -49737,7 +49737,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -50232,7 +50232,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -50484,7 +50484,7 @@
         "owner": "Chihuahua",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Chihuahua",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -50502,7 +50502,7 @@
                 "unit_id": "1707d26934b14cffb5f2595b381fcefa"
             },
             {
-                "type": "Modern Militia",
+                "type": "Modern Militia I",
                 "owner": "Chihuahua",
                 "health": 500.0,
                 "max_health": 500,
@@ -50520,7 +50520,7 @@
                 "unit_id": "33114082219f4dad9e1382c343dc0f30"
             },
             {
-                "type": "Modern Militia",
+                "type": "Modern Militia I",
                 "owner": "Chihuahua",
                 "health": 500.0,
                 "max_health": 500,
@@ -50538,7 +50538,7 @@
                 "unit_id": "903ad5f8b021478fa2d5f8dc0d984c85"
             },
             {
-                "type": "Modern Militia",
+                "type": "Modern Militia I",
                 "owner": "Chihuahua",
                 "health": 500.0,
                 "max_health": 500,
@@ -50596,7 +50596,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -50752,7 +50752,7 @@
         "owner": "Skystar Wheel",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -50807,7 +50807,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -51125,7 +51125,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -51251,7 +51251,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United States of America",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -51339,7 +51339,7 @@
         "owner": "Pepper Paradise Hot Sauce & More",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -51813,7 +51813,7 @@
         "owner": "Sinaloa",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Sinaloa",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -51831,7 +51831,7 @@
                 "unit_id": "a6c52ca7364a462383cad36f4f8b56a1"
             },
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Sinaloa",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -51849,7 +51849,7 @@
                 "unit_id": "1c796e93ad6b49a0a50a4822f6a5cfe1"
             },
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "Sinaloa",
                 "health": 100.0,
                 "max_health": 100,
@@ -51867,7 +51867,7 @@
                 "unit_id": "66ce9892e5474f0eba1405668ef52f83"
             },
             {
-                "type": "Modern Militia",
+                "type": "Modern Militia I",
                 "owner": "Sinaloa",
                 "health": 500.0,
                 "max_health": 500,
@@ -51885,7 +51885,7 @@
                 "unit_id": "077240ea7f004134b8f47d5b11c507f8"
             },
             {
-                "type": "Modern Militia",
+                "type": "Modern Militia I",
                 "owner": "Sinaloa",
                 "health": 500.0,
                 "max_health": 500,
@@ -52206,7 +52206,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -52346,7 +52346,7 @@
         "owner": "Expedition",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -52659,7 +52659,7 @@
         "owner": "Expedition",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -52743,7 +52743,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -52814,7 +52814,7 @@
         "owner": "Skystar Wheel",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -53021,7 +53021,7 @@
         "owner": "Sinaloa",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Sinaloa",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -53039,7 +53039,7 @@
                 "unit_id": "0d7dec0b67994b47b40a1dcb51f2ec97"
             },
             {
-                "type": "Modern Militia",
+                "type": "Modern Militia I",
                 "owner": "Sinaloa",
                 "health": 500.0,
                 "max_health": 500,
@@ -53057,7 +53057,7 @@
                 "unit_id": "f473cfc6e3ea44d282d3252f3fd47b1b"
             },
             {
-                "type": "Modern Militia",
+                "type": "Modern Militia I",
                 "owner": "Sinaloa",
                 "health": 500.0,
                 "max_health": 500,
@@ -53149,7 +53149,7 @@
         "owner": "Iran",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Iran",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -53167,7 +53167,7 @@
                 "unit_id": "0955a3d309e843ceb6759094d79cde86"
             },
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Iran",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -53314,7 +53314,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -53431,7 +53431,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -53555,7 +53555,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -53884,7 +53884,7 @@
         "owner": "Tibet",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Tibet",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -54002,7 +54002,7 @@
         "owner": "Expedition",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -54160,7 +54160,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -54213,7 +54213,7 @@
         "owner": "British-Japanese Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "British-Japanese Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -54269,7 +54269,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -54485,7 +54485,7 @@
         "owner": "British-Japanese Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "British-Japanese Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -54741,7 +54741,7 @@
         "owner": "Tibet",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Tibet",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -54865,7 +54865,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United States of America",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -54940,7 +54940,7 @@
         "owner": "British-Japanese Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "British-Japanese Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -54993,7 +54993,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -55217,7 +55217,7 @@
         "owner": "Kuwait",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -55603,7 +55603,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -55656,7 +55656,7 @@
         "owner": "Iran",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Iran",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -55782,7 +55782,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -55971,7 +55971,7 @@
         "owner": "British-Japanese Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "British-Japanese Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -56297,7 +56297,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -56370,7 +56370,7 @@
         "owner": "Kuwait",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -56459,7 +56459,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -56510,7 +56510,7 @@
         "owner": "Sinaloa",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Sinaloa",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -56528,7 +56528,7 @@
                 "unit_id": "53f16467632f4372b6545902cac3f590"
             },
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Sinaloa",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -56546,7 +56546,7 @@
                 "unit_id": "0984d01e5371431db30d12c82204bed8"
             },
             {
-                "type": "Modern Militia",
+                "type": "Modern Militia I",
                 "owner": "Sinaloa",
                 "health": 500.0,
                 "max_health": 500,
@@ -56564,7 +56564,7 @@
                 "unit_id": "932bed847b3a47d3847ef8db53a1950e"
             },
             {
-                "type": "Modern Militia",
+                "type": "Modern Militia I",
                 "owner": "Sinaloa",
                 "health": 500.0,
                 "max_health": 500,
@@ -56657,7 +56657,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -56777,7 +56777,7 @@
         "owner": "Emirate of Jabal Shammar",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Emirate of Jabal Shammar",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -57176,7 +57176,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -57471,7 +57471,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -57623,7 +57623,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -58041,7 +58041,7 @@
         "owner": "Bhutan",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Bhutan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -58240,7 +58240,7 @@
         "owner": "Iran",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Iran",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -58362,7 +58362,7 @@
         "owner": "Nepal",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nepal",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -58858,7 +58858,7 @@
         "owner": "Sinaloa",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Sinaloa",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -58876,7 +58876,7 @@
                 "unit_id": "291498ed9da34de293157b64d768fde7"
             },
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Sinaloa",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -58894,7 +58894,7 @@
                 "unit_id": "851bdcf8261546e9a79d217b4c196aa5"
             },
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "Sinaloa",
                 "health": 100.0,
                 "max_health": 100,
@@ -58912,7 +58912,7 @@
                 "unit_id": "686174aba205418580b03fe7de30c33d"
             },
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "Sinaloa",
                 "health": 100.0,
                 "max_health": 100,
@@ -58930,7 +58930,7 @@
                 "unit_id": "1c0341304ec54f4b97737f95af2abaa8"
             },
             {
-                "type": "Modern Militia",
+                "type": "Modern Militia I",
                 "owner": "Sinaloa",
                 "health": 500.0,
                 "max_health": 500,
@@ -58948,7 +58948,7 @@
                 "unit_id": "21237ce0f1824e62ac64ff02b14ff26e"
             },
             {
-                "type": "Modern Militia",
+                "type": "Modern Militia I",
                 "owner": "Sinaloa",
                 "health": 500.0,
                 "max_health": 500,
@@ -59071,7 +59071,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -59161,7 +59161,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -59218,7 +59218,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -59304,7 +59304,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -59359,7 +59359,7 @@
         "owner": "Mexico",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Mexico",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -59448,7 +59448,7 @@
         "owner": "British-Japanese Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "British-Japanese Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -59605,7 +59605,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -59693,7 +59693,7 @@
         "owner": "Saudi Arabia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Saudi Arabia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -59818,7 +59818,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -60230,7 +60230,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -60384,7 +60384,7 @@
         "owner": "Japan",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Japan",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -61141,7 +61141,7 @@
         "owner": "Mexico",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Mexico",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -61327,7 +61327,7 @@
         "owner": "Mexico",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Mexico",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -61345,7 +61345,7 @@
                 "unit_id": "1191926790d0498b8e17e02e16476dfe"
             },
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "Mexico",
                 "health": 100.0,
                 "max_health": 100,
@@ -61578,7 +61578,7 @@
         "owner": "Mexico",
         "units": [
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "Mexico",
                 "health": 100.0,
                 "max_health": 100,
@@ -61667,7 +61667,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -61861,7 +61861,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -62245,7 +62245,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -62300,7 +62300,7 @@
         "owner": "United Arab Emirates",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -62387,7 +62387,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -62527,7 +62527,7 @@
         "owner": "Mexico",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Mexico",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -62683,7 +62683,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -63048,7 +63048,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -63136,7 +63136,7 @@
         "owner": "Zapatistas",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Zapatistas",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -63154,7 +63154,7 @@
                 "unit_id": "4e20b5fc1e3845ebb8ac6d5097598437"
             },
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Zapatistas",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -63172,7 +63172,7 @@
                 "unit_id": "8060e7a73f97463493fea3aebaf3fe98"
             },
             {
-                "type": "Modern Militia",
+                "type": "Modern Militia I",
                 "owner": "Zapatistas",
                 "health": 500.0,
                 "max_health": 500,
@@ -63190,7 +63190,7 @@
                 "unit_id": "8ea377dc64684e92bc577cab163b9735"
             },
             {
-                "type": "Modern Militia",
+                "type": "Modern Militia I",
                 "owner": "Zapatistas",
                 "health": 500.0,
                 "max_health": 500,
@@ -63208,7 +63208,7 @@
                 "unit_id": "09c503e888774bc0b925d9e051676d2b"
             },
             {
-                "type": "Modern Militia",
+                "type": "Modern Militia I",
                 "owner": "Zapatistas",
                 "health": 500.0,
                 "max_health": 500,
@@ -63226,7 +63226,7 @@
                 "unit_id": "069a5be229f04739aa4e7267fd483c9d"
             },
             {
-                "type": "Modern Militia",
+                "type": "Modern Militia I",
                 "owner": "Zapatistas",
                 "health": 500.0,
                 "max_health": 500,
@@ -63351,7 +63351,7 @@
         "owner": "Mexico",
         "units": [
             {
-                "type": "Recoil-System Artillery",
+                "type": "Recoil-System Artillery I",
                 "owner": "Mexico",
                 "health": 100.0,
                 "max_health": 100,
@@ -63405,7 +63405,7 @@
         "owner": "Mexico",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Mexico",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -63495,7 +63495,7 @@
         "owner": "Oman",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Oman",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -63879,7 +63879,7 @@
         "owner": "Cuba",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Cuba",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -64033,7 +64033,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -64086,7 +64086,7 @@
         "owner": "Portugal",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Portugal",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -64178,7 +64178,7 @@
         "owner": "Emirate of Nedj and Hasa",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Emirate of Nedj and Hasa",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -64373,7 +64373,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -64391,7 +64391,7 @@
                 "unit_id": "4128dfa672d44790aca052bc7cf512df"
             },
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -64641,7 +64641,7 @@
         "owner": "Mexico",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Mexico",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -64731,7 +64731,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -64785,7 +64785,7 @@
         "owner": "Cameroon African State",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -64879,7 +64879,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Nationalist China",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -64930,7 +64930,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -65162,7 +65162,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -65588,7 +65588,7 @@
         "owner": "French Indochina",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "French Indochina",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -65606,7 +65606,7 @@
                 "unit_id": "485eabb3a9644429b329d1cb30028493"
             },
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "French Indochina",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -65762,7 +65762,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -66454,7 +66454,7 @@
         "owner": "British-Japanese Empire",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "British-Japanese Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -66705,7 +66705,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -68196,7 +68196,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -68664,7 +68664,7 @@
         "owner": "Nicaragua",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United States of America",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -68924,7 +68924,7 @@
         "owner": "Portugal",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Portugal",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -69013,7 +69013,7 @@
         "owner": "Italian East Africa",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -69536,7 +69536,7 @@
         "owner": "Aunt Fanny's Hot Pretzels",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Aunt Fanny's Hot Pretzels",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -69698,7 +69698,7 @@
         "owner": "Thailand",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Thailand",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -69848,7 +69848,7 @@
         "owner": "Darfur",
         "units": [
             {
-                "type": "Modern Militia",
+                "type": "Modern Militia I",
                 "owner": "Darfur",
                 "health": 500.0,
                 "max_health": 500,
@@ -70339,7 +70339,7 @@
         "owner": "Thailand",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Thailand",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -70722,7 +70722,7 @@
         "owner": "Italian East Africa",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -71411,7 +71411,7 @@
         "owner": "Darfur",
         "units": [
             {
-                "type": "Modern Militia",
+                "type": "Modern Militia I",
                 "owner": "Darfur",
                 "health": 500.0,
                 "max_health": 500,
@@ -71632,7 +71632,7 @@
         "owner": "Venezuela",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Venezuela",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -72299,7 +72299,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -72449,7 +72449,7 @@
         "owner": "British Raj",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "British Raj",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -72820,7 +72820,7 @@
         "owner": "Colombia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Colombia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -73166,7 +73166,7 @@
         "owner": "Ethiopia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Ethiopia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -73624,7 +73624,7 @@
         "owner": "Italian East Africa",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -74065,7 +74065,7 @@
         "owner": "French Indochina",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "French Indochina",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -74521,7 +74521,7 @@
         "owner": "The SF Sock Market",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -75424,7 +75424,7 @@
         "owner": "Ethiopia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Ethiopia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -76897,7 +76897,7 @@
         "owner": "Adventure Cat Sailing Charters",
         "units": [
             {
-                "type": "Modern Militia",
+                "type": "Modern Militia I",
                 "owner": "Adventure Cat Sailing Charters",
                 "health": 500.0,
                 "max_health": 500,
@@ -76915,7 +76915,7 @@
                 "unit_id": "48e8ce834bea41b1859f1bc0e9dcf2bd"
             },
             {
-                "type": "Modern Militia",
+                "type": "Modern Militia I",
                 "owner": "Adventure Cat Sailing Charters",
                 "health": 500.0,
                 "max_health": 500,
@@ -76933,7 +76933,7 @@
                 "unit_id": "fd1e14ad640541059f354d86d22f3f6d"
             },
             {
-                "type": "Modern Militia",
+                "type": "Modern Militia I",
                 "owner": "Adventure Cat Sailing Charters",
                 "health": 500.0,
                 "max_health": 500,
@@ -76951,7 +76951,7 @@
                 "unit_id": "450756f648404a15ab3f56120ac2a941"
             },
             {
-                "type": "Modern Militia",
+                "type": "Modern Militia I",
                 "owner": "Adventure Cat Sailing Charters",
                 "health": 500.0,
                 "max_health": 500,
@@ -76969,7 +76969,7 @@
                 "unit_id": "15382fcfd348452cb57210cfd4d2c4e6"
             },
             {
-                "type": "Modern Militia",
+                "type": "Modern Militia I",
                 "owner": "Adventure Cat Sailing Charters",
                 "health": 500.0,
                 "max_health": 500,
@@ -77283,7 +77283,7 @@
         "owner": "Liberia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Liberia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -77377,7 +77377,7 @@
         "owner": "Ethiopia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Ethiopia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -77499,7 +77499,7 @@
         "owner": "Ecuador",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Ecuador",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -77615,7 +77615,7 @@
         "owner": "Cameroon African State",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -78083,7 +78083,7 @@
         "owner": "The Spice & Tea Exchange",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -78262,7 +78262,7 @@
         "owner": "Italian East Africa",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -78350,7 +78350,7 @@
         "owner": "Ecuador",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Ecuador",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -78368,7 +78368,7 @@
                 "unit_id": "587f2d40723e4490ad4643cd710d41a5"
             },
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Ecuador",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -79235,7 +79235,7 @@
         "owner": "Zentralafrika",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -79613,7 +79613,7 @@
         "owner": "Italian East Africa",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Italy",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -81120,7 +81120,7 @@
         "owner": "East African Federation",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -81225,7 +81225,7 @@
         "owner": "Croissant Republic",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "France",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -81295,7 +81295,7 @@
         "owner": "Dutch East Indies",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Dutch East Indies",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -81644,7 +81644,7 @@
         "owner": "Dutch East Indies",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Dutch East Indies",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -82647,7 +82647,7 @@
         "owner": "Dutch East Indies",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Dutch East Indies",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -83039,7 +83039,7 @@
         "owner": "Bubba Gump Shrimp Co.",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -83057,7 +83057,7 @@
                 "unit_id": "75e9f9c1acf7479092491ea81706215d"
             },
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -83621,7 +83621,7 @@
         "owner": "Peru",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Peru",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -83805,7 +83805,7 @@
         "owner": "Brazil",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Brazil",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -83964,7 +83964,7 @@
         "owner": "East Germany",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -84894,7 +84894,7 @@
         "owner": "Belgian Congo",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Belgian Congo",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -85016,7 +85016,7 @@
         "owner": "East Germany",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -85104,7 +85104,7 @@
         "owner": "Atyrau",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Australia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -85817,7 +85817,7 @@
         "owner": "Bolivia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Bolivia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -86034,7 +86034,7 @@
         "owner": "Dutch East Indies",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Dutch East Indies",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -86382,7 +86382,7 @@
         "owner": "Brazil",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Brazil",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -87654,7 +87654,7 @@
         "owner": "Brazil",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Brazil",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -88139,7 +88139,7 @@
         "owner": "Brazil",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Brazil",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -88382,7 +88382,7 @@
         "owner": "Bay Walk",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Portugal",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -89281,7 +89281,7 @@
         "owner": "Paraguay",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Paraguay",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -89430,7 +89430,7 @@
         "owner": "French Madagascar",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "French Madagascar",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -89732,7 +89732,7 @@
         "owner": "Wine Tasting on the Bay",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Portugal",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -90667,7 +90667,7 @@
         "owner": "Rhodesia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "United Kingdom",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -91762,7 +91762,7 @@
         "owner": "Uruguay",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Uruguay",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -92704,7 +92704,7 @@
         "owner": "Chile",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Chile",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -92758,7 +92758,7 @@
         "owner": "Argentina",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Argentina",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -93430,7 +93430,7 @@
         "owner": "Sudwestafrika",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "German Empire",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -93685,7 +93685,7 @@
         "owner": "Union of South Africa",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Union of South Africa",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -93802,7 +93802,7 @@
         "owner": "Australia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Australia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -94301,7 +94301,7 @@
         "owner": "Australia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Australia",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -95018,7 +95018,7 @@
         "owner": "Union of South Africa",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Union of South Africa",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -95424,7 +95424,7 @@
         "owner": "New Zealand",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "New Zealand",
                 "health": 1200.0,
                 "max_health": 1200,
@@ -95733,7 +95733,7 @@
         "owner": "Australia",
         "units": [
             {
-                "type": "Supported Rifle Infantry",
+                "type": "Supported Rifle Infantry I",
                 "owner": "Australia",
                 "health": 1200.0,
                 "max_health": 1200,

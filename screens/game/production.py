@@ -441,7 +441,8 @@ class Production_Screen(GameState):
                 final_btn_color = btn_color if can_build else "grey"
                 cb = lambda n=unit_name: self.buy_unit(n)
 
-            self._add_scroll_button(x_pos + x_offset, y_offset, final_btn_color, queries.get_condensed_unit_name(unit_name), cb)
+            self._add_scroll_button(x_pos + x_offset, y_offset, final_btn_color,
+                                    queries.get_condensed_unit_name(unit_name, self.unit_library), cb)
 
             stats = self.unit_library[unit_name]
             if stats.get("air_role") == "fighter" and id(stats) not in self.air_damage_labels:
@@ -724,7 +725,8 @@ class Production_Screen(GameState):
         self._submit_production("building_queue", {"order_type": "BUILDING", "item_name": b_name}, f"Started {b_name}")
 
     def buy_unit(self, unit_name):
-        self._submit_production("unit_queue", {"unit_type": unit_name}, f"Production started: {unit_name}")
+        label = queries.get_unit_display_name(unit_name, self.unit_library)
+        self._submit_production("unit_queue", {"unit_type": unit_name}, f"Production started: {label}")
 
     def _submit_production(self, queue, intent, feedback):
         if not self.map_screen or not self.can_edit_realtime():
@@ -777,7 +779,8 @@ class Production_Screen(GameState):
             if not names:
                 continue
             items.append(SectionHeader(category))
-            items.extend(CheckboxItem(name, name, checked=name in current_custom) for name in names)
+            items.extend(CheckboxItem(name, queries.get_unit_display_name(name, self.unit_library),
+                                      checked=name in current_custom) for name in names)
 
         def on_picked(picked):
             if picked is None:

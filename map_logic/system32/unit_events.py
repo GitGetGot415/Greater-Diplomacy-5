@@ -20,7 +20,7 @@ EVENT_LABELS = {
 
 
 def unit_name(unit):
-    return unit.get("custom_name") or unit.get("type", "Unit")
+    return unit.get("custom_name") or queries.get_unit_display_name(unit.get("type", "Unit"))
 
 
 def normalize_log(value, turn):

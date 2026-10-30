@@ -87,6 +87,67 @@ class GameVersionTests(unittest.TestCase):
 
 
 class Version47StepTests(unittest.TestCase):
+    def test_older_unit_names_convert_in_all_saved_references_and_repeat_safely(self):
+        for older, current in migrations.LEGACY_UNIT_NAMES.items():
+            with self.subTest(unit=older):
+                unit = {"unit_id": "keep-id", "owner": "A", "type": older,
+                        "health": 11, "max_health": 20,
+                        "order": {"type": "UPGRADE", "target_type": older, "turns_left": 2},
+                        "future_field": {"keep": True}}
+                province = {"terrain": "plains", "units": [unit,
+                            {"type": f"Convoy ({older})", "original_type": older},
+                            {"type": "Jet Transport I", "air_cargo": [copy.deepcopy(unit)]}],
+                            "unit_queue": [{"unit_type": older, "turns_remaining": 3, "paid_materials": 17}]}
+                country = {"custom_production_units": [older, current], "research": {"unrelated": 2},
+                           "scripted_events": [{"conditions": [], "actions": [
+                               {"type": "Spawn Unit", "unit_type": older}]}]}
+                saved = {"version": c.GAME_VERSION, "nation_data": {"A": country},
+                         "provinces": {"P": copy.deepcopy(province)}, "future_field": [7]}
+                raw = {"P": copy.deepcopy(province)}
+                history = {"1": {"nation_data": {"A": copy.deepcopy(country)},
+                                 "provinces": {"P": copy.deepcopy(province)}}}
+                migrations.upgrade_save(saved, raw, history)
+                for record in (saved, history["1"]):
+                    self.assertEqual(record["nation_data"]["A"]["custom_production_units"], [current])
+                    self.assertEqual(record["nation_data"]["A"]["scripted_events"][0]
+                                     ["actions"][0]["unit_type"], current)
+                    self.assertEqual(record["nation_data"]["A"]["research"], {"unrelated": 2})
+                for converted in (raw["P"], saved["provinces"]["P"], history["1"]["provinces"]["P"]):
+                    self.assertEqual(converted["units"][0], dict(unit, type=current,
+                                     order={"type": "UPGRADE", "target_type": current, "turns_left": 2}))
+                    self.assertEqual(converted["units"][1],
+                                     {"type": f"Convoy ({current})", "original_type": current})
+                    self.assertEqual(converted["units"][2]["air_cargo"][0]["type"], current)
+                    self.assertEqual(converted["unit_queue"],
+                                     [{"unit_type": current, "turns_remaining": 3, "paid_materials": 17}])
+                self.assertEqual(saved["future_field"], [7])
+                once = copy.deepcopy((saved, raw, history))
+                migrations.upgrade_save(saved, raw, history)
+                self.assertEqual((saved, raw, history), once)
+                self.assertEqual(round_trip(saved), saved)
+
+    def test_older_unit_names_convert_in_tournament_projections_and_intents(self):
+        for older, current in migrations.LEGACY_UNIT_NAMES.items():
+            with self.subTest(unit=older):
+                move = {"game_version": c.GAME_VERSION,
+                        "nation_data": {"custom_production_units": [older, current]},
+                        "provinces": {"P": {"unit_queue": [{"unit_type": older, "turns_remaining": 3}]}},
+                        "aircraft_orders": [{"order": {"type": "UPGRADE", "target_type": older}}],
+                        "release_subjects": [], "player_intents": [
+                            {"type": "province_queue", "queue": "unit_queue", "items": [{"unit_type": older}]},
+                            {"type": "unit_order", "order": {"type": "UPGRADE", "target_type": older}},
+                            {"type": "country_preferences", "custom_production_units": [older, current]}]}
+                migrations.upgrade_move(move)
+                self.assertEqual(move["nation_data"]["custom_production_units"], [current])
+                self.assertEqual(move["provinces"]["P"]["unit_queue"][0]["unit_type"], current)
+                self.assertEqual(move["aircraft_orders"][0]["order"]["target_type"], current)
+                self.assertEqual(move["player_intents"][0]["items"][0]["unit_type"], current)
+                self.assertEqual(move["player_intents"][1]["order"]["target_type"], current)
+                self.assertEqual(move["player_intents"][2]["custom_production_units"], [current])
+                once = copy.deepcopy(move)
+                migrations.upgrade_move(move)
+                self.assertEqual(move, once)
+
     def test_obsolete_country_alliances_are_removed_from_saves_and_history(self):
         for old_value in ([], ["B"], "B", None, {"invalid": True}):
             with self.subTest(old_value=old_value):
@@ -319,6 +380,23 @@ class BuiltInMapTests(unittest.TestCase):
 
 
 class LibraryAndTournamentTests(unittest.TestCase):
+    def test_older_unit_library_keys_normalize_without_replacing_current_or_unknown_data(self):
+        metadata = {"family": "Battleship", "tier_order": 0, "tier_kind": "single",
+                    "tier_label": "", "division_suffix": "", "future_field": [7]}
+        old = {"health": 23, "metadata": metadata, "future_field": {"keep": True}}
+        library = {"Battleship": old}
+        migrations.normalize_cached_json_names("unit_library", library)
+        self.assertEqual(set(library), {"Battleship I"})
+        self.assertIs(library["Battleship I"], old)
+        self.assertEqual(metadata, {"family": "Battleship", "tier_order": 1, "tier_kind": "roman",
+                                   "tier_label": "I", "division_suffix": "I", "future_field": [7]})
+        self.assertEqual(old["future_field"], {"keep": True})
+        current = {"health": 31}
+        library = {"Battleship": {"health": 17}, "Battleship I": current}
+        migrations.normalize_cached_json_names("unit_library", library)
+        self.assertEqual(library, {"Battleship I": current})
+        self.assertIs(library["Battleship I"], current)
+
     def test_encrypted_payload_decoder_supports_both_encodings(self):
         saved = {"country": {"custom_field": 7}}
         payload = json.dumps(saved).encode("utf-8")

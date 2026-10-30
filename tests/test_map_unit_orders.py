@@ -85,7 +85,7 @@ class MapOrderTests(unittest.TestCase):
 
     def test_unreachable_member_keeps_all_orders_unchanged(self):
         game, slow, fast, destination = self.make_map()
-        fast["type"] = "Battleship"
+        fast["type"] = "Battleship I"
         self.assertFalse(game.issue_selected_move_orders(destination))
         self.assertNotIn("order", slow)
         self.assertNotIn("order", fast)
@@ -353,6 +353,7 @@ class OrdersSelectionRowsTests(unittest.TestCase):
         screen.target_province = focused
         screen.refresh_ui = lambda: None
 
+        screen.unit_library = {}
         screen.disband_unit(0, remote)
 
         self.assertNotIn("order", focused_unit)

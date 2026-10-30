@@ -197,6 +197,8 @@ from data.queries.unit_info import (
     get_condensed_unit_name,
     CONDENSED_BUILDING_NAME_WORDS,
     get_condensed_building_name,
+    get_unit_display_name,
+    unit_picker_items,
     get_base_item_name,
     UNIT_GROUP_INFANTRY,
     UNIT_GROUP_TANKS,

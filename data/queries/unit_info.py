@@ -315,7 +315,25 @@ def _condense_words(name, word_map):
     return " ".join(w for w in words if w)
 
 
-def get_condensed_unit_name(unit_name):
+def get_unit_display_name(unit_name, unit_library=None, *, context=None):
+    """Read the cached unit label while retaining its canonical identifier for actions."""
+    library = queries.get_unit_library(context) if unit_library is None else unit_library
+    if unit_name in library:
+        return queries.get_unit_metadata(unit_name, library, context=context).get("display_name", unit_name)
+    for carrier in ("Convoy", "Truck"):
+        prefix = carrier + " ("
+        if unit_name.startswith(prefix) and unit_name.endswith(")"):
+            return prefix + get_unit_display_name(unit_name[len(prefix):-1], library, context=context) + ")"
+    return unit_name
+
+
+def unit_picker_items(unit_names, unit_library=None, *, context=None):
+    """Return visible labels with canonical unit identifiers as picker values."""
+    library = queries.get_unit_library(context) if unit_library is None else unit_library
+    return [(get_unit_display_name(name, library, context=context), name) for name in unit_names]
+
+
+def get_condensed_unit_name(unit_name, unit_library=None, *, context=None):
     """Shortens a unit name via CONDENSED_UNIT_NAME_WORDS for space-constrained
     displays (production unit list, garrison rosters). e.g. 'Mechanized
     Infantry Type 1940' -> 'Mech Inf 1940', 'Medium Tank III' -> 'Med Tank III'.
@@ -324,10 +342,11 @@ def get_condensed_unit_name(unit_name):
     # "Convoy (Infantry Type 1940)"); condense the inner name and keep the
     # wrapper, rather than leaving it untouched because the parens break the
     # plain word-for-word lookup below.
+    unit_name = get_unit_display_name(unit_name, unit_library, context=context)
     carrier_match = re.match(r'^(Convoy|Truck) \((.+)\)$', unit_name)
     if carrier_match:
         carrier, inner = carrier_match.groups()
-        return f"{carrier} ({get_condensed_unit_name(inner)})"
+        return f"{carrier} ({get_condensed_unit_name(inner, unit_library, context=context)})"
 
     for phrase, short in CONDENSED_UNIT_NAME_PHRASES.items():
         if unit_name == phrase or unit_name.startswith(phrase + " "):

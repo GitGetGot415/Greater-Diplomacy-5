@@ -24,12 +24,12 @@ from tests import test_tournament_moves as tournament_harness
 # Read current content for checks of data use across systems.
 AIR_CONTENT = {
     key: (data["years"][0], data.get("req", {}),
-          data["display_name"] + (" I" if data["max_lvl"] > 1 else ""))
+          data.get("level_names", {}).get("1", data["display_name"]))
     for key, data in queries.get_tech_tree().items() if data["category"] == "AIR"
 }
 AIRCRAFT_LEVEL_YEARS = {
     key: data["years"] for key, data in queries.get_tech_tree().items()
-    if data["category"] == "AIR" and data["max_lvl"] > 1
+    if data["category"] == "AIR" and data.get("level_names")
 }
 
 def aircraft_cases():
@@ -204,7 +204,7 @@ class AirRulesTests(unittest.TestCase):
         migrations.upgrade_save(saved, {"P": province}, {})
         self.assertEqual(province["units"][0]["type"], "Biplane Fighter I")
         self.assertEqual(province["units"][0]["order"]["target_type"], "Biplane Fighter I")
-        self.assertEqual(country["custom_production_units"], ["Biplane Fighter I", "Zeppelin"])
+        self.assertEqual(country["custom_production_units"], ["Biplane Fighter I", "Zeppelin I"])
         self.assertEqual(country["research"], {"biplane": 1})
         self.assertEqual(country["research_progress"], {"biplane": 123})
         expected = copy.deepcopy((province, country))
@@ -453,7 +453,7 @@ class AirRealtimeTests(unittest.TestCase):
                 self.driver.validate_draft("A", [{"type": "research_queue", "tech_names": names}])
 
     def test_new_bomber_research_is_authoritative(self):
-        for tech_key, unit_name in (("biplane_bomber", "Biplane Bomber I"), ("zeppelin", "Zeppelin")):
+        for tech_key, unit_name in (("biplane_bomber", "Biplane Bomber I"), ("zeppelin", "Zeppelin I")):
             self.setUp()
             command = {"type": "research_queue", "tech_names": [tech_key]}
             requirements = queries.get_tech_tree()[tech_key]["req"]
@@ -541,6 +541,40 @@ class AirScreenTests(unittest.TestCase):
         self.research.start_research(self.map)
         self.production.start_with_province(self.map.selected_province, self.map)
 
+    def test_single_level_labels_keep_canonical_types_in_modals_production_and_custom_choices(self):
+        from tests.test_unit_metadata import fixture_metadata
+
+        name, family, tech = "Fixture Wing I", "Fixture Wing", "fixture_wing"
+        metadata = fixture_metadata(family=family)
+        metadata.update(research={"tech": tech, "level": 1}, requirements=[{"tech": tech, "level": 1}],
+                        display_name=family, tier_kind="roman", tier_label="I", division_suffix="")
+        library = {name: {"health": 101, "attack": 13, "defense": 3, "speed": 1,
+                         "cost_materials": 43, "cost_manpower": 17, "cost_fuel": 5, "production_time": 2,
+                         "production_group": "Air", "air_role": "bomber", "air_range_px": 70,
+                         "naval_unit": False, "metadata": metadata}}
+        tree = {tech: {"category": "AIR", "display_name": family, "max_lvl": 1, "years": [1900],
+                       "cost": 37, "req": {}, "level_names": {"1": name}}}
+        country = self.map.nation_data[self.country]
+        country.update(research={tech: 1}, custom_production_units=[])
+        with mock.patch.object(queries, "get_unit_library", return_value=library), \
+                mock.patch.object(queries, "get_tech_tree", return_value=tree):
+            production = type(self.production)()
+            self.research.start_research(self.map)
+            self.research.set_category("AIR")
+            node = next(button for button in self.research.elements if getattr(button, "is_tech_node", False))
+            self.assertEqual(node.text, family)
+            node.callback()
+            self.assertEqual(self.research.modal_entities, [name])
+            production.start_with_province(self.province, self.map)
+            next(button for button in production.elements if getattr(button, "text", "") == family).callback()
+            self.assertEqual(self.province["unit_queue"][-1]["unit_type"], name)
+            with mock.patch.object(queries, "open_checkbox_list") as picker:
+                production.open_custom_unit_manager()
+            item = next(item for item in picker.call_args.args[3] if getattr(item, "key", None) == name)
+            self.assertEqual(item.label, family)
+            picker.call_args.args[4]([item.key])
+            self.assertEqual(country["custom_production_units"], [name])
+
     def test_research_category_callback_uses_air_data(self):
         self.research.start_research(self.map)
         categories = self.research.categories
@@ -552,7 +586,7 @@ class AirScreenTests(unittest.TestCase):
         self.assertEqual(self.research.current_category, "AIR")
         self.assertEqual({node["key"] for node in self.research.nodes["AIR"]}, set(AIR_CONTENT))
         for key, (_, _, name) in AIR_CONTENT.items():
-            self.assertEqual(self.research.get_display_name(key, 1), name)
+            self.assertEqual(self.research.get_display_name(key, 1), queries.get_unit_display_name(name))
         self.research.draw(self.surface)
         self.research.set_category("COMPLETED")
         self.research.draw(self.surface)
@@ -581,8 +615,8 @@ class AirScreenTests(unittest.TestCase):
         self.assertEqual(len(buttons), len(expected))
         for tech, level in expected:
             base = self.research.tech_tree[tech].get("display_name", "")
-            name = f"{base} {c.ROMAN_NUMERALS[level]}" if tech in AIRCRAFT_LEVEL_YEARS else base
-            self.assertEqual(self.research.get_display_name(tech, level), name)
+            name = self.research.tech_tree[tech].get("level_names", {}).get(str(level), base)
+            self.assertEqual(self.research.get_display_name(tech, level), queries.get_unit_display_name(name))
             self.assertEqual(self.research.tech_year(tech, level), self.research.tech_tree[tech]["years"][level - 1])
 
     def test_production_fighter_labels_use_current_multipliers_and_cache_results(self):

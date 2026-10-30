@@ -137,7 +137,7 @@ class UnitFamily:
     def entries(self):
         out = []
         for i, suffix in enumerate(self.suffixes):
-            name = self.prefix if suffix is None else f"{self.prefix} {suffix}"
+            name = f"{self.prefix} {suffix}"
             entry = {}
             for key in UNIT_STAT_KEYS:
                 gen = self.stats[key]
@@ -155,9 +155,8 @@ class UnitFamily:
                 entry["bombard_range"] = bombard_range
             entry["naval_unit"] = self.naval_unit
             entry["order"] = {}
-            is_year = suffix is not None and suffix.isdigit()
-            # An unnumbered base is level one when its family has later levels.
-            tier = int(suffix) if is_year else (i + 1 if suffix is not None or len(self.suffixes) > 1 else 0)
+            is_year = suffix.isdigit()
+            tier = int(suffix) if is_year else i + 1
             research = {"tech": self.research_key, "level": max(1, tier if not is_year else 1)}
             if self.research_key == "infantry_type" and is_year:
                 research = {"tech": self.research_key, "year": tier}
@@ -169,15 +168,17 @@ class UnitFamily:
                 requirements = [{"tech": c.VEHICLE_INFANTRY_GATES[self.research_key], "level": 1},
                                 {"tech": "infantry_type", "minimum_year": tier}]
             entry["metadata"] = {"family": self.prefix, "tier_order": tier,
+                                 "display_name": self.prefix if len(self.suffixes) == 1 else name,
                                  "research": research, "requirements": requirements,
-                                 "tier_kind": "year" if is_year else "roman" if suffix else "single",
-                                 "tier_label": suffix or "", "division_suffix": suffix or self.division_suffix,
+                                 "tier_kind": "year" if is_year else "roman",
+                                 "tier_label": suffix,
+                                 "division_suffix": self.division_suffix or (suffix if len(self.suffixes) > 1 else ""),
                                  "recruitment": self.recruitment.copy(),
                                  "settings_family": self.prefix.removesuffix(" Type"),
                                  "production_group": self.production_group,
-                                 # The old quota rule counted only unnumbered Cavalry.
-                                 "ai_tank": self.ai_tank and (self.prefix != "Cavalry" or suffix is None),
-                                 "ai_force_category": (None if self.prefix == "Cavalry" and suffix is not None
+                                 # Cavalry stages do not count toward the older tank quota.
+                                 "ai_tank": self.ai_tank and self.prefix != "Cavalry",
+                                 "ai_force_category": (None if self.prefix == "Cavalry"
                                                        else self.ai_force_category)}
             out.append((name, entry))
         return out
@@ -295,6 +296,7 @@ class EquipmentFamily(UnitFamily):
         result = []
         for (_, entry), label in zip(entries, self.stage_names):
             name = prefix + label
+            entry["metadata"]["display_name"] = name
             entry["metadata"]["tier_label"] = label
             entry["metadata"]["tier_kind"] = "stage"
             result.append((name, entry))
@@ -386,31 +388,31 @@ AIR_RECIPE_COLUMNS = {
 CAR_SPD = piecewise([(0, 2, 0), (1, 3, 0), (4, 4, 0)])
 LT_SPD = piecewise([(0, 2, 0), (3, 3, 0)])
 
-# Keep unnumbered first levels for existing saves and production queues.
+# Every recruitable unit starts at level I. Older identifiers convert on load.
 LAND_UNIT_RECIPES = [
     #YR    NAME                          HP     ATK    DEF  SPD      MAT    MAN   FUEL  TIME BOMB   UPGRADES                                                                                         OPTIONS
-    (1914, 'WW1 Tank',                   3000,  1500,  100, 1,       6000,  1000, 300,  6,   None,  (1, 1, {}),                                                                                      {'unnumbered_first': True}),
-    (1912, 'WW1 Armored Car',            1000,  300,   50,  2,       3000,  1000, 100,  4,   None,  (1, 1, {}),                                                                                      {'unnumbered_first': True}),
+    (1914, 'WW1 Tank',                   3000,  1500,  100, 1,       6000,  1000, 300,  6,   None,  (1, 1, {}),                                                                                      {}),
+    (1912, 'WW1 Armored Car',            1000,  300,   50,  2,       3000,  1000, 100,  4,   None,  (1, 1, {}),                                                                                      {}),
     (1916, 'Armored Car',                1000,  400,   60,  CAR_SPD, 3000,  1000, 100,  4,   None,  (59, 4, {'health': 100, 'attack': 100, 'defense': 10, 'cost_materials': 200, 'cost_fuel': 5}),   {}),
     (1918, 'Light Tank',                 1800,  1200,  80,  LT_SPD,  5000,  1000, 150,  5,   None,  (59, 4, {'health': 200, 'attack': 150, 'defense': 10, 'cost_materials': 500, 'cost_fuel': 5}),   {}),
     (1925, 'Medium Tank',                2500,  2400,  150, 2,       9000,  1000, 200,  6,   None,  (4, 5, {'health': 500, 'attack': 600, 'defense': 25, 'cost_materials': 1000, 'cost_fuel': 10}),  {}),
     (1929, 'Heavy Tank',                 3000,  3000,  350, 1,       12000, 1000, 200,  6,   None,  (4, 4, {'health': 500, 'attack': 500, 'defense': 50, 'cost_materials': 1000, 'cost_fuel': 10}),  {}),
     (1945, 'Super Heavy Tank',           5000,  5000,  550, 1,       16000, 1000, 240,  6,   None,  (5, 4, {'defense': 50, 'cost_materials': 2000, 'cost_fuel': 20}),                                {}),
-    (1944, 'Landkreuzer P.1000 Ratte',   10000, 6000,  400, 1,       50000, 2000, 1000, 10,  1000,  (1, 1, {}),                                                                                      {'division_suffix': '1000', 'unnumbered_first': True}),
-    (1956, 'Landkreuzer P.1500 Monster', 15000, 8000,  500, 1,       60000, 2000, 1200, 12,  1200,  (1, 1, {}),                                                                                      {'division_suffix': '1500', 'unnumbered_first': True}),
-    (2030, 'Railgun',                    10000, 10000, 500, 1,       80000, 2000, 3000, 10,  10000, (1, 1, {}),                                                                                      {'unnumbered_first': True}),
+    (1944, 'Landkreuzer P.1000 Ratte',   10000, 6000,  400, 1,       50000, 2000, 1000, 10,  1000,  (1, 1, {}),                                                                                      {'division_suffix': '1000'}),
+    (1956, 'Landkreuzer P.1500 Monster', 15000, 8000,  500, 1,       60000, 2000, 1200, 12,  1200,  (1, 1, {}),                                                                                      {'division_suffix': '1500'}),
+    (2030, 'Railgun',                    10000, 10000, 500, 1,       80000, 2000, 3000, 10,  10000, (1, 1, {}),                                                                                      {}),
     (1945, 'Main Battle Tank',           5000,  5000,  250, 2,       16000, 1000, 240,  6,   None,  (42, 5, {'health': 500, 'attack': 500, 'defense': 25, 'cost_materials': 1000, 'cost_fuel': 10}), {}),
-    (1918, 'WW1 Railroad Gun',           1200,  500,   0,   1,       5000,  1000, 0,    6,   500,   (1, 1, {}),                                                                                      {'unnumbered_first': True}),
-    (1932, 'WW2 Railroad Gun',           2000,  800,   0,   1,       8000,  1000, 0,    6,   800,   (1, 1, {}),                                                                                      {'unnumbered_first': True}),
+    (1918, 'WW1 Railroad Gun',           1200,  500,   0,   1,       5000,  1000, 0,    6,   500,   (1, 1, {}),                                                                                      {}),
+    (1932, 'WW2 Railroad Gun',           2000,  800,   0,   1,       8000,  1000, 0,    6,   800,   (1, 1, {}),                                                                                      {}),
 ]
 
 NAVAL_UNIT_RECIPES = [
     #YR    NAME                HP    ATK   DEF  SPD MAT    MAN   FUEL TIME BOMB  UPGRADES                                                                                                                OPTIONS
-    (1800, 'Carrack',          800,  400,  0,   1,  2000,  500,  0,   4,   None, (6, 10, {'health': 40, 'attack': 20, 'cost_materials': 100}),                                                           {'unnumbered_first': True}),
-    (1860, 'Ironclad',         2000, 800,  200, 1,  6000,  1000, 100, 6,   None, (5, 4, {'health': 200, 'attack': 50, 'defense': 20, 'cost_materials': 500, 'cost_fuel': 10}),                           {'unnumbered_first': True}),
-    (1880, 'Pre-Dreadnought',  3000, 1200, 300, 1,  10000, 2000, 250, 8,   None, (5, 4, {'health': 200, 'attack': 200, 'defense': 20, 'cost_materials': 1000, 'cost_fuel': 10}),                         {'unnumbered_first': True}),
-    (1900, 'Dreadnought',      4000, 2400, 400, 1,  16000, 2000, 300, 10,  300,  (5, 4, {'health': 400, 'attack': 300, 'defense': 40, 'cost_materials': 800, 'cost_fuel': 20, 'bombard_attack': 40}),    {'unnumbered_first': True}),
-    (1920, 'Battleship',       6000, 4000, 600, 1,  20000, 2000, 400, 10,  500,  (2, 5, {'health': 400, 'attack': 300, 'defense': 40, 'cost_materials': 1000, 'cost_fuel': 20, 'bombard_attack': 50}),   {'unnumbered_first': True}),
+    (1800, 'Carrack',          800,  400,  0,   1,  2000,  500,  0,   4,   None, (6, 10, {'health': 40, 'attack': 20, 'cost_materials': 100}),                                                           {}),
+    (1860, 'Ironclad',         2000, 800,  200, 1,  6000,  1000, 100, 6,   None, (5, 4, {'health': 200, 'attack': 50, 'defense': 20, 'cost_materials': 500, 'cost_fuel': 10}),                           {}),
+    (1880, 'Pre-Dreadnought',  3000, 1200, 300, 1,  10000, 2000, 250, 8,   None, (5, 4, {'health': 200, 'attack': 200, 'defense': 20, 'cost_materials': 1000, 'cost_fuel': 10}),                         {}),
+    (1900, 'Dreadnought',      4000, 2400, 400, 1,  16000, 2000, 300, 10,  300,  (5, 4, {'health': 400, 'attack': 300, 'defense': 40, 'cost_materials': 800, 'cost_fuel': 20, 'bombard_attack': 40}),    {}),
+    (1920, 'Battleship',       6000, 4000, 600, 1,  20000, 2000, 400, 10,  500,  (2, 5, {'health': 400, 'attack': 300, 'defense': 40, 'cost_materials': 1000, 'cost_fuel': 20, 'bombard_attack': 50}),   {}),
     (1900, 'Destroyer',        2400, 1200, 200, 1,  8000,  1000, 250, 8,   None, (61, 4, {'health': 400, 'attack': 300, 'defense': 20, 'cost_materials': 500, 'cost_fuel': 5}),                          {}),
     (1910, 'Submarine',        1200, 600,  0,   1,  6000,  1000, 150, 6,   None, (61, 4, {'health': 200, 'attack': 100, 'cost_materials': 400, 'cost_fuel': 5}),                                         {}),
     (1930, 'Aircraft Carrier', 800,  600,  200, 1,  20000, 2000, 500, 10,  600,  (45, 5, {'health': 200, 'attack': 120, 'defense': 20, 'cost_materials': 1000, 'cost_fuel': 25, 'bombard_attack': 120}), {}),
@@ -420,12 +422,12 @@ AIR_UNIT_RECIPES = [
     #YR    NAME                   HP    ATK   DEF  SPD MAT    MAN   FUEL TIME BOMB  ROLE         RNG  AAMULT CONSUME IMMUNE FORT  CARGO UPGRADES                                                                                                            OPTIONS
     (1910, 'Biplane Fighter',     2000, 120,  0,   1,  1000,  500,  60,  2,   None, 'fighter',   60,  10,    None,   None,  None, None, (5, 4, {'health': 100, 'attack': 20, 'air_range_px': 5}),                                                           {}),
     (1915, 'Biplane Bomber',      3000, 600,  0,   1,  2000,  500,  80,  3,   None, 'bomber',    80,  None,  None,   None,  True, None, (5, 5, {'health': 500, 'attack': 100, 'air_range_px': 10}),                                                         {}),
-    (1910, 'Zeppelin',            3000, 300,  0,   1,  2000,  500,  60,  4,   None, 'bomber',    120, None,  None,   None,  True, None, (1, 1, {}),                                                                                                         {'unnumbered_first': True}),
+    (1910, 'Zeppelin',            3000, 300,  0,   1,  2000,  500,  60,  4,   None, 'bomber',    120, None,  None,   None,  True, None, (1, 1, {}),                                                                                                         {}),
     (1930, 'Monoplane Fighter',   3000, 250,  50,  1,  3000,  500,  100, 3,   None, 'fighter',   100, 8,     None,   None,  None, None, (5, 4, {'health': 200, 'attack': 50, 'defense': 10, 'air_range_px': 5}),                                            {}),
     (1930, 'Monoplane Bomber',    5000, 1000, 120, 1,  4000,  500,  120, 4,   None, 'bomber',    120, None,  None,   None,  True, None, (5, 5, {'health': 200, 'attack': 100, 'defense': 20, 'cost_materials': 400, 'air_range_px': 20}),                   {}),
     (1930, 'Monoplane Transport', 1000, 0,    0,   1,  9000,  1000, 200, 4,   None, 'transport', 60,  None,  None,   None,  None, 1,    (3, 5, {'cost_materials': 500, 'air_range_px': 10}),                                                                {}),
-    (1940, 'V1 Flying Bomb',      1000, 800,  0,   1,  2000,  0,    60,  2,   None, 'strike',    200, None,  True,   None,  True, None, (1, 1, {}),                                                                                                         {'unnumbered_first': True}),
-    (1945, 'V2 Rocket',           2000, 1200, 0,   1,  4000,  0,    80,  4,   None, 'strike',    300, None,  True,   True,  True, None, (1, 1, {}),                                                                                                         {'unnumbered_first': True}),
+    (1940, 'V1 Flying Bomb',      1000, 800,  0,   1,  2000,  0,    60,  2,   None, 'strike',    200, None,  True,   None,  True, None, (1, 1, {}),                                                                                                         {}),
+    (1945, 'V2 Rocket',           2000, 1200, 0,   1,  4000,  0,    80,  4,   None, 'strike',    300, None,  True,   True,  True, None, (1, 1, {}),                                                                                                         {}),
     (1950, 'Jet Fighter',         4000, 1000, 100, 1,  5000,  500,  160, 4,   None, 'fighter',   200, 4,     None,   None,  None, None, (51, 4, {'health': 200, 'attack': 100, 'defense': 20, 'cost_materials': 200, 'cost_fuel': 10, 'air_range_px': 5}),  {}),
     (1955, 'Jet Bomber',          6000, 1600, 200, 1,  6000,  500,  160, 6,   None, 'bomber',    300, None,  None,   None,  True, None, (40, 5, {'health': 200, 'attack': 200, 'defense': 20, 'cost_materials': 500, 'cost_fuel': 20, 'air_range_px': 10}), {}),
     (1955, 'Jet Transport',       2000, 0,    0,   1,  25000, 1000, 500, 6,   None, 'transport', 100, None,  None,   None,  None, 2,    (40, 5, {'health': 200, 'cost_materials': 1000, 'air_range_px': 20}),                                               {}),
@@ -439,8 +441,6 @@ def unit_family(row, *, naval_unit=False, air=False):
     levels, _, increases = upgrades
     options = options.copy()
     suffixes = rs(levels)
-    if options.pop("unnumbered_first", False):
-        suffixes[0] = None
     columns = AIR_RECIPE_COLUMNS if air else UNIT_RECIPE_COLUMNS
     stats = stage_stats(columns, values, increases, name=prefix)
     if air:
@@ -641,11 +641,11 @@ RESEARCH_RECIPES = [
     ],
     [
         #YEARS                           ID                  CAT     COST  REQ                                                      OPTIONS
-        (unit_years("Carrack"),          "carrack",          "NAVY", 600,  {},                                                      {"level_names": {"1": "Carrack"}}),
-        (unit_years("Ironclad"),         "ironclad",         "NAVY", 2400, {"carrack": 1},                                          {"level_names": {"1": "Ironclad"}}),
-        (unit_years("Pre-Dreadnought"),  "pre-dreadnought",  "NAVY", 2400, {"ironclad": 1},                                         {"level_names": {"1": "Pre-Dreadnought"}}),
-        (unit_years("Dreadnought"),      "dreadnought",      "NAVY", 2400, {"pre-dreadnought": 1},                                  {"level_names": {"1": "Dreadnought"}}),
-        (unit_years("Battleship"),       "battleship",       "NAVY", 2400, {"dreadnought": 1},                                      {"level_names": {"1": "Battleship"}}),
+        (unit_years("Carrack"),          "carrack",          "NAVY", 600,  {},                                                      {}),
+        (unit_years("Ironclad"),         "ironclad",         "NAVY", 2400, {"carrack": 1},                                          {}),
+        (unit_years("Pre-Dreadnought"),  "pre-dreadnought",  "NAVY", 2400, {"ironclad": 1},                                         {}),
+        (unit_years("Dreadnought"),      "dreadnought",      "NAVY", 2400, {"pre-dreadnought": 1},                                  {}),
+        (unit_years("Battleship"),       "battleship",       "NAVY", 2400, {"dreadnought": 1},                                      {}),
         (unit_years("Destroyer"),        "destroyer",        "NAVY", 2400, {"pre-dreadnought": len(unit_years("Pre-Dreadnought"))}, {}),
         (unit_years("Aircraft Carrier"), "aircraft_carrier", "NAVY", 2400, {"battleship": 1},                                       {}),
         (unit_years("Submarine"),        "submarine",        "NAVY", 2400, {"dreadnought": 1},                                      {}),
@@ -711,6 +711,10 @@ def research_recipe(row):
         return key, extend_infantry_research(key, entry)
     entry["max_lvl"] = len(years)
     entry["years"] = years
+    for families in UNIT_SECTIONS[1:]:
+        for family in families:
+            if family.research_key == key:
+                entry["level_names"] = {str(level): name for level, (name, _) in enumerate(family.entries(), 1)}
     fields = ("category", "display_name", "max_lvl", "cost", "req", "level_reqs", "years")
     ordered = {field: entry[field] for field in fields if field in entry}
     ordered.update({field: value for field, value in entry.items() if field not in ordered})

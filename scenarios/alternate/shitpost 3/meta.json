@@ -618,7 +618,7 @@
                         {
                             "type": "Declare War",
                             "target": "Crimea",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "",
                             "ai_generate": false,
                             "send_up_to": false
@@ -648,7 +648,7 @@
                         {
                             "type": "Declare War",
                             "target": "Belarus",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "",
                             "ai_generate": false,
                             "send_up_to": false
@@ -745,7 +745,7 @@
                         {
                             "type": "Declare War",
                             "target": "Denmark",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "",
                             "ai_generate": false,
                             "send_up_to": false
@@ -1232,7 +1232,7 @@
                         {
                             "type": "Declare War",
                             "target": "Belarus",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "",
                             "ai_generate": false,
                             "send_up_to": false
@@ -1334,7 +1334,7 @@
                         {
                             "type": "Declare War",
                             "target": "Belarus",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "",
                             "ai_generate": false,
                             "send_up_to": false
@@ -2796,7 +2796,7 @@
                         {
                             "type": "Declare War",
                             "target": "Ukraine",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "",
                             "ai_generate": false,
                             "send_up_to": false
@@ -3164,7 +3164,7 @@
                         {
                             "type": "Declare War",
                             "target": "Estonia",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "The reclamation begins now!",
                             "ai_generate": false,
                             "send_up_to": false
@@ -3283,7 +3283,7 @@
                         {
                             "type": "Declare War",
                             "target": "Wales",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "your land is ours!",
                             "ai_generate": false,
                             "send_up_to": false

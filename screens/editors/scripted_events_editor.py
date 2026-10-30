@@ -778,8 +778,10 @@ class _EventEditScreen(_ModalScreen):
             # from that can arrive holding "Add"/"Set"; snap it back to a real unit.
             if row.unit_type not in self.unit_types and self.unit_types:
                 row.unit_type = self.unit_types[0]
-            els.append(self.combo(x, y + 2, 250, row.unit_type, self.unit_types, "Unit Type",
-                                  lambda v: self._set(row, "unit_type", v)))
+            els.append(self.combo(x, y + 2, 250, row.unit_type,
+                                  queries.unit_picker_items(self.unit_types, context=self.map_ref), "Unit Type",
+                                  lambda v: self._set(row, "unit_type", v),
+                                  display_value=queries.get_unit_display_name(row.unit_type, context=self.map_ref)))
             x += 256
             message_field()
             flag_toggle("Must Control")
@@ -989,7 +991,8 @@ class Scripted_Events_Editor_Screen(_ModalScreen):
             elif a_type == "Give Territory":
                 act_strs.append(f"Give Territory to '{a.get('target')}'")
             elif a_type == "Spawn Unit":
-                act_strs.append(f"Spawn {a.get('unit_type', 'Unit')} for '{a.get('target')}'")
+                label = queries.get_unit_display_name(a.get('unit_type', 'Unit'), context=self.map_ref)
+                act_strs.append(f"Spawn {label} for '{a.get('target')}'")
             elif a_type == "Set Variable":
                 act_strs.append(f"Set Var '{a.get('target')}' {a.get('unit_type', '')} {a.get('message')}")
             else:

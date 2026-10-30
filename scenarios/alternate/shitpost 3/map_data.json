@@ -367,7 +367,7 @@
         "units": [
             {
                 "unit_id": "920225aed91e4199ac098ef5f0456137",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Proto-Finnish Holy Roman Khaganate",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -730,7 +730,7 @@
         "units": [
             {
                 "unit_id": "337efd99e7eb4dc582568a7be3d68b66",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Proto-Finnish Holy Roman Khaganate",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -1091,7 +1091,7 @@
         "units": [
             {
                 "unit_id": "ff00ede6f2214a6890a46551ecf09476",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Proto-Finnish Holy Roman Khaganate",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -1340,7 +1340,7 @@
         "units": [
             {
                 "unit_id": "2dcf28b38eeb4aeab3e7dd35024f7512",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Proto-Finnish Holy Roman Khaganate",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -1620,7 +1620,7 @@
         "units": [
             {
                 "unit_id": "3868d557d7b74ddea76fa23c68031547",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Proto-Finnish Holy Roman Khaganate",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -2052,7 +2052,7 @@
         "units": [
             {
                 "unit_id": "3fe7c5fb738243b082315568a23149b4",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Norway",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -2520,7 +2520,7 @@
         "units": [
             {
                 "unit_id": "9202625d62884898a377555d171944cc",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Proto-Finnish Holy Roman Khaganate",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -2692,7 +2692,7 @@
         "units": [
             {
                 "unit_id": "033696ecb04d413681239239bd725559",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Proto-Finnish Holy Roman Khaganate",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -2848,7 +2848,7 @@
         "units": [
             {
                 "unit_id": "df106fd0f2e14b9a839f943fef32b50e",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Proto-Finnish Holy Roman Khaganate",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -3111,7 +3111,7 @@
         "units": [
             {
                 "unit_id": "3e6e79058df346b599c410e3310fe134",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Norway",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -3163,7 +3163,7 @@
         "units": [
             {
                 "unit_id": "69c69fceac0945e7b03a08f20a4eb5f2",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Proto-Finnish Holy Roman Khaganate",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -3267,7 +3267,7 @@
         "units": [
             {
                 "unit_id": "d6947f8f274d4201a7fd0a63a992a57a",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Sweden",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -3319,7 +3319,7 @@
         "units": [
             {
                 "unit_id": "829748a6bb1a4c4e9c1d3df5378370cd",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Proto-Finnish Holy Roman Khaganate",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -3536,7 +3536,7 @@
         "units": [
             {
                 "unit_id": "a09a191f3592466c86e078fe375bb579",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Proto-Finnish Holy Roman Khaganate",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -3722,7 +3722,7 @@
         "units": [
             {
                 "unit_id": "6e5401ac864a43468dd168bb1397a78d",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Proto-Finnish Holy Roman Khaganate",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -4141,7 +4141,7 @@
         "units": [
             {
                 "unit_id": "87e0738465ff4aaa927acdb2b62162fe",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Norway",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -4300,7 +4300,7 @@
         "units": [
             {
                 "unit_id": "ead1335ba13c4388aee7c0813f5f32e9",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Sweden",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -5538,7 +5538,7 @@
         "units": [
             {
                 "unit_id": "7b231016e1bf4684bf3a6f2d3bdfc553",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Sweden",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -6294,7 +6294,7 @@
         "units": [
             {
                 "unit_id": "ac1a90fd2fcb463d9ae781dea16fc9c3",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Sweden",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -7113,7 +7113,7 @@
         "units": [
             {
                 "unit_id": "7dbf2522fd35489f8f245450b74e06ee",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Denmark",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -7201,7 +7201,7 @@
         "units": [
             {
                 "unit_id": "dcfb88dd77244621a24378754e12117e",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Sweden",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -7751,7 +7751,7 @@
         "units": [
             {
                 "unit_id": "4fe64e9d069f4f9885b666906d8b5314",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Sweden",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -7975,7 +7975,7 @@
         "units": [
             {
                 "unit_id": "e2d5ac03263549b6a15110c1bcd8e5fa",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Sweden",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -8080,7 +8080,7 @@
         "units": [
             {
                 "unit_id": "b447db8c773b4543a0f1cf679fdda995",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Sweden",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -8819,7 +8819,7 @@
         "units": [
             {
                 "unit_id": "d12e600f02da4e1f925f9a5bbfc407c2",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Denmark",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -9170,7 +9170,7 @@
         "units": [
             {
                 "unit_id": "1efc7a9d28a5404989be2aade23ec060",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Latvia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -9258,7 +9258,7 @@
         "units": [
             {
                 "unit_id": "d702f3bbfc8148c9853ab1920eca1195",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Denmark",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -9574,7 +9574,7 @@
         "units": [
             {
                 "unit_id": "fc6a9ceb44f34a13b4fcfe865167d5a9",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Denmark",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -9728,7 +9728,7 @@
         "units": [
             {
                 "unit_id": "a1b34a3f264d4a8abbe18c427723aa66",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Latvia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -9985,7 +9985,7 @@
         "units": [
             {
                 "unit_id": "6bc1170fb856474fa4037b6176e0d7ee",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Belarus",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -10601,7 +10601,7 @@
         "units": [
             {
                 "unit_id": "4542dea6ba9e4ca08e91d74161af6fe2",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Belarus",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -10686,7 +10686,7 @@
         "units": [
             {
                 "unit_id": "ef69ca69fbd2483c95826c16ff739b18",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Lithuania",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -10739,7 +10739,7 @@
         "units": [
             {
                 "unit_id": "02d8df131dd24f01bd62636ee69455d4",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Lithuania",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -10940,7 +10940,7 @@
         "units": [
             {
                 "unit_id": "b5509e879a3b4756a8a20ce28f69c238",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Scotland",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -11223,7 +11223,7 @@
         "units": [
             {
                 "unit_id": "12385933f1b0462f8a2d3e4ebdbfe0e5",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Lithuania",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -11410,7 +11410,7 @@
         "units": [
             {
                 "unit_id": "f1bff84781924902a2df051527518d2d",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Prussia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -11462,7 +11462,7 @@
         "units": [
             {
                 "unit_id": "f7439ec6227842ebb0f5e2c01b0ef70b",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Lithuania",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -11665,7 +11665,7 @@
         "units": [
             {
                 "unit_id": "d311c48404eb4a0ebf5975e2544ed5a7",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Scotland",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -11785,7 +11785,7 @@
         "units": [
             {
                 "unit_id": "db6520a8148c4df382d84c58d0b731a4",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Prussia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -11874,7 +11874,7 @@
         "units": [
             {
                 "unit_id": "084a733a36c94b43a494a9ab9a18a1b2",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Denmark",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -12129,7 +12129,7 @@
         "units": [
             {
                 "unit_id": "92e897f74d724597af942697774de1ff",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Scotland",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -12247,7 +12247,7 @@
         "units": [
             {
                 "unit_id": "3e8939e37aa848eb885961eab12c68b3",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "England",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -12328,7 +12328,7 @@
         "units": [
             {
                 "unit_id": "0294bbef3dda43588c4cc0ce13702a0f",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Pomerania",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -12498,7 +12498,7 @@
         "units": [
             {
                 "unit_id": "9d776eebec414c2f8391a92ed7d08833",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "North German Confederation",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -12587,7 +12587,7 @@
         "units": [
             {
                 "unit_id": "fa618840a8ff43bf8845e0a07e004eb7",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Lithuania",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -12707,7 +12707,7 @@
         "units": [
             {
                 "unit_id": "da283f45a60545cb9500e2c5777a13a4",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Poland",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -12938,7 +12938,7 @@
         "units": [
             {
                 "unit_id": "8ff0d8d40e9e4f31b9446fdd37d795cb",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "England",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -12992,7 +12992,7 @@
         "units": [
             {
                 "unit_id": "61147ad397424403bcd6bd5e8aeff0ae",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "England",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -13044,7 +13044,7 @@
         "units": [
             {
                 "unit_id": "1849f6708a494d6bb652369419a6506e",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Prussia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -13163,7 +13163,7 @@
         "units": [
             {
                 "unit_id": "0b03cf7157ec4584b78e58da4049a788",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Prussia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -13248,7 +13248,7 @@
         "units": [
             {
                 "unit_id": "e45e41f4d3cf405d9babb32f9816b7f8",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "North German Confederation",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -13496,7 +13496,7 @@
         "units": [
             {
                 "unit_id": "7aabf8f443414ec8bccbb36c4bbdd1cb",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Poland",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -13548,7 +13548,7 @@
         "units": [
             {
                 "unit_id": "764d7a9ee22a4763bfc93f47b2a34691",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Poland",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -13901,7 +13901,7 @@
         "units": [
             {
                 "unit_id": "d3110a1a4ce54e81b207ead602e9facf",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Prussia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -14075,7 +14075,7 @@
         "units": [
             {
                 "unit_id": "f8b5a3238daf4df58e203bb52933ecfa",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Prussia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -14393,7 +14393,7 @@
         "units": [
             {
                 "unit_id": "d32d62eb31d14e17bb51186ce6391ec4",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Pomerania",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -14445,7 +14445,7 @@
         "units": [
             {
                 "unit_id": "bcb8aeeb37b84788bb94ebcf316f3741",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "England",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -14551,7 +14551,7 @@
         "units": [
             {
                 "unit_id": "0ed0b882ebfd48448148b30dcd8aeda2",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "North German Confederation",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -14692,7 +14692,7 @@
         "units": [
             {
                 "unit_id": "f337f315b2e74f03b86e64bec067d45c",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Pomerania",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -14841,7 +14841,7 @@
         "units": [
             {
                 "unit_id": "63ebbbb7bc094ea89acf08465f4c7e39",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Poland",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -14892,7 +14892,7 @@
         "units": [
             {
                 "unit_id": "91b47d597feb46f8b8b92f1eacfc2bbe",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Netherlands",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -15067,7 +15067,7 @@
         "units": [
             {
                 "unit_id": "abc2c63648be493098b2b121a423f793",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Poland",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -15187,7 +15187,7 @@
         "units": [
             {
                 "unit_id": "5fa192190720453399e14a2404d3fce2",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Poland",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -15728,7 +15728,7 @@
         "units": [
             {
                 "unit_id": "1950583ea940430184ba2d4018ba78d2",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "England",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -15900,7 +15900,7 @@
         "units": [
             {
                 "unit_id": "0423d1fd918440dcae16577b7b1c4e95",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Wales",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -15953,7 +15953,7 @@
         "units": [
             {
                 "unit_id": "091c5940e17843fc918b8ce02d5f7cdb",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Netherlands",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -16038,7 +16038,7 @@
         "units": [
             {
                 "unit_id": "cfeeed68298940bd952b5472ee918c17",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Poland",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -16090,7 +16090,7 @@
         "units": [
             {
                 "unit_id": "38c334a7563244509f60b814d698c65b",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Poland",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -16210,7 +16210,7 @@
         "units": [
             {
                 "unit_id": "6df4e5c514934fa1b7924df391a9f501",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "North German Confederation",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -16379,7 +16379,7 @@
         "units": [
             {
                 "unit_id": "0773b803371748f5bec3f490b5da880a",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Pomerania",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -16563,7 +16563,7 @@
         "units": [
             {
                 "unit_id": "a600764c992341bfb2860076fb216c4e",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Wales",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -17139,7 +17139,7 @@
         "units": [
             {
                 "unit_id": "b901048d7b26403b8f939ba02a8eb822",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Poland",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -17509,7 +17509,7 @@
         "units": [
             {
                 "unit_id": "b4facab544be4a72bcff507e4151c500",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Belarus",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -18064,7 +18064,7 @@
         "units": [
             {
                 "unit_id": "b0db9981671d4c8a9446cb701017a7c2",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Wales",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -18406,7 +18406,7 @@
         "units": [
             {
                 "unit_id": "4a4aef6b79f24fa6b1f2c8149b069914",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "England",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -18903,7 +18903,7 @@
         "units": [
             {
                 "unit_id": "853f76fcb36c429f8e3b9c6a9c55332a",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Ukraine",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -19851,7 +19851,7 @@
         "units": [
             {
                 "unit_id": "279572fb1c414efa9adf643275de6faa",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Belgium",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -20000,7 +20000,7 @@
         "units": [
             {
                 "unit_id": "d7e4c93bb0954d8fbafd9bebb57ab49e",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "England",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -20753,7 +20753,7 @@
         "units": [
             {
                 "unit_id": "37d605012f3c42dabd58123336cb3cc6",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "England",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -20976,7 +20976,7 @@
         "units": [
             {
                 "unit_id": "8daddd34c908402996b3db9782d41b7b",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Corsica",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -20994,7 +20994,7 @@
             },
             {
                 "unit_id": "c94da6b63a6a4a9fb5fe267bb9bcb9bd",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Corsica",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -21012,7 +21012,7 @@
             },
             {
                 "unit_id": "ca8565e239a7412cba572c461721c720",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Corsica",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -21287,7 +21287,7 @@
         "units": [
             {
                 "unit_id": "33efb4fe394f4dc6bd304747a388fa7f",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Ordensstaat Burgund",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -21339,7 +21339,7 @@
         "units": [
             {
                 "unit_id": "226691a7456e4b66a134f43271a8b877",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Belgium",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -22020,7 +22020,7 @@
         "units": [
             {
                 "unit_id": "b0cb3f009e1a4a33ac5d63e2bf2a5c37",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Ordensstaat Burgund",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -25037,7 +25037,7 @@
         "units": [
             {
                 "unit_id": "7fd35a04d0284056a8a38ff365258791",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Ordensstaat Burgund",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -25389,7 +25389,7 @@
         "units": [
             {
                 "unit_id": "f2a88b218cd940339537709452193e17",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Japan",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -25443,7 +25443,7 @@
         "units": [
             {
                 "unit_id": "f696418b5f5c4c958614ec66b83a2e5c",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Normandy",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -26177,7 +26177,7 @@
         "units": [
             {
                 "unit_id": "23df01be880f4c76a6c7e8d135b3cbed",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Normandy",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -26330,7 +26330,7 @@
         "units": [
             {
                 "unit_id": "24f08c18212949b8aded44e0216d93ac",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Japan",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -26755,7 +26755,7 @@
         "units": [
             {
                 "unit_id": "0be3ee59adfe461e95955e68dc56a463",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "France",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -27106,7 +27106,7 @@
         "units": [
             {
                 "unit_id": "d4808f3478684b52bdca54260e63826b",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Commune of Japan",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -27193,7 +27193,7 @@
         "units": [
             {
                 "unit_id": "8d1c8fbc998a403ab38b0076dae616ed",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "France",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -27829,7 +27829,7 @@
         "units": [
             {
                 "unit_id": "3bd2cd72c47a4fdf9da8edbd68a69e7d",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Brittany",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -28045,7 +28045,7 @@
         "units": [
             {
                 "unit_id": "1f30cee90c0946e3ab7357765964bea7",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Commune of Japan",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -28616,7 +28616,7 @@
         "units": [
             {
                 "unit_id": "44e7ecbbffa148e999e5bcdac09072d4",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Brittany",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -29222,7 +29222,7 @@
         "units": [
             {
                 "unit_id": "f022818b4a0d4ae5aeb99ee9aecfc878",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "France",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -31207,7 +31207,7 @@
         "units": [
             {
                 "unit_id": "6b3e979f841f4ba487bbe660606243e6",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "France",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -31813,7 +31813,7 @@
         "units": [
             {
                 "unit_id": "98470fcae9f84b66b001f84ef641b2bf",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Ukraine",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -32952,7 +32952,7 @@
         "units": [
             {
                 "unit_id": "764744241c1646c0b6604e545742d1b1",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Crimea",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -35735,7 +35735,7 @@
         "units": [
             {
                 "unit_id": "29ed4a1ccc364867bdb986cef9fc7dbc",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "France",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -36224,7 +36224,7 @@
         "units": [
             {
                 "unit_id": "b4fcf6dbc26e4c2eb0fe1d1100a5532d",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Galicia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -36375,7 +36375,7 @@
         "units": [
             {
                 "unit_id": "f5c87c36028d4657aff40a0ee5f40bf6",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Spain",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -36611,7 +36611,7 @@
         "units": [
             {
                 "unit_id": "e5c57d084b994974bbfd4db56a361282",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Spain",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -36991,7 +36991,7 @@
         "units": [
             {
                 "unit_id": "a07235daeb5247a0a114c20384e5b804",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Galicia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -37326,7 +37326,7 @@
         "units": [
             {
                 "unit_id": "dd3619ff4b9948638e5510e4273fab4e",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Spain",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -37577,7 +37577,7 @@
         "units": [
             {
                 "unit_id": "0f6607f707c3450ba5e7c768be4b4ea3",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Galicia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -37961,7 +37961,7 @@
         "units": [
             {
                 "unit_id": "813526091974426a8ac1ddd59350a493",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Georgia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -38012,7 +38012,7 @@
         "units": [
             {
                 "unit_id": "54a74893ea634f138d4e0e1fdba6bcf9",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Galicia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -38065,7 +38065,7 @@
         "units": [
             {
                 "unit_id": "e6b8cd0ddd1c476c8fb43f5c5f183aad",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Spain",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -38511,7 +38511,7 @@
         "units": [
             {
                 "unit_id": "57c6ad8a5fb84a6aba8aed16092027fe",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Georgia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -38800,7 +38800,7 @@
         "units": [
             {
                 "unit_id": "1e25f2f0f87643cb88caf2c338c5bf47",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Georgia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -38851,7 +38851,7 @@
         "units": [
             {
                 "unit_id": "94361ccdfc254a8eb4daa44681bc3a65",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Portugal",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -39031,7 +39031,7 @@
         "units": [
             {
                 "unit_id": "07312ac0be234f7ebaebc26e370da94a",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Georgia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -39082,7 +39082,7 @@
         "units": [
             {
                 "unit_id": "332c92507f6b4770804efbbe049bcbc0",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Portugal",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -39135,7 +39135,7 @@
         "units": [
             {
                 "unit_id": "5ca1854e0ca240cb91a1d361c386618f",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Portugal",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -39380,7 +39380,7 @@
         "units": [
             {
                 "unit_id": "215525792b804a4e8aacd4a10a94886b",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Azerbaijan",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -40045,7 +40045,7 @@
         "units": [
             {
                 "unit_id": "6b20b32d168c4f668d779818b7ca93f8",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Azerbaijan",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -40325,7 +40325,7 @@
         "units": [
             {
                 "unit_id": "067cd9cd2fd349259021b4a7582355c1",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Armenia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -40542,7 +40542,7 @@
         "units": [
             {
                 "unit_id": "6b9c73e48a704ce49cd94bef96da491f",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Armenia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -40596,7 +40596,7 @@
         "units": [
             {
                 "unit_id": "0f7cf748dedc451499566669bc2730ef",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Azerbaijan",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -41480,7 +41480,7 @@
         "units": [
             {
                 "unit_id": "76f6aad251ed4325b5af62d176a50890",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Armenia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -42197,7 +42197,7 @@
         "units": [
             {
                 "unit_id": "4d1aa561277f4849a1371b8fed6ebec2",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Azerbaijan",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -42840,7 +42840,7 @@
         "units": [
             {
                 "unit_id": "ef727ca211224d199feca59eb67f651a",
-                "type": "IFV Semi-Automatic Infantry",
+                "type": "IFV Semi-Automatic Infantry I",
                 "owner": "Armenia",
                 "health": 3000.0,
                 "max_health": 3000,

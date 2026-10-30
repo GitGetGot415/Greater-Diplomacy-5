@@ -85,10 +85,11 @@ def expense_table_rows(units, unit_library):
         u_type = unit.get("original_type", unit.get("type"))
         upkeep = queries.get_unit_upkeep(unit_library.get(u_type, {}))
         unit_name = unit.get("type")
-        individual.append({"unit": unit_name, "location": prov["id"], **upkeep})
+        label = queries.get_unit_display_name(unit_name, unit_library)
+        individual.append({"unit": label, "location": prov["id"], **upkeep})
 
         if unit_name not in grouped:
-            grouped[unit_name] = {"unit": unit_name, "count": 0,
+            grouped[unit_name] = {"unit": label, "count": 0,
                                   **{resource: 0 for resource in c.ECON_RESOURCE_KEYS}}
         group = grouped[unit_name]
         group["count"] += 1

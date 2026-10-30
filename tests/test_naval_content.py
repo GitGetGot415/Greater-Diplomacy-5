@@ -71,16 +71,16 @@ class NavalContentTests(unittest.TestCase):
             self.assertEqual(set(levels), set(range(1, self.tree[tech]["max_lvl"] + 1)))
             for level, name in levels.items():
                 if level == 1:
-                    self.assertEqual(name, family)
+                    self.assertEqual(name, family + " I")
                     continue
                 research = queries.edited_research_levels({}, tech, level, True, self.tree)
                 with self.subTest(ship=name):
-                    self.assertEqual(queries.get_upgrade_target(family, research, self.library, self.tree), name)
+                    self.assertEqual(queries.get_upgrade_target(family + " I", research, self.library, self.tree), name)
                     candidates = ai_unit_eval.buildable_units(research, self.library)
                     self.assertIn(name, candidates)
                     self.assertNotIn(levels[level - 1], candidates)
                     self.country["research"] = research
-                    unit = queries.create_unit_dict(family, "A", self.library)
+                    unit = queries.create_unit_dict(family + " I", "A", self.library)
                     unit["health"] *= 0.6
                     self.province["units"] = [unit]
                     unit_actions.apply_action(self.context, "A", self.province, unit,
@@ -110,18 +110,18 @@ class NavalContentTests(unittest.TestCase):
     def test_completed_ironclad_research_obsoletes_carracks_without_removing_paid_units_or_queues(self):
         self.country["research"] = queries.edited_research_levels({}, "carrack", 1, True, self.tree)
         self.country["research_queue"] = [queries.build_research_project("ironclad", self.tree["ironclad"]["cost"])]
-        unit = queries.create_unit_dict("Carrack", "A", self.library)
+        unit = queries.create_unit_dict("Carrack I", "A", self.library)
         self.province["units"].append(unit)
-        production_actions.submit_production(self.context, "A", self.province, "unit_queue", {"unit_type": "Carrack"})
+        production_actions.submit_production(self.context, "A", self.province, "unit_queue", {"unit_type": "Carrack I"})
         preserved = copy.deepcopy(self.province)
         self.assertFalse(queries.is_unit_obsolete("Carrack", self.country["research"]))
-        self.assertIn("Carrack", ai_unit_eval.buildable_units(self.country["research"], self.library))
+        self.assertIn("Carrack I", ai_unit_eval.buildable_units(self.country["research"], self.library))
         self.country["research"] = queries.edited_research_levels(
             self.country["research"], "ironclad", 1, True, self.tree)
         self.assertTrue(queries.is_unit_obsolete("Carrack", self.country["research"]))
-        self.assertNotIn("Carrack", ai_unit_eval.buildable_units(self.country["research"], self.library))
-        self.assertIn("Ironclad", ai_unit_eval.buildable_units(self.country["research"], self.library))
-        self.assertTrue(queries.is_unit_unlocked("Carrack", self.country["research"], self.library))
+        self.assertNotIn("Carrack I", ai_unit_eval.buildable_units(self.country["research"], self.library))
+        self.assertIn("Ironclad I", ai_unit_eval.buildable_units(self.country["research"], self.library))
+        self.assertTrue(queries.is_unit_unlocked("Carrack I", self.country["research"], self.library))
         self.assertEqual(self.province, preserved)
 
     def test_editor_grants_and_removes_the_ship_prerequisite_chain(self):
@@ -269,20 +269,20 @@ class NavalContentTests(unittest.TestCase):
         self.assertEqual(saved["nation_data"][game.player_country]["research"], research)
         self.assertEqual(next(iter(loaded.values()))["units"], province["units"])
         self.assertEqual(next(iter(loaded.values()))["unit_queue"], province["unit_queue"])
-        for base, tech in (("Dreadnought", "dreadnought"), ("Battleship", "battleship")):
+        for base, tech in (("Dreadnought I", "dreadnought"), ("Battleship I", "battleship")):
             existing = {"research": {tech: 1}}
             self.assertEqual(queries.canonical_research_selection(existing, [], self.tree)["projects"], [])
             self.assertEqual(existing["research"], {tech: 1})
             self.assertIsNone(queries.get_upgrade_target(base, existing["research"], self.library, self.tree))
             for name in SHIPS:
-                self.assertEqual(queries.is_unit_unlocked(name, existing["research"], self.library), name == base)
+                self.assertEqual(queries.is_unit_unlocked(name + " I", existing["research"], self.library), name + " I" == base)
 
     def test_scenario_disables_use_the_ship_metadata_and_prune_dependencies(self):
         self.context.world.scenario_settings["unit_disabled"] = list(SHIPS)
         library = queries.get_unit_library(self.context)
         tree = queries.get_tech_tree(self.context)
         for name, tech in SHIPS.items():
-            self.assertNotIn(name, library)
+            self.assertNotIn(name + " I", library)
             self.assertNotIn(tech, tree)
             self.assertFalse(any(stats["metadata"]["family"] == name for stats in library.values()))
         for tech in ("destroyer", "submarine", "aircraft_carrier"):
@@ -383,7 +383,7 @@ class NavalScreenTests(unittest.TestCase):
         country["research"] = queries.edited_research_levels({}, "pre-dreadnought", 1, True)
         country["research_queue"] = []
         for resource in c.ECON_RESOURCE_KEYS:
-            country[resource] = 1 + sum(queries.get_unit_library()[name][f"cost_{resource}"] for name in SHIPS)
+            country[resource] = 1 + sum(queries.get_unit_library()[name + " I"][f"cost_{resource}"] for name in SHIPS)
         province = copy.deepcopy(game.selected_province)
         province.update(owner=country_id, cores=[country_id], is_coastal=True, buildings=["Basic Factory"],
                         unit_queue=[], building_queue=[])
@@ -392,7 +392,8 @@ class NavalScreenTests(unittest.TestCase):
             with app_harness.patch_map(game, nation_data=nations, tactical_mode=False):
                 research.start_research(game)
                 research.set_category("NAVY")
-                for name, tech in SHIPS.items():
+                for family, tech in SHIPS.items():
+                    name = family + " I"
                     nodes = [node for node in research.nodes["NAVY"] if node["key"] == tech]
                     self.assertEqual([node["year"] for node in nodes], queries.get_tech_tree(game)[tech]["years"])
                     country["research"] = queries.edited_research_levels({}, tech, 1, True)
@@ -404,13 +405,13 @@ class NavalScreenTests(unittest.TestCase):
                     self.assertEqual(province["unit_queue"][-1]["unit_type"], name)
                     for resource in c.ECON_RESOURCE_KEYS:
                         self.assertEqual(country[resource], before[resource] - queries.get_unit_library()[name][f"cost_{resource}"])
-                    if name == "Carrack":
+                    if name == "Carrack I":
                         paid_queue = copy.deepcopy(province["unit_queue"])
                         country["research"] = queries.edited_research_levels(country["research"], "ironclad", 1, True)
                         production.start_with_province(province, game)
                         choices = {getattr(button, "text", "") for button in production.elements}
-                        self.assertNotIn("Carrack", choices)
-                        self.assertIn("Ironclad", choices)
+                        self.assertNotIn("Carrack I", choices)
+                        self.assertIn("Ironclad I", choices)
                         self.assertEqual(province["unit_queue"], paid_queue)
         finally:
             research.start_research(game)

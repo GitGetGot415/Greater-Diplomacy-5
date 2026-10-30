@@ -215,7 +215,7 @@ class BombardmentFromWaterTests(unittest.TestCase):
         self.assertEqual(target["health"], target["max_health"])
 
     def test_a_battleship_still_shells_the_shore(self):
-        target = self.barrage("Battleship", naval=True)
+        target = self.barrage("Battleship I", naval=True)
         self.assertLess(target["health"], target["max_health"])
 
 

@@ -421,7 +421,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -1801,7 +1801,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -1916,7 +1916,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -1933,7 +1933,7 @@
                 "unit_id": "70de1bb92f7a463d9259830ca7b14e52"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -1950,7 +1950,7 @@
                 "unit_id": "7b57bf6aad6946aab886715f0e37701b"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -1967,7 +1967,7 @@
                 "unit_id": "c62841f2731a44d1b2140c0368ba8d93"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -1984,7 +1984,7 @@
                 "unit_id": "f1ac834df83d4e41849fa166bacaf44f"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -2082,7 +2082,7 @@
                 "unit_id": "ab4c22220e064556975d70e75148e33c"
             },
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Mongolia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -2099,7 +2099,7 @@
                 "unit_id": "98bc90ef8d064241b8868f5399495dc0"
             },
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Mongolia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -2530,7 +2530,7 @@
         "owner": "Finland",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Finland",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -2794,7 +2794,7 @@
         "owner": "Finland",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Finland",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -3088,7 +3088,7 @@
                 "unit_id": "a7b80ea7108a49b2959fa79f6654d443"
             },
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Mongolia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -3105,7 +3105,7 @@
                 "unit_id": "c9bbf19cb08d4837a10982eeb709e5e4"
             },
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Mongolia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -3257,7 +3257,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -3274,7 +3274,7 @@
                 "unit_id": "e21d2e0c98104b808a6bf34721325bdd"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -3291,7 +3291,7 @@
                 "unit_id": "8c1f3dc561da4a86a842b3abd0acf199"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -3308,7 +3308,7 @@
                 "unit_id": "48dc8545454f49429173f4c1f8468b39"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -3325,7 +3325,7 @@
                 "unit_id": "c43c2f8cad9f45f0a94e74c4699610b5"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -3731,7 +3731,7 @@
         "owner": "Norway",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Norway",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -3815,7 +3815,7 @@
         "owner": "Estonia",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Estonia",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -3986,7 +3986,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -4070,7 +4070,7 @@
         "owner": "Norway",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Norway",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -4304,7 +4304,7 @@
                 "unit_id": "32f181c7ed7348a6a496e47a5e8ca485"
             },
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Mongolia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -4321,7 +4321,7 @@
                 "unit_id": "bab52bb36fc64c6a9c8d6190dcd80af6"
             },
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Mongolia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -4786,7 +4786,7 @@
         "owner": "Latvia",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Latvia",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -4902,7 +4902,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -4919,7 +4919,7 @@
                 "unit_id": "1870804704e446b79df157255d463e1e"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -4936,7 +4936,7 @@
                 "unit_id": "706a951de97649ffadb54c722bec4ed2"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -4953,7 +4953,7 @@
                 "unit_id": "1d29bef19eb44e36a41748b2cec7c4a6"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -4970,7 +4970,7 @@
                 "unit_id": "ca55488f8ceb475b94c14cedc2db363d"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -5659,7 +5659,7 @@
                 "unit_id": "a7d1eec9d1204dc388ab2539d89d245e"
             },
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Mongolia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -5676,7 +5676,7 @@
                 "unit_id": "e5d1002541144a7eb17de29bcdaa9f2c"
             },
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Mongolia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -5930,7 +5930,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "United Kingdom",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -6015,7 +6015,7 @@
         "owner": "Sweden",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Sweden",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -6314,7 +6314,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -6331,7 +6331,7 @@
                 "unit_id": "e368a9c13b8e4857b6ba5db3a6aebed6"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -6348,7 +6348,7 @@
                 "unit_id": "cda3c06e9e8b41f69e22efb9e3d29e5a"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -6365,7 +6365,7 @@
                 "unit_id": "cb94da38d5064c1f81aa2485ff6e4248"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -6382,7 +6382,7 @@
                 "unit_id": "03c77e1f4db5465ca045ee426e441f12"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -6467,7 +6467,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -6757,7 +6757,7 @@
         "owner": "Sweden",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Sweden",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -6808,7 +6808,7 @@
         "owner": "Lithuania",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Lithuania",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -6893,7 +6893,7 @@
         "owner": "Denmark",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Denmark",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -7011,7 +7011,7 @@
         "owner": "Ireland",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Ireland",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -7622,7 +7622,7 @@
         "owner": "German Reich",
         "units": [
             {
-                "type": "Motorized Squad-Automatic Infantry",
+                "type": "Motorized Squad-Automatic Infantry I",
                 "owner": "German Reich",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -7744,7 +7744,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -7761,7 +7761,7 @@
                 "unit_id": "73a98b426ecd46dc9dcd0ee32004a50a"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -7778,7 +7778,7 @@
                 "unit_id": "7c50dde8e388461d8309f9553c611aa2"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -7795,7 +7795,7 @@
                 "unit_id": "89eacb0210ee40688a34a5195d09a542"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -7812,7 +7812,7 @@
                 "unit_id": "cfac34e63cc5420f842e73dc132794ca"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -7992,7 +7992,7 @@
         "owner": "German Reich",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "German Reich",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -8112,7 +8112,7 @@
         "owner": "Poland",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Poland",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -8182,7 +8182,7 @@
                 "unit_id": "16794a13d11a4472914aa4cea3681d7f"
             },
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Mongolia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -8199,7 +8199,7 @@
                 "unit_id": "7784fe9ce6cf4083a31f869441af4799"
             },
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Mongolia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -8375,7 +8375,7 @@
         "owner": "German Reich",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "German Reich",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -8722,7 +8722,7 @@
         "owner": "Poland",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Poland",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -9039,7 +9039,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -9416,7 +9416,7 @@
         "owner": "German Reich",
         "units": [
             {
-                "type": "Motorized Squad-Automatic Infantry",
+                "type": "Motorized Squad-Automatic Infantry I",
                 "owner": "German Reich",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -9538,7 +9538,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -9555,7 +9555,7 @@
                 "unit_id": "ab594a0b2be04029aa124034aa64d606"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -9572,7 +9572,7 @@
                 "unit_id": "84ebece12c4a4d7f85b6474895338a65"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -9589,7 +9589,7 @@
                 "unit_id": "acc88cba950845e281ed1deb70859c9e"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -9606,7 +9606,7 @@
                 "unit_id": "4d0c1802b04148bcb47b0e28ccd42adc"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -9732,7 +9732,7 @@
                 "unit_id": "784270972d284ccc9f5b35cf20f7dd2c"
             },
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Mongolia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -9749,7 +9749,7 @@
                 "unit_id": "4e436429aa5e46189d3bc36c306418c1"
             },
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Mongolia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -9834,7 +9834,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "United Kingdom",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -9851,7 +9851,7 @@
                 "unit_id": "c157a1b784824702aa7451d5639ab742"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "United Kingdom",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -9868,7 +9868,7 @@
                 "unit_id": "492828d007944df294c76127dc0b1c2c"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "United Kingdom",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -9885,7 +9885,7 @@
                 "unit_id": "2e11436bc25946909f0409b7d10f7780"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "United Kingdom",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -9902,7 +9902,7 @@
                 "unit_id": "187c86e12e9447caa2b2a15e5220c2ae"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "United Kingdom",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -9919,7 +9919,7 @@
                 "unit_id": "43debaff2b1e410b8fb0f95f62db13cc"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "United Kingdom",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -9989,7 +9989,7 @@
         "owner": "German Reich",
         "units": [
             {
-                "type": "Motorized Squad-Automatic Infantry",
+                "type": "Motorized Squad-Automatic Infantry I",
                 "owner": "German Reich",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -10421,7 +10421,7 @@
         "owner": "Netherlands",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Netherlands",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -10624,7 +10624,7 @@
                 "unit_id": "8ca10925ccb448dd8fbad7ebbde17433"
             },
             {
-                "type": "Motorized Squad-Automatic Infantry",
+                "type": "Motorized Squad-Automatic Infantry I",
                 "owner": "German Reich",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -10641,7 +10641,7 @@
                 "unit_id": "8192dc0b2f6a49f99b64b2bd44ad9541"
             },
             {
-                "type": "Motorized Squad-Automatic Infantry",
+                "type": "Motorized Squad-Automatic Infantry I",
                 "owner": "German Reich",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -10658,7 +10658,7 @@
                 "unit_id": "4f5365e9ceb14b4c855d16558f3e437c"
             },
             {
-                "type": "Motorized Squad-Automatic Infantry",
+                "type": "Motorized Squad-Automatic Infantry I",
                 "owner": "German Reich",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -11067,7 +11067,7 @@
         "owner": "Poland",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Poland",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -11084,7 +11084,7 @@
                 "unit_id": "6bbb92443a03407cb0ac9b963c066128"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Poland",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -11101,7 +11101,7 @@
                 "unit_id": "60f19dc191d54d26995d4c91af07a1fe"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Poland",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -11118,7 +11118,7 @@
                 "unit_id": "ce401428729847a7802742e5d4970a85"
             },
             {
-                "type": "Motorized Squad-Automatic Infantry",
+                "type": "Motorized Squad-Automatic Infantry I",
                 "owner": "Poland",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -11366,7 +11366,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -11383,7 +11383,7 @@
                 "unit_id": "a99b1ff43afd4d6dbfbaf9035ce362a5"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -11400,7 +11400,7 @@
                 "unit_id": "e0a0c97a76414a728aab13c095ea48a7"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -11417,7 +11417,7 @@
                 "unit_id": "84771fed7d304ab9a80d75f3d620c7f4"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -11434,7 +11434,7 @@
                 "unit_id": "f3b66382521e47c0a0c3890d1766b372"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -11552,7 +11552,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -12616,7 +12616,7 @@
                 "unit_id": "5d49759f891749ee9c7a3570ee69c61d"
             },
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Mongolia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -12633,7 +12633,7 @@
                 "unit_id": "c85c2c340fc542a9a37a323836c6a518"
             },
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Mongolia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -12780,7 +12780,7 @@
         "owner": "Belgium",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Belgium",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -12936,7 +12936,7 @@
         "owner": "German Reich",
         "units": [
             {
-                "type": "Motorized Squad-Automatic Infantry",
+                "type": "Motorized Squad-Automatic Infantry I",
                 "owner": "German Reich",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -12988,7 +12988,7 @@
         "owner": "Poland",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Poland",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -13312,7 +13312,7 @@
         "owner": "Poland",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Poland",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -13366,7 +13366,7 @@
         "owner": "German Reich",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "German Reich",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -13488,7 +13488,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -13505,7 +13505,7 @@
                 "unit_id": "cfb5fd1ef2bd49f1be37222117577db1"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -13522,7 +13522,7 @@
                 "unit_id": "fe1589cbc7714210bc8b05db15a4dd90"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -13539,7 +13539,7 @@
                 "unit_id": "5359578c39594cf1b55141a486cbb975"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -13556,7 +13556,7 @@
                 "unit_id": "ef1d4bdc627747f486a162470dc3541e"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -13691,7 +13691,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -14242,7 +14242,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -14259,7 +14259,7 @@
                 "unit_id": "1ab1a9bd1348422dae75ca1723166228"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -14276,7 +14276,7 @@
                 "unit_id": "5782a6e0855c4a9da56340ba7d3c994b"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -14293,7 +14293,7 @@
                 "unit_id": "d288ed485f684e1aa216ee7517398888"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -14310,7 +14310,7 @@
                 "unit_id": "f5cd6cbc35c34f6d8419fcd1745beacb"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -14327,7 +14327,7 @@
                 "unit_id": "754e0371caad4041b6ac8b993354c672"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -14344,7 +14344,7 @@
                 "unit_id": "d95d89a6d98649e48906d8614ee77723"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -14361,7 +14361,7 @@
                 "unit_id": "957dbc35173e4346b915c6ed089ff6df"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -14378,7 +14378,7 @@
                 "unit_id": "783c91cf7d254b9e98b0d7a1dfd0da0d"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -14481,7 +14481,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -14498,7 +14498,7 @@
                 "unit_id": "9f211fb9d62f4f75be3d89f44386e738"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -14515,7 +14515,7 @@
                 "unit_id": "eb615260c1f8472e98bb861467a4a362"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -14532,7 +14532,7 @@
                 "unit_id": "c1a0fba981ee4d87b91cb1b32f844700"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -14549,7 +14549,7 @@
                 "unit_id": "a034b6cf4fed4dcd8b95826d4816a822"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -14687,7 +14687,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -14704,7 +14704,7 @@
                 "unit_id": "f49a50b71bf4458d95bbd231f7388c8c"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -14721,7 +14721,7 @@
                 "unit_id": "b7b1dff3a94744b4b3ea5d5251d3e4ee"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -15032,7 +15032,7 @@
         "owner": "Slovakia",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Slovakia",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -15115,7 +15115,7 @@
         "owner": "German Reich",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "German Reich",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -15167,7 +15167,7 @@
         "owner": "German Reich",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "German Reich",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -15305,7 +15305,7 @@
                 "unit_id": "4e143646fdd645aa997cb4462ed7e96b"
             },
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Mongolia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -15322,7 +15322,7 @@
                 "unit_id": "6e0bb52216604539a240bd480690eb69"
             },
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Mongolia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -15445,7 +15445,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -15462,7 +15462,7 @@
                 "unit_id": "b2e37ec7be7e43f69d80a6d77715b1b5"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -15479,7 +15479,7 @@
                 "unit_id": "0842520772b7491380d899e9e49b8f14"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -15868,7 +15868,7 @@
         "owner": "Hungary",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Hungary",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -16188,7 +16188,7 @@
         "owner": "Canada",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Canada",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -16342,7 +16342,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -16496,7 +16496,7 @@
         "owner": "Romania",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Romania",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -16627,7 +16627,7 @@
                 "unit_id": "6d5ddc7424ff48e8a3c0f33bab5a4080"
             },
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Mongolia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -16644,7 +16644,7 @@
                 "unit_id": "2fafad6bf6d148c384467fec34d6df07"
             },
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Mongolia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -16763,7 +16763,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "United States of America",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -16813,7 +16813,7 @@
         "owner": "Canada",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Canada",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -16895,7 +16895,7 @@
         "owner": "Romania",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Romania",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -17011,7 +17011,7 @@
         "owner": "German Reich",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "German Reich",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -17112,7 +17112,7 @@
                 "unit_id": "fc97eac02a7e46319335ddf27d755b8c"
             },
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Mongolia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -17129,7 +17129,7 @@
                 "unit_id": "99b53eb983ec4843b5d1e4c54ba8727c"
             },
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Mongolia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -17551,7 +17551,7 @@
         "owner": "Hungary",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Hungary",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -17708,7 +17708,7 @@
         "owner": "German Reich",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "German Reich",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -17797,7 +17797,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -17814,7 +17814,7 @@
                 "unit_id": "b77d50f0116e45299ae2656f9f95e718"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -17831,7 +17831,7 @@
                 "unit_id": "0f39c375927440aebd63211fb0150e02"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -17848,7 +17848,7 @@
                 "unit_id": "530c906b11714a9f9aef96224c958d4c"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -17865,7 +17865,7 @@
                 "unit_id": "1778a7052b7547189b20d7d25bbdc097"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -17916,7 +17916,7 @@
         "owner": "Switzerland",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Switzerland",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -18049,7 +18049,7 @@
                 "unit_id": "35525eac179f4ce9a00ef01fa0e7a88d"
             },
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Mongolia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -18066,7 +18066,7 @@
                 "unit_id": "ba753faee0d3417b9630b9d89874acef"
             },
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Mongolia",
                 "health": 3000.0,
                 "max_health": 3000,
@@ -18200,7 +18200,7 @@
         "owner": "Switzerland",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Switzerland",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -18382,7 +18382,7 @@
         "owner": "German Reich",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "German Reich",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -18719,7 +18719,7 @@
         "owner": "Romania",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Romania",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -18837,7 +18837,7 @@
         "owner": "Hungary",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Hungary",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -19125,7 +19125,7 @@
         "owner": "Switzerland",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Switzerland",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -19204,7 +19204,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -19221,7 +19221,7 @@
                 "unit_id": "558f7f9fb4c44e4e86fe01728d35e995"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -19238,7 +19238,7 @@
                 "unit_id": "b5444543090f4f6e880c110cb84bd893"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -19255,7 +19255,7 @@
                 "unit_id": "f81a0ba4409442e0b496780028572c35"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -19272,7 +19272,7 @@
                 "unit_id": "cef55508779b4d47885df8419e5b421b"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -19355,7 +19355,7 @@
         "owner": "Switzerland",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Switzerland",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -19439,7 +19439,7 @@
         "owner": "Switzerland",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Switzerland",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -19653,7 +19653,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -19670,7 +19670,7 @@
                 "unit_id": "7e60aecae27f4688b1e7313f7692cc6e"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -19687,7 +19687,7 @@
                 "unit_id": "bdd9311e2c5b4afdb327f316c9a336a7"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -19704,7 +19704,7 @@
                 "unit_id": "44f705c9f86342c1b7c98d7b946cab4a"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -19721,7 +19721,7 @@
                 "unit_id": "7cffbb8d57c2444e8acccc68026b6953"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -19872,7 +19872,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Italy",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -19987,7 +19987,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -20105,7 +20105,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Italy",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -20222,7 +20222,7 @@
         "owner": "Romania",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Romania",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -20440,7 +20440,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -20457,7 +20457,7 @@
                 "unit_id": "e8c268cae1ff4ffe81d321f72b086e7a"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -20474,7 +20474,7 @@
                 "unit_id": "7b757c306d434786b7891eb96041126b"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -20491,7 +20491,7 @@
                 "unit_id": "9bac57f74c954a54b438785c053a3d5f"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -20508,7 +20508,7 @@
                 "unit_id": "e6eed5aefe4140dcb4fd8532ec877d4d"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -20559,7 +20559,7 @@
         "owner": "Yugoslavia",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Yugoslavia",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -20645,7 +20645,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -20662,7 +20662,7 @@
                 "unit_id": "fe97bf4d3b994108a0251478ce539d60"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -20679,7 +20679,7 @@
                 "unit_id": "f6313ae717ef4ec280a4fade7e57a5fc"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -20730,7 +20730,7 @@
         "owner": "Yugoslavia",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Yugoslavia",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -20850,7 +20850,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Italy",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -20900,7 +20900,7 @@
         "owner": "Canada",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Canada",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -21018,7 +21018,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Italy",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -21172,7 +21172,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Italy",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -21189,7 +21189,7 @@
                 "unit_id": "cb0e4a673dda456890f4576309275be4"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Italy",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -21445,7 +21445,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "United States of America",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -22052,7 +22052,7 @@
         "owner": "Bulgaria",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Bulgaria",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -22301,7 +22301,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -22450,7 +22450,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -22467,7 +22467,7 @@
                 "unit_id": "e7c4320e08824623b44891a256b5a5b5"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -22484,7 +22484,7 @@
                 "unit_id": "7621d1679a2d46d690c4f3a89cb4481c"
             },
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -22849,7 +22849,7 @@
         "owner": "Yugoslavia",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Yugoslavia",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -23100,7 +23100,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -23248,7 +23248,7 @@
         "owner": "Bulgaria",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Bulgaria",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -23467,7 +23467,7 @@
         "owner": "Turkey",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Turkey",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -24040,7 +24040,7 @@
         "owner": "Turkey",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Turkey",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -24639,7 +24639,7 @@
         "owner": "Yugoslavia",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Yugoslavia",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -24690,7 +24690,7 @@
         "owner": "Turkey",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Turkey",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -24811,7 +24811,7 @@
         "owner": "Spain",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Spain",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -25055,7 +25055,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -25177,7 +25177,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Italy",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -25544,7 +25544,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "United States of America",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -25754,7 +25754,7 @@
         "owner": "Portugal",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Portugal",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -26139,7 +26139,7 @@
         "owner": "Greece",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Greece",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -26617,7 +26617,7 @@
         "owner": "Turkey",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Turkey",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -27986,7 +27986,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -28989,7 +28989,7 @@
         "owner": "Greece",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Greece",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -30739,7 +30739,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -30983,7 +30983,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "United Kingdom",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -31101,7 +31101,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Italy",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -31307,7 +31307,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Italy",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -31356,7 +31356,7 @@
         "owner": "France",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "France",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -31517,7 +31517,7 @@
         "owner": "Iran",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Iran",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -31670,7 +31670,7 @@
         "owner": "Iraq",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Iraq",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -31878,7 +31878,7 @@
         "owner": "Italy",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Italy",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -31927,7 +31927,7 @@
         "owner": "United Kingdom",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "United Kingdom",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -33302,7 +33302,7 @@
         "owner": "United States of America",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "United States of America",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -33601,7 +33601,7 @@
         "owner": "Saudi Arabia",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Saudi Arabia",
                 "health": 2450.0,
                 "max_health": 2450,
@@ -34385,7 +34385,7 @@
         "owner": "Cuba",
         "units": [
             {
-                "type": "Squad-Automatic Infantry",
+                "type": "Squad-Automatic Infantry I",
                 "owner": "Cuba",
                 "health": 2450.0,
                 "max_health": 2450,

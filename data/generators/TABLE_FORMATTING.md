@@ -34,8 +34,11 @@ Read current tuning in these tables and the generated libraries. The example bel
 This row produces three Roman-numbered unit tiers. Each later tier adds the specified health increase.
 Research uses the same first year, interval, and level count.
 
-The `unnumbered_first` option keeps an existing first-tier identifier without a Roman numeral.
-Other tiers retain their Roman numerals. A family with one unnumbered entry remains unnumbered.
+Every recruitable unit has a numbered identifier, including a family with one level.
+Older identifiers convert through the shared save and move migrations.
+Generated `metadata.display_name` omits the suffix when the family has only one level.
+Use `queries.get_unit_display_name` for labels. Use `queries.unit_picker_items` when a picker returns a unit identifier.
+
 Use an inline `piecewise(...)` base value when a statistic has different growth segments.
 Do not also put that statistic in the increases dictionary.
 Aircraft use the same base columns, followed by their aircraft fields.

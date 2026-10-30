@@ -94,7 +94,7 @@ class AirDropRecoveryTests(unittest.TestCase):
 
     def test_ground_forecasts_show_aircraft_loss_during_recovery_without_mutation(self):
         target = self.land()
-        aircraft = wing(target, "V1 Flying Bomb", "B")
+        aircraft = wing(target, "V1 Flying Bomb I", "B")
         before = deepcopy(target["units"])
         for sides in ([[self.cargo, aircraft]], [[self.cargo], [aircraft]]):
             with self.subTest(sides=len(sides)):
@@ -110,7 +110,7 @@ class AirDropRecoveryTests(unittest.TestCase):
         self.game.nation_data["C"]["at_war_with"] = []
         for country in ("A", "B"):
             self.game.nation_data[country]["at_war_with"].remove("C")
-        neutral = wing(target, "V1 Flying Bomb", "C")
+        neutral = wing(target, "V1 Flying Bomb I", "C")
         before = deepcopy(neutral)
         queries.prepare_aircraft_for_ground_combat(target["units"], self.game.nation_data)
         self.assertEqual(neutral, before)
@@ -122,7 +122,7 @@ class AirDropRecoveryTests(unittest.TestCase):
 
     def test_grounded_aircraft_loss_credits_recovering_troops_in_reports(self):
         target = self.land()
-        aircraft = wing(target, "V1 Flying Bomb", "B")
+        aircraft = wing(target, "V1 Flying Bomb I", "B")
         health = aircraft["health"]
         with unit_events.record_turn(self.game):
             unit_events.run_step(self.game, "Ground combat", combat_processor.process_combat)
@@ -307,7 +307,7 @@ class RecoveryRuntimeTests(unittest.TestCase):
             game = self.runtime(directory)
             base, target = game.id_to_province[1], game.id_to_province[2]
             plane, cargo = wing(base, "Monoplane Transport"), wing(base, "Fixture Cargo")
-            missile = wing(target, "V1 Flying Bomb", "B")
+            missile = wing(target, "V1 Flying Bomb I", "B")
             queries.set_air_cargo(game, "A", plane, base, [cargo["unit_id"]])
             plane["order"] = queries.air_move_order(game, plane, base, target)
             health = cargo["health"]

@@ -70,7 +70,7 @@ Its rules describe differences from released data, not changes made only during 
 - deployment_queue entries move into unit_queue and building_queue.
 - Research projects without points_remaining receive points from their day countdown.
 - Production entries with days_remaining receive turns_remaining. The day field has priority.
-- Unnumbered aircraft become level I in units, transports, queues, upgrade targets, custom production, and Spawn Unit actions.
+- Unnumbered recruitable units become level I in units, transports, queues, upgrade targets, custom production, and Spawn Unit actions.
 - Older aircraft Trucks unpack on land or become Convoys at sea. Identity and health fraction do not change.
 - Scripted events receive condition and action lists from their single fields.
 - Inbox messages without message_id receive one.
@@ -108,6 +108,8 @@ LING becomes OPENROUTER. ling_api_key and ling_model become openrouter_api_key a
 Writers use current names. Positional settings slots do not change.
 
 Library loading converts AEROSPACE to AIR and Aerospace to Air.
+Older unnumbered unit library keys convert to their canonical level-I identifiers.
+Current keys take priority if a library contains both names. Unknown valid entry fields remain intact.
 Research IDs stay unchanged in saves and multiplayer files.
 Equipment unit IDs use stage names. Older IDs convert through the v47 step.
 

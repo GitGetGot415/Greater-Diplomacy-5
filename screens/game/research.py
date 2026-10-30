@@ -114,20 +114,13 @@ YEAR_TIER_TECHS = {
 # Tech keys whose display name is fixed and unrelated to their level.
 FIXED_TECH_NAMES = {
     "civilian_car": "Civilian Car",
-    "ww1_armored_car": "WW1 Armored Car",
-    "ww1_tank": "WW1 Tank",
-    "ww1_railroad_gun": "WW1 Railroad Gun",
-    "ww2_railroad_gun": "WW2 Railroad Gun",
     "bergius_process": "Bergius Process",
     "basic_factory": "Basic Factory",
     "basic_recruitment": "Basic Recruitment Center",
-    "landkreuzer_p1000_ratte": "Landkreuzer P.1000 Ratte",
-    "landkreuzer_p1500_monster": "Landkreuzer P.1500 Monster",
     "trucks": "Trucks",
     "armored_personnel_carriers": "Armored Personnel Carriers",
     "infantry_fighting_vehicle": "Infantry Fighting Vehicle",
     "electromagnetic_launcher": "Electromagnetic Launcher",
-    "railgun": "Railgun",
 }
 
 # Tech nodes whose icon isn't just its own display name (see draw_tech_nodes).
@@ -482,7 +475,13 @@ class Research_Screen(GameState):
         return years[min(max(lvl, 1) - 1, len(years) - 1)]
 
     def get_display_name(self, tech_key, lvl):
-        """The player-facing name of a tech at a given level.
+        """Show single-level unit labels without changing the referenced unit type."""
+        # Headless label previews can supply only a research tree.
+        library = getattr(self, "unit_library", None)
+        return queries.get_unit_display_name(self.get_entity_name(tech_key, lvl), library)
+
+    def get_entity_name(self, tech_key, lvl):
+        """The content identifier of a technology level or its unlocked unit.
 
         An explicit content name takes precedence.
         Content with several levels adds a Roman numeral to that name.
@@ -672,6 +671,7 @@ class Research_Screen(GameState):
             base_y = node["base_y"]
             
             display_name = self.get_display_name(tech_key, lvl)
+            entity_name = self.get_entity_name(tech_key, lvl)
             unlocks = queries.get_tech_unlocks(tech_key, lvl, context=self.map_screen, unit_unlocks=unit_unlocks)
             is_large = (self.building_library.get(tech_key, {}).get("group") in c.LARGE_ICON_BUILDING_GROUPS or
                         any(self.building_library.get(u, {}).get("group") in c.LARGE_ICON_BUILDING_GROUPS for u in unlocks))
@@ -679,7 +679,7 @@ class Research_Screen(GameState):
                 tech_key, self.current_category, lvl, large_icon=is_large)
             raw_btn_w, raw_btn_h = research_display.button_dimensions(presentation["button_size"])
             icon_name = self.tech_tree[tech_key].get("level_icons", {}).get(
-                str(lvl), TECH_ICON_OVERRIDES.get(tech_key, display_name))
+                str(lvl), TECH_ICON_OVERRIDES.get(tech_key, entity_name))
 
             # Style adjustments follow the central node settings. Icons scale independently.
             button_scale = symbol_loader.get_research_button_scale()
@@ -855,10 +855,11 @@ class Research_Screen(GameState):
 
     def cache_modal_unlocks(self):
         """Wrap capability notes once when the research detail panel changes."""
+        entity_name = self.get_entity_name(self.active_modal["tech_key"], self.active_modal["level"])
         self.modal_unlocks = queries.get_tech_unlocks(
             self.active_modal["tech_key"], self.active_modal["level"], context=self.map_screen)
         self.modal_entities = list(dict.fromkeys(
-            name for name in [self.active_modal["display_name"], *self.modal_unlocks]
+            name for name in [entity_name, *self.modal_unlocks]
             if name in self.unit_library or name in self.building_library))
         compact = len(self.modal_entities) > 1
         self.modal_body_line_step = MODAL_COMPACT_LINE_STEP_Y if compact else MODAL_LINE_STEP_Y
@@ -867,14 +868,15 @@ class Research_Screen(GameState):
         self.modal_building_outputs = {
             name: queries.get_building_output(name, self.subject_data.get("research", {}),
                                              self.building_library, context=self.map_screen)
-            for name in [self.active_modal["display_name"], *self.modal_unlocks]
+            for name in [entity_name, *self.modal_unlocks]
             if name in self.building_library}
-        has_air_traits = self.unit_library.get(self.active_modal["display_name"], {}).get("air_role")
+        has_air_traits = self.unit_library.get(entity_name, {}).get("air_role")
         self.modal_body_font = fonts.get("small" if has_air_traits or compact else "normal")
         font = self.modal_body_font
         width = MODAL_WIDTH - MODAL_TEXT_X - MODAL_TEXT_RIGHT_MARGIN
         self.modal_unlock_surfaces = [font.render(line, True, (150, 255, 150))
-            for unlock in self.modal_unlocks for line in wrap_text(f"- {unlock}", font, width)]
+            for unlock in self.modal_unlocks
+            for line in wrap_text(f"- {queries.get_unit_display_name(unlock, self.unit_library)}", font, width)]
         self.modal_unlock_line_step = (font.get_height() + MODAL_TRAIT_LINE_GAP
                                        if has_air_traits else self.modal_body_line_step)
         
@@ -1156,7 +1158,7 @@ class Research_Screen(GameState):
 
         y_off = panel_rect.y + MODAL_BODY_START_Y # Shifted down to make room for the warning text
         text_x = panel_rect.x + MODAL_TEXT_X
-        display_name = self.active_modal["display_name"]
+        entity_name = self.get_entity_name(self.active_modal["tech_key"], self.active_modal["level"])
         
         # Show what this tech unlocks - one per line so a long bonus string
         # doesn't get crammed alongside others and run off the edge of the modal.
@@ -1181,8 +1183,9 @@ class Research_Screen(GameState):
         # Draw stats for all relevant entities dynamically
         for entity in entities_to_show:
             # Draw a sub-header if the tech unlocks multiple things or if the unlocked item has a different name than the tech
-            if entity != display_name or len(entities_to_show) > 1:
-                surface.blit(font_small.render(f"Stats for {entity}:", True, c.COLOR_GOLD_HIGHLIGHT), (text_x, y_off))
+            if entity != entity_name or len(entities_to_show) > 1:
+                label = queries.get_unit_display_name(entity, self.unit_library)
+                surface.blit(font_small.render(f"Stats for {label}:", True, c.COLOR_GOLD_HIGHLIGHT), (text_x, y_off))
                 y_off += self.modal_subhead_step
                 
             if entity in self.unit_library:

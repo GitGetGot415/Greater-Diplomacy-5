@@ -21,6 +21,23 @@ class UnitProgressionTests(unittest.TestCase):
     def final_research(self):
         return {key: entry['max_lvl'] for key, entry in self.tree.items()}
 
+    def test_all_recruitable_unit_families_start_at_level_one_with_a_numbered_identifier(self):
+        for name, stats in self.library.items():
+            metadata = stats["metadata"]
+            with self.subTest(unit=name):
+                self.assertIn(metadata["tier_kind"], ("roman", "stage"))
+                self.assertGreater(queries.get_unit_research_requirement(name, self.library)[1], 0)
+                if metadata["tier_kind"] == "roman":
+                    level = metadata["research"]["level"]
+                    self.assertEqual(name, metadata["family"] + " " + c.ROMAN_NUMERALS[level])
+        for _, tiers in queries.get_unit_research_index(self.library):
+            first = min(tiers, key=lambda tier: tier[1])[0]
+            if self.library[first]["metadata"]["tier_kind"] == "roman":
+                self.assertTrue(first.endswith(" I"), first)
+            else:
+                # Vehicle variants can first appear after their shared equipment stage's level I.
+                self.assertRegex(first, r" [IVXLCDM]+$")
+
     def test_generated_runtime_data_matches_recipes(self):
         for path, builder in ((c.UNIT_DATA_PATH, generate_data.build_unit_data_text),
                               (c.BUILDING_DATA_PATH, generate_data.build_building_data_text),
@@ -31,7 +48,7 @@ class UnitProgressionTests(unittest.TestCase):
     def test_dated_unit_row_drives_stats_level_count_and_research(self):
         row = (1900, "Fixture Ship", 123, 17, 4, 2, 41, 19, 7, 6, 11,
                (3, 4, {"health": 9, "attack": 5, "cost_materials": 3, "bombard_attack": 2}),
-               {"unnumbered_first": True})
+               {})
         with patch.object(recipes, "NAVAL_UNIT_RECIPES", [row]):
             entries = recipes.unit_family(row, naval_unit=True).entries()
             tech, research = recipes.research_recipe((recipes.unit_years("Fixture Ship"),
@@ -39,7 +56,7 @@ class UnitProgressionTests(unittest.TestCase):
         self.assertEqual(tech, "fixture_ship")
         self.assertEqual(research["years"], [1900, 1904, 1908])
         self.assertEqual(research["max_lvl"], 3)
-        self.assertEqual([name for name, _ in entries], ["Fixture Ship", "Fixture Ship II", "Fixture Ship III"])
+        self.assertEqual([name for name, _ in entries], ["Fixture Ship I", "Fixture Ship II", "Fixture Ship III"])
         self.assertEqual([(entry["health"], entry["attack"], entry["cost_materials"], entry["bombard_attack"])
                           for _, entry in entries], [(123, 17, 41, 11), (132, 22, 44, 13), (141, 27, 47, 15)])
         for level, (_, entry) in enumerate(entries, 1):

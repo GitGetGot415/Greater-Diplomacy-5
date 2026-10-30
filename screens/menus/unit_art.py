@@ -222,6 +222,8 @@ def build_gallery_rows(style, country=None, level_display="default", show_all_ar
                 default_sublabel = full_label[len(prefix):] if full_label.startswith(prefix) else ""
             sublabel = _level_label(level_display, base, kind, years_list, idx_by_name,
                                     first, last, default_sublabel)
+            if level_display == "default" and queries.get_unit_display_name(first, unit_library) == base:
+                sublabel = ""
             cells.append({"label": sublabel, "resolve_name": first})
 
         if not cells:

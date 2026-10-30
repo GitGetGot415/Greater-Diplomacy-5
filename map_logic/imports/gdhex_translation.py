@@ -97,7 +97,7 @@ UNIT_TYPES = {
     "des": "Destroyer I",
     # GD5 has no cruiser class. Dreadnought is the closest available heavier
     # surface ship and keeps a Hex cruiser naval rather than silently losing it.
-    "cru": "Dreadnought",
+    "cru": "Dreadnought I",
 }
 
 

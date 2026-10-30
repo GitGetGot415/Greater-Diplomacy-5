@@ -17,6 +17,17 @@ def fixture_metadata(*, family="Fixture", tier=1, level=1):
 
 
 class UnitMetadataTests(unittest.TestCase):
+    def test_single_level_display_labels_preserve_canonical_identifiers_and_picker_values(self):
+        library = {"Fixture I": {"metadata": dict(fixture_metadata(), display_name="Fixture")},
+                   "Multiple I": {"metadata": dict(fixture_metadata(family="Multiple"), display_name="Multiple I")}}
+        self.assertEqual(queries.get_unit_display_name("Fixture I", library), "Fixture")
+        self.assertEqual(queries.get_unit_display_name("Multiple I", library), "Multiple I")
+        self.assertEqual(queries.get_unit_display_name("Convoy (Fixture I)", library), "Convoy (Fixture)")
+        self.assertEqual(queries.get_condensed_unit_name("Fixture I", library), "Fixture")
+        self.assertEqual(queries.unit_picker_items(library, library),
+                         [("Fixture", "Fixture I"), ("Multiple I", "Multiple I")])
+        self.assertEqual(set(library), {"Fixture I", "Multiple I"})
+
     def test_custom_identifiers_use_metadata_for_families_tiers_unlocks_and_upgrades(self):
         library = {"strange designation": {"metadata": fixture_metadata(tier=3)},
                    "a second design": {"metadata": fixture_metadata(tier=7, level=2)}}

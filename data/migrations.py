@@ -320,6 +320,22 @@ def normalize_cached_json_names(cache_key, data):
     if cache_key == "settings":
         migrate_setting_names(data)
     elif cache_key in ("unit_library", "tech_tree"):
+        if cache_key == "unit_library":
+            for older, current in LEGACY_UNIT_NAMES.items():
+                if older not in data:
+                    continue
+                entry = data.pop(older)
+                metadata = entry.get("metadata")
+                if isinstance(metadata, dict) and metadata.get("tier_kind") == "single":
+                    metadata.update(tier_order=1, tier_kind="roman", tier_label="I")
+                    if not metadata.get("division_suffix"):
+                        metadata["division_suffix"] = "I"
+                data.setdefault(current, entry)
+        else:
+            for entry in data.values():
+                if isinstance(entry.get("level_names"), dict):
+                    entry["level_names"] = {level: LEGACY_UNIT_NAMES.get(name, name)
+                                            for level, name in entry["level_names"].items()}
         field = "production_group" if cache_key == "unit_library" else "category"
         for entry in data.values():
             if field in entry:
@@ -611,19 +627,37 @@ LEGACY_AIRCRAFT_NAMES = {
     "Jet Fighter": "Jet Fighter I",
 }
 
+LEGACY_UNIT_NAMES = {
+    **LEGACY_AIRCRAFT_NAMES,
+    "WW1 Tank": "WW1 Tank I",
+    "WW1 Armored Car": "WW1 Armored Car I",
+    "Landkreuzer P.1000 Ratte": "Landkreuzer P.1000 Ratte I",
+    "Landkreuzer P.1500 Monster": "Landkreuzer P.1500 Monster I",
+    "Railgun": "Railgun I",
+    "WW1 Railroad Gun": "WW1 Railroad Gun I",
+    "WW2 Railroad Gun": "WW2 Railroad Gun I",
+    "Carrack": "Carrack I",
+    "Ironclad": "Ironclad I",
+    "Pre-Dreadnought": "Pre-Dreadnought I",
+    "Dreadnought": "Dreadnought I",
+    "Battleship": "Battleship I",
+    "Zeppelin": "Zeppelin I",
+    "V1 Flying Bomb": "V1 Flying Bomb I",
+    "V2 Rocket": "V2 Rocket I",
+}
 
-def _v47_aircraft_name(name):
-    """Number an unnumbered aircraft, including inside a transport name."""
+
+def _v47_unit_name(name):
+    """Number older unit identifiers, including inside a transport name."""
     if not isinstance(name, str):
         return name
-    if name in LEGACY_AIRCRAFT_NAMES:
-        return LEGACY_AIRCRAFT_NAMES[name]
+    if name in LEGACY_UNIT_NAMES:
+        return LEGACY_UNIT_NAMES[name]
     for carrier in ("Truck", "Convoy"):
         prefix = carrier + " ("
         if name.startswith(prefix) and name.endswith(")"):
             inner = name[len(prefix):-1]
-            if inner in LEGACY_AIRCRAFT_NAMES:
-                return prefix + LEGACY_AIRCRAFT_NAMES[inner] + ")"
+            return prefix + _v47_unit_name(inner) + ")"
     return name
 
 
@@ -650,7 +684,7 @@ def _v47_scripted_event(event):
                              "target": event.get("action_target", "None")}]
     for action in event.get("actions", []):
         if isinstance(action, dict) and action.get("type") == "Spawn Unit":
-            action["unit_type"] = _v47_aircraft_name(action.get("unit_type"))
+            action["unit_type"] = _v47_unit_name(action.get("unit_type"))
 
 
 def _v47_country(country):
@@ -662,7 +696,7 @@ def _v47_country(country):
             project["points_remaining"] = days * LEGACY_RESEARCH_POINTS_PER_DAY
     if isinstance(country.get("custom_production_units"), list):
         country["custom_production_units"] = [
-            _v47_aircraft_name(name) for name in country["custom_production_units"]]
+            _v47_unit_name(name) for name in country["custom_production_units"]]
     for entry in country.get("release_puppet_queue", []):
         if isinstance(entry, dict):
             entry.setdefault("release_type", c.PUPPET_TYPE_INTEGRATED)
@@ -711,16 +745,16 @@ def _v47_province(province, terrain):
             if isinstance(entry, dict):
                 _v47_production_turns(entry)
                 if "unit_type" in entry:
-                    entry["unit_type"] = _v47_aircraft_name(entry["unit_type"])
+                    entry["unit_type"] = _v47_unit_name(entry["unit_type"])
     for unit in province.get("units", []):
         if not isinstance(unit, dict):
             continue
         for field in ("type", "original_type"):
             if field in unit:
-                unit[field] = _v47_aircraft_name(unit[field])
+                unit[field] = _v47_unit_name(unit[field])
         order = unit.get("order")
         if isinstance(order, dict) and "target_type" in order:
-            order["target_type"] = _v47_aircraft_name(order["target_type"])
+            order["target_type"] = _v47_unit_name(order["target_type"])
         # Move files are player input. Validation reports malformed units after conversion.
         if not isinstance(unit.get("type"), str) or not queries.is_air_transport(unit):
             continue
@@ -755,9 +789,9 @@ def _v47_save(save_meta, map_data, history):
     realtime_match = save_meta.get("realtime_match")
     if isinstance(realtime_match, dict) and realtime_match.get("format") == "gd5-realtime-v1":
         realtime_match.setdefault("offline_view", "spectator")
-    aliases = equipment_stage_aliases()
+    aliases = {**LEGACY_UNIT_NAMES, **equipment_stage_aliases()}
     for records in (save_meta, map_data, history):
-        _v47_equipment_records(records, aliases)
+        _v47_unit_records(records, aliases)
 
 
 #: Every v46 move file contains these sections. An older move file can omit them.
@@ -783,7 +817,7 @@ def _v47_move(player_data):
             # A move has no terrain, so a Truck aircraft unpacks as on land.
             # Host validation then checks every unit against host state.
             _v47_province(province, None)
-    _v47_equipment_records(player_data, equipment_stage_aliases())
+    _v47_unit_records(player_data, {**LEGACY_UNIT_NAMES, **equipment_stage_aliases()})
 
 
 def equipment_stage_aliases():
@@ -822,7 +856,7 @@ def equipment_stage_aliases():
     return aliases
 
 
-def _v47_equipment_records(records, aliases):
+def _v47_unit_records(records, aliases):
     """Convert typed references, including cargo, orders, scripts, and saved history."""
     def converted(name):
         if not isinstance(name, str):
@@ -835,7 +869,7 @@ def _v47_equipment_records(records, aliases):
 
     if isinstance(records, list):
         for item in records:
-            _v47_equipment_records(item, aliases)
+            _v47_unit_records(item, aliases)
     elif isinstance(records, dict):
         for field, value in records.items():
             if field in ("type", "unit_type", "original_type", "target_type"):
@@ -848,7 +882,7 @@ def _v47_equipment_records(records, aliases):
                         choices.append(name)
                 records[field] = choices
             else:
-                _v47_equipment_records(value, aliases)
+                _v47_unit_records(value, aliases)
 
 
 SAVE_STEPS = ((47, _v47_save),)

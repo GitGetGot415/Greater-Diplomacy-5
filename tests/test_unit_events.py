@@ -247,7 +247,7 @@ class UnitEventRulesTests(unittest.TestCase):
         game.is_editor = False
         base = tile(game, 1, 8)
         target = tile(game, 2, 25, owner="B")
-        missile = wing(base, "V2 Rocket", order={"type": "AIR_ATTACK", "target_id": target["id"]})
+        missile = wing(base, "V2 Rocket I", order={"type": "AIR_ATTACK", "target_id": target["id"]})
         wing(target, "Infantry", owner="B")
         with unit_events.record_turn(game):
             unit_events.run_step(game, "Air missions", air_processor.process_air_orders)

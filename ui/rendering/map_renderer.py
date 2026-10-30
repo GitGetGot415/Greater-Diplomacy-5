@@ -320,7 +320,7 @@ def draw_map_screen(map_screen, surface):
             
             # Contextual prompt formatting for Tactical Mode
             if map_screen.tactical_mode and getattr(map_screen, 'pending_unit', None):
-                prompt_txt = f"Play as {map_screen.pending_unit.get('type')} ({disp_name})?"
+                prompt_txt = f"Play as {queries.get_unit_display_name(map_screen.pending_unit.get('type'), context=map_screen)} ({disp_name})?"
             else:
                 prompt_txt = f"Play as {disp_name}?"
         else:
@@ -375,7 +375,7 @@ def draw_map_screen(map_screen, surface):
             disp_name = map_screen.nation_data.get(map_screen.pending_selection, {}).get("name", map_screen.pending_selection)
             # Contextual instructions for Tactical Mode
             if map_screen.tactical_mode and getattr(map_screen, 'pending_unit', None):
-                instr_txt = f"Start Game as {map_screen.pending_unit.get('type')}?"
+                instr_txt = f"Start Game as {queries.get_unit_display_name(map_screen.pending_unit.get('type'), context=map_screen)}?"
             else:
                 instr_txt = f"Start Game as {disp_name}?"
 

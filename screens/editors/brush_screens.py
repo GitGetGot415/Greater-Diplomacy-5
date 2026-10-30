@@ -56,7 +56,7 @@ class Convoy_Converter_Screen(MapOverlayScreen):
             is_naval = self.unit_lib.get(name, {}).get("naval_unit", False)
             suffix = "(Truck)" if is_naval else "(Convoy)"
             checked = i in self.selected
-            label = f"{'[X]' if checked else '[ ]'} {name} {suffix}"
+            label = f"{'[X]' if checked else '[ ]'} {queries.get_unit_display_name(name, self.unit_lib)} {suffix}"
             btn = Button(row_x, y, "list_row", "green" if checked else "grey", label, lambda ii=i: self.toggle(ii))
             btn.rect.width = row_w
             btn.is_scrollable = True
@@ -221,7 +221,7 @@ class Clear_Map_Screen(MapOverlayScreen):
             self.elements.append(btn)
             y += 60
         if self.needs_unit_type():
-            label = self.selected_unit_type or "Select Unit..."
+            label = queries.get_unit_display_name(self.selected_unit_type, context=self.map_screen) or "Select Unit..."
             btn = Button(p.x + 30, y, "editor_ui", "orange", f"Unit: {label}", self.pick_unit_type)
             btn.rect.width = p.width - 60
             self.elements.append(btn)
@@ -255,7 +255,7 @@ class Clear_Map_Screen(MapOverlayScreen):
             self.selected_unit_type = val
             self.refresh_ui()
         queries.open_listbox_selector(self.map_screen, "Select Unit Type", "Choose a unit type:",
-                                      self.available_unit_types, on_pick)
+                                      queries.unit_picker_items(self.available_unit_types, context=self.map_screen), on_pick)
         self.refresh_ui()
 
     def pick_resource_type(self):
@@ -284,7 +284,8 @@ class Clear_Map_Screen(MapOverlayScreen):
 
         msg = f"Are you sure you want to clear:\n{opt}"
         if c_val and self.needs_country(): msg += f"\nCountry: {c_val}"
-        if u_val and self.needs_unit_type(): msg += f"\nUnit: {u_val}"
+        if u_val and self.needs_unit_type():
+            msg += f"\nUnit: {queries.get_unit_display_name(u_val, context=self.map_screen)}"
         if r_val and self.needs_resource_type(): msg += f"\nResource: {r_val}"
 
         def on_confirm(ok):

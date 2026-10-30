@@ -293,7 +293,11 @@ Historical naval units use the same research, coastal production, combat, and tr
 Their metadata connects each ship to its research track.
 
 Carracks, ironclads, pre-dreadnoughts, dreadnoughts, and battleships have numbered upgrades within their existing research tracks.
-Their unnumbered unit identifiers remain level one for existing saves and production queues.
+
+All recruitable unit identifiers include a level suffix. The first Roman-numbered level uses I.
+Single-level families omit that suffix in visible labels. Saved records and action callbacks retain the numbered identifier.
+Older unit references convert through the v47 migration. See documentation/data_migrations.txt.
+
 Research dates, level counts, statistics, and costs come from the unit and research libraries.
 data/generators/recipes.py defines the generation rules.
 
@@ -312,7 +316,8 @@ The generator derives this prerequisite from the pre-dreadnought recipe's level 
 Submarine research still requires dreadnought research.
 
 When you add unit tiers, update their research recipes and regenerate both runtime files.
-Keep existing unit identifiers and research level meanings. Older saves retain their completed research and can use additional levels.
+Keep research level meanings stable. Migrate older unit identifiers when standardization requires a rename.
+Older saves retain their completed research and can use additional levels.
 
 data/queries/unit_info.py reads metadata from the active library.
 Divisions do not duplicate this library metadata.

@@ -320,7 +320,7 @@
                         {
                             "type": "Declare War",
                             "target": "Normandy",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "we require your lands for a larger coastline (and also to get closer to the english)",
                             "ai_generate": false,
                             "send_up_to": false
@@ -343,7 +343,7 @@
                         {
                             "type": "Declare War",
                             "target": "Boudin Bakery",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "your existence is a mistake and we are here to correct it",
                             "ai_generate": false,
                             "send_up_to": false
@@ -446,7 +446,7 @@
                         {
                             "type": "Declare War",
                             "target": "Saudi Arabia",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "give us your oil",
                             "ai_generate": false,
                             "send_up_to": false
@@ -469,7 +469,7 @@
                         {
                             "type": "Declare War",
                             "target": "Jordan",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "you have no oil but we want you regardless",
                             "ai_generate": false,
                             "send_up_to": false
@@ -492,7 +492,7 @@
                         {
                             "type": "Accept Proposal",
                             "target": "Israel",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "hell yeah bbg",
                             "ai_generate": false,
                             "send_up_to": false
@@ -515,7 +515,7 @@
                         {
                             "type": "Reject Proposal",
                             "target": "Palestine",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "no",
                             "ai_generate": false,
                             "send_up_to": false
@@ -523,7 +523,7 @@
                         {
                             "type": "Declare War",
                             "target": "Palestine",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "die",
                             "ai_generate": false,
                             "send_up_to": false
@@ -553,7 +553,7 @@
                         {
                             "type": "Declare War",
                             "target": "Nationalist China",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "left unchecked, you will grow into a strong rival, so we're just nipping that problem in the bud",
                             "ai_generate": false,
                             "send_up_to": false
@@ -583,7 +583,7 @@
                         {
                             "type": "Declare War",
                             "target": "Japanese Empire",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "you're next",
                             "ai_generate": false,
                             "send_up_to": false
@@ -613,7 +613,7 @@
                         {
                             "type": "Declare War",
                             "target": "Azerbaijan",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "your oil fields look like they could use some freedom",
                             "ai_generate": false,
                             "send_up_to": false
@@ -643,7 +643,7 @@
                         {
                             "type": "Declare War",
                             "target": "Manchukuo",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "this was inevitable",
                             "ai_generate": false,
                             "send_up_to": false
@@ -748,7 +748,7 @@
                         {
                             "type": "Declare War",
                             "target": "North Macedonia",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "we will create greater bulgaria!",
                             "ai_generate": false,
                             "send_up_to": false
@@ -847,7 +847,7 @@
                         {
                             "type": "Declare War",
                             "target": "Granite",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "prolly should've finished this long ago, but you know what they say, better late than never",
                             "ai_generate": false,
                             "send_up_to": false
@@ -870,7 +870,7 @@
                         {
                             "type": "Declare War",
                             "target": "Morocco",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "we're bringing back spanish morocco with this one",
                             "ai_generate": false,
                             "send_up_to": false
@@ -1346,7 +1346,7 @@
                         {
                             "type": "Send Ceasefire",
                             "target": "United States of America",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "PLEASE IT DOESN'T HAVE TO BE THIS WAY",
                             "ai_generate": false,
                             "send_up_to": false
@@ -1818,7 +1818,7 @@
                         {
                             "type": "Declare War",
                             "target": "Montenegro",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "don't worry, you'll learn to love being a part of albania!",
                             "ai_generate": false,
                             "send_up_to": false
@@ -2154,7 +2154,7 @@
                         {
                             "type": "Declare War",
                             "target": "Darfur",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "we have cores on your entire country, honestly we should've done this a long time ago",
                             "ai_generate": false,
                             "send_up_to": false
@@ -2336,7 +2336,7 @@
                         {
                             "type": "Declare War",
                             "target": "Israel",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "die",
                             "ai_generate": false,
                             "send_up_to": false
@@ -2506,7 +2506,7 @@
                         {
                             "type": "Declare War",
                             "target": "Israel",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "from the river to the sea palestine will be free",
                             "ai_generate": false,
                             "send_up_to": false
@@ -2616,7 +2616,7 @@
                         {
                             "type": "Join Faction",
                             "target": "United States of America",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "shalom please let us in",
                             "ai_generate": false,
                             "send_up_to": false
@@ -2639,7 +2639,7 @@
                         {
                             "type": "Declare War",
                             "target": "Palestine",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": ":P",
                             "ai_generate": false,
                             "send_up_to": false
@@ -2883,7 +2883,7 @@
                         {
                             "type": "Declare War",
                             "target": "Armenia",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "armenia is a core and integral part of azerbaijan and we are simply returning things to the way they should be",
                             "ai_generate": false,
                             "send_up_to": false
@@ -2906,7 +2906,7 @@
                         {
                             "type": "Accept Proposal",
                             "target": "Japanese Empire",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "sure",
                             "ai_generate": false,
                             "send_up_to": false
@@ -3009,7 +3009,7 @@
                         {
                             "type": "Create Faction",
                             "target": "Georgia",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "perhaps an alliance might be useful, given our current situations...",
                             "ai_generate": false,
                             "send_up_to": false
@@ -3445,7 +3445,7 @@
                         {
                             "type": "Declare War",
                             "target": "Georgia",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "your country will serve as a nice base for future expansion into china",
                             "ai_generate": false,
                             "send_up_to": false
@@ -3468,7 +3468,7 @@
                         {
                             "type": "Invite to Faction",
                             "target": "Azerbaijan",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "if you join us, we could help you with your current war",
                             "ai_generate": false,
                             "send_up_to": false
@@ -3703,7 +3703,7 @@
                         {
                             "type": "Invite to Faction",
                             "target": "Darfur",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "if you need help we're willing to give it to you",
                             "ai_generate": false,
                             "send_up_to": false
@@ -3818,7 +3818,7 @@
                         {
                             "type": "Declare War",
                             "target": "Bulgaria",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "we're going to recreate the roman empire, and unfortunately for you, your land is required",
                             "ai_generate": false,
                             "send_up_to": false
@@ -3826,7 +3826,7 @@
                         {
                             "type": "Declare War",
                             "target": "North Macedonia",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "congratulations! you will be joining the roman empire very soon! please do not resist.",
                             "ai_generate": false,
                             "send_up_to": false
@@ -3849,7 +3849,7 @@
                         {
                             "type": "Declare War",
                             "target": "Moldova",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "join the empire! (your compliance is not a factor)",
                             "ai_generate": false,
                             "send_up_to": false
@@ -4924,7 +4924,7 @@
                         {
                             "type": "Declare War",
                             "target": "Switzerland",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "you're german, we're german, might as well unify, right? (please do not resist)",
                             "ai_generate": false,
                             "send_up_to": false
@@ -4947,7 +4947,7 @@
                         {
                             "type": "Declare War",
                             "target": "France",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "FALL GELB, FALL ROT, UND TOTALENKREIG",
                             "ai_generate": false,
                             "send_up_to": false
@@ -4970,7 +4970,7 @@
                         {
                             "type": "Declare War",
                             "target": "Brittany",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "you're next",
                             "ai_generate": false,
                             "send_up_to": false
@@ -4978,7 +4978,7 @@
                         {
                             "type": "Declare War",
                             "target": "Normandy",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "you're next",
                             "ai_generate": false,
                             "send_up_to": false
@@ -4986,7 +4986,7 @@
                         {
                             "type": "Declare War",
                             "target": "Boudin Bakery",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "you're next",
                             "ai_generate": false,
                             "send_up_to": false
@@ -4994,7 +4994,7 @@
                         {
                             "type": "Declare War",
                             "target": "Paraguay",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "you're next",
                             "ai_generate": false,
                             "send_up_to": false
@@ -5052,7 +5052,7 @@
                         {
                             "type": "Declare War",
                             "target": "Sea Lions",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "you're next",
                             "ai_generate": false,
                             "send_up_to": false
@@ -5075,7 +5075,7 @@
                         {
                             "type": "Declare War",
                             "target": "Aboriginals",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "you're next",
                             "ai_generate": false,
                             "send_up_to": false
@@ -5098,7 +5098,7 @@
                         {
                             "type": "Declare War",
                             "target": "Naples",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "you're next",
                             "ai_generate": false,
                             "send_up_to": false
@@ -5311,7 +5311,7 @@
                         {
                             "type": "Declare War",
                             "target": "Wales",
-                            "unit_type": "Supported Rifle Infantry",
+                            "unit_type": "Supported Rifle Infantry I",
                             "message": "we must unite the british isles!",
                             "ai_generate": false,
                             "send_up_to": false

@@ -250,7 +250,7 @@
         "owner": "European Union",
         "units": [
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "European Union",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -332,7 +332,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -690,7 +690,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -742,7 +742,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -826,7 +826,7 @@
         "owner": "European Union",
         "units": [
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "European Union",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -961,7 +961,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -1129,7 +1129,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -1163,7 +1163,7 @@
                 "unit_id": "3721893121114ce79439477c369d2be3"
             },
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -1217,7 +1217,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "Nationalist China",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -1270,7 +1270,7 @@
         "owner": "European Union",
         "units": [
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "European Union",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -1356,7 +1356,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -1427,7 +1427,7 @@
                 "unit_id": "99ef61f107214d68aedf2870069aff79"
             },
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "European Union",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -1444,7 +1444,7 @@
                 "unit_id": "36be96c1da564b09aeb63c26764109df"
             },
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "European Union",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -1641,7 +1641,7 @@
         "owner": "Mongolia",
         "units": [
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "Mongolia",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -1725,7 +1725,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -1794,7 +1794,7 @@
                 "unit_id": "8226903eb462436e9b03c376b9583c16"
             },
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -1948,7 +1948,7 @@
         "owner": "European Union",
         "units": [
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "European Union",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -2038,7 +2038,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "Nationalist China",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -2135,7 +2135,7 @@
                 "unit_id": "3446be4f8cdd4d10a44192e7ff034292"
             },
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Japanese Empire",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -2226,7 +2226,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -2296,7 +2296,7 @@
         "owner": "Korea",
         "units": [
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "Korea",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -2367,7 +2367,7 @@
                 "unit_id": "7cb1afae4cd941fcab976bfbf1b5e3e1"
             },
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "European Union",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -2421,7 +2421,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "Nationalist China",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -2503,7 +2503,7 @@
         "owner": "European Union",
         "units": [
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "European Union",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -2640,7 +2640,7 @@
         "owner": "Soviet Union",
         "units": [
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -2657,7 +2657,7 @@
                 "unit_id": "2a7195fa6ec8494d83c9f29f294dd66b"
             },
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "Soviet Union",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -2984,7 +2984,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "Ottoman Empire",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -3054,7 +3054,7 @@
                 "unit_id": "63824f12923e455d99d0980b36599ea5"
             },
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Ottoman Empire",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -3071,7 +3071,7 @@
                 "unit_id": "b385474cd6b640f38cfa142db495059a"
             },
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Ottoman Empire",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -3306,7 +3306,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Ottoman Empire",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -3376,7 +3376,7 @@
         "owner": "Afghanistan",
         "units": [
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "Afghanistan",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -3522,7 +3522,7 @@
         "owner": "Pakistan",
         "units": [
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "Pakistan",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -3633,7 +3633,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Nationalist China",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -3739,7 +3739,7 @@
         "owner": "India",
         "units": [
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "India",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -3792,7 +3792,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "Nationalist China",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -3879,7 +3879,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "Ottoman Empire",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -4090,7 +4090,7 @@
         "owner": "Ottoman Empire",
         "units": [
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Ottoman Empire",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -4190,7 +4190,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Nationalist China",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -4304,7 +4304,7 @@
         "owner": "India",
         "units": [
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "India",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -4440,7 +4440,7 @@
         "owner": "Myanmar",
         "units": [
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "Myanmar",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -4604,7 +4604,7 @@
         "owner": "Nationalist China",
         "units": [
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Nationalist China",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -4793,7 +4793,7 @@
         "owner": "Vietnam",
         "units": [
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "Vietnam",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -4963,7 +4963,7 @@
         "owner": "Sudan",
         "units": [
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "Sudan",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -5015,7 +5015,7 @@
         "owner": "Thailand",
         "units": [
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "Thailand",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -5068,7 +5068,7 @@
         "owner": "Mali Empire",
         "units": [
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "Mali Empire",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -5327,7 +5327,7 @@
         "owner": "Chad",
         "units": [
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "Chad",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -5377,7 +5377,7 @@
         "owner": "Mali Empire",
         "units": [
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "Mali Empire",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -5457,7 +5457,7 @@
         "owner": "Ethiopia",
         "units": [
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Ethiopia",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -5474,7 +5474,7 @@
                 "unit_id": "2d781e8f46164e5a8032e17df8de2292"
             },
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Ethiopia",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -5672,7 +5672,7 @@
         "owner": "Mali Empire",
         "units": [
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Mali Empire",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -5954,7 +5954,7 @@
         "owner": "Democratic Republic of the Congo",
         "units": [
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "Democratic Republic of the Congo",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -6328,7 +6328,7 @@
         "owner": "Indonesia",
         "units": [
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "Indonesia",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -6382,7 +6382,7 @@
         "owner": "Tanzania",
         "units": [
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "Tanzania",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -6435,7 +6435,7 @@
         "owner": "Democratic Republic of the Congo",
         "units": [
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "Democratic Republic of the Congo",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -6452,7 +6452,7 @@
                 "unit_id": "5563c8d8fe394fd8bfdc20668dbef33c"
             },
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "Democratic Republic of the Congo",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -6597,7 +6597,7 @@
         "owner": "Indonesia",
         "units": [
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "Indonesia",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -6931,7 +6931,7 @@
         "owner": "Union of South Africa",
         "units": [
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Union of South Africa",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -6979,7 +6979,7 @@
         "owner": "Australia",
         "units": [
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "Australia",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -7144,7 +7144,7 @@
         "owner": "Union of South Africa",
         "units": [
             {
-                "type": "Mechanized Semi-Automatic Infantry",
+                "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Union of South Africa",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -7419,7 +7419,7 @@
         "owner": "Union of South Africa",
         "units": [
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "Union of South Africa",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -7468,7 +7468,7 @@
         "owner": "Australia",
         "units": [
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "Australia",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -8038,7 +8038,7 @@
         "owner": "Australia",
         "units": [
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "Australia",
                 "health": 2500.0,
                 "max_health": 2500,
@@ -8317,7 +8317,7 @@
         "owner": "Australia",
         "units": [
             {
-                "type": "Semi-Automatic Infantry",
+                "type": "Semi-Automatic Infantry I",
                 "owner": "Australia",
                 "health": 2500.0,
                 "max_health": 2500,

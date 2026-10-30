@@ -46,7 +46,7 @@ Each other numeric owner gets a random unused playable GD5 country identity for 
 - Infantry, cavalry, motorized infantry, mechanized infantry, armored cars, and main battle tanks use corresponding GD5 unit families.
   Each unit keeps its health percentage.
 - Destroyers become `Destroyer I`.
-  Cruisers become `Dreadnought`, because GD5 has no cruiser class.
+  Cruisers become `Dreadnought I`, because GD5 has no cruiser class.
   Naval units stay on their generated ocean hex.
 
 GD5 applies research appropriate to the imported date.

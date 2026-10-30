@@ -131,6 +131,15 @@ Simply edit the number of levels the unit has and call that done.
 
 ### One Source of Truth
 
+- Keep names, identifiers, data shapes, and shared workflows as consistent as possible.
+  Standardize unit types across generation, gameplay, UI, AI, editors, and multiplayer.
+  Unit type standardization takes priority over keeping older identifiers in current code.
+- Add shared migrations when a change affects data from a previously released version.
+  Keep compatibility conversion at input boundaries. Use only the standardized representation internally.
+  Do not retain naming exceptions only to avoid writing a compatibility conversion.
+- Keep level suffixes in canonical unit identifiers, including single-level families.
+  Omit the suffix from player-facing unit labels when the family has only one level.
+  Use a shared display helper. Keep identifiers intact in saved data and action callbacks.
 - Match identifiers, data keys, constants, and documentation to player-facing names for the same thing.
   Keep required formatting differences, such as spaces and capitalization.
 - Preserve older settings, saves, and protocol values through shared migration rules when names change.

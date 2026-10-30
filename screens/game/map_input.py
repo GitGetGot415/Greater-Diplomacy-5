@@ -614,7 +614,8 @@ def handle_map_events(map_screen, event):
                             map_screen.hovered_province.setdefault("units", []).append(new_unit)
                             editor_changed = True
                             owner_name = queries.get_country_display_name(owner, map_screen.nation_data)
-                            map_screen.show_feedback(f"Placed {map_screen.brush_unit} for {owner_name}")
+                            label = queries.get_unit_display_name(map_screen.brush_unit, context=map_screen)
+                            map_screen.show_feedback(f"Placed {label} for {owner_name}")
 
         if editor_changed:
             map_screen.queue_editor_visual_refresh(*editor_layers)

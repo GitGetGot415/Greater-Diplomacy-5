@@ -464,7 +464,7 @@ class TransportTests(unittest.TestCase):
         self.assertGreater(farther.score, larger.score)
 
     def test_load_rejects_planes_ships_foreign_units_remote_units_and_tactical_division(self):
-        candidates = [wing(self.base, "Battleship"), wing(self.base, "Monoplane Bomber I"),
+        candidates = [wing(self.base, "Battleship I"), wing(self.base, "Monoplane Bomber I"),
                       wing(self.base, "Fixture Cargo", "B"), wing(self.destination, "Fixture Cargo")]
         for unit in candidates:
             with self.subTest(unit=unit["type"]), self.assertRaises(ValueError):
@@ -475,11 +475,11 @@ class TransportTests(unittest.TestCase):
             self.load()
 
     def test_ship_packed_in_truck_can_be_cargo(self):
-        ship = wing(self.base, "Battleship")
+        ship = wing(self.base, "Battleship I")
         queries.load_transport(ship, "Truck")
         queries.set_air_cargo(self.game, "A", self.plane, self.base, [ship["unit_id"]])
         queries.set_air_cargo(self.game, "A", self.plane, self.base, [])
-        self.assertEqual(ship["original_type"], "Battleship")
+        self.assertEqual(ship["original_type"], "Battleship I")
         self.assertTrue(ship["type"].startswith("Truck ("))
 
     def test_damage_matches_both_examples_and_compounds_from_current_health(self):

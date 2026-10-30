@@ -86,9 +86,10 @@ class ModalScreen(ScrollPanes, GameState):
     def button(self, x, y, width, color, text, callback, preset="list_row"):
         return self._sized(Button(x, y, preset, color, text, callback, font_preset="button_small"), width)
 
-    def combo(self, x, y, width, value, options, title, on_pick, color="light_blue"):
+    def combo(self, x, y, width, value, options, title, on_pick, color="light_blue", *, display_value=None):
         """A combobox: shows the current value, opens the shared modal list picker."""
-        label = text_utils.truncate_chars(str(value) if str(value) else "-", max(4, (width - 14) // 9))
+        visible = value if display_value is None else display_value
+        label = text_utils.truncate_chars(str(visible) if str(visible) else "-", max(4, (width - 14) // 9))
         return self.button(x, y, width, color, label,
                            lambda: self._choose(title, options, on_pick))
 

@@ -76,6 +76,8 @@ def _select_brush(map_screen, mode, attr, items, title, prompt, feedback_label="
         map_screen.editor_mode = mode
         display = (queries.get_country_display_name(val, map_screen.nation_data)
                    if val in map_screen.nation_data else val)
+        if mode == "UNIT":
+            display = queries.get_unit_display_name(val, context=map_screen)
         map_screen.show_feedback(f"{feedback_label}: {display}")
     queries.open_listbox_selector(map_screen, title, prompt, items, cb)
 
@@ -311,7 +313,8 @@ def open_map_research_editor(map_screen):
 
 def select_unit_brush(map_screen):
     """Opens a selection window for unit types and sets mode to UNIT."""
-    items = ["None", "Convoy", "----------"] + list(queries.get_unit_library(map_screen).keys())
+    items = ["None", "Convoy", "----------"] + queries.unit_picker_items(
+        queries.get_unit_library(map_screen), context=map_screen)
     _select_brush(map_screen, "UNIT", "brush_unit", items,
                   "Select Unit", "Select Unit to Place:")
 
