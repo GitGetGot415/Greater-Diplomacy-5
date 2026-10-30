@@ -24,7 +24,7 @@ Small buttons omit the checkerboard pattern. Very short buttons use fewer bands.
 The inner bevel reverses while a button is pressed under the pointer.
 Hover, selection, and disabled states keep their existing outlines and colors.
 Editor color swatches keep their flat fills.
-ui/widgets/ui_elements.py caches backgrounds by size, color, pressed state, and outline width.
+ui/widgets/ui_elements.py caches backgrounds by size, color, pressed state, outline width, and gradient strength.
 The cache retains at most 128 backgrounds. Moving a button reuses its background.
 This display change applies in all modes. It adds no saved fields or multiplayer commands.
 
@@ -32,9 +32,18 @@ MAP FRAME DISPLAY
 -----------------
 
 The map's top, bottom, left, and unit-filter bars use rectangles drawn in code.
-The bars use green shade bands, square borders, and bevels from the shared button shading cache.
+The bars use shade bands, square borders, and bevels from the shared button shading cache.
 The bars do not load PNG backgrounds.
 The existing panel visibility rules apply in player, spectator, tactical, editor, and multiplayer modes.
+
+Edit MAP_BAR_STYLES near the top of ui/bars/ui_bars.py to set each bar's color and gradient_strength.
+The entries are top, bottom, left, unit_filter, and bottom_left. The bottom_left entry controls the raised bottom-left corner panel.
+
+Set color to a red, green, blue (RGB) tuple. MAP_FRAME_COLOR provides the common default color.
+Set gradient_strength to a nonnegative number. A value of 1.0 keeps the standard gradient.
+A value of 0 gives a flat fill. A value above 1.0 increases the gradient contrast.
+
+Gradient strength does not change borders or bevels. Restart the game after editing these values.
 
 The province menu keeps assets/backgrounds/Province.png and caches the resized image for each viewport size.
 Map input uses that image to block clicks under panels and permit clicks through the transparent map window.

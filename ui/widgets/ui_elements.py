@@ -48,8 +48,10 @@ _SLIDER_OUTLINE_COLOR = (20, 20, 20)
 
 
 @lru_cache(maxsize=128)
-def _button_background(size, color, pressed, border_width):
-    """Cache stepped shading and bevels by size, color, and display state."""
+def _button_background(size, color, pressed, border_width, gradient_strength=1.0):
+    """Cache stepped shading and bevels by geometry, color, state, and strength."""
+    if gradient_strength < 0:
+        raise ValueError("Gradient strength must be zero or greater.")
     background = pygame.Surface(size)
     width, height = size
     if width <= 0 or height <= 0:
@@ -57,10 +59,14 @@ def _button_background(size, color, pressed, border_width):
 
     light = tuple(min(255, channel + _BUTTON_HIGHLIGHT) for channel in color)
     dark = tuple(max(0, channel - _BUTTON_SHADOW) for channel in color)
+    gradient_light = tuple(min(255, channel + round(_BUTTON_HIGHLIGHT * gradient_strength))
+                           for channel in color)
+    gradient_dark = tuple(max(0, channel - round(_BUTTON_SHADOW * gradient_strength))
+                          for channel in color)
     shade_count = max(_BUTTON_MIN_SHADE_COUNT,
                       (height + _BUTTON_SHADE_HEIGHT - 1) // _BUTTON_SHADE_HEIGHT)
     shade_count = min(shade_count, max(1, height // _BUTTON_PIXEL_SIZE))
-    shades = [queries.lerp_color(light, dark, i / max(1, shade_count - 1))
+    shades = [queries.lerp_color(gradient_light, gradient_dark, i / max(1, shade_count - 1))
               for i in range(shade_count)]
     boundaries = [0] + [
         (i * height // shade_count // _BUTTON_PIXEL_SIZE) * _BUTTON_PIXEL_SIZE
@@ -92,11 +98,12 @@ def _button_background(size, color, pressed, border_width):
     return background
 
 
-def draw_pixel_panel(surface, rect, color, border_color=(20, 20, 20)):
+def draw_pixel_panel(surface, rect, color, border_color=(20, 20, 20), *, gradient_strength=1.0):
     """Draw a square panel with the cached button shading and bevel."""
     if rect.width <= 0 or rect.height <= 0:
         return
-    background = _button_background(rect.size, tuple(color[:3]), False, _BUTTON_BORDER_WIDTH)
+    background = _button_background(rect.size, tuple(color[:3]), False, _BUTTON_BORDER_WIDTH,
+                                    gradient_strength)
     surface.blit(background, rect)
     pygame.draw.rect(surface, border_color, rect, _BUTTON_BORDER_WIDTH)
 

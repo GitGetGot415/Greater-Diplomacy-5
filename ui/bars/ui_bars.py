@@ -15,7 +15,17 @@ _ui_images_cache = {}
 # pixels without scaling the background again for every mouse event.
 _province_menu_background_cache = {}
 
-MAP_FRAME_COLOR = (55, 80, 50)
+MAP_FRAME_COLOR = (50, 80, 50)
+LEFT_FRAME_COLOR = (40, 80, 80)
+# Each bar can override the common color and the gradient strength.
+# Strength 0 gives a flat fill; 1 keeps the standard shading. Bevels stay visible.
+MAP_BAR_STYLES = {
+    "top": {"color": MAP_FRAME_COLOR, "gradient_strength": 0.0},
+    "bottom": {"color": MAP_FRAME_COLOR, "gradient_strength": 0.0},
+    "left": {"color": LEFT_FRAME_COLOR, "gradient_strength": 0.0},
+    "unit_filter": {"color": (120, 120, 120), "gradient_strength": 0.5},
+    "bottom_left": {"color": LEFT_FRAME_COLOR, "gradient_strength": 0.0},
+}
 
 # Recolored checkerboard tiles, cached by target bg_color so each screen only
 # pays the generation cost once
@@ -379,14 +389,20 @@ def map_unit_view_bar_rect(map_screen):
     return map_screen.unit_view_bar_rect
 
 
+def _draw_map_bar(surface, rect, style_name):
+    style = MAP_BAR_STYLES[style_name]
+    ui_elements.draw_pixel_panel(surface, rect, style["color"],
+                                gradient_strength=style["gradient_strength"])
+
+
 def draw_ui_bars(map_screen, surface):
     # --- LAYER 4: UI BARS & HUD ---
-    ui_elements.draw_pixel_panel(surface, map_screen.top_bar_rect, MAP_FRAME_COLOR)
-    ui_elements.draw_pixel_panel(surface, map_screen.bot_bar_rect, MAP_FRAME_COLOR)
+    _draw_map_bar(surface, map_screen.top_bar_rect, "top")
+    _draw_map_bar(surface, map_screen.bot_bar_rect, "bottom")
     unit_view_rect = map_unit_view_bar_rect(map_screen)
     if unit_view_rect is not None:
-        ui_elements.draw_pixel_panel(surface, unit_view_rect, MAP_FRAME_COLOR)
+        _draw_map_bar(surface, unit_view_rect, "unit_filter")
     
     if not map_screen.selection_mode and not map_screen.hide_raised_rect:
-        ui_elements.draw_pixel_panel(surface, map_screen.raised_rect, MAP_FRAME_COLOR)
-        ui_elements.draw_pixel_panel(surface, map_screen.ui_background_rect, MAP_FRAME_COLOR)
+        _draw_map_bar(surface, map_screen.raised_rect, "left")
+        _draw_map_bar(surface, map_screen.ui_background_rect, "bottom_left")
