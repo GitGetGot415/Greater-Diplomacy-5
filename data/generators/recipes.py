@@ -696,7 +696,7 @@ RESEARCH_RECIPES = [
         ([1945],                            'jet_engine',              'AIR', 2400, {},                                     {"NAME": 'Jet Engine'}),
         (unit_years("Jet Fighter"),         'jet_fighter',             'AIR', 1800, {'piston_fighter': 5, 'jet_engine': 1}, {"NAME": 'Jet Fighter'}),
         (unit_years("Jet Bomber"),          'jet_bomber',              'AIR', 2400, {'piston_bomber': 5, 'jet_fighter': 1}, {"NAME": 'Jet Bomber'}),
-        (unit_years("Jet Transport"),       'jet_transport',           'AIR', 2400, {'piston_bomber': 5, 'jet_fighter': 1}, {"NAME": 'Jet Transport'}),
+        (unit_years("Jet Transport"),       'jet_transport',           'AIR', 2400, {'piston_bomber': 5},                   {"NAME": 'Jet Transport'}),
     ],
 ]
 
