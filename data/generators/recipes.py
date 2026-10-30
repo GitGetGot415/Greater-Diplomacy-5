@@ -235,7 +235,7 @@ EQUIPMENT_STAGES = {
         (2000, "Optics-Equipped Infantry",    3500, 1100, 0,  1,  1350, 1000, 100, 2,   None, (5, 3, {'health': 100, 'attack': 50, 'cost_materials': 30})),
         (2015, "Networked Infantry",          4000, 1350, 0,  1,  1500, 1000, 115, 2,   None, (5, 3, {'health': 100, 'attack': 50, 'cost_materials': 40})),
         (2030, "Drone-Integrated Infantry",   4500, 1600, 0,  1,  1700, 1000, 130, 2,   None, (5, 2, {'health': 100, 'attack': 50, 'cost_materials': 40})),
-        (2040, "Sensor-Integrated Infantry",  5000, 1850, 0,  1,  1900, 1000, 140, 2,   None, (50, 2, {'health': 100, 'attack': 50, 'cost_materials': 50})),
+        (2040, "Sensor-Integrated Infantry",  5000, 1850, 0,  1,  1900, 1000, 140, 2,   None, (56, 2, {'health': 100, 'attack': 50, 'cost_materials': 50})),
     ],
     "cavalry": [
         #YR    NAME                       HP    ATK  DEF SPD MAT   MAN   FUEL TIME BOMB  UPGRADES
@@ -245,8 +245,7 @@ EQUIPMENT_STAGES = {
         (1890, "Magazine Carbines",       600,  300, 0,  2,  800,  2000, 0,   3,   None, (5, 4, {'health': 20, 'cost_materials': 20})),
         (1910, "Supported Cavalry",       700,  300, 0,  2,  900,  2000, 0,   3,   None, (2, 4, {'health': 50, 'cost_materials': 50})),
         (1918, "Mounted Rifle Cavalry",   800,  300, 0,  2,  1000, 2000, 0,   3,   None, (3, 4, {'health': 50, 'cost_materials': 50})),
-        (1930, "Modern Cavalry",          1000, 300, 0,  2,  1200, 2000, 0,   3,   None, (5, 4, {'health': 50, 'cost_materials': 50})),
-        # hey maybe get rid of cavalry after 1930???
+        (1930, "Modern Cavalry",          1000, 300, 0,  2,  1200, 2000, 0,   3,   None, (6, 4, {'health': 100, 'cost_materials': 60})),
     ],
     "militia": [
         #YR    NAME                          HP    ATK  DEF SPD MAT  MAN   FUEL TIME BOMB  UPGRADES
@@ -259,7 +258,7 @@ EQUIPMENT_STAGES = {
         (1980, "Assault-Rifle Militia",      1350, 180, 0,  1,  400, 1000, 0,   1,   None, (5, 4,  {'health': 50, 'attack': 8, 'cost_materials': 10})),
         (2000, "Radio-Equipped Militia",     1600, 220, 0,  1,  450, 1000, 0,   1,   None, (5, 4,  {'health': 50, 'attack': 8, 'cost_materials': 10})),
         (2020, "Optics-Equipped Militia",    1850, 260, 0,  1,  500, 1000, 0,   1,   None, (5, 4,  {'health': 50, 'attack': 8, 'cost_materials': 20})),
-        (2040, "Drone-Supported Militia",    2100, 300, 0,  1,  600, 1000, 0,   1,   None, (25, 4, {'health': 100, 'attack': 20, 'cost_materials': 50})),
+        (2040, "Drone-Supported Militia",    2100, 300, 0,  1,  600, 1000, 0,   1,   None, (28, 4, {'health': 100, 'attack': 20, 'cost_materials': 50})),
     ],
     "artillery": [
         #YR    NAME                                HP    ATK   DEF SPD MAT   MAN  FUEL TIME BOMB  UPGRADES
@@ -277,7 +276,7 @@ EQUIPMENT_STAGES = {
         (1995, "Digital Fire-Control Artillery",   950,  950,  0,  1,  1850, 500, 0,   2,   950,  (3, 5, {'health': 50, 'attack': 50, 'bombard_attack': 50, 'cost_materials': 50})),
         (2010, "Precision-Guided Artillery",       1100, 1100, 0,  1,  2000, 500, 0,   2,   1100, (3, 5, {'health': 50, 'attack': 50, 'bombard_attack': 50, 'cost_materials': 50})),
         (2025, "Sensor-Linked Artillery",          1250, 1250, 0,  1,  2150, 500, 0,   2,   1250, (3, 5, {'health': 50, 'attack': 50, 'bombard_attack': 50, 'cost_materials': 50})),
-        (2040, "Automated Fire-Control Artillery", 1400, 1400, 0,  1,  2300, 500, 0,   2,   1400, (20, 4, {'health': 100, 'attack': 100, 'bombard_attack': 100, 'cost_materials': 100})),
+        (2040, "Automated Fire-Control Artillery", 1400, 1400, 0,  1,  2300, 500, 0,   2,   1400, (28, 4, {'health': 100, 'attack': 100, 'bombard_attack': 100, 'cost_materials': 100})),
     ],
 }
 
