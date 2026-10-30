@@ -1,5 +1,6 @@
 import pygame
 import data.constants as c
+from data import queries
 from ui.widgets.ui_elements import Button, make_back_button
 from ui.rendering.font_manager import fonts
 from ui.navigation.game_state import GameState
@@ -66,7 +67,7 @@ class Automation_Screen(GameState):
         if self.can_edit_realtime():
             val = self.map_screen.nation_data[self.player]["automation"].get(key, False)
             self.map_screen.nation_data[self.player]["automation"][key] = not val
-            if getattr(self.map_screen, "realtime_multiplayer", False):
+            if self.map_screen.realtime_multiplayer:
                 # The map's regular draft sync runs every frame, but clearing
                 # its fingerprint here makes this visible preference update
                 # send on the very next frame even if the screen was opened
@@ -93,14 +94,7 @@ class Automation_Screen(GameState):
         ask_yes_no("Automation", question, answered)
 
     def can_edit_realtime(self):
-        if not self.is_valid_player:
-            return False
-        if not getattr(self.map_screen, "realtime_multiplayer", False):
-            return True
-        session = getattr(self.map_screen, "realtime_session", None)
-        player = getattr(session, "players", {}).get(
-            getattr(self.map_screen, "realtime_player_id", None))
-        return bool(session and session.phase == "TURN" and player and not player.submitted and not player.eliminated)
+        return bool(self.is_valid_player) and queries.realtime_turn_open(self.map_screen)
 
     def additional_draw(self, surface):
         # Panel Background

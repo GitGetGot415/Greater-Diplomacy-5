@@ -158,6 +158,8 @@ from data.queries.countries import (
     get_nearby_nations_across_water,
     can_release_nations_for,
     can_use_spectator_country_actions,
+    realtime_turn_open,
+    require_realtime_turn_open,
     get_puppet_release_provinces,
     get_living_nations,
     is_government_in_exile,

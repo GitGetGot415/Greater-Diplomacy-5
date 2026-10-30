@@ -155,7 +155,7 @@ class Research_List_Screen(MapOverlayScreen):
         if "infantry_type" in fresh_template: fresh_template["infantry_type"] = 1
         if "cavalry" in fresh_template: fresh_template["cavalry"] = 1
 
-        if getattr(map_screen, "default_research", None) is not None:
+        if map_screen.default_research is not None:
             for k, v in fresh_template.items():
                 if k not in map_screen.default_research:
                     map_screen.default_research[k] = v

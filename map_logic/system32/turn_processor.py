@@ -125,8 +125,6 @@ async def prepare_turn(map_screen):
 
 def snapshot_history(map_screen):
     world_state = world_for(map_screen)
-    if not hasattr(world_for(map_screen), 'history'):
-        world_state.history = {}
     turn_idx = str(world_state.time_manager.total_turns)
 
     # History is JSON data, so recursively copy its lists and dictionaries.

@@ -48,7 +48,7 @@ def map_ui_bar_at_position(map_screen, position):
         return True
 
     # Both flags exist on a live Map; Orders unit tests use smaller map doubles.
-    if (getattr(map_screen, "selection_mode", False)
+    if (map_screen.selection_mode
             or getattr(map_screen, "hide_raised_rect", False)):
         return False
     raised = getattr(map_screen, "raised_rect", None)
@@ -183,7 +183,7 @@ def _handle_map_unit_selection(map_screen, event, on_ui):
         # Keep combat bubbles as their own interaction. Everywhere else, defer
         # the primary click until release so a box can begin on either a unit
         # or open map space without accidentally selecting a province first.
-        if (clicked_stack is None and getattr(map_screen, "map_data", None) is not None
+        if (clicked_stack is None and map_screen.map_data is not None
                 and overlay_renderer.combat_bubble_at_screen_pos(map_screen, event.pos) is not None):
             return False
         map_screen.unit_selection_drag = {

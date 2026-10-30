@@ -90,9 +90,10 @@ def tactical_player_unit(map_screen):
     Both passes skip it at selection rather than refusing to disband at the end,
     so the host still balances its books; it just gives up the next unit along.
     """
-    if not getattr(session_for(map_screen), "tactical_mode", False):
+    session_state = session_for(map_screen)
+    if not session_state.tactical_mode:
         return None
-    return getattr(session_for(map_screen), "player_unit", None)
+    return session_state.player_unit
 
 
 def _disband_peacetime_militia(ai_name, my_provs, at_war, protected=None, *, context=None):

@@ -248,7 +248,7 @@ def render_buttons(map_screen):
 
     # Gameplay Buttons. Real-time mode is deliberately checked before the
     # legacy tournament flag: tournaments remain file-based and untouched.
-    if getattr(map_screen, "realtime_multiplayer", False):
+    if map_screen.realtime_multiplayer:
         def rt_submit():
             from data.multiplayer.realtime.session import collect_map_commands, RealtimeError
 
@@ -260,7 +260,7 @@ def render_buttons(map_screen):
                     player = map_screen.realtime_player_id
                     turn = session.turn_number
                     commands = collect_map_commands(map_screen, map_screen.player_country)
-                    is_remote = bool(getattr(map_screen, "realtime_client", None))
+                    is_remote = bool(map_screen.realtime_client)
                     # Set this before the queued socket work begins.  The
                     # confirmation modal can therefore close on this frame
                     # and the map remains interactive while TLS writes and
@@ -310,9 +310,9 @@ def render_buttons(map_screen):
         map_screen.btn_next_turn = Button(EDITOR_BOT_BTN_START_X, c.BOTTOM_BAR_UI_CENTER_Y,
                                           "small", "purple", "Submit Turn", rt_submit)
         map_screen.btn_import_turn = Button(-1000, -1000, "small", "grey", "Import Turn", lambda: None)
-    elif getattr(map_screen, 'multiplayer_mode', False):
+    elif map_screen.multiplayer_mode:
         def m_export():
-            turn = map_screen.time_manager.total_turns if hasattr(map_screen, 'time_manager') else 1
+            turn = map_screen.time_manager.total_turns
             cid = map_screen.player_country
             save_name = f"Turn_{turn}_{cid}.gd5move"
             export_path = os.path.join(c.TOURNAMENT_SAVES_DIR, save_name)
@@ -696,11 +696,11 @@ def bilateral_response_indicator(map_screen, target, action):
     if queries.faction_request_leadership_error(
             map_screen.player_country, target, action, map_screen.nation_data):
         return "NO"
-    human_players = set(getattr(map_screen, "active_players", ()) or ())
+    human_players = set(map_screen.active_players or ())
     if target in human_players:
         return "MAYBE"
 
-    scenario_settings = getattr(map_screen, "scenario_settings", None)
+    scenario_settings = map_screen.scenario_settings
     scripted_events_enabled = queries.get_scenario_flag(
         "use_scripted_events", c.DEFAULT_USE_SCRIPTED_EVENTS,
         scenario_settings)
@@ -710,7 +710,7 @@ def bilateral_response_indicator(map_screen, target, action):
         events = map_screen.nation_data[target]["scripted_events"]
         fired = tuple(map_screen.nation_data[target].get("fired_scripted_events", []))
         variables = tuple((item["name"], item["type"], item["value"])
-                          for item in getattr(map_screen, "script_variables", []))
+                          for item in map_screen.script_variables)
         cache_stamp = (getattr(map_screen, "_presentation_cache_revision", None), turns,
                        tuple(id(event) for event in events), fired, variables,
                        scripted_events_enabled)
@@ -783,7 +783,7 @@ def update_button_states(map_screen):
         map_screen.btn_spectator.visible = show_mode_buttons
         map_screen.btn_tactical.visible = show_mode_buttons
 
-        is_multiplayer = getattr(map_screen, 'num_players', 1) > 1
+        is_multiplayer = map_screen.num_players > 1
 
         if is_multiplayer:
             map_screen.btn_tactical.apply_state(enabled=False, text="Tactical mode disabled for multiplayer")
@@ -853,15 +853,15 @@ def update_button_states(map_screen):
         local_turn_preview = (
             map_screen.player_country == "n/a" and map_screen.viewing_ai_moves
             and len(map_screen.active_players) > 1
-            and not getattr(map_screen, "multiplayer_mode", False)
-            and not getattr(map_screen, "realtime_multiplayer", False))
+            and not map_screen.multiplayer_mode
+            and not map_screen.realtime_multiplayer)
         set_btn(map_screen.btn_next_turn,
                 local_turn_preview and not is_sel and not is_thinking,
                 not is_thinking, "Resolve Turn", "red")
         map_screen.btn_exit_to_menu.visible = not is_sel
         map_screen.btn_close_info.visible = is_sel
         map_screen.btn_realtime_details.visible = bool(
-            getattr(map_screen, "realtime_multiplayer", False)) and not is_sel
+            map_screen.realtime_multiplayer) and not is_sel
         return
 
     # ==================================================================== #
@@ -913,12 +913,12 @@ def update_button_states(map_screen):
                               and map_screen.secondary_mode == "UNITS"
                               and not map_screen.hide_raised_rect)
             button.is_selected = view_filter == map_screen.unit_view_filter
-        if getattr(map_screen, "realtime_multiplayer", False):
+        if map_screen.realtime_multiplayer:
             session = map_screen.realtime_session
             player = session.players.get(map_screen.realtime_player_id)
-            submission_pending = bool(getattr(map_screen, "realtime_submission_pending", False))
+            submission_pending = bool(map_screen.realtime_submission_pending)
             locked = (session.phase != "TURN" or not player or player.submitted or player.eliminated)
-            connection_lost = bool(getattr(map_screen, "realtime_connection_error", ""))
+            connection_lost = bool(map_screen.realtime_connection_error)
             map_screen.btn_next_turn.text = ("Submitting..." if submission_pending else
                                              "Unsubmit Turn" if player and player.submitted else "Submit Turn")
             map_screen.btn_next_turn.callback = (map_screen._realtime_unsubmit if player and player.submitted
@@ -927,7 +927,7 @@ def update_button_states(map_screen):
                                                  "orange" if player and player.submitted else "purple")
             map_screen.btn_next_turn.apply_state(enabled=not (connection_lost or session.phase == "PROCESSING"
                                                                or submission_pending or player and player.eliminated))
-        elif getattr(map_screen, 'multiplayer_mode', False):
+        elif map_screen.multiplayer_mode:
             map_screen.btn_next_turn.text = "Export Turn"
         else:
             map_screen.btn_next_turn.text = "Resolve Turn" if viewing_ai else "Next Turn"
@@ -935,10 +935,10 @@ def update_button_states(map_screen):
         map_screen.btn_next_turn.set_palette("red" if viewing_ai else "purple")
 
         # Visibility and active color swapping for the skip toggle
-        if getattr(map_screen, "realtime_multiplayer", False):
+        if map_screen.realtime_multiplayer:
             map_screen.btn_skip_ai.visible = False
             map_screen.btn_import_turn.visible = False
-        elif getattr(map_screen, 'multiplayer_mode', False):
+        elif map_screen.multiplayer_mode:
             map_screen.btn_skip_ai.visible = False
             map_screen.btn_import_turn.visible = not is_sel and not is_thinking
         else:
@@ -1006,7 +1006,7 @@ def update_button_states(map_screen):
 
     map_screen.btn_exit_to_menu.visible = not is_sel
     map_screen.btn_close_info.visible = is_sel
-    map_screen.btn_realtime_details.visible = bool(getattr(map_screen, "realtime_multiplayer", False)) and not is_sel
+    map_screen.btn_realtime_details.visible = bool(map_screen.realtime_multiplayer) and not is_sel
     selected_owner = (map_screen.selected_province or {}).get("owner")
     map_screen.btn_view_foreign_politics.visible = bool(
         is_sel and not map_screen.is_editor
@@ -1346,6 +1346,26 @@ def update_button_states(map_screen):
 
 
 class Map(StateAccess, GameState):
+    # Network connection state. main.py and the multiplayer screens attach it
+    # when a networked game starts. Every other game keeps these defaults.
+    realtime_session = None
+    realtime_player_id = None
+    realtime_client = None
+    realtime_server = None
+    realtime_server_map = None
+    realtime_port_mapping = None
+    realtime_temporary_relay = None
+    realtime_relay_token = ""
+    realtime_connection_error = ""
+    realtime_submission_pending = False
+    realtime_match_metadata = None
+    _realtime_snapshot_turn = None
+    _realtime_snapshot_phase = None
+    _realtime_draft_dirty = True
+    _realtime_draft_fingerprint = None
+    multiplayer_host_mode = False
+    multiplayer_player_key = ""
+
     def refresh_ui(self):
         # GameState can refresh during construction before Map has a selection.
         province = getattr(self, "selected_province", None)
@@ -1848,7 +1868,7 @@ class Map(StateAccess, GameState):
 
     # --- Screen Transitions ---
     def change_state(self, next_state):
-        if (getattr(self, "realtime_multiplayer", False)
+        if (self.realtime_multiplayer
                 and next_state in {"PRODUCTION", "ORDERS", "RESEARCH", "ECONOMY", "EDIT_COUNTRY",
                                   "MESSAGES", "FACTION", "FACTION_TERRITORIES", "POLITICS",
                                   "AUTOMATION", "PUPPETS", "CLAIMS", "DECLARE_INDEPENDENCE"}):
@@ -1892,12 +1912,12 @@ class Map(StateAccess, GameState):
         self.show_feedback("Map Unlocked")
 
     def save_map_data(self):
-        if getattr(self, "realtime_multiplayer", False):
+        if self.realtime_multiplayer:
             session = self.realtime_session
             if session.phase != "GAME_OVER":
                 self.show_feedback("Real-time matches can be saved after they end.")
                 return
-            authoritative_map = getattr(self, "realtime_server_map", self)
+            authoritative_map = self.realtime_server_map or self
             authoritative_map.realtime_match_metadata = session.completed_metadata()
             # The authoritative map is intentionally a countryless server
             # instance while the match runs. Persisting that internal ``None``
@@ -1942,7 +1962,7 @@ class Map(StateAccess, GameState):
         layer refreshes converge here so their caches cannot drift apart.
         """
         self._presentation_cache_revision = (
-            getattr(self, '_presentation_cache_revision', 0) + 1)
+            self._presentation_cache_revision + 1)
         self._combat_bubble_records_cache = None
         self._combat_unit_view_cache = None
         self._unit_render_index_cache = None
@@ -1951,7 +1971,7 @@ class Map(StateAccess, GameState):
         unit_events.refresh_presentation(self)
         # The inspector projects aircraft caught in ground combat as casualties.
         # Build its roster at this boundary, never during the frame draw.
-        if getattr(self, "selected_province", None) is not None:
+        if self.selected_province is not None:
             sidebar_info.prepare_unit_roster(self, self.selected_province)
         map_renderer.clear_viewport_scale_cache(self)
         # A real-time draft is a state snapshot, not per-frame presentation.
@@ -2030,7 +2050,7 @@ class Map(StateAccess, GameState):
         )
 
     def exit_to_menu(self):
-        if getattr(self, "realtime_multiplayer", False):
+        if self.realtime_multiplayer:
             session = self.realtime_session
             is_host = (self.realtime_player_id == getattr(session, "host_id", None))
             if not is_host:
@@ -2038,7 +2058,7 @@ class Map(StateAccess, GameState):
                 def leave_match(confirmed):
                     if not confirmed:
                         return
-                    client = getattr(self, "realtime_client", None)
+                    client = self.realtime_client
                     if client:
                         client.close()
                     self.show_feedback("You left the match. The host and other players continue normally.")
@@ -2052,9 +2072,9 @@ class Map(StateAccess, GameState):
                 return
 
             if session.phase == "GAME_OVER":
-                if getattr(self, "realtime_port_mapping", None):
+                if self.realtime_port_mapping:
                     self.realtime_port_mapping.stop()
-                if getattr(self, "realtime_server", None):
+                if self.realtime_server:
                     self.realtime_server.stop("The host closed this completed real-time match.")
                 self._destroy_temporary_relay()
                 self.change_state("MULTIPLAYER_MENU")
@@ -2064,9 +2084,9 @@ class Map(StateAccess, GameState):
                 if not confirmed:
                     return
                 session.end_match(self.realtime_player_id)
-                if getattr(self, "realtime_port_mapping", None):
+                if self.realtime_port_mapping:
                     self.realtime_port_mapping.stop()
-                if getattr(self, "realtime_server", None):
+                if self.realtime_server:
                     self.realtime_server.stop(
                         "The host ended the real-time match. You have been disconnected.")
                 self._destroy_temporary_relay()
@@ -2083,8 +2103,8 @@ class Map(StateAccess, GameState):
 
     def _destroy_temporary_relay(self):
         """Delete the host-owned, memory-only temporary relay after shutdown."""
-        relay = getattr(self, "realtime_temporary_relay", None)
-        token = getattr(self, "realtime_relay_token", "")
+        relay = self.realtime_temporary_relay
+        token = self.realtime_relay_token
         if not relay or not token:
             return
         self.realtime_temporary_relay = None
@@ -2146,7 +2166,7 @@ class Map(StateAccess, GameState):
                 or self.ai_is_thinking or self.player_country in (
                     "None", "Spectator", c.TOURNAMENT_SPECTATOR)):
             return False
-        if getattr(self, "realtime_multiplayer", False):
+        if self.realtime_multiplayer:
             player = self.realtime_session.players.get(self.realtime_player_id)
             if (self.realtime_session.phase != "TURN" or not player
                     or player.submitted or player.eliminated):
@@ -2154,13 +2174,13 @@ class Map(StateAccess, GameState):
         return True
 
     def is_unit_selected(self, unit):
-        selected = getattr(self, "selected_unit_ids", set())
+        selected = self.selected_unit_ids
         # ``id(unit)`` remains accepted for lightweight legacy test doubles,
         # while live maps use the persistent identity introduced for armies.
         return unit.get("unit_id") in selected or id(unit) in selected
 
     def clear_map_unit_selection(self):
-        getattr(self, "selected_unit_ids", set()).clear()
+        self.selected_unit_ids.clear()
         self.unit_selection_drag = None
 
     def deselect_map_units(self, units):
@@ -2607,7 +2627,7 @@ class Map(StateAccess, GameState):
                     updated_count += 1
 
         # --- NEW: Scrub the map's default template too! ---
-        if getattr(self, "default_research", None) is not None:
+        if self.default_research is not None:
             obsolete_defaults = [k for k in self.default_research.keys() if k not in tech_tree]
             for k in obsolete_defaults:
                 del self.default_research[k]
@@ -2648,17 +2668,17 @@ class Map(StateAccess, GameState):
         next draft.  Applying only at a new turn (or game over) preserves the
         host's unsubmitted local orders throughout the active turn.
         """
-        if (not getattr(self, "realtime_server_map", None)
-                or getattr(self, "realtime_client", None)):
+        if (not self.realtime_server_map
+                or self.realtime_client):
             return
-        session = getattr(self, "realtime_session", None)
+        session = self.realtime_session
         if not session or session.phase not in ("TURN", "GAME_OVER"):
             return
 
         current_turn = session.turn_number
         current_phase = session.phase
-        applied_turn = getattr(self, "_realtime_snapshot_turn", None)
-        applied_phase = getattr(self, "_realtime_snapshot_phase", None)
+        applied_turn = self._realtime_snapshot_turn
+        applied_phase = self._realtime_snapshot_phase
         should_apply = (applied_turn is None or current_turn != applied_turn or
                         (current_phase == "GAME_OVER" and applied_phase != "GAME_OVER"))
         if not should_apply:
@@ -2681,14 +2701,14 @@ class Map(StateAccess, GameState):
             self.clear_map_unit_selection()
             self._unit_selection_turn = self.time_manager.total_turns
             self._unit_selection_player = self.player_country
-        if getattr(self, "realtime_multiplayer", False):
+        if self.realtime_multiplayer:
             self._apply_host_realtime_snapshot()
-        if getattr(self, "realtime_multiplayer", False):
+        if self.realtime_multiplayer:
             session = self.realtime_session
             player = session.players.get(self.realtime_player_id)
             if (session.phase == "TURN" and player and not player.submitted and not player.eliminated
-                    and not getattr(self, "realtime_submission_pending", False)
-                    and getattr(self, "_realtime_draft_dirty", True)):
+                    and not self.realtime_submission_pending
+                    and self._realtime_draft_dirty):
                 # Keep the server's last accepted draft current after a real
                 # player/state boundary.  Serializing every province and army
                 # every frame made an idle planning turn do map-wide work just
@@ -2696,14 +2716,14 @@ class Map(StateAccess, GameState):
                 from data.multiplayer.realtime.session import collect_map_commands, RealtimeError
                 commands = collect_map_commands(self, self.player_country)
                 fingerprint = f"{session.turn_number}:" + json.dumps(commands, sort_keys=True, separators=(",", ":"))
-                if fingerprint != getattr(self, "_realtime_draft_fingerprint", None):
+                if fingerprint != self._realtime_draft_fingerprint:
                     try:
                         if session.sync_draft(self.realtime_player_id, session.turn_number, commands) is not False:
                             self._realtime_draft_fingerprint = fingerprint
                     except RealtimeError as error:
                         self.show_feedback(f"Order update rejected: {error}")
                 self._realtime_draft_dirty = False
-        if getattr(self, "realtime_multiplayer", False) and getattr(self, "realtime_client", None):
+        if self.realtime_multiplayer and self.realtime_client:
             from data.multiplayer.realtime.session import apply_authoritative_snapshot
             events = self.realtime_client.poll()
             # A socket close can be queued next to the host's explicit
@@ -2726,8 +2746,8 @@ class Map(StateAccess, GameState):
                     # a newly opened turn, or the final processed result.
                     current_turn = self.realtime_session.turn_number
                     current_phase = self.realtime_session.phase
-                    applied_turn = getattr(self, "_realtime_snapshot_turn", None)
-                    applied_phase = getattr(self, "_realtime_snapshot_phase", None)
+                    applied_turn = self._realtime_snapshot_turn
+                    applied_phase = self._realtime_snapshot_phase
                     should_apply = (applied_turn is None or current_turn != applied_turn or
                                     (current_phase == "GAME_OVER" and applied_phase != "GAME_OVER"))
                     if self.realtime_session.snapshot and should_apply:
@@ -2751,7 +2771,7 @@ class Map(StateAccess, GameState):
                             "Connection lost. Multiplayer actions are disabled; rejoin from the menu.")
                     else:
                         self.show_feedback(message)
-        elif getattr(self, "realtime_multiplayer", False) and getattr(self, "realtime_server_map", None):
+        elif self.realtime_multiplayer and self.realtime_server_map:
             # The host uses a separate visual map. Pull only processed server
             # turns across, never an in-progress draft, so hosting confers no
             # direct gameplay authority.

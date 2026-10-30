@@ -68,7 +68,7 @@ def _transformed_name_surfaces(map_screen, surf, shadow, blob):
 def draw_country_names(map_screen, surface):
     # --- LAYER 3.5: COUNTRY NAMES ---
     # Only show names on the Political map to avoid cluttering other modes
-    if map_screen.show_country_names and not getattr(map_screen, "tactical_mode", False):
+    if map_screen.show_country_names and not map_screen.tactical_mode:
         
         # 1. Cache text surfaces once to save performance
         if not hasattr(map_screen, 'country_name_surfs'):

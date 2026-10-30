@@ -159,7 +159,7 @@ class Faction_Screen(GameState):
 
     def confirm_rename(self):
         if not self.map_screen: return
-        if getattr(self.map_screen, "realtime_multiplayer", False):
+        if self.map_screen.realtime_multiplayer:
             if not player_diplomacy_actions.can_edit_diplomacy(self.map_screen):
                 return
         player_country = self.map_screen.player_country
@@ -173,7 +173,7 @@ class Faction_Screen(GameState):
                 # A tournament move otherwise carries only the renaming
                 # leader's nation record.  Keep an explicit, host-validated
                 # command so every member is renamed when the host imports it.
-                if getattr(self.map_screen, "multiplayer_mode", False):
+                if self.map_screen.multiplayer_mode:
                     pending = getattr(self.map_screen,
                                       "multiplayer_pending_faction_renames", None)
                     if pending is None:

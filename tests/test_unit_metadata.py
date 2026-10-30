@@ -7,13 +7,7 @@ from unittest.mock import patch
 
 from data import migrations, queries
 from map_logic.ai import ai_research, ai_tech_eval, ai_unit_eval
-
-
-def fixture_metadata(*, family="Fixture", tier=1, level=1):
-    return {"family": family, "tier_order": tier,
-            "research": {"tech": "fixture_track", "level": level},
-            "requirements": [{"tech": "fixture_track", "level": level}],
-            "recruitment": {"industry": "none", "coastal": False}}
+from tests.research_fixtures import fixture_metadata
 
 
 class UnitMetadataTests(unittest.TestCase):

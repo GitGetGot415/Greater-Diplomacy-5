@@ -40,9 +40,9 @@ Read `source_layout_changes.md` for previous and current source paths.
 | `ui/widgets/` | Text, flags, tables, and scrolling support. |
 | `ui/bars/` | The map heads-up display and view controls. |
 | `ui/information/` | Hover feedback, tooltips, and unit information popups. |
-| `map_tools/` | Offline map creation, repair, and validation. |
 | `scripts/` | Offline content editors, maintenance, dependency downloads, benchmarks, and previews. |
 | `scripts/data/` | Country-content maintenance. |
+| `scripts/maps/` | Offline map creation, repair, and validation. |
 | `scripts/editors/` | Standalone desktop content editors. |
 | `scripts/dependencies/` | Dependency download tools. |
 | `scripts/benchmarks/` | Objective Judge Horizon entry points. |
@@ -55,9 +55,9 @@ Read `source_layout_changes.md` for previous and current source paths.
 
 `AGENTS.md` defines repository rules for AI changes.
 `context/context_generator.py` combines source files into a text file.
-`map_tools/validation/check_flags.py` and `check_adjectives.py` check `data/json/countries_data.json`.
-`map_tools/interactive_map_tester.py` provides an interactive pygame map tester. Its earlier name was `tester.py`.
-`map_tools/automatic_map_painter.py` and `reset_map_data.py` are separate map-authoring tools.
+`scripts/maps/validation/check_flags.py` and `check_adjectives.py` check `data/json/countries_data.json`.
+`scripts/maps/interactive_map_tester.py` provides an interactive pygame map tester. Its earlier name was `tester.py`.
+`scripts/maps/automatic_map_painter.py` and `reset_map_data.py` are separate map-authoring tools.
 
 Complete feature screens belong in `screens/`. Each screen builds its own buttons.
 Read `player_controls.txt` for controls and permissions.
@@ -123,7 +123,6 @@ Review its source before use.
 6. Open the standalone country editor with `python scripts/editors/country_editor.py`.
 7. Run sandbox tests with `python -m unittest tests.test_mod_loader_security`.
 
-The previous benchmark, dependency-download, preview, and sandbox-test commands remain available as launchers.
 Runtime modules use their current import paths directly.
 Source-replacement mods must use the current target paths and imports.
 The save format, settings keys, content paths, and game version remain unchanged.

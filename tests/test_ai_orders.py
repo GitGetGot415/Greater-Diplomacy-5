@@ -17,6 +17,7 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import data.constants as c
+from tests.stub_map_screen import fill_state_defaults
 from map_logic.ai import ai_movement
 
 
@@ -28,6 +29,7 @@ class FakeScreen:
         }
         self.id_to_province = {1: self.map_data["p1"]}
         self.nation_data = {"Avaria": {}}
+        fill_state_defaults(self)
 
 
 def unit(order):

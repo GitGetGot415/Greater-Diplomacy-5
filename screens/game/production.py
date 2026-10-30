@@ -137,14 +137,7 @@ class Production_Screen(GameState):
         self.custom_artillery_modes = {}
 
     def can_edit_realtime(self):
-        if not getattr(self.map_screen, "realtime_multiplayer", False):
-            return True
-        session = getattr(self.map_screen, "realtime_session", None)
-        player = session.players.get(getattr(self.map_screen, "realtime_player_id", "")) if session else None
-        if session and session.phase == "TURN" and player and not player.submitted and not player.eliminated:
-            return True
-        self.map_screen.show_feedback("Turn submitted or unavailable; unsubmit to change production.")
-        return False
+        return queries.require_realtime_turn_open(self.map_screen, "production")
 
     def _mark_draft_changed(self):
         """Invalidate presentation and queue one real-time draft sync per edit."""

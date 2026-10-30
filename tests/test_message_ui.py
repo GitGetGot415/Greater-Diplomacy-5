@@ -25,6 +25,7 @@ pygame.init()
 pygame.display.set_mode((800, 600))
 
 import data.constants as c
+from tests.stub_map_screen import fill_state_defaults
 from map_logic.diplomacy import diplomacy_messages as dm
 from ui.panels import diplomatic_popups
 
@@ -42,6 +43,7 @@ class Screen:
     def __init__(self, nation_data):
         self.nation_data = nation_data
         self.diplomatic_popups = []
+        fill_state_defaults(self)
 
 
 def nation(**over):

@@ -22,6 +22,7 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import data.constants as c
+from tests.stub_map_screen import fill_state_defaults
 from map_logic.ai import ai_movement
 
 
@@ -49,6 +50,7 @@ class Screen:
             "Borland": {"at_war_with": ["Avaria"], "puppets": [],
                         "master": "", "faction": "", "research": {}},
         }
+        fill_state_defaults(self)
 
 
 def run(screen, provs, units_info, **ctx_over):
@@ -276,7 +278,7 @@ class UpgradeReachabilityTests(unittest.TestCase):
 
         from data import queries
         from unittest.mock import patch
-        from tests.test_unit_metadata import fixture_metadata
+        from tests.research_fixtures import fixture_metadata
         library = {"Militia I": {"metadata": fixture_metadata(tier=1)},
                    "Militia II": {"metadata": fixture_metadata(tier=2, level=2)}}
         screen = Screen(provs, at_war=())

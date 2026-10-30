@@ -140,8 +140,8 @@ def _unit_render_index(map_screen):
     revision = getattr(map_screen, "_presentation_cache_revision", None)
     # Compatibility for render tools and test doubles predating view filters.
     view_filter = getattr(map_screen, "unit_view_filter", queries.DEFAULT_UNIT_VIEW_FILTER)
-    player_country = getattr(map_screen, "player_country", None)
-    viewing_ai_moves = getattr(map_screen, "viewing_ai_moves", False)
+    player_country = map_screen.player_country
+    viewing_ai_moves = map_screen.viewing_ai_moves
     # A real Map owns explicit invalidation boundaries.  Small test/editor
     # doubles do not, so rebuild for them and reflect direct list mutations
     # rather than retaining stale unit references.
@@ -404,7 +404,7 @@ def estimated_combat_turns(sides, nation_data, province=None, max_turns=100):
 
 def _combat_friendly_nations(map_screen):
     player = map_screen.player_country
-    if player in (None, "", "Spectator", "Editor") or getattr(map_screen, "is_editor", False):
+    if player in (None, "", "Spectator", "Editor") or map_screen.is_editor:
         return set()
     return queries.get_all_friendly_nations(player, map_screen.nation_data)
 
@@ -802,10 +802,10 @@ def midpoint_bounce_pairs(map_screen):
     if not strategic_detail_markers_are_visible(map_screen):
         return []
 
-    player = getattr(map_screen, "player_country", None)
-    full_board = (getattr(map_screen, "viewing_ai_moves", False)
+    player = map_screen.player_country
+    full_board = (map_screen.viewing_ai_moves
                   or player in ("Spectator", "Editor")
-                  or getattr(map_screen, "is_editor", False))
+                  or map_screen.is_editor)
     visible_to = None if full_board else {player}
     return combat_rules.find_meeting_pairs(
         map_screen.map_data, map_screen.nation_data, visible_to)
@@ -823,10 +823,10 @@ def midpoint_bounce_outcomes(map_screen):
     if not strategic_detail_markers_are_visible(map_screen):
         return []
 
-    player = getattr(map_screen, "player_country", None)
-    full_board = (getattr(map_screen, "viewing_ai_moves", False)
+    player = map_screen.player_country
+    full_board = (map_screen.viewing_ai_moves
                   or player in ("Spectator", "Editor")
-                  or getattr(map_screen, "is_editor", False))
+                  or map_screen.is_editor)
     visible_to = None if full_board else {player}
 
     outcomes = []
@@ -864,9 +864,9 @@ def draw_midpoint_bounces(map_screen, surface):
     keeps the art aligned with the actual edge even when the map loops
     horizontally.
     """
-    if not getattr(map_screen, "viewing_ai_moves", False) and not (
-            getattr(map_screen, "player_country", None) in ("Spectator", "Editor")
-            or getattr(map_screen, "is_editor", False)):
+    if not map_screen.viewing_ai_moves and not (
+            map_screen.player_country in ("Spectator", "Editor")
+            or map_screen.is_editor):
         return
 
     outcomes = midpoint_bounce_outcomes(map_screen)
@@ -1136,7 +1136,7 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
                 is_vis = False
                 is_partial = True
             else:
-                fog_strength = getattr(map_screen, 'scenario_settings', {}).get("fog_of_war_strength", "normal")
+                fog_strength = map_screen.scenario_settings.get("fog_of_war_strength", "normal")
                 if fog_strength == "lite":
                     is_vis = False
                     is_partial = True
@@ -1501,7 +1501,7 @@ def _space_compact_groups(groups):
 
 def uses_compact_army_icons(map_screen):
     """Whether the current strategic zoom replaces army stacks with icons."""
-    return (not getattr(map_screen, "tactical_mode", False)
+    return (not map_screen.tactical_mode
             and map_screen.camera.zoom <= ARMY_GROUP_ICON_MAX_ZOOM)
 
 
@@ -2016,9 +2016,7 @@ def army_group_presentation(map_screen, desired_groups, combat_unit_ids):
     if states is None:
         states = {}
         map_screen.army_group_transition_states = states
-    # Animation test doubles can omit the viewer, as the render index permits.
-    viewer = (getattr(map_screen, "player_country", None),
-              getattr(map_screen, "viewing_ai_moves", False))
+    viewer = (map_screen.player_country, map_screen.viewing_ai_moves)
     if getattr(map_screen, "_army_group_viewer", viewer) != viewer:
         states.clear()
     map_screen._army_group_viewer = viewer

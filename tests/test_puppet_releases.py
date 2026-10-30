@@ -13,7 +13,7 @@ from data import queries
 from map_logic.diplomacy import diplomacy_processor, puppet_actions
 from screens.game import puppets_screen
 from tests import app_harness
-from tests.test_map_save_format import sample_map_screen
+from tests.stub_map_screen import map_double, sample_map_screen
 from ui.navigation import modal_stack
 
 
@@ -38,7 +38,7 @@ def release_map(player="Master"):
         provinces[str(pid)] = dict(id=pid, json_key=str(pid), owner=owner, cores=cores,
                                    terrain="plains", neighbors=[], units=[], building_queue=[],
                                    unit_queue=[], map_color=[pid, 0, 0], buildings=[], resources={})
-    return SimpleNamespace(nation_data=nations, map_data=provinces,
+    return map_double(nation_data=nations, map_data=provinces,
                            id_to_province={p["id"]: p for p in provinces.values()},
                            player_country=player, is_editor=False, tactical_mode=False,
                            multiplayer_mode=False, realtime_multiplayer=False,

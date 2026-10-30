@@ -25,45 +25,10 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from tests.combat_fixtures import StubBattleMap
+
 from data import queries
 from map_logic.system32 import combat_processor, movement_processor
-
-
-class StubMapScreen:
-    """Just enough of map_screen to resolve one fight standalone."""
-
-    def __init__(self):
-        self.map_data = {}
-        self.id_to_province = {}
-        self.nation_data = {}
-        self.tactical_mode = False
-        self.is_editor = False
-        self.viewing_ai_moves = True
-        self.ai_is_thinking = False
-        self.centers_need_update = False
-
-    def add_nation(self, name, at_war_with=()):
-        self.nation_data[name] = {
-            "name": name,
-            "at_war_with": list(at_war_with),
-            "claims": [],
-        }
-
-    def add_province(self, pid, owner, units=(), terrain="forest", neighbors=()):
-        prov = {
-            "id": pid,
-            "owner": owner,
-            "_turn_start_owner": owner,
-            "terrain": terrain,
-            "is_coastal": False,
-            "cores": [owner],
-            "neighbors": list(neighbors),
-            "units": list(units),
-            "building_queue": [],
-        }
-        self.map_data[pid] = prov
-        self.id_to_province[pid] = prov
-        return prov
 
 
 def unit(owner, kind="Infantry Type 1943", path=(), health=2000, attack=430,
@@ -94,7 +59,7 @@ def shoreline_swap():
 
     Returns (screen, sea province, land province, convoy afloat, convoy ashore).
     """
-    screen = StubMapScreen()
+    screen = StubBattleMap(terrain="forest")
     screen.add_nation("United States of America", at_war_with=["Spain"])
     screen.add_nation("Spain", at_war_with=["United States of America"])
 
@@ -143,7 +108,7 @@ class BeachedUnitTests(unittest.TestCase):
     """The net under the fix, and what repairs the save that found it."""
 
     def test_a_land_unit_adrift_is_put_back_aboard_a_convoy(self):
-        screen = StubMapScreen()
+        screen = StubBattleMap(terrain="forest")
         screen.add_nation("United Kingdom")
         gun = unit("United Kingdom", kind="Artillery VII", health=400, attack=480)
         gun["health"] = 200.0  # half strength, as the gun in province 620 was
@@ -160,7 +125,7 @@ class BeachedUnitTests(unittest.TestCase):
         self.assertAlmostEqual(gun["health"], 200.0)
 
     def test_it_keeps_its_orders_so_a_landing_still_happens(self):
-        screen = StubMapScreen()
+        screen = StubBattleMap(terrain="forest")
         screen.add_nation("United States of America")
         stranded = unit("United States of America", path=[769])
         screen.add_province(620, "Ocean", units=[stranded], terrain="coastal_sea",
@@ -171,7 +136,7 @@ class BeachedUnitTests(unittest.TestCase):
         self.assertEqual(stranded["order"]["path"], [769])
 
     def test_a_warship_at_sea_is_left_alone(self):
-        screen = StubMapScreen()
+        screen = StubBattleMap(terrain="forest")
         screen.add_nation("United States of America")
         ship = unit("United States of America", kind="Destroyer VIII", naval=True)
         screen.add_province(620, "Ocean", units=[ship], terrain="coastal_sea")
@@ -181,7 +146,7 @@ class BeachedUnitTests(unittest.TestCase):
         self.assertEqual(ship["type"], "Destroyer VIII")
 
     def test_an_army_on_dry_land_is_left_alone(self):
-        screen = StubMapScreen()
+        screen = StubBattleMap(terrain="forest")
         screen.add_nation("Spain")
         infantry = unit("Spain")
         screen.add_province(769, "Spain", units=[infantry])
@@ -195,7 +160,7 @@ class BombardmentFromWaterTests(unittest.TestCase):
     """Field guns have nothing to stand on out there. Battleships do."""
 
     def barrage(self, gun_type, naval):
-        screen = StubMapScreen()
+        screen = StubBattleMap(terrain="forest")
         screen.add_nation("United Kingdom", at_war_with=["Spain"])
         screen.add_nation("Spain", at_war_with=["United Kingdom"])
 

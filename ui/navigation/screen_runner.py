@@ -2,7 +2,7 @@
 
 _run_pygame_sub_screen below covers screens layered on the live map. run_screen()
 covers everything else: dialogs opened from the menus, and the standalone editors
-in scripts/editors and map_tools that used to be their own Tk apps and so may run
+in scripts/editors and scripts/maps that used to be their own Tk apps and so may run
 with no pygame display up at all.
 
 run_screen() takes an on_done(screen) callback instead of returning the finished

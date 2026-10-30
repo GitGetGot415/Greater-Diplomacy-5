@@ -18,7 +18,7 @@ from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError
 from map_logic.ai import ai_tech_eval, ai_unit_eval
 from map_logic.system32.research_processor import process_national_research
 from tests import app_harness
-from tests.test_map_save_format import sample_map_screen
+from tests.stub_map_screen import map_double, sample_map_screen
 from tests import test_tournament_moves as tournament_harness
 
 # Read current content for checks of data use across systems.
@@ -103,7 +103,7 @@ class AirRulesTests(unittest.TestCase):
         research = queries.edited_research_levels({}, tech, 1, True, tree)
         research[tech] = 0
         country = {"research": research, "research_queue": []}
-        game = SimpleNamespace(nation_data={"A": country}, player_country="A", scenario_settings={},
+        game = map_double(nation_data={"A": country}, player_country="A", scenario_settings={},
                                time_manager=SimpleNamespace(year=c.END_YEAR, day=1, month_index=0),
                                show_feedback=mock.Mock())
         for level, name in sorted(tiers.items()):
@@ -365,7 +365,7 @@ class AirRulesTests(unittest.TestCase):
     def test_research_completion_unlocks_production(self):
         country = {"research": {}, "research_queue": [
             {"tech_name": "biplane", "points_remaining": 1}]}
-        map_ref = SimpleNamespace(nation_data={"A": country}, player_country="A",
+        map_ref = map_double(nation_data={"A": country}, player_country="A",
                                  time_manager=SimpleNamespace(year=queries.get_tech_tree()["biplane"]["years"][0],
                                                               day=1, month_index=0),
                                  scenario_settings={}, show_feedback=mock.Mock())
@@ -407,7 +407,7 @@ class AirRealtimeTests(unittest.TestCase):
         for resource in c.ECON_RESOURCE_KEYS:
             country[resource] = 1 + sum(stats.get(f"cost_{resource}", 0)
                                       for stats in queries.get_unit_library().values())
-        self.map = SimpleNamespace(map_data={"home": province}, id_to_province={1: province},
+        self.map = map_double(map_data={"home": province}, id_to_province={1: province},
                                    nation_data={"A": country}, scenario_settings={})
         self.driver = MapRealtimeDriver(self.map)
 
@@ -542,7 +542,7 @@ class AirScreenTests(unittest.TestCase):
         self.production.start_with_province(self.map.selected_province, self.map)
 
     def test_single_level_labels_keep_canonical_types_in_modals_production_and_custom_choices(self):
-        from tests.test_unit_metadata import fixture_metadata
+        from tests.research_fixtures import fixture_metadata
 
         name, family, tech = "Fixture Wing I", "Fixture Wing", "fixture_wing"
         metadata = fixture_metadata(family=family)

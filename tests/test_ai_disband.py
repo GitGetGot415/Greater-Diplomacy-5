@@ -20,6 +20,7 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import data.constants as c
+from tests.stub_map_screen import fill_state_defaults
 from map_logic.ai import ai_construction, ai_unit_eval
 
 
@@ -68,6 +69,7 @@ class Screen:
             "Borland": {"at_war_with": ["Avaria"], "puppets": [],
                         "master": "", "faction": "", "research": {}},
         }
+        fill_state_defaults(self)
 
 
 def province(pid, units=(), queue=(), owner="Avaria", neighbors=()):

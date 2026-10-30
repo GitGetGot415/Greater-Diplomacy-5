@@ -30,45 +30,9 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from tests.combat_fixtures import StubBattleMap
+
 from map_logic.system32 import combat_processor, movement_processor
-
-
-class StubMapScreen:
-    """Just enough of map_screen for process_movement to run standalone."""
-
-    def __init__(self):
-        self.map_data = {}
-        self.id_to_province = {}
-        self.nation_data = {}
-        self.tactical_mode = False
-        # Lets edit_province_ownership.conquer_province run without a real
-        # pygame surface: the visual-update branch is skipped outright.
-        self.is_editor = False
-        self.viewing_ai_moves = True
-        self.ai_is_thinking = False
-        self.centers_need_update = False
-
-    def add_nation(self, name, at_war_with=()):
-        self.nation_data[name] = {
-            "name": name,
-            "at_war_with": list(at_war_with),
-            "claims": [],
-        }
-
-    def add_province(self, pid, owner, units=()):
-        prov = {
-            "id": pid,
-            "owner": owner,
-            "_turn_start_owner": owner,
-            "terrain": "Plains",
-            "is_coastal": False,
-            "cores": [owner],
-            "units": list(units),
-            "building_queue": [],
-        }
-        self.map_data[pid] = prov
-        self.id_to_province[pid] = prov
-        return prov
 
 
 def make_unit(owner, path, speed=1, health=1000, attack=100, defense=50):
@@ -88,7 +52,7 @@ def make_unit(owner, path, speed=1, health=1000, attack=100, defense=50):
 class MidTurnSwapTests(unittest.TestCase):
     def test_a_turn_start_head_on_swap_bounces_both_sides(self):
         """Hostile armies trade one volley but remain on their own tiles."""
-        screen = StubMapScreen()
+        screen = StubBattleMap(terrain="Plains")
         screen.add_nation("A", at_war_with=["B"])
         screen.add_nation("B", at_war_with=["A"])
 
@@ -106,7 +70,7 @@ class MidTurnSwapTests(unittest.TestCase):
         self.assertNotIn(unit_b, p1["units"])
 
     def test_a_multi_speed_unit_fights_a_mid_turn_swap(self):
-        screen = StubMapScreen()
+        screen = StubBattleMap(terrain="Plains")
         screen.add_nation("A", at_war_with=["B"])
         screen.add_nation("B", at_war_with=["A"])
 
@@ -136,7 +100,7 @@ class MidTurnSwapTests(unittest.TestCase):
 
 class FinishedMoverVisibilityTests(unittest.TestCase):
     def test_a_finished_mover_still_blocks_a_later_arrival(self):
-        screen = StubMapScreen()
+        screen = StubBattleMap(terrain="Plains")
         screen.add_nation("A", at_war_with=["B"])
         screen.add_nation("B", at_war_with=["A"])
 

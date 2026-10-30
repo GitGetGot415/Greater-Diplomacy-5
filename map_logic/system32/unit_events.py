@@ -56,15 +56,13 @@ def normalize_log(value, turn):
 
 
 def saved_log(map_screen):
-    # Old saves and lightweight map fixtures predate this field.
     world_state = world_for(map_screen)
-    return normalize_log(getattr(world_for(map_screen), "unit_event_log", None), world_state.time_manager.total_turns)
+    return normalize_log(world_state.unit_event_log, world_state.time_manager.total_turns)
 
 
 def saved_reads(map_screen):
-    # Old saves and lightweight map fixtures predate local report preferences.
     world_state = world_for(map_screen)
-    reads = getattr(session_for(map_screen), "unit_event_read_turns", {})
+    reads = session_for(map_screen).unit_event_read_turns
     return {owner: turn for owner, turn in reads.items()
             if isinstance(owner, str) and type(turn) is int and turn == world_state.time_manager.total_turns}
 
@@ -121,7 +119,7 @@ def refresh_presentation(map_screen):
     event_filter_for(map_screen)
     map_screen._unit_event_view = entries_for(map_screen)
     turn = world_state.time_manager.total_turns
-    reads = getattr(session_for(map_screen), "unit_event_read_turns", {})
+    reads = session_state.unit_event_read_turns
     map_screen._unit_event_unread = (0 if reads.get(session_state.player_country) == turn
                                     else len(map_screen._unit_event_view))
 
@@ -130,7 +128,7 @@ def mark_read(map_screen):
     # Read status is a local presentation preference, including on network clients.
     world_state = world_for(map_screen)
     session_state = session_for(map_screen)
-    reads = getattr(session_for(map_screen), "unit_event_read_turns", {})
+    reads = session_state.unit_event_read_turns
     turn = world_state.time_manager.total_turns
     session_state.unit_event_read_turns = {owner: value for owner, value in reads.items() if value == turn}
     session_state.unit_event_read_turns[session_state.player_country] = turn

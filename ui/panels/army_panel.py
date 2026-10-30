@@ -588,12 +588,12 @@ def _visible(map_screen, orders_screen=None):
     """Return whether the army tray may occupy the current map workspace."""
     if orders_screen is not None and getattr(orders_screen, "battle_screen", None) is not None:
         return False
-    return (not getattr(map_screen, "selection_mode", False)
-            and not getattr(map_screen, "is_editor", False)
+    return (not map_screen.selection_mode
+            and not map_screen.is_editor
             and (getattr(map_screen, "army_panel_visible_in_orders", False)
                  or not getattr(map_screen, "selected_province", None))
-            and getattr(map_screen, "player_country", "None") not in ("None", "Spectator")
-            and not getattr(map_screen, "tactical_mode", False))
+            and map_screen.player_country not in ("None", "Spectator")
+            and not map_screen.tactical_mode)
 
 
 def prepare(map_screen):

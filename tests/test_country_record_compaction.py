@@ -4,15 +4,14 @@ import copy
 import json
 from pathlib import Path
 import tempfile
-from types import SimpleNamespace
 import unittest
 from unittest import mock
 
 from data import queries
 from data.io import country_io
 from data.map import load_map
-from map_tools import compact_country_records
-from tests.test_map_save_format import sample_map_screen
+from scripts.maps import compact_country_records
+from tests.stub_map_screen import map_double, sample_map_screen
 from screens.editors import menus as editor_menus
 
 
@@ -94,7 +93,7 @@ class CountryRecordCompactionTests(unittest.TestCase):
         self.assertEqual(compact["A"], {})
         restored = queries.merge_country_templates(copy.deepcopy(compact))
         with mock.patch.object(queries, "scrub_default_images"):
-            load_map._load_default_images(SimpleNamespace(nation_data=restored))
+            load_map._load_default_images(map_double(nation_data=restored))
         self.assertEqual(restored["A"]["flag_data"], self.nations["A"]["flag_data"])
         self.assertEqual(restored["A"]["portrait_data"], self.nations["A"]["portrait_data"])
         for field in ("pending_diplomacy", "relations", "diplo_responses", "war_durations"):
@@ -143,7 +142,7 @@ class CountryRecordCompactionTests(unittest.TestCase):
         compact = queries.compact_nation_data(self.nations, {"owner": "A"})
         self.assertEqual(compact["B"], {})
         restored = queries.merge_country_templates(json.loads(json.dumps(compact)))
-        screen = SimpleNamespace(nation_data=restored)
+        screen = map_double(nation_data=restored)
         self.assertIn(("B", "B"), editor_menus._paintable_nations(screen))
         self.assertEqual(country_io.nation_colors_from(restored)["B"], tuple(self.catalog["B"]["color"]))
         self.assertTrue(queries.is_playable("B", restored))

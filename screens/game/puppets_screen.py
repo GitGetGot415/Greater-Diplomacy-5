@@ -101,14 +101,7 @@ class Puppets_Screen(MapOverlayScreen):
         self.max_scroll = min(0, self.panel_rect.height - (y_pos - self.scroll_y - self.panel_rect.y) - 20)
 
     def can_edit_realtime(self):
-        if not getattr(self.map_screen, "realtime_multiplayer", False):
-            return True
-        session = getattr(self.map_screen, "realtime_session", None)
-        player = session.players.get(getattr(self.map_screen, "realtime_player_id", "")) if session else None
-        if session and session.phase == "TURN" and player and not player.submitted and not player.eliminated:
-            return True
-        self.map_screen.show_feedback("Turn submitted or unavailable; unsubmit to change subjects.")
-        return False
+        return queries.require_realtime_turn_open(self.map_screen, "subjects")
 
     def set_siphon(self, puppet, res, slider_val):
         if not self.can_edit_realtime():
@@ -392,8 +385,8 @@ Create_Integrated_Puppet_Screen = Create_Puppet_Screen
 
 def open_puppets_menu(map_screen):
     if map_screen.player_country == "Spectator":
-        if (getattr(map_screen, "multiplayer_mode", False)
-                or getattr(map_screen, "realtime_multiplayer", False)
+        if (map_screen.multiplayer_mode
+                or map_screen.realtime_multiplayer
                 or map_screen.is_editor or map_screen.tactical_mode):
             map_screen.show_feedback("Spectator releases are available only in a local strategic game.")
             return

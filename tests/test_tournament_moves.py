@@ -12,13 +12,13 @@ import sys
 import tempfile
 import unittest
 from unittest import mock
-from types import SimpleNamespace
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import data.constants as c
+from tests.stub_map_screen import fill_state_defaults, map_double, synchronous_progress
 from tests.research_fixtures import factory_research_cases
 from data import queries
 from data.multiplayer.tournament import files as multiplayer_io
@@ -82,16 +82,10 @@ class Host:
         self.scenario_settings = {}
         self.submitted_moves = set()
         self.syncs = 0
+        fill_state_defaults(self)
 
     def sync_units_to_data(self):
         self.syncs += 1
-
-
-def synchronous_progress(jobs, worker, _caption, on_result):
-    for job in jobs:
-        result = worker(job)
-        if result:
-            on_result(result)
 
 
 class TournamentMoveTests(unittest.TestCase):
@@ -172,7 +166,7 @@ class TournamentMoveTests(unittest.TestCase):
 
     def test_production_uses_shared_costs_and_rejects_cumulative_overspend(self):
         from map_logic.actions import production_actions
-        from tests.test_unit_metadata import fixture_metadata
+        from tests.research_fixtures import fixture_metadata
         library = {"Fixture recruit": {"metadata": fixture_metadata(level=0),
                                       "cost_materials": 11, "cost_manpower": 3, "cost_fuel": 2,
                                       "production_time": 4}}
@@ -984,7 +978,7 @@ class TournamentMoveTests(unittest.TestCase):
         self.assertEqual(spectator_map.nation_data["Leader"]["inbox"], [])
         self.assertNotIn("order", spectator_map.map_data[(1, 1)]["units"][0])
 
-        visibility_screen = SimpleNamespace(
+        visibility_screen = map_double(
             player_country=c.TOURNAMENT_SPECTATOR,
             map_data={}, nation_data=spectator_map.nation_data,
             id_to_province={})

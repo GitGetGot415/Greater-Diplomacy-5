@@ -143,7 +143,7 @@ def contenders(nation_data, faction):
 def _holds_land(map_screen, nation):
     """Whether this nation is still on the map at all."""
     return any(prov.get("owner") == nation
-               for prov in getattr(world_for(map_screen), "map_data", {}).values())
+               for prov in world_for(map_screen).map_data.values())
 
 
 def promote(map_screen, faction, world=None):

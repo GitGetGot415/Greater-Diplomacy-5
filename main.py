@@ -825,7 +825,7 @@ class Controller:
                 if self.beepbox_stream is not None:
                     self.beepbox_stream.stop()
                     self.beepbox_stream = None
-                if c.USE_SOLOUD and getattr(self, "music_handle", None) is not None:
+                if c.USE_SOLOUD and self.music_handle is not None:
                     self.soloud.stop(self.music_handle)
                     self.music_handle = None
                 elif not c.USE_SOLOUD:

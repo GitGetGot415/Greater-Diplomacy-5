@@ -32,9 +32,8 @@ from data import queries
 
 
 def is_tactical_player_unit(map_screen, unit):
-    # Tactical state is deliberately optional on lightweight AI test maps.
     session_state = session_for(map_screen)
-    return bool(getattr(session_for(map_screen), "tactical_mode", False) and unit is session_state.player_unit)
+    return bool(session_state.tactical_mode and unit is session_state.player_unit)
 
 
 def air_stack_attack_efficiency(aircraft_count):

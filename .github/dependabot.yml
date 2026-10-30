@@ -15,7 +15,7 @@
 # that was pinned on purpose. Widening it later is one line, but that is a
 # decision about this project's dependencies rather than about this one.
 #
-# It also covers the browser build for free: map_tools/fetch_dragoman_wasm.py
+# It also covers the browser build for free: scripts/dependencies/fetch_dragoman_wasm.py
 # reads its version out of requirements.txt, so the same bumped line moves the
 # WebAssembly module the web build fetches. One number, one review, both
 # platforms.

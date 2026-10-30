@@ -21,6 +21,7 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import data.constants as c
+from tests.stub_map_screen import map_double
 from data.io import settings_schema
 from data import migrations
 
@@ -542,7 +543,7 @@ class NavigationIntroPopupTests(unittest.TestCase):
     def test_map_message_popups_hide_for_a_province_menu_without_being_cleared(self):
         from ui.panels import diplomatic_popups
 
-        map_stub = type("MapStub", (), {"selected_province": None})()
+        map_stub = map_double(selected_province=None)
         self.assertTrue(diplomatic_popups.map_message_popups_visible(map_stub))
 
         map_stub.selected_province = {"id": 1}

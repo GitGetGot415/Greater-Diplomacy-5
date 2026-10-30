@@ -40,71 +40,12 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from tests.combat_fixtures import damage_taken, StubBattleMap, unit
+
 import data.constants as c
 from data import queries
 from ui.rendering import overlay_renderer
 from map_logic.system32 import combat_processor, combat_rules, movement_processor
-
-
-class StubMapScreen:
-    """Just enough of map_screen to resolve combat standalone."""
-
-    def __init__(self):
-        self.map_data = {}
-        self.id_to_province = {}
-        self.nation_data = {}
-        self.tactical_mode = False
-        self.is_editor = False
-        self.viewing_ai_moves = True
-        self.ai_is_thinking = False
-        self.centers_need_update = False
-
-    def add_nation(self, name, at_war_with=()):
-        self.nation_data[name] = {
-            "name": name,
-            "at_war_with": list(at_war_with),
-            "claims": [],
-        }
-        return self.nation_data[name]
-
-    def add_province(self, pid, owner, units=(), terrain="hills"):
-        prov = {
-            "id": pid,
-            "owner": owner,
-            "_turn_start_owner": owner,
-            "terrain": terrain,
-            "is_coastal": False,
-            "cores": [owner],
-            "units": list(units),
-            "building_queue": [],
-        }
-        self.map_data[pid] = prov
-        self.id_to_province[pid] = prov
-        return prov
-
-
-def unit(owner, attack=100, health=100000, defense=0, path=(), kind="Infantry", speed=1):
-    """A unit with enough health to survive the fight, so damage is readable.
-
-    Defense defaults to 0 because apply_group_damage subtracts it flat from each
-    defender's share -- with defense in play, "how much did A deal" stops being
-    a single number and starts depending on who it landed on.
-    """
-    return {
-        "type": kind,
-        "owner": owner,
-        "order": {"type": "MOVE", "path": list(path)},
-        "speed": speed,
-        "health": health,
-        "max_health": health,
-        "attack": attack,
-        "defense": defense,
-        "morale": 50.0,
-    }
-
-
-def damage_taken(units):
-    return sum(u["max_health"] - u["health"] for u in units)
 
 
 def five_nation_tile():
@@ -117,7 +58,7 @@ def five_nation_tile():
     Unit counts are deliberately uneven -- B has 2 and C has 3 -- because the
     whole claim is about the size of the denominator.
     """
-    screen = StubMapScreen()
+    screen = StubBattleMap()
     screen.add_nation("A", at_war_with=["B", "C"])
     screen.add_nation("B", at_war_with=["A", "C", "D"])
     screen.add_nation("C", at_war_with=["A", "B"])
@@ -220,7 +161,7 @@ class OneVolleyPerNationTests(unittest.TestCase):
                                msg="the tile dealt more or less than the attack standing on it")
 
     def test_a_nation_facing_more_enemies_does_not_deal_more_damage(self):
-        alone = StubMapScreen()
+        alone = StubBattleMap()
         alone.add_nation("A", at_war_with=["B"])
         alone.add_nation("B", at_war_with=["A"])
         solo_a = [unit("A", attack=100)]
@@ -229,7 +170,7 @@ class OneVolleyPerNationTests(unittest.TestCase):
         combat_processor.process_combat(alone)
         one_front = damage_taken(solo_b)
 
-        crowded = StubMapScreen()
+        crowded = StubBattleMap()
         crowded.add_nation("A", at_war_with=["B", "C", "D"])
         for name in ("B", "C", "D"):
             crowded.add_nation(name, at_war_with=["A"])
@@ -252,7 +193,7 @@ class OneVolleyPerNationTests(unittest.TestCase):
         a tile fielded five times the width and the number stopped meaning
         anything the moment a second flag turned up.
         """
-        screen = StubMapScreen()
+        screen = StubBattleMap()
         names = ("A", "B", "C", "D", "E")
         for name in names:
             screen.add_nation(name, at_war_with=[n for n in names if n != name])
@@ -274,7 +215,7 @@ class OneVolleyPerNationTests(unittest.TestCase):
                         "every unit on the tile got to fire")
 
     def test_the_lane_slot_cap_applies_to_each_side(self):
-        screen = StubMapScreen()
+        screen = StubBattleMap()
         screen.add_nation("A", at_war_with=["B"])
         screen.add_nation("B", at_war_with=["A"])
 
@@ -291,7 +232,7 @@ class OneVolleyPerNationTests(unittest.TestCase):
                                10.0 * c.LANE_SLOTS_TYPICAL, places=6)
 
     def test_a_dying_nation_still_fires_this_turn(self):
-        screen = StubMapScreen()
+        screen = StubBattleMap()
         screen.add_nation("A", at_war_with=["B"])
         screen.add_nation("B", at_war_with=["A"])
 
@@ -381,7 +322,7 @@ class BystanderTests(unittest.TestCase):
         self.assertTrue(troops["A"][0].get("_in_combat_this_turn"))
 
     def test_a_neutral_convoy_stays_loaded(self):
-        screen = StubMapScreen()
+        screen = StubBattleMap()
         screen.add_nation("A", at_war_with=["B"])
         screen.add_nation("B", at_war_with=["A"])
         screen.add_nation("E")
@@ -402,7 +343,7 @@ class BystanderTests(unittest.TestCase):
         self.assertEqual(neutral["type"], "Convoy", "a bystander's convoy was unpacked")
 
     def test_a_neutral_warship_in_a_contested_port_survives(self):
-        screen = StubMapScreen()
+        screen = StubBattleMap()
         screen.add_nation("A", at_war_with=["B"])
         screen.add_nation("B", at_war_with=["A"])
         screen.add_nation("E")
@@ -421,7 +362,7 @@ class BystanderTests(unittest.TestCase):
 
 class WhoIsActuallyFightingTests(unittest.TestCase):
     def test_a_nation_at_war_with_someone_who_is_not_here_is_a_bystander(self):
-        screen = StubMapScreen()
+        screen = StubBattleMap()
         screen.add_nation("A", at_war_with=["B"])
         screen.add_nation("B", at_war_with=["A"])
         screen.add_nation("F", at_war_with=["Z"])
@@ -441,7 +382,7 @@ class WhoIsActuallyFightingTests(unittest.TestCase):
         # The pair loop this replaced checked hostility one way round only, so
         # the answer depended on the order units happened to sit in the province.
         def run(order):
-            screen = StubMapScreen()
+            screen = StubBattleMap()
             screen.add_nation("A", at_war_with=["B"])
             screen.add_nation("B")               # B's list never got A added
             troops = {"A": [unit("A", attack=100)], "B": [unit("B", attack=40)]}
@@ -466,7 +407,7 @@ class WhoIsActuallyFightingTests(unittest.TestCase):
         # Two sides means a head-on clash, and a lane always crosses the divide.
         # Two nations at war while marching together settle it where they land,
         # not while they cross.
-        screen = StubMapScreen()
+        screen = StubBattleMap()
         screen.add_nation("A", at_war_with=["B", "C"])
         screen.add_nation("B", at_war_with=["A", "C"])
         screen.add_nation("C", at_war_with=["A", "B"])
@@ -489,7 +430,7 @@ class HeadOnTests(unittest.TestCase):
     """resolve_meeting_engagement: two tiles swapping garrisons."""
 
     def build(self):
-        screen = StubMapScreen()
+        screen = StubBattleMap()
         screen.add_nation("A", at_war_with=["C"])
         screen.add_nation("C", at_war_with=["A"])
         screen.add_nation("E")
@@ -569,7 +510,7 @@ class PredictionBubbleTests(unittest.TestCase):
             [prov["units"]], screen.nation_data, friendly_nations)
 
     def winner_fixture(self):
-        screen = StubMapScreen()
+        screen = StubBattleMap()
         screen.player_country = "A"
         screen.visible_provinces = None
         screen.add_nation("A", at_war_with=["B"])
@@ -694,7 +635,7 @@ class PredictionBubbleTests(unittest.TestCase):
         simulate.assert_not_called()
 
     def test_an_unseen_enemy_order_does_not_remove_a_possible_defender(self):
-        screen = StubMapScreen()
+        screen = StubBattleMap()
         screen.player_country = "A"
         screen.viewing_ai_moves = False
         screen.add_nation("A", at_war_with=["B"])
@@ -714,7 +655,7 @@ class PredictionBubbleTests(unittest.TestCase):
             "the prediction used an enemy movement order the player cannot see")
 
     def test_another_nation_s_movement_does_not_create_a_prediction(self):
-        screen = StubMapScreen()
+        screen = StubBattleMap()
         screen.player_country = "A"
         screen.viewing_ai_moves = False
         screen.add_nation("A", at_war_with=["C"])
@@ -744,7 +685,7 @@ class PredictionBubbleTests(unittest.TestCase):
             "the player's own movement should create a prediction")
 
     def test_a_three_way_fight_counts_only_the_lane_you_are_in(self):
-        screen = StubMapScreen()
+        screen = StubBattleMap()
         screen.add_nation("P", at_war_with=["X"])
         screen.add_nation("X", at_war_with=["P", "Y"])
         screen.add_nation("Y", at_war_with=["X"])
@@ -770,7 +711,7 @@ class PredictionBubbleTests(unittest.TestCase):
         self.assertAlmostEqual(damage_taken(third), 100.0, places=6)
 
     def test_a_tile_where_only_a_bystander_ally_stands_is_not_your_fight(self):
-        screen = StubMapScreen()
+        screen = StubBattleMap()
         screen.add_nation("P")
         screen.add_nation("ALLY")
         screen.add_nation("X", at_war_with=["Y"])
@@ -791,7 +732,7 @@ class ChargeTests(unittest.TestCase):
     """process_pinning's suicide-charge probe, which also applies real damage."""
 
     def test_a_bystander_neither_absorbs_nor_answers_a_doomed_charge(self):
-        screen = StubMapScreen()
+        screen = StubBattleMap()
         screen.add_nation("DEF", at_war_with=["ATK"])
         screen.add_nation("ATK", at_war_with=["DEF"])
         screen.add_nation("E")

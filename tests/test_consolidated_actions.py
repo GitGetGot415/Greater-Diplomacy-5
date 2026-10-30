@@ -17,8 +17,8 @@ from map_logic.actions import unit_actions
 from map_logic.actions.player_actions import PlayerActions, collect_map_commands
 from map_logic.diplomacy import faction_actions, faction_leadership, faction_records
 from map_logic.diplomacy.action_definitions import availability
-from tests.test_unit_metadata import fixture_metadata
-from tests.test_tournament_moves import synchronous_progress
+from tests.research_fixtures import fixture_metadata
+from tests.stub_map_screen import synchronous_progress
 
 
 def game():

@@ -223,8 +223,8 @@ class CapacityIsRoomNotGarrisonTests(unittest.TestCase):
     """
 
     def tile(self, mine, theirs, terrain="hills"):
-        from tests.test_multiparty_combat import StubMapScreen, unit
-        screen = StubMapScreen()
+        from tests.combat_fixtures import StubBattleMap, unit
+        screen = StubBattleMap()
         screen.add_nation("A", at_war_with=["B"])
         screen.add_nation("B", at_war_with=["A"])
         units = [unit("A", attack=10) for _ in range(mine)]
@@ -282,10 +282,10 @@ class CapacityIsRoomNotGarrisonTests(unittest.TestCase):
     def test_allies_already_holding_the_line_still_take_their_share(self):
         """Raising our demand must not take width off an ally who has bodies
         for it -- share_slots is still the thing dividing the lane."""
-        from tests.test_multiparty_combat import StubMapScreen, unit
+        from tests.combat_fixtures import StubBattleMap, unit
         from map_logic.system32 import combat_rules
 
-        screen = StubMapScreen()
+        screen = StubBattleMap()
         screen.add_nation("A", at_war_with=["B"])
         screen.add_nation("ALLY", at_war_with=["B"])
         screen.add_nation("B", at_war_with=["A", "ALLY"])
@@ -318,9 +318,9 @@ class ReserveFlowTests(unittest.TestCase):
                 "order": {"type": "MOVE", "path": []}}
 
     def board(self, defenders, reserves=8, attackers=8):
-        from tests.test_multiparty_combat import StubMapScreen
+        from tests.combat_fixtures import StubBattleMap
 
-        screen = StubMapScreen()
+        screen = StubBattleMap()
         for name, foe in (("A", "E"), ("E", "A")):
             screen.add_nation(name, at_war_with=[foe])
             screen.nation_data[name]["is_playable"] = True

@@ -282,13 +282,8 @@ class Research_Screen(GameState):
                     and queries.can_edit_country_research(self.map_screen, self.subject))
         if self.map_screen.tactical_mode:
             return False
-        if getattr(self.map_screen, "realtime_multiplayer", False):
-            session = getattr(self.map_screen, "realtime_session", None)
-            player_id = getattr(self.map_screen, "realtime_player_id", None)
-            player = getattr(session, "players", {}).get(player_id)
-            if (not session or session.phase != "TURN" or not player or player.submitted or
-                    player.eliminated):
-                return False
+        if not queries.realtime_turn_open(self.map_screen):
+            return False
         return self.subject == self.map_screen.player_country
 
     def handle_events(self, events):
@@ -476,9 +471,7 @@ class Research_Screen(GameState):
 
     def get_display_name(self, tech_key, lvl):
         """Show single-level unit labels without changing the referenced unit type."""
-        # Headless label previews can supply only a research tree.
-        library = getattr(self, "unit_library", None)
-        return queries.get_unit_display_name(self.get_entity_name(tech_key, lvl), library)
+        return queries.get_unit_display_name(self.get_entity_name(tech_key, lvl), self.unit_library)
 
     def get_entity_name(self, tech_key, lvl):
         """The content identifier of a technology level or its unlocked unit.

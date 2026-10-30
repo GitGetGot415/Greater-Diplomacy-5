@@ -19,6 +19,7 @@ from screens.game import map_input as event_handler
 from ui.bars import ui_bars
 from ui.dialogs.message_box import _NavigationIntroPopup
 from ui.information import tooltip
+from tests.stub_map_screen import map_double
 
 
 class UnitViewFilterTests(unittest.TestCase):
@@ -33,7 +34,7 @@ class UnitViewFilterTests(unittest.TestCase):
         self.units = [{"type": name, "owner": "A", "unit_id": name}
                       for name in library]
         self.province = {"id": 1, "center": (100, 100), "units": self.units}
-        self.game = SimpleNamespace(
+        self.game = map_double(
             map_data={"one": self.province}, _presentation_cache_revision=0,
             unit_view_filter="ALL", player_country="A",
             nation_data={"A": {"armies": []}}, nation_colors={"A": (50, 100, 150)},

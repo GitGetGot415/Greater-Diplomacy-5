@@ -164,7 +164,7 @@ def retire_landless_nation(map_screen, nation, *, force=False):
     # what repainting one looks like halfway through -- so losing its treaties
     # for it would be destructive rather than tidy. Only the erase-entirely
     # half below still runs there, as it always has.
-    if not getattr(session_for(map_screen), "is_editor", False):
+    if not session_for(map_screen).is_editor:
         # A faction can restore territory to its original member through the
         # normal faction-core transfer rule. Do not dissolve the very
         # membership and historical border record that make that possible --

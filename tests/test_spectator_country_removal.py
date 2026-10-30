@@ -13,7 +13,7 @@ from map_logic.diplomacy import puppet_actions, volunteers, faction_leadership
 from map_logic.system32 import turn_processor
 from map_logic.territory import ownership as edit_province_ownership
 from tests import app_harness
-from tests.test_map_save_format import sample_map_screen
+from tests.stub_map_screen import sample_map_screen
 from screens.game import spectator_controls as spectator_menus
 from ui import dialogs as confirm_dialog
 from ui.navigation import modal_stack

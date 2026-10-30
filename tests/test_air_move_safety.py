@@ -10,7 +10,7 @@ from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError
 from map_logic.ai import ai_movement, ai_unit_eval
 from map_logic.system32 import air_processor, combat_rules, movement_processor
 from screens.game.map import Map
-from tests.test_air_mechanics import controlled_air_library, world, tile, wing
+from tests.air_fixtures import controlled_air_library, tile, wing, world
 
 
 class AirMissionPlanningTests(unittest.TestCase):

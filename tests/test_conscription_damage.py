@@ -19,8 +19,8 @@ from ui.rendering import overlay_renderer
 from map_logic.system32 import combat_processor, combat_rules
 from screens.game.economy import Economy_Screen
 from tests.stub_map_screen import StubMapScreen as EconomyMap
-from tests.test_map_save_format import sample_map_screen
-from tests.test_multiparty_combat import StubMapScreen as CombatMap
+from tests.stub_map_screen import sample_map_screen
+from tests.combat_fixtures import StubBattleMap
 from ui.panels.sidebar_info import unit_roster_row
 from ui.widgets.ui_elements import Slider
 
@@ -92,7 +92,7 @@ class ConscriptionCombatTests(unittest.TestCase):
         self.addCleanup(self.library.stop)
 
     def game(self):
-        game = CombatMap()
+        game = StubBattleMap()
         game.add_nation("A", at_war_with=["B"])
         game.add_nation("B", at_war_with=["A"])
         game.nation_data["A"]["conscription_slider"] = 0.25

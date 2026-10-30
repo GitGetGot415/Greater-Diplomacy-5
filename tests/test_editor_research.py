@@ -13,7 +13,7 @@ from data import queries
 from screens.editors import research_screens
 from screens.game.research import Research_Screen
 from tests import app_harness
-from tests.test_map_save_format import sample_map_screen
+from tests.stub_map_screen import map_double, sample_map_screen
 
 
 def tech_tree():
@@ -172,7 +172,7 @@ class LevelRequirementTests(unittest.TestCase):
     def test_ai_offers_the_intermediate_before_the_blocked_track(self):
         from map_logic.ai import ai_research
         tree = {key: self.tree[key] for key in ("root", "left")}
-        game = SimpleNamespace(nation_data={"A": {"research": {"root": 2}, "research_queue": []}},
+        game = map_double(nation_data={"A": {"research": {"root": 2}, "research_queue": []}},
                                time_manager=SimpleNamespace(year=c.START_YEAR + 100))
         with ExitStack() as stack:
             for name, result in (("get_tech_tree", tree), ("get_unit_library", {}),
@@ -192,7 +192,7 @@ class LevelRequirementTests(unittest.TestCase):
 class EditorResearchStateTests(unittest.TestCase):
     def setUp(self):
         self.enterContext(patch.object(queries, "get_tech_tree", return_value=tech_tree()))
-        self.game = SimpleNamespace(is_editor=True, tactical_mode=False, multiplayer_mode=False,
+        self.game = map_double(is_editor=True, tactical_mode=False, multiplayer_mode=False,
                                     realtime_multiplayer=False,
                                     map_data={1: {"owner": "A"}, 2: {"owner": "B"}},
                                     nation_data={"A": {"research": {}}, "B": {"research": {"root": 1}}},

@@ -35,7 +35,7 @@ class _MatchDetails(GameState):
         self.elements = [make_back_button(self.exit_screen, style="map")]
 
     def additional_draw(self, surface):
-        session = getattr(self.map_screen, "realtime_session", None)
+        session = self.map_screen.realtime_session
         if not session:
             return
         panel = pygame.Rect(c.SCREEN_WIDTH // 2 - 390, 140, 780,
@@ -58,7 +58,7 @@ class _MatchDetails(GameState):
             country = (queries.get_country_display_name(player.country_id, self.map_screen.nation_data)
                        if player.country_id else "No country")
             country_x = columns[1]
-            if player.country_id and player.country_id in getattr(self.map_screen, "nation_data", {}):
+            if player.country_id and player.country_id in self.map_screen.nation_data:
                 country_x = draw_flag(surface, player.country_id, self.map_screen.nation_data,
                                       country_x, y + 1)
             surface.blit(row_font.render(str(country), True, color), (country_x, y))
@@ -72,10 +72,10 @@ def show_details(map_screen):
 
 
 def draw(map_screen, surface):
-    if not getattr(map_screen, "realtime_multiplayer", False):
+    if not map_screen.realtime_multiplayer:
         return
-    session = getattr(map_screen, "realtime_session", None)
-    player = getattr(session, "players", {}).get(getattr(map_screen, "realtime_player_id", None))
+    session = map_screen.realtime_session
+    player = getattr(session, "players", {}).get(map_screen.realtime_player_id)
     if not session or not player:
         return
     remaining = max(0, session.config.max_turns - session.turn_number + 1)
@@ -93,7 +93,7 @@ def draw(map_screen, surface):
         state = "SUBMITTED" if player.submitted else "NOT SUBMITTED"
     lines = [f"Turn {session.turn_number} / {session.config.max_turns}  •  {remaining} remaining",
              f"Time: {countdown}  •  {submitted} / {active} players submitted", state]
-    connection_error = getattr(map_screen, "realtime_connection_error", "")
+    connection_error = map_screen.realtime_connection_error
     if connection_error:
         lines.append("CONNECTION LOST - actions disabled; rejoin from the menu")
     # The top-right map controls, including Exit, occupy the first toolbar

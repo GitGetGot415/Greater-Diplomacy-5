@@ -211,8 +211,8 @@ def draw_panel_frame(surface, rect, title=None, bg=None, border=None, border_wid
 def acquire_surface(size=None, caption=None):
     """Returns (surface, owns_display), creating a window only when none exists.
 
-    Used by the standalone paths -- the dev tools in scripts/editors and the
-    map_tools scripts run outside the game's main loop, with no display up yet.
+    Used by the standalone paths -- the dev tools in scripts/editors and
+    scripts/maps run outside the game's main loop, with no display up yet.
     """
     surface = pygame.display.get_surface()
     if surface is not None:

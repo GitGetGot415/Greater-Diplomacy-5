@@ -52,7 +52,7 @@ def row(owner="A", unit_id="gone", event="DESTROYED"):
 
 class UnitEventRulesTests(unittest.TestCase):
     def setUp(self):
-        from tests.test_air_mechanics import install_air_fixture
+        from tests.air_fixtures import install_air_fixture
         install_air_fixture(self)
 
     def test_combat_preserves_execution_and_reports_capped_losses_and_sources(self):
@@ -241,7 +241,7 @@ class UnitEventRulesTests(unittest.TestCase):
         self.assertNotIn("tile 1", json.dumps(projected["unit_event_log"]))
 
     def test_air_strikes_record_incident_tile_and_expended_weapon(self):
-        from tests.test_air_mechanics import world, tile, wing
+        from tests.air_fixtures import tile, wing, world
         from map_logic.system32 import air_processor
         game = world()
         game.is_editor = False
@@ -258,7 +258,7 @@ class UnitEventRulesTests(unittest.TestCase):
         self.assertTrue(any(entry["unit_id"] == missile["unit_id"] and entry["event"] == "EXPENDED" for entry in entries))
 
     def air_report_fixture(self):
-        from tests.test_air_mechanics import world, tile, wing
+        from tests.air_fixtures import tile, wing, world
         game = world()
         game.is_editor = False
         game.scenario_settings["fog_of_war"] = False
@@ -301,7 +301,7 @@ class UnitEventRulesTests(unittest.TestCase):
                          [entry for entry in entries if entry["owner"] == "A"])
 
     def test_large_air_stack_reports_credit_reduced_damage_to_every_aircraft(self):
-        from tests.test_air_mechanics import wing
+        from tests.air_fixtures import wing
         from map_logic.system32 import air_processor
         game, attacker, patrol, garrison, target = self.air_report_fixture()
         base = game.id_to_province[1]
@@ -359,7 +359,7 @@ class UnitEventRulesTests(unittest.TestCase):
         self.assertEqual(game.unit_event_log["events"], [])
 
     def test_air_strike_reveals_attacker_without_revealing_hidden_base(self):
-        from tests.test_air_mechanics import world, tile, wing
+        from tests.air_fixtures import tile, wing, world
         from map_logic.system32 import air_processor
         game = world()
         game.is_editor = False

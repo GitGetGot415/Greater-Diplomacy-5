@@ -167,7 +167,7 @@ def _run_blocking(make_modal, tk_parent, default_result=None):
     """Runs a dialog to completion with its own frame loop, and returns the answer.
 
     Only reachable when no display exists yet -- the standalone dev tools in
-    scripts/editors and the map_tools scripts, which run outside the game's main
+    scripts/editors and scripts/maps, which run outside the game's main
     loop. In-game the dialog goes on the modal stack instead; a nested loop
     here would never yield to the browser and would freeze a pygbag tab
     (see ui/navigation/modal_stack.py).

@@ -4,7 +4,7 @@ import sys
 import os
 
 # Add the parent directory (project root) to the Python path so it can find the 'data' module
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from ui.dialogs.file_browser_screen import run_file_browser
 

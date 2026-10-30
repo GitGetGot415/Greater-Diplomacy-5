@@ -15,6 +15,7 @@ single unit.
 """
 import pygame
 import data.constants as c
+from data import queries
 from ui.widgets.ui_elements import Button, make_back_button
 from ui.bars import ui_bars
 from ui.rendering.font_manager import fonts
@@ -115,14 +116,9 @@ class Politics_Screen(GameState):
     def can_edit(self):
         """Whether this screen may change the player's political direction."""
         if (self.is_read_only or not self.is_valid_player
-                or getattr(self.map_screen, "tactical_mode", False)):
+                or self.map_screen.tactical_mode):
             return False
-        if getattr(self.map_screen, "realtime_multiplayer", False):
-            session = getattr(self.map_screen, "realtime_session", None)
-            player = getattr(session, "players", {}).get(
-                getattr(self.map_screen, "realtime_player_id", None))
-            return bool(session and session.phase == "TURN" and player and not player.submitted and not player.eliminated)
-        return True
+        return queries.realtime_turn_open(self.map_screen)
 
     def set_drift(self, direction):
         if not self.can_edit:
@@ -449,7 +445,7 @@ class Politics_Screen(GameState):
 
         if self.is_read_only:
             note = "Read-only: this country's political choices cannot be changed here."
-        elif getattr(self.map_screen, "tactical_mode", False):
+        elif self.map_screen.tactical_mode:
             note = "Political direction cannot be changed in Tactical Mode."
         elif self.drift:
             note = ("Moving %s one step per turn until you stop it or it reaches the end."

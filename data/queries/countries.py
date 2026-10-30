@@ -207,21 +207,42 @@ def can_release_nations_for(map_screen, country_id):
             or session_state.is_editor or session_state.tactical_mode):
         return False
     if session_state.player_country == "Spectator":
-        return not (getattr(session_for(map_screen), "multiplayer_mode", False)
-                    or getattr(session_for(map_screen), "realtime_multiplayer", False))
+        return not (session_state.multiplayer_mode
+                    or session_state.realtime_multiplayer)
     return country_id == session_state.player_country
 
 
 def can_use_spectator_country_actions(map_screen):
     """Permit immediate country changes only during local spectator planning."""
     session_state = session_for(map_screen)
-    # Network modes are optional until a session attaches them to the map.
     return (session_state.player_country == "Spectator"
             and not (session_state.is_editor or session_state.tactical_mode or session_state.selection_mode
                      or session_state.ai_is_thinking or session_state.viewing_ai_moves
                      or session_state.is_refreshing or session_state.is_saving
-                     or getattr(session_for(map_screen), "multiplayer_mode", False)
-                     or getattr(session_for(map_screen), "realtime_multiplayer", False)))
+                     or session_state.multiplayer_mode
+                     or session_state.realtime_multiplayer))
+
+
+def realtime_turn_open(map_screen):
+    """Whether the viewer may still change their own draft this turn.
+
+    Outside real-time multiplayer there is no shared turn to close. In a real-time
+    game the player must be in the turn phase, unsubmitted, and not eliminated.
+    """
+    if not session_for(map_screen).realtime_multiplayer:
+        return True
+    session = map_screen.realtime_session
+    player = session.players.get(map_screen.realtime_player_id) if session else None
+    return bool(session and session.phase == "TURN" and player
+                and not player.submitted and not player.eliminated)
+
+
+def require_realtime_turn_open(map_screen, subject):
+    """Return realtime_turn_open, and tell the player why when it is closed."""
+    if realtime_turn_open(map_screen):
+        return True
+    map_screen.show_feedback(f"Turn submitted or unavailable; unsubmit to change {subject}.")
+    return False
 
 
 def get_puppet_release_provinces(master, core_nation, map_data, keep_cores=False, release_queue=()):

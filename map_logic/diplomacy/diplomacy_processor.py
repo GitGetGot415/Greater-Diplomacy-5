@@ -485,7 +485,7 @@ def _execute_ai_tasks(map_screen, ai_tasks, active_nations_list):
     # this pass builds its own. Verdicts read relations, war odds and prices off
     # it; without one they fall back to the old threshold rules.
     verdict_world = ai_world.for_screen(map_screen)
-    scenario_settings = getattr(world_for(map_screen), "scenario_settings", None)
+    scenario_settings = world_state.scenario_settings
 
     def call(task):
         if task["action"] == "CUSTOM_MSG":
@@ -1531,8 +1531,8 @@ def _process_scheduled_ai_volunteer_send_homes(map_screen):
 def _schedule_conflicting_ai_attache_revocations(map_screen):
     """Record new AI attaché conflicts for processing on the next turn."""
     world_state = world_for(map_screen)
-    human_hosts = set(getattr(session_for(map_screen), "active_players", ()))
-    human_hosts.add(getattr(session_for(map_screen), "player_country", ""))
+    human_hosts = set(session_for(map_screen).active_players)
+    human_hosts.add(session_for(map_screen).player_country)
     military_attaches.schedule_conflict_revocations_for_ai_hosts(
         world_state.nation_data, human_hosts)
 
@@ -1540,8 +1540,8 @@ def _schedule_conflicting_ai_attache_revocations(map_screen):
 def _schedule_conflicting_ai_volunteer_send_homes(map_screen):
     """Record AI volunteer conflicts for processing on the next turn."""
     world_state = world_for(map_screen)
-    human_hosts = set(getattr(session_for(map_screen), "active_players", ()))
-    human_hosts.add(getattr(session_for(map_screen), "player_country", ""))
+    human_hosts = set(session_for(map_screen).active_players)
+    human_hosts.add(session_for(map_screen).player_country)
     volunteers.schedule_conflict_send_homes_for_ai_hosts(
         world_state.nation_data, human_hosts)
 

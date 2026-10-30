@@ -109,7 +109,7 @@ class BattleScreenTestCase(unittest.TestCase):
 class BuildAndPaintTests(BattleScreenTestCase):
     def test_battle_and_sidebar_field_the_terrain_front_rank(self):
         from ui.panels import sidebar_info
-        from tests.test_multiparty_combat import unit
+        from tests.combat_fixtures import unit
 
         previous_terrain = self.province["terrain"]
         self.addCleanup(self.province.__setitem__, "terrain", previous_terrain)

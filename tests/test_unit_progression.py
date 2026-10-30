@@ -9,7 +9,7 @@ from unittest.mock import patch
 from data import constants as c, migrations, queries
 from data.generators import generate_data, recipes
 from map_logic.ai import ai_tech_eval, ai_unit_eval
-from tests.test_map_save_format import sample_map_screen
+from tests.stub_map_screen import sample_map_screen
 
 
 class UnitProgressionTests(unittest.TestCase):

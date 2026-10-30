@@ -1,9 +1,9 @@
 """Write built-in maps in the current save format.
 
-Preview bundled maps: python map_tools/upgrade_shipped_maps.py
-Apply the preview:    python map_tools/upgrade_shipped_maps.py --write
+Preview bundled maps: python scripts/maps/upgrade_shipped_maps.py
+Apply the preview:    python scripts/maps/upgrade_shipped_maps.py --write
 Upgrade an existing save or editor scenario explicitly:
-    python map_tools/upgrade_shipped_maps.py --write "saves/My Save"
+    python scripts/maps/upgrade_shipped_maps.py --write "saves/My Save"
 
 With no paths, only base_maps and shipped scenarios are visited. Personal saves,
 tournament files and scenarios/map_editor are never included implicitly.
@@ -19,7 +19,7 @@ import json
 from pathlib import Path
 import sys
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from data import constants as c, migrations

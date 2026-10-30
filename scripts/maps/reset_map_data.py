@@ -3,7 +3,7 @@ import os
 import sys
 
 # Add the parent directory (project root) to the Python path so the picker's imports resolve
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from ui.dialogs.file_browser_screen import run_file_browser
 

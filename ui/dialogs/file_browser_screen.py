@@ -6,7 +6,7 @@ path, and navigation is bounded only by what the OS lets the process read. A
 call site's `start_dir` is just where the browser opens, never a fence.
 
 run_file_browser() is the blocking entry point. It works with no pygame display
-already up (the standalone map_tools scripts) by opening its own window, the
+already up (the standalone scripts/maps tools) by opening its own window, the
 same trick ui/dialogs/ uses.
 """
 
@@ -517,8 +517,8 @@ def run_file_browser(title, start_dir=None, mode="open_file", extensions=None,
     """Answers on_result(path) -- or (list of paths), or None if cancelled.
 
     Usable from the game (a display is already up, so this hands off to the
-    modal stack and returns immediately) and from the standalone map_tools
-    scripts and Tk editor windows (a window is created for the duration and
+    modal stack and returns immediately) and from the standalone scripts/maps
+    tools and Tk editor windows (a window is created for the duration and
     on_result fires synchronously before this returns -- see run_screen).
     """
 

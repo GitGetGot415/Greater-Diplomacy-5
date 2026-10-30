@@ -9,7 +9,7 @@ from data.state_access import BackendState
 from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError
 from data.multiplayer.tournament.files import _validate_production_projection
 from map_logic.actions import production_actions as actions
-from tests.test_unit_metadata import fixture_metadata
+from tests.research_fixtures import fixture_metadata
 
 
 class ProductionActionTests(unittest.TestCase):

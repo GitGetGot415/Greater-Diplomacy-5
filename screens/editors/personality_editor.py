@@ -48,7 +48,7 @@ class Personality_Edit_Screen(MapOverlayScreen):
         # that has never been asked gets its procedural traits seeded here, so
         # the sliders open where the AI would actually have played it.
         traits = ai_personality.get(map_screen.nation_data, country_id,
-                                    getattr(map_screen, "scenario_settings", None))
+                                    map_screen.scenario_settings)
         self.values = {t: float(traits.get(t, 0.5)) for t in ai_personality.TRAITS}
         self.sliders = {}
         self.refresh_ui()
@@ -80,7 +80,7 @@ class Personality_Edit_Screen(MapOverlayScreen):
         block = nation_data.setdefault(self.country_id, {})
         block.pop("personality", None)
         traits = ai_personality.get(nation_data, self.country_id,
-                                    getattr(self.map_screen, "scenario_settings", None))
+                                    self.map_screen.scenario_settings)
         self.values = {t: float(traits.get(t, 0.5)) for t in ai_personality.TRAITS}
         self.map_screen.show_feedback(queries.get_country_display_name(
             self.country_id, self.map_screen.nation_data) + " reset to procedural traits")
@@ -108,7 +108,7 @@ class Personality_Edit_Screen(MapOverlayScreen):
             surface.blit(hi_surf, (slider.rect.right + 14, slider.rect.y - 2))
 
         note = ai_personality.describe(self.map_screen.nation_data, self.country_id,
-                                       getattr(self.map_screen, "scenario_settings", None))
+                                       self.map_screen.scenario_settings)
         summary = small.render(f"Currently saved as: {note}", True, c.UI_TEXT_DIM)
         surface.blit(summary, (p.x + 30, p.bottom - 90))
 

@@ -31,7 +31,7 @@ def advance_time(map_screen):
         return
 
     # PHASE 1: Prepare the turn and generate AI moves
-    if hasattr(session_for(map_screen), 'active_players') and len(session_state.active_players) > 1:
+    if len(session_state.active_players) > 1:
         session_state.current_player_index += 1
         
         if session_state.current_player_index < len(session_state.active_players):
@@ -139,7 +139,7 @@ async def _resolve_turn_and_refresh(map_screen):
         session_state.viewing_ai_moves = False
         session_state.is_refreshing = False
 
-        if hasattr(session_for(map_screen), 'active_players') and len(session_state.active_players) > 1:
+        if len(session_state.active_players) > 1:
             session_state.player_country = session_state.active_players[session_state.current_player_index]
             map_screen.show_player_ready_screen = True
 

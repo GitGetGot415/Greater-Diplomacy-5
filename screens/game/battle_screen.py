@@ -261,14 +261,7 @@ class Battle_Screen(ModalScreen):
     # ------------------------------------------------------------------ #
 
     def can_edit_realtime(self):
-        if not getattr(self.map_screen, "realtime_multiplayer", False):
-            return True
-        session = getattr(self.map_screen, "realtime_session", None)
-        player = session.players.get(getattr(self.map_screen, "realtime_player_id", "")) if session else None
-        if session and session.phase == "TURN" and player and not player.submitted and not player.eliminated:
-            return True
-        self.map_screen.show_feedback("Turn submitted or unavailable; unsubmit to change battle orders.")
-        return False
+        return queries.require_realtime_turn_open(self.map_screen, "battle orders")
 
     def send_to_lane(self, unit, lane):
         """Pins a unit to the duel against whoever is on the other side."""

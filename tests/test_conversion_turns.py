@@ -9,8 +9,8 @@ from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError
 from map_logic.ai import ai_movement
 from map_logic.system32 import air_processor, movement_processor
 from tests import test_air_transport as transport_tests
-from tests.test_air_mechanics import wing, tile
-from tests.test_map_save_format import sample_map_screen
+from tests.air_fixtures import tile, wing
+from tests.stub_map_screen import sample_map_screen
 
 
 class ConversionTurnsTests(unittest.TestCase):

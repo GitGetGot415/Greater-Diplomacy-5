@@ -475,13 +475,13 @@ def build(map_screen):
     """Snapshots the map for this turn's AI passes."""
     world_state = world_for(map_screen)
     total_turns = 0
-    time_manager = getattr(world_for(map_screen), "time_manager", None)
+    time_manager = world_state.time_manager
     if time_manager is not None:
         total_turns = queries.get_total_turns(time_manager)
 
     return AIWorld(world_state.map_data, world_state.nation_data,
                    world_state.id_to_province, total_turns,
-                   human_players=getattr(session_for(map_screen), "active_players", ()))
+                   human_players=session_for(map_screen).active_players)
 
 
 def for_screen(map_screen):

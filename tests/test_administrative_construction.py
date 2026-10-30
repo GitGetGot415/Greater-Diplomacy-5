@@ -2,7 +2,6 @@
 import copy
 import json
 import unittest
-from types import SimpleNamespace
 from unittest import mock
 
 from data import queries
@@ -10,7 +9,7 @@ import data.constants as c
 from data.multiplayer.tournament.files import _validate_administrative_orders
 from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError
 from map_logic.ai.ai_construction import _apply_coring_priority
-from tests.test_map_save_format import sample_map_screen
+from tests.stub_map_screen import map_double, sample_map_screen
 
 
 class AdministrativeConstructionTests(unittest.TestCase):
@@ -18,7 +17,7 @@ class AdministrativeConstructionTests(unittest.TestCase):
         self.settings = {"administrative_turn_overrides": {}, "administrative_disabled": []}
         self.province = {"id": 1, "json_key": "home", "owner": "A", "cores": ["B"],
                          "is_coastal": True, "building_queue": [], "units": []}
-        self.world = SimpleNamespace(scenario_settings=self.settings,
+        self.world = map_double(scenario_settings=self.settings,
                                      map_data={1: self.province},
                                      nation_data={"A": {"manpower": c.AI_SURPLUS_MANPOWER_FOR_CORING * 100}},
                                      id_to_province={1: self.province})

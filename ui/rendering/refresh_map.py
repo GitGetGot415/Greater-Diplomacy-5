@@ -413,7 +413,7 @@ def refresh_fog_map(map_screen):
 
     # --- THE FIX: Blanket the entire map in fog during the AI viewing phase in multiplayer ---
     # Prevents hotseat players from seeing Player 1's vision before the next turn starts
-    is_multiplayer = hasattr(map_screen, 'active_players') and len(map_screen.active_players) > 1
+    is_multiplayer = len(map_screen.active_players) > 1
     if map_screen.viewing_ai_moves and is_multiplayer:
         map_screen.visible_provinces = set() # Return an empty set so nothing is visible
         map_screen.partial_visible_provinces = set()
@@ -428,7 +428,7 @@ def refresh_fog_map(map_screen):
             
         map_screen.visible_provinces, map_screen.partial_visible_provinces = vis_result
 
-    fog_strength = map_screen.scenario_settings.get("fog_of_war_strength", "normal") if hasattr(map_screen, 'scenario_settings') else "normal"
+    fog_strength = map_screen.scenario_settings.get("fog_of_war_strength", "normal")
     extreme_hidden = set()
     
     if fog_strength == "extreme":

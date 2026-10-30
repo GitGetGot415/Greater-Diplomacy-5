@@ -61,6 +61,7 @@ from screens.multiplayer.realtime_multiplayer import (
 )
 from screens.game.map import Map
 from ui.widgets.ui_elements import Button
+from tests.stub_map_screen import map_double
 
 
 class Clock:
@@ -103,7 +104,7 @@ class FakeAddressProbe:
 
 class HostSnapshotTests(unittest.TestCase):
     def test_shared_economy_totals_replace_cached_values_and_clear_on_older_snapshots(self):
-        client = SimpleNamespace(player_country="A", nation_data={"A": {}}, map_data={},
+        client = map_double(player_country="A", nation_data={"A": {}}, map_data={},
                                  refresh_all_maps=mock.Mock())
         totals = {"B": {"available": True, "resources": [{"income": 123}]}}
         snapshot = {"nation_data": {"A": {}, "B": {}}, "country_economy_summaries": totals}
@@ -140,6 +141,7 @@ class HostSnapshotTests(unittest.TestCase):
         province = {"id": 1, "json_key": "home", "owner": "A", "units": [],
                     "cores": [], "building_queue": [], "unit_queue": []}
         host_view = object.__new__(Map)
+        host_view.selected_unit_ids = set()
         host_view.realtime_server_map = object()
         host_view.map_data = {"home": province}
         host_view.nation_data = {"A": {}}
@@ -166,6 +168,7 @@ class HostSnapshotTests(unittest.TestCase):
 
     def test_snapshot_retains_local_read_and_popup_state_for_the_same_message(self):
         client_map = object.__new__(Map)
+        client_map.selected_unit_ids = set()
         client_map.player_country = "A"
         client_map.nation_data = {"A": {"inbox": [
             {"message_id": "handled", "read": True, "popup_shown": True},
@@ -734,7 +737,7 @@ class RealtimeSessionTests(unittest.TestCase):
         self.assertEqual(decode_invite(invite)["session"], self.session.session_id)
 
     def test_research_draft_uses_server_progress_not_client_progress(self):
-        map_ref = SimpleNamespace(
+        map_ref = map_double(
             nation_data={"A": {"research": {"test_tech": 0}, "research_queue": [],
                                "research_progress": {}}},
             map_data={}, id_to_province={})
@@ -757,7 +760,7 @@ class RealtimeSessionTests(unittest.TestCase):
         tree = queries.get_tech_tree()
         cases = factory_research_cases(tree)
         for tech, locked, unlocked in cases:
-            map_ref = SimpleNamespace(nation_data={"A": {"research": dict(locked), "research_queue": []}},
+            map_ref = map_double(nation_data={"A": {"research": dict(locked), "research_queue": []}},
                                       map_data={}, id_to_province={})
             driver = MapRealtimeDriver(map_ref)
             command = {"type": "research_queue", "tech_names": [tech], "points_remaining": 0,
@@ -776,7 +779,7 @@ class RealtimeSessionTests(unittest.TestCase):
                 self.assertEqual(map_ref.nation_data["A"]["research_queue"], [])
 
     def test_collects_empty_and_nonempty_research_selection(self):
-        map_ref = SimpleNamespace(
+        map_ref = map_double(
             map_data={},
             nation_data={"A": {"name": "A", "color": [1, 2, 3],
                                "research_queue": [{"tech_name": "test_tech", "points_remaining": 10}]}})
@@ -788,7 +791,7 @@ class RealtimeSessionTests(unittest.TestCase):
 
     def test_economy_conversions_and_claim_drafts_are_server_validated(self):
         province = {"id": 7, "owner": "B", "units": []}
-        map_ref = SimpleNamespace(
+        map_ref = map_double(
             map_data={"target": province}, id_to_province={7: province},
             nation_data={
                 "A": {"claims": [], "claim_queue": [], "research": {}},
@@ -818,7 +821,7 @@ class RealtimeSessionTests(unittest.TestCase):
         self.assertEqual(retained[0]["queue"], [{"prov_id": 7, "turns_left": 3}])
 
     def test_collects_economy_conversion_and_claim_choices(self):
-        map_ref = SimpleNamespace(
+        map_ref = map_double(
             map_data={}, nation_data={"A": {
                 "conscription_slider": .6, "mat_to_fuel_slider": .2,
                 "claim_queue": [{"prov_id": 4, "turns_left": 5}],
@@ -834,7 +837,7 @@ class RealtimeSessionTests(unittest.TestCase):
     def test_conscription_damage_uses_server_applied_preferences_before_combat(self):
         from data import queries
 
-        map_ref = SimpleNamespace(
+        map_ref = map_double(
             map_data={}, id_to_province={}, player_country="None",
             nation_data={"A": {"conscription_slider": 0.25, "research": {}},
                          "B": {"conscription_slider": 1.0}})
@@ -865,7 +868,7 @@ class RealtimeSessionTests(unittest.TestCase):
         self.assertEqual(resolved_bonuses["B"], 0.0)
 
     def test_diplomacy_draft_is_collected_and_cannot_replace_inflight_offer(self):
-        map_ref = SimpleNamespace(
+        map_ref = map_double(
             map_data={}, id_to_province={}, nation_colors={},
             nation_data={
                 "A": {"name": "A", "color": [1, 2, 3], "research_queue": [],
@@ -1039,7 +1042,7 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
             "P": {"name": "P", "color": [7, 8, 9], "puppet_type": c.PUPPET_TYPE_INTEGRATED,
                   "siphon_rates": {"manpower": 0, "materials": 0, "fuel": 0}},
         }
-        return SimpleNamespace(map_data={"home": home, "foreign": foreign},
+        return map_double(map_data={"home": home, "foreign": foreign},
                                id_to_province={1: home, 2: foreign}, nation_data=nations,
                                nation_colors={"A": (1, 2, 3), "B": (4, 5, 6), "P": (7, 8, 9)},
                                scenario_settings={})
@@ -1256,7 +1259,7 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
     def test_policy_drafts_are_authoritative_and_keep_same_turn_cancels_empty(self):
         from map_logic import politics
 
-        map_ref = SimpleNamespace(
+        map_ref = map_double(
             map_data={}, id_to_province={}, player_country="None",
             nation_data={"A": {"political_value": -3, "research": {}}})
         driver = MapRealtimeDriver(map_ref)

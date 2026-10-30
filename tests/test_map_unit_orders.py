@@ -12,10 +12,11 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from data import queries
 import data.constants as c
+from tests.stub_map_screen import bare_orders_screen, fill_state_defaults
 from ui.camera import camera_handler
 from ui.rendering import overlay_renderer
 from screens.game.map import Map
-from screens.game.orders import Orders_Screen, _OrdersRowHitbox
+from screens.game.orders import _OrdersRowHitbox
 from screens.game import map_input as event_handler
 from screens.setup import player_setup
 from map_logic.system32.time_handler import TimeHandler
@@ -67,6 +68,8 @@ class MapOrderTests(unittest.TestCase):
         game.unit_event_read_turns = {}
         game.selected_unit_ids = {id(slow), id(fast)}
         game.unit_selection_drag = None
+        game._presentation_cache_revision = 0
+        game.selected_province = None
         game.show_feedback = lambda _text: None
         return game, slow, fast, p3
 
@@ -180,7 +183,7 @@ class OrdersSelectionRowsTests(unittest.TestCase):
                 self.selected_ids.difference_update(id(unit) for unit in units)
 
         map_stub = MapStub()
-        screen = object.__new__(Orders_Screen)
+        screen = bare_orders_screen()
         screen.map_screen = map_stub
         screen.read_only = False
         screen.selected_unit_index = 0
@@ -201,7 +204,7 @@ class OrdersSelectionRowsTests(unittest.TestCase):
         callback = Mock()
         row = _OrdersRowHitbox(
             pygame.Rect(10, 10, 100, 40), Mock(), secondary_callback=callback)
-        screen = object.__new__(Orders_Screen)
+        screen = bare_orders_screen()
         screen.battle_screen = None
         screen.map_screen = object()
         screen.elements = [row]
@@ -222,10 +225,10 @@ class OrdersSelectionRowsTests(unittest.TestCase):
         first["units"] = [unit_a]
         second["units"] = [unit_b]
 
-        map_stub = type("MapStub", (), {
+        map_stub = fill_state_defaults(type("MapStub", (), {
             "selected_unit_records": lambda self: [(unit_a, first), (unit_b, second)],
-        })()
-        screen = object.__new__(Orders_Screen)
+        })())
+        screen = bare_orders_screen()
         screen.map_screen = map_stub
         screen.target_province = first
 
@@ -266,7 +269,7 @@ class OrdersSelectionRowsTests(unittest.TestCase):
                 return [(unit, origin) for unit in origin["units"]
                         if id(unit) in self.selected_ids]
 
-        screen = object.__new__(Orders_Screen)
+        screen = bare_orders_screen()
         screen.map_screen = MapStub()
         screen.target_province = origin
         screen.read_only = False
@@ -319,7 +322,7 @@ class OrdersSelectionRowsTests(unittest.TestCase):
             def deselect_map_units(self, units):
                 self.selected_ids.difference_update(id(unit) for unit in units)
 
-        screen = object.__new__(Orders_Screen)
+        screen = bare_orders_screen()
         screen.map_screen = MapStub()
         screen.target_province = first
         screen.read_only = False
@@ -343,12 +346,12 @@ class OrdersSelectionRowsTests(unittest.TestCase):
         focused["units"] = [focused_unit]
         remote["units"] = [remote_unit]
 
-        map_stub = type("MapStub", (), {
+        map_stub = fill_state_defaults(type("MapStub", (), {
             "player_country": "A",
             "tactical_mode": False,
             "show_feedback": lambda self, _message: None,
-        })()
-        screen = object.__new__(Orders_Screen)
+        })())
+        screen = bare_orders_screen()
         screen.map_screen = map_stub
         screen.target_province = focused
         screen.refresh_ui = lambda: None
@@ -369,7 +372,7 @@ class OrdersBatchCommandsTests(unittest.TestCase):
         origin["units"] = [first]
         remote["units"] = [second]
         feedback = []
-        map_stub = type("MapStub", (), {
+        map_stub = fill_state_defaults(type("MapStub", (), {
             "player_country": "A",
             "tactical_mode": False,
             "nation_data": {"A": {"materials": 1000, "manpower": 1000,
@@ -377,8 +380,8 @@ class OrdersBatchCommandsTests(unittest.TestCase):
             "scenario_settings": {"free_repairs": False},
             "selected_unit_records": lambda self: [(first, origin), (second, remote)],
             "show_feedback": lambda self, message: feedback.append(message),
-        })()
-        screen = object.__new__(Orders_Screen)
+        })())
+        screen = bare_orders_screen()
         screen.map_screen = map_stub
         screen.unit_library = {"Infantry": {"cost_materials": 100,
                                              "cost_manpower": 50,
@@ -440,7 +443,7 @@ class OrdersBatchCommandsTests(unittest.TestCase):
         second = {"owner": "A", "type": "Infantry", "order": {"path": [3]}}
         screen, _map_stub, feedback = self._screen(first, second)
 
-        from tests.test_unit_metadata import fixture_metadata
+        from tests.research_fixtures import fixture_metadata
         screen.unit_library["Infantry"]["metadata"] = fixture_metadata(tier=1)
         screen.unit_library["Fixture upgraded infantry"] = {"metadata": fixture_metadata(tier=2, level=2)}
         _map_stub.nation_data["A"]["research"] = {"fixture_track": 2}
@@ -491,7 +494,7 @@ class OrdersBatchCommandsTests(unittest.TestCase):
 
 class MapOrderGestureTests(unittest.TestCase):
     def test_orders_move_release_on_a_map_bar_does_not_target_a_tile(self):
-        map_stub = type("MapStub", (), {
+        map_stub = fill_state_defaults(type("MapStub", (), {
             "top_bar_rect": pygame.Rect(0, 0, 800, 60),
             "bot_bar_rect": pygame.Rect(0, 540, 800, 60),
             "selection_mode": False,
@@ -499,8 +502,8 @@ class MapOrderGestureTests(unittest.TestCase):
             "unit_selection_drag": None,
             "unit_stack_hitboxes": [],
             "selected_unit_records": lambda self: [(object(), object())],
-        })()
-        screen = object.__new__(Orders_Screen)
+        })())
+        screen = bare_orders_screen()
         screen.map_screen = map_stub
         screen.panel_rect = pygame.Rect(800, 100, 200, 300)
         screen.is_dragging_scrollbar = False
@@ -523,21 +526,21 @@ class MapOrderGestureTests(unittest.TestCase):
         destination = province(2, [1])
         gun = {"owner": "A", "type": "Artillery I"}
         origin["units"] = [gun]
-        screen = object.__new__(Orders_Screen)
+        screen = bare_orders_screen()
         screen.panel_rect = pygame.Rect(0, 0, 100, 100)
         screen.bombarding_unit_index = 0
         screen.bombarding_unit_actual_index = 0
         screen.bombarding_unit_province = origin
         screen.exit_screen = Mock()
         screen.refresh_ui = lambda: None
-        screen.map_screen = type("MapStub", (), {
+        screen.map_screen = fill_state_defaults(type("MapStub", (), {
             "player_country": "A",
             "tactical_mode": False,
             "unit_selection_drag": None,
             "unit_stack_hitboxes": [],
             "id_to_province": {1: origin, 2: destination},
             "show_feedback": lambda self, _message: None,
-        })()
+        })())
 
         with (patch("screens.game.orders.event_handler.resolve_map_mouse_gesture_conflict"),
               patch("screens.game.orders.pygame.mouse.get_pos",
@@ -557,7 +560,7 @@ class MapOrderGestureTests(unittest.TestCase):
     def test_unit_hover_prefers_the_topmost_visible_stack(self):
         lower = {"rect": pygame.Rect(10, 10, 30, 30), "units": []}
         upper = {"rect": pygame.Rect(10, 10, 30, 30), "units": []}
-        map_stub = type("MapStub", (), {"unit_hover_hitboxes": [lower, upper]})()
+        map_stub = fill_state_defaults(type("MapStub", (), {"unit_hover_hitboxes": [lower, upper]})())
 
         self.assertIs(event_handler._unit_stack_at(map_stub, (20, 20)), upper)
         self.assertIsNone(event_handler._unit_stack_at(map_stub, (100, 100)))
@@ -566,13 +569,13 @@ class MapOrderGestureTests(unittest.TestCase):
         unit = {"owner": "A", "type": "Infantry"}
         origin = province(1, [])
         origin["units"] = [unit]
-        map_stub = type("MapStub", (), {
+        map_stub = fill_state_defaults(type("MapStub", (), {
             "unit_hover_hitboxes": [{
                 "rect": pygame.Rect(10, 10, 20, 20),
                 "province": origin,
                 "units": [unit],
             }],
-        })()
+        })())
 
         with patch("screens.game.map_input.player_setup.select_tactical_unit") as select_unit:
             self.assertTrue(event_handler._select_tactical_unit_stack(map_stub, (15, 15)))
@@ -583,7 +586,7 @@ class MapOrderGestureTests(unittest.TestCase):
         unit = {"owner": "A", "type": "Infantry"}
         destination = province(2, [])
         calls = []
-        map_stub = type("MapStub", (), {
+        map_stub = fill_state_defaults(type("MapStub", (), {
             "secondary_mode": "UNITS",
             "unit_selection_drag": None,
             "unit_stack_hitboxes": [],
@@ -591,7 +594,7 @@ class MapOrderGestureTests(unittest.TestCase):
             "can_select_map_units": lambda self: True,
             "selected_unit_records": lambda self: [(unit, province(1, []))],
             "issue_selected_move_orders": lambda self, dest, append=False: calls.append((dest, append)),
-        })()
+        })())
 
         with (patch("screens.game.map_input.queries.get_clicked_province", return_value=destination),
               patch("screens.game.map_input.pygame.key.get_mods", return_value=0)):
@@ -607,7 +610,7 @@ class MapOrderGestureTests(unittest.TestCase):
         second = {"owner": "A", "type": "Infantry"}
         selected, opened = [], []
         origin = province(1, [])
-        map_stub = type("MapStub", (), {
+        map_stub = fill_state_defaults(type("MapStub", (), {
             "secondary_mode": "UNITS",
             "unit_selection_drag": None,
             "unit_stack_hitboxes": [
@@ -617,7 +620,7 @@ class MapOrderGestureTests(unittest.TestCase):
             "can_select_map_units": lambda self: True,
             "select_map_units": lambda self, units, additive=False: selected.extend(units),
             "open_orders_for_unit_stack": lambda self, prov, units: opened.append((prov, units)),
-        })()
+        })())
 
         with patch("screens.game.map_input.pygame.key.get_mods", return_value=0):
             self.assertTrue(event_handler._handle_map_unit_selection(
@@ -665,14 +668,14 @@ class MapOrderGestureTests(unittest.TestCase):
         self.assertEqual(opened, [(origin, [unit])])
 
     def test_right_press_cancels_an_unfinished_left_drag_rectangle(self):
-        map_stub = type("MapStub", (), {
+        map_stub = fill_state_defaults(type("MapStub", (), {
             "secondary_mode": "UNITS",
             "unit_selection_drag": {"start": (10, 10), "current": (80, 80)},
             "unit_stack_hitboxes": [],
             "selected_unit_ids": set(),
             "can_select_map_units": lambda self: True,
             "_ignore_right_until_release": False,
-        })()
+        })())
 
         event_handler.resolve_map_mouse_gesture_conflict(
             map_stub, pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(20, 20), button=3))
@@ -681,10 +684,10 @@ class MapOrderGestureTests(unittest.TestCase):
         self.assertTrue(map_stub._ignore_right_until_release)
 
     def test_middle_press_cancels_a_left_drag_without_selecting_on_release(self):
-        map_stub = type("MapStub", (), {
+        map_stub = fill_state_defaults(type("MapStub", (), {
             "unit_selection_drag": {"start": (10, 10), "current": (80, 80)},
             "_ignore_left_until_release": False,
-        })()
+        })())
 
         event_handler.resolve_map_mouse_gesture_conflict(
             map_stub, pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=(20, 20), button=2))
@@ -699,7 +702,7 @@ class MapOrderGestureTests(unittest.TestCase):
         self.assertFalse(map_stub._ignore_left_until_release)
 
     def test_orders_map_click_returns_to_the_clicked_province_menu(self):
-        screen = object.__new__(Orders_Screen)
+        screen = bare_orders_screen()
         screen.panel_rect = pygame.Rect(100, 100, 200, 200)
         screen.bombarding_unit_index = None
         screen.is_dragging_scrollbar = False
@@ -707,10 +710,10 @@ class MapOrderGestureTests(unittest.TestCase):
         screen.exit_screen = Mock()
         screen.return_to_province_menu = False
         screen.entered_from_combat_bubble = True
-        screen.map_screen = type("MapStub", (), {
+        screen.map_screen = fill_state_defaults(type("MapStub", (), {
             "unit_selection_drag": None,
             "unit_stack_hitboxes": [],
-        })()
+        })())
 
         with (patch("screens.game.orders.event_handler.resolve_map_mouse_gesture_conflict"),
               patch("screens.game.orders.event_handler._select_map_province",
@@ -733,7 +736,7 @@ class MapOrderGestureTests(unittest.TestCase):
         second = {"owner": "A", "type": "Infantry"}
         selected = []
         origin = province(1, [])
-        map_stub = type("MapStub", (), {
+        map_stub = fill_state_defaults(type("MapStub", (), {
             "unit_selection_drag": None,
             "unit_stack_hitboxes": [
                 {"rect": pygame.Rect(20, 20, 20, 20), "province": origin, "units": [first]},
@@ -745,8 +748,8 @@ class MapOrderGestureTests(unittest.TestCase):
             "is_unit_selected": lambda self, unit: False,
             "select_map_units": lambda self, units, additive=False: selected.extend(units),
             "selected_unit_records": lambda self: [(unit, origin) for unit in selected],
-        })()
-        screen = object.__new__(Orders_Screen)
+        })())
+        screen = bare_orders_screen()
         screen.map_screen = map_stub
         screen.panel_rect = pygame.Rect(100, 100, 200, 200)
         screen.is_dragging_scrollbar = False
@@ -772,7 +775,7 @@ class MapOrderGestureTests(unittest.TestCase):
         origin = province(1, [])
         origin["units"] = [unit]
         focus = Mock()
-        map_stub = type("MapStub", (), {
+        map_stub = fill_state_defaults(type("MapStub", (), {
             "unit_selection_drag": None,
             "unit_stack_hitboxes": [{
                 "rect": pygame.Rect(10, 10, 20, 20),
@@ -786,8 +789,8 @@ class MapOrderGestureTests(unittest.TestCase):
             "is_unit_selected": lambda self, candidate: candidate is unit,
             "selected_unit_records": lambda self: [(unit, origin)],
             "focus_camera_on_army": focus,
-        })()
-        screen = object.__new__(Orders_Screen)
+        })())
+        screen = bare_orders_screen()
         screen.map_screen = map_stub
         screen.panel_rect = pygame.Rect(100, 100, 200, 200)
         screen.is_dragging_scrollbar = False
@@ -849,7 +852,7 @@ class MapViewDefaultTests(unittest.TestCase):
     def test_confirming_a_country_applies_the_play_view_defaults(self):
         applied = []
         focused = []
-        map_stub = type("MapStub", (), {
+        map_stub = fill_state_defaults(type("MapStub", (), {
             "pending_selection": "A",
             "active_players": [],
             "tactical_mode": False,
@@ -862,7 +865,7 @@ class MapViewDefaultTests(unittest.TestCase):
                 (country_id, animate)),
             "show_feedback": lambda self, _message: None,
             "refresh_map_layers": lambda self, *_layers: None,
-        })()
+        })())
 
         with patch("screens.game.map.render_buttons"):
             player_setup.confirm_player_country(map_stub)
@@ -874,7 +877,7 @@ class MapViewDefaultTests(unittest.TestCase):
 
     def test_starting_spectator_applies_the_play_view_defaults(self):
         applied = []
-        map_stub = type("MapStub", (), {
+        map_stub = fill_state_defaults(type("MapStub", (), {
             "active_players": [],
             "selection_mode": True,
             "pending_selection": None,
@@ -885,7 +888,7 @@ class MapViewDefaultTests(unittest.TestCase):
             "set_play_view_defaults": lambda self: applied.append(True),
             "show_feedback": lambda self, _message: None,
             "refresh_map_layers": lambda self, *_layers: None,
-        })()
+        })())
 
         with patch("screens.game.map.render_buttons"):
             player_setup.start_spectator(map_stub)
@@ -932,7 +935,7 @@ class MapViewDefaultTests(unittest.TestCase):
             camera, (2500, 1500), c.SCREEN_WIDTH, c.SCREEN_HEIGHT,
             120, 2.1, animate=True)
         expected_target = pygame.Vector2(camera.target_pos)
-        map_stub = type("MapStub", (), {
+        map_stub = fill_state_defaults(type("MapStub", (), {
             "loop_map": False,
             "map_w": 5000,
             "map_h": 5000,
@@ -940,7 +943,7 @@ class MapViewDefaultTests(unittest.TestCase):
             "total_ui_h": 120,
             "selection_mode": False,
             "hide_raised_rect": False,
-        })()
+        })())
 
         camera.update(map_stub, c.SCREEN_HEIGHT)
 

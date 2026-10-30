@@ -103,7 +103,7 @@ def draw_turn_loading_screen(map_screen, surface):
     # or two model-driven majors and most turns have none -- an empty bar every
     # turn would be worse than no bar.
     top = center_y - 100
-    summits = getattr(session_for(map_screen), "summits_total", 0)
+    summits = session_state.summits_total
     if summits:
         draw_bar(top, "1. Holding Summits", session_state.summits_completed, summits)
         top += spacing
@@ -123,7 +123,7 @@ def draw_turn_loading_screen(map_screen, surface):
     # can be 0 and this button is the only thing that ends a turn early.
     if (session_state.proactive_llm_tasks_total > 0
             or session_state.responsive_tasks_total > 0
-            or getattr(session_for(map_screen), "summits_total", 0) > 0):
+            or session_state.summits_total > 0):
         skip_btn_rect = pygame.Rect(center_x - 100, center_y + 180, 200, 40)
         mx, my = pygame.mouse.get_pos()
         

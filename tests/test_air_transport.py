@@ -17,8 +17,8 @@ from map_logic.ai import ai_unit_eval
 from map_logic.system32 import air_processor, combat_processor, movement_processor, unit_events
 from screens.game.orders import Orders_Screen, _AirMissionSelectScreen
 from tests import test_air_mechanics as air_tests
-from tests.test_air_mechanics import install_air_fixture, world, tile, wing
-from tests.test_tournament_moves import synchronous_progress
+from tests.air_fixtures import install_air_fixture, tile, wing, world
+from tests.stub_map_screen import synchronous_progress
 
 
 class TransportTests(unittest.TestCase):

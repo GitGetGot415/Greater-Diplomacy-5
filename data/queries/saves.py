@@ -203,7 +203,7 @@ def build_save_dict(map_screen, *, include_provinces=True, compact_nations=False
     session_state = session_for(map_screen)
     from map_logic.system32 import unit_events
     diplomacy_lifecycle.normalize_diplomatic_records(world_state.nation_data)
-    scenario_settings = getattr(world_for(map_screen), 'scenario_settings', {}) or {}
+    scenario_settings = world_state.scenario_settings or {}
     # Keep this setting explicit in every new save. Older base maps omit it,
     # but their effective default is OFF and that default should survive the
     # editor's copy/save path instead of disappearing from meta.json.
@@ -269,7 +269,7 @@ def player_snapshot_projection(map_screen, snapshot, country_id):
         tactical_mode=False, player_unit=None)
     visible, _partial = queries.get_visible_provinces(view) if country_id in world_state.nation_data else (set(), set())
     fog = queries.get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR,
-                            getattr(world_for(map_screen), "scenario_settings", {}))
+                            world_state.scenario_settings)
     result["country_economy_summaries"] = get_shared_country_economy_summaries(
         country_id, world_state.map_data, world_state.nation_data, context=map_screen)
     private_fields = ("production_queue", "current_research", "research_queue", "research_progress",

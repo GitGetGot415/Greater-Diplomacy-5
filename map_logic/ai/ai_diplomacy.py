@@ -65,7 +65,7 @@ def process_proactive_llm_tasks(map_screen):
     """
     world_state = world_for(map_screen)
     session_state = session_for(map_screen)
-    pending_choices = getattr(session_for(map_screen), "proactive_choices", None) or []
+    pending_choices = session_state.proactive_choices or []
     session_state.proactive_llm_tasks = []
 
     if not pending_choices:
@@ -317,7 +317,7 @@ def _publish_summit(map_screen, pair, agreed):
         headline = f"Our attaches report that {a} and {b} met in private, but parted without agreement."
 
     world = ai_world.for_screen(map_screen)
-    for human in getattr(session_for(map_screen), "active_players", ()):
+    for human in session_for(map_screen).active_players:
         if human in (a, b):
             continue
         neighbours = world.neighbors.get(human, ())
@@ -1233,7 +1233,7 @@ def _run_basic_proactive_ai(map_screen):
         # diplomacy in it. The player's own country is never in ai_nations, so
         # this needs no gate of its own.
         ai_politics.decide(world, ai_name, world_state.nation_data,
-                           getattr(world_for(map_screen), "scenario_settings", None))
+                           world_state.scenario_settings)
 
         # Battle Royale has no diplomacy to run, but the cooldown/access
         # upkeep above still applies to every nation -- this used to `return`
@@ -1475,7 +1475,7 @@ def process_scripted_events(map_screen, preview_request=None):
                     var_name = cond.get("variable", "")
                     var_type = "string"
                     var_val = "0"
-                    for v in getattr(world_for(map_screen), "script_variables", []):
+                    for v in world_state.script_variables:
                         if v["name"] == var_name:
                             var_type = v["type"]
                             var_val = v["value"]
@@ -1749,7 +1749,7 @@ def process_scripted_events(map_screen, preview_request=None):
                         op = act.get("unit_type", "Set")
                         msg_val = act.get("message", "0")
                         
-                        for v in getattr(world_for(map_screen), "script_variables", []):
+                        for v in world_state.script_variables:
                             if v["name"] == var_name:
                                 var_type = v["type"]
                                 if var_type in ["int", "double"]:

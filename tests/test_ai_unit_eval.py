@@ -489,9 +489,9 @@ class ThreatProfileTests(unittest.TestCase):
     def test_enemy_front_and_volley_use_border_terrain(self):
         from types import SimpleNamespace
         from map_logic.system32 import combat_rules
-        from tests.test_multiparty_combat import StubMapScreen, unit
+        from tests.combat_fixtures import StubBattleMap, unit
 
-        screen = StubMapScreen()
+        screen = StubBattleMap()
         screen.add_nation("A", at_war_with=["B"])
         screen.add_nation("B", at_war_with=["A"])
         prov = screen.add_province(

@@ -19,7 +19,7 @@ from map_logic.actions import production_actions
 from map_logic.ai import ai_tech_eval, ai_unit_eval
 from map_logic.system32.research_processor import process_national_research
 from screens.game.research import Research_Screen
-from tests.test_map_save_format import sample_map_screen
+from tests.stub_map_screen import sample_map_screen
 
 
 class HistoricalInfantryTests(unittest.TestCase):
@@ -179,6 +179,7 @@ class HistoricalInfantryTests(unittest.TestCase):
     def test_named_research_stages_use_the_same_editor_prerequisite_path(self):
         screen = Research_Screen.__new__(Research_Screen)
         screen.tech_tree = self.tree
+        screen.unit_library = None
         for tech in c.DATED_UNIT_RESEARCH_TRACKS:
             for level, year in enumerate(self.tree[tech]["years"], 1):
                 with self.subTest(tech=tech, year=year):

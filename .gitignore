@@ -7,7 +7,6 @@ venv/
 *.json.gz
 *.txt
 !assets/**
-!map_tools/*
 !base_maps/**
 !scenarios/**
 !context/**

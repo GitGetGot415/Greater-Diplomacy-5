@@ -488,7 +488,7 @@ class Menu(GameState):
             ground_start_x = -self.left_ground_rect.width - self.GROUND_INTRO_START_MARGIN
             self._left_ground_draw_pos = (int(_lerp(ground_start_x, self.left_ground_rect.x, t)), self.left_ground_rect.y)
 
-        if getattr(self, "hildehrand_image", None):
+        if self.hildehrand_image:
             rest_rect = self.hildehrand_image.get_rect(bottomleft=self._hildehrand_anchor_bottomleft)
             local_elapsed = elapsed - self.HILDEHRAND_INTRO_DELAY_MS
             t = _ease_out_expo(local_elapsed / self.SIGN_INTRO_MS) if local_elapsed > 0 else 0.0
@@ -525,19 +525,19 @@ class Menu(GameState):
             item["link_rect"].y = int(_lerp(rise_start_y, item["_intro_target_link_y"], t))
 
     def additional_draw(self, surface):
-        if getattr(self, "title_image", None):
+        if self.title_image:
             surface.blit(self.title_image, self._title_draw_pos)
 
-        if getattr(self, "right_ground_image", None):
+        if self.right_ground_image:
             surface.blit(self.right_ground_image, self._right_ground_draw_pos)
 
-        if getattr(self, "left_ground_image", None):
+        if self.left_ground_image:
             surface.blit(self.left_ground_image, self._left_ground_draw_pos)
 
-        if getattr(self, "sign_image", None):
+        if self.sign_image:
             surface.blit(self.sign_image, self._sign_draw_pos)
 
-        if getattr(self, "hildehrand_image", None):
+        if self.hildehrand_image:
             surface.blit(self.hildehrand_image, self._hildehrand_draw_pos)
 
         font = fonts.get("heading2")

@@ -6,45 +6,12 @@ import os
 import tempfile
 import unittest
 import zipfile
-from types import SimpleNamespace
 from unittest import mock
 
 from data import queries
 from data.map import history_io, load_map, save_map
 import data.constants as c
-
-
-def sample_map_screen():
-    province = {
-        "id": 7,
-        "terrain": "plains",
-        "center": [12, 34],
-        "neighbors": [6, 8],
-        "json_key": "(7, 0, 0)",
-        "map_color": [7, 0, 0],
-        "owner": "Avaria",
-        "cores": ["Avaria"],
-        "is_coastal": True,
-        "units": [{"type": "Infantry", "owner": "Avaria"}],
-        "building_queue": [],
-        "unit_queue": [{"type": "Infantry", "turns_left": 2}],
-        "orders": [],
-        "resources": {"Oil": 20},
-        "buildings": ["Factory"],
-    }
-    return SimpleNamespace(
-        map_data={(7, 0, 0): province},
-        raw_json_data={"(7, 0, 0)": {"id": 7, "terrain": "plains"}},
-        time_manager=SimpleNamespace(day=15, month_index=5, year=1939, total_turns=12),
-        loop_map=True,
-        player_country="Avaria",
-        active_players=["Avaria"],
-        current_player_index=0,
-        scenario_settings={"days_per_turn": 30},
-        script_variables=[{"name": "event_flag", "value": True}],
-        default_research={"infantry_type": 3},
-        nation_data={"Avaria": {"name": "Avaria", "materials": 200}},
-    )
+from tests.stub_map_screen import map_double, sample_map_screen
 
 
 class MapSaveFormatTests(unittest.TestCase):
@@ -69,7 +36,7 @@ class MapSaveFormatTests(unittest.TestCase):
         snapshot = json.loads(history_io.dump_text(queries.build_save_dict(map_screen)))
         self.assertNotIn("unassigned_army_card", snapshot)
         self.assertEqual(snapshot["nation_data"]["Avaria"].get("armies", []), [])
-        loaded = SimpleNamespace(player_country=snapshot["player_country"],
+        loaded = map_double(player_country=snapshot["player_country"],
                                  nation_data=snapshot["nation_data"],
                                  map_data=snapshot["provinces"])
         queries.normalize_armies(loaded.nation_data, loaded.map_data)

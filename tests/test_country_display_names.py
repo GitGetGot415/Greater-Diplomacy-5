@@ -32,6 +32,7 @@ class CountryDisplayNameTests(unittest.TestCase):
         screen = ListSelectScreen.__new__(ListSelectScreen)
         screen.on_confirm = picked.append
         screen.is_enabled = None
+        screen.close_on_select = True
         screen.exit_screen = lambda: None
         screen.select(("German Reich", "GER"))
         self.assertEqual(["GER"], picked)

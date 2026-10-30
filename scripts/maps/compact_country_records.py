@@ -1,9 +1,9 @@
 """Remove duplicated, unused country templates from map metadata.
 
-Preview bundled maps: python map_tools/compact_country_records.py
-Apply the preview:    python map_tools/compact_country_records.py --write
+Preview bundled maps: python scripts/maps/compact_country_records.py
+Apply the preview:    python scripts/maps/compact_country_records.py --write
 Clean an existing save or editor scenario explicitly:
-    python map_tools/compact_country_records.py --write "saves/My Save"
+    python scripts/maps/compact_country_records.py --write "saves/My Save"
 
 With no paths, only base_maps and shipped scenarios are visited. Personal saves,
 tournament files and scenarios/map_editor are never included implicitly.
@@ -16,7 +16,7 @@ import json
 from pathlib import Path
 import sys
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from data import constants as c, queries

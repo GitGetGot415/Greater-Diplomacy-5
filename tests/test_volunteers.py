@@ -7,7 +7,7 @@ from types import SimpleNamespace
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from tests.stub_map_screen import StubMapScreen
+from tests.stub_map_screen import StubMapScreen, bare_orders_screen
 from data import queries
 import data.constants as c
 from map_logic.ai import ai_evaluation
@@ -173,8 +173,6 @@ class VolunteerTests(unittest.TestCase):
         self.assertFalse(game.pending_action("A", "B"))
 
     def test_orders_uses_volunteer_host_for_neutral_territory_entry(self):
-        from screens.game.orders import Orders_Screen
-
         game = self.game()
         host_home = game.home_of("B")
         host_extension = game.add_province("B", cores=["B"])
@@ -182,7 +180,7 @@ class VolunteerTests(unittest.TestCase):
         unit = division("A")
         unit["volunteer_host"] = "B"
         host_home["units"] = [unit]
-        screen = object.__new__(Orders_Screen)
+        screen = bare_orders_screen()
         screen.map_screen = game
         screen.target_province = host_home
         self.assertTrue(screen.can_unit_enter(unit, host_extension))

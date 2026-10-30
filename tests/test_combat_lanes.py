@@ -35,7 +35,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import data.constants as c
 from map_logic.system32 import combat_processor, combat_rules
 
-from tests.test_multiparty_combat import StubMapScreen, damage_taken, unit
+from tests.combat_fixtures import damage_taken, StubBattleMap, unit
 
 
 def tile(screen, troops, owner=None):
@@ -74,7 +74,7 @@ def member_for(battle, nation):
 
 def alliance_tile(per_nation=8):
     """A and B allied against X and Y allied, everyone at war across the divide."""
-    screen = StubMapScreen()
+    screen = StubBattleMap()
     for name, faction in (("A", "Front A"), ("B", "Front A"), ("X", "Front X"), ("Y", "Front X")):
         enemies = ["X", "Y"] if name in ("A", "B") else ["A", "B"]
         screen.add_nation(name, at_war_with=enemies)
@@ -87,7 +87,7 @@ def alliance_tile(per_nation=8):
 
 def free_for_all_tile(per_nation=8):
     """A, B and C mutually hostile: the triangular front."""
-    screen = StubMapScreen()
+    screen = StubBattleMap()
     for name in ("A", "B", "C"):
         screen.add_nation(name, at_war_with=[n for n in ("A", "B", "C") if n != name])
 
@@ -146,7 +146,7 @@ class WidthTests(unittest.TestCase):
         for terrains in (("mountain", "plains"), ("plains", "mountain"),
                          ("plains", "plains"), ("hills", "hills")):
             with self.subTest(terrains=terrains):
-                screen = StubMapScreen()
+                screen = StubBattleMap()
                 screen.add_nation("A", at_war_with=["B"])
                 screen.add_nation("B", at_war_with=["A"])
                 width = min(combat_rules.combat_width_for_terrain(t)
@@ -209,7 +209,7 @@ class WidthTests(unittest.TestCase):
     def test_tile_battle_uses_its_terrain_width(self):
         for terrain in ("mountain", "plains", "hills"):
             with self.subTest(terrain=terrain):
-                screen = StubMapScreen()
+                screen = StubBattleMap()
                 screen.add_nation("A", at_war_with=["B"])
                 screen.add_nation("B", at_war_with=["A"])
                 squad = [unit("A", attack=10) for _ in range(30)]
@@ -272,7 +272,7 @@ class WidthTests(unittest.TestCase):
         as BIG's fifty and had the enemy volley divided across all fifty-two
         bodies. Here SMALL holds its own slots on the shared front.
         """
-        screen = StubMapScreen()
+        screen = StubBattleMap()
         screen.add_nation("BIG", at_war_with=["X"])
         screen.add_nation("SMALL", at_war_with=["X"])
         screen.add_nation("X", at_war_with=["BIG", "SMALL"])
@@ -325,7 +325,7 @@ class WidthTests(unittest.TestCase):
 
 class ReserveTests(unittest.TestCase):
     def test_a_reserve_deals_no_damage_and_takes_none(self):
-        screen = StubMapScreen()
+        screen = StubBattleMap()
         screen.add_nation("A", at_war_with=["B"])
         screen.add_nation("B", at_war_with=["A"])
 
@@ -355,7 +355,7 @@ class ReserveTests(unittest.TestCase):
         the cheapest defensive move in the game.
         """
         def damage_to_front(extra_bodies):
-            screen = StubMapScreen()
+            screen = StubBattleMap()
             screen.add_nation("A", at_war_with=["B"])
             screen.add_nation("B", at_war_with=["A"])
             defenders = [unit("A", attack=0) for _ in range(c.LANE_SLOTS_TYPICAL + extra_bodies)]
@@ -374,7 +374,7 @@ class ReserveTests(unittest.TestCase):
         first. See test_holding_back_does_not_shrink_the_width for the other
         half of the rule.
         """
-        screen = StubMapScreen()
+        screen = StubBattleMap()
         screen.add_nation("A", at_war_with=["B"])
         screen.add_nation("B", at_war_with=["A"])
 
@@ -424,7 +424,7 @@ class CoalitionTests(unittest.TestCase):
 
     def half_committed_tile(self):
         """ALLY stands with BIG but never joined the war against SMALLFOE."""
-        screen = StubMapScreen()
+        screen = StubBattleMap()
         screen.add_nation("BIG", at_war_with=["FOE", "SMALLFOE"])
         screen.add_nation("ALLY", at_war_with=["FOE"])
         screen.add_nation("FOE", at_war_with=["BIG", "ALLY"])
@@ -464,7 +464,7 @@ class CoalitionTests(unittest.TestCase):
 
     def test_a_member_with_nobody_to_shoot_stays_out_of_the_side(self):
         """It would otherwise eat width in a battle it cannot take part in."""
-        screen = StubMapScreen()
+        screen = StubBattleMap()
         screen.add_nation("BIG", at_war_with=["FOE"])
         screen.add_nation("NEUTRAL_ALLY", at_war_with=[])
         screen.add_nation("FOE", at_war_with=["BIG"])
@@ -498,7 +498,7 @@ class DissolveTests(unittest.TestCase):
         no longer present, its duel no longer exists, and the width it was
         holding is redistributed to the duels that remain.
         """
-        screen = StubMapScreen()
+        screen = StubBattleMap()
         for name in ("A", "B", "C"):
             screen.add_nation(name, at_war_with=[n for n in ("A", "B", "C") if n != name])
 
@@ -532,7 +532,7 @@ class OutnumberedTests(unittest.TestCase):
 
     def three_way_tile(self, defenders=1):
         """One defender, two separate attackers -- the Soviet/Romania/Germany tile."""
-        screen = StubMapScreen()
+        screen = StubBattleMap()
         screen.add_nation("SOV", at_war_with=["ROM", "GER"])
         screen.add_nation("ROM", at_war_with=["SOV"])
         screen.add_nation("GER", at_war_with=["SOV"])
@@ -593,7 +593,7 @@ class HeldBackTests(unittest.TestCase):
         Holding a unit back is a preference, honoured only while somebody else
         can take the slot.
         """
-        screen = StubMapScreen()
+        screen = StubBattleMap()
         screen.add_nation("JAP", at_war_with=["CHI"])
         screen.add_nation("CHI", at_war_with=["JAP"])
 
@@ -611,7 +611,7 @@ class HeldBackTests(unittest.TestCase):
         self.assertGreater(damage_taken([lone]), 0)
 
     def test_holding_back_is_still_honoured_when_somebody_can_replace_them(self):
-        screen = StubMapScreen()
+        screen = StubBattleMap()
         screen.add_nation("A", at_war_with=["B"])
         screen.add_nation("B", at_war_with=["A"])
 
@@ -633,7 +633,7 @@ class HeldBackTests(unittest.TestCase):
         The flag was read as a veto and _caps took its demand from what was
         left, so the five slots Japan gave up went to nobody at all.
         """
-        screen = StubMapScreen()
+        screen = StubBattleMap()
         screen.add_nation("A", at_war_with=["B"])
         screen.add_nation("B", at_war_with=["A"])
 
@@ -661,7 +661,7 @@ class HeldBackTests(unittest.TestCase):
         beside it in that lane with units to spare and an allowance already
         met -- so the slot exists, B has the body, and nothing seated it.
         """
-        screen = StubMapScreen()
+        screen = StubBattleMap()
         for name, faction, enemies in (("A", "Front A", ["X", "Y"]),
                                        ("B", "Front A", ["X", "Y"]),
                                        ("X", "", ["A", "B"]),
@@ -689,7 +689,7 @@ class HeldBackTests(unittest.TestCase):
     def test_a_stale_stance_is_dropped_when_the_unit_marches_away(self):
         from map_logic.system32 import movement_processor
 
-        screen = StubMapScreen()
+        screen = StubBattleMap()
         screen.add_nation("A", at_war_with=["B"])
         screen.add_nation("B", at_war_with=["A"])
 
@@ -744,7 +744,7 @@ class ChargeProbeTests(unittest.TestCase):
         The probe used to restate the pooled rule by hand, so tuning either half
         silently desynchronised them. Both now go through build_battle.
         """
-        screen = StubMapScreen()
+        screen = StubBattleMap()
         screen.add_nation("DEF", at_war_with=["ATK"])
         screen.add_nation("ATK", at_war_with=["DEF"])
 
@@ -769,7 +769,7 @@ class ChargeProbeTests(unittest.TestCase):
         resolution that used to wipe a doomed charge stops applying once the
         charge is deeper than the lane can seat.
         """
-        screen = StubMapScreen()
+        screen = StubBattleMap()
         screen.add_nation("DEF", at_war_with=["ATK"])
         screen.add_nation("ATK", at_war_with=["DEF"])
 
@@ -796,7 +796,7 @@ class LaneOrderLifetimeTests(unittest.TestCase):
     def test_a_lane_pin_is_dropped_when_the_unit_marches_away(self):
         from map_logic.system32 import movement_processor
 
-        screen = StubMapScreen()
+        screen = StubBattleMap()
         screen.add_nation("A", at_war_with=["B"])
         screen.add_nation("B", at_war_with=["A"])
 
@@ -818,7 +818,7 @@ class AiRotationTests(unittest.TestCase):
     def test_the_ai_pulls_a_shot_up_unit_out_when_a_fresh_one_can_take_the_slot(self):
         from map_logic.ai import ai_movement
 
-        screen = StubMapScreen()
+        screen = StubBattleMap()
         screen.add_nation("A", at_war_with=["B"])
         screen.add_nation("B", at_war_with=["A"])
 
@@ -841,7 +841,7 @@ class AiRotationTests(unittest.TestCase):
         """An empty slot dissolves the lane, which is worse than a hurt unit in it."""
         from map_logic.ai import ai_movement
 
-        screen = StubMapScreen()
+        screen = StubBattleMap()
         screen.add_nation("A", at_war_with=["B"])
         screen.add_nation("B", at_war_with=["A"])
 

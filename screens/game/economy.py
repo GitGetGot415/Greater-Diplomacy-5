@@ -200,14 +200,7 @@ class Economy_Screen(GameState):
         self.refresh_economy_preview()
 
     def can_edit_realtime(self):
-        if not getattr(self.map_screen, "realtime_multiplayer", False):
-            return True
-        session = getattr(self.map_screen, "realtime_session", None)
-        player = session.players.get(getattr(self.map_screen, "realtime_player_id", "")) if session else None
-        if session and session.phase == "TURN" and player and not player.submitted and not player.eliminated:
-            return True
-        self.map_screen.show_feedback("Turn submitted or unavailable; unsubmit to change the economy.")
-        return False
+        return queries.require_realtime_turn_open(self.map_screen, "the economy")
 
     def additional_draw(self, surface):
         if not self.map_screen: return

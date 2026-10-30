@@ -15,7 +15,7 @@ from map_logic.actions import production_actions, unit_actions
 from map_logic.ai import ai_research, ai_tech_eval, ai_unit_eval
 from map_logic.system32.movement_processor import process_upgrades
 from map_logic.system32.research_processor import process_national_research
-from tests.test_map_save_format import sample_map_screen
+from tests.stub_map_screen import sample_map_screen
 from tests import test_tournament_moves as tournament_harness
 
 

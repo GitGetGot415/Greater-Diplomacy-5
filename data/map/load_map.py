@@ -232,7 +232,7 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
     # 3. OVERRIDE: If we are loading an existing save file, prefer settings from inside the save
     # Do NOT override if we are in selection mode (starting a new scenario), so player UI choices are respected.
     if save_meta and "scenario_settings" in save_meta:
-        if not getattr(session_for(map_screen), 'selection_mode', False):
+        if not session_state.selection_mode:
             # Scenario settings -- including unit/building disables -- only ever
             # apply when starting a NEW scenario. A save already in progress
             # keeps exactly what was baked in at creation, full stop; the Turn
@@ -489,7 +489,7 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
     # through normal play, and never on an editor load, which drives this itself
     # (see research_screens.py / date_economy_screens.py) so manual per-nation
     # edits between those triggers aren't clobbered on every re-open.
-    if getattr(session_for(map_screen), 'selection_mode', False) and queries.get_scenario_flag(
+    if session_state.selection_mode and queries.get_scenario_flag(
             "force_time_appropriate_research", c.DEFAULT_FORCE_TIME_APPROPRIATE_RESEARCH,
             world_state.scenario_settings):
         queries.apply_time_appropriate_research_to_map(map_screen, world_state.time_manager.year)

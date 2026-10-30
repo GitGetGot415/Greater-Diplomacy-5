@@ -1,6 +1,7 @@
-"""A pygame-free stand-in for the map screen, just big enough to run a turn of
-diplomacy.
+"""Shared pygame-free stand-ins for the map screen.
 
+map_double and fill_state_defaults give any double the world and session fields
+of a live Map. StubMapScreen is just big enough to run a turn of diplomacy:
 process_diplomacy_turn only reaches for a handful of attributes, so the whole
 world can be a couple of provinces and a nation_data dict. force_skip_llm keeps
 the AI's canned fallback answers in play instead of reaching for the network.
@@ -8,10 +9,83 @@ the AI's canned fallback answers in play instead of reaching for the network.
 
 import os
 import sys
+from dataclasses import fields
+from types import SimpleNamespace
 
 # Import the game package from the repo root regardless of where tests run from
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
+
+from data.game_state import WorldState
+from data.session_state import SessionState
+from data.state_access import WORLD_ATTRIBUTES
+
+
+def fill_state_defaults(target):
+    """Give a map double every world and session field that a live Map exposes.
+
+    Rules read these fields directly, so a double without one fails like an
+    incompletely built Map. Fields that the double already has are kept.
+    """
+    world, session = WorldState(), SessionState()
+    names = [(world, name) for name in WORLD_ATTRIBUTES]
+    names += [(session, item.name) for item in fields(SessionState)]
+    for owner, name in names:
+        if not hasattr(target, name):
+            setattr(target, name, getattr(owner, name))
+    return target
+
+
+def map_double(**attributes):
+    """Return a SimpleNamespace map double with live Map field defaults."""
+    return fill_state_defaults(SimpleNamespace(**attributes))
+
+
+def bare_orders_screen():
+    """An Orders_Screen without layout, holding the order state that __init__ sets."""
+    # Orders loads pygame screen modules, which the other stand-ins here do not need.
+    from screens.game.orders import Orders_Screen
+    screen = object.__new__(Orders_Screen)
+    screen.read_only = False
+    screen.target_province = None
+    screen.bombarding_unit_index = None
+    screen._consume_bombard_target_release = False
+    screen._air_target_records = []
+    return screen
+
+
+def sample_map_screen():
+    """A one-province map double with every saved world and session field set."""
+    province = {
+        "id": 7,
+        "terrain": "plains",
+        "center": [12, 34],
+        "neighbors": [6, 8],
+        "json_key": "(7, 0, 0)",
+        "map_color": [7, 0, 0],
+        "owner": "Avaria",
+        "cores": ["Avaria"],
+        "is_coastal": True,
+        "units": [{"type": "Infantry", "owner": "Avaria"}],
+        "building_queue": [],
+        "unit_queue": [{"type": "Infantry", "turns_left": 2}],
+        "orders": [],
+        "resources": {"Oil": 20},
+        "buildings": ["Factory"],
+    }
+    return map_double(
+        map_data={(7, 0, 0): province},
+        raw_json_data={"(7, 0, 0)": {"id": 7, "terrain": "plains"}},
+        time_manager=SimpleNamespace(day=15, month_index=5, year=1939, total_turns=12),
+        loop_map=True,
+        player_country="Avaria",
+        active_players=["Avaria"],
+        current_player_index=0,
+        scenario_settings={"days_per_turn": 30},
+        script_variables=[{"name": "event_flag", "value": True}],
+        default_research={"infantry_type": 3},
+        nation_data={"Avaria": {"name": "Avaria", "materials": 200}},
+    )
 
 
 class StubTimeManager:
@@ -76,6 +150,7 @@ class StubMapScreen:
         self._next_prov_id = 1
         for name in nations:
             self._add_nation(name)
+        fill_state_defaults(self)
 
     def _add_nation(self, name):
         prov_id = self._next_prov_id
@@ -211,3 +286,11 @@ class StubMapScreen:
         from map_logic.diplomacy import diplomacy_logic
         return diplomacy_logic.toggle_diplomatic_response(
             self.nation_data, responder, sender, verdict, action, message)
+
+
+def synchronous_progress(jobs, worker, _caption, on_result):
+    """Stand in for run_with_progress by running each job inline, in order."""
+    for job in jobs:
+        result = worker(job)
+        if result:
+            on_result(result)

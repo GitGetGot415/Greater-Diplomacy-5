@@ -26,47 +26,9 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from tests.combat_fixtures import StubBattleMap
+
 from map_logic.system32 import combat_processor
-
-
-class StubMapScreen:
-    """Just enough of map_screen to run the capture pass standalone."""
-
-    def __init__(self):
-        self.map_data = {}
-        self.id_to_province = {}
-        self.nation_data = {}
-        self.scenario_settings = {}
-        self.tactical_mode = False
-        # conquer_province repaints a pygame surface unless one of these says a
-        # repaint would be pointless. There is no surface here, so it always is.
-        self.is_editor = False
-        self.viewing_ai_moves = True
-        self.ai_is_thinking = False
-        self.centers_need_update = False
-
-    def add_nation(self, name, at_war_with=(), faction=""):
-        self.nation_data[name] = {
-            "name": name,
-            "at_war_with": list(at_war_with),
-            "claims": [],
-            "faction": faction,
-        }
-
-    def add_province(self, pid, owner, turn_start_owner=None, units=(), cores=()):
-        prov = {
-            "id": pid,
-            "owner": owner,
-            "_turn_start_owner": owner if turn_start_owner is None else turn_start_owner,
-            "terrain": "hills",
-            "is_coastal": False,
-            "cores": list(cores),
-            "units": list(units),
-            "building_queue": [],
-        }
-        self.map_data[pid] = prov
-        self.id_to_province[pid] = prov
-        return prov
 
 
 def unit(owner, health=2450):
@@ -85,7 +47,7 @@ def unit(owner, health=2450):
 
 def three_nations():
     """Germany and Italy are Axis allies; both are at war with Yugoslavia."""
-    screen = StubMapScreen()
+    screen = StubBattleMap()
     screen.add_nation("German Reich", at_war_with=["Yugoslavia"], faction="Axis")
     screen.add_nation("Italy", at_war_with=["Yugoslavia"], faction="Axis")
     screen.add_nation("Yugoslavia", at_war_with=["German Reich", "Italy"])

@@ -56,7 +56,7 @@ def _hand_over_the_land_only(map_screen, prov, receiver):
 
 def _provinces_by_id(map_screen):
     world_state = world_for(map_screen)
-    if getattr(world_for(map_screen), "id_to_province", None):
+    if world_state.id_to_province:
         return world_state.id_to_province
     return {prov["id"]: prov for prov in world_state.map_data.values()}
 
@@ -85,7 +85,7 @@ def economies_for(map_screen):
     if world is not None:
         return world.economies
 
-    map_data = getattr(world_for(map_screen), "map_data", None)
+    map_data = world_state.map_data
     if not map_data:
         return None
     return queries.calculate_all_economies(map_data, world_state.nation_data, context=map_screen)

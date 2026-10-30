@@ -16,7 +16,8 @@ from cryptography.fernet import Fernet
 from data import constants as c, queries
 from data.multiplayer.tournament import files as io
 from data.map import history_io
-from tests.test_tournament_moves import Host, nation, synchronous_progress
+from tests.test_tournament_moves import Host, nation
+from tests.stub_map_screen import synchronous_progress
 
 
 class TournamentArchiveTests(unittest.TestCase):

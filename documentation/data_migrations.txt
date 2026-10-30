@@ -245,4 +245,4 @@ Keep existing support for earlier releases where required.
 7. Test older data, current data, and a save/load round trip.
 8. Test affected multiplayer validation and player modes.
 9. Run tests/test_data_migrations.py. It loads every built-in map through the steps.
-10. Run map_tools/upgrade_shipped_maps.py to write the built-in maps in the new format.
+10. Run scripts/maps/upgrade_shipped_maps.py to write the built-in maps in the new format.

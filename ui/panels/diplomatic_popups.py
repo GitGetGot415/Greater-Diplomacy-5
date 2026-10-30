@@ -120,7 +120,7 @@ def spawn_popups_for_player(map_screen):
     if map_screen.player_country in ["None", "Spectator", "Editor"]:
         return
 
-    if getattr(map_screen, 'tactical_mode', False):
+    if map_screen.tactical_mode:
         # Runs every frame the player is in control, so this also takes down any
         # alert that was already up when the mode changed.
         map_screen.diplomatic_popups = []
@@ -214,11 +214,11 @@ def map_message_popups_visible(map_screen):
     """
     return not any((
         getattr(map_screen, "selected_province", None),
-        getattr(map_screen, "selection_mode", False),
+        map_screen.selection_mode,
         getattr(map_screen, "show_player_ready_screen", False),
         getattr(map_screen, "show_exit_confirmation", False),
-        getattr(map_screen, "is_saving", False),
-        getattr(map_screen, "thread_error", None),
+        map_screen.is_saving,
+        map_screen.thread_error,
     ))
 
 def handle_events(map_screen, event):

@@ -330,20 +330,20 @@ def edited_research_levels(research, tech_key, level, researched, tech_tree=None
 
 def can_edit_starting_research(map_screen, country_id):
     """Starting research edits belong to a local map editor and a living country."""
-    return bool(getattr(session_for(map_screen), "is_editor", False)
+    return bool(session_for(map_screen).is_editor
                 and can_edit_country_research(map_screen, country_id))
 
 
 def can_edit_country_research(map_screen, country_id):
     """Allow direct research changes in a local editor or permitted spectator game."""
     world_state = world_for(map_screen)
-    # Optional mode flags support lightweight editor maps and older callers.
-    return bool((getattr(session_for(map_screen), "is_editor", False)
-                 or (getattr(session_for(map_screen), "player_country", None) == "Spectator"
+    session_state = session_for(map_screen)
+    return bool((session_state.is_editor
+                 or (session_state.player_country == "Spectator"
                      and c.SPECTATOR_CAN_EDIT_RESEARCH))
-                and not getattr(session_for(map_screen), "tactical_mode", False)
-                and not getattr(session_for(map_screen), "multiplayer_mode", False)
-                and not getattr(session_for(map_screen), "realtime_multiplayer", False)
+                and not session_state.tactical_mode
+                and not session_state.multiplayer_mode
+                and not session_state.realtime_multiplayer
                 and isinstance(country_id, str)
                 and country_id in world_state.nation_data
                 and country_id in queries.get_living_nations(world_state.map_data))
@@ -425,8 +425,9 @@ def _apply_country_research_state(country, state):
 def confirm_country_research_edit(map_screen, country_id, original, draft):
     """Save a permitted spectator draft only if the live research is unchanged."""
     world_state = world_for(map_screen)
-    if (getattr(session_for(map_screen), "player_country", None) != "Spectator"
-            or getattr(session_for(map_screen), "is_editor", False)
+    session_state = session_for(map_screen)
+    if (session_state.player_country != "Spectator"
+            or session_state.is_editor
             or not can_edit_country_research(map_screen, country_id)):
         raise ValueError("Research editing requires a permitted local spectator.")
     country = world_state.nation_data[country_id]

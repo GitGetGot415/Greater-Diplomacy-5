@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from ui.rendering import overlay_renderer
 import pygame
+from tests.stub_map_screen import map_double
 from pygame.math import Vector2
 
 
@@ -42,7 +43,7 @@ class BouncePreviewTests(unittest.TestCase):
         symbol_loader.load_symbols()
 
     def setUp(self):
-        self.screen = type("Screen", (), {})()
+        self.screen = map_double()
         self.screen.player_country = "A"
         self.screen.viewing_ai_moves = False
         self.screen.is_editor = False

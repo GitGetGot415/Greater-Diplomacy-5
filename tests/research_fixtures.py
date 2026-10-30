@@ -42,3 +42,10 @@ def factory_research_cases(tree):
             locked[dependency] = 0
         cases.append((key, locked, unlocked))
     return cases
+
+
+def fixture_metadata(*, family="Fixture", tier=1, level=1):
+    return {"family": family, "tier_order": tier,
+            "research": {"tech": "fixture_track", "level": level},
+            "requirements": [{"tech": "fixture_track", "level": level}],
+            "recruitment": {"industry": "none", "coastal": False}}

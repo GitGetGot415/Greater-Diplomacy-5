@@ -43,7 +43,7 @@ class ListSelectScreen(ModalScreen):
         if not self._item_enabled(item):
             return
         self.on_confirm(item[1] if isinstance(item, tuple) else item)
-        if getattr(self, "close_on_select", True):
+        if self.close_on_select:
             self.exit_screen()
 
     def set_items(self, items):

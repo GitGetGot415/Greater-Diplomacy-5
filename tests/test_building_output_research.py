@@ -11,7 +11,7 @@ from data import queries
 from data.runtime_rules import ActiveLibrary, RuntimeRules
 from map_logic.ai import ai_tech_eval
 from map_logic.system32 import economy_processor, research_processor
-from tests.test_map_save_format import sample_map_screen
+from tests.stub_map_screen import map_double, sample_map_screen
 from tests.research_fixtures import NEW_INDUSTRY_MILESTONES
 
 
@@ -82,7 +82,7 @@ class OutputBonusTests(unittest.TestCase):
         expected = 31 + 13 + 47
         self.assertEqual(queries.get_province_building_output(province, research, self.library)["materials"], expected)
         country = {"research": research, **dict.fromkeys(c.ECON_RESOURCE_KEYS, 0)}
-        game = SimpleNamespace(map_data={1: province}, nation_data={"A": country}, tactical_mode=False, player_country="A")
+        game = map_double(map_data={1: province}, nation_data={"A": country}, tactical_mode=False, player_country="A")
         report = queries.calculate_all_economies(game.map_data, game.nation_data)["A"]
         self.assertEqual(report["breakdown"]["materials"]["buildings"], expected)
         economy_processor.process_economy(game)
@@ -146,7 +146,7 @@ class OutputBonusTests(unittest.TestCase):
 
     def test_turn_processor_applies_the_reported_income(self):
         country = {"research": {"first": 1}, **dict.fromkeys(c.ECON_RESOURCE_KEYS, 0)}
-        game = SimpleNamespace(map_data={1: self.province()}, nation_data={"A": country},
+        game = map_double(map_data={1: self.province()}, nation_data={"A": country},
                                tactical_mode=False, player_country="A")
         expected = queries.calculate_all_economies(game.map_data, game.nation_data)["A"]
         economy_processor.process_economy(game)
@@ -374,7 +374,7 @@ class FactoryResearchContentTests(unittest.TestCase):
     def test_completion_changes_yields_without_mutating_building_data(self):
         library = queries.get_building_library()
         original = copy.deepcopy(library)
-        game = SimpleNamespace(nation_data={"A": {"research": {"basic_factory": 1},
+        game = map_double(nation_data={"A": {"research": {"basic_factory": 1},
             "research_queue": [{"tech_name": "bessemer_process", "points_remaining": 1}]}},
             time_manager=SimpleNamespace(year=2000, month_index=0, day=1), scenario_settings={},
             player_country="A", show_feedback=Mock())

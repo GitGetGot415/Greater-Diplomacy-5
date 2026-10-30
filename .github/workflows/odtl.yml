@@ -102,7 +102,7 @@ jobs:
             "https://github.com/Pr1nted/dragoman/releases/download/v$ver/libdragoman.so"
           if ! cmp -s libdragoman.so /tmp/pinned.so; then
             echo "libdragoman.so is not open-dragoman $ver."
-            echo "Run: rm libdragoman.so && python map_tools/fetch_dragoman_wasm.py"
+            echo "Run: rm libdragoman.so && python scripts/dependencies/fetch_dragoman_wasm.py"
             exit 1
           fi
           echo "libdragoman.so matches open-dragoman $ver"

@@ -18,7 +18,7 @@ INTENTIONALLY_UNSTAGED_FILES = set(manifest.DEV_ONLY_FILES)
 NON_PACKAGE_DIRS = {
     ".git", ".github", ".eggs", "__pycache__", "venv", ".venv", "build", "dist",
     "web_stage", "assets", "base_maps", "saves", "scenarios", "tournament_saves",
-    "compilation_scripts", "context", "map_tools", "scripts", "mods", "tests",
+    "compilation_scripts", "context", "scripts", "mods", "tests",
 }
 DEV_ONLY_PACKAGES = set(manifest.DEV_ONLY_PACKAGES)
 

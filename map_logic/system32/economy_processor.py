@@ -201,7 +201,7 @@ def process_queues(map_screen):
                     primary_reb_id = _spawn_rebellion(province, foreign_cores, primary_militia)
                     
                     # --- SECONDARY/TERTIARY REBELLIONS (nearby tiles with matching cores) ---
-                    if primary_core and hasattr(world_for(map_screen), 'id_to_province'):
+                    if primary_core:
                         spread_candidates = queries.find_nearby_matching_core_tiles(
                             province["id"], primary_core, current_owner,
                             world_state.map_data, world_state.id_to_province, c.REBELLION_MAX_SPREAD_DISTANCE

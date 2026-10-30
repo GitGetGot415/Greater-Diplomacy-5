@@ -12,8 +12,8 @@ from data import queries
 from ui.rendering import overlay_renderer
 from ui.rendering import country_names
 from ui.rendering import symbol_loader
-from screens.game.orders import Orders_Screen
 from ui.panels import army_panel, map_top_right_layout, minimap
+from tests.stub_map_screen import bare_orders_screen, map_double
 
 
 class CountryMapCenterTests(unittest.TestCase):
@@ -126,7 +126,7 @@ class ArmyQueryTests(unittest.TestCase):
             self.nations, self.world))
         self.assertIsNone(queries.set_army_defense_area(
             "A", reserved, [2], self.nations, self.world))
-        map_stub = SimpleNamespace(map_data=self.world, nation_data=self.nations)
+        map_stub = map_double(map_data=self.world, nation_data=self.nations)
         self.assertEqual(queries.queue_army_defense_orders(map_stub, "A", reserved), 0)
         self.assertEqual((self.nations, self.world), before)
 
@@ -269,10 +269,10 @@ class ArmyQueryTests(unittest.TestCase):
         queries.create_army("A", [second_unit["unit_id"], first_unit["unit_id"]],
                             self.nations, self.world)
         selected_ids = {first_unit["unit_id"]}
-        map_stub = SimpleNamespace(
+        map_stub = map_double(
             player_country="A", nation_data=self.nations, map_data=self.world,
             selected_unit_records=lambda: [(first_unit, self.first)])
-        orders = Orders_Screen.__new__(Orders_Screen)
+        orders = bare_orders_screen()
         orders.map_screen = map_stub
         orders.target_province = self.first
         orders.read_only = False
@@ -288,8 +288,8 @@ class ArmyQueryTests(unittest.TestCase):
             "A", [first_unit["unit_id"], second_unit["unit_id"]],
             self.nations, self.world)
         army["name"] = "Northern Command"
-        orders = Orders_Screen.__new__(Orders_Screen)
-        orders.map_screen = SimpleNamespace(nation_data=self.nations)
+        orders = bare_orders_screen()
+        orders.map_screen = map_double(nation_data=self.nations)
 
         self.assertEqual(orders._panel_title([first_unit]),
                          "ORDERS | Northern Command")
@@ -322,7 +322,7 @@ class ArmyQueryTests(unittest.TestCase):
             self.nations, self.world)
         self.assertEqual(saved["defense_area"], [self.second["id"]])
 
-        map_ref = SimpleNamespace(
+        map_ref = map_double(
             nation_data=self.nations, map_data=self.world,
             id_to_province={province["id"]: province for province in self.world.values()},
             _units_with_move_order_this_turn=set())
@@ -350,7 +350,7 @@ class ArmyQueryTests(unittest.TestCase):
             "A", [unit["unit_id"] for unit in members], self.nations, self.world)
         queries.set_army_defense_area(
             "A", army["id"], [third["id"], fourth["id"]], self.nations, self.world)
-        map_ref = SimpleNamespace(
+        map_ref = map_double(
             nation_data=self.nations, map_data=self.world,
             id_to_province={province["id"]: province for province in self.world.values()})
 
@@ -363,7 +363,7 @@ class ArmyQueryTests(unittest.TestCase):
 class ArmyControlTests(unittest.TestCase):
     def _name_editor_map(self):
         army = {"id": "army", "name": "Army 1", "unit_ids": []}
-        map_stub = SimpleNamespace(player_country="A", nation_data={"A": {"armies": [army]}},
+        map_stub = map_double(player_country="A", nation_data={"A": {"armies": [army]}},
                                    map_data={}, army_custom_symbol_state=None)
         army_panel._open_editor(map_stub, army)
         return map_stub
@@ -406,7 +406,7 @@ class ArmyControlTests(unittest.TestCase):
                 "symbol": "", "symbol_color": [210, 70, 70],
                 "symbol_rotation": 0, "symbol_flipped": False,
                 "custom_symbol": None}
-        map_stub = SimpleNamespace(player_country="A", nation_data={"A": {"armies": [army]}},
+        map_stub = map_double(player_country="A", nation_data={"A": {"armies": [army]}},
                                    map_data={})
         army_panel._open_editor(map_stub, army)
         rect = army_panel._editor_rect()
@@ -432,7 +432,7 @@ class ArmyControlTests(unittest.TestCase):
                 "symbol": "", "symbol_color": [210, 70, 70],
                 "symbol_rotation": 0, "symbol_flipped": False,
                 "custom_symbol": None}
-        map_stub = SimpleNamespace(player_country="A", nation_data={"A": {"armies": [army]}},
+        map_stub = map_double(player_country="A", nation_data={"A": {"armies": [army]}},
                                    map_data={}, army_custom_symbol_state=None)
         army_panel._open_editor(map_stub, army)
 
@@ -477,7 +477,7 @@ class ArmyControlTests(unittest.TestCase):
         second_army = {"id": "two", "unit_ids": ["third"],
                         "symbol": "Crown", "symbol_color": [50, 140, 230]}
         nation_data = {"A": {"armies": [first_army, second_army]}}
-        map_screen = SimpleNamespace(
+        map_screen = map_double(
             camera=SimpleNamespace(zoom=4, tilt_factor=1), player_country="A",
             nation_data=nation_data, nation_colors={"A": (220, 60, 70)},
             tactical_mode=False, player_unit=None, hovered_unit_stack=None,
@@ -510,7 +510,7 @@ class ArmyControlTests(unittest.TestCase):
                               "type": "Infantry"} for index in range(6)]
         selected_ids = {unit["unit_id"] for unit in first_tile_units[:5]}
         selected_ids.update(unit["unit_id"] for unit in second_tile_units[:3])
-        map_screen = SimpleNamespace(
+        map_screen = map_double(
             camera=SimpleNamespace(zoom=4, tilt_factor=1), player_country="A",
             nation_data={"A": {"armies": []}}, nation_colors={"A": (220, 60, 70)},
             tactical_mode=False, player_unit=None, hovered_unit_stack=None,
@@ -550,7 +550,7 @@ class ArmyControlTests(unittest.TestCase):
         army = {"id": "one", "unit_ids": ["first", "second"], "symbol": "Star"}
         first_province = {"center": (20, 20), "units": [first]}
         second_province = {"center": (80, 40), "units": [second]}
-        map_screen = SimpleNamespace(
+        map_screen = map_double(
             camera=SimpleNamespace(zoom=overlay_renderer.ARMY_GROUP_ICON_MAX_ZOOM,
                                    tilt_factor=1),
             player_country="A", nation_data={"A": {"armies": [army]}},
@@ -581,7 +581,7 @@ class ArmyControlTests(unittest.TestCase):
         self.assertEqual(partial_groups[0]["center"], (50, 30))
 
     def test_army_group_zoom_hides_partial_fog_unit_markers(self):
-        map_screen = SimpleNamespace(
+        map_screen = map_double(
             camera=SimpleNamespace(
                 zoom=overlay_renderer.ARMY_GROUP_ICON_MAX_ZOOM,
                 tilt_factor=1),
@@ -616,7 +616,7 @@ class ArmyControlTests(unittest.TestCase):
         province = {"id": 1, "center": (20, 20), "units": [
             organized, unorganized_one, foreign]}
         nearby_province = {"id": 2, "center": (50, 20), "units": [unorganized_two]}
-        map_screen = SimpleNamespace(
+        map_screen = map_double(
             camera=SimpleNamespace(zoom=overlay_renderer.ARMY_GROUP_ICON_MAX_ZOOM,
                                    tilt_factor=1),
             player_country="A", nation_data={"A": {"armies": [
@@ -652,7 +652,7 @@ class ArmyControlTests(unittest.TestCase):
         selected_unit = {"owner": "A", "unit_id": "selected", "type": "Infantry"}
         other_local = {"owner": "A", "unit_id": "other", "type": "Tank"}
         foreign = {"owner": "B", "unit_id": "foreign", "type": "Infantry"}
-        map_screen = SimpleNamespace(
+        map_screen = map_double(
             camera=SimpleNamespace(zoom=overlay_renderer.ARMY_GROUP_ICON_MAX_ZOOM,
                                    tilt_factor=1),
             player_country="A", nation_data={"A": {"armies": []}, "B": {}},
@@ -673,7 +673,7 @@ class ArmyControlTests(unittest.TestCase):
     def test_tactical_zoom_never_compacts_or_fades_units(self):
         local = {"owner": "A", "unit_id": "local", "type": "Infantry"}
         foreign = {"owner": "B", "unit_id": "foreign", "type": "Infantry"}
-        map_screen = SimpleNamespace(
+        map_screen = map_double(
             camera=SimpleNamespace(zoom=overlay_renderer.ARMY_GROUP_ICON_MAX_ZOOM),
             player_country="A", nation_data={"A": {"armies": []}, "B": {}},
             map_data={"province": {"units": [local, foreign]}}, tactical_mode=True,
@@ -697,7 +697,7 @@ class ArmyControlTests(unittest.TestCase):
         second = {"unit_id": "second"}
         first_province = {"center": (20, 20), "units": [first]}
         second_province = {"center": (80, 40), "units": [second]}
-        map_screen = SimpleNamespace(
+        map_screen = map_double(
             map_data={"first": first_province, "second": second_province},
             loop_map=False, map_w=100)
         desired = [{"army": {"id": "one"}, "units": [first, second],
@@ -739,7 +739,7 @@ class ArmyControlTests(unittest.TestCase):
         second = {"unit_id": "second"}
         first_province = {"center": (20, 20), "units": [first]}
         second_province = {"center": (80, 40), "units": [second]}
-        map_screen = SimpleNamespace(
+        map_screen = map_double(
             map_data={"first": first_province, "second": second_province},
             loop_map=False, map_w=100,
             army_group_transition_states={"stale": {"phase": "compress"}})
@@ -765,7 +765,7 @@ class ArmyControlTests(unittest.TestCase):
         second = {"unit_id": "second"}
         first_province = {"id": 1, "center": (20, 20), "units": [first]}
         second_province = {"id": 2, "center": (50, 20), "units": [second]}
-        map_screen = SimpleNamespace(
+        map_screen = map_double(
             map_data={"first": first_province, "second": second_province},
             loop_map=False, map_w=100)
         desired = [{"army": None, "presentation_id": ("area", "A", 1),
@@ -793,7 +793,7 @@ class ArmyControlTests(unittest.TestCase):
         second = {"unit_id": "second"}
         first_province = {"id": 1, "center": (20, 20), "units": [first]}
         second_province = {"id": 2, "center": (50, 20), "units": [second]}
-        map_screen = SimpleNamespace(
+        map_screen = map_double(
             map_data={"first": first_province, "second": second_province},
             loop_map=False, map_w=100)
         icon = pygame.Surface((20, 20), pygame.SRCALPHA)
@@ -820,7 +820,7 @@ class ArmyControlTests(unittest.TestCase):
         second = {"unit_id": "second"}
         first_province = {"center": (20, 20), "units": [first]}
         second_province = {"center": (80, 40), "units": [second]}
-        map_screen = SimpleNamespace(
+        map_screen = map_double(
             map_data={"first": first_province, "second": second_province},
             loop_map=False, map_w=100)
         icon = pygame.Surface((20, 20), pygame.SRCALPHA)
@@ -848,7 +848,7 @@ class ArmyControlTests(unittest.TestCase):
         second = {"unit_id": "second"}
         first_province = {"center": (20, 20), "units": [first]}
         second_province = {"center": (80, 40), "units": [second]}
-        map_screen = SimpleNamespace(
+        map_screen = map_double(
             map_data={"first": first_province, "second": second_province},
             loop_map=False, map_w=100)
         icon = pygame.Surface((20, 20), pygame.SRCALPHA)
@@ -884,7 +884,7 @@ class ArmyControlTests(unittest.TestCase):
         second = {"unit_id": "second"}
         first_province = {"center": (20, 20), "units": [first]}
         second_province = {"center": (80, 40), "units": [second]}
-        map_screen = SimpleNamespace(
+        map_screen = map_double(
             map_data={"first": first_province, "second": second_province},
             loop_map=False, map_w=100)
         icon = pygame.Surface((20, 20), pygame.SRCALPHA)
@@ -921,7 +921,7 @@ class ArmyControlTests(unittest.TestCase):
         army = {"id": "one", "unit_ids": ["first", "second"], "symbol": "Star"}
         first_province = {"id": 1, "center": (20, 20), "units": [first]}
         second_province = {"id": 2, "center": (80, 40), "units": [second]}
-        map_screen = SimpleNamespace(
+        map_screen = map_double(
             secondary_mode="UNITS", visible_provinces=None,
             camera=SimpleNamespace(zoom=overlay_renderer.ARMY_GROUP_ICON_MAX_ZOOM,
                                    tilt_factor=1),
@@ -958,7 +958,7 @@ class ArmyControlTests(unittest.TestCase):
         first_id, second_id = [unit["unit_id"] for unit in world["one"]["units"]]
         army = queries.create_army("A", [first_id], nations, world)
         selected_ids = [second_id]
-        map_stub = SimpleNamespace(
+        map_stub = map_double(
             player_country="A", nation_data=nations, map_data=world,
             selected_province=world["one"], army_panel_visible_in_orders=True,
             selection_mode=False, is_editor=False, tactical_mode=False,
@@ -1013,7 +1013,7 @@ class ArmyControlTests(unittest.TestCase):
                             for row in custom_symbol))
 
     def test_province_view_hides_the_army_tray_until_orders_open(self):
-        map_ref = SimpleNamespace(realtime_multiplayer=False, selected_province=None,
+        map_ref = map_double(realtime_multiplayer=False, selected_province=None,
                                   selection_mode=False, is_editor=False,
                                   player_country="A", tactical_mode=False,
                                   map_w=1000, map_h=500)
@@ -1033,7 +1033,7 @@ class UnassignedArmyPanelTests(unittest.TestCase):
             {"owner": "A", "type": "Tank"},
         ]}}
         self.nations = {"A": {"armies": []}}
-        self.map = SimpleNamespace(
+        self.map = map_double(
             player_country="A", nation_data=self.nations, map_data=self.world,
             selected_province=None, selection_mode=False, is_editor=False,
             tactical_mode=False, realtime_multiplayer=False, map_w=1000, map_h=500,
@@ -1184,7 +1184,7 @@ class MinimapTests(unittest.TestCase):
         active_map.fill((35, 140, 210))
         fog = pygame.Surface((40, 20), pygame.SRCALPHA)
         fog.fill((0, 0, 0, 180))
-        map_ref = SimpleNamespace(
+        map_ref = map_double(
             map_w=40, map_h=20, active_map=active_map, fog_map=fog,
             camera=SimpleNamespace(pos=SimpleNamespace(x=0, y=0), zoom=20, tilt_factor=1),
             total_ui_h=c.TOTAL_UI_HEIGHT)

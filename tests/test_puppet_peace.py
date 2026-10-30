@@ -17,6 +17,7 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import data.constants as c
+from tests.stub_map_screen import fill_state_defaults, map_double
 from data import queries
 from map_logic.ai import ai_evaluation
 from map_logic.diplomacy import treaty_effects
@@ -66,13 +67,8 @@ class EngineBackstopTests(unittest.TestCase):
         self.map_data = {"1": {"id": 1, "owner": "Free", "cores": ["Free"],
                                "neighbors": [], "units": []}}
 
-    class Host:
-        pass
-
     def apply(self, action, proposer, accepter):
-        host = self.Host()
-        host.nation_data = self.nation_data
-        host.map_data = self.map_data
+        host = map_double(nation_data=self.nation_data, map_data=self.map_data)
         return treaty_effects.apply_treaty_effect(host, action, proposer, accepter)
 
     def test_a_puppet_proposing_peace_is_blocked(self):
@@ -150,6 +146,7 @@ class RefusalWordingTests(unittest.TestCase):
             self.player_country = player
             self.selected_province = {"owner": target}
             self.said = []
+            fill_state_defaults(self)
 
         def show_feedback(self, text):
             self.said.append(text)

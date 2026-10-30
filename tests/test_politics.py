@@ -34,7 +34,8 @@ import pygame
 from map_logic import politics
 from map_logic.system32 import combat_processor, combat_rules
 
-from tests.test_multiparty_combat import StubMapScreen, damage_taken, unit
+from tests.stub_map_screen import map_double
+from tests.combat_fixtures import damage_taken, StubBattleMap, unit
 
 
 class StubTurnScreen:
@@ -55,7 +56,7 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
     def screen(self, tactical_mode):
         from screens.game.politics_screen import Politics_Screen
 
-        map_screen = type("MapScreen", (), {})()
+        map_screen = map_double()
         map_screen.player_country = "A"
         map_screen.tactical_mode = tactical_mode
         map_screen.nation_data = {
@@ -94,7 +95,7 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
     def test_foreign_politics_view_is_read_only(self):
         from screens.game.politics_screen import Politics_Screen
 
-        map_screen = type("MapScreen", (), {})()
+        map_screen = map_double()
         map_screen.player_country = "A"
         map_screen.tactical_mode = False
         map_screen.nation_data = {
@@ -429,7 +430,7 @@ class PolicyTests(unittest.TestCase):
 
 def two_nation_tile(a_value=c.POLITICS_START, b_value=c.POLITICS_START):
     """A and B at war on one tile, each with one unit. Returns (screen, prov)."""
-    screen = StubMapScreen()
+    screen = StubBattleMap()
     screen.add_nation("A", at_war_with=["B"])
     screen.add_nation("B", at_war_with=["A"])
     politics.set_value(screen.nation_data, "A", a_value)
@@ -475,7 +476,7 @@ class CombatDamageTests(unittest.TestCase):
         were applied to the side's pooled attack, whichever of the two the code
         happened to read first would arm the other.
         """
-        screen = StubMapScreen()
+        screen = StubBattleMap()
         screen.add_nation("A", at_war_with=["C"])
         screen.add_nation("B", at_war_with=["C"])
         screen.add_nation("C", at_war_with=["A", "B"])
@@ -569,7 +570,7 @@ class DisplayedDamageTests(unittest.TestCase):
 
 class BombardmentDamageTests(unittest.TestCase):
     def bombardment_damage(self, a_value):
-        screen = StubMapScreen()
+        screen = StubBattleMap()
         screen.add_nation("A", at_war_with=["B"])
         screen.add_nation("B", at_war_with=["A"])
         politics.set_value(screen.nation_data, "A", a_value)

@@ -122,7 +122,7 @@ files_to_skip_but_list = [
     "data\constants.py",
     #"data\queries\**",
     "context\context_generator.py",
-    "map_tools\**",
+    "scripts\maps\**",
     #"data\**",
 
     #"ui\**",

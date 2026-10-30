@@ -21,7 +21,7 @@ from map_logic.system32 import (
 from screens.game.battle_screen import Battle_Screen
 from screens.game.map import Map
 from tests import test_air_transport as transport_tests
-from tests.test_air_mechanics import tile, wing
+from tests.air_fixtures import tile, wing
 
 
 class AirDropRecoveryTests(unittest.TestCase):

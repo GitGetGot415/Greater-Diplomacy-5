@@ -262,7 +262,7 @@ class Orders_Screen(GameState):
         # already has. The panel shows every unit there and edits none of them.
         self.read_only = (not any(u.get("owner") == self.map_screen.player_country
                                   for u in units)
-                          or (getattr(self.map_screen, "realtime_multiplayer", False)
+                          or (self.map_screen.realtime_multiplayer
                               and (self.map_screen.realtime_session.phase != "TURN"
                                    or self.map_screen.realtime_session.players[
                                        self.map_screen.realtime_player_id].submitted)))
@@ -401,14 +401,14 @@ class Orders_Screen(GameState):
         rebound Clear Orders to a printable character.
         """
         if (self.renaming_unit_index is not None
-                or getattr(self, "read_only", False)
+                or self.read_only
                 or not self.map_screen
                 or self.map_screen.tactical_mode):
             return
         self.clear_all_orders()
 
     def select_unit(self, index):
-        if getattr(self, "read_only", False):
+        if self.read_only:
             return
         if self.map_screen.tactical_mode:
             self.map_screen.show_feedback("Tactical Mode: You can only command your specific unit!")
@@ -436,7 +436,7 @@ class Orders_Screen(GameState):
 
     def toggle_selected_unit(self, unit, province=None, additive=False):
         """Apply the shared map click behavior to one Orders roster row."""
-        if getattr(self, "read_only", False) or self._command_blocked(unit):
+        if self.read_only or self._command_blocked(unit):
             return
         if additive:
             if not self.map_screen.can_select_map_units():
@@ -655,7 +655,7 @@ class Orders_Screen(GameState):
         map_ref = self.map_screen
         if queries.unit_is_air_drop_recovering(unit):
             return True
-        if getattr(self, "read_only", False):
+        if self.read_only:
             return True
         if hasattr(map_ref, "player_country") and unit.get("owner") != map_ref.player_country:
             return True
@@ -905,15 +905,13 @@ class Orders_Screen(GameState):
         """Selected units plus their army peers in each army's saved order."""
         if selected_records is None:
             selected_records = self.map_screen.selected_unit_records()
-        if getattr(self, "read_only", False) and not selected_records:
+        if self.read_only and not selected_records:
             selected_records = [(unit, self.target_province)
                                 for unit in self.target_province.get("units", [])]
         visible_records = list(selected_records)
-        if selected_records and not getattr(self, "read_only", False):
-            # Some lightweight Orders test doubles predate persistent army
-            # data. Live map screens always provide both owners below.
-            nation_data = getattr(self.map_screen, "nation_data", None)
-            map_data = getattr(self.map_screen, "map_data", None)
+        if selected_records and not self.read_only:
+            nation_data = self.map_screen.nation_data
+            map_data = self.map_screen.map_data
             if isinstance(nation_data, dict) and isinstance(map_data, dict):
                 records_by_id = {
                     unit.get("unit_id"): (unit, province)
@@ -1034,7 +1032,7 @@ class Orders_Screen(GameState):
             for unit, base in selected_records if queries.is_air_unit(unit, context=self.map_screen)]
         self._air_range_input_key = None
         self._refresh_air_range_previews(self._air_range_hover_target)
-        if getattr(self.map_screen, "realtime_multiplayer", False):
+        if self.map_screen.realtime_multiplayer:
             player = self.map_screen.realtime_session.players.get(self.map_screen.realtime_player_id)
             self.read_only = (self.map_screen.realtime_session.phase != "TURN" or not player
                               or player.submitted or player.eliminated)
@@ -1380,8 +1378,7 @@ class Orders_Screen(GameState):
             self.refresh_ui()
 
     def set_bombard_target(self, index, dest, province=None):
-        # Older lightweight UI fixtures do not initialize targeting state.
-        if getattr(self, "_air_target_records", None):
+        if self._air_target_records:
             self.set_air_target(dest)
             return
         province = province or self.bombarding_unit_province or self.target_province
@@ -1815,7 +1812,7 @@ class Orders_Screen(GameState):
         # left-click selection gesture below, otherwise every target click is
         # consumed as the start of a selection rectangle.
         if (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
-                and getattr(self, "bombarding_unit_index", None) is not None):
+                and self.bombarding_unit_index is not None):
             # A mouse press has a matching release. Consume both halves of
             # this modal click so the release cannot fall through to the
             # ordinary empty-map exit gesture after the target is assigned.
@@ -1829,7 +1826,7 @@ class Orders_Screen(GameState):
             return
 
         if (event.type == pygame.MOUSEBUTTONUP and event.button == 1
-                and getattr(self, "_consume_bombard_target_release", False)):
+                and self._consume_bombard_target_release):
             self._consume_bombard_target_release = False
             self.map_screen.unit_selection_drag = None
             return
@@ -1838,7 +1835,7 @@ class Orders_Screen(GameState):
         # Let the camera finish a pan first, then consume both press/release so
         # a right-click cannot fall through to full-range air repositioning.
         if (event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP)
-                and getattr(self, "bombarding_unit_index", None) is not None
+                and self.bombarding_unit_index is not None
                 and event_handler.mouse_button_has_action(event.button, "issue_orders")):
             self.map_screen.unit_selection_drag = None
             if event.type == pygame.MOUSEBUTTONUP and not on_ui:
@@ -1911,7 +1908,7 @@ class Orders_Screen(GameState):
                         selected.extend(stack["units"])
                 self.map_screen.select_map_units(selected, additive=drag["additive"])
                 self.selected_unit_index = None
-                target = getattr(self, "target_province", None)
+                target = self.target_province
                 self.read_only = bool(target) and not any(
                     unit.get("owner") == self.map_screen.player_country
                     for unit in target.get("units", []))
@@ -2348,7 +2345,7 @@ class Orders_Screen(GameState):
         small_font = fonts.get("small")
         tiny_font = fonts.get("tiny")
 
-        read_only = getattr(self, "read_only", False)
+        read_only = self.read_only
         owner_color = self.map_screen.nation_colors.get(self.map_screen.player_country, (255, 255, 0))
         rows = self._roster_rows
         player_units = [unit for _key, unit, _province, _index in rows

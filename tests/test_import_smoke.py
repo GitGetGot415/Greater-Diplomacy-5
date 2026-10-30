@@ -23,10 +23,9 @@ SKIP_DIRS = {
     ".git", ".eggs", "__pycache__", "venv", ".venv", "build", "dist",
     "web_stage", "assets", "base_maps", "saves", "scenarios", "tournament_saves",
     "compilation_scripts",  # chdir + sys.path mutation at import time
-    "map_tools",            # standalone dev scripts, not in the runtime graph
     "mods",                 # mod sources are loaded by mod_loader, not imported
     "tests",
-    "scripts",              # offline editors, maintenance, previews, and benchmarks
+    "scripts",              # offline editors, map tools, maintenance, previews, and benchmarks
     # The source export tool writes its output when imported.
     "context",
     "data/json",
