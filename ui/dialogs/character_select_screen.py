@@ -124,6 +124,7 @@ class CharacterSelectScreen(ModalScreen):
         self._thumbnails = {}
         #: rel_path of the custom portrait pending a delete confirmation, if any.
         self.deleting_item = None
+        self._center_current_on_open = True
         self.refresh_ui()
 
     def select(self, rel_path):
@@ -202,6 +203,13 @@ class CharacterSelectScreen(ModalScreen):
         view_h = cull_bottom - grid_top
         self.scroll_content_rect = pygame.Rect(self.panel_rect.x, cull_top, self.panel_rect.width,
                                                cull_bottom - cull_top)
+
+        if self._center_current_on_open:
+            self._center_current_on_open = False
+            if self.current_path in self.images:
+                row = (self.images.index(self.current_path) + 1) // cols
+                desired = view_h // 2 - (row * row_h + tile_h // 2)
+                self.scroll_y = max(min(0, view_h - rows * row_h), min(0, desired))
 
         font = fonts.get("small")
         for row, y in self.layout_list_rows(rows, row_h, grid_top, view_h=view_h,
