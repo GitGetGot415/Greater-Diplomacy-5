@@ -491,18 +491,6 @@ def draw_slider(surface, rect, handle_rect, *, dragging=False, allowed_ratio=1.0
     pygame.draw.rect(surface, (255, 255, 255) if hovered or dragging else _SLIDER_OUTLINE_COLOR,
                      handle_rect, border)
 
-    # Narrow music handles have one grip. Standard handles have three grips.
-    pixel = _BUTTON_PIXEL_SIZE
-    grip_count = max(0, (handle_rect.width - 2 * (border + pixel) + pixel) // (2 * pixel))
-    grip_x = handle_rect.centerx - grip_count * pixel
-    grip_height = max(0, min(10, handle_rect.height - 2 * (border + pixel)))
-    grip_y = handle_rect.centery - grip_height // 2
-    for index in range(grip_count):
-        x = grip_x + index * 2 * pixel
-        surface.fill(_SLIDER_OUTLINE_COLOR, (x, grip_y, pixel, grip_height))
-        surface.fill(color, (x + pixel, grip_y + pixel, pixel, grip_height))
-
-
 class Slider:
     def __init__(self, x, y, width, text, initial_val, callback, visual_max=1.0, allowed_max=1.0):
         self.rect = pygame.Rect(x, y, width, 20)

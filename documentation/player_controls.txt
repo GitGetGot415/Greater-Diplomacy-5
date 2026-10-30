@@ -32,7 +32,7 @@ SLIDER DISPLAY
 --------------
 
 Shared sliders and the music progress control use the cached button shade bands and square borders.
-Tracks have recessed bevels. Handles have raised bevels and grip marks.
+Tracks have recessed bevels. Handles have raised bevels.
 The handle outline becomes white under the pointer or during dragging. Dragging reverses the handle bevel.
 
 Restricted track sections keep their dark red tint. Music progress keeps its orange fill.
