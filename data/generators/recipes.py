@@ -642,12 +642,12 @@ RESEARCH_RECIPES = [
     [
         #YEARS                           ID                  CAT     COST  REQ                                                      OPTIONS
         (unit_years("Carrack"),          "carrack",          "NAVY", 600,  {},                                                      {}),
-        (unit_years("Ironclad"),         "ironclad",         "NAVY", 2400, {"carrack": 1},                                          {}),
-        (unit_years("Pre-Dreadnought"),  "pre-dreadnought",  "NAVY", 2400, {"ironclad": 1},                                         {}),
-        (unit_years("Dreadnought"),      "dreadnought",      "NAVY", 2400, {"pre-dreadnought": 1},                                  {}),
-        (unit_years("Battleship"),       "battleship",       "NAVY", 2400, {"dreadnought": 1},                                      {}),
+        (unit_years("Ironclad"),         "ironclad",         "NAVY", 2400, {"carrack": len(unit_years("Carrack"))},                                          {}),
+        (unit_years("Pre-Dreadnought"),  "pre-dreadnought",  "NAVY", 2400, {"ironclad": len(unit_years("Ironclad"))},                                         {}),
+        (unit_years("Dreadnought"),      "dreadnought",      "NAVY", 2400, {"pre-dreadnought": len(unit_years("Pre-Dreadnought"))},                                  {}),
+        (unit_years("Battleship"),       "battleship",       "NAVY", 2400, {"dreadnought": len(unit_years("Dreadnought"))},                                      {}),
         (unit_years("Destroyer"),        "destroyer",        "NAVY", 2400, {"pre-dreadnought": len(unit_years("Pre-Dreadnought"))}, {}),
-        (unit_years("Aircraft Carrier"), "aircraft_carrier", "NAVY", 2400, {"battleship": 1},                                       {}),
+        (unit_years("Aircraft Carrier"), "aircraft_carrier", "NAVY", 2400, {"battleship": len(unit_years("Battleship"))},           {}),
         (unit_years("Submarine"),        "submarine",        "NAVY", 2400, {"pre-dreadnought": len(unit_years("Pre-Dreadnought"))},                                      {}),
     ],
     [

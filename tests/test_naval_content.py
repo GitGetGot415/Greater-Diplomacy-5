@@ -133,12 +133,22 @@ class NavalContentTests(unittest.TestCase):
         for tech in SHIPS.values():
             self.assertEqual(removed[tech], 0)
 
-    def test_destroyer_and_submarine_levels_follow_their_own_research_dependencies(self):
+    def test_naval_levels_follow_their_own_research_dependencies(self):
         final_pre_dreadnought = self.tree["pre-dreadnought"]["max_lvl"]
         self.assertEqual(self.tree["destroyer"]["req"], {"pre-dreadnought": final_pre_dreadnought})
         self.assertEqual(self.tree["submarine"]["req"], {"pre-dreadnought": final_pre_dreadnought})
-        for tech, prerequisite, required in (("destroyer", "pre-dreadnought", final_pre_dreadnought),
-                                             ("submarine", "pre-dreadnought", final_pre_dreadnought)):
+        final_battleship = self.tree["battleship"]["max_lvl"]
+        self.assertEqual(self.tree["aircraft_carrier"]["req"], {"battleship": final_battleship})
+        for tech, prerequisite in (("ironclad", "carrack"), ("pre-dreadnought", "ironclad"),
+                                   ("dreadnought", "pre-dreadnought"), ("battleship", "dreadnought")):
+            self.assertEqual(self.tree[tech]["req"], {prerequisite: self.tree[prerequisite]["max_lvl"]})
+        for tech, prerequisite, required in (("ironclad", "carrack", self.tree["carrack"]["max_lvl"]),
+                                             ("pre-dreadnought", "ironclad", self.tree["ironclad"]["max_lvl"]),
+                                             ("dreadnought", "pre-dreadnought", final_pre_dreadnought),
+                                             ("battleship", "dreadnought", self.tree["dreadnought"]["max_lvl"]),
+                                             ("destroyer", "pre-dreadnought", final_pre_dreadnought),
+                                             ("submarine", "pre-dreadnought", final_pre_dreadnought),
+                                             ("aircraft_carrier", "battleship", final_battleship)):
             entry = self.tree[tech]
             for level in range(1, entry["max_lvl"] + 1):
                 self.country["research"] = {tech: level - 1, prerequisite: required - 1}
@@ -155,9 +165,10 @@ class NavalContentTests(unittest.TestCase):
             self.assertTrue(queries.check_tech_requirements(granted, entry["req"]))
             removed = queries.edited_research_levels(granted, prerequisite, required, False, self.tree)
             self.assertEqual(removed[tech], 0)
-            self.assertEqual(granted.get("dreadnought", 0), 0)
-            preserved = queries.edited_research_levels(granted, "dreadnought", 1, False, self.tree)
-            self.assertEqual(preserved[tech], granted[tech])
+            if tech in ("destroyer", "submarine"):
+                self.assertEqual(granted.get("dreadnought", 0), 0)
+                preserved = queries.edited_research_levels(granted, "dreadnought", 1, False, self.tree)
+                self.assertEqual(preserved[tech], granted[tech])
 
     def test_ai_only_offers_destroyer_and_submarine_after_the_final_pre_dreadnought_level(self):
         final = self.tree["pre-dreadnought"]["max_lvl"]
