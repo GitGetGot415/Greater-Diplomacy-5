@@ -89,10 +89,12 @@ def _delete_relay_safely(token, droplet_id, firewall_id=None):
 # constants.py because other screens line up against them too.
 
 # --- Map view toggles (bottom-left grid) ---
-VIEW_BTN_START_X = 10
+
+UP_RIGHT_OFFSET = 3
+VIEW_BTN_START_X = 10 + UP_RIGHT_OFFSET
 VIEW_BTN_STEP_X = 50
-VIEW_BTN_ROW1_Y = c.SCREEN_HEIGHT - 50
-VIEW_BTN_ROW2_Y = c.SCREEN_HEIGHT - 100
+VIEW_BTN_ROW1_Y = c.SCREEN_HEIGHT - (50 + UP_RIGHT_OFFSET)
+VIEW_BTN_ROW2_Y = c.SCREEN_HEIGHT - (100 + UP_RIGHT_OFFSET)
 
 # --- Left vertical bar (Identity / Economy / R&D / ...) ---
 LEFT_UI_BAR_X = 20
