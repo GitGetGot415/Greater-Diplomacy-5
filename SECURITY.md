@@ -31,5 +31,5 @@ Use GitHub issues for ordinary gameplay bugs.
 Install only mods you trust.
 The Python mod sandbox is not a secure boundary for untrusted code.
 
-See [Mod Sandbox Security Model](documentation/other/sandbox_security.md)
+See [Mod Sandbox Security Model](documentation/other/SANDBOX_SECURITY.md)
 for details.

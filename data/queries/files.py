@@ -174,9 +174,9 @@ def import_mod_file(game_state, on_success=None):
     blocks filesystem/process access but is a best-effort guard, not a
     hardened security boundary -- see mod_loader.py's "Sandboxing" section.
 
-    The mod is also enabled by default (mod_loader.is_mod_enabled falls back
-    to True for anything with no entry yet) but doesn't take effect until the
-    game is restarted -- Python only imports a module once per process, so
+    The mod is disabled by default (mod_loader.is_mod_enabled falls back to
+    False for anything with no entry yet) and has to be enabled on the Mods
+    screen. Even then it doesn't take effect until the game is restarted -- Python only imports a module once per process, so
     anything already running has already loaded the unmodded version.
     """
     from ui import dialogs as confirm_dialog
@@ -192,7 +192,7 @@ def import_mod_file(game_state, on_success=None):
             shutil.copy2(file_path, dest)
             sync_persisted_dir(c.MODS_DIR)
             confirm_dialog.show_success("Import Success",
-                "Mod imported. Restart the game for it to take effect.")
+                "Mod imported. It is off for now. Turn it on in the Mods screen, then restart the game.")
             if on_success:
                 on_success()
         except Exception as e:
@@ -201,12 +201,18 @@ def import_mod_file(game_state, on_success=None):
     def _after_pick(file_path):
         if not file_path:
             return
+        if queries.IS_WEB:
+            sandbox_note = ("On the web build there is no sandbox. The mod can use "
+                            "everything your browser session can.")
+        else:
+            sandbox_note = ("It will run sandboxed by default (no file or process "
+                            "access, see the Mods screen to change that) -- but "
+                            "sandboxing is a best-effort guard, not a hard "
+                            "security boundary.")
         confirm_dialog.ask_yes_no(
             "Install Mod?",
-            "This mod replaces part of the game's own code. It will run "
-            "sandboxed by default (no file or process access, see the Mods "
-            "screen to change that) -- but sandboxing is a best-effort guard, "
-            "not a hard security boundary.\n\n"
+            "This mod replaces part of the game's own code. "
+            f"{sandbox_note}\n\n"
             "Only install mods from sources you trust.",
             lambda confirmed: _do_copy(file_path) if confirmed else None,
         )

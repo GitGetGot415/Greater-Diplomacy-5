@@ -376,7 +376,7 @@ Use verification appropriate to each change.
   Give required conditions before the steps.
   Separate rules, examples, and proposed features.
 - Apply these rules to design notes, agent guides, explanatory comments and docstrings.
-- These language rules do not apply to `context/TODO.txt`, tutorial help text, or the root `README.md`.
+- These language rules do not apply to `context/TODO.txt`, tutorial help text, the root `README.md`, or `documentation/other/SANDBOX_SECURITY.md`.
 - Preserve third-party licenses, source quotations, and archived source data.
   Simplify the project's explanation of that material, not the original text.
 - Check meaning against the code before handoff.

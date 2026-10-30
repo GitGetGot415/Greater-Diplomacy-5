@@ -32,7 +32,7 @@ would miss every module already imported by that point.
 Every mod is either sandboxed or unsandboxed.
 The audit hook checks selected operations against registered module globals on the active Python call stack.
 It also checks functions defined in a sandboxed mod when timers or threads call them.
-See documentation/other/sandbox_security.md for settings, import exceptions, and limitations.
+See documentation/other/SANDBOX_SECURITY.md for settings, import exceptions, and limitations.
 The sandbox does not make untrusted code safe.
 
 A short list of project files are reserved and cannot be mod targets:
@@ -385,7 +385,7 @@ def describe_mod(filename):
 # A callback defined in a registered mod retains its registered globals.
 # Deferred work with unregistered globals can run without a mod frame.
 # Scheduling origins are not recorded. Browser calls can also bypass audit events.
-# See documentation/other/sandbox_security.md for the full rules and limitations.
+# See documentation/other/SANDBOX_SECURITY.md for the full rules and limitations.
 
 _SANDBOX_BLOCKED_EVENTS = frozenset({
     "open", "os.remove", "os.rmdir", "os.removedirs", "os.rename", "os.replace",
@@ -511,7 +511,7 @@ def _install_sandbox_audit_hook():
         #
         # Mod-defined callbacks retain their registered globals, including on timers.
         # Deferred code with unregistered globals can lack a sandboxed frame.
-        # See documentation/other/sandbox_security.md.
+        # See documentation/other/SANDBOX_SECURITY.md.
         while frame is not None:
             if id(frame.f_globals) in sandboxed_dict_ids:
                 raise PermissionError(
@@ -785,8 +785,8 @@ def install():
             if sandboxed and sys.platform == "emscripten":
                 print(f"Mod '{filename}' is marked sandboxed, but on the web build the "
                       "Python-level sandbox does not extend to platform.window or browser "
-                      "APIs. Treat it as fully privileged. See issue #51 for the "
-                      "long-term fix.")
+                      "APIs. Treat it as fully privileged. A WASM runtime is proposed "
+                      "in issue #51 but is not planned.")
 
             overrides[module_name] = (source, abs_target, sandboxed, filename)
             _active_mods.add(filename)

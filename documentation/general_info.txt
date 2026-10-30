@@ -15,7 +15,7 @@ documentation/air_stuff.txt: aircraft controls and rules.
 documentation/data_migrations.txt: compatibility with older GD5 data.
 documentation/other/ai_responses_gd4_reference.txt: archived Greater Diplomacy 4 response text.
 documentation/other/recommended-relay-defaults.txt: relay setup defaults.
-documentation/other/sandbox_security.md: sandbox rules and limitations.
+documentation/other/SANDBOX_SECURITY.md: sandbox rules and limitations.
 README.md, For MacOS Users: macOS quarantine instructions.
 
 TOURNAMENT FILE STORAGE

@@ -5,6 +5,7 @@ from ui.navigation.game_state import FolderListState
 from ui.widgets.ui_elements import Button, make_back_button
 from ui.rendering.font_manager import fonts
 import data.constants as c
+from data.platform import IS_WEB
 import mod_loader
 
 class Mods(FolderListState):
@@ -20,7 +21,8 @@ class Mods(FolderListState):
     Each mod is also independently sandboxed or unsandboxed (sandboxed by
     default): a sandboxed mod's own code can't touch the filesystem or spawn
     processes/sockets, only replace behavior. See mod_loader.py's "Sandboxing"
-    section for what that does and doesn't protect against.
+    section for what that does and doesn't protect against. On web the sandbox
+    does not apply, so the sandbox button shows "No sandbox (web)" and is disabled.
     """
     back_state = "MENU"
     title = "MODS"
@@ -119,7 +121,11 @@ class Mods(FolderListState):
         # already matches what's actually running, orange/yellow -- with the
         # label itself switched to the "-ing..." form -- when it's queued but
         # won't take effect until a restart.
-        if sandboxed and sandbox_active:
+        # On web the audit hook cannot see browser calls (platform.window), so the
+        # setting protects nothing. Do not show a sandbox state there.
+        if IS_WEB:
+            sandbox_color, sandbox_label = "red", "No sandbox (web)"
+        elif sandboxed and sandbox_active:
             sandbox_color, sandbox_label = "green", "Sandboxed"
         elif not sandboxed and not sandbox_active:
             sandbox_color, sandbox_label = "red", "Unsandboxed"
@@ -140,7 +146,7 @@ class Mods(FolderListState):
         sandbox_btn = Button(845, btn_y, "tiny_square", sandbox_color, sandbox_label,
                              lambda f=filename: self.toggle_sandbox(f), font_preset="tiny")
         sandbox_btn.rect.width = 150
-        sandbox_btn.disabled = not info["valid"]
+        sandbox_btn.disabled = not info["valid"] or IS_WEB
         sandbox_btn.is_scrollable = True
         sandbox_btn.click_guard = self.scroll_click_guard
         self.elements.append(sandbox_btn)

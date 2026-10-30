@@ -8,9 +8,9 @@ This document explains what the mod loader's sandbox does, what it does **not** 
 
 ## TL;DR
 
-- **Desktop (Windows / macOS / Linux):** the sandbox blocks the *trivial* paths a sandboxed mod would use to touch the filesystem, spawn processes, or open sockets. It is not a hard security boundary — a determined mod can still escape via CPython internals or by scheduling callbacks that don't carry the mod's frame on the call stack. **Treat sandboxed mods as code you trust.**
+- **Desktop (Windows / macOS / Linux):** the sandbox blocks the *trivial* paths a sandboxed mod would use to touch the filesystem, spawn processes, or open sockets. It is not a hard security boundary — a determined mod can still escape via CPython internals or by scheduling a callback that has no mod code on the call stack and no mod globals (for example `threading.Timer(0, open, [...])`). **Treat sandboxed mods as code you trust.**
 - **Web (pygbag / WASM):** the sandbox is **advisory only**. `platform.window` is reachable from any Python code and gives the mod the full browser (`fetch`, `localStorage`, `XMLHttpRequest`, `eval`). None of those are CPython audit events. **Treat sandboxed mods on web as fully privileged.**
-- **If you genuinely need to run untrusted mods**, the long-term answer is the WebAssembly runtime sketched in [issue #51](https://github.com/GitGetGot415/Greater-Diplomacy-5/issues/51). The Python-level sandbox is not it.
+- **If you genuinely need to run untrusted mods**, do not install them. The Python-level sandbox is not a security boundary. A WebAssembly runtime is proposed in [issue #51](https://github.com/GitGetGot415/Greater-Diplomacy-5/issues/51), but it is not planned.
 
 ---
 
@@ -74,27 +74,27 @@ The carve-out applies only when the *direct* caller is importlib. If the mod cal
 
 ### Residual hole 1: scheduled callbacks
 
-A sandboxed mod that schedules a callback via `threading.Timer`, `signal.signal`, `atexit`, `asyncio.create_task`, or similar — and triggers a blocked op from inside that callback — can escape. The callback fires from a context where the mod's own frame is not on the call stack (the callback's `f_back` is the threading / signal / asyncio dispatcher, not the mod's top-level code).
+A sandboxed mod that schedules a callback via `threading.Timer`, `signal.signal`, `atexit`, `asyncio.create_task`, or similar can escape, but only when the callback itself carries no mod globals.
 
-Example that still works against the current sandbox:
+A function that the mod defines is **not** an escape. Its frame uses the mod's registered module globals, so the stack walk finds a sandboxed frame even when no other mod code is on the stack. The `scheduled mod callback` case in `tests/test_mod_loader_security.py` checks this.
+
+A callback that is not defined in the mod is an escape. Examples are a built-in, a function from the standard library, or a game function. The mod hands it to the scheduler directly. When it fires, the call stack holds only the scheduler's frames (for example `threading.Thread.run`).
+
+Example that still works against the current sandbox (checked against the current `mod_loader.py`):
 
 ```python
 # sandboxed mod, target=anything
 import threading
 
-def evil():
-    # By the time this runs, the mod's frame is long gone from the stack.
-    # f_back is threading.Thread.run or Timer.__init__'s callback dispatch.
-    open("/tmp/pwned", "w").close()
-
-threading.Timer(0.1, evil).start()
+# `open` is a built-in. No mod frame exists when it runs.
+threading.Timer(0.1, open, ["/tmp/pwned", "w"]).start()
 ```
 
 The audit hook fires for `open`, walks the stack, doesn't find a sandboxed frame, allows it.
 
-**Why we don't close this**: there's no clean way to distinguish "mod scheduled this callback" from "mod installed a normal hook the game uses legitimately" at the Python level. The audit hook only sees the call stack at fire time, not the call stack at registration time.
+**Why we don't close this**: the audit hook only sees the call stack at fire time, not the call stack at registration time. It cannot tell "the mod scheduled this callback" from "the game scheduled it".
 
-**What to do**: don't run mods you don't trust. If you need to run untrusted mods, use the WASM runtime.
+**What to do**: don't run mods you don't trust. There is no supported way to run untrusted mods today.
 
 ### Residual hole 2: CPython internals
 
@@ -121,10 +121,12 @@ The audit hook fires for none of these because they're foreign-function calls in
 ```
 Mod 'foo.py' is marked sandboxed, but on the web build the Python-level
 sandbox does not extend to platform.window or browser APIs. Treat it as
-fully privileged. See issue #51 for the long-term fix.
+fully privileged. See issue #51 for a proposed WASM runtime.
 ```
 
-This is honest labelling, not a fix. The real fix is the WASM runtime.
+The Mods screen shows "No sandbox (web)" in place of the sandbox toggle on web, and the import dialog says the same.
+
+This is honest labelling, not a fix. A WebAssembly runtime is proposed in issue #51, but it is not planned. Until then, no fix exists.
 
 ### Residual hole 4: side-channel reads via `os.listdir`
 
@@ -145,10 +147,10 @@ The sandbox is designed for **careless or lazily malicious mods**:
 It is **not** designed for:
 
 - A mod author who actively wants to compromise the user's machine or browser session.
-- A mod author who has read this SECURITY.md and is targeting the residual holes.
+- A mod author who has read this document and is targeting the residual holes.
 - A mod distributed by an attacker via a compromised mod repository.
 
-For those threat models, the answer is: don't install the mod. The long-term answer for untrusted mods is the WebAssembly runtime in [issue #51](https://github.com/GitGetGot415/Greater-Diplomacy-5/issues/51).
+For those threat models, the answer is: don't install the mod. A WebAssembly runtime for untrusted mods is proposed in [issue #51](https://github.com/GitGetGot415/Greater-Diplomacy-5/issues/51), but it is not planned.
 
 ---
 
@@ -164,7 +166,7 @@ For those threat models, the answer is: don't install the mod. The long-term ans
 
 - **Read the mod source before enabling it.** The mod file is plain Python; you can open it in any text editor.
 - Don't enable mods from sources you don't trust. The sandbox narrows the blast radius of bugs and lazy maliciousness; it does not turn an untrusted mod into a safe one.
-- On the web build, **sandboxed means nothing**. Treat every mod on web as fully privileged over your browser session.
+- On the web build, **sandboxed means nothing**. The Mods screen shows "No sandbox (web)" and the toggle is disabled. Treat every mod on web as fully privileged over your browser session.
 - If a mod you trust needs file access, toggle it to Unsandboxed on the Mods screen. The toggle is explicit; a sandboxed mod that suddenly stops working because it can't open a file is doing exactly what you want.
 
 ### For contributors
@@ -182,4 +184,4 @@ For those threat models, the answer is: don't install the mod. The long-term ans
 - Audit events reference: https://docs.python.org/3/library/audit_events.html
 - Original sandbox design (post-#22): see git history of `mod_loader.py` lines 213–264 (now rewritten).
 - Issue tracking the bypasses documented here: [issue #50](https://github.com/GitGetGot415/Greater-Diplomacy-5/issues/50).
-- Long-term WASM runtime proposal: [issue #51](https://github.com/GitGetGot415/Greater-Diplomacy-5/issues/51)
+- WASM runtime proposal (not planned): [issue #51](https://github.com/GitGetGot415/Greater-Diplomacy-5/issues/51)
