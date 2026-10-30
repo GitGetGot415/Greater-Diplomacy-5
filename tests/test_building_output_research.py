@@ -153,6 +153,34 @@ class OutputBonusTests(unittest.TestCase):
         for res in c.ECON_RESOURCE_KEYS:
             self.assertEqual(country[res], expected["total_inc"][res])
 
+    def test_shared_sweep_tables_give_each_nation_its_own_research_output(self):
+        # One economy sweep shares building tables between nations with the same
+        # output research. Each nation must still get its uncached building output.
+        research_by_nation = {"A": {"first": 1, "recruit": 1}, "B": {"first": 1, "recruit": 1},
+                              "C": {"first": 2}, "D": {"first": 9}, "E": {"recruit": 1, "first": 1},
+                              "F": {}, "G": {"first": 1, "recruit": 1}}
+        map_data = {}
+        for index, name in enumerate(research_by_nation):
+            province = self.province()
+            province["owner"], province["cores"] = name, [name]
+            map_data[index] = province
+        nation_data = {name: {"research": research} for name, research in research_by_nation.items()}
+        report = queries.calculate_all_economies(map_data, nation_data)
+        for index, (name, research) in enumerate(research_by_nation.items()):
+            expected = queries.get_province_building_output(map_data[index], research, self.library)
+            with self.subTest(nation=name):
+                for res in c.ECON_RESOURCE_KEYS:
+                    self.assertEqual(report[name]["breakdown"][res]["buildings"], expected[res])
+
+        cache = {}
+        shared = queries.get_building_output_modifiers(research_by_nation["A"], self.library, cache=cache)
+        self.assertIs(queries.get_building_output_modifiers(research_by_nation["B"], self.library, cache=cache),
+                      shared)
+        self.assertIsNot(queries.get_building_output_modifiers(research_by_nation["C"], self.library, cache=cache),
+                         shared)
+        self.assertEqual(queries.get_building_output_modifiers(research_by_nation["D"], self.library, cache=cache),
+                         queries.get_building_output_modifiers(research_by_nation["C"], self.library))
+
     def test_ai_values_the_actual_increment_on_owned_buildings(self):
         province = self.province(False)
         prices = {"materials": 3, "manpower": 2, "fuel": 7}

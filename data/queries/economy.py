@@ -387,20 +387,39 @@ def get_siphon_rates(nation_data_block):
     return nation_data_block.setdefault("siphon_rates", {res: 0.0 for res in c.ECON_RESOURCE_KEYS})
 
 
-def get_building_output_modifiers(research, building_library=None, *, context=None):
-    """Prepare percentage multipliers and flat additions for each building output."""
+def _building_output_bonus_levels(research, tree):
+    """Return (tech, capped level) for each researched tech that changes building output.
+
+    Research order is kept, so the bonuses multiply in the same order for every caller.
+    """
+    return tuple((tech, min(level, tree[tech]["max_lvl"]))
+                 for tech, level in research.items()
+                 if level > 0 and tech in tree and tree[tech].get("building_output_bonuses"))
+
+
+def get_building_output_modifiers(research, building_library=None, *, context=None, cache=None):
+    """Prepare percentage multipliers and flat additions for each building output.
+
+    `cache` is an optional dict for one pass over one building library.
+    Nations with the same output research then share one result, so do not change the result.
+    """
     if context is None:
         context = building_library
     if building_library is None:
         building_library = queries.get_building_library(context)
     tree = queries.get_tech_tree(context)
-    bonuses = [(bonus, min(level, tree[tech]["max_lvl"]))
-               for tech, level in research.items() if level > 0 and tech in tree
-               for bonus in tree[tech].get("building_output_bonuses", [])]
+    levels = _building_output_bonus_levels(research, tree)
+    if cache is not None and levels in cache:
+        return cache[levels]
+    bonuses = [(bonus, level) for tech, level in levels
+               for bonus in tree[tech]["building_output_bonuses"]]
     multipliers = {}
     additions = {}
+    modifiers = {"multipliers": multipliers, "additions": additions}
+    if cache is not None:
+        cache[levels] = modifiers
     if not bonuses:
-        return {"multipliers": multipliers, "additions": additions}
+        return modifiers
     for name, stats in building_library.items():
         values = {res: 1.0 for res in c.ECON_RESOURCE_KEYS}
         flat = {res: 0.0 for res in c.ECON_RESOURCE_KEYS}
@@ -414,7 +433,7 @@ def get_building_output_modifiers(research, building_library=None, *, context=No
                     flat[resource] += amount * level
         multipliers[name] = values
         additions[name] = flat
-    return {"multipliers": multipliers, "additions": additions}
+    return modifiers
 
 
 def get_building_output_multipliers(research, building_library=None, *, context=None):
@@ -470,13 +489,15 @@ def calculate_all_economies(map_data, nation_data, *, context=None):
         context = nation_data
     unit_lib = queries.get_unit_library(context)
     bldg_lib = queries.get_building_library(context)
+    # Filled for province owners only. Most nations share their output research,
+    # so each different table is built once per sweep.
     building_modifiers = {}
+    modifier_cache = {}
 
     # Initialize data structure for all active nations
     econ_data = {}
     for name, n_data in list(nation_data.items()):
         res_data = n_data.get("research", {})
-        building_modifiers[name] = get_building_output_modifiers(res_data, bldg_lib, context=context)
         bergius_bonus = c.BERGIUS_FUEL_BONUS if res_data.get("bergius_process", 0) > 0 else 0
         manpower_bonus = res_data.get("general_recruitment", 0) * c.GENERAL_RECRUITMENT_BONUS
         resource_refining_mult = 1.0 + res_data.get("resource_refining", 0) * c.RESOURCE_REFINING_BONUS_PER_LVL
@@ -522,9 +543,13 @@ def calculate_all_economies(map_data, nation_data, *, context=None):
                 bd["manpower"]["resources"] += int(res.get("Wheat", 0)) * (1.0 if is_core else c.NON_CORE_MULTIPLIERS["manpower"]) * refining_mult
 
             # Buildings
+            owner_research = nation_data[owner].get("research", {})
+            modifiers = building_modifiers.get(owner)
+            if modifiers is None:
+                modifiers = building_modifiers[owner] = get_building_output_modifiers(
+                    owner_research, bldg_lib, context=context, cache=modifier_cache)
             building_output = queries.get_province_building_output(
-                province, nation_data[owner].get("research", {}), bldg_lib,
-                modifiers=building_modifiers[owner])
+                province, owner_research, bldg_lib, modifiers=modifiers)
             for res in c.ECON_RESOURCE_KEYS:
                 bd[res]["buildings"] += building_output[res]
 
