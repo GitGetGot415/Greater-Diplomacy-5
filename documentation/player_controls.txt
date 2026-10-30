@@ -38,6 +38,14 @@ The handle outline becomes white under the pointer or during dragging. Dragging 
 Restricted track sections keep their dark red tint. Music progress keeps its orange fill.
 Dragging, value limits, labels, and permissions remain the same in all modes.
 
+SCROLLBAR DISPLAY
+-----------------
+
+Vertical and horizontal scrollbars use rectangular tracks and handles with the shared slider shading.
+Handles have no grip lines. Scroll ranges and input remain the same.
+
+These display changes apply in all modes. They add no saved fields or multiplayer commands.
+
 COUNTRY SUMMARY
 ---------------
 

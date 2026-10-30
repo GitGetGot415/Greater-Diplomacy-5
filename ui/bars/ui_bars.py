@@ -4,6 +4,7 @@ from contextlib import contextmanager
 import data.constants as c
 
 from ui.rendering.font_manager import fonts
+from ui.widgets import ui_elements
 
 
 # Cache the images using a tuple (filename, scale, directory) as the key
@@ -50,8 +51,7 @@ def draw_standard_scrollbar(surface, scroll_y, max_scroll, track_x, track_y, vie
     track_rect, handle_rect = get_standard_scrollbar_rects(
         scroll_y, max_scroll, track_x, track_y, view_h, width)
     if track_rect is not None:
-        pygame.draw.rect(surface, (50, 50, 60), track_rect)
-        pygame.draw.rect(surface, (150, 150, 150), handle_rect, border_radius=5)
+        ui_elements.draw_slider(surface, track_rect, handle_rect)
     return track_rect, handle_rect
 
 def calculate_scroll_snap_horizontal(mouse_x, min_value, max_value, track_x, track_w):
@@ -75,7 +75,6 @@ def draw_standard_scrollbar_horizontal(surface, value, min_value, max_value, tra
     if max_value <= min_value:
         return None, None
     track_rect = pygame.Rect(track_x, track_y, track_w, height)
-    pygame.draw.rect(surface, (50, 50, 60), track_rect)
 
     span = max_value - min_value
     handle_w = max(30, int(track_w * (track_w / (track_w + span))))
@@ -83,7 +82,7 @@ def draw_standard_scrollbar_horizontal(surface, value, min_value, max_value, tra
     handle_x = track_x + ratio * (track_w - handle_w)
 
     handle_rect = pygame.Rect(handle_x, track_y, handle_w, height)
-    pygame.draw.rect(surface, (150, 150, 150), handle_rect, border_radius=5)
+    ui_elements.draw_slider(surface, track_rect, handle_rect)
 
     return track_rect, handle_rect
 
