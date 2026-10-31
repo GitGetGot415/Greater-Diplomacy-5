@@ -37,10 +37,10 @@ TEXT_INPUT_STYLES = {
 # Shared sliders, scrollbars, and music progress use these RGB colors.
 # Replace a color reference with an RGB tuple to override its default.
 SLIDER_STYLES = {
-    "track": {"color": c.COLOR_SLIDER_TRACK, "gradient_strength": 1.0},
-    "handle": {"color": c.COLOR_SLIDER_HANDLE, "gradient_strength": 1.0},
-    "locked": {"color": (60, 40, 40), "gradient_strength": 1.0},
-    "progress": {"color": (255, 150, 50), "gradient_strength": 1.0},
+    "track": {"color": c.COLOR_SLIDER_TRACK, "gradient_strength": 0.5},
+    "handle": {"color": c.COLOR_SLIDER_HANDLE, "gradient_strength": 0.5},
+    "locked": {"color": (60, 40, 40), "gradient_strength": 0.5},
+    "progress": {"color": (255, 150, 50), "gradient_strength": 0.5},
 }
 
 TUTORIAL_PANEL_STYLES = {
