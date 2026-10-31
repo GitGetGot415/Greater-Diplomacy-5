@@ -177,7 +177,7 @@ class EditPortraitTests(unittest.TestCase):
         from data import queries
         with mock.patch.dict(queries._JSON_CACHE["hildehrand_choice"], {"data": {"variant": "x"}}):
             self.assertEqual(queries.get_hildehrand_gradient(),
-                             (False, c.HILDEHRAND_GRADIENT_DEFAULT_STRENGTH,
+                             (c.HILDEHRAND_GRADIENT_DEFAULT_ENABLED, c.HILDEHRAND_GRADIENT_DEFAULT_STRENGTH,
                               c.HILDEHRAND_GRADIENT_DEFAULT_STEPPED,
                               c.HILDEHRAND_GRADIENT_DEFAULT_BANDS))
         with mock.patch.dict(queries._JSON_CACHE["hildehrand_choice"],
@@ -187,6 +187,16 @@ class EditPortraitTests(unittest.TestCase):
                              (True, c.HILDEHRAND_GRADIENT_MAX_STRENGTH,
                               c.HILDEHRAND_GRADIENT_DEFAULT_STEPPED,
                               c.HILDEHRAND_GRADIENT_MAX_BANDS))
+
+    def test_gradient_enabled_default_and_saved_choice(self):
+        from data import queries
+        for default in (False, True):
+            with self.subTest(default=default), \
+                    mock.patch.object(c, "HILDEHRAND_GRADIENT_DEFAULT_ENABLED", default):
+                for saved, expected in (({}, default), ({"gradient": False}, False),
+                                        ({"gradient": True}, True)):
+                    with mock.patch.dict(queries._JSON_CACHE["hildehrand_choice"], {"data": saved}):
+                        self.assertEqual(queries.get_hildehrand_gradient()[0], expected)
 
 
 if __name__ == "__main__":

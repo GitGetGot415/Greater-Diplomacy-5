@@ -402,7 +402,9 @@ class SettingsScreenTests(unittest.TestCase):
     def test_checkerboard_gradient_defaults_and_invalid_saved_values(self):
         name = "checkerboard_gradient_strength"
         default = c.DEFAULT_CHECKERBOARD_GRADIENT_STRENGTH
+        self.assertEqual(default, 0.0)
         self.assertEqual(settings_schema.from_json_dict({})[name], default)
+        self.assertEqual(settings_schema.from_json_dict({name: 1.25})[name], 1.25)
         old_tuple = settings_schema.to_tuple(settings_schema.defaults(), {})[:-1]
         self.assertEqual(settings_schema.from_tuple(old_tuple)[name], default)
         for value in ("bad", True, float("nan"), float("inf")):

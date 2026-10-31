@@ -494,7 +494,7 @@ def get_hildehrand_choice():
 
 def get_hildehrand_gradient():
     """Returns (enabled, strength, stepped, bands) for the menu portrait's button gradient.
-    Off, with the default strength, style and band count, when unset."""
+    Use the constants for values that are not saved."""
     data = _load_cached_json("hildehrand_choice")
     if not isinstance(data, dict):
         data = {}
@@ -503,7 +503,7 @@ def get_hildehrand_gradient():
     stepped = bool(data.get("gradient_stepped", c.HILDEHRAND_GRADIENT_DEFAULT_STEPPED))
     bands = int(data.get("gradient_bands", c.HILDEHRAND_GRADIENT_DEFAULT_BANDS))
     bands = max(c.HILDEHRAND_GRADIENT_MIN_BANDS, min(bands, c.HILDEHRAND_GRADIENT_MAX_BANDS))
-    return bool(data.get("gradient")), strength, stepped, bands
+    return bool(data.get("gradient", c.HILDEHRAND_GRADIENT_DEFAULT_ENABLED)), strength, stepped, bands
 
 
 def save_hildehrand_portrait(variant, gradient, gradient_strength, gradient_stepped,

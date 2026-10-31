@@ -2299,7 +2299,7 @@ SETTINGS_BG_FILE = "Settings.png"
 # bg_color instead of being drawn red.
 CHECKERBOARD_TEMPLATE_FILE = "Checkerboard.png"
 CHECKERBOARD_SCROLL_SPEED = 18  # pixels/sec, moves down-and-right
-DEFAULT_CHECKERBOARD_GRADIENT_STRENGTH = 0.5
+DEFAULT_CHECKERBOARD_GRADIENT_STRENGTH = 0.0
 CHECKERBOARD_GRADIENT_STRENGTH = DEFAULT_CHECKERBOARD_GRADIENT_STRENGTH
 MAX_CHECKERBOARD_GRADIENT_STRENGTH = 2.0
 
@@ -2331,10 +2331,11 @@ SHUFFLE_DISABLED_TRACKS_PATH = "data/json/shuffle_disabled_tracks.json"
 STARTING_SONG_PATH = "data/json/starting_song.json"
 HILDEHRAND_CHOICE_PATH = "data/json/hildehrand_choice.json"
 # Menu portrait gradient: strength 1 matches a standard button; the slider runs 0 to the maximum.
+HILDEHRAND_GRADIENT_DEFAULT_ENABLED = False
 HILDEHRAND_GRADIENT_DEFAULT_STRENGTH = 1.0
 HILDEHRAND_GRADIENT_MAX_STRENGTH = 3.0
 # Stepped bands with dithered edges, like a button, instead of fine smooth bands.
-HILDEHRAND_GRADIENT_DEFAULT_STEPPED = True
+HILDEHRAND_GRADIENT_DEFAULT_STEPPED = False
 # Stepped style: how many color bands the portrait gradient has.
 HILDEHRAND_GRADIENT_DEFAULT_BANDS = 20
 HILDEHRAND_GRADIENT_MIN_BANDS = 2
