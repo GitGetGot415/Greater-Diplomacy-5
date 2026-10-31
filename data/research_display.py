@@ -74,6 +74,8 @@ def get_config(path=CONFIG_PATH):
         for tech_key, settings in config.get("technologies", {}).items():
             if settings.get("row", 1) not in range(1, len(layout["row_y"]) + 1):
                 raise ValueError(f"{tech_key} row must name a position in layout.row_y.")
+        for scale in config.get("symbol_scales", {}).values():
+            _positive(scale, "symbol_scales")
         for style in config.get("styles", {}).values():
             _positive(style.get("button_scale", 1.0), "style.button_scale")
             for scale in style.get("icon_scales", {}).values():
@@ -84,6 +86,11 @@ def get_config(path=CONFIG_PATH):
     except (KeyError, TypeError, AttributeError, ValueError) as error:
         raise ValueError(f"Invalid {path}: {error}") from error
     return config
+
+
+def symbol_scale(symbol_name):
+    """Return the zoom multiplier for a resolved symbol. Unlisted symbols use 1.0."""
+    return get_config().get("symbol_scales", {}).get(symbol_name, 1.0)
 
 
 def technology_row_y(tech_key):

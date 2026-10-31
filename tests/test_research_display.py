@@ -43,6 +43,22 @@ class DisplayDataTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "sample row"):
                 research_display.get_config(str(path))
 
+    def test_symbol_scale_reads_listed_symbols_and_defaults_the_rest(self):
+        config = display_config()
+        config["symbol_scales"] = {"Listed": 0.25}
+        with patch.object(research_display, "get_config", return_value=config):
+            self.assertEqual(research_display.symbol_scale("Listed"), 0.25)
+            self.assertEqual(research_display.symbol_scale("Unlisted"), 1.0)
+
+    def test_invalid_symbol_scale_is_rejected(self):
+        config = display_config()
+        config["symbol_scales"] = {"Listed": 0}
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory, "display.json")
+            path.write_text(json.dumps(config), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "symbol_scales"):
+                research_display.get_config(str(path))
+
     def test_settings_follow_precedence_without_mutating_cached_data(self):
         config = display_config()
         original = copy.deepcopy(config)

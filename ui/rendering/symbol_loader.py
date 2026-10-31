@@ -774,6 +774,11 @@ def _resolve_name_uncached(name, style=None, country=None):
     resolved = _resolve_classic_era(unit_name)
     if resolved is None:
         resolved = _resolve_against(name, SYMBOLS, country)
+    # Stage names such as "Motorized Supported Rifle Infantry II" do not contain
+    # their family name, so a family with one image needs its metadata to find it.
+    if resolved is None and name in queries.get_unit_library():
+        family = get_base_item_name(name)
+        resolved = family if family in SYMBOLS else None
     if resolved is None:
         return None
     return ("classic", resolved)
@@ -840,7 +845,7 @@ def get_symbol(name, zoom, color=None, alpha=255, style=None, country=None, *, f
 
     if fit_size is None:
         # Custom per-symbol scale overrides, on top of the global 0.5.
-        size = _scaled_size(base_img, zoom, c.SYMBOL_BASE_SCALES.get(base_name, 1.0))
+        size = _scaled_size(base_img, zoom, research_display.symbol_scale(base_name))
     else:
         width, height = base_img.get_size()
         ratio = min(fit_size[0] / width, fit_size[1] / height)

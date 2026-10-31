@@ -374,6 +374,12 @@ Their entries override matching central style entries. Unspecified entries retai
 Use the central file for bundled sizing changes.
 The map, production screens, and research category tabs do not use these node settings.
 
+symbol_scales corrects the size of art with disproportionate native dimensions.
+Each key is a resolved symbol name without .png. Unlisted symbols use 1.
+This multiplier applies to all symbols drawn by zoom, including map units and research icons.
+It applies with all art styles. It does not apply to symbols fitted to a fixed pixel box.
+On the research screen, the game multiplies symbol_scales with the node settings and icon_scales.
+
 RESEARCH EDITING
 ----------------
 

@@ -178,6 +178,13 @@ class FilenameDrivenUnitArtTests(unittest.TestCase):
                 self.assertIn(resolved[1], symbol_loader.SYMBOLS)
                 self.assertTrue(resolved[1].startswith(family + " "))
 
+    def test_every_library_unit_resolves_to_loaded_classic_art(self):
+        for name in queries.get_unit_library():
+            with self.subTest(unit=name):
+                resolved = symbol_loader.resolve(name, "classic")
+                self.assertIsNotNone(resolved)
+                self.assertIn(resolved[1], symbol_loader.SYMBOLS)
+
     def test_the_latest_culture_infantry_file_carries_forward_until_overridden(self):
         self.assertEqual(self._filename("Infantry Type 1914", "United Kingdom"),
                          "british/infantry_1914.png")

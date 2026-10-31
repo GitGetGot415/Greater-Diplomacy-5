@@ -120,6 +120,13 @@
         "pixels_per_year": 70,
         "modal_icon_box": 120
     },
+    "symbol_scales": {
+        "Motorized Infantry": 0.4,
+        "Mechanized Infantry": 0.4,
+        "Truck": 0.4,
+        "Cavalry": 0.8,
+        "Militia": 0.8
+    },
     "styles": {
         "classic": {
             "icon_scales": {

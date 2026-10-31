@@ -1370,15 +1370,6 @@ MIDPOINT_BOUNCE_SCALE = 1.0
 OVERLAY_STATUS_ICON_SCALE = 0.6
 OVERLAY_STATUS_ICON_ALPHA = 180  # 0 to 255 transparency scale
 
-# Handle disproportionate raw assets
-SYMBOL_BASE_SCALES = {
-    "Motorized Infantry": 0.4,
-    "Mechanized Infantry": 0.4,
-    "Truck": 0.4,
-    "Cavalry": 0.8,
-    "Militia": 0.8,
-}
-
 # Base unit classes that belong to the TANKS column despite not having
 # "Tank" or "Armored Car" in their name (see queries.get_ordered_unit_groups).
 TANK_GROUP_EXTRAS = [
