@@ -288,14 +288,11 @@ metadata.requirements lists the required technology levels and year conditions.
 metadata.recruitment identifies the industry and coastal requirements.
 Additional metadata retains existing display labels, art selection, and AI quota categories.
 
-Historical naval units use the same research, coastal production, combat, and transport rules as other ships.
-Their metadata connects each ship to its research track.
-
-Carracks, ironclads, pre-dreadnoughts, dreadnoughts, and battleships have numbered upgrades within their existing research tracks.
+Naval unit metadata connects each ship to its research track.
 
 All recruitable unit identifiers include a level suffix. The first Roman-numbered level uses I.
 Single-level families omit that suffix in visible labels. Saved records and action callbacks retain the numbered identifier.
-Older unit references convert through the v47 migration. See documentation/data_migrations.txt.
+See documentation/data_migrations.txt for older unit identifier conversions.
 
 Research dates, level counts, statistics, and costs come from the unit and research libraries.
 data/generators/recipes.py defines the generation rules.
@@ -309,10 +306,6 @@ Completed research unlocks production and upgrades within the same ship family.
 AI and both multiplayer modes use the same metadata and production rules.
 Research prerequisites also apply when an editor grants or removes technology.
 Existing completed research stays intact. Missing research levels count as unresearched.
-
-Destroyer research requires the final pre-dreadnought level. It does not require dreadnought research.
-The generator derives this prerequisite from the pre-dreadnought recipe's level count.
-Submarine research still requires dreadnought research.
 
 When you add unit tiers, update their research recipes and regenerate both runtime files.
 Keep research level meanings stable. Migrate older unit identifiers when standardization requires a rename.
