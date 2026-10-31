@@ -56,7 +56,7 @@ The main menu shows an evening sky above a blue water rectangle.
 The sky interpolates directly between its current top and horizon colors, with no intermediate color stops.
 Edit MENU_SKY_START_COLOR and MENU_SKY_END_COLOR near the top of screens/menus/menu.py.
 The start color appears at the top. The end color appears at the horizon.
-MENU_SKY_FADE_ENABLED controls a repeating color fade.
+MENU_SKY_FADE_ENABLED controls the repeating sky and water color fade.
 The top fades between MENU_SKY_START_COLOR and MENU_SKY_START_FADE_COLOR.
 The horizon fades between MENU_SKY_END_COLOR and MENU_SKY_END_FADE_COLOR.
 MENU_SKY_FADE_CYCLE_SECONDS sets the time for a complete fade to the target colors and back.
@@ -66,6 +66,9 @@ Use "linear" for constant speed, "ease_in" for a slow start, or "ease_out" for a
 Use "ease_in_out" for a slow start and finish. Each direction still takes half the cycle duration.
 Use a positive duration. Larger durations give slower fades. False for MENU_SKY_FADE_ENABLED keeps the original colors.
 MENU_WATER_START_COLOR sets the water color at the horizon. MENU_WATER_END_COLOR sets the color at the bottom.
+MENU_WATER_START_FADE_COLOR and MENU_WATER_END_FADE_COLOR set the water's corresponding fade targets.
+Water and sky use the same fade cycle, easing, and progress. Their colors change together.
+Both gradients interpolate directly between their current endpoints, with no intermediate color stops.
 The water has separate stepped, band count, and dithering settings. Both gradients use the same background cache.
 MENU_WATER_STEPPED selects shade bands when True and a smooth gradient when False.
 MENU_WATER_DITHERING controls square transitions between water bands. MENU_WATER_BANDS sets the number of water bands.
@@ -93,7 +96,7 @@ The game saves this choice with the portrait settings. Older settings keep dithe
 The Dithering button is disabled when Gradient or Stepped is off. Its saved choice remains unchanged.
 Dithering options apply only to stepped gradients. Restart after editing the sky or water settings in screens/menus/menu.py.
 MENU_SKY_BANDS applies only when MENU_SKY_STEPPED is True.
-The menu caches backgrounds by viewport size and sky endpoint colors. Restart the game after editing these values.
+The menu caches backgrounds by viewport size and sky and water endpoint colors. Restart after editing these values.
 Other menus retain their existing backgrounds.
 
 Edit PUPPET_PANEL_STYLES for the subjects and release_nations panels.

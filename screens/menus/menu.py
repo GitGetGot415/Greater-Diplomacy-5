@@ -36,7 +36,7 @@ MENU_SKY_END_COLOR = (220, 120, 140)
 # Fade
 MENU_SKY_FADE_ENABLED = True
 MENU_SKY_START_FADE_COLOR = (24, 28, 65)
-MENU_SKY_END_FADE_COLOR = (180, 80, 100)
+MENU_SKY_END_FADE_COLOR = (160, 60, 80)
 MENU_SKY_FADE_CYCLE_SECONDS = 8.0  # Full cycle: original colors to targets and back.
 # Options: "linear", "ease_in", "ease_out", "ease_in_out".
 MENU_SKY_FADE_IN_EASING = "ease_in_out"  # Original colors to target colors.
@@ -44,6 +44,8 @@ MENU_SKY_FADE_OUT_EASING = "ease_in_out"  # Target colors back to original color
 
 MENU_WATER_START_COLOR = (30, 62, 160)
 MENU_WATER_END_COLOR = (10, 25, 55)
+MENU_WATER_START_FADE_COLOR = (20, 42, 115)
+MENU_WATER_END_FADE_COLOR = (6, 15, 35)
 MENU_CHECKERBOARD_COLOR = (60, 30, 90)
 MENU_CHECKERBOARD_OPACITY = 50  # 0 hides the overlay; 255 makes it opaque.
 MENU_WATER_CHECKERBOARD_OPACITY = 20  # Reflected pattern: 0 hides it; 255 makes it opaque.
@@ -52,8 +54,9 @@ MENU_WATER_CHECKERBOARD_ANGLE = 50.0  # Degrees from vertical. Negative angles s
 
 
 @lru_cache(maxsize=4)
-def _menu_background(size, sky_start_color=MENU_SKY_START_COLOR, sky_end_color=MENU_SKY_END_COLOR):
-    """Cache the sky and water by viewport size and current sky endpoint colors."""
+def _menu_background(size, sky_start_color=MENU_SKY_START_COLOR, sky_end_color=MENU_SKY_END_COLOR,
+                     water_start_color=MENU_WATER_START_COLOR, water_end_color=MENU_WATER_END_COLOR):
+    """Cache the sky and water by viewport size and current endpoint colors."""
     width, height = size
     background = pygame.Surface(size)
     sky_height = round(height * MENU_WATERLINE_RATIO)
@@ -63,13 +66,13 @@ def _menu_background(size, sky_start_color=MENU_SKY_START_COLOR, sky_end_color=M
         stepped=MENU_SKY_STEPPED, bands=MENU_SKY_BANDS, dithering=MENU_SKY_DITHERING)
     ui_elements.draw_color_gradient(
         background, pygame.Rect(0, sky_height, width, height - sky_height),
-        (MENU_WATER_START_COLOR, MENU_WATER_END_COLOR),
+        (water_start_color, water_end_color),
         stepped=MENU_WATER_STEPPED, bands=MENU_WATER_BANDS, dithering=MENU_WATER_DITHERING)
     return background
 
 
 def _menu_fade_progress(progress, easing):
-    """Apply the selected speed curve to one direction of the sky fade."""
+    """Apply the selected speed curve to one direction of the background fade."""
     if easing == "linear":
         return progress
     if easing == "ease_in":
@@ -83,10 +86,11 @@ def _menu_fade_progress(progress, easing):
         "Use linear, ease_in, ease_out, or ease_in_out in MENU_SKY_FADE_IN_EASING and MENU_SKY_FADE_OUT_EASING.")
 
 
-def _menu_sky_colors():
-    """Fade both sky endpoints to their targets and back with the selected easing."""
+def _menu_gradient_colors():
+    """Fade sky and water endpoints together with one shared timing and easing calculation."""
     if not MENU_SKY_FADE_ENABLED:
-        return MENU_SKY_START_COLOR, MENU_SKY_END_COLOR
+        return (MENU_SKY_START_COLOR, MENU_SKY_END_COLOR,
+                MENU_WATER_START_COLOR, MENU_WATER_END_COLOR)
     if MENU_SKY_FADE_CYCLE_SECONDS <= 0:
         raise ValueError("MENU_SKY_FADE_CYCLE_SECONDS must be greater than zero.")
     phase = (pygame.time.get_ticks() / (1000.0 * MENU_SKY_FADE_CYCLE_SECONDS)) % 1.0
@@ -95,7 +99,9 @@ def _menu_sky_colors():
     else:
         blend = 1.0 - _menu_fade_progress((phase - 0.5) * 2.0, MENU_SKY_FADE_OUT_EASING)
     return (queries.lerp_color(MENU_SKY_START_COLOR, MENU_SKY_START_FADE_COLOR, blend),
-            queries.lerp_color(MENU_SKY_END_COLOR, MENU_SKY_END_FADE_COLOR, blend))
+            queries.lerp_color(MENU_SKY_END_COLOR, MENU_SKY_END_FADE_COLOR, blend),
+            queries.lerp_color(MENU_WATER_START_COLOR, MENU_WATER_START_FADE_COLOR, blend),
+            queries.lerp_color(MENU_WATER_END_COLOR, MENU_WATER_END_FADE_COLOR, blend))
 
 
 @lru_cache(maxsize=2)
@@ -662,8 +668,8 @@ class Menu(GameState):
             item["link_rect"].y = int(_lerp(rise_start_y, item["_intro_target_link_y"], t))
 
     def draw_background(self, surface):
-        sky_start, sky_end = _menu_sky_colors()
-        surface.blit(_menu_background(surface.get_size(), sky_start, sky_end), (0, 0))
+        colors = _menu_gradient_colors()
+        surface.blit(_menu_background(surface.get_size(), *colors), (0, 0))
         if MENU_CHECKERBOARD_OPACITY > 0 or MENU_WATER_CHECKERBOARD_OPACITY > 0:
             tile = ui_bars.get_checkerboard_tile(MENU_CHECKERBOARD_COLOR)
             horizon = round(surface.get_height() * MENU_WATERLINE_RATIO)
