@@ -6,6 +6,7 @@ from unittest.mock import Mock, patch
 import pygame
 
 from screens.menus.music_player import MusicScrubber
+from ui import background_styles
 from ui.widgets import ui_elements
 
 
@@ -92,6 +93,37 @@ class SliderInteractionTests(unittest.TestCase):
         self.event(scrubber, pygame.MOUSEBUTTONUP, (400, 110))
         self.callback.assert_called_once_with(1)
         self.assertFalse(scrubber.is_dragging)
+
+    def test_style_edits_refresh_cache_and_moving_controls_reuses_it(self):
+        rect = self.slider.rect
+        handle = self.slider.handle_rect
+        styles = {
+            name: {"color": (60 + index, 90 + index, 120 + index), "gradient_strength": 0.5}
+            for index, name in enumerate(("track", "handle", "locked", "progress"))
+        }
+        clip = self.surface.get_clip()
+        with patch.dict(background_styles.SLIDER_STYLES, styles, clear=True):
+            ui_elements.draw_slider(self.surface, rect, handle,
+                                    allowed_ratio=0.5, progress_ratio=0.25)
+            misses = ui_elements._button_background.cache_info().misses
+            self.assertEqual(misses, len(styles))
+            for index, (name, style) in enumerate(styles.items()):
+                with self.subTest(part=name):
+                    for field, value in (("gradient_strength", 0.0),
+                                         ("color", (80 + index, 100 + index, 140 + index))):
+                        style[field] = value
+                        ui_elements.draw_slider(self.surface, rect, handle,
+                                                allowed_ratio=0.5, progress_ratio=0.25)
+                        misses += 1
+                        self.assertEqual(ui_elements._button_background.cache_info().misses, misses)
+            rect.move_ip(10, 0)
+            handle.move_ip(10, 0)
+            with patch.object(ui_elements.queries, "lerp_color") as interpolate:
+                ui_elements.draw_slider(self.surface, rect, handle,
+                                        allowed_ratio=0.75, progress_ratio=0.5)
+            interpolate.assert_not_called()
+        self.assertEqual(self.surface.get_clip(), clip)
+        self.callback.assert_not_called()
 
 
 if __name__ == "__main__":

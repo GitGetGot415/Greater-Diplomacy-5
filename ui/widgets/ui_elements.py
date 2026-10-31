@@ -13,7 +13,7 @@ except Exception:
     pass
 import data.constants as c
 from data import queries
-from ui.background_styles import TEXT_INPUT_STYLES
+from ui.background_styles import SLIDER_STYLES, TEXT_INPUT_STYLES
 from ui.rendering.font_manager import fonts
 from ui.rendering import symbol_loader
 
@@ -44,8 +44,6 @@ _BUTTON_SHADOW = 50
 _BUTTON_PRESSED_DARKEN = 40
 _BUTTON_BORDER_WIDTH = 2
 _BUTTON_SELECTED_BORDER_WIDTH = 3
-_SLIDER_LOCKED_COLOR = (60, 40, 40)
-_SLIDER_PROGRESS_COLOR = (255, 150, 50)
 _SLIDER_OUTLINE_COLOR = (20, 20, 20)
 
 
@@ -525,30 +523,38 @@ def draw_slider(surface, rect, handle_rect, *, dragging=False, allowed_ratio=1.0
     if rect.width <= 0 or rect.height <= 0:
         return
     border = _BUTTON_BORDER_WIDTH
-    background = _button_background(rect.size, tuple(c.COLOR_SLIDER_TRACK), True, border)
+    style = SLIDER_STYLES["track"]
+    background = _button_background(rect.size, tuple(style["color"]), True, border,
+                                    style["gradient_strength"])
     surface.blit(background, rect)
 
     # Clip full-track backgrounds so movement reuses the same cached shading.
     if allowed_ratio < 1.0:
         start = int(rect.width * max(0.0, allowed_ratio))
-        locked = _button_background(rect.size, _SLIDER_LOCKED_COLOR, True, border)
+        style = SLIDER_STYLES["locked"]
+        locked = _button_background(rect.size, tuple(style["color"]), True, border,
+                                    style["gradient_strength"])
         surface.blit(locked, (rect.x + start, rect.y),
                      (start, 0, rect.width - start, rect.height))
         pygame.draw.line(surface, _SLIDER_OUTLINE_COLOR,
                          (rect.x + start, rect.top), (rect.x + start, rect.bottom - 1), border)
     if progress_ratio is not None:
         width = int(rect.width * max(0.0, min(1.0, progress_ratio)))
-        progress = _button_background(rect.size, _SLIDER_PROGRESS_COLOR, False, border)
+        style = SLIDER_STYLES["progress"]
+        progress = _button_background(rect.size, tuple(style["color"]), False, border,
+                                      style["gradient_strength"])
         surface.blit(progress, rect, (0, 0, width, rect.height))
     pygame.draw.rect(surface, _SLIDER_OUTLINE_COLOR, rect, border)
 
     hovered = handle_rect.collidepoint(pygame.mouse.get_pos())
-    color = tuple(c.COLOR_SLIDER_HANDLE)
+    style = SLIDER_STYLES["handle"]
+    color = tuple(style["color"])
     if dragging:
         color = tuple(max(0, channel - 40) for channel in color)
     elif hovered:
         color = tuple(min(255, channel + _BUTTON_HIGHLIGHT) for channel in color)
-    handle = _button_background(handle_rect.size, color, dragging, border)
+    handle = _button_background(handle_rect.size, color, dragging, border,
+                                style["gradient_strength"])
     surface.blit(handle, handle_rect)
     pygame.draw.rect(surface, (255, 255, 255) if hovered or dragging else _SLIDER_OUTLINE_COLOR,
                      handle_rect, border)

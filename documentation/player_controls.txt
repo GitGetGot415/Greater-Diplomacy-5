@@ -121,13 +121,23 @@ Shared sliders and the music progress control use the cached button shade bands 
 Tracks have recessed bevels. Handles have raised bevels.
 The handle outline becomes white under the pointer or during dragging. Dragging reverses the handle bevel.
 
-Restricted track sections keep their dark red tint. Music progress keeps its orange fill.
+Edit SLIDER_STYLES in ui/background_styles.py for slider colors and gradient strengths.
+The entries are track, handle, locked, and progress. Each entry has color and gradient_strength fields.
+Slider colors use RGB tuples. Zero strength gives a flat fill; one keeps the standard shading.
+Values above one increase contrast. Borders, bevels, and handle hover states keep their existing rules.
+Restart the game after editing these values.
+
+The locked entry controls restricted track sections. The progress entry controls the music progress fill.
+The track and handle entries initially reference existing color defaults in data/constants.py.
+Replace either reference with an RGB tuple to set its color in SLIDER_STYLES.
+The politics position line uses the track color without a gradient.
 Dragging, value limits, labels, and permissions remain the same in all modes.
 
 SCROLLBAR DISPLAY
 -----------------
 
 Vertical and horizontal scrollbars use rectangular tracks and handles with the shared slider shading.
+They use the track and handle entries in SLIDER_STYLES.
 Handles have no grip lines. Scroll ranges and input remain the same.
 
 These display changes apply in all modes. They add no saved fields or multiplayer commands.

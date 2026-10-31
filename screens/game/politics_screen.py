@@ -16,6 +16,7 @@ single unit.
 import pygame
 import data.constants as c
 from data import queries
+from ui.background_styles import SLIDER_STYLES
 from ui.widgets.ui_elements import Button, make_back_button
 from ui.bars import ui_bars
 from ui.rendering.font_manager import fonts
@@ -298,7 +299,7 @@ class Politics_Screen(GameState):
         track = self._track_rect()
         normal, small = fonts.get("normal"), fonts.get("small")
 
-        pygame.draw.rect(surface, c.COLOR_SLIDER_TRACK, track)
+        pygame.draw.rect(surface, SLIDER_STYLES["track"]["color"], track)
 
         # Ticks at both ends and dead centre, so the marker reads as a position
         # on a line rather than as a bar filling up.

@@ -7,6 +7,8 @@ Gradient strength must be zero or greater: 0 gives a flat fill; 1 gives standard
 Values above 1 increase contrast. Borders and bevels keep their existing appearance.
 """
 
+import data.constants as c
+
 MAP_FRAME_COLOR = (50, 80, 50)
 LEFT_FRAME_COLOR = (40, 80, 80)
 EDITOR_BG = (23, 35, 61, 245)
@@ -30,6 +32,15 @@ TEXT_INPUT_STYLES = {
     "active": {"color": (0, 0, 0), "gradient_strength": 0.0},
     "dialog": {"color": (0, 0, 0), "gradient_strength": 0.0},
     "message": {"color": (0, 0, 0), "gradient_strength": 0.0},
+}
+
+# Shared sliders, scrollbars, and music progress use these RGB colors.
+# Replace a color reference with an RGB tuple to override its default.
+SLIDER_STYLES = {
+    "track": {"color": c.COLOR_SLIDER_TRACK, "gradient_strength": 1.0},
+    "handle": {"color": c.COLOR_SLIDER_HANDLE, "gradient_strength": 1.0},
+    "locked": {"color": (60, 40, 40), "gradient_strength": 1.0},
+    "progress": {"color": (255, 150, 50), "gradient_strength": 1.0},
 }
 
 TUTORIAL_PANEL_STYLES = {
