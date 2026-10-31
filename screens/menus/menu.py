@@ -1,4 +1,5 @@
 import time
+from functools import lru_cache
 
 import pygame
 import webbrowser
@@ -17,6 +18,31 @@ from ui.rendering.font_manager import fonts
 
 from ui.dialogs.character_select_screen import CHARACTERS_DIR
 from ui import dialogs
+
+MENU_WATERLINE_RATIO = 0.6
+MENU_SKY_STEPPED = True  # False gives a smooth gradient. True adds dithering. Restart after editing.
+MENU_SKY_BANDS = 12
+# Edit these RGB colors, then restart the game.
+MENU_SKY_START_COLOR = (24, 28, 65)
+MENU_SKY_END_COLOR = (239, 155, 117)
+MENU_SKY_MIDDLE_COLORS = ((76, 49, 100), (167, 83, 112))
+MENU_WATER_COLOR = (30, 62, 100)
+
+
+@lru_cache(maxsize=4)
+def _menu_background(size):
+    """Cache the evening sky and water rectangle for each viewport size."""
+    width, height = size
+    background = pygame.Surface(size)
+    background.fill(MENU_WATER_COLOR)
+    sky_height = round(height * MENU_WATERLINE_RATIO)
+    colors = (MENU_SKY_START_COLOR, *MENU_SKY_MIDDLE_COLORS, MENU_SKY_END_COLOR)
+    ui_elements.draw_color_gradient(
+        background, pygame.Rect(0, 0, width, sky_height), colors,
+        stepped=MENU_SKY_STEPPED, bands=MENU_SKY_BANDS)
+    return background
+
+
 def _ease_out_expo(t):
     """Fast start that eases into the resting position: 1 - 2^-10t."""
     if t <= 0:
@@ -71,8 +97,6 @@ class Menu(GameState):
 
     def __init__(self):
         super().__init__()
-        self.bg_color = (20, 20, 80) # Blue
-        # GameState.draw_background falls back to a checkerboard tinted to bg_color
 
         try:
             raw_image = pygame.image.load("assets/images/The Sign.png").convert_alpha()
@@ -558,6 +582,9 @@ class Menu(GameState):
             t = _ease_out_expo(local_elapsed / self.BUTTON_INTRO_DURATION_MS) if local_elapsed > 0 else 0.0
             item["main_rect"].y = int(_lerp(rise_start_y, item["_intro_target_main_y"], t))
             item["link_rect"].y = int(_lerp(rise_start_y, item["_intro_target_link_y"], t))
+
+    def draw_background(self, surface):
+        surface.blit(_menu_background(surface.get_size()), (0, 0))
 
     def additional_draw(self, surface):
         if self.title_image:

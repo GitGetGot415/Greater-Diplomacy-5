@@ -156,6 +156,30 @@ def apply_button_gradient(image, gradient_strength=1.0, stepped=True, bands=None
     return shaded
 
 
+def draw_color_gradient(surface, rect, colors, *, stepped=True, bands=None):
+    """Draw color stops with the shared band layout and square transitions."""
+    if rect.width <= 0 or rect.height <= 0:
+        return
+    if stepped:
+        count, boundaries = _band_layout(rect.height, bands)
+    else:
+        count = rect.height
+        boundaries = list(range(count + 1))
+    shades = []
+    for band in range(count):
+        position = band / max(1, count - 1) * (len(colors) - 1)
+        index = min(int(position), len(colors) - 2)
+        shade = queries.lerp_color(colors[index], colors[index + 1], position - index)
+        shades.append(shade)
+        surface.fill(shade, (rect.x, rect.y + boundaries[band], rect.width,
+                             boundaries[band + 1] - boundaries[band]))
+    if stepped and _dithers(rect.width, rect.height, count):
+        for x, y, band, checker in _dither_squares(rect.width, boundaries):
+            surface.fill(shades[band - 1 + checker],
+                         (rect.x + x, rect.y + y,
+                          min(_BUTTON_PIXEL_SIZE, rect.width - x), _BUTTON_PIXEL_SIZE))
+
+
 def draw_pixel_background(surface, rect, style):
     """Draw cached shade bands without a border or bevel."""
     if rect.width <= 0 or rect.height <= 0:

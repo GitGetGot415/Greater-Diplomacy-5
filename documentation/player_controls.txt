@@ -52,6 +52,18 @@ Saves and multiplayer commands retain their existing data.
 Edit background colors and gradient strengths in ui/background_styles.py. All style tables described below use this shared file.
 Keep layout and border settings in their existing UI modules.
 
+The main menu shows an evening sky above a blue water rectangle.
+The sky changes from dark blue through purple to warm orange at the horizon.
+Edit MENU_SKY_START_COLOR and MENU_SKY_END_COLOR near the top of screens/menus/menu.py.
+The start color appears at the top. The end color appears at the horizon.
+MENU_SKY_MIDDLE_COLORS sets the intermediate colors. MENU_WATER_COLOR sets the water color.
+MENU_WATERLINE_RATIO in screens/menus/menu.py sets the horizon height. MENU_SKY_BANDS sets the number of sky bands.
+Set MENU_SKY_STEPPED to True for shade bands with square checkerboard transitions, as used by buttons and portraits.
+Set it to False for a smooth gradient.
+MENU_SKY_BANDS applies only when MENU_SKY_STEPPED is True.
+The menu caches the background for each viewport size. Restart the game after editing these values.
+Other menus retain their existing backgrounds.
+
 Edit PUPPET_PANEL_STYLES for the subjects and release_nations panels.
 Edit COUNTRY_SUMMARY_STYLES for country summary cards.
 Edit PRODUCTION_QUEUE_STYLES for the Buildings and Units queue backgrounds in production and on the map.
