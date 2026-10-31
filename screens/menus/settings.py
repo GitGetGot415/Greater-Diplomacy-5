@@ -14,6 +14,7 @@ from screens.menus.keybinds import default_keybinds
 
 # --- Settings screen button layout ---
 SETTINGS_RIGHT_COL_X = c.SCREEN_WIDTH - 260
+SETTINGS_CHECKERBOARD_COLOR = (60, 60, 60)
 SETTINGS_BACK_POS = (50, 50)
 SETTINGS_FULLSCREEN_Y = 10
 SETTINGS_OPTION_SIZE = (c.SIZES["setting_option"][0], 32)
@@ -299,6 +300,11 @@ class Settings(GameState):
             setattr(self, key, getattr(self.controller, key))
 
         self.refresh_ui()
+
+    def draw_background(self, surface):
+        """Show the checkerboard through the settings background's transparent areas."""
+        self.draw_checkerboard_background(surface, SETTINGS_CHECKERBOARD_COLOR)
+        super().draw_background(surface)
 
     # ------------------------------------------------------------------ #
     #                       AI PROVIDER TEXT FIELDS                      #
@@ -611,11 +617,11 @@ class Settings(GameState):
             value = getattr(self, key)
 
             if kind == "dir":
-                surface.blit(font.render(label, True, (100, 100, 100)), (x, y - 20))
+                surface.blit(font.render(label, True, (240, 240, 240)), (x, y - 20))
                 self.draw_text_field(surface, pygame.Rect(x, y, self.DIR_BOX_W, self.DIR_BOX_H), value)
             else:
                 # Color rows label to the right of the row and show a swatch
-                surface.blit(font.render(label, True, (100, 100, 100)), (x, y + 10))
+                surface.blit(font.render(label, True, (240, 240, 240)), (x, y + 10))
                 swatch = pygame.Rect(x + self.DIR_BOX_W - self.COLOR_BOX_W, y,
                                      self.COLOR_BOX_W, self.DIR_BOX_H)
                 pygame.draw.rect(surface, value, swatch)
