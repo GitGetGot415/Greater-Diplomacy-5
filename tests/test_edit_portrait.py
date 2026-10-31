@@ -41,6 +41,9 @@ class EditPortraitTests(unittest.TestCase):
         for sky, portrait in ((True, False), (False, True)):
             with self.subTest(sky=sky, portrait=portrait), \
                     mock.patch.object(menu_module, "MENU_SKY_DITHERING", sky), \
+                    mock.patch.object(menu_module, "MENU_WATER_DITHERING", not sky), \
+                    mock.patch.object(menu_module, "MENU_WATER_STEPPED", True), \
+                    mock.patch.object(menu_module, "MENU_WATER_BANDS", 4), \
                     mock.patch.object(self.menu, "hildehrand_gradient_dithering", portrait), \
                     mock.patch.object(ui_elements, "draw_color_gradient") as draw_sky, \
                     mock.patch.object(ui_elements, "apply_button_gradient",
@@ -49,8 +52,10 @@ class EditPortraitTests(unittest.TestCase):
                 self.menu.draw_background(pygame.Surface((1280, 720)))
                 self.menu._refresh_hildehrand_image()
                 self.assertEqual(draw_sky.call_count, 2)
-                for call in draw_sky.call_args_list:
-                    self.assertEqual(call.kwargs["dithering"], sky)
+                sky_call, water_call = draw_sky.call_args_list
+                self.assertEqual(sky_call.kwargs["dithering"], sky)
+                self.assertEqual(water_call.kwargs,
+                                 {"stepped": True, "bands": 4, "dithering": not sky})
                 self.assertEqual(shade_portrait.call_args.kwargs["dithering"], portrait)
                 self.menu.draw_background(pygame.Surface((1280, 720)))
                 self.assertEqual(draw_sky.call_count, 2)
