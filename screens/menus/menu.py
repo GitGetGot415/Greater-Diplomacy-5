@@ -9,7 +9,6 @@ import ssl
 from ui.widgets import ui_elements
 from ui.navigation.game_state import GameState
 from ui.widgets.ui_elements import Button
-from ui.background_styles import MENU_PORTRAIT_STYLE
 import data.constants as c
 from data import queries
 from ui.dialogs import pickers
@@ -144,7 +143,7 @@ class Menu(GameState):
         self._hildehrand_anchor_bottomleft = (hildehrand_anchor_x, hildehrand_anchor_y)
 
         self.hildehrand_choice = queries.get_hildehrand_choice()
-        self.hildehrand_gradient = queries.get_hildehrand_gradient()
+        self.hildehrand_gradient, self.hildehrand_gradient_strength = queries.get_hildehrand_gradient()
         try:
             self._hildehrand_plain_image = _load_scaled_image(
                 f"{CHARACTERS_DIR}/{self.hildehrand_choice}", self.HILDEHRAND_SCALE)
@@ -292,34 +291,20 @@ class Menu(GameState):
         )
         self.elements.append(self.refresh_btn)
 
-        # Small button beneath Hildehrand that opens a picker for any portrait
-        # under assets/characters/, not just Hildehrand's own F/M variants.
-        # Positioned off the fixed anchor point, not the image itself, so it
-        # never moves when a taller or shorter portrait gets picked.
-        swap_btn_width = c.SIZES["swap_hildehrand"][0]
-        hildehrand_anchor_x, hildehrand_anchor_y = self._hildehrand_anchor_bottomleft
-        self.swap_hildehrand_btn = Button(
+        # Small button beneath Hildehrand that opens the portrait editor: the
+        # picker for any portrait under assets/characters/ plus the gradient.
+        # Positioned off a fixed spot, not the image itself, so it never moves
+        # when a taller or shorter portrait gets picked.
+        self.edit_portrait_btn = Button(
             50,
             500,
-            "swap_hildehrand",
+            "edit_portrait",
             "purple",
-            "Choose Portrait",
-            self.open_hildehrand_picker,
+            "Edit Portrait",
+            lambda: self.go_to("EDIT_PORTRAIT"),
             font_preset="small",
         )
-        self.elements.append(self.swap_hildehrand_btn)
-
-        # Sits under the portrait button and shades the portrait like a button.
-        self.toggle_gradient_btn = Button(
-            50,
-            535,
-            "swap_hildehrand",
-            "purple",
-            "Toggle Gradient",
-            self.toggle_hildehrand_gradient,
-            font_preset="small",
-        )
-        self.elements.append(self.toggle_gradient_btn)
+        self.elements.append(self.edit_portrait_btn)
 
         # Exit lives in the top-right corner on desktop builds and uses the
         # shared modal dialog so the game is never closed accidentally by a
@@ -341,7 +326,7 @@ class Menu(GameState):
         # These controls skip the rise-from-bottom cascade below and instead
         # slide in horizontally: the refresh and exit buttons from the right,
         # alongside the sign and in the top corner respectively, and the
-        # portrait swap button from the left, alongside Hildehrand.
+        # portrait edit button from the left, alongside Hildehrand.
         right_intro_buttons = [self.refresh_btn]
         if self.exit_btn:
             right_intro_buttons.append(self.exit_btn)
@@ -349,8 +334,7 @@ class Menu(GameState):
             button._intro_from_right = True
         if self.exit_btn:
             self.exit_btn._intro_start_margin = self.EXIT_INTRO_START_MARGIN
-        self.swap_hildehrand_btn._intro_from_left = True
-        self.toggle_gradient_btn._intro_from_left = True
+        self.edit_portrait_btn._intro_from_left = True
 
         # Cascade the rise-in by vertical position: rows near the top of the
         # screen start first, rows near the bottom start last.
@@ -378,9 +362,6 @@ class Menu(GameState):
         if not IS_WEB:
             threading.Thread(target=self.check_version, daemon=True).start()
 
-    def open_hildehrand_picker(self):
-        pickers.open_character_picker(self, self.hildehrand_choice, self._set_hildehrand_choice)
-
     def confirm_exit(self):
 
         dialogs.ask_yes_no(
@@ -397,7 +378,7 @@ class Menu(GameState):
             # Let the main loop handle cleanup and platform-specific shutdown.
             pygame.event.post(pygame.event.Event(pygame.QUIT))
 
-    def _set_hildehrand_choice(self, rel_path):
+    def set_hildehrand_choice(self, rel_path):
         try:
             image = _load_scaled_image(f"{CHARACTERS_DIR}/{rel_path}", self.HILDEHRAND_SCALE)
         except Exception as e:
@@ -406,16 +387,21 @@ class Menu(GameState):
         self.hildehrand_choice = rel_path
         self._hildehrand_plain_image = image
         self._refresh_hildehrand_image()
-        self._save_hildehrand_settings()
+        self.save_hildehrand_settings()
 
     def toggle_hildehrand_gradient(self):
         self.hildehrand_gradient = not self.hildehrand_gradient
         self._refresh_hildehrand_image()
-        self._save_hildehrand_settings()
+        self.save_hildehrand_settings()
 
-    def _save_hildehrand_settings(self):
-        queries.save_cached_json("hildehrand_choice", {"variant": self.hildehrand_choice,
-                                                       "gradient": self.hildehrand_gradient})
+    def set_hildehrand_gradient_strength(self, strength):
+        """Live slider update. The caller saves once the drag ends."""
+        self.hildehrand_gradient_strength = strength
+        self._refresh_hildehrand_image()
+
+    def save_hildehrand_settings(self):
+        queries.save_hildehrand_portrait(self.hildehrand_choice, self.hildehrand_gradient,
+                                         self.hildehrand_gradient_strength)
 
     def _refresh_hildehrand_image(self):
         """Builds the drawn portrait from the plain one, shaded when the gradient is on.
@@ -423,7 +409,7 @@ class Menu(GameState):
         plain = self._hildehrand_plain_image
         if plain and self.hildehrand_gradient:
             self.hildehrand_image = ui_elements.apply_button_gradient(
-                plain, MENU_PORTRAIT_STYLE["gradient_strength"])
+                plain, self.hildehrand_gradient_strength)
         else:
             self.hildehrand_image = plain
 

@@ -493,9 +493,20 @@ def get_hildehrand_choice():
 
 
 def get_hildehrand_gradient():
-    """Returns whether the menu portrait uses the button gradient (off if unset)."""
+    """Returns (enabled, strength) for the menu portrait's button gradient.
+    Off at the default strength when unset."""
     data = _load_cached_json("hildehrand_choice")
-    return bool(data.get("gradient")) if isinstance(data, dict) else False
+    if not isinstance(data, dict):
+        data = {}
+    strength = data.get("gradient_strength", c.HILDEHRAND_GRADIENT_DEFAULT_STRENGTH)
+    strength = max(0.0, min(float(strength), c.HILDEHRAND_GRADIENT_MAX_STRENGTH))
+    return bool(data.get("gradient")), strength
+
+
+def save_hildehrand_portrait(variant, gradient, gradient_strength):
+    """Remembers the menu portrait, whether its gradient is on, and the gradient strength."""
+    save_cached_json("hildehrand_choice", {"variant": variant, "gradient": gradient,
+                                           "gradient_strength": gradient_strength})
 
 
 def get_research_years(*, context=None):

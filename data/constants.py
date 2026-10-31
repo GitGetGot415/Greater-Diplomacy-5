@@ -940,7 +940,7 @@ SIZES = {
     "thin": (150, 30),
     "ai_opinion": (100, 30),
     "puppet_option": (100, 30),
-    "swap_hildehrand": (120, 30),
+    "edit_portrait": (120, 30),
     "character_portrait_tile": (190, 190),
     "automation_option": (200, 30),
     # Compact Orders roster: three header controls and six icon commands per row.
@@ -2327,6 +2327,9 @@ ACTIVE_ALBUMS_PATH = "data/json/active_albums.json"
 SHUFFLE_DISABLED_TRACKS_PATH = "data/json/shuffle_disabled_tracks.json"
 STARTING_SONG_PATH = "data/json/starting_song.json"
 HILDEHRAND_CHOICE_PATH = "data/json/hildehrand_choice.json"
+# Menu portrait gradient: strength 1 matches a standard button; the slider runs 0 to the maximum.
+HILDEHRAND_GRADIENT_DEFAULT_STRENGTH = 1.0
+HILDEHRAND_GRADIENT_MAX_STRENGTH = 2.0
 HISTORICAL_LEADERS_PATH = "data/json/historical_leaders.json"
 HISTORICAL_LEADERS_DEFAULT_PATH = "data/json/historical_leaders_DEFAULT.json"
 

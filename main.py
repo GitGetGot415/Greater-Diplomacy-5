@@ -86,7 +86,7 @@ def _import_project_modules():
     """
     global IS_WEB, restore_persisted_dir, platform, pygame
     global Messages_Screen, dispatch_global_keys, synthesize_keybind_mouse_events, keyboard_input_is_captured, fonts, ui_elements, c, queries
-    global Load_Game, Map, Menu, New_Game, Settings, Credits, Music_Player, View_Assets, Mods, Unit_Art, Keybinds, Mouse_Settings, default_keybinds
+    global Load_Game, Map, Menu, New_Game, Settings, Credits, Music_Player, View_Assets, Mods, Unit_Art, Keybinds, Mouse_Settings, Edit_Portrait, default_keybinds
     global Translate, Translation_Menu, Greater_Diplomacy_4_Translation, Greater_Diplomacy_Hex_Translation
     global Orders_Screen, keybind_io, settings_schema, symbol_loader, modal_stack
     global Research_Screen, Economy_Screen, Edit_Country_Screen, Production_Screen
@@ -150,6 +150,7 @@ def _import_project_modules():
     from screens.menus.unit_art import Unit_Art
     from screens.menus.keybinds import Keybinds, default_keybinds
     from screens.menus.mouse_settings import Mouse_Settings
+    from screens.menus.edit_portrait import Edit_Portrait
     from screens.game.orders import Orders_Screen
     from data.io import keybind_io, settings_schema
     from ui.rendering import symbol_loader
@@ -376,6 +377,7 @@ class Controller:
             "UNIT_ART": Unit_Art(self),
             "KEYBINDS": Keybinds(self),
             "MOUSE_SETTINGS": Mouse_Settings(self),
+            "EDIT_PORTRAIT": Edit_Portrait(self),
             "CREDITS": Credits(),
             "MUSIC_PLAYER": Music_Player(self),
             "VIEW_ASSETS": View_Assets(),
@@ -599,6 +601,8 @@ class Controller:
         # 3. Load Game Refresh
         if next_state_name == "LOAD_GAME":
             self.states["LOAD_GAME"].refresh_ui()
+        elif next_state_name == "EDIT_PORTRAIT":
+            self.states["EDIT_PORTRAIT"].refresh_ui()
         elif next_state_name == "SETTINGS":
             # The navigation tutorial may persist its opt-out while Settings
             # is closed; rebuild so its toggle always reflects that value.

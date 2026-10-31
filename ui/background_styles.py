@@ -22,10 +22,6 @@ MAP_BAR_STYLES = {
     "bottom_left": {"color": LEFT_FRAME_COLOR, "gradient_strength": 0.0},
 }
 
-# Main menu portrait gradient, used by the Toggle Gradient button.
-# It has no color: the portrait keeps its own colors and only the shading changes.
-MENU_PORTRAIT_STYLE = {"gradient_strength": 1.0}
-
 MAP_CONFIRM_STYLES = {
     "country": {"color": (40, 40, 40), "gradient_strength": 0.0},
     "exit": {"color": (60, 40, 40), "gradient_strength": 0.0},

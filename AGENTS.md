@@ -26,6 +26,11 @@ AI means artificial intelligence. UI means user interface.
   Do not rename it during cleanup or refactoring.
   Rename it only when the user explicitly requests a different name.
 - **Never stage changes, commit to `main` or make another branch without explicit user approval.**
+- **Never use `git stash`, `git checkout`, `git reset`, `git restore`, or `git clean` to change the working tree.**
+  Do not use them to compare against a baseline or to test a clean state.
+  If the command is interrupted, the user's work can stay hidden or be lost.
+  To compare with an older version, export it to a separate directory with `git archive`.
+  Run the comparison in that directory and leave the working tree unchanged.
 - Use `color`, never `colour`, in identifiers, UI text, comments, and documentation.
 - Preserve intentional comments.
   Update inaccurate comments. Keep explanations of rules that are not obvious.
