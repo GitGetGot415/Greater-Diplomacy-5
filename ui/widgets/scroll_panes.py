@@ -33,6 +33,8 @@ class ScrollPanes:
     untagged is treated as fixed chrome drawn on top.
     """
 
+    regions = {}
+
     #: Default row height for pane_rows(), overridable per screen.
     ROW_HEIGHT = 34
 
@@ -42,7 +44,7 @@ class ScrollPanes:
         Screens with a fixed layout can just return a dict literal; the editors
         rebuild theirs in refresh_ui and return that.
         """
-        return getattr(self, "regions", {})
+        return self.regions
 
     def scroll_attrs(self, name):
         """The per-pane scroll state attribute names.

@@ -207,7 +207,7 @@ def open_spectator_messages(map_screen):
                                 m = months.index(parts[1]) if parts[1] in months else 0
                                 y = int(parts[2])
                                 sort_val = (y * 360) + (m * 30) + d
-                    except Exception:
+                    except ValueError:
                         pass
 
                     all_msgs.append({

@@ -100,13 +100,38 @@ class DialogTests(unittest.TestCase):
                 self.settle()
                 self.assertEqual(self.answers, [expected])
 
-    def test_three_choice_standalone_preserves_go_back_result(self):
-        from ui.dialogs import yes_no
-        with mock.patch.object(pygame.display, "get_surface", return_value=None), \
-                mock.patch.object(yes_no, "_run_blocking", return_value=None) as run:
+    def standalone_window_closed(self):
+        """A standalone tool with no game display, whose window the user closes."""
+        from ui.dialogs import base
+        return (mock.patch.object(pygame.display, "get_surface", return_value=None),
+                mock.patch.object(base.ui_bars, "acquire_surface", return_value=(self.surface, False)),
+                mock.patch.object(base.ui_bars, "release_surface"),
+                mock.patch.object(pygame.event, "get", return_value=[pygame.event.Event(pygame.QUIT)]))
+
+    def test_closing_a_standalone_three_choice_window_answers_go_back(self):
+        no_display, acquire, release, quit_event = self.standalone_window_closed()
+        with no_display, acquire, release, quit_event:
             dialogs.ask_yes_no("T", "Save?", self.answers.append, back_label="Go back")
-        self.assertIsNone(run.call_args.kwargs["default_result"])
         self.assertEqual(self.answers, [None])
+
+    def test_closing_a_standalone_two_choice_window_answers_no(self):
+        no_display, acquire, release, quit_event = self.standalone_window_closed()
+        with no_display, acquire, release, quit_event:
+            dialogs.ask_yes_no("T", "Save?", self.answers.append)
+        self.assertEqual(self.answers, [False])
+
+    def test_closing_a_standalone_text_window_answers_cancelled(self):
+        no_display, acquire, release, quit_event = self.standalone_window_closed()
+        with no_display, acquire, release, quit_event:
+            dialogs.ask_string("T", "Name?", self.answers.append)
+        self.assertEqual(self.answers, [None])
+
+    def test_closing_a_standalone_message_window_calls_back_without_arguments(self):
+        calls = []
+        no_display, acquire, release, quit_event = self.standalone_window_closed()
+        with no_display, acquire, release, quit_event:
+            dialogs.show_message("T", "Done.", on_result=lambda: calls.append(True))
+        self.assertEqual(calls, [True])
 
     # -- ask_string / ask_integer ---------------------------------------
 
@@ -367,14 +392,16 @@ class DialogTests(unittest.TestCase):
         open_url.assert_called_once_with(links[0]["url"])
 
     def test_standalone_person_info_receives_images(self):
-        from ui.dialogs import person_info
+        from ui.dialogs import base
         images = self.credited_images()
         calls = []
-        with mock.patch.object(person_info, "_run_blocking") as run:
-            person_info._show_person_info_standalone("Artist", "Art", [], "left", None,
-                                                    lambda: calls.append(True), images)
+        with mock.patch.object(pygame.display, "get_surface", return_value=None), \
+                mock.patch.object(base, "_run_blocking") as run:
+            dialogs.show_person_info("Artist", "Art", [], "left", None,
+                                     lambda: calls.append(True), images=images)
         modal = run.call_args.args[0](self.surface)
         self.assertEqual(len(modal.image_rows), len(images))
+        modal.deliver_result()
         self.assertEqual(calls, [True])
 
     def scrollable_credit_modal(self):

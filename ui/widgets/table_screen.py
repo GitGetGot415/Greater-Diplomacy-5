@@ -101,7 +101,7 @@ class TableScreen(GameState):
             return
         # A row half-scrolled under the header is drawn clipped, so the click
         # has to land inside the scroll region as well as on the row.
-        clip = getattr(self, "scroll_content_rect", None)
+        clip = self.scroll_content_rect
         if clip is not None and not clip.collidepoint(event.pos):
             return
         for rect, row in self.row_hitboxes:

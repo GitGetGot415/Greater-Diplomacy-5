@@ -9,8 +9,8 @@ per screen for anything that genuinely needs to differ.
 
 The class was previously buried in screens/editors/scripted_events_editor.py as _ModalScreen,
 which meant every other screen would have had to import a private name out of an
-unrelated 1200-line editor to reuse it. That module keeps the old name as an
-alias, so nothing that referred to it breaks.
+unrelated 1200-line editor to reuse it. That module keeps a _ModalScreen subclass
+that sets its own panel style.
 
 Import-graph note: this deliberately imports only game_state, ui_bars, ui_elements
 and the font manager at module scope. data.queries and ui.dialogs are

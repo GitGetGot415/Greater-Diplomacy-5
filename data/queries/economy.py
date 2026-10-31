@@ -160,6 +160,25 @@ def is_administrative_action_enabled(order_type, scenario_settings=None):
             and name not in settings.get("administrative_disabled", []))
 
 
+def nation_has_any_core(nation, map_data):
+    return any(nation in province.get("cores", []) for province in map_data.values())
+
+
+def province_can_be_cored(nation, province, id_to_province, has_any_core):
+    """A nation's cores must grow from the coast or from its existing cores.
+
+    A nation with no cores at all can start anywhere. has_any_core comes from
+    nation_has_any_core, so a caller that checks many provinces scans the map once.
+    """
+    if not has_any_core or province.get("is_coastal", False):
+        return True
+    for neighbor_id in province.get("neighbors", []):
+        neighbor = id_to_province.get(neighbor_id)
+        if neighbor and nation in neighbor.get("cores", []):
+            return True
+    return False
+
+
 def get_core_cost(nation, map_data, scenario_settings=None):
     """Calculates the cost to core a territory dynamically."""
     core_count = sum(1 for p in map_data.values() if nation in p.get("cores", []))

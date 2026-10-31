@@ -518,7 +518,7 @@ class RealtimeExitTests(unittest.TestCase):
     def test_map_hud_button_click_does_not_fall_through_to_a_tile(self):
         pygame.font.init()
         button = Button(100, 100, "small", "blue", "Details", lambda: None)
-        map_ref = SimpleNamespace(thread_error=None, elements=[button])
+        map_ref = SimpleNamespace(thread_error=None, elements=[button], unit_view_buttons={})
         event = pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(110, 110))
         with mock.patch("screens.game.map.map_input.handle_map_events") as handle:
             Map.additional_events(map_ref, event)

@@ -114,9 +114,7 @@ It will fallback to whatever you manually entered if the llm ai is turned off or
 # ==========================================
 
 class _ModalScreen(ModalScreen):
-    """Legacy alias. The implementation moved to ui/navigation/modal_screen.py so the other
-    six modal screens could share it instead of importing a private name out of
-    this editor; the name stays here because a mod may target this module."""
+    """The shared modal chrome from ui/navigation/modal_screen.py in this editor's panel style."""
     PANEL_STYLE = EDITOR_PANEL_STYLES["scripted_events"]
 
 

@@ -229,6 +229,10 @@ def render_settings_buttons(settings_screen):
 
 
 class Settings(GameState):
+    player_slider = None
+    fps_slider = None
+    ai_thread_slider = None
+
     # Hosted providers use API keys and model names. Ollama uses a base URL.
     AI_MODES = ["OFF", "OLLAMA", "GEMINI", "CHATGPT", "CLAUDE", "DEEPSEEK", "KIMI", "OPENROUTER"]
     # Preserve service-name capitalization in the UI.
@@ -417,14 +421,14 @@ class Settings(GameState):
         threads = 1 + int(val * 7)
         self.ai_threads = threads
         self.controller.ai_threads = threads
-        if hasattr(self, 'ai_thread_slider'):
+        if self.ai_thread_slider is not None:
             self.ai_thread_slider.text = f"Maximum AI Threads: {threads}"
         # Silently save whenever the slider moves
         queries.save_global_settings(self.controller)
 
     def update(self):
         super().update()
-        if hasattr(self, 'player_slider'):
+        if self.player_slider is not None:
             self.player_slider.visible = (self.back_state != "MAP")
 
     def set_ai_mode(self, mode):
@@ -562,7 +566,7 @@ class Settings(GameState):
     def set_fps(self, val):
         fps = int(20 + (val * 40)) # Scale 0.0-1.0 to 20-60
         self.controller.target_fps = fps
-        if hasattr(self, 'fps_slider'):
+        if self.fps_slider is not None:
             self.fps_slider.text = f"Max FPS: {fps}"
 
     def handle_events(self, events):
@@ -639,7 +643,7 @@ class Settings(GameState):
     def set_players(self, val):
         self.num_players = 1 + int(val * 7)
         self.controller.num_players = self.num_players
-        if hasattr(self, 'player_slider'):
+        if self.player_slider is not None:
             self.player_slider.text = f"Players: {self.num_players}"
 
     def save_and_go_back(self, execute_exit=True):

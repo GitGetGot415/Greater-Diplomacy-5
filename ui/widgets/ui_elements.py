@@ -371,6 +371,10 @@ def draw_notification_badge(surface, rect, text, color=None):
     surface.blit(txt_surf, txt_surf.get_rect(center=(bx, by)))
 
 class Button:
+    shading = True
+    right_image = None
+    notification_color = None
+
     # UPDATED: Added font_preset parameter defaulting to "button"
     def __init__(self, x, y, size_preset, color_preset, text, callback, image=None, show_text=True, layout="horizontal", font_preset="button", font_size=None):
         if isinstance(size_preset, (tuple, list)):
@@ -477,7 +481,7 @@ class Button:
         current_color, outline, width, depressed = _button_style(
             self.rect, self.color, self.hover_color, self.pressed_color,
             self.is_selected, self.disabled, self.is_pressed)
-        if getattr(self, 'shading', True):
+        if self.shading:
             self.draw_gradient_rect(surface, current_color, self.rect, pressed=depressed)
         else:
             pygame.draw.rect(surface, current_color, self.rect)
@@ -487,7 +491,7 @@ class Button:
         # Some compact action buttons pair their label with a small status
         # image at the far edge. Keep this separate from ``image``: that one
         # is the button's primary icon and participates in its own layouts.
-        right_image = getattr(self, "right_image", None)
+        right_image = self.right_image
         right_image_rect = None
         if right_image:
             right_image_rect = right_image.get_rect(
@@ -530,7 +534,7 @@ class Button:
             badge_text = str(self.notification_count)
         if badge_text:
             draw_notification_badge(surface, self.rect, badge_text,
-                                    getattr(self, "notification_color", None))
+                                    self.notification_color)
 
     def draw_gradient_rect(self, surface, color, rect, pressed=False):
         if rect.width <= 0 or rect.height <= 0:

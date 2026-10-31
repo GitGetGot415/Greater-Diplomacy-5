@@ -3,8 +3,7 @@ import os
 import re
 from data import queries
 from ui.background_styles import TUTORIAL_PANEL_STYLES
-from ui.navigation import modal_stack
-from ui.dialogs.base import _BaseModal, _back_key, _lighten, _run_blocking
+from ui.dialogs.base import _BaseModal, _back_key, _lighten, open_modal
 from ui.bars import ui_bars
 import data.constants as c
 from ui.rendering.font_manager import fonts
@@ -537,24 +536,14 @@ class _NavigationIntroPopup:
             surface.blit(button, button.get_rect(center=rect.center))
 
 
-def _show_message_standalone(title, message, tk_parent, kind, on_result, inline_parts=None):
-    _run_blocking(lambda surf: _MessageModal(surf, title, message, None, kind, inline_parts), tk_parent)
-    if on_result:
-        on_result()
-
-
 def show_message(title, message, tk_parent=None, kind="info", on_result=None, *, inline_parts=None):
     """Drop-in replacement for messagebox.showinfo / showwarning / showerror.
 
     `kind` picks the accent color: "info", "success", "warning", or "error".
     on_result, if given, is called (with no arguments) once the user dismisses it.
     """
-    surface = pygame.display.get_surface()
-    if surface is None:
-        _show_message_standalone(title, message, tk_parent, kind, on_result, inline_parts)
-        return
-
-    modal_stack.push(_MessageModal(surface, title, message, on_result, kind, inline_parts))
+    open_modal(lambda surface, callback: _MessageModal(surface, title, message, callback, kind, inline_parts),
+               on_result, tk_parent)
 
 
 def show_info(title, message, tk_parent=None, on_result=None, *, inline_parts=None):

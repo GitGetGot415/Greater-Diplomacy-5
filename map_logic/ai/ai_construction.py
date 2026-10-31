@@ -678,22 +678,9 @@ def _apply_coring_priority(map_screen, ai_name, data, my_provs):
     if not uncored_provs:
         return
 
-    valid_uncored = []
-    has_any_core = any(ai_name in p.get("cores", []) for p in world_state.map_data.values())
-    for p in uncored_provs:
-        can_core = False
-        if not has_any_core:
-            can_core = True
-        elif p.get("is_coastal", False):
-            can_core = True
-        else:
-            for n_id in p.get("neighbors", []):
-                n_prov = world_state.id_to_province.get(n_id)
-                if n_prov and ai_name in n_prov.get("cores", []):
-                    can_core = True
-                    break
-        if can_core:
-            valid_uncored.append(p)
+    has_any_core = queries.nation_has_any_core(ai_name, world_state.map_data)
+    valid_uncored = [p for p in uncored_provs
+                     if queries.province_can_be_cored(ai_name, p, world_state.id_to_province, has_any_core)]
 
     if not valid_uncored:
         return

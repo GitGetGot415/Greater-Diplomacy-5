@@ -22,7 +22,7 @@ from ui.navigation.game_state import (dispatch_global_keys, synthesize_keybind_m
 from ui.navigation import modal_stack
 from ui.bars import ui_bars
 
-from ui.dialogs import _hide_tk_chain, _show_tk_chain
+from ui.dialogs.base import tk_hidden
 
 
 class _ScreenModal:
@@ -63,31 +63,26 @@ class _ScreenModal:
 
 def _run_screen_standalone(screen, on_done, tk_parent, surface):
     """No main loop is pumping frames here, so resolve with our own blocking loop."""
-    hidden_tk = []
-    if tk_parent is not None:
-        hidden_tk = _hide_tk_chain(tk_parent)
-
     screen.done = False
     clock = pygame.time.Clock()
 
     try:
-        while not screen.done:
-            events = pygame.event.get()
-            events = synthesize_keybind_mouse_events(
-                events, allow_keydown=not keyboard_input_is_captured(screen))
-            for event in events:
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
-                dispatch_global_keys(screen, event)
-            screen.handle_events(events)
-            screen.update()
-            screen.draw(surface)
-            pygame.display.flip()
-            clock.tick(c.TARGET_FPS)
+        with tk_hidden(tk_parent):
+            while not screen.done:
+                events = pygame.event.get()
+                events = synthesize_keybind_mouse_events(
+                    events, allow_keydown=not keyboard_input_is_captured(screen))
+                for event in events:
+                    if event.type == pygame.QUIT:
+                        pygame.quit()
+                        sys.exit()
+                    dispatch_global_keys(screen, event)
+                screen.handle_events(events)
+                screen.update()
+                screen.draw(surface)
+                pygame.display.flip()
+                clock.tick(c.TARGET_FPS)
     finally:
-        if hidden_tk:
-            _show_tk_chain(hidden_tk)
         pygame.display.quit()
 
     if on_done:

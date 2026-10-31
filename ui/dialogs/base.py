@@ -1,6 +1,8 @@
 """Shared modal skeleton and standalone/blocking-loop plumbing for every
 dialog in this package -- see ui/dialogs/__init__.py for the overview.
 """
+from contextlib import contextmanager
+
 import pygame
 import data.constants as c
 from data import queries
@@ -55,8 +57,18 @@ def _show_tk_chain(hidden):
             pass
 
 
+@contextmanager
+def tk_hidden(tk_parent):
+    """Keeps a standalone tool's tkinter windows out of the way of a pygame dialog."""
+    hidden = _hide_tk_chain(tk_parent) if tk_parent is not None else []
+    try:
+        yield
+    finally:
+        _show_tk_chain(hidden)
+
+
 class _BaseModal:
-    """Shared skeleton for the four dialogs below.
+    """Shared skeleton for the dialogs in this package.
 
     Each one used to repeat the same __init__ prologue (snapshot the surface,
     pick three fonts, wrap the message, centre a box), the same update/_finish
@@ -104,11 +116,14 @@ class _BaseModal:
     def update(self):
         if self._resolved:
             modal_stack.pop()
-            if self.on_result:
-                if self.PASSES_RESULT:
-                    self.on_result(self._result)
-                else:
-                    self.on_result()
+            self.deliver_result()
+
+    def deliver_result(self):
+        if self.on_result:
+            if self.PASSES_RESULT:
+                self.on_result(self._result)
+            else:
+                self.on_result()
 
     def _finish(self, result=None):
         self._resolved = True
@@ -159,8 +174,21 @@ class _BaseModal:
         self.draw_content(surface)
 
 
+def open_modal(make_modal, on_result, tk_parent=None, default_result=None):
+    """Opens a dialog and answers on_result when it closes.
+
+    make_modal(surface, on_result) builds the dialog. default_result is the answer
+    when a standalone tool's window is closed instead of the dialog being answered.
+    """
+    surface = pygame.display.get_surface()
+    if surface is not None:
+        modal_stack.push(make_modal(surface, on_result))
+        return
+    _run_blocking(lambda surf: make_modal(surf, on_result), tk_parent, default_result=default_result)
+
+
 def _run_blocking(make_modal, tk_parent, default_result=None):
-    """Runs a dialog to completion with its own frame loop, and returns the answer.
+    """Runs a dialog to completion with its own frame loop, then delivers the answer.
 
     Only reachable when no display exists yet -- the standalone dev tools in
     scripts/editors and scripts/maps, which run outside the game's main
@@ -172,28 +200,27 @@ def _run_blocking(make_modal, tk_parent, default_result=None):
     the sentinel returned on QUIT.
     """
     surface, owns_display = ui_bars.acquire_surface(_STANDALONE_SIZE, "Confirm")
-    hidden_tk = _hide_tk_chain(tk_parent) if tk_parent is not None else []
 
     modal = make_modal(surface)
     clock = pygame.time.Clock()
-    result = default_result
 
     try:
-        while True:
-            events = pygame.event.get()
-            events = synthesize_keybind_mouse_events(events)
-            if any(event.type == pygame.QUIT for event in events):
-                break
-            modal.handle_events(events)
-            if modal._resolved:
-                result = modal._result
-                break
+        with tk_hidden(tk_parent):
+            while True:
+                events = pygame.event.get()
+                events = synthesize_keybind_mouse_events(events)
+                if any(event.type == pygame.QUIT for event in events):
+                    break
+                modal.handle_events(events)
+                if modal._resolved:
+                    break
 
-            modal.draw(surface)
-            pygame.display.flip()
-            clock.tick(c.TARGET_FPS)
+                modal.draw(surface)
+                pygame.display.flip()
+                clock.tick(c.TARGET_FPS)
     finally:
-        _show_tk_chain(hidden_tk)
         ui_bars.release_surface(owns_display)
 
-    return result
+    if not modal._resolved:
+        modal._result = default_result
+    modal.deliver_result()

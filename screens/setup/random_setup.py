@@ -9,6 +9,11 @@ from screens.setup.scenario_settings import Scenario_Settings
 
 
 class Random_Setup(GameState):
+    country_slider = None
+    year_slider = None
+    island_slider = None
+    resource_slider = None
+
     back_state = "NEW_GAME"
 
     def __init__(self):
@@ -72,26 +77,26 @@ class Random_Setup(GameState):
     def update_countries(self, val):
         self.country_slider_val = val
         self.current_countries = max(1, int(val * self.max_countries))
-        if hasattr(self, 'country_slider'):
+        if self.country_slider is not None:
             self.country_slider.text = f"Countries: {self.current_countries}"
 
     def update_year(self, val):
         self.year_slider_val = val
         self.current_year = int(c.START_YEAR + (val * (c.END_YEAR - c.START_YEAR)))
-        if hasattr(self, 'year_slider'):
+        if self.year_slider is not None:
             self.year_slider.text = f"Start Year: {self.current_year}"
 
     def update_island_size(self, val):
         self.island_size_slider_val = val
         max_island = c.RANDOM_SCENARIO_MAX_ISLAND_FILTER
         self.current_island_size = 1 + int(val * (max_island - 1))
-        if hasattr(self, 'island_slider'):
+        if self.island_slider is not None:
             self.island_slider.text = f"Island Filter Size: {self.current_island_size}"
 
     def update_resource_chance(self, val):
         self.resource_slider_val = val
         self.resource_chance = val
-        if hasattr(self, 'resource_slider'):
+        if self.resource_slider is not None:
             self.resource_slider.text = f"Resource Spawn: {int(self.resource_chance * 100)}%"
 
     def toggle_single_tile(self):

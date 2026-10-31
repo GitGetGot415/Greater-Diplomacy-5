@@ -1,6 +1,5 @@
 import pygame
-from ui.navigation import modal_stack
-from ui.dialogs.base import _BaseModal, _back_key, _run_blocking
+from ui.dialogs.base import _BaseModal, _back_key, open_modal
 
 
 class _YesNoModal(_BaseModal):
@@ -46,13 +45,6 @@ class _YesNoModal(_BaseModal):
             self.draw_button(surface, self.back_rect, self.back_label, (0, 100, 150), (0, 140, 190))
 
 
-def _ask_yes_no_standalone(title, message, on_result, tk_parent, yes_label, no_label, back_label=None):
-    result = _run_blocking(
-        lambda surf: _YesNoModal(surf, title, message, None, yes_label, no_label, back_label),
-        tk_parent, default_result=None if back_label is not None else False)
-    on_result(result if back_label is not None else bool(result))
-
-
 def ask_yes_no(title, message, on_result, tk_parent=None, yes_label="Yes", no_label="No", back_label=None):
     """Answers on_result(True/False) once the user picks Yes or No.
 
@@ -62,9 +54,6 @@ def ask_yes_no(title, message, on_result, tk_parent=None, yes_label="Yes", no_la
     tk_parent, if given, is a tkinter widget to hide for the dialog's duration --
     only meaningful for the standalone dev-tool path (no game display up yet).
     """
-    surface = pygame.display.get_surface()
-    if surface is None:
-        _ask_yes_no_standalone(title, message, on_result, tk_parent, yes_label, no_label, back_label)
-        return
-
-    modal_stack.push(_YesNoModal(surface, title, message, on_result, yes_label, no_label, back_label))
+    open_modal(lambda surface, callback: _YesNoModal(surface, title, message, callback,
+                                                     yes_label, no_label, back_label),
+               on_result, tk_parent, default_result=None if back_label is not None else False)

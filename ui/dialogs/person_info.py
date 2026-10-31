@@ -5,8 +5,7 @@ import webbrowser
 import pygame
 import data.constants as c
 from ui.rendering.font_manager import fonts
-from ui.navigation import modal_stack
-from ui.dialogs.base import _BaseModal, _back_key, _lighten, _run_blocking
+from ui.dialogs.base import _BaseModal, _back_key, _lighten, open_modal
 from ui.widgets import text_utils
 from ui.dialogs.message_box import _KIND_ACCENTS
 from ui.bars import ui_bars
@@ -253,13 +252,6 @@ class _PersonInfoModal(_BaseModal):
             if is_hovered:
                 pygame.draw.line(surface, color, (rect.left, rect.bottom), (rect.right, rect.bottom), 2)
 
-def _show_person_info_standalone(name, info_text, links, align, tk_parent, on_result, images=None):
-    _run_blocking(lambda surf: _PersonInfoModal(surf, name, info_text, links, None, align, images),
-                  tk_parent)
-    if on_result:
-        on_result()
-
-
 def show_person_info(name, info_text="", links=None, align="center", tk_parent=None, on_result=None, *, images=None):
     """Popup with free-text info about `name`, plus a list of clickable links below it.
 
@@ -273,9 +265,5 @@ def show_person_info(name, info_text="", links=None, align="center", tk_parent=N
     content scrolls with a draggable scrollbar, mouse wheel or arrow keys while
     Close stays visible.
     """
-    surface = pygame.display.get_surface()
-    if surface is None:
-        _show_person_info_standalone(name, info_text, links, align, tk_parent, on_result, images)
-        return
-
-    modal_stack.push(_PersonInfoModal(surface, name, info_text, links, on_result, align, images))
+    open_modal(lambda surface, callback: _PersonInfoModal(surface, name, info_text, links, callback, align, images),
+               on_result, tk_parent)

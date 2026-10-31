@@ -125,6 +125,9 @@ def render_edit_country_buttons(edit_screen):
     ])
 
 class Edit_Country_Screen(GameState):
+    popup_yes_rect = None
+    popup_no_rect = None
+
     back_state = "MAP"
 
     def __init__(self):
@@ -439,8 +442,8 @@ class Edit_Country_Screen(GameState):
             elif event.key == resolve_keybind(self, "BACK", pygame.K_ESCAPE):
                 on_no()
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            yes_rect = getattr(self, "popup_yes_rect", None)
-            no_rect = getattr(self, "popup_no_rect", None)
+            yes_rect = self.popup_yes_rect
+            no_rect = self.popup_no_rect
             if yes_rect and yes_rect.collidepoint(event.pos):
                 on_yes()
             elif no_rect and no_rect.collidepoint(event.pos):

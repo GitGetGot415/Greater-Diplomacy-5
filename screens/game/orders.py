@@ -1726,7 +1726,7 @@ class Orders_Screen(GameState):
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 # Guarded to the visible panel so a cancel box scrolled behind
                 # the panel's edge (clipped, no longer drawn) can't fire.
-                panel_rect = getattr(self, 'scroll_content_rect', None)
+                panel_rect = self.scroll_content_rect
                 if panel_rect is None or panel_rect.collidepoint(event.pos):
                     for rect, idx, province in self.cancel_rects:
                         if rect.collidepoint(event.pos):
@@ -1768,7 +1768,7 @@ class Orders_Screen(GameState):
 
         # Dragging the scrollbar handle (or the panel's own content) takes
         # priority over camera panning/hover.
-        if event.type == pygame.MOUSEMOTION and (getattr(self, "is_dragging_scrollbar", False)
+        if event.type == pygame.MOUSEMOTION and (self.is_dragging_scrollbar
                                                   or self.is_content_dragging("scroll_y")):
             self.handle_list_scroll(event, attr="scroll_y", limit_attr="max_scroll_y",
                                     content_rect_attr="scroll_content_rect")
@@ -2374,7 +2374,7 @@ class Orders_Screen(GameState):
             gradient_strength=style["gradient_strength"])
         self._draw_panel_header(surface, rows, player_units, read_only)
 
-        content_rect = getattr(self, 'scroll_content_rect', None) or pygame.Rect(
+        content_rect = self.scroll_content_rect or pygame.Rect(
             self.PANEL_X + 2, self.panel_top,
             self.PANEL_WIDTH - SCROLLBAR_WIDTH - 2, self.panel_max_h)
 

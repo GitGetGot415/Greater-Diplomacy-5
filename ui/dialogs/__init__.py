@@ -21,10 +21,8 @@ blocking-loop runner), yes_no.py, text_input.py (ask_integer/ask_string),
 message_box.py (show_info/success/warning/error), person_info.py. Call sites
 do `from ui import dialogs; dialogs.ask_yes_no(...)` or import a
 name directly (`from ui.dialogs import show_person_info`), so every
-public name -- and the couple of private helpers other ui/ modules reach for
-directly -- is re-exported here at package level.
+public name is re-exported here at package level.
 """
-from ui.dialogs.base import _hide_tk_chain, _show_tk_chain
 from ui.dialogs.yes_no import ask_yes_no
 from ui.dialogs.text_input import ask_integer, ask_string
 from ui.dialogs.message_box import (

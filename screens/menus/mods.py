@@ -25,6 +25,8 @@ class Mods(FolderListState):
     section for what that does and doesn't protect against. On web the sandbox
     does not apply, so the sandbox button shows "No sandbox (web)" and is disabled.
     """
+    _row_subtext = ()
+
     back_state = "MENU"
     title = "MODS"
 
@@ -171,7 +173,7 @@ class Mods(FolderListState):
     def additional_draw(self, surface):
         clip = surface.get_clip()
         surface.set_clip(self.scroll_content_rect)
-        for text, x, y in getattr(self, "_row_subtext", []):
+        for text, x, y in self._row_subtext:
             if text:
                 fonts.draw_text_with_shadow(surface, text, x, y, "small", (180, 180, 180))
         surface.set_clip(clip)

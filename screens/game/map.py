@@ -170,33 +170,51 @@ MP_HOST_EXPORT_SIZE = (150, 30)
 MP_HOST_KEYS_X = MP_HOST_EXPORT_X + MP_HOST_EXPORT_SIZE[0] + TOP_BAR_BUTTON_GAP
 
 
-def render_buttons(map_screen):
-    """Initializes and registers all map screen buttons uniformly."""
-    icons = ui_elements.UI_ICONS
-    map_screen.elements = []
+def _sub_screen_opener(map_screen, module_path, class_name):
+    """A click callback that late-imports a screen and runs it over the map.
 
-    # ==================================================================== #
-    #                        MAP VIEW TOGGLES                              #
-    # ==================================================================== #
+    The import has to stay inside the callback: these screens import the
+    map package, which is the module currently being built.
+    """
+    def open_it():
+        screen_runner._run_pygame_sub_screen(map_screen, getattr(import_module(module_path), class_name)(map_screen))
+    return open_it
+
+
+def _build_view_buttons(map_screen):
+    """The top-bar tools, the bottom-left map view grid, and the unit filter bar."""
+    icons = ui_elements.UI_ICONS
     map_screen.btn_help = Button(HELP_BTN_X, c.TOP_BAR_UI_CENTER_Y, "tiny", "blue", "Help", map_screen.show_navigation_tutorial, font_preset="normal")
     map_screen.btn_refresh_all = Button(REFRESH_BTN_X, c.TOP_BAR_UI_CENTER_Y, "small", "blue", "Refresh Maps", map_screen.refresh_all_maps, font_preset="normal")
     map_screen.btn_global_econ_overview = Button(GLOBAL_ECON_BTN_X, c.TOP_BAR_UI_CENTER_Y, "small", "pink", "Global Economy", lambda: editor_menus.open_editor_economy(map_screen), font_preset="normal")
 
-    map_screen.btn_view_terrain = Button(VIEW_BTN_START_X, VIEW_BTN_ROW2_Y, "small_square", "green", "Terrain", lambda: map_screen.set_map_layer("TERRAIN"), image=icons.get("terrain"), show_text=False)
-    map_screen.btn_view_political = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X, VIEW_BTN_ROW2_Y, "small_square", "green", "Political", lambda: map_screen.set_map_layer("POLITICAL"), image=icons.get("political"), show_text=False)
-    map_screen.btn_view_relations = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 2, VIEW_BTN_ROW2_Y, "small_square", "green", "Relations", lambda: map_screen.set_map_layer("RELATIONS"), image=icons.get("relations"), show_text=False)
-    map_screen.btn_view_cores = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 3, VIEW_BTN_ROW2_Y, "small_square", "green", "Cores", lambda: map_screen.set_map_layer("CORES"), image=icons.get("core"), show_text=False)
-    map_screen.btn_view_factions = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 4, VIEW_BTN_ROW2_Y, "small_square", "green", "Factions", lambda: map_screen.set_map_layer("FACTIONS"), image=icons.get("faction"), show_text=False)
+    map_layer_buttons = (
+        ("btn_view_terrain", "Terrain", "TERRAIN", "terrain"),
+        ("btn_view_political", "Political", "POLITICAL", "political"),
+        ("btn_view_relations", "Relations", "RELATIONS", "relations"),
+        ("btn_view_cores", "Cores", "CORES", "core"),
+        ("btn_view_factions", "Factions", "FACTIONS", "faction"),
+    )
+    for column, (attr, label, layer, icon) in enumerate(map_layer_buttons):
+        setattr(map_screen, attr, Button(
+            VIEW_BTN_START_X + VIEW_BTN_STEP_X * column, VIEW_BTN_ROW2_Y, "small_square", "green", label,
+            lambda layer=layer: map_screen.set_map_layer(layer), image=icons.get(icon), show_text=False))
 
     # In Preemptive navigation, clicking one of these while a tile is already
     # selected jumps straight to that mode's screen for it (Orders for Units,
     # Production for Economy) instead of just flipping the map overlay.
     # In Classic navigation it only ever flips the overlay. See
     # screens.game.map_input.navigate_view_mode / data.constants.MAP_NAVIGATION_MODE.
-    map_screen.btn_view_resources = Button(VIEW_BTN_START_X, VIEW_BTN_ROW1_Y, "small_square", "red", "Resources", lambda: map_input.navigate_view_mode(map_screen, "RESOURCES"), image=icons.get("resource"), show_text=False)
-    map_screen.btn_view_blank = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X, VIEW_BTN_ROW1_Y, "small_square", "red", "Blank", lambda: map_input.navigate_view_mode(map_screen, "BLANK"), image=icons.get("blank"), show_text=False)
-    map_screen.btn_view_units = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 2, VIEW_BTN_ROW1_Y, "small_square", "red", "Units", lambda: map_input.navigate_view_mode(map_screen, "UNITS"), image=icons.get("unit"), show_text=False)
-    map_screen.btn_view_economy = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 3, VIEW_BTN_ROW1_Y, "small_square", "red", "Economy", lambda: map_input.navigate_view_mode(map_screen, "ECONOMY"), image=icons.get("industry"), show_text=False)
+    view_mode_buttons = (
+        ("btn_view_resources", "Resources", "RESOURCES", "resource"),
+        ("btn_view_blank", "Blank", "BLANK", "blank"),
+        ("btn_view_units", "Units", "UNITS", "unit"),
+        ("btn_view_economy", "Economy", "ECONOMY", "industry"),
+    )
+    for column, (attr, label, mode, icon) in enumerate(view_mode_buttons):
+        setattr(map_screen, attr, Button(
+            VIEW_BTN_START_X + VIEW_BTN_STEP_X * column, VIEW_BTN_ROW1_Y, "small_square", "red", label,
+            lambda mode=mode: map_input.navigate_view_mode(map_screen, mode), image=icons.get(icon), show_text=False))
     map_screen.btn_toggle_names = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 4, VIEW_BTN_ROW1_Y, "small_square", "blue", "Names", map_screen.toggle_country_names, image=icons.get("names"), show_text=False)
 
     map_screen.unit_view_bar_rect = pygame.Rect(
@@ -230,141 +248,153 @@ def render_buttons(map_screen):
         map_screen.unit_view_buttons[view_filter].click_guard = (
             lambda: map_screen.unit_view_animation_start is None)
 
-    # ==================================================================== #
-    #                        LEFT & BOTTOM UI BARS                         #
-    # ==================================================================== #
-    start_y_val = LEFT_UI_BAR_START_Y
 
-   # Editor Buttons
-    map_screen.btn_ed_load = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X *(-0.5), c.BOTTOM_BAR_UI_CENTER_Y, "small_square", "blue", "Load", lambda: editor_menus.editor_load_map(map_screen), font_preset="normal")
-    map_screen.btn_ed_nation = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*1.5, c.BOTTOM_BAR_UI_CENTER_Y, "small", "grey", "Nation Brush", lambda: editor_menus.select_brush_nation(map_screen), font_preset="normal")
+def _build_editor_buttons(map_screen):
+    """The map editor's bottom strip and its three left-bar tools."""
+    icons = ui_elements.UI_ICONS
+    # (attribute, slots left of the strip's start, size, color, label, callback, icon).
+    # An entry without an icon shows its label instead.
+    bottom_strip = (
+        ("btn_ed_load", -0.5, "small_square", "blue", "Load", lambda: editor_menus.editor_load_map(map_screen), None),
+        ("btn_ed_nation", 1.5, "small", "grey", "Nation Brush", lambda: editor_menus.select_brush_nation(map_screen), None),
+        ("btn_ed_core", 2.5, "small", "pink", "Core Brush", lambda: editor_menus.select_core_brush(map_screen), None),
+        ("btn_ed_autocore", 3, "small_square", "pink", "Autocore", map_screen.auto_assign_cores, None),
+        ("btn_ed_clear", 3.5, "small_square", "pink", "Clear", lambda: editor_menus.open_clear_menu(map_screen), "red_line"),
+        ("btn_ed_claim", 4, "small_square", "orange", "Claim Brush", lambda: editor_menus.select_claim_brush(map_screen), "paper"),
+        ("btn_ed_resource", 4.5, "small_square", "purple", "Resource", lambda: editor_menus.select_resource_brush(map_screen), "resource"),
+        ("btn_ed_building", 5, "small_square", "grey", "Building", lambda: editor_menus.select_building_brush(map_screen), "industry"),
+        ("btn_ed_unit", 5.5, "small_square", "grey", "Unit", lambda: editor_menus.select_unit_brush(map_screen), "unit"),
+        ("btn_ed_refresh", 6.5, "small", "purple", "Data Refresh", map_screen.refresh_nation_data, None),
+        ("btn_ed_date", 7, "small_square", "orange", "Set Date", lambda: editor_menus.open_editor_date(map_screen), "clock"),
+        ("btn_ed_edited", 8, "small", "green", "Edited Countries", lambda: editor_menus.open_edited_countries(map_screen), None),
+    )
+    for attr, slots, size, color, label, callback, icon in bottom_strip:
+        appearance = (dict(image=icons.get(icon), show_text=False) if icon else dict(font_preset="normal"))
+        setattr(map_screen, attr, Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X * slots, c.BOTTOM_BAR_UI_CENTER_Y,
+                                         size, color, label, callback, **appearance))
+
     map_screen.btn_ed_brush = Button(EDITOR_SELECTION_TOOL_X, c.BOTTOM_BAR_UI_CENTER_Y, "small_square", "blue", "Brush", lambda: map_screen.set_editor_selection_tool("BRUSH"), image=icons.get("brush"), show_text=False)
     map_screen.btn_ed_paint = Button(EDITOR_SELECTION_TOOL_X + EDITOR_SELECTION_TOOL_STEP_X, c.BOTTOM_BAR_UI_CENTER_Y, "small_square", "blue", "Paint", lambda: map_screen.set_editor_selection_tool("PAINT"), image=icons.get("paint"), show_text=False)
-    map_screen.btn_ed_core = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*2.5, c.BOTTOM_BAR_UI_CENTER_Y, "small", "pink", "Core Brush", lambda: editor_menus.select_core_brush(map_screen), font_preset="normal")
-    map_screen.btn_ed_autocore = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*3, c.BOTTOM_BAR_UI_CENTER_Y, "small_square", "pink", "Autocore", map_screen.auto_assign_cores, font_preset="normal")
 
-    map_screen.btn_ed_clear = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*3.5, c.BOTTOM_BAR_UI_CENTER_Y, "small_square", "pink", "Clear", lambda: editor_menus.open_clear_menu(map_screen), image=icons.get("red_line"), show_text=False)
-
-    map_screen.btn_ed_claim = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*4, c.BOTTOM_BAR_UI_CENTER_Y, "small_square", "orange", "Claim Brush", lambda: editor_menus.select_claim_brush(map_screen), image=icons.get("paper"), show_text=False)
-    map_screen.btn_ed_resource = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*4.5, c.BOTTOM_BAR_UI_CENTER_Y, "small_square", "purple", "Resource", lambda: editor_menus.select_resource_brush(map_screen), image=icons.get("resource"), show_text=False)
-    map_screen.btn_ed_building = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*5, c.BOTTOM_BAR_UI_CENTER_Y, "small_square", "grey", "Building", lambda: editor_menus.select_building_brush(map_screen), image=icons.get("industry"), show_text=False)
-    map_screen.btn_ed_unit = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*5.5, c.BOTTOM_BAR_UI_CENTER_Y, "small_square", "grey", "Unit", lambda: editor_menus.select_unit_brush(map_screen), image=icons.get("unit"), show_text=False)
-    map_screen.btn_ed_refresh = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*6.5, c.BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Data Refresh", map_screen.refresh_nation_data, font_preset="normal")
-    map_screen.btn_ed_date = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*7, c.BOTTOM_BAR_UI_CENTER_Y, "small_square", "orange", "Set Date", lambda: editor_menus.open_editor_date(map_screen), image=icons.get("clock"), show_text=False)
-    map_screen.btn_ed_edited = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X*8, c.BOTTOM_BAR_UI_CENTER_Y, "small", "green", "Edited Countries", lambda: editor_menus.open_edited_countries(map_screen), font_preset="normal")
-    map_screen.btn_ed_diplo = Button(LEFT_UI_BAR_X, start_y_val + LEFT_UI_BAR_STEP_Y * 8, "left_ui_button", "red", "Diplomacy", lambda: editor_menus.open_diplomacy_editor(map_screen))
+    map_screen.btn_ed_diplo = Button(LEFT_UI_BAR_X, LEFT_UI_BAR_START_Y + LEFT_UI_BAR_STEP_Y * 8, "left_ui_button", "red", "Diplomacy", lambda: editor_menus.open_diplomacy_editor(map_screen))
     # Row 11, not 9: btn_gp_claims is row 9 and is also visible in the editor, so
     # this button spent its whole existence hidden underneath it, pixel for pixel,
     # with a click there firing both callbacks. test_editor_menu_layout keeps the
     # rows distinct now rather than trusting the next number picked by hand.
-    map_screen.btn_ed_personality = Button(LEFT_UI_BAR_X, start_y_val + LEFT_UI_BAR_STEP_Y * 11, "left_ui_button", "purple", "AI Personality", lambda: editor_menus.open_personality_editor(map_screen), font_preset="normal")
-    map_screen.btn_ed_scripts = Button(LEFT_UI_BAR_X, start_y_val + LEFT_UI_BAR_STEP_Y * 10, "left_ui_button", "red", "Scripted Events", lambda: scripted_events_editor.open_scripted_events_editor(map_screen), font_preset="normal")
+    map_screen.btn_ed_personality = Button(LEFT_UI_BAR_X, LEFT_UI_BAR_START_Y + LEFT_UI_BAR_STEP_Y * 11, "left_ui_button", "purple", "AI Personality", lambda: editor_menus.open_personality_editor(map_screen), font_preset="normal")
+    map_screen.btn_ed_scripts = Button(LEFT_UI_BAR_X, LEFT_UI_BAR_START_Y + LEFT_UI_BAR_STEP_Y * 10, "left_ui_button", "red", "Scripted Events", lambda: scripted_events_editor.open_scripted_events_editor(map_screen), font_preset="normal")
 
-    # Gameplay Buttons. Real-time mode is deliberately checked before the
-    # legacy tournament flag: tournaments remain file-based and untouched.
+
+def _submit_realtime_turn(map_screen):
+    from data.multiplayer.realtime.session import collect_map_commands, RealtimeError
+
+    def confirmed(accepted):
+        if not accepted:
+            return
+        try:
+            session = map_screen.realtime_session
+            player = map_screen.realtime_player_id
+            turn = session.turn_number
+            commands = collect_map_commands(map_screen, map_screen.player_country)
+            is_remote = bool(map_screen.realtime_client)
+            # Set this before the queued socket work begins.  The
+            # confirmation modal can therefore close on this frame
+            # and the map remains interactive while TLS writes and
+            # the host acknowledgement happen in background threads.
+            if is_remote:
+                map_screen.realtime_submission_pending = True
+                map_screen.show_feedback("Submitting turn to the host...")
+            if session.sync_draft(player, turn, commands) is False:
+                map_screen.realtime_submission_pending = False
+                map_screen.show_feedback("Cannot submit: connection to the host was lost.")
+                return
+            if session.submit(player, turn) is False:
+                map_screen.realtime_submission_pending = False
+                map_screen.show_feedback("Cannot submit: connection to the host was lost.")
+                return
+            # A remote client has queued a request, not yet a server
+            # acknowledgement.  Make the short in-flight interval
+            # explicit instead of leaving an apparently live Submit
+            # button on screen.
+            if not is_remote:
+                map_screen.show_feedback("Turn submitted. Unsubmit to edit again.")
+        except RealtimeError as error:
+            map_screen.show_feedback(f"Submission rejected: {error}")
+    dialogs.ask_yes_no("Submit Turn", "Lock these orders for this turn?", confirmed,
+                       yes_label="Submit", no_label="Keep Editing")
+
+
+def _unsubmit_realtime_turn(map_screen):
+    from data.multiplayer.realtime.session import RealtimeError
+
+    def confirmed(accepted):
+        if not accepted:
+            return
+        try:
+            if map_screen.realtime_session.unsubmit(
+                    map_screen.realtime_player_id,
+                    map_screen.realtime_session.turn_number) is False:
+                map_screen.show_feedback("Cannot unsubmit: connection to the host was lost.")
+                return
+            map_screen.show_feedback("Turn unlocked. You may edit orders again.")
+        except RealtimeError as error:
+            map_screen.show_feedback(f"Cannot unsubmit: {error}")
+    dialogs.ask_yes_no("Unsubmit Turn", "Unlock your turn and allow further edits?", confirmed,
+                       yes_label="Unsubmit", no_label="Stay Submitted")
+
+
+def _export_tournament_move(map_screen):
+    turn = map_screen.time_manager.total_turns
+    cid = map_screen.player_country
+    save_name = f"Turn_{turn}_{cid}.gd5move"
+    export_path = os.path.join(c.TOURNAMENT_SAVES_DIR, save_name)
+    player_key = map_screen.multiplayer_player_key
+
+    def export():
+        tournament_files.export_move_file(map_screen, export_path, player_key)
+        map_screen.show_feedback(f"Move exported to {export_path}")
+
+    file_exchange.export_with_overwrite_confirmation(export_path, export)
+
+
+def _import_tournament_move(map_screen):
+    def on_picked(file_path):
+        if file_path:
+            cid = map_screen.player_country
+            player_key = map_screen.multiplayer_player_key
+            keys_dict = {cid: player_key}
+
+            summary = tournament_files.load_move_files(map_screen, [file_path], keys_dict)
+            if not summary["loaded"]:
+                for rejection in summary["rejections"]:
+                    show_move_rejection(map_screen, rejection)
+                map_screen.show_feedback("Move import rejected. See the notification for details.")
+                return
+            map_screen.show_feedback(f"Move imported from {os.path.basename(file_path)}")
+
+            map_screen.refresh_map_layers(
+                "political", "factions", "relations", "cores", "faction_territories")
+            if hasattr(map_screen, 'sync_units_to_data'):
+                map_screen.sync_units_to_data()
+
+    pickers.open_file_browser(map_screen, "Select Move File", c.TOURNAMENT_SAVES_DIR,
+                              extensions=[".gd5move"], on_result=on_picked)
+
+
+def _build_turn_buttons(map_screen):
+    """The bottom-right turn controls, which depend on the multiplayer mode."""
+    icons = ui_elements.UI_ICONS
+    # Real-time mode is deliberately checked before the legacy tournament
+    # flag: tournaments remain file-based and untouched.
     if map_screen.realtime_multiplayer:
-        def rt_submit():
-            from data.multiplayer.realtime.session import collect_map_commands, RealtimeError
-
-            def confirmed(accepted):
-                if not accepted:
-                    return
-                try:
-                    session = map_screen.realtime_session
-                    player = map_screen.realtime_player_id
-                    turn = session.turn_number
-                    commands = collect_map_commands(map_screen, map_screen.player_country)
-                    is_remote = bool(map_screen.realtime_client)
-                    # Set this before the queued socket work begins.  The
-                    # confirmation modal can therefore close on this frame
-                    # and the map remains interactive while TLS writes and
-                    # the host acknowledgement happen in background threads.
-                    if is_remote:
-                        map_screen.realtime_submission_pending = True
-                        map_screen.show_feedback("Submitting turn to the host...")
-                    if session.sync_draft(player, turn, commands) is False:
-                        map_screen.realtime_submission_pending = False
-                        map_screen.show_feedback("Cannot submit: connection to the host was lost.")
-                        return
-                    if session.submit(player, turn) is False:
-                        map_screen.realtime_submission_pending = False
-                        map_screen.show_feedback("Cannot submit: connection to the host was lost.")
-                        return
-                    # A remote client has queued a request, not yet a server
-                    # acknowledgement.  Make the short in-flight interval
-                    # explicit instead of leaving an apparently live Submit
-                    # button on screen.
-                    if not is_remote:
-                        map_screen.show_feedback("Turn submitted. Unsubmit to edit again.")
-                except RealtimeError as error:
-                    map_screen.show_feedback(f"Submission rejected: {error}")
-            dialogs.ask_yes_no("Submit Turn", "Lock these orders for this turn?", confirmed,
-                                      yes_label="Submit", no_label="Keep Editing")
-
-        def rt_unsubmit():
-            from data.multiplayer.realtime.session import RealtimeError
-
-            def confirmed(accepted):
-                if not accepted:
-                    return
-                try:
-                    if map_screen.realtime_session.unsubmit(
-                            map_screen.realtime_player_id,
-                            map_screen.realtime_session.turn_number) is False:
-                        map_screen.show_feedback("Cannot unsubmit: connection to the host was lost.")
-                        return
-                    map_screen.show_feedback("Turn unlocked. You may edit orders again.")
-                except RealtimeError as error:
-                    map_screen.show_feedback(f"Cannot unsubmit: {error}")
-            dialogs.ask_yes_no("Unsubmit Turn", "Unlock your turn and allow further edits?", confirmed,
-                                      yes_label="Unsubmit", no_label="Stay Submitted")
-
-        map_screen._realtime_submit = rt_submit
-        map_screen._realtime_unsubmit = rt_unsubmit
+        map_screen._realtime_submit = lambda: _submit_realtime_turn(map_screen)
+        map_screen._realtime_unsubmit = lambda: _unsubmit_realtime_turn(map_screen)
         map_screen.btn_next_turn = Button(EDITOR_BOT_BTN_START_X, c.BOTTOM_BAR_UI_CENTER_Y,
-                                          "small", "purple", "Submit Turn", rt_submit)
+                                          "small", "purple", "Submit Turn", map_screen._realtime_submit)
         map_screen.btn_import_turn = Button(-1000, -1000, "small", "grey", "Import Turn", lambda: None)
     elif map_screen.multiplayer_mode:
-        def m_export():
-            turn = map_screen.time_manager.total_turns
-            cid = map_screen.player_country
-            save_name = f"Turn_{turn}_{cid}.gd5move"
-            export_path = os.path.join(c.TOURNAMENT_SAVES_DIR, save_name)
-            player_key = map_screen.multiplayer_player_key
-
-            def export():
-                tournament_files.export_move_file(map_screen, export_path, player_key)
-                map_screen.show_feedback(f"Move exported to {export_path}")
-
-            file_exchange.export_with_overwrite_confirmation(export_path, export)
-
-        map_screen.btn_next_turn = Button(EDITOR_BOT_BTN_START_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Export Turn", m_export)
-
-        def m_import():
-
-            def on_picked(file_path):
-                if file_path:
-                    cid = map_screen.player_country
-                    player_key = map_screen.multiplayer_player_key
-                    keys_dict = {cid: player_key}
-
-                    summary = tournament_files.load_move_files(map_screen, [file_path], keys_dict)
-                    if not summary["loaded"]:
-                        for rejection in summary["rejections"]:
-                            show_move_rejection(map_screen, rejection)
-                        map_screen.show_feedback("Move import rejected. See the notification for details.")
-                        return
-                    map_screen.show_feedback(f"Move imported from {os.path.basename(file_path)}")
-
-                    map_screen.refresh_map_layers(
-                        "political", "factions", "relations", "cores", "faction_territories")
-                    if hasattr(map_screen, 'sync_units_to_data'):
-                        map_screen.sync_units_to_data()
-
-            pickers.open_file_browser(map_screen, "Select Move File", c.TOURNAMENT_SAVES_DIR,
-                                      extensions=[".gd5move"], on_result=on_picked)
-
-        map_screen.btn_import_turn = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Import Turn", m_import)
+        map_screen.btn_next_turn = Button(EDITOR_BOT_BTN_START_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Export Turn", lambda: _export_tournament_move(map_screen))
+        map_screen.btn_import_turn = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Import Turn", lambda: _import_tournament_move(map_screen))
     else:
         map_screen.btn_next_turn = Button(EDITOR_BOT_BTN_START_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "purple", "Next Turn", lambda: turn_manager.advance_time(map_screen))
         map_screen.btn_import_turn = Button(-1000, -1000, "small", "grey", "Import Turn", lambda: None)
@@ -372,27 +402,22 @@ def render_buttons(map_screen):
     map_screen.btn_skip_ai = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X, c.BOTTOM_BAR_UI_CENTER_Y, "small", "grey", "Skip AI", map_screen.toggle_skip_ai, font_preset="normal")
     map_screen.btn_multi_turn = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X * 2, c.BOTTOM_BAR_UI_CENTER_Y, "small", "blue", "Multi-Turn", map_screen.trigger_multi_turn)
 
-    def sub_screen_opener(module_path, class_name):
-        """A click callback that late-imports a screen and runs it over the map.
-
-        The import has to stay inside the callback: these screens import the
-        map package, which is the module currently being built.
-        """
-        def open_it():
-            screen_runner._run_pygame_sub_screen(map_screen, getattr(import_module(module_path), class_name)(map_screen))
-        return open_it
-
     report_rect = resource_hud.unit_event_button_rect()
     map_screen.btn_unit_events = Button(
         report_rect.x, report_rect.y, "small_square", "yellow", "Unit events",
-        sub_screen_opener("screens.game.unit_events_screen", "UnitEventsScreen"),
+        _sub_screen_opener(map_screen, "screens.game.unit_events_screen", "UnitEventsScreen"),
         image=icons.get("mail"), show_text=False)
     unit_events.refresh_presentation(map_screen)
 
-    open_declare_independence = sub_screen_opener(
-        "screens.game.declare_independence", "Declare_Independence_Screen")
+    open_declare_independence = _sub_screen_opener(
+        map_screen, "screens.game.declare_independence", "Declare_Independence_Screen")
 
     map_screen.btn_declare_indep = Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X * 2, c.BOTTOM_BAR_UI_CENTER_Y, "small", "pink", "Independence!", open_declare_independence, font_preset="normal")
+
+
+def _build_left_bar_buttons(map_screen):
+    """The left-hand bar shared by players, spectators, and the map editor."""
+    icons = ui_elements.UI_ICONS
 
     def open_edit_country_action():
         if map_screen.player_country == "Spectator" or map_screen.is_editor:
@@ -430,17 +455,8 @@ def render_buttons(map_screen):
         if map_screen.is_editor or map_screen.player_country == "Spectator":
             editor_menus.open_politics_editor(map_screen)
         else:
-            sub_screen_opener("screens.game.politics_screen",
-                              "Politics_Screen")()
-
-    def open_selected_country_politics():
-        """Open the selected foreign country's politics as a read-only view."""
-        province = map_screen.selected_province
-        owner = province.get("owner") if province else None
-        if (not owner or owner == map_screen.player_country
-                or owner not in map_screen.nation_data):
-            return
-        screen_runner._run_pygame_sub_screen(map_screen, Politics_Screen(map_screen, country_id=owner))
+            _sub_screen_opener(map_screen, "screens.game.politics_screen",
+                               "Politics_Screen")()
 
     econ_callback = editor_or(editor_menus.open_starting_economy_editor, "ECONOMY")
     msgs_callback = editor_or(editor_menus.open_spectator_messages, "MESSAGES")
@@ -463,26 +479,46 @@ def render_buttons(map_screen):
         ("btn_gp_puppets", 10, "Puppets", "puppet",
          lambda: player_diplomacy_actions.open_puppets_menu(map_screen)),
         ("btn_gp_automation", 11, "Automation", None,
-         sub_screen_opener("screens.game.automation_screen", "Automation_Screen")),
+         _sub_screen_opener(map_screen, "screens.game.automation_screen", "Automation_Screen")),
         # Row 12 is the only row free in both modes -- the editor fills 1-11 too,
         # just with a different set.
         ("btn_gp_politics", 12, "Politics", "tophat", politics_callback),
     )
     for attr, row, label, icon_name, action in left_bar_buttons:
-        setattr(map_screen, attr, Button(LEFT_UI_BAR_X, start_y_val + LEFT_UI_BAR_STEP_Y * row,
+        setattr(map_screen, attr, Button(LEFT_UI_BAR_X, LEFT_UI_BAR_START_Y + LEFT_UI_BAR_STEP_Y * row,
                                    "left_ui_button", "pink", label, action,
                                    image=icons.get(icon_name) if icon_name else None,
                                    show_text=True))
 
     # Register the Slider below the new Automation button
-    slider_y = int(start_y_val + LEFT_UI_BAR_STEP_Y * CAMERA_TILT_SLIDER_ROW)
+    slider_y = int(LEFT_UI_BAR_START_Y + LEFT_UI_BAR_STEP_Y * CAMERA_TILT_SLIDER_ROW)
     map_screen.slider_camera_tilt = Slider(LEFT_UI_BAR_X, slider_y, CAMERA_TILT_SLIDER_WIDTH, "Camera Tilt", map_screen.camera_tilt_slider_val, map_screen.set_camera_tilt)
 
-    # ======================================================================== #
-    #                        CONTEXTUAL PROVINCE MENUS                         #
-    # ======================================================================== #
-    diplo_x = DIPLO_BTN_X
 
+def _load_ai_response_images():
+    response_images = {}
+    for response in ("YES", "NO", "MAYBE"):
+        image_path = os.path.join(c.ASSETS_DIR, f"{response}.png")
+        image = pygame.image.load(image_path).convert_alpha()
+        scale = min(AI_RESPONSE_INDICATOR_SIZE / image.get_width(),
+                    AI_RESPONSE_INDICATOR_SIZE / image.get_height())
+        response_images[response] = pygame.transform.smoothscale(
+            image, (round(image.get_width() * scale),
+                    round(image.get_height() * scale)))
+    return response_images
+
+
+def _add_country_action_button(map_screen, attr, x, row, color, label, action, **appearance):
+    base_y = ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * row
+    button = Button(x, base_y, "diplomatic", color, label, action, **appearance)
+    button.country_action_base_y = base_y
+    setattr(map_screen, attr, button)
+    map_screen.country_action_buttons.append(button)
+
+
+def _build_province_buttons(map_screen):
+    """The contextual province menus: domestic, foreign, and spectator actions."""
+    icons = ui_elements.UI_ICONS
     # Domestic Set. In Preemptive navigation both route through
     # navigate_view_mode rather than jumping straight to their screen, so
     # clicking them also swaps the bottom-left view-mode row over to match
@@ -520,16 +556,7 @@ def render_buttons(map_screen):
         ("btn_revoke_foreign_military_attache", 12, "red", "Revoke Their Attaché", player_diplomacy_actions.handle_revoke_foreign_military_attache),
         ("btn_send_home_foreign_volunteers", 13, "red", "Send Their Volunteers Home", player_diplomacy_actions.handle_send_home_foreign_volunteers),
     )
-    response_images = {}
-    for response in ("YES", "NO", "MAYBE"):
-        image_path = os.path.join(c.ASSETS_DIR, f"{response}.png")
-        image = pygame.image.load(image_path).convert_alpha()
-        scale = min(AI_RESPONSE_INDICATOR_SIZE / image.get_width(),
-                    AI_RESPONSE_INDICATOR_SIZE / image.get_height())
-        response_images[response] = pygame.transform.smoothscale(
-            image, (round(image.get_width() * scale),
-                    round(image.get_height() * scale)))
-    map_screen.ai_response_images = response_images
+    map_screen.ai_response_images = _load_ai_response_images()
 
     map_screen.country_action_buttons = []
     for attr, row, color, label, handler in diplo_buttons:
@@ -538,12 +565,8 @@ def render_buttons(map_screen):
                       player_diplomacy_actions.handle_specific_action(map_screen, a))
         else:
             action = lambda h=handler: h(map_screen)
-        button = Button(diplo_x, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * row,
-                        "diplomatic", color, label, action,
-                        font_preset="button_small")
-        button.country_action_base_y = ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * row
-        setattr(map_screen, attr, button)
-        map_screen.country_action_buttons.append(button)
+        _add_country_action_button(map_screen, attr, DIPLO_BTN_X, row, color, label, action,
+                                   font_preset="button_small")
 
     # Spectator God Power Buttons. Same overlapping-row rule as the foreign set:
     # only one of the buttons sharing a row is shown for a given selection.
@@ -559,27 +582,26 @@ def render_buttons(map_screen):
         ("btn_spec_delete", 5, "red", "Delete", "spec_delete_country"),
     )
     for attr, row, color, label, menu_fn in spectator_buttons:
-        button = Button(ACTION_BTN_X, ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * row,
-                        "diplomatic", color, label,
-                        lambda f=menu_fn: getattr(spectator_controls, f)(map_screen))
-        button.country_action_base_y = ACTION_BTN_START_Y + ACTION_BTN_STEP_Y * row
-        setattr(map_screen, attr, button)
-        map_screen.country_action_buttons.append(button)
+        _add_country_action_button(map_screen, attr, ACTION_BTN_X, row, color, label,
+                                   lambda f=menu_fn: getattr(spectator_controls, f)(map_screen))
 
-    def host_manage_players():
-        manage_players_panel(map_screen)
 
-    def host_export_turn():
-        export_next_turn(map_screen)
+def _open_selected_country_politics(map_screen):
+    """Open the selected foreign country's politics as a read-only view."""
+    province = map_screen.selected_province
+    owner = province.get("owner") if province else None
+    if (not owner or owner == map_screen.player_country
+            or owner not in map_screen.nation_data):
+        return
+    screen_runner._run_pygame_sub_screen(map_screen, Politics_Screen(map_screen, country_id=owner))
 
-    def host_manage_keys():
-        manage_keys_panel(map_screen)
 
-    map_screen.btn_spec_mp_manage = Button(MP_HOST_MANAGE_X, MP_HOST_BTN_Y, MP_HOST_MANAGE_SIZE, "blue", "Manage Players", host_manage_players)
-    map_screen.btn_spec_mp_export = Button(MP_HOST_EXPORT_X, MP_HOST_BTN_Y, MP_HOST_EXPORT_SIZE, "green", "Export Turn", host_export_turn)
-    map_screen.btn_spec_mp_keys = Button(MP_HOST_KEYS_X, MP_HOST_BTN_Y, "keys", "purple", "Keys", host_manage_keys)
+def _build_general_buttons(map_screen):
+    """The tournament host strip and the remaining fixed controls."""
+    map_screen.btn_spec_mp_manage = Button(MP_HOST_MANAGE_X, MP_HOST_BTN_Y, MP_HOST_MANAGE_SIZE, "blue", "Manage Players", lambda: manage_players_panel(map_screen))
+    map_screen.btn_spec_mp_export = Button(MP_HOST_EXPORT_X, MP_HOST_BTN_Y, MP_HOST_EXPORT_SIZE, "green", "Export Turn", lambda: export_next_turn(map_screen))
+    map_screen.btn_spec_mp_keys = Button(MP_HOST_KEYS_X, MP_HOST_BTN_Y, "keys", "purple", "Keys", lambda: manage_keys_panel(map_screen))
 
-    # General Controls
     def start_spectator_action():
         player_setup.start_spectator(map_screen)
         map_screen.refresh_map_layers("fog")
@@ -608,10 +630,20 @@ def render_buttons(map_screen):
     map_screen.btn_view_foreign_politics = Button(
         *c.PROVINCE_UI["foreign_politics_button"][:2],
         c.PROVINCE_UI["foreign_politics_button"][2:], "purple", "View Their Politics",
-        open_selected_country_politics, font_preset="normal")
+        lambda: _open_selected_country_politics(map_screen), font_preset="normal")
 
-    # --- Append all explicitly defined buttons into the elements list ---
-    map_screen.elements.extend([
+
+def render_buttons(map_screen):
+    """Initializes and registers all map screen buttons uniformly."""
+    _build_view_buttons(map_screen)
+    _build_editor_buttons(map_screen)
+    _build_turn_buttons(map_screen)
+    _build_left_bar_buttons(map_screen)
+    _build_province_buttons(map_screen)
+    _build_general_buttons(map_screen)
+
+    # The order here is the draw and click order.
+    map_screen.elements = [
         map_screen.btn_unit_view_toggle,
         *map_screen.unit_view_buttons.values(),
         map_screen.btn_help, map_screen.btn_refresh_all, map_screen.btn_global_econ_overview,
@@ -638,7 +670,7 @@ def render_buttons(map_screen):
         map_screen.btn_view_foreign_politics,
         map_screen.btn_spec_mp_manage, map_screen.btn_spec_mp_export, map_screen.btn_spec_mp_keys,
         map_screen.slider_camera_tilt
-    ])
+    ]
 
     for el in map_screen.elements:
         el.visible = False
@@ -1394,6 +1426,8 @@ def update_button_states(map_screen):
 
 
 class Map(StateAccess, GameState):
+    _popup_presentation_revision = None
+
     # Network connection state. main.py and the multiplayer screens attach it
     # when a networked game starts. Every other game keeps these defaults.
     realtime_session = None
@@ -2253,8 +2287,7 @@ class Map(StateAccess, GameState):
         # not let a click on a visible map HUD control (notably the movable
         # Details button) fall through and select the province underneath it.
         if event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
-            # Lightweight screens may not construct the filter controls.
-            unit_view_buttons = getattr(self, "unit_view_buttons", {})
+            unit_view_buttons = self.unit_view_buttons
             if any(isinstance(element, Button) and element.visible
                    and element.rect.collidepoint(event.pos)
                    and (element not in unit_view_buttons.values()
@@ -2620,7 +2653,7 @@ class Map(StateAccess, GameState):
 
     def draw_elements(self, surface):
         """Draw country actions in their own clipped, scrollable HUD pane."""
-        country_actions = set(getattr(self, "country_action_buttons", ()))
+        country_actions = set(self.country_action_buttons)
         unit_view_buttons = set(self.unit_view_buttons.values())
         for element in self.elements:
             if element not in country_actions:
@@ -2921,7 +2954,7 @@ class Map(StateAccess, GameState):
                      not self.show_player_ready_screen and \
                      not self.selection_mode
 
-        if (is_playing and getattr(self, '_popup_presentation_revision', None)
+        if (is_playing and self._popup_presentation_revision
                 != self._presentation_cache_revision):
             diplomatic_popups.spawn_popups_for_player(self)
             self._popup_presentation_revision = self._presentation_cache_revision

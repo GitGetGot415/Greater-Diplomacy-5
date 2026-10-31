@@ -1,8 +1,7 @@
 import pygame
 import data.constants as c
 from ui.rendering.font_manager import fonts
-from ui.navigation import modal_stack
-from ui.dialogs.base import _BaseModal, _back_key, _run_blocking
+from ui.dialogs.base import _BaseModal, _back_key, open_modal
 from ui.widgets.ui_elements import process_text_input, draw_text_input_background
 
 
@@ -87,26 +86,15 @@ class _TextInputModal(_BaseModal):
         self.draw_button(surface, self.cancel_rect, "Cancel", (150, 0, 0), (190, 0, 0))
 
 
-def _run_text_input_dialog_standalone(title, message, initial_text, tk_parent, char_allowed,
-                                      validate, on_result):
-    on_result(_run_blocking(
-        lambda surf: _TextInputModal(surf, title, message, initial_text, None,
-                                     char_allowed, validate),
-        tk_parent, default_result=None))
-
-
 def _run_text_input_dialog(title, message, initial_text, tk_parent, char_allowed, validate, on_result):
     """Shared single-line text-entry modal used by ask_integer and ask_string.
 
     char_allowed(unicode_char, current_text) -> bool decides which typed characters are accepted.
     validate(text) -> (value, error_message); value is None (with a message) when the text isn't acceptable yet.
     """
-    surface = pygame.display.get_surface()
-    if surface is None:
-        _run_text_input_dialog_standalone(title, message, initial_text, tk_parent, char_allowed, validate, on_result)
-        return
-
-    modal_stack.push(_TextInputModal(surface, title, message, initial_text, on_result, char_allowed, validate))
+    open_modal(lambda surface, callback: _TextInputModal(surface, title, message, initial_text, callback,
+                                                         char_allowed, validate),
+               on_result, tk_parent)
 
 
 def ask_integer(title, message, on_result, minvalue=None, maxvalue=None, initial=None, tk_parent=None):

@@ -122,6 +122,9 @@ AI_CHANCE_TOOLTIP = "Chance each turn that an AI meeting the conditions for war 
 
 
 class Scenario_Settings(GameState):
+    _session_bound = False
+    _session_on_close = None
+
     back_state = "NEW_GAME" # Track which screen to return to
     title = "Scenario Settings"
     title_y = 30
@@ -160,7 +163,7 @@ class Scenario_Settings(GameState):
         self.refresh_ui()
 
     def _save_settings(self):
-        if not getattr(self, "_session_bound", False):
+        if not self._session_bound:
             queries.save_scenario_settings(self.settings)
 
     def default_settings(self):
@@ -324,7 +327,7 @@ class Scenario_Settings(GameState):
         return self.truce_slider
 
     def toggle(self, key, default):
-        if getattr(self, "_session_bound", False):
+        if self._session_bound:
             self.settings[key] = not queries.get_scenario_flag(key, default, self.settings)
         else:
             queries.toggle_scenario_flag(self.settings, key, default)
@@ -338,13 +341,13 @@ class Scenario_Settings(GameState):
             # Refresh the badge from the shared settings after the modal closes;
             # unsaved edits stay inside the editor draft.
             turn_editor.open_turn_editor(on_done=lambda screen: self.refresh_ui(), settings=self.settings,
-                             persist=not getattr(self, "_session_bound", False))
+                             persist=not self._session_bound)
         except ImportError as e:
             print(f"Error importing turn editor: {e}")
 
     def open_unit_stats_editor(self):
         unit_stats_editor.open_unit_stats_editor(on_done=lambda screen: self.refresh_ui(), settings=self.settings,
-                               persist=not getattr(self, "_session_bound", False))
+                               persist=not self._session_bound)
 
     def cycle_days_per_turn(self):
         options = c.DAYS_PER_TURN_OPTIONS
@@ -360,8 +363,8 @@ class Scenario_Settings(GameState):
         self.refresh_ui()
 
     def exit_screen(self):
-        was_session_bound = getattr(self, "_session_bound", False)
-        on_close = getattr(self, "_session_on_close", None)
+        was_session_bound = self._session_bound
+        on_close = self._session_on_close
         if was_session_bound and on_close:
             on_close(self.settings)
         super().exit_screen()

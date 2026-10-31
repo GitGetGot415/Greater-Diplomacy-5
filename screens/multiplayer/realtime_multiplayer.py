@@ -422,6 +422,8 @@ class Realtime_Relay_Provision(GameState):
 
 
 class Realtime_Scenario_Select(GameState):
+    host_setup = None
+
     back_state = "REALTIME_HOST_SETUP"
     title = "Select Real-Time Scenario"
     title_y = 35
@@ -469,13 +471,17 @@ class Realtime_Scenario_Select(GameState):
             return
         # The host setup is a persistent controller state; the controller gives
         # this selector its reference immediately before transition.
-        if hasattr(self, "host_setup"):
+        if self.host_setup is not None:
             self.host_setup.scenario_path = path
             self.host_setup.refresh_ui()
         self.go_to("REALTIME_HOST_SETUP")
 
 
 class Realtime_Lobby(GameState):
+    host_setup = None
+    advertiser = None
+    _lobby_signature = None
+
     back_state = "REALTIME_HOST_SETUP"
     title = "Real-Time Lobby"
     title_y = 30
@@ -625,9 +631,9 @@ class Realtime_Lobby(GameState):
             try:
                 self.session.rename(host_id, value)
                 accepted_name = self.session.players[host_id].name
-                if getattr(self, "host_setup", None):
+                if self.host_setup:
                     self.host_setup.host_name = accepted_name
-                if getattr(self, "advertiser", None):
+                if self.advertiser:
                     self.advertiser.set_host_name(accepted_name)
                 self.refresh_ui()
             except RealtimeError as exc:
@@ -658,7 +664,7 @@ class Realtime_Lobby(GameState):
             self.host_setup.settings = copy.deepcopy(settings)
             self.host_setup.capacity = default_capacity
             self.host_setup.realtime_server_map = replacement_map
-            if getattr(self, "advertiser", None):
+            if self.advertiser:
                 self.advertiser.set_scenario_name(os.path.basename(path))
             self.server.broadcast_map_bundle()
             self.refresh_ui()
@@ -847,7 +853,7 @@ class Realtime_Lobby(GameState):
             self.session.start(self.session.host_id)
         except RealtimeError as exc:
             dialogs.show_error("Cannot Start", str(exc)); return
-        if getattr(self, "advertiser", None):
+        if self.advertiser:
             self.advertiser.stop()
         self.selected_realtime_session = self.session
         self.selected_realtime_server = self.server
@@ -868,7 +874,7 @@ class Realtime_Lobby(GameState):
             yes_label="End Lobby", no_label="Keep Lobby")
 
     def end_lobby(self):
-        if getattr(self, "advertiser", None): self.advertiser.stop()
+        if self.advertiser: self.advertiser.stop()
         if self.port_mapping: self.port_mapping.stop()
         if self.server:
             self.server.stop("The host ended the real-time lobby. You have been disconnected.")
@@ -895,7 +901,7 @@ class Realtime_Lobby(GameState):
             mapping = self.port_mapping.result() if self.port_mapping else None
             signature += ((mapping.protocol, mapping.message, mapping.external_address, mapping.external_port)
                           if mapping else ("mapping",))
-            if signature != getattr(self, "_lobby_signature", None):
+            if signature != self._lobby_signature:
                 self._lobby_signature = signature
                 self.refresh_ui()
         super().update()
@@ -923,6 +929,8 @@ class Realtime_Lobby(GameState):
 
 
 class Realtime_Join(GameState):
+    client = None
+
     back_state = "REAL_TIME_MULTIPLAYER"
     title = "Join Real-Time Match"
     title_y = 40
@@ -1024,7 +1032,7 @@ class Realtime_Join(GameState):
         self.connect(reconnect=True)
 
     def update(self):
-        client = getattr(self, "client", None)
+        client = self.client
         if client:
             for event in client.poll():
                 if event.get("type") == "ok" and event.get("payload", {}).get("state"):

@@ -25,6 +25,7 @@ import queue
 import secrets
 import socket
 import ssl
+import traceback
 import struct
 import tempfile
 import threading
@@ -308,6 +309,7 @@ class RealtimeSession:
     """
     def __init__(self, config: RealtimeConfig, countries: list[str], host_name: str,
                  driver: Any, password: str = "", clock: Callable[[], float] = time.monotonic):
+        self.players: dict[str, Player] = {}
         self.countries = list(dict.fromkeys(countries))
         if not self.countries:
             raise RealtimeError("The selected scenario has no playable countries.")
@@ -341,14 +343,12 @@ class RealtimeSession:
         name = sanitize_display_name(name)
         self._assert_name_available(name)
         player = Player(secrets.token_hex(12), name, secrets.token_urlsafe(32))
-        if not hasattr(self, "players"):
-            self.players: dict[str, Player] = {}
         self.players[player.player_id] = player
         return player
 
     def _assert_name_available(self, name: str, except_id: str | None = None) -> None:
         wanted = _name_key(name)
-        for player in getattr(self, "players", {}).values():
+        for player in self.players.values():
             if player.player_id != except_id and _name_key(player.name) == wanted:
                 raise RealtimeError("That display name is already in this lobby.")
 
@@ -358,10 +358,11 @@ class RealtimeSession:
     def _broadcast(self) -> None:
         state = self.public_state()
         for listener in list(self.listeners):
+            # One bad listener must not stop the others, but its failure must be visible.
             try:
                 listener(state)
             except Exception:
-                pass
+                traceback.print_exc()
 
     def join(self, name: str, password: str = "") -> Player:
         with self.lock:
@@ -842,6 +843,8 @@ class MapRealtimeDriver(PlayerActions):
 
 class RemoteSessionView:
     """Client-side, non-authoritative projection of server status/state."""
+    available_countries = ()
+
     def __init__(self, client: "RealtimeClient", state: dict[str, Any], player_id: str):
         self.client, self.player_id = client, player_id
         self.players: dict[str, SimpleNamespace] = {}
@@ -860,7 +863,7 @@ class RemoteSessionView:
         self.deadline = (time.monotonic() + max(0.0, deadline_epoch - time.time())
                          if isinstance(deadline_epoch, (int, float)) else None)
         self.snapshot = state.get("game_state")
-        self.available_countries = list(state.get("countries", getattr(self, "available_countries", [])))
+        self.available_countries = list(state.get("countries", self.available_countries))
         self.players = {item["player_id"]: SimpleNamespace(**item)
                         for item in state.get("players", []) if isinstance(item, dict)}
 

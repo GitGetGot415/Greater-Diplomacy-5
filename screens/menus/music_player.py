@@ -133,6 +133,8 @@ class MusicScrubber:
 
 
 class Music_Player(ScrollPanes, GameState):
+    progress_slider = None
+
     def __init__(self, controller):
         super().__init__()
         self.controller = controller
@@ -533,7 +535,7 @@ class Music_Player(ScrollPanes, GameState):
                 return self.controller._frozen_time
 
             # If the scrubber is being dragged, freeze — don't advance position
-            if hasattr(self, 'progress_slider') and self.progress_slider.is_dragging:
+            if self.progress_slider is not None and self.progress_slider.is_dragging:
                 self._last_ticks = pygame.time.get_ticks()
                 return self.controller._frozen_time
 
@@ -632,7 +634,7 @@ class Music_Player(ScrollPanes, GameState):
             self.controller._scrub_base_pos = pygame.mixer.music.get_pos() / 1000.0
             
         # Continuously sync the scrubber visual and text with actual audio progress
-        if hasattr(self, 'progress_slider'):
+        if self.progress_slider is not None:
             length = self.get_current_track_length()
             pos = self.get_current_track_pos()
             self.progress_slider.update_progress(pos, length)

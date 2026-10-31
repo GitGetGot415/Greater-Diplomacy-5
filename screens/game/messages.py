@@ -313,7 +313,7 @@ class Messages_Screen(GameState):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             # Guarded to the visible message pane so a delete box scrolled
             # behind the compose box (clipped, no longer drawn) can't fire.
-            if hasattr(self, 'draft_edit_rects') and not is_tactical and my < c.SCREEN_HEIGHT - MSG_INPUT_H:
+            if not is_tactical and my < c.SCREEN_HEIGHT - MSG_INPUT_H:
                 for del_rect, idx in self.draft_edit_rects:
                     if del_rect.collidepoint(mx, my):
                         
@@ -385,11 +385,10 @@ class Messages_Screen(GameState):
             if self.selected_recipient and mx >= MSG_LEFT_PANE_W and my < c.SCREEN_HEIGHT - MSG_INPUT_H:
                 # Ensure we aren't dragging when we're actually trying to click 'Delete Draft'
                 clicked_del = False
-                if hasattr(self, 'draft_edit_rects'):
-                    for del_rect, _ in self.draft_edit_rects:
-                        if del_rect.collidepoint(mx, my):
-                            clicked_del = True
-                            break
+                for del_rect, _ in self.draft_edit_rects:
+                    if del_rect.collidepoint(mx, my):
+                        clicked_del = True
+                        break
                 clicked_forward = any(
                     rect.collidepoint((mx, my)) for rect, _ in self.forward_button_rects)
                 if not clicked_del and not clicked_forward:

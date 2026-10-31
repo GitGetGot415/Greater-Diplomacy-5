@@ -251,16 +251,8 @@ def _handle_map_unit_selection(map_screen, event, on_ui):
     return False
 
 
-def handle_map_events(map_screen, event):
-    event_pos = getattr(event, "pos", None)
-    if event_pos is None:
-        event_pos = pygame.mouse.get_pos()
-    mx, my = event_pos
-
-    # --- POPUP INTERCEPT ---
-    if diplomatic_popups.handle_events(map_screen, event):
-        return
-
+def _handle_blocking_state(map_screen, event, mx, my):
+    """Screens that take over the map. Returns True when one of them is showing."""
     # --- HOTSEAT MULTIPLAYER HIJACK ---
     if map_screen.show_player_ready_screen:
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -272,7 +264,7 @@ def handle_map_events(map_screen, event):
 
                 map_screen.show_feedback("Turn started for " + queries.get_country_display_name(
                     map_screen.player_country, map_screen.nation_data))
-        return # Block all other map events!
+        return True # Block all other map events!
 
     # --- CONFIRMATION LOGIC HIJACK ---
     if map_screen.show_exit_confirmation:
@@ -285,11 +277,11 @@ def handle_map_events(map_screen, event):
                 map_screen.confirm_exit()
             elif no_rect and no_rect.collidepoint(mx, my):
                 map_screen.cancel_exit()
-        return # Block all other map events while confirming
+        return True # Block all other map events while confirming
 
     # --- SAVING HIJACK ---
     if map_screen.is_saving:
-        return # Block all other map events while saving!
+        return True # Block all other map events while saving!
 
     # --- AI THINKING HIJACK ---
     if map_screen.ai_is_thinking:
@@ -306,19 +298,26 @@ def handle_map_events(map_screen, event):
                 if not map_screen.multi_turn_abort_requested:
                     map_screen.multi_turn_abort_requested = True
                     map_screen.show_feedback("Multi-turn processing will stop after this turn...")
-        return # Block all other map events while AI is processing!
+        return True # Block all other map events while AI is processing!
 
+    return False
+
+
+def _handle_flag_button(map_screen, event, event_pos):
     flag_rect = flag_renderer.flag_button_rect(map_screen)
     if flag_rect and flag_rect.collidepoint(event_pos):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             country_summary.open_country_summary(map_screen, flag_renderer.summary_country(map_screen))
-            return
+            return True
         if event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP,
                           pygame.MOUSEMOTION, pygame.MOUSEWHEEL):
-            return
+            return True
+    return False
 
-    # 1. UI Check (make sure the mouse can't go through the ui bars)
 
+def _map_position_is_on_ui(map_screen, event_pos):
+    """UI check: makes sure the mouse can't go through the ui bars."""
+    mx, my = event_pos
     on_ui = map_ui_bar_at_position(map_screen, event_pos)
 
     # Buildings/Garrison, Diplomatic Info and the queue overlay sit on top of the
@@ -337,7 +336,11 @@ def handle_map_events(map_screen, event):
     if (map_screen.selected_province and ui_bars.province_menu_occludes_map_position(
             (mx, my), (c.SCREEN_WIDTH, c.SCREEN_HEIGHT))):
         on_ui = True
+    return on_ui
 
+
+def _handle_panel_scrolling(map_screen, event, mx, my):
+    """Wheel and drag scrolling for the panels that sit over the map."""
     # Country-action buttons have their own short scroll pane. It is separate
     # from the information panels because its buttons are normal map elements,
     # not text rendered by the panel itself.
@@ -348,7 +351,7 @@ def handle_map_events(map_screen, event):
         map_screen.country_actions_scroll_y = max(
             0, min(map_screen.country_actions_scroll_y - event.y * c.SCROLL_STEP,
                    maximum))
-        return
+        return True
 
     if (_panels_are_live(map_screen)
             and event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION)
@@ -360,7 +363,7 @@ def handle_map_events(map_screen, event):
                 drag_attr="country_actions_drag_state", lo=0,
                 hi=map_screen.country_actions_scroll_max,
                 invert=True, refresh=False):
-            return
+            return True
 
     # --- SCROLLABLE INFO PANEL WHEEL INTERCEPT ---
     # Lets the mouse wheel scroll long Buildings/Garrison, Diplomatic Info, and
@@ -374,7 +377,7 @@ def handle_map_events(map_screen, event):
                 current = getattr(map_screen, f"{name}_scroll_y", 0)
                 setattr(map_screen, f"{name}_scroll_y",
                         max(0, min(current - event.y * c.SCROLL_STEP, max_scroll)))
-                return
+                return True
 
     # --- SCROLLABLE INFO PANEL DRAG INTERCEPT ---
     # Lets the same three panels be grabbed and dragged directly, alongside the
@@ -387,14 +390,17 @@ def handle_map_events(map_screen, event):
                                         drag_attr=f"{name}_drag_state", lo=0,
                                         hi=getattr(map_screen, f"{name}_scroll_max", 0),
                                         invert=True):
-                return
+                return True
+    return False
 
-    # 2. Camera Controls (Always allow these so you can move while editing!)
+
+def _handle_camera(map_screen, event, on_ui):
+    """Camera controls. Always allowed, so you can move while editing."""
     if event.type == pygame.MOUSEWHEEL:
         map_screen.camera.handle_input(event, map_screen, False)
         if map_screen.selected_province and not map_screen.selection_mode:
             camera_handler.center_camera_on_province(map_screen.camera, map_screen.selected_province["center"], c.SCREEN_WIDTH, c.SCREEN_HEIGHT, map_screen.total_ui_h)
-        return
+        return True
 
     # Full map panning works in every map workspace; the context-limited
     # variant deliberately stops at Orders. A panned order click is consumed,
@@ -403,260 +409,382 @@ def handle_map_events(map_screen, event):
     pan_buttons = (mouse_buttons_for_map_panning()
                    if not map_screen.is_editor else set())
     map_screen.camera.handle_input(event, map_screen, on_ui, pan_buttons=pan_buttons)
-    if (event.type == pygame.MOUSEBUTTONUP
-            and map_screen.camera.finish_pan_drag(event.button)
-            and mouse_button_has_action(event.button, "issue_orders")):
-        return
+    return bool(event.type == pygame.MOUSEBUTTONUP
+                and map_screen.camera.finish_pan_drag(event.button)
+                and mouse_button_has_action(event.button, "issue_orders"))
 
-    # 3. HOVER LOGIC (CRITICAL: Must run before painting)
-    if not on_ui:
-        # Combat bubbles sit above the map's province hit map. Resolve them
-        # first so clicking or hovering a battle cannot also select the tile
-        # underneath it.
-        map_screen.hovered_combat_bubble = None
-        if (map_screen.secondary_mode == "UNITS"
-                and not map_screen.viewing_ai_moves):
-            map_screen.hovered_combat_bubble = overlay_renderer.combat_bubble_at_screen_pos(
-                map_screen, (mx, my))
 
-        map_screen.hovered_unit_stack = (
-            None if (map_screen.hovered_combat_bubble
-                     or map_screen.secondary_mode != "UNITS")
-            else _unit_stack_at(map_screen, (mx, my)))
-
-        # A visible unit stack is the more precise hover target.  Suppress
-        # the province glow beneath it so the unit itself gets the feedback.
-        map_screen.hovered_province = (
-            None if (map_screen.hovered_combat_bubble or map_screen.hovered_unit_stack)
-            else queries.get_clicked_province((mx, my), map_screen))
-
-        # Block interaction with extreme hidden tiles
-        if map_screen.hovered_province:
-            if map_screen.hovered_province["id"] in map_screen.extreme_hidden_provinces:
-                map_screen.hovered_province = None
-
-        if (map_screen.hovered_province
-                and map_screen.player_country == c.TOURNAMENT_SPECTATOR
-                and not queries.is_province_visible(
-                    map_screen, map_screen.hovered_province["id"])):
-            map_screen.hovered_province = None
-
-        if map_screen.hovered_province:
-            curr_id = map_screen.hovered_province["id"]
-            if curr_id != map_screen.last_hovered_id:
-                map_screen.hover_glow_surf, map_screen.hover_glow_rect = map_utils.create_glow_surface(
-                    map_screen.id_map, map_screen.hovered_province["map_color"]
-                )
-                map_screen.last_hovered_id = curr_id
-        else:
-            map_screen.last_hovered_id = None
-            map_screen.hover_glow_surf = None
-    else:
+def _update_map_hover(map_screen, on_ui, mx, my):
+    """Hover logic. It must run before painting, which paints the hovered tile."""
+    if on_ui:
         map_screen.hovered_province = map_screen.hovered_combat_bubble = None
         map_screen.hovered_unit_stack = None
         map_screen.hover_glow_surf = None
-
-    # --- UNDO / REDO LOGIC (Ctrl + Z / Ctrl + Y) ---
-    if event.type == pygame.KEYDOWN:
-        mods = pygame.key.get_mods()
-        if mods & pygame.KMOD_CTRL or mods & pygame.KMOD_GUI:
-            if event.key == pygame.K_z:
-                if map_screen.is_editor:
-                    queries.restore_editor_state(map_screen)
-                    return
-            elif event.key == pygame.K_y:
-                if map_screen.is_editor:
-                    queries.redo_editor_state(map_screen)
-                    return
-
-    # 4. EDITOR PAINTING LOGIC
-    # We do this AFTER hover logic so we know what we are hovering over
-    if map_screen.is_editor and not on_ui:
-        editor_changed = False
-        editor_layers = set()
-
-        # Capture the map state right before a new paint stroke begins
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button in (1, 3):
-            queries.save_editor_state(map_screen)
-
-        fill_active = (map_screen.editor_mode in ("NATION", "CORE")
-                       and map_screen.editor_selection_tool == "PAINT")
-        pressed = pygame.mouse.get_pressed()
-        # Paint runs once per click. Dragging must not fill a second region.
-        left_pressed = (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
-                        if fill_active else pressed[0])
-        right_pressed = (event.type == pygame.MOUSEBUTTONDOWN and event.button == 3
-                         if fill_active else pressed[2])
-
-        if left_pressed:
-            if map_screen.hovered_province:
-                if map_screen.editor_mode in ("NATION", "CORE"):
-                    editor_layers.update(ownership.apply_editor_territory_brush(
-                        map_screen, map_screen.hovered_province))
-                    editor_changed = bool(editor_layers)
-
-                # --- CLAIM MODE ---
-                elif map_screen.editor_mode == "CLAIM":
-                    if map_screen.hovered_province.get("owner") not in c.WATER_NATIONS:
-                        if map_screen.brush_nation in c.UNOWNED_LAND_OWNERS:
-                            province_id = map_screen.hovered_province["id"]
-                            if any(province_id in data.get("claims", [])
-                                   for data in map_screen.nation_data.values()):
-                                ownership.clear_claims(map_screen, map_screen.hovered_province)
-                                editor_changed = True
-                        else:
-                            claims = map_screen.nation_data.setdefault(
-                                map_screen.brush_nation, {}).setdefault("claims", [])
-                            if map_screen.hovered_province["id"] not in claims:
-                                ownership.add_claim(map_screen, map_screen.hovered_province, map_screen.brush_nation)
-                                editor_changed = True
-
-                # --- BUILDING MODE ---
-                elif map_screen.editor_mode == "BUILDING":
-                    current_buildings = map_screen.hovered_province.get("buildings", [])
-
-                    if map_screen.brush_building == "None":
-                        if current_buildings:
-                            map_screen.hovered_province["buildings"] = []
-                            editor_changed = True
-                    else:
-                        # Stop Advanced Buildings on empty tiles
-                        is_advanced = "Refinery" in map_screen.brush_building or "Recruitment" in map_screen.brush_building
-                        if is_advanced and not queries.has_basic_factory(map_screen.hovered_province):
-                            map_screen.show_feedback("Requires a Basic Factory first!")
-                        else:
-                            # Logic: Workshops/Factories are in the same "industrial" category
-                            is_industrial = "Workshop" in map_screen.brush_building or "Factory" in map_screen.brush_building
-                            is_recruitment = "Recruitment" in map_screen.brush_building
-                            is_fort = "Fort Lvl" in map_screen.brush_building
-
-                            new_list = []
-                            for b in current_buildings:
-                                # Keep existing building IF it's not the same type we are placing
-                                # AND (if placing industrial) it's not also industrial
-                                keep = True
-                                if is_industrial and ("Workshop" in b or "Factory" in b):
-                                    keep = False
-                                if "Refinery" in map_screen.brush_building and "Refinery" in b:
-                                    keep = False
-                                if is_recruitment and "Recruitment" in b:
-                                    keep = False
-                                if is_fort and "Fort Lvl" in b:
-                                    keep = False
-
-                                if keep: new_list.append(b)
-
-                            if map_screen.brush_building not in new_list:
-                                new_list.append(map_screen.brush_building)
-
-                            if new_list != current_buildings:
-                                map_screen.hovered_province["buildings"] = new_list
-                                editor_changed = True
-
-                # --- RESOURCE MODE ---
-                elif map_screen.editor_mode == "RESOURCE":
-                    if map_screen.brush_resource_type == "None":
-                        # Wipe all resources if the "None" brush is used
-                        if map_screen.hovered_province.get("resources"):
-                            map_screen.hovered_province["resources"] = {}
-                            editor_changed = True
-                    else:
-                        # Ensure resources is a dictionary
-                        if not isinstance(map_screen.hovered_province.get("resources"), dict):
-                            map_screen.hovered_province["resources"] = {}
-
-                        if (map_screen.hovered_province["resources"].get(
-                                map_screen.brush_resource_type)
-                                != map_screen.brush_resource_amount):
-                            map_screen.hovered_province["resources"][map_screen.brush_resource_type] = map_screen.brush_resource_amount
-                            editor_changed = True
-
-        if right_pressed:
-            if map_screen.hovered_province:
-                if map_screen.hovered_province.get("owner") not in c.WATER_NATIONS:
-
-                    if map_screen.editor_mode == "CORE":
-                        changed_layers = ownership.apply_editor_territory_brush(
-                            map_screen, map_screen.hovered_province, remove=True)
-                        editor_layers.update(changed_layers)
-                        editor_changed = editor_changed or bool(changed_layers)
-                    elif map_screen.editor_mode == "CLAIM":
-                        claims = map_screen.nation_data.get(
-                            map_screen.brush_nation, {}).get("claims", [])
-                        if map_screen.hovered_province["id"] in claims:
-                            ownership.remove_claim(map_screen, map_screen.hovered_province, map_screen.brush_nation)
-                            editor_changed = True
-                    else:
-                        map_screen.brush_nation = map_screen.hovered_province.get("owner", "Unclaimed")
-                        map_screen.show_feedback("Picked: " + queries.get_country_display_name(
-                            map_screen.brush_nation, map_screen.nation_data))
-
-        # Unit placement logic
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            if map_screen.hovered_province and map_screen.editor_mode == "UNIT":
-                if map_screen.brush_unit == "None":
-                    if map_screen.hovered_province.get("units"):
-                        map_screen.hovered_province["units"] = []
-                        editor_changed = True
-                        map_screen.show_feedback("Units cleared from province")
-                elif map_screen.brush_unit == "Convoy":
-                    open_convoy_converter(map_screen, map_screen.hovered_province)
-                elif map_screen.brush_unit == "----------":
-                    pass
-                else:
-                    owner = map_screen.hovered_province.get("owner", "Unclaimed")
-                    if owner in c.UNPLAYABLE_NATIONS:
-                        map_screen.show_feedback("Cannot place units in unowned territory!")
-                    else:
-                        new_unit = queries.create_unit_dict(map_screen.brush_unit, owner, queries.get_unit_library(map_screen))
-                        if queries.is_air_unit(new_unit, context=map_screen) and queries.is_water_province(map_screen.hovered_province):
-                            map_screen.show_feedback("Aircraft need a land base.")
-                        else:
-                            map_screen.hovered_province.setdefault("units", []).append(new_unit)
-                            editor_changed = True
-                            owner_name = queries.get_country_display_name(owner, map_screen.nation_data)
-                            label = queries.get_unit_display_name(map_screen.brush_unit, context=map_screen)
-                            map_screen.show_feedback(f"Placed {label} for {owner_name}")
-
-        if editor_changed:
-            map_screen.queue_editor_visual_refresh(*editor_layers)
-
-        # RETURN HERE: This stops the code from reaching the "Select Province" logic below
         return
 
-    # 5. COUNTRY SELECTION MODE (Scenarios)
-    if map_screen.selection_mode:
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            if not map_screen.pending_selection:
-                if hasattr(map_screen, 'se_checkbox_rect') and map_screen.se_checkbox_rect.collidepoint(mx, my):
-                    if queries.scenario_has_scripted_events(map_screen.nation_data):
-                        if queries.toggle_scenario_flag(map_screen.scenario_settings, "use_scripted_events", c.DEFAULT_USE_SCRIPTED_EVENTS):
-                            map_screen.show_feedback("Scripted Events: ON")
-                        else:
-                            map_screen.show_feedback("Scripted Events: OFF")
-                    return
+    # Combat bubbles sit above the map's province hit map. Resolve them
+    # first so clicking or hovering a battle cannot also select the tile
+    # underneath it.
+    map_screen.hovered_combat_bubble = None
+    if (map_screen.secondary_mode == "UNITS"
+            and not map_screen.viewing_ai_moves):
+        map_screen.hovered_combat_bubble = overlay_renderer.combat_bubble_at_screen_pos(
+            map_screen, (mx, my))
 
-            if map_screen.pending_selection:
-                if hasattr(map_screen, 'confirm_rect') and map_screen.confirm_rect.collidepoint(mx, my):
-                    player_setup.confirm_player_country(map_screen)
-                    # Refresh the fog map as soon as the player officially takes control of the country
-                    map_screen.refresh_map_layers("fog")
-                    map_screen.update_country_centers()
-                elif hasattr(map_screen, 'cancel_rect') and map_screen.cancel_rect.collidepoint(mx, my):
-                    player_setup.cancel_selection(map_screen)
-                return  # <--- CRITICAL FIX: Stops any clicks on the map behind the popup
+    map_screen.hovered_unit_stack = (
+        None if (map_screen.hovered_combat_bubble
+                 or map_screen.secondary_mode != "UNITS")
+        else _unit_stack_at(map_screen, (mx, my)))
 
-            # A unit box can extend beyond its small tile, so tactical box
-            # selection must not depend on the tile itself being hovered.
-            if on_ui:
-                return
-            if map_screen.tactical_mode and _select_tactical_unit_stack(map_screen, event.pos):
-                return
-            if map_screen.hovered_province:
-                if map_screen.tactical_mode:
-                    player_setup.select_tactical_unit(map_screen, map_screen.hovered_province)
+    # A visible unit stack is the more precise hover target.  Suppress
+    # the province glow beneath it so the unit itself gets the feedback.
+    map_screen.hovered_province = (
+        None if (map_screen.hovered_combat_bubble or map_screen.hovered_unit_stack)
+        else queries.get_clicked_province((mx, my), map_screen))
+
+    # Block interaction with extreme hidden tiles
+    if map_screen.hovered_province:
+        if map_screen.hovered_province["id"] in map_screen.extreme_hidden_provinces:
+            map_screen.hovered_province = None
+
+    if (map_screen.hovered_province
+            and map_screen.player_country == c.TOURNAMENT_SPECTATOR
+            and not queries.is_province_visible(
+                map_screen, map_screen.hovered_province["id"])):
+        map_screen.hovered_province = None
+
+    if map_screen.hovered_province:
+        curr_id = map_screen.hovered_province["id"]
+        if curr_id != map_screen.last_hovered_id:
+            map_screen.hover_glow_surf, map_screen.hover_glow_rect = map_utils.create_glow_surface(
+                map_screen.id_map, map_screen.hovered_province["map_color"]
+            )
+            map_screen.last_hovered_id = curr_id
+    else:
+        map_screen.last_hovered_id = None
+        map_screen.hover_glow_surf = None
+
+
+def _handle_editor_undo(map_screen, event):
+    """Undo and redo with Ctrl + Z and Ctrl + Y."""
+    if event.type != pygame.KEYDOWN or not map_screen.is_editor:
+        return False
+    mods = pygame.key.get_mods()
+    if mods & pygame.KMOD_CTRL or mods & pygame.KMOD_GUI:
+        if event.key == pygame.K_z:
+            queries.restore_editor_state(map_screen)
+            return True
+        if event.key == pygame.K_y:
+            queries.redo_editor_state(map_screen)
+            return True
+    return False
+
+
+def _paint_claim(map_screen, province):
+    if province.get("owner") in c.WATER_NATIONS:
+        return False
+    if map_screen.brush_nation in c.UNOWNED_LAND_OWNERS:
+        province_id = province["id"]
+        if any(province_id in data.get("claims", [])
+               for data in map_screen.nation_data.values()):
+            ownership.clear_claims(map_screen, province)
+            return True
+        return False
+    claims = map_screen.nation_data.setdefault(
+        map_screen.brush_nation, {}).setdefault("claims", [])
+    if province["id"] not in claims:
+        ownership.add_claim(map_screen, province, map_screen.brush_nation)
+        return True
+    return False
+
+
+def _buildings_after_brush(current_buildings, brush_building):
+    """The province's building list once a building brush is applied to it."""
+    # Logic: Workshops/Factories are in the same "industrial" category
+    is_industrial = "Workshop" in brush_building or "Factory" in brush_building
+    is_recruitment = "Recruitment" in brush_building
+    is_fort = "Fort Lvl" in brush_building
+
+    new_list = []
+    for b in current_buildings:
+        # Keep existing building IF it's not the same type we are placing
+        # AND (if placing industrial) it's not also industrial
+        keep = True
+        if is_industrial and ("Workshop" in b or "Factory" in b):
+            keep = False
+        if "Refinery" in brush_building and "Refinery" in b:
+            keep = False
+        if is_recruitment and "Recruitment" in b:
+            keep = False
+        if is_fort and "Fort Lvl" in b:
+            keep = False
+
+        if keep: new_list.append(b)
+
+    if brush_building not in new_list:
+        new_list.append(brush_building)
+    return new_list
+
+
+def _paint_building(map_screen, province):
+    current_buildings = province.get("buildings", [])
+    if map_screen.brush_building == "None":
+        if current_buildings:
+            province["buildings"] = []
+            return True
+        return False
+
+    # Stop Advanced Buildings on empty tiles
+    is_advanced = "Refinery" in map_screen.brush_building or "Recruitment" in map_screen.brush_building
+    if is_advanced and not queries.has_basic_factory(province):
+        map_screen.show_feedback("Requires a Basic Factory first!")
+        return False
+
+    new_list = _buildings_after_brush(current_buildings, map_screen.brush_building)
+    if new_list != current_buildings:
+        province["buildings"] = new_list
+        return True
+    return False
+
+
+def _paint_resource(map_screen, province):
+    if map_screen.brush_resource_type == "None":
+        # Wipe all resources if the "None" brush is used
+        if province.get("resources"):
+            province["resources"] = {}
+            return True
+        return False
+
+    # Ensure resources is a dictionary
+    if not isinstance(province.get("resources"), dict):
+        province["resources"] = {}
+
+    if province["resources"].get(map_screen.brush_resource_type) != map_screen.brush_resource_amount:
+        province["resources"][map_screen.brush_resource_type] = map_screen.brush_resource_amount
+        return True
+    return False
+
+
+def _erase_or_pick_with_brush(map_screen, province, editor_layers):
+    """The right mouse button: removes a core or claim, or picks the tile's owner."""
+    if province.get("owner") in c.WATER_NATIONS:
+        return False
+    if map_screen.editor_mode == "CORE":
+        changed_layers = ownership.apply_editor_territory_brush(map_screen, province, remove=True)
+        editor_layers.update(changed_layers)
+        return bool(changed_layers)
+    if map_screen.editor_mode == "CLAIM":
+        claims = map_screen.nation_data.get(
+            map_screen.brush_nation, {}).get("claims", [])
+        if province["id"] in claims:
+            ownership.remove_claim(map_screen, province, map_screen.brush_nation)
+            return True
+        return False
+    map_screen.brush_nation = province.get("owner", "Unclaimed")
+    map_screen.show_feedback("Picked: " + queries.get_country_display_name(
+        map_screen.brush_nation, map_screen.nation_data))
+    return False
+
+
+def _place_unit_with_brush(map_screen, province):
+    if map_screen.brush_unit == "None":
+        if province.get("units"):
+            province["units"] = []
+            map_screen.show_feedback("Units cleared from province")
+            return True
+        return False
+    if map_screen.brush_unit == "Convoy":
+        open_convoy_converter(map_screen, province)
+        return False
+    if map_screen.brush_unit == "----------":
+        return False
+
+    owner = province.get("owner", "Unclaimed")
+    if owner in c.UNPLAYABLE_NATIONS:
+        map_screen.show_feedback("Cannot place units in unowned territory!")
+        return False
+    new_unit = queries.create_unit_dict(map_screen.brush_unit, owner, queries.get_unit_library(map_screen))
+    if queries.is_air_unit(new_unit, context=map_screen) and queries.is_water_province(province):
+        map_screen.show_feedback("Aircraft need a land base.")
+        return False
+    province.setdefault("units", []).append(new_unit)
+    owner_name = queries.get_country_display_name(owner, map_screen.nation_data)
+    label = queries.get_unit_display_name(map_screen.brush_unit, context=map_screen)
+    map_screen.show_feedback(f"Placed {label} for {owner_name}")
+    return True
+
+
+def _handle_editor_brush(map_screen, event):
+    """Editor painting. It runs after hover logic, which finds the tile to paint."""
+    editor_changed = False
+    editor_layers = set()
+
+    # Capture the map state right before a new paint stroke begins
+    if event.type == pygame.MOUSEBUTTONDOWN and event.button in (1, 3):
+        queries.save_editor_state(map_screen)
+
+    fill_active = (map_screen.editor_mode in ("NATION", "CORE")
+                   and map_screen.editor_selection_tool == "PAINT")
+    pressed = pygame.mouse.get_pressed()
+    # Paint runs once per click. Dragging must not fill a second region.
+    left_pressed = (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
+                    if fill_active else pressed[0])
+    right_pressed = (event.type == pygame.MOUSEBUTTONDOWN and event.button == 3
+                     if fill_active else pressed[2])
+
+    province = map_screen.hovered_province
+    if province:
+        if left_pressed:
+            if map_screen.editor_mode in ("NATION", "CORE"):
+                editor_layers.update(ownership.apply_editor_territory_brush(map_screen, province))
+                editor_changed = bool(editor_layers)
+            elif map_screen.editor_mode == "CLAIM":
+                editor_changed = _paint_claim(map_screen, province)
+            elif map_screen.editor_mode == "BUILDING":
+                editor_changed = _paint_building(map_screen, province)
+            elif map_screen.editor_mode == "RESOURCE":
+                editor_changed = _paint_resource(map_screen, province)
+
+        if right_pressed:
+            editor_changed = _erase_or_pick_with_brush(map_screen, province, editor_layers) or editor_changed
+
+        # Unit placement logic
+        if (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
+                and map_screen.editor_mode == "UNIT"):
+            editor_changed = _place_unit_with_brush(map_screen, province) or editor_changed
+
+    if editor_changed:
+        map_screen.queue_editor_visual_refresh(*editor_layers)
+
+
+def _handle_country_selection(map_screen, event, mx, my, on_ui):
+    """Choosing a country or tactical unit when a scenario starts."""
+    if event.type != pygame.MOUSEBUTTONDOWN or event.button != 1:
+        return
+
+    if not map_screen.pending_selection:
+        if hasattr(map_screen, 'se_checkbox_rect') and map_screen.se_checkbox_rect.collidepoint(mx, my):
+            if queries.scenario_has_scripted_events(map_screen.nation_data):
+                if queries.toggle_scenario_flag(map_screen.scenario_settings, "use_scripted_events", c.DEFAULT_USE_SCRIPTED_EVENTS):
+                    map_screen.show_feedback("Scripted Events: ON")
                 else:
-                    player_setup.select_player_country(map_screen, map_screen.hovered_province)
+                    map_screen.show_feedback("Scripted Events: OFF")
+            return
+
+    if map_screen.pending_selection:
+        if hasattr(map_screen, 'confirm_rect') and map_screen.confirm_rect.collidepoint(mx, my):
+            player_setup.confirm_player_country(map_screen)
+            # Refresh the fog map as soon as the player officially takes control of the country
+            map_screen.refresh_map_layers("fog")
+            map_screen.update_country_centers()
+        elif hasattr(map_screen, 'cancel_rect') and map_screen.cancel_rect.collidepoint(mx, my):
+            player_setup.cancel_selection(map_screen)
+        return  # <--- CRITICAL FIX: Stops any clicks on the map behind the popup
+
+    # A unit box can extend beyond its small tile, so tactical box
+    # selection must not depend on the tile itself being hovered.
+    if on_ui:
+        return
+    if map_screen.tactical_mode and _select_tactical_unit_stack(map_screen, event.pos):
+        return
+    if map_screen.hovered_province:
+        if map_screen.tactical_mode:
+            player_setup.select_tactical_unit(map_screen, map_screen.hovered_province)
+        else:
+            player_setup.select_player_country(map_screen, map_screen.hovered_province)
+
+
+def _handle_combat_bubble_click(map_screen, event, on_ui):
+    """A province combat bubble opens that tile's Orders view with its battle
+    inspector already visible. Midpoint records are not produced anymore."""
+    if (event.type != pygame.MOUSEBUTTONDOWN or event.button != 1
+            or map_screen.viewing_ai_moves or on_ui):
+        return False
+    bubble = overlay_renderer.combat_bubble_at_screen_pos(map_screen, event.pos)
+    if bubble is None:
+        return False
+    province = map_screen.id_to_province.get(bubble.get("orders_province_id"))
+    if province is None:
+        return False
+    map_screen._orders_entered_from_combat_bubble = True
+    map_screen.selected_province = province
+    map_screen.change_state("ORDERS")
+    return True
+
+
+def _handle_mail_box(map_screen, event):
+    """Direct map message editing for the selected foreign country."""
+    if not map_screen.selected_province:
+        return
+    owner = map_screen.selected_province.get("owner")
+    if not queries.is_foreign_playable(owner, map_screen.player_country, map_screen.nation_data):
+        return
+
+    # MAIL BOX! MAIL BOX! MAIL BOX!
+
+    mail_rect = pygame.Rect(*c.PROVINCE_UI["mail_box"])
+
+    # 1. Handle clicking the box to activate/deactivate it
+    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+        if mail_rect.collidepoint(event.pos):
+            if map_screen.tactical_mode:
+                map_screen.show_feedback("Tactical Mode: Cannot send messages directly.")
+                map_screen.mail_input_active = False
+            else:
+                map_screen.mail_input_active = True
+        else:
+            map_screen.mail_input_active = False
+
+    # 2. Handle typing and sending if the box is active
+    elif map_screen.mail_input_active:
+        if map_screen.tactical_mode:
+            map_screen.mail_input_active = False
+        else:
+            map_screen.mail_draft_text, status = process_text_input(
+                event, map_screen.mail_draft_text, max_length=c.MAX_MAIL_DRAFT_LENGTH
+            )
+
+            if status == "SUBMIT":
+                draft = map_screen.mail_draft_text.strip()
+                if draft:
+                    msg = diplomacy_messages.queue_text_message(map_screen.nation_data, map_screen.player_country, owner, draft)
+                    map_screen.show_feedback(msg)
+                else:
+                    diplomacy_messages.cancel_text_message(map_screen.nation_data, map_screen.player_country, owner)
+                    map_screen.show_feedback("Draft cleared.")
+                map_screen.mail_input_active = False
+
+
+def handle_map_events(map_screen, event):
+    """Passes one event through the map's handlers. The order is the priority."""
+    event_pos = getattr(event, "pos", None)
+    if event_pos is None:
+        event_pos = pygame.mouse.get_pos()
+    mx, my = event_pos
+
+    if diplomatic_popups.handle_events(map_screen, event):
+        return
+    if _handle_blocking_state(map_screen, event, mx, my):
+        return
+    if _handle_flag_button(map_screen, event, event_pos):
+        return
+
+    on_ui = _map_position_is_on_ui(map_screen, event_pos)
+    if _handle_panel_scrolling(map_screen, event, mx, my):
+        return
+    if _handle_camera(map_screen, event, on_ui):
+        return
+    _update_map_hover(map_screen, on_ui, mx, my)
+    if _handle_editor_undo(map_screen, event):
+        return
+
+    # Returning here stops editor clicks from reaching province selection below.
+    if map_screen.is_editor and not on_ui:
+        _handle_editor_brush(map_screen, event)
+        return
+
+    if map_screen.selection_mode:
+        _handle_country_selection(map_screen, event, mx, my, on_ui)
         return
 
     # Unit stacks are a map-level interaction rather than an Orders-panel
@@ -664,62 +792,12 @@ def handle_map_events(map_screen, event):
     # selection so a selected group can target any open map province.
     if _handle_map_unit_selection(map_screen, event, on_ui):
         return
+    if _handle_combat_bubble_click(map_screen, event, on_ui):
+        return
 
-    # A province combat bubble opens that tile's Orders view with its battle
-    # inspector already visible. Midpoint records are not produced anymore.
-    if (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
-            and not map_screen.viewing_ai_moves
-            and not on_ui):
-        bubble = overlay_renderer.combat_bubble_at_screen_pos(map_screen, event.pos)
-        if bubble is not None:
-            province = map_screen.id_to_province.get(bubble.get("orders_province_id"))
-            if province is not None:
-                map_screen._orders_entered_from_combat_bubble = True
-                map_screen.selected_province = province
-                map_screen.change_state("ORDERS")
-                return
+    # Mail editing stays above standard selection, so a click can do both.
+    _handle_mail_box(map_screen, event)
 
-    # --- Direct Map Message Editing ---
-    # Moved ABOVE the "STANDARD GAME SELECTION" return block!
-    if map_screen.selected_province:
-        owner = map_screen.selected_province.get("owner")
-        is_foreign = queries.is_foreign_playable(owner, map_screen.player_country, map_screen.nation_data)
-        if is_foreign:
-            # MAIL BOX! MAIL BOX! MAIL BOX!
-
-            mail_rect = pygame.Rect(*c.PROVINCE_UI["mail_box"])
-
-            # 1. Handle clicking the box to activate/deactivate it
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                if mail_rect.collidepoint(event.pos):
-                    if map_screen.tactical_mode:
-                        map_screen.show_feedback("Tactical Mode: Cannot send messages directly.")
-                        map_screen.mail_input_active = False
-                    else:
-                        map_screen.mail_input_active = True
-                else:
-                    map_screen.mail_input_active = False
-
-            # 2. Handle typing and sending if the box is active
-            elif map_screen.mail_input_active:
-                if map_screen.tactical_mode:
-                    map_screen.mail_input_active = False
-                else:
-                    map_screen.mail_draft_text, status = process_text_input(
-                        event, map_screen.mail_draft_text, max_length=c.MAX_MAIL_DRAFT_LENGTH
-                    )
-
-                    if status == "SUBMIT":
-                        draft = map_screen.mail_draft_text.strip()
-                        if draft:
-                            msg = diplomacy_messages.queue_text_message(map_screen.nation_data, map_screen.player_country, owner, draft)
-                            map_screen.show_feedback(msg)
-                        else:
-                            diplomacy_messages.cancel_text_message(map_screen.nation_data, map_screen.player_country, owner)
-                            map_screen.show_feedback("Draft cleared.")
-                        map_screen.mail_input_active = False
-
-    # 6. STANDARD GAME SELECTION
     if (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
             and not on_ui):
         _select_map_province(map_screen, event.pos)

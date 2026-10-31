@@ -25,7 +25,7 @@ def _load_and_scale_local_image(file_path, size):
         try:
             img = pygame.image.load(file_path).convert_alpha()
             return pygame.transform.scale(img, size)
-        except Exception:
+        except (pygame.error, OSError, ValueError):
             pass
     return None
 

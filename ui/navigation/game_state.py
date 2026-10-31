@@ -140,6 +140,9 @@ class ScreenLayer:
         getattr(self.screen, self.draw_method)(surface)
 
 class GameState:
+    bg_color = c.DEFAULT_BG_COLOR
+    _armed_drag_attrs = ()
+
     # Screens layered over the map set this; it drives feedback text and keybind lookup.
     map_screen = None
     # Where exit_screen() sends the state machine. None just closes the screen.
@@ -238,7 +241,7 @@ class GameState:
         next MOUSEMOTION would otherwise be misread as an active drag with no
         button held, making the content appear to scroll on its own.
         """
-        for drag_attr in getattr(self, "_armed_drag_attrs", ()):
+        for drag_attr in self._armed_drag_attrs:
             setattr(self, drag_attr, None)
 
     def scroll_by(self, event, attr="scroll_y", limit_attr="max_scroll", speed=None):
@@ -375,8 +378,7 @@ class GameState:
             setattr(self, drag_attr, [event.pos[idx], False])
             # Remembered so cancel_active_drags() can find this attr by name --
             # drag_attr varies per caller/pane, so there's nothing else to scan.
-            self._armed_drag_attrs = getattr(self, "_armed_drag_attrs", set())
-            self._armed_drag_attrs.add(drag_attr)
+            self._armed_drag_attrs = {*self._armed_drag_attrs, drag_attr}
             return False
         if event.type == pygame.MOUSEBUTTONUP and event.button == 1 and state is not None:
             setattr(self, drag_attr, None)
@@ -514,7 +516,7 @@ class GameState:
             # Screens with no dedicated bg_image_path get an endlessly
             # scrolling checkerboard tinted to their own bg_color instead of
             # a flat fill -- see ui_bars.get_checkerboard_tile.
-            self.draw_checkerboard_background(surface, getattr(self, 'bg_color', c.DEFAULT_BG_COLOR))
+            self.draw_checkerboard_background(surface, self.bg_color)
 
     def draw_checkerboard_background(self, surface, base_color):
         # Draw the tile in a grid slightly larger than the screen, offset by a

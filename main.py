@@ -183,6 +183,11 @@ def _import_project_modules():
 
 
 class Controller:
+    soloud = None
+    music_handle = None
+    last_toggle_time = None
+    is_fullscreen = False
+
     def __init__(self):
         pygame.init()
         if IS_WEB:
@@ -779,7 +784,7 @@ class Controller:
             if self.beepbox_stream is not None:
                 self.beepbox_stream.stop()
                 self.beepbox_stream = None
-            if c.USE_SOLOUD and hasattr(self, 'music_handle') and self.music_handle is not None:
+            if c.USE_SOLOUD and self.music_handle is not None:
                 self.soloud.stop(self.music_handle)
             elif not c.USE_SOLOUD:
                 pygame.mixer.music.stop()
@@ -855,7 +860,7 @@ class Controller:
                 self.beepbox_stream = None
 
             if c.USE_SOLOUD:
-                if hasattr(self, 'music_handle') and self.music_handle is not None:
+                if self.music_handle is not None:
                     self.soloud.stop(self.music_handle)
 
                 self._load_soloud_stream_unicode_safe(track_path)
@@ -897,7 +902,7 @@ class Controller:
 
         if self.beepbox_stream is not None:
             self.beepbox_stream.stop()
-        if c.USE_SOLOUD and hasattr(self, 'soloud'):
+        if c.USE_SOLOUD and self.soloud is not None:
             self.soloud.deinit()
         elif not c.USE_SOLOUD:
             pygame.mixer.quit()
@@ -905,10 +910,10 @@ class Controller:
     def toggle_fullscreen(self):
         current_time = pygame.time.get_ticks()
         # Debounce: prevent toggling if less than 500ms has elapsed since the last toggle finished
-        if hasattr(self, 'last_toggle_time') and current_time - self.last_toggle_time < 500:
+        if self.last_toggle_time is not None and current_time - self.last_toggle_time < 500:
             return
 
-        self.is_fullscreen = not getattr(self, 'is_fullscreen', False)
+        self.is_fullscreen = not self.is_fullscreen
         if self.is_fullscreen:
             try:
                 self.screen = pygame.display.set_mode((c.SCREEN_WIDTH, c.SCREEN_HEIGHT), pygame.FULLSCREEN)
@@ -955,7 +960,7 @@ class Controller:
                         self.states["MUSIC_PLAYER"].refresh_ui()
             elif c.USE_SOLOUD:
                 # FIX: Check self.now_playing != "None" to prevent infinite loops when playlist is empty
-                if hasattr(self, 'music_handle') and self.music_handle is not None and self.now_playing != "None":
+                if self.music_handle is not None and self.now_playing != "None":
                     if not self.soloud.is_valid_voice_handle(self.music_handle):
                         self.play_random_song()
                         if self.active_state == self.states.get("MUSIC_PLAYER"):

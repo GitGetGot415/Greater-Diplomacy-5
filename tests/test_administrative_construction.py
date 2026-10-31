@@ -155,3 +155,30 @@ class AdministrativeConstructionTests(unittest.TestCase):
             process_queues(self.world)
         self.assertIn("A", self.province["cores"])
         self.assertFalse(self.province["building_queue"])
+
+
+class CoringReachTests(unittest.TestCase):
+    """The UI and the AI share this rule, so it is tested with artificial tiles."""
+
+    def setUp(self):
+        self.inland = {"id": 1, "neighbors": [2], "cores": []}
+        self.neighbor = {"id": 2, "neighbors": [1], "cores": []}
+        self.tiles = {1: self.inland, 2: self.neighbor}
+
+    def test_a_nation_with_no_cores_can_start_anywhere(self):
+        self.assertFalse(queries.nation_has_any_core("A", self.tiles))
+        self.assertTrue(queries.province_can_be_cored("A", self.inland, self.tiles, False))
+
+    def test_inland_tile_needs_a_neighboring_core(self):
+        self.assertFalse(queries.province_can_be_cored("A", self.inland, self.tiles, True))
+        self.neighbor["cores"] = ["A"]
+        self.assertTrue(queries.nation_has_any_core("A", self.tiles))
+        self.assertTrue(queries.province_can_be_cored("A", self.inland, self.tiles, True))
+
+    def test_another_nations_core_does_not_help(self):
+        self.neighbor["cores"] = ["B"]
+        self.assertFalse(queries.province_can_be_cored("A", self.inland, self.tiles, True))
+
+    def test_coastal_tile_needs_no_neighboring_core(self):
+        self.inland["is_coastal"] = True
+        self.assertTrue(queries.province_can_be_cored("A", self.inland, self.tiles, True))

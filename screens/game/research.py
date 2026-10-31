@@ -345,14 +345,12 @@ class Research_Screen(GameState):
 
     def update(self):
         super().update()
-        if hasattr(self, 'target_scroll_x'):
+        self.enforce_scroll_bounds()
 
-            self.enforce_scroll_bounds()
+        if abs(self.scroll_x - self.target_scroll_x) > 0.5:
+            self.scroll_x += (self.target_scroll_x - self.scroll_x) * SCROLL_LERP
 
-            if abs(self.scroll_x - self.target_scroll_x) > 0.5:
-                self.scroll_x += (self.target_scroll_x - self.scroll_x) * SCROLL_LERP
-
-            self._sync_tech_node_positions()
+        self._sync_tech_node_positions()
 
     def additional_events(self, event):
         if self.current_category in self.nodes and not self.active_modal:

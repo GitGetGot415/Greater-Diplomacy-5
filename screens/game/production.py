@@ -57,6 +57,27 @@ def variant_block_width(count):
 
 INFANTRY_MODE_BLOCK_WIDTH = variant_block_width(INFANTRY_MODE_COUNT)
 
+# Heavy Artillery rides Artillery's own research (see
+# c.UNIT_TECH_KEY_OVERRIDES) rather than a separate gate tech, so unlike
+# the Infantry variants it's always available once the row itself
+# is being drawn at all - there's nothing separate to grey it out for.
+ARTILLERY_VARIANTS = (
+    ("heavy", "Heavy Artillery", "Hvy", True),
+)
+
+
+def _no_action():
+    """The callback of a list button that is shown but cannot be used."""
+
+
+def resolve_variant(mode, variants):
+    """Validates a stored mode against current research, returning the
+    (possibly corrected) mode and its unit-name prefix swap target."""
+    for key, prefix, _label, available in variants:
+        if mode == key:
+            return (key, prefix) if available else ("normal", None)
+    return "normal", None
+
 # Colored section panels drawn behind each group of rows
 PANEL_X = 30
 PANEL_WIDTH = 750
@@ -207,20 +228,19 @@ class Production_Screen(GameState):
 
     def update(self):
         super().update()
-        if hasattr(self, 'target_scroll_y'):
-            self.enforce_scroll_bounds()
-            if abs(self.scroll_y - self.target_scroll_y) > 0.5:
-                self.scroll_y += (self.target_scroll_y - self.scroll_y) * SCROLL_LERP
+        self.enforce_scroll_bounds()
+        if abs(self.scroll_y - self.target_scroll_y) > 0.5:
+            self.scroll_y += (self.target_scroll_y - self.scroll_y) * SCROLL_LERP
 
-            # Keep scrollable buttons pinned to the list. They stay visible (the
-            # ProductionChromeOverlay draws over them once they slide behind the
-            # header/resource-HUD bars) but a click only registers while the click
-            # itself lands clear of those bars, so a still-visible sliver of a
-            # button stays clickable and no sfx sneaks through on the hidden part.
-            for el in self.elements:
-                if getattr(el, 'is_scrollable', False):
-                    el.rect.y = el.base_y + int(self.scroll_y)
-                    el.click_guard = lambda: CLICK_GUARD_TOP <= pygame.mouse.get_pos()[1] <= CLICK_GUARD_BOTTOM
+        # Keep scrollable buttons pinned to the list. They stay visible (the
+        # ProductionChromeOverlay draws over them once they slide behind the
+        # header/resource-HUD bars) but a click only registers while the click
+        # itself lands clear of those bars, so a still-visible sliver of a
+        # button stays clickable and no sfx sneaks through on the hidden part.
+        for el in self.elements:
+            if getattr(el, 'is_scrollable', False):
+                el.rect.y = el.base_y + int(self.scroll_y)
+                el.click_guard = lambda: CLICK_GUARD_TOP <= pygame.mouse.get_pos()[1] <= CLICK_GUARD_BOTTOM
 
     def _add_scroll_button(self, x_pos, y_offset, color, text, callback, size="production", font_preset="button_small"):
         """Creates one of the production screen's scrollable list buttons
@@ -238,388 +258,309 @@ class Production_Screen(GameState):
         view_mode_buttons.sync_highlight(self.view_mode_buttons, self.map_screen.secondary_mode)
         self.elements = [self.btn_back, *self.view_mode_buttons]
 
-        current_buildings = self.target_province.get("buildings", [])
-        building_queue = self.target_province.get("building_queue", [])
-        
-        owner_nation = self.target_province.get("owner")
-        player_research = self.map_screen.nation_data.get(owner_nation, {}).get("research", {})
-        
-        is_spectator = self.map_screen.player_country == "Spectator"
-        can_spectator_edit = c.SPECTATOR_CAN_EDIT_PRODUCTION
-
         self.active_bars = []
         self.air_damage_labels = {}
-        y_offset = LIST_START_Y
-        x_pos = LIST_X
+        self._list_y = LIST_START_Y
 
-        # --- BUILDING LOGIC ---
-        bldg_groups = ["industry", "fortification", "recruitment"]
-        
-        is_core = queries.has_core(owner_nation, self.target_province)
-        
+        self.admin_start_y = self._list_y
+        self._add_administrative_rows()
+        self.admin_end_y = self._list_y
+        self._list_y += SECTION_SPACING
+
+        self.other_start_y = self._list_y
+        self._add_building_rows()
+        self.other_end_y = self._list_y
+        self._list_y += SECTION_SPACING
+
+        self._add_unit_sections()
+        self._add_custom_unit_section()
+
+        # Calculate maximum scroll distance
+        # Negative floor, matching GameState.max_scroll -- see enforce_scroll_bounds.
+        self.max_scroll = min(0, c.SCREEN_HEIGHT - SCROLL_BOTTOM_PAD - self._list_y)
+
+        self.scroll_content_rect = pygame.Rect(0, CLICK_GUARD_TOP, c.SCREEN_WIDTH, CLICK_GUARD_BOTTOM - CLICK_GUARD_TOP)
+
+    def _spectator_locked(self):
+        return self.map_screen.player_country == "Spectator" and not c.SPECTATOR_CAN_EDIT_PRODUCTION
+
+    def _owner_research(self):
+        owner = self.target_province.get("owner")
+        return self.map_screen.nation_data.get(owner, {}).get("research", {})
+
+    def _add_administrative_row(self, color, text, callback, cost):
+        self._add_scroll_button(LIST_X, self._list_y, color, text, callback)
+        bar_rect = pygame.Rect(LIST_X + BAR_OFFSET_X, self._list_y, BAR_WIDTH, BAR_HEIGHT)
+        stats = {
+            "time": cost["time"],
+            "cost_manpower": cost["cost_manpower"],
+            "cost_materials": cost["cost_materials"],
+            "cost_fuel": cost["cost_fuel"],
+            "prod_manpower": 0, "prod_materials": 0, "prod_fuel": 0
+        }
+        self.active_bars.append((bar_rect, stats, self._list_y, "BUILDING"))
+        self._list_y += ROW_STEP_Y
+
+    def _add_administrative_rows(self):
+        province = self.target_province
+        owner = province.get("owner")
+        map_data = self.map_screen.map_data
+        settings = self.map_screen.scenario_settings
+        building_queue = province.get("building_queue", [])
+        locked = self._spectator_locked()
+
         # --- BUGFIX: Coring Restrictions ---
-        can_core = False
-        has_any_core = any(owner_nation in p.get("cores", []) for p in self.map_screen.map_data.values())
-        
-        if not has_any_core:
-            can_core = True
-        elif self.target_province.get("is_coastal", False):
-            can_core = True
-        else:
-            for n_id in self.target_province.get("neighbors", []):
-                n_prov = self.map_screen.id_to_province.get(n_id)
-                if n_prov and owner_nation in n_prov.get("cores", []):
-                    can_core = True
-                    break
+        can_core = queries.province_can_be_cored(owner, province, self.map_screen.id_to_province,
+                                                 queries.nation_has_any_core(owner, map_data))
 
-        self.admin_start_y = y_offset
-        if not is_core and queries.is_administrative_action_enabled("CORE", self.map_screen.scenario_settings):
-            is_coring = any(q.get("order_type") == "CORE" for q in building_queue)
-            core_data = queries.get_core_cost(owner_nation, self.map_screen.map_data, self.map_screen.scenario_settings)
-            
-            if is_coring:
-                btn_txt = "Coring..."
-                btn_color = "grey"
-                cb = lambda: None
-            elif is_spectator and not can_spectator_edit:
-                btn_txt = "Core Territory"
-                btn_color = "grey"
-                cb = lambda: None
+        if not queries.has_core(owner, province) and queries.is_administrative_action_enabled("CORE", settings):
+            if any(q.get("order_type") == "CORE" for q in building_queue):
+                color, text, callback = "grey", "Coring...", _no_action
+            elif locked:
+                color, text, callback = "grey", "Core Territory", _no_action
             elif not can_core:
-                btn_txt = "Cannot Core"
-                btn_color = "grey"
-                cb = lambda: None
+                color, text, callback = "grey", "Cannot Core", _no_action
             else:
-                btn_txt = "Core Territory"
-                btn_color = "purple"
-                cb = lambda: self.start_coring()
-
-            self._add_scroll_button(x_pos, y_offset, btn_color, btn_txt, cb)
-
-            bar_rect = pygame.Rect(x_pos + BAR_OFFSET_X, y_offset, BAR_WIDTH, BAR_HEIGHT)
-            mock_stats = {
-                "time": core_data["time"],
-                "cost_manpower": core_data["cost_manpower"],
-                "cost_materials": core_data["cost_materials"],
-                "cost_fuel": core_data["cost_fuel"],
-                "prod_manpower": 0, "prod_materials": 0, "prod_fuel": 0
-            }
-            self.active_bars.append((bar_rect, mock_stats, y_offset, "BUILDING"))
-            y_offset += ROW_STEP_Y
+                color, text, callback = "purple", "Core Territory", lambda: self.start_coring()
+            self._add_administrative_row(color, text, callback, queries.get_core_cost(owner, map_data, settings))
 
         # --- REMOVE CORES BUTTON ---
         # Cores are ignored entirely under the "Disable Cores" scenario rule, so
         # there's nothing left to add or strip -- skip this row completely.
-        if queries.is_administrative_action_enabled("REMOVE_CORE", self.map_screen.scenario_settings):
-            foreign_cores = [core for core in self.target_province.get("cores", []) if core != owner_nation]
-            has_unit = any(u.get("owner") == owner_nation for u in self.target_province.get("units", []))
+        if queries.is_administrative_action_enabled("REMOVE_CORE", settings):
+            foreign_cores = [core for core in province.get("cores", []) if core != owner]
+            has_unit = any(u.get("owner") == owner for u in province.get("units", []))
 
-            is_removing_cores = any(q.get("order_type") == "REMOVE_CORE" for q in building_queue)
-            remove_data = queries.get_remove_core_cost(owner_nation, self.map_screen.map_data, self.map_screen.scenario_settings)
-
-            if is_removing_cores:
-                btn_txt2 = "Removing Cores..."
-                btn_color2 = "grey"
-                cb2 = lambda: None
+            if any(q.get("order_type") == "REMOVE_CORE" for q in building_queue):
+                color, text, callback = "grey", "Removing Cores...", _no_action
             elif not foreign_cores:
-                btn_txt2 = "No Foreign Cores"
-                btn_color2 = "grey"
-                cb2 = lambda: None
+                color, text, callback = "grey", "No Foreign Cores", _no_action
             elif not has_unit:
-                btn_txt2 = "Needs Garrison"
-                btn_color2 = "grey"
-                cb2 = lambda: None
+                color, text, callback = "grey", "Needs Garrison", _no_action
             elif not can_core:
-                btn_txt2 = "Cannot Remove"
-                btn_color2 = "grey"
-                cb2 = lambda: None
-            elif is_spectator and not can_spectator_edit:
-                btn_txt2 = "Remove Cores"
-                btn_color2 = "grey"
-                cb2 = lambda: None
+                color, text, callback = "grey", "Cannot Remove", _no_action
+            elif locked:
+                color, text, callback = "grey", "Remove Cores", _no_action
             else:
-                btn_txt2 = "Remove Cores"
-                btn_color2 = "red"
-                cb2 = lambda: self.start_remove_cores()
+                color, text, callback = "red", "Remove Cores", lambda: self.start_remove_cores()
+            self._add_administrative_row(color, text, callback, queries.get_remove_core_cost(owner, map_data, settings))
 
-            self._add_scroll_button(x_pos, y_offset, btn_color2, btn_txt2, cb2)
+    def _next_building_in_group(self, group_id, current_buildings):
+        b_list = [b for b, d in self.building_library.items() if d.get("group") == group_id]
+        owned_in_group = [b for b in current_buildings if self.building_library.get(b, {}).get("group") == group_id]
+        if not owned_in_group:
+            return b_list[0] if b_list else None
+        target = None
+        for i, b_name in enumerate(b_list):
+            if b_name in owned_in_group:
+                if i + 1 < len(b_list):
+                    target = b_list[i+1]
+        return target
 
-            bar_rect2 = pygame.Rect(x_pos + BAR_OFFSET_X, y_offset, BAR_WIDTH, BAR_HEIGHT)
-            mock_stats2 = {
-                "time": remove_data["time"],
-                "cost_manpower": remove_data["cost_manpower"],
-                "cost_materials": remove_data["cost_materials"],
-                "cost_fuel": remove_data["cost_fuel"],
-                "prod_manpower": 0, "prod_materials": 0, "prod_fuel": 0
-            }
-            self.active_bars.append((bar_rect2, mock_stats2, y_offset, "BUILDING"))
-            y_offset += ROW_STEP_Y
+    def _add_building_rows(self):
+        province = self.target_province
+        owner = province.get("owner")
+        research = self._owner_research()
+        building_queue = province.get("building_queue", [])
 
-        self.admin_end_y = y_offset
+        for group_id in ("industry", "fortification", "recruitment"):
+            target = self._next_building_in_group(group_id, province.get("buildings", []))
+            if not target:
+                continue
 
-        y_offset += SECTION_SPACING
-        
-        self.other_start_y = y_offset
+            # Dynamically calculate the visual cost for the player
+            data = queries.get_building_cost(target, owner, self.map_screen.map_data, self.building_library)
+            output = queries.get_province_building_output(
+                {"owner": owner, "cores": province.get("cores", []), "buildings": [target]},
+                research, self.building_library, context=self.map_screen)
+            data.update({f"prod_{res}": amount for res, amount in output.items()})
+            is_building = any(q.get("group") == data["group"] for q in building_queue)
+            req_tech, req_lvl = queries.get_building_required_tech(target)
 
-        def process_building_categories(cat_groups):
-            nonlocal y_offset
-            for group_id in cat_groups:
-                b_list = [b for b, d in self.building_library.items() if d.get("group") == group_id]
-                target = None
-                owned_in_group = [b for b in current_buildings if self.building_library.get(b, {}).get("group") == group_id]
+            if req_tech and research.get(req_tech, 0) < req_lvl:
+                continue
 
-                if not owned_in_group:
-                    target = b_list[0] if b_list else None
-                else:
-                    for i, b_name in enumerate(b_list):
-                        if b_name in owned_in_group:
-                            if i + 1 < len(b_list):
-                                target = b_list[i+1]
-
-                if target:
-                    # Dynamically calculate the visual cost for the player
-                    data = queries.get_building_cost(target, owner_nation, self.map_screen.map_data, self.building_library)
-                    output = queries.get_province_building_output(
-                        {"owner": owner_nation, "cores": self.target_province.get("cores", []), "buildings": [target]},
-                        player_research, self.building_library, context=self.map_screen)
-                    data.update({f"prod_{res}": amount for res, amount in output.items()})
-                    is_building = any(q.get("group") == data["group"] for q in building_queue)
-                    req_tech, req_lvl = queries.get_building_required_tech(target)
-
-                    if req_tech and player_research.get(req_tech, 0) < req_lvl:
-                        continue 
-
-                    # --- ENFORCE FACTORY DEPENDENCY ---
-                    if data["group"] in ["recruitment"]:
-                        if not queries.has_basic_factory(self.target_province):
-                            continue
-
-                    if is_building:
-                        btn_txt = "Building..."
-                        cb = lambda: None
-                        btn_color = "grey"
-                    elif is_spectator and not can_spectator_edit:
-                        btn_txt = queries.get_condensed_building_name(target)
-                        cb = lambda: None
-                        btn_color = "grey"
-                    else:
-                        btn_txt = queries.get_condensed_building_name(target)
-                        cb = lambda t=target: self.start_construction(t)
-                        btn_color = "orange"
-
-                    self._add_scroll_button(x_pos, y_offset, btn_color, btn_txt, cb)
-
-                    bar_rect = pygame.Rect(x_pos + BAR_OFFSET_X, y_offset, BAR_WIDTH, BAR_HEIGHT)
-                    self.active_bars.append((bar_rect, data, y_offset, "BUILDING"))
-                    y_offset += ROW_STEP_Y
-
-        self.other_start_y = y_offset
-        process_building_categories(bldg_groups)
-        self.other_end_y = y_offset
-
-        y_offset += SECTION_SPACING
-
-        # --- UNIT LOGIC ---
-        def render_unit_button(unit_name, btn_color, x_offset=0):
-            nonlocal y_offset
-            factory = queries.get_unit_metadata(unit_name, self.unit_library, context=self.map_screen)["recruitment"]["industry"]
-            can_build = (factory == "none" or (queries.has_industry(self.target_province)
-                         if factory == "industry" else queries.has_basic_factory(self.target_province)))
-
-            if is_spectator and not can_spectator_edit:
-                final_btn_color = "grey"
-                cb = lambda: None
-            else:
-                final_btn_color = btn_color if can_build else "grey"
-                cb = lambda n=unit_name: self.buy_unit(n)
-
-            self._add_scroll_button(x_pos + x_offset, y_offset, final_btn_color,
-                                    queries.get_condensed_unit_name(unit_name, self.unit_library), cb)
-
-            stats = self.unit_library[unit_name]
-            if stats.get("air_role") == "fighter" and id(stats) not in self.air_damage_labels:
-                text = f"(Air Dmg x{stats.get('air_attack_multiplier', 1.0):g})"
-                self.air_damage_labels[id(stats)] = fonts.get("small").render(text, True, c.COLOR_SUCCESS_GREEN)
-            # Shrinks to keep its right edge fixed when x_offset > 0 (the Infantry
-            # row's Mot/Mec toggles push its button right) so every bar's right
-            # edge still lines up regardless of which row it belongs to.
-            bar_rect = pygame.Rect(x_pos + BAR_OFFSET_X + x_offset, y_offset, BAR_WIDTH - x_offset, BAR_HEIGHT)
-            self.active_bars.append((bar_rect, stats, y_offset, "UNIT"))
-            y_offset += ROW_STEP_Y
-
-        # Whether Motorized/Mechanized/IFV Infantry are unlocked at all
-        # (Trucks/APCs/IFV researched) - shared by the main Infantry row and every
-        # custom Infantry row, since the toggle's availability isn't per-year, just global.
-        mot_unlocked = queries.get_infantry_family_year("motorized_infantry", player_research, self.tech_tree) is not None
-        mec_unlocked = queries.get_infantry_family_year("mechanized_infantry", player_research, self.tech_tree) is not None
-        ifv_unlocked = queries.get_infantry_family_year("infantry_fighting_vehicle", player_research, self.tech_tree) is not None
-
-        # (mode key, name-swap target, toggle label) for every non-regular variant,
-        # left to right. Shared by render_mode_toggles and both row renderers so
-        # the three stay in sync.
-        INFANTRY_VARIANTS = (
-            ("motorized", "Motorized Infantry Type", "Mot", mot_unlocked),
-            ("mechanized", "Mechanized Infantry Type", "Mec", mec_unlocked),
-            ("ifv", "Infantry Fighting Vehicle Type", "IFV", ifv_unlocked),
-        )
-
-        # Heavy Artillery rides Artillery's own research (see
-        # c.UNIT_TECH_KEY_OVERRIDES) rather than a separate gate tech, so unlike
-        # the Infantry variants above it's always available once the row itself
-        # is being drawn at all - there's nothing separate to grey it out for.
-        ARTILLERY_VARIANTS = (
-            ("heavy", "Heavy Artillery", "Hvy", True),
-        )
-
-        def render_mode_toggles(mode, set_mode, variants):
-            """Draws the variant toggle squares at the row's left edge (see
-            variant_block_width). Always drawn, disabled/greyed when the
-            corresponding tech isn't researched. `set_mode(key)` should flip to
-            that mode, or back to 'normal' if it's already active."""
-            toggle_x = x_pos
-            spectator_locked = is_spectator and not can_spectator_edit
-            for key, _prefix, label, available in variants:
-                toggle_color = "orange" if (available and mode == key) else "blue"
-                toggle_cb = (lambda k=key: set_mode(k)) if (available and not spectator_locked) else (lambda: None)
-                toggle_btn = self._add_scroll_button(toggle_x, y_offset, toggle_color, label, toggle_cb,
-                                                      size="tiny_square", font_preset="tiny")
-                toggle_btn.disabled = not available or spectator_locked
-                toggle_x += 30 + INFANTRY_MODE_BTN_GAP
-
-        def resolve_variant(mode, variants):
-            """Validates a stored mode against current research, returning the
-            (possibly corrected) mode and its unit-name prefix swap target."""
-            for key, prefix, _label, available in variants:
-                if mode == key:
-                    return (key, prefix) if available else ("normal", None)
-            return "normal", None
-
-        def render_infantry_row():
-            """Single combined Infantry row: a Mot/Mec/IFV toggle to the left of
-            the production button picks which variant it builds (they all share
-            Infantry's own current year - see queries.get_infantry_family_year),
-            instead of separate rows per variant."""
-            base_year = queries.get_infantry_family_year("infantry_type", player_research, self.tech_tree)
-            if base_year is None:
-                return
-
-            mode, prefix = resolve_variant(self.infantry_mode, INFANTRY_VARIANTS)
-            self.infantry_mode = mode
-            unit_name = queries.get_unit_for_family_tier(self.unit_library, prefix or "Infantry Type", base_year, context=self.map_screen)
-            if unit_name is None:
-                return
-
-            def set_mode(new_mode):
-                # Clicking the already-active mode toggles it back off (regular Infantry).
-                self.infantry_mode = new_mode if self.infantry_mode != new_mode else "normal"
-                self.refresh_ui()
-
-            render_mode_toggles(mode, set_mode, INFANTRY_VARIANTS)
-            render_unit_button(unit_name, "green", x_offset=INFANTRY_MODE_BLOCK_WIDTH)
-
-        def render_custom_infantry_row(base_name, btn_color):
-            """Give each custom infantry stage its own vehicle toggle."""
-            mode, prefix = resolve_variant(self.custom_infantry_modes.get(base_name, "normal"), INFANTRY_VARIANTS)
-            self.custom_infantry_modes[base_name] = mode
-            unit_name = (queries.get_unit_for_family_tier(self.unit_library, prefix, queries.get_unit_tier(base_name, context=self.map_screen), context=self.map_screen)
-                         if prefix else base_name)
-            if unit_name is None:
-                return
-
-            def set_mode(new_mode, base=base_name):
-                current = self.custom_infantry_modes.get(base, "normal")
-                self.custom_infantry_modes[base] = new_mode if current != new_mode else "normal"
-                self.refresh_ui()
-
-            render_mode_toggles(mode, set_mode, INFANTRY_VARIANTS)
-            render_unit_button(unit_name, btn_color, x_offset=INFANTRY_MODE_BLOCK_WIDTH)
-
-        def highest_unlocked_tier(group_name):
-            """Return the latest unlocked equipment stage or numbered tier in a family."""
-            highest_lvl, highest_unlocked = -1, None
-            for name in self.unit_library:
-                if queries.get_base_unit_name(name, context=self.map_screen) == group_name:
-                    lvl = queries.get_unit_tier(name, self.unit_library, context=self.map_screen)
-                    if queries.is_unit_unlocked(name, player_research, self.unit_library, context=self.map_screen) and lvl > highest_lvl:
-                        highest_lvl, highest_unlocked = lvl, name
-            return highest_unlocked
-
-        ARTILLERY_MODE_BLOCK_WIDTH = variant_block_width(len(ARTILLERY_VARIANTS))
-
-        def render_artillery_row():
-            """Single combined Artillery row: a Hvy toggle to the left of the
-            production button switches to Heavy Artillery, which shares
-            Artillery's own research level exactly (see
-            c.UNIT_TECH_KEY_OVERRIDES) instead of getting a row of its own."""
-            highest_unlocked = highest_unlocked_tier("Artillery")
-            if highest_unlocked is None:
-                return
-
-            mode, prefix = resolve_variant(self.artillery_mode, ARTILLERY_VARIANTS)
-            self.artillery_mode = mode
-            unit_name = (queries.get_unit_for_family_tier(self.unit_library, prefix, queries.get_unit_tier(highest_unlocked, context=self.map_screen), context=self.map_screen)
-                         if prefix else highest_unlocked)
-            if unit_name is None:
-                return
-
-            def set_mode(new_mode):
-                self.artillery_mode = new_mode if self.artillery_mode != new_mode else "normal"
-                self.refresh_ui()
-
-            render_mode_toggles(mode, set_mode, ARTILLERY_VARIANTS)
-            render_unit_button(unit_name, "green", x_offset=ARTILLERY_MODE_BLOCK_WIDTH)
-
-        def render_custom_artillery_row(base_name, btn_color):
-            """Same Hvy toggle as render_artillery_row, but for one specific
-            "Artillery <numeral>" entry in the Custom section - each gets its own
-            independent toggle (see self.custom_artillery_modes)."""
-            mode, prefix = resolve_variant(self.custom_artillery_modes.get(base_name, "normal"), ARTILLERY_VARIANTS)
-            self.custom_artillery_modes[base_name] = mode
-            unit_name = (queries.get_unit_for_family_tier(self.unit_library, prefix, queries.get_unit_tier(base_name, context=self.map_screen), context=self.map_screen)
-                         if prefix else base_name)
-            if unit_name is None:
-                return
-
-            def set_mode(new_mode, base=base_name):
-                current = self.custom_artillery_modes.get(base, "normal")
-                self.custom_artillery_modes[base] = new_mode if current != new_mode else "normal"
-                self.refresh_ui()
-
-            render_mode_toggles(mode, set_mode, ARTILLERY_VARIANTS)
-            render_unit_button(unit_name, btn_color, x_offset=ARTILLERY_MODE_BLOCK_WIDTH)
-
-        def unit_speed_sort_key(unit_name):
-            # Fastest-to-build units float to the top of their category;
-            # materials cost is the tiebreaker when build time is equal.
-            stats = self.unit_library.get(unit_name, {})
-            return (stats.get('production_time', 0), stats.get('cost_materials', 0))
-
-        def process_unit_groups(groups, btn_color):
-            nonlocal y_offset
-            unlocked_units = []
-            for group_name in groups:
-                if queries.is_unit_obsolete(group_name, player_research):
+            # --- ENFORCE FACTORY DEPENDENCY ---
+            if data["group"] in ["recruitment"]:
+                if not queries.has_basic_factory(province):
                     continue
 
-                highest_unlocked = None
-                tech_key = queries.get_unit_tech_key(group_name, context=self.map_screen)
+            if is_building:
+                btn_txt = "Building..."
+                cb = _no_action
+                btn_color = "grey"
+            elif self._spectator_locked():
+                btn_txt = queries.get_condensed_building_name(target)
+                cb = _no_action
+                btn_color = "grey"
+            else:
+                btn_txt = queries.get_condensed_building_name(target)
+                cb = lambda t=target: self.start_construction(t)
+                btn_color = "orange"
 
-                if tech_key in ("infantry_type", "motorized_infantry", "mechanized_infantry", "infantry_fighting_vehicle"):
-                    year = queries.get_infantry_family_year(tech_key, player_research, self.tech_tree)
-                    if year is not None:
-                        highest_unlocked = queries.get_unit_for_family_tier(self.unit_library, group_name, year, context=self.map_screen)
-                else:
-                    highest_unlocked = highest_unlocked_tier(group_name)
+            self._add_scroll_button(LIST_X, self._list_y, btn_color, btn_txt, cb)
 
-                if highest_unlocked:
-                    unlocked_units.append(highest_unlocked)
+            bar_rect = pygame.Rect(LIST_X + BAR_OFFSET_X, self._list_y, BAR_WIDTH, BAR_HEIGHT)
+            self.active_bars.append((bar_rect, data, self._list_y, "BUILDING"))
+            self._list_y += ROW_STEP_Y
 
-            for unit_name in sorted(unlocked_units, key=unit_speed_sort_key):
-                render_unit_button(unit_name, btn_color)
+    def _add_unit_row(self, unit_name, btn_color, x_offset=0):
+        factory = queries.get_unit_metadata(unit_name, self.unit_library, context=self.map_screen)["recruitment"]["industry"]
+        can_build = (factory == "none" or (queries.has_industry(self.target_province)
+                     if factory == "industry" else queries.has_basic_factory(self.target_province)))
 
-        self.infantry_start_y = y_offset
-        render_infantry_row()
-        render_artillery_row()
+        if self._spectator_locked():
+            final_btn_color = "grey"
+            cb = _no_action
+        else:
+            final_btn_color = btn_color if can_build else "grey"
+            cb = lambda n=unit_name: self.buy_unit(n)
+
+        self._add_scroll_button(LIST_X + x_offset, self._list_y, final_btn_color,
+                                queries.get_condensed_unit_name(unit_name, self.unit_library), cb)
+
+        stats = self.unit_library[unit_name]
+        if stats.get("air_role") == "fighter" and id(stats) not in self.air_damage_labels:
+            text = f"(Air Dmg x{stats.get('air_attack_multiplier', 1.0):g})"
+            self.air_damage_labels[id(stats)] = fonts.get("small").render(text, True, c.COLOR_SUCCESS_GREEN)
+        # Shrinks to keep its right edge fixed when x_offset > 0 (the Infantry
+        # row's Mot/Mec toggles push its button right) so every bar's right
+        # edge still lines up regardless of which row it belongs to.
+        bar_rect = pygame.Rect(LIST_X + BAR_OFFSET_X + x_offset, self._list_y, BAR_WIDTH - x_offset, BAR_HEIGHT)
+        self.active_bars.append((bar_rect, stats, self._list_y, "UNIT"))
+        self._list_y += ROW_STEP_Y
+
+    def _add_variant_toggles(self, mode, set_mode, variants):
+        """Draws the variant toggle squares at the row's left edge (see
+        variant_block_width). Always drawn, disabled/greyed when the
+        corresponding tech isn't researched. `set_mode(key)` should flip to
+        that mode, or back to 'normal' if it's already active."""
+        toggle_x = LIST_X
+        spectator_locked = self._spectator_locked()
+        for key, _prefix, label, available in variants:
+            toggle_color = "orange" if (available and mode == key) else "blue"
+            toggle_cb = (lambda k=key: set_mode(k)) if (available and not spectator_locked) else _no_action
+            toggle_btn = self._add_scroll_button(toggle_x, self._list_y, toggle_color, label, toggle_cb,
+                                                  size="tiny_square", font_preset="tiny")
+            toggle_btn.disabled = not available or spectator_locked
+            toggle_x += 30 + INFANTRY_MODE_BTN_GAP
+
+    def _add_variant_row(self, variants, get_mode, store_mode, unit_for_prefix, btn_color):
+        """One production button with variant toggles to its left, so a family's
+        variants share a row. `unit_for_prefix` names the unit the chosen variant
+        builds, or None when there is nothing to build."""
+        mode, prefix = resolve_variant(get_mode(), variants)
+        store_mode(mode)
+        unit_name = unit_for_prefix(prefix)
+        if unit_name is None:
+            return
+
+        def set_mode(new_mode):
+            # Clicking the already-active mode toggles it back off.
+            store_mode(new_mode if get_mode() != new_mode else "normal")
+            self.refresh_ui()
+
+        self._add_variant_toggles(mode, set_mode, variants)
+        self._add_unit_row(unit_name, btn_color, x_offset=variant_block_width(len(variants)))
+
+    def _unit_in_variant_family(self, prefix, unit_name):
+        """The same tier as `unit_name` in the family named by `prefix`."""
+        if not prefix:
+            return unit_name
+        tier = queries.get_unit_tier(unit_name, context=self.map_screen)
+        return queries.get_unit_for_family_tier(self.unit_library, prefix, tier, context=self.map_screen)
+
+    def _add_infantry_row(self, variants):
+        """Single combined Infantry row: a Mot/Mec/IFV toggle to the left of
+        the production button picks which variant it builds (they all share
+        Infantry's own current year - see queries.get_infantry_family_year),
+        instead of separate rows per variant."""
+        base_year = queries.get_infantry_family_year("infantry_type", self._owner_research(), self.tech_tree)
+        if base_year is None:
+            return
+        self._add_variant_row(
+            variants, lambda: self.infantry_mode, lambda mode: setattr(self, "infantry_mode", mode),
+            lambda prefix: queries.get_unit_for_family_tier(self.unit_library, prefix or "Infantry Type", base_year,
+                                                            context=self.map_screen),
+            "green")
+
+    def _add_artillery_row(self):
+        """Single combined Artillery row: a Hvy toggle to the left of the
+        production button switches to Heavy Artillery, which shares
+        Artillery's own research level exactly (see
+        c.UNIT_TECH_KEY_OVERRIDES) instead of getting a row of its own."""
+        highest_unlocked = self._highest_unlocked_tier("Artillery")
+        if highest_unlocked is None:
+            return
+        self._add_variant_row(
+            ARTILLERY_VARIANTS, lambda: self.artillery_mode, lambda mode: setattr(self, "artillery_mode", mode),
+            lambda prefix: self._unit_in_variant_family(prefix, highest_unlocked), "green")
+
+    def _add_custom_variant_row(self, base_name, variants, modes, btn_color):
+        """Give each custom entry its own independent variant toggle."""
+        self._add_variant_row(
+            variants, lambda: modes.get(base_name, "normal"), lambda mode: modes.__setitem__(base_name, mode),
+            lambda prefix: self._unit_in_variant_family(prefix, base_name), btn_color)
+
+    def _highest_unlocked_tier(self, group_name):
+        """Return the latest unlocked equipment stage or numbered tier in a family."""
+        research = self._owner_research()
+        highest_lvl, highest_unlocked = -1, None
+        for name in self.unit_library:
+            if queries.get_base_unit_name(name, context=self.map_screen) == group_name:
+                lvl = queries.get_unit_tier(name, self.unit_library, context=self.map_screen)
+                if queries.is_unit_unlocked(name, research, self.unit_library, context=self.map_screen) and lvl > highest_lvl:
+                    highest_lvl, highest_unlocked = lvl, name
+        return highest_unlocked
+
+    def _unit_speed_sort_key(self, unit_name):
+        # Fastest-to-build units float to the top of their category;
+        # materials cost is the tiebreaker when build time is equal.
+        stats = self.unit_library.get(unit_name, {})
+        return (stats.get('production_time', 0), stats.get('cost_materials', 0))
+
+    def _add_unit_group_rows(self, groups, btn_color):
+        research = self._owner_research()
+        unlocked_units = []
+        for group_name in groups:
+            if queries.is_unit_obsolete(group_name, research):
+                continue
+
+            highest_unlocked = None
+            tech_key = queries.get_unit_tech_key(group_name, context=self.map_screen)
+
+            if tech_key in ("infantry_type", "motorized_infantry", "mechanized_infantry", "infantry_fighting_vehicle"):
+                year = queries.get_infantry_family_year(tech_key, research, self.tech_tree)
+                if year is not None:
+                    highest_unlocked = queries.get_unit_for_family_tier(self.unit_library, group_name, year, context=self.map_screen)
+            else:
+                highest_unlocked = self._highest_unlocked_tier(group_name)
+
+            if highest_unlocked:
+                unlocked_units.append(highest_unlocked)
+
+        for unit_name in sorted(unlocked_units, key=self._unit_speed_sort_key):
+            self._add_unit_row(unit_name, btn_color)
+
+    def _infantry_variants(self):
+        """(mode key, name-swap target, toggle label, available) for every
+        non-regular variant, left to right. Whether Motorized/Mechanized/IFV
+        Infantry are unlocked at all (Trucks/APCs/IFV researched) is shared by the
+        main Infantry row and every custom Infantry row, since the toggle's
+        availability isn't per-year, just global."""
+        research = self._owner_research()
+        return tuple(
+            (key, family, label, queries.get_infantry_family_year(tech, research, self.tech_tree) is not None)
+            for key, family, label, tech in (
+                ("motorized", "Motorized Infantry Type", "Mot", "motorized_infantry"),
+                ("mechanized", "Mechanized Infantry Type", "Mec", "mechanized_infantry"),
+                ("ifv", "Infantry Fighting Vehicle Type", "IFV", "infantry_fighting_vehicle"),
+            ))
+
+    def _add_unit_sections(self):
+        self.infantry_start_y = self._list_y
+        self._add_infantry_row(self._infantry_variants())
+        self._add_artillery_row()
         # Motorized/Mechanized/IFV are folded into the combined Infantry row above,
         # and Heavy Artillery into the combined Artillery row above - none of the
         # four are listed as their own group here.
@@ -627,73 +568,71 @@ class Production_Screen(GameState):
                                   if g not in ("Infantry Type", "Motorized Infantry Type",
                                                "Mechanized Infantry Type", "Infantry Fighting Vehicle Type",
                                                "Artillery", "Heavy Artillery")]
-        process_unit_groups(other_infantry_groups, "green")
-        self.infantry_end_y = y_offset
+        self._add_unit_group_rows(other_infantry_groups, "green")
+        self.infantry_end_y = self._list_y
 
-        y_offset += SECTION_SPACING 
-        self.tank_start_y = y_offset
-        process_unit_groups(self.tank_groups, "green")
-        self.tank_end_y = y_offset
+        self._list_y += SECTION_SPACING
+        self.tank_start_y = self._list_y
+        self._add_unit_group_rows(self.tank_groups, "green")
+        self.tank_end_y = self._list_y
 
-        y_offset += SECTION_SPACING 
+        self._list_y += SECTION_SPACING
         if self.target_province.get("is_coastal", False):
-            self.navy_start_y = y_offset
-            process_unit_groups(self.navy_groups, "blue")
-            self.navy_end_y = y_offset
+            self.navy_start_y = self._list_y
+            self._add_unit_group_rows(self.navy_groups, "blue")
+            self.navy_end_y = self._list_y
         else:
-            self.navy_start_y = self.navy_end_y = y_offset
+            self.navy_start_y = self.navy_end_y = self._list_y
 
         # A hidden/empty naval section must not add a second gap on land tiles.
         if self.navy_end_y > self.navy_start_y:
-            y_offset += SECTION_SPACING
-        self.air_start_y = y_offset
-        process_unit_groups(self.air_groups, "red")
-        self.air_end_y = y_offset
+            self._list_y += SECTION_SPACING
+        self.air_start_y = self._list_y
+        self._add_unit_group_rows(self.air_groups, "red")
+        self.air_end_y = self._list_y
 
+    def _add_custom_unit_section(self):
         # --- CUSTOM UNIT LOGIC ---
         # Lets a player build a specific researched tier (e.g. Medium Tank II) even
         # when a higher tier is researched and would otherwise be the only option shown.
-        y_offset += SECTION_SPACING
-        self.custom_start_y = y_offset
+        self._list_y += SECTION_SPACING
+        self.custom_start_y = self._list_y
 
+        owner_nation = self.target_province.get("owner")
+        research = self._owner_research()
         p_data = self.map_screen.nation_data.get(owner_nation)
         owner_valid = p_data is not None
 
         custom_units = p_data.get("custom_production_units", []) if owner_valid else []
-        valid_custom_units = [u for u in custom_units if u in self.unit_library and queries.is_unit_unlocked(u, player_research, context=self.map_screen)]
+        valid_custom_units = [u for u in custom_units if u in self.unit_library and queries.is_unit_unlocked(u, research, context=self.map_screen)]
         if owner_valid and valid_custom_units != custom_units:
             p_data["custom_production_units"] = valid_custom_units
         custom_units = valid_custom_units
 
-        if not owner_valid or (is_spectator and not can_spectator_edit):
-            manage_color, manage_cb = "grey", (lambda: None)
+        if not owner_valid or self._spectator_locked():
+            manage_color, manage_cb = "grey", _no_action
         else:
             manage_color, manage_cb = "pink", self.open_custom_unit_manager
 
-        self._add_scroll_button(x_pos, y_offset, manage_color, "Edit Custom Units", manage_cb)
-        y_offset += ROW_STEP_Y
+        self._add_scroll_button(LIST_X, self._list_y, manage_color, "Edit Custom Units", manage_cb)
+        self._list_y += ROW_STEP_Y
 
         # Stale entries (removed from the custom list since the last toggle) don't
         # need to stick around in the per-row Mot/Mec/Hvy state.
         self.custom_infantry_modes = {k: v for k, v in self.custom_infantry_modes.items() if k in custom_units}
         self.custom_artillery_modes = {k: v for k, v in self.custom_artillery_modes.items() if k in custom_units}
 
-        for unit_name in sorted(custom_units, key=unit_speed_sort_key):
+        infantry_variants = self._infantry_variants()
+        for unit_name in sorted(custom_units, key=self._unit_speed_sort_key):
             base_name = queries.get_base_unit_name(unit_name, context=self.map_screen)
             if base_name == "Infantry Type":
-                render_custom_infantry_row(unit_name, "yellow")
+                self._add_custom_variant_row(unit_name, infantry_variants, self.custom_infantry_modes, "yellow")
             elif base_name == "Artillery":
-                render_custom_artillery_row(unit_name, "yellow")
+                self._add_custom_variant_row(unit_name, ARTILLERY_VARIANTS, self.custom_artillery_modes, "yellow")
             else:
-                render_unit_button(unit_name, "yellow")
+                self._add_unit_row(unit_name, "yellow")
 
-        self.custom_end_y = y_offset
-
-        # Calculate maximum scroll distance
-        # Negative floor, matching GameState.max_scroll -- see enforce_scroll_bounds.
-        self.max_scroll = min(0, c.SCREEN_HEIGHT - SCROLL_BOTTOM_PAD - y_offset)
-
-        self.scroll_content_rect = pygame.Rect(0, CLICK_GUARD_TOP, c.SCREEN_WIDTH, CLICK_GUARD_BOTTOM - CLICK_GUARD_TOP)
+        self.custom_end_y = self._list_y
 
     def _can_start_administrative_action(self, order_type):
         owner = self.target_province.get("owner")

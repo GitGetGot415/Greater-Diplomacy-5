@@ -153,7 +153,7 @@ def _load_state():
     try:
         with open(STATE_PATH, "r", encoding="utf-8") as f:
             return json.load(f)
-    except Exception:
+    except (OSError, ValueError):
         return {}
 
 
