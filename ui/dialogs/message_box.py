@@ -147,7 +147,7 @@ class _NavigationIntroPopup:
     UNIT_VIEW_NOTE = (
         "In Units view specifically you will see 4 colored buttons in the bottom left corner, which are Naval [icon:naval:24], Land [icon:land:24], Air [icon:air:24], and All [icon:all:24]. "
         "These filter your view of the map so you only see units that belong in that category. "
-        "Click Hide above the buttons to hide the strip. The toggle moves down; click Show to open the strip and move it up again. Your selected filter stays active. "
+        "Click Hide above the buttons to slide the strip down. Click Show to slide it up again. Your selected filter stays active. "
         "All is selected whenever a game opens. "
     )
     ARMY_STEPS = (

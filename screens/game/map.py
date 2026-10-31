@@ -120,6 +120,7 @@ EDITOR_SELECTION_TOOL_STEP_X = c.SIZES["small_square"][0] + EDITOR_SELECTION_TOO
 # --- Vertical unit filters beside the lower left sidebar ---
 UNIT_VIEW_BUTTON_COLORS = {"NAVAL": "blue", "LAND": "green", "AIR": "red", "ALL": "yellow"}
 UNIT_VIEW_TOGGLE_HEIGHT = 22
+UNIT_VIEW_ANIMATION_MS = 100
 UNIT_VIEW_BUTTON_PADDING_X = 8
 UNIT_VIEW_BUTTON_PADDING_Y = 8
 UNIT_VIEW_BUTTON_GAP_Y = 10
@@ -226,6 +227,9 @@ def render_buttons(map_screen):
             "small_square", UNIT_VIEW_BUTTON_COLORS[view_filter], view_filter.title(),
             lambda view_filter=view_filter: map_screen.set_unit_view_filter(view_filter),
             image=icon, show_text=False)
+        # A moving or clipped filter must not receive a click.
+        map_screen.unit_view_buttons[view_filter].click_guard = (
+            lambda: map_screen.unit_view_animation_start is None)
 
     # ==================================================================== #
     #                        LEFT & BOTTOM UI BARS                         #
@@ -895,13 +899,18 @@ def _update_turn_buttons(map_screen, is_sel, is_thinking):
                          and map_screen.secondary_mode == "UNITS"
                          and not map_screen.hide_raised_rect)
     if map_screen.unit_view_buttons:
+        if map_screen.unit_view_animation_start is None:
+            map_screen.unit_view_bar_progress = float(not map_screen.unit_view_bar_collapsed)
+        offset = round(UNIT_VIEW_BAR_HEIGHT * (1 - map_screen.unit_view_bar_progress))
+        map_screen.unit_view_bar_offset = offset
         toggle = map_screen.btn_unit_view_toggle
         toggle.visible = unit_view_visible
         toggle.text = "Show" if map_screen.unit_view_bar_collapsed else "Hide"
-        toggle.rect.bottom = (map_screen.unit_view_bar_rect.bottom if map_screen.unit_view_bar_collapsed
-                              else map_screen.unit_view_bar_rect.top)
-    for view_filter, button in map_screen.unit_view_buttons.items():
-        button.visible = unit_view_visible and not map_screen.unit_view_bar_collapsed
+        toggle.rect.bottom = map_screen.unit_view_bar_rect.top + offset
+    for index, (view_filter, button) in enumerate(map_screen.unit_view_buttons.items()):
+        button.rect.y = (map_screen.unit_view_bar_rect.y + UNIT_VIEW_BUTTON_PADDING_Y
+                         + index * UNIT_VIEW_BUTTON_STEP_Y + map_screen.unit_view_bar_offset)
+        button.visible = unit_view_visible and map_screen.unit_view_bar_progress > 0
         button.is_selected = view_filter == map_screen.unit_view_filter
     if map_screen.realtime_multiplayer:
         session = map_screen.realtime_session
@@ -1407,6 +1416,10 @@ class Map(StateAccess, GameState):
     # Screens and panels set these on first use. Reads before that get these values.
     unit_view_filter = queries.DEFAULT_UNIT_VIEW_FILTER
     unit_view_bar_collapsed = False
+    unit_view_bar_progress = 1.0
+    unit_view_bar_offset = 0
+    unit_view_animation_start = None
+    unit_view_animation_from = 1.0
     btn_unit_view_toggle = None
     _ignore_left_until_release = False
     _ignore_right_until_release = False
@@ -1484,6 +1497,10 @@ class Map(StateAccess, GameState):
         # Presentation only: saves and multiplayer snapshots never persist it.
         self.unit_view_filter = queries.DEFAULT_UNIT_VIEW_FILTER
         self.unit_view_bar_collapsed = False
+        self.unit_view_bar_progress = 1.0
+        self.unit_view_bar_offset = 0
+        self.unit_view_animation_start = None
+        self.unit_view_animation_from = 1.0
         self.centers_need_update = False
         # Editor brushes may touch many provinces in one drag.  Queue the
         # expensive derived map surfaces and rebuild each affected layer once
@@ -1789,12 +1806,30 @@ class Map(StateAccess, GameState):
 
     def toggle_unit_view_bar(self):
         """Hide or show the filter strip without changing the selected filter."""
+        now = pygame.time.get_ticks()
+        self._advance_unit_view_animation(now)
         self.unit_view_bar_collapsed = not self.unit_view_bar_collapsed
-        if self.unit_view_bar_collapsed:
-            # A hidden control must not retain a pending mouse press.
-            for button in self.unit_view_buttons.values():
-                button.is_pressed = False
+        self.unit_view_animation_from = self.unit_view_bar_progress
+        target = float(not self.unit_view_bar_collapsed)
+        self.unit_view_animation_start = now if self.unit_view_bar_progress != target else None
+        # A moving control must not retain a pending mouse press.
+        for button in self.unit_view_buttons.values():
+            button.is_pressed = False
         update_button_states(self)
+
+    def _advance_unit_view_animation(self, now=None):
+        """Advance the local strip animation without changing game state."""
+        if self.unit_view_animation_start is None:
+            return
+        if now is None:
+            now = pygame.time.get_ticks()
+        elapsed = max(0, now - self.unit_view_animation_start)
+        fraction = min(1.0, elapsed / UNIT_VIEW_ANIMATION_MS)
+        target = float(not self.unit_view_bar_collapsed)
+        self.unit_view_bar_progress = (self.unit_view_animation_from
+                                       + (target - self.unit_view_animation_from) * fraction)
+        if fraction >= 1.0:
+            self.unit_view_animation_start = None
 
     def set_unit_view_filter(self, view_filter):
         """Switch the local unit overlay without changing any world state."""
@@ -2219,8 +2254,13 @@ class Map(StateAccess, GameState):
         # not let a click on a visible map HUD control (notably the movable
         # Details button) fall through and select the province underneath it.
         if event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
+            # Lightweight screens may not construct the filter controls.
+            unit_view_buttons = getattr(self, "unit_view_buttons", {})
             if any(isinstance(element, Button) and element.visible
-                   and element.rect.collidepoint(event.pos) for element in self.elements):
+                   and element.rect.collidepoint(event.pos)
+                   and (element not in unit_view_buttons.values()
+                        or self.unit_view_bar_rect.collidepoint(event.pos))
+                   for element in self.elements):
                 return
         map_input.handle_map_events(self, event)
 
@@ -2235,12 +2275,15 @@ class Map(StateAccess, GameState):
             if army_panel.handle_event(self, event):
                 continue
             toggle = self.btn_unit_view_toggle
-            if (event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP)
-                    and toggle is not None and toggle.visible
-                    and toggle.rect.collidepoint(event.pos)):
-                # The callback moves this button. Consume the click at its original position.
-                toggle.handle_event(event)
-                continue
+            if toggle is not None and event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
+                release = event.type == pygame.MOUSEBUTTONUP and event.button == 1 and toggle.is_pressed
+                if release or (toggle.visible and toggle.rect.collidepoint(event.pos)):
+                    # A moving button must consume its release, even if the pointer leaves it.
+                    if toggle.visible:
+                        toggle.handle_event(event)
+                    else:
+                        toggle.is_pressed = False
+                    continue
             super().handle_events([event])
 
     # --- Map-level unit selection and movement ---------------------------------
@@ -2579,9 +2622,16 @@ class Map(StateAccess, GameState):
     def draw_elements(self, surface):
         """Draw country actions in their own clipped, scrollable HUD pane."""
         country_actions = set(getattr(self, "country_action_buttons", ()))
+        unit_view_buttons = set(self.unit_view_buttons.values())
         for element in self.elements:
             if element not in country_actions:
-                element.draw(surface)
+                if element in unit_view_buttons:
+                    old_clip = surface.get_clip()
+                    surface.set_clip(old_clip.clip(self.unit_view_bar_rect))
+                    element.draw(surface)
+                    surface.set_clip(old_clip)
+                else:
+                    element.draw(surface)
 
         visible_actions = [button for button in country_actions if button.visible]
         if not visible_actions:
@@ -2770,6 +2820,7 @@ class Map(StateAccess, GameState):
         self._realtime_snapshot_phase = current_phase
 
     def update(self):
+        self._advance_unit_view_animation()
         if (self._unit_selection_turn != self.time_manager.total_turns
                 or self._unit_selection_player != self.player_country):
             self.clear_map_unit_selection()

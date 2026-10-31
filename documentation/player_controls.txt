@@ -467,6 +467,8 @@ All is selected when a game opens.
 
 Click Hide above the strip to hide its buttons and background. The toggle moves down to the bottom-left controls.
 Click Show to open the strip again. The toggle moves back above the strip.
+The toggle, buttons, and background slide for 0.1 seconds when the strip opens or closes.
+The filter buttons cannot be selected while the strip moves.
 The selected filter stays active while the strip is hidden. Each new map session starts with the strip open.
 This is a local display choice. Saves and multiplayer files do not store it.
 

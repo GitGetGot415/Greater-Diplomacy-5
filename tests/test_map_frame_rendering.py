@@ -78,6 +78,18 @@ class MapFrameRenderingTests(unittest.TestCase):
             ui_elements.draw_pixel_panel(self.surface, rect, (40, 60, 80), gradient_strength=0.5)
         interpolate.assert_not_called()
 
+    def test_filter_animation_reuses_background_and_restores_clip(self):
+        self.game.unit_view_bar_offset = 0
+        self.surface.set_clip(pygame.Rect(10, 10, 700, 500))
+        clip = self.surface.get_clip()
+        ui_bars.draw_ui_bars(self.game, self.surface)
+        with patch.object(ui_elements.queries, "lerp_color") as interpolate:
+            for offset in (20, 60, 100, 0):
+                self.game.unit_view_bar_offset = offset
+                ui_bars.draw_ui_bars(self.game, self.surface)
+        interpolate.assert_not_called()
+        self.assertEqual(self.surface.get_clip(), clip)
+
     def test_negative_gradient_strength_reports_how_to_correct_it(self):
         with self.assertRaisesRegex(ValueError, "zero or greater"):
             ui_elements.draw_pixel_panel(self.surface, self.game.top_bar_rect, (40, 60, 80),

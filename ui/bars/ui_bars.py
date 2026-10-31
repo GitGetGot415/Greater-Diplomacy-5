@@ -384,7 +384,11 @@ def map_unit_view_bar_rect(map_screen):
             or map_screen.secondary_mode != "UNITS"
             or map_screen.hide_raised_rect):
         return None
-    return map_screen.unit_view_bar_rect
+    rect = map_screen.unit_view_bar_rect
+    # Older lightweight screens do not have animation state.
+    offset = getattr(map_screen, "unit_view_bar_offset", 0)
+    visible = rect.clip(rect.move(0, offset))
+    return visible if visible.height else None
 
 
 def _draw_map_bar(surface, rect, style_name):
@@ -399,7 +403,11 @@ def draw_ui_bars(map_screen, surface):
     _draw_map_bar(surface, map_screen.bot_bar_rect, "bottom")
     unit_view_rect = map_unit_view_bar_rect(map_screen)
     if unit_view_rect is not None:
-        _draw_map_bar(surface, unit_view_rect, "unit_filter")
+        old_clip = surface.get_clip()
+        surface.set_clip(old_clip.clip(unit_view_rect))
+        offset = getattr(map_screen, "unit_view_bar_offset", 0)
+        _draw_map_bar(surface, map_screen.unit_view_bar_rect.move(0, offset), "unit_filter")
+        surface.set_clip(old_clip)
     
     if not map_screen.selection_mode and not map_screen.hide_raised_rect:
         _draw_map_bar(surface, map_screen.raised_rect, "left")
