@@ -14,6 +14,8 @@ from ui.panels import army_panel, map_top_right_layout
 from screens.game import map_input
 from screens.game import battle_screen
 from ui.navigation.modal_screen import ModalScreen
+from ui.background_styles import ORDERS_PANEL_STYLES
+from ui.widgets import ui_elements
 
 from ui.dialogs.list_select_screen import ListSelectScreen
 from ui.panels import sidebar_info
@@ -79,9 +81,6 @@ CANCEL_BOX_GAP_X = 2
 CANCEL_BOX_OFFSET_Y = 11
 CANCEL_BOX_SIZE = 16
 
-# Both map panels share the HUD palette; the values used to be typed out
-# separately here and in the other panel's module.
-PANEL_BG_COLOR = c.HUD_PANEL_BG
 PANEL_BORDER_COLOR = c.HUD_PANEL_BORDER
 SCROLLBAR_WIDTH = 8
 
@@ -157,7 +156,6 @@ class Orders_Screen(GameState):
     back_state = "MAP"
     PANEL_X = 10
     PANEL_WIDTH = 440
-    PANEL_TRANSPARENCY = 255
 
     def __init__(self):
         super().__init__()
@@ -2370,9 +2368,10 @@ class Orders_Screen(GameState):
                 overlay_renderer.draw_split_movement_path(surface, self.map_screen, origin,
                     [order["target_id"]], 1, owner_color, force_visible=True)
 
-        ui_bars.draw_translucent_panel(
-            surface, self.panel_rect, (*PANEL_BG_COLOR, self.PANEL_TRANSPARENCY),
-            border_color=PANEL_BORDER_COLOR, radius=3)
+        style = ORDERS_PANEL_STYLES["main"]
+        ui_elements.draw_pixel_panel(
+            surface, self.panel_rect, style["color"], PANEL_BORDER_COLOR,
+            gradient_strength=style["gradient_strength"])
         self._draw_panel_header(surface, rows, player_units, read_only)
 
         content_rect = getattr(self, 'scroll_content_rect', None) or pygame.Rect(

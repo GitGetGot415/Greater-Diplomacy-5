@@ -3,6 +3,7 @@ import data.constants as c
 from data import queries
 from ui.rendering.font_manager import fonts
 from ui.widgets import ui_elements
+from ui.background_styles import RESOURCE_BAR_STYLES
 
 # ==========================================
 # LAYOUT
@@ -29,7 +30,6 @@ def unit_event_button_rect():
 
 # --- Full-width bar (Production / Orders / diplomacy sub-screens) ---
 BAR_HEIGHT = 60
-BAR_BG_COLOR = (30, 30, 30)
 BAR_LINE_COLOR = (100, 100, 100)
 BAR_START_X = 50
 BAR_SPACING = 300
@@ -70,7 +70,9 @@ def draw_resource_bar(surface, map_screen, target_nation=None, start_x=None):
     sit under the first entry or two.
     """
     bar_rect = pygame.Rect(0, c.SCREEN_HEIGHT - BAR_HEIGHT, c.SCREEN_WIDTH, BAR_HEIGHT)
-    ui_elements.draw_pixel_panel(surface, bar_rect, BAR_BG_COLOR, BAR_LINE_COLOR)
+    style = RESOURCE_BAR_STYLES["full_width"]
+    ui_elements.draw_pixel_panel(surface, bar_rect, style["color"], BAR_LINE_COLOR,
+                                 gradient_strength=style["gradient_strength"])
 
     res_font = fonts.get("production_hud")
     resources = queries.get_resource_hud_strings(map_screen, include_net=False, target_nation=target_nation)

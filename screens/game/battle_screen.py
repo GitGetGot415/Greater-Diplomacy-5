@@ -38,6 +38,7 @@ from ui.widgets import flag_icons
 from ui.panels import sidebar_info
 from ui.bars import ui_bars, view_mode_buttons
 from ui.navigation.modal_screen import ModalScreen
+from ui.background_styles import COMBAT_PANEL_STYLES
 from ui.widgets.ui_elements import (draw_wrapped_icon_row, get_combat_stat_entries,
                           get_bombardment_stat_entries)
 from ui.widgets.text_utils import fit_text
@@ -93,6 +94,7 @@ class Battle_Screen(ModalScreen):
     ROW_HEIGHT = ROW_H
     PAD = 16
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_DANGER
+    PANEL_STYLE = COMBAT_PANEL_STYLES["main"]
 
     def __init__(self, map_screen, province, origin_screen=None, embedded_rect=None):
         self.province = province
@@ -770,8 +772,9 @@ class Battle_Screen(ModalScreen):
 
         p = self.panel_rect
         ui_bars.draw_panel_frame(
-            surface, p, title=None, bg=self.PANEL_BG, border=self.PANEL_BORDER,
-            border_width=self.PANEL_BORDER_WIDTH)
+            surface, p, title=None, bg=self.PANEL_STYLE["color"], border=self.PANEL_BORDER,
+            border_width=self.PANEL_BORDER_WIDTH,
+            gradient_strength=self.PANEL_STYLE["gradient_strength"])
         title_font = fonts.get("heading2")
         title = fit_text(self.get_panel_title(), title_font, p.width - (2 * self.PAD))
         title_surf = title_font.render(title, True, (255, 255, 255))

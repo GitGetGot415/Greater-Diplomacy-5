@@ -13,6 +13,7 @@ inside nation_data.
 """
 import pygame
 import data.constants as c
+from ui.background_styles import EDITOR_PANEL_STYLES
 from data import queries
 from ui.navigation.game_state import MapOverlayScreen, NationListOverlayScreen
 from ui.widgets.ui_elements import Button, Slider, make_back_button
@@ -33,6 +34,7 @@ TRAIT_POLES = {
 class Personality_Edit_Screen(MapOverlayScreen):
     pans_camera = False
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_SPECIAL
+    PANEL_STYLE = EDITOR_PANEL_STYLES["personality"]
     TITLE_PRESET = "heading2"
     TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
 
@@ -117,6 +119,7 @@ class Personality_List_Screen(NationListOverlayScreen):
     pans_camera = False
     scroll_anywhere = True
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_SPECIAL
+    PANEL_STYLE = EDITOR_PANEL_STYLES["personality_list"]
     PANEL_TITLE = "AI Personalities"
     TITLE_PRESET = "heading2"
     TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET

@@ -9,6 +9,7 @@ from ui.rendering.font_manager import fonts
 from ui.rendering import symbol_loader
 from data import queries, research_display
 from ui.bars import ui_bars
+from ui.background_styles import RESEARCH_PANEL_STYLES
 from map_logic import politics
 from ui.widgets.text_utils import wrap_text
 from ui.dialogs.list_select_screen import ListSelectScreen
@@ -965,8 +966,9 @@ class Research_Screen(GameState):
 
     def draw_hud_slots(self, surface):
         hud_rect = self.hud_slots_rect()
-        pygame.draw.rect(surface, (40, 40, 60), hud_rect)
-        pygame.draw.rect(surface, (200, 200, 200), hud_rect, 2)
+        style = RESEARCH_PANEL_STYLES["slots"]
+        ui_elements.draw_pixel_panel(surface, hud_rect, style["color"], (200, 200, 200),
+                                     gradient_strength=style["gradient_strength"])
         if self.editing_research_levels:
             for index, rendered in enumerate(self.editor_help_surfaces):
                 surface.blit(rendered, (HUD_TITLE_X, hud_rect.top + HUD_TITLE_OFFSET_Y + index * HUD_SLOT_STEP_Y))
@@ -1008,8 +1010,9 @@ class Research_Screen(GameState):
         ui_bars.draw_fullscreen_overlay(surface, MODAL_ALPHA)
 
         panel_rect = pygame.Rect(self.complete_panel_x, self.complete_panel_y, MODAL_WIDTH, MODAL_HEIGHT)
-        pygame.draw.rect(surface, (30, 30, 40), panel_rect)
-        pygame.draw.rect(surface, (200, 200, 200), panel_rect, 2)
+        style = RESEARCH_PANEL_STYLES["details"]
+        ui_elements.draw_pixel_panel(surface, panel_rect, style["color"], (200, 200, 200),
+                                     gradient_strength=style["gradient_strength"])
 
         font_title = fonts.get("heading1")
         font_med = fonts.get("heading2")
@@ -1259,7 +1262,8 @@ class Research_Screen(GameState):
         self.draw_timeline_axis(surface)
         
         # --- Standard Header ---
-        pygame.draw.rect(surface, (40, 40, 50), (0, 0, c.SCREEN_WIDTH, HEADER_HEIGHT))
+        ui_elements.draw_pixel_background(surface, pygame.Rect(0, 0, c.SCREEN_WIDTH, HEADER_HEIGHT),
+                                          RESEARCH_PANEL_STYLES["header"])
         pygame.draw.line(surface, (200, 200, 200), (0, HEADER_HEIGHT), (c.SCREEN_WIDTH, HEADER_HEIGHT), 2)
 
         ts = self.header_title_surface

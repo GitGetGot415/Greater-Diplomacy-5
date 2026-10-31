@@ -2,6 +2,7 @@
 tkinter tool windows -- see screens/editors/__init__.py."""
 import pygame
 import data.constants as c
+from ui.background_styles import EDITOR_PANEL_STYLES
 from data import queries
 from ui.dialogs import pickers
 from ui.navigation.game_state import MapOverlayScreen
@@ -17,6 +18,7 @@ class Convoy_Converter_Screen(MapOverlayScreen):
     pans_camera = False
     scroll_anywhere = True
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_CONFIRM
+    PANEL_STYLE = EDITOR_PANEL_STYLES["convoy_converter"]
     PANEL_TITLE = "Convert Units"
     TITLE_PRESET = "heading2"
     TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
@@ -99,6 +101,7 @@ class Resource_Brush_Screen(MapOverlayScreen):
     pans_camera = False
     RESOURCE_TYPES = ["Iron", "Coal", "Oil", "Wheat", "None"]
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_SPECIAL
+    PANEL_STYLE = EDITOR_PANEL_STYLES["resource_brush"]
     PANEL_TITLE = "Resource Brush"
     TITLE_PRESET = "heading2"
     TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
@@ -161,6 +164,7 @@ class Resource_Brush_Screen(MapOverlayScreen):
 class Clear_Map_Screen(MapOverlayScreen):
     pans_camera = False
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_DANGER
+    PANEL_STYLE = EDITOR_PANEL_STYLES["clear_map"]
     PANEL_TITLE = "Clear Map Items"
     TITLE_PRESET = "heading2"
     TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET

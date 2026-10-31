@@ -16,7 +16,8 @@ single unit.
 import pygame
 import data.constants as c
 from data import queries
-from ui.background_styles import SLIDER_STYLES
+from ui.background_styles import SLIDER_STYLES, POLITICS_PANEL_STYLES
+from ui.widgets import ui_elements
 from ui.widgets.ui_elements import Button, make_back_button
 from ui.bars import ui_bars
 from ui.rendering.font_manager import fonts
@@ -292,8 +293,9 @@ class Politics_Screen(GameState):
 
     @staticmethod
     def _draw_panel(surface, rect):
-        pygame.draw.rect(surface, (34, 38, 58), rect)
-        pygame.draw.rect(surface, c.COLOR_DIM_BORDER, rect, 3)
+        style = POLITICS_PANEL_STYLES["main"]
+        ui_elements.draw_pixel_panel(surface, rect, style["color"], c.COLOR_DIM_BORDER,
+                                     border_width=3, gradient_strength=style["gradient_strength"])
 
     def _draw_axis(self, surface):
         track = self._track_rect()
@@ -359,8 +361,9 @@ class Politics_Screen(GameState):
             border = (120, 170, 255)
         else:
             border = c.COLOR_DIM_BORDER
-        pygame.draw.rect(surface, (27, 31, 49), card)
-        pygame.draw.rect(surface, border, card, 2)
+        style = POLITICS_PANEL_STYLES["policy_card"]
+        ui_elements.draw_pixel_panel(surface, card, style["color"], border,
+                                     gradient_strength=style["gradient_strength"])
 
         heading = fonts.get(POLICY_TITLE_FONT).render(definition["name"], True, c.UI_TEXT_LIGHT)
         surface.blit(heading, heading.get_rect(centerx=card.centerx,

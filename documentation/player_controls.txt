@@ -52,6 +52,29 @@ Saves and multiplayer commands retain their existing data.
 Edit background colors and gradient strengths in ui/background_styles.py. All style tables described below use this shared file.
 Keep layout and border settings in their existing UI modules.
 
+Edit PUPPET_PANEL_STYLES for the subjects and release_nations panels.
+Edit COUNTRY_SUMMARY_STYLES for country summary cards.
+Edit PRODUCTION_QUEUE_STYLES for the Buildings and Units queue backgrounds in production and on the map.
+The map entry includes opacity as its fourth color value.
+Edit PRODUCTION_PANEL_STYLES for production category panels and their stats bars.
+Category panels and stats bars keep flat fills by default. Increase gradient_strength to add shade bands.
+
+Edit RESOURCE_BAR_STYLES for the full-width resource bar in Production, Orders, and other screens that use this bar.
+Edit COMBAT_PANEL_STYLES for the combat panel, including the panel beside Orders.
+Edit POLITICS_PANEL_STYLES for politics panels and policy cards.
+Edit AUTOMATION_PANEL_STYLES for the automation panel.
+Edit ECONOMY_PANEL_STYLES for national economy resource rows and the expenses table background.
+Edit ORDERS_PANEL_STYLES for the Orders panel.
+Edit EDITOR_PANEL_STYLES for editor panels, country lists, scripted-event lists, and historical leader cards.
+Its entries include research, starting_economy, date, diplomacy, politics, personality, scripted_events, unit_stats, and construction_turns.
+The corresponding list entries control country-selection panels. Brush and map-clearing panels have separate entries.
+Edit RESEARCH_PANEL_STYLES for timeline headers, research slots, and technology details.
+The research timeline uses these styles in player, spectator, and country-editor modes.
+Edit MUSIC_PANEL_STYLES["albums"] for the music album pane, including its fixed header.
+These panels use cached pixel shading. Each entry has color and gradient_strength fields.
+Colors, opacity, and gradient strength use the same rules as the other background styles.
+Restart the game after editing these values. The moving checkerboard background keeps its existing flat squares.
+
 Edit DIALOG_STYLES for the shared dialog background, including credits information and help dialogs.
 The file_browser entry controls the built-in file browser panel.
 Edit MESSAGE_PANEL_STYLES for the contacts pane in the messages screen.

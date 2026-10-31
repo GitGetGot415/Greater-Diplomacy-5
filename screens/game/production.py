@@ -2,6 +2,8 @@ import pygame
 import data.constants as c
 from ui.navigation.game_state import GameState
 from ui.bars import ui_bars
+from ui.background_styles import PRODUCTION_PANEL_STYLES
+from ui.widgets import ui_elements
 from ui.widgets.ui_elements import (
     Button,
     draw_resource_string,
@@ -78,20 +80,19 @@ CLICK_GUARD_BOTTOM = c.SCREEN_HEIGHT - resource_hud.BAR_HEIGHT
 SCROLL_WHEEL_STEP = 50
 SCROLL_LERP = 0.15
 
-# --- Section panels: (attr prefix, label, fill, border, text color) ---
+# --- Section panels: (attr prefix, label, border, text color) ---
 # Each entry paints one colored block behind its rows. Adding a section means
 # adding a row here plus the matching self.<prefix>_start_y / _end_y markers.
 SECTION_PANELS = [
-    ("admin",    "ADMINISTRATION",     (40, 20, 60), (150, 100, 200), (200, 150, 255)),
-    ("other",    "GENERAL BUILDINGS",  (60, 40, 20), (200, 100, 30),  (255, 150, 50)),
-    ("infantry", "INFANTRY",           (30, 60, 30), (50, 150, 50),   c.COLOR_SUCCESS_GREEN),
-    ("tank",     "TANKS",              (20, 45, 20), (40, 120, 40),   (80, 200, 80)),
-    ("navy",     "NAVAL FORCES",       (30, 30, 60), (50, 50, 150),   (100, 150, 255)),
-    ("air", "AIR",         (60, 30, 30), (200, 50, 50),   (255, 100, 100)),
-    ("custom",   "CUSTOM",             (60, 55, 20), (200, 180, 50),  (255, 220, 100)),
+    ("admin",    "ADMINISTRATION",     (150, 100, 200), (200, 150, 255)),
+    ("other",    "GENERAL BUILDINGS",  (200, 100, 30),  (255, 150, 50)),
+    ("infantry", "INFANTRY",           (50, 150, 50),   c.COLOR_SUCCESS_GREEN),
+    ("tank",     "TANKS",              (40, 120, 40),   (80, 200, 80)),
+    ("navy",     "NAVAL FORCES",       (50, 50, 150),   (100, 150, 255)),
+    ("air",      "AIR",                (200, 50, 50),   (255, 100, 100)),
+    ("custom",   "CUSTOM",             (200, 180, 50),  (255, 220, 100)),
 ]
 
-BAR_BG_COLOR = (40, 40, 40)
 BAR_BORDER_COLOR = (100, 100, 100)
 BAR_YIELD_COLOR = (150, 255, 150)
 BAR_STAT_COLOR = (200, 200, 200)
@@ -837,7 +838,7 @@ class Production_Screen(GameState):
 
         with ui_bars.clip_scroll_region(surface, self.scroll_content_rect,
                                         draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll):
-            for prefix, label, fill, border, text_color in SECTION_PANELS:
+            for prefix, label, border, text_color in SECTION_PANELS:
                 start_y = getattr(self, f"{prefix}_start_y", 0)
                 end_y = getattr(self, f"{prefix}_end_y", 0)
                 if end_y <= start_y:
@@ -845,7 +846,7 @@ class Production_Screen(GameState):
 
                 panel = pygame.Rect(PANEL_X, start_y + scroll - PANEL_PAD_TOP,
                                     PANEL_WIDTH, end_y - start_y + PANEL_PAD_TOP)
-                pygame.draw.rect(surface, fill, panel)
+                ui_elements.draw_pixel_background(surface, panel, PRODUCTION_PANEL_STYLES[prefix])
                 pygame.draw.rect(surface, border, panel, 2)
                 surface.blit(heading_font.render(label, True, text_color),
                              (PANEL_LABEL_X, start_y + scroll + PANEL_LABEL_OFFSET_Y))
@@ -856,7 +857,7 @@ class Production_Screen(GameState):
             bar_font = fonts.get("small")
             for base_rect, stats, base_y, bar_type in self.active_bars:
                 bar_rect = pygame.Rect(base_rect.x, base_y + scroll, base_rect.width, base_rect.height)
-                pygame.draw.rect(surface, BAR_BG_COLOR, bar_rect)
+                ui_elements.draw_pixel_background(surface, bar_rect, PRODUCTION_PANEL_STYLES["stats"])
                 pygame.draw.rect(surface, BAR_BORDER_COLOR, bar_rect, 1)
 
                 text_y = bar_rect.y + (bar_rect.height - bar_font.get_height()) // 2

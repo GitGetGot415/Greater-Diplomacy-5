@@ -13,6 +13,7 @@ import re
 import pygame
 from ui.navigation.game_state import GameState
 import data.constants as c
+from ui.background_styles import EDITOR_PANEL_STYLES
 from data import queries
 from ui.dialogs import pickers
 from map_logic.system32.time_handler import TimeHandler
@@ -22,6 +23,7 @@ from map_logic.ai.scripted_events import (ACT_TYPES, CHAIN_OPS, COND_TYPES, EDIT
 from ui.rendering.font_manager import fonts
 from ui import dialogs
 from ui.bars import ui_bars
+from ui.widgets import ui_elements
 from ui.navigation.modal_screen import ModalScreen
 from ui.widgets.table_screen import truncate
 from ui.widgets.ui_elements import Button, TextField, make_back_button
@@ -115,7 +117,7 @@ class _ModalScreen(ModalScreen):
     """Legacy alias. The implementation moved to ui/navigation/modal_screen.py so the other
     six modal screens could share it instead of importing a private name out of
     this editor; the name stays here because a mod may target this module."""
-    pass
+    PANEL_STYLE = EDITOR_PANEL_STYLES["scripted_events"]
 
 
 def _run(screen):
@@ -833,8 +835,9 @@ class _EventEditScreen(_ModalScreen):
         self.label(surface, "Actions:", (self.list_x, self.act_top - 20), preset="normal")
 
         for band_top in (self.cond_top, self.act_top):
-            pygame.draw.rect(surface, (26, 26, 34),
-                             pygame.Rect(p.x + 8, band_top - 4, p.width - 16, self.LIST_VIEW_H + 8))
+            ui_elements.draw_pixel_background(
+                surface, pygame.Rect(p.x + 8, band_top - 4, p.width - 16, self.LIST_VIEW_H + 8),
+                EDITOR_PANEL_STYLES["scripted_event_lists"])
 
         small = fonts.get("small")
         scroll_conds, max_conds = getattr(self, "_scroll_conds", 0), getattr(self, "_max_conds", 0)

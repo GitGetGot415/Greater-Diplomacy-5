@@ -7,6 +7,7 @@ from ui.widgets.ui_elements import Button, Slider, make_back_button
 from ui.rendering.font_manager import fonts
 from ui.rendering import overlay_renderer
 from ui.bars import ui_bars
+from ui.background_styles import PUPPET_PANEL_STYLES
 from ui.navigation.screen_runner import _run_pygame_sub_screen
 from ui.widgets.text_utils import fit_text
 
@@ -21,6 +22,7 @@ class Puppets_Screen(MapOverlayScreen):
     pans_camera = False
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_INFO
     PANEL_TITLE = "Your Subjects"
+    PANEL_STYLE = PUPPET_PANEL_STYLES["subjects"]
 
     def __init__(self, map_screen):
         super().__init__(map_screen, pygame.Rect(c.SCREEN_WIDTH//2 - 400, 100, 800, c.SCREEN_HEIGHT - 200))
@@ -210,6 +212,7 @@ class Create_Puppet_Screen(MapOverlayScreen):
     # Keep the land visible beside the release controls.
     CENTER_PANEL = False
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_INFO_OVER_MAP
+    PANEL_STYLE = PUPPET_PANEL_STYLES["release_nations"]
     RELEASE_TYPE_Y = 60
     RELEASE_TYPE_BUTTON_SIZE = (125, 40)
     RELEASE_TYPE_BUTTON_GAP = 10

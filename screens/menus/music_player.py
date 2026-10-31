@@ -4,6 +4,7 @@ from data import queries
 from ui.widgets import ui_elements
 from ui.navigation.game_state import GameState, ScreenLayer
 from ui.bars import ui_bars
+from ui.background_styles import MUSIC_PANEL_STYLES
 from ui.widgets.scroll_panes import ScrollPanes
 from ui.widgets.ui_elements import Button, Slider, make_back_button, make_info_button
 from ui.rendering.font_manager import fonts
@@ -770,7 +771,13 @@ class Music_Player(ScrollPanes, GameState):
 
     def draw_top_bar(self, surface):
         """Fixed chrome painted over the two independently scrolling panes."""
-        pygame.draw.rect(surface, (35, 35, 45), (0, 0, MUSIC_LEFT_PANE_W, 120))
+        clip = surface.get_clip()
+        try:
+            surface.set_clip(clip.clip(pygame.Rect(0, 0, MUSIC_LEFT_PANE_W, 120)))
+            # Use the full pane's gradient so the fixed header has no color seam.
+            self.draw_album_background(surface)
+        finally:
+            surface.set_clip(clip)
         pygame.draw.rect(surface, (25, 25, 30),
                          (MUSIC_LEFT_PANE_W, 0, c.SCREEN_WIDTH - MUSIC_LEFT_PANE_W, 200))
         pygame.draw.line(surface, (100, 100, 100),
@@ -795,10 +802,13 @@ class Music_Player(ScrollPanes, GameState):
         """Two independent scrolling panes, each cropped to its own rect."""
         self.draw_panes(surface)
 
-    def additional_draw(self, surface):
-        # Left Pane Background (Drawn underneath everything)
+    def draw_album_background(self, surface):
         left_pane = pygame.Rect(0, 0, MUSIC_LEFT_PANE_W, c.SCREEN_HEIGHT)
-        pygame.draw.rect(surface, (35, 35, 45), left_pane)
+        ui_elements.draw_pixel_background(surface, left_pane, MUSIC_PANEL_STYLES["albums"])
+
+    def additional_draw(self, surface):
+        # Left pane background, drawn underneath the album buttons.
+        self.draw_album_background(surface)
 
         # --- DYNAMIC SCROLLBAR RENDERING ---
         self.draw_pane_scrollbar(surface, "album", MUSIC_LEFT_PANE_W - MUSIC_SCROLLBAR_WIDTH - 5, 120,

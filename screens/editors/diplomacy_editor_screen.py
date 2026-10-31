@@ -2,6 +2,7 @@
 tkinter tool window -- see screens/editors/__init__.py."""
 import pygame
 import data.constants as c
+from ui.background_styles import EDITOR_PANEL_STYLES
 from data import queries
 from ui.navigation.game_state import MapOverlayScreen
 from ui.widgets.ui_elements import Button, TextField, make_back_button
@@ -30,6 +31,7 @@ class Diplomacy_Editor_Screen(ScrollPanes, MapOverlayScreen):
     pans_camera = False
     overlay_alpha = 220
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_INFO
+    PANEL_STYLE = EDITOR_PANEL_STYLES["diplomacy"]
     PANEL_TITLE = "Global Diplomacy, Factions & Agreements"
     TITLE_PRESET = "heading2"
     TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET

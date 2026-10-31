@@ -44,6 +44,93 @@ MESSAGE_PANEL_STYLES = {
     "contacts": {"color": (35, 35, 45), "gradient_strength": 1.0},
 }
 
+# Game panels retain their borders and layout in their screen modules.
+PUPPET_PANEL_STYLES = {
+    "subjects": {"color": c.PANEL_THEME_INFO[0], "gradient_strength": 1.0},
+    "release_nations": {"color": c.PANEL_THEME_INFO_OVER_MAP[0], "gradient_strength": 1.0},
+}
+
+COUNTRY_SUMMARY_STYLES = {
+    "card": {"color": (35, 41, 53), "gradient_strength": 1.0},
+}
+
+PRODUCTION_QUEUE_STYLES = {
+    "production": {"color": c.HUD_PANEL_BG, "gradient_strength": 1.0},
+    "map": {"color": (*c.HUD_PANEL_BG, 200), "gradient_strength": 1.0},
+}
+
+# These entries match the category prefixes in production.SECTION_PANELS.
+PRODUCTION_PANEL_STYLES = {
+    "admin": {"color": (40, 20, 60), "gradient_strength": 0.0},
+    "other": {"color": (60, 40, 20), "gradient_strength": 0.0},
+    "infantry": {"color": (30, 60, 30), "gradient_strength": 0.0},
+    "tank": {"color": (20, 45, 20), "gradient_strength": 0.0},
+    "navy": {"color": (30, 30, 60), "gradient_strength": 0.0},
+    "air": {"color": (60, 30, 30), "gradient_strength": 0.0},
+    "custom": {"color": (60, 55, 20), "gradient_strength": 0.0},
+    "stats": {"color": (40, 40, 40), "gradient_strength": 0.0},
+}
+
+RESOURCE_BAR_STYLES = {
+    "full_width": {"color": (30, 30, 30), "gradient_strength": 1.0},
+}
+
+COMBAT_PANEL_STYLES = {
+    "main": {"color": c.PANEL_THEME_DANGER[0], "gradient_strength": 1.0},
+}
+
+POLITICS_PANEL_STYLES = {
+    "main": {"color": (34, 38, 58), "gradient_strength": 1.0},
+    "policy_card": {"color": (27, 31, 49), "gradient_strength": 1.0},
+}
+
+AUTOMATION_PANEL_STYLES = {
+    "main": {"color": (40, 45, 50), "gradient_strength": 1.0},
+}
+
+ECONOMY_PANEL_STYLES = {
+    "resource": {"color": (40, 40, 50), "gradient_strength": 1.0},
+    "expenses": {"color": (25, 28, 35), "gradient_strength": 1.0},
+}
+
+ORDERS_PANEL_STYLES = {
+    "main": {"color": c.HUD_PANEL_BG, "gradient_strength": 1.0},
+}
+
+EDITOR_PANEL_STYLES = {
+    "research": {"color": c.PANEL_THEME_EDIT[0], "gradient_strength": 1.0},
+    "research_list": {"color": c.PANEL_THEME_EDIT[0], "gradient_strength": 1.0},
+    "date": {"color": c.PANEL_THEME_EDIT[0], "gradient_strength": 1.0},
+    "starting_economy": {"color": c.PANEL_THEME_INFO[0], "gradient_strength": 1.0},
+    "starting_economy_list": {"color": c.PANEL_THEME_CONFIRM[0], "gradient_strength": 1.0},
+    "politics": {"color": c.PANEL_THEME_SPECIAL[0], "gradient_strength": 1.0},
+    "politics_list": {"color": c.PANEL_THEME_SPECIAL[0], "gradient_strength": 1.0},
+    "personality": {"color": c.PANEL_THEME_SPECIAL[0], "gradient_strength": 1.0},
+    "personality_list": {"color": c.PANEL_THEME_SPECIAL[0], "gradient_strength": 1.0},
+    "diplomacy": {"color": c.PANEL_THEME_INFO[0], "gradient_strength": 1.0},
+    "convoy_converter": {"color": c.PANEL_THEME_CONFIRM[0], "gradient_strength": 1.0},
+    "resource_brush": {"color": c.PANEL_THEME_SPECIAL[0], "gradient_strength": 1.0},
+    "clear_map": {"color": c.PANEL_THEME_DANGER[0], "gradient_strength": 1.0},
+    "scripted_events": {"color": c.MODAL_BG, "gradient_strength": 1.0},
+    "scripted_event_lists": {"color": (26, 26, 34), "gradient_strength": 1.0},
+    "unit_stats": {"color": c.MODAL_BG, "gradient_strength": 1.0},
+    "unit_stats_row": {"color": (44, 44, 56), "gradient_strength": 0.0},
+    "construction_turns": {"color": c.MODAL_BG, "gradient_strength": 1.0},
+    "construction_turns_row": {"color": (44, 44, 56), "gradient_strength": 0.0},
+    "historical_leader_card": {"color": (35, 45, 35), "gradient_strength": 1.0},
+}
+
+# The research timeline is shared by play, spectators, and the country editor.
+RESEARCH_PANEL_STYLES = {
+    "slots": {"color": (40, 40, 60), "gradient_strength": 1.0},
+    "details": {"color": (30, 30, 40), "gradient_strength": 1.0},
+    "header": {"color": (40, 40, 50), "gradient_strength": 1.0},
+}
+
+MUSIC_PANEL_STYLES = {
+    "albums": {"color": (35, 35, 45), "gradient_strength": 1.0},
+}
+
 ASSET_VIEWER_STYLES = {
     "folders": {"color": (35, 35, 45), "gradient_strength": 0.0},
     "files": {"color": (30, 30, 38), "gradient_strength": 0.0},

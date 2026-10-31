@@ -5,10 +5,12 @@ import pygame
 
 from data import queries
 import data.constants as c
+from ui.background_styles import EDITOR_PANEL_STYLES
 from ui.rendering import symbol_loader
 from ui.rendering.font_manager import fonts
 from ui import dialogs
 from ui.bars import ui_bars
+from ui.widgets import ui_elements
 from ui.navigation.modal_screen import ModalScreen
 from ui.widgets.ui_elements import Button, TextField, make_back_button
 
@@ -16,6 +18,7 @@ from ui.navigation import screen_runner
 
 
 class UnitStatsEditorScreen(ModalScreen):
+    PANEL_STYLE = EDITOR_PANEL_STYLES["unit_stats"]
     PANEL_SIZE = (900, 640)
     PAD = 20
     ROW_HEIGHT = 54
@@ -165,8 +168,9 @@ class UnitStatsEditorScreen(ModalScreen):
                     surface.blit(label, rect)
                     continue
                 if index % 2 == 0:
-                    pygame.draw.rect(surface, (44, 44, 56),
-                                     (p.x + self.PAD, y, p.width - 2 * self.PAD, self.ROW_HEIGHT))
+                    ui_elements.draw_pixel_background(
+                        surface, pygame.Rect(p.x + self.PAD, y, p.width - 2 * self.PAD, self.ROW_HEIGHT),
+                        EDITOR_PANEL_STYLES["unit_stats_row"])
                 icon_x = p.x + self.PAD + self.ROW_LABEL_INSET
                 icon = self.icons.get(family)
                 if icon is not None:

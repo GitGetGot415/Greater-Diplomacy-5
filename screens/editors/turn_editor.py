@@ -15,9 +15,11 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import pygame
 import data.constants as c
+from ui.background_styles import EDITOR_PANEL_STYLES
 from data import queries
 from ui import dialogs
 from ui.bars import ui_bars
+from ui.widgets import ui_elements
 from ui.navigation.modal_screen import ModalScreen
 from ui.widgets.ui_elements import Button, Slider, TextField, make_back_button
 from ui.rendering import symbol_loader
@@ -46,6 +48,7 @@ class _ConversionTurnSlider(Slider):
 
 
 class TurnEditorScreen(ModalScreen):
+    PANEL_STYLE = EDITOR_PANEL_STYLES["construction_turns"]
     PANEL_SIZE = (900, 640)
     ROW_HEIGHT = 34
     PAD = 20
@@ -308,8 +311,9 @@ class TurnEditorScreen(ModalScreen):
             for i, y in self._row_layout:
                 btype = names[i]
                 if i % 2 == 0:
-                    pygame.draw.rect(surface, (44, 44, 56),
-                                     pygame.Rect(p.x + self.PAD, y, p.width - 2 * self.PAD, row_height))
+                    ui_elements.draw_pixel_background(
+                        surface, pygame.Rect(p.x + self.PAD, y, p.width - 2 * self.PAD, row_height),
+                        EDITOR_PANEL_STYLES["construction_turns_row"])
 
                 label_x = p.x + self.PAD + self.ROW_LABEL_INSET
                 if self.active_tab in ("unit", "building"):

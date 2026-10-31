@@ -2,6 +2,7 @@
 window -- see screens/editors/__init__.py."""
 import pygame
 import data.constants as c
+from ui.background_styles import EDITOR_PANEL_STYLES
 from data import queries
 from ui.navigation.game_state import MapOverlayScreen
 from ui.widgets.ui_elements import Button, TextField, make_back_button
@@ -23,6 +24,7 @@ class Research_Edit_Screen(MapOverlayScreen):
     scroll_anywhere = True
     ROW_HEIGHT = 36
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_EDIT
+    PANEL_STYLE = EDITOR_PANEL_STYLES["research"]
     TITLE_PRESET = "heading2"
     TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
 
@@ -137,6 +139,7 @@ class Research_List_Screen(MapOverlayScreen):
     pans_camera = False
     scroll_anywhere = True
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_EDIT
+    PANEL_STYLE = EDITOR_PANEL_STYLES["research_list"]
     PANEL_TITLE = "Map Research Editor"
     TITLE_PRESET = "heading2"
     TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET

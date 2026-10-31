@@ -6,6 +6,8 @@ from ui.widgets.ui_elements import Button, Slider, make_back_button
 from ui.rendering.font_manager import fonts
 from data import queries
 from ui.widgets.table_screen import TableScreen, TableColumn
+from ui.background_styles import ECONOMY_PANEL_STYLES
+from ui.widgets import ui_elements
 
 from ui.navigation import screen_runner
 
@@ -101,6 +103,9 @@ def expense_table_rows(units, unit_library):
 class ExpensesTableScreen(TableScreen):
     HEADER_Y = 108
     ROW_TOP = 150
+
+    def draw_background(self, surface):
+        ui_elements.draw_pixel_background(surface, surface.get_rect(), ECONOMY_PANEL_STYLES["expenses"])
 
     def __init__(self, game_state, individual_rows, grouped_rows):
         self.individual_rows = individual_rows
@@ -257,8 +262,9 @@ class Economy_Screen(GameState):
             
             # Row Background (Made taller to fit details)
             row_rect = pygame.Rect(c.SCREEN_WIDTH // 2 - ROW_WIDTH // 2, y_offset, ROW_WIDTH, ROW_HEIGHT)
-            pygame.draw.rect(surface, (40, 40, 50), row_rect)
-            pygame.draw.rect(surface, (100, 100, 100), row_rect, 1)
+            style = ECONOMY_PANEL_STYLES["resource"]
+            ui_elements.draw_pixel_panel(surface, row_rect, style["color"], (100, 100, 100),
+                                         border_width=1, gradient_strength=style["gradient_strength"])
             
             # Current Resource Amount
             if is_tactical:

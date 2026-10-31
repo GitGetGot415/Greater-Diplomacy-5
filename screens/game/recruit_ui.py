@@ -5,6 +5,7 @@ from ui.rendering.font_manager import fonts
 from ui.bars import ui_bars
 from ui.widgets import text_utils
 from ui.widgets import ui_elements
+from ui.background_styles import PRODUCTION_QUEUE_STYLES
 
 # ==========================================
 # LAYOUT
@@ -19,8 +20,6 @@ MAP_QUEUE_MAX_HEIGHT = 400
 
 # How fast the mouse wheel scrolls the read-only map queue overlay
 MAP_QUEUE_SCROLL_STEP = c.SCROLL_STEP
-# Alpha of the map queue overlay's fill, so the map stays visible behind it.
-MAP_QUEUE_TRANSPARENCY = 200
 
 # --- Interactive queue panel on the Production screen ---
 PANEL_WIDTH = 460
@@ -34,9 +33,6 @@ ROW_STEP_Y = 35
 ROW_NAME_MAX_CHARS = 13
 CANCEL_BOX_SIZE = 25
 
-# Both map panels share the HUD palette; the values used to be typed out
-# separately here and in the other panel's module.
-PANEL_BG_COLOR = c.HUD_PANEL_BG
 PANEL_BORDER_COLOR = c.HUD_PANEL_BORDER
 QUEUE_TEXT_COLOR = (255, 200, 50)
 MUTED_TEXT_COLOR = (150, 150, 150)
@@ -83,7 +79,9 @@ def draw_recruitment_overlay(surface, target_province):
 
     panel_rect = pygame.Rect(c.SCREEN_WIDTH - PANEL_WIDTH - PANEL_MARGIN_X, PANEL_TOP,
                              PANEL_WIDTH, c.SCREEN_HEIGHT - PANEL_BOTTOM_MARGIN)
-    ui_elements.draw_pixel_panel(surface, panel_rect, PANEL_BG_COLOR, PANEL_BORDER_COLOR)
+    style = PRODUCTION_QUEUE_STYLES["production"]
+    ui_elements.draw_pixel_panel(surface, panel_rect, style["color"], PANEL_BORDER_COLOR,
+                                 gradient_strength=style["gradient_strength"])
     split_x = panel_rect.x + PANEL_COLUMN_SPLIT
     pygame.draw.line(surface, PANEL_BORDER_COLOR, (split_x, panel_rect.y), (split_x, panel_rect.bottom), 2)
 
@@ -123,8 +121,9 @@ def draw_map_queue_overlay(surface, target_province, map_screen=None):
 
     panel_rect = pygame.Rect(MAP_QUEUE_OVERLAY_X, MAP_QUEUE_OVERLAY_Y, MAP_QUEUE_OVERLAY_WIDTH, panel_height)
 
-    ui_elements.draw_pixel_panel(surface, panel_rect, (*PANEL_BG_COLOR, MAP_QUEUE_TRANSPARENCY),
-                                 PANEL_BORDER_COLOR)
+    style = PRODUCTION_QUEUE_STYLES["map"]
+    ui_elements.draw_pixel_panel(surface, panel_rect, style["color"], PANEL_BORDER_COLOR,
+                                 gradient_strength=style["gradient_strength"])
     pygame.draw.line(surface, PANEL_BORDER_COLOR, (panel_rect.centerx, panel_rect.y), (panel_rect.centerx, panel_rect.bottom), 2)
 
     font = fonts.get("normal")

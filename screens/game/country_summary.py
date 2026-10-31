@@ -8,6 +8,7 @@ from ui.navigation.game_state import GameState
 from ui.rendering.font_manager import fonts
 from ui.widgets import flag_icons
 from ui.bars import ui_bars
+from ui.background_styles import COUNTRY_SUMMARY_STYLES
 from ui.widgets.text_utils import fit_text, render_inline_text, wrap_text
 from ui.widgets.ui_elements import make_back_button
 
@@ -110,8 +111,10 @@ class CountrySummaryScreen(GameState):
                 for line in wrap_text(text, font, width)]
             height = details_y + sum(line.get_height() + LINE_GAP for line in economy_details) + CARD_PADDING
         card = pygame.Surface((self.card_width, height), pygame.SRCALPHA)
-        ui_bars.draw_modal_box(card, card.get_rect(), bg_color=(35, 41, 53),
-                               border_color=(75, 90, 115), border_width=1)
+        style = COUNTRY_SUMMARY_STYLES["card"]
+        ui_bars.draw_modal_box(card, card.get_rect(), bg_color=style["color"],
+                               border_color=(75, 90, 115), border_width=1,
+                               gradient_strength=style["gradient_strength"])
         card.blit(fonts.get("heading2").render(title, True, c.UI_ACCENT_BLUE),
                   (CARD_PADDING, CARD_PADDING // 2))
         y = CARD_TITLE_HEIGHT

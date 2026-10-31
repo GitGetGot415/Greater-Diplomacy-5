@@ -742,6 +742,7 @@ class MapOverlayScreen(GameState):
     # title underneath, so a panel's look lived in its draw_content body rather
     # than anywhere you could see all of them at once.
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_INFO
+    PANEL_STYLE = None
     #: Header text drawn inside the panel. Override get_panel_title() instead
     #: for one that names a nation or otherwise changes with the screen.
     PANEL_TITLE = None
@@ -804,11 +805,13 @@ class MapOverlayScreen(GameState):
         the post-treaty map underneath its panel), call this at the point the
         old draw_modal_box call sat, so the layering is unchanged.
         """
+        style = self.PANEL_STYLE
         ui_bars.draw_panel_frame(surface, self.panel_rect, self.get_panel_title(),
-                                 bg=self.PANEL_BG, border=self.PANEL_BORDER,
+                                 bg=style["color"] if style else self.PANEL_BG, border=self.PANEL_BORDER,
                                  border_width=self.PANEL_BORDER_WIDTH,
                                  title_dy=self.TITLE_Y_OFFSET,
-                                 font_preset=self.TITLE_PRESET)
+                                 font_preset=self.TITLE_PRESET,
+                                 gradient_strength=style["gradient_strength"] if style else 1.0)
 
     def update(self):
         self.map_screen.camera.update(self.map_screen, c.SCREEN_HEIGHT)

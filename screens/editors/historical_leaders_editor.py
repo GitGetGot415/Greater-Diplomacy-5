@@ -26,6 +26,8 @@ from ui.dialogs import file_exchange
 from data.io.country_io import DEFAULT_NATION_COLOR
 from ui import dialogs
 from ui.bars import ui_bars
+from ui.background_styles import EDITOR_PANEL_STYLES
+from ui.widgets import ui_elements
 from ui.widgets.scroll_panes import ScrollPanes
 from ui.widgets.table_screen import truncate
 from ui.widgets.ui_elements import Button, TextField, make_back_button
@@ -562,8 +564,9 @@ class Historical_Leaders_Editor(ScrollPanes, GameState):
         fx = self.field_x
         for entry, y in self._entry_layout:
             card_rect = pygame.Rect(self.timeline_rect.x, y, self.timeline_rect.width - 20, ENTRY_ROW_H - 10)
-            pygame.draw.rect(surface, (35, 45, 35), card_rect, border_radius=4)
-            pygame.draw.rect(surface, (80, 110, 80), card_rect, 1, border_radius=4)
+            style = EDITOR_PANEL_STYLES["historical_leader_card"]
+            ui_elements.draw_pixel_panel(surface, card_rect, style["color"], (80, 110, 80),
+                                         border_width=1, gradient_strength=style["gradient_strength"])
 
             row1_y, row2_y = y + ROW1_Y_OFFSET, y + ROW2_Y_OFFSET
             for key, label in (("year", "Year"), ("month", "Mon"), ("day", "Day"),

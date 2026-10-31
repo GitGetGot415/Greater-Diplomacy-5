@@ -2,6 +2,7 @@
 tkinter tool windows -- see screens/editors/__init__.py."""
 import pygame
 import data.constants as c
+from ui.background_styles import EDITOR_PANEL_STYLES
 from data import queries
 from ui.navigation.game_state import MapOverlayScreen, NationListOverlayScreen
 from ui.widgets.ui_elements import Button, TextField, make_back_button
@@ -15,6 +16,7 @@ from ui.navigation.screen_runner import _run_pygame_sub_screen
 class Editor_Date_Screen(MapOverlayScreen):
     pans_camera = False
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_EDIT
+    PANEL_STYLE = EDITOR_PANEL_STYLES["date"]
     PANEL_TITLE = "Set Start Date"
     TITLE_PRESET = "heading2"
     TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
@@ -93,6 +95,7 @@ class Editor_Date_Screen(MapOverlayScreen):
 class Starting_Economy_Edit_Screen(MapOverlayScreen):
     pans_camera = False
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_INFO
+    PANEL_STYLE = EDITOR_PANEL_STYLES["starting_economy"]
     TITLE_PRESET = "heading2"
     TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
 
@@ -143,6 +146,7 @@ class Starting_Economy_List_Screen(NationListOverlayScreen):
     pans_camera = False
     scroll_anywhere = True
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_CONFIRM
+    PANEL_STYLE = EDITOR_PANEL_STYLES["starting_economy_list"]
     PANEL_TITLE = "Starting Economy Editor"
     TITLE_PRESET = "heading2"
     TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET

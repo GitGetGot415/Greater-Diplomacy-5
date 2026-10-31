@@ -4,6 +4,8 @@ from data import queries
 from ui.widgets.ui_elements import Button, make_back_button
 from ui.rendering.font_manager import fonts
 from ui.navigation.game_state import GameState
+from ui.background_styles import AUTOMATION_PANEL_STYLES
+from ui.widgets import ui_elements
 from map_logic.ai.automation_logic import (
     automate_player_construction, clear_player_construction,
     automate_player_movement, clear_player_movement,
@@ -98,8 +100,9 @@ class Automation_Screen(GameState):
 
     def additional_draw(self, surface):
         # Panel Background
-        pygame.draw.rect(surface, (40, 45, 50), self.panel_rect)
-        pygame.draw.rect(surface, c.COLOR_DIM_BORDER, self.panel_rect, 3)
+        style = AUTOMATION_PANEL_STYLES["main"]
+        ui_elements.draw_pixel_panel(surface, self.panel_rect, style["color"], c.COLOR_DIM_BORDER,
+                                     border_width=3, gradient_strength=style["gradient_strength"])
 
         title_font = fonts.get("title")
         title_surf = title_font.render("Automation Settings", True, c.COLOR_GOLD_HIGHLIGHT)
