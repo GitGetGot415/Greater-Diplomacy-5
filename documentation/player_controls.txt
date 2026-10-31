@@ -99,6 +99,14 @@ MENU_SKY_BANDS applies only when MENU_SKY_STEPPED is True.
 The menu caches backgrounds by viewport size and sky and water endpoint colors. Restart after editing these values.
 Other menus retain their existing backgrounds.
 
+The center menu buttons and their gradient panel enter together. Their spacing stays fixed during the entrance.
+Edit MENU_BUTTON_GROUP_POSITION in screens/menus/menu.py to move the group.
+MENU_BUTTON_PANEL_PADDING sets the space around the buttons.
+MENU_BUTTON_PANEL_COLOR and MENU_BUTTON_PANEL_GRADIENT_STRENGTH control the shared pixel shading.
+MENU_BUTTON_PANEL_BORDER_COLOR and MENU_BUTTON_PANEL_BORDER_WIDTH control the panel border.
+MENU_BUTTON_GROUP_INTRO_DELAY_MS and MENU_BUTTON_GROUP_INTRO_DURATION_MS control the entrance delay and duration in milliseconds.
+Zero duration shows the group immediately after its delay. Restart after editing these values.
+
 Edit PUPPET_PANEL_STYLES for the subjects and release_nations panels.
 Edit COUNTRY_SUMMARY_STYLES for country summary cards.
 Edit PRODUCTION_QUEUE_STYLES for the Buildings and Units queue backgrounds in production and on the map.

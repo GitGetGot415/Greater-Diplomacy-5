@@ -29,6 +29,16 @@ MENU_WATER_STEPPED = False
 MENU_WATER_DITHERING = False
 MENU_WATER_BANDS = 12
 
+# Center button group: position, panel appearance, and entrance animation.
+MENU_BUTTON_GROUP_POSITION = (460, 220)
+MENU_BUTTON_PANEL_PADDING = 16
+MENU_BUTTON_PANEL_COLOR = (45, 45, 70)
+MENU_BUTTON_PANEL_GRADIENT_STRENGTH = 1.0
+MENU_BUTTON_PANEL_BORDER_COLOR = (15, 15, 25)
+MENU_BUTTON_PANEL_BORDER_WIDTH = 2
+MENU_BUTTON_GROUP_INTRO_DELAY_MS = 0
+MENU_BUTTON_GROUP_INTRO_DURATION_MS = 650
+
 # Edit these RGB colors, then restart the game.
 MENU_SKY_START_COLOR = (24, 28, 65)
 MENU_SKY_END_COLOR = (220, 120, 140)
@@ -138,10 +148,8 @@ def _load_scaled_image(path, factor):
 
 class Menu(GameState):
     # Intro animation timings, in ms. Title drops from above, sign slides in
-    # from the right. Buttons/text rise straight up from below the screen;
-    # BUTTON_INTRO_CASCADE_MS is spread across them by vertical position, so
-    # rows nearer the top start sooner and lower rows start later, then each
-    # takes BUTTON_INTRO_DURATION_MS to arrive.
+    # from the right. Center buttons rise together with their panel.
+    # Other controls and bottom text keep their separate entrance timings.
     TITLE_INTRO_MS = 900
     SIGN_INTRO_MS = 900
     # Hildehrand slides in from the left, just slightly after the sign starts
@@ -302,8 +310,8 @@ class Menu(GameState):
         new_game_button_size = (200, 100)
         new_game_text_size = 28
         self.new_game_btn = Button(
-            460,
-            220,
+            MENU_BUTTON_GROUP_POSITION[0],
+            MENU_BUTTON_GROUP_POSITION[1],
             new_game_button_size,
             "green",
             "New Game",
@@ -314,7 +322,7 @@ class Menu(GameState):
         self.elements.append(self.new_game_btn)
 
         main_button_size = (200, 45)
-        main_table_x, main_table_y = (460, 330)
+        main_table_x, main_table_y = (MENU_BUTTON_GROUP_POSITION[0], MENU_BUTTON_GROUP_POSITION[1] + 110)
         main_button_w, main_button_h = main_button_size
         main_columns = 1
         for index, button_data in enumerate(c.MENU_MAIN_BUTTON_TABLE):
@@ -333,7 +341,7 @@ class Menu(GameState):
             self.elements.append(button)
 
         button_size = (130, 40)
-        table_x, table_y = 670, 220
+        table_x, table_y = MENU_BUTTON_GROUP_POSITION[0] + 210, MENU_BUTTON_GROUP_POSITION[1]
         button_w, button_h = button_size
         columns = 1
         for index, button_data in enumerate(c.MENU_BUTTON_TABLE):
@@ -351,6 +359,11 @@ class Menu(GameState):
             setattr(self, button_data["attribute"], button)
             self.elements.append(button)
         
+        self._center_button_targets = [(button, button.rect.topleft) for button in self.elements]
+        bounds = self.new_game_btn.rect.unionall([button.rect for button in self.elements])
+        self._button_panel_target = bounds.inflate(2 * MENU_BUTTON_PANEL_PADDING, 2 * MENU_BUTTON_PANEL_PADDING)
+        self.button_panel_rect = self._button_panel_target.copy()
+
         self.bottom_texts = []
         font = fonts.get("heading2")
         
@@ -456,6 +469,7 @@ class Menu(GameState):
         # slide-in as the refresh button just above it, sharing its delay.
         self._version_text_intro_delay = self.refresh_btn._intro_delay
         self._version_draw_pos = (0, 0)
+        self._position_center_buttons(0.0)
 
         # Start version check in background so it doesn't freeze the menu.
         # Skipped entirely on web: no real OS threads under Pyodide, and the
@@ -463,6 +477,14 @@ class Menu(GameState):
         # there's nothing useful to do here even synchronously.
         if not IS_WEB:
             threading.Thread(target=self.check_version, daemon=True).start()
+
+    def _position_center_buttons(self, progress):
+        """Move the panel and all center buttons with the same vertical offset."""
+        start_offset = c.SCREEN_HEIGHT + self.BUTTON_INTRO_START_MARGIN - self._button_panel_target.top
+        offset = round(_lerp(start_offset, 0, progress))
+        self.button_panel_rect.y = self._button_panel_target.y + offset
+        for button, (x, y) in self._center_button_targets:
+            button.rect.topleft = (x, y + offset)
 
     def confirm_exit(self):
 
@@ -607,9 +629,8 @@ class Menu(GameState):
 
     def update(self):
         # Drives the whole intro: title drops from above, the sign slides in
-        # from the right, and every button/text row rises straight up from
-        # below the screen (hidden until its delay elapses), eased with
-        # _ease_out_expo so each arrives fast then settles.
+        # from the right. Center buttons rise together with their panel;
+        # other controls and bottom text retain their individual timings.
         elapsed = pygame.time.get_ticks() - self.intro_start_ticks
 
         if self.title_rect:
@@ -641,7 +662,14 @@ class Menu(GameState):
         rise_start_y = c.SCREEN_HEIGHT + self.BUTTON_INTRO_START_MARGIN
         slide_start_x_right = c.SCREEN_WIDTH + self.INTRO_SLIDE_START_MARGIN
 
+        group_elapsed = elapsed - MENU_BUTTON_GROUP_INTRO_DELAY_MS
+        group_progress = (1.0 if MENU_BUTTON_GROUP_INTRO_DURATION_MS <= 0
+                          else _ease_out_expo(group_elapsed / MENU_BUTTON_GROUP_INTRO_DURATION_MS))
+        self._position_center_buttons(group_progress if group_elapsed >= 0 else 0.0)
+
         for btn in self.elements:
+            if any(btn is button for button, _ in self._center_button_targets):
+                continue
             local_elapsed = elapsed - btn._intro_delay
             t = _ease_out_expo(local_elapsed / self.BUTTON_INTRO_DURATION_MS) if local_elapsed > 0 else 0.0
             if getattr(btn, "_intro_from_right", False):
@@ -695,6 +723,10 @@ class Menu(GameState):
                 surface.set_clip(old_clip)
 
     def additional_draw(self, surface):
+        ui_elements.draw_pixel_panel(
+            surface, self.button_panel_rect, MENU_BUTTON_PANEL_COLOR, MENU_BUTTON_PANEL_BORDER_COLOR,
+            gradient_strength=MENU_BUTTON_PANEL_GRADIENT_STRENGTH,
+            border_width=MENU_BUTTON_PANEL_BORDER_WIDTH)
         if self.title_image:
             surface.blit(self.title_image, self._title_draw_pos)
 
