@@ -2299,6 +2299,9 @@ SETTINGS_BG_FILE = "Settings.png"
 # bg_color instead of being drawn red.
 CHECKERBOARD_TEMPLATE_FILE = "Checkerboard.png"
 CHECKERBOARD_SCROLL_SPEED = 18  # pixels/sec, moves down-and-right
+DEFAULT_CHECKERBOARD_GRADIENT_STRENGTH = 0.5
+CHECKERBOARD_GRADIENT_STRENGTH = DEFAULT_CHECKERBOARD_GRADIENT_STRENGTH
+MAX_CHECKERBOARD_GRADIENT_STRENGTH = 2.0
 
 FLAG_SIZE = (60, 40)
 PORTRAIT_SIZE = (60, 60)
@@ -2429,6 +2432,7 @@ RUNTIME_SETTINGS = {
     "ocean_dark_color": "OCEAN_DARK_BLUE",
     "tournament_saves_dir": "TOURNAMENT_SAVES_DIR",
     "checkerboard_water": "CHECKERBOARD_WATER",
+    "checkerboard_gradient_strength": "CHECKERBOARD_GRADIENT_STRENGTH",
     "unit_art_style": "UNIT_ART_STYLE",
     "map_navigation_mode": "MAP_NAVIGATION_MODE",
     "battle_display_mode": "BATTLE_DISPLAY_MODE",

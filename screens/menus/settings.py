@@ -16,7 +16,8 @@ from screens.menus.keybinds import default_keybinds
 SETTINGS_RIGHT_COL_X = c.SCREEN_WIDTH - 260
 SETTINGS_BACK_POS = (50, 50)
 SETTINGS_FULLSCREEN_Y = 10
-SETTINGS_OPTION_GAP_Y = 45
+SETTINGS_OPTION_SIZE = (c.SIZES["setting_option"][0], 32)
+SETTINGS_OPTION_GAP_Y = 34
 SETTINGS_CHECKERBOARD_WATER_Y = SETTINGS_FULLSCREEN_Y + SETTINGS_OPTION_GAP_Y
 SETTINGS_FPS_TOGGLE_Y = SETTINGS_CHECKERBOARD_WATER_Y + SETTINGS_OPTION_GAP_Y
 SETTINGS_SHOW_UNCLAIMED_Y = SETTINGS_FPS_TOGGLE_Y + SETTINGS_OPTION_GAP_Y
@@ -24,14 +25,15 @@ SETTINGS_INTRO_POPUP_Y = SETTINGS_SHOW_UNCLAIMED_Y + SETTINGS_OPTION_GAP_Y
 SETTINGS_ARMY_GROUP_ANIMATIONS_Y = SETTINGS_INTRO_POPUP_Y + SETTINGS_OPTION_GAP_Y
 SETTINGS_MAP_NAV_Y = SETTINGS_ARMY_GROUP_ANIMATIONS_Y + SETTINGS_OPTION_GAP_Y
 SETTINGS_BATTLE_DISPLAY_Y = SETTINGS_MAP_NAV_Y + SETTINGS_OPTION_GAP_Y
-SETTINGS_PLAYER_SLIDER_Y = 400
-SETTINGS_FPS_SLIDER_Y = 460
+SETTINGS_CHECKERBOARD_GRADIENT_Y = SETTINGS_BATTLE_DISPLAY_Y + 65
+SETTINGS_PLAYER_SLIDER_Y = SETTINGS_CHECKERBOARD_GRADIENT_Y + 55
+SETTINGS_FPS_SLIDER_Y = SETTINGS_PLAYER_SLIDER_Y + 55
 SETTINGS_AI_THREAD_SLIDER_POS = (60, 400)
 SETTINGS_SLIDER_WIDTH = 200
 SETTINGS_RESET_Y = 650
 SETTINGS_UNIT_ART_GAP_X = 20
-SETTINGS_KEYBINDS_Y = 520
-SETTINGS_MOUSE_SETTINGS_Y = 580
+SETTINGS_KEYBINDS_Y = SETTINGS_FPS_SLIDER_Y + 40
+SETTINGS_MOUSE_SETTINGS_Y = SETTINGS_KEYBINDS_Y + 60
 SETTINGS_AI_TOGGLE_POS = (10, c.SCREEN_HEIGHT - 60)
 SETTINGS_AI_PROVIDER_Y = c.SCREEN_HEIGHT - 250
 SETTINGS_AI_PROVIDER_START_X = 10
@@ -48,9 +50,8 @@ SETTINGS_PATH_BOX_X = c.SCREEN_WIDTH // 2 - 150
 # small square and left-of-the-setting placement scenario_settings.py uses.
 SETTINGS_INFO_GAP_X = 10
 SETTINGS_INFO_X = SETTINGS_RIGHT_COL_X - c.SIZES["scenario_setting_info"][0] - SETTINGS_INFO_GAP_X
-# Half the leftover height between a "setting_option" button (40px) and the smaller
-# "scenario_setting_info" square (32px), so the two line up on center.
-SETTINGS_INFO_Y_NUDGE = (c.SIZES["setting_option"][1] - c.SIZES["scenario_setting_info"][1]) // 2
+# Align the info buttons with the settings buttons.
+SETTINGS_INFO_Y_NUDGE = (SETTINGS_OPTION_SIZE[1] - c.SIZES["scenario_setting_info"][1]) // 2
 
 # (row Y, tooltip title, tooltip text) for each info button in that column, in
 # the same top-to-bottom order as the buttons themselves.
@@ -109,29 +110,29 @@ def render_settings_buttons(settings_screen):
 
     settings_screen.elements = [
         ui_elements.make_back_button(settings_screen.save_and_go_back, pos=SETTINGS_BACK_POS),
-        Button(keybind_x, SETTINGS_FULLSCREEN_Y, "setting_option", "blue", "Toggle Fullscreen", settings_screen.toggle_full),
-        Button(keybind_x, SETTINGS_CHECKERBOARD_WATER_Y, "setting_option", "green" if settings_screen.checkerboard_water else "red",
+        Button(keybind_x, SETTINGS_FULLSCREEN_Y, SETTINGS_OPTION_SIZE, "blue", "Toggle Fullscreen", settings_screen.toggle_full),
+        Button(keybind_x, SETTINGS_CHECKERBOARD_WATER_Y, SETTINGS_OPTION_SIZE, "green" if settings_screen.checkerboard_water else "red",
                f"Checkerboard Water: {'ON' if settings_screen.checkerboard_water else 'OFF'}", settings_screen.toggle_checkerboard_water),
-        Button(keybind_x, SETTINGS_FPS_TOGGLE_Y, "setting_option", "green" if settings_screen.show_fps else "red",
+        Button(keybind_x, SETTINGS_FPS_TOGGLE_Y, SETTINGS_OPTION_SIZE, "green" if settings_screen.show_fps else "red",
                f"Show FPS: {'ON' if settings_screen.show_fps else 'OFF'}", settings_screen.toggle_fps),
-        Button(keybind_x, SETTINGS_SHOW_UNCLAIMED_Y, "setting_option",
+        Button(keybind_x, SETTINGS_SHOW_UNCLAIMED_Y, SETTINGS_OPTION_SIZE,
                "green" if settings_screen.show_unclaimed else "red",
                f"Show Unassigned: {'ON' if settings_screen.show_unclaimed else 'OFF'}",
                settings_screen.toggle_show_unclaimed),
-        Button(keybind_x, SETTINGS_INTRO_POPUP_Y, "setting_option",
+        Button(keybind_x, SETTINGS_INTRO_POPUP_Y, SETTINGS_OPTION_SIZE,
                "green" if settings_screen.show_intro_popup else "red",
                f"Show Tutorial Popup: {'ON' if settings_screen.show_intro_popup else 'OFF'}",
                settings_screen.toggle_intro_popup),
-        Button(keybind_x, SETTINGS_MAP_NAV_Y, "setting_option", "purple",
+        Button(keybind_x, SETTINGS_MAP_NAV_Y, SETTINGS_OPTION_SIZE, "purple",
                f"Map Navigation: {settings_screen.map_navigation_mode.title()}",
                settings_screen.toggle_map_navigation_mode),
-        Button(keybind_x, SETTINGS_BATTLE_DISPLAY_Y, "setting_option", "purple",
+        Button(keybind_x, SETTINGS_BATTLE_DISPLAY_Y, SETTINGS_OPTION_SIZE, "purple",
                f"Battle Display: {settings_screen.battle_display_mode.title()}",
                settings_screen.toggle_battle_display_mode),
-        Button(keybind_x, SETTINGS_ARMY_GROUP_ANIMATIONS_Y, "setting_option",
+        Button(keybind_x, SETTINGS_ARMY_GROUP_ANIMATIONS_Y, SETTINGS_OPTION_SIZE,
                "green" if settings_screen.army_group_animations else "red",
                f"Army Group Animations: {'ON' if settings_screen.army_group_animations else 'OFF'}",
-               settings_screen.toggle_army_group_animations),
+               settings_screen.toggle_army_group_animations, font_preset="small"),
     ]
     settings_screen.elements.extend(
         make_info_button(SETTINGS_INFO_X, y,
@@ -175,6 +176,13 @@ def render_settings_buttons(settings_screen):
             )
 
     # Sliders
+    settings_screen.checkerboard_gradient_slider = Slider(
+        keybind_x, SETTINGS_CHECKERBOARD_GRADIENT_Y, SETTINGS_SLIDER_WIDTH,
+        f"Checkerboard Gradient: {settings_screen.controller.checkerboard_gradient_strength:.2f}",
+        settings_screen.controller.checkerboard_gradient_strength,
+        settings_screen.set_checkerboard_gradient,
+        visual_max=c.MAX_CHECKERBOARD_GRADIENT_STRENGTH,
+        allowed_max=c.MAX_CHECKERBOARD_GRADIENT_STRENGTH)
     settings_screen.player_slider = Slider(keybind_x, SETTINGS_PLAYER_SLIDER_Y, SETTINGS_SLIDER_WIDTH,
                                            f"Players: {settings_screen.num_players}",
                                            (settings_screen.num_players - 1) / 7.0, settings_screen.set_players)
@@ -193,6 +201,7 @@ def render_settings_buttons(settings_screen):
 
     settings_screen.elements.extend([
         settings_screen.ai_thread_slider,
+        settings_screen.checkerboard_gradient_slider,
         settings_screen.player_slider,
         settings_screen.fps_slider,
         Button(keybind_x, SETTINGS_RESET_Y, "medium", "red", "Reset Defaults", settings_screen.reset_defaults),
@@ -464,6 +473,8 @@ class Settings(GameState):
         self.checkerboard_water = False
         self.controller.checkerboard_water = False
         c.apply_runtime_settings({"checkerboard_water": False})
+        self.controller.checkerboard_gradient_strength = c.DEFAULT_CHECKERBOARD_GRADIENT_STRENGTH
+        c.apply_runtime_settings({"checkerboard_gradient_strength": self.controller.checkerboard_gradient_strength})
 
         self.show_intro_popup = True
         self.controller.show_intro_popup = True
@@ -534,6 +545,13 @@ class Settings(GameState):
         else:
             default = getattr(c, self.COLOR_FIELDS[key][1])
         self.apply_setting(key, default, refresh=refresh)
+
+    def set_checkerboard_gradient(self, val):
+        strength = round(val, 2)
+        self.controller.checkerboard_gradient_strength = strength
+        c.apply_runtime_settings({"checkerboard_gradient_strength": strength})
+        self.checkerboard_gradient_slider.text = f"Checkerboard Gradient: {strength:.2f}"
+        queries.save_global_settings(self.controller)
 
     def set_fps(self, val):
         fps = int(20 + (val * 40)) # Scale 0.0-1.0 to 20-60

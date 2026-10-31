@@ -11,6 +11,7 @@ Older names and their conversion rules belong to data.migrations.
 
 from collections import namedtuple
 from dataclasses import dataclass
+import math
 
 import data.constants as c
 from data import migrations
@@ -36,6 +37,13 @@ def _coerce_music_pitch_timeline(value):
     if value in (c.MUSIC_PITCH_TIMELINE_STATIC, c.MUSIC_PITCH_TIMELINE_DYNAMIC):
         return value
     return c.DEFAULT_MUSIC_PITCH_TIMELINE
+
+
+def _coerce_checkerboard_gradient(value):
+    """Keep saved gradient values within the slider range."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+        return c.DEFAULT_CHECKERBOARD_GRADIENT_STRENGTH
+    return max(0.0, min(float(value), c.MAX_CHECKERBOARD_GRADIENT_STRENGTH))
 
 
 # Keep positional compatibility for older callers. JSON settings use named keys.
@@ -94,6 +102,8 @@ SETTINGS_FIELDS = (
     _field("show_unclaimed", "show_unclaimed", lambda: c.DEFAULT_SHOW_UNCLAIMED),
     _field("openrouter_api_key", "openrouter_api_key", lambda: ""),
     _field("openrouter_model", "openrouter_model", lambda: c.DEFAULT_OPENROUTER_MODEL),
+    _field("checkerboard_gradient_strength", "checkerboard_gradient_strength",
+           lambda: c.DEFAULT_CHECKERBOARD_GRADIENT_STRENGTH, coerce=_coerce_checkerboard_gradient),
 )
 
 SETTINGS_ORDER = tuple(field.name for field in SETTINGS_FIELDS)

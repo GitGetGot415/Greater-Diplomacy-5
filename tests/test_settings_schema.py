@@ -39,6 +39,7 @@ GOLDEN_ORDER = (
     "music_pitch_timeline",
     "show_unclaimed",
     "openrouter_api_key", "openrouter_model",
+    "checkerboard_gradient_strength",
 )
 
 GOLDEN_JSON_KEYS = set(GOLDEN_ORDER)
@@ -397,6 +398,48 @@ class SettingsScreenTests(unittest.TestCase):
         self.assertTrue(settings_schema.from_json_dict({"show_fps": False})["show_unclaimed"])
         old_tuple = settings_schema.to_tuple(settings_schema.defaults(), {})[:GOLDEN_ORDER.index("show_unclaimed") + 1]
         self.assertTrue(settings_schema.from_tuple(old_tuple)["show_unclaimed"])
+
+    def test_checkerboard_gradient_defaults_and_invalid_saved_values(self):
+        name = "checkerboard_gradient_strength"
+        default = c.DEFAULT_CHECKERBOARD_GRADIENT_STRENGTH
+        self.assertEqual(settings_schema.from_json_dict({})[name], default)
+        old_tuple = settings_schema.to_tuple(settings_schema.defaults(), {})[:-1]
+        self.assertEqual(settings_schema.from_tuple(old_tuple)[name], default)
+        for value in ("bad", True, float("nan"), float("inf")):
+            with self.subTest(value=value):
+                self.assertEqual(settings_schema.from_json_dict({name: value})[name], default)
+        self.assertEqual(settings_schema.from_json_dict({name: -1})[name], 0)
+        self.assertEqual(settings_schema.from_json_dict({name: 99})[name], c.MAX_CHECKERBOARD_GRADIENT_STRENGTH)
+
+    def test_checkerboard_slider_updates_saves_and_resets(self):
+        import pygame
+        from types import SimpleNamespace
+        from data import queries
+        from data.io import keybind_io
+        from screens.menus.settings import Settings
+        pygame.font.init()
+        previous = c.CHECKERBOARD_GRADIENT_STRENGTH
+        self.addCleanup(setattr, c, "CHECKERBOARD_GRADIENT_STRENGTH", previous)
+        controller = SimpleNamespace(**settings_schema.defaults(), keybinds={})
+        controller.ai_mode = "OFF"
+        with mock.patch.object(queries, "get_settings", return_value={}), \
+                mock.patch.object(queries, "save_cached_json") as save:
+            screen = Settings(controller)
+            slider = screen.checkerboard_gradient_slider
+            screen.handle_events([pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=slider.handle_rect.center)])
+            with mock.patch.object(pygame.mouse, "get_pressed", return_value=(True, False, False)):
+                screen.handle_events([pygame.event.Event(pygame.MOUSEMOTION, pos=(slider.rect.right, slider.rect.centery))])
+            screen.handle_events([pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=slider.rect.topright)])
+            self.assertEqual(controller.checkerboard_gradient_strength, c.MAX_CHECKERBOARD_GRADIENT_STRENGTH)
+            self.assertEqual(c.CHECKERBOARD_GRADIENT_STRENGTH, controller.checkerboard_gradient_strength)
+            saved = save.call_args.args[1]
+            with mock.patch.object(keybind_io.os.path, "exists", return_value=True), \
+                    mock.patch.object(queries, "get_settings", return_value=saved):
+                restored = keybind_io.load_settings_result({}).values
+            self.assertEqual(restored["checkerboard_gradient_strength"], controller.checkerboard_gradient_strength)
+            screen.reset_defaults()
+            self.assertEqual(controller.checkerboard_gradient_strength, c.DEFAULT_CHECKERBOARD_GRADIENT_STRENGTH)
+            self.assertEqual(c.CHECKERBOARD_GRADIENT_STRENGTH, c.DEFAULT_CHECKERBOARD_GRADIENT_STRENGTH)
 
     def test_show_unclaimed_toggle_updates_runtime_and_persists(self):
         from screens.menus.settings import Settings

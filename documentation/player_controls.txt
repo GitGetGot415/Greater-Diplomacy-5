@@ -74,8 +74,8 @@ Edit MUSIC_PANEL_STYLES["albums"] for the music album pane, including its fixed 
 These panels use cached pixel shading. Each entry has color and gradient_strength fields.
 Colors, opacity, and gradient strength use the same rules as the other background styles.
 Restart the game after editing these values.
-Edit CHECKERBOARD_GRADIENT_STRENGTH to adjust the moving checkerboard squares.
-Use 0 for flat fills, 1 for button shading, or a higher value for more contrast.
+Use the Checkerboard Gradient slider in Settings to adjust the moving checkerboard squares.
+Use 0 for flat fills, 1 for button shading, or up to 2 for more contrast.
 The square bevels do not change with gradient strength.
 
 Edit DIALOG_STYLES for the shared dialog background, including credits information and help dialogs.

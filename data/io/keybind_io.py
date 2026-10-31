@@ -25,7 +25,9 @@ def save_settings(keybind_dict, sfx_volume, music_volume, num_players=1, ai_mode
                   army_group_animations=c.DEFAULT_ARMY_GROUP_ANIMATIONS,
                   music_pitch_timeline=c.DEFAULT_MUSIC_PITCH_TIMELINE,
                   show_unclaimed=c.DEFAULT_SHOW_UNCLAIMED,
-                  openrouter_api_key=None, openrouter_model=None, **legacy_settings):
+                  openrouter_api_key=None, openrouter_model=None,
+                  checkerboard_gradient_strength=c.DEFAULT_CHECKERBOARD_GRADIENT_STRENGTH,
+                  **legacy_settings):
     """Convert key codes to names and save settings as JSON.
 
     Keep positional argument slots for older callers.

@@ -3,7 +3,6 @@ import os
 from contextlib import contextmanager
 import data.constants as c
 from ui.background_styles import MAP_BAR_STYLES, MAP_CONFIRM_STYLES, MAP_FRAME_COLOR, LEFT_FRAME_COLOR
-from ui import background_styles
 
 from ui.rendering.font_manager import fonts
 from ui.widgets import ui_elements
@@ -306,7 +305,7 @@ def get_checkerboard_tile(base_color):
     always-small cache.
     """
     quantized = tuple(min(255, max(0, round(ch / 4) * 4)) for ch in base_color)
-    gradient_strength = background_styles.CHECKERBOARD_GRADIENT_STRENGTH
+    gradient_strength = c.CHECKERBOARD_GRADIENT_STRENGTH
     cache_key = (quantized, gradient_strength)
     if cache_key in _checkerboard_cache:
         return _checkerboard_cache[cache_key]
