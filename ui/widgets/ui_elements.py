@@ -646,7 +646,8 @@ def _text_box_text_x(rect, inner, text_width, pad_x, active):
 
 
 def draw_text_box(surface, rect, text, active=False, font=None, placeholder=None,
-                  pad_x=10, show_caret=True):
+                  pad_x=10, show_caret=True, *, bg_color=None, border_color=None,
+                  gradient_strength=1.0):
     """Draws one single-line text entry box: fill, border, text, caret.
 
     Nine screens carried their own copy of these four steps, between them using
@@ -661,8 +662,12 @@ def draw_text_box(surface, rect, text, active=False, font=None, placeholder=None
     """
     font = font or fonts.get("normal")
 
-    draw_pixel_panel(surface, rect, c.INPUT_BG_ACTIVE if active else c.INPUT_BG,
-                     c.INPUT_BORDER_ACTIVE if active else c.INPUT_BORDER, recessed=True)
+    if bg_color is None:
+        bg_color = c.INPUT_BG_ACTIVE if active else c.INPUT_BG
+    if border_color is None:
+        border_color = c.INPUT_BORDER_ACTIVE if active else c.INPUT_BORDER
+    draw_pixel_panel(surface, rect, bg_color, border_color, recessed=True,
+                     gradient_strength=gradient_strength)
 
     if not text and placeholder:
         text_surf = font.render(placeholder, True, c.UI_TEXT_MUTED)

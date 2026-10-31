@@ -118,7 +118,12 @@ def _open_editor(map_screen, army):
         "custom_symbol": queries.normalize_army_custom_symbol(
             army.get("custom_symbol")),
         "color_channel": None,
+        "name_active": False,
     }
+
+
+def _name_field_rect(rect):
+    return pygame.Rect(rect.x + 70, rect.y + 57, rect.width - 92, 28)
 
 
 def _symbol_rects(rect):
@@ -389,6 +394,8 @@ def _handle_editor_event(map_screen, event):
             handle_back_key(map_screen)
         elif event.key == pygame.K_RETURN:
             _save_editor(map_screen)
+        elif not state["name_active"]:
+            return True
         elif event.key == pygame.K_a and event.mod & (pygame.KMOD_CTRL | pygame.KMOD_GUI):
             state["name"] = ""
         elif event.key == pygame.K_c and event.mod & (pygame.KMOD_CTRL | pygame.KMOD_GUI):
@@ -410,6 +417,9 @@ def _handle_editor_event(map_screen, event):
         return True
     if event.type != pygame.MOUSEBUTTONDOWN or event.button != 1:
         return False
+    state["name_active"] = _name_field_rect(rect).collidepoint(event.pos)
+    if state["name_active"]:
+        return True
     if not rect.collidepoint(event.pos):
         return True
     close = pygame.Rect(rect.right - 30, rect.y + 10, 18, 18)
@@ -468,12 +478,13 @@ def _draw_editor(map_screen, surface):
     surface.blit(x, x.get_rect(center=close.center))
     label = text_font.render("Name", True, (205, 220, 240))
     surface.blit(label, (rect.x + 20, rect.y + 66))
-    name_box = pygame.Rect(rect.x + 70, rect.y + 57, rect.width - 92, 28)
+    name_box = _name_field_rect(rect)
     style = ARMY_EDITOR_STYLES["name_field"]
-    ui_elements.draw_pixel_panel(surface, name_box, style["color"], (110, 155, 215),
-                                 recessed=True, gradient_strength=style["gradient_strength"])
-    name = text_font.render(state["name"] or " ", True, (245, 245, 250))
-    surface.blit(name, (name_box.x + 7, name_box.y + 7))
+    ui_elements.draw_text_box(
+        surface, name_box, state["name"], active=state["name_active"], font=text_font, pad_x=7,
+        bg_color=style["color"],
+        border_color=c.INPUT_BORDER_ACTIVE if state["name_active"] else (110, 155, 215),
+        gradient_strength=style["gradient_strength"])
     symbol_label = text_font.render("Map emblem", True, (205, 220, 240))
     surface.blit(symbol_label, (rect.x + 20, rect.y + 98))
     for symbol, symbol_rect in _symbol_rects(rect):

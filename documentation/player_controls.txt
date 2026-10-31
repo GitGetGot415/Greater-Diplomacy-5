@@ -448,6 +448,12 @@ It gives no automatic orders.
 Right-click assignment applies only to saved army groups.
 Unassigned units keep their normal map display, without army symbols or color bands.
 
+In the army editor, click the Name field before typing or using name clipboard shortcuts.
+A white border and text cursor show that the field is active.
+Click elsewhere to stop editing the name. Long names scroll within the active field to keep the text cursor visible.
+Enter still saves the editor draft. Escape closes the editor without saving.
+Name-field focus is local display state. It is not saved or sent in multiplayer commands.
+
 data/queries/armies.py derives Unassigned from current units and saved army membership.
 ui/panels/army_panel.py caches this entry when map state changes.
 Frame rendering reads the cached entry.

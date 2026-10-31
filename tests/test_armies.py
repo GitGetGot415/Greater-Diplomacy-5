@@ -368,12 +368,82 @@ class ArmyControlTests(unittest.TestCase):
         army_panel._open_editor(map_stub, army)
         return map_stub
 
+    def _focus_name(self, map_stub):
+        field = army_panel._name_field_rect(army_panel._editor_rect())
+        self.assertTrue(army_panel.handle_event(map_stub, pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN, button=1, pos=field.center)))
+        self.assertTrue(map_stub.army_editor_state["name_active"])
+
+    def test_army_name_requires_focus_for_typing_and_clipboard_shortcuts(self):
+        map_stub = self._name_editor_map()
+        self.assertFalse(map_stub.army_editor_state["name_active"])
+        keys = ((pygame.K_x, 0, "x"), (pygame.K_BACKSPACE, 0, ""),
+                (pygame.K_a, pygame.KMOD_CTRL, "a"), (pygame.K_c, pygame.KMOD_CTRL, "c"),
+                (pygame.K_v, pygame.KMOD_CTRL, "v"), (pygame.K_INSERT, pygame.KMOD_SHIFT, ""),
+                (pygame.K_a, pygame.KMOD_GUI, "a"), (pygame.K_c, pygame.KMOD_GUI, "c"),
+                (pygame.K_v, pygame.KMOD_GUI, "v"))
+        with patch("ui.widgets.ui_elements._clipboard_text") as paste, \
+                patch.object(army_panel.pickers, "copy_to_clipboard") as copy:
+            for key, modifiers, text in keys:
+                with self.subTest(key=key, modifiers=modifiers):
+                    self.assertTrue(army_panel.handle_event(map_stub, pygame.event.Event(
+                        pygame.KEYDOWN, key=key, mod=modifiers, unicode=text)))
+                    self.assertEqual(map_stub.army_editor_state["name"], "Army 1")
+        paste.assert_not_called()
+        copy.assert_not_called()
+
+    def test_name_focus_tracks_clicks_without_changing_the_saved_army(self):
+        map_stub = self._name_editor_map()
+        self._focus_name(map_stub)
+        self.assertTrue(army_panel.handle_event(map_stub, pygame.event.Event(
+            pygame.KEYDOWN, key=pygame.K_x, mod=0, unicode="x")))
+        self.assertEqual(map_stub.army_editor_state["name"], "Army 1x")
+        self.assertEqual(map_stub.nation_data["A"]["armies"][0]["name"], "Army 1")
+
+        flip = army_panel._flip_button_rect(army_panel._editor_rect())
+        self.assertTrue(army_panel.handle_event(map_stub, pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN, button=1, pos=flip.center)))
+        self.assertTrue(map_stub.army_editor_state["symbol_flipped"])
+        self.assertFalse(map_stub.army_editor_state["name_active"])
+        army_panel.handle_event(map_stub, pygame.event.Event(
+            pygame.KEYDOWN, key=pygame.K_BACKSPACE, mod=0, unicode=""))
+        self.assertEqual(map_stub.army_editor_state["name"], "Army 1x")
+
+        self._focus_name(map_stub)
+        army_panel.handle_event(map_stub, pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN, button=1, pos=(-1, -1)))
+        self.assertFalse(map_stub.army_editor_state["name_active"])
+
+    def test_reopening_army_editor_requires_another_name_click(self):
+        map_stub = self._name_editor_map()
+        self._focus_name(map_stub)
+        army_panel.handle_back_key(map_stub)
+        army_panel._open_editor(map_stub, map_stub.nation_data["A"]["armies"][0])
+        self.assertFalse(map_stub.army_editor_state["name_active"])
+
+    def test_enter_and_escape_keep_editor_shortcuts_with_or_without_name_focus(self):
+        for focused in (False, True):
+            for key in (pygame.K_RETURN, pygame.K_ESCAPE):
+                with self.subTest(focused=focused, key=key):
+                    map_stub = self._name_editor_map()
+                    if focused:
+                        self._focus_name(map_stub)
+                    with patch.object(army_panel, "_save_editor") as save:
+                        self.assertTrue(army_panel.handle_event(map_stub, pygame.event.Event(
+                            pygame.KEYDOWN, key=key, mod=0, unicode="")))
+                    if key == pygame.K_RETURN:
+                        save.assert_called_once_with(map_stub)
+                    else:
+                        save.assert_not_called()
+                        self.assertIsNone(map_stub.army_editor_state)
+
     def test_army_name_editor_accepts_clipboard_shortcuts(self):
         for key, modifiers in ((pygame.K_v, pygame.KMOD_CTRL),
                                (pygame.K_v, pygame.KMOD_GUI),
                                (pygame.K_INSERT, pygame.KMOD_SHIFT)):
             with self.subTest(key=key, modifiers=modifiers):
                 map_stub = self._name_editor_map()
+                self._focus_name(map_stub)
                 paste = pygame.event.Event(pygame.KEYDOWN, key=key, mod=modifiers, unicode="")
                 with patch("ui.widgets.ui_elements._clipboard_text", return_value=" Northern\nCommand"), \
                      patch("ui.widgets.ui_elements.pygame.key.get_mods", return_value=0):
@@ -383,6 +453,7 @@ class ArmyControlTests(unittest.TestCase):
 
     def test_army_name_editor_limits_pasted_text(self):
         map_stub = self._name_editor_map()
+        self._focus_name(map_stub)
         paste = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_v,
                                    mod=pygame.KMOD_CTRL, unicode="")
         with patch("ui.widgets.ui_elements._clipboard_text", return_value="x" * 100), \
@@ -394,6 +465,7 @@ class ArmyControlTests(unittest.TestCase):
         for modifiers in (pygame.KMOD_CTRL, pygame.KMOD_GUI):
             with self.subTest(modifiers=modifiers):
                 map_stub = self._name_editor_map()
+                self._focus_name(map_stub)
                 copy = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_c,
                                           mod=modifiers, unicode="c")
                 with patch("ui.panels.army_panel.pickers.copy_to_clipboard", return_value=True) as clipboard:
