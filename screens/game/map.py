@@ -118,6 +118,7 @@ EDITOR_SELECTION_TOOL_GAP = 15
 EDITOR_SELECTION_TOOL_STEP_X = c.SIZES["small_square"][0] + EDITOR_SELECTION_TOOL_GAP
 
 # --- Vertical unit filters beside the lower left sidebar ---
+UNIT_VIEW_BUTTON_COLORS = {"NAVAL": "blue", "LAND": "green", "AIR": "red", "ALL": "yellow"}
 UNIT_VIEW_BUTTON_PADDING_X = 8
 UNIT_VIEW_BUTTON_PADDING_Y = 8
 UNIT_VIEW_BUTTON_GAP_Y = 10
@@ -216,7 +217,7 @@ def render_buttons(map_screen):
             map_screen.unit_view_bar_rect.x + UNIT_VIEW_BUTTON_PADDING_X,
             map_screen.unit_view_bar_rect.y + UNIT_VIEW_BUTTON_PADDING_Y
             + index * UNIT_VIEW_BUTTON_STEP_Y,
-            "small_square", "blue", view_filter.title(),
+            "small_square", UNIT_VIEW_BUTTON_COLORS[view_filter], view_filter.title(),
             lambda view_filter=view_filter: map_screen.set_unit_view_filter(view_filter),
             image=icon, show_text=False)
 

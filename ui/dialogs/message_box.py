@@ -145,7 +145,7 @@ class _NavigationIntroPopup:
     # Move [icon:name:size] markers to place images. Size is the maximum dimension in pixels.
     # Omit :size to use the body font height. Names come from ui_elements.UI_ICONS.
     UNIT_VIEW_NOTE = (
-        "In Units view specifically you will see new buttons pop up, which are Naval [icon:naval:24], Land [icon:land:24], Air [icon:air:24], and All [icon:all:24]. "
+        "In Units view specifically you will see 4 colored buttons in the bottom left corner, which are Naval [icon:naval:24], Land [icon:land:24], Air [icon:air:24], and All [icon:all:24]. "
         "These filter your view of the map so you only see units that belong in that category. "
         "All is selected whenever a game opens. "
     )
