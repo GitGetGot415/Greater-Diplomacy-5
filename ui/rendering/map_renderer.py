@@ -380,8 +380,10 @@ def draw_map_screen(map_screen, surface):
                 instr_txt = f"Start Game as {disp_name}?"
 
             # Published for screens/game/map_input.py to hit-test -- see draw_confirm_prompt.
+            style = ui_bars.MAP_CONFIRM_STYLES["country"]
             map_screen.confirm_rect, map_screen.cancel_rect = ui_bars.draw_confirm_prompt(
-                surface, box_rect, instr_txt, overlay_alpha=100)
+                surface, box_rect, instr_txt, overlay_alpha=100,
+                bg=style["color"], gradient_strength=style["gradient_strength"])
 
     # --- LAYER 6: FEEDBACK & TOOLTIPS ---
     # Check flag before drawing the tooltip
@@ -399,10 +401,12 @@ def draw_map_screen(map_screen, surface):
         # frame (centre-relative rather than box-relative); the two agreed only
         # because the box happened to be 200 tall, so resizing it here would
         # have silently moved the buttons out from under their own hitboxes.
+        style = ui_bars.MAP_CONFIRM_STYLES["exit"]
         map_screen.exit_yes_rect, map_screen.exit_no_rect = ui_bars.draw_confirm_prompt(
             surface, box_rect, "Quit to Main Menu?", "Unsaved progress will be lost.",
             yes_label="EXIT", no_label="STAY",
-            yes_color=(150, 0, 0), no_color=(0, 150, 0), hover=True)
+            yes_color=(150, 0, 0), no_color=(0, 150, 0), hover=True,
+            bg=style["color"], gradient_strength=style["gradient_strength"])
     
 def draw_badges(map_screen, surface):
     """Draws notification badges on top of buttons after the main UI renders."""

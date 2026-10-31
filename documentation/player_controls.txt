@@ -57,6 +57,17 @@ Gradient strength must be zero or greater. Zero gives a flat fill; one keeps the
 Values above one increase contrast. Borders and bevels remain visible at zero strength.
 Restart the game after editing these values. These settings do not change buttons, text, or color swatches.
 
+Edit ARMY_BUTTON_STYLES near the top of ui/panels/army_panel.py for army buttons and group cards.
+The create, E, and T entries each have color and gradient_strength fields.
+E controls the army editor button. T controls the target-area button.
+T also has active_color, used when the army has a target area.
+
+The army_group entry controls the gradient of existing army cards. Their colors still come from each army's symbol color.
+The unassigned entry controls the Unassigned box gradient. Its base color remains constants.UNASSIGNED_ARMY_COLOR.
+
+They use the same gradient rules as the panel styles. Hover, pressed, and disabled states retain the selected gradient strength.
+Restart the game after editing these values.
+
 MAP FRAME DISPLAY
 -----------------
 
@@ -73,6 +84,13 @@ Set gradient_strength to a nonnegative number. A value of 1.0 keeps the standard
 A value of 0 gives a flat fill. A value above 1.0 increases the gradient contrast.
 
 Gradient strength does not change borders or bevels. Restart the game after editing these values.
+
+Edit MAP_CONFIRM_STYLES near the top of ui/bars/ui_bars.py for map confirmation backgrounds.
+The country entry controls the country selection confirmation. The exit entry controls the exit confirmation.
+Each entry has color and gradient_strength fields, with the same rules as MAP_BAR_STYLES.
+
+These settings change only the panel background. They do not change the buttons or the dimming behind the panel.
+Restart the game after editing these values.
 
 The province menu keeps assets/backgrounds/Province.png and caches the resized image for each viewport size.
 Map input uses that image to block clicks under panels and permit clicks through the transparent map window.

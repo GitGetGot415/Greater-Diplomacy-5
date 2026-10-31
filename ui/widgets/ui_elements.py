@@ -149,12 +149,12 @@ def _button_style(rect, color, hover_color, pressed_color, selected, disabled, p
 
 def draw_pixel_button(surface, rect, color, *, hover_color=None, pressed_color=None,
                       selected=False, disabled=False, pressed=None,
-                      border_color=None):
+                      border_color=None, gradient_strength=1.0):
     """Draw button states. Callers retain their existing labels and input handlers."""
     current_color, outline, width, depressed = _button_style(
         rect, color, hover_color, pressed_color, selected, disabled, pressed, border_color)
     draw_pixel_panel(surface, rect, current_color, outline,
-                     border_width=width, recessed=depressed)
+                     border_width=width, recessed=depressed, gradient_strength=gradient_strength)
 
 
 def draw_progress_bar(surface, rect, ratio, color=(100, 200, 100), *,

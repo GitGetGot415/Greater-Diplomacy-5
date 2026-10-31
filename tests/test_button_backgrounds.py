@@ -116,6 +116,20 @@ class ButtonBackgroundTests(unittest.TestCase):
         self.assertEqual(rect, original)
         self.assertEqual(self.surface.get_clip(), clip)
 
+    def test_custom_button_gradient_changes_refresh_and_reuse_cached_backgrounds(self):
+        rect = pygame.Rect(10, 10, 120, 50)
+        for disabled in (False, True):
+            for strength in (0.0, 0.5, 1.0, 2.0):
+                ui_elements.draw_pixel_button(self.surface, rect, (40, 80, 120),
+                                              disabled=disabled, pressed=False,
+                                              gradient_strength=strength)
+        self.assertEqual(ui_elements._button_background.cache_info().misses, 8)
+        rect.move_ip(10, 10)
+        with patch.object(ui_elements.queries, "lerp_color") as interpolate:
+            ui_elements.draw_pixel_button(self.surface, rect, (40, 80, 120), pressed=False,
+                                          gradient_strength=0.5)
+        interpolate.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

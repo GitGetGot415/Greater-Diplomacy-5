@@ -32,6 +32,14 @@ ARMY_EDITOR_STYLES = {
     "emblem_preview": {"color": (10, 20, 40), "gradient_strength": 1.0},
 }
 
+ARMY_BUTTON_STYLES = {
+    "create": {"color": (42, 98, 73), "gradient_strength": 0.5},
+    "E": {"color": (62, 88, 135), "gradient_strength": 0.0},
+    "T": {"color": (62, 88, 135), "active_color": (50, 108, 83), "gradient_strength": 0.0},
+    "army_group": {"gradient_strength": 0.5},
+    "unassigned": {"gradient_strength": 0.0},
+}
+
 EDITOR_WIDTH = 540
 EDITOR_MIN_HEIGHT = 390
 SYMBOL_TILE_SIZE = 40
@@ -776,8 +784,10 @@ def draw(map_screen, surface, orders_screen=None, draw_editors=True, selected_id
             army.get("symbol_color", c.DEFAULT_ARMY_SYMBOL_COLOR), selected)
         if unassigned:
             card_color = c.UNASSIGNED_ARMY_COLOR
+        style = ARMY_BUTTON_STYLES["unassigned" if unassigned else "army_group"]
         ui_elements.draw_pixel_button(surface, rect, card_color, selected=selected,
-                                      border_color=border_color)
+                                      border_color=border_color,
+                                      gradient_strength=style["gradient_strength"])
         if not unassigned:
             _draw_emblem(surface, army.get("symbol", ""), army.get("custom_symbol"),
                          army.get("symbol_color", c.DEFAULT_ARMY_SYMBOL_COLOR),
@@ -800,12 +810,16 @@ def draw(map_screen, surface, orders_screen=None, draw_editors=True, selected_id
             surface.blit(arrow, arrow.get_rect(center=arrow_rect.center))
         target_area_rect = _target_area_rect(rect)
         has_target_area = bool(army.get("defense_area"))
+        style = ARMY_BUTTON_STYLES["T"]
         ui_elements.draw_pixel_button(surface, target_area_rect,
-                                      (50, 108, 83) if has_target_area else (62, 88, 135))
+                                      style["active_color"] if has_target_area else style["color"],
+                                      gradient_strength=style["gradient_strength"])
         target_area = text_font.render("T", True, (235, 255, 240))
         surface.blit(target_area, target_area.get_rect(center=target_area_rect.center))
         edit_rect = _edit_rect(rect)
-        ui_elements.draw_pixel_button(surface, edit_rect, (62, 88, 135))
+        style = ARMY_BUTTON_STYLES["E"]
+        ui_elements.draw_pixel_button(surface, edit_rect, style["color"],
+                                      gradient_strength=style["gradient_strength"])
         edit = text_font.render("E", True, (230, 240, 255))
         surface.blit(edit, edit.get_rect(center=edit_rect.center))
         close_rect = _close_rect(rect)
@@ -817,7 +831,9 @@ def draw(map_screen, surface, orders_screen=None, draw_editors=True, selected_id
         if create_rect.colliderect(tray):
             enabled = (_orders_can_manage_armies(map_screen, orders_screen)
                        and bool(selected_ids))
-            ui_elements.draw_pixel_button(surface, create_rect, (42, 98, 73), disabled=not enabled)
+            style = ARMY_BUTTON_STYLES["create"]
+            ui_elements.draw_pixel_button(surface, create_rect, style["color"], disabled=not enabled,
+                                          gradient_strength=style["gradient_strength"])
             label = text_font.render("+ Create Army", True,
                                      (235, 250, 240) if enabled else (135, 145, 155))
             surface.blit(label, label.get_rect(center=create_rect.center))

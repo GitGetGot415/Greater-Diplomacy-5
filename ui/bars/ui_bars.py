@@ -27,6 +27,11 @@ MAP_BAR_STYLES = {
     "bottom_left": {"color": LEFT_FRAME_COLOR, "gradient_strength": 0.0},
 }
 
+MAP_CONFIRM_STYLES = {
+    "country": {"color": (40, 40, 40), "gradient_strength": 0.0},
+    "exit": {"color": (60, 40, 40), "gradient_strength": 0.0},
+}
+
 # Recolored checkerboard tiles, cached by target bg_color so each screen only
 # pays the generation cost once
 _checkerboard_cache = {}
@@ -123,10 +128,11 @@ def draw_fullscreen_overlay(surface, alpha=180):
     overlay.fill((0, 0, 0, alpha))
     surface.blit(overlay, (0, 0))
 
-def draw_modal_box(surface, rect, bg_color=(40, 40, 50), border_color=(100, 150, 255), border_width=2):
+def draw_modal_box(surface, rect, bg_color=(40, 40, 50), border_color=(100, 150, 255), border_width=2,
+                   *, gradient_strength=1.0):
     """Draws a standardized modal background box with a border."""
     ui_elements.draw_pixel_panel(surface, rect, bg_color, border_color,
-                                 border_width=border_width)
+                                 border_width=border_width, gradient_strength=gradient_strength)
 
 def draw_translucent_panel(surface, rect, rgba, border_color=None, border_width=2, radius=0):
     """A panel with an alpha fill -- the map-layered HUD boxes.
@@ -150,7 +156,8 @@ def draw_confirm_prompt(surface, box_rect, question, subtitle=None,
                         yes_label="CONFIRM", no_label="CANCEL",
                         yes_color=(0, 150, 0), no_color=(150, 0, 0),
                         overlay_alpha=180, hover=False,
-                        bg=(40, 40, 40), border=(200, 200, 200), border_width=2):
+                        bg=(40, 40, 40), border=(200, 200, 200), border_width=2,
+                        gradient_strength=1.0):
     """Draws a yes/no prompt in `box_rect` and returns its two button rects.
 
     For the confirmations the map draws as a render layer rather than as a
@@ -168,7 +175,8 @@ def draw_confirm_prompt(surface, box_rect, question, subtitle=None,
     """
 
     draw_fullscreen_overlay(surface, overlay_alpha)
-    draw_modal_box(surface, box_rect, bg_color=bg, border_color=border, border_width=border_width)
+    draw_modal_box(surface, box_rect, bg_color=bg, border_color=border, border_width=border_width,
+                   gradient_strength=gradient_strength)
 
     font = fonts.get("heading2")
     head = font.render(question, True, (255, 255, 255))
