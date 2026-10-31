@@ -118,9 +118,9 @@ def _button_background(size, color, pressed, border_width, gradient_strength=1.0
 
 
 @lru_cache(maxsize=32)
-def _gradient_overlay(size, gradient_strength, stepped, bands):
+def _gradient_overlay(size, gradient_strength, stepped, bands, dithering=True):
     """Cached (add, subtract) shade surfaces holding the button gradient for a size.
-    Stepped is the button's own layout with dithered edges: `bands` color bands, or the
+    Stepped uses the button layout with optional dithered edges: `bands` color bands, or the
     count a button of this height picks (one per `_BUTTON_SHADE_HEIGHT` pixels) when
     `bands` is None. Smooth gives every pixel step its own shade and no dithering."""
     width, height = size
@@ -137,26 +137,26 @@ def _gradient_overlay(size, gradient_strength, stepped, bands):
 
     for i, delta in enumerate(deltas):
         paint(delta, (0, boundaries[i], width, boundaries[i + 1] - boundaries[i]))
-    if stepped and gradient_strength and _dithers(width, height, shade_count):
+    if stepped and dithering and gradient_strength and _dithers(width, height, shade_count):
         for x, y, band, checker in _dither_squares(width, boundaries):
             paint(deltas[band - 1 + checker],
                   (x, y, min(_BUTTON_PIXEL_SIZE, width - x), _BUTTON_PIXEL_SIZE))
     return add, sub
 
 
-def apply_button_gradient(image, gradient_strength=1.0, stepped=True, bands=None):
+def apply_button_gradient(image, gradient_strength=1.0, stepped=True, bands=None, *, dithering=True):
     """Return a copy of `image` with the button's top-light to bottom-dark shading.
     RGB-only blends keep the image's transparency intact."""
     if gradient_strength < 0:
         raise ValueError("Gradient strength must be zero or greater.")
-    add, sub = _gradient_overlay(image.get_size(), gradient_strength, stepped, bands)
+    add, sub = _gradient_overlay(image.get_size(), gradient_strength, stepped, bands, dithering)
     shaded = image.copy()
     shaded.blit(add, (0, 0), special_flags=pygame.BLEND_RGB_ADD)
     shaded.blit(sub, (0, 0), special_flags=pygame.BLEND_RGB_SUB)
     return shaded
 
 
-def draw_color_gradient(surface, rect, colors, *, stepped=True, bands=None):
+def draw_color_gradient(surface, rect, colors, *, stepped=True, bands=None, dithering=True):
     """Draw color stops with the shared band layout and square transitions."""
     if rect.width <= 0 or rect.height <= 0:
         return
@@ -173,7 +173,7 @@ def draw_color_gradient(surface, rect, colors, *, stepped=True, bands=None):
         shades.append(shade)
         surface.fill(shade, (rect.x, rect.y + boundaries[band], rect.width,
                              boundaries[band + 1] - boundaries[band]))
-    if stepped and _dithers(rect.width, rect.height, count):
+    if stepped and dithering and _dithers(rect.width, rect.height, count):
         for x, y, band, checker in _dither_squares(rect.width, boundaries):
             surface.fill(shades[band - 1 + checker],
                          (rect.x + x, rect.y + y,

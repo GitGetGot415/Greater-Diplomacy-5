@@ -506,13 +506,20 @@ def get_hildehrand_gradient():
     return bool(data.get("gradient", c.HILDEHRAND_GRADIENT_DEFAULT_ENABLED)), strength, stepped, bands
 
 
+def get_hildehrand_dithering():
+    """Read portrait dithering. Older settings keep square transitions enabled."""
+    data = _load_cached_json("hildehrand_choice")
+    return bool(data.get("gradient_dithering", True)) if isinstance(data, dict) else True
+
+
 def save_hildehrand_portrait(variant, gradient, gradient_strength, gradient_stepped,
-                             gradient_bands):
+                             gradient_bands, *, gradient_dithering=True):
     """Remembers the menu portrait and its gradient: on or off, strength, and stepped or smooth, and band count."""
     save_cached_json("hildehrand_choice", {"variant": variant, "gradient": gradient,
                                            "gradient_strength": gradient_strength,
                                            "gradient_stepped": gradient_stepped,
-                                           "gradient_bands": gradient_bands})
+                                           "gradient_bands": gradient_bands,
+                                           "gradient_dithering": gradient_dithering})
 
 
 def get_research_years(*, context=None):

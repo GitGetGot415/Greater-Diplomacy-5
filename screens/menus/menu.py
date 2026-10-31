@@ -19,8 +19,9 @@ from ui.rendering.font_manager import fonts
 from ui.dialogs.character_select_screen import CHARACTERS_DIR
 from ui import dialogs
 
-MENU_WATERLINE_RATIO = 0.6
-MENU_SKY_STEPPED = True  # False gives a smooth gradient. True adds dithering. Restart after editing.
+MENU_WATERLINE_RATIO = 0.605
+MENU_SKY_STEPPED = False  # False gives a smooth gradient. Restart after editing.
+MENU_SKY_DITHERING = True
 MENU_SKY_BANDS = 12
 # Edit these RGB colors, then restart the game.
 MENU_SKY_START_COLOR = (24, 28, 65)
@@ -39,7 +40,7 @@ def _menu_background(size):
     colors = (MENU_SKY_START_COLOR, *MENU_SKY_MIDDLE_COLORS, MENU_SKY_END_COLOR)
     ui_elements.draw_color_gradient(
         background, pygame.Rect(0, 0, width, sky_height), colors,
-        stepped=MENU_SKY_STEPPED, bands=MENU_SKY_BANDS)
+        stepped=MENU_SKY_STEPPED, bands=MENU_SKY_BANDS, dithering=MENU_SKY_DITHERING)
     return background
 
 
@@ -170,6 +171,7 @@ class Menu(GameState):
         (self.hildehrand_gradient, self.hildehrand_gradient_strength,
          self.hildehrand_gradient_stepped,
          self.hildehrand_gradient_bands) = queries.get_hildehrand_gradient()
+        self.hildehrand_gradient_dithering = queries.get_hildehrand_dithering()
         try:
             self._hildehrand_plain_image = _load_scaled_image(
                 f"{CHARACTERS_DIR}/{self.hildehrand_choice}", self.HILDEHRAND_SCALE)
@@ -425,6 +427,13 @@ class Menu(GameState):
         self._refresh_hildehrand_image()
         self.save_hildehrand_settings()
 
+    def toggle_hildehrand_gradient_dithering(self):
+        if not (self.hildehrand_gradient and self.hildehrand_gradient_stepped):
+            return
+        self.hildehrand_gradient_dithering = not self.hildehrand_gradient_dithering
+        self._refresh_hildehrand_image()
+        self.save_hildehrand_settings()
+
     def set_hildehrand_gradient_bands(self, bands):
         """Live slider update. The caller saves once the drag ends."""
         self.hildehrand_gradient_bands = bands
@@ -439,7 +448,8 @@ class Menu(GameState):
         queries.save_hildehrand_portrait(self.hildehrand_choice, self.hildehrand_gradient,
                                          self.hildehrand_gradient_strength,
                                          self.hildehrand_gradient_stepped,
-                                         self.hildehrand_gradient_bands)
+                                         self.hildehrand_gradient_bands,
+                                         gradient_dithering=self.hildehrand_gradient_dithering)
 
     def _refresh_hildehrand_image(self):
         """Builds the drawn portrait from the plain one, shaded when the gradient is on.
@@ -448,7 +458,7 @@ class Menu(GameState):
         if plain and self.hildehrand_gradient:
             self.hildehrand_image = ui_elements.apply_button_gradient(
                 plain, self.hildehrand_gradient_strength, self.hildehrand_gradient_stepped,
-                self.hildehrand_gradient_bands)
+                self.hildehrand_gradient_bands, dithering=self.hildehrand_gradient_dithering)
         else:
             self.hildehrand_image = plain
 

@@ -18,7 +18,7 @@ class EditPortraitTests(unittest.TestCase):
         self.screen = self.controller.states["EDIT_PORTRAIT"]
         self.screen.refresh_ui()
         names = ("hildehrand_gradient", "hildehrand_gradient_strength", "hildehrand_gradient_stepped",
-                 "hildehrand_gradient_bands")
+                 "hildehrand_gradient_bands", "hildehrand_gradient_dithering")
         saved = [getattr(self.menu, name) for name in names]
         self.addCleanup(lambda: ([setattr(self.menu, n, v) for n, v in zip(names, saved)],
                                  self.menu._refresh_hildehrand_image()))
@@ -30,6 +30,67 @@ class EditPortraitTests(unittest.TestCase):
         self.menu.edit_portrait_btn.callback()
         self.assertEqual(self.menu.next_state, "EDIT_PORTRAIT")
         self.menu.done, self.menu.next_state = False, None
+
+    def test_menu_and_portrait_forward_independent_dithering_options(self):
+        from screens.menus import menu as menu_module
+        from ui.widgets import ui_elements
+
+        self.menu.hildehrand_gradient = True
+        self.menu.hildehrand_gradient_stepped = True
+        self.addCleanup(menu_module._menu_background.cache_clear)
+        for sky, portrait in ((True, False), (False, True)):
+            with self.subTest(sky=sky, portrait=portrait), \
+                    mock.patch.object(menu_module, "MENU_SKY_DITHERING", sky), \
+                    mock.patch.object(self.menu, "hildehrand_gradient_dithering", portrait), \
+                    mock.patch.object(ui_elements, "draw_color_gradient") as draw_sky, \
+                    mock.patch.object(ui_elements, "apply_button_gradient",
+                                      wraps=ui_elements.apply_button_gradient) as shade_portrait:
+                menu_module._menu_background.cache_clear()
+                self.menu.draw_background(pygame.Surface((1280, 720)))
+                self.menu._refresh_hildehrand_image()
+                self.assertEqual(draw_sky.call_args.kwargs["dithering"], sky)
+                self.assertEqual(shade_portrait.call_args.kwargs["dithering"], portrait)
+                self.menu.draw_background(pygame.Surface((1280, 720)))
+                draw_sky.assert_called_once()
+
+    def test_dithering_button_toggles_preview_and_saves(self):
+        self.menu.hildehrand_gradient = True
+        self.menu.hildehrand_gradient_stepped = True
+        self.menu.hildehrand_gradient_dithering = True
+        self.screen.refresh_ui()
+        button = next(e for e in self.screen.elements
+                      if getattr(e, "text", "").startswith("Dithering"))
+        with mock.patch.object(self.menu, "_refresh_hildehrand_image") as refresh:
+            button.callback()
+        refresh.assert_called_once_with()
+        self.assertFalse(self.menu.hildehrand_gradient_dithering)
+        self.assertFalse(self.save.call_args.kwargs["gradient_dithering"])
+
+    def test_dithering_disabled_without_stepped_gradient(self):
+        for enabled, stepped in ((False, False), (False, True), (True, False)):
+            self.menu.hildehrand_gradient = enabled
+            self.menu.hildehrand_gradient_stepped = stepped
+            self.menu.hildehrand_gradient_dithering = True
+            self.screen.refresh_ui()
+            button = next(e for e in self.screen.elements
+                          if getattr(e, "text", "").startswith("Dithering"))
+            self.assertTrue(button.disabled)
+            button.callback()
+            self.assertTrue(self.menu.hildehrand_gradient_dithering)
+        self.save.assert_not_called()
+
+    def test_dithering_settings_round_trip_and_old_default(self):
+        from data.queries import content
+
+        with mock.patch.object(content, "_load_cached_json", return_value={}):
+            self.assertTrue(content.get_hildehrand_dithering())
+        for dithering in (False, True):
+            with mock.patch.object(content, "save_cached_json") as write:
+                content.save_hildehrand_portrait("portrait.png", True, 1.0, True, 4,
+                                                gradient_dithering=dithering)
+            saved = write.call_args.args[1]
+            with mock.patch.object(content, "_load_cached_json", return_value=saved):
+                self.assertEqual(content.get_hildehrand_dithering(), dithering)
 
     def test_back_returns_to_the_menu(self):
         self.screen.exit_screen()
@@ -46,7 +107,8 @@ class EditPortraitTests(unittest.TestCase):
         self.save.assert_called_with(self.menu.hildehrand_choice, True,
                                      self.menu.hildehrand_gradient_strength,
                                      self.menu.hildehrand_gradient_stepped,
-                                     self.menu.hildehrand_gradient_bands)
+                                     self.menu.hildehrand_gradient_bands,
+                                     gradient_dithering=self.menu.hildehrand_gradient_dithering)
 
     def test_stepped_button_is_disabled_and_ignored_while_the_gradient_is_off(self):
         self.menu.hildehrand_gradient = False
@@ -96,7 +158,8 @@ class EditPortraitTests(unittest.TestCase):
         self.assertNotEqual(pygame.image.tobytes(self.menu.hildehrand_image, "RGBA"), smooth)
         self.save.assert_called_with(self.menu.hildehrand_choice, True,
                                      self.menu.hildehrand_gradient_strength, True,
-                                     self.menu.hildehrand_gradient_bands)
+                                     self.menu.hildehrand_gradient_bands,
+                                     gradient_dithering=self.menu.hildehrand_gradient_dithering)
 
     def test_stepped_shading_has_button_bands_and_dithered_edges(self):
         from ui.widgets import ui_elements
@@ -134,7 +197,8 @@ class EditPortraitTests(unittest.TestCase):
         self.save.assert_called_once_with(self.menu.hildehrand_choice, True,
                                           c.HILDEHRAND_GRADIENT_MAX_STRENGTH / 2,
                                           self.menu.hildehrand_gradient_stepped,
-                                          self.menu.hildehrand_gradient_bands)
+                                          self.menu.hildehrand_gradient_bands,
+                                     gradient_dithering=self.menu.hildehrand_gradient_dithering)
 
     def test_band_slider_sets_a_whole_number_within_limits_and_saves_on_release(self):
         self.menu.hildehrand_gradient = True

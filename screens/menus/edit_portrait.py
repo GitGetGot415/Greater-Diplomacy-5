@@ -68,6 +68,10 @@ class Edit_Portrait(GameState):
         self.menu.toggle_hildehrand_gradient_stepped()
         self.refresh_ui()
 
+    def toggle_dithering(self):
+        self.menu.toggle_hildehrand_gradient_dithering()
+        self.refresh_ui()
+
     def set_strength(self, strength):
         self.menu.set_hildehrand_gradient_strength(strength)
         self._slider_changed = True
@@ -109,12 +113,19 @@ class Edit_Portrait(GameState):
         stepped_button = Button(CONTROLS_X, style_y, "medium", "green" if stepped else "red",
                                 f"Stepped: {'ON' if stepped else 'OFF'}", self.toggle_stepped)
         stepped_button.disabled = not enabled
+        dithering = menu.hildehrand_gradient_dithering
+        dithering_button = Button(
+            CONTROLS_X, CONTROLS_Y + 3 * CONTROLS_GAP_Y, "medium",
+            "green" if dithering else "red",
+            f"Dithering: {'ON' if dithering else 'OFF'}", self.toggle_dithering)
+        dithering_button.disabled = not (enabled and stepped)
         self.elements = [
             make_back_button(self.exit_screen),
             Button(CONTROLS_X, CONTROLS_Y, "medium", "purple", "Choose Portrait", self.open_picker),
             Button(CONTROLS_X, gradient_y, "medium", "green" if enabled else "red",
                    f"Gradient: {'ON' if enabled else 'OFF'}", self.toggle_gradient),
             stepped_button,
+            dithering_button,
             self.strength_slider,
             self.bands_slider,
         ]
