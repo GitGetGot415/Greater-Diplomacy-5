@@ -27,11 +27,7 @@ from map_logic.diplomacy import war_calls
 
 from data import queries
 from map_logic.diplomacy import peace_scope, deal_effects, ratification, military_attaches, volunteers
-from map_logic.diplomacy.diplomacy_agreements import (
-    finalize_create_faction,
-    finalize_faction_join,
-    join_faction_wars,
-)
+from map_logic.diplomacy.faction_actions import finalize_create_faction, finalize_faction_join, join_faction_wars
 from map_logic.diplomacy.diplomacy_events import log_global_event
 
 

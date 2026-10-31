@@ -6,7 +6,7 @@ from ui.camera import camera_handler
 from screens.setup import player_setup
 from data import queries
 from ui.widgets.ui_elements import process_text_input
-from map_logic.diplomacy import diplomacy_logic
+from map_logic.diplomacy import diplomacy_messages
 from screens.game import battle_screen
 from ui.bars import flag_renderer, ui_bars
 
@@ -712,10 +712,10 @@ def handle_map_events(map_screen, event):
                     if status == "SUBMIT":
                         draft = map_screen.mail_draft_text.strip()
                         if draft:
-                            msg = diplomacy_logic.queue_text_message(map_screen.nation_data, map_screen.player_country, owner, draft)
+                            msg = diplomacy_messages.queue_text_message(map_screen.nation_data, map_screen.player_country, owner, draft)
                             map_screen.show_feedback(msg)
                         else:
-                            diplomacy_logic.cancel_text_message(map_screen.nation_data, map_screen.player_country, owner)
+                            diplomacy_messages.cancel_text_message(map_screen.nation_data, map_screen.player_country, owner)
                             map_screen.show_feedback("Draft cleared.")
                         map_screen.mail_input_active = False
 

@@ -1,8 +1,8 @@
 """War state mutations: declaring, joining, and ending wars, plus the shared
 military-access helper the puppet/faction paths also reach for.
 
-See map_logic/diplomacy/diplomacy_agreements.py for how this fits alongside
-puppet_actions.py and faction_actions.py.
+Works alongside puppet_actions.py and faction_actions.py. These modules import
+each other where the concerns interact.
 """
 
 # Faction, subject, and deal mutations call war actions. Keep their imports local to avoid cycles.
@@ -296,8 +296,7 @@ def execute_peace_treaty(map_data, nation_data, proposer, target, peace_type, ma
     a `peace_type` string, which is what a save made before the rework can still
     have travelling in pending_diplomacy, and what the spectator's forced-peace
     cheat hands in. `map_data`/`nation_data` are read off `map_screen` by the
-    deal path; they stay in the signature because diplomacy_agreements re-exports
-    this function and a mod may be calling it.
+    deal path; they stay in the signature because a mod may be calling this function.
     """
     from map_logic.diplomacy import deal_effects
 

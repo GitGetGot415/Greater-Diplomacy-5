@@ -210,9 +210,6 @@ class Realtime_Host_Setup(GameState):
                                   saved, initial=self.address)
     def edit_password(self): self._string("Lobby Password", "password", "Optional password (blank removes it):", True)
     def edit_port(self): self._integer("Server Port", "port", "Forward this TCP port for WAN play:", MIN_SERVER_PORT, MAX_SERVER_PORT)
-    def edit_turns(self): self._integer("Maximum Turns", "max_turns", f"{MIN_MATCH_TURNS} to {MAX_MATCH_TURNS}:", MIN_MATCH_TURNS, MAX_MATCH_TURNS)
-    def edit_minutes(self): self._integer("Turn Time", "turn_minutes", f"Minutes per turn ({MIN_TURN_MINUTES} to {MAX_TURN_MINUTES}):", MIN_TURN_MINUTES, MAX_TURN_MINUTES)
-
     def edit_capacity(self):
         # Country count is checked authoritatively when opening the lobby.
         self._integer("Player Capacity", "capacity", f"Maximum connected players ({MIN_PLAYER_CAPACITY} to {MAX_PLAYER_CAPACITY}):", MIN_PLAYER_CAPACITY, MAX_PLAYER_CAPACITY)

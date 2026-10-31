@@ -1,8 +1,8 @@
 """Puppet-hierarchy mutations: assigning, releasing, annexing, and cascading
 diplomatic state (wars, peace, factions) down a master's puppet tree.
 
-See map_logic/diplomacy/diplomacy_agreements.py for how this fits alongside
-war_actions.py and faction_actions.py.
+Works alongside war_actions.py and faction_actions.py. These modules import
+each other where the concerns interact.
 """
 
 # Faction actions call subject actions. Keep imports of faction mutations local to avoid that reciprocal dependency.

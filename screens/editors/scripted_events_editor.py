@@ -25,7 +25,7 @@ from ui import dialogs
 from ui.bars import ui_bars
 from ui.widgets import ui_elements
 from ui.navigation.modal_screen import ModalScreen
-from ui.widgets.table_screen import truncate
+from ui.widgets import text_utils
 from ui.widgets.ui_elements import Button, TextField, make_back_button
 
 from ui.navigation import screen_runner
@@ -141,7 +141,7 @@ class _HelpScreen(_ModalScreen):
         font = fonts.get("normal")
         self.lines = []
         for raw in HELP_TEXT.split("\n"):
-            self.lines.extend(dialogs._wrap_text(raw, font, p.width - 2 * self.PAD - 30) or [""])
+            self.lines.extend(text_utils.wrap_text(raw, font, p.width - 2 * self.PAD - 30) or [""])
         self.refresh_ui()
 
     def refresh_ui(self):
@@ -375,7 +375,7 @@ class _VariablesScreen(_ModalScreen):
         for i, y in self.pane_rows("vars", len(self.variables), self.list_top, self.list_view_h, row_h=30):
             v = self.variables[i]
             btn = self.button(self.list_x, y, self.LIST_W - 24, "blue",
-                              truncate(f"{v['name']} ({v['type']}) = {v['value']}", 40),
+                              text_utils.truncate_chars(f"{v['name']} ({v['type']}) = {v['value']}", 40),
                               lambda idx=i: self.select(idx))
             btn.is_selected = i == self.selected
             btn.is_scrollable = True
@@ -936,7 +936,7 @@ class Scripted_Events_Editor_Screen(_ModalScreen):
             else:
                 cond_strs.append(f"{prefix}{c_dict.get('type')} {c_dict.get('value')}")
 
-        full_cond_str = truncate("".join(cond_strs), SUMMARY_MAX_CHARS)
+        full_cond_str = text_utils.truncate_chars("".join(cond_strs), SUMMARY_MAX_CHARS)
 
         actions = evt.get("actions", [])
 
@@ -963,7 +963,7 @@ class Scripted_Events_Editor_Screen(_ModalScreen):
             else:
                 act_strs.append(f"{a_type} '{a.get('target')}'")
 
-        act_str = truncate(f"Then {', '.join(act_strs)}", SUMMARY_MAX_CHARS)
+        act_str = text_utils.truncate_chars(f"Then {', '.join(act_strs)}", SUMMARY_MAX_CHARS)
 
         once_str = " [Once]" if evt.get("fire_once", True) else " [Repeat]"
         return f"{index + 1}. If {full_cond_str} -> {act_str}{once_str}"
@@ -1028,7 +1028,7 @@ class Scripted_Events_Editor_Screen(_ModalScreen):
         for i, y in self.pane_rows("nations", len(self.countries), self.nations_top,
                                  self.nations_view_h, row_h=30):
             cid = self.countries[i]
-            btn = self.button(self.nat_x, y, self.NAT_W - 24, "blue", truncate(cid, 26),
+            btn = self.button(self.nat_x, y, self.NAT_W - 24, "blue", text_utils.truncate_chars(cid, 26),
                               lambda cc=cid: self.select_nation(cc))
             btn.is_selected = cid == self.target
             btn.is_scrollable = True
@@ -1043,7 +1043,7 @@ class Scripted_Events_Editor_Screen(_ModalScreen):
         row_w = p.right - self.PAD - self.events_x - 20
         for i, y in self.pane_rows("events", len(events), self.events_top, self.events_view_h):
             btn = self.button(self.events_x, y, row_w, "blue",
-                              truncate(self._event_summary(events[i], i), row_w // 9),
+                              text_utils.truncate_chars(self._event_summary(events[i], i), row_w // 9),
                               lambda idx=i: self.select_event(idx))
             btn.is_selected = i == self.selected_event
             btn.is_scrollable = True

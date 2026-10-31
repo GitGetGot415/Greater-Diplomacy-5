@@ -15,10 +15,15 @@ from map_logic.diplomacy.diplomacy_messages import (
     get_response, get_response_map, set_response, clear_response, RESPONSE_ACCEPT,
     FORWARD_ACTION
 )
-from map_logic.diplomacy.diplomacy_agreements import (
-    finalize_war, finalize_neutral, finalize_disband_faction, finalize_faction_join, finalize_faction_leave,
-    join_faction_wars, finalize_faction_kick, finalize_annexation, finalize_release, finalize_take_puppets,
-    why_an_ai_may_not_leave
+from map_logic.diplomacy.war_actions import finalize_war, finalize_neutral
+from map_logic.diplomacy.puppet_actions import finalize_annexation, finalize_release, finalize_take_puppets
+from map_logic.diplomacy.faction_actions import (
+    finalize_disband_faction,
+    finalize_faction_join,
+    finalize_faction_leave,
+    join_faction_wars,
+    finalize_faction_kick,
+    why_an_ai_may_not_leave,
 )
 
 from map_logic.diplomacy.action_definitions import LITE_RESPONSE_KEYS, WAR_CANCELLED_ACTIONS, availability

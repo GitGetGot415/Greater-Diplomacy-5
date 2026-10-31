@@ -266,9 +266,9 @@ class StubMapScreen:
 
     def run_turn(self):
         """Advances one diplomatic turn."""
-        from map_logic.diplomacy import diplomacy_logic
+        from map_logic.diplomacy import diplomacy_processor
         self.time_manager.total_turns += 1
-        diplomacy_logic.process_diplomacy_turn(self)
+        diplomacy_processor.process_diplomacy_turn(self)
 
     def thread(self, owner, other):
         """The conversation `owner` can see with `other`, oldest first.
@@ -308,14 +308,14 @@ class StubMapScreen:
 
     def propose(self, sender, target, action, message="", parameters=None):
         """Queues an outgoing proposal exactly as the player's buttons would."""
-        from map_logic.diplomacy import diplomacy_logic
-        return diplomacy_logic.toggle_diplomacy_action(
+        from map_logic.diplomacy import diplomacy_processor
+        return diplomacy_processor.toggle_diplomacy_action(
             self.nation_data, sender, target, action, message, parameters=parameters)
 
     def answer(self, responder, sender, verdict, action, message=""):
         """Queues an answer to an incoming proposal."""
-        from map_logic.diplomacy import diplomacy_logic
-        return diplomacy_logic.toggle_diplomatic_response(
+        from map_logic.diplomacy import diplomacy_processor
+        return diplomacy_processor.toggle_diplomatic_response(
             self.nation_data, responder, sender, verdict, action, message)
 
 

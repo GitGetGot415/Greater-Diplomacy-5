@@ -55,12 +55,6 @@ def _show_tk_chain(hidden):
             pass
 
 
-def _wrap_text(text, font, max_width):
-    """Kept as the name checkbox_list_screen and scripted_events_editor already
-    import; the implementation now lives in ui/widgets/text_utils.py."""
-    return text_utils.wrap_text(text, font, max_width)
-
-
 class _BaseModal:
     """Shared skeleton for the four dialogs below.
 
@@ -96,7 +90,7 @@ class _BaseModal:
         self.btn_font = fonts.get("button")
 
         box_w = min(self.BOX_MAX_W, surface.get_width() - 40)
-        self.lines = _wrap_text(message, self.msg_font, box_w - 40) if message else []
+        self.lines = text_utils.wrap_text(message, self.msg_font, box_w - 40) if message else []
         box_h = max(self.BOX_MIN_H, self.BOX_CHROME_H + self.body_height() + extra_h)
 
         self.box_rect = pygame.Rect(0, 0, box_w, box_h)

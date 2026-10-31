@@ -45,7 +45,7 @@ def process_dead_nations(map_screen):
         # --- Master Independence on Collapse ---
         master = data.get("master", "")
         if master and master not in active_nations:
-            from map_logic.diplomacy.diplomacy_agreements import break_puppet_link
+            from map_logic.diplomacy.puppet_actions import break_puppet_link
             break_puppet_link(world_state.nation_data, master, nation)
             log_global_event(world_state.nation_data, f"{nation} has achieved independence following the collapse of {master}!")
 

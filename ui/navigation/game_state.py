@@ -7,7 +7,7 @@ from data.platform import sync_persisted_dir
 from ui.bars import ui_bars
 
 from ui.information import feedback_text
-from map_logic.diplomacy import diplomacy_logic
+from map_logic.diplomacy import diplomacy_processor
 from ui.widgets.ui_elements import process_text_input, draw_text_box, make_back_button
 from ui.rendering.font_manager import fonts
 
@@ -583,7 +583,7 @@ class GameState:
         the same three things -- toggle, report the returned message, refresh --
         and each one used to spell them out. They now use the same diplomacy owner.
         """
-        msg = diplomacy_logic.toggle_diplomacy_action(
+        msg = diplomacy_processor.toggle_diplomacy_action(
             self.map_screen.nation_data, self.map_screen.player_country,
             target, action, params)
         self.map_screen.show_feedback(msg)

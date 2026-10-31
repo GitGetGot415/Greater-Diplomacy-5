@@ -1,6 +1,6 @@
 from data.state_access import world_for, session_for
 import asyncio
-from map_logic.diplomacy import diplomacy_logic
+from map_logic.diplomacy import diplomacy_processor
 from map_logic.ai import (ai_movement, ai_research, ai_construction, ai_diplomacy, scripted_events,
                           ai_llm_runner, ai_world, automation_logic)
 from map_logic.system32 import (
@@ -118,7 +118,7 @@ async def prepare_turn(map_screen):
     # MOVED: Diplomacy is now processed AFTER AI movement generation.
     session_state.loading_status_text = "Processing Pending Diplomacy..."
     print("[SYSTEM] Processing Pending Diplomacy...")
-    diplomacy_logic.process_diplomacy_turn(map_screen)
+    diplomacy_processor.process_diplomacy_turn(map_screen)
     await asyncio.sleep(0)
 
     print("--- [PHASE 1] COMPLETE ---")

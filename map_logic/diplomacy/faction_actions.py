@@ -1,8 +1,8 @@
 """Faction mutations: creating, joining, leaving, kicking, and pulling a
 member's wars along with them.
 
-See map_logic/diplomacy/diplomacy_agreements.py for how this fits alongside
-war_actions.py and puppet_actions.py.
+Works alongside war_actions.py and puppet_actions.py. These modules import
+each other where the concerns interact.
 """
 from data import queries
 from map_logic.diplomacy.war_actions import (

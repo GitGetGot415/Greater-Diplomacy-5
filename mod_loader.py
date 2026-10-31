@@ -297,21 +297,6 @@ def _parse_first_line(first_line):
     }
 
 
-def read_mod(filename):
-    """Backward-compatible (target_rel_path, source_text) tuple for callers
-    that don't care about the manifest fields. Use _read_mod_full() for the
-    declared sandbox and legacy flag. Raises ValueError on an empty file or
-    a first line that isn't a recognized header comment, instead of letting
-    a bad mod crash the caller with an IndexError.
-
-    source_text is the *entire* file, first line included -- it's left in
-    place as an ordinary comment rather than stripped, so a compile error
-    inside the mod reports the same line number the user sees in their
-    editor.
-    """
-    target, source, _declared, _legacy = _read_mod_full(filename)
-    return target, source
-
 
 def _read_mod_full(filename):
     """(target_rel_path, source_text, declared_sandbox, legacy_format)."""

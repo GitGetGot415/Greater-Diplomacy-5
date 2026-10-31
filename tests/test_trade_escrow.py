@@ -17,7 +17,7 @@ offer and a player's offer go down the same path.
 import unittest
 
 
-from map_logic.diplomacy import diplomacy_logic
+from map_logic.diplomacy import diplomacy_messages
 from tests.stub_map_screen import StubMapScreen
 
 
@@ -46,7 +46,7 @@ class AiTradeEscrowTests(unittest.TestCase):
     def test_a_rejected_offer_leaves_the_proposer_exactly_where_it_started(self):
         """The regression: this used to leave B with 1300 materials."""
         self.game.run_turn()
-        self.game.answer("A", "B", diplomacy_logic.RESPONSE_REJECT, "TRADE")
+        self.game.answer("A", "B", diplomacy_messages.RESPONSE_REJECT, "TRADE")
         self.game.run_turn()
 
         self.assertEqual(self.stock("B"), (1000, 1000))
@@ -61,7 +61,7 @@ class AiTradeEscrowTests(unittest.TestCase):
 
     def test_an_accepted_offer_moves_resources_without_creating_any(self):
         self.game.run_turn()
-        self.game.answer("A", "B", diplomacy_logic.RESPONSE_ACCEPT, "TRADE")
+        self.game.answer("A", "B", diplomacy_messages.RESPONSE_ACCEPT, "TRADE")
         self.game.run_turn()
 
         self.assertEqual(self.stock("B"), (700, 1200))
@@ -70,7 +70,7 @@ class AiTradeEscrowTests(unittest.TestCase):
     def test_the_world_total_is_conserved_either_way(self):
         before = sum(self.stock("A") + self.stock("B"))
         self.game.run_turn()
-        self.game.answer("A", "B", diplomacy_logic.RESPONSE_ACCEPT, "TRADE")
+        self.game.answer("A", "B", diplomacy_messages.RESPONSE_ACCEPT, "TRADE")
         self.game.run_turn()
 
         self.assertEqual(sum(self.stock("A") + self.stock("B")), before)
@@ -108,7 +108,7 @@ class PlayerTradeEscrowTests(unittest.TestCase):
         self.game.run_turn()
         self.assertEqual(self.game.nation_data["A"]["materials"], -180)
 
-        self.game.answer("B", "A", diplomacy_logic.RESPONSE_REJECT, "TRADE")
+        self.game.answer("B", "A", diplomacy_messages.RESPONSE_REJECT, "TRADE")
         self.game.run_turn()
         self.assertEqual(self.game.nation_data["A"]["materials"], 120,
                          "refunding the promise rather than the holding would mint")

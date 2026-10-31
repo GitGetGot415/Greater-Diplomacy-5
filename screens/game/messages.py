@@ -6,7 +6,7 @@ from ui.widgets import text_utils
 from ui.widgets import ui_elements
 from ui.widgets.ui_elements import Button, process_text_input
 from ui.rendering.font_manager import fonts
-from map_logic.diplomacy import diplomacy_logic, diplomacy_messages, volunteers
+from map_logic.diplomacy import diplomacy_messages, diplomacy_processor, volunteers
 from data import queries
 from ui.dialogs import pickers
 from ui.background_styles import MESSAGE_PANEL_STYLES
@@ -154,7 +154,7 @@ class Messages_Screen(GameState):
                 if action_str:
                     pending_dict[self.selected_recipient] = _rebuild(action_str, existing.get("message", ""))
                 else:
-                    diplomacy_logic.cancel_text_message(self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient)
+                    diplomacy_messages.cancel_text_message(self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient)
 
                 if self.selected_recipient in draft_lists:
                     del draft_lists[self.selected_recipient]
@@ -320,7 +320,7 @@ class Messages_Screen(GameState):
                         # HANDLE DIPLOMATIC ACTION UNDO CLICKS
                         if idx == "TRADE_OFFER":
                             # Passing it to the toggle logic safely refunds the escrow!
-                            diplomacy_logic.toggle_diplomacy_action(self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient, "TRADE", "")
+                            diplomacy_processor.toggle_diplomacy_action(self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient, "TRADE", "")
                             self.map_screen.show_feedback("Trade Offer Cancelled.")
                         elif idx == "WAR_DECLARATION":
                             diplomacy_messages.clear_pending(self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient)
@@ -339,7 +339,7 @@ class Messages_Screen(GameState):
                                 else:
                                     self.map_screen.show_feedback("Cannot undo after the volunteer offer was delivered.")
                             elif act_name == volunteers.RECALL_ACTION:
-                                msg = diplomacy_logic.toggle_diplomacy_action(
+                                msg = diplomacy_processor.toggle_diplomacy_action(
                                     self.map_screen.nation_data, self.map_screen.player_country,
                                     self.selected_recipient, volunteers.RECALL_ACTION)
                                 self.map_screen.show_feedback(msg)

@@ -38,8 +38,7 @@ from screens.game import spectator_controls
 from screens.editors import menus as editor_menus
 from ui.camera.camera_handler import MapCamera
 from ui.camera import camera_handler
-from map_logic.diplomacy import (diplomacy_logic, guarantees, military_attaches,
-                                 peace_scope, player_diplomacy_actions, volunteers, war_actions)
+from map_logic.diplomacy import (diplomacy_messages, guarantees, military_attaches, peace_scope, player_diplomacy_actions, volunteers, war_actions)
 from map_logic.random_map import random_map_generator
 from ui.rendering import map_renderer, overlay_renderer, refresh_map
 from ui.rendering.font_manager import fonts
@@ -2008,9 +2007,9 @@ class Map(StateAccess, GameState):
             if is_foreign:
                 draft = self.mail_draft_text.strip()
                 if draft:
-                    diplomacy_logic.queue_text_message(self.nation_data, self.player_country, owner, draft)
+                    diplomacy_messages.queue_text_message(self.nation_data, self.player_country, owner, draft)
                 else:
-                    diplomacy_logic.cancel_text_message(self.nation_data, self.player_country, owner)
+                    diplomacy_messages.cancel_text_message(self.nation_data, self.player_country, owner)
                 self.mail_input_active = False
 
         self.selected_province = self.hovered_province = self.hover_glow_surf = self.last_hovered_id = None

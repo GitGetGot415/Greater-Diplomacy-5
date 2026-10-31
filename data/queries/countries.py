@@ -394,7 +394,7 @@ def was_original_owner(prov, nation, nation_data):
 
     Prefers the faction's pre-war border snapshot; without one it falls back to
     cores. Shared by the projected-peace preview and the treaty execution in
-    diplomacy_agreements, which used to keep separate copies of this rule and
+    the war actions, which used to keep separate copies of this rule and
     could therefore disagree about what a treaty was going to do.
     """
     fac = nation_data.get(nation, {}).get("faction", "")

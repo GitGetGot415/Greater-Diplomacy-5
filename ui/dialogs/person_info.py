@@ -6,7 +6,8 @@ import pygame
 import data.constants as c
 from ui.rendering.font_manager import fonts
 from ui.navigation import modal_stack
-from ui.dialogs.base import _BaseModal, _back_key, _lighten, _run_blocking, _wrap_text
+from ui.dialogs.base import _BaseModal, _back_key, _lighten, _run_blocking
+from ui.widgets import text_utils
 from ui.dialogs.message_box import _KIND_ACCENTS
 from ui.bars import ui_bars
 
@@ -95,7 +96,7 @@ class _PersonInfoModal(_BaseModal):
                 size = tuple(max(1, round(dimension * scale)) for dimension in source.get_size())
                 loaded_images[path] = pygame.transform.scale(source, size)
             label = image.get("text", os.path.basename(path))
-            lines = _wrap_text(label, self.link_font, label_w)
+            lines = text_utils.wrap_text(label, self.link_font, label_w)
             labels = [self.link_font.render(line, True, c.UI_TEXT_LIGHT) for line in lines]
             text_h = len(labels) * (self.link_font.get_height() + 2)
             self.image_rows.append({

@@ -4,7 +4,7 @@
 from data.state_access import world_for, session_for
 from data import queries
 from ui.dialogs import pickers
-from map_logic.diplomacy import diplomacy_logic, peace_scope, ratification
+from map_logic.diplomacy import diplomacy_messages, diplomacy_processor, peace_scope, ratification
 from map_logic.diplomacy import volunteers
 from map_logic.diplomacy import guarantees
 from map_logic.diplomacy import military_attaches
@@ -34,7 +34,7 @@ def _queue_and_report(map_screen, target, action_type, custom_msg):
     """
     if not can_edit_diplomacy(map_screen):
         return None
-    msg = diplomacy_logic.toggle_diplomacy_action(
+    msg = diplomacy_processor.toggle_diplomacy_action(
         map_screen.nation_data, map_screen.player_country, target, action_type, custom_msg)
     map_screen.mail_input_active = False
     map_screen.show_feedback(msg)
@@ -272,7 +272,7 @@ def _answer_incoming_request(map_screen, target, verdict, custom_msg):
         return None
 
     # Re-clicking the same verdict is an undo, handled inside the toggle.
-    queued_verdict, queued_action = diplomacy_logic.get_response_status(
+    queued_verdict, queued_action = diplomacy_messages.get_response_status(
         map_screen.nation_data, map_screen.player_country, target)
     is_undo = (queued_verdict == verdict and queued_action == action)
 
@@ -283,7 +283,7 @@ def _answer_incoming_request(map_screen, target, verdict, custom_msg):
     their_pending = map_screen.nation_data.get(target, {}).get("pending_diplomacy", {}).get(map_screen.player_country, {})
     params = their_pending.get("parameters") if isinstance(their_pending, dict) else None
 
-    msg = diplomacy_logic.toggle_diplomatic_response(
+    msg = diplomacy_processor.toggle_diplomatic_response(
         map_screen.nation_data, map_screen.player_country, target,
         verdict, action, custom_msg, parameters=params)
 
@@ -305,9 +305,9 @@ def handle_accept_req(map_screen, target=None, custom_msg=None):
     action, _turns = queries.get_diplomatic_status(target, map_screen.player_country, map_screen.nation_data)
 
     # Undoing an acceptance needs no eligibility check -- it only removes a queued answer.
-    queued_verdict, queued_action = diplomacy_logic.get_response_status(
+    queued_verdict, queued_action = diplomacy_messages.get_response_status(
         map_screen.nation_data, map_screen.player_country, target)
-    if not (queued_verdict == diplomacy_logic.RESPONSE_ACCEPT and queued_action == action):
+    if not (queued_verdict == diplomacy_messages.RESPONSE_ACCEPT and queued_action == action):
         my_faction = map_screen.nation_data[map_screen.player_country].get("faction", "")
 
         if action == "FACTION_INVITE":
@@ -333,7 +333,7 @@ def handle_accept_req(map_screen, target=None, custom_msg=None):
                 map_screen.show_feedback(reason)
                 return
 
-    _answer_incoming_request(map_screen, target, diplomacy_logic.RESPONSE_ACCEPT, custom_msg)
+    _answer_incoming_request(map_screen, target, diplomacy_messages.RESPONSE_ACCEPT, custom_msg)
 
 
 def handle_reject_req(map_screen, target=None, custom_msg=None):
@@ -343,7 +343,7 @@ def handle_reject_req(map_screen, target=None, custom_msg=None):
         if target is None:
             return
 
-    _answer_incoming_request(map_screen, target, diplomacy_logic.RESPONSE_REJECT, custom_msg)
+    _answer_incoming_request(map_screen, target, diplomacy_messages.RESPONSE_REJECT, custom_msg)
 
 
 def has_treaty_to_ratify(map_screen):
@@ -461,7 +461,7 @@ def handle_send_volunteers(map_screen):
         count, turns = details["count"], details["travel_turns"]
         message = (f"We offer {count} volunteer {'division' if count == 1 else 'divisions'}. "
                    f"They are estimated to arrive {turns} {'turn' if turns == 1 else 'turns'} after acceptance.")
-        msg = diplomacy_logic.toggle_diplomacy_action(
+        msg = diplomacy_processor.toggle_diplomacy_action(
             map_screen.nation_data, donor, host, volunteers.ACTION, message,
             parameters=details)
         if session_for(map_screen).realtime_multiplayer:
@@ -490,7 +490,7 @@ def handle_recall_volunteers(map_screen):
         return
     if not can_edit_diplomacy(map_screen):
         return None
-    msg = diplomacy_logic.toggle_diplomacy_action(
+    msg = diplomacy_processor.toggle_diplomacy_action(
         map_screen.nation_data, donor, host, volunteers.RECALL_ACTION,
         "We are recalling our volunteer divisions.")
     map_screen.show_feedback(msg)

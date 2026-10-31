@@ -1,7 +1,7 @@
 """Covers the small shared edits to a nation's diplomatic bookkeeping.
 
-Each of these was written out three or four times across
-map_logic/diplomacy/diplomacy_agreements.py with a different guard style, and
+Each of these was written out three or four times across the diplomatic
+agreement actions with a different guard style, and
 the odd one out was always the one that could raise. The cases here are the
 ones that used to differ between copies: a nation that has never been given the
 key at all, and a list that is already in the state being asked for.
@@ -10,14 +10,14 @@ key at all, and a list that is already in the state being asked for.
 import unittest
 
 
-from map_logic.diplomacy import diplomacy_agreements as agreements
+from map_logic.diplomacy import faction_actions, puppet_actions, war_actions
 from map_logic.system32 import combat_rules
 
 
 class WarListTests(unittest.TestCase):
     def test_link_war_is_bidirectional(self):
         data = {"A": {}, "B": {}}
-        agreements.link_war(data, "A", "B")
+        war_actions.link_war(data, "A", "B")
         self.assertEqual(data["A"]["at_war_with"], ["B"])
         self.assertEqual(data["B"]["at_war_with"], ["A"])
 
@@ -25,12 +25,12 @@ class WarListTests(unittest.TestCase):
         """join_faction_wars indexed nation_data directly here and raised
         KeyError for a nation that had never been to war."""
         data = {"A": {"at_war_with": []}}
-        agreements.link_war(data, "A", "Newcomer")
+        war_actions.link_war(data, "A", "Newcomer")
         self.assertEqual(data["Newcomer"]["at_war_with"], ["A"])
 
     def test_link_war_does_not_duplicate(self):
         data = {"A": {"at_war_with": ["B"]}, "B": {"at_war_with": ["A"]}}
-        agreements.link_war(data, "A", "B")
+        war_actions.link_war(data, "A", "B")
         self.assertEqual(data["A"]["at_war_with"], ["B"])
 
     def test_link_war_revokes_military_access_in_both_directions(self):
@@ -39,7 +39,7 @@ class WarListTests(unittest.TestCase):
             "Turkey": {"military_access": ["Germany"]},
             "Germany": {"military_access": ["Turkey"]},
         }
-        agreements.link_war(data, "Turkey", "Germany")
+        war_actions.link_war(data, "Turkey", "Germany")
 
         self.assertEqual(data["Turkey"]["military_access"], [])
         self.assertEqual(data["Germany"]["military_access"], [])
@@ -48,14 +48,14 @@ class WarListTests(unittest.TestCase):
         """finalize_war starts a war-duration counter off this answer, so a
         re-declaration must not reset the clock."""
         data = {"A": {}}
-        self.assertTrue(agreements.add_enemy(data, "A", "B"))
-        self.assertFalse(agreements.add_enemy(data, "A", "B"))
+        self.assertTrue(war_actions.add_enemy(data, "A", "B"))
+        self.assertFalse(war_actions.add_enemy(data, "A", "B"))
 
     def test_remove_enemy_reports_whether_it_changed_anything(self):
         data = {"A": {"at_war_with": ["B"]}}
-        self.assertTrue(agreements.remove_enemy(data, "A", "B"))
-        self.assertFalse(agreements.remove_enemy(data, "A", "B"))
-        self.assertFalse(agreements.remove_enemy(data, "Nobody", "B"))
+        self.assertTrue(war_actions.remove_enemy(data, "A", "B"))
+        self.assertFalse(war_actions.remove_enemy(data, "A", "B"))
+        self.assertFalse(war_actions.remove_enemy(data, "Nobody", "B"))
 
 
 class CallToArmsTests(unittest.TestCase):
@@ -81,7 +81,7 @@ class CallToArmsTests(unittest.TestCase):
         }
 
     def answer_the_call(self):
-        agreements.join_faction_wars({}, self.data, "JOINER", "CALLER")
+        faction_actions.join_faction_wars({}, self.data, "JOINER", "CALLER")
 
     def test_a_truce_survives_the_call(self):
         self.answer_the_call()
@@ -126,7 +126,7 @@ class PuppetPeaceTests(unittest.TestCase):
             "FOE": {"at_war_with": ["PUPPET", "MASTER"], "truces": {}},
         }
 
-        agreements.pull_puppets_into_peace("MASTER", "FOE", data)
+        puppet_actions.pull_puppets_into_peace("MASTER", "FOE", data)
 
         self.assertEqual(data["PUPPET"]["at_war_with"], [])
         self.assertNotIn("PUPPET", data["FOE"]["at_war_with"])
@@ -137,7 +137,7 @@ class PuppetPeaceTests(unittest.TestCase):
 class MilitaryAccessTests(unittest.TestCase):
     def test_access_is_dropped_both_ways(self):
         data = {"A": {"military_access": ["B"]}, "B": {"military_access": ["A"]}}
-        agreements.sever_military_access(data, "A", "B")
+        war_actions.sever_military_access(data, "A", "B")
         self.assertEqual(data["A"]["military_access"], [])
         self.assertEqual(data["B"]["military_access"], [])
 
@@ -147,16 +147,16 @@ class MilitaryAccessTests(unittest.TestCase):
             "A": {"pending_diplomacy": {"B": {"action": "REQ_MILITARY_ACCESS", "turns": 0}}},
             "B": {},
         }
-        agreements.sever_military_access(data, "A", "B")
+        war_actions.sever_military_access(data, "A", "B")
         self.assertNotIn("B", data["A"]["pending_diplomacy"])
 
     def test_an_unrelated_pending_action_is_left_alone(self):
         data = {"A": {"pending_diplomacy": {"B": {"action": "TRADE", "turns": 0}}}, "B": {}}
-        agreements.sever_military_access(data, "A", "B")
+        war_actions.sever_military_access(data, "A", "B")
         self.assertIn("B", data["A"]["pending_diplomacy"])
 
     def test_a_nation_with_no_access_list_is_survivable(self):
-        agreements.sever_military_access({"A": {}, "B": {}}, "A", "B")
+        war_actions.sever_military_access({"A": {}, "B": {}}, "A", "B")
 
     def test_reconcile_removes_access_from_a_legacy_war_save(self):
         """A load can contain an old direct war-list mutation rather than a
@@ -166,7 +166,7 @@ class MilitaryAccessTests(unittest.TestCase):
             "Germany": {"at_war_with": [], "military_access": ["Turkey"]},
         }
 
-        agreements.reconcile_military_access(data)
+        war_actions.reconcile_military_access(data)
 
         self.assertNotIn("Turkey", data["Germany"]["military_access"])
 
@@ -180,12 +180,12 @@ class CooldownTests(unittest.TestCase):
             "A": {"diplo_cooldowns": {"B": {"CALL_TO_ARMS": 3, "JOIN_WARS": 3, "TRADE": 3}}},
             "B": {"diplo_cooldowns": {"A": {"CALL_TO_ARMS": 3}}},
         }
-        agreements.clear_war_call_cooldowns(data, "A", "B")
+        war_actions.clear_war_call_cooldowns(data, "A", "B")
         self.assertEqual(data["A"]["diplo_cooldowns"]["B"], {"TRADE": 3})
         self.assertEqual(data["B"]["diplo_cooldowns"]["A"], {"CALL_TO_ARMS": 3})
 
     def test_no_cooldowns_at_all_is_survivable(self):
-        agreements.clear_war_call_cooldowns({"A": {}}, "A", "B")
+        war_actions.clear_war_call_cooldowns({"A": {}}, "A", "B")
 
 
 class MeetingEngagementTests(unittest.TestCase):

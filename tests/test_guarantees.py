@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 
 from map_logic.diplomacy import guarantees
-from map_logic.diplomacy import diplomacy_logic
+from map_logic.diplomacy import diplomacy_processor
 from map_logic.diplomacy import faction_actions
 from map_logic.diplomacy import war_actions
 from map_logic.ai import ai_opinion
@@ -48,10 +48,10 @@ class GuaranteeTests(unittest.TestCase):
 
     def test_guarantee_resolves_without_an_acceptance(self):
         screen = StubMapScreen(["A", "B"])
-        diplomacy_logic.toggle_diplomacy_action(
+        diplomacy_processor.toggle_diplomacy_action(
             screen.nation_data, "A", "B", guarantees.ACTION)
 
-        diplomacy_logic.process_diplomacy_turn(screen)
+        diplomacy_processor.process_diplomacy_turn(screen)
 
         self.assertEqual(guarantees.guaranteed_targets("A", screen.nation_data), ["B"])
         self.assertNotIn("B", screen.nation_data["A"]["pending_diplomacy"])
@@ -59,10 +59,10 @@ class GuaranteeTests(unittest.TestCase):
     def test_revoke_resolves_without_an_acceptance(self):
         screen = StubMapScreen(["A", "B"])
         screen.nation_data["A"]["guarantees"] = ["B"]
-        diplomacy_logic.toggle_diplomacy_action(
+        diplomacy_processor.toggle_diplomacy_action(
             screen.nation_data, "A", "B", guarantees.REVOKE_ACTION)
 
-        diplomacy_logic.process_diplomacy_turn(screen)
+        diplomacy_processor.process_diplomacy_turn(screen)
 
         self.assertEqual(guarantees.guaranteed_targets("A", screen.nation_data), [])
         self.assertNotIn("B", screen.nation_data["A"]["pending_diplomacy"])

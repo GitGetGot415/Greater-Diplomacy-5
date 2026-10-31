@@ -664,7 +664,6 @@ SETTINGS_BOX_W = 320
 SETTINGS_BOX_H = 40
 
 TARGET_FPS = 60
-CPU_LIMITER = 10
 
 # ==========================================
 # STARTING GAME RULES & TIMING
@@ -1054,8 +1053,6 @@ ELLIPSIS = "..."
 # Single-line text entry boxes. Nine screens each had their own fill/border
 # pair; these are the values they all draw with now (see
 # ui_elements.draw_text_box). The focused box lights up and gains a white edge.
-INPUT_BG = (30, 30, 40)
-INPUT_BG_ACTIVE = (60, 60, 80)
 INPUT_BORDER = (150, 150, 150)
 INPUT_BORDER_ACTIVE = (255, 255, 255)
 
@@ -1171,8 +1168,6 @@ DEFAULT_OCEAN_LIGHT_BLUE = (40, 100, 180)
 
 # Toggle this to False if you want to strictly hide names on areas <= 3 provinces
 SHOW_SMALL_TERRITORY_NAMES = False
-NAME_FADE_START = 4.0
-NAME_FADE_WINDOW = 1.5
 
 NAME_MIN_TILES_TO_SHOW = 3      # when to ignore showing islands
 NAME_ABS_MIN_TILES_TO_SHOW = 1  # if a country only has this many tiles
@@ -1981,8 +1976,6 @@ AI_REAR_GUARD_PENALTY = 50 # Pushes units off a quiet border once one is standin
 
 AI_MIN_COAST_FOR_NAVY = 8 # Tiles needed to justify building a navy
 
-AI_TANK_MIN_BASE_THRESHOLD = 2000
-AI_TANK_MIN_DIVISOR = 2000
 
 AI_MIN_MATERIALS_FOR_CONSTRUCTION = 15000
 
@@ -2185,9 +2178,6 @@ REL_MOD_MAX_REMOVE_CORE_PENALTY = -150
 REL_MOD_BROKEN_COMMITMENT = -40
 REL_MOD_BROKEN_COMMITMENT_TURNS = 60
 REL_MOD_HONORED_COMMITMENT = 15
-REL_MOD_REFUSED_CALL_TO_ARMS = -25
-REL_MOD_FOUGHT_TOGETHER = 10
-REL_MOD_GIFT = 10
 
 COLOR_REL_MAX_POS = (100, 100, 200) # Light blue at 200
 COLOR_REL_POS = (0, 255, 0)         # Green at 100

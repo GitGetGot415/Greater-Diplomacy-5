@@ -7,9 +7,9 @@ from data import queries
 from ui.navigation.game_state import MapOverlayScreen
 from ui.widgets.ui_elements import Button, TextField, make_back_button
 from ui.widgets.scroll_panes import ScrollPanes
-from ui.widgets.table_screen import truncate
+from ui.widgets import text_utils
 from ui.rendering.font_manager import fonts
-from map_logic.diplomacy.diplomacy_agreements import assign_puppet, would_create_puppet_cycle
+from map_logic.diplomacy.puppet_actions import assign_puppet, would_create_puppet_cycle
 from map_logic.diplomacy import guarantees, military_attaches
 
 from map_logic.diplomacy.faction_actions import rename_faction
@@ -298,7 +298,7 @@ class Diplomacy_Editor_Screen(ScrollPanes, MapOverlayScreen):
 
         for i, y in self.pane_rows("nations", len(self.countries), self.nations_top, self.nations_view_h):
             cid = self.countries[i]
-            btn = self._row(self.nat_x, y, self.NAT_W - 24, "blue", truncate(cid, 26),
+            btn = self._row(self.nat_x, y, self.NAT_W - 24, "blue", text_utils.truncate_chars(cid, 26),
                             lambda cc=cid: self.select_nation(cc))
             btn.is_selected = cid == self.target
             btn.pane = "nations"
@@ -314,7 +314,7 @@ class Diplomacy_Editor_Screen(ScrollPanes, MapOverlayScreen):
             for i, y in self.pane_rows(region, len(rows), self.lists_top, self.LIST_VIEW_H):
                 name = rows[i]
                 checked = is_checked(name)
-                label = truncate(name, 28) if single else f"{'[X]' if checked else '[  ]'} {truncate(name, 24)}"
+                label = text_utils.truncate_chars(name, 28) if single else f"{'[X]' if checked else '[  ]'} {text_utils.truncate_chars(name, 24)}"
                 btn = self._row(col_x, y, self.COL_W - 24, "green" if checked else "blue", label,
                                 lambda n=name, cb=on_click: cb(n))
                 btn.is_selected = checked

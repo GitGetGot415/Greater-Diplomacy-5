@@ -19,8 +19,7 @@ from unittest import mock
 
 import data.constants as c
 from data import queries
-from map_logic.diplomacy import (deal, diplomacy_logic, diplomacy_processor,
-                                 peace_scope, player_diplomacy_actions, ratification)
+from map_logic.diplomacy import (deal, diplomacy_messages, diplomacy_processor, peace_scope, player_diplomacy_actions, ratification)
 from tests.stub_map_screen import StubMapScreen
 
 
@@ -75,7 +74,7 @@ class BlocPeaceTests(unittest.TestCase):
 
         self.game.propose("A", "G", "PEACE_TREATY", parameters=agreement)
         self.game.run_turn()
-        self.game.answer("G", "A", diplomacy_logic.RESPONSE_ACCEPT, "PEACE_TREATY")
+        self.game.answer("G", "A", diplomacy_messages.RESPONSE_ACCEPT, "PEACE_TREATY")
         self.game.run_turn()
 
         for ours in ("A", "S"):
@@ -89,7 +88,7 @@ class BlocPeaceTests(unittest.TestCase):
 
         self.game.propose("A", "G", "PEACE_TREATY", parameters=agreement)
         self.game.run_turn()
-        self.game.answer("G", "A", diplomacy_logic.RESPONSE_ACCEPT, "PEACE_TREATY")
+        self.game.answer("G", "A", diplomacy_messages.RESPONSE_ACCEPT, "PEACE_TREATY")
         self.game.run_turn()
 
         self.assertEqual(self.game.nation_data["S"]["truces"]["T"], c.TRUCE_TURNS)
@@ -105,7 +104,7 @@ class BlocPeaceTests(unittest.TestCase):
 
         self.game.propose("A", "G", "PEACE_TREATY", parameters=agreement)
         self.game.run_turn()
-        self.game.answer("G", "A", diplomacy_logic.RESPONSE_ACCEPT, "PEACE_TREATY")
+        self.game.answer("G", "A", diplomacy_messages.RESPONSE_ACCEPT, "PEACE_TREATY")
         self.game.run_turn()
 
         self.assertEqual(self.game.owner_of(theirs_prov["id"]), "S")
@@ -127,7 +126,7 @@ class RatificationTests(unittest.TestCase):
     def reach_acceptance(self):
         self.game.propose("A", "G", "PEACE_TREATY", parameters=self.deal)
         self.game.run_turn()
-        self.game.answer("G", "A", diplomacy_logic.RESPONSE_ACCEPT, "PEACE_TREATY")
+        self.game.answer("G", "A", diplomacy_messages.RESPONSE_ACCEPT, "PEACE_TREATY")
         self.game.run_turn()
 
     def test_a_bound_member_is_asked_before_it_takes_effect(self):
@@ -181,7 +180,7 @@ class RatificationTests(unittest.TestCase):
 
         self.game.propose("A", "G", "PEACE_TREATY", parameters=plain)
         self.game.run_turn()
-        self.game.answer("G", "A", diplomacy_logic.RESPONSE_ACCEPT, "PEACE_TREATY")
+        self.game.answer("G", "A", diplomacy_messages.RESPONSE_ACCEPT, "PEACE_TREATY")
         self.game.run_turn()
 
         self.assertFalse(ratification.pending_for(self.game.nation_data, "S"))
@@ -214,7 +213,7 @@ class AcceptingBlocRatificationTests(unittest.TestCase):
     def reach_acceptance(self):
         self.game.propose("A", "G", "PEACE_TREATY", parameters=self.deal)
         self.game.run_turn()
-        self.game.answer("G", "A", diplomacy_logic.RESPONSE_ACCEPT, "PEACE_TREATY")
+        self.game.answer("G", "A", diplomacy_messages.RESPONSE_ACCEPT, "PEACE_TREATY")
         self.game.run_turn()
 
     def test_the_member_being_signed_away_is_asked(self):
@@ -268,7 +267,7 @@ class RatificationRouteTests(unittest.TestCase):
 
         self.game.propose("A", "G", "PEACE_TREATY", parameters=agreement)
         self.game.run_turn()
-        self.game.answer("G", "A", diplomacy_logic.RESPONSE_ACCEPT, "PEACE_TREATY")
+        self.game.answer("G", "A", diplomacy_messages.RESPONSE_ACCEPT, "PEACE_TREATY")
         self.game.run_turn()
         self.game.player_country = "S"
 
@@ -355,7 +354,7 @@ class LeaderToMemberPeaceTests(unittest.TestCase):
 
         self.game.propose("A", "T", "PEACE_TREATY", parameters=agreement)
         self.game.run_turn()
-        self.game.answer("T", "A", diplomacy_logic.RESPONSE_ACCEPT, "PEACE_TREATY")
+        self.game.answer("T", "A", diplomacy_messages.RESPONSE_ACCEPT, "PEACE_TREATY")
         self.game.run_turn()
 
         for ours in ("A", "S"):

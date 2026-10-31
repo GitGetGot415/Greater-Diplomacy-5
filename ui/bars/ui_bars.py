@@ -348,28 +348,6 @@ def get_checkerboard_tile(base_color):
     _checkerboard_cache[cache_key] = tile
     return tile
 
-def draw_textured_rect(surface, rect, image, mode="tile"):
-    """Fills the target rect with an image by either tiling or stretching it."""
-    
-    if mode == "stretch":
-        # Scale the image exactly to the dimensions of the rect
-        stretched_img = pygame.transform.scale(image, (rect.width, rect.height))
-        surface.blit(stretched_img, rect.topleft)
-        
-    else: # Default to "tile" mode
-        original_clip = surface.get_clip()
-        surface.set_clip(rect)
-        
-        img_w, img_h = image.get_size()
-        
-        for x in range(rect.left, rect.right, img_w):
-            for y in range(rect.top, rect.bottom, img_h):
-                surface.blit(image, (x, y))
-                
-        surface.set_clip(original_clip)
-    
-    pygame.draw.rect(surface, (20, 20, 20), rect, 2)
-
 def map_unit_view_toggle_rect(map_screen):
     """Return the visible filter toggle's input area, including when collapsed."""
     # Lightweight screens without filter controls do not construct this button.

@@ -43,8 +43,7 @@ Shared processing and save data
 map_logic/diplomacy/diplomacy_lifecycle.py owns request creation, replacement, removal, response binding, and timing transitions.
 diplomacy_messages.py retains its public accessors and correspondence functions.
 war_actions.py, puppet_actions.py, and faction_actions.py own their respective agreement actions.
-diplomacy_agreements.py exports those actions for compatibility with older callers.
-diplomacy_logic.py also exports agreement, processor, and message functions.
+Callers import each action from its owner module.
 The processor retains its existing phase order. Treaty effects remain in treaty_effects.py and the agreement modules.
 action_definitions.py declares action categories, availability handlers, and existing execution phases.
 Controls, AI candidates, scripts, current multiplayer drafts, and send processing use shared availability.

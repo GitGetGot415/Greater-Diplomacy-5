@@ -6,11 +6,6 @@ from ui.widgets import text_utils
 from ui.widgets.ui_elements import Button, make_back_button
 from ui.rendering.font_manager import fonts
 
-def truncate(text, max_chars):
-    """Kept as the name three editors already import; the implementation now
-    lives in ui/widgets/text_utils.py alongside the pixel-width fitters."""
-    return text_utils.truncate_chars(text, max_chars)
-
 class TableColumn:
     """One sortable column of a TableScreen.
 

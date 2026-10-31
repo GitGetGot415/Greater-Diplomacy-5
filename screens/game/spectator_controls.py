@@ -6,7 +6,7 @@ from ui.dialogs import pickers
 
 from map_logic.diplomacy.puppet_actions import finalize_spectator_country_removal
 from ui import dialogs
-from map_logic.diplomacy import diplomacy_logic
+from map_logic.diplomacy import faction_actions, war_actions
 
 
 def force_war_menu(map_screen): 
@@ -73,16 +73,15 @@ def spec_delete_country(map_screen):
         on_result=confirmed, yes_label="Delete", no_label="Cancel")
 
 
-def _spec_faction_action(map_screen, finalizer, verb, wants_map_data=False):
+def _spec_faction_action(map_screen, fn, verb, wants_map_data=False):
     """Applies a one-shot faction change to the selected province's owner.
 
     Create / leave / disband were three copies of the same six lines, differing
-    only in which diplomacy_logic function they called, whether it wanted
+    only in which faction function they called, whether it wanted
     map_data, and the past-tense verb in the feedback line.
     """
     if not map_screen.selected_province: return
     source_nation = map_screen.selected_province.get("owner")
-    fn = getattr(diplomacy_logic, finalizer)
     if wants_map_data:
         fn(map_screen.map_data, map_screen.nation_data, source_nation)
     else:
@@ -92,13 +91,13 @@ def _spec_faction_action(map_screen, finalizer, verb, wants_map_data=False):
     map_screen.refresh_diplomacy_maps()
 
 def spec_create_faction(map_screen):
-    _spec_faction_action(map_screen, "finalize_create_faction", "Created", wants_map_data=True)
+    _spec_faction_action(map_screen, faction_actions.finalize_create_faction, "Created", wants_map_data=True)
 
 def spec_leave_faction(map_screen):
-    _spec_faction_action(map_screen, "finalize_faction_leave", "Left")
+    _spec_faction_action(map_screen, faction_actions.finalize_faction_leave, "Left")
 
 def spec_disband_faction(map_screen):
-    _spec_faction_action(map_screen, "finalize_disband_faction", "Disbanded")
+    _spec_faction_action(map_screen, faction_actions.finalize_disband_faction, "Disbanded")
 
 def spec_join_faction(map_screen):
     open_spectator_action_menu(map_screen, "JOIN_FACTION")
@@ -123,23 +122,23 @@ SPECTATOR_ACTIONS = {
             n for n, d in ms.nation_data.items()
             if d.get("is_playable") and n != src and n in living
             and n not in _enemies_of(ms, src)),
-        lambda dl, ms, src, tgt: dl.finalize_war(ms.map_data, ms.nation_data, src, tgt),
+        lambda ms, src, tgt: war_actions.finalize_war(ms.map_data, ms.nation_data, src, tgt),
         "Forced War: {src} vs {tgt}"),
     "PEACE": SpectatorAction(
         lambda ms, src, living: sorted(n for n in _enemies_of(ms, src) if n in living),
-        lambda dl, ms, src, tgt: dl.finalize_neutral(ms.nation_data, src, tgt),
+        lambda ms, src, tgt: war_actions.finalize_neutral(ms.nation_data, src, tgt),
         "Forced Peace: {src} & {tgt}"),
     "JOIN_FACTION": SpectatorAction(
         lambda ms, src, living: sorted(
             n for n, d in ms.nation_data.items()
             if d.get("is_faction_leader") and n != src),
-        lambda dl, ms, src, tgt: dl.finalize_faction_join(ms.map_data, ms.nation_data, tgt, src),
+        lambda ms, src, tgt: faction_actions.finalize_faction_join(ms.map_data, ms.nation_data, tgt, src),
         "Forced Join: {src} joined {tgt}"),
     "INVITE_FACTION": SpectatorAction(
         lambda ms, src, living: sorted(
             n for n, d in ms.nation_data.items()
             if d.get("is_playable") and not d.get("faction") and n != src),
-        lambda dl, ms, src, tgt: dl.finalize_faction_join(ms.map_data, ms.nation_data, src, tgt),
+        lambda ms, src, tgt: faction_actions.finalize_faction_join(ms.map_data, ms.nation_data, src, tgt),
         "Forced Invite: {tgt} joined {src}"),
 }
 
@@ -175,7 +174,7 @@ def open_spectator_action_menu(map_screen, action_type):
                 map_screen.show_feedback(leadership_error)
                 return
         if action.apply:
-            action.apply(diplomacy_logic, map_screen, source_nation, target_nation)
+            action.apply(map_screen, source_nation, target_nation)
             map_screen.show_feedback(action.feedback.format(
                 src=queries.get_country_display_name(source_nation, map_screen.nation_data),
                 tgt=queries.get_country_display_name(target_nation, map_screen.nation_data)))

@@ -7,7 +7,8 @@ from ui.dialogs import pickers
 
 from data.io import country_io
 from screens import editors as editor_screens
-from ui.widgets.table_screen import TableScreen, TableColumn, truncate
+from ui.widgets import text_utils
+from ui.widgets.table_screen import TableScreen, TableColumn
 from screens.game.research import ResearchCountrySelectScreen
 from map_logic.diplomacy import diplomacy_messages
 from ui.widgets.text_detail_screen import TextDetailScreen
@@ -242,7 +243,7 @@ def open_spectator_messages(map_screen):
         TableColumn("sender", "Sender", 120),
         TableColumn("receiver", "Receiver", 120),
         TableColumn("type", "Type", 100),
-        TableColumn("message", "Message", 700, align="left", fmt=lambda v: truncate(v, 90)),
+        TableColumn("message", "Message", 700, align="left", fmt=lambda v: text_utils.truncate_chars(v, 90)),
     ]
     hint = "Orange = LLM generated, Green = forwarded."
 
