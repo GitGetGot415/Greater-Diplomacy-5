@@ -126,7 +126,18 @@
                 "Infantry*.png": 1.6,
                 "Cavalry*.png": 1.6,
                 "Militia*.png": 1.6,
-                "Infantry Fighting Vehicle.png": 1
+                "Infantry Fighting Vehicle.png": 1,
+                "Waltham System.png": 1.6,
+                "Lightbulb.png": 1.6,
+                "Machine Tools.png": 2,
+                "Industrial Robot.png": 1.6,
+                "Stanford Arm.png": 1.6,
+                "ASEA IRB 6.png": 1.6,
+                "Computer Numerical Control.png": 2,
+                "3D Printing.png": 2,
+                "Internet of Things.png": 2,
+                "Industry 4.0.png": 2,
+                "Industry 5.0.png": 2
             }
         },
         "hanskolmer": {
