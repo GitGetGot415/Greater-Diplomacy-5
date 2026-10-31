@@ -13,6 +13,7 @@ except Exception:
     pass
 import data.constants as c
 from data import queries
+from ui.background_styles import TEXT_INPUT_STYLES
 from ui.rendering.font_manager import fonts
 from ui.rendering import symbol_loader
 
@@ -34,13 +35,6 @@ _pygame_sfx_pitch_cache = {
 }
 
 UI_ICONS = {}
-
-TEXT_INPUT_STYLES = {
-    "inactive": {"color": (0, 0, 0), "gradient_strength": 0.0},
-    "active": {"color": (0, 0, 0), "gradient_strength": 0.0},
-    "dialog": {"color": (0, 0, 0), "gradient_strength": 0.0},
-    "message": {"color": (0, 0, 0), "gradient_strength": 0.0},
-}
 
 _BUTTON_MIN_SHADE_COUNT = 5
 _BUTTON_SHADE_HEIGHT = 10

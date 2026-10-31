@@ -7,6 +7,7 @@ from unittest.mock import call, patch
 import pygame
 
 import data.constants as c
+from ui import background_styles
 from ui.bars import ui_bars
 from ui.widgets import ui_elements
 
@@ -58,7 +59,7 @@ class MapFrameRenderingTests(unittest.TestCase):
         styles = {name: {"color": (40 + index, 60 + index, 80 + index),
                          "gradient_strength": index / 2}
                   for index, name in enumerate(rects)}
-        with patch.object(ui_bars, "MAP_BAR_STYLES", styles), \
+        with patch.dict(background_styles.MAP_BAR_STYLES, styles, clear=True), \
                 patch.object(ui_elements, "draw_pixel_panel", wraps=ui_elements.draw_pixel_panel) as draw:
             ui_bars.draw_ui_bars(self.game, self.surface)
         draw.assert_has_calls([

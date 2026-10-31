@@ -2,6 +2,7 @@ import pygame
 import os
 import re
 from data import queries
+from ui.background_styles import TUTORIAL_PANEL_STYLES
 from ui.navigation import modal_stack
 from ui.dialogs.base import _BaseModal, _back_key, _lighten, _run_blocking
 from ui.bars import ui_bars
@@ -9,12 +10,6 @@ import data.constants as c
 from ui.rendering.font_manager import fonts
 from ui.widgets import ui_elements
 from ui.widgets.text_utils import render_inline_text, wrap_text
-
-# Gradient strength 0 gives a flat fill. Strength 1 keeps the standard shading.
-TUTORIAL_PANEL_STYLES = {
-    "main": {"color": (34, 38, 49), "gradient_strength": 0.3},
-    "keyboard_navigation": {"color": (25, 31, 43), "gradient_strength": 0.0},
-}
 
 _KIND_ACCENTS = {
     "info": (80, 150, 220),

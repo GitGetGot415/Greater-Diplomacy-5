@@ -32,6 +32,7 @@ HIDDEN_IMPORTS = (
     "data.runtime_rules", "data.world_nations",
     "data.game_state", "data.session_state", "data.state_access",
     "data.research_display",
+    "ui.background_styles",
 )
 RUNTIME_PACKAGES = (
     "screens", "screens.menus", "screens.setup", "screens.multiplayer",

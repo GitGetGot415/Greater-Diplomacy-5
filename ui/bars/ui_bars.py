@@ -2,6 +2,7 @@ import pygame
 import os
 from contextlib import contextmanager
 import data.constants as c
+from ui.background_styles import MAP_BAR_STYLES, MAP_CONFIRM_STYLES, MAP_FRAME_COLOR, LEFT_FRAME_COLOR
 
 from ui.rendering.font_manager import fonts
 from ui.widgets import ui_elements
@@ -14,23 +15,6 @@ _ui_images_cache = {}
 # copies here as well so rendering and map hit-testing consult identical alpha
 # pixels without scaling the background again for every mouse event.
 _province_menu_background_cache = {}
-
-MAP_FRAME_COLOR = (50, 80, 50)
-LEFT_FRAME_COLOR = (40, 80, 80)
-# Each bar can override the common color and the gradient strength.
-# Strength 0 gives a flat fill; 1 keeps the standard shading. Bevels stay visible.
-MAP_BAR_STYLES = {
-    "top": {"color": MAP_FRAME_COLOR, "gradient_strength": 0.0},
-    "bottom": {"color": MAP_FRAME_COLOR, "gradient_strength": 0.0},
-    "left": {"color": LEFT_FRAME_COLOR, "gradient_strength": 0.0},
-    "unit_filter": {"color": (120, 120, 120), "gradient_strength": 0.5},
-    "bottom_left": {"color": LEFT_FRAME_COLOR, "gradient_strength": 0.0},
-}
-
-MAP_CONFIRM_STYLES = {
-    "country": {"color": (40, 40, 40), "gradient_strength": 0.0},
-    "exit": {"color": (60, 40, 40), "gradient_strength": 0.0},
-}
 
 # Recolored checkerboard tiles, cached by target bg_color so each screen only
 # pays the generation cost once

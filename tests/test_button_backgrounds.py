@@ -3,6 +3,7 @@ from unittest.mock import Mock, patch
 
 import pygame
 
+from ui import background_styles
 from ui.widgets import ui_elements
 
 
@@ -137,7 +138,7 @@ class ButtonBackgroundTests(unittest.TestCase):
         font = pygame.font.Font(None, 18)
         styles = {"inactive": {"color": (70, 80, 90), "gradient_strength": 1.0},
                   "active": {"color": (80, 90, 100), "gradient_strength": 0.5}}
-        with patch.dict(ui_elements.TEXT_INPUT_STYLES, styles, clear=True):
+        with patch.dict(background_styles.TEXT_INPUT_STYLES, styles, clear=True):
             ui_elements.draw_text_box(self.surface, rect, "name", font=font)
             styles["inactive"]["gradient_strength"] = 0.5
             ui_elements.draw_text_box(self.surface, rect, "name", font=font)

@@ -4,6 +4,7 @@ import pygame
 
 import data.constants as c
 from data import queries
+from ui.background_styles import ARMY_EDITOR_STYLES, ARMY_BUTTON_STYLES, EDITOR_BG
 from ui.dialogs import pickers
 from ui.rendering import symbol_loader
 from ui.rendering.font_manager import fonts
@@ -22,24 +23,7 @@ TRAY_CARD_SATURATION = 0.45
 TRAY_CARD_DARKEN = 0.42
 TRAY_SELECTED_LIGHTEN = 0.18
 TRAY_BORDER_LIGHTEN = 0.35
-EDITOR_BG = (23, 35, 61, 245)
 EDITOR_BORDER = (125, 175, 240)
-# The main style applies to both the army editor and the custom emblem editor.
-# Gradient strength 0 gives a flat fill. Strength 1 keeps the standard shading.
-ARMY_EDITOR_STYLES = {
-    "main": {"color": EDITOR_BG, "gradient_strength": 0.0},
-    "name_field": {"color": (0, 0, 0), "gradient_strength": 0.0},
-    "emblem_preview": {"color": (10, 20, 40), "gradient_strength": 1.0},
-}
-
-ARMY_BUTTON_STYLES = {
-    "create": {"color": (42, 98, 73), "gradient_strength": 0.5},
-    "E": {"color": (62, 88, 135), "gradient_strength": 0.0},
-    "T": {"color": (62, 88, 135), "active_color": (50, 108, 83), "gradient_strength": 0.0},
-    "army_group": {"gradient_strength": 0.5},
-    "unassigned": {"gradient_strength": 0.0},
-}
-
 EDITOR_WIDTH = 540
 EDITOR_MIN_HEIGHT = 390
 SYMBOL_TILE_SIZE = 40

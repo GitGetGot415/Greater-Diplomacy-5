@@ -49,7 +49,10 @@ The army tray scrollbar is six pixels wide. It stays beside the existing action 
 These changes affect display only. Click areas, keyboard controls, permissions, and game rules remain the same.
 Saves and multiplayer commands retain their existing data.
 
-Edit TEXT_INPUT_STYLES near the top of ui/widgets/ui_elements.py for text-entry background colors and gradient strengths.
+Edit background colors and gradient strengths in ui/background_styles.py. All style tables described below use this shared file.
+Keep layout and border settings in their existing UI modules.
+
+Edit TEXT_INPUT_STYLES for text-entry background colors and gradient strengths.
 The inactive and active entries control shared text fields, including searches, rename boxes, and editor fields.
 The dialog entry controls text-input dialogs. The message entry controls the message compose box.
 Each entry has color and gradient_strength fields. Zero strength gives a flat fill; one keeps the standard contrast.
@@ -60,18 +63,18 @@ It also defaults to a black fill with zero gradient strength.
 Text colors, focus borders, and input controls remain unchanged.
 Restart the game after editing these values.
 
-Edit TUTORIAL_PANEL_STYLES near the top of ui/dialogs/message_box.py for tutorial backgrounds.
+Edit TUTORIAL_PANEL_STYLES for tutorial backgrounds.
 Its entries are main and keyboard_navigation.
-Edit ARMY_EDITOR_STYLES near the top of ui/panels/army_panel.py for army editor backgrounds.
+Edit ARMY_EDITOR_STYLES for army editor backgrounds.
 Its entries are main, name_field, and emblem_preview. The main entry also applies to the custom emblem editor.
-EDITOR_BG supplies the main entry's default color. EDITOR_BORDER controls both editor window borders.
+EDITOR_BG supplies the main entry's default color. EDITOR_BORDER in ui/panels/army_panel.py controls both editor window borders.
 Each entry has color and gradient_strength fields, as in MAP_BAR_STYLES.
 Colors accept RGB tuples. A fourth value sets opacity from 0 to 255.
 Gradient strength must be zero or greater. Zero gives a flat fill; one keeps the standard shading.
 Values above one increase contrast. Borders and bevels remain visible at zero strength.
 Restart the game after editing these values. These settings do not change buttons, text, or color swatches.
 
-Edit ARMY_BUTTON_STYLES near the top of ui/panels/army_panel.py for army buttons and group cards.
+Edit ARMY_BUTTON_STYLES for army buttons and group cards.
 The create, E, and T entries each have color and gradient_strength fields.
 E controls the army editor button. T controls the target-area button.
 T also has active_color, used when the army has a target area.
@@ -90,7 +93,7 @@ The bars use shade bands, square borders, and bevels from the shared button shad
 The bars do not load PNG backgrounds.
 The existing panel visibility rules apply in player, spectator, tactical, editor, and multiplayer modes.
 
-Edit MAP_BAR_STYLES near the top of ui/bars/ui_bars.py to set each bar's color and gradient_strength.
+Edit MAP_BAR_STYLES in ui/background_styles.py to set each bar's color and gradient_strength.
 The entries are top, bottom, left, unit_filter, and bottom_left. The bottom_left entry controls the raised bottom-left corner panel.
 
 Set color to a red, green, blue (RGB) tuple. MAP_FRAME_COLOR provides the common default color.
@@ -99,7 +102,7 @@ A value of 0 gives a flat fill. A value above 1.0 increases the gradient contras
 
 Gradient strength does not change borders or bevels. Restart the game after editing these values.
 
-Edit MAP_CONFIRM_STYLES near the top of ui/bars/ui_bars.py for map confirmation backgrounds.
+Edit MAP_CONFIRM_STYLES in the same file for map confirmation backgrounds.
 The country entry controls the country selection confirmation. The exit entry controls the exit confirmation.
 Each entry has color and gradient_strength fields, with the same rules as MAP_BAR_STYLES.
 
