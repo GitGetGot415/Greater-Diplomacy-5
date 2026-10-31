@@ -10,12 +10,14 @@ class ButtonBackgroundTests(unittest.TestCase):
     def setUp(self):
         pygame.font.init()
         ui_elements._button_background.cache_clear()
+        ui_elements._translucent_background.cache_clear()
         self.surface = pygame.Surface((400, 200))
         self.button = ui_elements.Button(10, 10, (120, 50), "blue", "", Mock())
         self.mouse = patch.object(pygame.mouse, "get_pos", return_value=(300, 150))
         self.mouse.start()
         self.addCleanup(self.mouse.stop)
         self.addCleanup(ui_elements._button_background.cache_clear)
+        self.addCleanup(ui_elements._translucent_background.cache_clear)
 
     def test_background_is_shared_and_reused_after_moving(self):
         self.button.draw(self.surface)
@@ -85,6 +87,34 @@ class ButtonBackgroundTests(unittest.TestCase):
             self.button.draw(self.surface)
             self.button.handle_event(up)
             self.button.callback.assert_not_called()
+
+    def test_translucent_panels_reuse_copies_without_changing_opaque_cache(self):
+        rect = pygame.Rect(10, 10, 120, 50)
+        color = (30, 50, 70)
+        opaque = ui_elements._button_background(rect.size, color, False, 2)
+        original_alpha = opaque.get_alpha()
+        ui_elements.draw_pixel_panel(self.surface, rect, (*color, 180))
+        rect.move_ip(30, 20)
+        with patch.object(ui_elements.queries, "lerp_color") as interpolate:
+            ui_elements.draw_pixel_panel(self.surface, rect, (*color, 180))
+            ui_elements.draw_pixel_panel(self.surface, rect, (*color, 220))
+        interpolate.assert_not_called()
+        self.assertEqual(opaque.get_alpha(), original_alpha)
+        self.assertEqual(ui_elements._translucent_background.cache_info().misses, 2)
+        self.assertEqual(ui_elements._translucent_background.cache_info().hits, 1)
+
+    def test_progress_changes_reuse_shading_and_preserve_clip_and_geometry(self):
+        rect = pygame.Rect(10, 10, 200, 25)
+        original = rect.copy()
+        self.surface.set_clip(pygame.Rect(20, 15, 120, 60))
+        clip = self.surface.get_clip()
+        ui_elements.draw_progress_bar(self.surface, rect, 0.25)
+        with patch.object(ui_elements.queries, "lerp_color") as interpolate:
+            for progress in (-1, 0, 0.5, 1, 2):
+                ui_elements.draw_progress_bar(self.surface, rect, progress)
+        interpolate.assert_not_called()
+        self.assertEqual(rect, original)
+        self.assertEqual(self.surface.get_clip(), clip)
 
 
 if __name__ == "__main__":

@@ -1,8 +1,9 @@
-from data.state_access import world_for, session_for
+from data.state_access import session_for
 import pygame
 import data.constants as c
 from ui.rendering.font_manager import fonts
 from ui.bars import ui_bars
+from ui.widgets import ui_elements
 
 def draw_simple_refresh_bar(surface, status_text, completed, total):
     """Unified data refresh overlay to prevent duplication on base menu screens."""
@@ -17,20 +18,14 @@ def draw_simple_refresh_bar(surface, status_text, completed, total):
     bar_w, bar_h = 400, 30
     bar_x = center_x - (bar_w // 2)
     
-    pygame.draw.rect(surface, (40, 40, 60), (bar_x, center_y, bar_w, bar_h), border_radius=5)
-    
     progress_ratio = (completed / float(total)) if total > 0 else 0.0
-    fill_w = int(bar_w * progress_ratio)
-    if fill_w > 0:
-        pygame.draw.rect(surface, (100, 200, 100), (bar_x, center_y, fill_w, bar_h), border_radius=5)
-        
-    pygame.draw.rect(surface, (200, 200, 200), (bar_x, center_y, bar_w, bar_h), 2, border_radius=5)
+    ui_elements.draw_progress_bar(surface, pygame.Rect(bar_x, center_y, bar_w, bar_h), progress_ratio)
     
     pct_txt = fonts.get("tiny").render(f"{completed} / {total}", True, (255, 255, 255))
     surface.blit(pct_txt, pct_txt.get_rect(center=(center_x, center_y + bar_h // 2)))
 
 def draw_turn_loading_screen(map_screen, surface):
-    """Draws 4 dynamic progress bars for turn processing and a skip button."""
+    """Draw processing progress and its available stop controls."""
     session_state = session_for(map_screen)
     ui_bars.draw_fullscreen_overlay(surface, 200)
 
@@ -50,14 +45,9 @@ def draw_turn_loading_screen(map_screen, surface):
         lbl_txt = fonts.get("normal").render(label, True, c.UI_TEXT_LIGHT)
         surface.blit(lbl_txt, (bar_x, y_pos - 22))
 
-        # Background
-        pygame.draw.rect(surface, (40, 40, 60), (bar_x, y_pos, bar_w, bar_h), border_radius=5)
-
         # Progress Fill (Hold at 0% if total is currently unknown)
         progress_ratio = 0.0 if total == -1 else ((completed / float(total)) if total > 0 else 1.0)
-        fill_w = int(bar_w * progress_ratio)
-        if fill_w > 0:
-            pygame.draw.rect(surface, (100, 200, 100), (bar_x, y_pos, fill_w, bar_h), border_radius=5)
+        ui_elements.draw_progress_bar(surface, pygame.Rect(bar_x, y_pos, bar_w, bar_h), progress_ratio)
 
         # Counter text
         if total == -1:
@@ -68,9 +58,6 @@ def draw_turn_loading_screen(map_screen, surface):
         pct_txt = fonts.get("tiny").render(display_text, True, (255, 255, 255))
         surface.blit(pct_txt, pct_txt.get_rect(center=(center_x, y_pos + bar_h // 2)))
 
-        # Outline
-        pygame.draw.rect(surface, (200, 200, 200), (bar_x, y_pos, bar_w, bar_h), 2, border_radius=5)
-
     # --- NEW MULTI TURN LOGIC ---
     multi_total = session_state.multi_turns_total
     if multi_total > 0:
@@ -78,18 +65,14 @@ def draw_turn_loading_screen(map_screen, surface):
 
         # --- Draw the Abort Multi-Turn Button ---
         abort_btn_rect = pygame.Rect(center_x - 110, c.SCREEN_HEIGHT - 90, 220, 45)
-        mx, my = pygame.mouse.get_pos()
-
         already_aborting = session_state.multi_turn_abort_requested
         if already_aborting:
-            btn_color = (90, 90, 90)
             abort_label = "STOPPING..."
         else:
-            btn_color = (200, 60, 60) if abort_btn_rect.collidepoint(mx, my) else (150, 40, 40)
             abort_label = "ABORT MULTI-TURN"
 
-        pygame.draw.rect(surface, btn_color, abort_btn_rect, border_radius=5)
-        pygame.draw.rect(surface, (255, 100, 100), abort_btn_rect, 2, border_radius=5)
+        ui_elements.draw_pixel_button(surface, abort_btn_rect, (150, 40, 40),
+                                      hover_color=(200, 60, 60), disabled=already_aborting)
 
         abort_txt = fonts.get("button").render(abort_label, True, (255, 255, 255))
         surface.blit(abort_txt, abort_txt.get_rect(center=abort_btn_rect.center))
@@ -125,13 +108,7 @@ def draw_turn_loading_screen(map_screen, surface):
             or session_state.responsive_tasks_total > 0
             or session_state.summits_total > 0):
         skip_btn_rect = pygame.Rect(center_x - 100, center_y + 180, 200, 40)
-        mx, my = pygame.mouse.get_pos()
-        
-        # Hover color feedback
-        btn_color = (200, 60, 60) if skip_btn_rect.collidepoint(mx, my) else (150, 40, 40)
-        
-        pygame.draw.rect(surface, btn_color, skip_btn_rect, border_radius=5)
-        pygame.draw.rect(surface, (255, 100, 100), skip_btn_rect, 2, border_radius=5)
+        ui_elements.draw_pixel_button(surface, skip_btn_rect, (150, 40, 40), hover_color=(200, 60, 60))
         
         skip_txt = fonts.get("button").render("FORCE SKIP AI", True, (255, 255, 255))
         surface.blit(skip_txt, skip_txt.get_rect(center=skip_btn_rect.center))

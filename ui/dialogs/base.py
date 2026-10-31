@@ -8,6 +8,7 @@ from ui.navigation.game_state import synthesize_keybind_mouse_events
 from ui.rendering.font_manager import fonts
 from ui.navigation import modal_stack
 from ui.widgets import text_utils
+from ui.widgets import ui_elements
 from ui.bars import ui_bars
 
 _STANDALONE_SIZE = (520, 320)
@@ -20,7 +21,7 @@ _DIALOG_OVERLAY_ALPHA = 180
 
 
 def _lighten(color, amount=40):
-    """Hover tint for a solid-colored action button."""
+    """Hover tint for a dialog action button."""
     return tuple(min(255, channel + amount) for channel in color)
 
 
@@ -123,8 +124,7 @@ class _BaseModal:
 
     def draw_button(self, surface, rect, label, color, hover_color):
         """One of the dialog's action buttons, tinted while hovered."""
-        hovered = rect.collidepoint(pygame.mouse.get_pos())
-        pygame.draw.rect(surface, hover_color if hovered else color, rect, border_radius=4)
+        ui_elements.draw_pixel_button(surface, rect, color, hover_color=hover_color)
         surf = self.btn_font.render(label, True, (255, 255, 255))
         surface.blit(surf, surf.get_rect(center=rect.center))
 
@@ -152,8 +152,8 @@ class _BaseModal:
         surface.blit(self.background, (0, 0))
         ui_bars.draw_fullscreen_overlay(surface, _DIALOG_OVERLAY_ALPHA)
 
-        pygame.draw.rect(surface, _DIALOG_BG, self.box_rect)
-        pygame.draw.rect(surface, self.BORDER_COLOR, self.box_rect, self.BORDER_WIDTH)
+        ui_elements.draw_pixel_panel(surface, self.box_rect, _DIALOG_BG, self.BORDER_COLOR,
+                                     border_width=self.BORDER_WIDTH)
 
         title_surf = self.title_font.render(self.title, True, (255, 255, 255))
         surface.blit(title_surf,

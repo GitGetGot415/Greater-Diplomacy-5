@@ -8,6 +8,7 @@ from data import queries
 from ui.navigation.game_state import GameState
 from ui.rendering.font_manager import fonts
 from ui.widgets.ui_elements import make_back_button
+from ui.widgets import ui_elements
 from ui.widgets.flag_icons import draw_flag
 from ui.panels.map_top_right_layout import realtime_status_rect
 
@@ -40,8 +41,7 @@ class _MatchDetails(GameState):
             return
         panel = pygame.Rect(c.SCREEN_WIDTH // 2 - 390, 140, 780,
                             min(470, 115 + 48 * max(1, len(session.players))))
-        pygame.draw.rect(surface, (16, 25, 52), panel, border_radius=7)
-        pygame.draw.rect(surface, (105, 160, 235), panel, 2, border_radius=7)
+        ui_elements.draw_pixel_panel(surface, panel, (16, 25, 52), (105, 160, 235))
         heading_font, row_font = fonts.get("normal"), fonts.get("tiny")
         headings = ("Player", "Country", "Turn status", "Connection", "Ping")
         columns = (panel.x + 24, panel.x + 210, panel.x + 365, panel.x + 555, panel.x + 675)
@@ -99,21 +99,15 @@ def draw(map_screen, surface):
     # The top-right map controls, including Exit, occupy the first toolbar
     # row. Keep live-match status immediately below that row instead.
     rect = realtime_status_rect(bool(connection_error))
-    panel = pygame.Surface(rect.size, pygame.SRCALPHA)
-    panel.fill((5, 10, 25, 220))
-    surface.blit(panel, rect.topleft)
-    pygame.draw.rect(surface, (220, 100, 75) if connection_error else (110, 160, 230),
-                     rect, 1, border_radius=4)
+    ui_elements.draw_pixel_panel(surface, rect, (5, 10, 25, 220),
+                                 (220, 100, 75) if connection_error else (110, 160, 230))
     font = fonts.get("tiny")
     for index, line in enumerate(lines):
         color = (255, 175, 135) if connection_error and index == len(lines) - 1 else (240, 240, 245)
         surface.blit(font.render(line, True, color), (rect.x + 8, rect.y + 6 + index * 19))
     if session.phase == "GAME_OVER":
         overlay = pygame.Rect(c.SCREEN_WIDTH // 2 - 220, c.SCREEN_HEIGHT // 2 - 125, 440, 250)
-        panel = pygame.Surface(overlay.size, pygame.SRCALPHA)
-        panel.fill((8, 12, 28, 240))
-        surface.blit(panel, overlay.topleft)
-        pygame.draw.rect(surface, (215, 175, 75), overlay, 2, border_radius=7)
+        ui_elements.draw_pixel_panel(surface, overlay, (8, 12, 28, 240), (215, 175, 75))
         heading = fonts.get("heading2").render("REAL-TIME MATCH OVER", True, (255, 225, 135))
         surface.blit(heading, heading.get_rect(midtop=(overlay.centerx, overlay.y + 16)))
         standings = []

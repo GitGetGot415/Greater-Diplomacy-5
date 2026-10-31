@@ -2,6 +2,7 @@ import pygame
 import data.constants as c
 from ui.rendering.font_manager import fonts
 from ui.widgets import text_utils
+from ui.widgets import ui_elements
 from data import queries
 from ui.dialogs import pickers
 from map_logic.diplomacy import diplomacy_messages
@@ -79,12 +80,10 @@ class DiplomaticPopup:
 
     def draw(self, surface):
         # Draw background
-        pygame.draw.rect(surface, (40, 40, 50), self.rect)
-        pygame.draw.rect(surface, (200, 150, 50), self.rect, 2)
+        ui_elements.draw_pixel_panel(surface, self.rect, (40, 40, 50), (200, 150, 50))
 
         # Draw close button
-        pygame.draw.rect(surface, (150, 0, 0), self.x_rect)
-        pygame.draw.rect(surface, (255, 255, 255), self.x_rect, 1)
+        ui_elements.draw_pixel_button(surface, self.x_rect, (150, 0, 0))
         x_surf = self.font_body.render("X", True, (255, 255, 255))
         surface.blit(x_surf, (self.x_rect.x + 8, self.x_rect.y + 3))
 

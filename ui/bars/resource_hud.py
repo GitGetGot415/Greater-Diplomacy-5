@@ -2,7 +2,7 @@ import pygame
 import data.constants as c
 from data import queries
 from ui.rendering.font_manager import fonts
-from ui.bars import ui_bars
+from ui.widgets import ui_elements
 
 # ==========================================
 # LAYOUT
@@ -48,8 +48,8 @@ def draw_bottom_text(map_screen, surface):
     # Draw Background Box
     bg_width = (len(resources) * HUD_SPACING) - HUD_BOX_TRIM
     bg_rect = pygame.Rect(HUD_START_X - HUD_BOX_PAD_X, hud_y - HUD_BOX_PAD_Y, bg_width, HUD_BOX_HEIGHT)
-    ui_bars.draw_translucent_panel(surface, bg_rect, (0, 0, 0, HUD_BG_ALPHA),
-                                   border_color=BAR_LINE_COLOR, border_width=1)
+    ui_elements.draw_pixel_panel(surface, bg_rect, (0, 0, 0, HUD_BG_ALPHA),
+                                 BAR_LINE_COLOR, border_width=1)
 
     # Draw Text using the dedicated preset
     hud_font = fonts.get("resource_hud")
@@ -70,8 +70,7 @@ def draw_resource_bar(surface, map_screen, target_nation=None, start_x=None):
     sit under the first entry or two.
     """
     bar_rect = pygame.Rect(0, c.SCREEN_HEIGHT - BAR_HEIGHT, c.SCREEN_WIDTH, BAR_HEIGHT)
-    pygame.draw.rect(surface, BAR_BG_COLOR, bar_rect)
-    pygame.draw.line(surface, BAR_LINE_COLOR, (0, bar_rect.y), (c.SCREEN_WIDTH, bar_rect.y), 2)
+    ui_elements.draw_pixel_panel(surface, bar_rect, BAR_BG_COLOR, BAR_LINE_COLOR)
 
     res_font = fonts.get("production_hud")
     resources = queries.get_resource_hud_strings(map_screen, include_net=False, target_nation=target_nation)

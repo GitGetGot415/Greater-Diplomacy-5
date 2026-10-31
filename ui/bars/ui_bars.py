@@ -125,13 +125,8 @@ def draw_fullscreen_overlay(surface, alpha=180):
 
 def draw_modal_box(surface, rect, bg_color=(40, 40, 50), border_color=(100, 150, 255), border_width=2):
     """Draws a standardized modal background box with a border."""
-    if len(bg_color) == 4:
-        panel_surf = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
-        panel_surf.fill(bg_color)
-        surface.blit(panel_surf, rect.topleft)
-    else:
-        pygame.draw.rect(surface, bg_color, rect)
-    pygame.draw.rect(surface, border_color, rect, border_width)
+    ui_elements.draw_pixel_panel(surface, rect, bg_color, border_color,
+                                 border_width=border_width)
 
 def draw_translucent_panel(surface, rect, rgba, border_color=None, border_width=2, radius=0):
     """A panel with an alpha fill -- the map-layered HUD boxes.
@@ -193,7 +188,7 @@ def draw_confirm_prompt(surface, box_rect, question, subtitle=None,
         # `hover` dims the button until the cursor is on it, which is the
         # quit dialog's existing feedback; the picker had none.
         shade = tuple(max(0, ch - 50) for ch in color) if hover and not rect.collidepoint(mouse_pos) else color
-        pygame.draw.rect(surface, shade, rect)
+        ui_elements.draw_pixel_button(surface, rect, shade, hover_color=color)
         text = btn_font.render(label, True, (255, 255, 255))
         surface.blit(text, text.get_rect(center=rect.center))
 

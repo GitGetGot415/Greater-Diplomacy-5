@@ -3,7 +3,7 @@ import data.constants as c
 from ui.rendering.font_manager import fonts
 from ui.navigation import modal_stack
 from ui.dialogs.base import _BaseModal, _back_key, _run_blocking
-from ui.widgets.ui_elements import process_text_input
+from ui.widgets.ui_elements import process_text_input, draw_pixel_panel
 
 
 class _TextInputModal(_BaseModal):
@@ -65,9 +65,8 @@ class _TextInputModal(_BaseModal):
                     self._finish(None)
 
     def draw_content(self, surface):
-        pygame.draw.rect(surface, (20, 20, 20), self.input_rect)
         border_color = (220, 80, 80) if self.error_text else c.UI_TEXT_LIGHT
-        pygame.draw.rect(surface, border_color, self.input_rect, 2)
+        draw_pixel_panel(surface, self.input_rect, (20, 20, 20), border_color, recessed=True)
         clear_color = (135, 45, 45) if self.text else (85, 85, 85)
         self.draw_button(surface, self.clear_rect, "Clear", clear_color,
                          (180, 65, 65) if self.text else (115, 115, 115))

@@ -10,6 +10,7 @@ from ui.navigation.game_state import GameState
 from ui.rendering.font_manager import fonts
 from ui.bars import ui_bars
 from ui.widgets.ui_elements import Button, make_back_button
+from ui.widgets import ui_elements
 
 
 CARD_MARGIN_X = 32
@@ -136,8 +137,7 @@ class Mouse_Settings(GameState):
 
         for index, (_number, button, label) in enumerate(c.MOUSE_BUTTONS):
             card = self._card_rect(index)
-            pygame.draw.rect(surface, (28, 34, 45), card, border_radius=6)
-            pygame.draw.rect(surface, (80, 125, 170), card, 2, border_radius=6)
+            ui_elements.draw_pixel_panel(surface, card, (28, 34, 45), (80, 125, 170))
             heading = title_font.render(f"{label} Mouse", True, (145, 210, 255))
             surface.blit(heading, heading.get_rect(center=(card.centerx, CARD_HEADER_Y)))
 

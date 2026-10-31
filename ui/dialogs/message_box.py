@@ -363,8 +363,7 @@ class _NavigationIntroPopup:
         return False
 
     def draw(self, surface):
-        pygame.draw.rect(surface, (34, 38, 49), self.rect, border_radius=6)
-        pygame.draw.rect(surface, self.BORDER_COLOR, self.rect, 2, border_radius=6)
+        ui_elements.draw_pixel_panel(surface, self.rect, (34, 38, 49), self.BORDER_COLOR)
 
         page_number = self.body_font.render(
             f"{self.page_index + 1}/{len(self.PAGE_TITLES)}", True, (190, 205, 220))
@@ -381,8 +380,7 @@ class _NavigationIntroPopup:
             subtitle_y += subtitle_line_h
         content_y_offset = max(0, len(subtitle_lines) - 1) * subtitle_line_h
 
-        pygame.draw.rect(surface, (150, 0, 0), self.close_rect)
-        pygame.draw.rect(surface, (255, 255, 255), self.close_rect, 1)
+        ui_elements.draw_pixel_button(surface, self.close_rect, (150, 0, 0))
         x_label = self.body_font.render("X", True, (255, 255, 255))
         surface.blit(x_label, x_label.get_rect(center=self.close_rect.center))
 
@@ -427,10 +425,8 @@ class _NavigationIntroPopup:
             self.keyboard_navigation_rect = pygame.Rect(
                 self.rect.x + 40, keyboard_top, self.rect.width - 80,
                 self.KEYBOARD_NAVIGATION_BOX_H)
-            pygame.draw.rect(surface, (25, 31, 43), self.keyboard_navigation_rect,
-                             border_radius=4)
-            pygame.draw.rect(surface, (70, 115, 160), self.keyboard_navigation_rect,
-                             1, border_radius=4)
+            ui_elements.draw_pixel_panel(surface, self.keyboard_navigation_rect,
+                                         (25, 31, 43), (70, 115, 160), recessed=True)
             heading, description = self.KEYBOARD_NAVIGATION
             heading_surf = self.label_font.render(heading, True, (130, 205, 255))
             description_surf = self.body_font.render(description, True, (225, 225, 225))
@@ -530,10 +526,7 @@ class _NavigationIntroPopup:
         for rect, label, enabled in (
                 (self.prev_rect, "<", self.page_index > 0),
                 (self.next_rect, ">", self.page_index < len(self.PAGE_TITLES) - 1)):
-            hovered = enabled and rect.collidepoint(pygame.mouse.get_pos())
-            color = _lighten(self.BORDER_COLOR) if hovered else (
-                self.BORDER_COLOR if enabled else (70, 75, 85))
-            pygame.draw.rect(surface, color, rect, border_radius=4)
+            ui_elements.draw_pixel_button(surface, rect, self.BORDER_COLOR, disabled=not enabled)
             button = self.label_font.render(label, True, (255, 255, 255) if enabled else (145, 145, 145))
             surface.blit(button, button.get_rect(center=rect.center))
 

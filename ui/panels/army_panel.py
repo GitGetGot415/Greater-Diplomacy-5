@@ -9,6 +9,7 @@ from ui.rendering import symbol_loader
 from ui.rendering.font_manager import fonts
 from ui.panels import map_top_right_layout
 from ui.widgets.ui_elements import process_text_input
+from ui.widgets import ui_elements
 
 from screens.game.defense_area_screen import DefenseAreaScreen
 from ui.navigation import screen_runner
@@ -447,22 +448,19 @@ def _draw_editor(map_screen, surface):
     shade = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
     shade.fill((0, 0, 0, 105))
     surface.blit(shade, (0, 0))
-    panel = pygame.Surface(rect.size, pygame.SRCALPHA)
-    panel.fill(EDITOR_BG)
-    surface.blit(panel, rect.topleft)
-    pygame.draw.rect(surface, EDITOR_BORDER, rect, 2, border_radius=7)
+    ui_elements.draw_pixel_panel(surface, rect, EDITOR_BG, EDITOR_BORDER)
     title_font, text_font = fonts.get("button"), fonts.get("tiny")
     title = title_font.render("EDIT ARMY", True, (235, 245, 255))
     surface.blit(title, (rect.x + 18, rect.y + 11))
     close = pygame.Rect(rect.right - 30, rect.y + 10, 18, 18)
-    pygame.draw.rect(surface, (130, 45, 45), close, border_radius=3)
+    ui_elements.draw_pixel_button(surface, close, (130, 45, 45))
     x = text_font.render("X", True, (255, 235, 235))
     surface.blit(x, x.get_rect(center=close.center))
     label = text_font.render("Name", True, (205, 220, 240))
     surface.blit(label, (rect.x + 20, rect.y + 66))
     name_box = pygame.Rect(rect.x + 70, rect.y + 57, rect.width - 92, 28)
-    pygame.draw.rect(surface, (11, 18, 34), name_box, border_radius=3)
-    pygame.draw.rect(surface, (110, 155, 215), name_box, 1, border_radius=3)
+    ui_elements.draw_pixel_panel(surface, name_box, (11, 18, 34), (110, 155, 215),
+                                 recessed=True)
     name = text_font.render(state["name"] or " ", True, (245, 245, 250))
     surface.blit(name, (name_box.x + 7, name_box.y + 7))
     symbol_label = text_font.render("Map emblem", True, (205, 220, 240))
@@ -470,10 +468,7 @@ def _draw_editor(map_screen, surface):
     for symbol, symbol_rect in _symbol_rects(rect):
         is_custom = symbol is CUSTOM_SYMBOL_CHOICE
         selected = bool(state["custom_symbol"]) if is_custom else state["symbol"] == symbol
-        pygame.draw.rect(surface, (66, 112, 175) if selected else (39, 60, 95),
-                         symbol_rect, border_radius=4)
-        pygame.draw.rect(surface, (175, 215, 255) if selected else (95, 135, 190),
-                         symbol_rect, 2 if selected else 1, border_radius=4)
+        ui_elements.draw_pixel_button(surface, symbol_rect, (39, 60, 95), selected=selected)
         if is_custom:
             caption = text_font.render("Custom", True, (225, 235, 250))
             surface.blit(caption, caption.get_rect(center=symbol_rect.center))
@@ -487,17 +482,13 @@ def _draw_editor(map_screen, surface):
         label = text_font.render(name_text, True, component_color)
         surface.blit(label, (rect.x + 20, y + 2))
         bar = _color_bar_rect(rect, channel)
-        pygame.draw.rect(surface, (16, 22, 37), bar, border_radius=3)
-        filled = bar.copy()
-        filled.width = round(bar.width * state["symbol_color"][channel] / 255)
-        if filled.width:
-            pygame.draw.rect(surface, component_color, filled, border_radius=3)
-        pygame.draw.rect(surface, (140, 175, 220), bar, 1, border_radius=3)
+        ratio = state["symbol_color"][channel] / 255
+        ui_elements.draw_progress_bar(surface, bar, ratio, component_color,
+                                       track_color=(16, 22, 37), border_color=(140, 175, 220))
         value = text_font.render(str(state["symbol_color"][channel]), True, (240, 240, 245))
         surface.blit(value, (bar.right + 10, y + 2))
     sample = _sample_rect(rect)
-    pygame.draw.rect(surface, (12, 19, 34), sample, border_radius=4)
-    pygame.draw.rect(surface, (110, 155, 215), sample, 1, border_radius=4)
+    ui_elements.draw_pixel_panel(surface, sample, (12, 19, 34), (110, 155, 215), recessed=True)
     _draw_emblem(surface, state["symbol"], state["custom_symbol"], state["symbol_color"],
                  state["symbol_rotation"], sample.center, 32,
                  flipped=state["symbol_flipped"])
@@ -505,25 +496,18 @@ def _draw_editor(map_screen, surface):
     surface.blit(rotation_label, (sample.right + 12, sample.y + 15))
     for rotation, button in _rotation_button_rects(rect):
         selected = state["symbol_rotation"] == rotation
-        pygame.draw.rect(surface, (66, 112, 175) if selected else (39, 60, 95),
-                         button, border_radius=4)
-        pygame.draw.rect(surface, (175, 215, 255) if selected else (95, 135, 190),
-                         button, 2 if selected else 1, border_radius=4)
+        ui_elements.draw_pixel_button(surface, button, (39, 60, 95), selected=selected)
         label = text_font.render(f"{rotation}", True, (235, 245, 255))
         surface.blit(label, label.get_rect(center=button.center))
     flip = _flip_button_rect(rect)
-    pygame.draw.rect(surface, (66, 112, 175) if state["symbol_flipped"] else (39, 60, 95),
-                     flip, border_radius=4)
-    pygame.draw.rect(surface, (175, 215, 255) if state["symbol_flipped"] else (95, 135, 190),
-                     flip, 2 if state["symbol_flipped"] else 1, border_radius=4)
+    ui_elements.draw_pixel_button(surface, flip, (39, 60, 95), selected=state["symbol_flipped"])
     label = text_font.render("Flip", True, (235, 245, 255))
     surface.blit(label, label.get_rect(center=flip.center))
     cancel = pygame.Rect(rect.right - 230, rect.bottom - 42, 98, 26)
     save = pygame.Rect(rect.right - 122, rect.bottom - 42, 98, 26)
     for button, text, color in ((cancel, "Cancel", (84, 100, 130)),
                                 (save, "Save", (55, 120, 78))):
-        pygame.draw.rect(surface, color, button, border_radius=4)
-        pygame.draw.rect(surface, (190, 215, 245), button, 1, border_radius=4)
+        ui_elements.draw_pixel_button(surface, button, color)
         label = text_font.render(text, True, (245, 245, 250))
         surface.blit(label, label.get_rect(center=button.center))
 
@@ -536,10 +520,7 @@ def _draw_custom_symbol_editor(map_screen, surface):
     shade = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
     shade.fill((0, 0, 0, 130))
     surface.blit(shade, (0, 0))
-    panel = pygame.Surface(rect.size, pygame.SRCALPHA)
-    panel.fill(EDITOR_BG)
-    surface.blit(panel, rect.topleft)
-    pygame.draw.rect(surface, EDITOR_BORDER, rect, 2, border_radius=7)
+    ui_elements.draw_pixel_panel(surface, rect, EDITOR_BG, EDITOR_BORDER)
     title_font, text_font = fonts.get("button"), fonts.get("tiny")
     title = title_font.render("DRAW CUSTOM EMBLEM", True, (235, 245, 255))
     surface.blit(title, (rect.x + 18, rect.y + 15))
@@ -571,16 +552,14 @@ def _draw_custom_symbol_editor(map_screen, surface):
                                  else (230, 230, 235))
         surface.blit(label, label.get_rect(center=button.center))
     clear = pygame.Rect(rect.x + 330, rect.y + 268, 135, 30)
-    pygame.draw.rect(surface, (72, 84, 110), clear, border_radius=4)
-    pygame.draw.rect(surface, (160, 190, 230), clear, 1, border_radius=4)
+    ui_elements.draw_pixel_button(surface, clear, (72, 84, 110))
     clear_label = text_font.render("Clear", True, (245, 245, 250))
     surface.blit(clear_label, clear_label.get_rect(center=clear.center))
     cancel = pygame.Rect(rect.right - 224, rect.bottom - 42, 94, 26)
     done = pygame.Rect(rect.right - 120, rect.bottom - 42, 94, 26)
     for button, text, color in ((cancel, "Cancel", (84, 100, 130)),
                                 (done, "Done", (55, 120, 78))):
-        pygame.draw.rect(surface, color, button, border_radius=4)
-        pygame.draw.rect(surface, (190, 215, 245), button, 1, border_radius=4)
+        ui_elements.draw_pixel_button(surface, button, color)
         label = text_font.render(text, True, (245, 245, 250))
         surface.blit(label, label.get_rect(center=button.center))
 
@@ -750,10 +729,7 @@ def draw(map_screen, surface, orders_screen=None, draw_editors=True, selected_id
     tray, armies = _layout(map_screen, show_create=show_create, orders_screen=orders_screen)
     if not armies and not show_create:
         return
-    panel = pygame.Surface(tray.size, pygame.SRCALPHA)
-    panel.fill(TRAY_BG)
-    surface.blit(panel, tray.topleft)
-    pygame.draw.rect(surface, (100, 145, 215), tray, 1, border_radius=4)
+    ui_elements.draw_pixel_panel(surface, tray, TRAY_BG, (100, 145, 215))
     title_font, text_font = fonts.get("tiny"), fonts.get("tiny")
     title = title_font.render("ARMIES", True, (185, 215, 255))
     surface.blit(title, (tray.x + 8, tray.y + 5))
@@ -774,8 +750,8 @@ def draw(map_screen, surface, orders_screen=None, draw_editors=True, selected_id
             army.get("symbol_color", c.DEFAULT_ARMY_SYMBOL_COLOR), selected)
         if unassigned:
             card_color = c.UNASSIGNED_ARMY_COLOR
-        pygame.draw.rect(surface, card_color, rect, border_radius=4)
-        pygame.draw.rect(surface, border_color, rect, 1, border_radius=4)
+        ui_elements.draw_pixel_button(surface, rect, card_color, selected=selected,
+                                      border_color=border_color)
         if not unassigned:
             _draw_emblem(surface, army.get("symbol", ""), army.get("custom_symbol"),
                          army.get("symbol_color", c.DEFAULT_ARMY_SYMBOL_COLOR),
@@ -793,22 +769,21 @@ def draw(map_screen, surface, orders_screen=None, draw_editors=True, selected_id
         for arrow_rect, label, enabled in (
                 (_move_up_rect(rect), "^", index > first_army_index),
                 (_move_down_rect(rect), "v", index < len(armies) - 1)):
-            pygame.draw.rect(surface, (62, 88, 135) if enabled else (45, 52, 67),
-                             arrow_rect, border_radius=3)
+            ui_elements.draw_pixel_button(surface, arrow_rect, (62, 88, 135), disabled=not enabled)
             arrow = text_font.render(label, True, (230, 240, 255) if enabled else (120, 130, 145))
             surface.blit(arrow, arrow.get_rect(center=arrow_rect.center))
         target_area_rect = _target_area_rect(rect)
         has_target_area = bool(army.get("defense_area"))
-        pygame.draw.rect(surface, (50, 108, 83) if has_target_area else (62, 88, 135),
-                         target_area_rect, border_radius=3)
+        ui_elements.draw_pixel_button(surface, target_area_rect,
+                                      (50, 108, 83) if has_target_area else (62, 88, 135))
         target_area = text_font.render("T", True, (235, 255, 240))
         surface.blit(target_area, target_area.get_rect(center=target_area_rect.center))
         edit_rect = _edit_rect(rect)
-        pygame.draw.rect(surface, (62, 88, 135), edit_rect, border_radius=3)
+        ui_elements.draw_pixel_button(surface, edit_rect, (62, 88, 135))
         edit = text_font.render("E", True, (230, 240, 255))
         surface.blit(edit, edit.get_rect(center=edit_rect.center))
         close_rect = _close_rect(rect)
-        pygame.draw.rect(surface, (130, 45, 45), close_rect, border_radius=3)
+        ui_elements.draw_pixel_button(surface, close_rect, (130, 45, 45))
         x = text_font.render("X", True, (255, 235, 235))
         surface.blit(x, x.get_rect(center=close_rect.center))
     if show_create:
@@ -816,23 +791,19 @@ def draw(map_screen, surface, orders_screen=None, draw_editors=True, selected_id
         if create_rect.colliderect(tray):
             enabled = (_orders_can_manage_armies(map_screen, orders_screen)
                        and bool(selected_ids))
-            pygame.draw.rect(surface, (42, 98, 73) if enabled else (45, 52, 67),
-                             create_rect, border_radius=4)
-            pygame.draw.rect(surface, (140, 205, 165) if enabled else (95, 115, 130),
-                             create_rect, 1, border_radius=4)
+            ui_elements.draw_pixel_button(surface, create_rect, (42, 98, 73), disabled=not enabled)
             label = text_font.render("+ Create Army", True,
                                      (235, 250, 240) if enabled else (135, 145, 155))
             surface.blit(label, label.get_rect(center=create_rect.center))
     surface.set_clip(clip)
     if map_screen.army_panel_min_scroll < 0:
-        track = pygame.Rect(tray.right - 5, tray.y + 4, 3, tray.height - 8)
+        track = pygame.Rect(tray.right - 7, tray.y + 4, 6, tray.height - 8)
         handle_h = max(18, int(track.height * tray.height /
                                (tray.height - map_screen.army_panel_min_scroll)))
         travel = track.height - handle_h
         ratio = map_screen.army_panel_scroll_y / map_screen.army_panel_min_scroll
-        pygame.draw.rect(surface, (145, 175, 215),
-                         (track.x, track.y + int(travel * ratio), track.width, handle_h),
-                         border_radius=2)
+        handle = pygame.Rect(track.x, track.y + int(travel * ratio), track.width, handle_h)
+        ui_elements.draw_slider(surface, track, handle)
     if draw_editors:
         draw_editors_over_map(map_screen, surface)
 

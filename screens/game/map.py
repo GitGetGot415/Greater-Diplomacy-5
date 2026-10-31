@@ -2562,15 +2562,13 @@ class Map(StateAccess, GameState):
 
         if self.country_actions_scroll_max > 0:
             rect = self.country_actions_scroll_rect
-            pygame.draw.rect(surface, (50, 50, 60),
-                             (rect.right - 10, rect.y, 8, rect.height))
+            track = pygame.Rect(rect.right - 10, rect.y, 8, rect.height)
             handle_h = max(30, int(rect.height * rect.height /
                                    (rect.height + self.country_actions_scroll_max)))
             travel = rect.height - handle_h
             ratio = self.country_actions_scroll_y / self.country_actions_scroll_max
-            pygame.draw.rect(surface, (150, 150, 150),
-                             (rect.right - 10, rect.y + int(travel * ratio), 8, handle_h),
-                             border_radius=4)
+            handle = pygame.Rect(rect.right - 10, rect.y + int(travel * ratio), 8, handle_h)
+            ui_elements.draw_slider(surface, track, handle)
 
     def draw(self, surface):
         super().draw(surface)

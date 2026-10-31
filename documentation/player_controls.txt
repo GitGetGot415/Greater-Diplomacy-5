@@ -28,6 +28,24 @@ ui/widgets/ui_elements.py caches backgrounds by size, color, pressed state, outl
 The cache retains at most 128 backgrounds. Moving a button reuses its background.
 This display change applies in all modes. It adds no saved fields or multiplayer commands.
 
+PANELS AND CUSTOM CONTROLS
+-------------------------
+
+Dialogs, army controls, the tutorial, progress displays, and real-time match panels use the shared pixel shading.
+Production queues, resource bars, message boxes, and mouse settings cards use the same square borders and bevels.
+Shared modal panels also apply this appearance to their game and editor screens.
+Text fields have recessed bevels. Active fields keep their existing focus borders.
+Custom buttons keep hover, pressed, selected, and disabled states.
+Color swatches and the custom emblem canvas keep their flat colors.
+
+Opaque and translucent backgrounds use bounded caches in ui/widgets/ui_elements.py.
+Progress bars clip cached fills. Moving panels and changing progress reuse cached shading.
+The army tray and country-action list use shared scrollbar rendering.
+The army tray scrollbar is six pixels wide. It stays beside the existing action buttons.
+
+These changes affect display only. Click areas, keyboard controls, permissions, and game rules remain the same.
+Saves and multiplayer commands retain their existing data.
+
 MAP FRAME DISPLAY
 -----------------
 

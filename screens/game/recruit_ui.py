@@ -4,6 +4,7 @@ from data import queries
 from ui.rendering.font_manager import fonts
 from ui.bars import ui_bars
 from ui.widgets import text_utils
+from ui.widgets import ui_elements
 
 # ==========================================
 # LAYOUT
@@ -70,7 +71,7 @@ def get_queue_entry_text(item):
 def draw_cancel_box(surface, font, x, y):
     """Draws the red "X" cancel square and returns its rect for hit-testing."""
     rect = pygame.Rect(x, y, CANCEL_BOX_SIZE, CANCEL_BOX_SIZE)
-    pygame.draw.rect(surface, CANCEL_BOX_COLOR, rect)
+    ui_elements.draw_pixel_button(surface, rect, CANCEL_BOX_COLOR)
     label = font.render("X", True, (255, 255, 255))
     surface.blit(label, label.get_rect(center=rect.center))
     return rect
@@ -82,8 +83,7 @@ def draw_recruitment_overlay(surface, target_province):
 
     panel_rect = pygame.Rect(c.SCREEN_WIDTH - PANEL_WIDTH - PANEL_MARGIN_X, PANEL_TOP,
                              PANEL_WIDTH, c.SCREEN_HEIGHT - PANEL_BOTTOM_MARGIN)
-    pygame.draw.rect(surface, PANEL_BG_COLOR, panel_rect)
-    pygame.draw.rect(surface, PANEL_BORDER_COLOR, panel_rect, 2)
+    ui_elements.draw_pixel_panel(surface, panel_rect, PANEL_BG_COLOR, PANEL_BORDER_COLOR)
     split_x = panel_rect.x + PANEL_COLUMN_SPLIT
     pygame.draw.line(surface, PANEL_BORDER_COLOR, (split_x, panel_rect.y), (split_x, panel_rect.bottom), 2)
 
@@ -123,8 +123,8 @@ def draw_map_queue_overlay(surface, target_province, map_screen=None):
 
     panel_rect = pygame.Rect(MAP_QUEUE_OVERLAY_X, MAP_QUEUE_OVERLAY_Y, MAP_QUEUE_OVERLAY_WIDTH, panel_height)
 
-    ui_bars.draw_translucent_panel(surface, panel_rect, (*PANEL_BG_COLOR, MAP_QUEUE_TRANSPARENCY),
-                                   border_color=PANEL_BORDER_COLOR)
+    ui_elements.draw_pixel_panel(surface, panel_rect, (*PANEL_BG_COLOR, MAP_QUEUE_TRANSPARENCY),
+                                 PANEL_BORDER_COLOR)
     pygame.draw.line(surface, PANEL_BORDER_COLOR, (panel_rect.centerx, panel_rect.y), (panel_rect.centerx, panel_rect.bottom), 2)
 
     font = fonts.get("normal")

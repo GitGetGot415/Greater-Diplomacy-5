@@ -40,6 +40,7 @@ _BUTTON_SHADE_HEIGHT = 10
 _BUTTON_PIXEL_SIZE = 2
 _BUTTON_HIGHLIGHT = 30
 _BUTTON_SHADOW = 50
+_BUTTON_PRESSED_DARKEN = 40
 _BUTTON_BORDER_WIDTH = 2
 _BUTTON_SELECTED_BORDER_WIDTH = 3
 _SLIDER_LOCKED_COLOR = (60, 40, 40)
@@ -98,14 +99,75 @@ def _button_background(size, color, pressed, border_width, gradient_strength=1.0
     return background
 
 
-def draw_pixel_panel(surface, rect, color, border_color=(20, 20, 20), *, gradient_strength=1.0):
-    """Draw a square panel with the cached button shading and bevel."""
+@lru_cache(maxsize=128)
+def _translucent_background(size, color, recessed, border_width, gradient_strength):
+    """Cache translucent copies without changing shared opaque backgrounds."""
+    background = _button_background(size, color[:3], recessed, border_width,
+                                    gradient_strength).copy()
+    background.set_alpha(color[3])
+    return background
+
+
+def draw_pixel_panel(surface, rect, color, border_color=(20, 20, 20), *, gradient_strength=1.0,
+                     border_width=2, recessed=False):
+    """Draw a square panel with cached shading, bevels, and optional transparency."""
     if rect.width <= 0 or rect.height <= 0:
         return
-    background = _button_background(rect.size, tuple(color[:3]), False, _BUTTON_BORDER_WIDTH,
-                                    gradient_strength)
+    color = tuple(color)
+    if len(color) == 4:
+        background = _translucent_background(rect.size, color, recessed, border_width,
+                                             gradient_strength)
+    else:
+        background = _button_background(rect.size, color, recessed, border_width,
+                                        gradient_strength)
     surface.blit(background, rect)
-    pygame.draw.rect(surface, border_color, rect, _BUTTON_BORDER_WIDTH)
+    if border_color is not None and border_width:
+        pygame.draw.rect(surface, border_color, rect, border_width)
+
+
+def _button_style(rect, color, hover_color, pressed_color, selected, disabled, pressed, border_color=None):
+    """Resolve shared button colors, outline width, and pressed state."""
+    hovered = rect.collidepoint(pygame.mouse.get_pos())
+    if pressed is None:
+        pressed = pygame.mouse.get_pressed()[0]
+    depressed = not disabled and pressed and hovered
+    current_color = color
+    if disabled:
+        current_color = c.UI_COLORS["grey"][0]
+    elif depressed:
+        current_color = pressed_color or tuple(max(0, ch - _BUTTON_PRESSED_DARKEN) for ch in color[:3])
+    elif hovered:
+        current_color = hover_color or tuple(min(255, ch + _BUTTON_HIGHLIGHT) for ch in color[:3])
+    outline = border_color or ((255, 255, 255) if hovered else (20, 20, 20))
+    if selected:
+        outline = c.COLOR_GOLD_HIGHLIGHT
+    elif disabled:
+        outline = c.COLOR_DIM_BORDER
+    width = _BUTTON_SELECTED_BORDER_WIDTH if selected else _BUTTON_BORDER_WIDTH
+    return current_color, outline, width, depressed
+
+
+def draw_pixel_button(surface, rect, color, *, hover_color=None, pressed_color=None,
+                      selected=False, disabled=False, pressed=None,
+                      border_color=None):
+    """Draw button states. Callers retain their existing labels and input handlers."""
+    current_color, outline, width, depressed = _button_style(
+        rect, color, hover_color, pressed_color, selected, disabled, pressed, border_color)
+    draw_pixel_panel(surface, rect, current_color, outline,
+                     border_width=width, recessed=depressed)
+
+
+def draw_progress_bar(surface, rect, ratio, color=(100, 200, 100), *,
+                      track_color=(40, 40, 60), border_color=(200, 200, 200)):
+    """Clip a cached full-width fill so progress changes reuse the same shading."""
+    draw_pixel_panel(surface, rect, track_color, border_color, recessed=True)
+    inner = rect.inflate(-4, -4)
+    if inner.width <= 0 or inner.height <= 0:
+        return
+    fill_width = int(inner.width * max(0.0, min(1.0, ratio)))
+    if fill_width:
+        background = _button_background(inner.size, tuple(color[:3]), False, 0)
+        surface.blit(background, inner, (0, 0, fill_width, inner.height))
 
 
 def parse_pos(val, limit, size):
@@ -293,7 +355,7 @@ class Button:
         """Recolors the button from raw RGB values (palette swatches, etc.)."""
         self.color = base
         self.hover_color = base if hover is None else hover
-        self.pressed_color = tuple(max(0, ch - 40) for ch in base[:3])
+        self.pressed_color = tuple(max(0, ch - _BUTTON_PRESSED_DARKEN) for ch in base[:3])
 
     def apply_state(self, visible=None, enabled=None, text=None, color=None):
         """Updates the per-frame dynamic bits of a button in one call.
@@ -341,31 +403,14 @@ class Button:
     def draw(self, surface):
         if not self.visible: return
 
-        mouse_pos = pygame.mouse.get_pos()
-        is_hovered = self.rect.collidepoint(mouse_pos)
-        is_depressed = not self.disabled and self.is_pressed and is_hovered
-        
-        current_color = self.color
-        if self.disabled: current_color = c.UI_COLORS["grey"][0]
-        elif self.is_pressed and is_hovered: current_color = self.pressed_color
-        elif is_hovered: current_color = self.hover_color
-        
+        current_color, outline, width, depressed = _button_style(
+            self.rect, self.color, self.hover_color, self.pressed_color,
+            self.is_selected, self.disabled, self.is_pressed)
         if getattr(self, 'shading', True):
-            self.draw_gradient_rect(surface, current_color, self.rect, pressed=is_depressed)
+            self.draw_gradient_rect(surface, current_color, self.rect, pressed=depressed)
         else:
             pygame.draw.rect(surface, current_color, self.rect)
-        
-        if self.is_selected:
-            border_color = c.COLOR_GOLD_HIGHLIGHT
-            border_thickness = _BUTTON_SELECTED_BORDER_WIDTH
-        else:
-            if self.disabled:
-                border_color = c.COLOR_DIM_BORDER
-            else:
-                border_color = (255, 255, 255) if is_hovered else (20, 20, 20)
-            border_thickness = _BUTTON_BORDER_WIDTH
-            
-        pygame.draw.rect(surface, border_color, self.rect, border_thickness)
+        pygame.draw.rect(surface, outline, self.rect, width)
 
         labelled = bool(self.image and self.text and self.show_text)
         # Some compact action buttons pair their label with a small status
@@ -616,8 +661,8 @@ def draw_text_box(surface, rect, text, active=False, font=None, placeholder=None
     """
     font = font or fonts.get("normal")
 
-    pygame.draw.rect(surface, c.INPUT_BG_ACTIVE if active else c.INPUT_BG, rect)
-    pygame.draw.rect(surface, c.INPUT_BORDER_ACTIVE if active else c.INPUT_BORDER, rect, 2)
+    draw_pixel_panel(surface, rect, c.INPUT_BG_ACTIVE if active else c.INPUT_BG,
+                     c.INPUT_BORDER_ACTIVE if active else c.INPUT_BORDER, recessed=True)
 
     if not text and placeholder:
         text_surf = font.render(placeholder, True, c.UI_TEXT_MUTED)

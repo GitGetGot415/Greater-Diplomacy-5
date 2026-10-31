@@ -3,6 +3,7 @@ from ui.navigation.game_state import GameState
 import data.constants as c
 from ui.bars import ui_bars
 from ui.widgets import text_utils
+from ui.widgets import ui_elements
 from ui.widgets.ui_elements import Button, process_text_input
 from ui.rendering.font_manager import fonts
 from map_logic.diplomacy import diplomacy_logic, diplomacy_messages, volunteers
@@ -631,8 +632,7 @@ class Messages_Screen(GameState):
         font_tiny = fonts.get("tiny")
 
         left_pane_rect = pygame.Rect(0, 0, MSG_LEFT_PANE_W, c.SCREEN_HEIGHT)
-        pygame.draw.rect(surface, MSG_BG_LIGHT, left_pane_rect)
-        pygame.draw.line(surface, (100, 100, 100), (MSG_LEFT_PANE_W, 0), (MSG_LEFT_PANE_W, c.SCREEN_HEIGHT), 2)
+        ui_elements.draw_pixel_panel(surface, left_pane_rect, MSG_BG_LIGHT, (100, 100, 100))
 
         self.draw_list_scrollbar(surface, MSG_LEFT_PANE_W - 20, MSG_CONTACT_LIST_TOP_Y, c.SCREEN_HEIGHT - MSG_CONTACT_LIST_TOP_Y, width=10,
                                  attr="contact_scroll_y", limit_attr="max_contact_scroll",
@@ -768,8 +768,7 @@ class Messages_Screen(GameState):
             })
         
         input_rect = pygame.Rect(MSG_LEFT_PANE_W, c.SCREEN_HEIGHT - MSG_INPUT_H, c.SCREEN_WIDTH - MSG_LEFT_PANE_W, MSG_INPUT_H)
-        pygame.draw.rect(surface, MSG_BG_LIGHT, input_rect)
-        pygame.draw.line(surface, (100, 100, 100), (MSG_LEFT_PANE_W, input_rect.y), (c.SCREEN_WIDTH, input_rect.y), 2)
+        ui_elements.draw_pixel_panel(surface, input_rect, MSG_BG_LIGHT, (100, 100, 100), recessed=True)
 
         txt_surf = font_small.render(self.compose_text + "|", True, (255, 255, 255))
         surface.blit(txt_surf, (input_rect.x + 20, input_rect.y + 30))
@@ -872,19 +871,16 @@ class Messages_Screen(GameState):
                         self.draft_edit_rects.append((del_rect, msg['draft_idx']))
                     
                         if not self.map_screen.tactical_mode:
-                            pygame.draw.rect(surface, (150, 0, 0), del_rect, border_radius=5)
+                            ui_elements.draw_pixel_button(surface, del_rect, (150, 0, 0))
                             surface.blit(font_small.render("X", True, (255, 255, 255)), (del_rect.x + 7, del_rect.y + 2))
                 else:
                     box_x = MSG_LEFT_PANE_W + 30
                     color = MSG_BUBBLE_FORWARDED if forwarded_header else (MSG_BUBBLE_AI_DIPLO if is_diplo else MSG_BUBBLE_AI)
 
                 bubble_rect = pygame.Rect(box_x, draw_y, box_width, bubble_h)
-                pygame.draw.rect(surface, color, bubble_rect, border_radius=10)
-            
-                if is_draft:
-                    pygame.draw.rect(surface, c.COLOR_GOLD_HIGHLIGHT, bubble_rect, 2, border_radius=10)
-                elif forwarded_header:
-                    pygame.draw.rect(surface, c.COLOR_GOLD_HIGHLIGHT, bubble_rect, 3, border_radius=10)
+                border = c.COLOR_GOLD_HIGHLIGHT if is_draft or forwarded_header else (20, 20, 20)
+                ui_elements.draw_pixel_panel(surface, bubble_rect, color, border,
+                                             border_width=3 if forwarded_header and not is_draft else 2)
             
                 ly = draw_y + 10
                 for l in lines:
