@@ -11,6 +11,7 @@ from screens.game import battle_screen
 from ui.bars import flag_renderer, ui_bars
 
 from ui.panels import sidebar_info, diplomatic_popups
+from ui.information import tooltip
 from map_logic.ai import ai_handler
 from screens.editors.menus import open_convoy_converter
 from screens.game import country_summary
@@ -420,6 +421,7 @@ def _update_map_hover(map_screen, on_ui, mx, my):
         map_screen.hovered_province = map_screen.hovered_combat_bubble = None
         map_screen.hovered_unit_stack = None
         map_screen.hover_glow_surf = None
+        tooltip.prepare_building_yields(map_screen)
         return
 
     # Combat bubbles sit above the map's province hit map. Resolve them
@@ -463,6 +465,7 @@ def _update_map_hover(map_screen, on_ui, mx, my):
     else:
         map_screen.last_hovered_id = None
         map_screen.hover_glow_surf = None
+    tooltip.prepare_building_yields(map_screen)
 
 
 def _handle_editor_undo(map_screen, event):

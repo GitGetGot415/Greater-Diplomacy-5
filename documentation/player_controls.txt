@@ -478,6 +478,7 @@ Refresh Maps forces a full rebuild.
 Planning-frame rendering does not run map-wide calculations.
 
 In Economy view, factory icons turn gray while their province has units in production.
+The province hover shows building output with the owner's research bonuses and territory penalties.
 Factories without queued units keep their normal colors.
 This display uses cached production status and does not depend on the Units view filter.
 Partial fog keeps the existing unknown building marker.

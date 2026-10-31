@@ -38,6 +38,40 @@ class OutputBonusTests(unittest.TestCase):
         }
         self.enterContext(patch.object(queries, "get_tech_tree", return_value=self.tree))
         self.enterContext(patch.object(queries, "get_building_library", return_value=self.library))
+
+    def test_economy_hover_uses_owner_research_and_refreshes_after_state_changes(self):
+        from ui.information import tooltip
+        import pygame
+
+        province = {"id": 1, "owner": "A", "cores": ["A"],
+                    "buildings": ["Basic Factory"]}
+        screen = SimpleNamespace(hovered_province=province, secondary_mode="ECONOMY",
+                                 _presentation_cache_revision=0, _tooltip_building_stamp=None,
+                                 _tooltip_building_yields=[],
+                                 nation_data={"A": {"research": {"first": 1}}},
+                                 base_layer="POLITICAL", small_font=Mock())
+        screen.small_font.render.side_effect = lambda *args: pygame.Surface((1, 1))
+        with patch.object(queries, "is_province_visible", return_value=True):
+            tooltip.prepare_building_yields(screen)
+            expected = queries.get_building_output("Basic Factory", {"first": 1}, self.library)
+            self.assertEqual(screen._tooltip_building_yields,
+                             [("Basic Factory", {key: int(value) for key, value in expected.items()})])
+            with patch.object(queries, "get_building_output", side_effect=AssertionError("recomputed")), \
+                    patch.object(pygame.mouse, "get_pos", return_value=(100, 100)):
+                tooltip.prepare_building_yields(screen)
+                tooltip.draw_tooltip(screen, pygame.Surface((400, 400)))
+            rendered = [call.args[0] for call in screen.small_font.render.call_args_list]
+            self.assertTrue(any("Basic Factory" in line and "+46Mat" in line for line in rendered))
+            province["cores"] = []
+            screen._presentation_cache_revision += 1
+            tooltip.prepare_building_yields(screen)
+            self.assertEqual(screen._tooltip_building_yields[0][1],
+                             {key: int(value * c.NON_CORE_BUILDING_MULTIPLIER)
+                              for key, value in expected.items()})
+        screen._presentation_cache_revision += 1
+        with patch.object(queries, "is_province_visible", return_value=False):
+            tooltip.prepare_building_yields(screen)
+        self.assertEqual(screen._tooltip_building_yields, [])
         self.enterContext(patch.object(queries, "get_unit_library", return_value={}))
 
     def output(self, name, research):

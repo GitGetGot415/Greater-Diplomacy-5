@@ -64,7 +64,7 @@ from map_logic.diplomacy import diplomacy_lifecycle
 from map_logic.system32 import economy_processor, turn_processor
 from map_logic.ai import ai_handler
 from map_logic.actions import unit_actions
-from ui.information import feedback_text
+from ui.information import feedback_text, tooltip
 from data.multiplayer.tournament import files as tournament_files
 from ui.navigation import screen_runner
 
@@ -1673,6 +1673,8 @@ class Map(StateAccess, GameState):
         self.map_mode = self.base_layer
 
         self.selected_province = self.hovered_province = self.last_hovered_id = None
+        self._tooltip_building_stamp = None
+        self._tooltip_building_yields = []
         self.hover_glow_surf = self.hover_glow_rect = None
         self.hovered_unit_stack = None
         # Map-unit selection is presentation state only. Unit dictionaries
@@ -1835,6 +1837,7 @@ class Map(StateAccess, GameState):
 
     def set_view_mode(self, mode):
         self.secondary_mode = mode
+        tooltip.prepare_building_yields(self)
         self.show_feedback(f"View: {mode}")
 
     def toggle_unit_view_bar(self):
@@ -2108,6 +2111,9 @@ class Map(StateAccess, GameState):
         """
         self._presentation_cache_revision = (
             self._presentation_cache_revision + 1)
+        # Lightweight map doubles may not initialize hover presentation state.
+        if hasattr(self, "_tooltip_building_stamp"):
+            tooltip.prepare_building_yields(self)
         self._combat_bubble_records_cache = None
         self._combat_unit_view_cache = None
         self._unit_render_index_cache = None
@@ -2155,6 +2161,8 @@ class Map(StateAccess, GameState):
                 self.MAP_LAYER_REFRESHERS[layer](self)
             except KeyError as error:
                 raise ValueError(f"Unknown map layer: {layer!r}") from error
+        if "fog" in layers and hasattr(self, "_tooltip_building_stamp"):
+            tooltip.prepare_building_yields(self)
 
     def refresh_diplomacy_maps(self):
         """Unified helper to quickly refresh only diplomacy-related overlays."""

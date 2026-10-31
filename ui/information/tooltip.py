@@ -5,6 +5,30 @@ from ui.rendering import overlay_renderer
 
 UNIT_PREVIEW_LIMIT = 5
 
+
+def prepare_building_yields(map_screen):
+    """Cache visible building yields when the hover or map state changes."""
+    province = map_screen.hovered_province
+    visible = bool(province and map_screen.secondary_mode == "ECONOMY"
+                   and queries.is_province_visible(map_screen, province["id"]))
+    stamp = (id(province), map_screen._presentation_cache_revision, map_screen.secondary_mode, visible)
+    if map_screen._tooltip_building_stamp == stamp:
+        return
+    map_screen._tooltip_building_stamp = stamp
+    map_screen._tooltip_building_yields = []
+    if not visible:
+        return
+    owner = province.get("owner", "Unclaimed")
+    research = map_screen.nation_data.get(owner, {}).get("research", {})
+    library = queries.get_building_library(map_screen)
+    modifiers = queries.get_building_output_modifiers(research, library, context=map_screen)
+    for name in province.get("buildings", []):
+        building_province = dict(province, buildings=[name], building_queue=[])
+        output = queries.get_province_building_output(building_province, research, library,
+                                                      context=map_screen, modifiers=modifiers)
+        map_screen._tooltip_building_yields.append((name, output))
+
+
 def draw_tooltip(map_screen, surface):
     if not map_screen.hovered_province:
         return
@@ -134,24 +158,18 @@ def draw_tooltip(map_screen, surface):
         if not is_visible:
             lines.append("(Hidden by Fog of War)")
         else:
-            buildings = prov.get("buildings", [])
-            if buildings:
-                bldg_lib = queries.get_building_library(map_screen)
-                building_mult = 1.0 if is_core else c.NON_CORE_BUILDING_MULTIPLIER
-                for b in buildings:
-                    # Determine production text dynamically based on building stats
-                    stats = bldg_lib.get(b, {})
-                    p_mat = int(stats.get('prod_materials', 0) * building_mult)
-                    p_man = int(stats.get('prod_manpower', 0) * building_mult)
-                    p_fuel = int(stats.get('prod_fuel', 0) * building_mult)
+            for b, output in map_screen._tooltip_building_yields:
+                p_mat = output['materials']
+                p_man = output['manpower']
+                p_fuel = output['fuel']
 
-                    yields = []
-                    if p_man > 0: yields.append(f"+{queries.format_number(p_man)}Man")
-                    if p_mat > 0: yields.append(f"+{queries.format_number(p_mat)}Mat")
-                    if p_fuel > 0: yields.append(f"+{queries.format_number(p_fuel)}Fuel")
+                yields = []
+                if p_man > 0: yields.append(f"+{queries.format_number(p_man)}Man")
+                if p_mat > 0: yields.append(f"+{queries.format_number(p_mat)}Mat")
+                if p_fuel > 0: yields.append(f"+{queries.format_number(p_fuel)}Fuel")
 
-                    prod_hint = f"({', '.join(yields)})" if yields else ""
-                    lines.append(f"- {b} {prod_hint}")
+                prod_hint = f"({', '.join(yields)})" if yields else ""
+                lines.append(f"- {b} {prod_hint}")
 
     # 3. Render the Tooltip
     # Calculate dimensions
