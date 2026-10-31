@@ -8,6 +8,7 @@ import urllib.request
 import urllib.error
 import ssl
 from ui.widgets import ui_elements
+from ui.bars import ui_bars
 from ui.navigation.game_state import GameState
 from ui.widgets.ui_elements import Button
 import data.constants as c
@@ -21,13 +22,15 @@ from ui import dialogs
 
 MENU_WATERLINE_RATIO = 0.605
 MENU_SKY_STEPPED = False  # False gives a smooth gradient. Restart after editing.
-MENU_SKY_DITHERING = True
+MENU_SKY_DITHERING = False
 MENU_SKY_BANDS = 12
 # Edit these RGB colors, then restart the game.
 MENU_SKY_START_COLOR = (24, 28, 65)
-MENU_SKY_END_COLOR = (239, 155, 117)
+MENU_SKY_END_COLOR = (240, 160, 120)
 MENU_SKY_MIDDLE_COLORS = ((76, 49, 100), (167, 83, 112))
-MENU_WATER_COLOR = (30, 62, 100)
+MENU_WATER_START_COLOR = (30, 62, 100)
+MENU_WATER_END_COLOR = (10, 25, 55)
+MENU_CHECKERBOARD_OPACITY = 50  # 0 hides the overlay; 255 makes it opaque.
 
 
 @lru_cache(maxsize=4)
@@ -35,13 +38,24 @@ def _menu_background(size):
     """Cache the evening sky and water rectangle for each viewport size."""
     width, height = size
     background = pygame.Surface(size)
-    background.fill(MENU_WATER_COLOR)
     sky_height = round(height * MENU_WATERLINE_RATIO)
     colors = (MENU_SKY_START_COLOR, *MENU_SKY_MIDDLE_COLORS, MENU_SKY_END_COLOR)
     ui_elements.draw_color_gradient(
         background, pygame.Rect(0, 0, width, sky_height), colors,
         stepped=MENU_SKY_STEPPED, bands=MENU_SKY_BANDS, dithering=MENU_SKY_DITHERING)
+    ui_elements.draw_color_gradient(
+        background, pygame.Rect(0, sky_height, width, height - sky_height),
+        (MENU_WATER_START_COLOR, MENU_WATER_END_COLOR),
+        stepped=MENU_SKY_STEPPED, bands=MENU_SKY_BANDS, dithering=MENU_SKY_DITHERING)
     return background
+
+
+@lru_cache(maxsize=1)
+def _menu_checkerboard_overlay(tile, opacity):
+    """Cache a transparent copy without changing the shared checkerboard tile."""
+    overlay = tile.copy()
+    overlay.set_alpha(opacity)
+    return overlay
 
 
 def _ease_out_expo(t):
@@ -595,6 +609,17 @@ class Menu(GameState):
 
     def draw_background(self, surface):
         surface.blit(_menu_background(surface.get_size()), (0, 0))
+        if MENU_CHECKERBOARD_OPACITY > 0:
+            tile = ui_bars.get_checkerboard_tile(MENU_SKY_START_COLOR)
+            overlay = _menu_checkerboard_overlay(tile, MENU_CHECKERBOARD_OPACITY)
+            sky_rect = pygame.Rect(0, 0, surface.get_width(),
+                                   round(surface.get_height() * MENU_WATERLINE_RATIO))
+            old_clip = surface.get_clip()
+            surface.set_clip(old_clip.clip(sky_rect))
+            try:
+                self.draw_checkerboard_background(surface, MENU_SKY_START_COLOR, tile=overlay)
+            finally:
+                surface.set_clip(old_clip)
 
     def additional_draw(self, surface):
         if self.title_image:

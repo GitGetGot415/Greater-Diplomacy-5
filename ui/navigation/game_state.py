@@ -518,12 +518,13 @@ class GameState:
             # a flat fill -- see ui_bars.get_checkerboard_tile.
             self.draw_checkerboard_background(surface, self.bg_color)
 
-    def draw_checkerboard_background(self, surface, base_color):
+    def draw_checkerboard_background(self, surface, base_color, *, tile=None):
         # Draw the tile in a grid slightly larger than the screen, offset by a
         # time-based amount that grows down and to the right. Since the tile
         # is seamless, wrapping the offset back to 0 every tile-length makes
         # the motion loop forever with no seam.
-        tile = ui_bars.get_checkerboard_tile(base_color)
+        if tile is None:
+            tile = ui_bars.get_checkerboard_tile(base_color)
         tile_w, tile_h = tile.get_size()
 
         elapsed = pygame.time.get_ticks() / 1000.0

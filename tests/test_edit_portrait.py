@@ -48,10 +48,12 @@ class EditPortraitTests(unittest.TestCase):
                 menu_module._menu_background.cache_clear()
                 self.menu.draw_background(pygame.Surface((1280, 720)))
                 self.menu._refresh_hildehrand_image()
-                self.assertEqual(draw_sky.call_args.kwargs["dithering"], sky)
+                self.assertEqual(draw_sky.call_count, 2)
+                for call in draw_sky.call_args_list:
+                    self.assertEqual(call.kwargs["dithering"], sky)
                 self.assertEqual(shade_portrait.call_args.kwargs["dithering"], portrait)
                 self.menu.draw_background(pygame.Surface((1280, 720)))
-                draw_sky.assert_called_once()
+                self.assertEqual(draw_sky.call_count, 2)
 
     def test_dithering_button_toggles_preview_and_saves(self):
         self.menu.hildehrand_gradient = True

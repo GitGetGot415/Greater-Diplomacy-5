@@ -56,7 +56,15 @@ The main menu shows an evening sky above a blue water rectangle.
 The sky changes from dark blue through purple to warm orange at the horizon.
 Edit MENU_SKY_START_COLOR and MENU_SKY_END_COLOR near the top of screens/menus/menu.py.
 The start color appears at the top. The end color appears at the horizon.
-MENU_SKY_MIDDLE_COLORS sets the intermediate colors. MENU_WATER_COLOR sets the water color.
+MENU_SKY_MIDDLE_COLORS sets the intermediate sky colors.
+MENU_WATER_START_COLOR sets the water color at the horizon. MENU_WATER_END_COLOR sets the color at the bottom.
+The water uses the sky's stepped, band count, and dithering settings. Both gradients use the same background cache.
+A faint moving checkerboard overlays only the evening sky, behind the artwork and controls.
+The water hides the checkerboard below the horizon.
+It uses the same scrolling speed and direction as other screens. The gradient remains stationary.
+Edit MENU_CHECKERBOARD_OPACITY in screens/menus/menu.py to change its visibility.
+Use 0 to hide it or 255 for full opacity. The default is 18.
+The overlay uses the existing checkerboard tile. Other screens keep their existing checkerboards.
 MENU_WATERLINE_RATIO in screens/menus/menu.py sets the horizon height. MENU_SKY_BANDS sets the number of sky bands.
 Set MENU_SKY_STEPPED to True for shade bands with square checkerboard transitions, as used by buttons and portraits.
 Set it to False for a smooth gradient.
