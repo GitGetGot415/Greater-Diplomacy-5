@@ -1,13 +1,16 @@
-"""BeepBox song playback for desktop and browser builds."""
+"""BeepBox and UltraBox song playback for desktop and browser builds."""
 
 import base64
 from contextlib import contextmanager
 import importlib
+import io
 import json
 import os
 import queue
 import threading
 import time
+from urllib.parse import unquote, urlsplit
+import wave
 
 import data.constants as c
 
@@ -31,6 +34,10 @@ BUFFERED_BLOCKS = 32
 
 _MIXER_STREAM_LOCK = threading.Lock()
 _MIXER_STREAM_OWNER = None
+SONG_SYNTHS = {
+    "BeepBox": ("beepbox", "beepbox_synth.min.js"),
+    "UltraBox": ("ultrabox", "ultrabox_synth.min.js"),
+}
 
 
 def timeline_seconds_from_source(source_seconds, speed, timeline_mode):
@@ -47,20 +54,28 @@ def source_seconds_from_timeline(timeline_seconds, speed, timeline_mode):
     return timeline_seconds
 
 
+def _song_format(song):
+    """Return the supported format for a song object, or None."""
+    if (isinstance(song, dict) and isinstance(song.get("format"), str)
+            and song["format"] in SONG_SYNTHS and isinstance(song.get("channels"), list)):
+        return song["format"]
+    return None
+
+
 def is_beepbox_song(path):
-    """Return whether *path* contains a BeepBox song object we can synthesize."""
+    """Recognize supported BeepBox-family songs without starting an audio engine."""
     if not path.lower().endswith(".json"):
         return False
     try:
-        with open(path, "r", encoding="utf-8") as song_file:
+        with open(path, "r", encoding="utf-8-sig") as song_file:
             song = json.load(song_file)
-        return song.get("format") == "BeepBox" and isinstance(song.get("channels"), list)
+        return _song_format(song) is not None
     except (OSError, UnicodeError, json.JSONDecodeError, AttributeError):
         return False
 
 
 def is_available():
-    """Return whether the real-time-capable native BeepBox runtime is available.
+    """Return whether the native runtime for both song formats is available.
 
     QuickJS is retained only for tests and tooling that evaluate BeepBox data.
     It is an interpreter and cannot synthesize dense tracks at playback speed,
@@ -86,7 +101,7 @@ def _native_js_context():
         context = context_manager.__enter__()
     except (ImportError, OSError) as exc:
         raise RuntimeError(
-            "BeepBox desktop playback requires the bundled V8 runtime "
+            "BeepBox and UltraBox desktop playback require the bundled V8 runtime "
             "(mini-racer); QuickJS is too slow for real-time music synthesis"
         ) from exc
 
@@ -106,6 +121,113 @@ def has_beepbox_replacement(path):
     return is_beepbox_song(os.path.splitext(path)[0] + ".json")
 
 
+def _sample_url(reference):
+    """Separate UltraBox sample options from the sample address."""
+    return reference.split("!", 2)[-1] if reference.startswith("!") else reference
+
+
+def _local_sample_path(song_path, url):
+    """Find companion samples, including exports made with a local sample server."""
+    parsed = urlsplit(url)
+    if parsed.scheme and parsed.hostname not in ("127.0.0.1", "localhost", "::1"):
+        return None
+    relative = unquote(parsed.path).lstrip("/")
+    path = os.path.join(os.path.dirname(song_path), relative)
+    return path if os.path.isfile(path) else None
+
+
+def _read_song(song_path):
+    with open(song_path, encoding="utf-8-sig") as song_file:
+        song = json.load(song_file)
+    if _song_format(song) is None:
+        raise ValueError("Select a BeepBox or UltraBox song JSON file")
+    if song["format"] == "UltraBox":
+        references = []
+        for reference in song.get("customSamples", []):
+            url = _sample_url(reference)
+            path = _local_sample_path(song_path, url)
+            if path:
+                with open(path, "rb") as sample_file:
+                    encoded = base64.b64encode(sample_file.read()).decode("ascii")
+                # Keep the original name. Instruments refer to this URL suffix.
+                replacement = "data:audio/wav;base64," + encoded + "/" + url.rsplit("/", 1)[-1]
+                reference = reference[:len(reference) - len(url)] + replacement
+            references.append(reference)
+        song["customSamples"] = references
+    return song
+
+
+def _native_sample_data(song, stop_event=None):
+    """Decode custom WAV samples for V8, which has no browser audio decoder."""
+    if not song.get("customSamples"):
+        return {}
+    # Load native decoding dependencies only when a song needs sample playback.
+    import numpy as np
+
+    samples = {}
+    for reference in song.get("customSamples", []):
+        if stop_event is not None and stop_event.is_set():
+            return {}
+        url = _sample_url(reference)
+        if url in samples:
+            continue
+        label = "embedded sample" if url.startswith("data:") else url
+        try:
+            if url.startswith("data:"):
+                header, _, payload = url.partition(",")
+                if ";base64" not in header:
+                    raise ValueError("Use a base64 WAV sample")
+                raw = base64.b64decode(payload)
+            elif urlsplit(url).scheme in ("http", "https"):
+                # Network access stays on the synth worker, outside Pygame input.
+                import requests
+
+                try:
+                    response = requests.get(url, timeout=10)
+                    response.raise_for_status()
+                except requests.RequestException as exc:
+                    raise ValueError("Sample download failed: " + str(exc)) from exc
+                raw = response.content
+            else:
+                raise ValueError("Use embedded WAV samples or companion sample files")
+            with wave.open(io.BytesIO(raw)) as wav:
+                width = wav.getsampwidth()
+                channels = wav.getnchannels()
+                rate = wav.getframerate()
+                pcm = wav.readframes(wav.getnframes())
+            if width == 1:
+                values = (np.frombuffer(pcm, dtype=np.uint8).astype(np.float32) - 128) / 128
+            elif width in (2, 4):
+                values = np.frombuffer(pcm, dtype="<i" + str(width)).astype(np.float32) / (1 << (width * 8 - 1))
+            elif width == 3:
+                octets = np.frombuffer(pcm, dtype=np.uint8).reshape(-1, 3).astype(np.int32)
+                integers = octets[:, 0] | octets[:, 1] << 8 | octets[:, 2] << 16
+                values = ((integers ^ 0x800000) - 0x800000).astype(np.float32) / 0x800000
+            else:
+                raise ValueError("Use 8, 16, 24, or 32-bit PCM WAV samples")
+            values = values.reshape(-1, channels)[:, 0]
+            if not len(values):
+                raise ValueError("The WAV sample contains no audio frames")
+            samples[url] = {"rate": rate, "pcm": base64.b64encode(values.astype("<f4").tobytes()).decode("ascii")}
+        except (OSError, ValueError, wave.Error) as exc:
+            raise ValueError(f"Cannot load UltraBox {label}. Supply its sample file or embed it in the JSON: {exc}") from exc
+    return samples
+
+
+def _synth_source(song):
+    """Load the selected vendor synth without replacing the other format's engine."""
+    directory, filename = SONG_SYNTHS[song["format"]]
+    # Frozen modules can live in a temporary folder or a Python archive.
+    # Startup sets the working directory to the game's persistent assets.
+    assets_dir = c.ASSETS_ROOT_DIR
+    with open(os.path.join(assets_dir, directory, filename), encoding="utf-8") as source_file:
+        source = source_file.read()
+    if song["format"] == "UltraBox":
+        with open(os.path.join(assets_dir, directory, "gd5_adapter.js"), encoding="utf-8") as adapter_file:
+            source = adapter_file.read().replace("/* GD5_VENDOR_SYNTH */", source)
+    return source
+
+
 def _drain(q):
     while True:
         try:
@@ -115,7 +237,7 @@ def _drain(q):
 
 
 class BeepBoxStream:
-    """Synthesize BeepBox JSON incrementally into native SDL_mixer blocks.
+    """Synthesize either song format into native SDL_mixer blocks.
 
     Synthesis remains on a worker, but the time-critical playback path contains
     no Python callback. That distinction matters during large turns: a Pygame
@@ -197,16 +319,16 @@ class BeepBoxStream:
 
     def _produce(self):
         try:
-            assets_dir = os.path.dirname(os.path.dirname(os.path.dirname(
-                os.path.abspath(self.song_path)
-            )))
-            synth_path = os.path.join(assets_dir, "beepbox", "beepbox_synth.min.js")
-            with open(synth_path, "r", encoding="utf-8") as source_file:
-                source = source_file.read()
-            with open(self.song_path, "r", encoding="utf-8") as song_file:
-                song_json = song_file.read()
+            song = _read_song(self.song_path)
+            source = _synth_source(song)
+            song_json = json.dumps(song)
+            samples = _native_sample_data(song, self._stop_event) if song["format"] == "UltraBox" else None
+            if self._stop_event.is_set():
+                return
 
             with _native_js_context() as (context, self._engine_name):
+                if samples is not None:
+                    context.eval("globalThis.gd5NativeSamples = " + json.dumps(samples))
                 context.eval(source)
                 context.eval(_JS_BRIDGE)
                 song_json_literal = json.dumps(song_json)
@@ -230,6 +352,9 @@ class BeepBoxStream:
                             result = context.eval(
                                 f"gd5Init({song_json_literal}, {SAMPLE_RATE}, {speed}, {cursor})"
                             )
+                            while not context.eval("gd5SamplesReady()"):
+                                if self._stop_event.wait(0.01):
+                                    return
                             initialized = True
                         initialized_song = json.loads(result)
                         self._length = initialized_song["length"]
@@ -448,7 +573,7 @@ class BeepBoxStream:
 
 
 class WebBeepBoxStream:
-    """Play a BeepBox song through the vendor synth's browser Web Audio API."""
+    """Play either song format through its vendor's browser Web Audio API."""
 
     def __init__(self, song_path, volume=1.0, speed=1.0, start_time=0.0):
         import platform
@@ -460,22 +585,19 @@ class WebBeepBoxStream:
         self._error = None
         self._stopped = False
 
-        assets_dir = os.path.dirname(os.path.dirname(os.path.dirname(
-            os.path.abspath(song_path)
-        )))
-        synth_path = os.path.join(assets_dir, "beepbox", "beepbox_synth.min.js")
-        with open(synth_path, "r", encoding="utf-8") as source_file:
-            synth_source = source_file.read()
-        with open(song_path, "r", encoding="utf-8") as song_file:
-            song_json = song_file.read()
+        song = _read_song(song_path)
+        song_json = json.dumps(song)
 
         # The bridge and vendor bundle are evaluated once per page. The synth's
         # own activateAudio() method creates/resumes AudioContext on the user's
         # first input event, which is where the controller starts this stream.
-        if not getattr(self._window, "__gd5_beepbox_ready", False):
-            self._window.eval(synth_source)
+        engine_flag = "__gd5_" + song["format"].lower() + "_ready"
+        if not getattr(self._window, engine_flag, False):
+            self._window.eval(_synth_source(song))
+            setattr(self._window, engine_flag, True)
+        if not getattr(self._window, "__gd5_music_bridge_ready", False):
             self._window.eval(_WEB_JS_BRIDGE)
-            setattr(self._window, "__gd5_beepbox_ready", True)
+            setattr(self._window, "__gd5_music_bridge_ready", True)
 
         getattr(self._window, "__gd5_beepbox_load")(
             song_json, self.speed, max(0.0, float(start_time)), self.volume
@@ -503,6 +625,13 @@ class WebBeepBoxStream:
 
     @property
     def error(self):
+        if not self._stopped:
+            try:
+                message = getattr(self._window, "__gd5_beepbox_error")()
+                if message:
+                    self._error = RuntimeError(str(message))
+            except Exception as exc:
+                self._error = exc
         return self._error
 
     @property
@@ -557,31 +686,78 @@ class WebBeepBoxStream:
         self._stopped = True
 
 
-_JS_BRIDGE = r"""
+_SONG_JS_BRIDGE = r"""
+function gd5SongEngine(data) {
+    return data.format === "UltraBox" ? gd5UltraBox : beepbox;
+}
+function gd5IsUltraBox(synth) {
+    return typeof gd5UltraBox !== "undefined" && synth instanceof gd5UltraBox.Synth;
+}
+function gd5SongLength(synth, outputRate) {
+    return gd5IsUltraBox(synth)
+        ? synth.getTotalSamples(true, true, 0) / outputRate
+        : synth.song.barCount * synth.getSamplesPerBar() / outputRate;
+}
+function gd5ConfigureSynth(synth, outputRate, speed, seconds) {
+    synth.samplesPerSecond = outputRate / speed;
+    synth.computeDelayBufferSizes();
+    synth.resetEffects();
+    if (gd5IsUltraBox(synth)) {
+        const config = gd5UltraBox.Config;
+        const parts = config.partsPerBeat * synth.song.beatsPerBar;
+        const target = seconds * outputRate;
+        const length = synth.getTotalSamples(true, true, 0);
+        if (seconds <= 0) synth.playhead = 0;
+        else if (target >= length) synth.playhead = synth.song.barCount;
+        else {
+            // Reuse the vendor's tempo and next-bar calculations for seeking.
+            // Search bars first, then the position inside the selected bar.
+            let low = 0, high = synth.song.barCount;
+            while (low + 1 < high) {
+                const middle = (low + high) >> 1;
+                const sample = synth.getTotalSamples(true, true, 0, {bar: middle, part: 0});
+                if (sample <= target) low = middle; else high = middle;
+            }
+            const bar = low;
+            let partLow = 0, partHigh = synth.findPartsInBar(bar);
+            for (let i = 0; i < 24; i++) {
+                const middle = (partLow + partHigh) / 2;
+                const sample = synth.getTotalSamples(true, true, 0, {bar: bar, part: middle});
+                if (sample <= target) partLow = middle; else partHigh = middle;
+            }
+            synth.playhead = bar + (partLow + partHigh) / (2 * parts);
+        }
+        synth.computeLatestModValues();
+    } else synth.playhead = seconds * outputRate / synth.getSamplesPerBar();
+    synth.gd5Position = seconds;
+    synth.gd5Length = gd5SongLength(synth, outputRate);
+}
+"""
+
+
+_JS_BRIDGE = _SONG_JS_BRIDGE + r"""
+if (typeof gd5SamplesReady === "undefined") globalThis.gd5SamplesReady = function () { return true; };
 globalThis.gd5Synth = null;
 globalThis.gd5Length = 0;
 globalThis.gd5OutputRate = 44100;
 globalThis.gd5Init = function(songJson, outputRate, speed, seekSeconds) {
-    const song = new beepbox.Song();
-    song.fromJsonObject(JSON.parse(songJson));
-    const synth = new beepbox.Synth(song);
-    synth.samplesPerSecond = outputRate / speed;
-    synth.computeDelayBufferSizes();
+    const data = JSON.parse(songJson);
+    const engine = gd5SongEngine(data);
+    if (data.format === "UltraBox") gd5BeginSampleLoad();
+    const song = new engine.Song();
+    song.fromJsonObject(data);
+    const synth = new engine.Synth(song);
     synth.loopRepeatCount = 0;
-    synth.playhead = seekSeconds * outputRate / synth.getSamplesPerBar();
-    synth.resetEffects();
+    gd5ConfigureSynth(synth, outputRate, speed, seekSeconds);
     gd5OutputRate = outputRate;
     gd5Synth = synth;
-    gd5Length = song.barCount * synth.getSamplesPerBar() / outputRate;
+    gd5Length = gd5SongLength(synth, outputRate);
     return JSON.stringify({length: gd5Length});
 };
 globalThis.gd5Seek = function(seekSeconds, speed) {
     if (!gd5Synth) return JSON.stringify({length: 0});
-    gd5Synth.samplesPerSecond = gd5OutputRate / speed;
-    gd5Synth.computeDelayBufferSizes();
-    gd5Synth.playhead = seekSeconds * gd5OutputRate / gd5Synth.getSamplesPerBar();
-    gd5Synth.resetEffects();
-    gd5Length = gd5Synth.song.barCount * gd5Synth.getSamplesPerBar() / gd5OutputRate;
+    gd5ConfigureSynth(gd5Synth, gd5OutputRate, speed, seekSeconds);
+    gd5Length = gd5SongLength(gd5Synth, gd5OutputRate);
     return JSON.stringify({length: gd5Length});
 };
 globalThis.gd5Render = function(frameCount) {
@@ -620,27 +796,32 @@ globalThis.gd5Render = function(frameCount) {
 """
 
 
-_WEB_JS_BRIDGE = r"""
+_WEB_JS_BRIDGE = _SONG_JS_BRIDGE + r"""
 window.__gd5_beepbox_synth = null;
 window.__gd5_beepbox_gain = null;
 window.__gd5_beepbox_pause_requested = false;
 window.__gd5_beepbox_speed = 1;
 window.__gd5_beepbox_volume = 1;
 window.__gd5_beepbox_output_rate = 44100;
+window.__gd5_beepbox_loading = false;
+window.__gd5_beepbox_failure = null;
+window.__gd5_beepbox_error = function() { return window.__gd5_beepbox_failure; };
 window.__gd5_beepbox_length = function() {
     const synth = window.__gd5_beepbox_synth;
-    return synth ? synth.song.barCount * synth.getSamplesPerBar() / window.__gd5_beepbox_output_rate : 0;
+    return synth ? synth.gd5Length : 0;
 };
 window.__gd5_beepbox_position = function() {
     const synth = window.__gd5_beepbox_synth;
-    return synth ? synth.playhead * synth.getSamplesPerBar() / window.__gd5_beepbox_output_rate : 0;
+    return synth ? (gd5IsUltraBox(synth) ? synth.gd5Position :
+        synth.playhead * synth.getSamplesPerBar() / window.__gd5_beepbox_output_rate) : 0;
 };
 window.__gd5_beepbox_finished = function() {
     const synth = window.__gd5_beepbox_synth;
     // BeepBox pauses and wraps its playhead to bar 0 when a non-looping song
     // ends, so the playhead never remains at barCount for the bridge to poll.
     // A separate flag keeps an intentional user pause from looking like EOF.
-    return !!synth && !synth.playing && !window.__gd5_beepbox_pause_requested;
+    return !!synth && !synth.playing && !window.__gd5_beepbox_pause_requested &&
+        !window.__gd5_beepbox_loading && !window.__gd5_beepbox_failure;
 };
 window.__gd5_beepbox_load = function(songJson, speed, startTime, volume) {
     const previous = window.__gd5_beepbox_synth;
@@ -648,14 +829,29 @@ window.__gd5_beepbox_load = function(songJson, speed, startTime, volume) {
         previous.pause();
         previous.deactivateAudio();
     }
-    const song = new beepbox.Song();
-    song.fromJsonObject(JSON.parse(songJson));
-    const synth = new beepbox.Synth(song);
+    window.__gd5_beepbox_failure = null;
+    const data = JSON.parse(songJson);
+    const engine = gd5SongEngine(data);
+    if (data.format === "UltraBox") gd5BeginSampleLoad();
+    const song = new engine.Song();
+    song.fromJsonObject(data);
+    const synth = new engine.Synth(song);
     window.__gd5_beepbox_synth = synth;
     window.__gd5_beepbox_pause_requested = false;
     window.__gd5_beepbox_speed = speed;
     window.__gd5_beepbox_volume = volume;
     synth.loopRepeatCount = 0;
+    synth.gd5Position = startTime;
+    synth.gd5Length = gd5SongLength(synth, window.__gd5_beepbox_output_rate);
+    if (gd5IsUltraBox(synth)) {
+        const synthesize = synth.synthesize.bind(synth);
+        synth.synthesize = function(left, right, frames, playSong) {
+            const playing = this.playing;
+            synthesize(left, right, frames, playSong);
+            if (playing) this.gd5Position = Math.min(this.gd5Length, this.gd5Position +
+                frames / window.__gd5_beepbox_output_rate);
+        };
+    }
     const activateAudio = synth.activateAudio.bind(synth);
     const deactivateAudio = synth.deactivateAudio.bind(synth);
     synth.deactivateAudio = function() {
@@ -684,14 +880,33 @@ window.__gd5_beepbox_load = function(songJson, speed, startTime, volume) {
         }
         window.__gd5_beepbox_gain.gain.value = window.__gd5_beepbox_volume;
     };
-    synth.play();
-    synth.playhead = startTime * window.__gd5_beepbox_output_rate / synth.getSamplesPerBar();
-    synth.resetEffects();
+    window.__gd5_beepbox_loading = true;
+    function start() {
+        if (window.__gd5_beepbox_synth !== synth) return;
+        try {
+            if (gd5IsUltraBox(synth) && !gd5SamplesReady()) {
+                window.setTimeout(start, 20);
+                return;
+            }
+            window.__gd5_beepbox_loading = false;
+            synth.play();
+            gd5ConfigureSynth(synth, window.__gd5_beepbox_output_rate,
+                window.__gd5_beepbox_speed, synth.gd5Position);
+            if (window.__gd5_beepbox_pause_requested) synth.pause();
+        } catch (error) {
+            window.__gd5_beepbox_loading = false;
+            window.__gd5_beepbox_failure = String(error);
+            synth.pause();
+            synth.deactivateAudio();
+        }
+    }
+    start();
 };
 window.__gd5_beepbox_pause = function(paused) {
     const synth = window.__gd5_beepbox_synth;
     if (!synth) return;
     window.__gd5_beepbox_pause_requested = !!paused;
+    if (window.__gd5_beepbox_loading) return;
     if (paused) synth.pause(); else synth.play();
 };
 window.__gd5_beepbox_set_volume = function(volume) {
@@ -702,10 +917,7 @@ window.__gd5_beepbox_seek = function(position, speed) {
     const synth = window.__gd5_beepbox_synth;
     if (!synth) return;
     window.__gd5_beepbox_speed = speed;
-    synth.samplesPerSecond = window.__gd5_beepbox_output_rate / speed;
-    synth.computeDelayBufferSizes();
-    synth.playhead = position * window.__gd5_beepbox_output_rate / synth.getSamplesPerBar();
-    synth.resetEffects();
+    gd5ConfigureSynth(synth, window.__gd5_beepbox_output_rate, speed, position);
 };
 window.__gd5_beepbox_stop = function() {
     const synth = window.__gd5_beepbox_synth;

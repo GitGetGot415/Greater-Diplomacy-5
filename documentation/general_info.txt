@@ -352,6 +352,29 @@ tests/test_build_manifest.py compares manifest declarations with independent rep
 It also checks actual staging with temporary directories.
 Platform builds and browser checks remain separate verification steps.
 
+MUSIC PLAYBACK
+==============
+
+beepbox_audio.py owns BeepBox and UltraBox JSON recognition, sample loading, and playback.
+Put song JSON files in an album folder under assets/music/.
+The format field selects the original BeepBox synth or the separate UltraBox synth.
+The existing music controls apply to both formats.
+UltraBox duration and seeking use its tempo changes and next-bar commands.
+
+Desktop playback uses the existing V8 runtime and a synthesis worker.
+Custom desktop samples must use 8, 16, 24, or 32-bit integer PCM WAV audio.
+Samples can use embedded base64 data, companion files, or HTTP addresses.
+Companion files can replace localhost addresses when their paths match under the album folder.
+For example, localhost:8765/song.samples/Inst01a can use an album's song.samples/Inst01a file.
+The browser uses its audio decoder for embedded samples and HTTP samples.
+Remote browser samples require server access permission through Cross-Origin Resource Sharing (CORS).
+External sample packs are not included. Export their samples as embedded audio before playback.
+Missing samples cause a playback error. They do not use a substitute waveform.
+
+assets/ultrabox/README.txt records the vendor source and the duration extension.
+Builds include both synths through the assets directory in the shared build manifest.
+No music setting or game-save format changes are required.
+
 DISPLAY SUPPORT
 ===============
 

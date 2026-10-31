@@ -275,8 +275,14 @@ CREDITS_DATA = [
                 "links": [{"text": "GitHub", "url": "https://github.com/johnnesky/beepbox"}]
             },
             {
+                "link_text": "UltraBox",
+                "info": "Music editor and synthesizer used for UltraBox JSON playback",
+                "align": "left",
+                "links": [{"text": "GitHub", "url": "https://github.com/ultraabox/ultrabox_typescript"}]
+            },
+            {
                 "link_text": "PyMiniRacer",
-                "info": "Embedded V8 JavaScript runtime used for native BeepBox playback",
+                "info": "Embedded V8 JavaScript runtime used for native BeepBox and UltraBox playback",
                 "align": "left",
                 "links": [{"text": "GitHub", "url": "https://github.com/bpcreech/PyMiniRacer"}]
             }

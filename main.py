@@ -628,13 +628,13 @@ class Controller:
         # Scan the hard drive to find whatever is actually there!
         synced_albums = {}
         self.track_start_times = {} # Clear start times whenever we scan
-        # Web uses BeepBox's bundled Web Audio synth; desktop needs the
+        # Web uses the bundled BeepBox and UltraBox synths. Desktop needs the
         # packaged V8 runtime. QuickJS can parse a song but cannot keep dense
         # tracks synthesized fast enough for real-time playback.
         prefer_beepbox = IS_WEB or beepbox_audio.is_available()
         if not prefer_beepbox:
             print(
-                "BeepBox JSON tracks are unavailable because this Python interpreter "
+                "BeepBox and UltraBox JSON tracks are unavailable because this Python interpreter "
                 f"has no V8 JavaScript runtime: {sys.executable}. "
                 "Select the project venv or install requirements.txt."
             )
