@@ -161,7 +161,7 @@ class New_Game(GameState):
 
         pickers.open_checkbox_list(
             self, "Refresh Options", "Select what to forcefully reset:",
-            [CheckboxItem(key, label, checked=True) for key, label in self.REFRESH_FIELDS],
+            [CheckboxItem(key, label) for key, label in self.REFRESH_FIELDS],
             on_picked,
             footnote="If you don't know what you're doing, this might ruin your saved maps!")
 
