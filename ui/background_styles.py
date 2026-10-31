@@ -46,8 +46,8 @@ MESSAGE_PANEL_STYLES = {
 
 # Game panels retain their borders and layout in their screen modules.
 PUPPET_PANEL_STYLES = {
-    "subjects": {"color": c.PANEL_THEME_INFO[0], "gradient_strength": 1.0},
-    "release_nations": {"color": c.PANEL_THEME_INFO_OVER_MAP[0], "gradient_strength": 1.0},
+    "subjects": {"color": c.PANEL_THEME_INFO[0], "gradient_strength": 0.5},
+    "release_nations": {"color": c.PANEL_THEME_INFO_OVER_MAP[0], "gradient_strength": 0.5},
 }
 
 COUNTRY_SUMMARY_STYLES = {
@@ -72,20 +72,20 @@ PRODUCTION_PANEL_STYLES = {
 }
 
 RESOURCE_BAR_STYLES = {
-    "full_width": {"color": (30, 30, 30), "gradient_strength": 1.0},
+    "full_width": {"color": (30, 30, 30), "gradient_strength": 0.5},
 }
 
 COMBAT_PANEL_STYLES = {
-    "main": {"color": c.PANEL_THEME_DANGER[0], "gradient_strength": 1.0},
+    "main": {"color": c.PANEL_THEME_DANGER[0], "gradient_strength": 0.5},
 }
 
 POLITICS_PANEL_STYLES = {
-    "main": {"color": (34, 38, 58), "gradient_strength": 1.0},
-    "policy_card": {"color": (27, 31, 49), "gradient_strength": 1.0},
+    "main": {"color": (34, 38, 58), "gradient_strength": 0.5},
+    "policy_card": {"color": (27, 31, 49), "gradient_strength": 0.5},
 }
 
 AUTOMATION_PANEL_STYLES = {
-    "main": {"color": (40, 45, 50), "gradient_strength": 1.0},
+    "main": {"color": (40, 45, 50), "gradient_strength": 0.5},
 }
 
 ECONOMY_PANEL_STYLES = {
@@ -97,27 +97,29 @@ ORDERS_PANEL_STYLES = {
     "main": {"color": c.HUD_PANEL_BG, "gradient_strength": 1.0},
 }
 
+DEFAULT_GRADIENT_EDITOR_PANELS = 0.5
+
 EDITOR_PANEL_STYLES = {
-    "research": {"color": c.PANEL_THEME_EDIT[0], "gradient_strength": 1.0},
-    "research_list": {"color": c.PANEL_THEME_EDIT[0], "gradient_strength": 1.0},
-    "date": {"color": c.PANEL_THEME_EDIT[0], "gradient_strength": 1.0},
-    "starting_economy": {"color": c.PANEL_THEME_INFO[0], "gradient_strength": 1.0},
-    "starting_economy_list": {"color": c.PANEL_THEME_CONFIRM[0], "gradient_strength": 1.0},
-    "politics": {"color": c.PANEL_THEME_SPECIAL[0], "gradient_strength": 1.0},
-    "politics_list": {"color": c.PANEL_THEME_SPECIAL[0], "gradient_strength": 1.0},
-    "personality": {"color": c.PANEL_THEME_SPECIAL[0], "gradient_strength": 1.0},
-    "personality_list": {"color": c.PANEL_THEME_SPECIAL[0], "gradient_strength": 1.0},
-    "diplomacy": {"color": c.PANEL_THEME_INFO[0], "gradient_strength": 1.0},
-    "convoy_converter": {"color": c.PANEL_THEME_CONFIRM[0], "gradient_strength": 1.0},
-    "resource_brush": {"color": c.PANEL_THEME_SPECIAL[0], "gradient_strength": 1.0},
-    "clear_map": {"color": c.PANEL_THEME_DANGER[0], "gradient_strength": 1.0},
-    "scripted_events": {"color": c.MODAL_BG, "gradient_strength": 1.0},
-    "scripted_event_lists": {"color": (26, 26, 34), "gradient_strength": 1.0},
-    "unit_stats": {"color": c.MODAL_BG, "gradient_strength": 1.0},
+    "research": {"color": c.PANEL_THEME_EDIT[0], "gradient_strength": DEFAULT_GRADIENT_EDITOR_PANELS},
+    "research_list": {"color": c.PANEL_THEME_EDIT[0], "gradient_strength": DEFAULT_GRADIENT_EDITOR_PANELS},
+    "date": {"color": c.PANEL_THEME_EDIT[0], "gradient_strength": DEFAULT_GRADIENT_EDITOR_PANELS},
+    "starting_economy": {"color": c.PANEL_THEME_INFO[0], "gradient_strength": DEFAULT_GRADIENT_EDITOR_PANELS},
+    "starting_economy_list": {"color": c.PANEL_THEME_CONFIRM[0], "gradient_strength": DEFAULT_GRADIENT_EDITOR_PANELS},
+    "politics": {"color": c.PANEL_THEME_SPECIAL[0], "gradient_strength": DEFAULT_GRADIENT_EDITOR_PANELS},
+    "politics_list": {"color": c.PANEL_THEME_SPECIAL[0], "gradient_strength": DEFAULT_GRADIENT_EDITOR_PANELS},
+    "personality": {"color": c.PANEL_THEME_SPECIAL[0], "gradient_strength": DEFAULT_GRADIENT_EDITOR_PANELS},
+    "personality_list": {"color": c.PANEL_THEME_SPECIAL[0], "gradient_strength": DEFAULT_GRADIENT_EDITOR_PANELS},
+    "diplomacy": {"color": c.PANEL_THEME_INFO[0], "gradient_strength": DEFAULT_GRADIENT_EDITOR_PANELS},
+    "convoy_converter": {"color": c.PANEL_THEME_CONFIRM[0], "gradient_strength": DEFAULT_GRADIENT_EDITOR_PANELS},
+    "resource_brush": {"color": c.PANEL_THEME_SPECIAL[0], "gradient_strength": DEFAULT_GRADIENT_EDITOR_PANELS},
+    "clear_map": {"color": c.PANEL_THEME_DANGER[0], "gradient_strength": DEFAULT_GRADIENT_EDITOR_PANELS},
+    "scripted_events": {"color": c.MODAL_BG, "gradient_strength": DEFAULT_GRADIENT_EDITOR_PANELS},
+    "scripted_event_lists": {"color": (26, 26, 34), "gradient_strength": DEFAULT_GRADIENT_EDITOR_PANELS},
+    "unit_stats": {"color": c.MODAL_BG, "gradient_strength": DEFAULT_GRADIENT_EDITOR_PANELS},
     "unit_stats_row": {"color": (44, 44, 56), "gradient_strength": 0.0},
-    "construction_turns": {"color": c.MODAL_BG, "gradient_strength": 1.0},
+    "construction_turns": {"color": c.MODAL_BG, "gradient_strength": DEFAULT_GRADIENT_EDITOR_PANELS},
     "construction_turns_row": {"color": (44, 44, 56), "gradient_strength": 0.0},
-    "historical_leader_card": {"color": (35, 45, 35), "gradient_strength": 1.0},
+    "historical_leader_card": {"color": (35, 45, 35), "gradient_strength": DEFAULT_GRADIENT_EDITOR_PANELS},
 }
 
 # The research timeline is shared by play, spectators, and the country editor.
