@@ -505,8 +505,8 @@ BUILDING_RECIPES = [
     ],
     [
         #YR    NAME                        TIME GROUP          MAT   MAN FUEL OUTMAT OUTMAN OUTFUEL UPGRADES                         OPTIONS
-        (1910, "Basic Recruitment Center", 6,   "recruitment", 2500, 0,  0,   0,     50,    0,      (1, 1, {}),                      {"numbered": False}),
-        (1912, "Recruitment Building Lvl", 6,   "recruitment", 5000, 0,  0,   0,     100,   0,      (50, 2, {"prod_manpower": 100}), {}),
+        (1800, "Basic Recruitment Center", 6,   "recruitment", 2500, 0,  0,   0,     50,    0,      (1, 1, {}),                      {"numbered": False}),
+        (1805, "Recruitment Building Lvl", 6,   "recruitment", 5000, 0,  0,   0,     100,   0,      (35, 10, {"prod_manpower": 100}), {}),
     ],
     [
         #YR    NAME        TIME GROUP            MAT   MAN FUEL OUTMAT OUTMAN OUTFUEL UPGRADES                                         OPTIONS
@@ -679,7 +679,7 @@ RESEARCH_RECIPES = [
         (yr(1912, 2, 50),                            "fuel_refining",              "INDUSTRY", 1200, {"bergius_process": 1},   {}),
         (building_years("Basic Recruitment Center"), "basic_recruitment",          "INDUSTRY", 1200, {},                       {}),
         (building_years("Recruitment Building Lvl"), "recruitment_buildings",      "INDUSTRY", 1200, {"basic_recruitment": 1}, {}),
-        (yr(1913, 2, 50),                            "general_recruitment",        "INDUSTRY", 900,  GR,                       {}),
+        (yr(1810, 10, 35),                            "general_recruitment",        "INDUSTRY", 900,  GR,                       {}),
         (yr(1850, 2, 100),                           "resource_refining",          "INDUSTRY", 900,  {},                       {}),
     ],
     [
