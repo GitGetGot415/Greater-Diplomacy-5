@@ -510,24 +510,26 @@ class UnitViewControlTests(unittest.TestCase):
         before = queries.build_save_dict(game)
         before.pop("generated_at")
         toggle = game.btn_unit_view_toggle
-        position = toggle.rect.center
         pending_button = game.unit_view_buttons["NAVAL"]
         pending_button.is_pressed = True
-        with (patch.object(pygame.mouse, "get_pos", return_value=position),
-              patch.object(map_input.queries, "get_clicked_province",
+        with (patch.object(map_input.queries, "get_clicked_province",
                            side_effect=AssertionError("Toggle click reached the map")),
               patch.object(game, "set_unit_view_filter") as change_filter):
             for collapsed in (True, False):
-                game.handle_events([
-                    pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=position),
-                    pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=position),
-                ])
+                position = toggle.rect.center
+                with patch.object(pygame.mouse, "get_pos", return_value=position):
+                    game.handle_events([
+                        pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=position),
+                        pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=position),
+                    ])
                 self.assertEqual(game.unit_view_bar_collapsed, collapsed)
                 self.assertTrue(toggle.visible)
                 self.assertEqual(game.unit_view_filter, "AIR")
                 self.assertIsNone(game.selected_province)
                 self.assertEqual(ui_bars.map_unit_view_bar_rect(game) is None, collapsed)
-                self.assertTrue(map_input.map_ui_bar_at_position(game, position))
+                self.assertTrue(map_input.map_ui_bar_at_position(game, toggle.rect.center))
+                self.assertNotEqual(toggle.rect.center, position)
+                self.assertEqual(map_input.map_ui_bar_at_position(game, position), not collapsed)
                 self.assertFalse(pending_button.is_pressed)
                 if collapsed:
                     for kind in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):

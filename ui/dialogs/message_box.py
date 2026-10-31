@@ -147,7 +147,7 @@ class _NavigationIntroPopup:
     UNIT_VIEW_NOTE = (
         "In Units view specifically you will see 4 colored buttons in the bottom left corner, which are Naval [icon:naval:24], Land [icon:land:24], Air [icon:air:24], and All [icon:all:24]. "
         "These filter your view of the map so you only see units that belong in that category. "
-        "Click Hide above the buttons to hide the strip, or Show to open it again. Your selected filter stays active. "
+        "Click Hide above the buttons to hide the strip. The toggle moves down; click Show to open the strip and move it up again. Your selected filter stays active. "
         "All is selected whenever a game opens. "
     )
     ARMY_STEPS = (
@@ -155,7 +155,7 @@ class _NavigationIntroPopup:
          "In Orders, right-click a unit row to add or remove it without "
          "changing the other selected units."),
         ("Unassigned", "Select units outside armies with this first, dark grey card. It has no emblem or editing controls. "
-         "It hides when all units are assigned or Settings > Show Unclaimed is OFF. Unassigned units keep their map icons."),
+         "It hides when all units are assigned or Settings > Show Unassigned is OFF. Unassigned units keep their map icons."),
         ("Create an army", "In Orders, click + Create Army in the Army tray. (Located on the right side of the screen)"),
         ("Personalize", "Click a card to select the units in said army. Pressing the E button edits its name and emblem."),
         ("Target areas", "Press T on an army card, select its target tiles, and confirm. The army fills uncovered tiles first, then balances its units. Units that have no orders given will automatically be ordered to fill in the target area next turn."),

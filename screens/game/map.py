@@ -895,8 +895,11 @@ def _update_turn_buttons(map_screen, is_sel, is_thinking):
                          and map_screen.secondary_mode == "UNITS"
                          and not map_screen.hide_raised_rect)
     if map_screen.unit_view_buttons:
-        map_screen.btn_unit_view_toggle.visible = unit_view_visible
-        map_screen.btn_unit_view_toggle.text = "Show" if map_screen.unit_view_bar_collapsed else "Hide"
+        toggle = map_screen.btn_unit_view_toggle
+        toggle.visible = unit_view_visible
+        toggle.text = "Show" if map_screen.unit_view_bar_collapsed else "Hide"
+        toggle.rect.bottom = (map_screen.unit_view_bar_rect.bottom if map_screen.unit_view_bar_collapsed
+                              else map_screen.unit_view_bar_rect.top)
     for view_filter, button in map_screen.unit_view_buttons.items():
         button.visible = unit_view_visible and not map_screen.unit_view_bar_collapsed
         button.is_selected = view_filter == map_screen.unit_view_filter
@@ -2230,6 +2233,13 @@ class Map(StateAccess, GameState):
                     and popup.handle_event(event)):
                 continue
             if army_panel.handle_event(self, event):
+                continue
+            toggle = self.btn_unit_view_toggle
+            if (event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP)
+                    and toggle is not None and toggle.visible
+                    and toggle.rect.collidepoint(event.pos)):
+                # The callback moves this button. Consume the click at its original position.
+                toggle.handle_event(event)
                 continue
             super().handle_events([event])
 

@@ -36,7 +36,7 @@ TEXT_INPUT_STYLES = {
 
 # Credits, help, confirmations, and other dialogs share this background.
 DIALOG_STYLES = {
-    "main": {"color": (40, 40, 40), "gradient_strength": 1.0},
+    "main": {"color": (40, 40, 40), "gradient_strength": 0.5},
     "file_browser": {"color": c.MODAL_BG, "gradient_strength": 1.0},
 }
 

@@ -424,7 +424,7 @@ class SettingsScreenTests(unittest.TestCase):
         controller.ai_mode = "OFF"
         with mock.patch("screens.menus.settings.queries.get_settings", return_value={}):
             screen = Settings(controller)
-        unclaimed = next(item for item in screen.elements if item.text.startswith("Show Unclaimed:"))
+        unclaimed = next(item for item in screen.elements if item.text.startswith("Show Unassigned:"))
         with mock.patch("screens.menus.settings.queries.get_settings", return_value={}), \
                 mock.patch("screens.menus.settings.queries.save_global_settings"):
             unclaimed.callback()

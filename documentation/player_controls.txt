@@ -465,7 +465,8 @@ The filter uses the unit's current form.
 Convoys are naval, including transported aircraft. Trucks are land.
 All is selected when a game opens.
 
-Click Hide above the strip to hide its buttons and background. Click Show in the same position to open it again.
+Click Hide above the strip to hide its buttons and background. The toggle moves down to the bottom-left controls.
+Click Show to open the strip again. The toggle moves back above the strip.
 The selected filter stays active while the strip is hidden. Each new map session starts with the strip open.
 This is a local display choice. Saves and multiplayer files do not store it.
 
@@ -488,11 +489,11 @@ The display cache refreshes when orders, unit forms, filters, or the viewer chan
 ARMY GROUPS
 -----------
 
-The army list starts with Unassigned when Show Unclaimed is enabled and owned units remain outside army groups.
+The army list starts with Unassigned when Show Unassigned is enabled and owned units remain outside army groups.
 Unassigned includes all unit types, including units on foreign land.
-It hides when no owned units remain outside army groups, or Show Unclaimed is disabled.
-Settings places Show Unclaimed between Show FPS and Show Tutorial Popup.
-Show Unclaimed is enabled by default, including in older settings files.
+It hides when no owned units remain outside army groups, or Show Unassigned is disabled.
+Settings places Show Unassigned between Show FPS and Show Tutorial Popup.
+Show Unassigned is enabled by default, including in older settings files.
 Reset Defaults enables it again.
 
 This local display setting does not change membership, orders, saves, or multiplayer commands.

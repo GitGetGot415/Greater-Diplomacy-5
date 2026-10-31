@@ -63,7 +63,7 @@ SETTINGS_INFO_ROWS = (
      "unusual water for players who don't expect it."),
     (SETTINGS_FPS_TOGGLE_Y, "Show FPS",
      "Displays a live frames-per-second counter on screen."),
-    (SETTINGS_SHOW_UNCLAIMED_Y, "Show Unclaimed",
+    (SETTINGS_SHOW_UNCLAIMED_Y, "Show Unassigned",
      "Shows the Unassigned army card for your units outside army groups. "
      "Enabled by default. The card stays hidden when all units are assigned."),
     (SETTINGS_INTRO_POPUP_Y, "Show Tutorial Popup",
@@ -116,7 +116,7 @@ def render_settings_buttons(settings_screen):
                f"Show FPS: {'ON' if settings_screen.show_fps else 'OFF'}", settings_screen.toggle_fps),
         Button(keybind_x, SETTINGS_SHOW_UNCLAIMED_Y, "setting_option",
                "green" if settings_screen.show_unclaimed else "red",
-               f"Show Unclaimed: {'ON' if settings_screen.show_unclaimed else 'OFF'}",
+               f"Show Unassigned: {'ON' if settings_screen.show_unclaimed else 'OFF'}",
                settings_screen.toggle_show_unclaimed),
         Button(keybind_x, SETTINGS_INTRO_POPUP_Y, "setting_option",
                "green" if settings_screen.show_intro_popup else "red",
