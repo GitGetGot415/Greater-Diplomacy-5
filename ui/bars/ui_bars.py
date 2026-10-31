@@ -3,6 +3,7 @@ import os
 from contextlib import contextmanager
 import data.constants as c
 from ui.background_styles import MAP_BAR_STYLES, MAP_CONFIRM_STYLES, MAP_FRAME_COLOR, LEFT_FRAME_COLOR
+from ui import background_styles
 
 from ui.rendering.font_manager import fonts
 from ui.widgets import ui_elements
@@ -16,7 +17,7 @@ _ui_images_cache = {}
 # pixels without scaling the background again for every mouse event.
 _province_menu_background_cache = {}
 
-# Recolored checkerboard tiles, cached by target bg_color so each screen only
+# Recolored checkerboard tiles, cached by color and gradient strength so each screen only
 # pays the generation cost once
 _checkerboard_cache = {}
 
@@ -305,7 +306,8 @@ def get_checkerboard_tile(base_color):
     always-small cache.
     """
     quantized = tuple(min(255, max(0, round(ch / 4) * 4)) for ch in base_color)
-    cache_key = quantized
+    gradient_strength = background_styles.CHECKERBOARD_GRADIENT_STRENGTH
+    cache_key = (quantized, gradient_strength)
     if cache_key in _checkerboard_cache:
         return _checkerboard_cache[cache_key]
     base_color = quantized
@@ -336,7 +338,11 @@ def get_checkerboard_tile(base_color):
     for row in range(2):
         for col in range(2):
             color = shade_a if (row + col) % 2 == 0 else shade_b
-            tile.fill(color, (col * square, row * square, square, square))
+            ui_elements.draw_pixel_panel(
+                tile, pygame.Rect(col * square, row * square, square, square),
+                color, border_color=None, border_width=0,
+                gradient_strength=gradient_strength,
+            )
     pygame.draw.line(tile, shade_seam, (0, square), (tile_size, square))
     pygame.draw.line(tile, shade_seam, (square, 0), (square, tile_size))
 

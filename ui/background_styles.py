@@ -12,6 +12,7 @@ import data.constants as c
 MAP_FRAME_COLOR = (50, 80, 50)
 LEFT_FRAME_COLOR = (40, 80, 80)
 EDITOR_BG = (23, 35, 61, 245)
+CHECKERBOARD_GRADIENT_STRENGTH = 0.5
 
 # Each bar can override the common color and the gradient strength.
 MAP_BAR_STYLES = {
