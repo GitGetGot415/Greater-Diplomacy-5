@@ -31,13 +31,13 @@ MENU_WATER_BANDS = 12
 
 # Edit these RGB colors, then restart the game.
 MENU_SKY_START_COLOR = (24, 28, 65)
-MENU_SKY_END_COLOR = (240, 160, 120)
+MENU_SKY_END_COLOR = (220, 120, 140)
 
 # Fade
 MENU_SKY_FADE_ENABLED = True
 MENU_SKY_START_FADE_COLOR = (24, 28, 65)
-MENU_SKY_END_FADE_COLOR = (210, 110, 145)
-MENU_SKY_FADE_CYCLE_SECONDS = 10.0  # Full cycle: original colors to targets and back.
+MENU_SKY_END_FADE_COLOR = (180, 80, 100)
+MENU_SKY_FADE_CYCLE_SECONDS = 8.0  # Full cycle: original colors to targets and back.
 # Options: "linear", "ease_in", "ease_out", "ease_in_out".
 MENU_SKY_FADE_IN_EASING = "ease_in_out"  # Original colors to target colors.
 MENU_SKY_FADE_OUT_EASING = "ease_in_out"  # Target colors back to original colors.
