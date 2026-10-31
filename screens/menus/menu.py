@@ -9,6 +9,7 @@ import ssl
 from ui.widgets import ui_elements
 from ui.navigation.game_state import GameState
 from ui.widgets.ui_elements import Button
+from ui.background_styles import MENU_PORTRAIT_STYLE
 import data.constants as c
 from data import queries
 from ui.dialogs import pickers
@@ -421,7 +422,8 @@ class Menu(GameState):
         The anchor is the bottom-left corner, so the image size never moves the feet."""
         plain = self._hildehrand_plain_image
         if plain and self.hildehrand_gradient:
-            self.hildehrand_image = ui_elements.apply_button_gradient(plain)
+            self.hildehrand_image = ui_elements.apply_button_gradient(
+                plain, MENU_PORTRAIT_STYLE["gradient_strength"])
         else:
             self.hildehrand_image = plain
 
