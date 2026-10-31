@@ -645,6 +645,8 @@ class Slider:
         self.callback = callback
         self.dragging = False
         self.visible = True
+        # A disabled slider is a locked track reading OFF that ignores input.
+        self.disabled = False
         self.click_guard = None
 
         # --- COMBINED TRACKERS ---
@@ -655,6 +657,8 @@ class Slider:
         """
         Determines the exact text to render. 
         """
+        if self.disabled:
+            return f"{self.text.split(':')[0]}: OFF"
         if ":" in self.text:
             return self.text
         else:
@@ -664,18 +668,25 @@ class Slider:
         if not self.visible: return
         
         allowed_ratio = self.allowed_max / self.visual_max if self.visual_max > 0 else 1.0
-        draw_slider(surface, self.rect, self.handle_rect, dragging=self.dragging,
-                    allowed_ratio=allowed_ratio)
+        if self.disabled:
+            draw_slider(surface, self.rect, pygame.Rect(0, 0, 0, 0), allowed_ratio=0.0)
+        else:
+            draw_slider(surface, self.rect, self.handle_rect, dragging=self.dragging,
+                        allowed_ratio=allowed_ratio)
         
         slider_font = fonts.get("normal")
         
         display_text = self.get_display_string()
-        txt = slider_font.render(display_text, True, (255, 255, 255))
+        txt = slider_font.render(display_text, True,
+                                 c.UI_TEXT_MUTED if self.disabled else (255, 255, 255))
             
         surface.blit(txt, (self.rect.x, self.rect.y - 25))
 
     def handle_event(self, event):
         if not self.visible: return 
+        if self.disabled:
+            self.dragging = False
+            return
         
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.handle_rect.collidepoint(event.pos):
             if self.click_guard is not None and not self.click_guard():

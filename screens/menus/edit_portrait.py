@@ -29,6 +29,8 @@ class _BandSlider(Slider):
         return max(c.HILDEHRAND_GRADIENT_MIN_BANDS, round(value))
 
     def get_display_string(self):
+        if self.disabled:
+            return super().get_display_string()
         return f"{self.text}: {self.bands_for(self.value)}"
 
 
@@ -61,6 +63,8 @@ class Edit_Portrait(GameState):
         self.refresh_ui()
 
     def toggle_stepped(self):
+        if not self.menu.hildehrand_gradient:
+            return
         self.menu.toggle_hildehrand_gradient_stepped()
         self.refresh_ui()
 
@@ -81,6 +85,7 @@ class Edit_Portrait(GameState):
     def refresh_ui(self):
         menu = self.menu
         enabled = menu.hildehrand_gradient
+        stepped = menu.hildehrand_gradient_stepped
         button_w, button_h = c.SIZES["medium"]
         slider_x = CONTROLS_X + button_w + BUTTON_SLIDER_GAP_X
         gradient_y = CONTROLS_Y + CONTROLS_GAP_Y
@@ -97,14 +102,19 @@ class Edit_Portrait(GameState):
             menu.hildehrand_gradient_bands, self.set_bands,
             visual_max=c.HILDEHRAND_GRADIENT_MAX_BANDS,
             allowed_max=c.HILDEHRAND_GRADIENT_MAX_BANDS)
+        # Each slider reads OFF while the option it belongs to is off. Bands also need the
+        # gradient itself: the Stepped button is disabled without it.
+        self.strength_slider.disabled = not enabled
+        self.bands_slider.disabled = not (enabled and stepped)
+        stepped_button = Button(CONTROLS_X, style_y, "medium", "green" if stepped else "red",
+                                f"Stepped: {'ON' if stepped else 'OFF'}", self.toggle_stepped)
+        stepped_button.disabled = not enabled
         self.elements = [
             make_back_button(self.exit_screen),
             Button(CONTROLS_X, CONTROLS_Y, "medium", "purple", "Choose Portrait", self.open_picker),
             Button(CONTROLS_X, gradient_y, "medium", "green" if enabled else "red",
                    f"Gradient: {'ON' if enabled else 'OFF'}", self.toggle_gradient),
-            Button(CONTROLS_X, style_y, "medium", "blue",
-                   f"Style: {'Stepped' if menu.hildehrand_gradient_stepped else 'Smooth'}",
-                   self.toggle_stepped),
+            stepped_button,
             self.strength_slider,
             self.bands_slider,
         ]

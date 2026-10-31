@@ -48,6 +48,44 @@ class EditPortraitTests(unittest.TestCase):
                                      self.menu.hildehrand_gradient_stepped,
                                      self.menu.hildehrand_gradient_bands)
 
+    def test_stepped_button_is_disabled_and_ignored_while_the_gradient_is_off(self):
+        self.menu.hildehrand_gradient = False
+        self.menu.hildehrand_gradient_stepped = True
+        self.screen.refresh_ui()
+        button = next(e for e in self.screen.elements if getattr(e, "text", "").startswith("Stepped"))
+        self.assertTrue(button.disabled)
+        self.screen.toggle_stepped()
+        self.assertTrue(self.menu.hildehrand_gradient_stepped)
+        self.save.assert_not_called()
+        self.menu.hildehrand_gradient = True
+        self.screen.refresh_ui()
+        button = next(e for e in self.screen.elements if getattr(e, "text", "").startswith("Stepped"))
+        self.assertFalse(button.disabled)
+
+    def test_each_slider_reads_off_while_its_option_is_off(self):
+        cases = ((True, True, False, False), (True, False, False, True), (False, True, True, True),
+                 (False, False, True, True))
+        for gradient, stepped, strength_off, bands_off in cases:
+            with self.subTest(gradient=gradient, stepped=stepped):
+                self.menu.hildehrand_gradient = gradient
+                self.menu.hildehrand_gradient_stepped = stepped
+                self.screen.refresh_ui()
+                self.assertEqual(self.screen.strength_slider.disabled, strength_off)
+                self.assertEqual(self.screen.bands_slider.disabled, bands_off)
+                for slider, off in ((self.screen.strength_slider, strength_off),
+                                    (self.screen.bands_slider, bands_off)):
+                    self.assertEqual(slider.get_display_string().endswith(": OFF"), off)
+
+    def test_disabled_slider_ignores_input(self):
+        self.menu.hildehrand_gradient = False
+        self.screen.refresh_ui()
+        slider = self.screen.strength_slider
+        before = self.menu.hildehrand_gradient_strength
+        slider.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1,
+                                               pos=slider.handle_rect.center))
+        self.assertFalse(slider.dragging)
+        self.assertEqual(self.menu.hildehrand_gradient_strength, before)
+
     def test_style_toggle_persists_and_changes_the_menu_portrait(self):
         self.menu.hildehrand_gradient = True
         self.menu.hildehrand_gradient_stepped = False
