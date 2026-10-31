@@ -56,6 +56,11 @@ The main menu shows an evening sky above a blue water rectangle.
 The sky changes from dark blue through purple to warm orange at the horizon.
 Edit MENU_SKY_START_COLOR and MENU_SKY_END_COLOR near the top of screens/menus/menu.py.
 The start color appears at the top. The end color appears at the horizon.
+MENU_SKY_FADE_ENABLED controls a repeating color fade.
+The top fades between MENU_SKY_START_COLOR and MENU_SKY_START_FADE_COLOR.
+The horizon fades between MENU_SKY_END_COLOR and MENU_SKY_END_FADE_COLOR.
+MENU_SKY_FADE_CYCLE_SECONDS sets the time for a complete fade to the target colors and back.
+Use a positive duration. Larger durations give slower fades. False for MENU_SKY_FADE_ENABLED keeps the original colors.
 MENU_SKY_MIDDLE_COLORS sets the intermediate sky colors.
 MENU_WATER_START_COLOR sets the water color at the horizon. MENU_WATER_END_COLOR sets the color at the bottom.
 The water has separate stepped, band count, and dithering settings. Both gradients use the same background cache.
@@ -64,7 +69,7 @@ MENU_WATER_DITHERING controls square transitions between water bands. MENU_WATER
 Water dithering and band count apply only when MENU_WATER_STEPPED is True.
 A faint moving checkerboard overlays only the evening sky, behind the artwork and controls.
 The water hides the checkerboard below the horizon.
-It uses the same scrolling speed and direction as other screens. The gradient remains stationary.
+It uses the same scrolling speed and direction as other screens. The gradient stays in place while its colors fade.
 Edit MENU_CHECKERBOARD_OPACITY in screens/menus/menu.py to change its visibility.
 MENU_CHECKERBOARD_COLOR sets the checkerboard color independently of MENU_SKY_START_COLOR.
 Use 0 to hide it or 255 for full opacity. The default is 18.
@@ -78,7 +83,7 @@ The game saves this choice with the portrait settings. Older settings keep dithe
 The Dithering button is disabled when Gradient or Stepped is off. Its saved choice remains unchanged.
 Dithering options apply only to stepped gradients. Restart after editing the sky or water settings in screens/menus/menu.py.
 MENU_SKY_BANDS applies only when MENU_SKY_STEPPED is True.
-The menu caches the background for each viewport size. Restart the game after editing these values.
+The menu caches backgrounds by viewport size and sky endpoint colors. Restart the game after editing these values.
 Other menus retain their existing backgrounds.
 
 Edit PUPPET_PANEL_STYLES for the subjects and release_nations panels.

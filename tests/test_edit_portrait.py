@@ -40,6 +40,7 @@ class EditPortraitTests(unittest.TestCase):
         self.addCleanup(menu_module._menu_background.cache_clear)
         for sky, portrait in ((True, False), (False, True)):
             with self.subTest(sky=sky, portrait=portrait), \
+                    mock.patch.object(pygame.time, "get_ticks", return_value=0), \
                     mock.patch.object(menu_module, "MENU_SKY_DITHERING", sky), \
                     mock.patch.object(menu_module, "MENU_WATER_DITHERING", not sky), \
                     mock.patch.object(menu_module, "MENU_WATER_STEPPED", True), \

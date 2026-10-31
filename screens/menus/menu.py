@@ -1,4 +1,5 @@
 import time
+import math
 from functools import lru_cache
 
 import pygame
@@ -27,9 +28,17 @@ MENU_SKY_BANDS = 12
 MENU_WATER_STEPPED = False
 MENU_WATER_DITHERING = False
 MENU_WATER_BANDS = 12
+
 # Edit these RGB colors, then restart the game.
 MENU_SKY_START_COLOR = (24, 28, 65)
 MENU_SKY_END_COLOR = (240, 160, 120)
+
+# Fade
+MENU_SKY_FADE_ENABLED = True
+MENU_SKY_START_FADE_COLOR = (42, 22, 75)
+MENU_SKY_END_FADE_COLOR = (210, 110, 145)
+MENU_SKY_FADE_CYCLE_SECONDS = 10.0  # Full cycle: original colors to targets and back.
+
 MENU_SKY_MIDDLE_COLORS = ((76, 49, 100), (167, 83, 112))
 MENU_WATER_START_COLOR = (30, 62, 100)
 MENU_WATER_END_COLOR = (10, 25, 55)
@@ -38,12 +47,12 @@ MENU_CHECKERBOARD_OPACITY = 50  # 0 hides the overlay; 255 makes it opaque.
 
 
 @lru_cache(maxsize=4)
-def _menu_background(size):
-    """Cache the evening sky and water rectangle for each viewport size."""
+def _menu_background(size, sky_start_color=MENU_SKY_START_COLOR, sky_end_color=MENU_SKY_END_COLOR):
+    """Cache the sky and water by viewport size and current sky endpoint colors."""
     width, height = size
     background = pygame.Surface(size)
     sky_height = round(height * MENU_WATERLINE_RATIO)
-    colors = (MENU_SKY_START_COLOR, *MENU_SKY_MIDDLE_COLORS, MENU_SKY_END_COLOR)
+    colors = (sky_start_color, *MENU_SKY_MIDDLE_COLORS, sky_end_color)
     ui_elements.draw_color_gradient(
         background, pygame.Rect(0, 0, width, sky_height), colors,
         stepped=MENU_SKY_STEPPED, bands=MENU_SKY_BANDS, dithering=MENU_SKY_DITHERING)
@@ -52,6 +61,18 @@ def _menu_background(size):
         (MENU_WATER_START_COLOR, MENU_WATER_END_COLOR),
         stepped=MENU_WATER_STEPPED, bands=MENU_WATER_BANDS, dithering=MENU_WATER_DITHERING)
     return background
+
+
+def _menu_sky_colors():
+    """Fade both sky endpoints to their targets and back with gentle reversals."""
+    if not MENU_SKY_FADE_ENABLED:
+        return MENU_SKY_START_COLOR, MENU_SKY_END_COLOR
+    if MENU_SKY_FADE_CYCLE_SECONDS <= 0:
+        raise ValueError("MENU_SKY_FADE_CYCLE_SECONDS must be greater than zero.")
+    phase = pygame.time.get_ticks() / (1000.0 * MENU_SKY_FADE_CYCLE_SECONDS)
+    blend = (1.0 - math.cos(math.tau * phase)) / 2.0
+    return (queries.lerp_color(MENU_SKY_START_COLOR, MENU_SKY_START_FADE_COLOR, blend),
+            queries.lerp_color(MENU_SKY_END_COLOR, MENU_SKY_END_FADE_COLOR, blend))
 
 
 @lru_cache(maxsize=1)
@@ -612,7 +633,8 @@ class Menu(GameState):
             item["link_rect"].y = int(_lerp(rise_start_y, item["_intro_target_link_y"], t))
 
     def draw_background(self, surface):
-        surface.blit(_menu_background(surface.get_size()), (0, 0))
+        sky_start, sky_end = _menu_sky_colors()
+        surface.blit(_menu_background(surface.get_size(), sky_start, sky_end), (0, 0))
         if MENU_CHECKERBOARD_OPACITY > 0:
             tile = ui_bars.get_checkerboard_tile(MENU_CHECKERBOARD_COLOR)
             overlay = _menu_checkerboard_overlay(tile, MENU_CHECKERBOARD_OPACITY)
