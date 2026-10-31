@@ -46,6 +46,17 @@ The army tray scrollbar is six pixels wide. It stays beside the existing action 
 These changes affect display only. Click areas, keyboard controls, permissions, and game rules remain the same.
 Saves and multiplayer commands retain their existing data.
 
+Edit TUTORIAL_PANEL_STYLES near the top of ui/dialogs/message_box.py for tutorial backgrounds.
+Its entries are main and keyboard_navigation.
+Edit ARMY_EDITOR_STYLES near the top of ui/panels/army_panel.py for army editor backgrounds.
+Its entries are main, name_field, and emblem_preview. The main entry also applies to the custom emblem editor.
+EDITOR_BG supplies the main entry's default color. EDITOR_BORDER controls both editor window borders.
+Each entry has color and gradient_strength fields, as in MAP_BAR_STYLES.
+Colors accept RGB tuples. A fourth value sets opacity from 0 to 255.
+Gradient strength must be zero or greater. Zero gives a flat fill; one keeps the standard shading.
+Values above one increase contrast. Borders and bevels remain visible at zero strength.
+Restart the game after editing these values. These settings do not change buttons, text, or color swatches.
+
 MAP FRAME DISPLAY
 -----------------
 

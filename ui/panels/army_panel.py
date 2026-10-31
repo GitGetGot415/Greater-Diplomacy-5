@@ -24,6 +24,14 @@ TRAY_SELECTED_LIGHTEN = 0.18
 TRAY_BORDER_LIGHTEN = 0.35
 EDITOR_BG = (23, 35, 61, 245)
 EDITOR_BORDER = (125, 175, 240)
+# The main style applies to both the army editor and the custom emblem editor.
+# Gradient strength 0 gives a flat fill. Strength 1 keeps the standard shading.
+ARMY_EDITOR_STYLES = {
+    "main": {"color": EDITOR_BG, "gradient_strength": 0.0},
+    "name_field": {"color": (10, 20, 40), "gradient_strength": 1.0},
+    "emblem_preview": {"color": (10, 20, 40), "gradient_strength": 1.0},
+}
+
 EDITOR_WIDTH = 540
 EDITOR_MIN_HEIGHT = 390
 SYMBOL_TILE_SIZE = 40
@@ -448,7 +456,9 @@ def _draw_editor(map_screen, surface):
     shade = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
     shade.fill((0, 0, 0, 105))
     surface.blit(shade, (0, 0))
-    ui_elements.draw_pixel_panel(surface, rect, EDITOR_BG, EDITOR_BORDER)
+    style = ARMY_EDITOR_STYLES["main"]
+    ui_elements.draw_pixel_panel(surface, rect, style["color"], EDITOR_BORDER,
+                                 gradient_strength=style["gradient_strength"])
     title_font, text_font = fonts.get("button"), fonts.get("tiny")
     title = title_font.render("EDIT ARMY", True, (235, 245, 255))
     surface.blit(title, (rect.x + 18, rect.y + 11))
@@ -459,8 +469,9 @@ def _draw_editor(map_screen, surface):
     label = text_font.render("Name", True, (205, 220, 240))
     surface.blit(label, (rect.x + 20, rect.y + 66))
     name_box = pygame.Rect(rect.x + 70, rect.y + 57, rect.width - 92, 28)
-    ui_elements.draw_pixel_panel(surface, name_box, (11, 18, 34), (110, 155, 215),
-                                 recessed=True)
+    style = ARMY_EDITOR_STYLES["name_field"]
+    ui_elements.draw_pixel_panel(surface, name_box, style["color"], (110, 155, 215),
+                                 recessed=True, gradient_strength=style["gradient_strength"])
     name = text_font.render(state["name"] or " ", True, (245, 245, 250))
     surface.blit(name, (name_box.x + 7, name_box.y + 7))
     symbol_label = text_font.render("Map emblem", True, (205, 220, 240))
@@ -488,7 +499,9 @@ def _draw_editor(map_screen, surface):
         value = text_font.render(str(state["symbol_color"][channel]), True, (240, 240, 245))
         surface.blit(value, (bar.right + 10, y + 2))
     sample = _sample_rect(rect)
-    ui_elements.draw_pixel_panel(surface, sample, (12, 19, 34), (110, 155, 215), recessed=True)
+    style = ARMY_EDITOR_STYLES["emblem_preview"]
+    ui_elements.draw_pixel_panel(surface, sample, style["color"], (110, 155, 215), recessed=True,
+                                 gradient_strength=style["gradient_strength"])
     _draw_emblem(surface, state["symbol"], state["custom_symbol"], state["symbol_color"],
                  state["symbol_rotation"], sample.center, 32,
                  flipped=state["symbol_flipped"])
@@ -520,7 +533,9 @@ def _draw_custom_symbol_editor(map_screen, surface):
     shade = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
     shade.fill((0, 0, 0, 130))
     surface.blit(shade, (0, 0))
-    ui_elements.draw_pixel_panel(surface, rect, EDITOR_BG, EDITOR_BORDER)
+    style = ARMY_EDITOR_STYLES["main"]
+    ui_elements.draw_pixel_panel(surface, rect, style["color"], EDITOR_BORDER,
+                                 gradient_strength=style["gradient_strength"])
     title_font, text_font = fonts.get("button"), fonts.get("tiny")
     title = title_font.render("DRAW CUSTOM EMBLEM", True, (235, 245, 255))
     surface.blit(title, (rect.x + 18, rect.y + 15))

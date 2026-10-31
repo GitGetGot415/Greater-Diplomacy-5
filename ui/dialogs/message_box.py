@@ -10,6 +10,12 @@ from ui.rendering.font_manager import fonts
 from ui.widgets import ui_elements
 from ui.widgets.text_utils import render_inline_text, wrap_text
 
+# Gradient strength 0 gives a flat fill. Strength 1 keeps the standard shading.
+TUTORIAL_PANEL_STYLES = {
+    "main": {"color": (34, 38, 49), "gradient_strength": 0.5},
+    "keyboard_navigation": {"color": (25, 31, 43), "gradient_strength": 1.0},
+}
+
 _KIND_ACCENTS = {
     "info": (80, 150, 220),
     "success": (60, 170, 90),
@@ -363,7 +369,9 @@ class _NavigationIntroPopup:
         return False
 
     def draw(self, surface):
-        ui_elements.draw_pixel_panel(surface, self.rect, (34, 38, 49), self.BORDER_COLOR)
+        style = TUTORIAL_PANEL_STYLES["main"]
+        ui_elements.draw_pixel_panel(surface, self.rect, style["color"], self.BORDER_COLOR,
+                                     gradient_strength=style["gradient_strength"])
 
         page_number = self.body_font.render(
             f"{self.page_index + 1}/{len(self.PAGE_TITLES)}", True, (190, 205, 220))
@@ -425,8 +433,10 @@ class _NavigationIntroPopup:
             self.keyboard_navigation_rect = pygame.Rect(
                 self.rect.x + 40, keyboard_top, self.rect.width - 80,
                 self.KEYBOARD_NAVIGATION_BOX_H)
+            style = TUTORIAL_PANEL_STYLES["keyboard_navigation"]
             ui_elements.draw_pixel_panel(surface, self.keyboard_navigation_rect,
-                                         (25, 31, 43), (70, 115, 160), recessed=True)
+                                         style["color"], (70, 115, 160), recessed=True,
+                                         gradient_strength=style["gradient_strength"])
             heading, description = self.KEYBOARD_NAVIGATION
             heading_surf = self.label_font.render(heading, True, (130, 205, 255))
             description_surf = self.body_font.render(description, True, (225, 225, 225))
