@@ -42,7 +42,7 @@ MENU_SKY_FADE_CYCLE_SECONDS = 8.0  # Full cycle: original colors to targets and 
 MENU_SKY_FADE_IN_EASING = "ease_in_out"  # Original colors to target colors.
 MENU_SKY_FADE_OUT_EASING = "ease_in_out"  # Target colors back to original colors.
 
-MENU_WATER_START_COLOR = (30, 62, 100)
+MENU_WATER_START_COLOR = (30, 62, 160)
 MENU_WATER_END_COLOR = (10, 25, 55)
 MENU_CHECKERBOARD_COLOR = (60, 30, 90)
 MENU_CHECKERBOARD_OPACITY = 50  # 0 hides the overlay; 255 makes it opaque.
