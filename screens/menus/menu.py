@@ -36,8 +36,11 @@ MENU_SKY_END_COLOR = (240, 160, 120)
 # Fade
 MENU_SKY_FADE_ENABLED = True
 MENU_SKY_START_FADE_COLOR = (24, 28, 65)
-MENU_SKY_END_FADE_COLOR = (24, 28, 65)
+MENU_SKY_END_FADE_COLOR = (210, 110, 145)
 MENU_SKY_FADE_CYCLE_SECONDS = 10.0  # Full cycle: original colors to targets and back.
+# Options: "linear", "ease_in", "ease_out", "ease_in_out".
+MENU_SKY_FADE_IN_EASING = "ease_in_out"  # Original colors to target colors.
+MENU_SKY_FADE_OUT_EASING = "ease_in_out"  # Target colors back to original colors.
 
 MENU_WATER_START_COLOR = (30, 62, 100)
 MENU_WATER_END_COLOR = (10, 25, 55)
@@ -62,14 +65,32 @@ def _menu_background(size, sky_start_color=MENU_SKY_START_COLOR, sky_end_color=M
     return background
 
 
+def _menu_fade_progress(progress, easing):
+    """Apply the selected speed curve to one direction of the sky fade."""
+    if easing == "linear":
+        return progress
+    if easing == "ease_in":
+        return progress * progress
+    if easing == "ease_out":
+        return 1.0 - (1.0 - progress) ** 2
+    if easing == "ease_in_out":
+        return (1.0 - math.cos(math.pi * progress)) / 2.0
+    raise ValueError(
+        f"Unknown sky fade easing {easing!r}. "
+        "Use linear, ease_in, ease_out, or ease_in_out in MENU_SKY_FADE_IN_EASING and MENU_SKY_FADE_OUT_EASING.")
+
+
 def _menu_sky_colors():
-    """Fade both sky endpoints to their targets and back with gentle reversals."""
+    """Fade both sky endpoints to their targets and back with the selected easing."""
     if not MENU_SKY_FADE_ENABLED:
         return MENU_SKY_START_COLOR, MENU_SKY_END_COLOR
     if MENU_SKY_FADE_CYCLE_SECONDS <= 0:
         raise ValueError("MENU_SKY_FADE_CYCLE_SECONDS must be greater than zero.")
-    phase = pygame.time.get_ticks() / (1000.0 * MENU_SKY_FADE_CYCLE_SECONDS)
-    blend = (1.0 - math.cos(math.tau * phase)) / 2.0
+    phase = (pygame.time.get_ticks() / (1000.0 * MENU_SKY_FADE_CYCLE_SECONDS)) % 1.0
+    if phase < 0.5:
+        blend = _menu_fade_progress(phase * 2.0, MENU_SKY_FADE_IN_EASING)
+    else:
+        blend = 1.0 - _menu_fade_progress((phase - 0.5) * 2.0, MENU_SKY_FADE_OUT_EASING)
     return (queries.lerp_color(MENU_SKY_START_COLOR, MENU_SKY_START_FADE_COLOR, blend),
             queries.lerp_color(MENU_SKY_END_COLOR, MENU_SKY_END_FADE_COLOR, blend))
 

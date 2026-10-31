@@ -60,6 +60,10 @@ MENU_SKY_FADE_ENABLED controls a repeating color fade.
 The top fades between MENU_SKY_START_COLOR and MENU_SKY_START_FADE_COLOR.
 The horizon fades between MENU_SKY_END_COLOR and MENU_SKY_END_FADE_COLOR.
 MENU_SKY_FADE_CYCLE_SECONDS sets the time for a complete fade to the target colors and back.
+MENU_SKY_FADE_IN_EASING sets the speed curve toward the target colors.
+MENU_SKY_FADE_OUT_EASING sets the speed curve back to the original colors.
+Use "linear" for constant speed, "ease_in" for a slow start, or "ease_out" for a slow finish.
+Use "ease_in_out" for a slow start and finish. Each direction still takes half the cycle duration.
 Use a positive duration. Larger durations give slower fades. False for MENU_SKY_FADE_ENABLED keeps the original colors.
 MENU_WATER_START_COLOR sets the water color at the horizon. MENU_WATER_END_COLOR sets the color at the bottom.
 The water has separate stepped, band count, and dithering settings. Both gradients use the same background cache.
