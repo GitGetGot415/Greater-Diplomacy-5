@@ -265,6 +265,9 @@ Keep tuning data in its source files:
 
 ### UI Appearance
 
+- When the user requests a gradient, interpolate directly between the specified start and end colors.
+  Do not add intermediate color stops unless the user explicitly requests them.
+  For animated gradients, interpolate directly between the current start and end colors at each animation step.
 - Use the existing buttons, sliders, and scrollbars as the visual reference for new or changed UI.
 - Use a pixel-art style with rectangular shapes, square corners, solid outlines, and raised or recessed bevels.
 - Use stepped shade bands and small square dithering where space permits. Avoid smooth gradients and flat control backgrounds.
