@@ -17,7 +17,8 @@ class EditPortraitTests(unittest.TestCase):
         self.menu = self.controller.states["MENU"]
         self.screen = self.controller.states["EDIT_PORTRAIT"]
         self.screen.refresh_ui()
-        names = ("hildehrand_gradient", "hildehrand_gradient_strength", "hildehrand_gradient_stepped")
+        names = ("hildehrand_gradient", "hildehrand_gradient_strength", "hildehrand_gradient_stepped",
+                 "hildehrand_gradient_bands")
         saved = [getattr(self.menu, name) for name in names]
         self.addCleanup(lambda: ([setattr(self.menu, n, v) for n, v in zip(names, saved)],
                                  self.menu._refresh_hildehrand_image()))
@@ -44,7 +45,8 @@ class EditPortraitTests(unittest.TestCase):
         self.assertIsNot(self.menu.hildehrand_image, plain)
         self.save.assert_called_with(self.menu.hildehrand_choice, True,
                                      self.menu.hildehrand_gradient_strength,
-                                     self.menu.hildehrand_gradient_stepped)
+                                     self.menu.hildehrand_gradient_stepped,
+                                     self.menu.hildehrand_gradient_bands)
 
     def test_style_toggle_persists_and_changes_the_menu_portrait(self):
         self.menu.hildehrand_gradient = True
@@ -55,7 +57,8 @@ class EditPortraitTests(unittest.TestCase):
         self.assertTrue(self.menu.hildehrand_gradient_stepped)
         self.assertNotEqual(pygame.image.tobytes(self.menu.hildehrand_image, "RGBA"), smooth)
         self.save.assert_called_with(self.menu.hildehrand_choice, True,
-                                     self.menu.hildehrand_gradient_strength, True)
+                                     self.menu.hildehrand_gradient_strength, True,
+                                     self.menu.hildehrand_gradient_bands)
 
     def test_stepped_shading_has_button_bands_and_dithered_edges(self):
         from ui.widgets import ui_elements
@@ -83,7 +86,7 @@ class EditPortraitTests(unittest.TestCase):
     def test_slider_updates_live_and_saves_once_when_released(self):
         self.menu.hildehrand_gradient = True
         self.screen.refresh_ui()
-        slider = next(e for e in self.screen.elements if isinstance(e, Slider))
+        slider = self.screen.strength_slider
         slider.callback(c.HILDEHRAND_GRADIENT_MAX_STRENGTH)
         slider.callback(c.HILDEHRAND_GRADIENT_MAX_STRENGTH / 2)
         self.assertEqual(self.menu.hildehrand_gradient_strength, c.HILDEHRAND_GRADIENT_MAX_STRENGTH / 2)
@@ -92,7 +95,30 @@ class EditPortraitTests(unittest.TestCase):
         self.screen.additional_events(pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=(0, 0)))
         self.save.assert_called_once_with(self.menu.hildehrand_choice, True,
                                           c.HILDEHRAND_GRADIENT_MAX_STRENGTH / 2,
-                                          self.menu.hildehrand_gradient_stepped)
+                                          self.menu.hildehrand_gradient_stepped,
+                                          self.menu.hildehrand_gradient_bands)
+
+    def test_band_slider_sets_a_whole_number_within_limits_and_saves_on_release(self):
+        self.menu.hildehrand_gradient = True
+        self.screen.refresh_ui()
+        slider = self.screen.bands_slider
+        slider.callback(c.HILDEHRAND_GRADIENT_MIN_BANDS + 4.4)
+        self.assertEqual(self.menu.hildehrand_gradient_bands, c.HILDEHRAND_GRADIENT_MIN_BANDS + 4)
+        slider.callback(0)
+        self.assertEqual(self.menu.hildehrand_gradient_bands, c.HILDEHRAND_GRADIENT_MIN_BANDS)
+        self.save.assert_not_called()
+        self.screen.additional_events(pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=(0, 0)))
+        self.save.assert_called_once()
+
+    def test_more_bands_make_more_distinct_bands_in_the_portrait(self):
+        from ui.widgets import ui_elements
+        image = pygame.Surface((40, 300), pygame.SRCALPHA)
+        image.fill((120, 120, 120, 255))
+
+        def band_count(bands):
+            shaded = ui_elements.apply_button_gradient(image, 1.0, True, bands)
+            return len({tuple(shaded.get_at((0, y))) for y in range(300)})
+        self.assertLess(band_count(4), band_count(12))
 
     def test_strength_zero_leaves_the_portrait_unshaded(self):
         self.menu.hildehrand_gradient = True
@@ -114,12 +140,15 @@ class EditPortraitTests(unittest.TestCase):
         with mock.patch.dict(queries._JSON_CACHE["hildehrand_choice"], {"data": {"variant": "x"}}):
             self.assertEqual(queries.get_hildehrand_gradient(),
                              (False, c.HILDEHRAND_GRADIENT_DEFAULT_STRENGTH,
-                              c.HILDEHRAND_GRADIENT_DEFAULT_STEPPED))
+                              c.HILDEHRAND_GRADIENT_DEFAULT_STEPPED,
+                              c.HILDEHRAND_GRADIENT_DEFAULT_BANDS))
         with mock.patch.dict(queries._JSON_CACHE["hildehrand_choice"],
-                             {"data": {"gradient": True, "gradient_strength": 99}}):
+                             {"data": {"gradient": True, "gradient_strength": 99,
+                                       "gradient_bands": 999}}):
             self.assertEqual(queries.get_hildehrand_gradient(),
                              (True, c.HILDEHRAND_GRADIENT_MAX_STRENGTH,
-                              c.HILDEHRAND_GRADIENT_DEFAULT_STEPPED))
+                              c.HILDEHRAND_GRADIENT_DEFAULT_STEPPED,
+                              c.HILDEHRAND_GRADIENT_MAX_BANDS))
 
 
 if __name__ == "__main__":

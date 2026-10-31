@@ -144,7 +144,8 @@ class Menu(GameState):
 
         self.hildehrand_choice = queries.get_hildehrand_choice()
         (self.hildehrand_gradient, self.hildehrand_gradient_strength,
-         self.hildehrand_gradient_stepped) = queries.get_hildehrand_gradient()
+         self.hildehrand_gradient_stepped,
+         self.hildehrand_gradient_bands) = queries.get_hildehrand_gradient()
         try:
             self._hildehrand_plain_image = _load_scaled_image(
                 f"{CHARACTERS_DIR}/{self.hildehrand_choice}", self.HILDEHRAND_SCALE)
@@ -400,6 +401,11 @@ class Menu(GameState):
         self._refresh_hildehrand_image()
         self.save_hildehrand_settings()
 
+    def set_hildehrand_gradient_bands(self, bands):
+        """Live slider update. The caller saves once the drag ends."""
+        self.hildehrand_gradient_bands = bands
+        self._refresh_hildehrand_image()
+
     def set_hildehrand_gradient_strength(self, strength):
         """Live slider update. The caller saves once the drag ends."""
         self.hildehrand_gradient_strength = strength
@@ -408,7 +414,8 @@ class Menu(GameState):
     def save_hildehrand_settings(self):
         queries.save_hildehrand_portrait(self.hildehrand_choice, self.hildehrand_gradient,
                                          self.hildehrand_gradient_strength,
-                                         self.hildehrand_gradient_stepped)
+                                         self.hildehrand_gradient_stepped,
+                                         self.hildehrand_gradient_bands)
 
     def _refresh_hildehrand_image(self):
         """Builds the drawn portrait from the plain one, shaded when the gradient is on.
@@ -416,7 +423,8 @@ class Menu(GameState):
         plain = self._hildehrand_plain_image
         if plain and self.hildehrand_gradient:
             self.hildehrand_image = ui_elements.apply_button_gradient(
-                plain, self.hildehrand_gradient_strength, self.hildehrand_gradient_stepped)
+                plain, self.hildehrand_gradient_strength, self.hildehrand_gradient_stepped,
+                self.hildehrand_gradient_bands)
         else:
             self.hildehrand_image = plain
 

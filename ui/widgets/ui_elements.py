@@ -118,13 +118,13 @@ def _button_background(size, color, pressed, border_width, gradient_strength=1.0
 
 
 @lru_cache(maxsize=32)
-def _gradient_overlay(size, gradient_strength, stepped):
+def _gradient_overlay(size, gradient_strength, stepped, bands):
     """Cached (add, subtract) shade surfaces holding the button gradient for a size.
-    Stepped is the button's own layout at this height: bands every
-    `_BUTTON_SHADE_HEIGHT` pixels with dithered edges. Smooth gives every pixel step
-    its own shade and no dithering."""
+    Stepped is the button's own layout with dithered edges: `bands` color bands, or the
+    count a button of this height picks (one per `_BUTTON_SHADE_HEIGHT` pixels) when
+    `bands` is None. Smooth gives every pixel step its own shade and no dithering."""
     width, height = size
-    shade_count, boundaries = _band_layout(height, None if stepped else height)
+    shade_count, boundaries = _band_layout(height, bands if stepped else height)
     light = round(_BUTTON_HIGHLIGHT * gradient_strength)
     dark = round(_BUTTON_SHADOW * gradient_strength)
     deltas = [round(light + (-dark - light) * i / max(1, shade_count - 1))
@@ -144,12 +144,12 @@ def _gradient_overlay(size, gradient_strength, stepped):
     return add, sub
 
 
-def apply_button_gradient(image, gradient_strength=1.0, stepped=True):
+def apply_button_gradient(image, gradient_strength=1.0, stepped=True, bands=None):
     """Return a copy of `image` with the button's top-light to bottom-dark shading.
     RGB-only blends keep the image's transparency intact."""
     if gradient_strength < 0:
         raise ValueError("Gradient strength must be zero or greater.")
-    add, sub = _gradient_overlay(image.get_size(), gradient_strength, stepped)
+    add, sub = _gradient_overlay(image.get_size(), gradient_strength, stepped, bands)
     shaded = image.copy()
     shaded.blit(add, (0, 0), special_flags=pygame.BLEND_RGB_ADD)
     shaded.blit(sub, (0, 0), special_flags=pygame.BLEND_RGB_SUB)

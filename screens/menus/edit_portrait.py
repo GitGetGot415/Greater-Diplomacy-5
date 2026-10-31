@@ -14,10 +14,22 @@ PREVIEW_FLOOR_PAD = 20
 CONTROLS_X = 640
 CONTROLS_Y = 150
 CONTROLS_GAP_Y = 70
-SLIDER_W = 400
-SLIDER_LABEL_PAD = 25
+BUTTON_SLIDER_GAP_X = 30
+SLIDER_W = 300
+SLIDER_LABEL_PAD = 10   # Lowers a slider so its label, drawn above it, lines up with the button.
 PREVIEW_COLOR = (28, 34, 45)
 PREVIEW_BORDER = (80, 125, 170)
+
+
+class _BandSlider(Slider):
+    """Whole-number slider: shows and reports the band count, never below the minimum."""
+
+    @staticmethod
+    def bands_for(value):
+        return max(c.HILDEHRAND_GRADIENT_MIN_BANDS, round(value))
+
+    def get_display_string(self):
+        return f"{self.text}: {self.bands_for(self.value)}"
 
 
 class Edit_Portrait(GameState):
@@ -31,7 +43,9 @@ class Edit_Portrait(GameState):
         super().__init__()
         self.controller = controller
         self.bg_color = (40, 40, 40)
-        self._strength_changed = False
+        self._slider_changed = False
+        self.strength_slider = None
+        self.bands_slider = None
         # Controls are built by refresh_ui() on entry, when the menu exists.
 
     @property
@@ -52,29 +66,47 @@ class Edit_Portrait(GameState):
 
     def set_strength(self, strength):
         self.menu.set_hildehrand_gradient_strength(strength)
-        self._strength_changed = True
+        self._slider_changed = True
+
+    def set_bands(self, value):
+        self.menu.set_hildehrand_gradient_bands(_BandSlider.bands_for(value))
+        self._slider_changed = True
 
     def additional_events(self, event):
         # Saving on every slider step would rewrite the file dozens of times per drag.
-        if event.type == pygame.MOUSEBUTTONUP and event.button == 1 and self._strength_changed:
-            self._strength_changed = False
+        if event.type == pygame.MOUSEBUTTONUP and event.button == 1 and self._slider_changed:
+            self._slider_changed = False
             self.menu.save_hildehrand_settings()
 
     def refresh_ui(self):
         menu = self.menu
         enabled = menu.hildehrand_gradient
+        button_w, button_h = c.SIZES["medium"]
+        slider_x = CONTROLS_X + button_w + BUTTON_SLIDER_GAP_X
+        gradient_y = CONTROLS_Y + CONTROLS_GAP_Y
+        style_y = CONTROLS_Y + 2 * CONTROLS_GAP_Y
+        slider_dy = (button_h - 20) // 2 + SLIDER_LABEL_PAD
+
+        self.strength_slider = Slider(
+            slider_x, gradient_y + slider_dy, SLIDER_W, "Gradient Strength",
+            menu.hildehrand_gradient_strength, self.set_strength,
+            visual_max=c.HILDEHRAND_GRADIENT_MAX_STRENGTH,
+            allowed_max=c.HILDEHRAND_GRADIENT_MAX_STRENGTH)
+        self.bands_slider = _BandSlider(
+            slider_x, style_y + slider_dy, SLIDER_W, "Color Bands",
+            menu.hildehrand_gradient_bands, self.set_bands,
+            visual_max=c.HILDEHRAND_GRADIENT_MAX_BANDS,
+            allowed_max=c.HILDEHRAND_GRADIENT_MAX_BANDS)
         self.elements = [
             make_back_button(self.exit_screen),
             Button(CONTROLS_X, CONTROLS_Y, "medium", "purple", "Choose Portrait", self.open_picker),
-            Button(CONTROLS_X, CONTROLS_Y + CONTROLS_GAP_Y, "medium", "green" if enabled else "red",
+            Button(CONTROLS_X, gradient_y, "medium", "green" if enabled else "red",
                    f"Gradient: {'ON' if enabled else 'OFF'}", self.toggle_gradient),
-            Button(CONTROLS_X, CONTROLS_Y + 2 * CONTROLS_GAP_Y, "medium", "blue",
+            Button(CONTROLS_X, style_y, "medium", "blue",
                    f"Style: {'Stepped' if menu.hildehrand_gradient_stepped else 'Smooth'}",
                    self.toggle_stepped),
-            Slider(CONTROLS_X, CONTROLS_Y + 3 * CONTROLS_GAP_Y + SLIDER_LABEL_PAD, SLIDER_W,
-                   "Gradient Strength", menu.hildehrand_gradient_strength, self.set_strength,
-                   visual_max=c.HILDEHRAND_GRADIENT_MAX_STRENGTH,
-                   allowed_max=c.HILDEHRAND_GRADIENT_MAX_STRENGTH),
+            self.strength_slider,
+            self.bands_slider,
         ]
 
     def additional_draw(self, surface):
