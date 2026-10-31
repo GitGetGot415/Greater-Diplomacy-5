@@ -143,13 +143,14 @@ class Menu(GameState):
         self._hildehrand_anchor_bottomleft = (hildehrand_anchor_x, hildehrand_anchor_y)
 
         self.hildehrand_choice = queries.get_hildehrand_choice()
+        self.hildehrand_gradient = queries.get_hildehrand_gradient()
         try:
-
-            self.hildehrand_image = _load_scaled_image(f"{CHARACTERS_DIR}/{self.hildehrand_choice}",
-                                                        self.HILDEHRAND_SCALE)
+            self._hildehrand_plain_image = _load_scaled_image(
+                f"{CHARACTERS_DIR}/{self.hildehrand_choice}", self.HILDEHRAND_SCALE)
         except Exception as e:
             print(f"Failed to load the Hildehrand image: {e}")
-            self.hildehrand_image = None
+            self._hildehrand_plain_image = None
+        self._refresh_hildehrand_image()
 
         self._hildehrand_draw_pos = (
             self.hildehrand_image.get_rect(bottomleft=self._hildehrand_anchor_bottomleft).topleft
@@ -307,6 +308,18 @@ class Menu(GameState):
         )
         self.elements.append(self.swap_hildehrand_btn)
 
+        # Sits under the portrait button and shades the portrait like a button.
+        self.toggle_gradient_btn = Button(
+            50,
+            535,
+            "swap_hildehrand",
+            "purple",
+            "Toggle Gradient",
+            self.toggle_hildehrand_gradient,
+            font_preset="small",
+        )
+        self.elements.append(self.toggle_gradient_btn)
+
         # Exit lives in the top-right corner on desktop builds and uses the
         # shared modal dialog so the game is never closed accidentally by a
         # single click. Browsers cannot close their own tab, so omit this
@@ -336,6 +349,7 @@ class Menu(GameState):
         if self.exit_btn:
             self.exit_btn._intro_start_margin = self.EXIT_INTRO_START_MARGIN
         self.swap_hildehrand_btn._intro_from_left = True
+        self.toggle_gradient_btn._intro_from_left = True
 
         # Cascade the rise-in by vertical position: rows near the top of the
         # screen start first, rows near the bottom start last.
@@ -389,8 +403,27 @@ class Menu(GameState):
             print(f"Failed to load the Hildehrand image: {e}")
             return
         self.hildehrand_choice = rel_path
-        self.hildehrand_image = image
-        queries.save_cached_json("hildehrand_choice", {"variant": rel_path})
+        self._hildehrand_plain_image = image
+        self._refresh_hildehrand_image()
+        self._save_hildehrand_settings()
+
+    def toggle_hildehrand_gradient(self):
+        self.hildehrand_gradient = not self.hildehrand_gradient
+        self._refresh_hildehrand_image()
+        self._save_hildehrand_settings()
+
+    def _save_hildehrand_settings(self):
+        queries.save_cached_json("hildehrand_choice", {"variant": self.hildehrand_choice,
+                                                       "gradient": self.hildehrand_gradient})
+
+    def _refresh_hildehrand_image(self):
+        """Builds the drawn portrait from the plain one, shaded when the gradient is on.
+        The anchor is the bottom-left corner, so the image size never moves the feet."""
+        plain = self._hildehrand_plain_image
+        if plain and self.hildehrand_gradient:
+            self.hildehrand_image = ui_elements.apply_button_gradient(plain)
+        else:
+            self.hildehrand_image = plain
 
     def trigger_version_check(self):
         if IS_WEB:

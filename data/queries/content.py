@@ -492,6 +492,12 @@ def get_hildehrand_choice():
     return variant if variant in discover_character_images() else DEFAULT_PORTRAIT
 
 
+def get_hildehrand_gradient():
+    """Returns whether the menu portrait uses the button gradient (off if unset)."""
+    data = _load_cached_json("hildehrand_choice")
+    return bool(data.get("gradient")) if isinstance(data, dict) else False
+
+
 def get_research_years(*, context=None):
     """Copy equipment research dates for saves and snapshots."""
     tree = queries.get_tech_tree(context)

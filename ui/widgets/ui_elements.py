@@ -98,6 +98,28 @@ def _button_background(size, color, pressed, border_width, gradient_strength=1.0
     return background
 
 
+def apply_button_gradient(image, gradient_strength=1.0):
+    """Return a copy of `image` with the button's stepped top-light to bottom-dark
+    shading applied. RGB-only blends keep the image's transparency intact."""
+    shaded = image.copy()
+    width, height = shaded.get_size()
+    shade_count = min(max(_BUTTON_MIN_SHADE_COUNT,
+                          (height + _BUTTON_SHADE_HEIGHT - 1) // _BUTTON_SHADE_HEIGHT),
+                      max(1, height // _BUTTON_PIXEL_SIZE))
+    light = round(_BUTTON_HIGHLIGHT * gradient_strength)
+    dark = round(_BUTTON_SHADOW * gradient_strength)
+    for i in range(shade_count):
+        top = i * height // shade_count
+        bottom = (i + 1) * height // shade_count
+        delta = round(light + (-dark - light) * i / max(1, shade_count - 1))
+        band = (0, top, width, bottom - top)
+        if delta > 0:
+            shaded.fill((delta,) * 3, band, pygame.BLEND_RGB_ADD)
+        elif delta < 0:
+            shaded.fill((-delta,) * 3, band, pygame.BLEND_RGB_SUB)
+    return shaded
+
+
 def draw_pixel_background(surface, rect, style):
     """Draw cached shade bands without a border or bevel."""
     if rect.width <= 0 or rect.height <= 0:
