@@ -23,8 +23,8 @@ MAP_BAR_STYLES = {
 }
 
 MAP_CONFIRM_STYLES = {
-    "country": {"color": (40, 40, 40), "gradient_strength": 0.0},
-    "exit": {"color": (60, 40, 40), "gradient_strength": 0.0},
+    "country": {"color": (40, 40, 40), "gradient_strength": 0.5},
+    "exit": {"color": (60, 40, 40), "gradient_strength": 0.5},
 }
 
 TEXT_INPUT_STYLES = {
@@ -79,6 +79,10 @@ COMBAT_PANEL_STYLES = {
     "main": {"color": c.PANEL_THEME_DANGER[0], "gradient_strength": 0.5},
 }
 
+CLAIMS_PANEL_STYLES = {
+    "main": {"color": (*c.HUD_PANEL_BG, 230), "gradient_strength": 0.5},
+}
+
 POLITICS_PANEL_STYLES = {
     "main": {"color": (34, 38, 58), "gradient_strength": 0.5},
     "policy_card": {"color": (27, 31, 49), "gradient_strength": 0.5},
@@ -131,6 +135,11 @@ RESEARCH_PANEL_STYLES = {
 
 MUSIC_PANEL_STYLES = {
     "albums": {"color": (35, 35, 45), "gradient_strength": 1.0},
+    "header": {"color": (25, 25, 30), "gradient_strength": 0.5},
+}
+
+PORTRAIT_EDITOR_STYLES = {
+    "preview": {"color": (28, 34, 45), "gradient_strength": 0.5},
 }
 
 ASSET_VIEWER_STYLES = {

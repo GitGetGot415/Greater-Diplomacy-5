@@ -3,6 +3,7 @@
 import pygame
 
 import data.constants as c
+from ui.background_styles import PORTRAIT_EDITOR_STYLES
 from ui.dialogs import pickers
 from ui.navigation.game_state import GameState
 from ui.widgets import ui_elements
@@ -17,7 +18,6 @@ CONTROLS_GAP_Y = 70
 BUTTON_SLIDER_GAP_X = 30
 SLIDER_W = 300
 SLIDER_LABEL_PAD = 10   # Lowers a slider so its label, drawn above it, lines up with the button.
-PREVIEW_COLOR = (28, 34, 45)
 PREVIEW_BORDER = (80, 125, 170)
 
 
@@ -120,7 +120,9 @@ class Edit_Portrait(GameState):
         ]
 
     def additional_draw(self, surface):
-        ui_elements.draw_pixel_panel(surface, PREVIEW_RECT, PREVIEW_COLOR, PREVIEW_BORDER, gradient_strength=0.0)
+        style = PORTRAIT_EDITOR_STYLES["preview"]
+        ui_elements.draw_pixel_panel(surface, PREVIEW_RECT, style["color"], PREVIEW_BORDER,
+                                     gradient_strength=style["gradient_strength"])
         image = self.menu.hildehrand_image
         if image:
             feet = (PREVIEW_RECT.centerx, PREVIEW_RECT.bottom - PREVIEW_FLOOR_PAD)

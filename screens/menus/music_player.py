@@ -778,8 +778,8 @@ class Music_Player(ScrollPanes, GameState):
             self.draw_album_background(surface)
         finally:
             surface.set_clip(clip)
-        pygame.draw.rect(surface, (25, 25, 30),
-                         (MUSIC_LEFT_PANE_W, 0, c.SCREEN_WIDTH - MUSIC_LEFT_PANE_W, 200))
+        header = pygame.Rect(MUSIC_LEFT_PANE_W, 0, c.SCREEN_WIDTH - MUSIC_LEFT_PANE_W, 200)
+        ui_elements.draw_pixel_background(surface, header, MUSIC_PANEL_STYLES["header"])
         pygame.draw.line(surface, (100, 100, 100),
                          (MUSIC_LEFT_PANE_W, 0), (MUSIC_LEFT_PANE_W, c.SCREEN_HEIGHT), 2)
 

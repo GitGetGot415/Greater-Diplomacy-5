@@ -6,6 +6,8 @@ from ui.widgets.ui_elements import make_back_button, Button
 from ui.rendering.font_manager import fonts
 from ui.rendering import overlay_renderer
 from ui.bars import ui_bars
+from ui.background_styles import CLAIMS_PANEL_STYLES
+from ui.widgets import ui_elements
 from ui.navigation.screen_runner import _run_pygame_sub_screen
 
 
@@ -401,8 +403,9 @@ class Claims_Screen(MapOverlayScreen):
                     overlay_renderer.draw_map_highlight(surface, self.map_screen, pid, color, base_radius=4, inset=i, is_justifying=is_just)
 
         # Draw Information Panel
-        ui_bars.draw_translucent_panel(surface, self.panel_rect, (*c.HUD_PANEL_BG, 230),
-                                       border_color=c.MODAL_BORDER)
+        style = CLAIMS_PANEL_STYLES["main"]
+        ui_elements.draw_pixel_panel(surface, self.panel_rect, style["color"], c.MODAL_BORDER,
+                                     gradient_strength=style["gradient_strength"])
 
         font = fonts.get("heading1")
         heading = ("Justify: " + queries.get_country_display_name(
