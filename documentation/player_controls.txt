@@ -52,6 +52,13 @@ Saves and multiplayer commands retain their existing data.
 Edit background colors and gradient strengths in ui/background_styles.py. All style tables described below use this shared file.
 Keep layout and border settings in their existing UI modules.
 
+Edit DIALOG_STYLES for the shared dialog background, including credits information and help dialogs.
+The file_browser entry controls the built-in file browser panel.
+Edit MESSAGE_PANEL_STYLES for the contacts pane in the messages screen.
+Edit ASSET_VIEWER_STYLES for the folders, files, and preview panes in the asset viewer.
+Each entry has color and gradient_strength fields. Zero gives a flat fill; one gives standard shading.
+Values above one increase contrast. Restart the game after editing these values.
+
 Edit TEXT_INPUT_STYLES for text-entry background colors and gradient strengths.
 The inactive and active entries control shared text fields, including searches, rename boxes, and editor fields.
 The dialog entry controls text-input dialogs. The message entry controls the message compose box.
@@ -457,6 +464,10 @@ Clicking a province still shows its full visible unit list.
 The filter uses the unit's current form.
 Convoys are naval, including transported aircraft. Trucks are land.
 All is selected when a game opens.
+
+Click Hide above the strip to hide its buttons and background. Click Show in the same position to open it again.
+The selected filter stays active while the strip is hidden. Each new map session starts with the strip open.
+This is a local display choice. Saves and multiplayer files do not store it.
 
 Changing the filter clears local unit selection and compression animations.
 It does not change units, orders, AI decisions, fog permissions, saves, or multiplayer commands.

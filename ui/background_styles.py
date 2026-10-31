@@ -34,6 +34,22 @@ TEXT_INPUT_STYLES = {
     "message": {"color": (0, 0, 0), "gradient_strength": 0.0},
 }
 
+# Credits, help, confirmations, and other dialogs share this background.
+DIALOG_STYLES = {
+    "main": {"color": (40, 40, 40), "gradient_strength": 1.0},
+    "file_browser": {"color": c.MODAL_BG, "gradient_strength": 1.0},
+}
+
+MESSAGE_PANEL_STYLES = {
+    "contacts": {"color": (35, 35, 45), "gradient_strength": 1.0},
+}
+
+ASSET_VIEWER_STYLES = {
+    "folders": {"color": (35, 35, 45), "gradient_strength": 0.0},
+    "files": {"color": (30, 30, 38), "gradient_strength": 0.0},
+    "preview": {"color": (60, 60, 75), "gradient_strength": 0.0},
+}
+
 # Shared sliders, scrollbars, and music progress use these RGB colors.
 # Replace a color reference with an RGB tuple to override its default.
 SLIDER_STYLES = {

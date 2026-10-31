@@ -9,6 +9,7 @@ from ui.rendering.font_manager import fonts
 from map_logic.diplomacy import diplomacy_logic, diplomacy_messages, volunteers
 from data import queries
 from ui.dialogs import pickers
+from ui.background_styles import MESSAGE_PANEL_STYLES
 
 from map_logic.diplomacy import player_diplomacy_actions, ratification
 from screens.game.peace_screen import open_view_peace_treaty_menu, open_view_trade_deal_menu
@@ -32,7 +33,6 @@ MSG_DIPLO_BTN_START_X = MSG_LEFT_PANE_W + 20
 MSG_DIPLO_BTN_STEP_X = 220
 
 MSG_BG_DARK = (25, 25, 30)
-MSG_BG_LIGHT = (35, 35, 45)
 MSG_BUBBLE_PLAYER = (40, 100, 200)
 MSG_BUBBLE_PLAYER_DIPLO = (180, 60, 60) # Player diplomatic red
 MSG_BUBBLE_AI = (60, 60, 80)
@@ -632,7 +632,9 @@ class Messages_Screen(GameState):
         font_tiny = fonts.get("tiny")
 
         left_pane_rect = pygame.Rect(0, 0, MSG_LEFT_PANE_W, c.SCREEN_HEIGHT)
-        ui_elements.draw_pixel_panel(surface, left_pane_rect, MSG_BG_LIGHT, (100, 100, 100))
+        style = MESSAGE_PANEL_STYLES["contacts"]
+        ui_elements.draw_pixel_panel(surface, left_pane_rect, style["color"], (100, 100, 100),
+                                     gradient_strength=style["gradient_strength"])
 
         self.draw_list_scrollbar(surface, MSG_LEFT_PANE_W - 20, MSG_CONTACT_LIST_TOP_Y, c.SCREEN_HEIGHT - MSG_CONTACT_LIST_TOP_Y, width=10,
                                  attr="contact_scroll_y", limit_attr="max_contact_scroll",

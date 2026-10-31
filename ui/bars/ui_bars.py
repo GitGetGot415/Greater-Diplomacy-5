@@ -188,7 +188,7 @@ def draw_confirm_prompt(surface, box_rect, question, subtitle=None,
 
 
 def draw_panel_frame(surface, rect, title=None, bg=None, border=None, border_width=3,
-                     title_dy=None, font_preset="heading2"):
+                     title_dy=None, font_preset="heading2", gradient_strength=1.0):
     """The standard modal panel: filled box, border, and a centred title.
 
     Every modal screen repeated this same three-step sequence with its own
@@ -199,7 +199,7 @@ def draw_panel_frame(surface, rect, title=None, bg=None, border=None, border_wid
     draw_modal_box(surface, rect,
                    bg_color=c.MODAL_BG if bg is None else bg,
                    border_color=c.MODAL_BORDER if border is None else border,
-                   border_width=border_width)
+                   border_width=border_width, gradient_strength=gradient_strength)
     if title:
         dy = c.MODAL_TITLE_Y_OFFSET if title_dy is None else title_dy
         return draw_centered_title(surface, title, rect.y + dy, font_preset)
@@ -364,6 +364,17 @@ def draw_textured_rect(surface, rect, image, mode="tile"):
         surface.set_clip(original_clip)
     
     pygame.draw.rect(surface, (20, 20, 20), rect, 2)
+
+def map_unit_view_toggle_rect(map_screen):
+    """Return the visible filter toggle's input area, including when collapsed."""
+    # Lightweight screens without filter controls do not construct this button.
+    if (not map_screen.unit_view_buttons
+            or map_screen.secondary_mode != "UNITS"
+            or map_screen.hide_raised_rect):
+        return None
+    button = map_screen.btn_unit_view_toggle
+    return button.rect if button is not None and button.visible else None
+
 
 def map_unit_view_bar_rect(map_screen):
     """Return the live unit-filter bar for drawing, layout and input."""

@@ -4,6 +4,8 @@ import shutil
 from ui.navigation.game_state import GameState, ScreenLayer
 from ui.bars import ui_bars
 from ui.widgets import text_utils
+from ui.widgets import ui_elements
+from ui.background_styles import ASSET_VIEWER_STYLES
 from ui.widgets.scroll_panes import ScrollPanes
 from ui.widgets.ui_elements import Button, make_back_button
 from ui.rendering.font_manager import fonts
@@ -30,8 +32,6 @@ PREVIEW_MARGIN = 20
 IMAGE_EXTENSIONS = (".png",)
 TEXT_EXTENSIONS = (".txt",)
 VIEWABLE_EXTENSIONS = IMAGE_EXTENSIONS + TEXT_EXTENSIONS
-
-PREVIEW_BACKGROUND_COLOR = (60, 60, 75)
 
 def _truncate_text(text, font, max_width):
     """Kept as a local name; the implementation moved to ui/widgets/text_utils.py, whose
@@ -296,11 +296,20 @@ class View_Assets(ScrollPanes, GameState):
     def additional_events(self, event):
         self.route_pane_scroll(event)
 
+    def _draw_pane_backgrounds(self, surface):
+        panes = (("folders", 0, FOLDER_PANE_W),
+                 ("files", FOLDER_PANE_W, FILE_PANE_W),
+                 ("preview", PREVIEW_X, PREVIEW_W))
+        for name, x, width in panes:
+            rect = pygame.Rect(x, 0, width, c.SCREEN_HEIGHT)
+            ui_elements.draw_pixel_background(surface, rect, ASSET_VIEWER_STYLES[name])
+
     def draw_top_bar(self, surface):
         """Fixed header drawn over the scrolling folder and file panes."""
-        pygame.draw.rect(surface, (35, 35, 45), (0, 0, FOLDER_PANE_W, HEADER_H))
-        pygame.draw.rect(surface, (30, 30, 38), (FOLDER_PANE_W, 0, FILE_PANE_W, HEADER_H))
-        pygame.draw.rect(surface, PREVIEW_BACKGROUND_COLOR, (PREVIEW_X, 0, PREVIEW_W, HEADER_H))
+        clip = surface.get_clip()
+        surface.set_clip(clip.clip(pygame.Rect(0, 0, c.SCREEN_WIDTH, HEADER_H)))
+        self._draw_pane_backgrounds(surface)
+        surface.set_clip(clip)
         pygame.draw.line(surface, (100, 100, 100), (FOLDER_PANE_W, 0),
                          (FOLDER_PANE_W, c.SCREEN_HEIGHT), 2)
         pygame.draw.line(surface, (100, 100, 100), (PREVIEW_X, 0),
@@ -330,9 +339,7 @@ class View_Assets(ScrollPanes, GameState):
 
     def additional_draw(self, surface):
         # Pane backgrounds
-        pygame.draw.rect(surface, (35, 35, 45), (0, 0, FOLDER_PANE_W, c.SCREEN_HEIGHT))
-        pygame.draw.rect(surface, (30, 30, 38), (FOLDER_PANE_W, 0, FILE_PANE_W, c.SCREEN_HEIGHT))
-        pygame.draw.rect(surface, PREVIEW_BACKGROUND_COLOR, (PREVIEW_X, 0, PREVIEW_W, c.SCREEN_HEIGHT))
+        self._draw_pane_backgrounds(surface)
 
         # --- Preview (majority of the screen, for high-quality viewing) ---
         center = (PREVIEW_X + PREVIEW_W // 2, HEADER_H + (c.SCREEN_HEIGHT - HEADER_H) // 2)

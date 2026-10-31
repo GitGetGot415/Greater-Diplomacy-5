@@ -42,6 +42,7 @@ class ModalScreen(ScrollPanes, GameState):
     #: Chrome, overridable per screen. Defaults are the shared modal look.
     OVERLAY_ALPHA = c.MODAL_OVERLAY_ALPHA
     PANEL_BG = c.MODAL_BG
+    PANEL_STYLE = None
     PANEL_BORDER = c.MODAL_BORDER
     PANEL_BORDER_WIDTH = 3
     TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
@@ -129,11 +130,13 @@ class ModalScreen(ScrollPanes, GameState):
             surface.fill(self.FALLBACK_BG)
         ui_bars.draw_fullscreen_overlay(surface, self.OVERLAY_ALPHA)
 
+        style = self.PANEL_STYLE
         ui_bars.draw_panel_frame(surface, self.panel_rect, self.title,
-                                 bg=self.PANEL_BG, border=self.PANEL_BORDER,
+                                 bg=style["color"] if style else self.PANEL_BG, border=self.PANEL_BORDER,
                                  border_width=self.PANEL_BORDER_WIDTH,
                                  title_dy=self.TITLE_Y_OFFSET,
-                                 font_preset=self.TITLE_PRESET)
+                                 font_preset=self.TITLE_PRESET,
+                                 gradient_strength=style["gradient_strength"] if style else 1.0)
 
         self.draw_body(surface)
         self.draw_elements(surface)

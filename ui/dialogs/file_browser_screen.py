@@ -18,6 +18,7 @@ import pygame
 import data.constants as c
 from ui.bars import ui_bars
 from ui.navigation.modal_screen import ModalScreen
+from ui.background_styles import DIALOG_STYLES
 from ui.widgets import text_utils
 from ui.widgets.ui_elements import Button, TextField
 from ui.rendering.font_manager import fonts
@@ -141,6 +142,7 @@ class FileBrowserScreen(ModalScreen):
     on_confirm is never called on cancel.
     """
     PANEL_SIZE = (1180, 640)
+    PANEL_STYLE = DIALOG_STYLES["file_browser"]
     ROW_HEIGHT = 30
     LIST_TOP_OFF = 108
     LIST_VIEW_H = 450

@@ -453,6 +453,7 @@ class UnitViewControlTests(unittest.TestCase):
     def setUp(self):
         self.game.selected_province = None
         self.game.unit_view_filter = queries.DEFAULT_UNIT_VIEW_FILTER
+        self.game.unit_view_bar_collapsed = False
         self.game.tactical_mode = False
         self.game.set_play_view_defaults()
         update_button_states(self.game)
@@ -488,14 +489,78 @@ class UnitViewControlTests(unittest.TestCase):
 
     def test_filters_and_bar_only_appear_in_units_view(self):
         game = self.game
-        for mode in ("UNITS", "ECONOMY", "RESOURCES", "BLANK", "UNITS"):
-            game.set_view_mode(mode)
-            update_button_states(game)
-            self.assertEqual([button.visible for button in game.unit_view_buttons.values()],
-                             [mode == "UNITS"] * len(queries.UNIT_VIEW_FILTERS))
-            self.assertEqual(ui_bars.map_unit_view_bar_rect(game) is not None, mode == "UNITS")
-            self.assertEqual(map_input.map_ui_bar_at_position(
-                game, game.unit_view_bar_rect.center), mode == "UNITS")
+        for collapsed in (False, True):
+            game.unit_view_bar_collapsed = collapsed
+            for mode in ("UNITS", "ECONOMY", "RESOURCES", "BLANK", "UNITS"):
+                game.set_view_mode(mode)
+                update_button_states(game)
+                expanded = mode == "UNITS" and not collapsed
+                self.assertEqual([button.visible for button in game.unit_view_buttons.values()],
+                                 [expanded] * len(queries.UNIT_VIEW_FILTERS))
+                self.assertEqual(game.btn_unit_view_toggle.visible, mode == "UNITS")
+                self.assertEqual(ui_bars.map_unit_view_bar_rect(game) is not None, expanded)
+                self.assertEqual(map_input.map_ui_bar_at_position(
+                    game, game.unit_view_bar_rect.center), expanded)
+                self.assertEqual(map_input.map_ui_bar_at_position(
+                    game, game.btn_unit_view_toggle.rect.center), mode == "UNITS")
+
+    def test_toggle_clicks_preserve_filter_and_save_without_selecting_the_map(self):
+        game = self.game
+        game.set_unit_view_filter("AIR")
+        before = queries.build_save_dict(game)
+        before.pop("generated_at")
+        toggle = game.btn_unit_view_toggle
+        position = toggle.rect.center
+        pending_button = game.unit_view_buttons["NAVAL"]
+        pending_button.is_pressed = True
+        with (patch.object(pygame.mouse, "get_pos", return_value=position),
+              patch.object(map_input.queries, "get_clicked_province",
+                           side_effect=AssertionError("Toggle click reached the map")),
+              patch.object(game, "set_unit_view_filter") as change_filter):
+            for collapsed in (True, False):
+                game.handle_events([
+                    pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=position),
+                    pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=position),
+                ])
+                self.assertEqual(game.unit_view_bar_collapsed, collapsed)
+                self.assertTrue(toggle.visible)
+                self.assertEqual(game.unit_view_filter, "AIR")
+                self.assertIsNone(game.selected_province)
+                self.assertEqual(ui_bars.map_unit_view_bar_rect(game) is None, collapsed)
+                self.assertTrue(map_input.map_ui_bar_at_position(game, position))
+                self.assertFalse(pending_button.is_pressed)
+                if collapsed:
+                    for kind in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
+                        pending_button.handle_event(pygame.event.Event(
+                            kind, button=1, pos=pending_button.rect.center))
+            pending_button.handle_event(pygame.event.Event(
+                pygame.MOUSEBUTTONUP, button=1, pos=pending_button.rect.center))
+            change_filter.assert_not_called()
+        after = queries.build_save_dict(game)
+        after.pop("generated_at")
+        self.assertEqual(after, before)
+
+    def test_toggle_follows_existing_mode_and_panel_visibility(self):
+        game = self.game
+        for collapsed in (False, True):
+            game.unit_view_bar_collapsed = collapsed
+            for changes, visible in (
+                    ({"tactical_mode": True}, True),
+                    ({"player_country": "Spectator"}, True),
+                    ({"multiplayer_mode": True}, True),
+                    ({"is_editor": True}, False),
+                    ({"selection_mode": True}, False),
+                    ({"hide_raised_rect": True}, False),
+                    ({"ai_is_thinking": True}, False),
+                    ({"selected_province": next(iter(game.map_data.values()))}, False)):
+                with self.subTest(collapsed=collapsed, changes=tuple(changes)):
+                    with app_harness.patch_map(game, **changes):
+                        update_button_states(game)
+                        self.assertEqual(game.btn_unit_view_toggle.visible, visible)
+                        self.assertEqual(ui_bars.map_unit_view_toggle_rect(game) is not None, visible)
+                        self.assertEqual(any(button.visible for button in game.unit_view_buttons.values()),
+                                         visible and not collapsed)
+        update_button_states(game)
 
     def test_changing_unit_filter_does_not_switch_or_announce_a_map_view(self):
         game = self.game

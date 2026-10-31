@@ -119,6 +119,7 @@ EDITOR_SELECTION_TOOL_STEP_X = c.SIZES["small_square"][0] + EDITOR_SELECTION_TOO
 
 # --- Vertical unit filters beside the lower left sidebar ---
 UNIT_VIEW_BUTTON_COLORS = {"NAVAL": "blue", "LAND": "green", "AIR": "red", "ALL": "yellow"}
+UNIT_VIEW_TOGGLE_HEIGHT = 22
 UNIT_VIEW_BUTTON_PADDING_X = 8
 UNIT_VIEW_BUTTON_PADDING_Y = 8
 UNIT_VIEW_BUTTON_GAP_Y = 10
@@ -202,6 +203,11 @@ def render_buttons(map_screen):
         map_screen.raised_rect.right,
         map_screen.ui_background_rect.top - UNIT_VIEW_BAR_HEIGHT,
         UNIT_VIEW_BAR_WIDTH, UNIT_VIEW_BAR_HEIGHT)
+    map_screen.btn_unit_view_toggle = Button(
+        map_screen.unit_view_bar_rect.x,
+        map_screen.unit_view_bar_rect.y - UNIT_VIEW_TOGGLE_HEIGHT,
+        (UNIT_VIEW_BAR_WIDTH, UNIT_VIEW_TOGGLE_HEIGHT), "grey", "Hide",
+        map_screen.toggle_unit_view_bar, font_preset="small")
     map_screen.unit_view_buttons = {}
     for index, view_filter in enumerate(queries.UNIT_VIEW_FILTERS):
         icon = icons.get(view_filter.lower())
@@ -603,6 +609,7 @@ def render_buttons(map_screen):
 
     # --- Append all explicitly defined buttons into the elements list ---
     map_screen.elements.extend([
+        map_screen.btn_unit_view_toggle,
         *map_screen.unit_view_buttons.values(),
         map_screen.btn_help, map_screen.btn_refresh_all, map_screen.btn_global_econ_overview,
         map_screen.btn_view_terrain, map_screen.btn_view_political, map_screen.btn_view_relations, map_screen.btn_view_cores, map_screen.btn_view_factions,
@@ -884,10 +891,14 @@ def _update_turn_buttons(map_screen, is_sel, is_thinking):
 
     # Hide/disable the button if we are thinking
     map_screen.btn_next_turn.visible = not is_sel and not is_thinking
+    unit_view_visible = (map_screen.btn_next_turn.visible
+                         and map_screen.secondary_mode == "UNITS"
+                         and not map_screen.hide_raised_rect)
+    if map_screen.unit_view_buttons:
+        map_screen.btn_unit_view_toggle.visible = unit_view_visible
+        map_screen.btn_unit_view_toggle.text = "Show" if map_screen.unit_view_bar_collapsed else "Hide"
     for view_filter, button in map_screen.unit_view_buttons.items():
-        button.visible = (map_screen.btn_next_turn.visible
-                          and map_screen.secondary_mode == "UNITS"
-                          and not map_screen.hide_raised_rect)
+        button.visible = unit_view_visible and not map_screen.unit_view_bar_collapsed
         button.is_selected = view_filter == map_screen.unit_view_filter
     if map_screen.realtime_multiplayer:
         session = map_screen.realtime_session
@@ -1392,6 +1403,8 @@ class Map(StateAccess, GameState):
 
     # Screens and panels set these on first use. Reads before that get these values.
     unit_view_filter = queries.DEFAULT_UNIT_VIEW_FILTER
+    unit_view_bar_collapsed = False
+    btn_unit_view_toggle = None
     _ignore_left_until_release = False
     _ignore_right_until_release = False
     _unit_roster_cache = None
@@ -1467,6 +1480,7 @@ class Map(StateAccess, GameState):
         self.hide_minimap = False
         # Presentation only: saves and multiplayer snapshots never persist it.
         self.unit_view_filter = queries.DEFAULT_UNIT_VIEW_FILTER
+        self.unit_view_bar_collapsed = False
         self.centers_need_update = False
         # Editor brushes may touch many provinces in one drag.  Queue the
         # expensive derived map surfaces and rebuild each affected layer once
@@ -1769,6 +1783,15 @@ class Map(StateAccess, GameState):
     def set_view_mode(self, mode):
         self.secondary_mode = mode
         self.show_feedback(f"View: {mode}")
+
+    def toggle_unit_view_bar(self):
+        """Hide or show the filter strip without changing the selected filter."""
+        self.unit_view_bar_collapsed = not self.unit_view_bar_collapsed
+        if self.unit_view_bar_collapsed:
+            # A hidden control must not retain a pending mouse press.
+            for button in self.unit_view_buttons.values():
+                button.is_pressed = False
+        update_button_states(self)
 
     def set_unit_view_filter(self, view_filter):
         """Switch the local unit overlay without changing any world state."""

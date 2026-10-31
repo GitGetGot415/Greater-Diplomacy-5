@@ -40,10 +40,12 @@ def map_ui_bar_at_position(map_screen, position):
     top_bar = map_screen.top_bar_rect
     bottom_bar = map_screen.bot_bar_rect
     unit_view_bar = ui_bars.map_unit_view_bar_rect(map_screen)
+    unit_view_toggle = ui_bars.map_unit_view_toggle_rect(map_screen)
     flag_rect = flag_renderer.flag_button_rect(map_screen)
     if ((top_bar and top_bar.collidepoint(position))
             or (bottom_bar and bottom_bar.collidepoint(position))
             or (unit_view_bar and unit_view_bar.collidepoint(position))
+            or (unit_view_toggle and unit_view_toggle.collidepoint(position))
             or (flag_rect and flag_rect.collidepoint(position))):
         return True
 

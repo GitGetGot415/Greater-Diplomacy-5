@@ -35,6 +35,7 @@ UI_STATE = {
     "army_panel_visible_in_orders": False, "army_group_transition_states": None,
     "army_editor_state": None, "btn_realtime_details": None, "army_panel_scroll_y": 0,
     "strategic_unit_fade_states": None, "_minimap_image_cache": None, "unit_view_buttons": {},
+    "unit_view_bar_collapsed": False, "btn_unit_view_toggle": None,
     "army_custom_symbol_state": None,
     "_ignore_left_until_release": False, "_ignore_right_until_release": False,
     "_unit_render_index_cache": None, "_combat_unit_view_cache": None,

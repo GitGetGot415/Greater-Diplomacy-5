@@ -48,7 +48,7 @@ _SLIDER_OUTLINE_COLOR = (20, 20, 20)
 
 
 @lru_cache(maxsize=128)
-def _button_background(size, color, pressed, border_width, gradient_strength=1.0):
+def _button_background(size, color, pressed, border_width, gradient_strength=1.0, bevel_enabled=True):
     """Cache stepped shading and bevels by geometry, color, state, and strength."""
     if gradient_strength < 0:
         raise ValueError("Gradient strength must be zero or greater.")
@@ -77,7 +77,7 @@ def _button_background(size, color, pressed, border_width, gradient_strength=1.0
                                 boundaries[i + 1] - boundaries[i]))
 
     # Keep solid band centers. Small buttons use bands without dithering.
-    if height >= shade_count * _BUTTON_PIXEL_SIZE * 3:
+    if gradient_strength and height >= shade_count * _BUTTON_PIXEL_SIZE * 3:
         for i, boundary in enumerate(boundaries[1:-1], start=1):
             for y in (boundary - _BUTTON_PIXEL_SIZE, boundary):
                 for x in range(0, width, _BUTTON_PIXEL_SIZE):
@@ -89,7 +89,7 @@ def _button_background(size, color, pressed, border_width, gradient_strength=1.0
     # Place the bevel inside the existing selection or hover outline.
     inner = background.get_rect().inflate(-2 * border_width, -2 * border_width)
     bevel = min(_BUTTON_PIXEL_SIZE, inner.width // 2, inner.height // 2)
-    if bevel > 0:
+    if bevel_enabled and bevel > 0:
         top_left, bottom_right = (dark, light) if pressed else (light, dark)
         background.fill(top_left, (inner.x, inner.y, inner.width, bevel))
         background.fill(top_left, (inner.x, inner.y, bevel, inner.height))
@@ -98,11 +98,25 @@ def _button_background(size, color, pressed, border_width, gradient_strength=1.0
     return background
 
 
+def draw_pixel_background(surface, rect, style):
+    """Draw cached shade bands without a border or bevel."""
+    if rect.width <= 0 or rect.height <= 0:
+        return
+    color = tuple(style["color"])
+    if len(color) == 4:
+        background = _translucent_background(rect.size, color, False, 0,
+                                             style["gradient_strength"], False)
+    else:
+        background = _button_background(rect.size, color, False, 0,
+                                        style["gradient_strength"], False)
+    surface.blit(background, rect)
+
+
 @lru_cache(maxsize=128)
-def _translucent_background(size, color, recessed, border_width, gradient_strength):
+def _translucent_background(size, color, recessed, border_width, gradient_strength, bevel_enabled=True):
     """Cache translucent copies without changing shared opaque backgrounds."""
     background = _button_background(size, color[:3], recessed, border_width,
-                                    gradient_strength).copy()
+                                    gradient_strength, bevel_enabled).copy()
     background.set_alpha(color[3])
     return background
 

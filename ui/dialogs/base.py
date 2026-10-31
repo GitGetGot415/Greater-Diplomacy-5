@@ -10,13 +10,13 @@ from ui.navigation import modal_stack
 from ui.widgets import text_utils
 from ui.widgets import ui_elements
 from ui.bars import ui_bars
+from ui.background_styles import DIALOG_STYLES
 
 _STANDALONE_SIZE = (520, 320)
 
 # These dialogs keep their own darker, higher-contrast look rather than the
 # modal panel palette: they interrupt whatever is on screen, including the
 # panels in that palette, so they have to read as sitting above it.
-_DIALOG_BG = (40, 40, 40)
 _DIALOG_OVERLAY_ALPHA = 180
 
 
@@ -152,8 +152,10 @@ class _BaseModal:
         surface.blit(self.background, (0, 0))
         ui_bars.draw_fullscreen_overlay(surface, _DIALOG_OVERLAY_ALPHA)
 
-        ui_elements.draw_pixel_panel(surface, self.box_rect, _DIALOG_BG, self.BORDER_COLOR,
-                                     border_width=self.BORDER_WIDTH)
+        style = DIALOG_STYLES["main"]
+        ui_elements.draw_pixel_panel(surface, self.box_rect, style["color"], self.BORDER_COLOR,
+                                     border_width=self.BORDER_WIDTH,
+                                     gradient_strength=style["gradient_strength"])
 
         title_surf = self.title_font.render(self.title, True, (255, 255, 255))
         surface.blit(title_surf,
