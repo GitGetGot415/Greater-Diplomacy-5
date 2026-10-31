@@ -48,6 +48,7 @@ MENU_CHECKERBOARD_COLOR = (60, 30, 90)
 MENU_CHECKERBOARD_OPACITY = 50  # 0 hides the overlay; 255 makes it opaque.
 MENU_WATER_CHECKERBOARD_OPACITY = 20  # Reflected pattern: 0 hides it; 255 makes it opaque.
 MENU_WATER_CHECKERBOARD_HEIGHT_SCALE = 0.5  # 0.5 gives half-height squares; must be greater than zero.
+MENU_WATER_CHECKERBOARD_ANGLE = 50.0  # Degrees from vertical. Negative angles slant the other way; 0 is vertical.
 
 
 @lru_cache(maxsize=4)
@@ -682,7 +683,8 @@ class Menu(GameState):
                     self.draw_checkerboard_background(
                         surface, MENU_CHECKERBOARD_COLOR, tile=overlay,
                         reflection_y=horizon if reflected else None,
-                        reflection_scale=overlay.get_height() / tile.get_height() if reflected else 1.0)
+                        reflection_scale=overlay.get_height() / tile.get_height() if reflected else 1.0,
+                        reflection_shear=math.tan(math.radians(MENU_WATER_CHECKERBOARD_ANGLE)) if reflected else 0.0)
             finally:
                 surface.set_clip(old_clip)
 

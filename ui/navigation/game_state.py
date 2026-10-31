@@ -519,7 +519,7 @@ class GameState:
             self.draw_checkerboard_background(surface, self.bg_color)
 
     def draw_checkerboard_background(self, surface, base_color, *, tile=None, reflection_y=None,
-                                     reflection_scale=1.0):
+                                     reflection_scale=1.0, reflection_shear=0.0):
         # Draw the tile in a grid slightly larger than the screen, offset by a
         # time-based amount that grows down and to the right. Since the tile
         # is seamless, wrapping the offset back to 0 every tile-length makes
@@ -540,6 +540,18 @@ class GameState:
             source_offset = int((elapsed * c.CHECKERBOARD_SCROLL_SPEED) % source_height)
             origin = (1.0 + reflection_scale) * reflection_y + reflection_scale * source_offset
             start_y = round(origin) % tile_h - tile_h
+            if reflection_shear:
+                water_height = surface.get_height() - reflection_y
+                if water_height <= 0:
+                    return
+                pattern = ui_bars.get_sheared_checkerboard(
+                    tile, (surface.get_width(), water_height), reflection_shear)
+                source_y = (reflection_y - start_y) % tile_h
+                # Cancel the cached row offset at the horizon to keep the reflection aligned.
+                source_x = (offset_x + round(reflection_shear * source_y)) % tile_w
+                surface.blit(pattern, (0, reflection_y),
+                             (source_x, source_y, surface.get_width(), water_height))
+                return
         for y in range(start_y, surface.get_height() + tile_h, tile_h):
             for x in range(start_x, surface.get_width() + tile_w, tile_w):
                 surface.blit(tile, (x, y))

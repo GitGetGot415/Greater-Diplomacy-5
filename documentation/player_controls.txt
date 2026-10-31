@@ -76,6 +76,9 @@ The reflection uses the sky checkerboard's color and horizontal movement. Its ve
 Edit MENU_WATER_CHECKERBOARD_OPACITY to change reflection visibility independently of the sky checkerboard.
 MENU_WATER_CHECKERBOARD_HEIGHT_SCALE controls the reflected squares' height. Use 1.0 for original height or 0.5 for half height.
 Use a positive value. The reflection's vertical movement scales with its height. The pattern still covers the water.
+MENU_WATER_CHECKERBOARD_ANGLE sets the reflected vertical lines' angle in degrees from vertical.
+Use 0 for vertical lines. Positive and negative values slant the lines in opposite directions.
+Horizontal lines remain level. The reflection stays aligned with the sky pattern at the horizon.
 It uses the same scrolling speed and direction as other screens. The gradient stays in place while its colors fade.
 Edit MENU_CHECKERBOARD_OPACITY in screens/menus/menu.py to change its visibility.
 MENU_CHECKERBOARD_COLOR sets the checkerboard color independently of MENU_SKY_START_COLOR.

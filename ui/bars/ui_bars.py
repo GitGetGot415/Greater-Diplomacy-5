@@ -1,6 +1,7 @@
 import pygame
 import os
 from contextlib import contextmanager
+from functools import lru_cache
 import data.constants as c
 from ui.background_styles import MAP_BAR_STYLES, MAP_CONFIRM_STYLES, MAP_FRAME_COLOR, LEFT_FRAME_COLOR
 
@@ -347,6 +348,23 @@ def get_checkerboard_tile(base_color):
 
     _checkerboard_cache[cache_key] = tile
     return tile
+
+@lru_cache(maxsize=2)
+def get_sheared_checkerboard(tile, size, shear):
+    """Cache a tiled pattern with horizontal row offsets and level horizontal lines."""
+    tile_w, tile_h = tile.get_size()
+    width, height = size
+    pattern = pygame.Surface((width + tile_w, height + tile_h), pygame.SRCALPHA)
+    # Copy opaque rows, then apply opacity once. RGB source alpha otherwise produces opaque dark pixels.
+    opaque_tile = tile.copy()
+    opaque_tile.set_alpha(255)
+    for y in range(pattern.get_height()):
+        offset = round(shear * y) % tile_w
+        for x in range(offset - tile_w, pattern.get_width(), tile_w):
+            pattern.blit(opaque_tile, (x, y), (0, y % tile_h, tile_w, 1))
+    pattern.set_alpha(tile.get_alpha())
+    return pattern
+
 
 def map_unit_view_toggle_rect(map_screen):
     """Return the visible filter toggle's input area, including when collapsed."""
