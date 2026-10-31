@@ -21,7 +21,7 @@ from ui.rendering.font_manager import fonts
 from ui.dialogs.character_select_screen import CHARACTERS_DIR
 from ui import dialogs
 
-MENU_WATERLINE_RATIO = 0.605
+MENU_WATERLINE_RATIO = 0.6
 MENU_SKY_STEPPED = False  # False gives a smooth gradient. Restart after editing.
 MENU_SKY_DITHERING = False
 MENU_SKY_BANDS = 12
