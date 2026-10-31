@@ -671,7 +671,7 @@ RESEARCH_RECIPES = [
         ([1975],                                     "asea_irb_6",                 "INDUSTRY", 1200, {"factory": 8},           {"NAME": "ASEA IRB 6", "BONUS": proportional_building_bonus(["Basic Factory", "Factory"], "materials", 0.1)}),
         ([1985],                                     "computer_numerical_control", "INDUSTRY", 1200, {"factory": 9},           {"NAME": "Computer Numerical Control", "BONUS": proportional_building_bonus(["Basic Factory", "Factory"], "materials", 0.1)}),
         ([1995],                                     "3d_printing",                "INDUSTRY", 1200, {"factory": 10},          {"NAME": "3D Printing", "BONUS": proportional_building_bonus(["Basic Factory", "Factory"], "materials", 0.1)}),
-        ([2005],                                     "internet_of_things",         "INDUSTRY", 1200, {"factory": 11},          {"NAME": "Internet of Things", "BONUS": proportional_building_bonus(["Basic Factory", "Factory"], "materials", 0.1)}),
+        ([2005],                                     "internet_of_things",         "INDUSTRY", 1200, {"factory": 11},          {"NAME": "Internet of Things", "BONUS": proportional_building_bonus(["Basic Factory", "Factory"], "materials", 0.05)}),
         ([2015],                                     "industry_4_0",               "INDUSTRY", 1200, {"factory": 12},          {"NAME": "Industry 4.0", "BONUS": proportional_building_bonus(["Basic Factory", "Factory"], "materials", 0.05)}),
         ([2025],                                     "industry_5_0",               "INDUSTRY", 1200, {"factory": 13},          {"NAME": "Industry 5.0", "BONUS": proportional_building_bonus(["Basic Factory", "Factory"], "materials", 0.05)}),
         (building_years("Factory Lvl"),              "factory",                    "INDUSTRY", 1200, {"diesel_engine": 1},     {"GATES": FACTORY_LEVEL_GATES}),
@@ -680,7 +680,7 @@ RESEARCH_RECIPES = [
         (building_years("Basic Recruitment Center"), "basic_recruitment",          "INDUSTRY", 1200, {},                       {}),
         (building_years("Recruitment Building Lvl"), "recruitment_buildings",      "INDUSTRY", 1200, {"basic_recruitment": 1}, {}),
         (yr(1913, 2, 50),                            "general_recruitment",        "INDUSTRY", 900,  GR,                       {}),
-        (yr(1911, 1, 100),                           "resource_refining",          "INDUSTRY", 900,  {},                       {}),
+        (yr(1850, 2, 100),                           "resource_refining",          "INDUSTRY", 900,  {},                       {}),
     ],
     [
         #YEARS                              ID                         CAT    COST  REQ                                     OPTIONS
