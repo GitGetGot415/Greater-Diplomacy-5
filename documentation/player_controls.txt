@@ -53,7 +53,7 @@ Edit background colors and gradient strengths in ui/background_styles.py. All st
 Keep layout and border settings in their existing UI modules.
 
 The main menu shows an evening sky above a blue water rectangle.
-The sky changes from dark blue through purple to warm orange at the horizon.
+The sky interpolates directly between its current top and horizon colors, with no intermediate color stops.
 Edit MENU_SKY_START_COLOR and MENU_SKY_END_COLOR near the top of screens/menus/menu.py.
 The start color appears at the top. The end color appears at the horizon.
 MENU_SKY_FADE_ENABLED controls a repeating color fade.
@@ -61,7 +61,6 @@ The top fades between MENU_SKY_START_COLOR and MENU_SKY_START_FADE_COLOR.
 The horizon fades between MENU_SKY_END_COLOR and MENU_SKY_END_FADE_COLOR.
 MENU_SKY_FADE_CYCLE_SECONDS sets the time for a complete fade to the target colors and back.
 Use a positive duration. Larger durations give slower fades. False for MENU_SKY_FADE_ENABLED keeps the original colors.
-MENU_SKY_MIDDLE_COLORS sets the intermediate sky colors.
 MENU_WATER_START_COLOR sets the water color at the horizon. MENU_WATER_END_COLOR sets the color at the bottom.
 The water has separate stepped, band count, and dithering settings. Both gradients use the same background cache.
 MENU_WATER_STEPPED selects shade bands when True and a smooth gradient when False.

@@ -39,7 +39,6 @@ MENU_SKY_START_FADE_COLOR = (24, 28, 65)
 MENU_SKY_END_FADE_COLOR = (24, 28, 65)
 MENU_SKY_FADE_CYCLE_SECONDS = 10.0  # Full cycle: original colors to targets and back.
 
-MENU_SKY_MIDDLE_COLORS = ((76, 49, 100), (167, 83, 112))
 MENU_WATER_START_COLOR = (30, 62, 100)
 MENU_WATER_END_COLOR = (10, 25, 55)
 MENU_CHECKERBOARD_COLOR = (60, 30, 90)
@@ -52,7 +51,7 @@ def _menu_background(size, sky_start_color=MENU_SKY_START_COLOR, sky_end_color=M
     width, height = size
     background = pygame.Surface(size)
     sky_height = round(height * MENU_WATERLINE_RATIO)
-    colors = (sky_start_color, *MENU_SKY_MIDDLE_COLORS, sky_end_color)
+    colors = (sky_start_color, sky_end_color)
     ui_elements.draw_color_gradient(
         background, pygame.Rect(0, 0, width, sky_height), colors,
         stepped=MENU_SKY_STEPPED, bands=MENU_SKY_BANDS, dithering=MENU_SKY_DITHERING)
