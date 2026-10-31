@@ -46,6 +46,10 @@ class Edit_Portrait(GameState):
         self.menu.toggle_hildehrand_gradient()
         self.refresh_ui()
 
+    def toggle_stepped(self):
+        self.menu.toggle_hildehrand_gradient_stepped()
+        self.refresh_ui()
+
     def set_strength(self, strength):
         self.menu.set_hildehrand_gradient_strength(strength)
         self._strength_changed = True
@@ -64,7 +68,10 @@ class Edit_Portrait(GameState):
             Button(CONTROLS_X, CONTROLS_Y, "medium", "purple", "Choose Portrait", self.open_picker),
             Button(CONTROLS_X, CONTROLS_Y + CONTROLS_GAP_Y, "medium", "green" if enabled else "red",
                    f"Gradient: {'ON' if enabled else 'OFF'}", self.toggle_gradient),
-            Slider(CONTROLS_X, CONTROLS_Y + 2 * CONTROLS_GAP_Y + SLIDER_LABEL_PAD, SLIDER_W,
+            Button(CONTROLS_X, CONTROLS_Y + 2 * CONTROLS_GAP_Y, "medium", "blue",
+                   f"Style: {'Stepped' if menu.hildehrand_gradient_stepped else 'Smooth'}",
+                   self.toggle_stepped),
+            Slider(CONTROLS_X, CONTROLS_Y + 3 * CONTROLS_GAP_Y + SLIDER_LABEL_PAD, SLIDER_W,
                    "Gradient Strength", menu.hildehrand_gradient_strength, self.set_strength,
                    visual_max=c.HILDEHRAND_GRADIENT_MAX_STRENGTH,
                    allowed_max=c.HILDEHRAND_GRADIENT_MAX_STRENGTH),

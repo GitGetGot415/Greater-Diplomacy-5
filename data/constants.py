@@ -2330,6 +2330,8 @@ HILDEHRAND_CHOICE_PATH = "data/json/hildehrand_choice.json"
 # Menu portrait gradient: strength 1 matches a standard button; the slider runs 0 to the maximum.
 HILDEHRAND_GRADIENT_DEFAULT_STRENGTH = 1.0
 HILDEHRAND_GRADIENT_MAX_STRENGTH = 2.0
+# Stepped bands with dithered edges, like a button, instead of fine smooth bands.
+HILDEHRAND_GRADIENT_DEFAULT_STEPPED = True
 HISTORICAL_LEADERS_PATH = "data/json/historical_leaders.json"
 HISTORICAL_LEADERS_DEFAULT_PATH = "data/json/historical_leaders_DEFAULT.json"
 

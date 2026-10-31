@@ -47,6 +47,35 @@ _BUTTON_SELECTED_BORDER_WIDTH = 3
 _SLIDER_OUTLINE_COLOR = (20, 20, 20)
 
 
+def _band_layout(height, shade_count=None):
+    """Shade band count and pixel-aligned band edges for a height. Buttons pick the
+    count from their height; pass `shade_count` to force one."""
+    if shade_count is None:
+        shade_count = max(_BUTTON_MIN_SHADE_COUNT,
+                          (height + _BUTTON_SHADE_HEIGHT - 1) // _BUTTON_SHADE_HEIGHT)
+    shade_count = min(shade_count, max(1, height // _BUTTON_PIXEL_SIZE))
+    boundaries = [0] + [
+        (i * height // shade_count // _BUTTON_PIXEL_SIZE) * _BUTTON_PIXEL_SIZE
+        for i in range(1, shade_count)
+    ] + [height]
+    return shade_count, boundaries
+
+
+def _dither_squares(width, boundaries):
+    """Yield (x, y, band, checker) for the checkerboard squares that blend each pair
+    of neighbouring bands: the shade is `shades[band - 1 + checker]`."""
+    for band, boundary in enumerate(boundaries[1:-1], start=1):
+        for y in (boundary - _BUTTON_PIXEL_SIZE, boundary):
+            for x in range(0, width, _BUTTON_PIXEL_SIZE):
+                checker = (x // _BUTTON_PIXEL_SIZE + y // _BUTTON_PIXEL_SIZE) % 2
+                yield x, y, band, checker
+
+
+def _dithers(width, height, shade_count):
+    """Small buttons use bands without dithering."""
+    return height >= shade_count * _BUTTON_PIXEL_SIZE * 3
+
+
 @lru_cache(maxsize=128)
 def _button_background(size, color, pressed, border_width, gradient_strength=1.0, bevel_enabled=True):
     """Cache stepped shading and bevels by geometry, color, state, and strength."""
@@ -63,28 +92,18 @@ def _button_background(size, color, pressed, border_width, gradient_strength=1.0
                            for channel in color)
     gradient_dark = tuple(max(0, channel - round(_BUTTON_SHADOW * gradient_strength))
                           for channel in color)
-    shade_count = max(_BUTTON_MIN_SHADE_COUNT,
-                      (height + _BUTTON_SHADE_HEIGHT - 1) // _BUTTON_SHADE_HEIGHT)
-    shade_count = min(shade_count, max(1, height // _BUTTON_PIXEL_SIZE))
+    shade_count, boundaries = _band_layout(height)
     shades = [queries.lerp_color(gradient_light, gradient_dark, i / max(1, shade_count - 1))
               for i in range(shade_count)]
-    boundaries = [0] + [
-        (i * height // shade_count // _BUTTON_PIXEL_SIZE) * _BUTTON_PIXEL_SIZE
-        for i in range(1, shade_count)
-    ] + [height]
     for i, shade in enumerate(shades):
         background.fill(shade, (0, boundaries[i], width,
                                 boundaries[i + 1] - boundaries[i]))
 
-    # Keep solid band centers. Small buttons use bands without dithering.
-    if gradient_strength and height >= shade_count * _BUTTON_PIXEL_SIZE * 3:
-        for i, boundary in enumerate(boundaries[1:-1], start=1):
-            for y in (boundary - _BUTTON_PIXEL_SIZE, boundary):
-                for x in range(0, width, _BUTTON_PIXEL_SIZE):
-                    checker = (x // _BUTTON_PIXEL_SIZE + y // _BUTTON_PIXEL_SIZE) % 2
-                    shade = shades[i - 1 + checker]
-                    background.fill(shade, (x, y, min(_BUTTON_PIXEL_SIZE, width - x),
-                                            _BUTTON_PIXEL_SIZE))
+    # Keep solid band centers.
+    if gradient_strength and _dithers(width, height, shade_count):
+        for x, y, band, checker in _dither_squares(width, boundaries):
+            background.fill(shades[band - 1 + checker],
+                            (x, y, min(_BUTTON_PIXEL_SIZE, width - x), _BUTTON_PIXEL_SIZE))
 
     # Place the bevel inside the existing selection or hover outline.
     inner = background.get_rect().inflate(-2 * border_width, -2 * border_width)
@@ -98,25 +117,42 @@ def _button_background(size, color, pressed, border_width, gradient_strength=1.0
     return background
 
 
-def apply_button_gradient(image, gradient_strength=1.0):
-    """Return a copy of `image` with the button's stepped top-light to bottom-dark
-    shading applied. RGB-only blends keep the image's transparency intact."""
-    shaded = image.copy()
-    width, height = shaded.get_size()
-    shade_count = min(max(_BUTTON_MIN_SHADE_COUNT,
-                          (height + _BUTTON_SHADE_HEIGHT - 1) // _BUTTON_SHADE_HEIGHT),
-                      max(1, height // _BUTTON_PIXEL_SIZE))
+@lru_cache(maxsize=32)
+def _gradient_overlay(size, gradient_strength, stepped):
+    """Cached (add, subtract) shade surfaces holding the button gradient for a size.
+    Stepped is the button's own layout at this height: bands every
+    `_BUTTON_SHADE_HEIGHT` pixels with dithered edges. Smooth gives every pixel step
+    its own shade and no dithering."""
+    width, height = size
+    shade_count, boundaries = _band_layout(height, None if stepped else height)
     light = round(_BUTTON_HIGHLIGHT * gradient_strength)
     dark = round(_BUTTON_SHADOW * gradient_strength)
-    for i in range(shade_count):
-        top = i * height // shade_count
-        bottom = (i + 1) * height // shade_count
-        delta = round(light + (-dark - light) * i / max(1, shade_count - 1))
-        band = (0, top, width, bottom - top)
-        if delta > 0:
-            shaded.fill((delta,) * 3, band, pygame.BLEND_RGB_ADD)
-        elif delta < 0:
-            shaded.fill((-delta,) * 3, band, pygame.BLEND_RGB_SUB)
+    deltas = [round(light + (-dark - light) * i / max(1, shade_count - 1))
+              for i in range(shade_count)]
+    add, sub = pygame.Surface(size), pygame.Surface(size)
+
+    def paint(delta, rect):
+        add.fill((max(delta, 0),) * 3, rect)
+        sub.fill((max(-delta, 0),) * 3, rect)
+
+    for i, delta in enumerate(deltas):
+        paint(delta, (0, boundaries[i], width, boundaries[i + 1] - boundaries[i]))
+    if stepped and gradient_strength and _dithers(width, height, shade_count):
+        for x, y, band, checker in _dither_squares(width, boundaries):
+            paint(deltas[band - 1 + checker],
+                  (x, y, min(_BUTTON_PIXEL_SIZE, width - x), _BUTTON_PIXEL_SIZE))
+    return add, sub
+
+
+def apply_button_gradient(image, gradient_strength=1.0, stepped=True):
+    """Return a copy of `image` with the button's top-light to bottom-dark shading.
+    RGB-only blends keep the image's transparency intact."""
+    if gradient_strength < 0:
+        raise ValueError("Gradient strength must be zero or greater.")
+    add, sub = _gradient_overlay(image.get_size(), gradient_strength, stepped)
+    shaded = image.copy()
+    shaded.blit(add, (0, 0), special_flags=pygame.BLEND_RGB_ADD)
+    shaded.blit(sub, (0, 0), special_flags=pygame.BLEND_RGB_SUB)
     return shaded
 
 

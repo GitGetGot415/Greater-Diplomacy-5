@@ -143,7 +143,8 @@ class Menu(GameState):
         self._hildehrand_anchor_bottomleft = (hildehrand_anchor_x, hildehrand_anchor_y)
 
         self.hildehrand_choice = queries.get_hildehrand_choice()
-        self.hildehrand_gradient, self.hildehrand_gradient_strength = queries.get_hildehrand_gradient()
+        (self.hildehrand_gradient, self.hildehrand_gradient_strength,
+         self.hildehrand_gradient_stepped) = queries.get_hildehrand_gradient()
         try:
             self._hildehrand_plain_image = _load_scaled_image(
                 f"{CHARACTERS_DIR}/{self.hildehrand_choice}", self.HILDEHRAND_SCALE)
@@ -394,6 +395,11 @@ class Menu(GameState):
         self._refresh_hildehrand_image()
         self.save_hildehrand_settings()
 
+    def toggle_hildehrand_gradient_stepped(self):
+        self.hildehrand_gradient_stepped = not self.hildehrand_gradient_stepped
+        self._refresh_hildehrand_image()
+        self.save_hildehrand_settings()
+
     def set_hildehrand_gradient_strength(self, strength):
         """Live slider update. The caller saves once the drag ends."""
         self.hildehrand_gradient_strength = strength
@@ -401,7 +407,8 @@ class Menu(GameState):
 
     def save_hildehrand_settings(self):
         queries.save_hildehrand_portrait(self.hildehrand_choice, self.hildehrand_gradient,
-                                         self.hildehrand_gradient_strength)
+                                         self.hildehrand_gradient_strength,
+                                         self.hildehrand_gradient_stepped)
 
     def _refresh_hildehrand_image(self):
         """Builds the drawn portrait from the plain one, shaded when the gradient is on.
@@ -409,7 +416,7 @@ class Menu(GameState):
         plain = self._hildehrand_plain_image
         if plain and self.hildehrand_gradient:
             self.hildehrand_image = ui_elements.apply_button_gradient(
-                plain, self.hildehrand_gradient_strength)
+                plain, self.hildehrand_gradient_strength, self.hildehrand_gradient_stepped)
         else:
             self.hildehrand_image = plain
 
