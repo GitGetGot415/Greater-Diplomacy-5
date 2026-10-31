@@ -2327,7 +2327,7 @@ HILDEHRAND_GRADIENT_MAX_STRENGTH = 3.0
 # Stepped bands with dithered edges, like a button, instead of fine smooth bands.
 HILDEHRAND_GRADIENT_DEFAULT_STEPPED = False
 # Stepped style: how many color bands the portrait gradient has.
-HILDEHRAND_GRADIENT_DEFAULT_BANDS = 20
+HILDEHRAND_GRADIENT_DEFAULT_BANDS = 10
 HILDEHRAND_GRADIENT_MIN_BANDS = 2
 HILDEHRAND_GRADIENT_MAX_BANDS = 64
 HISTORICAL_LEADERS_PATH = "data/json/historical_leaders.json"
