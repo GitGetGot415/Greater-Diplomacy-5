@@ -46,6 +46,8 @@ MENU_WATER_START_COLOR = (30, 62, 100)
 MENU_WATER_END_COLOR = (10, 25, 55)
 MENU_CHECKERBOARD_COLOR = (60, 30, 90)
 MENU_CHECKERBOARD_OPACITY = 50  # 0 hides the overlay; 255 makes it opaque.
+MENU_WATER_CHECKERBOARD_OPACITY = 20  # Reflected pattern: 0 hides it; 255 makes it opaque.
+MENU_WATER_CHECKERBOARD_HEIGHT_SCALE = 0.5  # 0.5 gives half-height squares; must be greater than zero.
 
 
 @lru_cache(maxsize=4)
@@ -95,10 +97,16 @@ def _menu_sky_colors():
             queries.lerp_color(MENU_SKY_END_COLOR, MENU_SKY_END_FADE_COLOR, blend))
 
 
-@lru_cache(maxsize=1)
-def _menu_checkerboard_overlay(tile, opacity):
+@lru_cache(maxsize=2)
+def _menu_checkerboard_overlay(tile, opacity, reflected=False, height_scale=1.0):
     """Cache a transparent copy without changing the shared checkerboard tile."""
-    overlay = tile.copy()
+    overlay = pygame.transform.flip(tile, False, True) if reflected else tile.copy()
+    if reflected:
+        if height_scale <= 0:
+            raise ValueError("MENU_WATER_CHECKERBOARD_HEIGHT_SCALE must be greater than zero.")
+        height = max(1, round(tile.get_height() * height_scale))
+        if height != tile.get_height():
+            overlay = pygame.transform.scale(overlay, (tile.get_width(), height))
     overlay.set_alpha(opacity)
     return overlay
 
@@ -655,15 +663,26 @@ class Menu(GameState):
     def draw_background(self, surface):
         sky_start, sky_end = _menu_sky_colors()
         surface.blit(_menu_background(surface.get_size(), sky_start, sky_end), (0, 0))
-        if MENU_CHECKERBOARD_OPACITY > 0:
+        if MENU_CHECKERBOARD_OPACITY > 0 or MENU_WATER_CHECKERBOARD_OPACITY > 0:
             tile = ui_bars.get_checkerboard_tile(MENU_CHECKERBOARD_COLOR)
-            overlay = _menu_checkerboard_overlay(tile, MENU_CHECKERBOARD_OPACITY)
-            sky_rect = pygame.Rect(0, 0, surface.get_width(),
-                                   round(surface.get_height() * MENU_WATERLINE_RATIO))
+            horizon = round(surface.get_height() * MENU_WATERLINE_RATIO)
             old_clip = surface.get_clip()
-            surface.set_clip(old_clip.clip(sky_rect))
             try:
-                self.draw_checkerboard_background(surface, MENU_CHECKERBOARD_COLOR, tile=overlay)
+                for reflected, opacity, rect in (
+                        (False, MENU_CHECKERBOARD_OPACITY,
+                         pygame.Rect(0, 0, surface.get_width(), horizon)),
+                        (True, MENU_WATER_CHECKERBOARD_OPACITY,
+                         pygame.Rect(0, horizon, surface.get_width(), surface.get_height() - horizon))):
+                    if opacity <= 0:
+                        continue
+                    overlay = _menu_checkerboard_overlay(
+                        tile, opacity, reflected,
+                        MENU_WATER_CHECKERBOARD_HEIGHT_SCALE if reflected else 1.0)
+                    surface.set_clip(old_clip.clip(rect))
+                    self.draw_checkerboard_background(
+                        surface, MENU_CHECKERBOARD_COLOR, tile=overlay,
+                        reflection_y=horizon if reflected else None,
+                        reflection_scale=overlay.get_height() / tile.get_height() if reflected else 1.0)
             finally:
                 surface.set_clip(old_clip)
 

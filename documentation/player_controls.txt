@@ -71,11 +71,15 @@ MENU_WATER_STEPPED selects shade bands when True and a smooth gradient when Fals
 MENU_WATER_DITHERING controls square transitions between water bands. MENU_WATER_BANDS sets the number of water bands.
 Water dithering and band count apply only when MENU_WATER_STEPPED is True.
 A faint moving checkerboard overlays only the evening sky, behind the artwork and controls.
-The water hides the checkerboard below the horizon.
+The water has a separate checkerboard reflection, mirrored vertically at the horizon.
+The reflection uses the sky checkerboard's color and horizontal movement. Its vertical movement is reversed.
+Edit MENU_WATER_CHECKERBOARD_OPACITY to change reflection visibility independently of the sky checkerboard.
+MENU_WATER_CHECKERBOARD_HEIGHT_SCALE controls the reflected squares' height. Use 1.0 for original height or 0.5 for half height.
+Use a positive value. The reflection's vertical movement scales with its height. The pattern still covers the water.
 It uses the same scrolling speed and direction as other screens. The gradient stays in place while its colors fade.
 Edit MENU_CHECKERBOARD_OPACITY in screens/menus/menu.py to change its visibility.
 MENU_CHECKERBOARD_COLOR sets the checkerboard color independently of MENU_SKY_START_COLOR.
-Use 0 to hide it or 255 for full opacity. The default is 18.
+For either opacity setting, use 0 to hide the pattern or 255 for full opacity.
 The overlay uses the existing checkerboard tile. Other screens keep their existing checkerboards.
 MENU_WATERLINE_RATIO in screens/menus/menu.py sets the horizon height. MENU_SKY_BANDS sets the number of sky bands.
 Set MENU_SKY_STEPPED to True for shade bands with square checkerboard transitions, as used by buttons and portraits.

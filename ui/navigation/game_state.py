@@ -518,7 +518,8 @@ class GameState:
             # a flat fill -- see ui_bars.get_checkerboard_tile.
             self.draw_checkerboard_background(surface, self.bg_color)
 
-    def draw_checkerboard_background(self, surface, base_color, *, tile=None):
+    def draw_checkerboard_background(self, surface, base_color, *, tile=None, reflection_y=None,
+                                     reflection_scale=1.0):
         # Draw the tile in a grid slightly larger than the screen, offset by a
         # time-based amount that grows down and to the right. Since the tile
         # is seamless, wrapping the offset back to 0 every tile-length makes
@@ -533,6 +534,12 @@ class GameState:
 
         start_x = -offset_x - tile_w
         start_y = -offset_y - tile_h
+        if reflection_y is not None:
+            # Mirror and scale the original pattern about the waterline, including its movement.
+            source_height = tile_h / reflection_scale
+            source_offset = int((elapsed * c.CHECKERBOARD_SCROLL_SPEED) % source_height)
+            origin = (1.0 + reflection_scale) * reflection_y + reflection_scale * source_offset
+            start_y = round(origin) % tile_h - tile_h
         for y in range(start_y, surface.get_height() + tile_h, tile_h):
             for x in range(start_x, surface.get_width() + tile_w, tile_w):
                 surface.blit(tile, (x, y))
