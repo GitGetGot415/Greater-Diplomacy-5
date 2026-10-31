@@ -768,7 +768,8 @@ class Messages_Screen(GameState):
             })
         
         input_rect = pygame.Rect(MSG_LEFT_PANE_W, c.SCREEN_HEIGHT - MSG_INPUT_H, c.SCREEN_WIDTH - MSG_LEFT_PANE_W, MSG_INPUT_H)
-        ui_elements.draw_pixel_panel(surface, input_rect, MSG_BG_LIGHT, (100, 100, 100), recessed=True)
+        ui_elements.draw_text_input_background(surface, input_rect, active=True,
+                                               style_name="message", border_color=(100, 100, 100))
 
         txt_surf = font_small.render(self.compose_text + "|", True, (255, 255, 255))
         surface.blit(txt_surf, (input_rect.x + 20, input_rect.y + 30))

@@ -130,6 +130,26 @@ class ButtonBackgroundTests(unittest.TestCase):
                                           gradient_strength=0.5)
         interpolate.assert_not_called()
 
+    def test_text_input_styles_refresh_the_cache_and_drawing_preserves_clipping(self):
+        rect = pygame.Rect(10, 10, 120, 40)
+        self.surface.set_clip(pygame.Rect(15, 15, 80, 35))
+        clip = self.surface.get_clip()
+        font = pygame.font.Font(None, 18)
+        styles = {"inactive": {"color": (70, 80, 90), "gradient_strength": 1.0},
+                  "active": {"color": (80, 90, 100), "gradient_strength": 0.5}}
+        with patch.dict(ui_elements.TEXT_INPUT_STYLES, styles, clear=True):
+            ui_elements.draw_text_box(self.surface, rect, "name", font=font)
+            styles["inactive"]["gradient_strength"] = 0.5
+            ui_elements.draw_text_box(self.surface, rect, "name", font=font)
+            styles["inactive"]["color"] = (90, 100, 110)
+            ui_elements.draw_text_box(self.surface, rect, "name", font=font)
+            ui_elements.draw_text_box(self.surface, rect, "name", active=True, font=font)
+            self.assertEqual(ui_elements._button_background.cache_info().misses, 4)
+            with patch.object(ui_elements.queries, "lerp_color") as interpolate:
+                ui_elements.draw_text_box(self.surface, rect, "long name" * 8, active=True, font=font)
+            interpolate.assert_not_called()
+        self.assertEqual(self.surface.get_clip(), clip)
+
 
 if __name__ == "__main__":
     unittest.main()

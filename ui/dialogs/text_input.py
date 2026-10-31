@@ -3,7 +3,7 @@ import data.constants as c
 from ui.rendering.font_manager import fonts
 from ui.navigation import modal_stack
 from ui.dialogs.base import _BaseModal, _back_key, _run_blocking
-from ui.widgets.ui_elements import process_text_input, draw_pixel_panel
+from ui.widgets.ui_elements import process_text_input, draw_text_input_background
 
 
 class _TextInputModal(_BaseModal):
@@ -66,7 +66,8 @@ class _TextInputModal(_BaseModal):
 
     def draw_content(self, surface):
         border_color = (220, 80, 80) if self.error_text else c.UI_TEXT_LIGHT
-        draw_pixel_panel(surface, self.input_rect, (20, 20, 20), border_color, recessed=True)
+        draw_text_input_background(surface, self.input_rect, active=True,
+                                   style_name="dialog", border_color=border_color)
         clear_color = (135, 45, 45) if self.text else (85, 85, 85)
         self.draw_button(surface, self.clear_rect, "Clear", clear_color,
                          (180, 65, 65) if self.text else (115, 115, 115))

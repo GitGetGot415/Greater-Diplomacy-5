@@ -28,7 +28,7 @@ EDITOR_BORDER = (125, 175, 240)
 # Gradient strength 0 gives a flat fill. Strength 1 keeps the standard shading.
 ARMY_EDITOR_STYLES = {
     "main": {"color": EDITOR_BG, "gradient_strength": 0.0},
-    "name_field": {"color": (10, 20, 40), "gradient_strength": 1.0},
+    "name_field": {"color": (0, 0, 0), "gradient_strength": 0.0},
     "emblem_preview": {"color": (10, 20, 40), "gradient_strength": 1.0},
 }
 

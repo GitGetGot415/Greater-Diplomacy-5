@@ -34,7 +34,10 @@ PANELS AND CUSTOM CONTROLS
 Dialogs, army controls, the tutorial, progress displays, and real-time match panels use the shared pixel shading.
 Production queues, resource bars, message boxes, and mouse settings cards use the same square borders and bevels.
 Shared modal panels also apply this appearance to their game and editor screens.
+
 Text fields have recessed bevels. Active fields keep their existing focus borders.
+Text-entry backgrounds use black fills with zero gradient strength by default.
+
 Custom buttons keep hover, pressed, selected, and disabled states.
 Color swatches and the custom emblem canvas keep their flat colors.
 
@@ -45,6 +48,17 @@ The army tray scrollbar is six pixels wide. It stays beside the existing action 
 
 These changes affect display only. Click areas, keyboard controls, permissions, and game rules remain the same.
 Saves and multiplayer commands retain their existing data.
+
+Edit TEXT_INPUT_STYLES near the top of ui/widgets/ui_elements.py for text-entry background colors and gradient strengths.
+The inactive and active entries control shared text fields, including searches, rename boxes, and editor fields.
+The dialog entry controls text-input dialogs. The message entry controls the message compose box.
+Each entry has color and gradient_strength fields. Zero strength gives a flat fill; one keeps the standard contrast.
+
+Higher strengths increase contrast. Positive strengths use the standard top-to-bottom shading direction.
+The army name field keeps its color and gradient strength in ARMY_EDITOR_STYLES["name_field"].
+It also defaults to a black fill with zero gradient strength.
+Text colors, focus borders, and input controls remain unchanged.
+Restart the game after editing these values.
 
 Edit TUTORIAL_PANEL_STYLES near the top of ui/dialogs/message_box.py for tutorial backgrounds.
 Its entries are main and keyboard_navigation.

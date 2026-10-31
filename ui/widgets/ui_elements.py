@@ -35,6 +35,13 @@ _pygame_sfx_pitch_cache = {
 
 UI_ICONS = {}
 
+TEXT_INPUT_STYLES = {
+    "inactive": {"color": (0, 0, 0), "gradient_strength": 0.0},
+    "active": {"color": (0, 0, 0), "gradient_strength": 0.0},
+    "dialog": {"color": (0, 0, 0), "gradient_strength": 0.0},
+    "message": {"color": (0, 0, 0), "gradient_strength": 0.0},
+}
+
 _BUTTON_MIN_SHADE_COUNT = 5
 _BUTTON_SHADE_HEIGHT = 10
 _BUTTON_PIXEL_SIZE = 2
@@ -645,9 +652,24 @@ def _text_box_text_x(rect, inner, text_width, pad_x, active):
     return text_x - max(0, text_width - available_width)
 
 
+def draw_text_input_background(surface, rect, active=False, *, style_name=None,
+                               bg_color=None, border_color=None, gradient_strength=None):
+    """Draw a text-entry background from the editable style settings."""
+    style = TEXT_INPUT_STYLES[style_name if style_name is not None else
+                              "active" if active else "inactive"]
+    if bg_color is None:
+        bg_color = style["color"]
+    if gradient_strength is None:
+        gradient_strength = style["gradient_strength"]
+    if border_color is None:
+        border_color = c.INPUT_BORDER_ACTIVE if active else c.INPUT_BORDER
+    draw_pixel_panel(surface, rect, bg_color, border_color, recessed=True,
+                     gradient_strength=gradient_strength)
+
+
 def draw_text_box(surface, rect, text, active=False, font=None, placeholder=None,
                   pad_x=10, show_caret=True, *, bg_color=None, border_color=None,
-                  gradient_strength=1.0):
+                  gradient_strength=None):
     """Draws one single-line text entry box: fill, border, text, caret.
 
     Nine screens carried their own copy of these four steps, between them using
@@ -662,12 +684,8 @@ def draw_text_box(surface, rect, text, active=False, font=None, placeholder=None
     """
     font = font or fonts.get("normal")
 
-    if bg_color is None:
-        bg_color = c.INPUT_BG_ACTIVE if active else c.INPUT_BG
-    if border_color is None:
-        border_color = c.INPUT_BORDER_ACTIVE if active else c.INPUT_BORDER
-    draw_pixel_panel(surface, rect, bg_color, border_color, recessed=True,
-                     gradient_strength=gradient_strength)
+    draw_text_input_background(surface, rect, active, bg_color=bg_color,
+                               border_color=border_color, gradient_strength=gradient_strength)
 
     if not text and placeholder:
         text_surf = font.render(placeholder, True, c.UI_TEXT_MUTED)

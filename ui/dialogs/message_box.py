@@ -12,8 +12,8 @@ from ui.widgets.text_utils import render_inline_text, wrap_text
 
 # Gradient strength 0 gives a flat fill. Strength 1 keeps the standard shading.
 TUTORIAL_PANEL_STYLES = {
-    "main": {"color": (34, 38, 49), "gradient_strength": 0.5},
-    "keyboard_navigation": {"color": (25, 31, 43), "gradient_strength": 1.0},
+    "main": {"color": (34, 38, 49), "gradient_strength": 0.3},
+    "keyboard_navigation": {"color": (25, 31, 43), "gradient_strength": 0.0},
 }
 
 _KIND_ACCENTS = {
