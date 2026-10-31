@@ -7,7 +7,7 @@ from unittest.mock import patch
 import data.constants as c
 from data.state_access import BackendState
 from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError
-from data.multiplayer.tournament.files import _validate_production_projection
+from data.multiplayer.tournament.v46_moves import _validate_production_projection
 from map_logic.actions import production_actions as actions
 from tests.research_fixtures import fixture_metadata
 
@@ -105,3 +105,62 @@ class ProductionActionTests(unittest.TestCase):
         for resource in c.ECON_RESOURCE_KEYS:
             if resource != "manpower":
                 self.assertEqual(ai.cost[f"cost_{resource}"], player.cost[f"cost_{resource}"])
+
+
+class AdministrativeLegalityTests(unittest.TestCase):
+    """Execution owns the coring rules, so no client can skip them."""
+
+    def setUp(self):
+        self.context = BackendState()
+        self.context.world.nation_data["A"] = {"materials": 0, "manpower": 10 ** 6, "fuel": 0, "research": {}}
+        for number, neighbors, cores in ((1, [2], ["A"]), (2, [1], []), (3, [], [])):
+            province = {"id": number, "json_key": str(number), "owner": "A", "cores": cores, "neighbors": neighbors,
+                        "units": [], "building_queue": [], "unit_queue": [], "buildings": []}
+            self.context.world.map_data[str(number)] = province
+            self.context.world.id_to_province[number] = province
+        self.connected, self.isolated = (self.context.world.id_to_province[number] for number in (2, 3))
+
+    def prepare(self, province, order_type):
+        return actions.prepare_production(self.context, "A", province, "building_queue", {"order_type": order_type})
+
+    def test_coring_requires_a_connected_or_coastal_tile(self):
+        self.assertEqual(self.prepare(self.connected, "CORE").order["order_type"], "CORE")
+        with self.assertRaisesRegex(ValueError, "coast"):
+            self.prepare(self.isolated, "CORE")
+        self.isolated["is_coastal"] = True
+        self.assertEqual(self.prepare(self.isolated, "CORE").order["order_type"], "CORE")
+
+    def test_a_country_with_no_cores_can_core_anywhere(self):
+        self.context.world.id_to_province[1]["cores"] = []
+        self.assertEqual(self.prepare(self.isolated, "CORE").order["order_type"], "CORE")
+
+    def test_removing_cores_requires_a_garrison_and_a_connected_tile(self):
+        for province in (self.connected, self.isolated):
+            province["cores"] = ["B"]
+        with self.assertRaisesRegex(ValueError, "units"):
+            self.prepare(self.connected, "REMOVE_CORE")
+        self.connected["units"] = [{"owner": "B"}]
+        with self.assertRaisesRegex(ValueError, "units"):
+            self.prepare(self.connected, "REMOVE_CORE")
+        self.connected["units"] = [{"owner": "A"}]
+        self.assertEqual(self.prepare(self.connected, "REMOVE_CORE").order["order_type"], "REMOVE_CORE")
+        self.isolated["units"] = [{"owner": "A"}]
+        with self.assertRaisesRegex(ValueError, "coast"):
+            self.prepare(self.isolated, "REMOVE_CORE")
+
+    def test_realtime_rejects_an_illegal_order_and_keeps_an_accepted_one(self):
+        driver = MapRealtimeDriver(self.context)
+        before = copy.deepcopy((self.context.world.map_data, self.context.world.nation_data))
+        with self.assertRaisesRegex(RealtimeError, "coast"):
+            driver.validate_draft("A", [{"type": "province_queue", "province_id": 3, "queue": "building_queue",
+                                         "items": [{"order_type": "CORE"}]}])
+        self.assertEqual((self.context.world.map_data, self.context.world.nation_data), before)
+        # An order the server already accepted stays valid if the tile later loses its connection.
+        accepted = self.prepare(self.connected, "CORE").order
+        self.connected["building_queue"] = [accepted]
+        self.context.world.id_to_province[1]["cores"] = ["B"]
+        self.context.world.id_to_province[3]["cores"] = ["A"]
+        command = driver.validate_draft("A", [{"type": "province_queue", "province_id": 2, "queue": "building_queue",
+                                               "items": [copy.deepcopy(accepted)]}])[0]
+        self.assertEqual(command["items"], [accepted])
+        self.assertEqual(command["new_costs"], [])

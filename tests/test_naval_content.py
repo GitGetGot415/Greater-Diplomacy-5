@@ -8,7 +8,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from data import constants as c, migrations, queries
-from data.multiplayer.tournament.files import _validate_production_projection
+from data.multiplayer.tournament.v46_moves import _validate_production_projection
 from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError
 from data.state_access import BackendState
 from map_logic.actions import production_actions, unit_actions

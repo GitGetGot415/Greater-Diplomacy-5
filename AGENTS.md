@@ -59,12 +59,13 @@ AI means artificial intelligence. UI means user interface.
 | `data/state_access.py` | Explicit state access, map compatibility properties, and backend execution context. |
 | `map_logic/actions/production_actions.py` | Shared production validation, queue construction, charging, cancellation, and refunds. |
 | `map_logic/actions/unit_actions.py` | Shared unit-order preparation, execution, replacement, payment, and cancellation. |
-| `map_logic/actions/player_actions.py` | Shared multiplayer intent validation and application, plus the validated older projection adapter. |
+| `map_logic/actions/player_actions.py` | Shared multiplayer intent validation and application. |
 | `map_logic/diplomacy/action_definitions.py`, `map_logic/diplomacy/faction_records.py` | Diplomatic categories and availability; authoritative faction mutations and compatibility projections. |
 | `map_logic/diplomacy/diplomacy_lifecycle.py` | Request identity, channel writes, timing transitions, and response references. |
 | `data/json/` | Data libraries and AI response text used without an LLM. |
 | `data/map/save_map.py`, `data/map/load_map.py` | Saves, loads, defaults, and migration calls. |
 | `data/multiplayer/tournament/files.py` | Tournament files, player move export, host import, authentication, and filtering. |
+| `data/multiplayer/tournament/v46_moves.py` | Input adapter for released v46 move files. Remove it in v48. |
 | `data/multiplayer/realtime/session.py` | Real-time protocol, server commands, snapshots, and filtered client state. |
 | `map_logic/system32/` | Turns, movement, economy, research, and combat. |
 | `map_logic/diplomacy/` | Shared diplomacy rules, messages, effects, and state changes. |

@@ -44,7 +44,8 @@ class LayeringTests(unittest.TestCase):
     def test_data_does_not_import_ui_or_screens(self):
         """Dialog helpers once kept almost every module in one import cycle."""
         # Tournament file work draws a progress bar and clears name caches. It is not part of a cycle.
-        allowed = {os.path.join("multiplayer", "tournament", "files.py")}
+        allowed = {os.path.join("multiplayer", "tournament", "files.py"),
+                   os.path.join("multiplayer", "tournament", "v46_moves.py")}
         data_dir = os.path.dirname(PACKAGE_DIR)
         for root, _dirs, files in os.walk(data_dir):
             for filename in files:

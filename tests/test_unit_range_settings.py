@@ -11,7 +11,7 @@ import pygame
 
 from data import queries
 import data.constants as c
-from data.multiplayer.tournament import files as tournament_files
+from data.multiplayer.tournament import v46_moves
 from data.multiplayer.realtime.session import (
     MapRealtimeDriver,
     RealtimeConfig,
@@ -123,19 +123,19 @@ class UnitRangeRulesTests(unittest.TestCase):
         with self.assertRaises(RealtimeError):
             driver.validate_draft("A", [command])
         with self.assertRaises(ValueError):
-            tournament_files._validate_aircraft_orders(game, "A", payload, {})
+            v46_moves._validate_aircraft_orders(game, "A", payload, {})
         game.scenario_settings = {"unit_range_overrides": {"Fixture Wing": {"air_range_start": 100}}}
         queries.apply_unit_range_overrides(self.library, game.scenario_settings)
         canonical = queries.canonical_air_order(game, unit, base, order)
         self.assertIn(canonical, ai_movement.legal_air_candidates(game, unit, base))
         self.assertEqual(driver.validate_draft("A", [command])[0]["order"], canonical)
-        _live, drafts = tournament_files._validate_aircraft_orders(game, "A", payload, {})
+        _live, drafts = v46_moves._validate_aircraft_orders(game, "A", payload, {})
         self.assertEqual(drafts[0][1], canonical)
         for country in ("B",):
             with self.assertRaises(RealtimeError):
                 driver.validate_draft(country, [command])
             with self.assertRaises(ValueError):
-                tournament_files._validate_aircraft_orders(game, country, payload, {})
+                v46_moves._validate_aircraft_orders(game, country, payload, {})
         malformed = dict(command, order={"type": "AIR_ATTACK", "target_id": 999})
         with self.assertRaises(RealtimeError):
             driver.validate_draft("A", [malformed])

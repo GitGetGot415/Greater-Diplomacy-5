@@ -179,6 +179,10 @@ def province_can_be_cored(nation, province, id_to_province, has_any_core):
     return False
 
 
+def province_has_garrison(nation, province):
+    return any(unit.get("owner") == nation for unit in province.get("units", []))
+
+
 def get_core_cost(nation, map_data, scenario_settings=None):
     """Calculates the cost to core a territory dynamically."""
     core_count = sum(1 for p in map_data.values() if nation in p.get("cores", []))

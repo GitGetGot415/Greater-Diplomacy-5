@@ -329,13 +329,12 @@ class Production_Screen(GameState):
         # there's nothing left to add or strip -- skip this row completely.
         if queries.is_administrative_action_enabled("REMOVE_CORE", settings):
             foreign_cores = [core for core in province.get("cores", []) if core != owner]
-            has_unit = any(u.get("owner") == owner for u in province.get("units", []))
 
             if any(q.get("order_type") == "REMOVE_CORE" for q in building_queue):
                 color, text, callback = "grey", "Removing Cores...", _no_action
             elif not foreign_cores:
                 color, text, callback = "grey", "No Foreign Cores", _no_action
-            elif not has_unit:
+            elif not queries.province_has_garrison(owner, province):
                 color, text, callback = "grey", "Needs Garrison", _no_action
             elif not can_core:
                 color, text, callback = "grey", "Cannot Remove", _no_action

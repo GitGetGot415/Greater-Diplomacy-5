@@ -108,7 +108,8 @@ Read the `data/queries/__init__.py` docstring before you add a query that tests 
 
 Modules in `data/` do not import `ui/` or `screens/`.
 Put code that opens a dialog or a screen in `ui/` or `screens/`.
-`data/multiplayer/tournament/files.py` is the one exception. It draws a progress bar and clears name caches.
+`data/multiplayer/tournament/files.py` is an exception. It draws a progress bar and clears name caches.
+`data/multiplayer/tournament/v46_moves.py` is a temporary exception. It clears name caches until its removal in v48.
 `tests/test_queries_package.py` checks this rule.
 
 Read [AGENTS.md, Imports](../AGENTS.md#imports) for the import policy.

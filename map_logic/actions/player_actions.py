@@ -816,57 +816,6 @@ class PlayerActions:
         self._validate_queue_budget(country_id, refreshed)
         return refreshed
 
-    def apply_legacy_unit_projection(self, country_id, provs, live_aircraft, aircraft_orders, *, replace_units):
-        """Apply validated older snapshots after the tournament host completes review.
-
-        This input adapter preserves approved stats and queue overrides.
-        Current player intents cannot reach this method.
-        """
-        world_state = self.world
-        # ``unit_snapshot`` was added after the original .gd5move format.
-        # Preserve old files' behavior, but make every newly-created move
-        # replace even an empty army so disbands and volunteer offers survive.
-        apply_unit_snapshot = replace_units
-        if apply_unit_snapshot:
-            for target_prov in world_state.map_data.values():
-                target_prov["units"] = [u for u in target_prov.get("units", [])
-                                        if u.get("owner") != country_id or u.get("unit_id") in live_aircraft]
-            
-            # Create a lookup for json_key -> tuple key
-            json_key_map = {v.get("json_key"): k for k, v in world_state.map_data.items()}
-                
-            for prov_key, updates in provs.items():
-                real_key = json_key_map.get(prov_key)
-                if real_key not in world_state.map_data:
-                    continue
-                target_prov = world_state.map_data[real_key]
-                
-                if "building_queue" in updates:
-                    target_prov["building_queue"] = updates["building_queue"]
-                if "unit_queue" in updates:
-                    target_prov["unit_queue"] = updates["unit_queue"]
-                    
-                if "units" in updates:
-                    if "units" not in target_prov:
-                        target_prov["units"] = []
-                    target_prov["units"].extend(u for u in updates["units"] if isinstance(u, dict)
-                        and u.get("owner") == country_id and u.get("unit_id") not in live_aircraft
-                        and not queries.is_air_unit(u, context=self.map_ref) and not queries.is_air_transport(u, context=self.map_ref)
-                        and not (isinstance(u.get("order"), dict)
-                                 and isinstance(u["order"].get("type"), str)
-                                 and u["order"].get("type") in queries.AIR_ORDER_TYPES))
-
-        for unit, order, name in aircraft_orders:
-            uid = unit["unit_id"]
-            current = next(u for p in world_state.map_data.values()
-                           for u in queries.units_with_air_cargo(p.get("units", []))
-                           if u.get("unit_id") == uid)
-            current["order"] = order or {"type": "MOVE", "path": []}
-            if name:
-                current["custom_name"] = name
-            
-
-
 def collect_map_commands(map_ref, country_id: str) -> list[dict[str, Any]]:
     """Serialize supported local order controls into server commands.
 

@@ -98,14 +98,22 @@ def prepare_production(context, country_id, province, queue, intent, *,
     if order_type in queries.ADMINISTRATIVE_ACTIONS:
         if not queries.is_administrative_action_enabled(order_type, world.scenario_settings):
             raise ValueError("That administrative action is disabled.")
+        can_reach = queries.province_can_be_cored(country_id, province, world.id_to_province,
+                                                  queries.nation_has_any_core(country_id, world.map_data))
         if order_type == "CORE":
             if country_id in province.get("cores", []):
                 raise ValueError("That territory is already cored.")
+            if not can_reach:
+                raise ValueError("That territory must touch the coast or one of your cores.")
             cost = queries.get_core_cost(country_id, world.map_data, world.scenario_settings)
             name = "Core Territory"
         else:
             if not any(core != country_id for core in province.get("cores", [])):
                 raise ValueError("That territory has no foreign cores to remove.")
+            if not queries.province_has_garrison(country_id, province):
+                raise ValueError("Removing cores requires your units in that territory.")
+            if not can_reach:
+                raise ValueError("That territory must touch the coast or one of your cores.")
             cost = queries.get_remove_core_cost(country_id, world.map_data, world.scenario_settings)
             name = "Remove Cores"
         group = "administration"

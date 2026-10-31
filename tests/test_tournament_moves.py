@@ -19,6 +19,7 @@ from tests.research_fixtures import research_lock_cases
 from data import queries
 from ui.dialogs import pickers
 from data.multiplayer.tournament import files as tournament_files
+from map_logic.actions import production_actions
 
 
 class Time:
@@ -196,6 +197,45 @@ class TournamentMoveTests(unittest.TestCase):
                 else:
                     self.assertEqual((host.nation_data, host.map_data), before)
                     self.assertFalse(result["rejections"][0]["overridable"])
+
+    def coring_host(self):
+        host = Host()
+        host.nation_data["Leader"]["manpower"] = 10 ** 6
+        host.map_data = {str(number): {"id": number, "json_key": f"P{number}", "owner": "Leader",
+                                       "cores": cores, "neighbors": neighbors, "units": [],
+                                       "building_queue": [], "unit_queue": []}
+                         for number, neighbors, cores in ((1, [2], ["Leader"]), (2, [1], []), (3, [], []))}
+        host.id_to_province = {province["id"]: province for province in host.map_data.values()}
+        return host
+
+    def test_both_move_formats_enforce_the_coring_rule(self):
+        def intents(host, province_id):
+            return {"player_intents": [{"type": "province_queue", "province_id": province_id,
+                                        "queue": "building_queue", "items": [{"order_type": "CORE"}]}],
+                    "game_version": c.GAME_VERSION, "tournament_session": host.multiplayer_session_key,
+                    "tournament_turn": host.time_manager.total_turns}
+
+        def snapshot(host, province_id):
+            order = production_actions.prepare_production(
+                host, "Leader", host.id_to_province[2], "building_queue", {"order_type": "CORE"}).order
+            return self.player_data("Leader", host, provinces={f"P{province_id}": {"building_queue": [order]}})
+
+        for move_format in (intents, snapshot):
+            for province_id, legal in ((2, True), (3, False)):
+                with self.subTest(move_format=move_format.__name__, province_id=province_id), \
+                        tempfile.TemporaryDirectory() as directory:
+                    host = self.coring_host()
+                    before = copy.deepcopy(host.map_data)
+                    path = self.write_move(directory, "core.gd5move", "Leader", move_format(host, province_id))
+                    result = self.import_moves(host, [path])
+                    self.assertEqual(result["loaded"], int(legal), result["rejections"])
+                    queue = host.id_to_province[province_id]["building_queue"]
+                    if legal:
+                        self.assertEqual([item["order_type"] for item in queue], ["CORE"])
+                    else:
+                        self.assertIn("coast", result["rejections"][0]["reason"])
+                        self.assertFalse(result["rejections"][0]["overridable"])
+                        self.assertEqual(host.map_data, before)
 
     def test_response_references_are_checked_before_country_merge(self):
         from map_logic.diplomacy import diplomacy_messages

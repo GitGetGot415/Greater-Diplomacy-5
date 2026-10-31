@@ -5,7 +5,7 @@ from unittest.mock import Mock, patch
 
 from data import queries
 import data.constants as c
-from data.multiplayer.tournament import files as tournament_files
+from data.multiplayer.tournament import v46_moves
 from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError
 from map_logic.ai import ai_movement, ai_unit_eval
 from map_logic.system32 import air_processor, combat_rules, movement_processor
@@ -332,7 +332,7 @@ class AirMoveSafetyTests(unittest.TestCase):
                 command = {"type": "unit_order", "province_id": self.base["id"],
                     "unit_index": 0, "unit_id": self.plane["unit_id"], "order": draft}
                 self.assertEqual(MapRealtimeDriver(self.game).validate_draft("A", [command])[0]["order"], draft)
-                _, drafts = tournament_files._validate_aircraft_orders(self.game, "A",
+                _, drafts = v46_moves._validate_aircraft_orders(self.game, "A",
                     {"aircraft_orders": [{"unit_id": self.plane["unit_id"], "order": draft}]}, {})
                 self.assertEqual(drafts[0][1], draft)
                 self.assertEqual(self.plane["order"], patrol)
@@ -347,7 +347,7 @@ class AirMoveSafetyTests(unittest.TestCase):
         command = {"type": "unit_order", "province_id": self.base["id"],
             "unit_index": 0, "unit_id": self.plane["unit_id"], "order": draft}
         self.assertEqual(MapRealtimeDriver(self.game).validate_draft("A", [command])[0]["order"], draft)
-        _, drafts = tournament_files._validate_aircraft_orders(self.game, "A",
+        _, drafts = v46_moves._validate_aircraft_orders(self.game, "A",
             {"aircraft_orders": [{"unit_id": self.plane["unit_id"], "order": draft}]}, {})
         self.assertEqual(drafts[0][1], draft)
         self.assertEqual(self.plane["order"], original)
@@ -383,7 +383,7 @@ class AirMoveSafetyTests(unittest.TestCase):
             command = {"type": "unit_order", "province_id": 1, "unit_index": 0,
                        "unit_id": self.plane["unit_id"], "order": order}
             real = MapRealtimeDriver(self.game).validate_draft("A", [command])[0]["order"]
-            _, drafts = tournament_files._validate_aircraft_orders(self.game, "A",
+            _, drafts = v46_moves._validate_aircraft_orders(self.game, "A",
                 {"aircraft_orders": [{"unit_id": self.plane["unit_id"], "order": order}]}, {})
             self.assertEqual(real, drafts[0][1])
             return real
@@ -402,7 +402,7 @@ class AirMoveSafetyTests(unittest.TestCase):
                 with self.assertRaises(RealtimeError):
                     MapRealtimeDriver(self.game).validate_draft("A", [command])
                 with self.assertRaises(ValueError):
-                    tournament_files._validate_aircraft_orders(self.game, "A",
+                    v46_moves._validate_aircraft_orders(self.game, "A",
                         {"aircraft_orders": [{"unit_id": self.plane["unit_id"], "order": order}]}, {})
 
     def test_ai_relocates_before_striking_when_ground_units_can_reach_base(self):

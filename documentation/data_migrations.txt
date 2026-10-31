@@ -214,12 +214,13 @@ Cancellation refunds become available before the combined payment is collected.
 Older compatibility projections can accompany intents. Conflicting unit, cargo, production, research, army, or appearance choices are rejected.
 When player_intents is present, only validated intents establish game state.
 v46 moves have no player_intents. After conversion, they use the partial-snapshot input adapter and host review.
-legacy_player_country converts their country fields. The shared player service applies their validated unit projection.
+data/multiplayer/tournament/v46_moves.py owns this adapter. legacy_player_country converts their country fields.
 Explicit older stat, timing, and refund differences still require the existing host review.
 Review acceptance re-reads and revalidates the file. Current real-time clients cannot request these older projection overrides.
 Older snapshots discard invalid diplomatic drafts while preserving unrelated choices, as their earlier adapter did.
 Current complete intent drafts reject invalid actions instead.
-Remove the partial-snapshot adapter when v46 moves stop converting, in v48.
+Remove v46_moves.py and its branch in load_move_files when v46 moves stop converting, in v48.
+The older projections in export_move_file and the conflict checks in tournament_player_intents can go at the same time.
 
 These adapters retain session checks, turn checks, duplicate detection, submission replacement, and older units without IDs.
 Tournament encryption, fog policy, file downloads, and storage synchronization remain with the tournament input and output module.

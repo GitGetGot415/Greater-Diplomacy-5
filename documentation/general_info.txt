@@ -201,6 +201,10 @@ map_logic/actions/player_actions.py validates and applies player intents without
 An intent contains a player's choice. It cannot establish resources, ownership, unit statistics, or faction membership.
 Current tournament exports and real-time drafts use these domain commands.
 Older tournament snapshots retain an input-only application path for supported host-reviewed differences.
+map_logic/actions/production_actions.py enforces coring rules for players, AI, tournament moves, and real-time drafts.
+A new Core Territory order needs a coastal tile or a neighboring core. A country with no cores can start on any tile.
+A new Remove Cores order needs the same connection and the country's own unit on the tile.
+An order that the game already accepted keeps its progress if these conditions later change.
 See documentation/data_migrations.txt for precedence and compatibility limits.
 
 map_logic/diplomacy/action_definitions.py owns diplomatic categories, availability checks, and existing execution-phase declarations.

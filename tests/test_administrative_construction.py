@@ -6,7 +6,7 @@ from unittest import mock
 
 from data import queries
 import data.constants as c
-from data.multiplayer.tournament.files import _validate_administrative_orders
+from data.multiplayer.tournament.v46_moves import _validate_administrative_orders
 from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError
 from map_logic.ai.ai_construction import _apply_coring_priority
 from tests.stub_map_screen import map_double, sample_map_screen
@@ -62,6 +62,7 @@ class AdministrativeConstructionTests(unittest.TestCase):
 
     def test_realtime_rebuilds_timers_and_rejects_disabled_actions(self):
         driver = MapRealtimeDriver(self.world)
+        self.province["units"] = [{"owner": "A"}]
         for order, (name, constant) in queries.ADMINISTRATIVE_ACTIONS.items():
             duration = getattr(c, constant) + 3
             self.settings["administrative_turn_overrides"][name] = duration
