@@ -21,6 +21,14 @@ _province_menu_background_cache = {}
 # pays the generation cost once
 _checkerboard_cache = {}
 
+
+@lru_cache(maxsize=32)
+def scaled_checkerboard_tile(tile, size):
+    """Cache checkerboard tiles at the camera's zoom and tilt scale."""
+    if size == tile.get_size():
+        return tile
+    return pygame.transform.scale(tile, size)
+
 # ==========================================
 # UNIFIED UI HELPERS
 # ==========================================

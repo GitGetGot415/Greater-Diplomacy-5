@@ -86,7 +86,7 @@ It uses the same scrolling speed and direction as other screens. The gradient st
 Edit MENU_CHECKERBOARD_OPACITY in screens/menus/menu.py to change its visibility.
 MENU_CHECKERBOARD_COLOR sets the checkerboard color independently of MENU_SKY_START_COLOR.
 For either opacity setting, use 0 to hide the pattern or 255 for full opacity.
-The overlay uses the existing checkerboard tile. Other screens keep their existing checkerboards.
+The overlay uses the existing checkerboard tile. Other menus keep their existing checkerboards.
 MENU_WATERLINE_RATIO in screens/menus/menu.py sets the horizon height. MENU_SKY_BANDS sets the number of sky bands.
 Set MENU_SKY_STEPPED to True for shade bands with square checkerboard transitions, as used by buttons and portraits.
 Set it to False for a smooth gradient.
@@ -98,6 +98,15 @@ Dithering options apply only to stepped gradients. Restart after editing the sky
 MENU_SKY_BANDS applies only when MENU_SKY_STEPPED is True.
 The menu caches backgrounds by viewport size and sky and water endpoint colors. Restart after editing these values.
 Other menus retain their existing backgrounds.
+
+The map shows the menu sky gradient and moving checkerboard above the horizon when camera tilt exposes the sky.
+The sky pattern starts at the map horizon. It moves with the horizon when you pan or tilt the camera.
+
+The Checkerboard Water setting shows the sky pattern mirrored across that horizon.
+The water checkerboard is opaque and blue. Its grid has no slant.
+Its color changes with zoom. Camera tilt controls its compression without the menu's additional water height scale.
+At 0% camera tilt, the squares have no vertical compression. At 100%, they have full vertical compression.
+The water pattern follows map panning, zoom, and tilt. Its vertical scale and movement compress with the map.
 
 Set MENU_SIGN_GRADIENT_ENABLED in screens/menus/menu.py to shade the sign.
 Set MENU_SIGN_GRADIENT_STRENGTH to adjust the sign shading.

@@ -60,9 +60,9 @@ SETTINGS_INFO_ROWS = (
     (SETTINGS_FULLSCREEN_Y, "Toggle Fullscreen",
      "Switches the game window between fullscreen and windowed mode."),
     (SETTINGS_CHECKERBOARD_WATER_Y, "Checkerboard Water",
-     "Whether the map's ocean uses a slowly scrolling checkerboard pattern "
-     "instead of a flat fill color. Off by default since it can read as "
-     "unusual water for players who don't expect it."),
+     "Shows an opaque blue checkerboard on the ocean, aligned with the sky pattern at the horizon. "
+     "The water pattern follows "
+     "camera movement, zoom, and tilt. Off by default."),
     (SETTINGS_FPS_TOGGLE_Y, "Show FPS",
      "Displays a live frames-per-second counter on screen."),
     (SETTINGS_SHOW_UNCLAIMED_Y, "Show Unassigned",

@@ -292,10 +292,8 @@ CREDITS_DATA = [
 
 SHOW_FPS = False
 
-# Whether the Map screen's ocean uses the scrolling checkerboard pattern
-# (see GameState.draw_checkerboard_background) instead of a flat fill. Off by
-# default since it can visually read as unusual water for players who don't
-# expect it.
+# Show the sky checkerboard's reflection on the ocean. The pattern follows
+# the map camera's position, zoom, and tilt. Disabled by default.
 CHECKERBOARD_WATER = False
 
 # How clicking a tile and switching the bottom-left view mode (Resources/

@@ -519,7 +519,8 @@ class GameState:
             self.draw_checkerboard_background(surface, self.bg_color)
 
     def draw_checkerboard_background(self, surface, base_color, *, tile=None, reflection_y=None,
-                                     reflection_scale=1.0, reflection_shear=0.0):
+                                     reflection_scale=1.0, reflection_shear=0.0, scroll_y_scale=1.0,
+                                     scroll_x_scale=1.0, origin=(0, 0)):
         # Draw the tile in a grid slightly larger than the screen, offset by a
         # time-based amount that grows down and to the right. Since the tile
         # is seamless, wrapping the offset back to 0 every tile-length makes
@@ -529,31 +530,36 @@ class GameState:
         tile_w, tile_h = tile.get_size()
 
         elapsed = pygame.time.get_ticks() / 1000.0
-        offset_x = int((elapsed * c.CHECKERBOARD_SCROLL_SPEED) % tile_w)
-        offset_y = int((elapsed * c.CHECKERBOARD_SCROLL_SPEED) % tile_h)
+        offset_x = int((elapsed * c.CHECKERBOARD_SCROLL_SPEED * scroll_x_scale) % tile_w)
+        offset_y = int((elapsed * c.CHECKERBOARD_SCROLL_SPEED * scroll_y_scale) % tile_h)
 
-        start_x = -offset_x - tile_w
-        start_y = -offset_y - tile_h
+        start_x = round(origin[0] - offset_x) % tile_w - tile_w
+        start_y = round(origin[1] - offset_y) % tile_h - tile_h
         if reflection_y is not None:
             # Mirror and scale the original pattern about the waterline, including its movement.
             source_height = tile_h / reflection_scale
-            source_offset = int((elapsed * c.CHECKERBOARD_SCROLL_SPEED) % source_height)
-            origin = (1.0 + reflection_scale) * reflection_y + reflection_scale * source_offset
-            start_y = round(origin) % tile_h - tile_h
+            source_offset = int((elapsed * c.CHECKERBOARD_SCROLL_SPEED * scroll_y_scale) % source_height)
+            reflected_origin = reflection_y + reflection_scale * (reflection_y - origin[1] + source_offset)
+            start_y = round(reflected_origin) % tile_h - tile_h
             if reflection_shear:
-                water_height = surface.get_height() - reflection_y
+                water_top = max(0, reflection_y, surface.get_clip().top)
+                water_height = surface.get_clip().bottom - water_top
                 if water_height <= 0:
                     return
                 pattern = ui_bars.get_sheared_checkerboard(
                     tile, (surface.get_width(), water_height), reflection_shear)
-                source_y = (reflection_y - start_y) % tile_h
+                source_y = (water_top - start_y) % tile_h
                 # Cancel the cached row offset at the horizon to keep the reflection aligned.
-                source_x = (offset_x + round(reflection_shear * source_y)) % tile_w
-                surface.blit(pattern, (0, reflection_y),
+                source_x = (-start_x - round(reflection_shear * (water_top - reflection_y))
+                            + round(reflection_shear * source_y)) % tile_w
+                surface.blit(pattern, (0, water_top),
                              (source_x, source_y, surface.get_width(), water_height))
                 return
-        for y in range(start_y, surface.get_height() + tile_h, tile_h):
-            for x in range(start_x, surface.get_width() + tile_w, tile_w):
+        clip = surface.get_clip()
+        start_y += ((clip.top - start_y) // tile_h) * tile_h
+        start_x += ((clip.left - start_x) // tile_w) * tile_w
+        for y in range(start_y, clip.bottom, tile_h):
+            for x in range(start_x, clip.right, tile_w):
                 surface.blit(tile, (x, y))
 
     def draw(self, surface):

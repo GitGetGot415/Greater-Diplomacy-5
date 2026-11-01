@@ -2637,15 +2637,10 @@ class Map(StateAccess, GameState):
         # Recomputed here (not just in update()) so callers that draw this
         # background without running Map_Screen.update() first -- Orders_Screen,
         # MapOverlayScreen (claims/peace/trade/puppets) -- still get a live,
-        # zoom-responsive color instead of a stale one. The generic checkerboard
-        # fallback would checkerboard the ocean itself, so gate that behind the
-        # opt-in Settings toggle; default is a flat fill so gameplay water looks
-        # like water unless the player asks otherwise.
+        # zoom-responsive color instead of a stale one. The shared renderer
+        # anchors the sky and optional water reflection to the map camera.
         self.bg_color = camera_handler.get_dynamic_ocean_color(self.camera, self.min_zoom)
-        if c.CHECKERBOARD_WATER:
-            super().draw_background(surface)
-        else:
-            surface.fill(self.bg_color)
+        map_renderer.draw_map_background(self, surface, self.bg_color)
 
     def additional_draw(self, surface):
         map_renderer.draw_map_screen(self, surface)
