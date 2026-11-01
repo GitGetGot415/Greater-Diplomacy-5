@@ -39,9 +39,9 @@ This effect uses the SFX volume, pitch, and per-file volume multiplier on deskto
 MAP MODE AND VIEW BUTTON SOUNDS
 -------------------------------
 
-Resources, Blank, Units, and Economy buttons play assets/sounds/Select Mode.wav.
+Resources, Blank, Units, and Economy buttons play assets/sounds/Select View.wav.
 The shared mode buttons on Orders, Production, and Battle use the same sound.
-Terrain, Political, Relations, Cores, and Factions buttons play assets/sounds/Select View.wav.
+Terrain, Political, Relations, Cores, and Factions buttons play assets/sounds/Select Mode.wav.
 These effects use the SFX volume, pitch, and per-file volume multiplier on desktop and web builds.
 
 CLASSIC UNIT ART

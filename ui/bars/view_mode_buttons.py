@@ -32,7 +32,7 @@ def build(navigate):
     return [
         Button(START_X + STEP_X * i, ROW_Y, "small_square", "red", _LABELS[mode],
                (lambda m=mode: navigate(m)), image=icons.get(_ICONS[mode]), show_text=False,
-               sound_kind="select_mode")
+               sound_kind="select_view")
         for i, mode in enumerate(MODES)
     ]
 
