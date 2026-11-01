@@ -1,6 +1,6 @@
 """Read released v46 move files, which have partial snapshots and no player intents.
 
-Remove this module when v46 moves stop converting, in v48.
+Keep this module while v46 moves convert. Every later release converts them.
 See documentation/data_migrations.txt, CURRENT AND OLDER TOURNAMENT CHOICES.
 Current moves use the shared commands in map_logic/actions/player_actions.py.
 """

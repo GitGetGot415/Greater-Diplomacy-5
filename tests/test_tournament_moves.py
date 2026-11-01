@@ -665,8 +665,8 @@ class TournamentMoveTests(unittest.TestCase):
     def test_moves_that_no_step_converts_are_refused_with_an_update_message(self):
         from data import migrations
         newer = {"game_version": f"v{migrations.CURRENT_VERSION + 1}"}
-        too_old = {"game_version": f"v{migrations.CURRENT_VERSION - 2}"}
-        for name, version in (("newer", newer), ("too old", too_old), ("before v46", None)):
+        too_old = {"game_version": f"v{migrations.LAST_UNSTAMPED_VERSION - 1}"}
+        for name, version in (("newer", newer), ("stamped before v46", too_old), ("before v46", None)):
             with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
                 host = Host()
                 if version is None:

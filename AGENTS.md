@@ -74,7 +74,7 @@ AI means artificial intelligence. UI means user interface.
 | `data/json/` | Data libraries and AI response text used without an LLM. |
 | `data/map/save_map.py`, `data/map/load_map.py` | Saves, loads, defaults, and migration calls. |
 | `data/multiplayer/tournament/files.py` | Tournament files, player move export, host import, authentication, and filtering. |
-| `data/multiplayer/tournament/v46_moves.py` | Input adapter for released v46 move files. Remove it in v48. |
+| `data/multiplayer/tournament/v46_moves.py` | Input adapter for released v46 move files. Keep it while v46 moves convert. |
 | `data/multiplayer/realtime/session.py` | Real-time protocol, server commands, snapshots, and filtered client state. |
 | `map_logic/system32/` | Turns, movement, economy, research, and combat. |
 | `map_logic/diplomacy/` | Shared diplomacy rules, messages, effects, and state changes. |
@@ -252,7 +252,7 @@ Keep tuning data in its source files:
 - Preserve unknown or older valid data where possible.
   Migration must produce predictable results and be safe to run once on load.
 - A save step also converts every history snapshot. A selected history turn becomes live game state.
-- Tournament move steps convert moves from the previous release only.
+- Tournament move steps convert moves from v46 and every later release. A move from an older release runs every newer step.
   The host must approve each converted move. The converted move then passes all normal validation.
 - Load repairs are not version steps. They run on every load and fix invalid current data.
   Examples are unit identities, army rosters, faction leaders, and units or buildings missing from the active library.

@@ -79,6 +79,21 @@ class GameVersionTests(unittest.TestCase):
             migrations.upgrade_save(old, {}, {})
             self.assertEqual(calls, ["next release"])
 
+    def test_moves_from_every_older_release_since_v46_run_each_newer_step_in_order(self):
+        calls = []
+        steps = tuple((target, lambda move, target=target: calls.append(target)) for target in (47, 48, 49))
+        with mock.patch.object(migrations, "MOVE_STEPS", steps),                 mock.patch.object(migrations, "CURRENT_VERSION", 49):
+            for stamp, expected in ((None, [47, 48, 49]), ("v47", [48, 49]), ("v48", [49]), ("v49", [])):
+                with self.subTest(stamp=stamp):
+                    calls.clear()
+                    move = {} if stamp is None else {"game_version": stamp}
+                    self.assertEqual(migrations.upgrade_move(move),
+                                     migrations.LAST_UNSTAMPED_VERSION if stamp is None
+                                     else migrations.version_number(stamp))
+                    self.assertEqual(calls, expected)
+            with self.assertRaisesRegex(ValueError, "older than v46"):
+                migrations.upgrade_move({"game_version": f"v{migrations.LAST_UNSTAMPED_VERSION - 1}"})
+
     def test_the_next_release_step_is_safe_to_repeat_on_this_release(self):
         saved = {"nation_data": {"A": {"allied_with": ["B"], "research_queue": [{"tech_name": "a"}]}}}
         upgraded(saved)

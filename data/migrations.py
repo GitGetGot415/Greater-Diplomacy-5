@@ -69,26 +69,28 @@ def upgrade_save(save_meta, map_data, history):
 
 
 #: Move files gained game_version after v46. An unstamped move is from v46 or earlier.
+#: v46 is also the oldest move version that converts, because older moves lack the v46 sections.
 LAST_UNSTAMPED_VERSION = 46
 
 
 def move_version(player_data):
     """Return a move's version number. Refuse a move that no step can convert.
 
-    Moves last one turn, so only moves from the previous release convert.
+    Moves from v46 and every later release convert. MOVE_STEPS run in order.
     """
     version = (check_version(player_data["game_version"], "This move")
                if "game_version" in player_data else LAST_UNSTAMPED_VERSION)
-    if version < CURRENT_VERSION - 1:
+    if version < LAST_UNSTAMPED_VERSION:
         raise ValueError(
-            f"This move was made with an older game version than v{CURRENT_VERSION - 1}. "
+            f"This move was made with a game version older than v{LAST_UNSTAMPED_VERSION}. "
             f"The player must update to {c.GAME_VERSION} and export the move again.")
     return version
 
 
 def upgrade_move(player_data):
-    """Convert a move file from the previous release in place.
+    """Convert a move file from any supported older release in place.
 
+    A move from several releases ago runs every step newer than its version.
     The host approves each converted move. The move then passes normal validation.
     """
     version = move_version(player_data)

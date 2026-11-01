@@ -199,19 +199,21 @@ No-context library access reads defaults. Active gameplay passes its explicit wo
 TOURNAMENT MOVE VERSIONS
 ------------------------
 
-A move lasts one turn. Only moves from the previous release convert.
-A host that runs v48 converts v47 moves and refuses v46 moves.
+Moves from v46 and every later release convert. v46 is the oldest supported move.
+A host that runs v48 converts v46 and v47 moves.
+A move from an older release runs every step in MOVE_STEPS that is newer than its version, in order.
 A move from the host's own version needs no conversion and no host question.
 
-1. The host loads a move from the previous release.
+1. The host loads a move from an older release.
 2. The import rejects the move with a "version" override. The rejection does not change host state.
 3. The host chooses Convert or Reject.
 4. After Convert, the import runs MOVE_STEPS on the move.
 5. The converted move then passes every normal check, including session, turn, and permission checks.
 6. A converted move with statistic differences then asks for the "stats" override.
 
-A move from a newer version, or from before the previous release, is refused.
+A move from a newer version, or from before v46, is refused.
 It cannot be overridden. The rejection tells the player to update and export again.
+Keep every move step. A step is only removed when the user asks to drop support for that release.
 Every v46 move contains nation_data, provinces, aircraft_orders, and release_subjects.
 A move without them is from before v46, and conversion refuses it.
 
@@ -232,8 +234,8 @@ Explicit older stat, timing, and refund differences still require the existing h
 Review acceptance re-reads and revalidates the file. Current real-time clients cannot request these older projection overrides.
 Older snapshots discard invalid diplomatic drafts while preserving unrelated choices, as their earlier adapter did.
 Current complete intent drafts reject invalid actions instead.
-Remove v46_moves.py and its branch in load_move_files when v46 moves stop converting, in v48.
-The older projections in export_move_file and the conflict checks in tournament_player_intents can go at the same time.
+Keep v46_moves.py and its branch in load_move_files while v46 moves convert.
+Remove them, the older projections in export_move_file, and the conflict checks in tournament_player_intents only when the user asks to drop v46 moves.
 
 These adapters retain session checks, turn checks, duplicate detection, submission replacement, and older units without IDs.
 Tournament encryption, fog policy, file downloads, and storage synchronization remain with the tournament input and output module.
