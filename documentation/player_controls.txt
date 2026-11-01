@@ -101,6 +101,7 @@ Other menus retain their existing backgrounds.
 
 The map shows the menu sky gradient and moving checkerboard above the horizon when camera tilt exposes the sky.
 The sky pattern starts at the map horizon. It moves with the horizon when you pan or tilt the camera.
+Before camera zoom and tilt, map checkerboard squares use half the menu pattern's width and height.
 
 The Checkerboard Water setting shows the sky pattern mirrored across that horizon.
 The water checkerboard is opaque and blue. Its grid has no slant.

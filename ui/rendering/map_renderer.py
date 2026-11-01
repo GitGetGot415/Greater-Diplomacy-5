@@ -22,6 +22,7 @@ from ui.panels import sidebar_info
 # every frame.  Keep a small working set for the settled camera positions; the
 # key deliberately includes every camera-derived input to a transform.
 _VIEWPORT_SCALE_CACHE_LIMIT = 16
+MAP_CHECKERBOARD_SCALE = 0.5
 
 
 def _scaled_map_region(map_screen, source, source_rect, destination_size):
@@ -57,6 +58,7 @@ def draw_map_background(map_screen, surface, ocean_color):
     """Anchor the sky and its water reflection to the camera's map horizon."""
     surface.fill(ocean_color)
     camera = map_screen.camera
+    checkerboard_scale = camera.zoom * MAP_CHECKERBOARD_SCALE
     horizon = map_screen.top_ui_height - camera.pos.y * camera.zoom * camera.tilt_factor
     camera_x = camera.pos.x
     if map_screen.loop_map and map_screen.map_w:
@@ -79,7 +81,7 @@ def draw_map_background(map_screen, surface, ocean_color):
                 map_screen.draw_checkerboard_background(
                     surface, menu.MENU_CHECKERBOARD_COLOR, tile=overlay, origin=origin,
                     scroll_x_scale=camera.zoom, scroll_y_scale=camera.zoom,
-                    tile_scale=(camera.zoom, camera.zoom))
+                    tile_scale=(checkerboard_scale, checkerboard_scale))
 
         water_top = max(viewport.top, horizon)
         water_rect = pygame.Rect(0, water_top, viewport.width, max(0, viewport.bottom - water_top))
@@ -87,13 +89,13 @@ def draw_map_background(map_screen, surface, ocean_color):
         if c.CHECKERBOARD_WATER and surface.get_clip().height:
             water_base = ui_bars.get_checkerboard_tile(ocean_color)
             reflected = menu._menu_checkerboard_overlay(water_base, 255, True)
-            water_height = max(1.0, reflected.get_height() * camera.zoom * camera.tilt_factor)
-            reflection_scale = water_height / max(1.0, tile.get_height() * camera.zoom)
+            water_height = max(1.0, reflected.get_height() * checkerboard_scale * camera.tilt_factor)
+            reflection_scale = water_height / max(1.0, tile.get_height() * checkerboard_scale)
             map_screen.draw_checkerboard_background(
                 surface, ocean_color, tile=reflected, origin=origin,
                 reflection_y=horizon, reflection_scale=reflection_scale,
                 scroll_x_scale=camera.zoom, scroll_y_scale=camera.zoom,
-                tile_scale=(camera.zoom, camera.zoom * camera.tilt_factor))
+                tile_scale=(checkerboard_scale, checkerboard_scale * camera.tilt_factor))
     finally:
         surface.set_clip(old_clip)
 
