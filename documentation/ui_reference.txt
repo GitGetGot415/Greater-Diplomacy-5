@@ -36,6 +36,14 @@ UNIT FILTER BUTTON SOUNDS
 The bottom-left Naval, Land, Air, and All buttons play assets/sounds/Select Unit Filter.wav when clicked.
 This effect uses the SFX volume, pitch, and per-file volume multiplier on desktop and web builds.
 
+MAP MODE AND VIEW BUTTON SOUNDS
+-------------------------------
+
+Resources, Blank, Units, and Economy buttons play assets/sounds/Select Mode.wav.
+The shared mode buttons on Orders, Production, and Battle use the same sound.
+Terrain, Political, Relations, Cores, and Factions buttons play assets/sounds/Select View.wav.
+These effects use the SFX volume, pitch, and per-file volume multiplier on desktop and web builds.
+
 CLASSIC UNIT ART
 ---------------
 

@@ -31,7 +31,8 @@ def build(navigate):
     icons = ui_elements.UI_ICONS
     return [
         Button(START_X + STEP_X * i, ROW_Y, "small_square", "red", _LABELS[mode],
-               (lambda m=mode: navigate(m)), image=icons.get(_ICONS[mode]), show_text=False)
+               (lambda m=mode: navigate(m)), image=icons.get(_ICONS[mode]), show_text=False,
+               sound_kind="select_mode")
         for i, mode in enumerate(MODES)
     ]
 

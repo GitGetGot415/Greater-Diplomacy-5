@@ -199,7 +199,8 @@ def _build_view_buttons(map_screen):
     for column, (attr, label, layer, icon) in enumerate(map_layer_buttons):
         setattr(map_screen, attr, Button(
             VIEW_BTN_START_X + VIEW_BTN_STEP_X * column, VIEW_BTN_ROW2_Y, "small_square", "green", label,
-            lambda layer=layer: map_screen.set_map_layer(layer), image=icons.get(icon), show_text=False))
+            lambda layer=layer: map_screen.set_map_layer(layer), image=icons.get(icon), show_text=False,
+            sound_kind="select_view"))
 
     # In Preemptive navigation, clicking one of these while a tile is already
     # selected jumps straight to that mode's screen for it (Orders for Units,
@@ -215,7 +216,8 @@ def _build_view_buttons(map_screen):
     for column, (attr, label, mode, icon) in enumerate(view_mode_buttons):
         setattr(map_screen, attr, Button(
             VIEW_BTN_START_X + VIEW_BTN_STEP_X * column, VIEW_BTN_ROW1_Y, "small_square", "red", label,
-            lambda mode=mode: map_input.navigate_view_mode(map_screen, mode), image=icons.get(icon), show_text=False))
+            lambda mode=mode: map_input.navigate_view_mode(map_screen, mode), image=icons.get(icon), show_text=False,
+            sound_kind="select_mode"))
     map_screen.btn_toggle_names = Button(VIEW_BTN_START_X + VIEW_BTN_STEP_X * 4, VIEW_BTN_ROW1_Y, "small_square", "blue", "Names", map_screen.toggle_country_names, image=icons.get("names"), show_text=False)
 
     map_screen.unit_view_bar_rect = pygame.Rect(

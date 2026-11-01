@@ -32,6 +32,8 @@ MUSIC_UI_SOUND_PATHS = {
     "select_music": "assets/sounds/Select Music.wav",
     "skip_song": "assets/sounds/Skip Song.wav",
     "select_unit_filter": "assets/sounds/Select Unit Filter.wav",
+    "select_mode": "assets/sounds/Select Mode.wav",
+    "select_view": "assets/sounds/Select View.wav",
 }
 SOUND_VOLUMES_PATH = "assets/sounds/volumes.json"
 sound_volume_multipliers = {}
