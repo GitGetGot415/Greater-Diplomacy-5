@@ -129,7 +129,7 @@ class CharacterSelectScreen(ModalScreen):
 
     def refresh_ui(self):
         self.elements = [Button(self.panel_rect.x + 20, self.panel_rect.y + 20, "small", "red",
-                                "Cancel", self.exit_screen)]
+                                "Cancel", self.exit_screen, sound_kind="back")]
 
         tile_w, tile_h = c.SIZES["character_portrait_tile"]
         cols = self.COLUMNS

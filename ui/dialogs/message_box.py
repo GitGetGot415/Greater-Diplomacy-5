@@ -327,6 +327,7 @@ class _NavigationIntroPopup:
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if self.close_rect.collidepoint(event.pos):
+                ui_elements.play_ui_sound("back")
                 self.dismiss()
                 return True
             if self.prev_rect.collidepoint(event.pos):

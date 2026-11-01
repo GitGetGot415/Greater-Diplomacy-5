@@ -126,7 +126,7 @@ class _AirMissionSelectScreen(ModalScreen):
             self.elements.append(button)
         self.elements.append(self.button(self.panel_rect.x + self.OPTION_INSET,
             self.panel_rect.bottom - self.CANCEL_BOTTOM,
-            self.panel_rect.width - 2 * self.OPTION_INSET, "red", "Cancel", self.exit_screen))
+            self.panel_rect.width - 2 * self.OPTION_INSET, "red", "Cancel", self.exit_screen, sound_kind="back"))
 
     def select(self, mission, on_select):
         if mission not in self.enabled_missions:
@@ -1060,7 +1060,7 @@ class Orders_Screen(GameState):
 
         close_button = Button(self.panel_rect.right - 38, self.panel_rect.y + 7,
                               "tiny_square", "red", "X", self.exit_screen,
-                              font_preset="tiny")
+                              font_preset="tiny", sound_kind="back")
         self.elements = [*self.view_mode_buttons, close_button]
         self.action_buttons = []
         self.unit_row_icons = {}

@@ -1,5 +1,6 @@
 import pygame
 from ui.dialogs.base import _BaseModal, _back_key, open_modal
+from ui.widgets import ui_elements
 
 
 class _YesNoModal(_BaseModal):
@@ -36,6 +37,7 @@ class _YesNoModal(_BaseModal):
                 elif self.no_rect.collidepoint(event.pos):
                     self._finish(False)
                 elif self.back_rect is not None and self.back_rect.collidepoint(event.pos):
+                    ui_elements.play_ui_sound("back")
                     self._finish(None)
 
     def draw_content(self, surface):

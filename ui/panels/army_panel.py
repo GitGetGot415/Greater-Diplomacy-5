@@ -416,6 +416,7 @@ def _handle_editor_event(map_screen, event):
         return True
     close = pygame.Rect(rect.right - 30, rect.y + 10, 18, 18)
     if close.collidepoint(event.pos):
+        ui_elements.play_ui_sound("back")
         map_screen.army_editor_state = None
         map_screen.army_custom_symbol_state = None
         return True

@@ -70,7 +70,7 @@ class ListSelectScreen(ModalScreen):
 
     def refresh_ui(self):
         self.elements = [Button(self.panel_rect.x + 20, self.panel_rect.y + 20, "small", "red",
-                                "Cancel", self.exit_screen)]
+                                "Cancel", self.exit_screen, sound_kind="back")]
 
         self.visible_items = self._filtered_items()
 

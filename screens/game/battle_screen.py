@@ -394,7 +394,7 @@ class Battle_Screen(ModalScreen):
         if self.embedded:
             self.elements.append(
                 self.button(p.right - self.PAD - 130, btn_y, 130,
-                            "red", "Close Battle", self.exit_screen))
+                            "red", "Close Battle", self.exit_screen, sound_kind="back"))
         else:
             self.elements.append(
                 self.button(p.x + self.PAD, btn_y, 150, "blue", "Unit Orders", self.go_to_orders))
@@ -404,7 +404,7 @@ class Battle_Screen(ModalScreen):
                     self.button(p.x + self.PAD + 160, btn_y, 150, "orange", "Clear Lane Orders",
                                 self.clear_orders))
             self.elements.append(
-                self.button(p.right - self.PAD - 110, btn_y, 110, "red", "Close", self.exit_screen))
+                self.button(p.right - self.PAD - 110, btn_y, 110, "red", "Close", self.exit_screen, sound_kind="back"))
 
         if self.embedded:
             self.view_mode_buttons = []

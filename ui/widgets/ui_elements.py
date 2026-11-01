@@ -28,6 +28,7 @@ pygame_slider_sound = None
 music_ui_sounds = {}
 pygame_music_ui_sounds = {}
 MUSIC_UI_SOUND_PATHS = {
+    "back": "assets/sounds/Back.wav",
     "table": "assets/sounds/Table.wav",
     "open_settings": "assets/sounds/Open Settings.mp3",
     "help": "assets/sounds/Help.mp3",
@@ -751,7 +752,7 @@ def make_back_button(on_click, style="menu", pos=None, label="Back", color="red"
     Pass `pos` to place the button relative to a panel; it wins over `style`.
     """
     x, y = pos if pos is not None else BACK_BTN_STYLES.get(style, c.BACK_BTN_TOPLEFT)
-    return Button(x, y, "small", color, label, on_click)
+    return Button(x, y, "small", color, label, on_click, sound_kind="back")
 
 
 def make_info_button(x, y, on_click, y_offset=0):

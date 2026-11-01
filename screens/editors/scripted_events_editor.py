@@ -144,7 +144,7 @@ class _HelpScreen(_ModalScreen):
 
     def refresh_ui(self):
         p = self.panel_rect
-        self.elements = [Button(p.centerx - 50, p.bottom - 56, "small", "red", "Close", self.exit_screen)]
+        self.elements = [Button(p.centerx - 50, p.bottom - 56, "small", "red", "Close", self.exit_screen, sound_kind="back")]
         # Nothing is clickable in the body, so the text drives the scroll limit alone.
         self.max_scroll = min(0, self.view_h - len(self.lines) * self.LINE_H)
 
@@ -366,7 +366,7 @@ class _VariablesScreen(_ModalScreen):
 
     def refresh_ui(self):
         p = self.panel_rect
-        self.elements = [Button(p.x + self.PAD, p.bottom - 56, "small", "red", "Close", self.exit_screen)]
+        self.elements = [Button(p.x + self.PAD, p.bottom - 56, "small", "red", "Close", self.exit_screen, sound_kind="back")]
 
         self._content_vars = pygame.Rect(self.list_x, self.list_top, self.LIST_W, self.list_view_h)
         self.scroll_content_rect = self._content_vars
@@ -801,7 +801,7 @@ class _EventEditScreen(_ModalScreen):
         self.elements += [
             self.button(p.x + self.PAD, btn_y, 200, "blue", "Add Conditional", self.add_condition, preset="medium"),
             self.button(p.x + self.PAD + 210, btn_y, 200, "purple", "Add Action", self.add_action, preset="medium"),
-            self.button(p.x + self.PAD + 430, btn_y, 120, "red", "Cancel", self.exit_screen, preset="medium"),
+            self.button(p.x + self.PAD + 430, btn_y, 120, "red", "Cancel", self.exit_screen, preset="medium", sound_kind="back"),
             self.button(p.right - self.PAD - 200, btn_y, 200, "green", "Save Event", self.save_event, preset="medium"),
         ]
 

@@ -75,7 +75,7 @@ class Declare_War_Screen(MapOverlayScreen):
         self.refresh_ui()
 
     def refresh_ui(self):
-        self.elements = [Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Cancel", self.exit_screen)]
+        self.elements = [Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Cancel", self.exit_screen, sound_kind="back")]
 
         confirm_text = "Update Declaration" if self.is_editing else "Confirm"
         btn_confirm = Button(self.panel_rect.centerx - 150, self.panel_rect.bottom - 70, "new_game", "red", confirm_text, self.confirm)

@@ -6,7 +6,7 @@ import pygame
 import data.constants as c
 from ui.rendering.font_manager import fonts
 from ui.dialogs.base import _BaseModal, _back_key, _lighten, open_modal
-from ui.widgets import text_utils
+from ui.widgets import text_utils, ui_elements
 from ui.dialogs.message_box import _KIND_ACCENTS
 from ui.bars import ui_bars
 
@@ -200,6 +200,7 @@ class _PersonInfoModal(_BaseModal):
                     self._set_scroll(self.scroll_y + step)
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if self.ok_rect.collidepoint(event.pos):
+                    ui_elements.play_ui_sound("back")
                     self._finish()
                     return
                 if self.scroll_track_rect is not None and self.scroll_track_rect.collidepoint(event.pos):

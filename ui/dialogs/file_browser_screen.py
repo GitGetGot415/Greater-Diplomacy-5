@@ -441,7 +441,7 @@ class FileBrowserScreen(ModalScreen):
 
         # -- Bottom bar
         btn_y = panel.bottom - 56
-        self.elements.append(Button(panel.x + self.SIDEBAR_OFF, btn_y, "small", "red", "Cancel", self.exit_screen))
+        self.elements.append(Button(panel.x + self.SIDEBAR_OFF, btn_y, "small", "red", "Cancel", self.exit_screen, sound_kind="back"))
 
         # The toggles carry longer labels than a button font fits, so they drop a size.
         tool_w, _tool_h = c.SIZES["browser_tool"]

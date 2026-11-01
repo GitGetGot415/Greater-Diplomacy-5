@@ -164,7 +164,7 @@ class CheckboxListScreen(ModalScreen):
             self.elements.append(btn)
 
         btn_y = p.bottom - 52
-        self.elements.append(Button(p.x + self.PAD, btn_y, "small", "red", "Cancel", self.exit_screen))
+        self.elements.append(Button(p.x + self.PAD, btn_y, "small", "red", "Cancel", self.exit_screen, sound_kind="back"))
         confirm_w, _h = c.SIZES["medium"]
         self.elements.append(Button(p.right - self.PAD - confirm_w, btn_y - 5, "medium", "green",
                                     self.confirm_label, self._confirm))

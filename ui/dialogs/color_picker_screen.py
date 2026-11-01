@@ -81,7 +81,7 @@ class ColorPickerScreen(ModalScreen):
         self.elements = list(self.sliders) + [
             self.hex_field,
             Button(self.panel_rect.centerx - 130, self.panel_rect.bottom - 55, "small", "green", "OK", self._confirm),
-            Button(self.panel_rect.centerx + 10, self.panel_rect.bottom - 55, "small", "red", "Cancel", self.exit_screen),
+            Button(self.panel_rect.centerx + 10, self.panel_rect.bottom - 55, "small", "red", "Cancel", self.exit_screen, sound_kind="back"),
         ]
 
     def draw_body(self, surface):

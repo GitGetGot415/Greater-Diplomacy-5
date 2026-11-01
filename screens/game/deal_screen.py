@@ -758,7 +758,7 @@ class Deal_Screen(MapOverlayScreen):
         """Just the buttons. Split from refresh_ui because scrolling the
         recipient list has to re-place its rows without re-pricing the deal."""
         self.elements = [Button(50, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Cancel",
-                                self.exit_screen)]
+                                self.exit_screen, sound_kind="back")]
 
         for side, picks in ((TAKE, self.take_ids), (GIVE, self.give_ids)):
             self.elements.append(build_choice_button(

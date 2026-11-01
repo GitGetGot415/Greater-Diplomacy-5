@@ -55,7 +55,7 @@ def render_edit_country_buttons(edit_screen):
     icons = ui_elements.UI_ICONS
     edit_screen.elements = []
 
-    edit_screen.btn_cancel = Button(*EDIT_COUNTRY_CANCEL_POS, "small", "red", "Cancel", edit_screen.exit_screen)
+    edit_screen.btn_cancel = Button(*EDIT_COUNTRY_CANCEL_POS, "small", "red", "Cancel", edit_screen.exit_screen, sound_kind="back")
 
     # save_and_exit is the only place this screen writes anything back, so
     # taking it away is the whole of read-only: drawing on the canvas still

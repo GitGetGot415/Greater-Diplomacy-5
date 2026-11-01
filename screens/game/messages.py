@@ -411,7 +411,7 @@ class Messages_Screen(GameState):
                     self.send_message()
 
     def refresh_ui(self):
-        self.elements = [Button(20, 20, "small", "red", "Exit", self.exit_screen)]
+        self.elements = [Button(20, 20, "small", "red", "Exit", self.exit_screen, sound_kind="back")]
         self.elements.append(Button(20, 70, "small", "blue", "Mark All Read", self.mark_all_read))
         # The thread draws these hitboxes after it knows the current scroll
         # position. Never retain geometry from a frame that was rebuilt.

@@ -558,7 +558,7 @@ class Research_Screen(GameState):
                     self.elements.append(Button(panel_x + MODAL_ACTION_BTN_X, panel_y + MODAL_BTN_Y_OFFSET, "medium", "green", "Researched", lambda: None))
             return
         
-        self.elements.append(Button(*EXIT_BTN_POS, "small", "red", "Exit", self.exit_screen))
+        self.elements.append(Button(*EXIT_BTN_POS, "small", "red", "Exit", self.exit_screen, sound_kind="back"))
 
         category_width, category_height = c.SIZES["medium"]
         available_width = c.SCREEN_WIDTH - CATEGORY_BTN_START_X - CATEGORY_BTN_RIGHT_MARGIN

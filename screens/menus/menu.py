@@ -457,7 +457,7 @@ class Menu(GameState):
                 "red",
                 "Exit",
                 self.confirm_exit,
-                font_preset="button",
+                font_preset="button", sound_kind="back",
             )
             self.elements.append(self.exit_btn)
 
@@ -522,6 +522,7 @@ class Menu(GameState):
     @staticmethod
     def _exit_game(confirmed):
         if confirmed:
+            ui_elements.play_ui_sound("back")
             # Let the main loop handle cleanup and platform-specific shutdown.
             pygame.event.post(pygame.event.Event(pygame.QUIT))
 

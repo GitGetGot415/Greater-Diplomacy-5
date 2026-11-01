@@ -40,7 +40,7 @@ class DefenseAreaScreen(MapOverlayScreen):
         panel = self.panel_rect
         self.elements = [
             Button(panel.x + 36, panel.bottom - 44, "small", "grey", "Cancel",
-                   self.exit_screen, font_preset="normal"),
+                   self.exit_screen, font_preset="normal", sound_kind="back"),
             Button(panel.centerx - 75, panel.bottom - 44, "small", "orange", "Clear",
                    self.clear_selection, font_preset="normal"),
             Button(panel.right - 224, panel.bottom - 44, "medium", "green", "Confirm",

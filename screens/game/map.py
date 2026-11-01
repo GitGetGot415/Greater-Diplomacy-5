@@ -640,8 +640,8 @@ def _build_general_buttons(map_screen):
 
     map_screen.btn_spectator = Button(LEFT_UI_BAR_X, BTN_SPECTATOR_Y, "medium", "grey", "Spectator Mode", start_spectator_action)
     map_screen.btn_tactical = Button(LEFT_UI_BAR_X + BTN_TACTICAL_OFFSET_X, BTN_SPECTATOR_Y, "medium", "orange", "Tactical Mode", toggle_tactical_action)
-    map_screen.btn_close_info = Button(TOP_RIGHT_BTN_X, c.TOP_BAR_UI_CENTER_Y, "small", "red", "X", map_screen.deselect_province)
-    map_screen.btn_exit_to_menu = Button(TOP_RIGHT_BTN_X, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Exit", map_screen.exit_to_menu)
+    map_screen.btn_close_info = Button(TOP_RIGHT_BTN_X, c.TOP_BAR_UI_CENTER_Y, "small", "red", "X", map_screen.deselect_province, sound_kind="back")
+    map_screen.btn_exit_to_menu = Button(TOP_RIGHT_BTN_X, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Exit", map_screen.exit_to_menu, sound_kind="back")
     map_screen.btn_realtime_details = Button(TOP_RIGHT_BTN_X + 30, c.TOP_BAR_UI_CENTER_Y + 120,
                                               "tiny", "blue", "Details",
                                               lambda: realtime_status_panel.show_details(map_screen))
@@ -2321,6 +2321,7 @@ class Map(StateAccess, GameState):
         self.show_feedback("Exit cancelled")
 
     def confirm_exit(self):
+        ui_elements.play_ui_sound("back")
         diplomatic_popups.clear_popups(self)
         self.change_state("MENU")
 
