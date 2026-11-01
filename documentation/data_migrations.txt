@@ -153,6 +153,16 @@ An older unfinished first project receives its earlier equipment stages before t
 An unresearched track without a pending project stays unresearched.
 Tournament snapshots, older move projections, real-time snapshots, and imports use the same research-year representation.
 
+UNIT EVENT REPORT COMPATIBILITY
+-------------------------------
+
+Each new damage entry can include detail_parts with text fragments and identified units' recorded owners.
+Saves, tournament exports, and real-time snapshots retain these fragments.
+unit_events.normalize_log validates the fragments and preserves the original details text.
+Old reports without detail_parts keep plain text for other units until the next completed turn.
+Their main unit still has its recorded owner's flag.
+Existing Unknown unit entries cannot recover identities omitted by older recording rules.
+
 UNIT METADATA
 -------------
 

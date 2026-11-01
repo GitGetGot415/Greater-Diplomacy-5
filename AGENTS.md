@@ -12,7 +12,8 @@ AI means artificial intelligence. UI means user interface.
    Preserve unrelated user changes. Do not discard work to get a clean tree.
 3. Read the relevant design notes:
    - `documentation/non_llm_ai.txt`: rule-based AI and shared combat rules.
-   - `documentation/player_controls.txt`: player controls, tactical play, spectators, editors, reports, and map display.
+   - `documentation/player_controls.txt`: player actions, permissions, and visible results.
+   - `documentation/ui_reference.txt`: UI styling, artwork, sound assets, and research display configuration.
    - `documentation/ai_movement.txt`: AI unit orders, movement caches, aircraft missions, and movement tuning.
    - `documentation/llm_ai.txt`: large language models (LLMs), prompts, budgets, cancellation, and fairness.
    - `documentation/diplo_stuff.txt`: diplomacy, messages, guarantees, volunteers, attach?s, factions, war, and peace.
@@ -389,7 +390,22 @@ A data edit must not make a test fail, unless the test checks that JSON matches 
 
 - Keep each shared explanation in one primary guide. Check existing guides before adding documentation.
 - Use short references elsewhere. Keep local conditions, exceptions, permissions, and summaries needed to use each guide independently.
-- Update the primary guide when its rules change.
+- Update documentation when a change makes an existing explanation incomplete or inaccurate, or adds behavior that users must understand.
+  A code edit alone does not require a documentation addition.
+- Update the existing topic in its primary guide. Do not append a new section for each development task.
+- Document current rules and procedures. Keep development change reports and verification results in the handoff.
+  Omit repeated statements that unaffected systems remain unchanged.
+
+### Player Controls Scope
+
+- `documentation/player_controls.txt` owns player actions, permissions, and visible results.
+  Update it only when one of these changes.
+- Keep styling constants, asset filenames, cache internals, serialization fields, and implementation handoffs out of that guide.
+  Put UI configuration and artwork in `documentation/ui_reference.txt`.
+  Put state ownership, storage, and presentation caches in `documentation/general_info.txt`.
+  Put older-data compatibility in `documentation/data_migrations.txt`.
+- Link to a technical guide when necessary. Preserve local conditions, exceptions, permissions, and user instructions.
+- Apply the same scope rules to other guides. Do not move unrelated task notes into another guide.
 
 ### Unit, Building, and Research Data
 
@@ -437,7 +453,7 @@ Treat it as player documentation.
 Update it when map navigation, unit selection, orders, or covered bottom-left controls change.
 Add or update tests for changed tutorial behavior.
 
-Update affected documentation, comments, examples, tests, schemas, and UI text with the implementation.
+Update documentation, comments, examples, tests, schemas, and UI text when the implementation makes them incomplete or inaccurate.
 Check guides that refer to each changed rule. Keep their local instructions and references accurate.
 See `documentation/general_info.txt` for the guide index.
 Update every description or preview of changed player behavior.

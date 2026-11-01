@@ -1,0 +1,322 @@
+UI CONFIGURATION AND ARTWORK
+============================
+
+UI means user interface. SFX means sound effects.
+This guide owns UI styling, artwork selection, sound assets, and research display configuration.
+Update an existing topic when its configuration changes. Do not append development change reports.
+Keep player actions and permissions in documentation/player_controls.txt.
+See documentation/general_info.txt, DISPLAY SUPPORT, for gameplay presentation caches.
+
+MUSIC BUTTON SOUNDS
+-------------------
+
+Music buttons play assets/sounds/Open Music.wav when clicked.
+Album buttons play assets/sounds/Select Album.wav. Song buttons play assets/sounds/Select Song.wav.
+These effects use the SFX volume and pitch settings on desktop and web builds.
+
+CLASSIC UNIT ART
+---------------
+
+Classic unit images use each equipment stage's year, not the current game year.
+Files in assets/classic can specify a year range, such as Infantry 1800-1899.png.
+A plus sign sets an open end, such as Militia 1900+.png.
+Alternate styles keep their own images. Missing images use the Classic fallback.
+Restart the game after adding image files.
+
+BUTTON DISPLAY
+--------------
+
+Shared buttons use shade bands and square checkerboard transitions.
+Taller buttons add shades to keep bands approximately 10 pixels high.
+Small buttons omit the checkerboard pattern. Very short buttons use fewer bands.
+The inner bevel reverses while a button is pressed under the pointer.
+Hover, selection, and disabled states keep their existing outlines and colors.
+Editor color swatches keep their flat fills.
+ui/widgets/ui_elements.py caches backgrounds by size, color, pressed state, outline width, and gradient strength.
+The cache retains at most 128 backgrounds. Moving a button reuses its background.
+
+PANELS AND CUSTOM CONTROLS
+-------------------------
+
+Dialogs, army controls, the tutorial, progress displays, and real-time match panels use the shared pixel shading.
+Production queues, resource bars, message boxes, and mouse settings cards use the same square borders and bevels.
+Shared modal panels also apply this appearance to their game and editor screens.
+
+Text fields have recessed bevels. Active fields keep their existing focus borders.
+Text-entry backgrounds use black fills with zero gradient strength by default.
+
+Custom buttons keep hover, pressed, selected, and disabled states.
+Color swatches and the custom emblem canvas keep their flat colors.
+
+Opaque and translucent backgrounds use bounded caches in ui/widgets/ui_elements.py.
+Progress bars clip cached fills. Moving panels and changing progress reuse cached shading.
+The army tray and country-action list use shared scrollbar rendering.
+The army tray scrollbar is six pixels wide. It stays beside the existing action buttons.
+
+Edit background colors and gradient strengths in ui/background_styles.py. The panel style tables in this guide use this shared file.
+Keep layout and border settings in their existing UI modules.
+
+MENU SKY AND WATER
+------------------
+
+The main menu shows an evening sky above a blue water rectangle.
+The sky interpolates directly between its current top and horizon colors, with no intermediate color stops.
+Edit MENU_SKY_START_COLOR and MENU_SKY_END_COLOR near the top of screens/menus/menu.py.
+The start color appears at the top. The end color appears at the horizon.
+MENU_SKY_FADE_ENABLED controls the repeating sky and water color fade.
+The top fades between MENU_SKY_START_COLOR and MENU_SKY_START_FADE_COLOR.
+The horizon fades between MENU_SKY_END_COLOR and MENU_SKY_END_FADE_COLOR.
+MENU_SKY_FADE_CYCLE_SECONDS sets the time for a complete fade to the target colors and back.
+MENU_SKY_FADE_IN_EASING sets the speed curve toward the target colors.
+MENU_SKY_FADE_OUT_EASING sets the speed curve back to the original colors.
+Use "linear" for constant speed, "ease_in" for a slow start, or "ease_out" for a slow finish.
+Use "ease_in_out" for a slow start and finish. Each direction still takes half the cycle duration.
+Use a positive duration. Larger durations give slower fades. False for MENU_SKY_FADE_ENABLED keeps the original colors.
+MENU_WATER_START_COLOR sets the water color at the horizon. MENU_WATER_END_COLOR sets the color at the bottom.
+MENU_WATER_START_FADE_COLOR and MENU_WATER_END_FADE_COLOR set the water's corresponding fade targets.
+Water and sky use the same fade cycle, easing, and progress. Their colors change together.
+Both gradients interpolate directly between their current endpoints, with no intermediate color stops.
+The water has separate stepped, band count, and dithering settings. Both gradients use the same background cache.
+MENU_WATER_STEPPED selects shade bands when True and a smooth gradient when False.
+MENU_WATER_DITHERING controls square transitions between water bands. MENU_WATER_BANDS sets the number of water bands.
+Water dithering and band count apply only when MENU_WATER_STEPPED is True.
+A faint moving checkerboard overlays only the evening sky, behind the artwork and controls.
+The water has a separate checkerboard reflection, mirrored vertically at the horizon.
+The reflection uses the sky checkerboard's color and horizontal movement. Its vertical movement is reversed.
+Edit MENU_WATER_CHECKERBOARD_OPACITY to change reflection visibility independently of the sky checkerboard.
+MENU_WATER_CHECKERBOARD_HEIGHT_SCALE controls the reflected squares' height. Use 1.0 for original height or 0.5 for half height.
+Use a positive value. The reflection's vertical movement scales with its height. The pattern still covers the water.
+MENU_WATER_CHECKERBOARD_ANGLE sets the reflected vertical lines' angle in degrees from vertical.
+Use 0 for vertical lines. Positive and negative values slant the lines in opposite directions.
+Horizontal lines remain level. The reflection stays aligned with the sky pattern at the horizon.
+It uses the same scrolling speed and direction as other screens. The gradient stays in place while its colors fade.
+Edit MENU_CHECKERBOARD_OPACITY in screens/menus/menu.py to change its visibility.
+MENU_CHECKERBOARD_COLOR sets the checkerboard color independently of MENU_SKY_START_COLOR.
+For either opacity setting, use 0 to hide the pattern or 255 for full opacity.
+The overlay uses the existing checkerboard tile. Other menus keep their existing checkerboards.
+MENU_WATERLINE_RATIO in screens/menus/menu.py sets the horizon height. MENU_SKY_BANDS sets the number of sky bands.
+Set MENU_SKY_STEPPED to True for shade bands with square checkerboard transitions, as used by buttons and portraits.
+Set it to False for a smooth gradient.
+MENU_SKY_DITHERING controls square transitions between sky bands. False keeps plain band edges.
+Dithering options apply only to stepped gradients. Restart after editing the sky or water settings in screens/menus/menu.py.
+MENU_SKY_BANDS applies only when MENU_SKY_STEPPED is True.
+The menu caches backgrounds by viewport size and sky and water endpoint colors. Restart after editing these values.
+Other menus retain their existing backgrounds.
+
+The default checkerboard speed is DEFAULT_CHECKERBOARD_SCROLL_SPEED in data/constants.py.
+Slow speeds blend between pixel positions. Zoom keeps the pattern's position continuous.
+See documentation/player_controls.txt, DISPLAY AND SOUND SETTINGS, for the player settings.
+
+The map uses the menu sky gradient when camera tilt exposes the sky.
+The sky pattern starts at the map horizon and moves with it during panning and tilt.
+Map checkerboard squares use half the menu pattern's width and height before camera zoom and tilt.
+Checkerboard Water mirrors the sky pattern with an opaque blue fill and no grid slant.
+Zoom changes its color. Camera tilt controls compression without MENU_WATER_CHECKERBOARD_HEIGHT_SCALE.
+Panning, zoom, and tilt transform the pattern and its movement.
+
+MENU ARTWORK AND BUTTON GROUP
+-----------------------------
+
+Set MENU_SIGN_GRADIENT_ENABLED in screens/menus/menu.py to shade the sign.
+Set MENU_SIGN_GRADIENT_STRENGTH to adjust the sign shading.
+Set MENU_SCENERY_GRADIENT_ENABLED to shade both grass platforms.
+Set MENU_SCENERY_GRADIENT_STRENGTH to adjust the platform shading.
+Set MENU_SCENERY_GRADIENT_START and MENU_SCENERY_GRADIENT_END to positions on each platform image.
+Use 0 for the top and 1 for the bottom. The start must be less than the end.
+The gradient is brightest at the start and darkest at the end.
+It keeps those shades above the start and below the end.
+Set MENU_SCENERY_BRIGHTNESS from -255 to 255 to darken or brighten both platforms.
+Use 0 for no brightness change. Brightness also applies when the gradient is disabled.
+For either strength, use 0 for no shading or 1 for standard shading.
+Use a value of 0 or greater. Restart the game after editing these values.
+
+The center menu buttons and their gradient panel enter together. Their spacing stays fixed during the entrance.
+Edit MENU_BUTTON_GROUP_POSITION in screens/menus/menu.py to move the group.
+MENU_BUTTON_PANEL_PADDING sets the space around the buttons.
+MENU_BUTTON_PANEL_COLOR and MENU_BUTTON_PANEL_GRADIENT_STRENGTH control the shared pixel shading.
+MENU_BUTTON_PANEL_BORDER_COLOR and MENU_BUTTON_PANEL_BORDER_WIDTH control the panel border.
+MENU_BUTTON_GROUP_INTRO_DELAY_MS and MENU_BUTTON_GROUP_INTRO_DURATION_MS control the entrance delay and duration in milliseconds.
+Zero duration shows the group immediately after its delay. Restart after editing these values.
+
+PANEL STYLE TABLES
+------------------
+
+Edit PUPPET_PANEL_STYLES for the subjects and release_nations panels.
+Edit COUNTRY_SUMMARY_STYLES for country summary cards.
+Edit PRODUCTION_QUEUE_STYLES for the Buildings and Units queue backgrounds in production and on the map.
+The map entry includes opacity as its fourth color value.
+Edit PRODUCTION_PANEL_STYLES for production category panels and their stats bars.
+Category panels and stats bars keep flat fills by default. Increase gradient_strength to add shade bands.
+
+Edit RESOURCE_BAR_STYLES for the full-width resource bar in Production, Orders, and other screens that use this bar.
+Edit COMBAT_PANEL_STYLES for the combat panel, including the panel beside Orders.
+Edit CLAIMS_PANEL_STYLES for the claims panel.
+Edit POLITICS_PANEL_STYLES for politics panels and policy cards.
+Edit AUTOMATION_PANEL_STYLES for the automation panel.
+Edit ECONOMY_PANEL_STYLES for national economy resource rows and the expenses table background.
+Edit ORDERS_PANEL_STYLES for the Orders panel.
+Edit EDITOR_PANEL_STYLES for editor panels, country lists, scripted-event lists, and historical leader cards.
+Its entries include metadata, research, starting_economy, date, diplomacy, politics, personality, scripted_events, unit_stats, and construction_turns.
+The corresponding list entries control country-selection panels. Brush and map-clearing panels have separate entries.
+Edit RESEARCH_PANEL_STYLES for timeline headers, research slots, and technology details.
+The research timeline uses these styles in player, spectator, and country-editor modes.
+Edit MUSIC_PANEL_STYLES for the music album pane and the playback header.
+Edit PORTRAIT_EDITOR_STYLES for the menu portrait editor preview panel.
+These panels use cached pixel shading. Each entry has color and gradient_strength fields.
+Colors, opacity, and gradient strength use the same rules as the other background styles.
+Restart the game after editing these values.
+
+DIALOGS AND TEXT FIELDS
+-----------------------
+
+Edit DIALOG_STYLES for the shared dialog background, including credits information and help dialogs.
+The file_browser entry controls the built-in file browser panel.
+Edit MESSAGE_PANEL_STYLES for the contacts pane in the messages screen.
+Edit ASSET_VIEWER_STYLES for the folders, files, and preview panes in the asset viewer.
+Each entry has color and gradient_strength fields. Zero gives a flat fill; one gives standard shading.
+Values above one increase contrast. Restart the game after editing these values.
+
+Edit TEXT_INPUT_STYLES for text-entry background colors and gradient strengths.
+The inactive and active entries control shared text fields, including searches, rename boxes, and editor fields.
+The dialog entry controls text-input dialogs. The message entry controls the message compose box.
+Each entry has color and gradient_strength fields. Zero strength gives a flat fill; one keeps the standard contrast.
+
+Higher strengths increase contrast. Positive strengths use the standard top-to-bottom shading direction.
+The army name field keeps its color and gradient strength in ARMY_EDITOR_STYLES["name_field"].
+It also defaults to a black fill with zero gradient strength.
+Text colors, focus borders, and input controls remain unchanged.
+Restart the game after editing these values.
+
+TUTORIAL AND ARMY STYLES
+------------------------
+
+Edit TUTORIAL_PANEL_STYLES for tutorial backgrounds.
+Its entries are main and keyboard_navigation.
+Edit ARMY_EDITOR_STYLES for army editor backgrounds.
+Its entries are main, name_field, and emblem_preview. The main entry also applies to the custom emblem editor.
+EDITOR_BG supplies the main entry's default color. EDITOR_BORDER in ui/panels/army_panel.py controls both editor window borders.
+Each entry has color and gradient_strength fields, as in MAP_BAR_STYLES.
+Colors accept RGB tuples. A fourth value sets opacity from 0 to 255.
+Gradient strength must be zero or greater. Zero gives a flat fill; one keeps the standard shading.
+Values above one increase contrast. Borders and bevels remain visible at zero strength.
+Restart the game after editing these values. These settings do not change buttons, text, or color swatches.
+
+Edit ARMY_BUTTON_STYLES for army buttons and group cards.
+The create, E, and T entries each have color and gradient_strength fields.
+E controls the army editor button. T controls the target-area button.
+T also has active_color, used when the army has a target area.
+
+The army_group entry controls the gradient of existing army cards. Their colors still come from each army's symbol color.
+The unassigned entry controls the Unassigned box gradient. Its base color remains constants.UNASSIGNED_ARMY_COLOR.
+
+They use the same gradient rules as the panel styles. Hover, pressed, and disabled states retain the selected gradient strength.
+Restart the game after editing these values.
+
+MAP FRAME DISPLAY
+-----------------
+
+The map's top, bottom, left, and unit-filter bars use rectangles drawn in code.
+The bars use shade bands, square borders, and bevels from the shared button shading cache.
+The bars do not load PNG backgrounds.
+The existing panel visibility rules apply in player, spectator, tactical, editor, and multiplayer modes.
+
+Edit MAP_BAR_STYLES in ui/background_styles.py to set each bar's color and gradient_strength.
+The entries are top, bottom, left, unit_filter, and bottom_left. The bottom_left entry controls the raised bottom-left corner panel.
+
+Set color to a red, green, blue (RGB) tuple. MAP_FRAME_COLOR provides the common default color.
+Set gradient_strength to a nonnegative number. A value of 1.0 keeps the standard gradient.
+A value of 0 gives a flat fill. A value above 1.0 increases the gradient contrast.
+
+Gradient strength does not change borders or bevels. Restart the game after editing these values.
+
+Edit MAP_CONFIRM_STYLES in the same file for map confirmation backgrounds.
+The country entry controls the country selection confirmation. The exit entry controls the exit confirmation.
+Each entry has color and gradient_strength fields, with the same rules as MAP_BAR_STYLES.
+
+These settings change only the panel background. They do not change the buttons or the dimming behind the panel.
+Restart the game after editing these values.
+
+The province menu keeps assets/backgrounds/Province.png and caches the resized image for each viewport size.
+Map input uses that image to block clicks under panels and permit clicks through the transparent map window.
+The moving checkerboard squares use button shading.
+
+SLIDER DISPLAY
+--------------
+
+Shared sliders and the music progress control use the cached button shade bands and square borders.
+Tracks have recessed bevels. Handles have raised bevels.
+The handle outline becomes white under the pointer or during dragging. Dragging reverses the handle bevel.
+
+Edit SLIDER_STYLES in ui/background_styles.py for slider colors and gradient strengths.
+The entries are track, handle, locked, and progress. Each entry has color and gradient_strength fields.
+Slider colors use RGB tuples. Zero strength gives a flat fill; one keeps the standard shading.
+Values above one increase contrast. Borders, bevels, and handle hover states keep their existing rules.
+Restart the game after editing these values.
+
+The locked entry controls restricted track sections. The progress entry controls the music progress fill.
+The track and handle entries initially reference existing color defaults in data/constants.py.
+Replace either reference with an RGB tuple to set its color in SLIDER_STYLES.
+The politics position line uses the track color without a gradient.
+
+SCROLLBAR DISPLAY
+-----------------
+
+Vertical and horizontal scrollbars use rectangular tracks and handles with the shared slider shading.
+They use the track and handle entries in SLIDER_STYLES.
+Handles have no grip lines. Scroll ranges and input remain the same.
+
+RESEARCH DISPLAY SETTINGS
+-------------------------
+
+data/json/research_display.json contains research button sizes, icon scales, layout values, and bundled art-style adjustments.
+Restart the game after you edit this file. The game reads it once and caches the data.
+These settings apply to player, spectator, and map-editor research timelines.
+
+button_sizes defines named presets as [width, height] in pixels.
+defaults selects a button_size and an icon_scale.
+defaults.large_icon_scale applies to technologies that unlock buildings in constants.LARGE_ICON_BUILDING_GROUPS.
+An icon_scale multiplies the existing symbol zoom. It does not specify a pixel size.
+Button dimensions and icon scales are independent. Icons keep their proportions.
+
+The game applies settings in this order:
+1. Apply defaults. Select large_icon_scale when the unlocked building requires it.
+2. Apply the matching categories entry, such as NAVY.
+3. Apply the technologies entry for the technology key, such as railgun.
+4. Apply that technology's levels entry for the exact level, such as "2".
+5. Apply art-style multipliers.
+
+Each category, technology, or level entry can specify button_size, icon_scale, or both.
+button_size accepts a named preset or an explicit [width, height] pair.
+Technology entries use keys from the active research library. Display-name changes do not select different sizes.
+Level entries override only that level. Later levels use their own settings or the technology settings.
+Unlisted technologies and categories use defaults. Unlisted fields retain the preceding settings.
+
+For example, this technology entry sets an explicit button size and icon scale:
+"railgun": {"button_size": [420, 180], "icon_scale": 1.5}
+
+layout.row_y contains six row positions. layout.default_row_y positions technologies without an assigned row.
+layout.row_center_offset locates each row's center relative to its position.
+Button centers and connection anchors use the same offset.
+layout.pixels_per_year sets horizontal timeline spacing. layout.modal_icon_box sets the detail popup's icon box.
+Increase row or timeline spacing if larger buttons overlap. The game does not arrange rows automatically.
+
+styles contains the bundled art adjustments, including Classic. Each key names an art style.
+button_scale multiplies all button dimensions while that style is active.
+button_scale_overrides applies additional width and height multipliers to a resolved symbol key or family.
+icon_scales applies additional icon multipliers by relative image filename, including culture subfolders.
+Filenames can contain wildcard patterns, such as Infantry*.png. An exact filename takes priority over patterns.
+If several patterns match, the first pattern takes priority.
+Classic filenames use the symbol name with .png. Classic Infantry*.png and Militia*.png rules double their research icons.
+These image-specific adjustments follow the actual image's style and country variant.
+Classic fallback images use the Classic rules, including when another art style is selected.
+
+Optional assets/<style>/research_scale.json files remain supported for custom styles.
+Their entries override matching central style entries. Unspecified entries retain the central values.
+Use the central file for bundled sizing changes.
+The map, production screens, and research category tabs do not use these node settings.
+
+symbol_scales corrects the size of art with disproportionate native dimensions.
+Each key is a resolved symbol name without .png. Unlisted symbols use 1.
+This multiplier applies to all symbols drawn by zoom, including map units and research icons.
+It applies with all art styles. It does not apply to symbols fitted to a fixed pixel box.
+On the research screen, the game multiplies symbol_scales with the node settings and icon_scales.

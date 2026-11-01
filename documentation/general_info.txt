@@ -4,7 +4,8 @@ GUIDE INDEX
 documentation/general_info.txt: storage, scenario settings, state ownership, build policy, and project files.
 documentation/code_layout.md: directory responsibilities and task-to-code references.
 documentation/non_llm_ai.txt: rule-based AI and shared combat rules.
-documentation/player_controls.txt: player and editor controls, mode permissions, reports, map display, and army groups.
+documentation/player_controls.txt: player and editor actions, permissions, and visible results.
+documentation/ui_reference.txt: UI styling, artwork, sound assets, and research display configuration.
 documentation/ai_movement.txt: AI unit orders, movement caches, aircraft missions, attack checks, rotation, and movement tuning.
 documentation/llm_ai.txt: model settings, legal choices, prompts, summits, budgets, cancellation, and fairness.
 
@@ -382,12 +383,86 @@ Treat shared cached images as read-only.
 Pass alpha to get_symbol instead of changing a shared image's alpha.
 Map culling checks both width and height.
 These caches reduce repeated work when many units use the same image.
-See documentation/player_controls.txt, MAP DISPLAY, for display behavior and invalidation rules.
+See documentation/player_controls.txt, MAP DISPLAY, for player-visible behavior.
+See documentation/ui_reference.txt for styling and artwork configuration.
 
 ui/widgets/flag_icons.py caches small national flags for country lists and combat rows.
 draw_panes(foregrounds=) in ui/widgets/scroll_panes.py draws row flags and stat icons.
 ui/bars/ui_bars.py draws its shared textured bar.
 screens/game/map_input.py uses the same rectangle to block clicks through the bar.
+
+PRESENTATION STATE AND INVALIDATION
+----------------------------------
+
+queries.get_country_summary prepares the screen's data when it opens.
+queries.get_country_damage_multiplier owns the combined national damage modifier for summaries and combat.
+Frame drawing and scrolling use cached presentation data.
+
+Map refreshes calculate layer inputs when game state changes.
+They reuse pixel surfaces that have not changed.
+Fog updates current visibility even when it can reuse its image.
+Hotseat blanking and player changes still apply.
+Editor painting invalidates the affected surface. Refresh Maps forces a full rebuild.
+
+Planning-frame rendering does not run map-wide calculations.
+Economy display caches production status independently of the Units view filter.
+Unit filter results refresh on load, state changes, or input changes.
+The display cache refreshes when orders, unit forms, filters, or the viewer change.
+Flag images and report detail text are prepared when the screen or expanded view opens.
+
+SPECTATOR PERMISSION SETTINGS
+-----------------------------
+
+The switches in data/constants.py are SPECTATOR_CAN_EDIT_PRODUCTION, SPECTATOR_CAN_EDIT_RESEARCH, and SPECTATOR_CAN_EDIT_APPEARANCE.
+All default to True. False permits viewing without the corresponding editing ability.
+See documentation/player_controls.txt, SPECTATOR PLAY, for related controls.
+
+RESEARCH AND TACTICAL CONTEXT
+----------------------------
+
+map_screen.viewing_research_country passes the selected country to the research screen.
+map_screen.viewing_research_mode passes View or Edit. This temporary display choice is not saved.
+editing_country serves the same purpose for the identity editor.
+
+queries.get_active_ai_nations removes the human-country exclusion while tactical_mode is active.
+map_screen.player_unit can remain after independence ends tactical mode.
+Check tactical_mode instead of inferring the mode from that attribute.
+diplomatic_popups.spawn_popups_for_player marks suppressed host messages as shown during tactical play.
+This prevents old host messages from appearing after independence.
+
+DERIVED ARMY ENTRIES
+-------------------
+
+data/queries/armies.py derives Unassigned from current units and saved army membership.
+ui/panels/army_panel.py caches this entry when map state changes.
+Frame rendering reads the cached entry.
+Saves and multiplayer rosters contain only saved army groups.
+Loading units and memberships recreates Unassigned without a new saved field.
+
+The real-time server rejects rosters that use the reserved Unassigned identifier.
+Save loading and tournament imports discard records that use this identifier.
+
+UNIT EVENT RECORDING AND STORAGE
+================================
+
+See documentation/player_controls.txt, LAST-TURN UNIT EVENTS, for controls, permissions, and read status.
+See documentation/data_migrations.txt, UNIT EVENT REPORT COMPATIBILITY, for older report details.
+
+map_logic/system32/unit_events.py records actual turn resolution, including losses and attacks by AI units.
+AI plans and combat forecasts do not write entries.
+Damage dealt uses each source's share of the applied volley.
+Shares include target restrictions and combat modifiers.
+The total credit equals the target's actual health loss.
+It excludes damage beyond the target's remaining health.
+
+Saves retain only the latest report and its local read status.
+Older saves start with an empty report.
+History snapshots do not store copies of reports.
+
+Tournament archives retain all entries in the shared host and player snapshot.
+Real-time snapshots include only the receiving player's entries.
+Player move files and real-time commands cannot replace host reports.
+Real-time broadcasts preserve local read status for the same turn.
 
 TUTORIAL ICON MARKERS
 ====================

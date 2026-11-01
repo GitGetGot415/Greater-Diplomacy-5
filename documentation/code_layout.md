@@ -61,6 +61,7 @@ Read `general_info.txt` for state ownership, storage, and build policy.
 
 Complete feature screens belong in `screens/`. Each screen builds its own buttons.
 Read `player_controls.txt` for controls and permissions.
+Read `ui_reference.txt` for UI configuration and artwork.
 
 The folders identify owners. Some existing rules still call presentation helpers.
 Turn coordination still connects AI, resolution, and presentation refreshes.
