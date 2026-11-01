@@ -480,7 +480,7 @@ def _build_left_bar_buttons(map_screen):
          "economy(the_economy_of_a_country_to_be_unusually_specific)", econ_callback),
         ("btn_gp_rd", 3, "R&D", "research", research_callback),
         ("btn_gp_msgs", 4, "Metadata" if map_screen.is_editor else "Mail",
-         "paper" if map_screen.is_editor else "mail", msgs_callback),
+         "core" if map_screen.is_editor else "mail", msgs_callback),
         ("btn_gp_save", 5, "Save", "save", map_screen.save_map_data),
         ("btn_gp_settings", 6, "Settings", "settings", lambda: map_screen.change_state("SETTINGS")),
         ("btn_gp_music", 7, "Music", "music", lambda: map_screen.change_state("MUSIC_PLAYER")),
@@ -898,7 +898,7 @@ def _update_unassigned_viewer_buttons(map_screen, is_sel, is_thinking):
 
 def _update_editor_buttons(map_screen, is_sel):
     map_screen.btn_gp_msgs.text = "Metadata"
-    map_screen.btn_gp_msgs.image = ui_elements.UI_ICONS.get("paper")
+    map_screen.btn_gp_msgs.image = ui_elements.UI_ICONS.get("core")
     ed_btns = [
         map_screen.btn_gp_edit, map_screen.btn_gp_econ, map_screen.btn_gp_rd,
         map_screen.btn_gp_msgs, map_screen.btn_gp_save, map_screen.btn_gp_claims,
