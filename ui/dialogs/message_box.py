@@ -144,9 +144,10 @@ class _NavigationIntroPopup:
     # Move [icon:name:size] markers to place images. Size is the maximum dimension in pixels.
     # Omit :size to use the body font height. Names come from ui_elements.UI_ICONS.
     UNIT_VIEW_NOTE = (
-        "In Units view specifically you will see 4 colored buttons in the bottom left corner, which are Naval [icon:naval:24], Land [icon:land:24], Air [icon:air:24], and All [icon:all:24]. "
+        "In Units view you will see 4 colored buttons in the bottom left corner, which are Naval [icon:naval:24], Land [icon:land:24], Air [icon:air:24], and All [icon:all:24]. "
         "These filter your view of the map so you only see units that belong in that category. "
         "Click Hide above the buttons to slide the strip down. Click Show to slide it up again. Your selected filter stays active. "
+        "Switching away from Units view slides the strip closed. The Hide/Show button stays visible, disabled, and without text. Returning opens the strip unless you used Hide. "
         "All is selected whenever a game opens. "
     )
     ARMY_STEPS = (

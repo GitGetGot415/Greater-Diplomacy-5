@@ -940,16 +940,18 @@ def _update_turn_buttons(map_screen, is_sel, is_thinking):
     # Hide/disable the button if we are thinking
     map_screen.btn_next_turn.visible = not is_sel and not is_thinking
     unit_view_visible = (map_screen.btn_next_turn.visible
-                         and map_screen.secondary_mode == "UNITS"
                          and not map_screen.hide_raised_rect)
     if map_screen.unit_view_buttons:
         if map_screen.unit_view_animation_start is None:
-            map_screen.unit_view_bar_progress = float(not map_screen.unit_view_bar_collapsed)
+            map_screen.unit_view_bar_progress = map_screen._unit_view_bar_target()
         offset = round(UNIT_VIEW_BAR_HEIGHT * (1 - map_screen.unit_view_bar_progress))
         map_screen.unit_view_bar_offset = offset
         toggle = map_screen.btn_unit_view_toggle
         toggle.visible = unit_view_visible
-        toggle.text = "Show" if map_screen.unit_view_bar_collapsed else "Hide"
+        toggle.disabled = map_screen.secondary_mode != "UNITS"
+        toggle.text = "" if toggle.disabled else "Show" if map_screen.unit_view_bar_collapsed else "Hide"
+        if toggle.disabled:
+            toggle.is_pressed = False
         toggle.rect.bottom = map_screen.unit_view_bar_rect.top + offset
     for index, (view_filter, button) in enumerate(map_screen.unit_view_buttons.items()):
         button.rect.y = (map_screen.unit_view_bar_rect.y + UNIT_VIEW_BUTTON_PADDING_Y
@@ -1851,22 +1853,35 @@ class Map(StateAccess, GameState):
         update_button_states(self)
 
     def set_view_mode(self, mode):
+        now = pygame.time.get_ticks()
+        self._advance_unit_view_animation(now)
+        previous_target = self._unit_view_bar_target()
         self.secondary_mode = mode
+        if self._unit_view_bar_target() != previous_target:
+            self._start_unit_view_animation(now)
         tooltip.prepare_building_yields(self)
         self.show_feedback(f"View: {mode}")
+
+    def _unit_view_bar_target(self):
+        """Keep manual collapse separate from automatic hiding outside Units view."""
+        return float(self.secondary_mode == "UNITS" and not self.unit_view_bar_collapsed)
 
     def toggle_unit_view_bar(self):
         """Hide or show the filter strip without changing the selected filter."""
         now = pygame.time.get_ticks()
         self._advance_unit_view_animation(now)
         self.unit_view_bar_collapsed = not self.unit_view_bar_collapsed
+        self._start_unit_view_animation(now)
+        update_button_states(self)
+
+    def _start_unit_view_animation(self, now):
+        """Start or reverse the strip from its current position."""
         self.unit_view_animation_from = self.unit_view_bar_progress
-        target = float(not self.unit_view_bar_collapsed)
+        target = self._unit_view_bar_target()
         self.unit_view_animation_start = now if self.unit_view_bar_progress != target else None
         # A moving control must not retain a pending mouse press.
         for button in self.unit_view_buttons.values():
             button.is_pressed = False
-        update_button_states(self)
 
     def _advance_unit_view_animation(self, now=None):
         """Advance the local strip animation without changing game state."""
@@ -1876,7 +1891,7 @@ class Map(StateAccess, GameState):
             now = pygame.time.get_ticks()
         elapsed = max(0, now - self.unit_view_animation_start)
         fraction = min(1.0, elapsed / UNIT_VIEW_ANIMATION_MS)
-        target = float(not self.unit_view_bar_collapsed)
+        target = self._unit_view_bar_target()
         self.unit_view_bar_progress = (self.unit_view_animation_from
                                        + (target - self.unit_view_animation_from) * fraction)
         if fraction >= 1.0:

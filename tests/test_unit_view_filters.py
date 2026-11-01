@@ -488,22 +488,96 @@ class UnitViewControlTests(unittest.TestCase):
         self.assertFalse(any(button.visible for button in buttons))
         self.assertIsNone(ui_bars.map_unit_view_bar_rect(game))
 
-    def test_filters_and_bar_only_appear_in_units_view(self):
+    def test_leaving_units_animates_before_hiding_controls_and_background(self):
         game = self.game
-        for collapsed in (False, True):
-            game.unit_view_bar_collapsed = collapsed
-            for mode in ("UNITS", "ECONOMY", "RESOURCES", "BLANK", "UNITS"):
-                game.set_view_mode(mode)
+        for mode in ("ECONOMY", "RESOURCES", "BLANK"):
+            with self.subTest(mode=mode):
+                game.set_play_view_defaults()
+                game.unit_view_animation_start = None
                 update_button_states(game)
-                expanded = mode == "UNITS" and not collapsed
-                self.assertEqual([button.visible for button in game.unit_view_buttons.values()],
-                                 [expanded] * len(queries.UNIT_VIEW_FILTERS))
-                self.assertEqual(game.btn_unit_view_toggle.visible, mode == "UNITS")
-                self.assertEqual(ui_bars.map_unit_view_bar_rect(game) is not None, expanded)
-                self.assertEqual(map_input.map_ui_bar_at_position(
-                    game, game.unit_view_bar_rect.center), expanded)
-                self.assertEqual(map_input.map_ui_bar_at_position(
-                    game, game.btn_unit_view_toggle.rect.center), mode == "UNITS")
+                button = game.unit_view_buttons["LAND"]
+                button.is_pressed = True
+                with patch.object(pygame.time, "get_ticks", return_value=1000):
+                    game.set_view_mode(mode)
+                update_button_states(game)
+                self.assertEqual(game.unit_view_bar_progress, 1)
+                self.assertIsNotNone(ui_bars.map_unit_view_bar_rect(game))
+                self.assertFalse(button.is_pressed)
+                self.assertTrue(game.btn_unit_view_toggle.disabled)
+                game._advance_unit_view_animation(1050)
+                update_button_states(game)
+                self.assertGreater(game.unit_view_bar_progress, 0)
+                self.assertLess(game.unit_view_bar_progress, 1)
+                bar = ui_bars.map_unit_view_bar_rect(game)
+                self.assertIsNotNone(bar)
+                self.assertTrue(map_input.map_ui_bar_at_position(game, bar.center))
+                with patch.object(game, "set_unit_view_filter") as change:
+                    position = button.rect.center
+                    for event_type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
+                        button.handle_event(pygame.event.Event(event_type, button=1, pos=position))
+                    change.assert_not_called()
+                game._advance_unit_view_animation(1100)
+                update_button_states(game)
+                self.assertEqual(game.unit_view_bar_progress, 0)
+                self.assertIsNone(ui_bars.map_unit_view_bar_rect(game))
+                self.assertIsNotNone(ui_bars.map_unit_view_toggle_rect(game))
+                toggle = game.btn_unit_view_toggle
+                self.assertTrue(toggle.disabled)
+                position = toggle.rect.center
+                with (patch.object(toggle, "callback") as toggle_action,
+                      patch.object(pygame.mouse, "get_pos", return_value=position),
+                      patch.object(map_input, "handle_map_events",
+                                   side_effect=AssertionError("Disabled toggle click reached the map"))):
+                    game.handle_events([
+                        pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=position),
+                        pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=position),
+                    ])
+                    toggle_action.assert_not_called()
+                self.assertFalse(any(button.visible for button in game.unit_view_buttons.values()))
+                self.assertFalse(game.unit_view_bar_collapsed)
+                with patch.object(pygame.time, "get_ticks", return_value=1200):
+                    game.set_view_mode("UNITS")
+                game._advance_unit_view_animation(1250)
+                update_button_states(game)
+                self.assertGreater(game.unit_view_bar_progress, 0)
+                self.assertLess(game.unit_view_bar_progress, 1)
+                game._advance_unit_view_animation(1300)
+                update_button_states(game)
+                self.assertEqual(game.unit_view_bar_progress, 1)
+                self.assertFalse(game.btn_unit_view_toggle.disabled)
+
+    def test_view_switch_preserves_manual_collapse(self):
+        game = self.game
+        game.unit_view_bar_collapsed = True
+        update_button_states(game)
+        for mode in ("ECONOMY", "RESOURCES", "BLANK", "UNITS"):
+            game.set_view_mode(mode)
+            update_button_states(game)
+            self.assertEqual(game.unit_view_bar_progress, 0)
+            self.assertIsNone(game.unit_view_animation_start)
+            self.assertIsNone(ui_bars.map_unit_view_bar_rect(game))
+            self.assertTrue(game.btn_unit_view_toggle.visible)
+            self.assertEqual(game.btn_unit_view_toggle.disabled, mode != "UNITS")
+            self.assertTrue(game.unit_view_bar_collapsed)
+
+    def test_view_switch_reverses_animation_without_jumping(self):
+        game = self.game
+        with patch.object(pygame.time, "get_ticks", return_value=1000):
+            game.set_view_mode("ECONOMY")
+        game._advance_unit_view_animation(1050)
+        halfway = game.unit_view_bar_progress
+        with patch.object(pygame.time, "get_ticks", return_value=1050):
+            game.set_view_mode("RESOURCES")
+        self.assertEqual(game.unit_view_animation_start, 1000)
+        self.assertEqual(game.unit_view_bar_progress, halfway)
+        with patch.object(pygame.time, "get_ticks", return_value=1050):
+            game.set_view_mode("UNITS")
+        self.assertEqual(game.unit_view_bar_progress, halfway)
+        game._advance_unit_view_animation(1100)
+        self.assertGreater(game.unit_view_bar_progress, halfway)
+        game._advance_unit_view_animation(1150)
+        update_button_states(game)
+        self.assertEqual(game.unit_view_bar_progress, 1)
 
     def test_toggle_clicks_preserve_filter_and_save_without_selecting_the_map(self):
         game = self.game

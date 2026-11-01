@@ -240,6 +240,8 @@ Partial fog keeps the existing unknown building marker.
 The Units view filter does not affect this production display.
 
 Naval, Land, Air, and All form a vertical strip beside the lower left sidebar in Units view.
+Switching to another map view slides the filter buttons and their background closed before they disappear.
+Returning to Units view opens the strip unless you used Hide to close it.
 They filter local unit stacks, army markers, and order arrows.
 Hover previews list only visible units that match the selected category.
 Training icons use the queued unit's category, even when the province has no deployed units.
@@ -252,6 +254,7 @@ Convoys are naval, including transported aircraft. Trucks are land.
 
 Click Hide above the strip to hide its buttons and background. The toggle moves down to the bottom-left controls.
 Click Show to open the strip again. The toggle moves back above the strip.
+Outside Units view, this button stays visible without text and is disabled.
 The strip slides open or closed.
 The filter buttons cannot be selected while the strip moves.
 The selected filter stays active while the strip is hidden.

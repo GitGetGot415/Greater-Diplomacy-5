@@ -439,7 +439,6 @@ def map_unit_view_toggle_rect(map_screen):
     """Return the visible filter toggle's input area, including when collapsed."""
     # Lightweight screens without filter controls do not construct this button.
     if (not map_screen.unit_view_buttons
-            or map_screen.secondary_mode != "UNITS"
             or map_screen.hide_raised_rect):
         return None
     button = map_screen.btn_unit_view_toggle
@@ -451,7 +450,6 @@ def map_unit_view_bar_rect(map_screen):
     # Older tools/test doubles do not construct the map's filter controls.
     buttons = map_screen.unit_view_buttons
     if (not any(button.visible for button in buttons.values())
-            or map_screen.secondary_mode != "UNITS"
             or map_screen.hide_raised_rect):
         return None
     rect = map_screen.unit_view_bar_rect
