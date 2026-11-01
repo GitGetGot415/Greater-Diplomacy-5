@@ -31,10 +31,13 @@ MENU_WATER_DITHERING = False
 MENU_WATER_BANDS = 12
 
 # Sign and grass platform shading
-MENU_SIGN_GRADIENT_ENABLED = False
-MENU_SIGN_GRADIENT_STRENGTH = 1.0
-MENU_SCENERY_GRADIENT_ENABLED = False
+MENU_SIGN_GRADIENT_ENABLED = True
+MENU_SIGN_GRADIENT_STRENGTH = 0.5
+MENU_SCENERY_GRADIENT_ENABLED = True
 MENU_SCENERY_GRADIENT_STRENGTH = 1.0
+MENU_SCENERY_GRADIENT_START = 0.0   # image top (0.0 - 1.0)
+MENU_SCENERY_GRADIENT_END = 0.5     # image bottom (0.0 - 1.0)
+MENU_SCENERY_BRIGHTNESS = -10       # -255 to 255
 
 # Center button group: position, panel appearance, and entrance animation
 MENU_BUTTON_GROUP_POSITION = (460, 220)
@@ -242,14 +245,16 @@ class Menu(GameState):
             self.left_ground_image = None
             self.left_ground_rect = None
 
-        for name, enabled, strength in (
-            ("sign_image", MENU_SIGN_GRADIENT_ENABLED, MENU_SIGN_GRADIENT_STRENGTH),
-            ("right_ground_image", MENU_SCENERY_GRADIENT_ENABLED, MENU_SCENERY_GRADIENT_STRENGTH),
-            ("left_ground_image", MENU_SCENERY_GRADIENT_ENABLED, MENU_SCENERY_GRADIENT_STRENGTH),
-        ):
+        if MENU_SIGN_GRADIENT_ENABLED and self.sign_image is not None:
+            self.sign_image = ui_elements.apply_button_gradient(
+                self.sign_image, MENU_SIGN_GRADIENT_STRENGTH, stepped=False)
+        for name in ("right_ground_image", "left_ground_image"):
             image = getattr(self, name)
-            if enabled and image is not None:
-                setattr(self, name, ui_elements.apply_button_gradient(image, strength, stepped=False))
+            if image is not None and (MENU_SCENERY_GRADIENT_ENABLED or MENU_SCENERY_BRIGHTNESS):
+                strength = MENU_SCENERY_GRADIENT_STRENGTH if MENU_SCENERY_GRADIENT_ENABLED else 0
+                setattr(self, name, ui_elements.apply_button_gradient(
+                    image, strength, stepped=False, start=MENU_SCENERY_GRADIENT_START,
+                    end=MENU_SCENERY_GRADIENT_END, brightness=MENU_SCENERY_BRIGHTNESS))
 
         # Hildehrand stands near the left edge of the screen, scaled the same
         # nearest-neighbour way as The Sign.png (not smoothscale) so the

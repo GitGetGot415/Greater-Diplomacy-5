@@ -118,7 +118,8 @@ def _button_background(size, color, pressed, border_width, gradient_strength=1.0
 
 
 @lru_cache(maxsize=32)
-def _gradient_overlay(size, gradient_strength, stepped, bands, dithering=True):
+def _gradient_overlay(size, gradient_strength, stepped, bands, dithering=True,
+                      start=0.0, end=1.0, brightness=0):
     """Cached (add, subtract) shade surfaces holding the button gradient for a size.
     Stepped uses the button layout with optional dithered edges: `bands` color bands, or the
     count a button of this height picks (one per `_BUTTON_SHADE_HEIGHT` pixels) when
@@ -127,11 +128,15 @@ def _gradient_overlay(size, gradient_strength, stepped, bands, dithering=True):
     shade_count, boundaries = _band_layout(height, bands if stepped else height)
     light = round(_BUTTON_HIGHLIGHT * gradient_strength)
     dark = round(_BUTTON_SHADOW * gradient_strength)
-    deltas = [round(light + (-dark - light) * i / max(1, shade_count - 1))
-              for i in range(shade_count)]
+    deltas = []
+    for i in range(shade_count):
+        position = i / max(1, shade_count - 1)
+        progress = max(0.0, min(1.0, (position - start) / (end - start)))
+        deltas.append(round(light + (-dark - light) * progress + brightness))
     add, sub = pygame.Surface(size), pygame.Surface(size)
 
     def paint(delta, rect):
+        delta = max(-255, min(255, delta))
         add.fill((max(delta, 0),) * 3, rect)
         sub.fill((max(-delta, 0),) * 3, rect)
 
@@ -144,12 +149,18 @@ def _gradient_overlay(size, gradient_strength, stepped, bands, dithering=True):
     return add, sub
 
 
-def apply_button_gradient(image, gradient_strength=1.0, stepped=True, bands=None, *, dithering=True):
+def apply_button_gradient(image, gradient_strength=1.0, stepped=True, bands=None, *, dithering=True,
+                          start=0.0, end=1.0, brightness=0):
     """Return a copy of `image` with the button's top-light to bottom-dark shading.
     RGB-only blends keep the image's transparency intact."""
     if gradient_strength < 0:
         raise ValueError("Gradient strength must be zero or greater.")
-    add, sub = _gradient_overlay(image.get_size(), gradient_strength, stepped, bands, dithering)
+    if not 0 <= start < end <= 1:
+        raise ValueError("Gradient positions must satisfy 0 <= start < end <= 1.")
+    if not -255 <= brightness <= 255:
+        raise ValueError("Brightness must be between -255 and 255.")
+    add, sub = _gradient_overlay(image.get_size(), gradient_strength, stepped, bands, dithering,
+                                 start, end, brightness)
     shaded = image.copy()
     shaded.blit(add, (0, 0), special_flags=pygame.BLEND_RGB_ADD)
     shaded.blit(sub, (0, 0), special_flags=pygame.BLEND_RGB_SUB)

@@ -103,6 +103,12 @@ Set MENU_SIGN_GRADIENT_ENABLED in screens/menus/menu.py to shade the sign.
 Set MENU_SIGN_GRADIENT_STRENGTH to adjust the sign shading.
 Set MENU_SCENERY_GRADIENT_ENABLED to shade both grass platforms.
 Set MENU_SCENERY_GRADIENT_STRENGTH to adjust the platform shading.
+Set MENU_SCENERY_GRADIENT_START and MENU_SCENERY_GRADIENT_END to positions on each platform image.
+Use 0 for the top and 1 for the bottom. The start must be less than the end.
+The gradient is brightest at the start and darkest at the end.
+It keeps those shades above the start and below the end.
+Set MENU_SCENERY_BRIGHTNESS from -255 to 255 to darken or brighten both platforms.
+Use 0 for no brightness change. Brightness also applies when the gradient is disabled.
 For either strength, use 0 for no shading or 1 for standard shading.
 Use a value of 0 or greater. Restart the game after editing these values.
 

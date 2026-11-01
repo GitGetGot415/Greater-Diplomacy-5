@@ -433,7 +433,7 @@ def get_starting_song():
 
 
 #: Fallback portrait -- the game's original default look.
-DEFAULT_PORTRAIT = "Hildehrand/F/2.png"
+DEFAULT_PORTRAIT = "Hildehrand/F/4.png"
 
 #: Extensions accepted both when scanning assets/characters/ and when
 #: importing a new custom portrait. Broader than the curated set's plain
