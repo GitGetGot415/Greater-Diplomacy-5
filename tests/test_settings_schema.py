@@ -587,9 +587,14 @@ class NavigationIntroPopupTests(unittest.TestCase):
                 pygame.MOUSEBUTTONDOWN, pos=popup.checkbox_rect.center, button=1))
         save.assert_called_once_with("settings", {"show_intro_popup": False})
 
-        popup.handle_event(pygame.event.Event(
-            pygame.MOUSEBUTTONDOWN, pos=popup.next_rect.center, button=1))
-        self.assertEqual(popup.page_index, 1)
+        with mock.patch.object(message_box.ui_elements, "play_ui_sound") as sound:
+            popup.handle_event(pygame.event.Event(
+                pygame.MOUSEBUTTONDOWN, pos=popup.prev_rect.center, button=1))
+            sound.assert_not_called()
+            popup.handle_event(pygame.event.Event(
+                pygame.MOUSEBUTTONDOWN, pos=popup.next_rect.center, button=1))
+            self.assertEqual(popup.page_index, 1)
+            sound.assert_called_once_with("click")
         popup.handle_event(pygame.event.Event(
             pygame.MOUSEBUTTONDOWN, pos=popup.next_rect.center, button=1))
         self.assertEqual(popup.page_index, 2)
@@ -610,6 +615,10 @@ class NavigationIntroPopupTests(unittest.TestCase):
             with mock.patch.object(popup, "_army_step_lines", side_effect=AssertionError("Frame prepared help")):
                 popup.draw(surface)
         self.assertEqual(popup.page_index, len(popup.PAGE_TITLES) - 1)
+        with mock.patch.object(message_box.ui_elements, "play_ui_sound") as sound:
+            popup.handle_event(pygame.event.Event(
+                pygame.MOUSEBUTTONDOWN, pos=popup.next_rect.center, button=1))
+            sound.assert_not_called()
         for _page in range(popup.page_index, 3, -1):
             popup.handle_event(pygame.event.Event(
                 pygame.MOUSEBUTTONDOWN, pos=popup.prev_rect.center, button=1))

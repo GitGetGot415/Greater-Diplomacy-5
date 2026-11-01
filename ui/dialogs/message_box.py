@@ -294,8 +294,11 @@ class _NavigationIntroPopup:
             self.map_screen.navigation_intro_popup = None
 
     def change_page(self, direction):
+        previous_page = self.page_index
         self.page_index = max(0, min(
             self.page_index + direction, len(self.PAGE_TITLES) - 1))
+        if self.page_index != previous_page:
+            ui_elements.play_ui_sound("click")
 
     def _move_to(self, x, y):
         self.rect.topleft = (x, y)
