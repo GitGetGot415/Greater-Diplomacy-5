@@ -9,6 +9,7 @@ from data import queries
 import data.constants as c
 from tests.stub_map_screen import bare_orders_screen, fill_state_defaults
 from ui.camera import camera_handler
+from ui.widgets import ui_elements
 from ui.rendering import overlay_renderer
 from screens.game.map import Map
 from screens.game.orders import _OrdersRowHitbox
@@ -107,6 +108,35 @@ class MapOrderTests(unittest.TestCase):
         self.assertTrue(game.click_select_map_units([fast], additive=True))
         self.assertEqual({id(unit) for unit, _province in game.selected_unit_records()},
                          {id(slow), id(fast)})
+
+    def test_unit_selection_sound_plays_once_for_single_and_group_selection(self):
+        game, slow, fast, _destination = self.make_map()
+        game.clear_map_unit_selection()
+        with patch.object(ui_elements, "play_ui_sound") as sound:
+            self.assertTrue(game.click_select_map_units([slow]))
+            sound.assert_called_once_with("select_unit")
+            sound.reset_mock()
+            self.assertFalse(game.click_select_map_units([slow]))
+            sound.assert_not_called()
+            game.select_map_units([slow, fast])
+            sound.assert_called_once_with("select_unit")
+            sound.reset_mock()
+            game.select_map_units([slow, fast])
+            sound.assert_not_called()
+            game.select_map_units([slow])
+            sound.assert_called_once_with("select_unit")
+            sound.reset_mock()
+            game.select_map_units([fast], additive=True)
+            sound.assert_called_once_with("select_unit")
+
+    def test_empty_and_blocked_selection_do_not_play_unit_selection_sound(self):
+        game, slow, _fast, _destination = self.make_map()
+        with patch.object(ui_elements, "play_ui_sound") as sound:
+            game.select_map_units([])
+            game.select_map_units([{"owner": "B"}])
+            game.viewing_ai_moves = True
+            game.select_map_units([slow])
+            sound.assert_not_called()
 
     def test_selecting_an_army_refocuses_the_orders_target(self):
         unit = {"unit_id": "unit-a", "owner": "A", "type": "Infantry"}

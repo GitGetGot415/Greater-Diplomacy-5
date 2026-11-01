@@ -138,13 +138,13 @@ class _OrdersRowHitbox(Button):
 
     The action glyphs occupy the rest of the row and do not overlap this rect,
     so selecting a unit and issuing one of its commands remain separate clicks.
-    It inherits Button's press/click/sound handling while leaving the dense row
-    rendering to Orders_Screen.additional_draw.
+    It inherits Button's press and release handling. Shared map selection plays
+    the sound. Orders_Screen.additional_draw draws the row.
     """
 
     def __init__(self, rect, callback, secondary_callback=None):
         super().__init__(rect.x, rect.y, "tiny_square", "grey", "", callback,
-                         show_text=False)
+                         show_text=False, sound_kind=None)
         self.rect = pygame.Rect(rect)
         self.secondary_callback = secondary_callback
 
@@ -1117,7 +1117,7 @@ class Orders_Screen(GameState):
                 "blue" if all_selected else "grey")
             btn_all = Button(button_x, PANEL_Y + TOP_BTN_ROW_OFFSET_Y,
                              "orders_header_button", all_color, "Select All",
-                             lambda: self.select_unit("ALL"), font_preset="tiny")
+                             lambda: self.select_unit("ALL"), font_preset="tiny", sound_kind=None)
             btn_all.disabled = is_tactical
             btn_all.is_selected = all_selected and not is_tactical
             self.elements.append(btn_all)

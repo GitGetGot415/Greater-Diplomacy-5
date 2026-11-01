@@ -2404,6 +2404,7 @@ class Map(StateAccess, GameState):
         """Select commandable units represented by one or more visible stacks."""
         if not self.can_select_map_units():
             return
+        previous_selection = self.selected_unit_ids.copy()
         eligible = [unit for unit in units if unit.get("owner") == self.player_country]
         if self.tactical_mode:
             eligible = [unit for unit in eligible if unit is self.player_unit]
@@ -2411,6 +2412,8 @@ class Map(StateAccess, GameState):
             self.selected_unit_ids.clear()
         queries.ensure_unit_ids(self.map_data)
         self.selected_unit_ids.update(unit["unit_id"] for unit in eligible)
+        if eligible and self.selected_unit_ids != previous_selection:
+            ui_elements.play_ui_sound("select_unit")
         self.show_feedback(f"{len(self.selected_unit_ids)} unit{'s' if len(self.selected_unit_ids) != 1 else ''} selected")
 
     def click_select_map_units(self, units, additive=False):
