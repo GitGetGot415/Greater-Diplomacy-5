@@ -27,12 +27,16 @@ SETTINGS_ARMY_GROUP_ANIMATIONS_Y = SETTINGS_INTRO_POPUP_Y + SETTINGS_OPTION_GAP_
 SETTINGS_MAP_NAV_Y = SETTINGS_ARMY_GROUP_ANIMATIONS_Y + SETTINGS_OPTION_GAP_Y
 SETTINGS_BATTLE_DISPLAY_Y = SETTINGS_MAP_NAV_Y + SETTINGS_OPTION_GAP_Y
 SETTINGS_CHECKERBOARD_GRADIENT_Y = SETTINGS_BATTLE_DISPLAY_Y + 65
-SETTINGS_PLAYER_SLIDER_Y = SETTINGS_CHECKERBOARD_GRADIENT_Y + 55
-SETTINGS_FPS_SLIDER_Y = SETTINGS_PLAYER_SLIDER_Y + 55
+SETTINGS_SLIDER_GAP_Y = 55
+SETTINGS_CHECKERBOARD_SPEED_Y = SETTINGS_CHECKERBOARD_GRADIENT_Y + SETTINGS_SLIDER_GAP_Y
+SETTINGS_PLAYER_SLIDER_Y = SETTINGS_CHECKERBOARD_SPEED_Y + SETTINGS_SLIDER_GAP_Y
+SETTINGS_FPS_SLIDER_Y = SETTINGS_PLAYER_SLIDER_Y + SETTINGS_SLIDER_GAP_Y
 SETTINGS_AI_THREAD_SLIDER_POS = (60, 400)
 SETTINGS_SLIDER_WIDTH = 200
 SETTINGS_RESET_Y = 650
 SETTINGS_UNIT_ART_GAP_X = 20
+SETTINGS_UNIT_ART_Y = min(SETTINGS_RESET_Y + SETTINGS_SLIDER_GAP_Y,
+                          c.SCREEN_HEIGHT - c.SIZES["medium"][1] - 10)
 SETTINGS_KEYBINDS_Y = SETTINGS_FPS_SLIDER_Y + 40
 SETTINGS_MOUSE_SETTINGS_Y = SETTINGS_KEYBINDS_Y + 60
 SETTINGS_AI_TOGGLE_POS = (10, c.SCREEN_HEIGHT - 60)
@@ -184,6 +188,11 @@ def render_settings_buttons(settings_screen):
         settings_screen.set_checkerboard_gradient,
         visual_max=c.MAX_CHECKERBOARD_GRADIENT_STRENGTH,
         allowed_max=c.MAX_CHECKERBOARD_GRADIENT_STRENGTH)
+    settings_screen.checkerboard_speed_slider = Slider(
+        keybind_x, SETTINGS_CHECKERBOARD_SPEED_Y, SETTINGS_SLIDER_WIDTH,
+        f"Checkerboard Speed: {settings_screen.controller.checkerboard_scroll_speed:g}",
+        settings_screen.controller.checkerboard_scroll_speed, settings_screen.set_checkerboard_speed,
+        visual_max=c.MAX_CHECKERBOARD_SCROLL_SPEED, allowed_max=c.MAX_CHECKERBOARD_SCROLL_SPEED)
     settings_screen.player_slider = Slider(keybind_x, SETTINGS_PLAYER_SLIDER_Y, SETTINGS_SLIDER_WIDTH,
                                            f"Players: {settings_screen.num_players}",
                                            (settings_screen.num_players - 1) / 7.0, settings_screen.set_players)
@@ -203,10 +212,11 @@ def render_settings_buttons(settings_screen):
     settings_screen.elements.extend([
         settings_screen.ai_thread_slider,
         settings_screen.checkerboard_gradient_slider,
+        settings_screen.checkerboard_speed_slider,
         settings_screen.player_slider,
         settings_screen.fps_slider,
         Button(keybind_x, SETTINGS_RESET_Y, "medium", "red", "Reset Defaults", settings_screen.reset_defaults),
-        Button(keybind_x - c.SIZES["medium"][0] - SETTINGS_UNIT_ART_GAP_X, SETTINGS_RESET_Y, "medium", "blue",
+        Button(keybind_x - c.SIZES["medium"][0] - SETTINGS_UNIT_ART_GAP_X, SETTINGS_UNIT_ART_Y, "medium", "blue",
                "Unit Art", settings_screen.open_unit_art),
     ])
 
@@ -485,6 +495,8 @@ class Settings(GameState):
         c.apply_runtime_settings({"checkerboard_water": False})
         self.controller.checkerboard_gradient_strength = c.DEFAULT_CHECKERBOARD_GRADIENT_STRENGTH
         c.apply_runtime_settings({"checkerboard_gradient_strength": self.controller.checkerboard_gradient_strength})
+        self.controller.checkerboard_scroll_speed = c.DEFAULT_CHECKERBOARD_SCROLL_SPEED
+        c.apply_runtime_settings({"checkerboard_scroll_speed": self.controller.checkerboard_scroll_speed})
 
         self.show_intro_popup = True
         self.controller.show_intro_popup = True
@@ -561,6 +573,13 @@ class Settings(GameState):
         self.controller.checkerboard_gradient_strength = strength
         c.apply_runtime_settings({"checkerboard_gradient_strength": strength})
         self.checkerboard_gradient_slider.text = f"Checkerboard Gradient: {strength:.2f}"
+        queries.save_global_settings(self.controller)
+
+    def set_checkerboard_speed(self, val):
+        speed = round(val)
+        self.controller.checkerboard_scroll_speed = speed
+        c.apply_runtime_settings({"checkerboard_scroll_speed": speed})
+        self.checkerboard_speed_slider.text = f"Checkerboard Speed: {speed}"
         queries.save_global_settings(self.controller)
 
     def set_fps(self, val):

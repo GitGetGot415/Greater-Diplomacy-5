@@ -57,15 +57,12 @@ def draw_map_background(map_screen, surface, ocean_color):
     """Anchor the sky and its water reflection to the camera's map horizon."""
     surface.fill(ocean_color)
     camera = map_screen.camera
-    horizon = map_screen.top_ui_height + int(-camera.pos.y * camera.zoom * camera.tilt_factor)
+    horizon = map_screen.top_ui_height - camera.pos.y * camera.zoom * camera.tilt_factor
     camera_x = camera.pos.x
     if map_screen.loop_map and map_screen.map_w:
         camera_x %= map_screen.map_w
     origin = (-camera_x * camera.zoom, horizon)
     tile = ui_bars.get_checkerboard_tile(menu.MENU_CHECKERBOARD_COLOR)
-    sky_size = (max(1, round(tile.get_width() * camera.zoom)),
-                max(1, round(tile.get_height() * camera.zoom)))
-    sky_tile = ui_bars.scaled_checkerboard_tile(tile, sky_size)
     old_clip = surface.get_clip()
     viewport = pygame.Rect(0, map_screen.top_ui_height, surface.get_width(),
                            max(0, surface.get_height() - map_screen.total_ui_h))
@@ -78,10 +75,11 @@ def draw_map_background(map_screen, surface, ocean_color):
             sky = menu._menu_background((surface.get_width(), background_height), *menu._menu_gradient_colors())
             surface.blit(sky, (0, horizon - round(background_height * menu.MENU_WATERLINE_RATIO)))
             if menu.MENU_CHECKERBOARD_OPACITY > 0:
-                overlay = menu._menu_checkerboard_overlay(sky_tile, menu.MENU_CHECKERBOARD_OPACITY)
+                overlay = menu._menu_checkerboard_overlay(tile, menu.MENU_CHECKERBOARD_OPACITY)
                 map_screen.draw_checkerboard_background(
                     surface, menu.MENU_CHECKERBOARD_COLOR, tile=overlay, origin=origin,
-                    scroll_x_scale=camera.zoom, scroll_y_scale=camera.zoom)
+                    scroll_x_scale=camera.zoom, scroll_y_scale=camera.zoom,
+                    tile_scale=(camera.zoom, camera.zoom))
 
         water_top = max(viewport.top, horizon)
         water_rect = pygame.Rect(0, water_top, viewport.width, max(0, viewport.bottom - water_top))
@@ -89,13 +87,13 @@ def draw_map_background(map_screen, surface, ocean_color):
         if c.CHECKERBOARD_WATER and surface.get_clip().height:
             water_base = ui_bars.get_checkerboard_tile(ocean_color)
             reflected = menu._menu_checkerboard_overlay(water_base, 255, True)
-            water_size = (sky_size[0], max(1, round(reflected.get_height() * camera.zoom * camera.tilt_factor)))
-            water_tile = ui_bars.scaled_checkerboard_tile(reflected, water_size)
-            reflection_scale = water_tile.get_height() / sky_tile.get_height()
+            water_height = max(1.0, reflected.get_height() * camera.zoom * camera.tilt_factor)
+            reflection_scale = water_height / max(1.0, tile.get_height() * camera.zoom)
             map_screen.draw_checkerboard_background(
-                surface, ocean_color, tile=water_tile, origin=origin,
+                surface, ocean_color, tile=reflected, origin=origin,
                 reflection_y=horizon, reflection_scale=reflection_scale,
-                scroll_x_scale=camera.zoom, scroll_y_scale=camera.zoom)
+                scroll_x_scale=camera.zoom, scroll_y_scale=camera.zoom,
+                tile_scale=(camera.zoom, camera.zoom * camera.tilt_factor))
     finally:
         surface.set_clip(old_clip)
 

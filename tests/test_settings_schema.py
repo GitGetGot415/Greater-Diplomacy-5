@@ -40,6 +40,7 @@ GOLDEN_ORDER = (
     "show_unclaimed",
     "openrouter_api_key", "openrouter_model",
     "checkerboard_gradient_strength",
+    "checkerboard_scroll_speed",
 )
 
 GOLDEN_JSON_KEYS = set(GOLDEN_ORDER)
@@ -69,6 +70,7 @@ class RoundTripTests(unittest.TestCase):
     def sample(self):
         values = settings_schema.defaults()
         values.update({"num_players": 3, "ai_mode": "OPENROUTER", "target_fps": 144,
+                       "checkerboard_scroll_speed": 37,
                        "openrouter_api_key": "test-key", "openrouter_model": "inclusionai/test-ling-model",
                        "show_fps": False, "show_unclaimed": False, "saves_dir": "elsewhere",
                        "ocean_light_color": (1, 2, 3)})
@@ -405,13 +407,57 @@ class SettingsScreenTests(unittest.TestCase):
         self.assertEqual(default, 0.0)
         self.assertEqual(settings_schema.from_json_dict({})[name], default)
         self.assertEqual(settings_schema.from_json_dict({name: 1.25})[name], 1.25)
-        old_tuple = settings_schema.to_tuple(settings_schema.defaults(), {})[:-1]
+        old_tuple = settings_schema.to_tuple(settings_schema.defaults(), {})[:GOLDEN_ORDER.index(name) + 1]
         self.assertEqual(settings_schema.from_tuple(old_tuple)[name], default)
         for value in ("bad", True, float("nan"), float("inf")):
             with self.subTest(value=value):
                 self.assertEqual(settings_schema.from_json_dict({name: value})[name], default)
         self.assertEqual(settings_schema.from_json_dict({name: -1})[name], 0)
         self.assertEqual(settings_schema.from_json_dict({name: 99})[name], c.MAX_CHECKERBOARD_GRADIENT_STRENGTH)
+
+    def test_checkerboard_speed_defaults_and_invalid_saved_values(self):
+        name = "checkerboard_scroll_speed"
+        default = c.DEFAULT_CHECKERBOARD_SCROLL_SPEED
+        self.assertEqual(settings_schema.from_json_dict({})[name], default)
+        old_tuple = settings_schema.to_tuple(settings_schema.defaults(), {})[:-1]
+        self.assertEqual(settings_schema.from_tuple(old_tuple)[name], default)
+        for value in ("bad", True, float("nan"), float("inf")):
+            with self.subTest(value=value):
+                self.assertEqual(settings_schema.from_json_dict({name: value})[name], default)
+        self.assertEqual(settings_schema.from_json_dict({name: -1})[name], 0)
+        self.assertEqual(settings_schema.from_json_dict({name: 1e6})[name], c.MAX_CHECKERBOARD_SCROLL_SPEED)
+
+    def test_checkerboard_speed_slider_updates_saves_and_resets(self):
+        import pygame
+        from types import SimpleNamespace
+        from data import queries
+        from data.io import keybind_io
+        from screens.menus.settings import Settings
+        pygame.font.init()
+        for name in c.RUNTIME_SETTINGS.values():
+            self.addCleanup(setattr, c, name, getattr(c, name))
+        controller = SimpleNamespace(**settings_schema.defaults(), keybinds={})
+        controller.ai_mode = "OFF"
+        with mock.patch.object(queries, "get_settings", return_value={}), \
+                mock.patch.object(queries, "save_cached_json") as save:
+            screen = Settings(controller)
+            slider = screen.checkerboard_speed_slider
+            screen.handle_events([pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=slider.handle_rect.center)])
+            with mock.patch.object(pygame.mouse, "get_pressed", return_value=(True, False, False)):
+                screen.handle_events([pygame.event.Event(pygame.MOUSEMOTION, pos=(slider.rect.right, slider.rect.centery))])
+            screen.handle_events([pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=slider.rect.topright)])
+            self.assertEqual(controller.checkerboard_scroll_speed, c.MAX_CHECKERBOARD_SCROLL_SPEED)
+            self.assertEqual(c.CHECKERBOARD_SCROLL_SPEED, controller.checkerboard_scroll_speed)
+            saved = save.call_args.args[1]
+            with mock.patch.object(keybind_io.os.path, "exists", return_value=True), \
+                    mock.patch.object(queries, "get_settings", return_value=saved):
+                restored = keybind_io.load_settings_result({}).values
+            self.assertEqual(restored["checkerboard_scroll_speed"], controller.checkerboard_scroll_speed)
+            screen.set_checkerboard_speed(0)
+            self.assertEqual(c.CHECKERBOARD_SCROLL_SPEED, 0)
+            screen.reset_defaults()
+            self.assertEqual(controller.checkerboard_scroll_speed, c.DEFAULT_CHECKERBOARD_SCROLL_SPEED)
+            self.assertEqual(c.CHECKERBOARD_SCROLL_SPEED, c.DEFAULT_CHECKERBOARD_SCROLL_SPEED)
 
     def test_checkerboard_slider_updates_saves_and_resets(self):
         import pygame

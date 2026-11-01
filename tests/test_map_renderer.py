@@ -7,7 +7,27 @@ from unittest.mock import patch
 import pygame
 
 from ui.rendering import hover_renderer, map_renderer
+from ui.bars import ui_bars
+import data.constants as c
 from tests.stub_map_screen import map_double
+
+
+class CheckerboardAnimationTests(unittest.TestCase):
+    def test_speed_changes_and_pause_keep_the_current_phase(self):
+        with patch.object(ui_bars, "_checkerboard_scroll_clock", None), \
+                patch.object(c, "CHECKERBOARD_SCROLL_SPEED", 10), \
+                patch.object(pygame.time, "get_ticks", return_value=1000) as ticks:
+            self.assertEqual(ui_bars.checkerboard_scroll_offset(), 10)
+            ticks.return_value = 2000
+            self.assertEqual(ui_bars.checkerboard_scroll_offset(), 20)
+            c.CHECKERBOARD_SCROLL_SPEED = 20
+            self.assertEqual(ui_bars.checkerboard_scroll_offset(), 20)
+            ticks.return_value = 2500
+            self.assertEqual(ui_bars.checkerboard_scroll_offset(), 30)
+            c.CHECKERBOARD_SCROLL_SPEED = 0
+            self.assertEqual(ui_bars.checkerboard_scroll_offset(), 30)
+            ticks.return_value = 3000
+            self.assertEqual(ui_bars.checkerboard_scroll_offset(), 30)
 
 
 class NonLoopingMapRendererTests(unittest.TestCase):

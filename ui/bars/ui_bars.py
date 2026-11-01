@@ -20,6 +20,20 @@ _province_menu_background_cache = {}
 # Recolored checkerboard tiles, cached by color and gradient strength so each screen only
 # pays the generation cost once
 _checkerboard_cache = {}
+_checkerboard_scroll_clock = None
+
+
+def checkerboard_scroll_offset():
+    """Advance one shared animation phase without jumps when its speed changes."""
+    global _checkerboard_scroll_clock
+    ticks = pygame.time.get_ticks()
+    if _checkerboard_scroll_clock is None:
+        offset = ticks * c.CHECKERBOARD_SCROLL_SPEED / 1000.0
+    else:
+        previous_ticks, offset, previous_speed = _checkerboard_scroll_clock
+        offset += max(0, ticks - previous_ticks) * previous_speed / 1000.0
+    _checkerboard_scroll_clock = (ticks, offset, c.CHECKERBOARD_SCROLL_SPEED)
+    return offset
 
 
 @lru_cache(maxsize=32)

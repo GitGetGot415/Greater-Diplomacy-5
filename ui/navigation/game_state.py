@@ -1,5 +1,6 @@
 import os
 import shutil
+import math
 import pygame
 import data.constants as c
 from data import queries
@@ -520,7 +521,7 @@ class GameState:
 
     def draw_checkerboard_background(self, surface, base_color, *, tile=None, reflection_y=None,
                                      reflection_scale=1.0, reflection_shear=0.0, scroll_y_scale=1.0,
-                                     scroll_x_scale=1.0, origin=(0, 0)):
+                                     scroll_x_scale=1.0, origin=(0, 0), tile_scale=(1.0, 1.0)):
         # Draw the tile in a grid slightly larger than the screen, offset by a
         # time-based amount that grows down and to the right. Since the tile
         # is seamless, wrapping the offset back to 0 every tile-length makes
@@ -528,19 +529,21 @@ class GameState:
         if tile is None:
             tile = ui_bars.get_checkerboard_tile(base_color)
         tile_w, tile_h = tile.get_size()
+        period_x = max(1.0, tile_w * tile_scale[0])
+        period_y = max(1.0, tile_h * tile_scale[1])
 
-        elapsed = pygame.time.get_ticks() / 1000.0
-        offset_x = int((elapsed * c.CHECKERBOARD_SCROLL_SPEED * scroll_x_scale) % tile_w)
-        offset_y = int((elapsed * c.CHECKERBOARD_SCROLL_SPEED * scroll_y_scale) % tile_h)
+        phase = ui_bars.checkerboard_scroll_offset()
+        offset_x = (phase * scroll_x_scale) % period_x
+        offset_y = (phase * scroll_y_scale) % period_y
 
-        start_x = round(origin[0] - offset_x) % tile_w - tile_w
-        start_y = round(origin[1] - offset_y) % tile_h - tile_h
+        start_x = (origin[0] - offset_x) % period_x - period_x
+        start_y = (origin[1] - offset_y) % period_y - period_y
         if reflection_y is not None:
             # Mirror and scale the original pattern about the waterline, including its movement.
-            source_height = tile_h / reflection_scale
-            source_offset = int((elapsed * c.CHECKERBOARD_SCROLL_SPEED * scroll_y_scale) % source_height)
+            source_height = period_y / reflection_scale
+            source_offset = (phase * scroll_y_scale) % source_height
             reflected_origin = reflection_y + reflection_scale * (reflection_y - origin[1] + source_offset)
-            start_y = round(reflected_origin) % tile_h - tile_h
+            start_y = reflected_origin % period_y - period_y
             if reflection_shear:
                 water_top = max(0, reflection_y, surface.get_clip().top)
                 water_height = surface.get_clip().bottom - water_top
@@ -548,19 +551,28 @@ class GameState:
                     return
                 pattern = ui_bars.get_sheared_checkerboard(
                     tile, (surface.get_width(), water_height), reflection_shear)
-                source_y = (water_top - start_y) % tile_h
+                source_y = round(water_top - start_y) % tile_h
                 # Cancel the cached row offset at the horizon to keep the reflection aligned.
-                source_x = (-start_x - round(reflection_shear * (water_top - reflection_y))
+                source_x = (round(-start_x) - round(reflection_shear * (water_top - reflection_y))
                             + round(reflection_shear * source_y)) % tile_w
                 surface.blit(pattern, (0, water_top),
                              (source_x, source_y, surface.get_width(), water_height))
                 return
         clip = surface.get_clip()
-        start_y += ((clip.top - start_y) // tile_h) * tile_h
-        start_x += ((clip.left - start_x) // tile_w) * tile_w
-        for y in range(start_y, clip.bottom, tile_h):
-            for x in range(start_x, clip.right, tile_w):
-                surface.blit(tile, (x, y))
+        # Round each projected boundary once. A rounded tile period accumulates
+        # position errors across the screen and changes the phase during zoom.
+        first_row = math.floor((clip.top - start_y) / period_y)
+        last_row = math.ceil((clip.bottom - start_y) / period_y)
+        first_col = math.floor((clip.left - start_x) / period_x)
+        last_col = math.ceil((clip.right - start_x) / period_x)
+        for row in range(first_row, last_row):
+            top = round(start_y + row * period_y)
+            bottom = round(start_y + (row + 1) * period_y)
+            for col in range(first_col, last_col):
+                left = round(start_x + col * period_x)
+                right = round(start_x + (col + 1) * period_x)
+                scaled = ui_bars.scaled_checkerboard_tile(tile, (right - left, bottom - top))
+                surface.blit(scaled, (left, top))
 
     def draw(self, surface):
         # 1. Fill background or draw background image

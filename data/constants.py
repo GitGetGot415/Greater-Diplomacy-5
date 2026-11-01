@@ -2277,7 +2277,9 @@ SETTINGS_BG_FILE = "Settings.png"
 # between squares; at runtime it's recolored to match each screen's own
 # bg_color instead of being drawn red.
 CHECKERBOARD_TEMPLATE_FILE = "Checkerboard.png"
-CHECKERBOARD_SCROLL_SPEED = 18  # pixels/sec, moves down-and-right
+DEFAULT_CHECKERBOARD_SCROLL_SPEED = 18  # pixels/sec
+CHECKERBOARD_SCROLL_SPEED = DEFAULT_CHECKERBOARD_SCROLL_SPEED
+MAX_CHECKERBOARD_SCROLL_SPEED = 100
 DEFAULT_CHECKERBOARD_GRADIENT_STRENGTH = 0.0
 CHECKERBOARD_GRADIENT_STRENGTH = DEFAULT_CHECKERBOARD_GRADIENT_STRENGTH
 MAX_CHECKERBOARD_GRADIENT_STRENGTH = 2.0
@@ -2413,6 +2415,7 @@ RUNTIME_SETTINGS = {
     "tournament_saves_dir": "TOURNAMENT_SAVES_DIR",
     "checkerboard_water": "CHECKERBOARD_WATER",
     "checkerboard_gradient_strength": "CHECKERBOARD_GRADIENT_STRENGTH",
+    "checkerboard_scroll_speed": "CHECKERBOARD_SCROLL_SPEED",
     "unit_art_style": "UNIT_ART_STYLE",
     "map_navigation_mode": "MAP_NAVIGATION_MODE",
     "battle_display_mode": "BATTLE_DISPLAY_MODE",

@@ -46,6 +46,13 @@ def _coerce_checkerboard_gradient(value):
     return max(0.0, min(float(value), c.MAX_CHECKERBOARD_GRADIENT_STRENGTH))
 
 
+def _coerce_checkerboard_speed(value):
+    """Keep saved movement speeds within the slider range."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+        return c.DEFAULT_CHECKERBOARD_SCROLL_SPEED
+    return max(0.0, min(float(value), c.MAX_CHECKERBOARD_SCROLL_SPEED))
+
+
 # Keep positional compatibility for older callers. JSON settings use named keys.
 SETTINGS_FIELDS = (
     _field("sfx_volume", "sfx_volume", lambda: c.DEFAULT_SFX_VOLUME),
@@ -104,6 +111,8 @@ SETTINGS_FIELDS = (
     _field("openrouter_model", "openrouter_model", lambda: c.DEFAULT_OPENROUTER_MODEL),
     _field("checkerboard_gradient_strength", "checkerboard_gradient_strength",
            lambda: c.DEFAULT_CHECKERBOARD_GRADIENT_STRENGTH, coerce=_coerce_checkerboard_gradient),
+    _field("checkerboard_scroll_speed", "checkerboard_scroll_speed",
+           lambda: c.DEFAULT_CHECKERBOARD_SCROLL_SPEED, coerce=_coerce_checkerboard_speed),
 )
 
 SETTINGS_ORDER = tuple(field.name for field in SETTINGS_FIELDS)

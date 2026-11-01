@@ -27,6 +27,7 @@ def save_settings(keybind_dict, sfx_volume, music_volume, num_players=1, ai_mode
                   show_unclaimed=c.DEFAULT_SHOW_UNCLAIMED,
                   openrouter_api_key=None, openrouter_model=None,
                   checkerboard_gradient_strength=c.DEFAULT_CHECKERBOARD_GRADIENT_STRENGTH,
+                  checkerboard_scroll_speed=c.DEFAULT_CHECKERBOARD_SCROLL_SPEED,
                   **legacy_settings):
     """Convert key codes to names and save settings as JSON.
 
