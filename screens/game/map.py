@@ -112,6 +112,7 @@ COUNTRY_FOCUS_UNIT_ZOOM_MARGIN = 0.1
 # --- Bottom-right button strip (editor tools, turn controls) ---
 EDITOR_BOT_BTN_START_X = c.SCREEN_WIDTH - 120
 EDITOR_BOT_BTN_STEP_X = 110
+EDITOR_BULK_ICON_SCALE = 2
 EDITOR_SELECTION_TOOL_X = EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X * 0.5
 EDITOR_SELECTION_TOOL_GAP = 15
 EDITOR_SELECTION_TOOL_STEP_X = c.SIZES["small_square"][0] + EDITOR_SELECTION_TOOL_GAP
@@ -272,6 +273,8 @@ def _build_editor_buttons(map_screen):
         appearance = (dict(image=icons.get(icon), show_text=False) if icon else dict(font_preset="normal"))
         setattr(map_screen, attr, Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X * slots, c.BOTTOM_BAR_UI_CENTER_Y,
                                          size, color, label, callback, **appearance))
+
+    map_screen.btn_ed_bulk.image = pygame.transform.scale_by(icons["stack"], EDITOR_BULK_ICON_SCALE)
 
     map_screen.btn_ed_brush = Button(EDITOR_SELECTION_TOOL_X, c.BOTTOM_BAR_UI_CENTER_Y, "small_square", "blue", "Brush", lambda: map_screen.set_editor_selection_tool("BRUSH"), image=icons.get("brush"), show_text=False)
     map_screen.btn_ed_paint = Button(EDITOR_SELECTION_TOOL_X + EDITOR_SELECTION_TOOL_STEP_X, c.BOTTOM_BAR_UI_CENTER_Y, "small_square", "blue", "Paint", lambda: map_screen.set_editor_selection_tool("PAINT"), image=icons.get("paint"), show_text=False)
