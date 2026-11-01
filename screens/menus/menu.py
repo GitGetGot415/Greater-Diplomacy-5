@@ -14,6 +14,7 @@ from ui.navigation.game_state import GameState
 from ui.widgets.ui_elements import Button
 import data.constants as c
 from data import queries
+from data.migrations import version_number
 from ui.dialogs import pickers
 from data.platform import IS_WEB
 from ui.rendering.font_manager import fonts
@@ -615,9 +616,16 @@ class Menu(GameState):
 
             fetched_version = response.read().decode('utf-8').strip()
             
-            if fetched_version == c.GAME_VERSION:
+            current_number = version_number(c.GAME_VERSION)
+            fetched_number = version_number(fetched_version)
+            if not current_number or not fetched_number:
+                raise ValueError("Invalid game version")
+            if current_number == fetched_number:
                 self.version_status = f"Version: {c.GAME_VERSION} (Up to date)"
                 self.version_color = c.COLOR_SUCCESS_GREEN # Green
+            elif current_number > fetched_number:
+                self.version_status = f"Version: {c.GAME_VERSION} (Dev version)"
+                self.version_color = (100, 160, 255) # Blue
             else:
                 self.version_status = f"Outdated! Latest: {fetched_version} (Current: {c.GAME_VERSION})"
                 self.version_color = (255, 100, 100) # Red

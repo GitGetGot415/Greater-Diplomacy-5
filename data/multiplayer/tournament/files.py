@@ -22,7 +22,7 @@ from data.map import history_io
 from data.map.map_cache import remove_optional_layer_files
 from data.platform import sync_persisted_dir
 
-from data.multiplayer.tournament import v46_moves
+from data.migrations import v46_moves
 from map_logic.actions.player_actions import collect_map_commands, PlayerActions
 
 

@@ -11,7 +11,7 @@ import pygame
 
 from data import queries
 import data.constants as c
-from data.multiplayer.tournament import v46_moves
+from data.migrations import v46_moves
 from data.multiplayer.realtime.session import (
     MapRealtimeDriver,
     RealtimeConfig,

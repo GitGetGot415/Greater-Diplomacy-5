@@ -13,7 +13,7 @@ import pygame
 from data import migrations, queries
 import data.constants as c
 from data.multiplayer.tournament import files as tournament_files
-from data.multiplayer.tournament import v46_moves
+from data.migrations import v46_moves
 from data.multiplayer.realtime.session import (
     MapRealtimeDriver,
     RealtimeError,

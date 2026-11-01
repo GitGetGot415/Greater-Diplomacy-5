@@ -2,14 +2,17 @@ SAVED DATA MIGRATIONS
 ====================
 
 Migration means conversion from an older Greater Diplomacy 5 (GD5) data format to the current format.
-data/migrations.py owns version steps and older GD5 identifiers.
+The data/migrations/ package owns version steps, older GD5 identifiers, and the v46 move adapter.
 Save imports from other games belong in their separate translation modules.
 Greater Diplomacy 4 (GD4) and Greater Diplomacy Hex Edition are separate games, not older GD5 versions.
 
 OWNERSHIP
 ---------
 
-Keep GD5 version steps and older identifiers in data/migrations.py.
+Keep all conversion of older GD5 data in the data/migrations/ package. Its __init__.py lists each file.
+Each game version has its own file, such as v47.py. versions.py registers the steps.
+Callers import names from the package: from data import migrations.
+Tests that replace SAVE_STEPS, MOVE_STEPS, or CURRENT_VERSION replace them in data.migrations.versions.
 Keep GD4 conversion rules in map_logic/imports/gd4_translation.py.
 Keep Greater Diplomacy Hex Edition conversion rules in map_logic/imports/gdhex_translation.py.
 Keep current settings fields and defaults in data/io/settings_schema.py.
@@ -17,6 +20,7 @@ Keep current gameplay rules and validation in their shared rule modules.
 Keep saved-file access, compression formats, and storage synchronization in their input and output modules.
 
 Load repairs are not migrations. They fix invalid current data on every load.
+The clamps in data/migrations/repairs.py and research.py are load repairs. They share the package but are not version steps.
 The armies.py, units.py, saves.py, and air.py modules in data/queries/ own unit identities, unit statistics, province overlays, air order repair, and spawned-territory repair.
 map_logic/diplomacy/diplomacy_lifecycle.py owns request, response, and treaty identities.
 map_logic/diplomacy/faction_records.py owns faction record validation.
@@ -46,7 +50,7 @@ VERSION STEPS
 -------------
 
 A version step converts all older data to the format of one game version.
-SAVE_STEPS and MOVE_STEPS in data/migrations.py list the steps in version order.
+SAVE_STEPS and MOVE_STEPS in data/migrations/versions.py list the steps in version order.
 migrations.upgrade_save runs each save step that is newer than the save's version.
 It then sets the save's version to GAME_VERSION.
 
@@ -131,7 +135,7 @@ data/queries/saves.py copies these public year lists from the active research li
 History, default research, paused projects, and active project points retain their meaning.
 Completed equipment years map to the latest available stage at or before that year.
 Unfinished points apply to the next stage. Projects are removed when the converted track is already complete.
-Older files without research_years use the original research dates in data/migrations.py.
+Older files without research_years use the original research dates in data/migrations/research.py.
 An older unfinished first project receives its earlier equipment stages before that project continues.
 An unresearched track without a pending project stays unresearched.
 Tournament snapshots, older move projections, real-time snapshots, and imports use the same research-year representation.
@@ -229,7 +233,7 @@ Cancellation refunds become available before the combined payment is collected.
 Older compatibility projections can accompany intents. Conflicting unit, cargo, production, research, army, or appearance choices are rejected.
 When player_intents is present, only validated intents establish game state.
 v46 moves have no player_intents. After conversion, they use the partial-snapshot input adapter and host review.
-data/multiplayer/tournament/v46_moves.py owns this adapter. legacy_player_country converts their country fields.
+data/migrations/v46_moves.py owns this adapter. legacy_player_country in data/migrations/tournament.py converts their country fields.
 Explicit older stat, timing, and refund differences still require the existing host review.
 Review acceptance re-reads and revalidates the file. Current real-time clients cannot request these older projection overrides.
 Older snapshots discard invalid diplomatic drafts while preserving unrelated choices, as their earlier adapter did.
@@ -254,9 +258,11 @@ Keep existing support for earlier releases where required.
 
 1. Set GAME_VERSION in data/constants.py to the new version. Use that version for the step.
    Never change version.txt. See how_to_update.txt in the repository root.
-2. Write the step in data/migrations.py, in a section named for that version.
+2. Write the step in a new file in data/migrations/, named for that version, such as v48.py.
 3. Convert country records, province records, meta.json fields, and every history snapshot.
-4. Add the step to SAVE_STEPS. If move files contain the changed data, add a move step to MOVE_STEPS.
+4. Add the step to SAVE_STEPS in data/migrations/versions.py.
+   If move files contain the changed data, add a move step to MOVE_STEPS there.
+   Add the new file to the list in data/migrations/__init__.py.
 5. Change gameplay code to read only the new format. Remove any read-time adapter for the old format.
 6. Preserve unknown valid fields and references held by other modules.
 7. Test older data, current data, and a save/load round trip.

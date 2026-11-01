@@ -69,7 +69,7 @@ class GameVersionTests(unittest.TestCase):
         calls = []
         steps = ((migrations.CURRENT_VERSION, lambda *parts: calls.append("this release")),
                  (migrations.CURRENT_VERSION + 1, lambda *parts: calls.append("next release")))
-        with mock.patch.object(migrations, "SAVE_STEPS", steps):
+        with mock.patch.object(migrations.versions, "SAVE_STEPS", steps):
             old = {"version": f"v{migrations.CURRENT_VERSION - 1}"}
             migrations.upgrade_save(old, {}, {})
             self.assertEqual(calls, ["this release", "next release"])
@@ -82,7 +82,7 @@ class GameVersionTests(unittest.TestCase):
     def test_moves_from_every_older_release_since_v46_run_each_newer_step_in_order(self):
         calls = []
         steps = tuple((target, lambda move, target=target: calls.append(target)) for target in (47, 48, 49))
-        with mock.patch.object(migrations, "MOVE_STEPS", steps),                 mock.patch.object(migrations, "CURRENT_VERSION", 49):
+        with mock.patch.object(migrations.versions, "MOVE_STEPS", steps),                 mock.patch.object(migrations.versions, "CURRENT_VERSION", 49):
             for stamp, expected in ((None, [47, 48, 49]), ("v47", [48, 49]), ("v48", [49]), ("v49", [])):
                 with self.subTest(stamp=stamp):
                     calls.clear()

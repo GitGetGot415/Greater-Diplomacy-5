@@ -7,7 +7,7 @@ from unittest.mock import patch
 import data.constants as c
 from data.state_access import BackendState
 from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError
-from data.multiplayer.tournament.v46_moves import _validate_production_projection
+from data.migrations.v46_moves import _validate_production_projection
 from map_logic.actions import production_actions as actions
 from tests.research_fixtures import fixture_metadata
 

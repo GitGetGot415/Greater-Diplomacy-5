@@ -62,7 +62,7 @@ AI means artificial intelligence. UI means user interface.
 | --- | --- |
 | `data/constants.py` | Constants and tuning values shared across modules. |
 | `data/queries/` | Shared state queries, rule helpers, caches, and the save-dictionary builder. One module per topic. |
-| `data/migrations.py` | Older GD5 identifiers, saved-data conversions, and load repairs. |
+| `data/migrations/` | All conversion of older GD5 data: identifiers, version steps, load repairs, and the v46 move adapter. One file per concern. |
 | `data/game_state.py`, `data/session_state.py` | World data, participants, control permissions, and processing progress. |
 | `data/runtime_rules.py`, `data/world_nations.py` | World-specific active libraries, derived indexes, and explicit country-mapping context. |
 | `data/state_access.py` | Explicit state access, map compatibility properties, and backend execution context. |
@@ -74,7 +74,6 @@ AI means artificial intelligence. UI means user interface.
 | `data/json/` | Data libraries and AI response text used without an LLM. |
 | `data/map/save_map.py`, `data/map/load_map.py` | Saves, loads, defaults, and migration calls. |
 | `data/multiplayer/tournament/files.py` | Tournament files, player move export, host import, authentication, and filtering. |
-| `data/multiplayer/tournament/v46_moves.py` | Input adapter for released v46 move files. Keep it while v46 moves convert. |
 | `data/multiplayer/realtime/session.py` | Real-time protocol, server commands, snapshots, and filtered client state. |
 | `map_logic/system32/` | Turns, movement, economy, research, and combat. |
 | `map_logic/diplomacy/` | Shared diplomacy rules, messages, effects, and state changes. |
@@ -222,7 +221,7 @@ Keep tuning data in its source files:
   Every save, tournament file, and move file records the version that wrote it.
   Do not add another version number, schema name, or numbered format.
 - A version step converts all older data to the format of one game version.
-  Put each step in `SAVE_STEPS` or `MOVE_STEPS` in `data/migrations.py`.
+  Put each step in its own file in `data/migrations/`. List it in `SAVE_STEPS` or `MOVE_STEPS` in `data/migrations/versions.py`.
   Give the step the version in `GAME_VERSION`.
   See `how_to_update.txt` for the short steps and `documentation/data_migrations.txt` for the procedure.
 - A file from a newer version is refused with an error that tells the player to update.
@@ -241,7 +240,7 @@ Keep tuning data in its source files:
 - Treat a new saved field as a data-format change.
   Define its owner, writer, loader, and old-save default.
   Test round trips and legacy loading.
-- Put older GD5 data conversion rules and identifier aliases in `data/migrations.py`.
+- Put older GD5 data conversion rules and identifier aliases in the `data/migrations/` package.
   Call those helpers from loaders, importers, and other data boundaries.
   Keep save imports from other games in their separate translation modules.
   GD4 and Greater Diplomacy Hex Edition are separate games, not older GD5 versions.

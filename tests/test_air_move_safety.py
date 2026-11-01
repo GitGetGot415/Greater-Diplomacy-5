@@ -5,7 +5,7 @@ from unittest.mock import Mock, patch
 
 from data import queries
 import data.constants as c
-from data.multiplayer.tournament import v46_moves
+from data.migrations import v46_moves
 from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError
 from map_logic.ai import ai_movement, ai_unit_eval
 from map_logic.system32 import air_processor, combat_rules, movement_processor

@@ -211,8 +211,8 @@ class LegacyNamingTests(unittest.TestCase):
             legacy = dict(self.LEGACY_SETTINGS, future_setting={"enabled": False}, keybinds={"BACK": None})
             path.write_text(json.dumps(legacy), encoding="utf-8")
             with mock.patch.dict(queries._JSON_CACHE, {"settings": {"path": str(path), "data": None}}), \
-                    mock.patch.object(migrations, "migrate_setting_names",
-                                      wraps=migrations.migrate_setting_names) as migrate:
+                    mock.patch.object(migrations.settings, "migrate_setting_names",
+                                      wraps=migrations.settings.migrate_setting_names) as migrate:
                 settings = queries.get_settings()
                 self.assertIs(queries.get_settings(), settings)
                 migrate.assert_called_once()
