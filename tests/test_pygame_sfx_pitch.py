@@ -63,24 +63,24 @@ class PygameSfxPitchTests(unittest.TestCase):
         self.assertEqual(len(ui_elements._pygame_sfx_pitch_cache["slider"]), 1)
 
     def test_volume_config_loads_filename_multipliers_and_defaults(self):
-        values = {"Slider.wav": 2.5, "Select Music.wav": 0}
+        values = {"Slider.wav": 2.5, "Select Song.wav": 0}
         with patch("builtins.open", mock_open(read_data=json.dumps(values))):
             ui_elements.load_sound_volumes()
         ui_elements.global_sfx_volume = 0.4
         with patch.object(ui_elements.c, "SOUND_CLICK_PATH", "assets/sounds/Slider.wav"):
             self.assertEqual(ui_elements._ui_sound_volume("click"), 1.0)
-        self.assertEqual(ui_elements._ui_sound_volume("select_music"), 0)
+        self.assertEqual(ui_elements._ui_sound_volume("select_song"), 0)
         self.assertEqual(ui_elements._ui_sound_volume("open_music"), 0.4)
         with patch("builtins.open", side_effect=FileNotFoundError):
             ui_elements.load_sound_volumes()
-        self.assertEqual(ui_elements._ui_sound_volume("select_music"), 0.4)
+        self.assertEqual(ui_elements._ui_sound_volume("select_song"), 0.4)
 
     def test_volume_config_rejects_invalid_values_and_json(self):
         for value in [-1, True, "2", None, float("inf"), float("nan")]:
             with self.subTest(value=value):
-                contents = json.dumps({"Select Music.wav": value})
+                contents = json.dumps({"Select Song.wav": value})
                 with patch("builtins.open", mock_open(read_data=contents)):
-                    with self.assertRaisesRegex(ValueError, "Select Music.wav"):
+                    with self.assertRaisesRegex(ValueError, "Select Song.wav"):
                         ui_elements.load_sound_volumes()
         for contents in ["[]", "{"]:
             with patch("builtins.open", mock_open(read_data=contents)):
@@ -111,31 +111,31 @@ class PygameSfxPitchTests(unittest.TestCase):
         self.assertIsNot(boosted, ui_elements._pygame_sound_at_pitch("click", 2))
 
     def test_backend_volume_uses_master_times_multiplier(self):
-        ui_elements.sound_volume_multipliers["Select Music.wav"] = 4
+        ui_elements.sound_volume_multipliers["Select Song.wav"] = 4
         ui_elements.global_sfx_volume = 0.5
         engine = Mock()
         sound = Mock()
         with patch.object(ui_elements.c, "USE_SOLOUD", True), \
                 patch.object(ui_elements, "soloud_engine", engine), \
-                patch.dict(ui_elements.music_ui_sounds, select_music=sound):
-            ui_elements.play_ui_sound("select_music")
+                patch.dict(ui_elements.music_ui_sounds, select_song=sound):
+            ui_elements.play_ui_sound("select_song")
             engine.set_volume.assert_called_once_with(engine.play.return_value, 2)
         with patch.object(ui_elements.c, "USE_SOLOUD", False), \
                 patch.object(ui_elements, "_pygame_sound_at_pitch", return_value=sound) as prepare:
-            ui_elements.play_ui_sound("select_music")
-            prepare.assert_called_once_with("select_music", 2)
+            ui_elements.play_ui_sound("select_song")
+            prepare.assert_called_once_with("select_song", 2)
             sound.set_volume.assert_called_once_with(1)
             ui_elements.global_sfx_volume = 0.125
-            ui_elements.play_ui_sound("select_music")
-            prepare.assert_called_with("select_music", 1)
+            ui_elements.play_ui_sound("select_song")
+            prepare.assert_called_with("select_song", 1)
             sound.set_volume.assert_called_with(0.5)
             sound.play.reset_mock()
             ui_elements.global_sfx_volume = 0
-            ui_elements.play_ui_sound("select_music")
+            ui_elements.play_ui_sound("select_song")
             sound.play.assert_not_called()
             ui_elements.global_sfx_volume = 1
-            ui_elements.sound_volume_multipliers["Select Music.wav"] = 0
-            ui_elements.play_ui_sound("select_music")
+            ui_elements.sound_volume_multipliers["Select Song.wav"] = 0
+            ui_elements.play_ui_sound("select_song")
             sound.play.assert_not_called()
 
 
