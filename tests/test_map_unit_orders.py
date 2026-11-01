@@ -1,5 +1,6 @@
 """Regression coverage for map-level unit routing without a live display."""
 import unittest
+from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 import pygame
@@ -490,7 +491,12 @@ class OrdersBatchCommandsTests(unittest.TestCase):
         second = {"owner": "A", "type": "Infantry", "order": {"type": "DISBAND"}}
         screen, _map_stub, feedback = self._screen(first, second)
 
-        screen.cancel_selected_batch_orders("DISBAND")
+        with patch.object(ui_elements, "play_ui_sound") as sound:
+            screen.cancel_selected_batch_orders("DISBAND")
+            sound.assert_called_once_with("cancel_orders")
+            sound.reset_mock()
+            screen.cancel_selected_batch_orders("DISBAND")
+            sound.assert_not_called()
 
         self.assertNotIn("order", first)
         self.assertNotIn("order", second)
@@ -523,8 +529,49 @@ class OrdersBatchCommandsTests(unittest.TestCase):
         self.assertNotIn("order", first)
         self.assertNotIn("order", second)
 
+    def test_cancel_one_and_clear_group_play_once_and_ignore_empty_orders(self):
+        first = {"owner": "A", "type": "Infantry", "order": {"type": "DISBAND"}}
+        second = {"owner": "A", "type": "Infantry", "order": {"type": "DISBAND"}}
+        screen, game, _feedback = self._screen(first, second)
+        records = game.selected_unit_records()
+        game.map_data = {str(province["id"]): province for _unit, province in records}
+        with patch.object(ui_elements, "play_ui_sound") as sound:
+            screen.cancel_unit_order(0, records[0][1])
+            sound.assert_called_once_with("cancel_orders")
+            sound.reset_mock()
+            screen.cancel_unit_order(0, records[0][1])
+            sound.assert_not_called()
+            first["order"] = {"type": "DISBAND"}
+            screen.clear_all_orders()
+            sound.assert_called_once_with("cancel_orders")
+            sound.reset_mock()
+            screen.clear_all_orders()
+            sound.assert_not_called()
+        self.assertNotIn("order", first)
+        self.assertNotIn("order", second)
+
 
 class MapOrderGestureTests(unittest.TestCase):
+    def test_province_selection_sound_requires_a_visible_valid_selection(self):
+        tile = {"id": 1, "owner": "A", "center": (10, 10)}
+        game = SimpleNamespace(viewing_ai_moves=False, player_country="A",
+            extreme_hidden_provinces=set(), camera=None, total_ui_h=0,
+            nation_data={}, secondary_mode="BLANK")
+        with (patch.object(map_input, "map_ui_bar_at_position", return_value=False),
+              patch.object(queries, "get_clicked_province", return_value=tile) as clicked,
+              patch.object(map_input.sidebar_info, "prepare_unit_roster"),
+              patch.object(camera_handler, "center_camera_on_province"),
+              patch.object(queries, "get_message_draft", return_value=""),
+              patch.object(ui_elements, "play_ui_sound") as sound):
+            self.assertTrue(map_input._select_map_province(game, (10, 10), navigate=False))
+            sound.assert_called_once_with("click_province")
+            sound.reset_mock()
+            game.extreme_hidden_provinces = {1}
+            self.assertFalse(map_input._select_map_province(game, (10, 10)))
+            clicked.return_value = None
+            self.assertFalse(map_input._select_map_province(game, (10, 10)))
+            sound.assert_not_called()
+
     def test_orders_move_release_on_a_map_bar_does_not_target_a_tile(self):
         map_stub = fill_state_defaults(type("MapStub", (), {
             "top_bar_rect": pygame.Rect(0, 0, 800, 60),

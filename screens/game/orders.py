@@ -120,6 +120,8 @@ class _AirMissionSelectScreen(ModalScreen):
                 self.panel_rect.width - 2 * self.OPTION_INSET, "blue", label,
                 lambda selected=mission: self.select(selected, on_select))
             button.right_image = orders._get_action_icon(icon, button.rect.size)
+            if mission == "NONE":
+                button.sound_kind = None
             button.apply_state(enabled=mission in self.enabled_missions, color="blue")
             self.elements.append(button)
         self.elements.append(self.button(self.panel_rect.x + self.OPTION_INSET,
@@ -530,13 +532,20 @@ class Orders_Screen(GameState):
                 and unit["order"].get("type") == order_type)
         ]
 
+    @staticmethod
+    def _play_order_sound(kind, results):
+        """Play one effect when a player action changes at least one order."""
+        if any(result.changed for result in results):
+            ui_elements.play_ui_sound(kind)
+
     def cancel_selected_batch_orders(self, order_type):
         """Cancel one matching order across the current selection at once."""
         ordered_units = self._selected_units_with_order(order_type)
         if not ordered_units:
             return
-        unit_actions.apply_batch(self.map_screen, self.map_screen.player_country,
+        results = unit_actions.apply_batch(self.map_screen, self.map_screen.player_country,
                                  [(unit, province, None) for unit, province in ordered_units])
+        self._play_order_sound("cancel_orders", results)
         self._mark_draft_changed()
         self.map_screen.show_feedback(
             f"Cancelled {order_type.lower()} for {len(ordered_units)} selected "
@@ -620,6 +629,7 @@ class Orders_Screen(GameState):
 
     def _apply_selected_air_mission(self, records, mission):
         count = 0
+        cancelled_orders = []
         for unit, province in records:
             if self._air_mission_unit_index(unit, province) is None:
                 continue
@@ -629,8 +639,12 @@ class Orders_Screen(GameState):
                 # Mixed groups skip unsupported defense choices or invalid bases.
                 # Keep those units' orders and reserved payment.
                 continue
-            unit_actions.apply_action(self.map_screen, unit["owner"], province, unit, order)
+            had_order = bool(unit.get("order"))
+            result = unit_actions.apply_action(self.map_screen, unit["owner"], province, unit, order)
+            if mission == "NONE" and had_order:
+                cancelled_orders.append(result)
             count += 1
+        self._play_order_sound("cancel_orders", cancelled_orders)
         self.cancel_bombard_targeting(refresh=False)
         self._finish_batch_command("Air mission", count)
         if not count:
@@ -738,10 +752,11 @@ class Orders_Screen(GameState):
         is_tactical = self.map_screen.tactical_mode
         buttons = []
 
-        def add(slot, color, help_text, callback, icon_name, enabled=True):
+        def add(slot, color, help_text, callback, icon_name, enabled=True, sound_kind="click"):
             button = self._add_action_button(
                 row_key, row_y, slot, color, help_text, callback, icon_name,
                 row_guard, enabled=enabled)
+            button.sound_kind = sound_kind
             buttons.append(button)
             return button
 
@@ -757,7 +772,7 @@ class Orders_Screen(GameState):
 
         if order_type == "CONVERT":
             btn_conv = add(ACTION_COL_CONVERT, "red", "Cancel conversion",
-                           lambda idx=index, p=province: self.cancel_unit_order(idx, p), convert_icon)
+                           lambda idx=index, p=province: self.cancel_unit_order(idx, p), convert_icon, sound_kind=None)
         elif in_combat:
             btn_conv = add(ACTION_COL_CONVERT, "grey", "Convert: unavailable in combat",
                            lambda: None, convert_icon, enabled=False)
@@ -802,7 +817,7 @@ class Orders_Screen(GameState):
 
         if order_type == "DISBAND":
             btn_disband = add(ACTION_COL_DISBAND, "red", "Cancel disband order",
-                              lambda idx=index, p=province: self.cancel_unit_order(idx, p), "Disbanding")
+                              lambda idx=index, p=province: self.cancel_unit_order(idx, p), "Disbanding", sound_kind=None)
         elif is_tactical and unit is self.map_screen.player_unit:
             btn_disband = add(ACTION_COL_DISBAND, "grey", "Disband: unavailable in tactical mode",
                               lambda: None, "Disbanding", enabled=False)
@@ -817,7 +832,7 @@ class Orders_Screen(GameState):
         max_hp = int(unit.get("max_health", 1))
         if order_type == "REPAIR":
             btn_repair = add(ACTION_COL_REPAIR, "orange", "Cancel repair order",
-                             lambda idx=index, p=province: self.cancel_unit_order(idx, p), "Repairing")
+                             lambda idx=index, p=province: self.cancel_unit_order(idx, p), "Repairing", sound_kind=None)
         elif hp >= max_hp:
             btn_repair = add(ACTION_COL_REPAIR, "grey", "Repair: unit is at full HP",
                              lambda: None, "Repairing", enabled=False)
@@ -840,7 +855,7 @@ class Orders_Screen(GameState):
 
         if order_type == "UPGRADE":
             btn_upgrade = add(ACTION_COL_UPGRADE, "red", "Cancel upgrade order",
-                              lambda idx=index, p=province: self.cancel_unit_order(idx, p), "Upgrading")
+                              lambda idx=index, p=province: self.cancel_unit_order(idx, p), "Upgrading", sound_kind=None)
         else:
             upgrade_target = queries.get_upgrade_target(
                 unit_name, player_research, self.unit_library, queries.get_tech_tree(self.map_screen))
@@ -872,7 +887,7 @@ class Orders_Screen(GameState):
         elif order_type == "BOMBARD":
             btn_bombard = add(ACTION_COL_BOMBARD, "red", "Cancel bombardment",
                               lambda idx=index, p=province: self.cancel_unit_order(idx, p),
-                              "Bombardment Arrows")
+                              "Bombardment Arrows", sound_kind=None)
         elif not queries.can_bombard(unit_name, context=self.map_screen):
             btn_bombard = add(ACTION_COL_BOMBARD, "grey", "Bombard: unit has no bombardment",
                               lambda: None, "Bombardment Arrows", enabled=False)
@@ -885,7 +900,7 @@ class Orders_Screen(GameState):
         else:
             btn_bombard = add(ACTION_COL_BOMBARD, "yellow", "Choose bombardment target",
                               lambda idx=index, p=province, key=row_key: self.start_bombard_targeting(idx, p, key),
-                              "Bombardment Arrows")
+                              "Bombardment Arrows", sound_kind="bombardment_selected")
 
         # Rename gets the name field and one Save glyph to itself. This is the
         # compact counterpart of the old row hiding its other five buttons.
@@ -1126,7 +1141,7 @@ class Orders_Screen(GameState):
             btn_clear = Button(button_x, PANEL_Y + TOP_BTN_ROW_OFFSET_Y,
                                "orders_clear_button", "red",
                                "Clear ALL Orders", self.clear_all_orders,
-                               font_preset="tiny")
+                               font_preset="tiny", sound_kind=None)
             btn_clear.disabled = is_tactical
             self.elements.append(btn_clear)
             button_x = btn_clear.rect.right + TOP_BTN_GAP_X
@@ -1175,7 +1190,8 @@ class Orders_Screen(GameState):
                     button = Button(batch_x, PANEL_Y + BATCH_BTN_ROW_OFFSET_Y,
                                     "orders_header_button", color,
                                     button_label, callback,
-                                    font_preset="tiny")
+                                    font_preset="tiny",
+                                    sound_kind=None if is_active_for_every_selection else "click")
                     self._fit_batch_button(button, batch_width)
                     button.apply_state(enabled=bool(count), color=color)
                     button.help_text = (
@@ -1522,7 +1538,10 @@ class Orders_Screen(GameState):
         except ValueError as exc:
             self.map_screen.show_feedback(str(exc))
             return
-        unit_actions.apply_action(self.map_screen, unit["owner"], province, unit, order)
+        had_order = bool(unit.get("order"))
+        result = unit_actions.apply_action(self.map_screen, unit["owner"], province, unit, order)
+        if mission == "NONE" and had_order:
+            self._play_order_sound("cancel_orders", [result])
         self.cancel_bombard_targeting(refresh=False)
         self._mark_draft_changed()
         self.refresh_ui()
@@ -1634,7 +1653,10 @@ class Orders_Screen(GameState):
             if any(unit is units[index] for unit, _base in self._air_target_records):
                 self.cancel_bombard_targeting(refresh=False)
             if "order" in units[index]:
-                unit_actions.cancel_action(self.map_screen, units[index]["owner"], province, units[index])
+                had_order = bool(units[index]["order"])
+                result = unit_actions.cancel_action(self.map_screen, units[index]["owner"], province, units[index])
+                if had_order:
+                    self._play_order_sound("cancel_orders", [result])
                 self._mark_draft_changed()
                 self.map_screen.show_feedback("Order Cancelled")
                 self.refresh_ui()
@@ -1647,6 +1669,7 @@ class Orders_Screen(GameState):
         units = ([unit for unit, _province in selected_records]
                  if selected_records else self.target_province.get("units", []))
         cleared_any = False
+        cancelled_orders = []
         cancelled_targeting = self.bombarding_unit_index is not None
         self.cancel_bombard_targeting(refresh=False)
 
@@ -1655,10 +1678,14 @@ class Orders_Screen(GameState):
                 if "order" in unit:
                     province = next(province for province in self.map_screen.map_data.values()
                                     if any(current is unit for current in province.get("units", [])))
-                    unit_actions.cancel_action(self.map_screen, unit["owner"], province, unit)
+                    had_order = bool(unit["order"])
+                    result = unit_actions.cancel_action(self.map_screen, unit["owner"], province, unit)
+                    if had_order:
+                        cancelled_orders.append(result)
                     cleared_any = True
 
         if cleared_any:
+            self._play_order_sound("cancel_orders", cancelled_orders)
             self._mark_draft_changed()
             self.map_screen.show_feedback("All orders cleared")
         if cleared_any or cancelled_targeting:

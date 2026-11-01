@@ -1,6 +1,7 @@
 import data.constants as c
 from data import queries
 from ui.dialogs import pickers
+from ui.widgets import ui_elements
 
 # The map imports player_setup. Keep map-screen callbacks local to avoid that cycle.
 
@@ -9,6 +10,7 @@ def select_player_country(map_screen, province):
     if owner in map_screen.nation_data and map_screen.nation_data[owner].get("is_playable"):
         map_screen.pending_selection = owner
         map_screen.selected_province = province 
+        ui_elements.play_ui_sound("click_province")
         map_screen.show_feedback(f"Selected {owner.title()}...")
     else:
         map_screen.show_feedback("Cannot select unowned or non-playable territory")
@@ -61,6 +63,7 @@ def _stage_tactical_selection(map_screen, unit, owner, province):
     map_screen.pending_selection = owner
     map_screen.pending_unit = unit
     map_screen.selected_province = province
+    ui_elements.play_ui_sound("click_province")
     map_screen.show_feedback(f"Selected {unit.get('type')} in {owner.title()}...")
 
 def confirm_player_country(map_screen):

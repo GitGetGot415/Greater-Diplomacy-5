@@ -90,7 +90,13 @@ class Automation_Screen(GameState):
 
         def answered(confirmed):
             if confirmed and self.can_edit_realtime():
+                clearing_orders = action is clear_player_movement and any(
+                    unit.get("owner") == self.player and unit.get("order")
+                    for province in self.map_screen.map_data.values()
+                    for unit in province.get("units", []))
                 action(self.map_screen)
+                if clearing_orders:
+                    ui_elements.play_ui_sound("cancel_orders")
             self.refresh_ui()
 
         ask_yes_no("Automation", question, answered)

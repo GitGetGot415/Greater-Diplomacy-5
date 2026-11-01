@@ -6,6 +6,7 @@ from ui.camera import camera_handler
 from screens.setup import player_setup
 from data import queries
 from ui.widgets.ui_elements import process_text_input
+from ui.widgets import ui_elements
 from map_logic.diplomacy import diplomacy_messages
 from screens.game import battle_screen
 from ui.bars import flag_renderer, ui_bars
@@ -107,6 +108,7 @@ def _select_map_province(map_screen, position, navigate=True):
         map_screen.player_country, owner, map_screen.nation_data)
     if navigate and c.MAP_NAVIGATION_MODE != "CLASSIC":
         navigate_view_mode(map_screen, map_screen.secondary_mode)
+    ui_elements.play_ui_sound("click_province")
     return True
 
 
@@ -712,6 +714,7 @@ def _handle_combat_bubble_click(map_screen, event, on_ui):
     map_screen._orders_entered_from_combat_bubble = True
     map_screen.selected_province = province
     map_screen.change_state("ORDERS")
+    ui_elements.play_ui_sound("click_province")
     return True
 
 
