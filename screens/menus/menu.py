@@ -22,14 +22,20 @@ from ui.dialogs.character_select_screen import CHARACTERS_DIR
 from ui import dialogs
 
 MENU_WATERLINE_RATIO = 0.6
-MENU_SKY_STEPPED = False  # False gives a smooth gradient. Restart after editing.
+MENU_SKY_STEPPED = False  # False gives a smooth gradient
 MENU_SKY_DITHERING = False
 MENU_SKY_BANDS = 12
 MENU_WATER_STEPPED = False
 MENU_WATER_DITHERING = False
 MENU_WATER_BANDS = 12
 
-# Center button group: position, panel appearance, and entrance animation.
+# Sign and grass platform shading
+MENU_SIGN_GRADIENT_ENABLED = False
+MENU_SIGN_GRADIENT_STRENGTH = 1.0
+MENU_SCENERY_GRADIENT_ENABLED = False
+MENU_SCENERY_GRADIENT_STRENGTH = 1.0
+
+# Center button group: position, panel appearance, and entrance animation
 MENU_BUTTON_GROUP_POSITION = (460, 220)
 MENU_BUTTON_PANEL_PADDING = 16
 MENU_BUTTON_PANEL_COLOR = (45, 45, 70)
@@ -39,7 +45,7 @@ MENU_BUTTON_PANEL_BORDER_WIDTH = 2
 MENU_BUTTON_GROUP_INTRO_DELAY_MS = 200
 MENU_BUTTON_GROUP_INTRO_DURATION_MS = 650
 
-# Edit these RGB colors, then restart the game.
+# Edit these RGB colors
 MENU_SKY_START_COLOR = (24, 28, 65)
 MENU_SKY_END_COLOR = (220, 120, 140)
 
@@ -47,20 +53,20 @@ MENU_SKY_END_COLOR = (220, 120, 140)
 MENU_SKY_FADE_ENABLED = True
 MENU_SKY_START_FADE_COLOR = (24, 28, 65)
 MENU_SKY_END_FADE_COLOR = (160, 60, 80)
-MENU_SKY_FADE_CYCLE_SECONDS = 8.0  # Full cycle: original colors to targets and back.
-# Options: "linear", "ease_in", "ease_out", "ease_in_out".
-MENU_SKY_FADE_IN_EASING = "ease_in_out"  # Original colors to target colors.
-MENU_SKY_FADE_OUT_EASING = "ease_in_out"  # Target colors back to original colors.
+MENU_SKY_FADE_CYCLE_SECONDS = 8.0  # Full cycle: original colors to targets and back
+# Options: "linear", "ease_in", "ease_out", "ease_in_out"
+MENU_SKY_FADE_IN_EASING = "ease_in_out"  # Original colors to target colors
+MENU_SKY_FADE_OUT_EASING = "ease_in_out"  # Target colors back to original colors
 
 MENU_WATER_START_COLOR = (30, 62, 160)
 MENU_WATER_END_COLOR = (10, 25, 55)
 MENU_WATER_START_FADE_COLOR = (20, 42, 115)
 MENU_WATER_END_FADE_COLOR = (6, 15, 35)
 MENU_CHECKERBOARD_COLOR = (60, 30, 90)
-MENU_CHECKERBOARD_OPACITY = 50  # 0 hides the overlay; 255 makes it opaque.
-MENU_WATER_CHECKERBOARD_OPACITY = 20  # Reflected pattern: 0 hides it; 255 makes it opaque.
-MENU_WATER_CHECKERBOARD_HEIGHT_SCALE = 0.5  # 0.5 gives half-height squares; must be greater than zero.
-MENU_WATER_CHECKERBOARD_ANGLE = 50.0  # Degrees from vertical. Negative angles slant the other way; 0 is vertical.
+MENU_CHECKERBOARD_OPACITY = 50  # 0 hides the overlay; 255 makes it opaque
+MENU_WATER_CHECKERBOARD_OPACITY = 30  # Reflected pattern: 0 hides it; 255 makes it opaque
+MENU_WATER_CHECKERBOARD_HEIGHT_SCALE = 0.5  # 0.5 gives half-height squares; must be greater than zero
+MENU_WATER_CHECKERBOARD_ANGLE = 50.0  # Degrees from vertical. Negative angles slant the other way; 0 is vertical
 
 
 @lru_cache(maxsize=4)
@@ -234,6 +240,15 @@ class Menu(GameState):
             print(f"Failed to load the left ground image: {e}")
             self.left_ground_image = None
             self.left_ground_rect = None
+
+        for name, enabled, strength in (
+            ("sign_image", MENU_SIGN_GRADIENT_ENABLED, MENU_SIGN_GRADIENT_STRENGTH),
+            ("right_ground_image", MENU_SCENERY_GRADIENT_ENABLED, MENU_SCENERY_GRADIENT_STRENGTH),
+            ("left_ground_image", MENU_SCENERY_GRADIENT_ENABLED, MENU_SCENERY_GRADIENT_STRENGTH),
+        ):
+            image = getattr(self, name)
+            if enabled and image is not None:
+                setattr(self, name, ui_elements.apply_button_gradient(image, strength, stepped=False))
 
         # Hildehrand stands near the left edge of the screen, scaled the same
         # nearest-neighbour way as The Sign.png (not smoothscale) so the

@@ -99,6 +99,13 @@ MENU_SKY_BANDS applies only when MENU_SKY_STEPPED is True.
 The menu caches backgrounds by viewport size and sky and water endpoint colors. Restart after editing these values.
 Other menus retain their existing backgrounds.
 
+Set MENU_SIGN_GRADIENT_ENABLED in screens/menus/menu.py to shade the sign.
+Set MENU_SIGN_GRADIENT_STRENGTH to adjust the sign shading.
+Set MENU_SCENERY_GRADIENT_ENABLED to shade both grass platforms.
+Set MENU_SCENERY_GRADIENT_STRENGTH to adjust the platform shading.
+For either strength, use 0 for no shading or 1 for standard shading.
+Use a value of 0 or greater. Restart the game after editing these values.
+
 The center menu buttons and their gradient panel enter together. Their spacing stays fixed during the entrance.
 Edit MENU_BUTTON_GROUP_POSITION in screens/menus/menu.py to move the group.
 MENU_BUTTON_PANEL_PADDING sets the space around the buttons.
