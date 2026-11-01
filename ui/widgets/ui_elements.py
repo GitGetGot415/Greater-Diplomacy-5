@@ -32,6 +32,7 @@ MUSIC_UI_SOUND_PATHS = {
     "select_album": "assets/sounds/Select Album.wav",
     "select_song": "assets/sounds/Select Song.wav",
     "toggle_pause": "assets/sounds/Toggle Pause.wav",
+    "time_select": "assets/sounds/Time Select.wav",
     "skip_song": "assets/sounds/Skip Song.wav",
     "select_unit_filter": "assets/sounds/Select Unit Filter.wav",
     "select_mode": "assets/sounds/Select Mode.wav",
