@@ -189,6 +189,7 @@ class Controller:
     is_fullscreen = False
 
     def __init__(self):
+        ui_elements.load_sound_volumes()
         pygame.init()
         if IS_WEB:
             # pygame.init() auto-inits the mixer subsystem as one of its defaults,

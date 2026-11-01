@@ -1,3 +1,6 @@
+import json
+import math
+import os
 import subprocess
 import sys
 from collections import OrderedDict
@@ -26,9 +29,11 @@ music_ui_sounds = {}
 pygame_music_ui_sounds = {}
 MUSIC_UI_SOUND_PATHS = {
     "open_music": "assets/sounds/Open Music.wav",
-    "select_album": "assets/sounds/Select Album.wav",
-    "select_song": "assets/sounds/Select Song.wav",
+    "select_music": "assets/sounds/Select Music.wav",
+    "toggle_pause": "assets/sounds/Toggle Pause.wav",
 }
+SOUND_VOLUMES_PATH = "assets/sounds/volumes.json"
+sound_volume_multipliers = {}
 global_sfx_volume = 0.5
 global_sfx_pitch = 0.5
 
@@ -295,6 +300,38 @@ def parse_pos(val, limit, size):
             return base
     return val
 
+def load_sound_volumes(path=SOUND_VOLUMES_PATH):
+    """Read per-file SFX multipliers once at startup. Missing entries use 1."""
+    try:
+        with open(path, encoding="utf-8") as source:
+            values = json.load(source)
+    except FileNotFoundError:
+        values = {}
+    except json.JSONDecodeError as error:
+        raise ValueError(f"Fix invalid JSON in {path}: {error}") from error
+    if not isinstance(values, dict):
+        raise ValueError(f"{path} must contain sound filenames and volume multipliers.")
+    for filename, value in values.items():
+        if (isinstance(value, bool) or not isinstance(value, (int, float))
+                or not math.isfinite(value) or value < 0):
+            raise ValueError(f"{path}: {filename} must have a finite volume multiplier of zero or greater.")
+    sound_volume_multipliers.clear()
+    sound_volume_multipliers.update(values)
+    for cache in _pygame_sfx_pitch_cache.values():
+        cache.clear()
+
+
+def _ui_sound_volume(kind):
+    """Combine the file multiplier with the player's SFX volume."""
+    if kind == "click":
+        path = c.SOUND_CLICK_PATH
+    elif kind == "slider":
+        path = c.SOUND_SLIDER_PATH
+    else:
+        path = MUSIC_UI_SOUND_PATHS[kind]
+    return global_sfx_volume * sound_volume_multipliers.get(os.path.basename(path), 1.0)
+
+
 def load_music_ui_sounds(sound_factory, *, soloud=False):
     """Load music control effects when the audio backend starts."""
     sounds = music_ui_sounds if soloud else pygame_music_ui_sounds
@@ -317,19 +354,22 @@ def play_ui_sound(kind="click"):
     """
     if global_sfx_volume <= 0:
         return
+    volume = _ui_sound_volume(kind)
+    if volume <= 0:
+        return
 
     if c.USE_SOLOUD:
         sound = (click_sound if kind == "click" else slider_sound if kind == "slider"
                  else music_ui_sounds.get(kind))
         if sound and soloud_engine:
             handle = soloud_engine.play(sound)
-            soloud_engine.set_volume(handle, global_sfx_volume)
+            soloud_engine.set_volume(handle, volume)
             # Centres the speed variance directly on a 0.5 pitch input
             soloud_engine.set_relative_play_speed(handle, 0.5 + global_sfx_pitch)
     else:
-        sound = _pygame_sound_at_pitch(kind)
+        sound = _pygame_sound_at_pitch(kind, max(1.0, volume))
         if sound:
-            sound.set_volume(global_sfx_volume)
+            sound.set_volume(min(1.0, volume))
             sound.play()
 
 def set_pygame_ui_sounds(click, slider):
@@ -366,27 +406,43 @@ def _resample_pygame_sound(sound, speed):
         resampled = np.clip(np.rint(resampled), limits.min, limits.max)
     return pygame.sndarray.make_sound(resampled.astype(samples.dtype))
 
-def _pygame_sound_at_pitch(kind):
-    """Gets a cached pygame UI sound at the selected SFX playback speed."""
+def _amplify_pygame_sound(sound, gain):
+    """Boost samples and clip peaks to the mixer format's valid range."""
+    samples = pygame.sndarray.array(sound)
+    amplified = samples.astype(np.float64)
+    if np.issubdtype(samples.dtype, np.integer):
+        limits = np.iinfo(samples.dtype)
+        midpoint = (limits.max + 1) / 2 if limits.min == 0 else 0
+        amplified = (amplified - midpoint) * gain + midpoint
+        amplified = np.clip(np.rint(amplified), limits.min, limits.max)
+    else:
+        amplified = np.clip(amplified * gain, -1.0, 1.0)
+    return pygame.sndarray.make_sound(amplified.astype(samples.dtype))
+
+
+def _pygame_sound_at_pitch(kind, gain=1.0):
+    """Get a cached pygame effect at the selected pitch and amplification."""
     sound = (pygame_click_sound if kind == "click" else pygame_slider_sound if kind == "slider"
              else pygame_music_ui_sounds.get(kind))
     if sound is None:
         return None
 
     speed = 0.5 + global_sfx_pitch
-    if speed == 1.0:
+    if speed == 1.0 and gain == 1.0:
         return sound
 
     # Quantising very slightly lets a dragged slider reuse neighbouring cached
     # variants while retaining a smooth audible response.
-    cache_key = round(speed, 2)
+    cache_key = (round(speed, 2), gain)
     cache = _pygame_sfx_pitch_cache[kind]
     cached_sound = cache.get(cache_key)
     if cached_sound is not None:
         cache.move_to_end(cache_key)
         return cached_sound
 
-    pitched_sound = _resample_pygame_sound(sound, cache_key)
+    pitched_sound = _resample_pygame_sound(sound, cache_key[0]) if speed != 1.0 else sound
+    if gain != 1.0:
+        pitched_sound = _amplify_pygame_sound(pitched_sound, gain)
     cache[cache_key] = pitched_sound
     if len(cache) > PYGAME_SFX_PITCH_CACHE_SIZE:
         cache.popitem(last=False)

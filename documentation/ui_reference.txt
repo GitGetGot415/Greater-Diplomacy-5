@@ -11,8 +11,23 @@ MUSIC BUTTON SOUNDS
 -------------------
 
 Music buttons play assets/sounds/Open Music.wav when clicked.
-Album buttons play assets/sounds/Select Album.wav. Song buttons play assets/sounds/Select Song.wav.
+Album and song buttons play assets/sounds/Select Music.wav.
+The Play/Pause button plays assets/sounds/Toggle Pause.wav when clicked.
 These effects use the SFX volume and pitch settings on desktop and web builds.
+
+SOUND VOLUME CONFIGURATION
+--------------------------
+
+Edit assets/sounds/volumes.json to set each sound effect's volume multiplier by filename.
+Use 1.0 for the original level, 0.5 for half amplitude, or 2.0 for double amplitude.
+Use 0 to mute a sound. Values must be finite numbers of zero or greater.
+A missing configuration file or entry uses 1.0.
+Invalid JSON or multipliers produce a startup error with the file path.
+Restart the game after edits. The game reads this file once at startup.
+The SFX volume setting multiplies each configured level. SFX volume 0 still mutes all effects.
+Desktop and web support values above 1.0. Large boosts can clip audio peaks and cause distortion.
+The file controls sound effects only. It does not change music volume or activate unused sound effects.
+Each effect that uses the same file shares its multiplier.
 
 CLASSIC UNIT ART
 ---------------

@@ -213,7 +213,7 @@ class Music_Player(ScrollPanes, GameState):
                 y_offset += 60
                 album_content_h += 60
             btn.click_guard = album_guard
-            btn.sound_kind = "select_album"
+            btn.sound_kind = "select_music"
             btn.pane = "album"
             self.elements.append(btn)
 
@@ -237,7 +237,7 @@ class Music_Player(ScrollPanes, GameState):
             # selection; it must remain available for deliberate playback.
             track_btn = Button(MUSIC_LEFT_PANE_W + 20, track_y, "song", color, track_name, track_cb)
             track_btn.click_guard = lambda: pygame.mouse.get_pos()[1] >= 200
-            track_btn.sound_kind = "select_song"
+            track_btn.sound_kind = "select_music"
             track_btn.pane = "track"
             self.elements.append(track_btn)
 
@@ -269,7 +269,8 @@ class Music_Player(ScrollPanes, GameState):
         
         # Add Pause Button
         pause_text = "Play" if getattr(self.controller, 'is_paused', False) else "Pause"
-        self.elements.append(Button(MUSIC_LEFT_PANE_W + 240, 80, "medium", "orange", pause_text, self.toggle_pause))
+        self.elements.append(Button(MUSIC_LEFT_PANE_W + 240, 80, "medium", "orange", pause_text,
+                                    self.toggle_pause, sound_kind="toggle_pause"))
         
         # Add Progress Slider (Custom MusicScrubber)
         self.progress_slider = MusicScrubber(
