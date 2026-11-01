@@ -18,6 +18,7 @@ import data.constants as c
 from tests import app_harness
 from ui import dialogs
 from ui.navigation import modal_stack
+from ui.widgets import ui_elements
 
 
 def key(k):
@@ -30,6 +31,10 @@ def typed(ch):
 
 def click(pos):
     return pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=pos, button=1)
+
+
+def release(pos):
+    return pygame.event.Event(pygame.MOUSEBUTTONUP, pos=pos, button=1)
 
 
 class DialogTests(unittest.TestCase):
@@ -221,9 +226,31 @@ class DialogTests(unittest.TestCase):
         calls = []
         dialogs.show_message("T", "Done.", on_result=lambda: calls.append(True))
         modal = modal_stack.active()
-        modal.handle_events([click(modal.ok_rect.center)])
+        with mock.patch.object(ui_elements, "play_ui_sound") as sound:
+            modal.handle_events([click(modal.ok_rect.center)])
+            self.assertFalse(modal._resolved)
+            sound.assert_not_called()
+            modal.handle_events([release(modal.ok_rect.center)])
+            sound.assert_called_once_with("click")
+            modal.handle_events([click(modal.ok_rect.center), release(modal.ok_rect.center)])
+            sound.assert_called_once_with("click")
         self.settle()
         self.assertEqual(calls, [True])
+        self.assertTrue(modal_stack.is_empty())
+
+    def test_message_ok_cancels_when_released_outside_like_other_buttons(self):
+        dialogs.show_info("T", "Help text.")
+        modal = modal_stack.active()
+        outside = (modal.ok_rect.left - 10, modal.ok_rect.centery)
+        with mock.patch.object(ui_elements, "play_ui_sound") as sound:
+            modal.handle_events([click(modal.ok_rect.center), release(outside)])
+            self.assertFalse(modal._resolved)
+            modal.handle_events([click(outside), release(modal.ok_rect.center)])
+            self.assertFalse(modal._resolved)
+            sound.assert_not_called()
+            modal.handle_events([click(modal.ok_rect.center), release(modal.ok_rect.center)])
+            sound.assert_called_once_with("click")
+        self.settle()
         self.assertTrue(modal_stack.is_empty())
 
     def test_message_kinds_all_render(self):

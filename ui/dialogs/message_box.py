@@ -39,6 +39,9 @@ class _MessageModal(_BaseModal):
             self.box_rect.centery = surface.get_height() // 2
         self.BORDER_COLOR = self.accent
         self.ok_rect = pygame.Rect(self.box_rect.centerx - 60, self.box_rect.bottom - 55, 120, 40)
+        self.ok_button = ui_elements.Button(*self.ok_rect.topleft, self.ok_rect.size, "blue", "OK",
+                                            self._finish)
+        self.ok_button.set_colors(self.accent, _lighten(self.accent))
         self.body_rect = pygame.Rect(self.box_rect.x + self.BODY_MARGIN, self.box_rect.y + self.BODY_DY,
                                     self.box_rect.width - 2 * self.BODY_MARGIN,
                                     self.ok_rect.top - self.BODY_BUTTON_GAP - (self.box_rect.y + self.BODY_DY))
@@ -64,6 +67,8 @@ class _MessageModal(_BaseModal):
 
     def handle_events(self, events):
         for event in events:
+            if self._resolved:
+                return
             if self.inline_lines is not None:
                 scroll = (-event.y * c.SCROLL_STEP if event.type == pygame.MOUSEWHEEL else
                           self.body_rect.height if event.type == pygame.KEYDOWN and event.key == pygame.K_PAGEDOWN else
@@ -73,12 +78,10 @@ class _MessageModal(_BaseModal):
                 if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_ESCAPE,
                                  pygame.K_SPACE, _back_key()):
                     self._finish()
-            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                if self.ok_rect.collidepoint(event.pos):
-                    self._finish()
+            self.ok_button.handle_event(event)
 
     def draw_content(self, surface):
-        self.draw_button(surface, self.ok_rect, "OK", self.accent, _lighten(self.accent))
+        self.ok_button.draw(surface)
 
 
 class _NavigationIntroPopup:
