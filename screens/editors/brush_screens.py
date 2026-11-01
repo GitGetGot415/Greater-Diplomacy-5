@@ -161,6 +161,96 @@ class Resource_Brush_Screen(MapOverlayScreen):
 # CLEAR MAP ITEMS
 # ==========================================
 
+class Bulk_Edit_Screen(MapOverlayScreen):
+    """Choose map-wide setup changes through shared editor rules."""
+    pans_camera = False
+    PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_SPECIAL
+    PANEL_STYLE = EDITOR_PANEL_STYLES["resource_brush"]
+    PANEL_TITLE = "Bulk Edit Map"
+    TITLE_PRESET = "heading2"
+    TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
+    PANEL_WIDTH, PANEL_HEIGHT = 620, 400
+    BUTTON_TOP, BUTTON_GAP = 90, 65
+
+    def __init__(self, map_screen):
+        super().__init__(map_screen, pygame.Rect(0, 0, self.PANEL_WIDTH, self.PANEL_HEIGHT))
+        self.back_state = "MAP"
+        self.refresh_ui()
+
+    def refresh_ui(self):
+        p = self.panel_rect
+        self.elements = [make_back_button(self.exit_screen, style="map")]
+        actions = (
+            ("Set All Factories", "grey", self.pick_factory),
+            ("Set Army by Research Year", "green", lambda: self.pick_units("year")),
+            ("Set Army by Family Level", "blue", lambda: self.pick_units("level")),
+            ("Reset All Diplomacy", "red", self.reset_diplomacy),
+        )
+        for row, (label, color, callback) in enumerate(actions):
+            button = Button(p.x + 40, p.y + self.BUTTON_TOP + row * self.BUTTON_GAP,
+                            "editor_ui", color, label, callback)
+            button.rect.width = p.width - 80
+            button.disabled = not queries.can_bulk_edit_map(self.map_screen)
+            self.elements.append(button)
+
+    def confirm_change(self, message, action):
+        def confirmed(ok):
+            if not ok:
+                return
+            try:
+                feedback = action()
+            except ValueError as error:
+                dialogs.show_error("Bulk Edit", str(error))
+                return
+            self.map_screen.show_feedback(feedback)
+        dialogs.ask_yes_no("Bulk Edit Map", message, confirmed)
+
+    def pick_factory(self):
+        targets = queries.editor_factory_targets(self.map_screen)
+        if not targets:
+            self.map_screen.show_feedback("No factories in the active building library.")
+            return
+
+        def selected(target):
+            self.confirm_change(
+                f"Set every existing factory to {target}?\nOther buildings and empty tiles stay unchanged.\nMap Undo can reverse this change.",
+                lambda: f"Updated {queries.set_editor_factories(self.map_screen, target)} factories.")
+        pickers.open_listbox_selector(self, "Set All Factories", "Choose the target factory level:", targets, selected)
+
+    def pick_units(self, mode):
+        prompt = ("Enter the research year. Each family uses its latest equipment available by that year.\n"
+                  "Families with no equipment by that year stay unchanged."
+                  if mode == "year" else
+                  "Enter the family level, starting at 1.\nFamilies with fewer levels use their highest level.")
+
+        def selected(value):
+            if value is None:
+                return
+
+            def apply():
+                changed, skipped = queries.set_editor_units(self.map_screen, mode, value)
+                return f"Updated {changed} units. Skipped {skipped} units without matching equipment."
+
+            self.confirm_change(
+                f"Set all placed army, naval, and air units to {mode} {value}?\n"
+                "Unit families and health percentages stay unchanged.\n"
+                "Orders on changed units are cleared. Map Undo can reverse this change.", apply)
+        dialogs.ask_integer("Set Army Equipment", prompt, selected, minvalue=1,
+                            initial=self.map_screen.time_manager.year if mode == "year" else 1)
+
+    def reset_diplomacy(self):
+        def apply():
+            queries.reset_editor_diplomacy(self.map_screen)
+            return "Diplomacy reset for all countries."
+        self.confirm_change(
+            "Reset wars, factions, puppets, agreements, and diplomatic requests for all countries?\n"
+            "Volunteers and resources held for offers return home. Territory, cores, and message history stay unchanged.\n"
+            "This clears Map Undo and Redo history. Save a copy first if you need the current setup.", apply)
+
+    def draw_content(self, surface):
+        self.draw_panel(surface)
+
+
 class Clear_Map_Screen(MapOverlayScreen):
     pans_camera = False
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_DANGER

@@ -653,3 +653,40 @@ Territory Paint matches the clicked tile's owner. Core Paint matches its complet
 Left-click applies the selected nation. Unclaimed clears cores.
 Right-click removes the selected nation's cores, or picks a territory owner.
 Undo and Redo apply to the complete fill. The selected tool is not saved.
+
+MAP EDITOR BULK CHANGES
+-----------------------
+
+Select Bulk Edit at the top of the editor's left toolbar.
+These tools require an idle local map editor.
+They are unavailable in player games, tactical play, tournament multiplayer, and real-time multiplayer.
+Each tool requires confirmation before it changes the map.
+
+Set All Factories changes existing factories to the selected factory type.
+The list uses the active building library. It includes Basic Factory and the available numbered levels.
+Other buildings and empty tiles stay unchanged. Construction queues stay unchanged.
+This can increase or decrease factory levels. Map Undo and Redo can reverse the change.
+
+Set Army by Research Year selects the latest equipment available by the entered year for each unit family.
+The selection uses equipment metadata and the active research timeline.
+A unit stays unchanged when its family has no equipment available by that year.
+Set Army by Family Level selects a position in each family's equipment sequence, starting at 1.
+A family with fewer levels uses its highest available level.
+
+Both army tools change placed ground, naval, and air units, including transported units and aircraft cargo.
+They preserve unit identities, owners, custom names, army assignments, and health percentages.
+They clear orders on changed units. They do not change research, production queues, or off-map volunteer equipment.
+Map Undo and Redo can reverse these equipment changes.
+Current equipment and factory settings come from the sources listed in AGENTS.md under Tuning Data.
+
+Reset All Diplomacy ends wars and removes factions, puppet links, guarantees, military access, and military attaches.
+It clears relation modifiers, truces, diplomatic cooldowns, pending requests, replies, treaty ratifications, and diplomatic return or release queues.
+Volunteer divisions return to their owners immediately.
+Territory, cores, country appearance, research, and message history stay unchanged.
+Resources held for pending offers or treaties return to their country's stockpiles.
+Territorial claims and cores can still affect relation scores. Scripted events can establish new agreements later.
+The reset clears Map Undo and Redo history. Save a copy before resetting diplomacy if you need the current setup.
+
+Data Refresh requires confirmation before it reloads country defaults and synchronizes unit statistics.
+The confirmation lists the country appearance fields that the refresh resets.
+Cancel or press Back to keep the current data.

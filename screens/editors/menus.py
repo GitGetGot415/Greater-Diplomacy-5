@@ -4,6 +4,7 @@ import data.constants as c
 from data.map import load_map
 from data import queries
 from ui.dialogs import pickers
+from ui import dialogs
 
 from data.io import country_io
 from screens import editors as editor_screens
@@ -320,6 +321,27 @@ def select_resource_brush(map_screen):
 def open_diplomacy_editor(map_screen):
     """Opens a native screen to edit global relations, factions and puppets."""
     _launch_editor_screen(map_screen, "Diplomacy_Editor_Screen", needs_countries=True)
+
+
+def open_bulk_editor(map_screen):
+    """Open bulk setup tools only for an idle local editor."""
+    if queries.can_bulk_edit_map(map_screen):
+        _launch_editor_screen(map_screen, "Bulk_Edit_Screen")
+
+
+def confirm_editor_data_refresh(map_screen):
+    """Confirm the editor button without changing programmatic data refreshes."""
+    if not queries.can_bulk_edit_map(map_screen):
+        return
+
+    def confirmed(ok):
+        if ok and queries.can_bulk_edit_map(map_screen):
+            map_screen.refresh_nation_data()
+    dialogs.ask_yes_no(
+        "Refresh Data",
+        "Refresh country and unit data from the current libraries?\n"
+        "This resets custom country names, adjectives, leaders, colors, flags, and portraits.\n"
+        "Unit statistics are synchronized with the active unit library.", confirmed)
 
 def open_personality_editor(map_screen):
     """Opens a native screen to set what each AI nation is like."""

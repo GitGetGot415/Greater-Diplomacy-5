@@ -254,6 +254,18 @@ def end_country_missions(map_screen, country, successor=None):
             del donor_missions[host]
 
 
+def end_all_missions(map_screen):
+    """Return all volunteer divisions immediately during a map editor diplomacy reset."""
+    for donor, data in world_for(map_screen).nation_data.items():
+        donor_missions = data.get("volunteer_missions", {})
+        for host, mission in list(donor_missions.items()):
+            if mission.get("state") == DEPLOYED:
+                _recall_deployed(map_screen, donor, host, mission)
+            for entry in mission.get("held_units", []):
+                _restore_to_origin(map_screen, donor, entry)
+            del donor_missions[host]
+
+
 def create_offer(map_screen, donor, host, chosen):
     """Remove selected units and create the off-map offer mission.
 

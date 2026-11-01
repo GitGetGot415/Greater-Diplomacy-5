@@ -264,7 +264,7 @@ def _build_editor_buttons(map_screen):
         ("btn_ed_resource", 4.5, "small_square", "purple", "Resource", lambda: editor_menus.select_resource_brush(map_screen), "resource"),
         ("btn_ed_building", 5, "small_square", "grey", "Building", lambda: editor_menus.select_building_brush(map_screen), "industry"),
         ("btn_ed_unit", 5.5, "small_square", "grey", "Unit", lambda: editor_menus.select_unit_brush(map_screen), "unit"),
-        ("btn_ed_refresh", 6.5, "small", "purple", "Data Refresh", map_screen.refresh_nation_data, None),
+        ("btn_ed_refresh", 6.5, "small", "purple", "Data Refresh", lambda: editor_menus.confirm_editor_data_refresh(map_screen), None),
         ("btn_ed_date", 7, "small_square", "orange", "Set Date", lambda: editor_menus.open_editor_date(map_screen), "clock"),
         ("btn_ed_edited", 8, "small", "green", "Edited Countries", lambda: editor_menus.open_edited_countries(map_screen), None),
     )
@@ -277,6 +277,7 @@ def _build_editor_buttons(map_screen):
     map_screen.btn_ed_paint = Button(EDITOR_SELECTION_TOOL_X + EDITOR_SELECTION_TOOL_STEP_X, c.BOTTOM_BAR_UI_CENTER_Y, "small_square", "blue", "Paint", lambda: map_screen.set_editor_selection_tool("PAINT"), image=icons.get("paint"), show_text=False)
 
     map_screen.btn_ed_diplo = Button(LEFT_UI_BAR_X, LEFT_UI_BAR_START_Y + LEFT_UI_BAR_STEP_Y * 8, "left_ui_button", "red", "Diplomacy", lambda: editor_menus.open_diplomacy_editor(map_screen))
+    map_screen.btn_ed_bulk = Button(LEFT_UI_BAR_X, LEFT_UI_BAR_START_Y, "left_ui_button", "blue", "Bulk Edit", lambda: editor_menus.open_bulk_editor(map_screen))
     # Row 11, not 9: btn_gp_claims is row 9 and is also visible in the editor, so
     # this button spent its whole existence hidden underneath it, pixel for pixel,
     # with a click there firing both callbacks. test_editor_menu_layout keeps the
@@ -652,7 +653,7 @@ def render_buttons(map_screen):
         map_screen.btn_unit_events,
         map_screen.btn_ed_load, map_screen.btn_ed_nation, map_screen.btn_ed_brush, map_screen.btn_ed_paint,
         map_screen.btn_ed_core, map_screen.btn_ed_claim, map_screen.btn_ed_autocore, map_screen.btn_ed_clear, map_screen.btn_ed_resource, map_screen.btn_ed_building,
-        map_screen.btn_ed_unit, map_screen.btn_ed_refresh, map_screen.btn_ed_edited, map_screen.btn_ed_date, map_screen.btn_ed_diplo, map_screen.btn_ed_personality, map_screen.btn_ed_scripts,
+        map_screen.btn_ed_unit, map_screen.btn_ed_refresh, map_screen.btn_ed_edited, map_screen.btn_ed_date, map_screen.btn_ed_diplo, map_screen.btn_ed_personality, map_screen.btn_ed_scripts, map_screen.btn_ed_bulk,
         map_screen.btn_next_turn, map_screen.btn_import_turn, map_screen.btn_skip_ai, map_screen.btn_multi_turn, map_screen.btn_declare_indep, map_screen.btn_gp_edit, map_screen.btn_gp_econ, map_screen.btn_gp_rd, map_screen.btn_gp_msgs,
         map_screen.btn_gp_save, map_screen.btn_gp_settings, map_screen.btn_gp_music, map_screen.btn_gp_faction, map_screen.btn_gp_claims, map_screen.btn_gp_puppets, map_screen.btn_gp_automation, map_screen.btn_gp_politics, map_screen.btn_go_orders, map_screen.btn_go_battle, map_screen.btn_go_production,
         map_screen.btn_declare_war, map_screen.btn_join_wars, map_screen.btn_call_to_arms, map_screen.btn_fac_invite,
@@ -891,7 +892,7 @@ def _update_editor_buttons(map_screen, is_sel):
         map_screen.btn_gp_msgs, map_screen.btn_gp_save, map_screen.btn_gp_claims,
         map_screen.btn_ed_load, map_screen.btn_ed_nation, map_screen.btn_ed_brush, map_screen.btn_ed_paint, map_screen.btn_ed_core, map_screen.btn_ed_claim,
         map_screen.btn_ed_autocore, map_screen.btn_ed_resource, map_screen.btn_ed_building,
-        map_screen.btn_ed_unit, map_screen.btn_ed_refresh, map_screen.btn_ed_clear,
+        map_screen.btn_ed_unit, map_screen.btn_ed_refresh, map_screen.btn_ed_clear, map_screen.btn_ed_bulk,
         map_screen.btn_ed_date, map_screen.btn_ed_edited, map_screen.btn_ed_diplo, map_screen.btn_ed_personality, map_screen.btn_ed_scripts,
         map_screen.btn_gp_settings, map_screen.btn_gp_music, map_screen.btn_gp_politics,
         map_screen.slider_camera_tilt

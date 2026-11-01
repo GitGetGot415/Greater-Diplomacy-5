@@ -10,6 +10,7 @@ import json
 import uuid
 
 import data.constants as c
+from data.state_access import world_for
 
 
 class RequestState(Enum):
@@ -230,3 +231,38 @@ def normalize_diplomacy_channels(nation_data):
         country.setdefault("pending_diplomacy", {})
         country.setdefault("diplo_responses", {})
     return normalize_diplomatic_records(nation_data)
+
+
+def reset_editor_setup(context):
+    """Remove live diplomatic setup and refund held offers. Preserve historical records."""
+    # These effect owners import lifecycle helpers. Load them after module initialization.
+    from map_logic.diplomacy import deal_effects, faction_records, volunteers
+
+    world = world_for(context)
+    volunteers.end_all_missions(context)
+    faction_records.restore(context, {})
+    list_fields = ("at_war_with", "puppets", "guarantees", "military_attaches", "military_access",
+                   "pending_military_attache_revocations", "pending_volunteer_send_homes",
+                   "return_queue", "release_puppet_queue")
+    table_fields = ("relations", "wargoals", "temp_modifiers", "pending_diplomacy", "diplo_responses",
+                    "diplo_cooldowns", "truces", "draft_lists", "war_durations",
+                    "military_access_reasons", "volunteer_missions")
+    for country, data in world.nation_data.items():
+        if country in c.UNPLAYABLE_NATIONS or country == "WAR_PRE_MAPS":
+            continue
+        for request in data.get("pending_diplomacy", {}).values():
+            deal_effects.release_escrow(world.nation_data, request.get("escrow"), country)
+        treaty = data.get("pending_treaty", {})
+        deal_effects.release_escrow(world.nation_data, treaty.get("escrow"), country)
+        for field in list_fields:
+            if field in data:
+                data[field] = []
+        for field in table_fields:
+            if field in data:
+                data[field] = {}
+        data["master"] = ""
+        data["puppet_type"] = ""
+        for field in ("faction_pressure", "faction_tenure", "is_created_integrated_puppet",
+                      "pending_treaty", "pending_ratification"):
+            data.pop(field, None)
+    world.nation_data.pop("WAR_PRE_MAPS", None)

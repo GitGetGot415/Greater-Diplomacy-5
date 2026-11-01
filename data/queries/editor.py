@@ -1,8 +1,9 @@
-"""Map editor paint regions and undo/redo state."""
+"""Map editor paint regions, bulk setup changes, and undo/redo state."""
 
 import copy
 import data.constants as c
-from data.state_access import world_for
+from data.state_access import world_for, session_for
+from data import queries
 
 
 def get_editor_paint_region(province, id_to_province, mode):
@@ -97,3 +98,124 @@ def redo_editor_state(map_screen):
     next_state = map_screen.editor_redo_history.pop()
     _apply_map_state(map_screen, next_state)
     map_screen.show_feedback("Redo Successful")
+
+
+def can_bulk_edit_map(context):
+    """Allow bulk setup changes only in an idle local map editor."""
+    session = session_for(context)
+    return bool(session.is_editor and not session.tactical_mode
+                and not session.multiplayer_mode and not session.realtime_multiplayer
+                and not session.ai_is_thinking and not session.viewing_ai_moves
+                and not session.is_refreshing and not session.is_saving)
+
+
+def editor_factory_targets(context):
+    """Return active factory types in research-level order."""
+    targets = []
+    for name in queries.get_building_library(context):
+        tech, level = queries.get_building_required_tech(name)
+        if tech in ("basic_factory", "factory"):
+            targets.append((0 if tech == "basic_factory" else level, name))
+    return [name for _, name in sorted(targets)]
+
+
+def set_editor_factories(context, target):
+    """Set existing factories to one active type. Preserve other buildings."""
+    if not can_bulk_edit_map(context):
+        raise ValueError("Bulk changes require an idle local map editor.")
+    factories = set(editor_factory_targets(context))
+    if target not in factories:
+        raise ValueError("Select a factory from the active building library.")
+    changes = []
+    for province in world_for(context).map_data.values():
+        buildings = province.get("buildings", [])
+        changes.extend((buildings, index) for index, name in enumerate(buildings)
+                       if name in factories and name != target)
+    if changes:
+        save_editor_state(context)
+        for buildings, index in changes:
+            buildings[index] = target
+        context.queue_editor_visual_refresh()
+    return len(changes)
+
+
+def editor_unit_targets(context, mode, value):
+    """Choose family equipment by year or one-based family level."""
+    if mode not in ("year", "level") or type(value) is not int or value < 1:
+        raise ValueError("Enter a positive whole year or family level.")
+    library = queries.get_unit_library(context)
+    tree = queries.get_tech_tree(context)
+    families = {}
+    for name in library:
+        metadata = queries.get_unit_metadata(name, library, context=context)
+        requirements = [metadata["research"]] + metadata["requirements"]
+        years = []
+        for requirement in requirements:
+            if "year" in requirement or "minimum_year" in requirement:
+                years.append(requirement.get("year", requirement.get("minimum_year")))
+            else:
+                timeline = tree.get(requirement["tech"], {}).get("years", [])
+                level = requirement["level"]
+                if 0 < level <= len(timeline):
+                    years.append(timeline[level - 1])
+        families.setdefault(metadata["family"], []).append(
+            (metadata["tier_order"], name, max(years) if years else None))
+    targets = {}
+    for family, tiers in families.items():
+        tiers.sort(key=lambda item: item[0])
+        if mode == "level":
+            targets[family] = tiers[min(value, len(tiers)) - 1][1]
+        else:
+            eligible = [item for item in tiers if item[2] is not None and item[2] <= value]
+            if eligible:
+                targets[family] = eligible[-1][1]
+    return targets
+
+
+def set_editor_units(context, mode, value):
+    """Change placed equipment, including cargo, without changing unit identity."""
+    if not can_bulk_edit_map(context):
+        raise ValueError("Bulk changes require an idle local map editor.")
+    library = queries.get_unit_library(context)
+    targets = editor_unit_targets(context, mode, value)
+    changes = []
+    skipped = 0
+    for province in world_for(context).map_data.values():
+        for unit in queries.units_with_air_cargo(province.get("units", [])):
+            current = unit.get("original_type", unit.get("type"))
+            if current not in library:
+                skipped += 1
+                continue
+            family = queries.get_base_unit_name(current, library, context=context)
+            target = targets.get(family)
+            if target is None:
+                skipped += 1
+            elif target != current:
+                changes.append((unit, target))
+    if changes:
+        save_editor_state(context)
+        for unit, target in changes:
+            if "original_type" in unit:
+                transport = unit["type"].split(" (", 1)[0]
+                unit["original_type"] = target
+                unit["type"] = f"{transport} ({target})"
+            else:
+                unit["type"] = target
+            queries.apply_library_stats(unit, library)
+            unit["order"] = {}
+        context.queue_editor_visual_refresh()
+    return len(changes), skipped
+
+
+def reset_editor_diplomacy(context):
+    """Clear live diplomatic setup. Preserve territory, cores, and historical messages."""
+    if not can_bulk_edit_map(context):
+        raise ValueError("Bulk changes require an idle local map editor.")
+    # Diplomacy imports queries during startup. Resolve its owners after initialization.
+    from map_logic.diplomacy import diplomacy_lifecycle
+
+    diplomacy_lifecycle.reset_editor_setup(context)
+    # Map-only undo cannot restore diplomatic state or off-map volunteer placement.
+    session_for(context).editor_history.clear()
+    session_for(context).editor_redo_history.clear()
+    context.refresh_diplomacy_maps()
