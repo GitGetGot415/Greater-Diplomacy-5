@@ -363,6 +363,9 @@ Platform builds and browser checks remain separate verification steps.
 MUSIC PLAYBACK
 ==============
 
+Desktop startup music begins after the first rendered frame is displayed.
+Browser startup music waits for the first mouse click or key press.
+
 beepbox_audio.py owns BeepBox and UltraBox JSON recognition, sample loading, and playback.
 Put song JSON files in an album folder under assets/music/.
 The format field selects the original BeepBox synth or the separate UltraBox synth.

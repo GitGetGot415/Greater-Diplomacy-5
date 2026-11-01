@@ -79,8 +79,8 @@ def boot():
     c.USE_SOLOUD = False
     pygame.init()
     _surface = pygame.display.set_mode((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
-    # Startup music can launch a synthesizer thread even with silent output.
-    # Skip only this automatic playback; explicit music tests keep real methods.
+    # Guard constructor checks against accidental audio or synthesizer startup.
+    # Normal startup playback belongs to run(), after the first displayed frame.
     with patch.object(main.Controller, "play_startup_song"):
         _controller = main.Controller()
     STATES_UNBUILT_AT_BOOT.update(

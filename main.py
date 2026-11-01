@@ -364,10 +364,8 @@ class Controller:
         # (per pygbag's own guidance: "remove startup sounds and/or wait for a
         # mouse click"). Playing immediately at boot means the browser silently
         # ignores it and the AudioContext never resumes. Deferred to the first
-        # real input event in run() on web; unaffected on desktop.
+        # real input event in run() on web. Desktop playback waits for its first frame.
         self._web_audio_unlocked = False
-        if not IS_WEB:
-            self.play_startup_song()
 
         # Say where this game is, for anything that wants to translate a map
         # into it. Best effort and never fatal -- see map_logic/imports/odtl.py.
@@ -934,6 +932,7 @@ class Controller:
         pygame.event.clear(pygame.KEYDOWN)
 
     async def run(self):
+        startup_music_pending = not IS_WEB
         while True:
             # --- THE MAGIC CPU FIX ---
             self.clock.tick(self.target_fps)
@@ -1055,6 +1054,10 @@ class Controller:
                 self.screen.blit(fps_surface, (c.SCREEN_WIDTH - 75, 10))
 
             pygame.display.flip()
+            if startup_music_pending:
+                startup_music_pending = False
+                if self.now_playing == "None":
+                    self.play_startup_song()
             await asyncio.sleep(0)  # yield to the browser tab / event loop every frame
 
 async def _bootstrap():
