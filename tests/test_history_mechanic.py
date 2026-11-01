@@ -5,10 +5,12 @@ import shutil
 import tempfile
 import unittest
 from types import SimpleNamespace
+from unittest import mock
 
 from data import queries
 from data.map import history_io, load_map
 from map_logic.system32.turn_processor import snapshot_history
+from screens.menus import load_game
 
 
 class HistoryMechanicTests(unittest.TestCase):
@@ -101,6 +103,20 @@ class HistoryMechanicTests(unittest.TestCase):
         queries.overlay_saved_province_data(current, old_history)
 
         self.assertEqual(current["(7, 0, 0)"]["resources"], {"Iron": 30})
+
+    def test_history_menu_uses_turn_dates_and_loads_the_selected_turn(self):
+        menu = SimpleNamespace(managed_dir="fixture-saves", load_specific_save=mock.Mock())
+        with mock.patch.object(history_io, "read_turn_dates", return_value={
+                "10": "Later date", "2": "Earlier date"}) as read_dates, \
+                mock.patch.object(history_io, "read", side_effect=AssertionError(
+                    "The menu must not load the full timeline")), \
+                mock.patch.object(load_game.pickers, "open_listbox_selector") as picker:
+            load_game.Load_Game.open_history_menu(menu, "fixture")
+        read_dates.assert_called_once_with(load_game.os.path.join("fixture-saves", "fixture"))
+        args = picker.call_args.args
+        self.assertEqual(args[3], ["Turn 2: Earlier date", "Turn 10: Later date"])
+        args[4]("Turn 10: Later date")
+        menu.load_specific_save.assert_called_once_with("fixture", history_turn=10)
 
 
 if __name__ == "__main__":

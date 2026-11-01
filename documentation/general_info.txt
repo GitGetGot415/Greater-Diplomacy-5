@@ -145,6 +145,8 @@ Dictionary changes preserve deletions and key order. List changes preserve edits
 Snapshot changes omit unchanged messages, images, research, and units.
 The reader restores separate, complete snapshots for the timeline and historical loading.
 This format reduces disk storage. It does not reduce the full timeline's memory use.
+The History menu applies only date changes. It does not copy or retain every snapshot.
+It still decompresses and parses the history file. Complete snapshots load after the player selects a turn.
 
 Older plain history.json files and compressed full snapshots remain readable.
 Saving an older game selects the smaller representation. No turns or messages are removed.

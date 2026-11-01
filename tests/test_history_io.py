@@ -59,6 +59,39 @@ class HistoryIOTests(unittest.TestCase):
 
     def test_no_history_reads_as_empty(self):
         self.assertEqual(history_io.read(self.dir), {})
+        self.assertEqual(history_io.read_turn_dates(self.dir), {})
+
+    def test_turn_dates_support_full_and_delta_files_in_both_storage_forms(self):
+        history = {
+            "7": {"date_str": "First date", "nation_data": {"A": {"materials": 10}}},
+            "9": {"date_str": "First date", "nation_data": {"B": {"materials": 20}}},
+            "10": {"nation_data": {}},
+            "11": {"date_str": "Last date", "nation_data": {}},
+        }
+        expected = {"7": "First date", "9": "First date", "10": "Turn 10", "11": "Last date"}
+        for filename, opener in ((history_io.PLAIN_NAME, open), (history_io.GZ_NAME, gzip.open)):
+            for payload in (history, history_io.encode_history(history)):
+                with self.subTest(filename=filename, delta="_history_format" in payload):
+                    with opener(os.path.join(self.dir, filename), "wt", encoding="utf-8") as handle:
+                        json.dump(payload, handle)
+                    with mock.patch.object(history_io.copy, "deepcopy", side_effect=AssertionError(
+                            "The history menu must not copy full snapshots")):
+                        self.assertEqual(history_io.read_turn_dates(self.dir), expected)
+                    self.assertEqual(history_io.read(self.dir), history)
+                    os.remove(os.path.join(self.dir, filename))
+
+    def test_turn_dates_prefer_compressed_history_and_keep_the_payload_unchanged(self):
+        history = sample_history()
+        payload = history_io.encode_history(history)
+        before = copy.deepcopy(payload)
+        expected = {turn: snapshot["date_str"] for turn, snapshot in history.items()}
+        self.assertEqual(history_io.decode_history(payload, dates_only=True), expected)
+        self.assertEqual(payload, before)
+        with open(os.path.join(self.dir, history_io.PLAIN_NAME), "w", encoding="utf-8") as handle:
+            json.dump({"99": {"date_str": "Stale date"}}, handle)
+        with gzip.open(os.path.join(self.dir, history_io.GZ_NAME), "wt", encoding="utf-8") as handle:
+            json.dump(payload, handle)
+        self.assertEqual(history_io.read_turn_dates(self.dir), expected)
 
     def test_writing_empty_history_removes_old_files_and_writes_nothing(self):
         for filename in (history_io.GZ_NAME, history_io.PLAIN_NAME):
@@ -82,6 +115,8 @@ class HistoryIOTests(unittest.TestCase):
             json.dump(sample_history(), f)
 
         self.assertEqual(history_io.read(self.dir), sample_history())
+        self.assertEqual(history_io.read_turn_dates(self.dir),
+                         {turn: snapshot["date_str"] for turn, snapshot in sample_history().items()})
 
     def test_a_non_object_history_payload_is_treated_as_unavailable(self):
         with open(os.path.join(self.dir, history_io.PLAIN_NAME), "w", encoding="utf-8") as f:
@@ -239,6 +274,8 @@ class HistoryIOTests(unittest.TestCase):
                 with gzip.open(os.path.join(self.dir, history_io.GZ_NAME), "wt", encoding="utf-8") as handle:
                     json.dump(payload, handle)
                 self.assertEqual(history_io.read(self.dir), sample_history())
+                self.assertEqual(history_io.read_turn_dates(self.dir),
+                                 {turn: snapshot["date_str"] for turn, snapshot in sample_history().items()})
 
 
 if __name__ == "__main__":

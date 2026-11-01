@@ -80,20 +80,20 @@ class Load_Game(FolderListState):
 
     def open_history_menu(self, folder_name):
         save_dir = os.path.join(self.managed_dir, folder_name)
-        history_data = history_io.read(save_dir)
+        turn_dates = history_io.read_turn_dates(save_dir)
 
-        if not history_data:
+        if not turn_dates:
             has_file = any(os.path.exists(os.path.join(save_dir, name))
                            for name in (history_io.GZ_NAME, history_io.PLAIN_NAME))
             dialogs.show_info("No History", "History file is empty." if has_file
                                      else "No history available for this save.")
             return
 
-        turns = sorted([int(k) for k in history_data.keys()])
+        turns = sorted([int(k) for k in turn_dates])
         turn_by_label = {}
         items = []
         for t in turns:
-            date_str = history_data[str(t)].get("date_str", f"Turn {t}")
+            date_str = turn_dates[str(t)]
             label = f"Turn {t}: {date_str}"
             items.append(label)
             turn_by_label[label] = t

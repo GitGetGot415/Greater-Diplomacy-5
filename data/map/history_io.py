@@ -5,6 +5,7 @@ The writer stores full snapshots or snapshot changes, whichever is smaller.
 Reading restores independent full snapshots for all existing callers.
 Legacy full snapshots remain supported in plain and compressed files.
 Use read for history files. It prefers the compressed file.
+Use read_turn_dates for the menu. It does not retain full snapshots.
 Buffered text writes avoid json.dump's many small writes.
 """
 
@@ -116,11 +117,16 @@ def encode_history(history):
     return {"_history_format": DELTA_FORMAT, "turns": turns}
 
 
-def decode_history(payload):
-    """Read the delta format or legacy full snapshots."""
+def decode_history(payload, *, dates_only=False):
+    """Read full snapshots, or only turn dates for the history menu."""
     if not isinstance(payload, dict):
         raise ValueError("history root must be an object")
     if "_history_format" not in payload:
+        if dates_only:
+            if not all(isinstance(snapshot, dict) for snapshot in payload.values()):
+                raise ValueError("history snapshot must be an object")
+            return {turn: snapshot.get("date_str", f"Turn {turn}")
+                    for turn, snapshot in payload.items()}
         return payload
     if payload["_history_format"] != DELTA_FORMAT or not isinstance(payload.get("turns"), list):
         raise ValueError("unsupported history format")
@@ -131,11 +137,23 @@ def decode_history(payload):
                 or not isinstance(entry[0], str) or entry[0] in history):
             raise ValueError("invalid history turn entry")
         turn, delta = entry
+        if dates_only and isinstance(delta, list) and delta:
+            # Apply only date changes. Loading still validates the full snapshot.
+            if delta[0] == "set" and len(delta) == 2 and isinstance(delta[1], dict):
+                delta = ["set", {key: value for key, value in delta[1].items() if key == "date_str"}]
+            elif delta[0] == "dict" and len(delta) == 4 and isinstance(delta[2], dict):
+                delta = ["dict", delta[1],
+                         {key: value for key, value in delta[2].items() if key == "date_str"}, None]
         snapshot = _restore_delta(previous, delta)
         if not isinstance(snapshot, dict):
             raise ValueError("history snapshot must be an object")
-        # Timeline edits or save migrations must not change another turn.
-        previous = history[turn] = copy.deepcopy(snapshot)
+        if dates_only:
+            # The menu needs one current snapshot, not a copy of every turn.
+            history[turn] = snapshot.get("date_str", f"Turn {turn}")
+            previous = snapshot
+        else:
+            # Timeline edits or save migrations must not change another turn.
+            previous = history[turn] = copy.deepcopy(snapshot)
     return history
 
 
@@ -220,7 +238,17 @@ def write(save_path, history, compress=True):
 
 
 def read(load_path):
-    """Loads a history from `load_path`, compressed or not. {} if there is none.
+    """Load independent full snapshots, compressed or plain."""
+    return _read(load_path, dates_only=False)
+
+
+def read_turn_dates(load_path):
+    """Load turn dates without copying and retaining the full timeline."""
+    return _read(load_path, dates_only=True)
+
+
+def _read(load_path, *, dates_only):
+    """Load history data. Return an empty dictionary when no file is usable.
 
     A corrupt or unreadable history costs the timeline, not the save, so this
     reports and returns empty rather than raising into the load path.
@@ -235,7 +263,7 @@ def read(load_path):
         try:
             with opener(path) as f:
                 payload = json.load(f)
-            return decode_history(payload)
+            return decode_history(payload, dates_only=dates_only)
         except (OSError, EOFError, UnicodeError, ValueError) as e:
             print(f"Error loading {os.path.basename(path)}: {e}")
             # A partially written compressed file should not hide a valid
