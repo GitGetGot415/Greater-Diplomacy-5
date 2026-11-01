@@ -499,7 +499,7 @@ def _build_left_bar_buttons(map_screen):
         ("btn_gp_politics", 12, "Politics", "tophat", politics_callback),
     )
     for attr, row, label, icon_name, action in left_bar_buttons:
-        sound_kind = "open_music" if attr == "btn_gp_music" else "click"
+        sound_kind = {"btn_gp_music": "open_music", "btn_gp_settings": "open_settings"}.get(attr, "click")
         if attr == "btn_gp_msgs" and not map_screen.is_editor and map_screen.player_country == "Spectator":
             sound_kind = None
         setattr(map_screen, attr, Button(LEFT_UI_BAR_X, LEFT_UI_BAR_START_Y + LEFT_UI_BAR_STEP_Y * row,

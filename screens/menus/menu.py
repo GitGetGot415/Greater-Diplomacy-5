@@ -376,7 +376,8 @@ class Menu(GameState):
                 lambda state=button_data["state"]: self.go_to(state),
                 image=ui_elements.UI_ICONS.get(button_data.get("image")),
                 font_size=button_data.get("text_size"),
-                sound_kind="open_music" if button_data["state"] == "MUSIC_PLAYER" else "click",
+                sound_kind={"MUSIC_PLAYER": "open_music", "SETTINGS": "open_settings"}.get(
+                    button_data["state"], "click"),
             )
             setattr(self, button_data["attribute"], button)
             self.elements.append(button)

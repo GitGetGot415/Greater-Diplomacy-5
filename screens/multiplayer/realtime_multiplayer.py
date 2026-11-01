@@ -529,7 +529,7 @@ class Realtime_Lobby(GameState):
         # cannot mistake Back for harmless navigation.
         self.elements = [
             Button(20, 75, "left_ui_button", "pink", "Settings", lambda: self.go_to("SETTINGS"),
-                   image=UI_ICONS.get("settings")),
+                   image=UI_ICONS.get("settings"), sound_kind="open_settings"),
             Button(20, 110, "left_ui_button", "pink", "Music", lambda: self.go_to("MUSIC_PLAYER"),
                    image=UI_ICONS.get("music"), sound_kind="open_music"),
             Button(20, 145, "left_ui_button", "blue", "Rename", self.edit_host_name),
@@ -1154,7 +1154,7 @@ class Realtime_Remote_Lobby(GameState):
     def refresh_ui(self):
         self.elements = [
             Button(20, 75, "left_ui_button", "pink", "Settings", lambda: self.go_to("SETTINGS"),
-                   image=UI_ICONS.get("settings")),
+                   image=UI_ICONS.get("settings"), sound_kind="open_settings"),
             Button(20, 110, "left_ui_button", "pink", "Music", lambda: self.go_to("MUSIC_PLAYER"),
                    image=UI_ICONS.get("music"), sound_kind="open_music"),
             Button(20, 145, "left_ui_button", "purple", "Copy Reconnect Code", self.copy_reconnect_code,

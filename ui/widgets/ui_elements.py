@@ -29,6 +29,8 @@ music_ui_sounds = {}
 pygame_music_ui_sounds = {}
 MUSIC_UI_SOUND_PATHS = {
     "table": "assets/sounds/Table.wav",
+    "open_settings": "assets/sounds/Open Settings.mp3",
+    "help": "assets/sounds/Help.mp3",
     "open_music": "assets/sounds/Open Music.wav",
     "select_album": "assets/sounds/Select Album.wav",
     "select_song": "assets/sounds/Select Song.wav",
@@ -715,7 +717,8 @@ def make_info_button(x, y, on_click, y_offset=0):
     size is local layout, while the button's behavior and visual identity stay
     consistent everywhere.
     """
-    return Button(x, y + y_offset, "scenario_setting_info", "light_blue", "?", on_click)
+    return Button(x, y + y_offset, "scenario_setting_info", "light_blue", "?", on_click,
+                  sound_kind="help")
 
 
 def draw_slider(surface, rect, handle_rect, *, dragging=False, allowed_ratio=1.0,
