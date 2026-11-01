@@ -317,7 +317,7 @@ def _persisted_roots():
     # module can't import data.constants back at top level.
     import data.constants as c
     custom_characters_dir = os.path.join(CHARACTERS_DIR, CUSTOM_SUBDIR)
-    return (c.SAVES_DIR, c.TOURNAMENT_SAVES_DIR, c.MODS_DIR, custom_characters_dir)
+    return (c.SAVES_DIR, c.TOURNAMENT_SAVES_DIR, c.SCENARIOS_CUSTOM_DIR, c.MODS_DIR, custom_characters_dir)
 
 
 async def restore_persisted_dir(root):

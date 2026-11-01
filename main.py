@@ -1071,6 +1071,7 @@ async def _bootstrap():
     if IS_WEB:
         await restore_persisted_dir(c.SAVES_DIR)
         await restore_persisted_dir(c.TOURNAMENT_SAVES_DIR)
+        await restore_persisted_dir(c.SCENARIOS_CUSTOM_DIR)
         from ui.dialogs.character_select_screen import CHARACTERS_DIR, CUSTOM_SUBDIR
         await restore_persisted_dir(os.path.join(CHARACTERS_DIR, CUSTOM_SUBDIR))
     game = Controller()

@@ -8,27 +8,87 @@ from data import queries
 from data.map import history_io
 from data.map.map_cache import remove_optional_layer_files
 from data.platform import sync_persisted_dir
+from data.state_access import session_for
+from ui import dialogs
 
-async def save_map_data(self, save_name=None):
+
+def editor_save_path(name):
+    """Resolve a scenario folder inside the configured custom scenario directory."""
+    name = queries.validated_scenario_name(name)
+    if not name:
+        raise ValueError("Choose a scenario name before resolving its folder.")
+    root = os.path.realpath(c.SCENARIOS_CUSTOM_DIR)
+    path = os.path.join(root, name)
+    if os.path.commonpath((root, os.path.realpath(path))) != root:
+        raise ValueError("The scenario folder must be inside the custom scenarios directory.")
+    return path
+
+
+def available_editor_name(name):
+    """Add the first unused numeric suffix without changing another scenario."""
+    candidate = name
+    number = 1
+    while os.path.lexists(editor_save_path(candidate)):
+        candidate = f"{name}-{number}"
+        number += 1
+    return candidate
+
+
+def prepare_editor_save(context, on_ready):
+    """Choose a destination on the UI thread before starting background writes."""
+    if not queries.can_bulk_edit_map(context):
+        return
+    try:
+        name = queries.validated_scenario_name(session_for(context).editor_scenario_name)
+        if not name:
+            name = "MapExport_" + datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        path = editor_save_path(name)
+    except ValueError as error:
+        dialogs.show_error("Save Scenario", str(error))
+        return
+
+    def ready(name, overwrite):
+        if queries.can_bulk_edit_map(context):
+            on_ready(name, overwrite)
+
+    if not os.path.lexists(path):
+        ready(name, False)
+    elif not os.path.isdir(path):
+        ready(available_editor_name(name), False)
+    else:
+        def confirmed(answer):
+            if answer is True:
+                ready(name, True)
+            elif answer is False:
+                ready(available_editor_name(name), False)
+        dialogs.ask_yes_no(
+            "Scenario Already Exists",
+            f'A scenario named "{name}" already exists.\n'
+            "Overwrite it, save a numbered copy, or cancel?",
+            confirmed, yes_label="Overwrite", no_label="Save Copy", back_label="Cancel")
+
+
+async def save_map_data(self, save_name=None, *, overwrite=False):
     """Saves logical data and visual state. Runs as a background coroutine (see
     data.platform.run_background) so a 'Saving...' screen can be shown instead
     of freezing the window while a large history.json/images are written."""
     try:
-        queries.scrub_default_images(self.nation_data)
-
-        if not save_name:
-            save_name = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-
         # --- CONDITIONAL PATH LOGIC ---
         if self.is_editor:
-            # Standardize Map Editor Exports to the custom scenarios directory
-            save_path = os.path.join(c.SCENARIOS_CUSTOM_DIR, f"MapExport_{save_name}")
+            if not save_name:
+                save_name = session_for(self).editor_scenario_name or (
+                    "MapExport_" + datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
+            save_path = editor_save_path(save_name)
+            # Creating the directory here also rejects a collision after the UI check.
+            os.makedirs(save_path, exist_ok=overwrite)
         else:
             # Standard Game Save
+            if not save_name:
+                save_name = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             save_path = os.path.join(c.SAVES_DIR, save_name)
+            os.makedirs(save_path, exist_ok=True)
 
-        if not os.path.exists(save_path):
-            os.makedirs(save_path)
+        queries.scrub_default_images(self.nation_data)
 
         # 1. Consolidated Data Structure
         # map_data.json now carries the full current province state. Keep the
@@ -76,12 +136,13 @@ async def save_map_data(self, save_name=None):
         pygame.image.save(self.id_map, os.path.join(save_path, "id_map.png"))
         self.save_progress_completed = 5
 
-        if not self.is_editor:
-            # Web only: mirror the new save into IndexedDB so it survives closing
-            # the tab (pygbag's in-memory FS otherwise loses it). No-op on desktop.
-            sync_persisted_dir(c.SAVES_DIR)
+        # Web builds restore both saved games and custom scenarios at startup.
+        sync_persisted_dir(c.SCENARIOS_CUSTOM_DIR if self.is_editor else c.SAVES_DIR)
+        if self.is_editor:
+            session_for(self).editor_scenario_name = os.path.basename(save_path)
 
         self.show_feedback(f"Exported: {save_name} to {save_path}" if self.is_editor else f"Saved: {save_name} to {save_path}")
+        return save_path
     except Exception as e:
         print(f"SAVE FAILED:\n{traceback.format_exc()}")
         self.show_feedback(f"Save failed: {e}")

@@ -145,7 +145,7 @@ Edit AUTOMATION_PANEL_STYLES for the automation panel.
 Edit ECONOMY_PANEL_STYLES for national economy resource rows and the expenses table background.
 Edit ORDERS_PANEL_STYLES for the Orders panel.
 Edit EDITOR_PANEL_STYLES for editor panels, country lists, scripted-event lists, and historical leader cards.
-Its entries include research, starting_economy, date, diplomacy, politics, personality, scripted_events, unit_stats, and construction_turns.
+Its entries include metadata, research, starting_economy, date, diplomacy, politics, personality, scripted_events, unit_stats, and construction_turns.
 The corresponding list entries control country-selection panels. Brush and map-clearing panels have separate entries.
 Edit RESEARCH_PANEL_STYLES for timeline headers, research slots, and technology details.
 The research timeline uses these styles in player, spectator, and country-editor modes.
@@ -653,6 +653,36 @@ Territory Paint matches the clicked tile's owner. Core Paint matches its complet
 Left-click applies the selected nation. Unclaimed clears cores.
 Right-click removes the selected nation's cores, or picks a territory owner.
 Undo and Redo apply to the complete fill. The selected tool is not saved.
+
+MAP EDITOR METADATA
+-------------------
+
+The local map editor shows Metadata in place of Mail.
+It contains Scenario Name, Author, and Description text fields.
+Select Apply Metadata to keep changes in the current map. Back closes the draft without applying it.
+Use Save on the map to write the scenario and its metadata to disk.
+Metadata changes require an idle local editor. Tournament, real-time, tactical, and ordinary player sessions cannot apply these changes.
+
+Scenario Name comes from the loaded scenario's folder name. New editor maps start with an empty name.
+The scenario does not store a second copy of its name in meta.json.
+Changing Scenario Name changes the next save's destination. It does not rename or delete the original folder.
+Author and Description are stored in meta.json under scenario_metadata.
+Older scenarios without this information open with empty Author and Description fields.
+
+1. Open Metadata and enter a Scenario Name, if required.
+2. Enter Author and Description, if required.
+3. Select Apply Metadata.
+4. Select Save on the map.
+
+A named scenario saves directly under that name in the custom scenarios directory.
+An empty name uses the existing MapExport_ name with a date and time.
+The name must be one valid folder name. Path separators and reserved system names are not permitted.
+If the destination exists, choose Overwrite, Save Copy, or Cancel.
+Overwrite replaces the scenario files in that folder.
+Save Copy selects the first unused numbered name, such as Example-1 or Example-2.
+Cancel and Back leave existing files unchanged.
+After a save, Metadata shows the actual destination folder's name.
+Browser builds also keep custom scenarios in persistent storage.
 
 MAP EDITOR BULK CHANGES
 -----------------------

@@ -882,6 +882,7 @@ def apply_authoritative_snapshot(map_ref, snapshot: dict[str, Any]) -> None:
     world_state = world_for(map_ref)
     if not isinstance(snapshot, dict):
         return
+    world_state.scenario_metadata = queries.normalized_scenario_metadata(snapshot.get("scenario_metadata", {}))
     settings = snapshot.get("scenario_settings")
     if isinstance(settings, dict):
         world_state.scenario_settings = copy.deepcopy(settings)

@@ -1,0 +1,273 @@
+"""Check editor metadata, scenario names, save collisions, and older-save defaults."""
+
+import asyncio
+import copy
+import json
+import os
+import tempfile
+import unittest
+from types import MethodType, SimpleNamespace
+from unittest import mock
+
+from data import constants as c, queries
+from data import platform
+from data.map import load_map, save_map
+from screens.editors.date_economy_screens import Editor_Metadata_Screen
+from tests.stub_map_screen import map_double
+
+
+def editor():
+    return map_double(
+        is_editor=True, player_country="Editor", editor_scenario_name="",
+        map_data={"p": {"id": 1, "json_key": "p", "owner": "A", "cores": ["A"], "units": []}},
+        raw_json_data={"p": {"id": 1, "owner": "A"}}, nation_data={"A": {"materials": 4}},
+        scenario_metadata={}, terrain_map=object(), id_map=object(), show_feedback=mock.Mock())
+
+
+class ScenarioMetadataTests(unittest.TestCase):
+    def setUp(self):
+        self.game = editor()
+        self.directory = self.enterContext(tempfile.TemporaryDirectory())
+        self.enterContext(mock.patch.object(c, "SCENARIOS_CUSTOM_DIR", self.directory))
+        self.enterContext(mock.patch.object(queries, "get_country_data", return_value={}))
+        self.enterContext(mock.patch("data.queries.saves.get_research_years", return_value={}))
+
+    def test_apply_validates_before_changing_state_and_preserves_unknown_metadata(self):
+        self.game.scenario_metadata = {"extension": {"keep": True}}
+        queries.set_editor_metadata(self.game, " My Scenario ", "Author", "Description")
+        self.assertEqual(self.game.editor_scenario_name, "My Scenario")
+        self.assertEqual(self.game.scenario_metadata,
+                         {"author": "Author", "description": "Description", "extension": {"keep": True}})
+        before = copy.deepcopy(self.game.scenario_metadata)
+        for name, author, description in (("../outside", "A", "D"), ("Name", None, "D"), ("Name", "A", [])):
+            with self.subTest(name=name), self.assertRaises(ValueError):
+                queries.set_editor_metadata(self.game, name, author, description)
+            self.assertEqual(self.game.scenario_metadata, before)
+            self.assertEqual(self.game.editor_scenario_name, "My Scenario")
+
+    def test_permissions_rechecked_when_metadata_is_applied(self):
+        for key, value in (("is_editor", False), ("multiplayer_mode", True), ("realtime_multiplayer", True),
+                           ("tactical_mode", True), ("is_saving", True), ("is_refreshing", True),
+                           ("ai_is_thinking", True), ("viewing_ai_moves", True)):
+            with self.subTest(key=key), mock.patch.object(self.game, key, value), self.assertRaises(ValueError):
+                queries.set_editor_metadata(self.game, "Name", "Author", "Description")
+        self.assertEqual(self.game.scenario_metadata, {})
+
+    def test_names_cannot_escape_the_scenario_directory(self):
+        for name in ("../outside", "..", ".", "a/b", "a\\b", "C:outside", "bad?name", "ends.", "CON", "nul.txt"):
+            with self.subTest(name=name), self.assertRaises(ValueError):
+                save_map.editor_save_path(name)
+        self.assertEqual(queries.validated_scenario_name("  "), "")
+        self.assertEqual(save_map.editor_save_path("Valid name"), os.path.join(self.directory, "Valid name"))
+
+    def test_serializer_stores_author_and_description_without_the_folder_name(self):
+        queries.set_editor_metadata(self.game, "Folder Name", "Creator", "Some text")
+        saved = queries.build_save_dict(self.game, include_provinces=False)
+        self.assertEqual(saved["scenario_metadata"], {"author": "Creator", "description": "Some text"})
+        self.assertNotIn("editor_scenario_name", saved)
+        self.assertNotIn("scenario_name", saved)
+        saved["scenario_metadata"]["author"] = "Other"
+        self.assertEqual(self.game.scenario_metadata["author"], "Creator")
+
+    def test_older_maps_default_to_empty_metadata_and_name_uses_current_folder(self):
+        self.game.scenario_metadata = {"author": "Previous author"}
+        load_map.restore_scenario_metadata(self.game, {}, os.path.join(self.directory, "Renamed Folder"))
+        self.assertEqual(self.game.scenario_metadata, {"author": "", "description": ""})
+        self.assertEqual(self.game.editor_scenario_name, "Renamed Folder")
+        load_map.restore_scenario_metadata(self.game, None)
+        self.assertEqual(self.game.editor_scenario_name, "")
+        self.game.is_editor = False
+        load_map.restore_scenario_metadata(self.game, {}, os.path.join(self.directory, "Saved Game"))
+        self.assertEqual(self.game.editor_scenario_name, "")
+
+    def test_named_and_unnamed_saves_choose_paths_without_a_name_prompt(self):
+        with mock.patch("ui.dialogs.ask_yes_no") as ask:
+            ready = mock.Mock()
+            self.game.editor_scenario_name = "Chosen Name"
+            save_map.prepare_editor_save(self.game, ready)
+            ready.assert_called_once_with("Chosen Name", False)
+            ready.reset_mock()
+            self.game.editor_scenario_name = ""
+            with mock.patch.object(save_map, "datetime") as clock:
+                clock.now.return_value.strftime.return_value = "timestamp"
+                save_map.prepare_editor_save(self.game, ready)
+            ready.assert_called_once_with("MapExport_timestamp", False)
+            ask.assert_not_called()
+
+    def test_collision_offers_overwrite_numbered_copy_and_cancel(self):
+        self.game.editor_scenario_name = "Existing"
+        for name in ("Existing", "Existing-1", "Existing-2"):
+            os.mkdir(os.path.join(self.directory, name))
+        with mock.patch("ui.dialogs.ask_yes_no") as ask:
+            ready = mock.Mock()
+            save_map.prepare_editor_save(self.game, ready)
+            ready.assert_not_called()
+            self.assertEqual(ask.call_args.kwargs["yes_label"], "Overwrite")
+            self.assertEqual(ask.call_args.kwargs["no_label"], "Save Copy")
+            self.assertEqual(ask.call_args.kwargs["back_label"], "Cancel")
+            callback = ask.call_args.args[2]
+            callback(None)
+            ready.assert_not_called()
+            callback(False)
+            ready.assert_called_once_with("Existing-3", False)
+            ready.reset_mock()
+            callback(True)
+            ready.assert_called_once_with("Existing", True)
+            ready.reset_mock()
+            self.game.realtime_multiplayer = True
+            callback(True)
+            ready.assert_not_called()
+
+    def test_numbered_copy_skips_files_and_rechecks_names_at_confirmation(self):
+        self.game.editor_scenario_name = "Existing"
+        os.mkdir(os.path.join(self.directory, "Existing"))
+        with mock.patch("ui.dialogs.ask_yes_no") as ask:
+            ready = mock.Mock()
+            save_map.prepare_editor_save(self.game, ready)
+            with open(os.path.join(self.directory, "Existing-1"), "w") as handle:
+                handle.write("Preserve")
+            ask.call_args.args[2](False)
+            ready.assert_called_once_with("Existing-2", False)
+
+    def write_scenario(self, name=None, overwrite=False):
+        self.game.is_saving = True
+        with mock.patch.object(save_map.pygame.image, "save"), \
+                mock.patch.object(queries, "scrub_default_images"), \
+                mock.patch.object(save_map, "sync_persisted_dir") as sync:
+            result = asyncio.run(save_map.save_map_data(self.game, name, overwrite=overwrite))
+        return result, sync
+
+    def test_disk_round_trip_uses_exact_folder_name_and_survives_renaming(self):
+        queries.set_editor_metadata(self.game, "Exact Name", "Créateur", "Map description")
+        path, sync = self.write_scenario()
+        self.assertEqual(path, os.path.join(self.directory, "Exact Name"))
+        sync.assert_called_once_with(self.directory)
+        saved, _map, _history = load_map.read_save_files(path)
+        self.assertEqual(saved["scenario_metadata"], {"author": "Créateur", "description": "Map description"})
+        self.assertNotIn("name", saved["scenario_metadata"])
+        loaded = editor()
+        load_map.restore_scenario_metadata(loaded, saved, os.path.join(self.directory, "Renamed"))
+        self.assertEqual(loaded.editor_scenario_name, "Renamed")
+        self.assertEqual(loaded.scenario_metadata, saved["scenario_metadata"])
+        self.assertFalse(self.game.is_saving)
+
+    def test_existing_folder_requires_explicit_overwrite_in_the_writer(self):
+        path = os.path.join(self.directory, "Existing")
+        os.mkdir(path)
+        meta_path = os.path.join(path, "meta.json")
+        with open(meta_path, "w") as handle:
+            handle.write("Preserve previous scenario")
+        with mock.patch("builtins.print"):
+            result, _sync = self.write_scenario("Existing")
+        self.assertIsNone(result)
+        with open(meta_path) as handle:
+            self.assertEqual(handle.read(), "Preserve previous scenario")
+        self.assertFalse(self.game.is_saving)
+        result, _sync = self.write_scenario("Existing", overwrite=True)
+        self.assertEqual(result, path)
+        with open(meta_path) as handle:
+            self.assertIsInstance(json.load(handle), dict)
+
+    def test_save_copy_writes_numbered_folder_and_preserves_previous_scenario(self):
+        previous = os.path.join(self.directory, "Existing")
+        os.mkdir(previous)
+        previous_meta = os.path.join(previous, "meta.json")
+        with open(previous_meta, "w") as handle:
+            handle.write("Keep the previous scenario")
+        self.game.editor_scenario_name = "Existing"
+        ready = mock.Mock()
+        with mock.patch("ui.dialogs.ask_yes_no") as ask:
+            save_map.prepare_editor_save(self.game, ready)
+            ask.call_args.args[2](False)
+        name, overwrite = ready.call_args.args
+        path, _sync = self.write_scenario(name, overwrite)
+        self.assertEqual(path, os.path.join(self.directory, "Existing-1"))
+        self.assertEqual(self.game.editor_scenario_name, "Existing-1")
+        with open(previous_meta) as handle:
+            self.assertEqual(handle.read(), "Keep the previous scenario")
+
+    def test_unnamed_writer_keeps_timestamp_export_naming(self):
+        with mock.patch.object(save_map, "datetime") as clock:
+            clock.now.return_value.strftime.return_value = "timestamp"
+            path, _sync = self.write_scenario()
+        self.assertEqual(path, os.path.join(self.directory, "MapExport_timestamp"))
+
+    def test_realtime_snapshot_metadata_is_public_and_copied_from_the_server(self):
+        from data.multiplayer.realtime.session import apply_authoritative_snapshot
+
+        client = map_double(player_country="A", nation_data={"A": {}}, map_data={},
+                            refresh_all_maps=mock.Mock())
+        metadata = {"author": "Author", "description": "Description"}
+        apply_authoritative_snapshot(client, {"scenario_metadata": metadata, "nation_data": {"A": {}}})
+        self.assertEqual(client.scenario_metadata, metadata)
+        self.assertIsNot(client.scenario_metadata, metadata)
+        apply_authoritative_snapshot(client, {"nation_data": {"A": {}}})
+        self.assertEqual(client.scenario_metadata, {"author": "", "description": ""})
+
+    def test_editor_metadata_screen_applies_through_shared_permission_checks(self):
+        screen = object.__new__(Editor_Metadata_Screen)
+        screen.map_screen = self.game
+        screen.fields = {key: SimpleNamespace(text=value, active=False)
+                         for key, value in (("name", "Name"), ("author", "Author"), ("description", "Description"))}
+        screen.done = False
+        self.assertEqual(self.game.scenario_metadata, {})
+        screen.apply()
+        self.assertTrue(screen.done)
+        self.assertEqual(self.game.editor_scenario_name, "Name")
+        self.assertEqual(self.game.scenario_metadata, {"author": "Author", "description": "Description"})
+        self.game.multiplayer_mode = True
+        screen.done = False
+        with mock.patch("ui.dialogs.show_error") as error:
+            screen.apply()
+        error.assert_called_once()
+        self.assertFalse(screen.done)
+
+    def test_custom_scenarios_are_in_the_browser_persistence_roots(self):
+        self.assertIn(c.SCENARIOS_CUSTOM_DIR, platform._persisted_roots())
+
+    def test_metadata_replaces_mail_only_for_the_editor(self):
+        from screens.game import map as map_module
+        from screens.editors import menus
+
+        game = mock.Mock(is_editor=True, player_country="Editor")
+        def button(_x, _y, _size, _color, text, callback, **_appearance):
+            return SimpleNamespace(text=text, callback=callback)
+        with mock.patch.object(map_module, "Button", side_effect=button), \
+                mock.patch.object(map_module, "Slider"):
+            map_module._build_left_bar_buttons(game)
+        with mock.patch.object(menus, "open_editor_metadata") as metadata, \
+                mock.patch.object(menus, "open_spectator_messages") as messages:
+            game.btn_gp_msgs.callback()
+            metadata.assert_called_once_with(game)
+            game.is_editor = False
+            game.player_country = "Spectator"
+            game.btn_gp_msgs.callback()
+            messages.assert_called_once_with(game)
+            game.player_country = "A"
+            game.btn_gp_msgs.callback()
+            game.change_state.assert_called_once_with("MESSAGES")
+
+    def test_map_save_button_waits_for_collision_choice_before_starting_work(self):
+        from screens.game import map as map_module
+
+        game = self.game
+        game.editor_scenario_name = "Existing"
+        game.save_map_data = MethodType(map_module.Map.save_map_data, game)
+        game.draw = mock.Mock()
+        os.mkdir(os.path.join(self.directory, "Existing"))
+        with mock.patch("ui.dialogs.ask_yes_no") as ask, \
+                mock.patch.object(map_module, "run_background") as background, \
+                mock.patch.object(map_module.pygame.display, "get_surface"), \
+                mock.patch.object(map_module.pygame.display, "flip"):
+            game.save_map_data()
+            self.assertFalse(game.is_saving)
+            background.assert_not_called()
+            ask.call_args.args[2](None)
+            background.assert_not_called()
+            ask.call_args.args[2](True)
+            background.assert_called_once_with(save_map.save_map_data, game, "Existing", overwrite=True)
+            self.assertTrue(game.is_saving)
+
+
+if __name__ == "__main__":
+    unittest.main()

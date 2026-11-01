@@ -137,6 +137,12 @@ def open_editor_date(map_screen):
     _launch_editor_screen(map_screen, "Editor_Date_Screen")
 
 
+def open_editor_metadata(map_screen):
+    """Open scenario information only in an idle local editor."""
+    if queries.can_bulk_edit_map(map_screen):
+        _launch_editor_screen(map_screen, "Editor_Metadata_Screen")
+
+
 def open_editor_economy(map_screen):
     """Opens a full-screen sortable table of every active country's detailed income."""
     if not _has_active_countries(map_screen):

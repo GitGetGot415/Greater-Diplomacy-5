@@ -42,6 +42,15 @@ def read_save_files(load_path):
     return save_meta, map_data, history_io.read(load_path)
 
 
+def restore_scenario_metadata(context, save_meta, scenario_path=None):
+    """Load optional author information. Derive the editor name from its folder."""
+    replace_mapping(world_for(context), "scenario_metadata", queries.normalized_scenario_metadata(
+        (save_meta or {}).get("scenario_metadata", {})))
+    session = session_for(context)
+    session.editor_scenario_name = (
+        os.path.basename(os.path.normpath(scenario_path)) if session.is_editor and scenario_path else "")
+
+
 def newer_version_message(load_path):
     """Return the update message for a save from a newer game, or None."""
     meta_path = os.path.join(load_path, "meta.json")
@@ -148,6 +157,9 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
     map_screen.country_economy_summaries = {}
     replace_mapping(world_state, "history", {})
     replace_mapping(world_state, "raw_json_data", {})
+    replace_mapping(world_state, "scenario_metadata", {})
+    session_state.editor_scenario_name = ""
+    has_explicit_path = bool(load_path)
 
     # --- UNIFIED SETTINGS LOADING ---
     if scenario_settings is None:
@@ -228,6 +240,7 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
     # 2. Read the save and convert it to the current version before any of it is used.
     save_meta, raw_map_data, history = read_save_files(load_path)
     migrations.upgrade_save(save_meta if save_meta is not None else {}, raw_map_data, history)
+    restore_scenario_metadata(map_screen, save_meta, load_path if has_explicit_path else None)
 
     # 3. OVERRIDE: If we are loading an existing save file, prefer settings from inside the save
     # Do NOT override if we are in selection mode (starting a new scenario), so player UI choices are respected.

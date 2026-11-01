@@ -9,6 +9,55 @@ from ui.widgets.ui_elements import Button, TextField, make_back_button
 from ui import dialogs
 from ui.navigation.screen_runner import _run_pygame_sub_screen
 
+
+class Editor_Metadata_Screen(MapOverlayScreen):
+    """Edit scenario information as a draft until Apply is selected."""
+    pans_camera = False
+    PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_EDIT
+    PANEL_STYLE = EDITOR_PANEL_STYLES["metadata"]
+    PANEL_TITLE = "Metadata"
+    TITLE_PRESET = "heading2"
+    TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
+    PANEL_WIDTH, PANEL_HEIGHT = 780, 360
+    FIELD_LEFT, FIELD_TOP, FIELD_GAP, FIELD_HEIGHT = 205, 80, 70, 40
+
+    def __init__(self, map_screen):
+        super().__init__(map_screen, pygame.Rect(0, 0, self.PANEL_WIDTH, self.PANEL_HEIGHT))
+        self.back_state = "MAP"
+        metadata = queries.normalized_scenario_metadata(map_screen.scenario_metadata)
+        values = (("name", "Scenario Name:", map_screen.editor_scenario_name),
+                  ("author", "Author:", metadata["author"]),
+                  ("description", "Description:", metadata["description"]))
+        self.fields = {key: TextField(0, 0, self.PANEL_WIDTH - self.FIELD_LEFT - 30,
+                                     self.FIELD_HEIGHT, value, label=label)
+                       for key, label, value in values}
+        self.refresh_ui()
+
+    @property
+    def listening_for(self):
+        return any(field.active for field in self.fields.values())
+
+    def refresh_ui(self):
+        p = self.panel_rect
+        for row, field in enumerate(self.fields.values()):
+            field.rect.topleft = (p.x + self.FIELD_LEFT, p.y + self.FIELD_TOP + row * self.FIELD_GAP)
+        self.elements = [make_back_button(self.exit_screen, style="map"),
+                         Button(p.centerx - 100, p.bottom - 55, "medium", "green", "Apply Metadata", self.apply)]
+        self.elements.extend(self.fields.values())
+
+    def apply(self):
+        try:
+            queries.set_editor_metadata(self.map_screen, *(self.fields[key].text
+                                        for key in ("name", "author", "description")))
+        except ValueError as error:
+            dialogs.show_error("Metadata", str(error))
+            return
+        self.map_screen.show_feedback("Scenario metadata updated. Save the map to write it to disk.")
+        self.done = True
+
+    def draw_content(self, surface):
+        self.draw_panel(surface)
+
 # ==========================================
 # SET START DATE
 # ==========================================

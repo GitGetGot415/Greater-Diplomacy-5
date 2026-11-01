@@ -462,7 +462,14 @@ def _build_left_bar_buttons(map_screen):
                                "Politics_Screen")()
 
     econ_callback = editor_or(editor_menus.open_starting_economy_editor, "ECONOMY")
-    msgs_callback = editor_or(editor_menus.open_spectator_messages, "MESSAGES")
+
+    def msgs_callback():
+        if map_screen.is_editor:
+            editor_menus.open_editor_metadata(map_screen)
+        elif map_screen.player_country == "Spectator":
+            editor_menus.open_spectator_messages(map_screen)
+        else:
+            map_screen.change_state("MESSAGES")
 
     # The left-hand bar: one column, one size, one color, one row per entry.
     # Claims and Puppets route everyone to the native Pygame screen so they can
@@ -472,7 +479,8 @@ def _build_left_bar_buttons(map_screen):
         ("btn_gp_econ", 2, "Economy",
          "economy(the_economy_of_a_country_to_be_unusually_specific)", econ_callback),
         ("btn_gp_rd", 3, "R&D", "research", research_callback),
-        ("btn_gp_msgs", 4, "Mail", "mail", msgs_callback),
+        ("btn_gp_msgs", 4, "Metadata" if map_screen.is_editor else "Mail",
+         "paper" if map_screen.is_editor else "mail", msgs_callback),
         ("btn_gp_save", 5, "Save", "save", map_screen.save_map_data),
         ("btn_gp_settings", 6, "Settings", "settings", lambda: map_screen.change_state("SETTINGS")),
         ("btn_gp_music", 7, "Music", "music", lambda: map_screen.change_state("MUSIC_PLAYER")),
@@ -889,6 +897,8 @@ def _update_unassigned_viewer_buttons(map_screen, is_sel, is_thinking):
 
 
 def _update_editor_buttons(map_screen, is_sel):
+    map_screen.btn_gp_msgs.text = "Metadata"
+    map_screen.btn_gp_msgs.image = ui_elements.UI_ICONS.get("paper")
     ed_btns = [
         map_screen.btn_gp_edit, map_screen.btn_gp_econ, map_screen.btn_gp_rd,
         map_screen.btn_gp_msgs, map_screen.btn_gp_save, map_screen.btn_gp_claims,
@@ -992,6 +1002,8 @@ def _update_turn_buttons(map_screen, is_sel, is_thinking):
 
 
 def _update_gameplay_buttons(map_screen, is_sel, is_thinking):
+    map_screen.btn_gp_msgs.text = "Mail"
+    map_screen.btn_gp_msgs.image = ui_elements.UI_ICONS.get("mail")
     viewing_ai = map_screen.viewing_ai_moves
     gp_btns = [
         map_screen.btn_gp_edit, map_screen.btn_gp_econ, map_screen.btn_gp_rd,
@@ -2062,7 +2074,7 @@ class Map(StateAccess, GameState):
         update_button_states(self)
         self.show_feedback("Map Unlocked")
 
-    def save_map_data(self):
+    def save_map_data(self, save_name=None, *, overwrite=False):
         if self.realtime_multiplayer:
             session = self.realtime_session
             if session.phase != "GAME_OVER":
@@ -2082,6 +2094,13 @@ class Map(StateAccess, GameState):
             return
         if self.is_saving:
             return # Already saving, ignore duplicate clicks
+        if self.is_editor:
+            if not queries.can_bulk_edit_map(self):
+                return
+            if save_name is None:
+                save_map.prepare_editor_save(
+                    self, lambda name, replace: self.save_map_data(name, overwrite=replace))
+                return
         self.is_saving = True
         self.loading_status_text = "Saving Game..."
         self.save_progress_completed = 0
@@ -2092,7 +2111,7 @@ class Map(StateAccess, GameState):
         self.draw(pygame.display.get_surface())
         pygame.display.flip()
 
-        run_background(save_map.save_map_data, self)
+        run_background(save_map.save_map_data, self, save_name, overwrite=overwrite)
 
     MAP_LAYER_REFRESHERS = {
         "political": refresh_map.refresh_political_map,

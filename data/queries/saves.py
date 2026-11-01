@@ -10,6 +10,18 @@ from data.queries.nation_summary import get_shared_country_economy_summaries
 from data import queries
 
 
+def normalized_scenario_metadata(metadata):
+    """Copy optional scenario information. Older saves default to empty text."""
+    if not isinstance(metadata, dict):
+        raise ValueError("Scenario metadata must be an object.")
+    result = copy.deepcopy(metadata)
+    for key in ("author", "description"):
+        value = result.setdefault(key, "")
+        if not isinstance(value, str):
+            raise ValueError(f"Scenario {key} must be text.")
+    return result
+
+
 def merge_country_templates(nation_data):
     """Restore catalog countries and add missing fields in place.
 
@@ -226,6 +238,7 @@ def build_save_dict(map_screen, *, include_provinces=True, compact_nations=False
         "active_players": session_state.active_players,
         "current_player_index": session_state.current_player_index,
         "scenario_settings": scenario_settings,
+        "scenario_metadata": normalized_scenario_metadata(world_state.scenario_metadata),
         "script_variables": world_state.script_variables,
         "default_research": world_state.default_research,
         "research_years": get_research_years(context=map_screen),

@@ -9,6 +9,7 @@ screens/editors/menus.py looks screens up here by class name (`getattr(editor_sc
 class_name)`), so every screen class is re-exported at package level.
 """
 from screens.editors.date_economy_screens import (
+    Editor_Metadata_Screen,
     Editor_Date_Screen,
     Starting_Economy_Edit_Screen,
     Starting_Economy_List_Screen,

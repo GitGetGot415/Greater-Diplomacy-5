@@ -15,6 +15,7 @@ class SessionState:
     player_unit: object = None
     unit_economy: dict = field(default_factory=lambda: {**{res: 0 for res in c.ECON_RESOURCE_KEYS}, "fuel_inc": 0})
     is_editor: bool = False
+    editor_scenario_name: str = ""
     selection_mode: bool = False
     viewing_ai_moves: bool = False
     skip_ai_view: bool = False

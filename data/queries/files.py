@@ -3,10 +3,27 @@
 import copy
 import data.constants as c
 import os
+import re
 import shutil
 import zipfile
 from data.queries.tech import get_tech_requirements
 from data import queries
+
+
+def validated_scenario_name(name):
+    """Accept a single portable folder name, or empty text for automatic naming."""
+    if not isinstance(name, str):
+        raise ValueError("Scenario Name must be text.")
+    name = name.strip()
+    if not name:
+        return ""
+    if (name in (".", "..") or name.endswith(".")
+            or any(char in '<>:"/\\|?*' or ord(char) < 32 for char in name)):
+        raise ValueError('Scenario Name cannot contain <>:"/\\|?*, control characters, or end with a period.')
+    base = name.split(".", 1)[0].upper()
+    if base in ("CON", "PRN", "AUX", "NUL") or re.fullmatch(r"(?:COM|LPT)[1-9]", base):
+        raise ValueError("Scenario Name is reserved by the operating system. Choose another name.")
+    return name
 
 
 def extract_and_flatten_zip(zip_path, extract_target_dir):

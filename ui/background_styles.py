@@ -104,6 +104,7 @@ ORDERS_PANEL_STYLES = {
 DEFAULT_GRADIENT_EDITOR_PANELS = 0.5
 
 EDITOR_PANEL_STYLES = {
+    "metadata": {"color": c.PANEL_THEME_EDIT[0], "gradient_strength": DEFAULT_GRADIENT_EDITOR_PANELS},
     "research": {"color": c.PANEL_THEME_EDIT[0], "gradient_strength": DEFAULT_GRADIENT_EDITOR_PANELS},
     "research_list": {"color": c.PANEL_THEME_EDIT[0], "gradient_strength": DEFAULT_GRADIENT_EDITOR_PANELS},
     "date": {"color": c.PANEL_THEME_EDIT[0], "gradient_strength": DEFAULT_GRADIENT_EDITOR_PANELS},

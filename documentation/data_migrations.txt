@@ -26,6 +26,19 @@ map_logic/diplomacy/diplomacy_lifecycle.py owns request, response, and treaty id
 map_logic/diplomacy/faction_records.py owns faction record validation.
 map_logic/diplomacy/deal.py reads old peace text, old trade fields, and AI prose as deals.
 
+SCENARIO INFORMATION
+--------------------
+
+WorldState.scenario_metadata owns optional Author and Description text.
+The shared save builder writes scenario_metadata to meta.json, saves, and multiplayer snapshots.
+The loader supplies empty text when an older file omits this optional field.
+This additive field does not change an older field's meaning or require a version step.
+Scenario information remains the same when a selected history turn becomes live state.
+Only local map editors can change it. Multiplayer commands cannot change it.
+
+SessionState.editor_scenario_name is an editor draft. It is not saved in scenario data.
+The loader derives the name from the selected folder. See documentation/player_controls.txt, MAP EDITOR METADATA, for save controls.
+
 GAME VERSIONS
 -------------
 

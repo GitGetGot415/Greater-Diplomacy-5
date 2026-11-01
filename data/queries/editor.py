@@ -109,6 +109,16 @@ def can_bulk_edit_map(context):
                 and not session.is_refreshing and not session.is_saving)
 
 
+def set_editor_metadata(context, name, author, description):
+    """Apply scenario information only in an idle local editor."""
+    if not can_bulk_edit_map(context):
+        raise ValueError("Metadata changes require an idle local map editor.")
+    name = queries.validated_scenario_name(name)
+    metadata = queries.normalized_scenario_metadata({"author": author, "description": description})
+    world_for(context).scenario_metadata.update(metadata)
+    session_for(context).editor_scenario_name = name
+
+
 EDITOR_BUILDING_GROUPS = {
     "industry": "Factories",
     "recruitment": "Recruitment Centers",
