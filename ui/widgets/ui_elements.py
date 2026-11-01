@@ -31,6 +31,8 @@ MUSIC_UI_SOUND_PATHS = {
     "table": "assets/sounds/Table.wav",
     "open_settings": "assets/sounds/Open Settings.mp3",
     "help": "assets/sounds/Help.mp3",
+    "create_army": "assets/sounds/Create Army.mp3",
+    "research": "assets/sounds/Research.mp3",
     "open_music": "assets/sounds/Open Music.wav",
     "select_album": "assets/sounds/Select Album.wav",
     "select_song": "assets/sounds/Select Song.wav",
