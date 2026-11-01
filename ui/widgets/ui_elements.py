@@ -31,6 +31,7 @@ MUSIC_UI_SOUND_PATHS = {
     "open_music": "assets/sounds/Open Music.wav",
     "select_music": "assets/sounds/Select Music.wav",
     "skip_song": "assets/sounds/Skip Song.wav",
+    "select_unit_filter": "assets/sounds/Select Unit Filter.wav",
 }
 SOUND_VOLUMES_PATH = "assets/sounds/volumes.json"
 sound_volume_multipliers = {}
@@ -333,7 +334,7 @@ def _ui_sound_volume(kind):
 
 
 def load_music_ui_sounds(sound_factory, *, soloud=False):
-    """Load music control effects when the audio backend starts."""
+    """Load named control effects when the audio backend starts."""
     sounds = music_ui_sounds if soloud else pygame_music_ui_sounds
     sounds.clear()
     for kind, path in MUSIC_UI_SOUND_PATHS.items():

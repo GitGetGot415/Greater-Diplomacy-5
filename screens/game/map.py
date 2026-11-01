@@ -244,7 +244,7 @@ def _build_view_buttons(map_screen):
             + index * UNIT_VIEW_BUTTON_STEP_Y,
             "small_square", UNIT_VIEW_BUTTON_COLORS[view_filter], view_filter.title(),
             lambda view_filter=view_filter: map_screen.set_unit_view_filter(view_filter),
-            image=icon, show_text=False)
+            image=icon, show_text=False, sound_kind="select_unit_filter")
         # A moving or clipped filter must not receive a click.
         map_screen.unit_view_buttons[view_filter].click_guard = (
             lambda: map_screen.unit_view_animation_start is None)

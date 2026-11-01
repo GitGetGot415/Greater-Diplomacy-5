@@ -30,6 +30,12 @@ Desktop and web support values above 1.0. Large boosts can clip audio peaks and 
 The file controls sound effects only. It does not change music volume or activate unused sound effects.
 Each effect that uses the same file shares its multiplier.
 
+UNIT FILTER BUTTON SOUNDS
+-------------------------
+
+The bottom-left Naval, Land, Air, and All buttons play assets/sounds/Select Unit Filter.wav when clicked.
+This effect uses the SFX volume, pitch, and per-file volume multiplier on desktop and web builds.
+
 CLASSIC UNIT ART
 ---------------
 
