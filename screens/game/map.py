@@ -259,7 +259,7 @@ def _build_editor_buttons(map_screen):
         ("btn_ed_nation", 1.5, "small", "grey", "Nation Brush", lambda: editor_menus.select_brush_nation(map_screen), None),
         ("btn_ed_core", 2.5, "small", "pink", "Core Brush", lambda: editor_menus.select_core_brush(map_screen), None),
         ("btn_ed_autocore", 3, "small_square", "pink", "Autocore", map_screen.auto_assign_cores, None),
-        ("btn_ed_bulk", 3.5, "small_square", "blue", "Bulk Edit", lambda: editor_menus.open_bulk_editor(map_screen), "brush"),
+        ("btn_ed_bulk", 3.5, "small_square", "blue", "Bulk Edit", lambda: editor_menus.open_bulk_editor(map_screen), "stack"),
         ("btn_ed_claim", 4, "small_square", "orange", "Claim Brush", lambda: editor_menus.select_claim_brush(map_screen), "paper"),
         ("btn_ed_resource", 4.5, "small_square", "purple", "Resource", lambda: editor_menus.select_resource_brush(map_screen), "resource"),
         ("btn_ed_building", 5, "small_square", "grey", "Building", lambda: editor_menus.select_building_brush(map_screen), "industry"),

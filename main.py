@@ -311,6 +311,7 @@ class Controller:
             "names": symbol_loader.get_symbol("Text", 0.5),
             "paint": symbol_loader.get_symbol("Paint", 1.5),
             "brush": symbol_loader.get_symbol("Brush", 1.5),
+            "stack": pygame.image.load("assets/images/Stack.png").convert_alpha(),
             "eraser": symbol_loader.get_symbol("Eraser", 1.5),
             "colors": symbol_loader.get_symbol("Colors", 2),
             "red_line": symbol_loader.get_symbol("Red Line", 1.5),
