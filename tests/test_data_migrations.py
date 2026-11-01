@@ -17,6 +17,8 @@ from data.map import history_io, load_map
 from map_logic.diplomacy import diplomacy_lifecycle
 
 ROOT = Path(__file__).resolve().parents[1]
+#: The release that the newest version step converts.
+PREVIOUS_VERSION = f"v{migrations.CURRENT_VERSION - 1}"
 
 
 def round_trip(value):
@@ -40,9 +42,10 @@ class GameVersionTests(unittest.TestCase):
             with self.subTest(missing=missing):
                 self.assertEqual(migrations.version_number(missing), 0)
 
-    def test_game_version_matches_the_released_version(self):
+    def test_game_version_is_not_older_than_the_released_version(self):
+        # version.txt names the last release. GAME_VERSION names the version in development.
         released = (ROOT / "version.txt").read_text(encoding="utf-8").strip()
-        self.assertEqual(c.GAME_VERSION, released)
+        self.assertGreaterEqual(migrations.CURRENT_VERSION, migrations.version_number(released))
 
     def test_steps_target_released_versions_or_the_next_release(self):
         for steps in (migrations.SAVE_STEPS, migrations.MOVE_STEPS):
@@ -99,7 +102,7 @@ class Version47StepTests(unittest.TestCase):
                 country = {"custom_production_units": [older, current], "research": {"unrelated": 2},
                            "scripted_events": [{"conditions": [], "actions": [
                                {"type": "Spawn Unit", "unit_type": older}]}]}
-                saved = {"version": c.GAME_VERSION, "nation_data": {"A": country},
+                saved = {"version": PREVIOUS_VERSION, "nation_data": {"A": country},
                          "provinces": {"P": copy.deepcopy(province)}, "future_field": [7]}
                 raw = {"P": copy.deepcopy(province)}
                 history = {"1": {"nation_data": {"A": copy.deepcopy(country)},
@@ -127,7 +130,7 @@ class Version47StepTests(unittest.TestCase):
     def test_older_unit_names_convert_in_tournament_projections_and_intents(self):
         for older, current in migrations.LEGACY_UNIT_NAMES.items():
             with self.subTest(unit=older):
-                move = {"game_version": c.GAME_VERSION,
+                move = {"game_version": PREVIOUS_VERSION,
                         "nation_data": {"custom_production_units": [older, current]},
                         "provinces": {"P": {"unit_queue": [{"unit_type": older, "turns_remaining": 3}]}},
                         "aircraft_orders": [{"order": {"type": "UPGRADE", "target_type": older}}],
@@ -290,9 +293,80 @@ class Version47StepTests(unittest.TestCase):
                          ["Biplane Fighter I", "Fixture"])
 
 
+class ResearchChangeTests(unittest.TestCase):
+    """v47 gave technologies new prerequisites and lowered some maximum levels."""
+    TREE = {"base": {"max_lvl": 3, "req": {}},
+            "middle": {"max_lvl": 2, "req": {"base": 2}},
+            "top": {"max_lvl": 2, "req": {"middle": 1}},
+            "capped": {"max_lvl": 4, "req": {}}}
+
+    def patched_tree(self):
+        return mock.patch.object(queries, "get_tech_tree", return_value=self.TREE)
+
+    def test_the_v47_step_grants_prerequisites_of_owned_technologies_once(self):
+        country = {"research": {"top": 1, "capped": 2, "unknown_tech": 5, "infantry_type": 30}}
+        complete = {"research": {"base": 3, "middle": 2, "top": 2}}
+        history = {"1": {"nation_data": {"A": copy.deepcopy(country)}}}
+        saved = {"version": PREVIOUS_VERSION, "nation_data": {"A": country, "B": complete},
+                 "default_research": {"top": 1}}
+        with self.patched_tree():
+            migrations.upgrade_save(saved, {}, history)
+            for record in (country, history["1"]["nation_data"]["A"]):
+                self.assertEqual(record["research"], {"top": 1, "middle": 1, "base": 2, "capped": 2,
+                                                       "unknown_tech": 5, "infantry_type": 30})
+            self.assertEqual(saved["default_research"], {"top": 1, "middle": 1, "base": 2})
+            self.assertEqual(complete["research"], {"base": 3, "middle": 2, "top": 2})
+            once = copy.deepcopy(saved)
+            migrations.upgrade_save(saved, {}, {})
+            self.assertEqual(saved, once)
+
+    def test_the_v47_step_grants_prerequisites_in_tournament_moves(self):
+        move = {"game_version": PREVIOUS_VERSION, "nation_data": {"research": {"top": 2}},
+                "provinces": {}, "aircraft_orders": [], "release_subjects": []}
+        with self.patched_tree():
+            migrations.upgrade_move(move)
+        self.assertEqual(move["nation_data"]["research"], {"top": 2, "middle": 1, "base": 2})
+
+    def test_levels_above_the_active_maximum_are_lowered_and_finished_projects_removed(self):
+        country = {"research": {"capped": 9, "base": 1, "infantry_type": 500},
+                   "research_queue": [{"tech_name": "capped", "points_remaining": 5},
+                                      {"tech_name": "base", "points_remaining": 5}],
+                   "research_progress": {"capped": 3}, "current_research": "capped"}
+        saved = {"nation_data": {"A": country}, "default_research": {"capped": 7}}
+        history = {"1": {"nation_data": {"A": copy.deepcopy(country)}}}
+        migrations.clamp_research_levels(saved, self.TREE, history)
+        for record in (country, history["1"]["nation_data"]["A"]):
+            # The equipment tracks keep levels beyond a content cap. See migrate_infantry_research.
+            self.assertEqual(record["research"], {"capped": 4, "base": 1, "infantry_type": 500})
+            self.assertEqual(record["research_queue"], [{"tech_name": "base", "points_remaining": 5}])
+            self.assertEqual(record["research_progress"], {})
+            self.assertIsNone(record["current_research"])
+        self.assertEqual(saved["default_research"], {"capped": 4})
+
+
 class LoadRepairTests(unittest.TestCase):
     LIBRARY = {"Fixture Ground": {"health": 40, "attack": 6, "defense": 3, "speed": 5},
                "Fixture Ship": {"health": 90, "attack": 9, "defense": 2, "speed": 4, "naval_unit": True}}
+
+    def test_queue_clamp_leaves_malformed_entries_and_unknown_families_alone(self):
+        queue = ["not an entry", {}, {"item_name": None}, {"item_name": "Removed Lvl 3"},
+                 {"item_name": "Fixture Lvl -4"}]
+        migrations.clamp_building_queue(queue, {"Fixture Lvl 1": {}, "Fixture Lvl 2": {}})
+        self.assertEqual(queue, ["not an entry", {}, {"item_name": None},
+                                 {"item_name": "Removed Lvl 3"}, {"item_name": "Fixture Lvl 1"}])
+
+    def test_queued_building_levels_follow_the_active_library_like_built_ones(self):
+        buildings = {"Fixture Lvl 1": {}, "Fixture Lvl 2": {}}
+        paid = {"item_name": "Fixture Lvl 9", "order_type": "BUILDING", "turns_remaining": 3,
+                "refund": {"cost_materials": 7}}
+        province = {"buildings": ["Fixture Lvl 5", "Removed Lvl 1"],
+                    "building_queue": [paid, {"item_name": "Fixture Lvl 1"},
+                                       {"item_name": "Core Territory", "order_type": "CORE"}]}
+        load_map._repair_province(province, buildings)
+        self.assertEqual(province["buildings"], ["Fixture Lvl 2"])
+        self.assertEqual([entry["item_name"] for entry in province["building_queue"]],
+                         ["Fixture Lvl 2", "Fixture Lvl 1", "Core Territory"])
+        self.assertEqual((paid["turns_remaining"], paid["refund"]), (3, {"cost_materials": 7}))
 
     def test_units_take_library_stats_and_keep_their_health_fraction(self):
         ground = {"type": "Fixture Ground", "max_health": 200, "health": 100,

@@ -765,7 +765,7 @@ def load_move_files(map_ref, move_file_paths, keys_dict, *, accept_stat_mismatch
                    override="version")
             continue
         try:
-            # Steps for the next release also convert moves from this release.
+            # Convert the move from the previous release to this one.
             migrations.upgrade_move(player_data)
         except ValueError as error:
             reject(file_path, cid, str(error))

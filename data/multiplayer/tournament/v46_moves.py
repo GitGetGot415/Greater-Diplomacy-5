@@ -53,8 +53,15 @@ def prepare(map_ref, cid, player_data):
     research_snapshot = {"nation_data": {cid: copy.deepcopy(nd)}}
     if "research_years" in player_data:
         research_snapshot["research_years"] = player_data["research_years"]
-    migrations.migrate_infantry_research(research_snapshot, queries.get_tech_tree(map_ref))
+    tech_tree = queries.get_tech_tree(map_ref)
+    migrations.migrate_infantry_research(research_snapshot, tech_tree)
+    migrations.clamp_research_levels(research_snapshot, tech_tree)
     nd = research_snapshot["nation_data"][cid]
+    # The host clamped its own queues on load, so the move's copies must match them.
+    building_library = queries.get_building_library(context=map_ref)
+    for province in provs.values():
+        if isinstance(province, dict) and isinstance(province.get("building_queue"), list):
+            migrations.clamp_building_queue(province["building_queue"], building_library)
     queries.validate_air_drop_recovery_armies(
         cid, nd.get("armies", world_state.nation_data[cid].get("armies", [])),
         world_state.nation_data, world_state.map_data)

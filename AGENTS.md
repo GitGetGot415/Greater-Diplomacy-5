@@ -34,6 +34,12 @@ AI means artificial intelligence. UI means user interface.
   If the command is interrupted, the user's work can stay hidden or be lost.
   To compare with an older version, export it to a separate directory with `git archive`.
   Run the comparison in that directory and leave the working tree unchanged.
+- **NEVER edit `version.txt`. Do not change, reformat, or rewrite it for any reason.**
+  The game downloads this file from the public repository and compares it with its own version.
+  Players see "Outdated" when it is newer than their copy.
+  If it changes before a release exists, every player wrongly sees that an update is available.
+  Only the user changes `version.txt`, when they release.
+  Change `GAME_VERSION` in `data/constants.py` for development work. Report that you did not touch `version.txt`.
 - Use `color`, never `colour`, in identifiers, UI text, comments, and documentation.
 - Preserve intentional comments.
   Update inaccurate comments. Keep explanations of rules that are not obvious.
@@ -210,13 +216,15 @@ Keep tuning data in its source files:
 
 - Preserve existing supported public interfaces, saved data, and configuration behavior.
   Change them only when the user explicitly requests a breaking change.
-- The game version is the save version. `version.txt` and `GAME_VERSION` in `data/constants.py` give it.
+- The game version is the save version. `GAME_VERSION` in `data/constants.py` gives it.
+  It names the version in development. Set it to the new version when work on that version starts.
+  `version.txt` names the last released version. Never edit it (see Required Rules).
   Every save, tournament file, and move file records the version that wrote it.
   Do not add another version number, schema name, or numbered format.
 - A version step converts all older data to the format of one game version.
   Put each step in `SAVE_STEPS` or `MOVE_STEPS` in `data/migrations.py`.
-  Give the step the next release version, one above `GAME_VERSION`. Do not change `GAME_VERSION` or `version.txt`.
-  See `documentation/data_migrations.txt` for the procedure.
+  Give the step the version in `GAME_VERSION`.
+  See `how_to_update.txt` for the short steps and `documentation/data_migrations.txt` for the procedure.
 - A file from a newer version is refused with an error that tells the player to update.
 - Prefer additive, optional fields with defaults that preserve old behavior.
   Add a version step when a field changes meaning, moves, or changes shape.

@@ -75,9 +75,10 @@ def _saved_player_view(save_meta):
 
 
 def _repair_province(province, building_library):
-    """Give a loaded province its queue lists. Clamp out-of-range building levels and drop buildings the active library lacks."""
+    """Give a loaded province its queue lists. Clamp out-of-range building levels, built or queued, and drop buildings the active library lacks."""
     province.setdefault("unit_queue", [])
     province.setdefault("building_queue", [])
+    migrations.clamp_building_queue(province["building_queue"], building_library)
     clamped = (migrations.clamp_building_level(name, building_library) for name in province.get("buildings", []))
     province["buildings"] = [name for name in clamped if name is not None]
     resources = province.get("resources", {})
@@ -272,6 +273,7 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
     if save_meta:
         # This compares saved research years with the active tree, so it runs on every load.
         migrations.migrate_infantry_research(save_meta, tech_tree, world_state.history)
+        migrations.clamp_research_levels(save_meta, tech_tree, world_state.history)
 
     if map_screen.history_turn is not None and save_meta:
         _apply_history_snapshot(save_meta, world_state.history, map_screen.history_turn)

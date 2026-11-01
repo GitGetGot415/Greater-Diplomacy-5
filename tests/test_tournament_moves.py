@@ -621,9 +621,10 @@ class TournamentMoveTests(unittest.TestCase):
         from data import migrations
         return self.v46_move(country_id, host, game_version=f"v{migrations.CURRENT_VERSION - 1}")
 
-    def test_move_from_this_release_converts_without_host_review(self):
+    def test_move_from_this_release_needs_no_conversion_or_host_review(self):
         host = Host()
-        move = self.v46_move("Leader", host, release_subjects=[{"core_nation": "Outsider"}])
+        move = self.v46_move("Leader", host, game_version=c.GAME_VERSION, release_subjects=[
+            {"core_nation": "Outsider", "release_type": c.PUPPET_TYPE_INTEGRATED}])
         host.map_data = {"land": {"id": 1, "owner": "Leader", "cores": ["Outsider"],
                                   "terrain": "plains", "units": []}}
         with tempfile.TemporaryDirectory() as directory:

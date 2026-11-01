@@ -59,8 +59,6 @@ def upgrade_save(save_meta, map_data, history):
     save_meta is meta.json, map_data is map_data.json by JSON key, and history
     holds the decoded turn snapshots. A selected history turn becomes live
     state, so every step also converts every snapshot. Return the saved version.
-    A step for the next release also runs on saves of this release, so it must
-    be safe to repeat.
     """
     version = check_version(save_meta.get("version"))
     for target, step in SAVE_STEPS:
@@ -368,6 +366,18 @@ def clamp_building_level(name, building_library):
     return f"{family} Lvl {min(max(level, min(levels)), max(levels))}"
 
 
+def clamp_building_queue(queue, building_library):
+    """Move queued numbered buildings to the nearest level in the active library.
+
+    Orders without a level, such as core orders, and names with no family stay as they are.
+    """
+    for entry in queue:
+        if isinstance(entry, dict):
+            clamped = clamp_building_level(entry.get("item_name"), building_library)
+            if clamped:
+                entry["item_name"] = clamped
+
+
 # Original GD5 equipment dates. These describe older saved level numbers.
 LEGACY_INFANTRY_RESEARCH_YEARS = {
     "infantry_type": list(range(1910, 2051)),
@@ -437,6 +447,45 @@ def migrate_infantry_research(saved, tech_tree, history=None):
         if isinstance(snapshot, dict):
             convert_countries(snapshot.get("nation_data"))
     saved["research_years"] = targets
+    return saved
+
+
+def clamp_research_levels(saved, tech_tree, history=None):
+    """Lower research levels above the active maximum. Drop projects the new maximum completes.
+
+    The equipment tracks keep their levels. migrate_infantry_research retains levels
+    beyond a content cap on purpose.
+    """
+    def clamp(country):
+        research = country.get("research")
+        if not isinstance(research, dict):
+            return
+        done = set()
+        for key, level in research.items():
+            if (key in tech_tree and key not in c.DATED_UNIT_RESEARCH_TRACKS
+                    and type(level) is int and level > tech_tree[key]["max_lvl"]):
+                research[key] = tech_tree[key]["max_lvl"]
+                done.add(key)
+        if "research_queue" in country:
+            country["research_queue"][:] = [project for project in country["research_queue"]
+                                            if project.get("tech_name") not in done]
+        for key in done:
+            country.get("research_progress", {}).pop(key, None)
+        if country.get("current_research") in done:
+            country["current_research"] = None
+
+    def clamp_countries(countries):
+        if isinstance(countries, dict):
+            for country in countries.values():
+                if isinstance(country, dict):
+                    clamp(country)
+
+    if isinstance(saved.get("default_research"), dict):
+        clamp({"research": saved["default_research"]})
+    clamp_countries(saved.get("nation_data"))
+    for snapshot in (history or {}).values():
+        if isinstance(snapshot, dict):
+            clamp_countries(snapshot.get("nation_data"))
     return saved
 
 
@@ -709,9 +758,34 @@ def _v47_scripted_event(event):
             action["unit_type"] = _v47_unit_name(action.get("unit_type"))
 
 
+def _v47_research_prerequisites(research):
+    """Grant the prerequisite levels that v47 added to technologies a country already has.
+
+    Without them a country cannot research further levels of what it owns. The grant
+    uses the default technology tree. The equipment tracks keep their older level scale
+    until migrate_infantry_research converts them, and no prerequisite uses them.
+    """
+    from data import queries
+    if not isinstance(research, dict):
+        return
+    tree = queries.get_tech_tree()
+    for tech, level in list(research.items()):
+        if tech not in tree or tech in c.DATED_UNIT_RESEARCH_TRACKS or type(level) is not int or level < 1:
+            continue
+        level = min(level, tree[tech]["max_lvl"])
+        if queries.check_tech_requirements(research, queries.get_tech_requirements(tree[tech], level), level):
+            continue
+        try:
+            research.update(queries.edited_research_levels(research, tech, level, True, tree))
+        except ValueError:
+            # A prerequisite the default tree cannot supply. Keep the saved levels.
+            continue
+
+
 def _v47_country(country):
     """Convert one country record."""
     country.pop("allied_with", None)
+    _v47_research_prerequisites(country.get("research"))
     for project in country.get("research_queue", []):
         days = project.get("days_remaining", LEGACY_RESEARCH_DEFAULT_DAYS) if isinstance(project, dict) else None
         if _is_count(days) and "points_remaining" not in project:
@@ -794,6 +868,7 @@ def _v47_province(province, terrain):
 
 
 def _v47_save(save_meta, map_data, history):
+    _v47_research_prerequisites(save_meta.get("default_research"))
     _v47_nations(save_meta.get("nation_data"))
     for key, province in map_data.items():
         _v47_province(province, province.get("terrain"))

@@ -26,10 +26,11 @@ GAME VERSIONS
 -------------
 
 The game version is the save version.
-version.txt and GAME_VERSION in data/constants.py hold the latest release.
-A release commit sets both to the new version.
-Version steps do not change either value.
-A step for the next release runs on every load until that release, because saves of this build have an older version.
+GAME_VERSION in data/constants.py holds the version in development.
+Set it to the new version when work on that version starts.
+version.txt holds the last released version. Players download it to check for updates.
+Only the owner changes version.txt, at release. Never change it during development.
+A step uses the version in GAME_VERSION. A save from the previous version runs it once.
 
 Saves, tournament files, and move files record the version that wrote them.
 Saves use the version field. Move files use the game_version field.
@@ -56,6 +57,8 @@ Gameplay, UI, and AI code read only the current format.
 
 Some conversions compare saved data with the active libraries. They run on every load:
 - migrate_infantry_research compares saved research years with the active research tree.
+- clamp_research_levels lowers a research level above the active maximum. The equipment tracks keep their levels.
+  It removes queued projects, progress, and current research for a technology that the new maximum completes.
 - queries.refresh_unit_stats copies unit statistics from the active unit library.
 These are not version steps. A changed library changes their result without a new version.
 
@@ -83,6 +86,10 @@ Its rules describe differences from released data, not changes made only during 
 - Transport names, aircraft cargo, production queues, upgrade targets, custom production lists, and scripted spawns use the same conversion.
 - Map overlays, every history snapshot, and tournament move intents receive these conversions.
 - Duplicate custom production entries combine when their older units become the same stage.
+- Countries receive the prerequisite levels of technologies they already have.
+  v47 added prerequisites, so a country could not research further levels of what it owned.
+  The grant uses the default technology tree and covers saves, history, default research, and moves.
+  Equipment tracks are not changed, and no prerequisite uses them.
 
 LOAD ORDER
 ----------
@@ -91,11 +98,14 @@ LOAD ORDER
 2. migrations.upgrade_save converts all three to the current version.
 3. Scenario settings select the active libraries.
 4. migrate_infantry_research converts research levels to the active research tree.
+   clamp_research_levels then lowers levels above the active maximum.
 5. A selected history turn replaces the current country and province state.
 6. Country templates fill empty catalog records and missing fields.
 7. Province repairs drop buildings and units that the active libraries do not contain.
    A numbered building level outside its family range moves to the nearest level in the active library.
    Example: "Factory Lvl 50" becomes the highest Factory level. migrations.clamp_building_level does this.
+   Queued building orders follow the same rule (migrations.clamp_building_queue). A paid order keeps its progress and refund.
+   A v46 move receives the same clamp, so its queue matches the host's queue.
    A building with no family in the library is still dropped.
 8. Unit statistics refresh from the active unit library. Health keeps its fraction of maximum health.
 9. Faction roster repair occurs before faction pre-war maps are initialized.
@@ -191,7 +201,7 @@ TOURNAMENT MOVE VERSIONS
 
 A move lasts one turn. Only moves from the previous release convert.
 A host that runs v48 converts v47 moves and refuses v46 moves.
-A move from the host's own release also runs the steps for the next release. The host is not asked.
+A move from the host's own version needs no conversion and no host question.
 
 1. The host loads a move from the previous release.
 2. The import rejects the move with a "version" override. The rejection does not change host state.
@@ -240,7 +250,8 @@ Include only identifiers and formats that existed in supported released data.
 Do not add migration rules for content introduced and changed only during development of the target release.
 Keep existing support for earlier releases where required.
 
-1. Use the next release version, one above GAME_VERSION. Do not change GAME_VERSION or version.txt.
+1. Set GAME_VERSION in data/constants.py to the new version. Use that version for the step.
+   Never change version.txt. See how_to_update.txt in the repository root.
 2. Write the step in data/migrations.py, in a section named for that version.
 3. Convert country records, province records, meta.json fields, and every history snapshot.
 4. Add the step to SAVE_STEPS. If move files contain the changed data, add a move step to MOVE_STEPS.
