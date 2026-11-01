@@ -271,7 +271,7 @@ class Music_Player(ScrollPanes, GameState):
         # Add Pause Button
         pause_text = "Play" if getattr(self.controller, 'is_paused', False) else "Pause"
         self.elements.append(Button(MUSIC_LEFT_PANE_W + 240, 80, "medium", "orange", pause_text,
-                                    self.toggle_pause, sound_kind="select_music"))
+                                    self.toggle_pause, sound_kind="toggle_pause"))
         
         # Add Progress Slider (Custom MusicScrubber)
         self.progress_slider = MusicScrubber(
