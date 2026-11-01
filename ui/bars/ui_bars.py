@@ -1,5 +1,6 @@
 import pygame
 import os
+import math
 from contextlib import contextmanager
 from functools import lru_cache
 import data.constants as c
@@ -42,6 +43,52 @@ def scaled_checkerboard_tile(tile, size):
     if size == tile.get_size():
         return tile
     return pygame.transform.scale(tile, size)
+
+
+@lru_cache(maxsize=32)
+def opaque_checkerboard_tile(tile):
+    """Apply checkerboard opacity after interpolation, once per background layer."""
+    opaque = tile.copy()
+    opaque.set_alpha(None)
+    return opaque
+
+
+@lru_cache(maxsize=4)
+def checkerboard_canvas(size):
+    """Reuse a padded drawing surface for fractional checkerboard movement."""
+    return pygame.Surface((size[0] + 2, size[1] + 2))
+
+
+@lru_cache(maxsize=4)
+def _checkerboard_blend_buffers(size):
+    width, height = size
+    return pygame.Surface((width, height + 1)), pygame.Surface(size)
+
+
+def draw_checkerboard_region(surface, pattern, rect, source_position, opacity):
+    """Blend adjacent pixel positions before applying the layer's opacity."""
+    if rect.width <= 0 or rect.height <= 0:
+        return
+    source_x, source_y = source_position
+    x, y = math.floor(source_x), math.floor(source_y)
+    fraction_x, fraction_y = source_x - x, source_y - y
+    horizontal, blended = _checkerboard_blend_buffers(rect.size)
+    pattern.set_alpha(None)
+    horizontal.set_alpha(None)
+    blended.set_alpha(None)
+    try:
+        horizontal.blit(pattern, (0, 0), (x, y, rect.width, rect.height + 1))
+        if fraction_x:
+            pattern.set_alpha(round(255 * fraction_x))
+            horizontal.blit(pattern, (0, 0), (x + 1, y, rect.width, rect.height + 1))
+        blended.blit(horizontal, (0, 0), (0, 0, rect.width, rect.height))
+        if fraction_y:
+            horizontal.set_alpha(round(255 * fraction_y))
+            blended.blit(horizontal, (0, 0), (0, 1, rect.width, rect.height))
+        blended.set_alpha(opacity)
+        surface.blit(blended, rect.topleft)
+    finally:
+        pattern.set_alpha(opacity)
 
 # ==========================================
 # UNIFIED UI HELPERS

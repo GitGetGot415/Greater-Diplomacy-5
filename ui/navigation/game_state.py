@@ -551,28 +551,37 @@ class GameState:
                     return
                 pattern = ui_bars.get_sheared_checkerboard(
                     tile, (surface.get_width(), water_height), reflection_shear)
-                source_y = round(water_top - start_y) % tile_h
+                source_y = (water_top - start_y) % tile_h
                 # Cancel the cached row offset at the horizon to keep the reflection aligned.
-                source_x = (round(-start_x) - round(reflection_shear * (water_top - reflection_y))
-                            + round(reflection_shear * source_y)) % tile_w
-                surface.blit(pattern, (0, water_top),
-                             (source_x, source_y, surface.get_width(), water_height))
+                source_x = (-start_x - reflection_shear * (water_top - reflection_y)
+                            + reflection_shear * source_y) % tile_w
+                ui_bars.draw_checkerboard_region(
+                    surface, pattern, pygame.Rect(0, water_top, surface.get_width(), water_height),
+                    (source_x, source_y), tile.get_alpha())
                 return
         clip = surface.get_clip()
-        # Round each projected boundary once. A rounded tile period accumulates
-        # position errors across the screen and changes the phase during zoom.
-        first_row = math.floor((clip.top - start_y) / period_y)
-        last_row = math.ceil((clip.bottom - start_y) / period_y)
-        first_col = math.floor((clip.left - start_x) / period_x)
-        last_col = math.ceil((clip.right - start_x) / period_x)
+        if clip.width <= 0 or clip.height <= 0:
+            return
+        canvas = ui_bars.checkerboard_canvas(clip.size)
+        opaque_tile = ui_bars.opaque_checkerboard_tile(tile)
+        base_x, base_y = math.floor(start_x), math.floor(start_y)
+        canvas_x, canvas_y = clip.left - 1, clip.top - 1
+        # Keep the fractional translation separate from rounded tile boundaries.
+        # Blend that translation once for the complete background layer.
+        first_row = math.floor((canvas_y - base_y) / period_y)
+        last_row = math.ceil((canvas_y + canvas.get_height() - base_y) / period_y)
+        first_col = math.floor((canvas_x - base_x) / period_x)
+        last_col = math.ceil((canvas_x + canvas.get_width() - base_x) / period_x)
         for row in range(first_row, last_row):
-            top = round(start_y + row * period_y)
-            bottom = round(start_y + (row + 1) * period_y)
+            top = base_y + round(row * period_y) - canvas_y
+            bottom = base_y + round((row + 1) * period_y) - canvas_y
             for col in range(first_col, last_col):
-                left = round(start_x + col * period_x)
-                right = round(start_x + (col + 1) * period_x)
-                scaled = ui_bars.scaled_checkerboard_tile(tile, (right - left, bottom - top))
-                surface.blit(scaled, (left, top))
+                left = base_x + round(col * period_x) - canvas_x
+                right = base_x + round((col + 1) * period_x) - canvas_x
+                scaled = ui_bars.scaled_checkerboard_tile(opaque_tile, (right - left, bottom - top))
+                canvas.blit(scaled, (left, top))
+        ui_bars.draw_checkerboard_region(
+            surface, canvas, clip, (1 - (start_x - base_x), 1 - (start_y - base_y)), tile.get_alpha())
 
     def draw(self, surface):
         # 1. Fill background or draw background image

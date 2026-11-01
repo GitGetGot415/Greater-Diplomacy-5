@@ -2277,7 +2277,7 @@ SETTINGS_BG_FILE = "Settings.png"
 # between squares; at runtime it's recolored to match each screen's own
 # bg_color instead of being drawn red.
 CHECKERBOARD_TEMPLATE_FILE = "Checkerboard.png"
-DEFAULT_CHECKERBOARD_SCROLL_SPEED = 18  # pixels/sec
+DEFAULT_CHECKERBOARD_SCROLL_SPEED = 16  # pixels/sec
 CHECKERBOARD_SCROLL_SPEED = DEFAULT_CHECKERBOARD_SCROLL_SPEED
 MAX_CHECKERBOARD_SCROLL_SPEED = 100
 DEFAULT_CHECKERBOARD_GRADIENT_STRENGTH = 0.0

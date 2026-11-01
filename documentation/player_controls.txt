@@ -159,9 +159,10 @@ The default strength is 0.
 Use 0 for flat fills, 1 for button shading, or up to 2 for more contrast.
 The square bevels do not change with gradient strength.
 Use the Checkerboard Speed slider below it to set movement from 0 to 100 pixels per second.
-Use 0 to stop movement. The default speed is 18 pixels per second.
-The game saves this setting. Reset Defaults restores the default speed.
+Use 0 to stop movement. The default speed is DEFAULT_CHECKERBOARD_SCROLL_SPEED in data/constants.py.
+The game saves this setting. Reset Defaults restores that default speed.
 The speed applies to menu backgrounds, the map sky, and checkerboard water.
+Slow speeds blend between pixel positions for smooth movement.
 Water movement follows the camera's zoom and tilt. Zoom keeps the pattern's position continuous.
 
 Edit DIALOG_STYLES for the shared dialog background, including credits information and help dialogs.
