@@ -629,7 +629,7 @@ class Menu(GameState):
                 self.version_status = f"Version: {c.GAME_VERSION} (Up to date)"
                 self.version_color = c.COLOR_SUCCESS_GREEN # Green
             elif current_number > fetched_number:
-                self.version_status = f"Version: {c.GAME_VERSION} (Dev version)"
+                self.version_status = f"Dev version: {c.GAME_VERSION} (Current: {fetched_version})"
                 self.version_color = (100, 160, 255) # Blue
             else:
                 self.version_status = f"Outdated! Latest: {fetched_version} (Current: {c.GAME_VERSION})"

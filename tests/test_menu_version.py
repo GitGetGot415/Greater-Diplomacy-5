@@ -7,7 +7,7 @@ from screens.menus import menu
 class MenuVersionTests(unittest.TestCase):
     def test_version_status_compares_version_numbers(self):
         cases = (
-            ("v47", "v46", "Version: v47 (Dev version)", (100, 160, 255)),
+            ("v47", "v46", "Version: v47 (Dev version; Current release: v46)", (100, 160, 255)),
             ("v9", "v10", "Outdated! Latest: v10 (Current: v9)", (255, 100, 100)),
             ("v47", "v47", "Version: v47 (Up to date)", menu.c.COLOR_SUCCESS_GREEN),
             ("v47", "invalid", "Version: v47 (Error checking)", (255, 100, 100)),
