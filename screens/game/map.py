@@ -228,7 +228,7 @@ def _build_view_buttons(map_screen):
         map_screen.unit_view_bar_rect.x,
         map_screen.unit_view_bar_rect.y - UNIT_VIEW_TOGGLE_HEIGHT,
         (UNIT_VIEW_BAR_WIDTH, UNIT_VIEW_TOGGLE_HEIGHT), "grey", "Hide",
-        map_screen.toggle_unit_view_bar, font_preset="small")
+        map_screen.toggle_unit_view_bar, font_preset="small", sound_kind="select_view")
     map_screen.unit_view_buttons = {}
     for index, view_filter in enumerate(queries.UNIT_VIEW_FILTERS):
         icon = icons.get(view_filter.lower())
