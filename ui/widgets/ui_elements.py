@@ -43,6 +43,7 @@ MUSIC_UI_SOUND_PATHS = {
 }
 SOUND_VOLUMES_PATH = "assets/sounds/volumes.json"
 sound_volume_multipliers = {}
+sound_start_offsets = {}
 global_sfx_volume = 0.5
 global_sfx_pitch = 0.5
 
@@ -310,7 +311,7 @@ def parse_pos(val, limit, size):
     return val
 
 def load_sound_volumes(path=SOUND_VOLUMES_PATH):
-    """Read per-file SFX multipliers once at startup. Missing entries use 1."""
+    """Read per-file SFX volume multipliers and start offsets at startup."""
     try:
         with open(path, encoding="utf-8") as source:
             values = json.load(source)
@@ -319,26 +320,45 @@ def load_sound_volumes(path=SOUND_VOLUMES_PATH):
     except json.JSONDecodeError as error:
         raise ValueError(f"Fix invalid JSON in {path}: {error}") from error
     if not isinstance(values, dict):
-        raise ValueError(f"{path} must contain sound filenames and volume multipliers.")
+        raise ValueError(f"{path} must contain sound filenames and sound settings.")
+    multipliers = {}
+    offsets = {}
     for filename, value in values.items():
-        if (isinstance(value, bool) or not isinstance(value, (int, float))
-                or not math.isfinite(value) or value < 0):
-            raise ValueError(f"{path}: {filename} must have a finite volume multiplier of zero or greater.")
+        if isinstance(value, dict):
+            unknown = value.keys() - {"volume", "offset"}
+            if unknown:
+                raise ValueError(f"{path}: {filename} has unknown sound settings: {', '.join(sorted(unknown))}.")
+            volume, offset = value.get("volume", 1.0), value.get("offset", 0.0)
+        else:
+            volume, offset = value, 0.0
+        for name, number in (("volume", volume), ("offset", offset)):
+            if (isinstance(number, bool) or not isinstance(number, (int, float))
+                    or not math.isfinite(number) or number < 0):
+                raise ValueError(f"{path}: {filename} {name} must be a finite number of zero or greater.")
+        multipliers[filename] = volume
+        offsets[filename] = offset
     sound_volume_multipliers.clear()
-    sound_volume_multipliers.update(values)
+    sound_volume_multipliers.update(multipliers)
+    sound_start_offsets.clear()
+    sound_start_offsets.update(offsets)
     for cache in _pygame_sfx_pitch_cache.values():
         cache.clear()
 
 
-def _ui_sound_volume(kind):
-    """Combine the file multiplier with the player's SFX volume."""
+def _ui_sound_filename(kind):
+    """Find the configuration key for a UI sound."""
     if kind == "click":
         path = c.SOUND_CLICK_PATH
     elif kind == "slider":
         path = c.SOUND_SLIDER_PATH
     else:
         path = MUSIC_UI_SOUND_PATHS[kind]
-    return global_sfx_volume * sound_volume_multipliers.get(os.path.basename(path), 1.0)
+    return os.path.basename(path)
+
+
+def _ui_sound_volume(kind):
+    """Combine the file multiplier with the player's SFX volume."""
+    return global_sfx_volume * sound_volume_multipliers.get(_ui_sound_filename(kind), 1.0)
 
 
 def load_music_ui_sounds(sound_factory, *, soloud=False):
@@ -371,10 +391,19 @@ def play_ui_sound(kind="click"):
         sound = (click_sound if kind == "click" else slider_sound if kind == "slider"
                  else music_ui_sounds.get(kind))
         if sound and soloud_engine:
-            handle = soloud_engine.play(sound)
+            offset = sound_start_offsets.get(_ui_sound_filename(kind), 0.0)
+            if offset and offset >= sound.get_length():
+                return
+            # Seek a new paused voice at normal speed before it can emit audio.
+            handle = soloud_engine.play(sound, aPaused=1) if offset else soloud_engine.play(sound)
+            if offset and soloud_engine.seek(handle, offset) != 0:
+                soloud_engine.stop(handle)
+                return
             soloud_engine.set_volume(handle, volume)
             # Centres the speed variance directly on a 0.5 pitch input
             soloud_engine.set_relative_play_speed(handle, 0.5 + global_sfx_pitch)
+            if offset:
+                soloud_engine.set_pause(handle, False)
     else:
         sound = _pygame_sound_at_pitch(kind, max(1.0, volume))
         if sound:
@@ -436,19 +465,28 @@ def _pygame_sound_at_pitch(kind, gain=1.0):
     if sound is None:
         return None
 
+    offset = sound_start_offsets.get(_ui_sound_filename(kind), 0.0)
+    if offset and offset >= sound.get_length():
+        return None
     speed = 0.5 + global_sfx_pitch
-    if speed == 1.0 and gain == 1.0:
+    if offset == 0 and speed == 1.0 and gain == 1.0:
         return sound
 
     # Quantising very slightly lets a dragged slider reuse neighbouring cached
     # variants while retaining a smooth audible response.
-    cache_key = (round(speed, 2), gain)
+    cache_key = (round(speed, 2), gain, offset)
     cache = _pygame_sfx_pitch_cache[kind]
     cached_sound = cache.get(cache_key)
     if cached_sound is not None:
         cache.move_to_end(cache_key)
         return cached_sound
 
+    if offset:
+        start_frame = int(offset * pygame.mixer.get_init()[0])
+        samples = pygame.sndarray.array(sound)
+        if start_frame >= len(samples):
+            return None
+        sound = pygame.sndarray.make_sound(np.ascontiguousarray(samples[start_frame:]))
     pitched_sound = _resample_pygame_sound(sound, cache_key[0]) if speed != 1.0 else sound
     if gain != 1.0:
         pitched_sound = _amplify_pygame_sound(pitched_sound, gain)

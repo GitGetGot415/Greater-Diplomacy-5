@@ -332,6 +332,15 @@ The controller reads that result directly.
 load_settings retains its positional result for older callers.
 The positional order is an interface contract. Settings files use JSON keys.
 
+assets/sounds/volumes.json controls sound effect volume and start offsets by filename.
+A number sets the volume multiplier. For example, 1.0 uses the original level.
+An object can set both values, for example: "Help.mp3": {"volume": 1.0, "offset": 0.25}.
+The offset is in seconds from the start of the source sound, before the pitch setting applies.
+
+The sound effects volume setting multiplies the configured volume. This file does not control music.
+Both values must be finite numbers of zero or greater. Missing volume and offset values use 1.0 and 0.0.
+An offset at or past the sound length plays no sound. Restart the game after changes.
+
 BUILD POLICY
 ============
 

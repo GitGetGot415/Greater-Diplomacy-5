@@ -1,15 +1,15 @@
 {
-    "Select Unit Filter.wav": 1.0,
-    "Select Mode.wav": 1.0,
-    "Open Music.wav": 4.0,
-    "Open Settings.mp3": 1.0,
-    "Help.mp3": 1.0,
-    "Table.wav": 1.0,
-    "Select Song.wav": 2.0,
-    "Select Album.wav": 2.0,
-    "Slider.wav": 1.0,
-    "Select View.wav": 1.0,
-    "Tap.wav": 1.0,
-    "Toggle Pause.wav": 2.0,
-    "Skip Song.wav": 1.0
+    "Select Unit Filter.wav":   1.0,
+    "Select Mode.wav":          1.0,
+    "Open Music.wav":           4.0,
+    "Open Settings.mp3":        {"volume": 2.0, "offset": 0.05},
+    "Help.mp3":                 {"volume": 1.0, "offset": 0.05},
+    "Table.wav":                1.0,
+    "Select Song.wav":          2.0,
+    "Select Album.wav":         2.0,
+    "Slider.wav":               1.0,
+    "Select View.wav":          1.0,
+    "Tap.wav":                  1.0,
+    "Toggle Pause.wav":         2.0,
+    "Skip Song.wav":            1.0
 }

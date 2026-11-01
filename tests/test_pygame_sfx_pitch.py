@@ -21,6 +21,8 @@ class PygameSfxPitchTests(unittest.TestCase):
         self.old_pitch = ui_elements.global_sfx_pitch
         self.old_volume = ui_elements.global_sfx_volume
         self.old_multipliers = ui_elements.sound_volume_multipliers.copy()
+        self.old_offsets = ui_elements.sound_start_offsets.copy()
+        ui_elements.sound_start_offsets.clear()
         self.old_caches = {
             kind: cache.copy()
             for kind, cache in ui_elements._pygame_sfx_pitch_cache.items()
@@ -37,6 +39,8 @@ class PygameSfxPitchTests(unittest.TestCase):
         ui_elements.global_sfx_volume = self.old_volume
         ui_elements.sound_volume_multipliers.clear()
         ui_elements.sound_volume_multipliers.update(self.old_multipliers)
+        ui_elements.sound_start_offsets.clear()
+        ui_elements.sound_start_offsets.update(self.old_offsets)
         for kind, cache in ui_elements._pygame_sfx_pitch_cache.items():
             cache.clear()
             cache.update(self.old_caches[kind])
@@ -86,6 +90,86 @@ class PygameSfxPitchTests(unittest.TestCase):
             with patch("builtins.open", mock_open(read_data=contents)):
                 with self.assertRaisesRegex(ValueError, "volumes.json"):
                     ui_elements.load_sound_volumes()
+
+    def test_sound_config_accepts_numbers_and_optional_object_fields(self):
+        values = {"Slider.wav": 2.5, "Select Song.wav": {"volume": 0.5, "offset": 0.25},
+                  "Help.mp3": {"offset": 0.1}, "Table.wav": {"volume": 2}, "Open Music.wav": {}}
+        with patch("builtins.open", mock_open(read_data=json.dumps(values))):
+            ui_elements.load_sound_volumes()
+        self.assertEqual(ui_elements.sound_volume_multipliers,
+                         {"Slider.wav": 2.5, "Select Song.wav": 0.5, "Help.mp3": 1.0,
+                          "Table.wav": 2, "Open Music.wav": 1.0})
+        self.assertEqual(ui_elements.sound_start_offsets,
+                         {"Slider.wav": 0.0, "Select Song.wav": 0.25, "Help.mp3": 0.1,
+                          "Table.wav": 0.0, "Open Music.wav": 0.0})
+
+    def test_sound_config_rejects_invalid_values_and_preserves_previous_settings(self):
+        ui_elements.sound_volume_multipliers["existing.wav"] = 2
+        ui_elements.sound_start_offsets["existing.wav"] = 0.5
+        for field in ("volume", "offset"):
+            for invalid in [-1, True, "2", None, float("inf"), float("nan")]:
+                with self.subTest(field=field, invalid=invalid):
+                    contents = json.dumps({"test.wav": {field: invalid}})
+                    with patch("builtins.open", mock_open(read_data=contents)):
+                        with self.assertRaisesRegex(ValueError, f"test.wav {field}"):
+                            ui_elements.load_sound_volumes()
+                    self.assertEqual(ui_elements.sound_volume_multipliers["existing.wav"], 2)
+                    self.assertEqual(ui_elements.sound_start_offsets["existing.wav"], 0.5)
+        with patch("builtins.open", mock_open(read_data='{"test.wav": {"offest": 1}}')):
+            with self.assertRaisesRegex(ValueError, "offest"):
+                ui_elements.load_sound_volumes()
+
+    def test_pygame_offset_trims_source_before_pitch_and_handles_end_of_sound(self):
+        sample_rate, _, channels = pygame.mixer.get_init()
+        frames = np.arange(1000, dtype=np.int16)
+        samples = np.repeat(frames[:, None], channels, axis=1) if channels > 1 else frames
+        source = pygame.sndarray.make_sound(samples)
+        ui_elements.set_pygame_ui_sounds(source, source)
+        with patch.object(ui_elements.c, "SOUND_CLICK_PATH", "assets/sounds/fixture.wav"):
+            ui_elements.sound_start_offsets["fixture.wav"] = 100 / sample_rate
+            ui_elements.set_sfx_pitch(0.5)
+            trimmed = ui_elements._pygame_sound_at_pitch("click")
+            np.testing.assert_array_equal(pygame.sndarray.array(trimmed), samples[100:])
+            self.assertIs(trimmed, ui_elements._pygame_sound_at_pitch("click"))
+            ui_elements.set_sfx_pitch(1.0)
+            pitched = pygame.sndarray.array(ui_elements._pygame_sound_at_pitch("click"))
+            np.testing.assert_array_equal(pitched[0], samples[100])
+            self.assertEqual(len(pitched), 600)
+            ui_elements.sound_start_offsets["fixture.wav"] = 1000 / sample_rate
+            self.assertIsNone(ui_elements._pygame_sound_at_pitch("click"))
+        np.testing.assert_array_equal(pygame.sndarray.array(source), samples)
+
+    def test_soloud_seeks_paused_at_normal_speed_before_playback(self):
+        ui_elements.sound_start_offsets["Select Song.wav"] = 0.25
+        ui_elements.sound_volume_multipliers["Select Song.wav"] = 1.0
+        ui_elements.global_sfx_volume = 0.5
+        ui_elements.global_sfx_pitch = 1.0
+        sound = Mock()
+        sound.get_length.return_value = 1.0
+        engine = Mock()
+        engine.seek.return_value = 0
+        with patch.object(ui_elements.c, "USE_SOLOUD", True), \
+                patch.object(ui_elements, "soloud_engine", engine), \
+                patch.dict(ui_elements.music_ui_sounds, select_song=sound):
+            ui_elements.play_ui_sound("select_song")
+            handle = engine.play.return_value
+            self.assertEqual(engine.mock_calls, [
+                unittest.mock.call.play(sound, aPaused=1),
+                unittest.mock.call.seek(handle, 0.25),
+                unittest.mock.call.set_volume(handle, 0.5),
+                unittest.mock.call.set_relative_play_speed(handle, 1.5),
+                unittest.mock.call.set_pause(handle, False),
+            ])
+            engine.reset_mock()
+            ui_elements.sound_start_offsets["Select Song.wav"] = 1.0
+            ui_elements.play_ui_sound("select_song")
+            engine.play.assert_not_called()
+            engine.reset_mock()
+            ui_elements.sound_start_offsets["Select Song.wav"] = 0.25
+            engine.seek.return_value = 1
+            ui_elements.play_ui_sound("select_song")
+            engine.stop.assert_called_once_with(handle)
+            engine.set_pause.assert_not_called()
 
     def test_amplification_boosts_samples_and_clips_without_wraparound(self):
         samples = pygame.sndarray.array(self.sound)
