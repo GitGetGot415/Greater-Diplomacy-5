@@ -12,7 +12,6 @@ It cannot create an action that the rules forbid.
 See documentation/llm_ai.txt for model settings, decisions, prompts, and request control.
 
 This guide covers AI valuation, research, combat, and diplomacy.
-See documentation/player_controls.txt for controls, player-mode permissions, reports, and map display.
 See documentation/ai_movement.txt for unit orders, movement caches, aircraft AI, and movement tuning.
 The shared combat rules also apply to human players.
 See documentation/diplo_stuff.txt for diplomacy timing and effects.

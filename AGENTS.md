@@ -12,8 +12,6 @@ AI means artificial intelligence. UI means user interface.
    Preserve unrelated user changes. Do not discard work to get a clean tree.
 3. Read the relevant design notes:
    - `documentation/non_llm_ai.txt`: rule-based AI and shared combat rules.
-   - `documentation/player_controls.txt`: player actions, permissions, and visible results.
-   - `documentation/ui_reference.txt`: UI styling, artwork, sound assets, and research display configuration.
    - `documentation/ai_movement.txt`: AI unit orders, movement caches, aircraft missions, and movement tuning.
    - `documentation/llm_ai.txt`: large language models (LLMs), prompts, budgets, cancellation, and fairness.
    - `documentation/diplo_stuff.txt`: diplomacy, messages, guarantees, volunteers, attach?s, factions, war, and peace.
@@ -300,7 +298,6 @@ Keep tuning data in its source files:
 - Tactical players command one division while the host country remains AI-controlled.
   Existing spectator flags control spectator editing.
   Check the actual modes and flags. Do not infer a mode from a related attribute.
-- Follow the display defaults, tactical rendering, and unit-box selection rules in `documentation/player_controls.txt`.
 
 ### AI and Diplomacy
 
@@ -395,17 +392,6 @@ A data edit must not make a test fail, unless the test checks that JSON matches 
 - Update the existing topic in its primary guide. Do not append a new section for each development task.
 - Document current rules and procedures. Keep development change reports and verification results in the handoff.
   Omit repeated statements that unaffected systems remain unchanged.
-
-### Player Controls Scope
-
-- `documentation/player_controls.txt` owns player actions, permissions, and visible results.
-  Update it only when one of these changes.
-- Keep styling constants, asset filenames, cache internals, serialization fields, and implementation handoffs out of that guide.
-  Put UI configuration and artwork in `documentation/ui_reference.txt`.
-  Put state ownership, storage, and presentation caches in `documentation/general_info.txt`.
-  Put older-data compatibility in `documentation/data_migrations.txt`.
-- Link to a technical guide when necessary. Preserve local conditions, exceptions, permissions, and user instructions.
-- Apply the same scope rules to other guides. Do not move unrelated task notes into another guide.
 
 ### Unit, Building, and Research Data
 

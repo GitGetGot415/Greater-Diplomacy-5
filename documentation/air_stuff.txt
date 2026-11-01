@@ -431,7 +431,6 @@ Network snapshots do not include the temporary geometry cache or interception li
 Last-turn reports
 -----------------
 
-See documentation/player_controls.txt, LAST-TURN UNIT EVENTS, for report controls, visibility, and read status.
 See documentation/general_info.txt, UNIT EVENT RECORDING AND STORAGE, for report storage.
 
 Interception damage and destroyed-unit entries use Interception in Details.

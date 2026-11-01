@@ -4,8 +4,6 @@ GUIDE INDEX
 documentation/general_info.txt: storage, scenario settings, state ownership, build policy, and project files.
 documentation/code_layout.md: directory responsibilities and task-to-code references.
 documentation/non_llm_ai.txt: rule-based AI and shared combat rules.
-documentation/player_controls.txt: player and editor actions, permissions, and visible results.
-documentation/ui_reference.txt: UI styling, artwork, sound assets, and research display configuration.
 documentation/ai_movement.txt: AI unit orders, movement caches, aircraft missions, attack checks, rotation, and movement tuning.
 documentation/llm_ai.txt: model settings, legal choices, prompts, summits, budgets, cancellation, and fairness.
 
@@ -383,8 +381,6 @@ Treat shared cached images as read-only.
 Pass alpha to get_symbol instead of changing a shared image's alpha.
 Map culling checks both width and height.
 These caches reduce repeated work when many units use the same image.
-See documentation/player_controls.txt, MAP DISPLAY, for player-visible behavior.
-See documentation/ui_reference.txt for styling and artwork configuration.
 
 ui/widgets/flag_icons.py caches small national flags for country lists and combat rows.
 draw_panes(foregrounds=) in ui/widgets/scroll_panes.py draws row flags and stat icons.
@@ -415,7 +411,6 @@ SPECTATOR PERMISSION SETTINGS
 
 The switches in data/constants.py are SPECTATOR_CAN_EDIT_PRODUCTION, SPECTATOR_CAN_EDIT_RESEARCH, and SPECTATOR_CAN_EDIT_APPEARANCE.
 All default to True. False permits viewing without the corresponding editing ability.
-See documentation/player_controls.txt, SPECTATOR PLAY, for related controls.
 
 RESEARCH AND TACTICAL CONTEXT
 ----------------------------
@@ -445,7 +440,6 @@ Save loading and tournament imports discard records that use this identifier.
 UNIT EVENT RECORDING AND STORAGE
 ================================
 
-See documentation/player_controls.txt, LAST-TURN UNIT EVENTS, for controls, permissions, and read status.
 See documentation/data_migrations.txt, UNIT EVENT REPORT COMPATIBILITY, for older report details.
 
 map_logic/system32/unit_events.py records actual turn resolution, including losses and attacks by AI units.
