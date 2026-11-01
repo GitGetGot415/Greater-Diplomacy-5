@@ -682,7 +682,7 @@ class UnitViewControlTests(unittest.TestCase):
                     ({"tactical_mode": True}, True),
                     ({"player_country": "Spectator"}, True),
                     ({"multiplayer_mode": True}, True),
-                    ({"is_editor": True}, False),
+                    ({"is_editor": True}, True),
                     ({"selection_mode": True}, False),
                     ({"hide_raised_rect": True}, False),
                     ({"ai_is_thinking": True}, False),
@@ -706,6 +706,20 @@ class UnitViewControlTests(unittest.TestCase):
             self.assertEqual(game.secondary_mode, mode)
             switch_view.assert_not_called()
             feedback.assert_not_called()
+
+    def test_editor_filter_callbacks_keep_editor_tools_and_hide_gameplay_controls(self):
+        game = self.game
+        with app_harness.patch_map(game, is_editor=True, player_country="Editor"):
+            update_button_states(game)
+            for view_filter, button in game.unit_view_buttons.items():
+                button.callback()
+                self.assertEqual(game.unit_view_filter, view_filter)
+                self.assertTrue(button.visible)
+                self.assertTrue(button.is_selected)
+                self.assertTrue(game.btn_ed_unit.visible)
+                self.assertFalse(game.btn_next_turn.visible)
+                self.assertFalse(game.can_select_map_units())
+        update_button_states(game)
 
     def test_order_arrows_follow_the_unit_filter(self):
         game = self.game

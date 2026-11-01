@@ -414,6 +414,7 @@ Editor painting invalidates the affected surface. Refresh Maps forces a full reb
 Planning-frame rendering does not run map-wide calculations.
 Economy display caches production status independently of the Units view filter.
 Unit filter results refresh on load, state changes, or input changes.
+The game and map editor use the same unit filter controls. Filters change only the local display.
 The display cache refreshes when orders, unit forms, filters, or the viewer change.
 Flag images and report detail text are prepared when the screen or expanded view opens.
 

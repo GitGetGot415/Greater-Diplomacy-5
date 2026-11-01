@@ -941,13 +941,9 @@ def _update_editor_buttons(map_screen, is_sel):
     map_screen.btn_realtime_details.visible = False
 
 
-def _update_turn_buttons(map_screen, is_sel, is_thinking):
-    viewing_ai = map_screen.viewing_ai_moves
-
-    # Hide/disable the button if we are thinking
-    map_screen.btn_next_turn.visible = not is_sel and not is_thinking
-    unit_view_visible = (map_screen.btn_next_turn.visible
-                         and not map_screen.hide_raised_rect)
+def _update_unit_view_buttons(map_screen, is_sel, is_thinking):
+    """Share unit filter controls between the game and map editor."""
+    unit_view_visible = not is_sel and not is_thinking and not map_screen.hide_raised_rect
     if map_screen.unit_view_buttons:
         if map_screen.unit_view_animation_start is None:
             map_screen.unit_view_bar_progress = map_screen._unit_view_bar_target()
@@ -965,6 +961,13 @@ def _update_turn_buttons(map_screen, is_sel, is_thinking):
                          + index * UNIT_VIEW_BUTTON_STEP_Y + map_screen.unit_view_bar_offset)
         button.visible = unit_view_visible and map_screen.unit_view_bar_progress > 0
         button.is_selected = view_filter == map_screen.unit_view_filter
+
+
+def _update_turn_buttons(map_screen, is_sel, is_thinking):
+    viewing_ai = map_screen.viewing_ai_moves
+
+    # Hide/disable the button if we are thinking
+    map_screen.btn_next_turn.visible = not is_sel and not is_thinking
     if map_screen.realtime_multiplayer:
         session = map_screen.realtime_session
         player = session.players.get(map_screen.realtime_player_id)
@@ -1423,6 +1426,8 @@ def update_button_states(map_screen):
             and not has_player_country):
         _update_unassigned_viewer_buttons(map_screen, is_sel, is_thinking)
         return
+
+    _update_unit_view_buttons(map_screen, is_sel, is_thinking)
 
     if map_screen.is_editor:
         _update_editor_buttons(map_screen, is_sel)
