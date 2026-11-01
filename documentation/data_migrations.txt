@@ -94,6 +94,9 @@ LOAD ORDER
 5. A selected history turn replaces the current country and province state.
 6. Country templates fill empty catalog records and missing fields.
 7. Province repairs drop buildings and units that the active libraries do not contain.
+   A numbered building level outside its family range moves to the nearest level in the active library.
+   Example: "Factory Lvl 50" becomes the highest Factory level. migrations.clamp_building_level does this.
+   A building with no family in the library is still dropped.
 8. Unit statistics refresh from the active unit library. Health keeps its fraction of maximum health.
 9. Faction roster repair occurs before faction pre-war maps are initialized.
 

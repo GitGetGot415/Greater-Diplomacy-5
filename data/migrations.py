@@ -346,6 +346,28 @@ def normalize_cached_json_names(cache_key, data):
 # ================================
 
 
+_BUILDING_LEVEL_NAME = re.compile(r"(.+) Lvl (-?\d+)")
+
+
+def clamp_building_level(name, building_library):
+    """Return the building a saved name means in the active library, or None.
+
+    A numbered building whose level is not in the library moves to the nearest
+    existing level of its family. A name with no family in the library gives None.
+    """
+    if name in building_library:
+        return name
+    match = _BUILDING_LEVEL_NAME.fullmatch(name) if isinstance(name, str) else None
+    if not match:
+        return None
+    family, level = match.group(1), int(match.group(2))
+    levels = [int(other.group(2)) for other in map(_BUILDING_LEVEL_NAME.fullmatch, building_library)
+              if other and other.group(1) == family]
+    if not levels:
+        return None
+    return f"{family} Lvl {min(max(level, min(levels)), max(levels))}"
+
+
 # Original GD5 equipment dates. These describe older saved level numbers.
 LEGACY_INFANTRY_RESEARCH_YEARS = {
     "infantry_type": list(range(1910, 2051)),

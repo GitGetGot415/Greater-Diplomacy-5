@@ -334,6 +334,16 @@ class LoadRepairTests(unittest.TestCase):
         load_map._repair_province(malformed, {})
         self.assertEqual(malformed["resources"], {})
 
+    def test_province_repair_clamps_building_levels_to_the_library_range(self):
+        library = {f"Fixture Lvl {level}": {} for level in (2, 3, 4)}
+        library["Other Lvl 1"] = {}
+        names = ["Fixture Lvl 50", "Fixture Lvl -4", "Fixture Lvl 3", "Fixture Lvl 0",
+                 "Unknown Lvl 9", "Fixture Lvl", "Removed Building"]
+        province = {"buildings": names}
+        load_map._repair_province(province, library)
+        self.assertEqual(province["buildings"],
+                         ["Fixture Lvl 4", "Fixture Lvl 2", "Fixture Lvl 3", "Fixture Lvl 2"])
+
     def test_missing_and_duplicate_unit_ids_stay_stable_after_round_trip(self):
         units = [{"unit_id": "existing"}, {"unit_id": "existing"},
                  {"air_cargo": [{"unit_id": ""}, {}]}]
