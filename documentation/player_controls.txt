@@ -1,6 +1,10 @@
 PLAYER CONTROLS AND PERMISSIONS
 ===============================
 
+Music buttons play assets/sounds/Open Music.wav when clicked.
+Album buttons play assets/sounds/Select Album.wav. Song buttons play assets/sounds/Select Song.wav.
+These effects use the SFX volume and pitch settings on desktop and web builds.
+
 CLASSIC UNIT ART
 ---------------
 

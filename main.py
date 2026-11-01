@@ -235,6 +235,7 @@ class Controller:
                     ui_elements.click_sound.load(c.SOUND_CLICK_PATH)
                     ui_elements.slider_sound = Wav()
                     ui_elements.slider_sound.load(c.SOUND_SLIDER_PATH)
+                    ui_elements.load_music_ui_sounds(Wav, soloud=True)
                 except Exception:
                     print("Warning: Sound files not found in assets folder")
 
@@ -253,6 +254,7 @@ class Controller:
                     pygame.mixer.Sound(c.SOUND_CLICK_PATH),
                     pygame.mixer.Sound(c.SOUND_SLIDER_PATH),
                 )
+                ui_elements.load_music_ui_sounds(pygame.mixer.Sound)
             except Exception:
                 print("Warning: Sound files not found in assets folder")
 
@@ -765,6 +767,7 @@ class Controller:
                 pygame.mixer.Sound(c.SOUND_CLICK_PATH),
                 pygame.mixer.Sound(c.SOUND_SLIDER_PATH),
             )
+            ui_elements.load_music_ui_sounds(pygame.mixer.Sound)
         except Exception:
             print("Warning: Sound files not found in assets folder")
 

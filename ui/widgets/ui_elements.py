@@ -22,6 +22,13 @@ click_sound = None
 slider_sound = None
 pygame_click_sound = None
 pygame_slider_sound = None
+music_ui_sounds = {}
+pygame_music_ui_sounds = {}
+MUSIC_UI_SOUND_PATHS = {
+    "open_music": "assets/sounds/Open Music.wav",
+    "select_album": "assets/sounds/Select Album.wav",
+    "select_song": "assets/sounds/Select Song.wav",
+}
 global_sfx_volume = 0.5
 global_sfx_pitch = 0.5
 
@@ -32,6 +39,7 @@ PYGAME_SFX_PITCH_CACHE_SIZE = 24
 _pygame_sfx_pitch_cache = {
     "click": OrderedDict(),
     "slider": OrderedDict(),
+    **{kind: OrderedDict() for kind in MUSIC_UI_SOUND_PATHS},
 }
 
 UI_ICONS = {}
@@ -287,6 +295,20 @@ def parse_pos(val, limit, size):
             return base
     return val
 
+def load_music_ui_sounds(sound_factory, *, soloud=False):
+    """Load music control effects when the audio backend starts."""
+    sounds = music_ui_sounds if soloud else pygame_music_ui_sounds
+    sounds.clear()
+    for kind, path in MUSIC_UI_SOUND_PATHS.items():
+        if soloud:
+            sound = sound_factory()
+            sound.load(path)
+        else:
+            sound = sound_factory(path)
+        sounds[kind] = sound
+        _pygame_sfx_pitch_cache[kind].clear()
+
+
 def play_ui_sound(kind="click"):
     """Plays a UI sfx through whichever audio backend is active.
 
@@ -297,7 +319,8 @@ def play_ui_sound(kind="click"):
         return
 
     if c.USE_SOLOUD:
-        sound = click_sound if kind == "click" else slider_sound
+        sound = (click_sound if kind == "click" else slider_sound if kind == "slider"
+                 else music_ui_sounds.get(kind))
         if sound and soloud_engine:
             handle = soloud_engine.play(sound)
             soloud_engine.set_volume(handle, global_sfx_volume)
@@ -345,7 +368,8 @@ def _resample_pygame_sound(sound, speed):
 
 def _pygame_sound_at_pitch(kind):
     """Gets a cached pygame UI sound at the selected SFX playback speed."""
-    sound = pygame_click_sound if kind == "click" else pygame_slider_sound
+    sound = (pygame_click_sound if kind == "click" else pygame_slider_sound if kind == "slider"
+             else pygame_music_ui_sounds.get(kind))
     if sound is None:
         return None
 
@@ -356,7 +380,7 @@ def _pygame_sound_at_pitch(kind):
     # Quantising very slightly lets a dragged slider reuse neighbouring cached
     # variants while retaining a smooth audible response.
     cache_key = round(speed, 2)
-    cache = _pygame_sfx_pitch_cache["click" if kind == "click" else "slider"]
+    cache = _pygame_sfx_pitch_cache[kind]
     cached_sound = cache.get(cache_key)
     if cached_sound is not None:
         cache.move_to_end(cache_key)
@@ -373,7 +397,7 @@ def set_sfx_volume(val):
     global global_sfx_volume
     global_sfx_volume = val
     if not c.USE_SOLOUD:
-        for sound in (pygame_click_sound, pygame_slider_sound):
+        for sound in (pygame_click_sound, pygame_slider_sound, *pygame_music_ui_sounds.values()):
             if sound:
                 sound.set_volume(val)
 
@@ -411,7 +435,7 @@ class Button:
     notification_color = None
 
     # UPDATED: Added font_preset parameter defaulting to "button"
-    def __init__(self, x, y, size_preset, color_preset, text, callback, image=None, show_text=True, layout="horizontal", font_preset="button", font_size=None):
+    def __init__(self, x, y, size_preset, color_preset, text, callback, image=None, show_text=True, layout="horizontal", font_preset="button", font_size=None, sound_kind="click"):
         if isinstance(size_preset, (tuple, list)):
             self.width, self.height = (int(size_preset[0]), int(size_preset[1]))
         else:
@@ -424,6 +448,7 @@ class Button:
 
         self.text = text
         self.callback = callback
+        self.sound_kind = sound_kind
         self.image = image 
         self.show_text = show_text
         self.layout = layout
@@ -589,7 +614,7 @@ class Button:
             if self.is_pressed:
                 self.is_pressed = False
                 if self.rect.collidepoint(event.pos) and (self.click_guard is None or self.click_guard()):
-                    play_ui_sound("click")
+                    play_ui_sound(self.sound_kind)
                     self.callback()
 
 #: Where a back button sits, by the kind of screen it is on.

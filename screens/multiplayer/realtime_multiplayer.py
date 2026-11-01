@@ -531,7 +531,7 @@ class Realtime_Lobby(GameState):
             Button(20, 75, "left_ui_button", "pink", "Settings", lambda: self.go_to("SETTINGS"),
                    image=UI_ICONS.get("settings")),
             Button(20, 110, "left_ui_button", "pink", "Music", lambda: self.go_to("MUSIC_PLAYER"),
-                   image=UI_ICONS.get("music")),
+                   image=UI_ICONS.get("music"), sound_kind="open_music"),
             Button(20, 145, "left_ui_button", "blue", "Rename", self.edit_host_name),
         ]
         if not self.session:
@@ -1156,7 +1156,7 @@ class Realtime_Remote_Lobby(GameState):
             Button(20, 75, "left_ui_button", "pink", "Settings", lambda: self.go_to("SETTINGS"),
                    image=UI_ICONS.get("settings")),
             Button(20, 110, "left_ui_button", "pink", "Music", lambda: self.go_to("MUSIC_PLAYER"),
-                   image=UI_ICONS.get("music")),
+                   image=UI_ICONS.get("music"), sound_kind="open_music"),
             Button(20, 145, "left_ui_button", "purple", "Copy Reconnect Code", self.copy_reconnect_code,
                    font_preset="tiny"),
             Button(20, 180, "left_ui_button", "blue", "Rename", self.edit_name),

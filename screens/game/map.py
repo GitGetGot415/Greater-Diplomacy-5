@@ -499,7 +499,7 @@ def _build_left_bar_buttons(map_screen):
         setattr(map_screen, attr, Button(LEFT_UI_BAR_X, LEFT_UI_BAR_START_Y + LEFT_UI_BAR_STEP_Y * row,
                                    "left_ui_button", "pink", label, action,
                                    image=icons.get(icon_name) if icon_name else None,
-                                   show_text=True))
+                                   show_text=True, sound_kind="open_music" if attr == "btn_gp_music" else "click"))
 
     # Register the Slider below the new Automation button
     slider_y = int(LEFT_UI_BAR_START_Y + LEFT_UI_BAR_STEP_Y * CAMERA_TILT_SLIDER_ROW)
