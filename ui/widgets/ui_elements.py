@@ -28,6 +28,7 @@ pygame_slider_sound = None
 music_ui_sounds = {}
 pygame_music_ui_sounds = {}
 MUSIC_UI_SOUND_PATHS = {
+    "table": "assets/sounds/Table.wav",
     "open_music": "assets/sounds/Open Music.wav",
     "select_album": "assets/sounds/Select Album.wav",
     "select_song": "assets/sounds/Select Song.wav",
@@ -510,6 +511,7 @@ class Button:
 
         self.text = text
         self.callback = callback
+        # None lets the opened screen play its own sound.
         self.sound_kind = sound_kind
         self.image = image 
         self.show_text = show_text
@@ -676,7 +678,8 @@ class Button:
             if self.is_pressed:
                 self.is_pressed = False
                 if self.rect.collidepoint(event.pos) and (self.click_guard is None or self.click_guard()):
-                    play_ui_sound(self.sound_kind)
+                    if self.sound_kind is not None:
+                        play_ui_sound(self.sound_kind)
                     self.callback()
 
 #: Where a back button sits, by the kind of screen it is on.

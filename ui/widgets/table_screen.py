@@ -2,7 +2,7 @@ import pygame
 from ui.navigation.game_state import GameState
 import data.constants as c
 from ui.bars import ui_bars
-from ui.widgets import text_utils
+from ui.widgets import text_utils, ui_elements
 from ui.widgets.ui_elements import Button, make_back_button
 from ui.rendering.font_manager import fonts
 
@@ -75,6 +75,7 @@ class TableScreen(GameState):
                 self.group_spans.append((group, start_x, span_w))
 
         self.refresh_ui()
+        ui_elements.play_ui_sound("table")
 
     def sort_by(self, col):
         reverse = self.sort_reverse.get(col.key, False)

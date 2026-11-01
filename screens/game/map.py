@@ -187,7 +187,7 @@ def _build_view_buttons(map_screen):
     icons = ui_elements.UI_ICONS
     map_screen.btn_help = Button(HELP_BTN_X, c.TOP_BAR_UI_CENTER_Y, "tiny", "blue", "Help", map_screen.show_navigation_tutorial, font_preset="normal")
     map_screen.btn_refresh_all = Button(REFRESH_BTN_X, c.TOP_BAR_UI_CENTER_Y, "small", "blue", "Refresh Maps", map_screen.refresh_all_maps, font_preset="normal")
-    map_screen.btn_global_econ_overview = Button(GLOBAL_ECON_BTN_X, c.TOP_BAR_UI_CENTER_Y, "small", "pink", "Global Economy", lambda: editor_menus.open_editor_economy(map_screen), font_preset="normal")
+    map_screen.btn_global_econ_overview = Button(GLOBAL_ECON_BTN_X, c.TOP_BAR_UI_CENTER_Y, "small", "pink", "Global Economy", lambda: editor_menus.open_editor_economy(map_screen), font_preset="normal", sound_kind=None)
 
     map_layer_buttons = (
         ("btn_view_terrain", "Terrain", "TERRAIN", "terrain"),
@@ -274,7 +274,8 @@ def _build_editor_buttons(map_screen):
     for attr, slots, size, color, label, callback, icon in bottom_strip:
         appearance = (dict(image=icons.get(icon), show_text=False) if icon else dict(font_preset="normal"))
         setattr(map_screen, attr, Button(EDITOR_BOT_BTN_START_X - EDITOR_BOT_BTN_STEP_X * slots, c.BOTTOM_BAR_UI_CENTER_Y,
-                                         size, color, label, callback, **appearance))
+                                         size, color, label, callback,
+                                         sound_kind=None if attr == "btn_ed_edited" else "click", **appearance))
 
     map_screen.btn_ed_bulk.image = pygame.transform.scale_by(icons["stack"], EDITOR_BULK_ICON_SCALE)
 
@@ -411,7 +412,7 @@ def _build_turn_buttons(map_screen):
     map_screen.btn_unit_events = Button(
         report_rect.x, report_rect.y, "small_square", "yellow", "Unit events",
         _sub_screen_opener(map_screen, "screens.game.unit_events_screen", "UnitEventsScreen"),
-        image=icons.get("mail"), show_text=False)
+        image=icons.get("mail"), show_text=False, sound_kind=None)
     unit_events.refresh_presentation(map_screen)
 
     open_declare_independence = _sub_screen_opener(
@@ -498,10 +499,13 @@ def _build_left_bar_buttons(map_screen):
         ("btn_gp_politics", 12, "Politics", "tophat", politics_callback),
     )
     for attr, row, label, icon_name, action in left_bar_buttons:
+        sound_kind = "open_music" if attr == "btn_gp_music" else "click"
+        if attr == "btn_gp_msgs" and not map_screen.is_editor and map_screen.player_country == "Spectator":
+            sound_kind = None
         setattr(map_screen, attr, Button(LEFT_UI_BAR_X, LEFT_UI_BAR_START_Y + LEFT_UI_BAR_STEP_Y * row,
                                    "left_ui_button", "pink", label, action,
                                    image=icons.get(icon_name) if icon_name else None,
-                                   show_text=True, sound_kind="open_music" if attr == "btn_gp_music" else "click"))
+                                   show_text=True, sound_kind=sound_kind))
 
     # Register the Slider below the new Automation button
     slider_y = int(LEFT_UI_BAR_START_Y + LEFT_UI_BAR_STEP_Y * CAMERA_TILT_SLIDER_ROW)

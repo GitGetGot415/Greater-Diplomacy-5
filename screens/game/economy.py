@@ -153,7 +153,7 @@ class Economy_Screen(GameState):
         self.elements = [make_back_button(self.exit_screen)]
         
         # Expenses button positioned in the top right corner
-        btn_expenses = Button(c.SCREEN_WIDTH - EXPENSES_BTN_OFFSET_X, c.BACK_BTN_TOPLEFT[1], "small", "orange", "Expenses", self.open_expenses_table)
+        btn_expenses = Button(c.SCREEN_WIDTH - EXPENSES_BTN_OFFSET_X, c.BACK_BTN_TOPLEFT[1], "small", "orange", "Expenses", self.open_expenses_table, sound_kind=None)
         if self.map_screen.tactical_mode:
             btn_expenses.apply_state(enabled=False)
         self.elements.append(btn_expenses)

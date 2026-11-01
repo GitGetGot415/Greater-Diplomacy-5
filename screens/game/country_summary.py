@@ -6,7 +6,7 @@ import data.constants as c
 from data import queries
 from ui.navigation.game_state import GameState
 from ui.rendering.font_manager import fonts
-from ui.widgets import flag_icons
+from ui.widgets import flag_icons, ui_elements
 from ui.bars import ui_bars
 from ui.background_styles import COUNTRY_SUMMARY_STYLES
 from ui.widgets.text_utils import fit_text, render_inline_text, wrap_text
@@ -40,6 +40,7 @@ class CountrySummaryScreen(GameState):
         self.flag = flag_icons.flag_surface(country_id, map_screen.nation_data, HEADER_FLAG_SIZE)
         self._layout_width = None
         self.refresh_ui()
+        ui_elements.play_ui_sound("table")
 
     def _country_parts(self, country_ids):
         parts = []
