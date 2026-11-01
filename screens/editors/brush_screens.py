@@ -169,7 +169,7 @@ class Bulk_Edit_Screen(MapOverlayScreen):
     PANEL_TITLE = "Bulk Edit Map"
     TITLE_PRESET = "heading2"
     TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
-    PANEL_WIDTH, PANEL_HEIGHT = 620, 465
+    PANEL_WIDTH, PANEL_HEIGHT = 620, 400
     BUTTON_TOP, BUTTON_GAP = 90, 65
 
     def __init__(self, map_screen):
@@ -181,9 +181,8 @@ class Bulk_Edit_Screen(MapOverlayScreen):
         p = self.panel_rect
         self.elements = [make_back_button(self.exit_screen, style="map")]
         actions = (
-            ("Set All Factories", "grey", self.pick_factory),
-            ("Set Army by Research Year", "green", lambda: self.pick_units("year")),
-            ("Set Army by Family Level", "blue", lambda: self.pick_units("level")),
+            ("Set All Buildings", "grey", self.pick_buildings),
+            ("Set Army by Research Year", "green", self.pick_units),
             ("Reset All Diplomacy", "red", self.reset_diplomacy),
             ("Clear Map Items", "pink", self.open_clear_menu),
         )
@@ -213,38 +212,44 @@ class Bulk_Edit_Screen(MapOverlayScreen):
             self.map_screen.show_feedback(feedback)
         dialogs.ask_yes_no("Bulk Edit Map", message, confirmed)
 
-    def pick_factory(self):
-        targets = queries.editor_factory_targets(self.map_screen)
+    def pick_buildings(self):
+        items = [(label, group) for group, label in queries.EDITOR_BUILDING_GROUPS.items()]
+        pickers.open_listbox_selector(self, "Set All Buildings", "Choose the building type to change:",
+                                      items, self.pick_building_level)
+
+    def pick_building_level(self, group):
+        label = queries.EDITOR_BUILDING_GROUPS[group]
+        targets = queries.editor_building_targets(self.map_screen, group)
         if not targets:
-            self.map_screen.show_feedback("No factories in the active building library.")
+            self.map_screen.show_feedback(f"No {label.lower()} in the active building library.")
             return
 
         def selected(target):
             self.confirm_change(
-                f"Set every existing factory to {target}?\nOther buildings and empty tiles stay unchanged.\nMap Undo can reverse this change.",
-                lambda: f"Updated {queries.set_editor_factories(self.map_screen, target)} factories.")
-        pickers.open_listbox_selector(self, "Set All Factories", "Choose the target factory level:", targets, selected)
+                f"Set all existing {label.lower()} to {target}?\n"
+                f"Only tiles with existing {label.lower()} are changed.\n"
+                "Other buildings stay unchanged. Map Undo can reverse this change.",
+                lambda: f"Updated {queries.set_editor_buildings(self.map_screen, group, target)} {label.lower()}.")
+        pickers.open_listbox_selector(self, f"Set All {label}", "Choose the target building level:", targets, selected)
 
-    def pick_units(self, mode):
+    def pick_units(self):
         prompt = ("Enter the research year. Each family uses its latest equipment available by that year.\n"
-                  "Families with no equipment by that year stay unchanged."
-                  if mode == "year" else
-                  "Enter the family level, starting at 1.\nFamilies with fewer levels use their highest level.")
+                  "Families with no equipment by that year stay unchanged.")
 
         def selected(value):
             if value is None:
                 return
 
             def apply():
-                changed, skipped = queries.set_editor_units(self.map_screen, mode, value)
+                changed, skipped = queries.set_editor_units(self.map_screen, "year", value)
                 return f"Updated {changed} units. Skipped {skipped} units without matching equipment."
 
             self.confirm_change(
-                f"Set all placed army, naval, and air units to {mode} {value}?\n"
+                f"Set all placed army, naval, and air units to research year {value}?\n"
                 "Unit families and health percentages stay unchanged.\n"
                 "Orders on changed units are cleared. Map Undo can reverse this change.", apply)
         dialogs.ask_integer("Set Army Equipment", prompt, selected, minvalue=1,
-                            initial=self.map_screen.time_manager.year if mode == "year" else 1)
+                            initial=self.map_screen.time_manager.year)
 
     def reset_diplomacy(self):
         def apply():

@@ -52,8 +52,55 @@ class BulkEditTests(unittest.TestCase):
                      "gate": {"years": [1830]}}
         self.enterContext(mock.patch.object(queries, "get_unit_library", return_value=self.library))
         self.enterContext(mock.patch.object(queries, "get_tech_tree", return_value=self.tree))
-        self.enterContext(mock.patch.object(queries, "get_building_library", return_value={
-            "Basic Factory": {}, "Factory Lvl 4": {}, "Factory Lvl 2": {}, "Other": {}}))
+        self.buildings = {
+            "Basic Factory": {"group": "industry"},
+            "Factory Lvl 2": {"group": "industry"},
+            "Factory Lvl 4": {"group": "industry"},
+            "Recruitment Start": {"group": "recruitment"},
+            "Recruitment Target": {"group": "recruitment"},
+            "Fort Start": {"group": "fortification"},
+            "Fort Target": {"group": "fortification"},
+            "Other": {"group": "other"},
+        }
+        self.enterContext(mock.patch.object(queries, "get_building_library", return_value=self.buildings))
+
+    def test_each_building_group_changes_only_existing_matching_buildings(self):
+        for group in queries.EDITOR_BUILDING_GROUPS:
+            with self.subTest(group=group):
+                game = editor()
+                source, *_, target = [name for name, data in self.buildings.items() if data["group"] == group]
+                other_buildings = [name for name, data in self.buildings.items() if data["group"] != group]
+                game.map_data["a"]["buildings"] = [source, *other_buildings]
+                game.map_data["a"]["building_queue"] = [{"type": source, "turns_left": 3}]
+                game.map_data["b"]["buildings"] = [target]
+                game.map_data["other"] = {"id": 4, "owner": "B", "buildings": other_buildings.copy()}
+                before = copy.deepcopy(game.map_data)
+                self.assertEqual(queries.set_editor_buildings(game, group, target), 1)
+                self.assertEqual(game.map_data["a"]["buildings"], [target, *other_buildings])
+                self.assertEqual(game.map_data["b"], before["b"])
+                self.assertEqual(game.map_data["other"], before["other"])
+                self.assertEqual(game.map_data["empty"], before["empty"])
+                self.assertEqual(game.map_data["a"]["building_queue"], before["a"]["building_queue"])
+                self.assertEqual(len(game.editor_history), 1)
+                queries.restore_editor_state(game)
+                self.assertEqual(game.map_data["a"]["buildings"], before["a"]["buildings"])
+                queries.redo_editor_state(game)
+                self.assertEqual(game.map_data["a"]["buildings"], [target, *other_buildings])
+
+    def test_building_group_validation_and_no_matching_tiles_have_no_side_effects(self):
+        for group in queries.EDITOR_BUILDING_GROUPS:
+            expected = [name for name, data in self.buildings.items() if data["group"] == group]
+            self.assertEqual(queries.editor_building_targets(self.game, group), expected)
+            with self.subTest(group=group), self.assertRaises(ValueError):
+                queries.set_editor_buildings(self.game, group, "Other")
+        with self.assertRaises(ValueError):
+            queries.set_editor_buildings(self.game, "unknown", "Other")
+        with self.assertRaises(ValueError):
+            queries.set_editor_buildings(self.game, "fortification", "Basic Factory")
+        before = copy.deepcopy(self.game.map_data)
+        self.assertEqual(queries.set_editor_buildings(self.game, "fortification", "Fort Target"), 0)
+        self.assertEqual(self.game.map_data, before)
+        self.assertEqual(self.game.editor_history, [])
 
     def test_factories_change_across_owners_and_support_undo_redo(self):
         self.assertEqual(queries.editor_factory_targets(self.game),
@@ -132,9 +179,12 @@ class BulkEditTests(unittest.TestCase):
                              ("ai_is_thinking", True), ("viewing_ai_moves", True),
                              ("is_saving", True), ("is_refreshing", True)):
             with self.subTest(field=field), mock.patch.object(self.game, field, value):
-                for action, args in ((queries.set_editor_factories, ("Factory Lvl 2",)),
-                                     (queries.set_editor_units, ("level", 1)),
-                                     (queries.reset_editor_diplomacy, ())):
+                actions = [(queries.set_editor_buildings, (group, queries.editor_building_targets(self.game, group)[0]))
+                           for group in queries.EDITOR_BUILDING_GROUPS]
+                actions.extend(((queries.set_editor_factories, ("Factory Lvl 2",)),
+                                (queries.set_editor_units, ("year", 1850)),
+                                (queries.reset_editor_diplomacy, ())))
+                for action, args in actions:
                     with self.assertRaises(ValueError):
                         action(self.game, *args)
         self.assertEqual(self.game.editor_history, [])
@@ -199,8 +249,11 @@ class BulkEditTests(unittest.TestCase):
 
     def test_edited_equipment_and_buildings_survive_existing_save_overlay(self):
         self.game.map_data["a"]["units"] = [{"type": "Early", "owner": "A", "health": 60, "max_health": 120}]
-        queries.set_editor_factories(self.game, "Factory Lvl 2")
-        queries.set_editor_units(self.game, "level", 2)
+        self.game.map_data["a"]["buildings"].extend(["Recruitment Start", "Fort Start"])
+        for group in queries.EDITOR_BUILDING_GROUPS:
+            targets = queries.editor_building_targets(self.game, group)
+            queries.set_editor_buildings(self.game, group, targets[-1])
+        queries.set_editor_units(self.game, "year", 1850)
         saved = json.loads(json.dumps({key: queries.build_saved_province_data(p)
                                       for key, p in self.game.map_data.items()}))
         loaded = editor()
@@ -222,38 +275,43 @@ class BulkEditTests(unittest.TestCase):
 
 
 class BulkEditorCallbackTests(unittest.TestCase):
-    def test_factory_picker_applies_only_after_confirmation(self):
+    def test_building_picker_selects_group_and_level_then_requires_confirmation(self):
         screen = object.__new__(Bulk_Edit_Screen)
         screen.map_screen = editor()
-        with mock.patch.object(queries, "editor_factory_targets", return_value=["chosen"]), \
-                mock.patch("screens.editors.brush_screens.pickers.open_listbox_selector") as picker, \
-                mock.patch("ui.dialogs.ask_yes_no") as ask, \
-                mock.patch.object(queries, "set_editor_factories", return_value=2) as apply:
-            screen.pick_factory()
-            apply.assert_not_called()
-            picker.call_args.args[4]("chosen")
-            apply.assert_not_called()
-            ask.call_args.args[2](False)
-            apply.assert_not_called()
-            ask.call_args.args[2](True)
-            apply.assert_called_once_with(screen.map_screen, "chosen")
-
-    def test_army_input_cancellation_and_confirmed_modes(self):
-        screen = object.__new__(Bulk_Edit_Screen)
-        screen.map_screen = editor()
-        for mode, value in (("year", 1837), ("level", 3)):
-            with self.subTest(mode=mode), \
-                    mock.patch("ui.dialogs.ask_integer") as number, \
+        for group in queries.EDITOR_BUILDING_GROUPS:
+            with self.subTest(group=group), \
+                    mock.patch.object(queries, "editor_building_targets", return_value=["chosen"]) as targets, \
+                    mock.patch("screens.editors.brush_screens.pickers.open_listbox_selector") as picker, \
                     mock.patch("ui.dialogs.ask_yes_no") as ask, \
-                    mock.patch.object(queries, "set_editor_units", return_value=(2, 1)) as apply:
-                screen.pick_units(mode)
-                number.call_args.args[2](None)
-                ask.assert_not_called()
+                    mock.patch.object(queries, "set_editor_buildings", return_value=2) as apply:
+                screen.pick_buildings()
+                self.assertEqual({value for label, value in picker.call_args.args[3]},
+                                 {"industry", "recruitment", "fortification"})
                 apply.assert_not_called()
-                number.call_args.args[2](value)
+                picker.call_args.args[4](group)
+                targets.assert_called_once_with(screen.map_screen, group)
+                self.assertEqual(picker.call_args.args[3], ["chosen"])
+                picker.call_args.args[4]("chosen")
+                apply.assert_not_called()
+                ask.call_args.args[2](False)
                 apply.assert_not_called()
                 ask.call_args.args[2](True)
-                apply.assert_called_once_with(screen.map_screen, mode, value)
+                apply.assert_called_once_with(screen.map_screen, group, "chosen")
+
+    def test_army_year_input_cancellation_and_confirmation(self):
+        screen = object.__new__(Bulk_Edit_Screen)
+        screen.map_screen = editor()
+        with mock.patch("ui.dialogs.ask_integer") as number, \
+                mock.patch("ui.dialogs.ask_yes_no") as ask, \
+                mock.patch.object(queries, "set_editor_units", return_value=(2, 1)) as apply:
+            screen.pick_units()
+            number.call_args.args[2](None)
+            ask.assert_not_called()
+            apply.assert_not_called()
+            number.call_args.args[2](1837)
+            apply.assert_not_called()
+            ask.call_args.args[2](True)
+            apply.assert_called_once_with(screen.map_screen, "year", 1837)
 
     def test_refresh_waits_for_confirmation_and_rechecks_permission(self):
         game = editor()

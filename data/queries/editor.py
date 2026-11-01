@@ -109,34 +109,49 @@ def can_bulk_edit_map(context):
                 and not session.is_refreshing and not session.is_saving)
 
 
-def editor_factory_targets(context):
-    """Return active factory types in research-level order."""
-    targets = []
-    for name in queries.get_building_library(context):
-        tech, level = queries.get_building_required_tech(name)
-        if tech in ("basic_factory", "factory"):
-            targets.append((0 if tech == "basic_factory" else level, name))
-    return [name for _, name in sorted(targets)]
+EDITOR_BUILDING_GROUPS = {
+    "industry": "Factories",
+    "recruitment": "Recruitment Centers",
+    "fortification": "Forts",
+}
 
 
-def set_editor_factories(context, target):
-    """Set existing factories to one active type. Preserve other buildings."""
+def editor_building_targets(context, group):
+    """Return one building group's active types in library order."""
+    if group not in EDITOR_BUILDING_GROUPS:
+        raise ValueError("Select factories, recruitment centers, or forts.")
+    return [name for name, stats in queries.get_building_library(context).items()
+            if stats.get("group") == group]
+
+
+def set_editor_buildings(context, group, target):
+    """Replace existing buildings in one group. Do not add buildings to other tiles."""
     if not can_bulk_edit_map(context):
         raise ValueError("Bulk changes require an idle local map editor.")
-    factories = set(editor_factory_targets(context))
-    if target not in factories:
-        raise ValueError("Select a factory from the active building library.")
+    building_types = set(editor_building_targets(context, group))
+    if target not in building_types:
+        raise ValueError("Select a building from the chosen group in the active building library.")
     changes = []
     for province in world_for(context).map_data.values():
         buildings = province.get("buildings", [])
         changes.extend((buildings, index) for index, name in enumerate(buildings)
-                       if name in factories and name != target)
+                       if name in building_types and name != target)
     if changes:
         save_editor_state(context)
         for buildings, index in changes:
             buildings[index] = target
         context.queue_editor_visual_refresh()
     return len(changes)
+
+
+def editor_factory_targets(context):
+    """Keep the factory-specific interface on the shared building-group query."""
+    return editor_building_targets(context, "industry")
+
+
+def set_editor_factories(context, target):
+    """Keep the factory-specific interface on the shared building editor."""
+    return set_editor_buildings(context, "industry", target)
 
 
 def editor_unit_targets(context, mode, value):

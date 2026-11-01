@@ -663,22 +663,23 @@ These tools require an idle local map editor.
 They are unavailable in player games, tactical play, tournament multiplayer, and real-time multiplayer.
 Each tool requires confirmation before it changes the map.
 
-Set All Factories changes existing factories to the selected factory type.
-The list uses the active building library. It includes Basic Factory and the available numbered levels.
-Other buildings and empty tiles stay unchanged. Construction queues stay unchanged.
-This can increase or decrease factory levels. Map Undo and Redo can reverse the change.
+Set All Buildings opens a choice of Factories, Recruitment Centers, or Forts.
+Select a building type, then select its target level from the active building library.
+Each action changes only existing buildings of the selected type.
+For example, setting forts changes only tiles that already have a fort.
+It does not add the selected building type to other tiles.
+Other buildings and construction queues stay unchanged.
+This can increase or decrease building levels. Map Undo and Redo can reverse the change.
 
 Set Army by Research Year selects the latest equipment available by the entered year for each unit family.
 The selection uses equipment metadata and the active research timeline.
 A unit stays unchanged when its family has no equipment available by that year.
-Set Army by Family Level selects a position in each family's equipment sequence, starting at 1.
-A family with fewer levels uses its highest available level.
 
-Both army tools change placed ground, naval, and air units, including transported units and aircraft cargo.
-They preserve unit identities, owners, custom names, army assignments, and health percentages.
-They clear orders on changed units. They do not change research, production queues, or off-map volunteer equipment.
+The army tool changes placed ground, naval, and air units, including transported units and aircraft cargo.
+It preserves unit identities, owners, custom names, army assignments, and health percentages.
+It clears orders on changed units. It does not change research, production queues, or off-map volunteer equipment.
 Map Undo and Redo can reverse these equipment changes.
-Current equipment and factory settings come from the sources listed in AGENTS.md under Tuning Data.
+Current equipment and building settings come from the sources listed in AGENTS.md under Tuning Data.
 
 Reset All Diplomacy ends wars and removes factions, puppet links, guarantees, military access, and military attaches.
 It clears relation modifiers, truces, diplomatic cooldowns, pending requests, replies, treaty ratifications, and diplomatic return or release queues.
