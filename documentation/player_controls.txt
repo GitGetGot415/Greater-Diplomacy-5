@@ -657,7 +657,8 @@ Undo and Redo apply to the complete fill. The selected tool is not saved.
 MAP EDITOR BULK CHANGES
 -----------------------
 
-Select Bulk Edit at the top of the editor's left toolbar.
+Select the square blue Bulk Edit button in the editor's bottom toolbar.
+Select Clear Map Items inside Bulk Edit to open the existing clearing tools.
 These tools require an idle local map editor.
 They are unavailable in player games, tactical play, tournament multiplayer, and real-time multiplayer.
 Each tool requires confirmation before it changes the map.

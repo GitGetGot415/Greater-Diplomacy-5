@@ -158,7 +158,7 @@ class Resource_Brush_Screen(MapOverlayScreen):
         surface.blit(label, label.get_rect(midright=(p.centerx - 85, p.y + 210)))
 
 # ==========================================
-# CLEAR MAP ITEMS
+# BULK MAP CHANGES
 # ==========================================
 
 class Bulk_Edit_Screen(MapOverlayScreen):
@@ -169,7 +169,7 @@ class Bulk_Edit_Screen(MapOverlayScreen):
     PANEL_TITLE = "Bulk Edit Map"
     TITLE_PRESET = "heading2"
     TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
-    PANEL_WIDTH, PANEL_HEIGHT = 620, 400
+    PANEL_WIDTH, PANEL_HEIGHT = 620, 465
     BUTTON_TOP, BUTTON_GAP = 90, 65
 
     def __init__(self, map_screen):
@@ -185,6 +185,7 @@ class Bulk_Edit_Screen(MapOverlayScreen):
             ("Set Army by Research Year", "green", lambda: self.pick_units("year")),
             ("Set Army by Family Level", "blue", lambda: self.pick_units("level")),
             ("Reset All Diplomacy", "red", self.reset_diplomacy),
+            ("Clear Map Items", "pink", self.open_clear_menu),
         )
         for row, (label, color, callback) in enumerate(actions):
             button = Button(p.x + 40, p.y + self.BUTTON_TOP + row * self.BUTTON_GAP,
@@ -192,6 +193,13 @@ class Bulk_Edit_Screen(MapOverlayScreen):
             button.rect.width = p.width - 80
             button.disabled = not queries.can_bulk_edit_map(self.map_screen)
             self.elements.append(button)
+
+    def open_clear_menu(self):
+        # Menus imports this screen through the editors package during startup.
+        from screens.editors import menus
+
+        if queries.can_bulk_edit_map(self.map_screen):
+            menus.open_clear_menu(self.map_screen)
 
     def confirm_change(self, message, action):
         def confirmed(ok):
