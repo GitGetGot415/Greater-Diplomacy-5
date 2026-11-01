@@ -12,7 +12,8 @@ MUSIC BUTTON SOUNDS
 
 Music buttons play assets/sounds/Open Music.wav when clicked.
 Album and song buttons play assets/sounds/Select Music.wav.
-The Play/Pause button plays assets/sounds/Toggle Pause.wav when clicked.
+The Play/Pause button also plays assets/sounds/Select Music.wav.
+The Skip / Random Song button plays assets/sounds/Skip Song.wav when clicked.
 These effects use the SFX volume and pitch settings on desktop and web builds.
 
 SOUND VOLUME CONFIGURATION

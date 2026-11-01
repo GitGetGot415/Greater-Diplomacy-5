@@ -265,12 +265,13 @@ class Music_Player(ScrollPanes, GameState):
         
         self.elements.append(make_back_button(self.handle_back_key))
         # Anchored relative to the UI so it never scrolls away!
-        self.elements.append(Button(MUSIC_LEFT_PANE_W + 20, 80, "medium", "green", "Skip / Random Song", self.play_track))
+        self.elements.append(Button(MUSIC_LEFT_PANE_W + 20, 80, "medium", "green", "Skip / Random Song",
+                                    self.play_track, sound_kind="skip_song"))
         
         # Add Pause Button
         pause_text = "Play" if getattr(self.controller, 'is_paused', False) else "Pause"
         self.elements.append(Button(MUSIC_LEFT_PANE_W + 240, 80, "medium", "orange", pause_text,
-                                    self.toggle_pause, sound_kind="toggle_pause"))
+                                    self.toggle_pause, sound_kind="select_music"))
         
         # Add Progress Slider (Custom MusicScrubber)
         self.progress_slider = MusicScrubber(

@@ -30,7 +30,7 @@ pygame_music_ui_sounds = {}
 MUSIC_UI_SOUND_PATHS = {
     "open_music": "assets/sounds/Open Music.wav",
     "select_music": "assets/sounds/Select Music.wav",
-    "toggle_pause": "assets/sounds/Toggle Pause.wav",
+    "skip_song": "assets/sounds/Skip Song.wav",
 }
 SOUND_VOLUMES_PATH = "assets/sounds/volumes.json"
 sound_volume_multipliers = {}
