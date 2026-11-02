@@ -717,8 +717,9 @@ class Button:
 
         if labelled:
             if self.layout == 'vertical':
+                # Centered in the band between the button's top edge and the image.
                 self.draw_label(surface, self.text, self.rect.width - 2 * _BUTTON_LABEL_MARGIN,
-                                midtop=(self.rect.centerx, self.rect.y + 5))
+                                center=(self.rect.centerx, (self.rect.y + img_rect.top) // 2))
             else:
                 self.draw_label(surface, self.text, midleft=(img_rect.right + 10, self.rect.centery))
         elif self.text and not self.image:
