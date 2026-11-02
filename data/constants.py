@@ -128,7 +128,9 @@ CREDITS_DATA = [
         "people": [
             {
                 "link_text": "GitGetGot415",
-                "info": "Albums Created:",
+                "info": (
+                    "Albums Created:"
+                ),
                 "images": [
                         {"path": "assets/music/Greater Diplomacy 1/icon.png", "text": "Greater Diplomacy 1"},
                         {"path": "assets/music/Greater Diplomacy 2/icon.png", "text": "Greater Diplomacy 2"},
