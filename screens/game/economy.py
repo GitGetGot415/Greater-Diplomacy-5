@@ -104,9 +104,6 @@ class ExpensesTableScreen(TableScreen):
     HEADER_Y = 108
     ROW_TOP = 150
 
-    def draw_background(self, surface):
-        ui_elements.draw_pixel_background(surface, surface.get_rect(), ECONOMY_PANEL_STYLES["expenses"])
-
     def __init__(self, game_state, individual_rows, grouped_rows):
         self.individual_rows = individual_rows
         self.grouped_rows = grouped_rows

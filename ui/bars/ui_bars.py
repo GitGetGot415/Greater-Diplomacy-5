@@ -7,7 +7,7 @@ import data.constants as c
 from ui.background_styles import MAP_BAR_STYLES, MAP_CONFIRM_STYLES, MAP_FRAME_COLOR, LEFT_FRAME_COLOR
 
 from ui.rendering.font_manager import fonts
-from ui.widgets import ui_elements
+from ui.widgets import text_utils, ui_elements
 
 
 # Cache the images using a tuple (filename, scale, directory) as the key
@@ -257,6 +257,10 @@ def draw_confirm_prompt(surface, box_rect, question, subtitle=None,
     return yes_rect, no_rect
 
 
+# Space kept on each side of a panel title. A longer title ends in an ellipsis.
+PANEL_TITLE_MARGIN = 16
+
+
 def draw_panel_frame(surface, rect, title=None, bg=None, border=None, border_width=3,
                      title_dy=None, font_preset="heading2", gradient_strength=1.0):
     """The standard modal panel: filled box, border, and a centred title.
@@ -272,7 +276,8 @@ def draw_panel_frame(surface, rect, title=None, bg=None, border=None, border_wid
                    border_width=border_width, gradient_strength=gradient_strength)
     if title:
         dy = c.MODAL_TITLE_Y_OFFSET if title_dy is None else title_dy
-        return draw_centered_title(surface, title, rect.y + dy, font_preset)
+        fitted = text_utils.fit_text(title, fonts.get(font_preset), rect.width - 2 * PANEL_TITLE_MARGIN)
+        return draw_centered_title(surface, fitted, rect.y + dy, font_preset, center_x=rect.centerx)
     return None
 
 
@@ -314,11 +319,12 @@ def release_surface(owns_display):
         pygame.display.quit()
 
 
-def draw_centered_title(surface, text, y_pos, font_preset="heading1", color=(255, 255, 255), shadow=False):
-    """Draws centered title text to standardize headers."""
+def draw_centered_title(surface, text, y_pos, font_preset="heading1", color=(255, 255, 255), shadow=False,
+                        center_x=None):
+    """Draws title text centered on the screen, or on center_x when given."""
     title_font = fonts.get(font_preset)
     title_surf = title_font.render(text, True, color)
-    x_pos = c.SCREEN_WIDTH // 2 - title_surf.get_width() // 2
+    x_pos = (c.SCREEN_WIDTH // 2 if center_x is None else center_x) - title_surf.get_width() // 2
     if shadow:
         surface.blit(title_font.render(text, True, (0, 0, 0)), (x_pos + 1, y_pos + 1))
     rect = title_surf.get_rect(topleft=(x_pos, y_pos))

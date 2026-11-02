@@ -7,7 +7,7 @@ from ui.widgets import text_utils
 from ui.widgets import ui_elements
 from ui.background_styles import ASSET_VIEWER_STYLES
 from ui.widgets.scroll_panes import ScrollPanes
-from ui.widgets.ui_elements import Button, make_back_button
+from ui.widgets.ui_elements import Button, make_back_button, make_choice_button
 from ui.rendering.font_manager import fonts
 from data.platform import IS_WEB, download_file, downloads_dir
 import data.constants as c
@@ -242,11 +242,8 @@ class View_Assets(ScrollPanes, GameState):
         y = HEADER_H + self._scroll_folder
         folder_content_h = 0
         for folder in self.folders:
-            is_active = folder == self.current_folder
-            color = "green" if is_active else "grey"
-            cb = lambda f=folder: self.select_folder(f)
-
-            btn = Button(20, y, "asset_folder", color, folder, cb)
+            btn = make_choice_button(20, y, "asset_folder", folder, folder == self.current_folder,
+                                     lambda f=folder: self.select_folder(f), idle_color="grey")
             btn.click_guard = lambda: pygame.mouse.get_pos()[1] >= HEADER_H
             btn.pane = "folder"
             self.elements.append(btn)

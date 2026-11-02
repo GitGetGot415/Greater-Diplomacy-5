@@ -1,22 +1,6 @@
-from ui.widgets.ui_elements import Button
-
 from map_logic.diplomacy import deal as deal_mod
 from screens.game.peace_screen import draw_projected_deal_map
 
-
-def build_choice_button(x, y, size, label, enabled, selected, callback, font_preset="button"):
-    """One button in a mutually exclusive option row.
-
-    Green when picked, blue when available, greyed and unclickable when not,
-    plus the gold selection border. Every option row in these menus (wargoals,
-    peace terms, puppet direction, claim view mode) had its own copy of this.
-    """
-    color = ("green" if selected else "blue") if enabled else "grey"
-    btn = Button(x, y, size, color, label, callback, font_preset=font_preset)
-    btn.is_selected = selected
-    if not enabled:
-        btn.apply_state(enabled=False)
-    return btn
 
 def draw_projected_peace_map(surface, map_screen, peace_type, proposer, target):
     """DEPRECATED. Tints every province a treaty would move.

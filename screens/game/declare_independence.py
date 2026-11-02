@@ -3,7 +3,7 @@ import copy
 from ui.navigation.game_state import MapOverlayScreen
 import data.constants as c
 from ui.widgets import text_utils
-from ui.widgets.ui_elements import Button, TextField, make_back_button
+from ui.widgets.ui_elements import Button, TextField, make_back_button, make_choice_button
 from ui.rendering.font_manager import fonts
 from data import queries
 from ui.dialogs import pickers
@@ -64,14 +64,15 @@ class Declare_Independence_Screen(MapOverlayScreen):
         btn_x = panel_x + 450
         btn_y = panel_y + 80
         
-        color_none = "green" if self.selected_core is None else "blue"
-        self.elements.append(Button(btn_x, btn_y, "medium", color_none, "None", lambda: self.select_core(None)))
+        self.elements.append(make_choice_button(btn_x, btn_y, "medium", "None", self.selected_core is None,
+                                                lambda: self.select_core(None)))
         
         for i, core_tag in enumerate(self.available_cores):
             core_name = self.map_screen.nation_data.get(core_tag, {}).get("name", core_tag)
             display_name = text_utils.truncate_chars(core_name, CORE_NAME_MAX_CHARS)
-            color_core = "green" if self.selected_core == core_tag else "blue"
-            self.elements.append(Button(btn_x, btn_y + 60 * (i + 1), "medium", color_core, display_name, lambda ct=core_tag: self.select_core(ct)))
+            self.elements.append(make_choice_button(btn_x, btn_y + 60 * (i + 1), "medium", display_name,
+                                                    self.selected_core == core_tag,
+                                                    lambda ct=core_tag: self.select_core(ct)))
 
     def pick_color(self):
         def on_confirm(color):

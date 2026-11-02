@@ -94,7 +94,6 @@ AUTOMATION_PANEL_STYLES = {
 
 ECONOMY_PANEL_STYLES = {
     "resource": {"color": (40, 40, 50), "gradient_strength": 1.0},
-    "expenses": {"color": (25, 28, 35), "gradient_strength": 1.0},
 }
 
 ORDERS_PANEL_STYLES = {

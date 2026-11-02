@@ -79,6 +79,10 @@ OUTCOME_H = 48
 OUTCOME_GAP = 8
 
 
+# The embedded inspector sits close under its title to leave room for the lanes.
+EMBEDDED_TITLE_Y_OFFSET = 8
+
+
 class Battle_Screen(ModalScreen):
     """A tile's lanes, and the player's units in them.
 
@@ -110,6 +114,7 @@ class Battle_Screen(ModalScreen):
         super().__init__(map_screen, self.get_panel_title(), panel_size=panel_size)
         if embedded_rect is not None:
             self.panel_rect = pygame.Rect(embedded_rect)
+            self.TITLE_Y_OFFSET = EMBEDDED_TITLE_Y_OFFSET
         # Hotseat and fog of war: the same rule the Orders panel uses. A province you
         # cannot see is not one whose order of battle you get to read.
         self.visible = queries.is_province_visible(map_screen, province["id"])
@@ -770,12 +775,7 @@ class Battle_Screen(ModalScreen):
             self.draw(surface)
             return
 
-        p = self.panel_rect
-        ui_bars.draw_screen_panel(surface, self, None)
-        title_font = fonts.get("heading2")
-        title = fit_text(self.get_panel_title(), title_font, p.width - (2 * self.PAD))
-        title_surf = title_font.render(title, True, (255, 255, 255))
-        surface.blit(title_surf, title_surf.get_rect(midtop=(p.centerx, p.y + 8)))
+        ui_bars.draw_screen_panel(surface, self, self.get_panel_title())
         self.draw_body(surface)
         self.draw_elements(surface)
         self.draw_foreground(surface)

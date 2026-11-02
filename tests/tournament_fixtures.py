@@ -14,5 +14,5 @@ def _fixture_key(password, salt):
 
 
 def fast_tournament_crypto():
-    """Patch rule tests locally. Archive encryption tests use production derivation."""
+    """Patch behavior tests locally. Dedicated encryption tests retain production derivation."""
     return patch.object(files, "generate_fernet_key_from_password", new=_fixture_key)

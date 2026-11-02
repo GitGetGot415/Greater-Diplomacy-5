@@ -45,6 +45,7 @@ class NavalContentTests(unittest.TestCase):
 
     def test_ship_metadata_unlocks_agree_for_players_ai_and_older_libraries(self):
         navy = queries.get_grouped_units(self.library, by_family=False)["Navy"]
+        research_index = queries.get_unit_research_index(self.library)
         for name, tech in self.ships.items():
             with self.subTest(ship=name):
                 self.assertIn(name, navy)
@@ -55,10 +56,13 @@ class NavalContentTests(unittest.TestCase):
                 level = metadata["research"]["level"]
                 before, after = {tech: level - 1}, {tech: level}
                 self.assertFalse(queries.is_unit_unlocked(name, before, self.library))
-                self.assertNotIn(name, ai_unit_eval.buildable_units(before, self.library))
+                self.assertNotIn(name, ai_unit_eval.buildable_units(
+                    before, self.library, research_index=research_index))
                 self.assertTrue(queries.is_unit_unlocked(name, after, self.library))
-                self.assertIn(name, ai_unit_eval.buildable_units(after, self.library))
-                self.assertIn(name, ai_tech_eval.units_unlocked_by(tech, before, self.library))
+                self.assertIn(name, ai_unit_eval.buildable_units(
+                    after, self.library, research_index=research_index))
+                self.assertIn(name, ai_tech_eval.units_unlocked_by(
+                    tech, before, self.library, research_index=research_index))
                 unit = queries.create_unit_dict(name, "A", self.library)
                 self.assertTrue(queries.is_naval_unit(name))
                 for field in ("health", "attack", "defense", "speed"):
@@ -299,10 +303,12 @@ class NavalScreenTests(unittest.TestCase):
                     node = next(button for button in research.elements
                                 if getattr(button, "is_tech_node", False)
                                 and button.text == research.get_display_name(tech, progress[tech] + 1))
-                    node.callback()
-                    self.assertEqual(research.active_modal["status"], "AVAILABLE" if complete else "LOCKED")
+                    with patch("screens.game.research._run_pygame_sub_screen"):
+                        node.callback()
+                    details = research.details_screen
+                    self.assertEqual(details.node["status"], "AVAILABLE" if complete else "LOCKED")
                     if complete:
-                        button = next(button for button in research.elements
+                        button = next(button for button in details.elements
                                       if getattr(button, "text", "") == "Start Research")
                         country["research"] = dict(locked)
                         button.callback()
@@ -344,10 +350,12 @@ class NavalScreenTests(unittest.TestCase):
                     node = next(button for button in research.elements
                                 if getattr(button, "is_tech_node", False)
                                 and button.text == research.get_display_name(tech, level))
-                    node.callback()
-                    self.assertEqual((research.active_modal["tech_key"], research.active_modal["level"]), (tech, level))
-                    self.assertIn(name, research.modal_entities)
-                    next(button for button in research.elements if getattr(button, "text", "") == "Start Research").callback()
+                    with patch("screens.game.research._run_pygame_sub_screen"):
+                        node.callback()
+                    details = research.details_screen
+                    self.assertEqual((details.node["tech_key"], details.node["level"]), (tech, level))
+                    self.assertIn(name, details.modal_entities)
+                    next(button for button in details.elements if getattr(button, "text", "") == "Start Research").callback()
                     self.assertEqual(country["research_queue"], [queries.build_research_project(tech, tree[tech]["cost"])])
                     country["research"] = queries.edited_research_levels(country["research"], tech, level, True, tree)
                     country["research_queue"] = []

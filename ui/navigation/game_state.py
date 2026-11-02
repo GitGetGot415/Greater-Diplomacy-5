@@ -698,11 +698,15 @@ class ButtonMenuScreen(GameState):
         """Returns one (label, color, callback) row per button, with an optional fourth icon."""
         raise NotImplementedError
 
+    @classmethod
+    def build_menu_buttons(cls, rows):
+        """Builds the centered column from (label, color, callback) rows, with an optional fourth icon."""
+        return [Button("centered", cls.BUTTON_TOP + i * cls.BUTTON_GAP, "large", color, label,
+                       callback, image=icon[0] if icon else None)
+                for i, (label, color, callback, *icon) in enumerate(rows)]
+
     def refresh_ui(self):
-        self.elements = []
-        for i, (label, color, callback, *icon) in enumerate(self.menu_buttons()):
-            self.elements.append(Button("centered", self.BUTTON_TOP + i * self.BUTTON_GAP, "large", color, label,
-                                        callback, image=icon[0] if icon else None))
+        self.elements = self.build_menu_buttons(self.menu_buttons())
         self.elements.append(make_back_button(self.exit_screen))
 
     def additional_draw(self, surface):
@@ -755,11 +759,22 @@ class RefreshingMenuListScreen(MenuListScreen):
 
     map_refresh.refresh_map_directories writes the four refresh values below.
     While it runs, the buttons are hidden and input is ignored.
+
+    A view with no list is a page of ButtonMenuScreen.build_menu_buttons, so its
+    title sits where ButtonMenuScreen places it.
     """
     is_refreshing = False
     refresh_total = 0
     refresh_completed = 0
     refresh_status = ""
+
+    @property
+    def title_y(self):
+        return GameState.title_y if self.has_menu_list() else ButtonMenuScreen.title_y
+
+    @property
+    def title_shadow(self):
+        return GameState.title_shadow if self.has_menu_list() else ButtonMenuScreen.title_shadow
 
     def update(self):
         super().update()
@@ -781,11 +796,38 @@ class FolderListState(GameState):
     """Base for the menus that list folders on disk (saves, custom maps).
 
     Subclasses point `managed_dir` at a directory and get the rename and delete
-    popups for free.
+    popups for free. ROW_BUTTONS describes one row of a simple list.
     """
+    ROW_TOP = 0
+    #: (x, y offset, size preset, color, label, handler name) per button in a row.
+    #: A None label shows the folder name. The handler receives the folder name.
+    ROW_BUTTONS = ()
+    #: Handler name -> button sound, for a handler that does not use "click".
+    ROW_BUTTON_SOUNDS = {}
+    IMPORT_BUTTON_POS = (160, 20)
 
     def __init__(self):
         super().__init__()
+
+    def add_folder_row(self, name, y):
+        """Adds one scrolling row of ROW_BUTTONS inside a layout_list_rows loop."""
+        for x, y_offset, size, color, label, handler in self.ROW_BUTTONS:
+            self.add_list_row(Button(x, y + y_offset, size, color, label or name,
+                                     lambda folder=name, h=handler: getattr(self, h)(folder),
+                                     sound_kind=self.ROW_BUTTON_SOUNDS.get(handler, "click")))
+
+    def make_import_zip_button(self):
+        # ui.dialogs imports this module, so this import must stay local.
+        from ui.dialogs import file_exchange
+
+        return Button(*self.IMPORT_BUTTON_POS, "medium", "green", "Import .zip",
+                      lambda: file_exchange.import_zip_to_dir(self, self.managed_dir, self.refresh_ui))
+
+    def additional_events(self, event):
+        self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
+
+    def additional_draw(self, surface):
+        self.draw_list_scrollbar(surface, c.SCREEN_WIDTH - 40, self.ROW_TOP, c.SCREEN_HEIGHT - 200)
 
     # -- the directory being managed; a property so sub-state screens can swap it
     @property

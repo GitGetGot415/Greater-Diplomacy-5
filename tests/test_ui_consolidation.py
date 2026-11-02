@@ -261,5 +261,139 @@ class ToggleAndFooterTests(SharedUiTestCase):
         self.assertEqual(results, [["a"]])
 
 
+class FolderRowTests(SharedUiTestCase):
+    def test_save_row_buttons_call_their_handlers_with_the_folder(self):
+        from screens.menus.load_game import Load_Game
+
+        screen = Load_Game()
+        with mock.patch.object(screen, "layout_list_rows", return_value=[(0, 120)]), \
+                mock.patch.object(screen, "list_folders", return_value=["Save"]):
+            screen.scroll_click_guard = lambda: True
+            screen.refresh_ui()
+        for label, handler in (("Save", "load_specific_save"), ("History", "open_history_menu"),
+                               ("Rename", "start_rename"), ("Export", "export_save_zip"), ("X", "start_delete")):
+            with self.subTest(label=label), mock.patch.object(screen, handler) as called:
+                button_named(screen, label).callback()
+                called.assert_called_once_with("Save")
+
+    def test_custom_map_row_opens_the_map_from_the_custom_directory(self):
+        import data.constants as c
+        from screens.setup.select_base_map import Select_Base_Map
+
+        screen = Select_Base_Map()
+        with mock.patch.object(screen, "start_editor_with_map") as start:
+            screen.edit_custom_map("Map")
+        start.assert_called_once_with("Map", c.SCENARIOS_CUSTOM_DIR)
+
+
+class ButtonMenuPageTests(SharedUiTestCase):
+    def test_new_game_category_page_routes_each_button(self):
+        from screens.setup.new_game import New_Game
+
+        screen = New_Game()
+        screen.draw(self.surface)
+        button_named(screen, "Alternate Scenarios").callback()
+        self.assertEqual(screen.sub_state, "ALTERNATE")
+        screen.draw(self.surface)
+
+    def test_other_directory_page_opens_a_category(self):
+        from screens.setup.select_base_map import Select_Base_Map
+
+        screen = Select_Base_Map()
+        screen.set_sub_state("OTHER_CATEGORY")
+        button_named(screen, "Historical Scenarios").callback()
+        self.assertEqual(screen.sub_state, "OTHER_HISTORICAL")
+
+
+class ResearchDetailsTests(SharedUiTestCase):
+    def open_details(self):
+        from screens.game.research import Research_Screen
+
+        game = app_harness.boot_map()
+        research = Research_Screen()
+        research.start_research(game)
+        tech = next(iter(research.tech_tree))
+        node = {"status": "AVAILABLE", "tech_key": tech, "level": 1, "icon": None, "cost": 100,
+                "display_name": research.get_display_name(tech, 1)}
+        with mock.patch("screens.game.research._run_pygame_sub_screen") as run:
+            research.open_modal(node)
+        return research, research.details_screen, run
+
+    def test_details_open_as_a_sub_screen_and_reset_when_closed(self):
+        research, details, run = self.open_details()
+        self.assertIs(run.call_args.args[1], details)
+        details.draw(self.surface)
+        run.call_args.kwargs["on_done"]()
+        self.assertIsNone(research.details_screen)
+        self.assertTrue(research.elements)
+
+    def test_back_key_closes_only_the_details(self):
+        research, details, _run = self.open_details()
+        details.handle_back_key()
+        self.assertTrue(details.done)
+        self.assertFalse(research.done)
+
+    def test_start_action_calls_research_then_closes(self):
+        research, details, _run = self.open_details()
+        with mock.patch.object(research, "start_or_resume_research") as start:
+            details.start_research()
+        start.assert_called_once_with(details.node["tech_key"])
+        self.assertTrue(details.done)
+
+    def test_drawing_does_not_run_the_research_forecast(self):
+        from data import queries
+
+        _research, details, _run = self.open_details()
+        with mock.patch.object(queries, "get_research_multiplier", side_effect=AssertionError("frame rules")):
+            details.draw(self.surface)
+
+
+class MatchDetailsTests(SharedUiTestCase):
+    @staticmethod
+    def player(name, connected=True):
+        return SimpleNamespace(player_id=name, name=name, country_id=None, eliminated=False, submitted=False,
+                               connected=connected, ping_ms=5)
+
+    def map_screen(self, session):
+        map_screen = mock.Mock(realtime_session=session, nation_data={})
+        map_screen.map_screen = None
+        return map_screen
+
+    def test_rows_follow_the_session_and_keep_the_chosen_sort(self):
+        from ui.panels.realtime_status_panel import _MatchDetails
+
+        session = SimpleNamespace(host_id="Host", players={"a": self.player("Bravo"), "b": self.player("Alpha")})
+        screen = _MatchDetails(self.map_screen(session))
+        screen.sort_by(screen.columns[0])
+        self.assertEqual([row["player"] for row in screen.rows], ["Alpha", "Bravo"])
+
+        session.players["c"] = self.player("Aaron", connected=False)
+        screen.update()
+        self.assertEqual([row["player"] for row in screen.rows], ["Aaron", "Alpha", "Bravo"])
+        self.assertEqual(screen.rows[0]["connection"], "Disconnected")
+        screen.draw(self.surface)
+
+    def test_no_session_shows_an_empty_table(self):
+        from ui.panels.realtime_status_panel import _MatchDetails
+
+        screen = _MatchDetails(self.map_screen(None))
+        self.assertEqual(screen.rows, [])
+        screen.update()
+        screen.draw(self.surface)
+
+
+class ChoiceButtonTests(SharedUiTestCase):
+    def test_selection_and_availability_are_reported(self):
+        from ui.widgets.ui_elements import make_choice_button
+
+        callback = mock.Mock()
+        chosen = make_choice_button(0, 0, "medium", "A", True, callback)
+        self.assertTrue(chosen.is_selected)
+        self.assertFalse(chosen.disabled)
+        chosen.callback()
+        callback.assert_called_once()
+        self.assertTrue(make_choice_button(0, 0, "medium", "B", False, callback, enabled=False).disabled)
+
+
 if __name__ == "__main__":
     unittest.main()

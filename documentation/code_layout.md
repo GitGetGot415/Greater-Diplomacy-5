@@ -145,7 +145,14 @@ Use `python run_tests.py tests.test_import_smoke` to time one module.
 Use `--durations 0` to hide timing details. Use `--quiet` to hide per-test progress.
 Import and sandbox probes run up to four child processes concurrently.
 Each probe keeps its own interpreter. Sandbox probes also keep separate temporary folders.
-Game tests run sequentially because they share pygame state and patched globals.
+Full test runs use up to four worker processes. Each worker has separate pygame state and patched globals.
+Each discovered module suite stays together. Its tests run sequentially within one worker.
+Workers retain normal discovery hooks, failure reports, skips, and timing results.
+Use `--jobs 1` for sequential execution. Use `--jobs 2` to reduce worker memory use.
+Focused commands use one process unless you supply `--jobs`.
+Content checks reuse parsed indexes while their source libraries stay unchanged.
+Archive behavior tests use fast password derivation. Dedicated encryption tests retain production derivation and its required work factor.
 Air UI tests use fresh in-memory maps. Persistence tests still save and load real files.
+The cached application harness restores its display before reuse if another test changed the display size.
 The ODTL module supplies a discovery hook for its standalone function tests.
 Builds do not include offline tools from `scripts/`.

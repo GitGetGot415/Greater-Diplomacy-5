@@ -5,7 +5,7 @@ import data.constants as c
 from ui.background_styles import EDITOR_PANEL_STYLES
 from data import queries
 from ui.navigation.game_state import EditorOverlayScreen
-from ui.widgets.ui_elements import Button, TextField, checkbox_label, make_back_button, toggle_color
+from ui.widgets.ui_elements import Button, TextField, checkbox_label, make_back_button, make_choice_button, toggle_color
 from ui.widgets.scroll_panes import ScrollPanes
 from ui.widgets import text_utils
 from ui.rendering.font_manager import fonts
@@ -318,25 +318,21 @@ class Diplomacy_Editor_Screen(ScrollPanes, EditorOverlayScreen):
                 btn.click_guard = getattr(self, f"_guard_{region}")
                 self.elements.append(btn)
 
-        core_button = Button(self.cols_x, self.row_a_y - 2, "editor_ui",
-                             "green" if self.relationship_view == "core" else "blue",
-                             "Wars, Factions & Puppets",
-                             lambda: self.set_relationship_view("core"), font_preset="button_small")
-        agreement_button = Button(self.cols_x + 310, self.row_a_y - 2, "editor_ui",
-                                  "green" if self.relationship_view == "agreements" else "blue",
-                                  "Diplomatic Agreements",
-                                  lambda: self.set_relationship_view("agreements"), font_preset="button_small")
+        core_button = make_choice_button(self.cols_x, self.row_a_y - 2, "editor_ui", "Wars, Factions & Puppets",
+                                         self.relationship_view == "core",
+                                         lambda: self.set_relationship_view("core"), font_preset="button_small")
+        agreement_button = make_choice_button(self.cols_x + 310, self.row_a_y - 2, "editor_ui", "Diplomatic Agreements",
+                                              self.relationship_view == "agreements",
+                                              lambda: self.set_relationship_view("agreements"), font_preset="button_small")
         self.elements += [core_button, agreement_button]
 
         if self.relationship_view == "core":
             self.faction_field.rect.topleft = (self.cols_x + 130, self.row_b_y)
             self.elements.append(self.faction_field)
-            leader_btn = Button(self.cols_x + 470, self.row_b_y - 2, "editor_ui",
-                                "green" if self.is_leader else "grey",
-                                f"Faction Leader: {'Yes' if self.is_leader else 'No'}",
-                                self.toggle_leader, font_preset="button_small")
-            leader_btn.is_selected = self.is_leader
-            self.elements.append(leader_btn)
+            self.elements.append(make_choice_button(self.cols_x + 470, self.row_b_y - 2, "editor_ui",
+                                                    f"Faction Leader: {'Yes' if self.is_leader else 'No'}",
+                                                    self.is_leader, self.toggle_leader, idle_color="grey",
+                                                    font_preset="button_small"))
             self.elements.append(Button(self.cols_x, self.row_b_y + 48, "editor_ui", "blue",
                                         f"Puppet Type: {self.puppet_type}", self.cycle_puppet_type,
                                         font_preset="button_small"))

@@ -3,7 +3,7 @@ import itertools
 import pygame
 
 from ui.navigation.game_state import GameState
-from ui.widgets.ui_elements import Button, make_back_button
+from ui.widgets.ui_elements import make_back_button, make_choice_button
 from ui.rendering.font_manager import fonts
 from ui.rendering import symbol_loader
 from data import queries
@@ -339,10 +339,9 @@ class Unit_Art(GameState):
 
         y = 100
         for style in c.UNIT_ART_STYLES:
-            btn = Button(20, y, "medium", "green" if style == self.style else "grey",
-                        STYLE_LABELS.get(style, style.title()), lambda s=style: self.set_style(s))
-            btn.is_selected = (style == self.style)
-            self.elements.append(btn)
+            self.elements.append(make_choice_button(20, y, "medium", STYLE_LABELS.get(style, style.title()),
+                                                    style == self.style, lambda s=style: self.set_style(s),
+                                                    idle_color="grey"))
             y += 60
 
         self.elements.extend(self._build_country_tabs())
@@ -457,11 +456,11 @@ class Unit_Art(GameState):
                 x = GALLERY_X + ROW_PAD_X
                 y += TAB_H + TAB_ROW_GAP
 
-            btn = Button(x, y, "asset_folder", "green" if value == self.country else "grey",
-                        label, lambda v=value: self.set_country_filter(v), font_preset=TAB_FONT)
+            btn = make_choice_button(x, y, "asset_folder", label, value == self.country,
+                                     lambda v=value: self.set_country_filter(v), idle_color="grey",
+                                     font_preset=TAB_FONT)
             btn.rect.width = w
             btn.rect.height = TAB_H
-            btn.is_selected = (value == self.country)
             buttons.append(btn)
             x += w + TAB_GAP_X
 
@@ -480,11 +479,10 @@ class Unit_Art(GameState):
         w = font.size(SHOW_ALL_ART_LABEL)[0] + SHOW_ALL_ART_PAD_X * 2
         x = c.SCREEN_WIDTH - 30 - w
 
-        btn = Button(x, SHOW_ALL_ART_Y, "asset_folder", "green" if self.show_all_art else "grey",
-                    SHOW_ALL_ART_LABEL, self.toggle_show_all_art, font_preset=SHOW_ALL_ART_FONT)
+        btn = make_choice_button(x, SHOW_ALL_ART_Y, "asset_folder", SHOW_ALL_ART_LABEL, self.show_all_art,
+                                 self.toggle_show_all_art, idle_color="grey", font_preset=SHOW_ALL_ART_FONT)
         btn.rect.width = w
         btn.rect.height = SHOW_ALL_ART_H
-        btn.is_selected = self.show_all_art
         return btn
 
     def _build_level_display_toggle(self):
@@ -503,11 +501,11 @@ class Unit_Art(GameState):
             w = font.size(label)[0] + LEVEL_TOGGLE_PAD_X * 2
             x -= w
 
-            btn = Button(x, LEVEL_TOGGLE_Y, "asset_folder", "green" if mode == self.level_display else "grey",
-                        label, lambda m=mode: self.set_level_display(m), font_preset=LEVEL_TOGGLE_FONT)
+            btn = make_choice_button(x, LEVEL_TOGGLE_Y, "asset_folder", label, mode == self.level_display,
+                                     lambda m=mode: self.set_level_display(m), idle_color="grey",
+                                     font_preset=LEVEL_TOGGLE_FONT)
             btn.rect.width = w
             btn.rect.height = LEVEL_TOGGLE_H
-            btn.is_selected = (mode == self.level_display)
             buttons.append(btn)
             x -= LEVEL_TOGGLE_GAP_X
         return buttons

@@ -1,5 +1,5 @@
 import os
-from ui.navigation.game_state import RefreshingMenuListScreen
+from ui.navigation.game_state import ButtonMenuScreen, RefreshingMenuListScreen
 from ui.widgets.ui_elements import Button, make_back_button
 import data.constants as c
 from data import queries
@@ -52,10 +52,12 @@ class New_Game(RefreshingMenuListScreen):
         if self.sub_state == "CATEGORY":
             self.elements = [
                 make_back_button(self.exit_screen),
-                Button("centered", 200, "large", "blue", "Historical Scenarios", lambda: self.set_sub_state("HISTORICAL")),
-                Button("centered", 300, "large", "purple", "Alternate Scenarios", lambda: self.set_sub_state("ALTERNATE")),
-                Button("centered", 400, "large", "green", "Map Editor Scenarios", lambda: self.set_sub_state("MAP_EDITOR")),
-                Button("centered", 500, "large", "orange", "Random Scenario", self.start_random_scenario),
+                *ButtonMenuScreen.build_menu_buttons([
+                    ("Historical Scenarios", "blue", lambda: self.set_sub_state("HISTORICAL")),
+                    ("Alternate Scenarios", "purple", lambda: self.set_sub_state("ALTERNATE")),
+                    ("Map Editor Scenarios", "green", lambda: self.set_sub_state("MAP_EDITOR")),
+                    ("Random Scenario", "orange", self.start_random_scenario),
+                ]),
                 Button(c.SCREEN_WIDTH - 220, c.SCREEN_HEIGHT - 160, "medium", "purple", "Data Refresh", self.trigger_global_data_refresh),
                 settings_btn,
             ]

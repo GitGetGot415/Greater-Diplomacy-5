@@ -48,16 +48,22 @@ class HistoricalInfantryTests(unittest.TestCase):
 
     def test_early_equipment_unlocks_agree_for_players_and_ai(self):
         self.assertTrue(self.early)
+        # Content stays unchanged during this pass. Reuse its parsed indexes.
+        research_index = queries.get_unit_research_index(self.library)
+        unit_unlocks = queries.get_unit_unlock_index()
         for name in self.equipment:
             tech, level = queries.get_unit_research_requirement(name, self.library)
             with self.subTest(unit=name):
                 before, after = {tech: level - 1}, {tech: level}
                 self.assertFalse(queries.is_unit_unlocked(name, before, self.library))
                 self.assertTrue(queries.is_unit_unlocked(name, after, self.library))
-                self.assertNotIn(name, ai_unit_eval.buildable_units(before, self.library))
-                self.assertIn(name, ai_unit_eval.buildable_units(after, self.library))
-                self.assertIn(name, ai_tech_eval.units_unlocked_by(tech, before, self.library))
-                self.assertIn(name, queries.get_tech_unlocks(tech, level))
+                self.assertNotIn(name, ai_unit_eval.buildable_units(
+                    before, self.library, research_index=research_index))
+                self.assertIn(name, ai_unit_eval.buildable_units(
+                    after, self.library, research_index=research_index))
+                self.assertIn(name, ai_tech_eval.units_unlocked_by(
+                    tech, before, self.library, research_index=research_index))
+                self.assertIn(name, queries.get_tech_unlocks(tech, level, unit_unlocks=unit_unlocks))
 
     def test_starting_equipment_and_factory_are_available_in_1800(self):
         research = queries.get_time_appropriate_research(c.START_YEAR)

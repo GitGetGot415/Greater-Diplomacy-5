@@ -7,7 +7,7 @@ from ui.bars import ui_bars
 from ui.background_styles import MUSIC_PANEL_STYLES
 from ui.widgets.scroll_panes import ScrollPanes
 from ui.widgets.text_utils import fit_text
-from ui.widgets.ui_elements import Button, Slider, make_back_button, make_info_button
+from ui.widgets.ui_elements import Button, Slider, make_back_button, make_choice_button, make_info_button
 from ui.rendering.font_manager import fonts
 import data.constants as c
 from beepbox_audio import source_seconds_from_timeline, timeline_seconds_from_source
@@ -375,22 +375,17 @@ class Music_Player(ScrollPanes, GameState):
         )
         self.elements.append(self.progress_slider)
         timeline_mode = self.controller.music_pitch_timeline
-        static_button = Button(
-            MUSIC_TIMELINE_BUTTON_X, MUSIC_TIMELINE_BUTTON_Y,
-            MUSIC_TIMELINE_BUTTON_SIZE,
-            "green" if timeline_mode == c.MUSIC_PITCH_TIMELINE_STATIC else "grey",
-            "Static", self.set_static_pitch_timeline, font_preset="tiny",
-        )
-        static_button.is_selected = timeline_mode == c.MUSIC_PITCH_TIMELINE_STATIC
-        self.elements.append(static_button)
-        dynamic_button = Button(
+        self.elements.append(make_choice_button(
+            MUSIC_TIMELINE_BUTTON_X, MUSIC_TIMELINE_BUTTON_Y, MUSIC_TIMELINE_BUTTON_SIZE, "Static",
+            timeline_mode == c.MUSIC_PITCH_TIMELINE_STATIC, self.set_static_pitch_timeline,
+            idle_color="grey", font_preset="tiny",
+        ))
+        self.elements.append(make_choice_button(
             MUSIC_TIMELINE_BUTTON_X + MUSIC_TIMELINE_BUTTON_SIZE[0] + MUSIC_TIMELINE_BUTTON_GAP,
-            MUSIC_TIMELINE_BUTTON_Y, MUSIC_TIMELINE_BUTTON_SIZE,
-            "green" if timeline_mode == c.MUSIC_PITCH_TIMELINE_DYNAMIC else "grey",
-            "Dynamic", self.set_dynamic_pitch_timeline, font_preset="tiny",
-        )
-        dynamic_button.is_selected = timeline_mode == c.MUSIC_PITCH_TIMELINE_DYNAMIC
-        self.elements.append(dynamic_button)
+            MUSIC_TIMELINE_BUTTON_Y, MUSIC_TIMELINE_BUTTON_SIZE, "Dynamic",
+            timeline_mode == c.MUSIC_PITCH_TIMELINE_DYNAMIC, self.set_dynamic_pitch_timeline,
+            idle_color="grey", font_preset="tiny",
+        ))
         self.elements.append(make_info_button(
             MUSIC_TIMELINE_HELP_BUTTON_X,
             MUSIC_TIMELINE_HELP_BUTTON_Y,

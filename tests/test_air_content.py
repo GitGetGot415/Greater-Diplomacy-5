@@ -146,6 +146,8 @@ class AirRulesTests(unittest.TestCase):
     def test_each_aircraft_level_unlocks_library_stats_for_players_and_ai(self):
         library = queries.get_unit_library()
         tree = queries.get_tech_tree()
+        research_index = queries.get_unit_research_index(library)
+        unit_unlocks = queries.get_unit_unlock_index()
         for tech, years in AIRCRAFT_LEVEL_YEARS.items():
             base = tree[tech]["display_name"]
             for level in range(1, len(years) + 1):
@@ -159,10 +161,11 @@ class AirRulesTests(unittest.TestCase):
                     after = {tech: level}
                     self.assertFalse(queries.is_unit_unlocked(name, before))
                     self.assertTrue(queries.is_unit_unlocked(name, after))
-                    self.assertEqual(ai_tech_eval.units_unlocked_by(tech, before, library), (name,))
-                    self.assertIn(name, ai_unit_eval.buildable_units(after, library))
+                    self.assertEqual(ai_tech_eval.units_unlocked_by(
+                        tech, before, library, research_index=research_index), (name,))
+                    self.assertIn(name, ai_unit_eval.buildable_units(after, library, research_index=research_index))
                     self.assertTrue(set(queries.get_air_unit_traits(name)).issubset(
-                        queries.get_tech_unlocks(tech, level)))
+                        queries.get_tech_unlocks(tech, level, unit_unlocks=unit_unlocks)))
                     self.assertIsNone(queries.get_upgrade_target(name, after, library, tree))
                     if level > 1:
                         self.assertEqual(queries.get_upgrade_target(f"{base} I", after, library, tree), name)
@@ -559,8 +562,9 @@ class AirScreenTests(unittest.TestCase):
             self.research.set_category("AIR")
             node = next(button for button in self.research.elements if getattr(button, "is_tech_node", False))
             self.assertEqual(node.text, family)
-            node.callback()
-            self.assertEqual(self.research.modal_entities, [name])
+            with mock.patch("screens.game.research._run_pygame_sub_screen"):
+                node.callback()
+            self.assertEqual(self.research.details_screen.modal_entities, [name])
             production.start_with_province(self.province, self.map)
             next(button for button in production.elements if getattr(button, "text", "") == family).callback()
             self.assertEqual(self.province["unit_queue"][-1]["unit_type"], name)
@@ -593,13 +597,14 @@ class AirScreenTests(unittest.TestCase):
             if key == "jet_engine":
                 continue
             with self.subTest(unit=name):
-                self.research.open_modal({"tech_key": key, "level": 1, "status": "COMPLETED",
-                    "display_name": name, "target_year": year, "icon": None,
-                    "cost": self.research.tech_cost(key)})
-                self.assertTrue(set(queries.get_air_unit_traits(name)).issubset(self.research.modal_unlocks))
+                with mock.patch("screens.game.research._run_pygame_sub_screen"):
+                    self.research.open_modal({"tech_key": key, "level": 1, "status": "COMPLETED",
+                        "display_name": name, "target_year": year, "icon": None,
+                        "cost": self.research.tech_cost(key)})
+                details = self.research.details_screen
+                self.assertTrue(set(queries.get_air_unit_traits(name)).issubset(details.modal_unlocks))
                 with mock.patch.object(queries, "get_tech_unlocks", side_effect=AssertionError("frame traits")):
-                    self.research.draw(self.surface)
-        self.research.close_modal()
+                    details.draw(self.surface)
 
     def test_aircraft_timeline_levels_follow_research_data(self):
         self.research.start_research(self.map)

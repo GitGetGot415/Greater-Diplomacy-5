@@ -450,12 +450,14 @@ class OutputResearchScreenTests(unittest.TestCase):
                 button = next(button for button in screen.elements
                               if getattr(button, "is_tech_node", False)
                               and button.text == screen.get_display_name(tech, 1))
-                button.callback()
-                self.assertEqual(screen.active_modal["tech_key"], tech)
-                self.assertEqual(screen.active_modal["status"], "AVAILABLE")
+                with patch("screens.game.research._run_pygame_sub_screen"):
+                    button.callback()
+                details = screen.details_screen
+                self.assertEqual(details.node["tech_key"], tech)
+                self.assertEqual(details.node["status"], "AVAILABLE")
                 with patch.object(queries, "get_building_output", side_effect=AssertionError("frame output rules")):
-                    screen.draw(self.surface)
-                screen.modal_start_research()
+                    details.draw(self.surface)
+                details.start_research()
                 self.assertEqual(country["research_queue"], [{"tech_name": tech, "points_remaining": tree[tech]["cost"]}])
                 self.assertNotIn(tech, country["research"])
 

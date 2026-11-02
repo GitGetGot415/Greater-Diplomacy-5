@@ -5,6 +5,7 @@ from ui.widgets.ui_elements import Button, make_back_button
 from ui.rendering.font_manager import fonts
 from ui.navigation.game_state import GameState
 from ui.background_styles import AUTOMATION_PANEL_STYLES
+from ui.bars import ui_bars
 from ui.widgets import ui_elements
 from map_logic.ai.automation_logic import (
     automate_player_construction, clear_player_construction,
@@ -28,6 +29,12 @@ ROW_SPACING = 150
 
 
 class Automation_Screen(GameState):
+    PANEL_STYLE = AUTOMATION_PANEL_STYLES["main"]
+    PANEL_BORDER = c.COLOR_DIM_BORDER
+    PANEL_BORDER_WIDTH = 3
+    TITLE_PRESET = "title"
+    TITLE_Y_OFFSET = 20
+
     def __init__(self, map_screen):
         super().__init__()
         # Dark red background
@@ -105,14 +112,7 @@ class Automation_Screen(GameState):
         return bool(self.is_valid_player) and queries.realtime_turn_open(self.map_screen)
 
     def additional_draw(self, surface):
-        # Panel Background
-        style = AUTOMATION_PANEL_STYLES["main"]
-        ui_elements.draw_pixel_panel(surface, self.panel_rect, style["color"], c.COLOR_DIM_BORDER,
-                                     border_width=3, gradient_strength=style["gradient_strength"])
-
-        title_font = fonts.get("title")
-        title_surf = title_font.render("Automation Settings", True, c.COLOR_GOLD_HIGHLIGHT)
-        surface.blit(title_surf, (self.panel_rect.centerx - title_surf.get_width()//2, self.panel_rect.y + 20))
+        ui_bars.draw_screen_panel(surface, self, "Automation Settings")
 
         if not self.is_valid_player:
             msg_font = fonts.get("normal")

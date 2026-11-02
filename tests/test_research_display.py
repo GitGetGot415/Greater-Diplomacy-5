@@ -203,6 +203,7 @@ class ResearchInputTests(unittest.TestCase):
         self.enterContext(patch.object(queries, "get_tech_tree", return_value=tree))
         self.enterContext(patch.object(research_display, "get_config", return_value=display_config()))
         self.enterContext(patch.object(symbol_loader, "get_symbol", return_value=None))
+        self.enterContext(patch("screens.game.research._run_pygame_sub_screen"))
         self.screen = Research_Screen()
         self.screen.start_research(self.map)
 
@@ -217,8 +218,8 @@ class ResearchInputTests(unittest.TestCase):
                 patch.object(ui_elements, "play_ui_sound"):
             for event_type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
                 node.handle_event(pygame.event.Event(event_type, button=1, pos=point))
-        self.assertEqual(self.screen.active_modal["tech_key"], "sample")
-        self.assertEqual(self.screen.active_modal["level"], 2)
+        self.assertEqual(self.screen.details_screen.node["tech_key"], "sample")
+        self.assertEqual(self.screen.details_screen.node["level"], 2)
 
     def test_click_in_resized_button_opens_the_correct_level(self):
         self.click_second_level()

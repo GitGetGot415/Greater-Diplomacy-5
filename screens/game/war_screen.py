@@ -4,9 +4,8 @@ from data import queries
 from map_logic.diplomacy import diplomacy_messages
 from ui.navigation.game_state import MapOverlayScreen
 from ui.rendering.font_manager import fonts
-from ui.widgets.ui_elements import Button
+from ui.widgets.ui_elements import Button, make_choice_button
 from ui.navigation.screen_runner import _run_pygame_sub_screen
-from screens.game.diplomacy_screen_widgets import build_choice_button
 
 from screens.game.claims_screen import open_claim_picker
 
@@ -86,8 +85,8 @@ class Declare_War_Screen(MapOverlayScreen):
             btn_x = self.panel_rect.centerx + (-210 if i % 2 == 0 else 10)
             btn_y = self.panel_rect.y + (80 if i < 2 else 150)
             self.elements.append(
-                build_choice_button(btn_x, btn_y, "medium", opt["label"], opt["enabled"],
-                                    self.selected_wargoal_idx == i, lambda idx=i: self.select_wg(idx))
+                make_choice_button(btn_x, btn_y, "medium", opt["label"], self.selected_wargoal_idx == i,
+                                   lambda idx=i: self.select_wg(idx), enabled=opt["enabled"])
             )
 
         # Making a claim used to be a whole tab of its own, reached from the

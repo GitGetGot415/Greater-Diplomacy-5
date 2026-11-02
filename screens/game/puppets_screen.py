@@ -212,6 +212,7 @@ class Create_Puppet_Screen(MapOverlayScreen):
     CENTER_PANEL = False
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_INFO_OVER_MAP
     PANEL_STYLE = PUPPET_PANEL_STYLES["release_nations"]
+    TITLE_PRESET = "heading2"
     RELEASE_TYPE_Y = 60
     RELEASE_TYPE_BUTTON_SIZE = (125, 40)
     RELEASE_TYPE_BUTTON_GAP = 10
@@ -220,7 +221,6 @@ class Create_Puppet_Screen(MapOverlayScreen):
     ROW_HEIGHT = 50
     CONTENT_TOP = 160
     CONTENT_BOTTOM_GAP = 30
-    TITLE_MARGIN = 20
     ROW_TEXT_WIDTH = 280
     QUEUED_TEXT_COLORS = {
         c.PUPPET_TYPE_INTEGRATED: c.COLOR_GOLD_HIGHLIGHT,
@@ -234,6 +234,10 @@ class Create_Puppet_Screen(MapOverlayScreen):
         self.keep_cores = False
         self.release_type = c.PUPPET_TYPE_INTEGRATED
         self.refresh_ui()
+
+    def get_panel_title(self):
+        return "Release Nations: " + queries.get_country_display_name(
+            self.releasing_country, self.map_screen.nation_data)
 
     def can_edit_realtime(self):
         if not queries.can_release_nations_for(self.map_screen, self.releasing_country):
@@ -257,10 +261,6 @@ class Create_Puppet_Screen(MapOverlayScreen):
 
     def refresh_ui(self):
         self.elements = [make_back_button(self.exit_screen, style="map")]
-        name = queries.get_country_display_name(self.releasing_country, self.map_screen.nation_data)
-        title_font = fonts.get("heading2")
-        title = fit_text(f"Release Nations: {name}", title_font, self.panel_rect.width - 2 * self.TITLE_MARGIN)
-        self.release_title = title_font.render(title, True, c.UI_TEXT_LIGHT)
         enabled = queries.can_release_nations_for(self.map_screen, self.releasing_country)
         width, height = self.RELEASE_TYPE_BUTTON_SIZE
         group_width = len(c.PUPPET_RELEASE_TYPES) * width + (len(c.PUPPET_RELEASE_TYPES) - 1) * self.RELEASE_TYPE_BUTTON_GAP
@@ -365,8 +365,6 @@ class Create_Puppet_Screen(MapOverlayScreen):
         for province_id, color in self.queued_highlights:
             overlay_renderer.draw_map_highlight(surface, self.map_screen, province_id, color, base_radius=10)
         self.draw_panel(surface)
-        surface.blit(self.release_title, self.release_title.get_rect(
-            midtop=(self.panel_rect.centerx, self.panel_rect.y + self.TITLE_Y_OFFSET)))
         font = fonts.get("normal")
         if not self.release_rows:
             surface.blit(font.render("No potential subjects available.", True, c.UI_TEXT_MUTED),

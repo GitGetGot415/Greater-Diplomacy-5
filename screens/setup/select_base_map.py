@@ -1,6 +1,6 @@
 import os
 from ui import dialogs
-from ui.navigation.game_state import FolderListState, RefreshingMenuListScreen
+from ui.navigation.game_state import ButtonMenuScreen, FolderListState, RefreshingMenuListScreen
 from ui.widgets.ui_elements import Button, make_back_button
 import data.constants as c
 from data import queries
@@ -8,6 +8,14 @@ from ui.dialogs import file_exchange
 from screens.setup import map_refresh
 class Select_Base_Map(RefreshingMenuListScreen, FolderListState):
     back_state = "MENU"
+
+    # One row of the custom map list.
+    ROW_BUTTONS = (
+        (c.SCREEN_WIDTH // 2 - 250, 0, "new_game", "blue", None, "edit_custom_map"),
+        (c.SCREEN_WIDTH // 2 + 70, 5, "small", "grey", "Rename", "start_rename"),
+        (c.SCREEN_WIDTH // 2 + 190, 5, "small", "green", "Export", "export_scenario_zip"),
+        (c.SCREEN_WIDTH // 2 + 310, 5, "small_square", "red", "X", "start_delete"),
+    )
 
     # sub_state -> (button/header label, data.constants directory attribute name)
     # for browsing maps that live in other scenario directories.
@@ -62,10 +70,9 @@ class Select_Base_Map(RefreshingMenuListScreen, FolderListState):
 
         if self.sub_state == "OTHER_CATEGORY":
             self.elements = [make_back_button(lambda: self.set_sub_state("CUSTOM_MAPS"))]
-            for i, (state, (label, _attr)) in enumerate(self.OTHER_MAP_CATEGORIES.items()):
-                self.elements.append(
-                    Button("centered", 220 + i * 100, "large", "blue", label,
-                           lambda s=state: self.set_sub_state(s)))
+            self.elements += ButtonMenuScreen.build_menu_buttons(
+                [(label, "blue", lambda s=state: self.set_sub_state(s))
+                 for state, (label, _attr) in self.OTHER_MAP_CATEGORIES.items()])
             return
 
         is_custom = self.sub_state == "CUSTOM_MAPS"
@@ -74,8 +81,7 @@ class Select_Base_Map(RefreshingMenuListScreen, FolderListState):
         if is_custom:
             self.elements.extend([
                 make_back_button(self.exit_screen),
-                Button(160, 20, "medium", "green", "Import .zip",
-                       lambda: file_exchange.import_zip_to_dir(self, self.managed_dir, self.refresh_ui)),
+                self.make_import_zip_button(),
                 Button("centered-160", c.SCREEN_HEIGHT - 100, "large", "purple", "New Map",
                        lambda: self.set_sub_state("BASE_MAPS")),
                 Button("centered+160", c.SCREEN_HEIGHT - 100, "large", "orange", "Edit Existing Map",
@@ -108,20 +114,10 @@ class Select_Base_Map(RefreshingMenuListScreen, FolderListState):
             return
 
         for i, btn_y in self.layout_menu_list(len(names)):
-            name = names[i]
+            self.add_folder_row(names[i], btn_y)
 
-            row_buttons = [
-                Button(c.SCREEN_WIDTH // 2 - 250, btn_y, "new_game", "blue", name,
-                       lambda n=name: self.start_editor_with_map(n, c.SCENARIOS_CUSTOM_DIR)),
-                Button(c.SCREEN_WIDTH // 2 + 70, btn_y + 5, "small", "grey", "Rename",
-                       lambda n=name: self.start_rename(n)),
-                Button(c.SCREEN_WIDTH // 2 + 190, btn_y + 5, "small", "green", "Export",
-                       lambda n=name: self.export_scenario_zip(n)),
-                Button(c.SCREEN_WIDTH // 2 + 310, btn_y + 5, "small_square", "red", "X",
-                       lambda n=name: self.start_delete(n)),
-            ]
-            for btn in row_buttons:
-                self.add_list_row(btn)
+    def edit_custom_map(self, map_name):
+        self.start_editor_with_map(map_name, c.SCENARIOS_CUSTOM_DIR)
 
     def trigger_base_map_data_refresh(self):
         """Calls the unified data refresh query for base maps."""

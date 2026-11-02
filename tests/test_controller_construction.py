@@ -43,6 +43,24 @@ class ControllerConstructionTests(unittest.TestCase):
     def setUpClass(cls):
         cls.controller, cls.surface = app_harness.boot()
 
+    def test_cached_harness_recovers_after_another_test_resizes_the_display(self):
+        from ui import dialogs
+
+        game_map = app_harness.boot_map()
+        try:
+            for acquire in (app_harness.boot, app_harness.boot_map):
+                pygame.display.set_mode((1, 1))
+                acquire()
+                # Popup construction failed when a cached harness kept the tiny display.
+                with mock.patch("ui.navigation.modal_stack.push") as push:
+                    dialogs.show_info("Fixture", "Cached display fixture.",
+                                      inline_parts=[("Cached display fixture.", None)])
+                push.assert_called_once()
+                self.assertIs(app_harness.boot()[0], self.controller)
+                self.assertIs(app_harness.boot_map(), game_map)
+        finally:
+            app_harness.boot()
+
     def test_state_keys_are_exactly_as_expected(self):
         self.assertEqual(set(self.controller.states), EXPECTED_STATES)
 

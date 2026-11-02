@@ -297,7 +297,7 @@ class EditorResearchTreeTests(unittest.TestCase):
         self.node("tip", 2).callback()
         research = self.map.nation_data[self.country]["research"]
         self.assertEqual(research, {"root": 2, "branch": 2, "tip": 2})
-        self.assertIsNone(self.screen.active_modal)
+        self.assertIsNone(self.screen.details_screen)
         self.node("branch", 1).callback()
         self.assertEqual(research, {"root": 2, "branch": 0, "tip": 0})
 

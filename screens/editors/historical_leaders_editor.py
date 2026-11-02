@@ -30,7 +30,7 @@ from ui.background_styles import EDITOR_PANEL_STYLES
 from ui.widgets import ui_elements
 from ui.widgets.scroll_panes import ScrollPanes
 from ui.widgets import text_utils
-from ui.widgets.ui_elements import Button, TextField, make_back_button
+from ui.widgets.ui_elements import Button, TextField, make_back_button, make_choice_button
 from ui.rendering.font_manager import fonts
 
 from ui.navigation import screen_runner
@@ -515,10 +515,10 @@ class Historical_Leaders_Editor(ScrollPanes, GameState):
                                   self.roster_rect.height, ROSTER_ROW_H):
             country = self.roster[i]
             label = f"{country} ({len(self.data.get(country, []))})"
-            btn = Button(self.roster_rect.x, y, "list_row", "green" if country == self.active_country else "blue",
-                        text_utils.truncate_chars(label, 28), lambda cc=country: self.select_country(cc), font_preset="button_small")
+            btn = make_choice_button(self.roster_rect.x, y, "list_row", text_utils.truncate_chars(label, 28),
+                                     country == self.active_country, lambda cc=country: self.select_country(cc),
+                                     font_preset="button_small")
             btn.rect.width = self.roster_rect.width - 50
-            btn.is_selected = country == self.active_country
             btn.pane = "roster"
             btn.click_guard = self._guard_roster
             self.elements.append(btn)

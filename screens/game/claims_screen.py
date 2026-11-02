@@ -2,12 +2,11 @@ import pygame
 import data.constants as c
 from data import queries
 from ui.navigation.game_state import MapOverlayScreen
-from ui.widgets.ui_elements import make_back_button, Button
+from ui.widgets.ui_elements import make_back_button, make_choice_button
 from ui.rendering.font_manager import fonts
 from ui.rendering import overlay_renderer
 from ui.bars import ui_bars
 from ui.background_styles import CLAIMS_PANEL_STYLES
-from ui.widgets import ui_elements
 from ui.navigation.screen_runner import _run_pygame_sub_screen
 
 
@@ -27,6 +26,10 @@ class Claims_Screen(MapOverlayScreen):
     # Docked to the left so the claimed provinces stay visible beside it.
     CENTER_PANEL = False
     overlay_alpha = 0
+    PANEL_STYLE = CLAIMS_PANEL_STYLES["main"]
+    PANEL_BORDER = c.MODAL_BORDER
+    PANEL_BORDER_WIDTH = 2
+    TITLE_Y_OFFSET = 10
 
     # Panel list metrics, shared by the drawing pass and the scroll measurement.
     SECTION_HEADER_H = 30
@@ -68,12 +71,9 @@ class Claims_Screen(MapOverlayScreen):
                 modes = [(self.panel_rect.x + 20, row_y, "YOURS", "Your Claims"),
                          (self.panel_rect.x + 200, row_y, "THEIRS", "Claims On You")]
 
-            # This row greys the inactive entries rather than showing them blue
             for x, y, mode, label in modes:
-                btn = Button(x, y, "brick", "blue" if self.view_mode == mode else "grey", label,
-                             lambda m=mode: self.set_view_mode(m))
-                btn.is_selected = (self.view_mode == mode)
-                self.elements.append(btn)
+                self.elements.append(make_choice_button(x, y, "brick", label, self.view_mode == mode,
+                                                        lambda m=mode: self.set_view_mode(m), idle_color="grey"))
 
         self._refresh_claims_data()
 
@@ -257,6 +257,11 @@ class Claims_Screen(MapOverlayScreen):
     #                          PANEL CONTENTS                            #
     # ------------------------------------------------------------------ #
 
+    def get_panel_title(self):
+        if self.is_picker:
+            return "Justify: " + queries.get_country_display_name(self.target_nation, self.map_screen.nation_data)
+        return "Territory Claims"
+
     def _nation_label(self, tag):
         return self.map_screen.nation_data.get(tag, {}).get("name", tag)
 
@@ -403,15 +408,7 @@ class Claims_Screen(MapOverlayScreen):
                     overlay_renderer.draw_map_highlight(surface, self.map_screen, pid, color, base_radius=4, inset=i, is_justifying=is_just)
 
         # Draw Information Panel
-        style = CLAIMS_PANEL_STYLES["main"]
-        ui_elements.draw_pixel_panel(surface, self.panel_rect, style["color"], c.MODAL_BORDER,
-                                     gradient_strength=style["gradient_strength"])
-
-        font = fonts.get("heading1")
-        heading = ("Justify: " + queries.get_country_display_name(
-            self.target_nation, self.map_screen.nation_data)) if self.is_picker else "Territory Claims"
-        title = font.render(heading, True, (255, 255, 255))
-        surface.blit(title, (self.panel_rect.centerx - title.get_width()//2, self.panel_rect.y + 10))
+        self.draw_panel(surface)
 
         if self.is_picker:
             hint = fonts.get("small").render(

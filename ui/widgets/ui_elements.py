@@ -826,6 +826,19 @@ def on_off_color(is_on):
     return "green" if is_on else "red"
 
 
+def make_choice_button(x, y, size_preset, label, is_selected, on_click, *, enabled=True,
+                       idle_color="blue", **button_options):
+    """One button in a group of options: green with the gold border when selected.
+
+    An unavailable option is greyed and cannot be clicked.
+    """
+    button = Button(x, y, size_preset, "green" if is_selected else idle_color, label, on_click, **button_options)
+    button.is_selected = is_selected
+    if not enabled:
+        button.apply_state(enabled=False)
+    return button
+
+
 def checkbox_label(text, is_checked):
     """The text of a list row that is ticked or not ticked."""
     return f"{'[X]' if is_checked else '[  ]'} {text}"

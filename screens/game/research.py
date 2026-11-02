@@ -4,7 +4,8 @@ import pygame
 from ui.navigation.game_state import GameState, ScreenLayer
 import data.constants as c
 from ui.widgets import ui_elements
-from ui.widgets.ui_elements import Button, draw_resource_string, draw_combat_stats, draw_bombardment_stats
+from ui.widgets.ui_elements import (Button, draw_resource_string, draw_combat_stats, draw_bombardment_stats,
+                                    make_choice_button)
 from ui.rendering.font_manager import fonts
 from ui.rendering import symbol_loader
 from data import queries, research_display
@@ -13,6 +14,8 @@ from ui.background_styles import RESEARCH_PANEL_STYLES
 from map_logic import politics
 from ui.widgets.text_utils import wrap_text
 from ui.dialogs.list_select_screen import ListSelectScreen
+from ui.navigation.modal_screen import ModalScreen
+from ui.navigation.screen_runner import _run_pygame_sub_screen
 from ui import dialogs
 from map_logic.system32.research_processor import select_research
 
@@ -68,7 +71,6 @@ SPECTATOR_HELP_LINES = ("EDIT COUNTRY RESEARCH:",) + EDITOR_HELP_LINES[1:3] + (
 MODAL_WIDTH = 800
 MODAL_HEIGHT = 500
 MODAL_ALPHA = 180
-MODAL_TITLE_X = 30
 MODAL_TITLE_Y = 30
 MODAL_ICON_X = 30
 MODAL_ICON_Y = 100
@@ -196,6 +198,258 @@ class ResearchCountrySelectScreen(ListSelectScreen):
         self.map_screen.next_state, self.map_screen.done = "RESEARCH", True
 
 
+class ResearchDetailsScreen(ModalScreen):
+    """One technology's cost, unlocks, statistics, and research action.
+
+    Everything it shows is prepared when it opens, so drawing runs no rules.
+    """
+    PANEL_SIZE = (MODAL_WIDTH, MODAL_HEIGHT)
+    OVERLAY_ALPHA = MODAL_ALPHA
+    PANEL_STYLE = RESEARCH_PANEL_STYLES["details"]
+    PANEL_BORDER = (200, 200, 200)
+    PANEL_BORDER_WIDTH = 2
+    TITLE_PRESET = "heading1"
+    TITLE_Y_OFFSET = MODAL_TITLE_Y
+
+    def __init__(self, research, node):
+        super().__init__(research, node["display_name"].upper())
+        self.research = research
+        self.node = node
+        self.unit_library = research.unit_library
+        self.building_library = research.building_library
+        self._cache_icon()
+        self._cache_forecast()
+        self._cache_unlocks()
+        self.refresh_ui()
+
+    def _cache_icon(self):
+        self.big_icon = None
+        icon = self.node["icon"]
+        if icon:
+            width, height = icon.get_size()
+            scale_factor = min(MODAL_ICON_BOX / width, MODAL_ICON_BOX / height)
+            self.big_icon = pygame.transform.scale(icon, (width * scale_factor, height * scale_factor))
+
+    def _cache_forecast(self):
+        """Prepares the cost line and any warning about how long research will take."""
+        map_screen = self.research.map_screen
+        cost = self.node["cost"]
+        days_per_turn = queries.get_days_per_turn(map_screen.scenario_settings)
+        pol_mult = politics.research_multiplier(map_screen.nation_data, self.research.subject)
+        faction_bonus = queries.get_faction_research_bonus(
+            self.research.subject, self.node["tech_key"], self.node["level"], map_screen.nation_data)
+        pts_per_turn = (c.BASE_RESEARCH_POINTS_PER_DAY * days_per_turn * pol_mult
+                        * (1.0 + faction_bonus))
+
+        # pts_per_turn is 0 at the authoritarian end of the political axis, which
+        # is a project that never finishes rather than one that takes a very
+        # large number of turns -- say so instead of printing the number.
+        base_time = (cost / pts_per_turn) if pts_per_turn > 0 else 0
+        time_txt = f"{max(1, int(base_time))} turns" if pts_per_turn > 0 else "halted"
+        sharing_text = (f"; faction sharing +{int(faction_bonus * 100)}%"
+                        if faction_bonus else "")
+        self.cost_surface = fonts.get("heading2").render(
+            f"Research Cost: {queries.format_number(cost)} pts ({time_txt}{sharing_text})",
+            True, c.COLOR_GOLD_HIGHLIGHT)
+
+        # --- AHEAD OF TIME SIMULATION ---
+        target_year = self.node.get("target_year", 1900)
+        actual_turns = 0
+        sim_year = queries.get_exact_year(map_screen.time_manager)
+        pts_accumulated = 0
+        year_inc = days_per_turn / 360.0
+
+        # Simulate the research progress turn-by-turn using the central math query
+        while pts_accumulated < cost and actual_turns < c.MAX_RESEARCH_TURN_SIMULATION:
+            mult = queries.get_research_multiplier(sim_year, target_year)
+            pts_accumulated += (pts_per_turn * mult)
+            sim_year += year_inc
+            actual_turns += 1
+
+        # A fully authoritarian nation researches at 0x, so the loop runs out
+        # its cap instead of finishing. Saying "~500 turns" would be a lie of a
+        # different kind to the one this warning exists to prevent.
+        warning = None
+        if pts_accumulated < cost:
+            warning = "Research is halted under the current political system."
+        elif actual_turns > base_time:
+            warning = f"Ahead of Time Penalty! Estimated Actual Time: ~{actual_turns} turns"
+        self.warning_surface = fonts.get("normal").render(warning, True, (255, 100, 100)) if warning else None
+        self.warning_icon_size = max(16, fonts.get("normal").get_height())
+        self.warning_icon = ui_elements.scale_icon(c.ICON_WARNING, self.warning_icon_size) if warning else None
+
+    def _cache_unlocks(self):
+        """Wraps capability notes and prepares each listed entity's numbers."""
+        research = self.research
+        map_screen = research.map_screen
+        self.entity_name = research.get_entity_name(self.node["tech_key"], self.node["level"])
+        self.modal_unlocks = queries.get_tech_unlocks(
+            self.node["tech_key"], self.node["level"], context=map_screen)
+        self.modal_entities = list(dict.fromkeys(
+            name for name in [self.entity_name, *self.modal_unlocks]
+            if name in self.unit_library or name in self.building_library))
+        compact = len(self.modal_entities) > 1
+        self.modal_body_line_step = MODAL_COMPACT_LINE_STEP_Y if compact else MODAL_LINE_STEP_Y
+        self.modal_subhead_step = MODAL_COMPACT_LINE_STEP_Y if compact else MODAL_SUBHEAD_STEP_Y
+        self.modal_entity_padding = MODAL_COMPACT_ENTITY_PADDING_Y if compact else MODAL_ENTITY_PADDING_Y
+        self.modal_building_outputs = {
+            name: queries.get_building_output(name, research.subject_data.get("research", {}),
+                                             self.building_library, context=map_screen)
+            for name in [self.entity_name, *self.modal_unlocks]
+            if name in self.building_library}
+        self.modal_building_costs = {
+            name: (queries.get_building_cost(name, research.subject, map_screen.map_data, self.building_library)
+                   if name == "Basic Factory" and research.subject in map_screen.nation_data
+                   else self.building_library[name])
+            for name in self.modal_building_outputs}
+        has_air_traits = self.unit_library.get(self.entity_name, {}).get("air_role")
+        self.modal_body_font = fonts.get("small" if has_air_traits or compact else "normal")
+        font = self.modal_body_font
+        width = MODAL_WIDTH - MODAL_TEXT_X - MODAL_TEXT_RIGHT_MARGIN
+        self.modal_unlock_surfaces = [font.render(line, True, (150, 255, 150))
+            for unlock in self.modal_unlocks
+            for line in wrap_text(f"- {queries.get_unit_display_name(unlock, self.unit_library)}", font, width)]
+        self.modal_unlock_line_step = (font.get_height() + MODAL_TRAIT_LINE_GAP
+                                       if has_air_traits else self.modal_body_line_step)
+
+    def _action(self):
+        """The (label, color, callback) of the action button, or None."""
+        research = self.research
+        if not research.can_edit:
+            # The one slot the action button lives in, so an onlooker has no
+            # route to start or pause research at all rather than a
+            # disabled-looking button that still fires.
+            label = "Tactical: Read Only" if research.map_screen.tactical_mode else "Spectator: Read Only"
+            return label, "grey", lambda: None
+        status = self.node["status"]
+        if status == "AVAILABLE":
+            if len(research.subject_data.get("research_queue", [])) >= c.RESEARCH_SLOTS:
+                return "Slots Full", "grey", lambda: None
+            return "Start Research", "blue", self.start_research
+        if status == "RESEARCHING":
+            return "Pause", "orange", self.pause_research
+        if status == "LOCKED":
+            return "Missing Reqs", "red", lambda: None
+        if status == "COMPLETED":
+            return "Researched", "green", lambda: None
+        return None
+
+    def refresh_ui(self):
+        p = self.panel_rect
+        y = p.y + MODAL_BTN_Y_OFFSET
+        self.elements = [Button(p.x + MODAL_CANCEL_BTN_X, y, "small", "red", "Cancel", self.exit_screen)]
+        action = self._action()
+        if action:
+            label, color, callback = action
+            self.elements.append(Button(p.x + MODAL_ACTION_BTN_X, y, "medium", color, label, callback))
+
+    def start_research(self):
+        self.research.start_or_resume_research(self.node["tech_key"])
+        self.exit_screen()
+
+    def pause_research(self):
+        self.research.pause_research(self.node["tech_key"])
+        self.exit_screen()
+
+    def draw_body(self, surface):
+        panel_rect = self.panel_rect
+
+        if self.big_icon:
+            surface.blit(self.big_icon,
+                         (panel_rect.x + MODAL_ICON_X + (MODAL_ICON_BOX - self.big_icon.get_width()) // 2,
+                          panel_rect.y + MODAL_ICON_Y + (MODAL_ICON_BOX - self.big_icon.get_height()) // 2))
+
+        text_x = panel_rect.x + MODAL_TEXT_X
+        surface.blit(self.cost_surface, (text_x, panel_rect.y + MODAL_COST_Y))
+
+        if self.warning_surface:
+            warn_x = text_x
+            if self.warning_icon:
+                surface.blit(self.warning_icon, (warn_x, panel_rect.y + MODAL_WARNING_Y + 2))
+                warn_x += self.warning_icon_size + 5
+            surface.blit(self.warning_surface, (warn_x, panel_rect.y + MODAL_WARNING_Y))
+
+        y_off = panel_rect.y + MODAL_BODY_START_Y # Shifted down to make room for the warning text
+
+        # Show what this tech unlocks - one per line so a long bonus string
+        # doesn't get crammed alongside others and run off the edge of the modal.
+        unlocks = self.modal_unlocks
+        font_small = self.modal_body_font
+        if unlocks:
+            surface.blit(font_small.render("Unlocks:", True, (150, 255, 150)), (text_x, y_off))
+            y_off += self.modal_body_line_step
+            for rendered in self.modal_unlock_surfaces:
+                surface.blit(rendered, (text_x, y_off))
+                y_off += self.modal_unlock_line_step
+
+        entities_to_show = self.modal_entities
+
+        # Fallback ONLY if there's no unit, no building, and no programmatic unlocks
+        if not entities_to_show and not unlocks:
+            txt1 = "Advanced statistical data unavailable."
+            surface.blit(font_small.render(txt1, True, c.UI_TEXT_MUTED), (text_x, y_off))
+            y_off += MODAL_LINE_STEP_Y
+
+        # Draw stats for all relevant entities dynamically
+        for entity in entities_to_show:
+            # Draw a sub-header if the tech unlocks multiple things or if the unlocked item has a different name than the tech
+            if entity != self.entity_name or len(entities_to_show) > 1:
+                label = queries.get_unit_display_name(entity, self.unit_library)
+                surface.blit(font_small.render(f"Stats for {label}:", True, c.COLOR_GOLD_HIGHLIGHT), (text_x, y_off))
+                y_off += self.modal_subhead_step
+
+            if entity in self.unit_library:
+                s = self.unit_library[entity]
+
+                # --- MODIFIED COMBAT STATS STRING ---
+                draw_combat_stats(
+                    surface, font_small, "Combat Stats:   ",
+                    s.get('attack', 0), s.get('defense', 0), s.get('health', 0), s.get('speed', 0),
+                    text_x, y_off, (200, 200, 200)
+                )
+                y_off += self.modal_body_line_step
+
+                if 'bombard_attack' in s:
+                    draw_bombardment_stats(
+                        surface, font_small,
+                        s.get('bombard_attack', 0), s.get('bombard_range', 0),
+                        text_x, y_off, (200, 200, 200)
+                    )
+                    y_off += self.modal_body_line_step
+
+                draw_resource_string(
+                    surface, font_small, "Production Cost:   ",
+                    s.get('cost_materials', 0), s.get('cost_manpower', 0), s.get('cost_fuel', 0),
+                    text_x, y_off, (200, 200, 200)
+                )
+                y_off += self.modal_body_line_step
+
+            elif entity in self.building_library:
+                s = self.modal_building_costs[entity]
+
+                txt1 = f"Construction Time: {max(1, s.get('time',0) // 1)} turns"
+                surface.blit(font_small.render(txt1, True, c.UI_TEXT_LIGHT), (text_x, y_off))
+                y_off += self.modal_body_line_step
+
+                draw_resource_string(
+                    surface, font_small, "Yield (Per Turn):   ",
+                    self.modal_building_outputs[entity]["materials"],
+                    self.modal_building_outputs[entity]["manpower"],
+                    self.modal_building_outputs[entity]["fuel"],
+                    text_x, y_off, (150, 255, 150), is_yield=True
+                )
+                y_off += self.modal_body_line_step
+
+                draw_resource_string(
+                    surface, font_small, "Construction Cost:   ",
+                    s.get('cost_materials', 0), s.get('cost_manpower', 0), s.get('cost_fuel', 0),
+                    text_x, y_off, (200, 200, 200)
+                )
+                y_off += self.modal_body_line_step
+
+            y_off += self.modal_entity_padding
+
+
 class Research_Screen(GameState):
     back_state = "MAP"
 
@@ -217,10 +471,8 @@ class Research_Screen(GameState):
         self.unit_library = queries.get_unit_library(self.map_screen)
         self.building_library = queries.get_building_library(self.map_screen)
         
-        self.active_modal = None
-
-        self.complete_panel_x = 250
-        self.complete_panel_y = 125
+        #: The open details window, cleared when it closes.
+        self.details_screen = None
 
         # --- Timeline Variables ---
         self.scroll_x = 0
@@ -353,7 +605,7 @@ class Research_Screen(GameState):
         self._sync_tech_node_positions()
 
     def additional_events(self, event):
-        if self.current_category in self.nodes and not self.active_modal:
+        if self.current_category in self.nodes:
             if event.type == pygame.MOUSEWHEEL:
                 self.target_scroll_x += event.y * SCROLL_WHEEL_STEP
 
@@ -493,7 +745,7 @@ class Research_Screen(GameState):
         self.unit_library = queries.get_unit_library(map_ref)
         self.building_library = queries.get_building_library(map_ref)
         self.current_category = "INFANTRY"
-        self.active_modal = None
+        self.details_screen = None
         self.scroll_x = 0
         self.target_scroll_x = 0
         # Research_Screen is a singleton built once at boot (see main.py), but the
@@ -508,7 +760,6 @@ class Research_Screen(GameState):
 
     def set_category(self, cat):
         self.current_category = queries.normalize_air_category(cat)
-        self.active_modal = None
         self.scroll_x = 0
         self.target_scroll_x = 0
         self.enforce_scroll_bounds()
@@ -529,35 +780,6 @@ class Research_Screen(GameState):
         queue = player_data.setdefault("research_queue", [])
         self.cache_header()
         
-        is_tactical = self.map_screen.tactical_mode
-
-        if self.active_modal:
-            self.cache_modal_unlocks()
-            st = self.active_modal["status"]
-            panel_x, panel_y = self.complete_panel_x, self.complete_panel_y
-
-            self.elements.append(Button(panel_x + MODAL_CANCEL_BTN_X, panel_y + MODAL_BTN_Y_OFFSET, "small", "red", "Cancel", self.close_modal))
-
-            if not self.can_edit:
-                # The one slot the action button lives in, so an onlooker has no
-                # route to modal_start_research or modal_pause_research at all
-                # rather than a disabled-looking button that still fires.
-                label = "Tactical: Read Only" if is_tactical else "Spectator: Read Only"
-                self.elements.append(Button(panel_x + MODAL_ACTION_BTN_X, panel_y + MODAL_BTN_Y_OFFSET, "medium", "grey", label, lambda: None))
-            else:
-                if st == "AVAILABLE":
-                    if len(queue) >= c.RESEARCH_SLOTS:
-                        self.elements.append(Button(panel_x + MODAL_ACTION_BTN_X, panel_y + MODAL_BTN_Y_OFFSET, "medium", "grey", "Slots Full", lambda: None))
-                    else:
-                        self.elements.append(Button(panel_x + MODAL_ACTION_BTN_X, panel_y + MODAL_BTN_Y_OFFSET, "medium", "blue", "Start Research", self.modal_start_research))
-                elif st == "RESEARCHING":
-                    self.elements.append(Button(panel_x + MODAL_ACTION_BTN_X, panel_y + MODAL_BTN_Y_OFFSET, "medium", "orange", "Pause", self.modal_pause_research))
-                elif st == "LOCKED":
-                    self.elements.append(Button(panel_x + MODAL_ACTION_BTN_X, panel_y + MODAL_BTN_Y_OFFSET, "medium", "red", "Missing Reqs", lambda: None))
-                elif st == "COMPLETED":
-                    self.elements.append(Button(panel_x + MODAL_ACTION_BTN_X, panel_y + MODAL_BTN_Y_OFFSET, "medium", "green", "Researched", lambda: None))
-            return
-        
         self.elements.append(Button(*EXIT_BTN_POS, "small", "red", "Exit", self.exit_screen, sound_kind="back"))
 
         category_width, category_height = c.SIZES["medium"]
@@ -565,11 +787,10 @@ class Research_Screen(GameState):
         category_width = min(category_width,
                              (available_width - CATEGORY_BTN_GAP * (len(self.categories) - 1)) // len(self.categories))
         for i, cat in enumerate(self.categories):
-            color = "green" if self.current_category == cat else "blue"
-            btn = Button(CATEGORY_BTN_START_X + i * (category_width + CATEGORY_BTN_GAP), CATEGORY_BTN_Y,
-                         (category_width, category_height), color, cat,
-                         lambda c=cat: self.set_category(c))
-            self.elements.append(btn)
+            self.elements.append(make_choice_button(
+                CATEGORY_BTN_START_X + i * (category_width + CATEGORY_BTN_GAP), CATEGORY_BTN_Y,
+                (category_width, category_height), cat, self.current_category == cat,
+                lambda c=cat: self.set_category(c)))
 
         if self.current_category == "COMPLETED":
             self.cache_completed_text_list(res_levels)
@@ -703,7 +924,12 @@ class Research_Screen(GameState):
         if self.editing_research_levels:
             self.toggle_editor_tech(node_info["tech_key"], node_info["level"])
             return
-        self.active_modal = node_info
+        self.cancel_active_drags()
+        self.details_screen = ResearchDetailsScreen(self, node_info)
+        _run_pygame_sub_screen(self.map_screen, self.details_screen, on_done=self._details_closed)
+
+    def _details_closed(self):
+        self.details_screen = None
         self.refresh_ui()
 
     def toggle_editor_tech(self, tech_key, level):
@@ -798,45 +1024,6 @@ class Research_Screen(GameState):
         self.research_confirmation_pending = False
         super().exit_screen()
 
-    def cache_modal_unlocks(self):
-        """Wrap capability notes once when the research detail panel changes."""
-        entity_name = self.get_entity_name(self.active_modal["tech_key"], self.active_modal["level"])
-        self.modal_unlocks = queries.get_tech_unlocks(
-            self.active_modal["tech_key"], self.active_modal["level"], context=self.map_screen)
-        self.modal_entities = list(dict.fromkeys(
-            name for name in [entity_name, *self.modal_unlocks]
-            if name in self.unit_library or name in self.building_library))
-        compact = len(self.modal_entities) > 1
-        self.modal_body_line_step = MODAL_COMPACT_LINE_STEP_Y if compact else MODAL_LINE_STEP_Y
-        self.modal_subhead_step = MODAL_COMPACT_LINE_STEP_Y if compact else MODAL_SUBHEAD_STEP_Y
-        self.modal_entity_padding = MODAL_COMPACT_ENTITY_PADDING_Y if compact else MODAL_ENTITY_PADDING_Y
-        self.modal_building_outputs = {
-            name: queries.get_building_output(name, self.subject_data.get("research", {}),
-                                             self.building_library, context=self.map_screen)
-            for name in [entity_name, *self.modal_unlocks]
-            if name in self.building_library}
-        has_air_traits = self.unit_library.get(entity_name, {}).get("air_role")
-        self.modal_body_font = fonts.get("small" if has_air_traits or compact else "normal")
-        font = self.modal_body_font
-        width = MODAL_WIDTH - MODAL_TEXT_X - MODAL_TEXT_RIGHT_MARGIN
-        self.modal_unlock_surfaces = [font.render(line, True, (150, 255, 150))
-            for unlock in self.modal_unlocks
-            for line in wrap_text(f"- {queries.get_unit_display_name(unlock, self.unit_library)}", font, width)]
-        self.modal_unlock_line_step = (font.get_height() + MODAL_TRAIT_LINE_GAP
-                                       if has_air_traits else self.modal_body_line_step)
-        
-    def close_modal(self):
-        self.active_modal = None
-        self.refresh_ui()
-
-    def modal_start_research(self):
-        self.start_or_resume_research(self.active_modal["tech_key"])
-        self.close_modal()
-
-    def modal_pause_research(self):
-        self.pause_research(self.active_modal["tech_key"])
-        self.close_modal()
-
     def start_or_resume_research(self, tech_name):
         if self.editing_research_levels or not self.can_edit:
             return
@@ -865,7 +1052,7 @@ class Research_Screen(GameState):
         self.refresh_ui()
 
     def draw_timeline_axis(self, surface):
-        if self.current_category in ["COMPLETED"] or self.active_modal:
+        if self.current_category in ["COMPLETED"]:
             return
 
         current_year = self.map_screen.time_manager.year
@@ -1004,191 +1191,6 @@ class Research_Screen(GameState):
         self.hscroll_track_rect = track
         self.hscroll_handle_rect = handle
 
-    def draw_subscreen_modal(self, surface):
-        ui_bars.draw_fullscreen_overlay(surface, MODAL_ALPHA)
-
-        panel_rect = pygame.Rect(self.complete_panel_x, self.complete_panel_y, MODAL_WIDTH, MODAL_HEIGHT)
-        style = RESEARCH_PANEL_STYLES["details"]
-        ui_elements.draw_pixel_panel(surface, panel_rect, style["color"], (200, 200, 200),
-                                     gradient_strength=style["gradient_strength"])
-
-        font_title = fonts.get("heading1")
-        font_med = fonts.get("heading2")
-        font_small = fonts.get("normal")
-
-        title = font_title.render(self.active_modal["display_name"].upper(), True, (255, 255, 255))
-        surface.blit(title, (panel_rect.x + MODAL_TITLE_X, panel_rect.y + MODAL_TITLE_Y))
-
-        if self.active_modal["icon"]:
-            original_icon = self.active_modal["icon"]
-            width, height = original_icon.get_size()
-
-            scale_factor = min(MODAL_ICON_BOX / width, MODAL_ICON_BOX / height)
-            
-            new_width = width * scale_factor
-            new_height = height * scale_factor
-        
-            big_icon = pygame.transform.scale(original_icon, (new_width, new_height))
-            
-            surface.blit(big_icon, (panel_rect.x + MODAL_ICON_X + (MODAL_ICON_BOX - new_width) // 2,
-                                    panel_rect.y + MODAL_ICON_Y + (MODAL_ICON_BOX - new_height) // 2))
-
-        cost = self.active_modal["cost"]
-        
-        days_per_turn = queries.get_days_per_turn(self.map_screen.scenario_settings)
-        pol_mult = politics.research_multiplier(self.map_screen.nation_data, self.subject)
-        faction_bonus = queries.get_faction_research_bonus(
-            self.subject, self.active_modal["tech_key"], self.active_modal["level"],
-            self.map_screen.nation_data)
-        pts_per_turn = (c.BASE_RESEARCH_POINTS_PER_DAY * days_per_turn * pol_mult
-                        * (1.0 + faction_bonus))
-        
-        # pts_per_turn is 0 at the authoritarian end of the political axis, which
-        # is a project that never finishes rather than one that takes a very
-        # large number of turns -- say so instead of printing the number.
-        base_time = (cost / pts_per_turn) if pts_per_turn > 0 else 0
-        time_txt = f"{max(1, int(base_time))} turns" if pts_per_turn > 0 else "halted"
-        sharing_text = (f"; faction sharing +{int(faction_bonus * 100)}%"
-                        if faction_bonus else "")
-        cost_txt = font_med.render(
-            f"Research Cost: {queries.format_number(cost)} pts ({time_txt}{sharing_text})",
-            True, c.COLOR_GOLD_HIGHLIGHT)
-        surface.blit(cost_txt, (panel_rect.x + MODAL_TEXT_X, panel_rect.y + MODAL_COST_Y))
-
-        # --- AHEAD OF TIME SIMULATION ---
-        current_exact_year = queries.get_exact_year(self.map_screen.time_manager)
-        target_year = self.active_modal.get("target_year", 1900)
-        
-        actual_turns = 0
-        sim_year = current_exact_year
-        pts_accumulated = 0
-        
-        base_pts_per_turn = (c.BASE_RESEARCH_POINTS_PER_DAY * days_per_turn * pol_mult
-                             * (1.0 + faction_bonus))
-        year_inc = days_per_turn / 360.0
-        
-        # Simulate the research progress turn-by-turn using the central math query
-        while pts_accumulated < cost and actual_turns < c.MAX_RESEARCH_TURN_SIMULATION:
-            mult = queries.get_research_multiplier(sim_year, target_year)
-            pts_accumulated += (base_pts_per_turn * mult)
-            sim_year += year_inc
-            actual_turns += 1
-
-        # A fully authoritarian nation researches at 0x, so the loop runs out
-        # its cap instead of finishing. Saying "~500 turns" would be a lie of a
-        # different kind to the one this warning exists to prevent.
-        stalled = pts_accumulated < cost
-
-        if stalled:
-            warn_x = panel_rect.x + MODAL_TEXT_X
-            icon_h = max(16, font_small.get_height())
-            warn_icon = ui_elements.scale_icon(c.ICON_WARNING, icon_h)
-            if warn_icon:
-                surface.blit(warn_icon, (warn_x, panel_rect.y + MODAL_WARNING_Y + 2))
-                warn_x += icon_h + 5
-            warn_txt = font_small.render("Research is halted under the current political system.",
-                                         True, (255, 100, 100))
-            surface.blit(warn_txt, (warn_x, panel_rect.y + MODAL_WARNING_Y))
-        elif actual_turns > base_time:
-            # --- MODIFIED WARNING LOGIC ---
-            warn_x = panel_rect.x + MODAL_TEXT_X
-            icon_h = max(16, font_small.get_height())
-            warn_icon = ui_elements.scale_icon(c.ICON_WARNING, icon_h)
-            if warn_icon:
-                surface.blit(warn_icon, (warn_x, panel_rect.y + MODAL_WARNING_Y + 2))
-                warn_x += icon_h + 5
-
-
-            warn_txt = font_small.render(f"Ahead of Time Penalty! Estimated Actual Time: ~{actual_turns} turns", True, (255, 100, 100))
-            surface.blit(warn_txt, (warn_x, panel_rect.y + MODAL_WARNING_Y))
-        # --------------------------------
-
-        y_off = panel_rect.y + MODAL_BODY_START_Y # Shifted down to make room for the warning text
-        text_x = panel_rect.x + MODAL_TEXT_X
-        entity_name = self.get_entity_name(self.active_modal["tech_key"], self.active_modal["level"])
-        
-        # Show what this tech unlocks - one per line so a long bonus string
-        # doesn't get crammed alongside others and run off the edge of the modal.
-        unlocks = self.modal_unlocks
-        font_small = self.modal_body_font
-        if unlocks:
-            surface.blit(font_small.render("Unlocks:", True, (150, 255, 150)), (text_x, y_off))
-            y_off += self.modal_body_line_step
-            for rendered in self.modal_unlock_surfaces:
-                surface.blit(rendered, (text_x, y_off))
-                y_off += self.modal_unlock_line_step
-            
-        entities_to_show = self.modal_entities
-                    
-        # Fallback ONLY if there's no unit, no building, and no programmatic unlocks
-        if not entities_to_show and not unlocks:
-            txt1 = "Advanced statistical data unavailable."
-            surface.blit(font_small.render(txt1, True, c.UI_TEXT_MUTED), (text_x, y_off))
-            y_off += MODAL_LINE_STEP_Y
-
-
-        # Draw stats for all relevant entities dynamically
-        for entity in entities_to_show:
-            # Draw a sub-header if the tech unlocks multiple things or if the unlocked item has a different name than the tech
-            if entity != entity_name or len(entities_to_show) > 1:
-                label = queries.get_unit_display_name(entity, self.unit_library)
-                surface.blit(font_small.render(f"Stats for {label}:", True, c.COLOR_GOLD_HIGHLIGHT), (text_x, y_off))
-                y_off += self.modal_subhead_step
-                
-            if entity in self.unit_library:
-                s = self.unit_library[entity]
-                
-                # --- MODIFIED COMBAT STATS STRING ---
-                draw_combat_stats(
-                    surface, font_small, "Combat Stats:   ",
-                    s.get('attack', 0), s.get('defense', 0), s.get('health', 0), s.get('speed', 0),
-                    text_x, y_off, (200, 200, 200)
-                )
-                y_off += self.modal_body_line_step
-
-                if 'bombard_attack' in s:
-                    draw_bombardment_stats(
-                        surface, font_small,
-                        s.get('bombard_attack', 0), s.get('bombard_range', 0),
-                        text_x, y_off, (200, 200, 200)
-                    )
-                    y_off += self.modal_body_line_step
-
-                draw_resource_string(
-                    surface, font_small, "Production Cost:   ",
-                    s.get('cost_materials', 0), s.get('cost_manpower', 0), s.get('cost_fuel', 0),
-                    text_x, y_off, (200, 200, 200)
-                )
-                y_off += self.modal_body_line_step
-                
-            elif entity in self.building_library:
-                if entity == "Basic Factory" and self.map_screen and self.subject in self.map_screen.nation_data:
-                    s = queries.get_building_cost(entity, self.subject, self.map_screen.map_data, self.building_library)
-                else:
-                    s = self.building_library[entity]
-
-                txt1 = f"Construction Time: {max(1, s.get('time',0) // 1)} turns"
-                surface.blit(font_small.render(txt1, True, c.UI_TEXT_LIGHT), (text_x, y_off))
-                y_off += self.modal_body_line_step
-                
-                draw_resource_string(
-                    surface, font_small, "Yield (Per Turn):   ",
-                    self.modal_building_outputs[entity]["materials"],
-                    self.modal_building_outputs[entity]["manpower"],
-                    self.modal_building_outputs[entity]["fuel"],
-                    text_x, y_off, (150, 255, 150), is_yield=True
-                )
-                y_off += self.modal_body_line_step
-                
-                draw_resource_string(
-                    surface, font_small, "Construction Cost:   ",
-                    s.get('cost_materials', 0), s.get('cost_manpower', 0), s.get('cost_fuel', 0),
-                    text_x, y_off, (200, 200, 200)
-                )
-                y_off += self.modal_body_line_step
-                
-            y_off += self.modal_entity_padding
-
     def cache_completed_text_list(self, res_levels):
         """Lay out the completed overview at the input/state boundary."""
         self.completed_text_surfaces = []
@@ -1278,13 +1280,3 @@ class Research_Screen(GameState):
 
         # ACTIVE RESEARCH SLOTS is now drawn by ResearchHudOverlay (appended last
         # in refresh_ui), so it renders on top of any scrolled tech-node button.
-
-        if self.active_modal:
-            self.draw_subscreen_modal(surface)
-
-    def handle_back_key(self):
-        # Back closes an open tech modal before it leaves the screen.
-        if self.active_modal:
-            self.close_modal()
-        else:
-            self.exit_screen()

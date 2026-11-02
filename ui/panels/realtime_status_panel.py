@@ -5,11 +5,10 @@ import pygame
 
 import data.constants as c
 from data import queries
-from ui.navigation.game_state import GameState
 from ui.rendering.font_manager import fonts
-from ui.widgets.ui_elements import make_back_button
 from ui.widgets import ui_elements
-from ui.widgets.flag_icons import draw_flag
+from ui.widgets.flag_icons import flag_surface
+from ui.widgets.table_screen import TableColumn, TableScreen
 from ui.panels.map_top_right_layout import realtime_status_rect
 
 from ui.navigation import screen_runner
@@ -24,46 +23,81 @@ def _ping_text(player, host_id):
     return f"{ping} ms" if isinstance(ping, int) else "Checking..."
 
 
-class _MatchDetails(GameState):
-    """Read-only live-match roster shown over the map without pausing it."""
-    title = "Real-Time Match Details"
-    title_y = 105
+# (row key, column label, column width)
+MATCH_DETAIL_COLUMNS = (("player", "Player", 190), ("country", "Country", 220), ("turn", "Turn status", 220),
+                        ("connection", "Connection", 140), ("ping", "Ping", 110))
+MATCH_DETAIL_CONNECTED_COLOR = (240, 240, 245)
+MATCH_DETAIL_DISCONNECTED_COLOR = (185, 150, 150)
+
+
+class _MatchDetails(TableScreen):
+    """Read-only live-match roster. The rows follow the session while it is open."""
 
     def __init__(self, map_screen):
-        super().__init__()
-        self.map_screen = map_screen
+        columns = [TableColumn(key, label, width, align="left",
+                               render=lambda row, k=key: row["cells"][k],
+                               icon=(lambda row: row["flag"]) if key == "country" else None)
+                   for key, label, width in MATCH_DETAIL_COLUMNS]
+        self.sorted_column = None
+        self.rows_signature = self._signature(map_screen)
+        super().__init__(map_screen, "Real-Time Match Details", columns, self._build_rows(map_screen),
+                         empty_message="No match is running.")
         self.bg_color = (8, 14, 31)
-        self.elements = [make_back_button(self.exit_screen, style="map")]
 
-    def additional_draw(self, surface):
-        session = self.map_screen.realtime_session
+    @staticmethod
+    def _player_values(map_screen):
+        """One dict of displayed text and flag owner per player."""
+        session = map_screen.realtime_session
         if not session:
-            return
-        panel = pygame.Rect(c.SCREEN_WIDTH // 2 - 390, 140, 780,
-                            min(470, 115 + 48 * max(1, len(session.players))))
-        ui_elements.draw_pixel_panel(surface, panel, (16, 25, 52), (105, 160, 235))
-        heading_font, row_font = fonts.get("normal"), fonts.get("tiny")
-        headings = ("Player", "Country", "Turn status", "Connection", "Ping")
-        columns = (panel.x + 24, panel.x + 210, panel.x + 365, panel.x + 555, panel.x + 675)
-        for heading, x in zip(headings, columns):
-            surface.blit(heading_font.render(heading, True, (180, 210, 255)), (x, panel.y + 18))
-        for index, player in enumerate(session.players.values()):
-            y = panel.y + 56 + index * 45
-            submitted = "Eliminated / spectating" if player.eliminated else (
+            return []
+        values = []
+        for player in session.players.values():
+            turn = "Eliminated / spectating" if player.eliminated else (
                 "Submitted" if player.submitted else "Not submitted")
-            connection = "Connected" if player.connected else "Disconnected"
-            values = (player.name, submitted, connection, _ping_text(player, session.host_id))
-            color = (240, 240, 245) if player.connected else (185, 150, 150)
-            surface.blit(row_font.render(str(values[0]), True, color), (columns[0], y))
-            country = (queries.get_country_display_name(player.country_id, self.map_screen.nation_data)
-                       if player.country_id else "No country")
-            country_x = columns[1]
-            if player.country_id and player.country_id in self.map_screen.nation_data:
-                country_x = draw_flag(surface, player.country_id, self.map_screen.nation_data,
-                                      country_x, y + 1)
-            surface.blit(row_font.render(str(country), True, color), (country_x, y))
-            for value, x in zip(values[1:], columns[2:]):
-                surface.blit(row_font.render(str(value), True, color), (x, y))
+            values.append({
+                "player": str(player.name),
+                "country": (queries.get_country_display_name(player.country_id, map_screen.nation_data)
+                            if player.country_id else "No country"),
+                "turn": turn,
+                "connection": "Connected" if player.connected else "Disconnected",
+                "ping": _ping_text(player, session.host_id),
+                "country_id": player.country_id,
+                "connected": player.connected,
+            })
+        return values
+
+    @classmethod
+    def _signature(cls, map_screen):
+        return [tuple(values.values()) for values in cls._player_values(map_screen)]
+
+    @classmethod
+    def _build_rows(cls, map_screen):
+        font = fonts.get("small")
+        rows = []
+        for values in cls._player_values(map_screen):
+            color = MATCH_DETAIL_CONNECTED_COLOR if values["connected"] else MATCH_DETAIL_DISCONNECTED_COLOR
+            country_id = values["country_id"]
+            rows.append({**values,
+                         "cells": {key: font.render(values[key], True, color)
+                                   for key, _label, _width in MATCH_DETAIL_COLUMNS},
+                         "flag": (flag_surface(country_id, map_screen.nation_data)
+                                  if country_id and country_id in map_screen.nation_data else None)})
+        return rows
+
+    def sort_by(self, col):
+        self.sorted_column = col
+        super().sort_by(col)
+
+    def update(self):
+        signature = self._signature(self.map_screen)
+        if signature == self.rows_signature:
+            return
+        self.rows_signature = signature
+        self.rows = self._build_rows(self.map_screen)
+        if self.sorted_column:
+            # sort_by stores the direction for the next click, so this one is its opposite.
+            self.rows.sort(key=self.sorted_column.sort_key,
+                           reverse=not self.sort_reverse[self.sorted_column.key])
 
 
 def show_details(map_screen):

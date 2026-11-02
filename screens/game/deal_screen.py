@@ -33,11 +33,10 @@ from map_logic.diplomacy import deal as deal_mod
 from map_logic.diplomacy import diplomacy_messages, peace_scope, reach, war_score
 from ui.rendering import overlay_renderer, refresh_map
 from ui.rendering.font_manager import fonts
-from screens.game.diplomacy_screen_widgets import build_choice_button
 from ui.widgets import text_utils
 from ui.bars import ui_bars
 from ui.navigation.screen_runner import _run_pygame_sub_screen
-from ui.widgets.ui_elements import Button, draw_text_box, process_text_input
+from ui.widgets.ui_elements import Button, draw_text_box, make_choice_button, process_text_input
 
 from map_logic.ai.scripted_events import scripted_event_response_preview
 
@@ -761,22 +760,21 @@ class Deal_Screen(MapOverlayScreen):
                                 self.exit_screen, sound_kind="back")]
 
         for side, picks in ((TAKE, self.take_ids), (GIVE, self.give_ids)):
-            self.elements.append(build_choice_button(
+            self.elements.append(make_choice_button(
                 self._col_x(side) + self.LABEL_W, self.panel_rect.y + self.Y_RECIPIENT,
-                "thin", f"To: {self._recipient_label(side)}", True,
-                self.list_open == side,
+                "thin", f"To: {self._recipient_label(side)}", self.list_open == side,
                 lambda s=side: self.open_recipient_list(s), font_preset="small"))
-            self.elements.append(build_choice_button(
+            self.elements.append(make_choice_button(
                 self._col_x(side) + self.LABEL_W, self.panel_rect.y + self.Y_PROVINCES,
-                "small", f"Pick ({len(picks)})", True, self.picking == side,
+                "small", f"Pick ({len(picks)})", self.picking == side,
                 lambda s=side: self.set_picking(s), font_preset="small"))
 
         occupied = self.occupied_of_theirs()
         if occupied:
             taken_all = occupied <= set(self.take_ids)
-            self.elements.append(build_choice_button(
+            self.elements.append(make_choice_button(
                 self.panel_rect.x + self.PAD, self.panel_rect.y + self.Y_NOTICE,
-                "diplomatic", f"Demand all {len(occupied)} I hold", True, taken_all,
+                "diplomatic", f"Demand all {len(occupied)} I hold", taken_all,
                 self.take_everything_occupied, font_preset="small"))
 
         self._build_clause_toggles()
@@ -809,9 +807,9 @@ class Deal_Screen(MapOverlayScreen):
         box = self.list_rect()
         window = options[self.list_scroll:self.list_scroll + self.LIST_ROWS]
         for i, nation in enumerate(window):
-            self.elements.append(build_choice_button(
+            self.elements.append(make_choice_button(
                 box.x + 6, box.y + 6 + i * self.LIST_ROW_H, "automation_option",
-                AUTO if nation is None else nation, True,
+                AUTO if nation is None else nation,
                 self.recipients[self.list_open] == nation,
                 lambda n=nation, s=self.list_open: self.choose_recipient(s, n),
                 font_preset="small"))
@@ -829,10 +827,10 @@ class Deal_Screen(MapOverlayScreen):
 
         x = self._terms_x()
         for i, (label, attr, enabled) in enumerate(toggles):
-            self.elements.append(build_choice_button(
+            self.elements.append(make_choice_button(
                 x, self.panel_rect.y + self.Y_RECIPIENT + i * (self.TOGGLE_H + 4),
-                "diplomatic", label, enabled, getattr(self, attr),
-                lambda a=attr: self.toggle_clause(a), font_preset="small"))
+                "diplomatic", label, getattr(self, attr),
+                lambda a=attr: self.toggle_clause(a), enabled=enabled, font_preset="small"))
 
     def toggle_clause(self, attr):
         setattr(self, attr, not getattr(self, attr))

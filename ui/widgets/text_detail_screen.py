@@ -37,7 +37,7 @@ class TextDetailScreen(GameState):
         self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
 
     def draw(self, surface):
-        surface.fill(self.bg_color)
+        self.draw_background(surface)
         ui_bars.draw_centered_title(surface, self.title, 25, "heading1")
 
         if self.subtitle:

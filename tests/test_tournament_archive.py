@@ -84,6 +84,7 @@ class TournamentArchiveTests(unittest.TestCase):
             for name in ("terrain.png", "id_map.png")}
         return loaded, result
 
+    @fast_tournament_crypto()
     def test_hosts_and_country_players_load_one_shared_snapshot(self):
         original_raw = copy.deepcopy(self.host.raw_json_data)
         path, payload = self.export()
@@ -106,6 +107,7 @@ class TournamentArchiveTests(unittest.TestCase):
         self.assertEqual(self.host.raw_json_data, original_raw)
         self.assertFalse(io.load_tournament(str(path), "invalid-key")[0])
 
+    @fast_tournament_crypto()
     def test_snapshot_stores_current_provinces_once_and_regenerates_overlays(self):
         path, payload = self.export()
         snapshot = io.decrypt_dict(payload["game_data"], self.host.multiplayer_session_key)
@@ -120,6 +122,7 @@ class TournamentArchiveTests(unittest.TestCase):
         for name in ("terrain.png", "id_map.png"):
             self.assertEqual((self.root / "temp_load" / name).read_bytes()[:8], b'\x89PNG\r\n\x1a\n')
 
+    @fast_tournament_crypto()
     def test_load_ignores_legacy_history_and_removes_stale_history_and_overlays(self):
         path, payload = self.export()
         payload["history"] = io.encrypt_dict(self.host.history, self.host.multiplayer_session_key)
@@ -174,6 +177,7 @@ class TournamentArchiveTests(unittest.TestCase):
         self.assertEqual(len(compressed), len(plain))
         self.assertEqual(io.decrypt_dict(compressed, "fixture-key"), data)
 
+    @fast_tournament_crypto()
     def test_legacy_uncompressed_snapshot_loads_for_all_recipients(self):
         path, payload = self.export()
         for field, key in (("game_data", self.host.multiplayer_session_key),
@@ -185,6 +189,7 @@ class TournamentArchiveTests(unittest.TestCase):
             self.assertTrue(loaded[0])
             self.assertEqual(snapshot["date"]["total_turns"], self.host.time_manager.total_turns)
 
+    @fast_tournament_crypto()
     def test_more_players_and_repeated_exports_add_only_key_records(self):
         first_country = next(iter(self.keys))
         single_path, single = self.export("single.gd5tour", {first_country: self.keys[first_country]})
@@ -207,6 +212,7 @@ class TournamentArchiveTests(unittest.TestCase):
             self.assertEqual(loaded[6], self.host.multiplayer_session_key)
             self.assertEqual(restored["nation_data"][cid]["inbox"], self.host.nation_data[cid]["inbox"])
 
+    @fast_tournament_crypto()
     def test_regenerated_key_still_opens_the_shared_snapshot(self):
         self.export()
         cid = next(iter(self.keys))
@@ -219,6 +225,7 @@ class TournamentArchiveTests(unittest.TestCase):
         self.assertEqual(loaded[6], self.host.multiplayer_session_key)
         self.assertEqual(restored, io.decrypt_dict(payload["game_data"], loaded[6]))
 
+    @fast_tournament_crypto()
     def test_move_session_uses_the_shared_key(self):
         context = {"tournament_session": self.host.multiplayer_session_key,
                    "tournament_turn": self.host.time_manager.total_turns}

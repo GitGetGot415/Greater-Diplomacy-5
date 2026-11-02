@@ -103,9 +103,6 @@ class UnitEventsScreen(TableScreen):
         unit_events.mark_unread(self.map_screen)
         self.map_screen.btn_unit_events.notification_count = self.map_screen._unit_event_unread
 
-    def draw_background(self, surface):
-        self.draw_checkerboard_background(surface, self.bg_color)
-
     def show_event(self, row):
         amount = f"\nHealth: {row['amount']:.2f}" if row["amount"] else ""
         dialogs.show_info(row["event_label"],

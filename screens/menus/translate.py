@@ -1,7 +1,7 @@
 import os
 import pygame
 from ui.navigation.game_state import GameState
-from ui.widgets.ui_elements import Button, make_back_button
+from ui.widgets.ui_elements import Button, make_back_button, make_choice_button
 from ui.rendering.font_manager import fonts
 from map_logic.imports import odtl
 from data import queries
@@ -310,17 +310,17 @@ class Translate(GameState):
             # Below the title, not beside it: at "medium" these two are wide
             # enough that the second one runs through the centred heading.
             # "medium" is 200 wide, so 25 and 255 leaves 30 between them.
-            Button(25, 90, "medium", "green" if self.direction == "TO_ODMAP" else "grey",
-                   "GD5 to .odmap", lambda: self.set_direction("TO_ODMAP")),
-            Button(255, 90, "medium", "green" if self.direction == "FROM_ODMAP" else "grey",
-                   ".odmap to GD5", lambda: self.set_direction("FROM_ODMAP")),
+            make_choice_button(25, 90, "medium", "GD5 to .odmap", self.direction == "TO_ODMAP",
+                               lambda: self.set_direction("TO_ODMAP"), idle_color="grey"),
+            make_choice_button(255, 90, "medium", ".odmap to GD5", self.direction == "FROM_ODMAP",
+                               lambda: self.set_direction("FROM_ODMAP"), idle_color="grey"),
             # A second row for Unciv. Below rather than beside: four "medium"
             # buttons do not fit across the screen, and the first row is where
             # a player looking for Open Doctrines expects to find it.
-            Button(25, 140, "medium", "green" if self.direction == "TO_UNCIV" else "grey",
-                   "GD5 to Unciv", lambda: self.set_direction("TO_UNCIV")),
-            Button(255, 140, "medium", "green" if self.direction == "FROM_UNCIV" else "grey",
-                   "Unciv to GD5", lambda: self.set_direction("FROM_UNCIV")),
+            make_choice_button(25, 140, "medium", "GD5 to Unciv", self.direction == "TO_UNCIV",
+                               lambda: self.set_direction("TO_UNCIV"), idle_color="grey"),
+            make_choice_button(255, 140, "medium", "Unciv to GD5", self.direction == "FROM_UNCIV",
+                               lambda: self.set_direction("FROM_UNCIV"), idle_color="grey"),
         ]
 
         # A browser has no folders, so it gets the two things it does have:

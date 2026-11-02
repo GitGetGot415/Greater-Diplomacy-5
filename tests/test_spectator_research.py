@@ -29,6 +29,7 @@ class SubjectTests(unittest.TestCase):
         cls.screen = cls.controller.states["RESEARCH"]
 
     def setUp(self):
+        self.enterContext(patch("screens.game.research._run_pygame_sub_screen"))
         self.addCleanup(self.screen.start_research, self.map)
         tree = {"test_research": {"display_name": "Test research", "category": "INDUSTRY",
                                   "years": [1900], "max_lvl": 1, "cost": 100, "req": {}}}
@@ -133,39 +134,32 @@ class SubjectTests(unittest.TestCase):
         finally:
             c.SPECTATOR_CAN_EDIT_RESEARCH = original
 
+    def available_node(self):
+        tech = next(iter(self.screen.tech_tree))
+        return {"status": "AVAILABLE", "tech_key": tech, "level": 1, "icon": None, "cost": 100,
+                "display_name": self.screen.get_display_name(tech, 1)}
+
     def test_with_the_switch_off_the_modal_offers_no_action(self):
         target = self.others()[0]
         self.spectate(target)
         original = c.SPECTATOR_CAN_EDIT_RESEARCH
         c.SPECTATOR_CAN_EDIT_RESEARCH = False
         try:
-            self.screen.active_modal = {"status": "AVAILABLE",
-                                        "tech_key": next(iter(self.screen.tech_tree)),
-                                        "level": 1, "display_name": self.screen.get_display_name(
-                                            next(iter(self.screen.tech_tree)), 1)}
-            self.screen.refresh_ui()
-            labels = [getattr(el, "text", "") for el in self.screen.elements]
+            self.screen.open_modal(self.available_node())
+            labels = [getattr(el, "text", "") for el in self.screen.details_screen.elements]
             self.assertIn("Spectator: Read Only", labels)
             self.assertNotIn("Start Research", labels)
         finally:
             c.SPECTATOR_CAN_EDIT_RESEARCH = original
-            self.screen.active_modal = None
 
     def test_a_player_still_gets_the_action_button(self):
         self.screen.start_research(self.map)
         self.map.tactical_mode = False
         self.map.nation_data[self.map.player_country]["research_queue"] = []
-        self.screen.active_modal = {"status": "AVAILABLE",
-                                    "tech_key": next(iter(self.screen.tech_tree)),
-                                    "level": 1, "display_name": self.screen.get_display_name(
-                                        next(iter(self.screen.tech_tree)), 1)}
-        try:
-            self.screen.refresh_ui()
-            labels = [getattr(el, "text", "") for el in self.screen.elements]
-            self.assertIn("Start Research", labels)
-            self.assertNotIn("Spectator: Read Only", labels)
-        finally:
-            self.screen.active_modal = None
+        self.screen.open_modal(self.available_node())
+        labels = [getattr(el, "text", "") for el in self.screen.details_screen.elements]
+        self.assertIn("Start Research", labels)
+        self.assertNotIn("Spectator: Read Only", labels)
 
     def test_view_mode_opens_details_but_cannot_change_research(self):
         target = self.others()[0]
@@ -173,7 +167,7 @@ class SubjectTests(unittest.TestCase):
         before = deepcopy(self.map.nation_data[target])
         button = next(button for button in self.screen.elements if getattr(button, "is_tech_node", False))
         button.callback()
-        self.assertIsNotNone(self.screen.active_modal)
+        self.assertIsNotNone(self.screen.details_screen)
         self.assertFalse(self.screen.can_edit)
         self.screen.start_or_resume_research("test_research")
         self.screen.pause_research("test_research")

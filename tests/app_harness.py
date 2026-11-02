@@ -62,6 +62,14 @@ def boot():
     """Returns (controller, surface), building them once per interpreter."""
     global _controller, _surface
     if _controller is not None:
+        # Other tests can resize the shared SDL display between harness calls.
+        import pygame
+        import data.constants as c
+        current = pygame.display.get_surface()
+        if current is None or current.get_size() != (c.SCREEN_WIDTH, c.SCREEN_HEIGHT):
+            pygame.display.init()
+            current = pygame.display.set_mode((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
+        _surface = current
         return _controller, _surface
 
     import mod_loader
@@ -107,10 +115,10 @@ def boot_map():
     were the ones the smoke test could not reach.
     """
     global _map
+    controller, _ = boot()
     if _map is not None:
         return _map
 
-    controller, _ = boot()
     import main
     import data.queries as queries
 

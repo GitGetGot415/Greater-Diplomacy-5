@@ -7,7 +7,7 @@ from ui.dialogs import pickers
 from ui.dialogs import file_exchange
 from data.map import history_io
 from ui.navigation.game_state import FolderListState
-from ui.widgets.ui_elements import Button, make_back_button
+from ui.widgets.ui_elements import make_back_button
 import data.constants as c
 
 from data.map.load_map import newer_version_message
@@ -18,15 +18,14 @@ class Load_Game(FolderListState):
 
     ROW_HEIGHT = 40
     ROW_TOP = 120
-    # (x, size preset, color, label, handler name) for the buttons on every save row.
-    # A None label falls back to the folder name.
-    ROW_BUTTONS = [
-        (20, "save_file", "blue", None, "load_specific_save"),
-        (785, "small_save_button", "purple", "History", "open_history_menu"),
-        (895, "small_save_button", "grey", "Rename", "start_rename"),
-        (1005, "small_save_button", "green", "Export", "export_save_zip"),
-        (1115, "small_save_button", "red", "Del", "start_delete"),
-    ]
+    ROW_BUTTONS = (
+        (20, 0, "save_file", "blue", None, "load_specific_save"),
+        (785, 0, "small_save_button", "purple", "History", "open_history_menu"),
+        (895, 0, "small_save_button", "grey", "Rename", "start_rename"),
+        (1005, 0, "small_save_button", "green", "Export", "export_save_zip"),
+        (1115, 0, "small_save_button", "red", "X", "start_delete"),
+    )
+    ROW_BUTTON_SOUNDS = {"open_history_menu": "time_select"}
 
     def __init__(self):
         super().__init__()
@@ -40,25 +39,13 @@ class Load_Game(FolderListState):
     def refresh_ui(self):
         self.elements = [
             make_back_button(self.exit_screen),
-            Button(160, 20, "medium", "green", "Import .zip",
-                   lambda: file_exchange.import_zip_to_dir(self, self.managed_dir, self.refresh_ui))
+            self.make_import_zip_button(),
         ]
 
         folders = self.list_folders()
         self.scroll_content_rect = pygame.Rect(0, 100, c.SCREEN_WIDTH, (c.SCREEN_HEIGHT - 50) - 100)
         for i, btn_y in self.layout_list_rows(len(folders), self.ROW_HEIGHT, self.ROW_TOP):
-            folder = folders[i]
-            for x, size, color, label, handler in self.ROW_BUTTONS:
-                btn = Button(x, btn_y, size, color, label or folder,
-                            lambda f=folder, h=handler: getattr(self, h)(f),
-                            sound_kind="time_select" if handler == "open_history_menu" else "click")
-                self.add_list_row(btn)
-
-    def additional_events(self, event):
-        self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
-
-    def additional_draw(self, surface):
-        self.draw_list_scrollbar(surface, c.SCREEN_WIDTH - 40, self.ROW_TOP, c.SCREEN_HEIGHT - 200)
+            self.add_folder_row(folders[i], btn_y)
 
     def export_save_zip(self, folder_name):
         file_exchange.export_dir_as_zip(os.path.join(self.managed_dir, folder_name), f"{folder_name}.zip")
