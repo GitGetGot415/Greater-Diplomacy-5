@@ -1,4 +1,4 @@
-"""ZIP extraction, research-project construction, and country appearance helpers."""
+"""ZIP extraction, music album folders, research-project construction, and country appearance helpers."""
 
 import copy
 import data.constants as c
@@ -10,20 +10,59 @@ from data.queries.tech import get_tech_requirements
 from data import queries
 
 
-def validated_scenario_name(name):
+def validated_scenario_name(name, label="Scenario Name"):
     """Accept a single portable folder name, or empty text for automatic naming."""
     if not isinstance(name, str):
-        raise ValueError("Scenario Name must be text.")
+        raise ValueError(f"{label} must be text.")
     name = name.strip()
     if not name:
         return ""
     if (name in (".", "..") or name.endswith(".")
             or any(char in '<>:"/\\|?*' or ord(char) < 32 for char in name)):
-        raise ValueError('Scenario Name cannot contain <>:"/\\|?*, control characters, or end with a period.')
+        raise ValueError(f'{label} cannot contain <>:"/\\|?*, control characters, or end with a period.')
     base = name.split(".", 1)[0].upper()
     if base in ("CON", "PRN", "AUX", "NUL") or re.fullmatch(r"(?:COM|LPT)[1-9]", base):
-        raise ValueError("Scenario Name is reserved by the operating system. Choose another name.")
+        raise ValueError(f"{label} is reserved by the operating system. Choose another name.")
     return name
+
+
+def is_user_album(album):
+    """True for an album folder made in the music screen, which may be deleted."""
+    return os.path.isfile(os.path.join(c.MUSIC_DIR, album, c.USER_ALBUM_MARKER))
+
+
+def create_user_album(name):
+    """Makes an empty album folder under c.MUSIC_DIR and returns its folder name.
+
+    Raises ValueError with a player-readable message when the name cannot be used.
+    """
+    name = validated_scenario_name(name, label="Album Name")
+    if not name:
+        raise ValueError("Enter a name for the album.")
+    existing = {folder.casefold() for folder in os.listdir(c.MUSIC_DIR)} if os.path.isdir(c.MUSIC_DIR) else set()
+    if name.casefold() in existing:
+        raise ValueError(f"An album named {name} already exists.")
+    album_dir = os.path.join(c.MUSIC_DIR, name)
+    try:
+        os.makedirs(album_dir)
+        with open(os.path.join(album_dir, c.USER_ALBUM_MARKER), "w", encoding="utf-8") as marker:
+            marker.write("Made in the music screen. Remove this file to stop the music screen from deleting this album.\n")
+    except OSError as error:
+        raise ValueError(f"Could not create the album: {error}") from error
+    return name
+
+
+def delete_user_album(album):
+    """Deletes an album folder made in the music screen.
+
+    Raises ValueError for a shipped album, or when the folder cannot be removed.
+    """
+    if not is_user_album(album):
+        raise ValueError(f"{album} is not an album made in the music screen, so it cannot be deleted here.")
+    try:
+        shutil.rmtree(os.path.join(c.MUSIC_DIR, album))
+    except OSError as error:
+        raise ValueError(f"Could not delete the album: {error}") from error
 
 
 def extract_and_flatten_zip(zip_path, extract_target_dir):

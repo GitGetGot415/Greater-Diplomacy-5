@@ -23,6 +23,9 @@ ALBUM_COLUMNS = 2
 # Album folder names shown first, in this order. Names with no matching folder
 # are skipped. Every other album follows, sorted Z to A.
 ALBUM_ORDER = ["Greater Diplomacy 5", "Greater Diplomacy 4", "Greater Diplomacy 3", "Greater Diplomacy 2", "Greater Diplomacy 1", "Experimental", "PenguinMod-ObjectLibraries"]
+# The tile that makes a new album is always the last tile, after every album.
+NEW_ALBUM_LABEL = "+ New Album"
+ALBUM_DELETE_BUTTON_SIZE = "tiny_square"
 ALBUM_MARGIN = 20
 ALBUM_GAP = 10
 ALBUM_TILE_SIZE = (140, 170)
@@ -202,15 +205,17 @@ class Music_Player(ScrollPanes, GameState):
         albums = pinned + sorted((album for album in self.controller.all_albums if album not in pinned),
                                  reverse=True)
         row_height = 0
-        for album_index, album in enumerate(albums):
-            is_active = album in self.controller.active_albums
+        # None stands for the new-album tile, which always comes last.
+        tiles = albums + [None]
+        for album_index, album in enumerate(tiles):
+            is_active = album is not None and album in self.controller.active_albums
             color = "green" if is_active else "grey"
             
             # --- IMPROVED COVER ART SEARCH ---
-            album_dir = os.path.join(c.MUSIC_DIR, album)
             icon_img = None
+            album_dir = None if album is None else os.path.join(c.MUSIC_DIR, album)
             
-            if os.path.exists(album_dir):
+            if album_dir is not None and os.path.exists(album_dir):
                 # Search the album folder for ANY valid image file to use as the cover art
                 for file in os.listdir(album_dir):
                     if file.lower().endswith(('.png', '.jpg', '.jpeg')):
@@ -223,7 +228,7 @@ class Music_Player(ScrollPanes, GameState):
                             print(f"Error loading icon {file} for {album}: {e}")
             
             # Only registers a click (sound included) when below the clipping header!
-            album_cb = lambda a=album: self.toggle_album(a)
+            album_cb = self.start_new_album if album is None else (lambda a=album: self.toggle_album(a))
             album_guard = lambda: pygame.mouse.get_pos()[1] >= 120
 
             column = album_index % ALBUM_COLUMNS
@@ -231,11 +236,13 @@ class Music_Player(ScrollPanes, GameState):
             if icon_img:
                 btn = Button(tile_x, y_offset, ALBUM_TILE_SIZE, color, album,
                              album_cb, image=icon_img, show_text=True, layout="vertical")
+            elif album is None:
+                btn = Button(tile_x, y_offset, ALBUM_TEXT_TILE_SIZE, "blue", NEW_ALBUM_LABEL, album_cb)
             else:
                 btn = Button(tile_x, y_offset, ALBUM_TEXT_TILE_SIZE, color, album, album_cb)
             row_height = max(row_height, btn.height)
-            # A row ends after its last column, or after the final album.
-            if column == ALBUM_COLUMNS - 1 or album_index == len(albums) - 1:
+            # A row ends after its last column, or after the final tile.
+            if column == ALBUM_COLUMNS - 1 or album_index == len(tiles) - 1:
                 y_offset += row_height + ALBUM_GAP
                 album_content_h += row_height + ALBUM_GAP
                 row_height = 0
@@ -245,6 +252,19 @@ class Music_Player(ScrollPanes, GameState):
             btn.sound_kind = "select_album"
             btn.pane = "album"
             self.elements.append(btn)
+
+            if album is not None and queries.is_user_album(album):
+                # Flush in the tile's top-right corner, on top of it in z-order
+                # (appended after) and in click priority (the tile's guard
+                # refuses clicks that land inside the X).
+                delete_btn = Button(btn.rect.right - c.SIZES[ALBUM_DELETE_BUTTON_SIZE][0], btn.rect.y,
+                                    ALBUM_DELETE_BUTTON_SIZE, "red", "X",
+                                    lambda a=album: self.start_delete_album(a))
+                delete_btn.click_guard = album_guard
+                delete_btn.pane = "album"
+                self.elements.append(delete_btn)
+                btn.click_guard = lambda dbtn=delete_btn: (
+                    not dbtn.rect.collidepoint(pygame.mouse.get_pos()) and album_guard())
 
         # Calculate max boundary for Album scrolling
         self._max_album = min(0, c.SCREEN_HEIGHT - 120 - album_content_h - 20)
@@ -782,6 +802,43 @@ class Music_Player(ScrollPanes, GameState):
         self.refresh_ui()
 
     # --- PLAYLIST ACTIONS ---
+    def start_new_album(self):
+        dialogs.ask_string("New Album", "Album name:", self.create_album, allow_empty=False)
+
+    def create_album(self, name):
+        if name is None:
+            return
+        try:
+            queries.create_user_album(name)
+        except ValueError as error:
+            dialogs.show_error("New Album", str(error))
+            return
+        self.controller.load_music_data()
+        self.refresh_ui()
+
+    def start_delete_album(self, album):
+        dialogs.ask_yes_no(
+            "Delete Album", f"Delete {album} and every file in it? This cannot be undone.",
+            lambda confirmed, a=album: self.delete_album(a) if confirmed else None)
+
+    def delete_album(self, album):
+        album_prefix = f"{c.MUSIC_DIR}/{album}/"
+        if self.controller.now_playing.replace("\\", "/").startswith(album_prefix):
+            # The playing file stays open, which blocks deleting its folder.
+            dialogs.show_error("Delete Album", f"A song from {album} is playing. Play a song from another album first.")
+            return
+        try:
+            queries.delete_user_album(album)
+        except ValueError as error:
+            dialogs.show_error("Delete Album", str(error))
+            return
+        self.controller.load_music_data()
+        self.refresh_ui()
+        # The shorter list can leave the pane scrolled past its new end.
+        if self._scroll_album < self._max_album:
+            self._scroll_album = self._max_album
+            self.refresh_ui()
+
     def toggle_album(self, album):
         if album in self.controller.active_albums:
             self.controller.active_albums.remove(album)

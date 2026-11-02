@@ -2264,6 +2264,9 @@ BACKGROUNDS_DIR = "assets/backgrounds"
 FLAGS_DIR = "assets/flags"
 PORTRAITS_DIR = "assets/portraits"
 MUSIC_DIR = "assets/music"
+# Created in an album folder that the player made in the music screen. Shipped
+# albums never have it, which is how the screen knows it may delete a folder.
+USER_ALBUM_MARKER = "user_album.txt"
 # These three are rebindable in Settings, so main.py overwrites them at startup
 # with whatever was persisted. The DEFAULT_ forms are the shipped values, and
 # are what settings loading falls back to -- reading the mutable name there

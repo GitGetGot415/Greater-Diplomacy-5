@@ -7,7 +7,7 @@ import pygame
 import data.constants as c
 from data import queries
 from ui.widgets.ui_elements import Button, Slider
-from screens.menus.music_player import Music_Player
+from screens.menus.music_player import Music_Player, NEW_ALBUM_LABEL
 
 
 def make_controller():
@@ -50,7 +50,7 @@ class ShuffleExclusionTests(unittest.TestCase):
         ]
         self.assertEqual(
             [button.text for button in album_buttons],
-            ["Zulu", "Bravo", "Alpha"],
+            ["Zulu", "Bravo", "Alpha", NEW_ALBUM_LABEL],
         )
 
     def test_random_selection_skips_excluded_tracks(self):

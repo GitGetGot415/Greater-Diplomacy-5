@@ -368,6 +368,10 @@ Browser startup music waits for the first mouse click or key press.
 
 beepbox_audio.py owns BeepBox and UltraBox JSON recognition, sample loading, and playback.
 Put song JSON files in an album folder under assets/music/.
+The "+ New Album" tile in the music screen asks for a name and makes an empty album folder.
+That folder holds a user_album.txt file. Only folders with this file show a delete button.
+Shipped album folders do not have this file, so the music screen cannot delete them.
+ALBUM_ORDER in screens/menus/music_player.py sets which albums show first. The "+ New Album" tile is always last.
 The format field selects the original BeepBox synth or the separate UltraBox synth.
 The existing music controls apply to both formats.
 UltraBox duration and seeking use its tempo changes and next-bar commands.
