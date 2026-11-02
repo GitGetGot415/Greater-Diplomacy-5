@@ -2661,6 +2661,7 @@ class Map(StateAccess, GameState):
         if army_panel.handle_back_key(self):
             return
         if self.selected_province:
+            ui_elements.play_ui_sound("back")
             self.deselect_province()
 
     def handle_orders_key(self):

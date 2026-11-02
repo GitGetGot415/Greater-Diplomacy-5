@@ -318,7 +318,7 @@ def _handle_custom_symbol_event(map_screen, event):
     canvas = _custom_canvas_rect(rect)
     if event.type == pygame.KEYDOWN:
         if event.key == pygame.K_ESCAPE:
-            map_screen.army_custom_symbol_state = None
+            handle_back_key(map_screen)
         elif event.key == pygame.K_RETURN:
             custom_symbol = _custom_symbol_rows(custom_state["pixels"])
             if custom_symbol is None:
@@ -367,9 +367,11 @@ def _handle_custom_symbol_event(map_screen, event):
 def handle_back_key(map_screen):
     """Close the foremost army editor layer, returning whether one was open."""
     if _custom_symbol_editor_state(map_screen) is not None:
+        ui_elements.play_ui_sound("back")
         map_screen.army_custom_symbol_state = None
         return True
     if _editor_state(map_screen) is not None:
+        ui_elements.play_ui_sound("back")
         map_screen.army_editor_state = None
         map_screen.army_custom_symbol_state = None
         return True

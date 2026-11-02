@@ -20,7 +20,7 @@ _KIND_ACCENTS = {
 
 class _MessageModal(_BaseModal):
     """A titled message with one OK button. The "info" kind is the blue popup:
-    it plays Help.mp3 when it opens and Back.wav when OK is clicked."""
+    it plays Info.mp3 when it opens and Back.wav when it closes."""
     BOX_MAX_W = 520
     BOX_CHROME_H = 170   # 110 of chrome plus the 60 the OK row occupies
     BORDER_WIDTH = 3
@@ -31,9 +31,9 @@ class _MessageModal(_BaseModal):
 
     def __init__(self, surface, title, message, on_result, kind, inline_parts=None, extra_h=0):
         self.accent = _KIND_ACCENTS.get(kind, _KIND_ACCENTS["info"])
-        is_info = self.accent == _KIND_ACCENTS["info"]
-        if is_info:
-            ui_elements.play_ui_sound("help")
+        self.is_info = self.accent == _KIND_ACCENTS["info"]
+        if self.is_info:
+            ui_elements.play_ui_sound("info")
         self.inline_lines = (render_inline_text(inline_parts, fonts.get("normal"),
                              min(self.BOX_MAX_W, surface.get_width() - 40) - 2 * self.BODY_MARGIN,
                              (210, 210, 210), wrap=True) if inline_parts is not None else None)
@@ -45,7 +45,7 @@ class _MessageModal(_BaseModal):
         self.BORDER_COLOR = self.accent
         self.ok_rect = pygame.Rect(self.box_rect.centerx - 60, self.box_rect.bottom - 55, 120, 40)
         self.ok_button = ui_elements.Button(*self.ok_rect.topleft, self.ok_rect.size, "blue", "OK",
-                                            self._finish, sound_kind="back" if is_info else "click")
+                                            self._finish, sound_kind="back" if self.is_info else "click")
         self.ok_button.set_colors(self.accent, _lighten(self.accent))
         self.body_rect = pygame.Rect(self.box_rect.x + self.BODY_MARGIN, self.box_rect.y + self.BODY_DY,
                                     self.box_rect.width - 2 * self.BODY_MARGIN,
@@ -56,6 +56,15 @@ class _MessageModal(_BaseModal):
     def _clamps_to_viewport(self):
         """Whether the content can outgrow the window, so the box must stop at its edge."""
         return self.inline_lines is not None
+
+    def close_on_key(self, key):
+        """Closes the popup if `key` dismisses it, and says whether it did."""
+        if key not in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_ESCAPE, pygame.K_SPACE, _back_key()):
+            return False
+        if self.is_info:
+            ui_elements.play_ui_sound("back")
+        self._finish()
+        return True
 
     def body_height(self):
         if self.inline_lines is None:
@@ -84,9 +93,7 @@ class _MessageModal(_BaseModal):
                           -self.body_rect.height if event.type == pygame.KEYDOWN and event.key == pygame.K_PAGEUP else 0)
                 self.body_scroll = max(0, min(self.body_scroll_limit, self.body_scroll + scroll))
             if event.type == pygame.KEYDOWN:
-                if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_ESCAPE,
-                                 pygame.K_SPACE, _back_key()):
-                    self._finish()
+                self.close_on_key(event.key)
             self.ok_button.handle_event(event)
 
     def draw_content(self, surface):

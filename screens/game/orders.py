@@ -1702,9 +1702,10 @@ class Orders_Screen(GameState):
             self.renaming_unit_actual_index = None
             self.refresh_ui()
         elif self.bombarding_unit_index is not None:
+            ui_elements.play_ui_sound("back")
             self.cancel_bombard_targeting()
         else:
-            self.exit_screen()
+            self.go_back()
 
     def handle_events(self, events):
         for event in events:

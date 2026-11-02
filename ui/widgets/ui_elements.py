@@ -32,7 +32,7 @@ MUSIC_UI_SOUND_PATHS = {
     "back": "assets/sounds/Back.wav",
     "table": "assets/sounds/Table.wav",
     "open_settings": "assets/sounds/Open Settings.mp3",
-    "help": "assets/sounds/Help.mp3",
+    "info": "assets/sounds/Info.mp3",
     "create_army": "assets/sounds/Create Army.mp3",
     "research": "assets/sounds/Research.mp3",
     "select_unit": "assets/sounds/Select Unit.mp3",
@@ -861,7 +861,7 @@ def make_info_button(x, y, on_click, y_offset=0):
 
     Each screen owns its own local ``y_offset`` because its neighboring control
     size is local layout, while the button's behavior and visual identity stay
-    consistent everywhere. The popup it opens plays the help sound.
+    consistent everywhere. The popup it opens plays the info sound.
     """
     return Button(x, y + y_offset, "scenario_setting_info", "light_blue", "?", on_click,
                   sound_kind=None)

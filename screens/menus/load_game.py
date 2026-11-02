@@ -7,7 +7,7 @@ from ui.dialogs import pickers
 from ui.dialogs import file_exchange
 from data.map import history_io
 from ui.navigation.game_state import FolderListState
-from ui.widgets.ui_elements import Button, make_back_button
+from ui.widgets.ui_elements import Button, make_back_button, play_ui_sound
 import data.constants as c
 
 from data.map.load_map import newer_version_message
@@ -49,9 +49,10 @@ class Load_Game(FolderListState):
         for i, btn_y in self.layout_list_rows(len(folders), self.ROW_HEIGHT, self.ROW_TOP):
             folder = folders[i]
             for x, size, color, label, handler in self.ROW_BUTTONS:
+                # open_history_menu plays its own sound, which depends on what it finds.
                 btn = Button(x, btn_y, size, color, label or folder,
                             lambda f=folder, h=handler: getattr(self, h)(f),
-                            sound_kind="time_select" if handler == "open_history_menu" else "click")
+                            sound_kind=None if handler == "open_history_menu" else "click")
                 self.add_list_row(btn)
 
     def additional_events(self, event):
@@ -74,6 +75,7 @@ class Load_Game(FolderListState):
                                      else "No history available for this save.")
             return
 
+        play_ui_sound("time_select")
         turns = sorted([int(k) for k in turn_dates])
         turn_by_label = {}
         items = []

@@ -1,5 +1,6 @@
 import os
 from ui.navigation.game_state import ButtonMenuScreen, RefreshingMenuListScreen
+from ui.widgets.ui_elements import play_ui_sound
 from ui.widgets.ui_elements import Button, make_back_button
 import data.constants as c
 from data import queries
@@ -135,9 +136,10 @@ class New_Game(RefreshingMenuListScreen):
     def handle_back_key(self):
         # Escape steps back up the category tree before it leaves the screen.
         if self.sub_state != "CATEGORY":
+            play_ui_sound("back")
             self.set_sub_state("CATEGORY")
         else:
-            self.exit_screen()
+            self.go_back()
 
     def start_random_scenario(self):
         self.set_sub_state("CATEGORY")

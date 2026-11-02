@@ -205,7 +205,7 @@ class Keybinds(GameState):
     def handle_back_key(self):
         # Ignore Escape while a key is being rebound; it belongs to the capture.
         if not self.listening_for:
-            self.exit_screen()
+            self.go_back()
 
     def additional_draw(self, surface):
         """Label the columns and expose non-blocking duplicate-key warnings."""

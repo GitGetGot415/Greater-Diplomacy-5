@@ -26,6 +26,7 @@ class _YesNoModal(_BaseModal):
         for event in events:
             if event.type == pygame.KEYDOWN:
                 if self.back_rect is not None and event.key in (pygame.K_ESCAPE, _back_key(), pygame.K_g):
+                    ui_elements.play_ui_sound("back")
                     self._finish(None)
                 elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_y):
                     self._finish(True)

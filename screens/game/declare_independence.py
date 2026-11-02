@@ -187,7 +187,7 @@ class Declare_Independence_Screen(MapOverlayScreen):
         if self.name_field.active:
             self.name_field.active = False
         else:
-            self.exit_screen()
+            self.go_back()
 
     def draw_content(self, surface):
         panel_rect = self.panel_rect

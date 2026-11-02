@@ -261,7 +261,7 @@ class DialogTests(unittest.TestCase):
         self.assertTrue(modal_stack.is_empty())
 
     def test_only_the_blue_popups_play_the_help_and_back_sounds(self):
-        for kind, opened, clicked in (("info", ["help"], "back"), ("success", [], "click"),
+        for kind, opened, clicked in (("info", ["info"], "back"), ("success", [], "click"),
                                       ("warning", [], "click"), ("error", [], "click")):
             with self.subTest(kind=kind), mock.patch.object(ui_elements, "play_ui_sound") as sound:
                 dialogs.show_message("T", "Body.", kind=kind)
@@ -275,7 +275,7 @@ class DialogTests(unittest.TestCase):
     def test_credits_popup_uses_the_blue_popup_button_and_sounds(self):
         with mock.patch.object(ui_elements, "play_ui_sound") as sound:
             dialogs.show_person_info("Name", "Some blurb.", [])
-            sound.assert_called_once_with("help")
+            sound.assert_called_once_with("info")
             sound.reset_mock()
             modal = modal_stack.active()
             self.assertEqual(modal.ok_button.text, "OK")
@@ -292,7 +292,30 @@ class DialogTests(unittest.TestCase):
             button = make_info_button(10, 10, lambda: dialogs.show_info("T", "Help text."))
             button.handle_event(click(button.rect.center))
             button.handle_event(release(button.rect.center))
-            sound.assert_called_once_with("help")
+            sound.assert_called_once_with("info")
+        modal_stack.pop()
+
+    def test_keyboard_close_plays_back_once_on_blue_popups_only(self):
+        for open_popup, expected in ((lambda: dialogs.show_info("T", "Body."), ["back"]),
+                                     (lambda: dialogs.show_person_info("Name", "Blurb.", []), ["back"]),
+                                     (lambda: dialogs.show_error("T", "Body."), [])):
+            for pressed in (pygame.K_RETURN, pygame.K_ESCAPE, pygame.K_SPACE):
+                with self.subTest(expected=expected, key=pressed):
+                    open_popup()
+                    modal = modal_stack.active()
+                    with mock.patch.object(ui_elements, "play_ui_sound") as sound:
+                        modal.handle_events([key(pressed), key(pressed)])
+                    self.assertTrue(modal._resolved)
+                    self.assertEqual([call.args[0] for call in sound.call_args_list], expected)
+                    modal_stack.pop()
+
+    def test_credits_arrow_keys_scroll_without_closing_or_a_sound(self):
+        dialogs.show_person_info("Name", "Blurb.", [])
+        modal = modal_stack.active()
+        with mock.patch.object(ui_elements, "play_ui_sound") as sound:
+            modal.handle_events([key(pygame.K_DOWN)])
+        self.assertFalse(modal._resolved)
+        sound.assert_not_called()
         modal_stack.pop()
 
     def test_message_kinds_all_render(self):

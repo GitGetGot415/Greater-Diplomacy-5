@@ -103,7 +103,7 @@ class ListSelectScreen(ModalScreen):
             self.scroll_y = 0
             self.refresh_ui()
         else:
-            self.exit_screen()
+            self.go_back()
 
     def _handle_search_key(self, event):
         if event.key == pygame.K_RETURN:

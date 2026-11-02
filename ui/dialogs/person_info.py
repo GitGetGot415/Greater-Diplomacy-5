@@ -5,7 +5,7 @@ import webbrowser
 import pygame
 import data.constants as c
 from ui.rendering.font_manager import fonts
-from ui.dialogs.base import _back_key, open_modal
+from ui.dialogs.base import open_modal
 from ui.widgets import text_utils
 from ui.dialogs.message_box import _MessageModal
 from ui.bars import ui_bars
@@ -187,10 +187,9 @@ class _PersonInfoModal(_MessageModal):
             elif event.type == pygame.WINDOWFOCUSLOST:
                 self._scroll_drag_offset = None
             elif event.type == pygame.KEYDOWN:
-                if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_ESCAPE,
-                                 pygame.K_SPACE, _back_key()):
-                    self._finish()
-                elif event.key in (pygame.K_UP, pygame.K_DOWN):
+                if self.close_on_key(event.key):
+                    continue
+                if event.key in (pygame.K_UP, pygame.K_DOWN):
                     step = _SCROLL_STEP if event.key == pygame.K_DOWN else -_SCROLL_STEP
                     self._set_scroll(self.scroll_y + step)
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:

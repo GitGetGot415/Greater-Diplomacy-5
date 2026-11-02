@@ -10,7 +10,7 @@ from ui.bars import ui_bars
 from ui.information import feedback_text
 from ui.panels import turn_progress
 from map_logic.diplomacy import diplomacy_processor
-from ui.widgets.ui_elements import Button, make_back_button
+from ui.widgets.ui_elements import Button, make_back_button, play_ui_sound
 from ui.rendering.font_manager import fonts
 
 
@@ -222,6 +222,11 @@ class GameState:
         self.done = True
 
     def handle_back_key(self):
+        self.go_back()
+
+    def go_back(self):
+        """Leaves this screen with the same sound as its Back button."""
+        play_ui_sound("back")
         self.exit_screen()
 
     def content_drag_attr_name(self, attr="scroll_y"):

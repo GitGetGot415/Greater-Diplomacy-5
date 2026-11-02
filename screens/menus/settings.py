@@ -647,6 +647,7 @@ class Settings(GameState):
             self.exit_screen()
 
     def handle_back_key(self):
+        ui_elements.play_ui_sound("back")
         self.save_and_go_back()
 
     def toggle_full(self):

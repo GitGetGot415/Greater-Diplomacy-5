@@ -597,5 +597,3 @@ class Unit_Art(GameState):
         size = (max(1, int(w * scale)), max(1, int(h * scale)))
         return pygame.transform.smoothscale(surf, size) if scale < 1.0 else pygame.transform.scale(surf, size)
 
-    def handle_back_key(self):
-        self.exit_screen()

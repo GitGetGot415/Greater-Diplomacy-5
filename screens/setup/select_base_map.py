@@ -1,7 +1,7 @@
 import os
 from ui import dialogs
 from ui.navigation.game_state import ButtonMenuScreen, FolderListState, RefreshingMenuListScreen
-from ui.widgets.ui_elements import Button, make_back_button
+from ui.widgets.ui_elements import Button, make_back_button, play_ui_sound
 import data.constants as c
 from data import queries
 from ui.dialogs import file_exchange
@@ -150,11 +150,11 @@ class Select_Base_Map(RefreshingMenuListScreen, FolderListState):
 
     def handle_back_key(self):
         # Escape steps back up the sub-state tree before it leaves the screen.
-        if self.sub_state == "BASE_MAPS":
-            self.set_sub_state("CUSTOM_MAPS")
-        elif self.sub_state == "OTHER_CATEGORY":
-            self.set_sub_state("CUSTOM_MAPS")
-        elif self.sub_state in self.OTHER_MAP_CATEGORIES:
+        if self.sub_state == "CUSTOM_MAPS":
+            self.go_back()
+            return
+        play_ui_sound("back")
+        if self.sub_state in self.OTHER_MAP_CATEGORIES:
             self.set_sub_state("OTHER_CATEGORY")
         else:
-            self.exit_screen()
+            self.set_sub_state("CUSTOM_MAPS")

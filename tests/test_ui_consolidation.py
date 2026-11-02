@@ -276,6 +276,35 @@ class FolderRowTests(SharedUiTestCase):
                 button_named(screen, label).callback()
                 called.assert_called_once_with("Save")
 
+    def history_click_sounds(self, turn_dates):
+        """Every sound one click on History makes, including the button's own."""
+        from screens.menus import load_game
+        from ui.widgets import ui_elements
+
+        screen = load_game.Load_Game()
+        with mock.patch.object(screen, "layout_list_rows", return_value=[(0, 120)]), \
+                mock.patch.object(screen, "list_folders", return_value=["Save"]):
+            screen.scroll_click_guard = lambda: True
+            screen.refresh_ui()
+        button = button_named(screen, "History")
+        with mock.patch.object(load_game.history_io, "read_turn_dates", return_value=turn_dates), \
+                mock.patch.object(load_game.pickers, "open_listbox_selector"), \
+                mock.patch.object(ui_elements, "play_ui_sound") as sound, \
+                mock.patch.object(load_game, "play_ui_sound", sound), \
+                mock.patch("pygame.mouse.get_pos", return_value=button.rect.center):
+            button.handle_event(click(button.rect.center))
+            button.handle_event(pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=button.rect.center))
+        from ui.navigation import modal_stack
+        if turn_dates == {}:
+            modal_stack.pop()
+        return [call.args[0] for call in sound.call_args_list]
+
+    def test_history_with_nothing_to_show_plays_only_the_info_sound(self):
+        self.assertEqual(self.history_click_sounds({}), ["info"])
+
+    def test_history_with_turns_plays_only_time_select(self):
+        self.assertEqual(self.history_click_sounds({"1": "January 1900"}), ["time_select"])
+
 
 class ButtonMenuPageTests(SharedUiTestCase):
     def test_new_game_category_page_routes_each_button(self):
@@ -371,6 +400,93 @@ class MatchDetailsTests(SharedUiTestCase):
         self.assertEqual(screen.rows, [])
         screen.update()
         screen.draw(self.surface)
+
+
+class BackKeySoundTests(SharedUiTestCase):
+    """The back key sounds like a Back button when it goes back, and only then."""
+
+    def back_sounds(self, screen):
+        from ui.navigation import game_state
+        from ui.widgets import ui_elements
+
+        with mock.patch.object(ui_elements, "play_ui_sound") as sound, \
+                mock.patch.object(game_state, "play_ui_sound", sound), \
+                mock.patch("ui.navigation.game_state.queries.get_keybind",
+                           side_effect=lambda _action, default: default):
+            game_state.dispatch_global_keys(screen, key(pygame.K_ESCAPE))
+        return [call.args[0] for call in sound.call_args_list]
+
+    def test_leaving_an_ordinary_screen_plays_back_once(self):
+        from ui.navigation.game_state import GameState
+
+        screen = GameState()
+        self.assertEqual(self.back_sounds(screen), ["back"])
+        self.assertTrue(screen.done)
+
+    def test_stepping_back_inside_a_screen_plays_back_once(self):
+        from screens.setup import new_game
+
+        screen = new_game.New_Game()
+        screen.set_sub_state("HISTORICAL")
+        with mock.patch.object(new_game, "play_ui_sound") as sound:
+            screen.handle_back_key()
+        sound.assert_called_once_with("back")
+        self.assertEqual(screen.sub_state, "CATEGORY")
+        self.assertFalse(screen.done)
+
+    def test_leaving_a_text_box_is_silent(self):
+        from screens.game.declare_independence import Declare_Independence_Screen
+
+        screen = Declare_Independence_Screen(mock.Mock(player_country="Alpha", player_unit=None, map_data={},
+                                                       nation_data={}, top_bar_rect=None))
+        screen.name_field.active = True
+        self.assertEqual(self.back_sounds(screen), [])
+        self.assertFalse(screen.done)
+        self.assertEqual(self.back_sounds(screen), ["back"])
+        self.assertTrue(screen.done)
+
+    def test_keybind_capture_and_the_main_menu_are_silent(self):
+        from screens.menus.keybinds import Keybinds
+        from screens.menus.menu import Menu
+
+        screen = object.__new__(Keybinds)
+        screen.done = False
+        screen.listening_for = "BACK"
+        screen.handle_back_key()
+        self.assertFalse(screen.done)
+        menu = object.__new__(Menu)
+        with mock.patch.object(Menu, "exit_screen") as leave, mock.patch("ui.navigation.game_state.play_ui_sound") as sound:
+            menu.handle_back_key()
+        leave.assert_called_once()
+        sound.assert_not_called()
+
+    def test_map_only_sounds_when_it_closes_something(self):
+        from screens.game.map import Map
+        from ui.panels import army_panel
+        from ui.widgets import ui_elements
+
+        game = mock.Mock(selected_province=None)
+        with mock.patch.object(army_panel, "handle_back_key", return_value=False), \
+                mock.patch.object(ui_elements, "play_ui_sound") as sound:
+            Map.handle_back_key(game)
+            sound.assert_not_called()
+            game.selected_province = {"id": 1}
+            Map.handle_back_key(game)
+            sound.assert_called_once_with("back")
+        game.deselect_province.assert_called_once()
+
+    def test_go_back_option_on_a_three_way_popup_plays_back_from_the_keyboard(self):
+        from ui import dialogs
+        from ui.navigation import modal_stack
+        from ui.widgets import ui_elements
+
+        answers = []
+        dialogs.ask_yes_no("T", "Body.", answers.append, back_label="Go back")
+        modal = modal_stack.active()
+        with mock.patch.object(ui_elements, "play_ui_sound") as sound:
+            modal.handle_events([key(pygame.K_ESCAPE)])
+        sound.assert_called_once_with("back")
+        modal_stack.pop()
 
 
 class ChoiceButtonTests(SharedUiTestCase):

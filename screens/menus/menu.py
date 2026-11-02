@@ -519,6 +519,10 @@ class Menu(GameState):
             no_label="Cancel",
         )
 
+    def handle_back_key(self):
+        # The main menu has nothing to go back to, so this stays silent.
+        self.exit_screen()
+
     @staticmethod
     def _exit_game(confirmed):
         if confirmed:

@@ -93,14 +93,14 @@ class PygameSfxPitchTests(unittest.TestCase):
 
     def test_sound_config_accepts_numbers_and_optional_object_fields(self):
         values = {"Slider.wav": 2.5, "Select Song.wav": {"volume": 0.5, "offset": 0.25},
-                  "Help.mp3": {"offset": 0.1}, "Table.wav": {"volume": 2}, "Open Music.wav": {}}
+                  "Info.mp3": {"offset": 0.1}, "Table.wav": {"volume": 2}, "Open Music.wav": {}}
         with patch("builtins.open", mock_open(read_data=json.dumps(values))):
             ui_elements.load_sound_volumes()
         self.assertEqual(ui_elements.sound_volume_multipliers,
-                         {"Slider.wav": 2.5, "Select Song.wav": 0.5, "Help.mp3": 1.0,
+                         {"Slider.wav": 2.5, "Select Song.wav": 0.5, "Info.mp3": 1.0,
                           "Table.wav": 2, "Open Music.wav": 1.0})
         self.assertEqual(ui_elements.sound_start_offsets,
-                         {"Slider.wav": 0.0, "Select Song.wav": 0.25, "Help.mp3": 0.1,
+                         {"Slider.wav": 0.0, "Select Song.wav": 0.25, "Info.mp3": 0.1,
                           "Table.wav": 0.0, "Open Music.wav": 0.0})
 
     def test_sound_config_rejects_invalid_values_and_preserves_previous_settings(self):
