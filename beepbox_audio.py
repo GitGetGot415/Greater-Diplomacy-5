@@ -412,16 +412,13 @@ class BeepBoxStream:
                 busy = self._channel.get_busy()
                 native_queue = self._channel.get_queue()
                 if busy and self._current_sound is None:
-                    # Channel.stop() is asynchronous with respect to SDL's
-                    # mixer thread. Immediately after a seek it can therefore
-                    # still report the discarded pre-seek block as busy. If a
-                    # fresh block is merely queued behind that stale status,
+                    # If a fresh block is merely queued behind a stale block,
                     # audio resumes but _play_chunk() never establishes the
                     # new position clock, leaving the progress bar frozen.
                     # Channel zero is reserved for this stream, so anything
                     # playing here without _current_sound is stale and safe to
                     # replace with the first block of the new generation.
-                    self._channel.stop()
+                    self._halt_channel()
                     busy = False
                     native_queue = None
                 if self._queued_sound is not None and native_queue is None:
@@ -467,6 +464,16 @@ class BeepBoxStream:
                 self._last_update_time = now
         except Exception as exc:
             self._worker_error = exc
+
+    def _halt_channel(self):
+        """Silence the current block and discard the queued block.
+
+        Pygame starts the queued Sound when Channel.stop() ends the current
+        one, so one stop leaves up to one block of old audio playing. The
+        queue is empty after the first stop, so the second stop ends the audio.
+        """
+        self._channel.stop()
+        self._channel.stop()
 
     def _play_chunk(self, chunk, now):
         _generation, start, frames, pcm = chunk
@@ -528,7 +535,7 @@ class BeepBoxStream:
             self._position = max(0.0, float(position))
             if speed is not None:
                 self.speed = max(0.25, min(2.0, float(speed)))
-            self._channel.stop()
+            self._halt_channel()
             self._generation += 1
             self._current_sound = None
             self._queued_sound = None
@@ -563,7 +570,7 @@ class BeepBoxStream:
         global _MIXER_STREAM_OWNER
         with _MIXER_STREAM_LOCK:
             if _MIXER_STREAM_OWNER is self:
-                self._channel.stop()
+                self._halt_channel()
                 _MIXER_STREAM_OWNER = None
         # The worker is a daemon and checks _stop_event while rendering and
         # while waiting for queue space. Normal track changes must not wait for

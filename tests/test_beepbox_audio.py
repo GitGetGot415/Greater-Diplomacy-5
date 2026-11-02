@@ -227,9 +227,8 @@ try:
     assert stream.position >= 0.1
     normal_length = stream.length
 
-    # SDL may briefly keep reporting a stopped block as busy. Repeated seeks
-    # during playback must start both the new audio and its visual position
-    # clock instead of queuing behind that stale status.
+    # Repeated seeks during playback must start both the new audio and its
+    # visual position clock instead of queuing behind a stale block.
     for target in (20.0, 40.0, 60.0):
         stream.seek(target)
         seek_deadline = time.monotonic() + 3
@@ -335,6 +334,55 @@ finally:
              SONG_PATH,
              os.path.join(ROOT, "assets", "music", "Experimental", "Sensory Overload Rainbow.json"),
              SONG_PATH],
+            cwd=ROOT,
+            env=environment,
+            capture_output=True,
+            text=True,
+            timeout=20,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    @unittest.skipUnless(
+        _native_audio_tests_available(),
+        "set GD5_RUN_NATIVE_AUDIO_TESTS=1 to run native audio integration tests",
+    )
+    def test_stop_and_seek_silence_the_queued_block(self):
+        script = r"""
+import sys
+import time
+from tests.test_beepbox_audio import _disable_windows_native_error_dialogs
+_disable_windows_native_error_dialogs()
+import pygame
+from beepbox_audio import BeepBoxStream
+
+def wait_for_queued_block(stream):
+    deadline = time.monotonic() + 8
+    while (stream._channel.get_queue() is None and stream.error is None
+           and time.monotonic() < deadline):
+        stream.update()
+        time.sleep(0.01)
+    assert stream.error is None, stream.error
+    assert stream._channel.get_queue() is not None
+
+pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=1024)
+stream = BeepBoxStream(sys.argv[1], volume=0.0)
+try:
+    wait_for_queued_block(stream)
+    stream.seek(20.0)
+    assert not stream._channel.get_busy(), "seek left the old queued block playing"
+
+    wait_for_queued_block(stream)
+    channel = stream._channel
+    stream.stop()
+    assert not channel.get_busy(), "stop left the queued block playing"
+finally:
+    stream.stop(wait=True)
+    pygame.mixer.quit()
+"""
+        environment = os.environ.copy()
+        environment["SDL_AUDIODRIVER"] = "dummy"
+        result = subprocess.run(
+            [sys.executable, "-X", "faulthandler", "-c", script, SONG_PATH],
             cwd=ROOT,
             env=environment,
             capture_output=True,
