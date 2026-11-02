@@ -328,8 +328,7 @@ class FileBrowserTests(unittest.TestCase):
         self.assertEqual(fb.EXTENSION_ICONS[".gd5tour"], "GD5TOUR.png")
         self.assertEqual(fb.EXTENSION_ICONS[".gd5move"], "GD5MOVE.png")
 
-    def test_map_vector_and_text_files_have_their_own_icons(self):
-        self.assertEqual(fb.EXTENSION_ICONS[".gd4map"], "GD4MAP.png")
+    def test_vector_and_text_files_have_their_own_icons(self):
         self.assertEqual(fb.EXTENSION_ICONS[".svg"], "SVG.png")
         self.assertEqual(fb.EXTENSION_ICONS[".txt"], "Text.png")
 

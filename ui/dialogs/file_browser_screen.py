@@ -67,7 +67,6 @@ GAME_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__
 # .py	        # Python.png
 # .gd5tour	    # GD5TOUR.png
 # .gd5move	    # GD5MOVE.png
-# .gd4map	    # GD4MAP.png
 # .svg	        # SVG.png
 # .txt	        # Text.png
 
@@ -85,7 +84,6 @@ EXTENSION_ICONS = {
     ".py": "Python.png",
     ".gd5tour": "GD5TOUR.png",
     ".gd5move": "GD5MOVE.png",
-    ".gd4map": "GD4MAP.png",
     ".svg": "SVG.png",
     ".txt": "Text.png",
 }
