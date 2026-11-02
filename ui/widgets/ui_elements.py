@@ -586,6 +586,8 @@ class Button:
         self.text_align = "center"
         # Opt-in: shrink a plain (image-less) label to fit the button width.
         self.fit_text = False
+        # With fit_text: only shrink the font, never wrap, for buttons too short for two lines.
+        self.fit_single_line = False
         # Opt-in for vertical layouts: sit the image this far above the bottom
         # edge instead of at the default offset, so it fills the space below the label.
         self.image_bottom_margin = None
@@ -639,6 +641,13 @@ class Button:
 
     def fit_label(self, text, max_width):
         """Returns (font, text) with the label shrunk, then wrapped, to fit max_width."""
+        if self.fit_single_line:
+            for size in range(self.font_point_size, _BUTTON_FIT_MIN_SIZE - 1, -1):
+                font = self.font if size == self.font_point_size else fonts.get_size(size)
+                if font.size(text)[0] <= max_width:
+                    break
+            return font, text
+
         def attempt(size, max_lines):
             font = self.font if size == self.font_point_size else fonts.get_size(size)
             # Only the wrapped pass may split a word that is too wide for one line.

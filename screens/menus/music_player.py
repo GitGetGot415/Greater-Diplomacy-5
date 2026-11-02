@@ -304,6 +304,8 @@ class Music_Player(ScrollPanes, GameState):
             # selection; it must remain available for deliberate playback.
             track_btn = Button(MUSIC_LEFT_PANE_W + 20, track_y, "song", color, track_name, track_cb)
             track_btn.click_guard = lambda: pygame.mouse.get_pos()[1] >= 200
+            track_btn.fit_text = True
+            track_btn.fit_single_line = True
             track_btn.sound_kind = "select_song"
             track_btn.pane = "track"
             self.elements.append(track_btn)

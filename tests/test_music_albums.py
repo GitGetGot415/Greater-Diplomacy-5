@@ -109,6 +109,23 @@ class AlbumTileTests(unittest.TestCase):
         self.assertNotEqual((tiles[plain[-1]].rect.x, tiles[plain[-1]].rect.y),
                             (second_column_x, stacked[-1].rect.bottom + music_player.ALBUM_GAP))
 
+    def test_long_track_names_shrink_on_one_line(self):
+        pygame.font.init()
+        player = self.make_player([])
+        long_name = "A very long track name " * 3 + ".mp3"
+        player.controller.playlist = [f"{c.MUSIC_DIR}/Album/{long_name}", f"{c.MUSIC_DIR}/Album/short.mp3"]
+        player.refresh_ui()
+
+        long_button, short_button = [b for b in player.elements if getattr(b, "pane", None) == "track"
+                                     and b.text != "X"]
+        width = long_button.rect.width - 12
+        font, text = long_button.fit_label(long_button.text, width)
+        self.assertEqual(text, long_button.text)
+        self.assertLess(font.get_height(), long_button.font.get_height())
+        self.assertLessEqual(font.size(text)[0], width)
+        font, _text = short_button.fit_label(short_button.text, width)
+        self.assertEqual(font, short_button.font)
+
     def test_only_deletable_albums_get_a_delete_button(self):
         player = self.make_player(["Mine", "Shipped"])
         with mock.patch.object(queries, "is_deletable_album", side_effect=lambda album: album == "Mine"):
