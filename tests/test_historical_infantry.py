@@ -216,35 +216,38 @@ class HistoricalInfantryTests(unittest.TestCase):
     def test_old_equipment_references_convert_in_all_save_parts_and_repeat_safely(self):
         aliases = migrations.equipment_stage_aliases()
         self.assertTrue(aliases)
+        nations = {}
+        raw = {}
+        for older, current in aliases.items():
+            unit = {"type": older, "owner": "A", "unit_id": "keep-id", "health": 25, "max_health": 100,
+                    "order": {"type": "UPGRADE", "target_type": older}, "unknown": [7]}
+            raw[older] = {"units": [unit, {"type": f"Convoy ({older})", "original_type": older},
+                                    {"type": "Jet Transport I", "air_cargo": [copy.deepcopy(unit)]}],
+                          "unit_queue": [{"unit_type": older, "turns_remaining": 3, "paid_materials": 17}]}
+            nations[older] = {"custom_production_units": [older, older],
+                              "scripted_events": [{"actions": [{"type": "Spawn Unit", "unit_type": older}]}]}
+        saved = {"version": "v46", "nation_data": nations, "provinces": copy.deepcopy(raw),
+                 "unknown": {"keep": "unchanged"}}
+        history = {"1": {"provinces": copy.deepcopy(raw)}}
+        migrations.upgrade_save(saved, raw, history)
         for older, current in aliases.items():
             with self.subTest(older=older):
-                unit = {"type": older, "owner": "A", "unit_id": "keep-id", "health": 25, "max_health": 100,
-                        "order": {"type": "UPGRADE", "target_type": older}, "unknown": [7]}
-                province = {"units": [unit, {"type": f"Convoy ({older})", "original_type": older},
-                                       {"type": "Jet Transport I", "air_cargo": [copy.deepcopy(unit)]}],
-                            "unit_queue": [{"unit_type": older, "turns_remaining": 3, "paid_materials": 17}]}
-                saved = {"version": "v46", "nation_data": {"A": {
-                    "custom_production_units": [older, older],
-                    "scripted_events": [{"actions": [{"type": "Spawn Unit", "unit_type": older}]}]}},
-                    "provinces": {"P": copy.deepcopy(province)}, "unknown": {"keep": "unchanged"}}
-                raw = {"P": province}
-                history = {"1": {"provinces": {"P": copy.deepcopy(province)}}}
-                migrations.upgrade_save(saved, raw, history)
-                self.assertEqual(saved["nation_data"]["A"]["custom_production_units"], [current])
-                self.assertEqual(saved["nation_data"]["A"]["scripted_events"][0]["actions"][0]["unit_type"], current)
-                for converted in (raw["P"], saved["provinces"]["P"], history["1"]["provinces"]["P"]):
+                self.assertEqual(saved["nation_data"][older]["custom_production_units"], [current])
+                self.assertEqual(saved["nation_data"][older]["scripted_events"][0]["actions"][0]["unit_type"], current)
+                for converted in (raw[older], saved["provinces"][older], history["1"]["provinces"][older]):
                     self.assertEqual(converted["units"][0]["type"], current)
                     self.assertEqual(converted["units"][0]["order"]["target_type"], current)
                     self.assertEqual(converted["units"][1]["type"], f"Convoy ({current})")
                     self.assertEqual(converted["units"][1]["original_type"], current)
                     self.assertEqual(converted["units"][2]["air_cargo"][0]["type"], current)
                     self.assertEqual(converted["unit_queue"], [{"unit_type": current, "turns_remaining": 3, "paid_materials": 17}])
+                unit = raw[older]["units"][0]
                 self.assertTrue(queries.apply_library_stats(unit, self.library))
                 self.assertEqual(unit["health"], self.library[current]["health"] / 4)
                 self.assertEqual((unit["unit_id"], unit["unknown"]), ("keep-id", [7]))
-                once = copy.deepcopy((saved, raw, history))
-                migrations.upgrade_save(saved, raw, history)
-                self.assertEqual((saved, raw, history), once)
+        once = copy.deepcopy((saved, raw, history))
+        migrations.upgrade_save(saved, raw, history)
+        self.assertEqual((saved, raw, history), once)
 
     def test_tournament_conversion_preserves_intents_and_projection_agreement(self):
         older, current = next(iter(migrations.equipment_stage_aliases().items()))

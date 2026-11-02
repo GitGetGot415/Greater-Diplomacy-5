@@ -714,6 +714,7 @@ function gd5ConfigureSynth(synth, outputRate, speed, seconds) {
         const parts = config.partsPerBeat * synth.song.beatsPerBar;
         const target = seconds * outputRate;
         const length = synth.getTotalSamples(true, true, 0);
+        synth.gd5Length = length / outputRate;
         if (seconds <= 0) synth.playhead = 0;
         else if (target >= length) synth.playhead = synth.song.barCount;
         else {
@@ -735,9 +736,11 @@ function gd5ConfigureSynth(synth, outputRate, speed, seconds) {
             synth.playhead = bar + (partLow + partHigh) / (2 * parts);
         }
         synth.computeLatestModValues();
-    } else synth.playhead = seconds * outputRate / synth.getSamplesPerBar();
+    } else {
+        synth.playhead = seconds * outputRate / synth.getSamplesPerBar();
+        synth.gd5Length = gd5SongLength(synth, outputRate);
+    }
     synth.gd5Position = seconds;
-    synth.gd5Length = gd5SongLength(synth, outputRate);
 }
 """
 
@@ -758,13 +761,13 @@ globalThis.gd5Init = function(songJson, outputRate, speed, seekSeconds) {
     gd5ConfigureSynth(synth, outputRate, speed, seekSeconds);
     gd5OutputRate = outputRate;
     gd5Synth = synth;
-    gd5Length = gd5SongLength(synth, outputRate);
+    gd5Length = synth.gd5Length;
     return JSON.stringify({length: gd5Length});
 };
 globalThis.gd5Seek = function(seekSeconds, speed) {
     if (!gd5Synth) return JSON.stringify({length: 0});
     gd5ConfigureSynth(gd5Synth, gd5OutputRate, speed, seekSeconds);
-    gd5Length = gd5SongLength(gd5Synth, gd5OutputRate);
+    gd5Length = gd5Synth.gd5Length;
     return JSON.stringify({length: gd5Length});
 };
 globalThis.gd5Render = function(frameCount) {
