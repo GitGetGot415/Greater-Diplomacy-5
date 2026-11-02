@@ -24,7 +24,7 @@ MUSIC_SCROLLBAR_WIDTH = 20
 ALBUM_COLUMNS = 2
 # Album folder names shown first, in this order. Names with no matching folder
 # are skipped. Every other album follows, sorted A to Z.
-ALBUM_ORDER = ["Greater Diplomacy 5", "Greater Diplomacy 4", "Greater Diplomacy 3", "Greater Diplomacy 2", "Greater Diplomacy 1", "Experimental", "PenguinMod-ObjectLibraries"]
+ALBUM_ORDER = ["PenguinMod-ObjectLibraries", "Greater Diplomacy 5", "Greater Diplomacy 4", "Greater Diplomacy 3", "Greater Diplomacy 2", "Greater Diplomacy 1", "Experimental"]
 # The tile that makes a new album is always the last tile, after every album.
 NEW_ALBUM_LABEL = "+ New Album"
 ALBUM_DELETE_BUTTON_SIZE = (22, 22)
