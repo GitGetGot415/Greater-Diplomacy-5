@@ -960,7 +960,7 @@ SIZES = {
     "orders_clear_button": (150, 30),
     "orders_action_icon": (28, 28),
     "left_ui_bar": (120, 50),
-    "song": (700, 30),
+    "song": (600, 30),
     "asset_folder": (200, 36),
     "asset_file": (270, 22),
     "save_file": (745, 30),
