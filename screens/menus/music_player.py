@@ -20,6 +20,9 @@ from ui import dialogs
 MUSIC_SCROLLBAR_WIDTH = 20
 # Albums sit in a grid of ALBUM_COLUMNS tiles; the left pane is sized to hold it.
 ALBUM_COLUMNS = 2
+# Album folder names shown first, in this order. Names with no matching folder
+# are skipped. Every other album follows, sorted Z to A.
+ALBUM_ORDER = ["Greater Diplomacy 5", "Greater Diplomacy 4", "Greater Diplomacy 3", "Greater Diplomacy 2", "Greater Diplomacy 1", "Experimental", "PenguinMod-ObjectLibraries"]
 ALBUM_MARGIN = 20
 ALBUM_GAP = 10
 ALBUM_TILE_SIZE = (140, 170)
@@ -195,7 +198,9 @@ class Music_Player(ScrollPanes, GameState):
         y_offset = 120 + self._scroll_album
         album_content_h = 0
         
-        albums = sorted(self.controller.all_albums.keys(), reverse=True)
+        pinned = [album for album in ALBUM_ORDER if album in self.controller.all_albums]
+        albums = pinned + sorted((album for album in self.controller.all_albums if album not in pinned),
+                                 reverse=True)
         row_height = 0
         for album_index, album in enumerate(albums):
             is_active = album in self.controller.active_albums
