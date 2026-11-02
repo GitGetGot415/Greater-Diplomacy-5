@@ -20,7 +20,7 @@ def make_controller():
 
 
 class ShuffleExclusionTests(unittest.TestCase):
-    def test_albums_are_displayed_in_reverse_alphabetical_order(self):
+    def test_albums_are_displayed_in_alphabetical_order(self):
         pygame.font.init()
         controller = SimpleNamespace(
             all_albums={"Alpha": [], "Zulu": [], "Bravo": []},
@@ -50,7 +50,7 @@ class ShuffleExclusionTests(unittest.TestCase):
         ]
         self.assertEqual(
             [button.text for button in album_buttons],
-            ["Zulu", "Bravo", "Alpha", NEW_ALBUM_LABEL],
+            ["Alpha", "Bravo", "Zulu", NEW_ALBUM_LABEL],
         )
 
     def test_random_selection_skips_excluded_tracks(self):

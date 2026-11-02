@@ -23,7 +23,7 @@ MUSIC_SCROLLBAR_WIDTH = 20
 # Albums sit in a grid of ALBUM_COLUMNS tiles; the left pane is sized to hold it.
 ALBUM_COLUMNS = 2
 # Album folder names shown first, in this order. Names with no matching folder
-# are skipped. Every other album follows, sorted Z to A.
+# are skipped. Every other album follows, sorted A to Z.
 ALBUM_ORDER = ["Greater Diplomacy 5", "Greater Diplomacy 4", "Greater Diplomacy 3", "Greater Diplomacy 2", "Greater Diplomacy 1", "Experimental", "PenguinMod-ObjectLibraries"]
 # The tile that makes a new album is always the last tile, after every album.
 NEW_ALBUM_LABEL = "+ New Album"
@@ -849,10 +849,9 @@ class Music_Player(ScrollPanes, GameState):
 
     # --- PLAYLIST ACTIONS ---
     def album_display_order(self):
-        """Album names in screen order: ALBUM_ORDER first, then the rest Z to A."""
+        """Album names in screen order: ALBUM_ORDER first, then the rest A to Z."""
         pinned = [album for album in ALBUM_ORDER if album in self.controller.all_albums]
-        return pinned + sorted((album for album in self.controller.all_albums if album not in pinned),
-                               reverse=True)
+        return pinned + sorted(album for album in self.controller.all_albums if album not in pinned)
 
     def deletable_albums(self):
         """The albums that accept new songs: every album not in UNDELETABLE_ALBUMS."""
