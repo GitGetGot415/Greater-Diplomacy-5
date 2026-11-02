@@ -679,7 +679,7 @@ class Controller:
                         if (prefer_beepbox and file.lower().endswith(".json")
                                 and beepbox_audio.is_beepbox_song(file_path)):
                             track_path = file_path.replace("\\", "/")
-                        elif file.lower().endswith(('.mp3', '.wav', '.ogg')):
+                        elif file.lower().endswith(c.MUSIC_AUDIO_EXTENSIONS):
                             if prefer_beepbox and os.path.splitext(file)[0].casefold() in beepbox_stems:
                                 continue
                             track_path = os.path.join(album_dir, file).replace("\\", "/")

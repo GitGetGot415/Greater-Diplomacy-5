@@ -52,6 +52,49 @@ class AlbumFolderTests(unittest.TestCase):
                 queries.create_album(bad_name)
 
 
+class AddSongTests(unittest.TestCase):
+    def setUp(self):
+        self._dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self._dir.cleanup)
+        patcher = mock.patch.object(c, "MUSIC_DIR", os.path.join(self._dir.name, "music"))
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        os.makedirs(os.path.join(c.MUSIC_DIR, "Mine"))
+        self.source_dir = os.path.join(self._dir.name, "downloads")
+        os.makedirs(self.source_dir)
+
+    def source(self, name, content=b"data"):
+        path = os.path.join(self.source_dir, name)
+        with open(path, "wb") as song:
+            song.write(content)
+        return path
+
+    def test_audio_files_are_copied_and_repeats_are_numbered(self):
+        for extension in c.MUSIC_AUDIO_EXTENSIONS:
+            with self.subTest(extension=extension):
+                self.assertEqual(queries.add_song_to_album(self.source("song" + extension), "Mine"),
+                                 "song" + extension)
+        self.assertEqual(queries.add_song_to_album(self.source("song.mp3"), "Mine"), "song (2).mp3")
+        self.assertEqual(queries.add_song_to_album(self.source("song.mp3"), "Mine"), "song (3).mp3")
+
+    def test_unplayable_files_are_refused(self):
+        for name in ("notes.txt", "data.json"):
+            with self.subTest(name=name), self.assertRaises(ValueError):
+                queries.add_song_to_album(self.source(name, b"{}"), "Mine")
+        self.assertEqual(os.listdir(os.path.join(c.MUSIC_DIR, "Mine")), [])
+
+    def test_beepbox_json_is_accepted(self):
+        with mock.patch("beepbox_audio.is_beepbox_song", return_value=True):
+            self.assertEqual(queries.add_song_to_album(self.source("tune.json"), "Mine"), "tune.json")
+
+    def test_undeletable_and_missing_albums_are_refused(self):
+        os.makedirs(os.path.join(c.MUSIC_DIR, "Shipped"))
+        with mock.patch.object(c, "UNDELETABLE_ALBUMS", ("Shipped",)):
+            for album in ("Shipped", "Nowhere"):
+                with self.subTest(album=album), self.assertRaises(ValueError):
+                    queries.add_song_to_album(self.source("song.mp3"), album)
+
+
 class AlbumTileTests(unittest.TestCase):
     def make_player(self, albums):
         pygame.font.init()
@@ -117,7 +160,7 @@ class AlbumTileTests(unittest.TestCase):
         player.refresh_ui()
 
         long_button, short_button = [b for b in player.elements if getattr(b, "pane", None) == "track"
-                                     and b.text != "X"]
+                                     and b.text not in ("X", music_player.ADD_SONG_LABEL)]
         width = long_button.rect.width - 12
         font, text = long_button.fit_label(long_button.text, width)
         self.assertEqual(text, long_button.text)
@@ -125,6 +168,40 @@ class AlbumTileTests(unittest.TestCase):
         self.assertLessEqual(font.size(text)[0], width)
         font, _text = short_button.fit_label(short_button.text, width)
         self.assertEqual(font, short_button.font)
+
+    def test_add_song_button_is_last_in_the_song_list_and_needs_a_deletable_album(self):
+        player = self.make_player(["Mine"])
+        player.controller.playlist = [f"{c.MUSIC_DIR}/Mine/a.mp3"]
+        for deletable in (True, False):
+            with self.subTest(deletable=deletable),                     mock.patch.object(queries, "is_deletable_album", return_value=deletable):
+                player.refresh_ui()
+                track_buttons = [b for b in player.elements if getattr(b, "pane", None) == "track"
+                                 and b.text != "X"]
+                self.assertEqual(track_buttons[-1].text, music_player.ADD_SONG_LABEL)
+                self.assertEqual(track_buttons[-1].disabled, not deletable)
+
+    def test_add_song_asks_for_an_album_then_a_file(self):
+        player = self.make_player(["Mine", "Shipped"])
+        player.add_song = mock.Mock()
+        with mock.patch.object(queries, "is_deletable_album", side_effect=lambda album: album == "Mine"),                 mock.patch("ui.dialogs.pickers.open_listbox_selector") as choose_album,                 mock.patch("ui.dialogs.pickers.open_file_browser") as choose_file:
+            player.start_add_song()
+            self.assertEqual(choose_album.call_args.args[3], ["Mine"])
+            choose_album.call_args.args[4]("Mine")
+            self.assertEqual(choose_file.call_args.kwargs["extensions"], music_player.SONG_FILE_EXTENSIONS)
+            choose_file.call_args.kwargs["on_result"]("song.mp3")
+        player.add_song.assert_called_once_with("Mine", "song.mp3")
+
+    def test_add_song_reloads_after_a_copy_and_reports_errors(self):
+        player = self.make_player([])
+        player.refresh_ui = mock.Mock()
+        with mock.patch.object(queries, "add_song_to_album") as add:
+            player.add_song("Mine", "song.mp3")
+            player.add_song("Mine", None)
+        add.assert_called_once_with("song.mp3", "Mine")
+        player.controller.load_music_data.assert_called_once()
+        with mock.patch.object(queries, "add_song_to_album", side_effect=ValueError("bad")),                 mock.patch("ui.dialogs.show_error") as show_error:
+            player.add_song("Mine", "song.txt")
+        show_error.assert_called_once()
 
     def test_only_deletable_albums_get_a_delete_button(self):
         player = self.make_player(["Mine", "Shipped"])

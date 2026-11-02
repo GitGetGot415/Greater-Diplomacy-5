@@ -13,6 +13,8 @@ import data.constants as c
 from beepbox_audio import source_seconds_from_timeline, timeline_seconds_from_source
 
 from ui import dialogs
+from ui.dialogs import pickers
+from data.platform import downloads_dir
 # ==========================================
 # LAYOUT
 # ==========================================
@@ -29,6 +31,8 @@ ALBUM_DELETE_BUTTON_SIZE = (22, 22)
 # How far the delete button sticks out past the tile's top-right corner.
 ALBUM_DELETE_OVERHANG = 6
 ALBUM_MARGIN = 20
+ADD_SONG_LABEL = "+ Add Song"
+SONG_FILE_EXTENSIONS = list(c.MUSIC_AUDIO_EXTENSIONS) + [".json"]
 ALBUM_GAP = 10
 ALBUM_TILE_SIZE = (140, 170)
 ALBUM_TEXT_TILE_SIZE = (140, 50)
@@ -206,9 +210,7 @@ class Music_Player(ScrollPanes, GameState):
         y_offset = 120 + ALBUM_DELETE_OVERHANG + self._scroll_album
         album_content_h = ALBUM_DELETE_OVERHANG
         
-        pinned = [album for album in ALBUM_ORDER if album in self.controller.all_albums]
-        albums = pinned + sorted((album for album in self.controller.all_albums if album not in pinned),
-                                 reverse=True)
+        albums = self.album_display_order()
         # A row has ALBUM_COLUMNS slots. Each slot holds one cover tile, or a
         # stack of up to ALBUM_MAX_TEXT_STACK tiles without a cover.
         slot_heights = [0] * ALBUM_COLUMNS
@@ -325,6 +327,15 @@ class Music_Player(ScrollPanes, GameState):
             self.elements.append(shuffle_toggle)
             track_y += song_y
             track_content_h += song_y
+
+        # Always the last row of the song list.
+        add_song_btn = Button(MUSIC_LEFT_PANE_W + 20, track_y, "song", "blue", ADD_SONG_LABEL,
+                              self.start_add_song)
+        add_song_btn.disabled = not self.deletable_albums()
+        add_song_btn.click_guard = lambda: pygame.mouse.get_pos()[1] >= 200
+        add_song_btn.pane = "track"
+        self.elements.append(add_song_btn)
+        track_content_h += song_y
 
         # Calculate max boundary for Track scrolling
         self._max_track = min(0, c.SCREEN_HEIGHT - 200 - track_content_h - 20)
@@ -822,6 +833,38 @@ class Music_Player(ScrollPanes, GameState):
         self.refresh_ui()
 
     # --- PLAYLIST ACTIONS ---
+    def album_display_order(self):
+        """Album names in screen order: ALBUM_ORDER first, then the rest Z to A."""
+        pinned = [album for album in ALBUM_ORDER if album in self.controller.all_albums]
+        return pinned + sorted((album for album in self.controller.all_albums if album not in pinned),
+                               reverse=True)
+
+    def deletable_albums(self):
+        """The albums that accept new songs: every album not in UNDELETABLE_ALBUMS."""
+        return [album for album in self.album_display_order() if queries.is_deletable_album(album)]
+
+    def start_add_song(self):
+        albums = self.deletable_albums()
+        if albums:
+            pickers.open_listbox_selector(self, "Add Song", "Which album should the song go in?",
+                                          albums, self.pick_song_file)
+
+    def pick_song_file(self, album):
+        pickers.open_file_browser(self, f"Select a Song for {album}", downloads_dir(),
+                                  extensions=SONG_FILE_EXTENSIONS,
+                                  on_result=lambda path: self.add_song(album, path))
+
+    def add_song(self, album, path):
+        if not path:
+            return
+        try:
+            queries.add_song_to_album(path, album)
+        except ValueError as error:
+            dialogs.show_error("Add Song", str(error))
+            return
+        self.controller.load_music_data()
+        self.refresh_ui()
+
     def start_new_album(self):
         dialogs.ask_string("New Album", "Album name:", self.create_album, allow_empty=False)
 

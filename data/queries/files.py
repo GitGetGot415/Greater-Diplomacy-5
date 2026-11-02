@@ -6,6 +6,7 @@ import os
 import re
 import shutil
 import zipfile
+import beepbox_audio
 from data.queries.tech import get_tech_requirements
 from data import queries
 
@@ -48,6 +49,32 @@ def create_album(name):
     except OSError as error:
         raise ValueError(f"Could not create the album: {error}") from error
     return name
+
+
+def add_song_to_album(source_path, album):
+    """Copies a song file into an album folder and returns the new file name.
+
+    Raises ValueError for an album in c.UNDELETABLE_ALBUMS, a missing album, a file
+    the game cannot play, or a copy that fails.
+    """
+    album_dir = os.path.join(c.MUSIC_DIR, album)
+    if not is_deletable_album(album) or not os.path.isdir(album_dir):
+        raise ValueError(f"Songs cannot be added to {album}.")
+    extension = os.path.splitext(source_path)[1].lower()
+    if not (extension in c.MUSIC_AUDIO_EXTENSIONS
+            or (extension == ".json" and beepbox_audio.is_beepbox_song(source_path))):
+        raise ValueError("The game plays MP3, WAV, and OGG files, and BeepBox or UltraBox JSON songs.")
+    stem = os.path.splitext(os.path.basename(source_path))[0]
+    file_name = stem + extension
+    copy_number = 1
+    while os.path.exists(os.path.join(album_dir, file_name)):
+        copy_number += 1
+        file_name = f"{stem} ({copy_number}){extension}"
+    try:
+        shutil.copy2(source_path, os.path.join(album_dir, file_name))
+    except OSError as error:
+        raise ValueError(f"Could not add the song: {error}") from error
+    return file_name
 
 
 def delete_album(album):

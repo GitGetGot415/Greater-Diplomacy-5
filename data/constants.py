@@ -2264,6 +2264,8 @@ BACKGROUNDS_DIR = "assets/backgrounds"
 FLAGS_DIR = "assets/flags"
 PORTRAITS_DIR = "assets/portraits"
 MUSIC_DIR = "assets/music"
+# Audio files the game plays from an album folder. BeepBox and UltraBox .json songs are also played.
+MUSIC_AUDIO_EXTENSIONS = (".mp3", ".wav", ".ogg")
 # Album folder names the music screen never deletes. Every other album folder
 # gets a delete button. Add the name of each album that ships with the game.
 UNDELETABLE_ALBUMS = (
