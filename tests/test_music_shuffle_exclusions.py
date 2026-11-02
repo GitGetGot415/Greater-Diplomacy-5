@@ -130,7 +130,7 @@ class ShuffleExclusionTests(unittest.TestCase):
         self.assertEqual(title, "Music Player Help")
         self.assertIn("Static", message)
         self.assertIn("Dynamic", message)
-        self.assertIn("X", message)
+        self.assertIn("S", message)
 
     def test_non_excluded_song_button_remains_selectable(self):
         pygame.font.init()

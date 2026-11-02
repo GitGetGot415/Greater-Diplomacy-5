@@ -320,8 +320,8 @@ class Music_Player(ScrollPanes, GameState):
                 track_btn.rect.right + TRACK_SHUFFLE_TOGGLE_GAP,
                 track_y + (song_y - TRACK_SHUFFLE_TOGGLE_SIZE[1]) // 2,
                 TRACK_SHUFFLE_TOGGLE_SIZE,
-                "green" if excluded_from_shuffle else "red",
-                "X",
+                "grey" if excluded_from_shuffle else "green",
+                "S",
                 lambda p=track_path: self.toggle_shuffle_exclusion(p),
                 font_preset="tiny",
             )
@@ -811,9 +811,9 @@ class Music_Player(ScrollPanes, GameState):
             "progress slider faster; lower pitch moves it slower.\n\n"
             "Dynamic changes the displayed song length with the pitch. Higher "
             "pitch shortens the displayed duration and lower pitch lengthens it.\n\n"
-            "Use the X beside a song to exclude it from Skip / Random Song. "
-            "A green X means the song is excluded; click it again to restore "
-            "the song to the random queue.",
+            "The S beside a song sets whether Skip / Random Song can pick it. "
+            "A green S means the song can be picked. A grey S means the song "
+            "is skipped; click it again to put the song back in the random queue.",
         )
 
     def set_music_pitch_timeline(self, timeline_mode):

@@ -194,7 +194,7 @@ class AlbumTileTests(unittest.TestCase):
         player.refresh_ui()
 
         long_button, short_button = [b for b in player.elements if getattr(b, "pane", None) == "track"
-                                     and b.text not in ("X", music_player.ADD_SONG_LABEL)]
+                                     and b.text not in ("X", "S", music_player.ADD_SONG_LABEL)]
         width = long_button.rect.width - 12
         font, text = long_button.fit_label(long_button.text, width)
         self.assertEqual(text, long_button.text)
