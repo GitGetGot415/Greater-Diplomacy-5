@@ -338,18 +338,6 @@ Use verification appropriate to each change.
 - Tests must not require real network services or an LLM unless marked as integration tests.
 - Before you change how tests or scripts are imported or run, search `.github/workflows/` for commands that use them.
 
-1. Add or update focused regression tests for the rule and actual failure.
-   Keep useful tests. Rewrite them around the required behavior when necessary.
-   Do not delete useful coverage or weaken assertions only to make a failing test pass.
-2. Run focused tests during development.
-   Example: `python -m unittest tests.test_tournament_moves`.
-   Focused regression tests must pass before handoff.
-3. Run `python run_tests.py` before handoff when feasible.
-   For a refactor that must not change gameplay, record `python scripts/checks/turn_digest.py --output before.json` first.
-   After the refactor, run `python scripts/checks/turn_digest.py --compare before.json`.
-4. Complete the affected-systems checklist above.
-   For UI, run functional smoke checks and check appearance manually.
-   Test alternative permissions and input handling.
 
 ### Unit, Building, and Research Tests
 
