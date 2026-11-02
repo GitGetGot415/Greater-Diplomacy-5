@@ -72,14 +72,13 @@ class Mods(FolderListState):
         queries.sync_persisted_dir(self.managed_dir)
         self.refresh_ui()
 
-    def confirm_delete(self):
-        if self.deleting_item:
-            path = os.path.join(self.managed_dir, self.deleting_item)
-            if os.path.exists(path):
-                os.remove(path)
-                mod_loader.set_mod_enabled(self.deleting_item, None)
-                queries.sync_persisted_dir(self.managed_dir)
-        self.cancel_delete()
+    def delete_item(self, name):
+        path = os.path.join(self.managed_dir, name)
+        if os.path.exists(path):
+            os.remove(path)
+            mod_loader.set_mod_enabled(name, None)
+            queries.sync_persisted_dir(self.managed_dir)
+        self.refresh_ui()
 
     def refresh_ui(self):
         self.elements = [

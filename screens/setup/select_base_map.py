@@ -49,10 +49,6 @@ class Select_Base_Map(FolderListState):
             return self.OTHER_MAP_CATEGORIES[self.sub_state][0].upper()
         return ""
 
-    def set_sub_state(self, state):
-        self.deleting_item = None
-        super().set_sub_state(state)
-
     def update(self):
         super().update()
 
@@ -162,10 +158,8 @@ class Select_Base_Map(FolderListState):
         super().exit_screen()
 
     def handle_back_key(self):
-        # Escape closes the popup, then steps back up the sub-state tree before it leaves the screen.
-        if self.deleting_item:
-            self.cancel_delete()
-        elif self.sub_state == "BASE_MAPS":
+        # Escape steps back up the sub-state tree before it leaves the screen.
+        if self.sub_state == "BASE_MAPS":
             self.set_sub_state("CUSTOM_MAPS")
         elif self.sub_state == "OTHER_CATEGORY":
             self.set_sub_state("CUSTOM_MAPS")

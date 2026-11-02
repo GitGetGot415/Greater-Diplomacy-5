@@ -740,16 +740,12 @@ class ButtonMenuScreen(GameState):
 class FolderListState(GameState):
     """Base for the menus that list folders on disk (saves, custom maps).
 
-    Subclasses point `managed_dir` at a directory and get the rename popup, the
-    delete confirmation popup and their input handling for free. While the delete
-    popup is open, it covers the screen and takes all mouse and keyboard input.
+    Subclasses point `managed_dir` at a directory and get the rename and delete
+    popups for free.
     """
-    # Size of the centred "Delete X?" confirmation popup.
-    delete_popup_size = ui_bars.DELETE_POPUP_SIZE
 
     def __init__(self):
         super().__init__()
-        self.deleting_item = None
 
     # -- the directory being managed; a property so sub-state screens can swap it
     @property
@@ -792,49 +788,19 @@ class FolderListState(GameState):
         self.refresh_ui()
 
     def start_delete(self, name):
-        self.deleting_item = name
+        """Opens the popup that asks the player to confirm the deletion."""
+        # ui.dialogs imports this module, so this import must stay local.
+        from ui import dialogs
+
+        dialogs.ask_yes_no("Delete", f"Delete '{name}'? This cannot be undone.",
+                           lambda confirmed: self.delete_item(name) if confirmed else None)
+
+    def delete_item(self, name):
+        path = os.path.join(self.managed_dir, name)
+        if os.path.exists(path):
+            shutil.rmtree(path)
+            sync_persisted_dir(self.managed_dir)
         self.refresh_ui()
-
-    def confirm_delete(self):
-        if self.deleting_item:
-            path = os.path.join(self.managed_dir, self.deleting_item)
-            if os.path.exists(path):
-                shutil.rmtree(path)
-                sync_persisted_dir(self.managed_dir)
-        self.cancel_delete()
-
-    def cancel_delete(self):
-        self.deleting_item = None
-        self.refresh_ui()
-
-    def handle_events(self, events):
-        for event in events:
-            if self.deleting_item:
-                if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
-                    self.confirm_delete()
-                continue
-            super().handle_events([event])
-
-    def handle_back_key(self):
-        # The global BACK key runs before handle_events, so it closes the popup here.
-        if self.deleting_item:
-            self.cancel_delete()
-        else:
-            super().handle_back_key()
-
-    # ---------------------------------------------------------------- #
-    #                            RENDERING                             #
-    # ---------------------------------------------------------------- #
-
-    def draw(self, surface):
-        super().draw(surface)
-        # After the buttons, so that the popup covers them.
-        if self.deleting_item:
-            self.draw_delete_confirm(surface)
-
-    def draw_delete_confirm(self, surface, center=None):
-        """Dims the screen and asks for Enter/Escape on the pending deletion."""
-        ui_bars.draw_delete_confirm(surface, self.deleting_item, center=center, size=self.delete_popup_size)
 
 
 class MapOverlayScreen(GameState):

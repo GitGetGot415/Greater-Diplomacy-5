@@ -7,17 +7,7 @@ from unittest import mock
 
 from tests import app_harness  # Sets the dummy video driver before pygame starts.
 
-import pygame
-
 from ui.navigation.game_state import FolderListState
-
-
-class _RecordingElement:
-    def __init__(self):
-        self.events = []
-
-    def handle_event(self, event):
-        self.events.append(event)
 
 
 class _FolderScreen(FolderListState):
@@ -26,8 +16,6 @@ class _FolderScreen(FolderListState):
     def __init__(self, directory):
         super().__init__()
         self.directory = directory
-        self.element = _RecordingElement()
-        self.elements = [self.element]
         self.refreshes = 0
 
     @property
@@ -36,14 +24,6 @@ class _FolderScreen(FolderListState):
 
     def refresh_ui(self):
         self.refreshes += 1
-
-
-def click():
-    return pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(5, 5))
-
-
-def key(code):
-    return pygame.event.Event(pygame.KEYDOWN, key=code, unicode="", mod=0)
 
 
 class FolderListPromptTests(unittest.TestCase):
@@ -92,31 +72,27 @@ class FolderListPromptTests(unittest.TestCase):
         for char in "aZ9 _-":
             self.assertTrue(is_valid(char), char)
 
-    def test_delete_popup_blocks_the_buttons_behind_it(self):
-        self.screen.start_delete("old")
-        self.screen.handle_events([click()])
-        self.assertEqual(self.screen.element.events, [])
-        self.assertEqual(self.screen.deleting_item, "old")
+    def open_delete(self):
+        with mock.patch("ui.dialogs.ask_yes_no") as ask:
+            self.screen.start_delete("old")
+        return ask.call_args.args[2]
 
-    def test_buttons_receive_events_when_no_popup_is_open(self):
-        event = click()
-        self.screen.handle_events([event])
-        self.assertEqual(self.screen.element.events, [event])
-
-    def test_enter_confirms_the_delete(self):
-        self.screen.start_delete("old")
-        self.screen.handle_events([key(pygame.K_RETURN)])
-        self.assertFalse(os.path.exists(os.path.join(self.dir, "old")))
-        self.assertIsNone(self.screen.deleting_item)
-
-    def test_back_key_cancels_the_delete_without_leaving_the_screen(self):
-        self.screen.start_delete("old")
-        self.screen.handle_back_key()
+    def test_delete_keeps_the_folder_until_the_popup_is_answered(self):
+        self.open_delete()
         self.assertTrue(os.path.isdir(os.path.join(self.dir, "old")))
-        self.assertIsNone(self.screen.deleting_item)
-        self.assertFalse(self.screen.done)
 
-    def test_back_key_leaves_the_screen_when_no_popup_is_open(self):
+    def test_confirming_the_delete_removes_the_folder_and_refreshes(self):
+        self.open_delete()(True)
+        self.assertFalse(os.path.exists(os.path.join(self.dir, "old")))
+        self.assertEqual(self.screen.refreshes, 1)
+
+    def test_denying_the_delete_keeps_the_folder(self):
+        answer = self.open_delete()
+        for value in (False, None):
+            answer(value)
+            self.assertTrue(os.path.isdir(os.path.join(self.dir, "old")))
+
+    def test_back_key_leaves_the_screen(self):
         self.screen.handle_back_key()
         self.assertTrue(self.screen.done)
         self.assertEqual(self.screen.next_state, "MENU")

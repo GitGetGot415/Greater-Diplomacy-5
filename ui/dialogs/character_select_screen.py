@@ -16,10 +16,10 @@ from ui.navigation.modal_screen import ModalScreen
 from ui.widgets.ui_elements import Button
 from ui.rendering.font_manager import fonts
 
+from ui import dialogs
 from ui.dialogs import file_exchange
 from data.platform import CHARACTERS_DIR, CUSTOM_SUBDIR, sync_persisted_dir
 from data.queries.content import DEFAULT_PORTRAIT, discover_character_images, is_custom_portrait
-from ui.bars import ui_bars
 
 
 def _label_for(rel_path):
@@ -65,8 +65,6 @@ class CharacterSelectScreen(ModalScreen):
         self.current_path = current_path
         self.images = discover_character_images()
         self._thumbnails = {}
-        #: rel_path of the custom portrait pending a delete confirmation, if any.
-        self.deleting_item = None
         self._center_current_on_open = True
         self.refresh_ui()
 
@@ -86,36 +84,22 @@ class CharacterSelectScreen(ModalScreen):
         self.refresh_ui()
 
     def start_delete_custom(self, rel_path):
-        self.deleting_item = rel_path
-        # The X sits inside scroll_content_rect, so this very click can arm a
-        # content-drag on mouse-down. additional_events then blocks mouse
-        # events -- including the matching mouse-up -- while the confirm
-        # popup is open, so without this the drag is left stuck armed and the
-        # next mouse move free-scrolls the grid with no button held. Same
-        # fix GameState.cancel_active_drags() exists for: a covering screen
-        # stealing that mouse-up.
-        self.cancel_active_drags()
-        self.refresh_ui()
+        dialogs.ask_yes_no("Delete Portrait", f"Delete '{_label_for(rel_path)}'? This cannot be undone.",
+                           lambda confirmed: self.delete_custom(rel_path) if confirmed else None)
 
-    def cancel_delete_custom(self):
-        self.deleting_item = None
+    def delete_custom(self, rel_path):
+        path = os.path.join(CHARACTERS_DIR, rel_path)
+        if os.path.exists(path):
+            os.remove(path)
+            sync_persisted_dir(os.path.join(CHARACTERS_DIR, CUSTOM_SUBDIR))
+        # Deleting the portrait currently in use elsewhere would leave that
+        # screen holding a path that no longer resolves on the next load --
+        # fall back to the default rather than leaving a dangling reference.
+        if self.current_path == rel_path:
+            self.current_path = DEFAULT_PORTRAIT
+            self.on_confirm(DEFAULT_PORTRAIT)
+        self.images = discover_character_images()
         self.refresh_ui()
-
-    def confirm_delete_custom(self):
-        rel_path = self.deleting_item
-        if rel_path:
-            path = os.path.join(CHARACTERS_DIR, rel_path)
-            if os.path.exists(path):
-                os.remove(path)
-                sync_persisted_dir(os.path.join(CHARACTERS_DIR, CUSTOM_SUBDIR))
-            # Deleting the portrait currently in use elsewhere would leave that
-            # screen holding a path that no longer resolves on the next load --
-            # fall back to the default rather than leaving a dangling reference.
-            if self.current_path == rel_path:
-                self.current_path = DEFAULT_PORTRAIT
-                self.on_confirm(DEFAULT_PORTRAIT)
-            self.images = discover_character_images()
-        self.cancel_delete_custom()
 
     def _thumbnail(self, rel_path):
         thumb = self._thumbnails.get(rel_path)
@@ -165,11 +149,7 @@ class CharacterSelectScreen(ModalScreen):
                 if idx == 0:
                     self._add_tile(x, y)
                     continue
-                rel_path = self.images[idx - 1]
-                # Replaced by the centred confirm popup while its own delete is pending.
-                if rel_path == self.deleting_item:
-                    continue
-                self._portrait_tile(rel_path, x, y, font)
+                self._portrait_tile(self.images[idx - 1], x, y, font)
 
     def _add_tile(self, x, y):
         btn = Button(x, y, "character_portrait_tile", "green", "+ Add New",
@@ -201,13 +181,6 @@ class CharacterSelectScreen(ModalScreen):
             self.add_list_row(del_btn)
 
     def additional_events(self, event):
-        if self.deleting_item:
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_RETURN:
-                    self.confirm_delete_custom()
-                elif event.key == pygame.K_ESCAPE:
-                    self.cancel_delete_custom()
-            return
         self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
 
     def draw_body(self, surface):
@@ -218,5 +191,3 @@ class CharacterSelectScreen(ModalScreen):
     def draw_foreground(self, surface):
         self.draw_list_scrollbar(surface, self.panel_rect.right - 30, self.panel_rect.y + self.GRID_TOP,
                                  self.panel_rect.height - self.GRID_TOP - 20)
-        if self.deleting_item:
-            ui_bars.draw_delete_confirm(surface, _label_for(self.deleting_item), center=self.panel_rect.center)

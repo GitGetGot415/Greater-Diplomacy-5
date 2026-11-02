@@ -2,18 +2,18 @@
 import pygame
 import os
 import unicodedata
-from ui.navigation.game_state import GameState, resolve_keybind
+from ui.navigation.game_state import GameState
 from ui.widgets.ui_elements import process_text_input, draw_text_box, Button
 from ui.widgets import ui_elements
 from ui.rendering.font_manager import fonts
 import data.constants as c
 from data import queries
+from ui import dialogs
 from ui.dialogs import pickers
 from data.platform import downloads_dir
 from data.io.country_io import DEFAULT_NATION_COLOR
 from ui.rendering import country_names
 
-from ui.bars import ui_bars
 
 
 # ==========================================
@@ -47,7 +47,6 @@ EDIT_COUNTRY_NULL_COLOR_Y = 105
 input_box_x = c.EDIT_COUNTRY_UI_X1
 second_right_ui_x = c.EDIT_COUNTRY_UI_X2
 right_ui_x = c.EDIT_COUNTRY_UI_X3
-x_offset_confirmation = -100
 
 
 def render_edit_country_buttons(edit_screen):
@@ -125,8 +124,6 @@ def render_edit_country_buttons(edit_screen):
     ])
 
 class Edit_Country_Screen(GameState):
-    popup_yes_rect = None
-    popup_no_rect = None
 
     back_state = "MAP"
 
@@ -156,8 +153,6 @@ class Edit_Country_Screen(GameState):
         self.active_color = (0, 0, 0)
         self.draw_mode = "BRUSH" # Can be "BRUSH" or "FILL"
         self.active_input = None # "COUNTRY_NAME", "NAME", or "TITLE"
-        self.resetting_type = None # "FLAG" or "PORTRAIT"
-        self.show_unsaved_confirmation = False
         
         self.is_drawing = False
         self.history = []
@@ -313,7 +308,10 @@ class Edit_Country_Screen(GameState):
             self.portrait_surf = self.history[self.history_index][1].copy()
 
     def trigger_reset(self, target_type):
-        self.resetting_type = target_type
+        """Asks before resetting "FLAG" or "PORTRAIT" to its default."""
+        name = target_type.title()
+        dialogs.ask_yes_no(f"Reset {name}", f"Reset {name} to Default?",
+                           lambda confirmed: self.confirm_reset(target_type) if confirmed else None)
 
     def reset_map_color(self):
         """Resets the map color to the original value stored upon entering the editor."""
@@ -321,18 +319,14 @@ class Edit_Country_Screen(GameState):
         self.map_screen.show_feedback("Map color reset to default!")
         self.save_state()
 
-    def confirm_reset(self):
-        if self.resetting_type == "FLAG":
+    def confirm_reset(self, target_type):
+        if target_type == "FLAG":
             self.flag_surf = queries.decode_b64_to_surf("DEFAULT", self.flag_size, is_portrait=False, country_name=self.editing_country)
-        elif self.resetting_type == "PORTRAIT":
+        elif target_type == "PORTRAIT":
             self.portrait_surf = queries.decode_b64_to_surf("DEFAULT", self.portrait_size, is_portrait=True, country_name=self.editing_country)
-        
-        self.map_screen.show_feedback(f"{self.resetting_type.title()} reset to default!")
-        self.save_state()
-        self.resetting_type = None
 
-    def cancel_reset(self):
-        self.resetting_type = None
+        self.map_screen.show_feedback(f"{target_type.title()} reset to default!")
+        self.save_state()
 
     def open_switch_appearance_menu(self):
         """Opens a floating Tkinter tree configuration list to copy assets from another nation."""
@@ -429,43 +423,6 @@ class Edit_Country_Screen(GameState):
         self.map_screen.show_feedback("Country Data Saved!")
         self.force_exit_to_map()
 
-    def _handle_popup_event(self, event, on_yes, on_no):
-        """Answers whichever danger prompt is open.
-
-        Both prompts take Enter/Escape and a click on either button, and the
-        buttons are the rects _draw_popup published, so this is the same
-        handler either way -- only the two callbacks differ.
-        """
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_RETURN:
-                on_yes()
-            elif event.key == resolve_keybind(self, "BACK", pygame.K_ESCAPE):
-                on_no()
-        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            yes_rect = self.popup_yes_rect
-            no_rect = self.popup_no_rect
-            if yes_rect and yes_rect.collidepoint(event.pos):
-                on_yes()
-            elif no_rect and no_rect.collidepoint(event.pos):
-                on_no()
-
-    def handle_events(self, events):
-        for event in events:
-            # --- UNSAVED CHANGES POPUP INTERCEPT ---
-            if self.show_unsaved_confirmation:
-                self._handle_popup_event(event, self.force_exit_to_map,
-                                         lambda: setattr(self, "show_unsaved_confirmation", False))
-                continue
-
-            if self.resetting_type:
-                self._handle_popup_event(event, self.confirm_reset, self.cancel_reset)
-                continue
-
-
-            for el in self.elements:
-                el.handle_event(event)
-            self.additional_events(event)
-
     def execute_draw(self, mx, my, is_click):
         """Handles applying the brush or fill onto the proper surface"""
         def apply(surf, rect, scale):
@@ -552,23 +509,6 @@ class Edit_Country_Screen(GameState):
                     elif self.active_input == "TITLE":
                         self.leader_title, _ = process_text_input(event, self.leader_title, max_length=c.COUNTRY_NAME_MAX_LENGTH)
 
-    def _draw_popup(self, surface, title_text, sub_text, yes_text, no_text):
-        """Draws whichever danger prompt is open and publishes its buttons.
-
-        The rects are stored rather than recomputed in handle_events: the two
-        used to be written out separately, box-relative here and centre-relative
-        there, and only agreed because the box happened to be 200 tall.
-        """
-
-        box_rect = pygame.Rect(0, 0, 450, 200)
-        box_rect.center = (c.SCREEN_WIDTH // 2 + x_offset_confirmation, c.SCREEN_HEIGHT // 2)
-
-        self.popup_yes_rect, self.popup_no_rect = ui_bars.draw_confirm_prompt(
-            surface, box_rect, title_text, sub_text,
-            yes_label=yes_text, no_label=no_text,
-            yes_color=(150, 0, 0), no_color=(0, 150, 0), hover=True,
-            bg=(60, 20, 20), border=(255, 50, 50), border_width=3)
-
     def additional_draw(self, surface):
         title_font = fonts.get("title")
         heading_font = fonts.get("heading2")
@@ -632,11 +572,6 @@ class Edit_Country_Screen(GameState):
         draw_input_box(600, "Leader Name:", "NAME", self.leader_name)
         draw_input_box(660, "Leader Title:", "TITLE", self.leader_title)
 
-        if self.resetting_type:
-            self._draw_popup(surface, f"Reset {self.resetting_type.title()} to Default?", "Press Enter to Confirm or Esc to Cancel", "YES", "NO")
-        if self.show_unsaved_confirmation:
-            self._draw_popup(surface, "Discard Unsaved Changes?", "Press Enter to Discard or Esc to Cancel", "DISCARD", "CANCEL")
-
         # --- Draw Original Key Country ID block ---
         id_display_x = EDIT_COUNTRY_ID_DISPLAY_X
         id_display_y = EDIT_COUNTRY_ID_DISPLAY_Y
@@ -647,10 +582,11 @@ class Edit_Country_Screen(GameState):
     def exit_screen(self):
         # Backing out with pending edits asks before discarding them.
         if self.has_unsaved_changes():
-            self.show_unsaved_confirmation = True
+            dialogs.ask_yes_no("Unsaved Changes", "Discard Unsaved Changes?",
+                               lambda confirmed: self.force_exit_to_map() if confirmed else None,
+                               yes_label="Discard", no_label="Cancel")
         else:
             self.force_exit_to_map()
 
     def force_exit_to_map(self):
-        self.show_unsaved_confirmation = False
         super().exit_screen()

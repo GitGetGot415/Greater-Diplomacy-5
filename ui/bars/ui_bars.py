@@ -257,28 +257,6 @@ def draw_confirm_prompt(surface, box_rect, question, subtitle=None,
     return yes_rect, no_rect
 
 
-DELETE_POPUP_SIZE = (500, 200)
-
-
-def draw_delete_confirm(surface, name, center=None, size=DELETE_POPUP_SIZE):
-    """Dims the screen and asks for Enter/Escape before `name` is deleted.
-
-    `center` defaults to the screen center. The caller handles the keys.
-    """
-    draw_fullscreen_overlay(surface, 180)
-
-    pop_rect = pygame.Rect((0, 0), size)
-    pop_rect.center = center or (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)
-    bg, border, border_width = c.PANEL_THEME_DANGER
-    draw_modal_box(surface, pop_rect, bg_color=bg, border_color=border, border_width=border_width)
-
-    msg = fonts.get("heading2").render(f"Delete '{name}'?", True, (255, 255, 255))
-    surface.blit(msg, msg.get_rect(center=(pop_rect.centerx, pop_rect.centery - 25)))
-
-    sub_msg = fonts.get("normal").render("Press Enter to Confirm or Esc to Cancel", True, c.UI_TEXT_LIGHT)
-    surface.blit(sub_msg, sub_msg.get_rect(center=(pop_rect.centerx, pop_rect.centery + 25)))
-
-
 def draw_panel_frame(surface, rect, title=None, bg=None, border=None, border_width=3,
                      title_dy=None, font_preset="heading2", gradient_strength=1.0):
     """The standard modal panel: filled box, border, and a centred title.
