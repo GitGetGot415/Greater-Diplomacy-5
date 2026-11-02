@@ -86,7 +86,6 @@ def keyboard_input_is_captured(state):
         or bool(getattr(state, "active_input", None))
         or bool(getattr(state, "mail_input_active", False))
         or getattr(state, "renaming_unit_index", None) is not None
-        or bool(getattr(state, "is_renaming", False))
         or bool(getattr(state, "text_input_active", False))
         or bool(getattr(state, "army_editor_state", None))
         or bool(getattr(getattr(state, "map_screen", None),

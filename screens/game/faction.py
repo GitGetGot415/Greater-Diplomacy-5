@@ -1,12 +1,13 @@
 import pygame
-from ui.navigation.game_state import GameState, resolve_keybind
+from ui.navigation.game_state import GameState
 import data.constants as c
 from ui.bars import ui_bars
 from ui.widgets.flag_icons import draw_flag_centered
-from ui.widgets.ui_elements import Button, process_text_input, make_back_button, draw_text_box
+from ui.widgets.ui_elements import Button, make_back_button
 from ui.rendering.font_manager import fonts
 from map_logic.diplomacy import faction_actions, faction_leadership
 from data import queries
+from ui import dialogs
 
 from map_logic.diplomacy import player_diplomacy_actions
 from ui.rendering import country_names
@@ -28,16 +29,12 @@ class Faction_Screen(GameState):
         super().__init__()
         self.bg_color = (30, 35, 40)
         self.map_screen = None
-        self.is_renaming = False
-        self.new_faction_name = ""
         self.scroll_y = 0
         self.max_scroll = 0
         self.scroll_content_rect = None
 
     def start_faction(self, map_ref):
         self.map_screen = map_ref
-        self.is_renaming = False
-        self.new_faction_name = ""
         self.scroll_y = 0
         self.refresh_ui()
 
@@ -85,7 +82,7 @@ class Faction_Screen(GameState):
         self.elements.append(btn_territories)
         
         # 4. Rename Faction Button
-        if is_leader and not self.is_renaming:
+        if is_leader:
             btn_rename = Button(c.SCREEN_WIDTH // 2 - 100, c.SCREEN_HEIGHT - 220, "medium", "blue", "Rename Faction", self.start_rename)
             self.elements.append(btn_rename)
 
@@ -150,20 +147,22 @@ class Faction_Screen(GameState):
         self.next_state, self.done = "FACTION_TERRITORIES", True
         
     def start_rename(self):
-        self.is_renaming = True
+        """Opens the popup that asks for a new faction name."""
         player_country = self.map_screen.player_country
-        self.new_faction_name = self.map_screen.nation_data.get(player_country, {}).get("faction", "")
-        self.refresh_ui()
+        current_name = self.map_screen.nation_data.get(player_country, {}).get("faction", "")
+        dialogs.ask_string("Rename Faction", f"Enter a new name for {current_name}:", self.confirm_rename,
+                           initial=current_name, allow_empty=False, max_length=c.FACTION_NAME_MAX_LENGTH)
 
-    def confirm_rename(self):
-        if not self.map_screen: return
+    def confirm_rename(self, new_name):
+        """Applies the popup's answer. Cancel gives None, which changes nothing."""
+        if new_name is None or not self.map_screen: return
         if self.map_screen.realtime_multiplayer:
             if not player_diplomacy_actions.can_edit_diplomacy(self.map_screen):
                 return
         player_country = self.map_screen.player_country
         old_name = self.map_screen.nation_data.get(player_country, {}).get("faction", "")
-        new_name = self.new_faction_name.strip()
-        
+        new_name = new_name.strip()
+
         if new_name and old_name and new_name != old_name:
             renamed = faction_actions.rename_faction(
                 self.map_screen.nation_data, player_country, old_name, new_name)
@@ -181,25 +180,11 @@ class Faction_Screen(GameState):
             else:
                 self.map_screen.show_feedback(
                     "Faction names must be unique, and only its leader may rename it.")
-                
-        self.is_renaming = False
+
         self.refresh_ui()
 
-    def cancel_rename(self):
-        self.is_renaming = False
-        self.refresh_ui()
-        
     def additional_events(self, event):
-        if self.handle_list_scroll(event, content_rect_attr="scroll_content_rect"):
-            return
-        if self.is_renaming:
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_RETURN:
-                    self.confirm_rename()
-                elif event.key == resolve_keybind(self, "BACK", pygame.K_ESCAPE):
-                    self.cancel_rename()
-                else:
-                    self.new_faction_name, _ = process_text_input(event, self.new_faction_name, max_length=40)
+        self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
 
     def additional_draw(self, surface):
         if not self.map_screen: return
@@ -208,7 +193,6 @@ class Faction_Screen(GameState):
         nation_data = self.map_screen.nation_data
         my_faction = nation_data.get(player_country, {}).get("faction", "")
 
-        font_title = fonts.get("title")
         font_heading = fonts.get("heading1")
         font_normal = fonts.get("normal")
 
@@ -216,16 +200,8 @@ class Faction_Screen(GameState):
             ui_bars.draw_centered_title(surface, "No Faction", 100, font_preset="title", color=(150, 150, 150))
             return
 
-        if self.is_renaming:
-            title_rect = pygame.Rect(c.SCREEN_WIDTH // 2 - 200, 30, 400, 50)
-            draw_text_box(surface, title_rect, self.new_faction_name, active=True,
-                          font=font_title)
-            
-            instr = font_normal.render("Enter: Save | Esc: Cancel", True, c.UI_TEXT_LIGHT)
-            surface.blit(instr, (c.SCREEN_WIDTH // 2 - instr.get_width() // 2, 90))
-        else:
-            ui_bars.draw_centered_title(surface, f"Faction: {my_faction}", 40, font_preset="title")
-            
+        ui_bars.draw_centered_title(surface, f"Faction: {my_faction}", 40, font_preset="title")
+
         # Alphabetize what the player reads, not the internal nation IDs.  The
         # latter can differ after a rename or imported save and should never
         # determine the visible roster order.
@@ -303,13 +279,6 @@ class Faction_Screen(GameState):
                                           nation_data):
             return f"{name} (Government in Exile)"
         return name
-
-    def handle_back_key(self):
-        # Escape cancels an in-progress rename before it leaves the screen.
-        if self.is_renaming:
-            self.cancel_rename()
-        else:
-            self.exit_screen()
 
 class Faction_Territories_Screen(GameState):
     back_state = "FACTION"

@@ -42,6 +42,64 @@ class FactionScreenTests(unittest.TestCase):
             game.nation_data[nation]["is_faction_leader"] = False
         self.assertEqual(screen._claim_button("").text, "Faction Needs A Leader")
 
+    def open_rename(self, screen):
+        with patch("ui.dialogs.ask_string") as ask:
+            screen.start_rename()
+        return ask
+
+    def rename_button(self, screen):
+        return next((el for el in screen.elements if el.text == "Rename Faction"), None)
+
+    def test_rename_button_stays_and_opens_a_popup_with_the_current_name(self):
+        game, _nations = self.make_game()
+        screen = Faction_Screen()
+        screen.start_faction(game)
+        ask = self.open_rename(screen)
+        self.assertEqual(ask.call_args.kwargs["initial"], "The Pact")
+        self.assertEqual(ask.call_args.kwargs["max_length"], c.FACTION_NAME_MAX_LENGTH)
+        self.assertIsNotNone(self.rename_button(screen))
+
+    def test_rename_answer_renames_the_faction_and_keeps_the_button(self):
+        game, nations = self.make_game()
+        screen = Faction_Screen()
+        screen.start_faction(game)
+        self.open_rename(screen).call_args.args[2]("  New Pact  ")
+        self.assertEqual(game.nation_data[nations[1]]["faction"], "New Pact")
+        self.assertIsNotNone(self.rename_button(screen))
+
+    def test_cancelled_rename_changes_nothing(self):
+        game, nations = self.make_game()
+        screen = Faction_Screen()
+        screen.start_faction(game)
+        self.open_rename(screen).call_args.args[2](None)
+        self.assertEqual(game.nation_data[nations[0]]["faction"], "The Pact")
+
+    def test_tournament_rename_records_the_host_command(self):
+        game, _nations = self.make_game()
+        game.multiplayer_mode = True
+        game.multiplayer_pending_faction_renames = []
+        screen = Faction_Screen()
+        screen.start_faction(game)
+        self.open_rename(screen).call_args.args[2]("New Pact")
+        self.assertEqual(game.multiplayer_pending_faction_renames,
+                         [{"old_name": "The Pact", "new_name": "New Pact"}])
+
+    def test_realtime_rename_is_refused_when_diplomacy_cannot_be_edited(self):
+        game, nations = self.make_game()
+        game.realtime_multiplayer = True
+        screen = Faction_Screen()
+        screen.start_faction(game)
+        with patch("screens.game.faction.player_diplomacy_actions.can_edit_diplomacy", return_value=False):
+            self.open_rename(screen).call_args.args[2]("New Pact")
+        self.assertEqual(game.nation_data[nations[0]]["faction"], "The Pact")
+
+    def test_members_do_not_get_a_rename_button(self):
+        game, nations = self.make_game()
+        game.player_country = nations[1]
+        screen = Faction_Screen()
+        screen.start_faction(game)
+        self.assertIsNone(self.rename_button(screen))
+
     def test_large_roster_is_scrollable_and_draws_a_flag_for_each_member(self):
         game, nations = self.make_game(30)
         screen = Faction_Screen()

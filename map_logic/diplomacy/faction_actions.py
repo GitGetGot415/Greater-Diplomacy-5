@@ -31,7 +31,7 @@ def rename_faction(nation_data, leader, old_name, new_name):
 
     new_name = new_name.strip()
     leader_data = nation_data.get(leader, {})
-    if (not old_name or not new_name or len(new_name) > 40 or old_name == new_name
+    if (not old_name or not new_name or len(new_name) > c.FACTION_NAME_MAX_LENGTH or old_name == new_name
             or leader_data.get("faction") != old_name
             or not leader_data.get("is_faction_leader", False)):
         return False

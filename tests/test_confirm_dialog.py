@@ -204,6 +204,13 @@ class DialogTests(unittest.TestCase):
         self.settle()
         self.assertEqual(self.answers, [None])
 
+    def test_ask_string_max_length_stops_new_characters(self):
+        dialogs.ask_string("T", "Name?", self.answers.append, initial="ab", max_length=3)
+        modal = modal_stack.active()
+        modal.handle_events([typed("c"), typed("d"), key(pygame.K_RETURN)])
+        self.settle()
+        self.assertEqual(self.answers, ["abc"])
+
     def test_ask_integer_accepts_digits(self):
         dialogs.ask_integer("T", "How many?", self.answers.append)
         modal = modal_stack.active()
