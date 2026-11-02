@@ -273,6 +273,8 @@ Keep tuning data in its source files:
 
 ### UI Appearance
 
+- **Do not add UI help text, hints, or instructional placeholders unless the user explicitly requests them.**
+  Do not add text merely because it might be helpful or fill empty space.
 - When the user requests a gradient, interpolate directly between the specified start and end colors.
   Do not add intermediate color stops unless the user explicitly requests them.
   For animated gradients, interpolate directly between the current start and end colors at each animation step.
