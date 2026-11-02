@@ -12,6 +12,79 @@ from ui.bars import ui_bars
 from ui.widgets import ui_elements
 
 
+class DisplayModeTests(unittest.TestCase):
+    def test_recreated_windows_disable_native_destination_alpha(self):
+        for flags in (0, pygame.FULLSCREEN, pygame.NOFRAME):
+            with self.subTest(flags=flags):
+                native = pygame.Surface((40, 30), pygame.SRCALPHA)
+                with patch.object(pygame.display, "set_mode", return_value=native) as create:
+                    surface = ui_bars.set_display_mode((40, 30), flags)
+                create.assert_called_once_with((40, 30), flags)
+                self.assertIs(surface, native)
+                self.assertIsNone(surface.get_alpha())
+
+    def test_standalone_window_uses_the_same_display_setup(self):
+        native = pygame.Surface((40, 30), pygame.SRCALPHA)
+        with patch.object(pygame.display, "get_surface", return_value=None), \
+                patch.object(pygame, "get_init", return_value=True), \
+                patch.object(pygame.display, "set_mode", return_value=native), \
+                patch.object(pygame.display, "set_caption") as caption:
+            surface, owns_display = ui_bars.acquire_surface((40, 30), "Tool")
+        self.assertIs(surface, native)
+        self.assertTrue(owns_display)
+        self.assertIsNone(surface.get_alpha())
+        caption.assert_called_once_with("Tool")
+
+    def test_fullscreen_and_windowed_transitions_reapply_display_setup(self):
+        import main
+
+        controller = main.Controller.__new__(main.Controller)
+        controller.is_fullscreen = False
+        controller.last_toggle_time = None
+        native = pygame.Surface((40, 30), pygame.SRCALPHA)
+        with patch.object(main, "pygame", pygame, create=True), \
+                patch.object(main, "c", c, create=True), \
+                patch.object(main, "ui_bars", ui_bars, create=True), \
+                patch.object(pygame.display, "set_mode", return_value=native) as create, \
+                patch.object(pygame.time, "get_ticks", side_effect=(1000, 1000, 2000, 2000)), \
+                patch.object(pygame.event, "clear"):
+            controller.toggle_fullscreen()
+            self.assertTrue(controller.is_fullscreen)
+            self.assertIsNone(controller.screen.get_alpha())
+            # A new native window can enable alpha again on each mode change.
+            native.set_alpha(255)
+            controller.toggle_fullscreen()
+        self.assertFalse(controller.is_fullscreen)
+        self.assertIsNone(controller.screen.get_alpha())
+        create.assert_has_calls([
+            call((c.SCREEN_WIDTH, c.SCREEN_HEIGHT), pygame.FULLSCREEN),
+            call((c.SCREEN_WIDTH, c.SCREEN_HEIGHT), 0),
+        ])
+
+    def test_fullscreen_failure_keeps_borderless_fallback_opaque(self):
+        import main
+
+        controller = main.Controller.__new__(main.Controller)
+        controller.is_fullscreen = False
+        controller.last_toggle_time = None
+        native = pygame.Surface((40, 30), pygame.SRCALPHA)
+        with patch.object(main, "pygame", pygame, create=True), \
+                patch.object(main, "c", c, create=True), \
+                patch.object(main, "ui_bars", ui_bars, create=True), \
+                patch.object(pygame.display, "set_mode",
+                             side_effect=(pygame.error("Fullscreen unavailable"), native)) as create, \
+                patch.object(pygame.display, "Info",
+                             return_value=SimpleNamespace(current_w=1280, current_h=720)), \
+                patch.object(pygame.event, "clear"):
+            controller.toggle_fullscreen()
+        self.assertIs(controller.screen, native)
+        self.assertIsNone(native.get_alpha())
+        create.assert_has_calls([
+            call((c.SCREEN_WIDTH, c.SCREEN_HEIGHT), pygame.FULLSCREEN),
+            call((1280, 720), pygame.NOFRAME),
+        ])
+
+
 class MapFrameRenderingTests(unittest.TestCase):
     def setUp(self):
         ui_elements._button_background.cache_clear()

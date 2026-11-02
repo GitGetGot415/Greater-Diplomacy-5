@@ -85,7 +85,7 @@ def _import_project_modules():
     the enclosing class statement first executes.
     """
     global IS_WEB, restore_persisted_dir, platform, pygame
-    global Messages_Screen, dispatch_global_keys, synthesize_keybind_mouse_events, keyboard_input_is_captured, fonts, ui_elements, c, queries
+    global Messages_Screen, dispatch_global_keys, synthesize_keybind_mouse_events, keyboard_input_is_captured, fonts, ui_elements, ui_bars, c, queries
     global Load_Game, Map, Menu, New_Game, Settings, Credits, Music_Player, View_Assets, Mods, Unit_Art, Keybinds, Mouse_Settings, Edit_Portrait, default_keybinds
     global Translate, Translation_Menu, Greater_Diplomacy_4_Translation, Greater_Diplomacy_Hex_Translation
     global Orders_Screen, keybind_io, settings_schema, symbol_loader, modal_stack
@@ -130,6 +130,7 @@ def _import_project_modules():
                            keyboard_input_is_captured)
     from ui.rendering.font_manager import fonts
     from ui.widgets import ui_elements
+    from ui.bars import ui_bars
     import data.constants as c
     from data import queries
     from screens.menus.load_game import Load_Game
@@ -263,7 +264,7 @@ class Controller:
         font_path = c.FONT_PATH_DEFAULT
         fonts.init_fonts(font_path)
 
-        self.screen = pygame.display.set_mode((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
+        self.screen = ui_bars.set_display_mode((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
 
         # Load the sound into the ui_elements module using SoLoud Wav()
         try:
@@ -278,7 +279,7 @@ class Controller:
         except Exception:
             print(f"Warning: {c.SOUND_SLIDER_PATH} not found in assets folder")
 
-        self.screen = pygame.display.set_mode((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
+        self.screen = ui_bars.set_display_mode((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
 
         # 0. Load symbols
         try:
@@ -919,12 +920,12 @@ class Controller:
         self.is_fullscreen = not self.is_fullscreen
         if self.is_fullscreen:
             try:
-                self.screen = pygame.display.set_mode((c.SCREEN_WIDTH, c.SCREEN_HEIGHT), pygame.FULLSCREEN)
+                self.screen = ui_bars.set_display_mode((c.SCREEN_WIDTH, c.SCREEN_HEIGHT), pygame.FULLSCREEN)
             except pygame.error:
                 info = pygame.display.Info()
-                self.screen = pygame.display.set_mode((info.current_w, info.current_h), pygame.NOFRAME)
+                self.screen = ui_bars.set_display_mode((info.current_w, info.current_h), pygame.NOFRAME)
         else:
-            self.screen = pygame.display.set_mode((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
+            self.screen = ui_bars.set_display_mode((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
 
         # Update toggle time AFTER transition, so cooldown starts when screen is ready
         self.last_toggle_time = pygame.time.get_ticks()

@@ -401,6 +401,12 @@ No music setting or game-save format changes are required.
 DISPLAY SUPPORT
 ===============
 
+ui/bars/ui_bars.py creates display surfaces through set_display_mode.
+Game startup, fullscreen changes, and standalone tools use this helper.
+The helper disables destination alpha blending on the window surface.
+macOS can supply an alpha-enabled surface. Zero destination alpha can make transparent text backgrounds appear white.
+Text and image surfaces keep their transparency when drawn onto the opaque display.
+
 ui/rendering/symbol_loader.py caches symbol-name results and scaled images.
 ui/rendering/overlay_renderer.py caches complete unit-box images in UNIT_BOXES.
 Treat shared cached images as read-only.

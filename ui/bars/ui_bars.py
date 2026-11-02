@@ -295,6 +295,15 @@ def draw_screen_panel(surface, screen, title):
                             gradient_strength=style["gradient_strength"] if style else 1.0)
 
 
+def set_display_mode(size, flags=0):
+    """Create an opaque display surface for the game and standalone tools."""
+    surface = pygame.display.set_mode(size, flags)
+    # macOS can supply an alpha-enabled window surface. Its alpha channel is
+    # not window transparency. Zero destination alpha can turn text into white rectangles.
+    surface.set_alpha(None)
+    return surface
+
+
 def acquire_surface(size=None, caption=None):
     """Returns (surface, owns_display), creating a window only when none exists.
 
@@ -307,7 +316,7 @@ def acquire_surface(size=None, caption=None):
 
     if not pygame.get_init():
         pygame.init()
-    surface = pygame.display.set_mode(size or (c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
+    surface = set_display_mode(size or (c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
     if caption:
         pygame.display.set_caption(caption)
     return surface, True
