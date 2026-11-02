@@ -433,6 +433,10 @@ The helper disables destination alpha blending on the window surface.
 macOS can supply an alpha-enabled surface. Zero destination alpha can make transparent text backgrounds appear white.
 Text and image surfaces keep their transparency when drawn onto the opaque display.
 
+Scrolling checkerboard buffers store red, green, and blue (RGB) values without a pixel-alpha channel.
+Fractional scrolling and overlay opacity use whole-surface alpha.
+These buffers do not inherit pixel alpha from the macOS display.
+
 ui/rendering/symbol_loader.py caches symbol-name results and scaled images.
 ui/rendering/overlay_renderer.py caches complete unit-box images in UNIT_BOXES.
 Treat shared cached images as read-only.

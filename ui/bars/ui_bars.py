@@ -56,13 +56,15 @@ def opaque_checkerboard_tile(tile):
 @lru_cache(maxsize=4)
 def checkerboard_canvas(size):
     """Reuse a padded drawing surface for fractional checkerboard movement."""
-    return pygame.Surface((size[0] + 2, size[1] + 2))
+    return pygame.Surface((size[0] + 2, size[1] + 2), depth=32)
 
 
 @lru_cache(maxsize=4)
 def _checkerboard_blend_buffers(size):
     width, height = size
-    return pygame.Surface((width, height + 1)), pygame.Surface(size)
+    # Explicit RGB storage prevents inheritance of macOS display pixel alpha.
+    # Full-opacity interpolation can clear that alpha and hide the next overlay.
+    return pygame.Surface((width, height + 1), depth=32), pygame.Surface(size, depth=32)
 
 
 def draw_checkerboard_region(surface, pattern, rect, source_position, opacity):

@@ -13,6 +13,26 @@ from tests.stub_map_screen import map_double
 
 
 class CheckerboardAnimationTests(unittest.TestCase):
+    def test_cached_scrolling_buffers_do_not_inherit_native_display_alpha(self):
+        surface_type = pygame.Surface
+
+        def native_surface(size, flags=0, depth=0):
+            # Model a native window whose default format includes pixel alpha.
+            if not flags and not depth:
+                return surface_type(size, pygame.SRCALPHA)
+            return surface_type(size, flags, depth)
+
+        for cache in (ui_bars.checkerboard_canvas, ui_bars._checkerboard_blend_buffers):
+            cache.cache_clear()
+            self.addCleanup(cache.cache_clear)
+        with patch.object(pygame, "Surface", side_effect=native_surface):
+            canvas = ui_bars.checkerboard_canvas((40, 30))
+            buffers = ui_bars._checkerboard_blend_buffers((40, 30))
+            self.assertIs(ui_bars.checkerboard_canvas((40, 30)), canvas)
+            self.assertIs(ui_bars._checkerboard_blend_buffers((40, 30)), buffers)
+        for surface in (canvas, *buffers):
+            self.assertEqual(surface.get_masks()[3], 0)
+
     def test_speed_changes_and_pause_keep_the_current_phase(self):
         with patch.object(ui_bars, "_checkerboard_scroll_clock", None), \
                 patch.object(c, "CHECKERBOARD_SCROLL_SPEED", 10), \
