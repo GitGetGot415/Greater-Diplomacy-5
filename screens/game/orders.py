@@ -397,13 +397,17 @@ class Orders_Screen(GameState):
         foreign/read-only rosters and tactical mode. A key press also belongs
         to the rename field while that field is active, even if the player has
         rebound Clear Orders to a printable character.
+
+        Where it is available the key always answers with the cancel sound,
+        even when there was nothing to clear.
         """
         if (self.renaming_unit_index is not None
                 or self.read_only
                 or not self.map_screen
                 or self.map_screen.tactical_mode):
             return
-        self.clear_all_orders()
+        if not self.clear_all_orders():
+            ui_elements.play_ui_sound("cancel_orders")
 
     def select_unit(self, index):
         if self.read_only:
@@ -534,9 +538,14 @@ class Orders_Screen(GameState):
 
     @staticmethod
     def _play_order_sound(kind, results):
-        """Play one effect when a player action changes at least one order."""
-        if any(result.changed for result in results):
+        """Play one effect when a player action changes at least one order.
+
+        Returns whether it played.
+        """
+        changed = any(result.changed for result in results)
+        if changed:
             ui_elements.play_ui_sound(kind)
+        return changed
 
     def cancel_selected_batch_orders(self, order_type):
         """Cancel one matching order across the current selection at once."""
@@ -1662,6 +1671,7 @@ class Orders_Screen(GameState):
                 self.refresh_ui()
 
     def clear_all_orders(self):
+        """Cancels the displayed units' orders. Returns whether the cancel sound played."""
         selected_records = self.map_screen.selected_unit_records()
         # Orders normally clears exactly the units displayed in its roster.
         # Retain the province fallback for a read-only inspection opened by an
@@ -1672,6 +1682,7 @@ class Orders_Screen(GameState):
         cancelled_orders = []
         cancelled_targeting = self.bombarding_unit_index is not None
         self.cancel_bombard_targeting(refresh=False)
+        played_sound = False
 
         for unit in units:
             if unit.get("owner") == self.map_screen.player_country and not self._command_blocked_silent(unit):
@@ -1685,11 +1696,12 @@ class Orders_Screen(GameState):
                     cleared_any = True
 
         if cleared_any:
-            self._play_order_sound("cancel_orders", cancelled_orders)
+            played_sound = self._play_order_sound("cancel_orders", cancelled_orders)
             self._mark_draft_changed()
             self.map_screen.show_feedback("All orders cleared")
         if cleared_any or cancelled_targeting:
             self.refresh_ui()
+        return played_sound
 
     def handle_back_key(self):
         # Inline editing and bombardment targeting each consume Escape before

@@ -847,9 +847,10 @@ def handle_view_mode_keybind(map_screen, mode, action, origin=None):
     Deliberately independent of Classic/Preemptive map navigation
     (navigate_view_mode): a Classic player can still want Q/W to jump, and a
     Preemptive one can still want them not to, without changing how a click or
-    the view-mode row's own buttons behave.
+    the view-mode row's own buttons behave. Plays the same sound as those buttons.
     """
     origin = origin or map_screen
+    ui_elements.play_ui_sound("select_view")
     map_screen.set_view_mode(mode)
     _resync_view_mode_row(origin)
     if queries.get_keybind_changes_screen(action):

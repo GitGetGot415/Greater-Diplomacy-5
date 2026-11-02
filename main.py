@@ -1011,6 +1011,7 @@ class Controller:
             for event in events:
                 if (event.type == pygame.KEYDOWN and not getattr(listening_screen, "listening_for", None)
                         and event.key == self.keybinds.get("FULLSCREEN", pygame.K_F11)):
+                    ui_elements.play_ui_sound("click")
                     self.toggle_fullscreen()
 
             if top_modal is None:

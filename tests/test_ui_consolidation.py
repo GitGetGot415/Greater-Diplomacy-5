@@ -489,6 +489,58 @@ class BackKeySoundTests(SharedUiTestCase):
         modal_stack.pop()
 
 
+class KeybindSoundTests(SharedUiTestCase):
+    def test_orders_and_production_keys_play_the_view_button_sound_once(self):
+        from screens.game import map_input
+        from ui.widgets import ui_elements
+
+        for mode, action in (("UNITS", "ORDERS"), ("ECONOMY", "ECONOMY")):
+            with self.subTest(action=action), mock.patch.object(ui_elements, "play_ui_sound") as sound, \
+                    mock.patch.object(map_input.queries, "get_keybind_changes_screen", return_value=False):
+                map_screen = mock.Mock()
+                map_input.handle_view_mode_keybind(map_screen, mode, action)
+                sound.assert_called_once_with("select_view")
+                map_screen.set_view_mode.assert_called_once_with(mode)
+
+    def orders_screen(self):
+        from screens.game.orders import Orders_Screen
+
+        screen = object.__new__(Orders_Screen)
+        screen.renaming_unit_index = None
+        screen.read_only = False
+        screen.map_screen = mock.Mock(tactical_mode=False)
+        return screen
+
+    def test_clear_orders_key_plays_the_cancel_sound_even_with_nothing_to_clear(self):
+        from ui.widgets import ui_elements
+
+        screen = self.orders_screen()
+        with mock.patch.object(type(screen), "clear_all_orders", return_value=False), \
+                mock.patch.object(ui_elements, "play_ui_sound") as sound:
+            screen.handle_clear_orders_key()
+        sound.assert_called_once_with("cancel_orders")
+
+    def test_clear_orders_key_does_not_repeat_a_sound_already_played(self):
+        from ui.widgets import ui_elements
+
+        screen = self.orders_screen()
+        with mock.patch.object(type(screen), "clear_all_orders", return_value=True), \
+                mock.patch.object(ui_elements, "play_ui_sound") as sound:
+            screen.handle_clear_orders_key()
+        sound.assert_not_called()
+
+    def test_clear_orders_key_is_silent_where_it_is_unavailable(self):
+        from ui.widgets import ui_elements
+
+        screen = self.orders_screen()
+        screen.read_only = True
+        with mock.patch.object(type(screen), "clear_all_orders") as clear, \
+                mock.patch.object(ui_elements, "play_ui_sound") as sound:
+            screen.handle_clear_orders_key()
+        clear.assert_not_called()
+        sound.assert_not_called()
+
+
 class ChoiceButtonTests(SharedUiTestCase):
     def test_selection_and_availability_are_reported(self):
         from ui.widgets.ui_elements import make_choice_button
