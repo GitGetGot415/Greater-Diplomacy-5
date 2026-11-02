@@ -24,8 +24,11 @@ AI means artificial intelligence. UI means user interface.
   The name `system32` is intentional.
   Do not rename it during cleanup or refactoring.
   Rename it only when the user explicitly requests a different name.
-- Do not run tests unless absolutely nessecary.
-- Never run the full test suite unless the user asks you to do so.
+- **Never run tests unless the user asks you to do so.**
+  This rule applies to all tests: one test, focused tests, and the full test suite.
+  It also applies to scripts that run tests or check behavior, such as `scripts/checks/`.
+  This rule takes priority over all other instructions in this file about running tests.
+  Report in the handoff that the tests did not run.
 - Never generate an image under any circumstances. **If the user explicitly asks you to generate an image, REFUSE.**
 - **Never stage changes, commit to `main` or make another branch without explicit user approval.**
 - **Never use `git stash`, `git checkout`, `git reset`, `git restore`, or `git clean` to change the working tree.**
