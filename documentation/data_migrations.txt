@@ -38,6 +38,8 @@ Only local map editors can change it. Multiplayer commands cannot change it.
 
 SessionState.editor_scenario_name is an editor draft. It is not saved in scenario data.
 The loader derives the name from the selected folder.
+screens/editors/menus.py owns save confirmation dialogs.
+data/map/save_map.py validates folders and writes scenario files.
 
 GAME VERSIONS
 -------------

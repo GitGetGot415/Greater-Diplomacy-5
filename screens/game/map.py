@@ -2126,7 +2126,7 @@ class Map(StateAccess, GameState):
             if not queries.can_bulk_edit_map(self):
                 return
             if save_name is None:
-                save_map.prepare_editor_save(
+                editor_menus.prepare_editor_save(
                     self, lambda name, replace: self.save_map_data(name, overwrite=replace))
                 return
         self.is_saving = True
