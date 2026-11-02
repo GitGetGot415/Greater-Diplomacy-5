@@ -156,6 +156,9 @@ class Mods(FolderListState):
             subtext = f"{subtext}  ({info['error']})" if subtext else info["error"]
         self._row_subtext.append((subtext, 25, btn_y + 32))
 
+    def additional_events(self, event):
+        self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
+
     def additional_draw(self, surface):
         clip = surface.get_clip()
         surface.set_clip(self.scroll_content_rect)
@@ -171,4 +174,4 @@ class Mods(FolderListState):
         fonts.draw_text_with_shadow(surface, "Restart the game for changes to take effect.",
                                     20, c.SCREEN_HEIGHT - 35, "small", (180, 180, 180))
 
-        super().additional_draw(surface)
+        self.draw_list_scrollbar(surface, c.SCREEN_WIDTH - 40, self.ROW_TOP, c.SCREEN_HEIGHT - 200)

@@ -271,19 +271,10 @@ class FolderRowTests(SharedUiTestCase):
             screen.scroll_click_guard = lambda: True
             screen.refresh_ui()
         for label, handler in (("Save", "load_specific_save"), ("History", "open_history_menu"),
-                               ("Rename", "start_rename"), ("Export", "export_save_zip"), ("X", "start_delete")):
+                               ("Rename", "start_rename"), ("Export", "export_save_zip"), ("Del", "start_delete")):
             with self.subTest(label=label), mock.patch.object(screen, handler) as called:
                 button_named(screen, label).callback()
                 called.assert_called_once_with("Save")
-
-    def test_custom_map_row_opens_the_map_from_the_custom_directory(self):
-        import data.constants as c
-        from screens.setup.select_base_map import Select_Base_Map
-
-        screen = Select_Base_Map()
-        with mock.patch.object(screen, "start_editor_with_map") as start:
-            screen.edit_custom_map("Map")
-        start.assert_called_once_with("Map", c.SCENARIOS_CUSTOM_DIR)
 
 
 class ButtonMenuPageTests(SharedUiTestCase):

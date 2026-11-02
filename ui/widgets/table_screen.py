@@ -35,6 +35,8 @@ class TableScreen(GameState):
     GROUP_LABEL_Y = 65
     HEADER_Y = 88
     ROW_TOP = 130
+    #: Every row is filled, alternating between these two colors.
+    ROW_COLORS = ((35, 38, 45), (46, 50, 59))
     CELL_ICON_GAP = text_utils.INLINE_ICON_GAP
 
     def __init__(self, game_state, title, columns, rows, empty_message="Nothing to show.",
@@ -51,8 +53,7 @@ class TableScreen(GameState):
         #: one is given, so the economy and expenses tables are unaffected.
         self.on_row_click = on_row_click
         #: Optional callback taking the row dict and returning a background
-        #: color, or None to leave the row striped as usual. Tables that pass
-        #: nothing are drawn exactly as before.
+        #: color, or None to use the row's alternating color.
         self.row_tint = row_tint
         #: (rect, row) for every row actually drawn last frame. Culled rows are
         #: absent, so a row scrolled out of view cannot be clicked.
@@ -143,10 +144,7 @@ class TableScreen(GameState):
                 row = self.rows[i]
                 row_rect = pygame.Rect(self.table_x, y, self.total_w, self.ROW_HEIGHT)
                 tint = self.row_tint(row) if self.row_tint else None
-                if tint:
-                    pygame.draw.rect(surface, tint, row_rect)
-                elif i % 2 == 0:
-                    pygame.draw.rect(surface, (35, 38, 45), row_rect)
+                pygame.draw.rect(surface, tint or self.ROW_COLORS[i % 2], row_rect)
 
                 if hovered is not None:
                     self.row_hitboxes.append((row_rect, row))

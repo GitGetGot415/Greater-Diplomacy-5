@@ -10,7 +10,6 @@ from ui.widgets.ui_elements import Button
 
 from ui import dialogs
 BACKGROUND_COLOR = (80, 60, 40)
-ROW_COLOR = (48, 35, 25)
 TABLE_MARGIN = 25
 CELL_PADDING = 12
 UNREAD_BUTTON_SIZE = (120, 30)
@@ -23,6 +22,8 @@ COLUMN_SHARES = (("unit_name", "Unit", .20), ("tile_id", "Tile", .08),
 
 
 class UnitEventsScreen(TableScreen):
+    ROW_COLORS = ((48, 35, 25), (60, 45, 32))
+
     def __init__(self, map_screen):
         self.all_rows = [row | {"event_label": unit_events.EVENT_LABELS[row["event"]]}
                          for row in unit_events.entries_for(map_screen)]
@@ -53,7 +54,7 @@ class UnitEventsScreen(TableScreen):
             columns.append(TableColumn(key, label, width, align="left", fmt=fit, icon=icon, render=render))
         super().__init__(map_screen, "Unit events - Last turn", columns, rows,
                          empty_message=self.empty_report_message(),
-                         on_row_click=self.show_event, row_tint=lambda _row: ROW_COLOR)
+                         on_row_click=self.show_event)
         self.bg_color = BACKGROUND_COLOR
         unit_events.mark_read(map_screen)
         map_screen.btn_unit_events.notification_count = map_screen._unit_event_unread
