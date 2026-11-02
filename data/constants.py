@@ -694,7 +694,7 @@ RESEARCH_SLOTS = 3 # Number of techs a nation can research simultaneously
 # Faction partners that have already completed the exact tech level being
 # researched share their findings. Each partner makes research points 10% more
 # effective; five or more partners reach the 50% cap.
-FACTION_NAME_MAX_LENGTH = 40
+FACTION_NAME_MAX_LENGTH = 60
 FACTION_RESEARCH_BONUS_PER_MEMBER = 0.10
 FACTION_RESEARCH_BONUS_CAP = 0.50
 
