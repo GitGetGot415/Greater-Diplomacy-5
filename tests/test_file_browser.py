@@ -309,6 +309,20 @@ class FileBrowserTests(unittest.TestCase):
         self.assertEqual(fb.format_size(None), "")
         self.assertEqual(fb.format_modified(None), "")
 
+    def test_every_icon_name_has_a_file(self):
+        names = {fb.FOLDER_ICON, fb.DRIVE_ICON, fb.FILE_ICON, *fb.EXTENSION_ICONS.values()}
+        for name in names:
+            self.assertTrue(os.path.isfile(os.path.join(c.FILE_SYSTEM_ICONS_DIR, name)), name)
+
+    def test_entry_icon_follows_the_kind_and_extension(self):
+        screen = self.browser()
+        with mock.patch.object(screen, "_icon", side_effect=lambda name: name):
+            self.assertEqual(screen._entry_icon(self.entry(screen, "alpha")), fb.FOLDER_ICON)
+            self.assertEqual(screen._entry_icon(fb.Entry("A.ZIP", "file", 1, 0, "")), fb.EXTENSION_ICONS[".zip"])
+            self.assertEqual(screen._entry_icon(fb.Entry("a.unknown", "file", 1, 0, "")), fb.FILE_ICON)
+            screen._show(fb.DRIVE_VIEW)
+            self.assertEqual(screen._entry_icon(screen.entries[0]), fb.DRIVE_ICON)
+
 
 if __name__ == "__main__":
     unittest.main()

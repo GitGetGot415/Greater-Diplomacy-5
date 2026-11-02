@@ -25,6 +25,7 @@ from typing import NamedTuple, Optional
 import pygame
 import data.constants as c
 from data.queries.content import IMAGE_EXTENSIONS
+from ui.bars import ui_bars
 from ui.navigation.modal_screen import ModalScreen
 from ui.background_styles import DIALOG_STYLES
 from ui.widgets import text_utils, ui_elements
@@ -53,25 +54,25 @@ GAME_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__
 
 # Item          # Icon
 
-# Folder	    # Star
-# Drive	        # Save
-# Generic file	# Paper
-# Images	    # Colors
-# Audio	        # Music
-# .zip	        # Heart
-# .json	        # Text
-# .py	        # Gear
+# Folder	    # Folder.png
+# Drive	        # Drive.png
+# Generic file	# Generic File.png
+# Images	    # Image.png
+# Audio	        # Audio.png
+# .zip	        # Zip.png
+# .json	        # JSON.png
+# .py	        # Python.png
 
-# Filler art from the shared symbols. Change these names to replace an icon.
-FOLDER_ICON = "Star"
-DRIVE_ICON = "Save"
-FILE_ICON = "Paper"
+# Files in c.FILE_SYSTEM_ICONS_DIR.
+FOLDER_ICON = "Folder.png"
+DRIVE_ICON = "Drive.png"
+FILE_ICON = "Generic File.png"
 EXTENSION_ICONS = {
-    **dict.fromkeys(IMAGE_EXTENSIONS, "Colors"),
-    **dict.fromkeys(c.MUSIC_AUDIO_EXTENSIONS, "Music"),
-    ".zip": "Heart",
-    ".json": "Text",
-    ".py": "Gear",
+    **dict.fromkeys(IMAGE_EXTENSIONS, "Image.png"),
+    **dict.fromkeys(c.MUSIC_AUDIO_EXTENSIONS, "Audio.png"),
+    ".zip": "Zip.png",
+    ".json": "JSON.png",
+    ".py": "Python.png",
 }
 
 ROW_SELECTED_STYLE = {"color": c.UI_COLORS["blue"][0], "gradient_strength": 1.0}
@@ -857,9 +858,13 @@ class FileBrowserScreen(ModalScreen):
     # ------------------------------------------------------------------ #
 
     def _icon(self, name):
-        """The standalone map tools load no symbols, so an icon can be None there."""
+        """Centers the pixel art at its native size in a fixed square. The icons
+        differ in size, and the square keeps the names beside them aligned."""
         if name not in self._icons:
-            self._icons[name] = ui_elements.scale_icon(name, self.ICON_SIZE)
+            art = ui_bars.get_ui_image(name, directory=c.FILE_SYSTEM_ICONS_DIR)
+            icon = pygame.Surface((self.ICON_SIZE, self.ICON_SIZE), pygame.SRCALPHA)
+            icon.blit(art, art.get_rect(center=icon.get_rect().center))
+            self._icons[name] = icon
         return self._icons[name]
 
     def _entry_icon(self, entry):

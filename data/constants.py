@@ -2256,6 +2256,7 @@ ARMY_CUSTOM_SYMBOL_EMPTY = "."
 # assets/images set since building names/levels multiply fast. Loaded into
 # the same SYMBOLS name->Surface map as ASSETS_DIR -- see symbol_loader.load_symbols.
 BUILDINGS_DIR = "assets/buildings"
+FILE_SYSTEM_ICONS_DIR = "assets/file_system"
 # Alternate unit-art sets live in their own folder under here, named after the
 # style (e.g. assets/hanskolmer). Each has a unit_art.json file for culture
 # metadata and can contain baseline/tiered art filenames such as
