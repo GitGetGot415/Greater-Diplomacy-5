@@ -1055,7 +1055,7 @@ PANEL_THEME_SPECIAL = (MODAL_BG, (150, 100, 250), 2)     # brushes and personali
 PANEL_THEME_CONFIRM_OVER_MAP = ((30, 40, 30, 230), PANEL_THEME_CONFIRM[1], 3)
 PANEL_THEME_INFO_OVER_MAP    = ((*HUD_PANEL_BG, 230), UI_ACCENT_BLUE, 2)
 
-# Pixels per wheel notch. GameState.scroll_speed mirrors this; panels that roll
+# Pixels per wheel notch. Screen.scroll_speed mirrors this; panels that roll
 # their own wheel handling should read it from here rather than redeclaring it.
 SCROLL_STEP = 30
 
@@ -1169,8 +1169,6 @@ APPLY_TILT_TO_OVERLAYS = False # Whether the tilt compresses icons and text over
 APPLY_TILT_TO_ARROWS = True # Whether the tilt compresses movement arrows
 APPLY_TILT_TO_STATUS_ICONS = True # Whether the tilt compresses training, disbanding, and construction icons
 APPLY_TILT_TO_TEXT = True
-
-COLOR_SKYBOX = (135, 206, 235) # Light Sky Blue
 
 # Water brightness stuff
 OCEAN_DARK_BLUE = (10, 20, 40)
@@ -2298,7 +2296,7 @@ PROVINCE_BG_FILE = "Province.png"
 SETTINGS_BG_FILE = "Settings.png"
 
 # Scrolling checkerboard drawn behind any screen that has no bg_image_path
-# (see GameState.draw_checkerboard_background). The on-disk file is a plain
+# (see Screen.draw_checkerboard_background). The on-disk file is a plain
 # red template -- it exists only to define the light/dark contrast ratio
 # between squares; at runtime it's recolored to match each screen's own
 # bg_color instead of being drawn red.

@@ -553,9 +553,9 @@ class ScreenRunnerTests(unittest.TestCase):
             modal_stack.pop()
 
     def make_screen(self):
-        from ui.navigation.game_state import GameState
+        from ui.navigation.screen import Screen
 
-        class Trivial(GameState):
+        class Trivial(Screen):
             def draw(self, surface):
                 pass
 

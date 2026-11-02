@@ -154,16 +154,6 @@ def set_editor_buildings(context, group, target):
     return len(changes)
 
 
-def editor_factory_targets(context):
-    """Keep the factory-specific interface on the shared building-group query."""
-    return editor_building_targets(context, "industry")
-
-
-def set_editor_factories(context, target):
-    """Keep the factory-specific interface on the shared building editor."""
-    return set_editor_buildings(context, "industry", target)
-
-
 def editor_unit_targets(context, mode, value):
     """Choose family equipment by year or one-based family level."""
     if mode not in ("year", "level") or type(value) is not int or value < 1:

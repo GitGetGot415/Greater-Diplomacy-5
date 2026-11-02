@@ -197,50 +197,38 @@ def handle_specific_action(map_screen, action_type):
     _queue_and_report(map_screen, target, action_type, custom_msg)
 
 
-def handle_guarantee(map_screen):
-    """Queue, undo, or revoke a unilateral guarantee."""
+def _toggle_commitment(map_screen, rules, undo_action, active_targets):
+    """Queue or undo a commitment, or queue ending one that is already active."""
     target = _selected_diplomacy_target(map_screen)
     if target is None:
         return
     pending = map_screen.nation_data.get(map_screen.player_country, {}).get(
         "pending_diplomacy", {}).get(target, {})
     pending_action = pending.get("action") if isinstance(pending, dict) else pending
-    if pending_action in (guarantees.ACTION, guarantees.REVOKE_ACTION):
+    if pending_action in (rules.ACTION, undo_action):
         _queue_and_report(map_screen, target, pending_action, "")
         return
-    if target in guarantees.guaranteed_targets(map_screen.player_country,
-                                               map_screen.nation_data):
-        _queue_and_report(map_screen, target, guarantees.REVOKE_ACTION, "")
+    if target in active_targets(map_screen.player_country, map_screen.nation_data):
+        _queue_and_report(map_screen, target, undo_action, "")
         return
-    legal, reason = guarantees.is_eligible(map_screen.player_country, target,
-                                           map_screen.nation_data)
+    legal, reason = rules.is_eligible(map_screen.player_country, target,
+                                      map_screen.nation_data)
     if not legal:
         map_screen.show_feedback(reason)
         return
-    _queue_and_report(map_screen, target, guarantees.ACTION, "")
+    _queue_and_report(map_screen, target, rules.ACTION, "")
+
+
+def handle_guarantee(map_screen):
+    """Queue, undo, or revoke a unilateral guarantee."""
+    _toggle_commitment(map_screen, guarantees, guarantees.REVOKE_ACTION,
+                       guarantees.guaranteed_targets)
 
 
 def handle_military_attache(map_screen):
     """Queue or undo an attaché request after checking the live war state."""
-    target = _selected_diplomacy_target(map_screen)
-    if target is None:
-        return
-    pending = map_screen.nation_data.get(map_screen.player_country, {}).get(
-        "pending_diplomacy", {}).get(target, {})
-    pending_action = pending.get("action") if isinstance(pending, dict) else pending
-    if pending_action in (military_attaches.ACTION, military_attaches.WITHDRAW_ACTION):
-        _queue_and_report(map_screen, target, pending_action, "")
-        return
-    if target in military_attaches.hosts_for(map_screen.player_country,
-                                             map_screen.nation_data):
-        _queue_and_report(map_screen, target, military_attaches.WITHDRAW_ACTION, "")
-        return
-    legal, reason = military_attaches.is_eligible(map_screen.player_country, target,
-                                                   map_screen.nation_data)
-    if not legal:
-        map_screen.show_feedback(reason)
-        return
-    _queue_and_report(map_screen, target, military_attaches.ACTION, "")
+    _toggle_commitment(map_screen, military_attaches, military_attaches.WITHDRAW_ACTION,
+                       military_attaches.hosts_for)
 
 
 def handle_revoke_foreign_military_attache(map_screen):
@@ -344,11 +332,6 @@ def handle_reject_req(map_screen, target=None, custom_msg=None):
             return
 
     _answer_incoming_request(map_screen, target, diplomacy_messages.RESPONSE_REJECT, custom_msg)
-
-
-def has_treaty_to_ratify(map_screen):
-    """Whether the player's faction leader has signed something binding them."""
-    return bool(ratification.pending_for(map_screen.nation_data, map_screen.player_country))
 
 
 def handle_ratify_treaty(map_screen, accept):

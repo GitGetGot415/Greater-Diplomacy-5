@@ -48,16 +48,12 @@ class MapCamera:
         self._middle_drag_last_pos = None
         self._ignore_middle_until_release = True
 
-    def finish_right_drag(self):
-        """Clear a main-map right drag and report whether it panned.
+    def finish_pan_drag(self, button):
+        """Finish one configurable pan gesture and report whether it moved.
 
         A short right-click must keep reaching the movement-order handler;
         only a drag consumes its matching release.
         """
-        return self.finish_pan_drag(3)
-
-    def finish_pan_drag(self, button):
-        """Finish one configurable pan gesture and report whether it moved."""
         if self._pan_drag_button == button:
             moved = self._pan_drag_moved
             self._clear_pan_drag(button)

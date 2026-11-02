@@ -444,43 +444,33 @@ class RealtimeSession:
             player.name, player.ready = name, False
             self._broadcast()
 
+    def _set_config_locked(self, field: str, value: int) -> None:
+        """Change one lobby setting, restoring the old value if validation fails."""
+        previous = getattr(self.config, field)
+        setattr(self.config, field, value)
+        try:
+            self.config.validate(len(self.countries))
+        except Exception:
+            setattr(self.config, field, previous)
+            raise
+        self._broadcast()
+
     def set_capacity(self, host_id: str, capacity: int) -> None:
         with self.lock:
             self._require_host_lobby(host_id)
             if len(self.players) > capacity:
                 raise RealtimeError("Remove players before reducing capacity.")
-            previous = self.config.max_players
-            self.config.max_players = capacity
-            try:
-                self.config.validate(len(self.countries))
-            except Exception:
-                self.config.max_players = previous
-                raise
-            self._broadcast()
+            self._set_config_locked("max_players", capacity)
 
     def set_turn_limit(self, host_id: str, max_turns: int) -> None:
         with self.lock:
             self._require_host_lobby(host_id)
-            previous = self.config.max_turns
-            self.config.max_turns = max_turns
-            try:
-                self.config.validate(len(self.countries))
-            except Exception:
-                self.config.max_turns = previous
-                raise
-            self._broadcast()
+            self._set_config_locked("max_turns", max_turns)
 
     def set_turn_minutes(self, host_id: str, turn_minutes: int) -> None:
         with self.lock:
             self._require_host_lobby(host_id)
-            previous = self.config.turn_minutes
-            self.config.turn_minutes = turn_minutes
-            try:
-                self.config.validate(len(self.countries))
-            except Exception:
-                self.config.turn_minutes = previous
-                raise
-            self._broadcast()
+            self._set_config_locked("turn_minutes", turn_minutes)
 
     def set_scenario_settings(self, host_id: str, settings: dict[str, Any]) -> None:
         """Replace the pre-game rule bundle and notify every lobby client."""

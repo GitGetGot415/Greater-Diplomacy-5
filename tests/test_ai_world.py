@@ -170,13 +170,6 @@ class AIWorldParityTests(unittest.TestCase):
 
     # --- derived decisions ---------------------------------------------
 
-    def test_thinks_it_can_win_matches(self):
-        for a, b in self.pairs():
-            self.assertEqual(
-                self.world.thinks_it_can_win(a, b),
-                queries.ai_thinks_it_can_win(a, b, self.map_data, self.nation_data, self.id_to_province),
-                f"{a} vs {b}")
-
     def test_is_weaker_neighbor_matches(self):
         for a, b in self.pairs():
             self.assertEqual(self.world.is_weaker_neighbor(a, b),
@@ -188,7 +181,9 @@ class AIWorldParityTests(unittest.TestCase):
             border_ratio, global_ratio = self.world.power_ratio(a, b)
             expected = (border_ratio >= c.AI_WAR_STRENGTH_THRESHOLD
                         and global_ratio >= c.AI_GLOBAL_STRENGTH_THRESHOLD)
-            self.assertEqual(self.world.thinks_it_can_win(a, b), expected, f"{a} vs {b}")
+            self.assertEqual(
+                queries.ai_thinks_it_can_win(a, b, self.map_data, self.nation_data, self.id_to_province),
+                expected, f"{a} vs {b}")
 
     # --- diplomacy -----------------------------------------------------
 

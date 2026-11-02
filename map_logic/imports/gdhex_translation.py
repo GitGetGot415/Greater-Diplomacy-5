@@ -12,7 +12,6 @@ import json
 import math
 import os
 import random
-import re
 import shutil
 from datetime import datetime
 
@@ -493,17 +492,6 @@ def build_save_payload(parsed):
     return payload, raw_map, _build_map_assets(raw_map, width, height), notes
 
 
-def _destination_path(source_path, saves_dir):
-    stem = re.sub(r"[^A-Za-z0-9 _-]+", "", os.path.splitext(os.path.basename(source_path))[0]).strip()
-    stem = stem or "GD Hex Import"
-    base = os.path.join(saves_dir, f"GD HEX - {stem}")
-    destination, suffix = base, 2
-    while os.path.exists(destination):
-        destination = f"{base} ({suffix})"
-        suffix += 1
-    return destination
-
-
 def translate_file(source_path, saves_dir=None):
     """Convert a Hex save into a new, collision-safe GD5 save folder."""
     try:
@@ -515,7 +503,7 @@ def translate_file(source_path, saves_dir=None):
     payload, raw_map, assets, notes = build_save_payload(parsed)
     saves_dir = saves_dir or c.SAVES_DIR
     os.makedirs(saves_dir, exist_ok=True)
-    destination = _destination_path(source_path, saves_dir)
+    destination = queries.import_destination_path(source_path, saves_dir, "GD HEX", "GD Hex Import")
     os.makedirs(destination)
     try:
         saved_provinces = payload.pop("provinces")

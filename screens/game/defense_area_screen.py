@@ -4,7 +4,7 @@ import pygame
 
 import data.constants as c
 from data import queries
-from ui.navigation.game_state import MapOverlayScreen
+from ui.navigation.screen import MapOverlayScreen
 from ui.rendering import overlay_renderer
 from ui.rendering.font_manager import fonts
 from ui.widgets.ui_elements import Button

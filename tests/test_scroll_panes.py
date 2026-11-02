@@ -11,13 +11,13 @@ import unittest
 
 import pygame
 
-from ui.navigation.game_state import GameState
+from ui.navigation.screen import Screen
 from ui.widgets.scroll_panes import ScrollPanes
 
 _REAL_GET_POS = pygame.mouse.get_pos
 
 
-class TwoPaneScreen(ScrollPanes, GameState):
+class TwoPaneScreen(ScrollPanes, Screen):
     ROW_HEIGHT = 20
 
     def __init__(self):
@@ -41,7 +41,7 @@ class ScrollAttrTests(unittest.TestCase):
 
     def test_names_are_underscore_prefixed(self):
         """A pane called "events" must not publish self.handle_events and
-        clobber GameState.handle_events."""
+        clobber Screen.handle_events."""
         attrs = self.screen.scroll_attrs("events")
         self.assertTrue(all(name.startswith("_") for name in attrs.values()))
         self.assertNotIn("handle_events", attrs.values())

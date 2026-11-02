@@ -17,7 +17,7 @@ import pygame
 import data.constants as c
 from ui.background_styles import EDITOR_PANEL_STYLES
 from data import queries
-from ui.navigation.game_state import EditorSliderScreen, NationListOverlayScreen
+from ui.navigation.screen import EditorSliderScreen, NationListOverlayScreen
 from ui.widgets.ui_elements import Button, Slider
 from ui.rendering.font_manager import fonts
 from map_logic import politics

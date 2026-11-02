@@ -314,12 +314,6 @@ class AIWorld:
         """Countries next door by land or a short navigable sea crossing."""
         return self.neighbors[nation] | self.sea_targets.get(nation, {}).keys()
 
-    def thinks_it_can_win(self, ai_nation, target_nation):
-        """queries.ai_thinks_it_can_win, from the cached ratios."""
-        border_ratio, global_ratio = self.power_ratio(ai_nation, target_nation)
-        return (border_ratio >= c.AI_WAR_STRENGTH_THRESHOLD
-                and global_ratio >= c.AI_GLOBAL_STRENGTH_THRESHOLD)
-
     def is_weaker_neighbor(self, ai_nation, target_nation):
         """queries.is_weaker_neighbor -- note this one ignores the border and distraction."""
         my_total = self.alliance_strength(ai_nation) + self.econ_power(ai_nation) / 100.0

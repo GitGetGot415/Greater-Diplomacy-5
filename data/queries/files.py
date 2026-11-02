@@ -13,6 +13,18 @@ from data import queries
 from data import migrations
 
 
+def import_destination_path(source_path, saves_dir, prefix, fallback_name):
+    """Choose an unused save folder for a file imported from another game."""
+    stem = re.sub(r"[^A-Za-z0-9 _-]+", "", os.path.splitext(os.path.basename(source_path))[0]).strip()
+    stem = stem or fallback_name
+    base = os.path.join(saves_dir, f"{prefix} - {stem}")
+    destination, suffix = base, 2
+    while os.path.exists(destination):
+        destination = f"{base} ({suffix})"
+        suffix += 1
+    return destination
+
+
 def read_saved_content_summary(directory):
     """Read browser details without loading map geometry, images, or history."""
     result = {"details": [], "error": ""}

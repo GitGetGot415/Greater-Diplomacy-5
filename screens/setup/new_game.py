@@ -1,5 +1,5 @@
 import os
-from ui.navigation.game_state import ButtonMenuScreen, RefreshingMenuListScreen
+from ui.navigation.screen import ButtonMenuScreen, RefreshingMenuListScreen
 from ui.widgets.ui_elements import play_ui_sound
 from ui.widgets.ui_elements import Button, make_back_button
 import data.constants as c

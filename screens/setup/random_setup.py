@@ -1,5 +1,5 @@
 import os
-from ui.navigation.game_state import GameState
+from ui.navigation.screen import Screen
 import data.constants as c
 from ui.bars import ui_bars
 from ui.widgets.ui_elements import Button, Slider, make_back_button, make_toggle_button
@@ -8,7 +8,7 @@ from data import queries
 from screens.setup.scenario_settings import Scenario_Settings
 
 
-class Random_Setup(GameState):
+class Random_Setup(Screen):
     country_slider = None
     year_slider = None
     island_slider = None

@@ -7,7 +7,7 @@ from unittest import mock
 
 from tests import app_harness  # Sets the dummy video driver before pygame starts.
 
-from ui.navigation.game_state import FolderListState
+from ui.navigation.screen import FolderListState
 
 
 class _FolderScreen(FolderListState):
@@ -33,7 +33,7 @@ class FolderListPromptTests(unittest.TestCase):
         self.dir = temp.name
         os.mkdir(os.path.join(self.dir, "old"))
         self.screen = _FolderScreen(self.dir)
-        persist = mock.patch("ui.navigation.game_state.sync_persisted_dir")
+        persist = mock.patch("ui.navigation.screen.sync_persisted_dir")
         persist.start()
         self.addCleanup(persist.stop)
 

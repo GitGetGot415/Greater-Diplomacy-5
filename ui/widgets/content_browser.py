@@ -8,7 +8,7 @@ import pygame
 
 import data.constants as c
 from data import queries
-from ui.navigation.game_state import FolderListState, RefreshingMenuListScreen
+from ui.navigation.screen import FolderListState, RefreshingMenuListScreen
 from ui.rendering.font_manager import fonts
 from ui.widgets.scroll_panes import ScrollPanes
 from ui.widgets.text_utils import fit_text, wrap_text

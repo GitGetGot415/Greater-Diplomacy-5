@@ -2,7 +2,7 @@ import os
 import itertools
 import pygame
 
-from ui.navigation.game_state import GameState
+from ui.navigation.screen import Screen
 from ui.widgets.ui_elements import make_back_button, make_choice_button
 from ui.rendering.font_manager import fonts
 from ui.rendering import symbol_loader
@@ -240,7 +240,7 @@ def build_gallery_rows(style, country=None, level_display="default", show_all_ar
     return rows
 
 
-class Unit_Art(GameState):
+class Unit_Art(Screen):
     """Settings sub-screen: pick a unit art style on the left, browse every
     unit it would draw on the right. Picking a style applies it immediately
     (same as every other toggle on the Settings screen) and persists it."""

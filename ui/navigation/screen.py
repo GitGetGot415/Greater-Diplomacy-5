@@ -24,9 +24,9 @@ def resolve_keybind(state, action, default):
     return queries.get_keybind(action, default)
 
 
-def host_map_screen(game_state):
+def host_map_screen(screen):
     """The map a screen is layered over, or the opener when it has no map."""
-    return getattr(game_state, "map_screen", None) or game_state
+    return getattr(screen, "map_screen", None) or screen
 
 
 # Keys currently acting as held mouse buttons.  This suppresses repeated
@@ -144,7 +144,7 @@ class ScreenLayer:
     def draw(self, surface):
         getattr(self.screen, self.draw_method)(surface)
 
-class GameState:
+class Screen:
     bg_color = c.DEFAULT_BG_COLOR
     _armed_drag_attrs = ()
 
@@ -685,7 +685,7 @@ class GameState:
     def update(self):
         pass
 
-class ButtonMenuScreen(GameState):
+class ButtonMenuScreen(Screen):
     """A title, an optional caption, one centered column of large buttons, and Back."""
     title_y = 100
     title_shadow = True
@@ -720,7 +720,7 @@ class ButtonMenuScreen(GameState):
             surface.blit(text, text.get_rect(midtop=(c.SCREEN_WIDTH // 2, self.CAPTION_Y)))
 
 
-class MenuListScreen(GameState):
+class MenuListScreen(Screen):
     """A title, one centered scrolling list, and Back: the scenario and map pickers.
 
     The list stops above the buttons that some of these screens place along the
@@ -775,11 +775,11 @@ class RefreshingMenuListScreen(MenuListScreen):
 
     @property
     def title_y(self):
-        return GameState.title_y if self.has_menu_list() else ButtonMenuScreen.title_y
+        return Screen.title_y if self.has_menu_list() else ButtonMenuScreen.title_y
 
     @property
     def title_shadow(self):
-        return GameState.title_shadow if self.has_menu_list() else ButtonMenuScreen.title_shadow
+        return Screen.title_shadow if self.has_menu_list() else ButtonMenuScreen.title_shadow
 
     def update(self):
         super().update()
@@ -797,7 +797,7 @@ class RefreshingMenuListScreen(MenuListScreen):
                                                   self.refresh_completed, self.refresh_total)
 
 
-class FolderListState(GameState):
+class FolderListState(Screen):
     """Base for the menus that list folders on disk (saves, custom maps).
 
     Subclasses point `managed_dir` at a directory and get the rename and delete
@@ -863,7 +863,7 @@ class FolderListState(GameState):
         self.refresh_ui()
 
 
-class MapOverlayScreen(GameState):
+class MapOverlayScreen(Screen):
     """Base for screens drawn on top of the live map (claims, peace, trade, puppets...).
 
     Handles the camera pass-through, panel scrolling and the standard

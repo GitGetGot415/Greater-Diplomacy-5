@@ -18,7 +18,7 @@ take effect the next time a historical scenario is opened.
 import copy
 import json
 import pygame
-from ui.navigation.game_state import GameState
+from ui.navigation.screen import Screen
 import data.constants as c
 from data import queries
 from ui.dialogs import pickers
@@ -77,7 +77,7 @@ def _date_key(entry):
     return (as_int(entry.get("year", 0)), as_int(entry.get("month", 0)), as_int(entry.get("day", 0)))
 
 
-class Historical_Leaders_Editor(ScrollPanes, GameState):
+class Historical_Leaders_Editor(ScrollPanes, Screen):
     back_state = "NEW_GAME"
     title = "Historical Leaders & Names"
 

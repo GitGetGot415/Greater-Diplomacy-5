@@ -125,10 +125,6 @@ class LeadershipTests(unittest.TestCase):
         self.game.set_war("A", "G")
         self.game.set_war("S", "G")
 
-    def test_leader_of_resolves_through_the_faction(self):
-        self.assertEqual(peace_scope.leader_of("S", self.game.nation_data), "A")
-        self.assertEqual(peace_scope.leader_of("G", self.game.nation_data), "G")
-
     def test_an_unaligned_enemy_can_still_be_talked_to_directly(self):
         self.assertEqual(peace_scope.negotiation_role("A", "G", self.game.nation_data),
                          peace_scope.BLOC_LEADER)

@@ -3,7 +3,7 @@ import data.constants as c
 from data import queries
 from ui.widgets.ui_elements import Button, make_back_button
 from ui.rendering.font_manager import fonts
-from ui.navigation.game_state import GameState
+from ui.navigation.screen import Screen
 from ui.background_styles import AUTOMATION_PANEL_STYLES
 from ui.bars import ui_bars
 from ui.widgets import ui_elements
@@ -28,7 +28,7 @@ AUTOMATION_OPTIONS = (
 ROW_SPACING = 150
 
 
-class Automation_Screen(GameState):
+class Automation_Screen(Screen):
     PANEL_STYLE = AUTOMATION_PANEL_STYLES["main"]
     PANEL_BORDER = c.COLOR_DIM_BORDER
     PANEL_BORDER_WIDTH = 3

@@ -6,7 +6,7 @@ from contextlib import contextmanager
 import pygame
 import data.constants as c
 from data import queries
-from ui.navigation.game_state import synthesize_keybind_mouse_events
+from ui.navigation.screen import synthesize_keybind_mouse_events
 from ui.rendering.font_manager import fonts
 from ui.navigation import modal_stack
 from ui.widgets import text_utils

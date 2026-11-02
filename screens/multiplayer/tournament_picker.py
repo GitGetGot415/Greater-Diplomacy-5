@@ -1,4 +1,4 @@
-from ui.navigation.game_state import ButtonMenuScreen
+from ui.navigation.screen import ButtonMenuScreen
 import data.constants as c
 from ui.dialogs import pickers
 

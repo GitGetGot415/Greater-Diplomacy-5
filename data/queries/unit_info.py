@@ -444,11 +444,6 @@ AI_FORCE_TANKS = "TANKS"
 AI_FORCE_NAVY = "NAVY"
 
 
-def is_ai_tank(unit_type, *, context=None):
-    """Whether the AI counts this unit towards its armour quota."""
-    return bool(queries.get_unit_metadata(unit_type, context=context).get("ai_tank", False))
-
-
 def ai_force_category(unit_type, *, context=None):
     """Read the AI quota group independently from production presentation."""
     if not unit_type:

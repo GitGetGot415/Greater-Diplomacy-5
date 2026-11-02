@@ -1,11 +1,11 @@
 import pygame
-from ui.navigation.game_state import GameState
+from ui.navigation.screen import Screen
 from ui.widgets.ui_elements import make_back_button
 import data.constants as c
 from ui.rendering.font_manager import fonts
 from ui.dialogs import show_person_info
 
-class Credits(GameState):
+class Credits(Screen):
     back_state = "MENU"
 
     def __init__(self):

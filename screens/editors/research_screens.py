@@ -4,7 +4,7 @@ import pygame
 import data.constants as c
 from ui.background_styles import EDITOR_PANEL_STYLES
 from data import queries
-from ui.navigation.game_state import EditorOverlayScreen, NationListOverlayScreen
+from ui.navigation.screen import EditorOverlayScreen, NationListOverlayScreen
 from ui.widgets.ui_elements import Button, TextField, make_back_button, make_on_off_button
 from ui import dialogs
 from ui.bars import ui_bars
@@ -50,7 +50,7 @@ class Research_Edit_Screen(EditorOverlayScreen):
     def _store_entry(self, tech, text):
         """Writes one field's text back. The state is a tuple rather than a
         plain dict slot, so the fields tag themselves with entry_apply and
-        GameState.sync_entries routes through here."""
+        Screen.sync_entries routes through here."""
         _, _, max_lvl = self.tech_state[tech]
         self.tech_state[tech] = ("entry", text, max_lvl)
 

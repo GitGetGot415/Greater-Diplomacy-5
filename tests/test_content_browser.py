@@ -40,7 +40,7 @@ class ContentBrowserTests(unittest.TestCase):
             patcher.start()
             self.addCleanup(patcher.stop)
         self.constants = c
-        patcher = mock.patch("ui.navigation.game_state.sync_persisted_dir")
+        patcher = mock.patch("ui.navigation.screen.sync_persisted_dir")
         self.persist = patcher.start()
         self.addCleanup(patcher.stop)
 
@@ -172,7 +172,7 @@ class ContentBrowserTests(unittest.TestCase):
         self.assertLess(screen.pane_scroll("items"), 0)
 
     def test_escape_releases_search_focus_before_leaving(self):
-        from ui.navigation.game_state import dispatch_global_keys, keyboard_input_is_captured
+        from ui.navigation.screen import dispatch_global_keys, keyboard_input_is_captured
 
         for screen in (self.save_screen(), self.map_screen()):
             with self.subTest(screen=type(screen).__name__):

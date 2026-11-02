@@ -1,5 +1,5 @@
 import pygame
-from ui.navigation.game_state import GameState
+from ui.navigation.screen import Screen
 from ui.widgets.ui_elements import Button, make_back_button, make_info_button
 import data.constants as c
 from data import queries
@@ -94,7 +94,7 @@ def keybind_conflicts(keybinds):
 SCREEN_TOGGLE_ACTIONS = ("ORDERS", "ECONOMY")
 
 
-class Keybinds(GameState):
+class Keybinds(Screen):
     """Settings sub-screen: every rebindable key, moved out of Settings itself
     so that screen doesn't have to grow a row per action."""
 

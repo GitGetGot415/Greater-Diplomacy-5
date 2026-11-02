@@ -1,7 +1,7 @@
 import math
 
 import pygame
-from ui.navigation.game_state import GameState, ScreenLayer
+from ui.navigation.screen import Screen, ScreenLayer
 import data.constants as c
 from ui.widgets import ui_elements
 from ui.widgets.ui_elements import (Button, draw_resource_string, draw_combat_stats, draw_bombardment_stats,
@@ -450,7 +450,7 @@ class ResearchDetailsScreen(ModalScreen):
             y_off += self.modal_entity_padding
 
 
-class Research_Screen(GameState):
+class Research_Screen(Screen):
     back_state = "MAP"
 
     def __init__(self):
@@ -627,7 +627,7 @@ class Research_Screen(GameState):
 
     def handle_timeline_scrollbar(self, event):
         """Drag-to-scroll on the horizontal scrollbar track/handle at the
-        bottom of the screen. Mirrors GameState.handle_list_scroll's
+        bottom of the screen. Mirrors Screen.handle_list_scroll's
         grab/drag/snap pattern, but against scroll_x's own signed min/max-year
         range instead of the mixin's fixed 0..negative-max convention -- so it
         drives target_scroll_x directly rather than going through that helper.

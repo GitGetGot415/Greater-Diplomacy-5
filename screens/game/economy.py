@@ -1,5 +1,5 @@
 import pygame
-from ui.navigation.game_state import GameState
+from ui.navigation.screen import Screen
 import data.constants as c
 from ui.bars import ui_bars
 from ui.widgets.ui_elements import Button, Slider, make_back_button
@@ -134,7 +134,7 @@ class ExpensesTableScreen(TableScreen):
                                         color, label, lambda value=grouped: self.set_grouped(value),
                                         font_preset="button_small"))
 
-class Economy_Screen(GameState):
+class Economy_Screen(Screen):
     back_state = "MAP"
 
     def __init__(self):

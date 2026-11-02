@@ -492,17 +492,6 @@ def build_save_payload(parsed, base_map_dir=None):
     return payload, notes
 
 
-def _destination_path(source_path, saves_dir):
-    stem = re.sub(r"[^A-Za-z0-9 _-]+", "", os.path.splitext(os.path.basename(source_path))[0]).strip()
-    stem = stem or "GD4 Import"
-    base = os.path.join(saves_dir, f"GD4 - {stem}")
-    destination, suffix = base, 2
-    while os.path.exists(destination):
-        destination = f"{base} ({suffix})"
-        suffix += 1
-    return destination
-
-
 def translate_file(source_path, saves_dir=None, base_map_dir=None):
     """Convert ``source_path`` and return ``(destination, notes)``.
 
@@ -523,7 +512,7 @@ def translate_file(source_path, saves_dir=None, base_map_dir=None):
     queries.compact_save_nation_data(payload, raw_map)
     saves_dir = saves_dir or c.SAVES_DIR
     os.makedirs(saves_dir, exist_ok=True)
-    destination = _destination_path(source_path, saves_dir)
+    destination = queries.import_destination_path(source_path, saves_dir, "GD4", "GD4 Import")
     os.makedirs(destination)
     try:
         with open(os.path.join(destination, "meta.json"), "w", encoding="utf-8") as handle:

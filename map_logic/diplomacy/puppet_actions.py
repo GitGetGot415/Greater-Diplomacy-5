@@ -370,11 +370,6 @@ def canonical_puppet_release_queue(map_data, nation_data, master, entries, old_q
     return result
 
 
-def finalize_create_integrated_puppet(map_data, nation_data, master, core_nation, map_screen, keep_cores=False):
-    """Compatibility entry point for an Integrated release."""
-    return finalize_create_puppet(map_data, nation_data, master, core_nation, map_screen, keep_cores)
-
-
 def finalize_create_puppet(map_data, nation_data, master, core_nation, map_screen,
                          keep_cores=False, release_type=c.PUPPET_TYPE_INTEGRATED):
     """Release eligible core land as an Integrated, Autonomous, or Independent country."""

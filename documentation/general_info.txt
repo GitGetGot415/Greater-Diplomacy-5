@@ -11,7 +11,6 @@ documentation/other/llm_benchmark_notes.txt: historical model performance measur
 documentation/diplo_stuff.txt: diplomacy controls, rules, and message timing.
 documentation/air_stuff.txt: aircraft controls and rules.
 documentation/data_migrations.txt: compatibility with older GD5 data.
-how_to_update.txt (repository root): the short steps to start and release a new version.
 documentation/other/ai_responses_gd4_reference.txt: archived Greater Diplomacy 4 response text.
 documentation/other/recommended-relay-defaults.txt: relay setup defaults.
 documentation/other/SANDBOX_SECURITY.md: sandbox rules and limitations.

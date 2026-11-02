@@ -1,7 +1,7 @@
 import pygame
 from ui.widgets import ui_elements
 from ui.widgets.ui_elements import Button, Slider, TextField, make_info_button, make_toggle_button
-from ui.navigation.game_state import GameState
+from ui.navigation.screen import Screen
 import data.constants as c
 from data import queries
 from ui.dialogs import pickers
@@ -239,7 +239,7 @@ def render_settings_buttons(settings_screen):
         ])
 
 
-class Settings(GameState):
+class Settings(Screen):
     player_slider = None
     fps_slider = None
     ai_thread_slider = None

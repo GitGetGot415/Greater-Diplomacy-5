@@ -1,4 +1,4 @@
-from ui.navigation.game_state import ButtonMenuScreen
+from ui.navigation.screen import ButtonMenuScreen
 from ui.widgets import ui_elements
 
 from data.platform import IS_WEB

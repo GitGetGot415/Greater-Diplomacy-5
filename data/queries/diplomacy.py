@@ -3,6 +3,28 @@
 import data.constants as c
 
 
+def add_nation_list_entry(nation_data, nation, field, entry):
+    """Add one entry to a country's list field, returning whether it was new."""
+    entries = nation_data[nation].setdefault(field, [])
+    if not isinstance(entries, list):
+        entries = nation_data[nation][field] = []
+    if entry in entries:
+        return False
+    entries.append(entry)
+    return True
+
+
+def remove_nation_list_entry(nation_data, nation, field, entry):
+    """Remove one entry from a country's list field, dropping the field when it empties."""
+    entries = nation_data.get(nation, {}).get(field, [])
+    if not isinstance(entries, list) or entry not in entries:
+        return False
+    entries.remove(entry)
+    if not entries:
+        nation_data[nation].pop(field, None)
+    return True
+
+
 def are_at_war(nation_a, nation_b, nation_data):
     """Returns True if nation_b is in nation_a's war list."""
     return nation_b in get_enemies(nation_a, nation_data)

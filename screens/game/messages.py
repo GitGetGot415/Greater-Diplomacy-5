@@ -1,5 +1,5 @@
 import pygame
-from ui.navigation.game_state import GameState
+from ui.navigation.screen import Screen
 import data.constants as c
 from ui.bars import ui_bars
 from ui.widgets import text_utils
@@ -42,7 +42,7 @@ MSG_BUBBLE_MAX_WIDTH_RATIO = 0.6
 MSG_FORWARD_BUTTON_SIZE = (82, 24)
 
 
-class Messages_Screen(GameState):
+class Messages_Screen(Screen):
     back_state = "MAP"
 
     def __init__(self):
@@ -55,7 +55,7 @@ class Messages_Screen(GameState):
         self.draft_edit_rects = []
         
         # The message thread scrolls on the positive convention (0 at the
-        # newest message, growing as you scroll back), unlike GameState's
+        # newest message, growing as you scroll back), unlike Screen's
         # scroll_y which is a negative offset. Kept under its own name so
         # the two never share an attribute -- the contact list beside it
         # does use the base class's helpers, on the base convention.

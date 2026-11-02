@@ -1,8 +1,7 @@
 # screens/editors/edit_country.py
 import pygame
-import os
 import unicodedata
-from ui.navigation.game_state import GameState
+from ui.navigation.screen import Screen
 from ui.widgets.ui_elements import TextField, Button
 from ui.widgets import ui_elements
 from ui.rendering.font_manager import fonts
@@ -10,7 +9,6 @@ import data.constants as c
 from data import queries
 from ui import dialogs
 from ui.dialogs import pickers
-from data.platform import downloads_dir
 from data.io.country_io import DEFAULT_NATION_COLOR
 from ui.rendering import country_names
 
@@ -140,7 +138,7 @@ def render_edit_country_buttons(edit_screen):
     ])
     edit_screen.elements.extend(edit_screen.fields.values())
 
-class Edit_Country_Screen(GameState):
+class Edit_Country_Screen(Screen):
 
     back_state = "MAP"
 
@@ -246,54 +244,6 @@ class Edit_Country_Screen(GameState):
             self.active_color = tuple(color) + (255,)
         # Slice to [:3] so we only pass RGB to the picker, dropping the Alpha
         pickers.open_color_picker(self, "Choose Brush Color", tuple(self.active_color)[:3], on_confirm)
-
-    def _export_image(self, surf, suffix, fallback_name):
-        """Writes one of the country's images out to Downloads.
-
-        The flag and portrait buttons were the same eight lines apart from
-        which surface and which filename suffix.
-        """
-        safe_name = "".join(ch for ch in self.country_name if ch.isalnum() or ch in " _-") or fallback_name
-        export_path = os.path.join(downloads_dir(), f"{safe_name}_{suffix}.png")
-        try:
-            pygame.image.save(surf, export_path)
-            self.map_screen.show_feedback("Exported to Downloads")
-        except Exception:
-            self.map_screen.show_feedback("Failed to export")
-
-    def export_flag(self):
-        self._export_image(self.flag_surf, "flag", "Flag")
-
-    def export_portrait(self):
-        self._export_image(self.portrait_surf, "portrait", "Portrait")
-
-    def import_flag(self):
-        def on_picked(file_path):
-            if file_path:
-                try:
-                    new_img = pygame.image.load(file_path).convert()
-                    self.flag_surf = pygame.transform.scale(new_img, self.flag_size)
-                    self.save_state()
-                    self.map_screen.show_feedback("Flag Imported!")
-                except Exception as e:
-                    self.map_screen.show_feedback("Failed to import flag.")
-
-        pickers.open_file_browser(self, "Select Flag Image", c.FLAGS_DIR,
-                                  extensions=[".png", ".jpg", ".jpeg", ".bmp"], on_result=on_picked)
-
-    def import_portrait(self):
-        def on_picked(file_path):
-            if file_path:
-                try:
-                    new_img = pygame.image.load(file_path).convert()
-                    self.portrait_surf = pygame.transform.scale(new_img, self.portrait_size)
-                    self.save_state()
-                    self.map_screen.show_feedback("Portrait Imported!")
-                except Exception as e:
-                    self.map_screen.show_feedback("Failed to import portrait.")
-
-        pickers.open_file_browser(self, "Select Portrait Image", c.PORTRAITS_DIR,
-                                  extensions=[".png", ".jpg", ".jpeg", ".bmp"], on_result=on_picked)
 
     def refresh_ui(self):
         render_edit_country_buttons(self)

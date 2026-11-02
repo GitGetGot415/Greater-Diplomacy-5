@@ -21,7 +21,7 @@ from ui.widgets import ui_elements
 from ui.widgets.ui_elements import Button, make_back_button
 from ui.bars import ui_bars
 from ui.rendering.font_manager import fonts
-from ui.navigation.game_state import GameState
+from ui.navigation.screen import Screen
 from map_logic import politics
 
 #: Direction, button face, and the word under it.
@@ -63,7 +63,7 @@ POLICY_BUTTON_HEIGHT = c.SIZES["small"][1]
 POLICY_BUTTON_BOTTOM_GAP = 8
 
 
-class Politics_Screen(GameState):
+class Politics_Screen(Screen):
     def __init__(self, map_screen, country_id=None):
         super().__init__()
         # Deep blue-grey; this is the domestic screen, not a war one.

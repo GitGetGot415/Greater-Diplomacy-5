@@ -54,7 +54,7 @@ from data.multiplayer.realtime.relay import (
     destroy_temporary_relay,
 )
 from data.platform import IS_WEB
-from ui.navigation.game_state import GameState, MenuListScreen
+from ui.navigation.screen import Screen, MenuListScreen
 from ui.rendering.font_manager import fonts
 from ui import dialogs
 from ui.widgets.ui_elements import Button, UI_ICONS, make_back_button, play_ui_sound
@@ -128,7 +128,7 @@ def _client_nation_data(client):
     return nation_data if isinstance(nation_data, dict) else {}
 
 
-class _RealtimeScreen(GameState):
+class _RealtimeScreen(Screen):
     """Background color and default title height of the real-time screens."""
     bg_color = (12, 28, 50)
     title_y = 35

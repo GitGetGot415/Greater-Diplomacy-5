@@ -27,7 +27,7 @@ from data.map import load_map, save_map
 from data.platform import run_background
 
 # Core Game State & Global UI Elements
-from ui.navigation.game_state import GameState
+from ui.navigation.screen import Screen
 from map_logic.system32 import turn_manager, unit_events
 from screens.game import map_input
 # Game Logic & Rendering Submodules
@@ -741,7 +741,7 @@ def layout_country_action_buttons(map_screen):
     for button in buttons:
         button.rect.y = (button.country_action_base_y
                          - map_screen.country_actions_scroll_y)
-        # GameState dispatches button events before the map event handler can
+        # Screen dispatches button events before the map event handler can
         # consume a pane drag. Do not let clipped-away rows receive that click.
         button.click_guard = lambda r=rect: r.collidepoint(pygame.mouse.get_pos())
 
@@ -1455,7 +1455,7 @@ def update_button_states(map_screen):
             _update_player_province_buttons(map_screen, owner)
 
 
-class Map(StateAccess, GameState):
+class Map(StateAccess, Screen):
     _popup_presentation_revision = None
 
     # Network connection state. main.py and the multiplayer screens attach it
@@ -1515,7 +1515,7 @@ class Map(StateAccess, GameState):
     _badge_state_cache = None
 
     def refresh_ui(self):
-        # GameState can refresh during construction before Map has a selection.
+        # Screen can refresh during construction before Map has a selection.
         province = getattr(self, "selected_province", None)
         if province is not None:
             sidebar_info.prepare_unit_roster(self, province)

@@ -148,7 +148,7 @@ class LobbyTests(SharedUiTestCase):
 class EditCountryFieldTests(SharedUiTestCase):
     def test_typing_reaches_the_clicked_field_and_captures_the_keyboard(self):
         from screens.editors.edit_country import Edit_Country_Screen
-        from ui.navigation.game_state import keyboard_input_is_captured
+        from ui.navigation.screen import keyboard_input_is_captured
 
         screen = Edit_Country_Screen()
         screen.elements = list(screen.fields.values())
@@ -219,7 +219,7 @@ class EditorWindowTests(SharedUiTestCase):
 
     def test_form_field_focus_captures_the_keyboard(self):
         from screens.editors.date_economy_screens import Starting_Economy_Edit_Screen
-        from ui.navigation.game_state import keyboard_input_is_captured
+        from ui.navigation.screen import keyboard_input_is_captured
 
         map_screen = mock.Mock(player_country="Editor", nation_data={"Alpha": {}}, army_editor_state=None)
         screen = Starting_Economy_Edit_Screen(map_screen, "Alpha")
@@ -231,7 +231,7 @@ class EditorWindowTests(SharedUiTestCase):
         from screens.editors.date_economy_screens import Starting_Economy_Edit_Screen, Starting_Economy_List_Screen
 
         map_screen = mock.Mock(player_country="Editor", map_data={}, nation_data={"Alpha": {}})
-        with mock.patch("ui.navigation.game_state.queries.get_living_nations", return_value=["Alpha"]):
+        with mock.patch("ui.navigation.screen.queries.get_living_nations", return_value=["Alpha"]):
             screen = Starting_Economy_List_Screen(map_screen)
         with mock.patch("ui.navigation.screen_runner._run_pygame_sub_screen") as run:
             screen.edit("Alpha")
@@ -416,15 +416,15 @@ class BackKeySoundTests(SharedUiTestCase):
 
         with mock.patch.object(ui_elements, "play_ui_sound") as sound, \
                 mock.patch.object(game_state, "play_ui_sound", sound), \
-                mock.patch("ui.navigation.game_state.queries.get_keybind",
+                mock.patch("ui.navigation.screen.queries.get_keybind",
                            side_effect=lambda _action, default: default):
             game_state.dispatch_global_keys(screen, key(pygame.K_ESCAPE))
         return [call.args[0] for call in sound.call_args_list]
 
     def test_leaving_an_ordinary_screen_plays_back_once(self):
-        from ui.navigation.game_state import GameState
+        from ui.navigation.screen import Screen
 
-        screen = GameState()
+        screen = Screen()
         self.assertEqual(self.back_sounds(screen), ["back"])
         self.assertTrue(screen.done)
 
@@ -460,7 +460,7 @@ class BackKeySoundTests(SharedUiTestCase):
         screen.handle_back_key()
         self.assertFalse(screen.done)
         menu = object.__new__(Menu)
-        with mock.patch.object(Menu, "exit_screen") as leave, mock.patch("ui.navigation.game_state.play_ui_sound") as sound:
+        with mock.patch.object(Menu, "exit_screen") as leave, mock.patch("ui.navigation.screen.play_ui_sound") as sound:
             menu.handle_back_key()
         leave.assert_called_once()
         sound.assert_not_called()

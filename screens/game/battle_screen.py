@@ -122,7 +122,7 @@ class Battle_Screen(ModalScreen):
         self.regions = {}
         self.lane_outcome = None
         # {pane: [(rect, payload)]}, filled by refresh_ui and read by the
-        # foreground painters. Safe to cache because GameState.scroll_by calls
+        # foreground painters. Safe to cache because Screen.scroll_by calls
         # refresh_ui on every wheel notch, so the rects never go stale.
         self.row_paint = {}
         self.refresh_ui()
@@ -679,7 +679,7 @@ class Battle_Screen(ModalScreen):
     def draw_elements(self, surface):
         """Rows crop to their own pane, and their decoration crops with them.
 
-        Without this the screen leaned on GameState.draw_elements, which clips
+        Without this the screen leaned on Screen.draw_elements, which clips
         to a single content rect -- there are four here, so nothing was clipped
         at all and a long roster painted straight over the footer buttons.
         """

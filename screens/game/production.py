@@ -1,6 +1,6 @@
 import pygame
 import data.constants as c
-from ui.navigation.game_state import GameState
+from ui.navigation.screen import Screen
 from ui.bars import ui_bars
 from ui.background_styles import PRODUCTION_PANEL_STYLES
 from ui.widgets import ui_elements
@@ -118,7 +118,7 @@ BAR_BORDER_COLOR = (100, 100, 100)
 BAR_YIELD_COLOR = (150, 255, 150)
 BAR_STAT_COLOR = (200, 200, 200)
 
-class Production_Screen(GameState):
+class Production_Screen(Screen):
     back_state = "MAP"
 
     def __init__(self):
@@ -276,7 +276,7 @@ class Production_Screen(GameState):
         self._add_custom_unit_section()
 
         # Calculate maximum scroll distance
-        # Negative floor, matching GameState.max_scroll -- see enforce_scroll_bounds.
+        # Negative floor, matching Screen.max_scroll -- see enforce_scroll_bounds.
         self.max_scroll = min(0, c.SCREEN_HEIGHT - SCROLL_BOTTOM_PAD - self._list_y)
 
         self.scroll_content_rect = pygame.Rect(0, CLICK_GUARD_TOP, c.SCREEN_WIDTH, CLICK_GUARD_BOTTOM - CLICK_GUARD_TOP)
