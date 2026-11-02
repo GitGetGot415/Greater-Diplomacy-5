@@ -213,6 +213,7 @@ class Music_Player(ScrollPanes, GameState):
                 y_offset += 60
                 album_content_h += 60
             btn.click_guard = album_guard
+            btn.fit_text = True
             btn.sound_kind = "select_album"
             btn.pane = "album"
             self.elements.append(btn)

@@ -74,6 +74,9 @@ _BUTTON_SHADOW = 50
 _BUTTON_PRESSED_DARKEN = 40
 _BUTTON_BORDER_WIDTH = 2
 _BUTTON_SELECTED_BORDER_WIDTH = 3
+# Vertical (image) button labels shrink to fit, but never below this point size.
+_BUTTON_MIN_FIT_FONT_SIZE = 10
+_BUTTON_LABEL_MARGIN = 6
 _SLIDER_OUTLINE_COLOR = (20, 20, 20)
 
 
@@ -566,6 +569,7 @@ class Button:
 
         # Pull the requested font preset or explicit size from the FontManager
         self.font = fonts.get_size(font_size) if font_size is not None else fonts.get(font_preset)
+        self.font_point_size = int(font_size) if font_size is not None else fonts.presets[font_preset]["size"]
 
         self.visible = True
         self.is_pressed = False
@@ -573,6 +577,8 @@ class Button:
         self.is_selected = False
         self.disabled = False
         self.text_align = "center"
+        # Opt-in: shrink a plain (image-less) label to fit the button width.
+        self.fit_text = False
         self.notification_count = 0
         # Overrides notification_count's digit text with an arbitrary string
         # (e.g. "!"). Same badge, just not a count.
@@ -618,14 +624,26 @@ class Button:
         if color is not None or enabled is not None:
             self.set_palette("grey" if self.disabled else (color or "green"))
 
-    def draw_label(self, surface, text, **anchor):
+    def fitted_font(self, text, max_width):
+        """Returns the button font, or the largest smaller one that fits max_width."""
+        size = self.font_point_size
+        font = self.font
+        while size > _BUTTON_MIN_FIT_FONT_SIZE and max(
+                font.size(line)[0] for line in text.splitlines() or [text]) > max_width:
+            size -= 1
+            font = fonts.get_size(size)
+        return font
+
+    def draw_label(self, surface, text, max_width=None, **anchor):
         """Blits the button's text with its standard 1px drop shadow.
 
         `anchor` takes any pygame rect keyword (center=, midleft=, midtop=...),
         which is what lets every layout branch below share one blit path.
+        `max_width` shrinks the font until the text fits (down to a readable minimum).
         """
+        font = self.fitted_font(text, max_width) if max_width else self.font
         if "\n" in text:
-            lines = [(line, self.font.render(line, True, (255, 255, 255)))
+            lines = [(line, font.render(line, True, (255, 255, 255)))
                      for line in text.splitlines()]
             block_rect = pygame.Rect(0, 0,
                                      max(line.get_width() for _text, line in lines),
@@ -635,14 +653,14 @@ class Button:
             y = block_rect.y
             for line_text, line in lines:
                 line_rect = line.get_rect(centerx=block_rect.centerx, y=y)
-                shadow = self.font.render(line_text, True, (0, 0, 0))
+                shadow = font.render(line_text, True, (0, 0, 0))
                 surface.blit(shadow, (line_rect.x + 1, line_rect.y + 1))
                 surface.blit(line, line_rect)
                 y += line.get_height()
             return block_rect
-        text_surf = self.font.render(text, True, (255, 255, 255))
+        text_surf = font.render(text, True, (255, 255, 255))
         text_rect = text_surf.get_rect(**anchor)
-        surface.blit(self.font.render(text, True, (0, 0, 0)), (text_rect.x + 1, text_rect.y + 1))
+        surface.blit(font.render(text, True, (0, 0, 0)), (text_rect.x + 1, text_rect.y + 1))
         surface.blit(text_surf, text_rect)
         return text_rect
 
@@ -681,21 +699,24 @@ class Button:
 
         if labelled:
             if self.layout == 'vertical':
-                self.draw_label(surface, self.text, midtop=(self.rect.centerx, self.rect.y + 5))
+                self.draw_label(surface, self.text, self.rect.width - 2 * _BUTTON_LABEL_MARGIN,
+                                midtop=(self.rect.centerx, self.rect.y + 5))
             else:
                 self.draw_label(surface, self.text, midleft=(img_rect.right + 10, self.rect.centery))
         elif self.text and not self.image:
+            fit_width = self.rect.width - 2 * _BUTTON_LABEL_MARGIN if self.fit_text else None
             if self.text_align == "left":
-                self.draw_label(surface, self.text, midleft=(self.rect.x + 10, self.rect.centery))
+                self.draw_label(surface, self.text, fit_width,
+                                midleft=(self.rect.x + 10, self.rect.centery))
             elif right_image_rect:
                 # Centre the label in the space left of the indicator, rather
                 # than underneath the image or across the button as a whole.
                 text_right = right_image_rect.left - 4
-                self.draw_label(surface, self.text,
+                self.draw_label(surface, self.text, fit_width,
                                 center=((self.rect.left + text_right) // 2,
                                         self.rect.centery))
             else:
-                self.draw_label(surface, self.text, center=self.rect.center)
+                self.draw_label(surface, self.text, fit_width, center=self.rect.center)
 
         if right_image_rect:
             surface.blit(right_image, right_image_rect)
