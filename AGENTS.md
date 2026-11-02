@@ -338,7 +338,6 @@ Use verification appropriate to each change.
 - Tests must not require real network services or an LLM unless marked as integration tests.
 - Before you change how tests or scripts are imported or run, search `.github/workflows/` for commands that use them.
 
-
 ### Unit, Building, and Research Tests
 
 - Test mechanics and data use without fixing current values from [Tuning Data](#tuning-data).
