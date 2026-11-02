@@ -18,7 +18,7 @@ class Multiplayer_Hub(ButtonMenuScreen):
 
     def refresh_ui(self):
         super().refresh_ui()
-        self.elements.append(Button(c.SCREEN_WIDTH - 120, 20, "small", "blue", "Help", self.show_help))
+        self.elements.append(Button(c.SCREEN_WIDTH - 120, 20, "small", "blue", "Help", self.show_help, sound_kind=None))
 
     def show_help(self):
         help_text = (

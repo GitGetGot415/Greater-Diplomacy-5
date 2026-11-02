@@ -146,12 +146,15 @@ class Historical_Leaders_Editor(ScrollPanes, GameState):
 
     def add_country(self):
         self.sync_entries()
-        all_playable = sorted(name for name, stats in queries.get_country_data().items()
+        country_data = queries.get_country_data()
+        all_playable = sorted(name for name, stats in country_data.items()
                               if stats.get("is_playable") and name not in c.UNPLAYABLE_NATIONS)
         available = [n for n in all_playable if n not in self.data]
         if not available:
             dialogs.show_info("Add Country", "Every playable country is already being tracked.")
             return
+
+        ui_elements.play_ui_sound("click")
 
         def on_pick(country):
             self.data[country] = []
@@ -163,7 +166,7 @@ class Historical_Leaders_Editor(ScrollPanes, GameState):
 
         pickers.open_listbox_selector(
             self, "Add Country", "Choose a country to track:",
-            queries.country_picker_items(available, self.map_screen.nation_data), on_pick)
+            queries.country_picker_items(available, country_data), on_pick)
 
     def remove_country(self, country):
         def on_confirm(ok):
@@ -178,7 +181,7 @@ class Historical_Leaders_Editor(ScrollPanes, GameState):
         count = len(self.data.get(country, []))
         dialogs.ask_yes_no(
             "Remove Country",
-            f"Stop tracking {queries.get_country_display_name(country, self.map_screen.nation_data)} and discard its {count} timeline entr{'y' if count == 1 else 'ies'}?\n"
+            f"Stop tracking {queries.get_country_display_name(country, queries.get_country_data())} and discard its {count} timeline entr{'y' if count == 1 else 'ies'}?\n"
             f"This isn't written to disk until you Save Timeline.",
             on_confirm)
 
@@ -503,7 +506,7 @@ class Historical_Leaders_Editor(ScrollPanes, GameState):
         self.elements = [
             make_back_button(self.exit_screen),
             Button(self.roster_rect.x, self.roster_rect.y - 40, "editor_ui", "green",
-                  "+ Add Country", self.add_country),
+                  "+ Add Country", self.add_country, sound_kind=None),
             Button(700, c.SCREEN_HEIGHT - 60, "small", "blue", "Export", self.export_timeline),
             Button(810, c.SCREEN_HEIGHT - 60, "small", "purple", "Import", self.import_timeline),
             Button(920, c.SCREEN_HEIGHT - 60, "small", "orange", "Reset", self.reset_timeline),

@@ -489,6 +489,176 @@ class BackKeySoundTests(SharedUiTestCase):
         modal_stack.pop()
 
 
+class OneSoundPerClickTests(SharedUiTestCase):
+    def tearDown(self):
+        from ui.navigation import modal_stack
+        while not modal_stack.is_empty():
+            modal_stack.pop()
+
+    def click_sounds(self, button, *modules):
+        """Every sound one click on `button` makes, wherever it is played from."""
+        from ui.widgets import ui_elements
+
+        with mock.patch.object(ui_elements, "play_ui_sound") as sound:
+            patches = [mock.patch.object(module, "play_ui_sound", sound) for module in modules]
+            for patch in patches:
+                patch.start()
+            try:
+                with mock.patch("pygame.mouse.get_pos", return_value=button.rect.center):
+                    button.handle_event(click(button.rect.center))
+                    button.handle_event(pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=button.rect.center))
+            finally:
+                for patch in patches:
+                    patch.stop()
+        return [call.args[0] for call in sound.call_args_list]
+
+    def test_tournament_help_plays_only_info(self):
+        from screens.multiplayer.multiplayer_hub import Multiplayer_Hub
+
+        self.assertEqual(self.click_sounds(button_named(Multiplayer_Hub(), "Help")), ["info"])
+
+    def test_guest_lobby_popup_buttons_play_only_info(self):
+        lobby = LobbyTests().guest_lobby()
+        lobby.reconnect_token = "code"
+        for label in ("Match Rules", "Copy Reconnect Code"):
+            with self.subTest(label=label), mock.patch("ui.dialogs.pickers.copy_to_clipboard", return_value=True):
+                self.assertEqual(self.click_sounds(button_named(lobby, label)), ["info"])
+
+    def test_host_lobby_popup_buttons_play_only_info(self):
+        from screens.multiplayer.realtime_multiplayer import Realtime_Lobby
+
+        screen = Realtime_Lobby()
+        screen.server_map = SimpleNamespace(nation_data={})
+        screen.session = mock.Mock(
+            host_id="host", countries=[],
+            config=SimpleNamespace(scenario_id="Scenario", max_players=2, max_turns=9, turn_minutes=3, port=1),
+            players={"host": LobbyTests.player("Host", "host", None)})
+        screen.lan_invite = "invite"
+        screen.internet_button_color = lambda: "blue"
+        screen.internet_button_label = lambda: "Internet Invite"
+        screen.refresh_ui()
+        for label in ("Copy LAN Invite", "Internet Invite", "Networking Status"):
+            with self.subTest(label=label), mock.patch("ui.dialogs.pickers.copy_to_clipboard", return_value=True):
+                self.assertEqual(self.click_sounds(button_named(screen, label)), ["info"])
+
+    def test_networking_help_plays_only_info(self):
+        from screens.multiplayer.realtime_multiplayer import Realtime_Host_Setup
+
+        screen = Realtime_Host_Setup()
+        self.assertEqual(self.click_sounds(button_named(screen, "Networking Help")), ["info"])
+
+    def load_game_row(self, label):
+        from screens.menus.load_game import Load_Game
+
+        screen = Load_Game()
+        with mock.patch.object(screen, "layout_list_rows", return_value=[(0, 120)]), \
+                mock.patch.object(screen, "list_folders", return_value=["Save"]):
+            screen.scroll_click_guard = lambda: True
+            screen.refresh_ui()
+        return screen, button_named(screen, label)
+
+    def test_save_row_clicks_when_it_loads_and_plays_info_when_refused(self):
+        from screens.menus import load_game
+
+        screen, row = self.load_game_row("Save")
+        with mock.patch.object(load_game, "newer_version_message", return_value="Update the game."):
+            self.assertEqual(self.click_sounds(row, load_game), ["info"])
+        self.assertFalse(screen.done)
+        with mock.patch.object(load_game, "newer_version_message", return_value=None):
+            self.assertEqual(self.click_sounds(row, load_game), ["click"])
+        self.assertTrue(screen.done)
+
+    def test_history_refuses_a_newer_save_before_its_turn_list(self):
+        from screens.menus import load_game
+
+        _screen, row = self.load_game_row("History")
+        with mock.patch.object(load_game, "newer_version_message", return_value="Update the game."), \
+                mock.patch.object(load_game.pickers, "open_listbox_selector") as picker:
+            self.assertEqual(self.click_sounds(row, load_game), ["info"])
+        picker.assert_not_called()
+
+    def test_a_turn_from_the_history_list_does_not_click_a_second_time(self):
+        from screens.menus import load_game
+
+        screen, _row = self.load_game_row("History")
+        with mock.patch.object(load_game, "newer_version_message", return_value=None), \
+                mock.patch.object(load_game, "play_ui_sound") as sound:
+            screen.load_specific_save("Save", history_turn=3)
+        sound.assert_not_called()
+
+    def test_add_country_clicks_for_its_list_and_plays_info_when_there_is_none(self):
+        from screens.editors import historical_leaders_editor as editor
+
+        screen = editor.Historical_Leaders_Editor()
+        button = button_named(screen, "+ Add Country")
+        data = {"Alpha": {"is_playable": True, "name": "Alpha Republic"}}
+        with mock.patch.object(editor.queries, "get_country_data", return_value=data):
+            screen.data = {}
+            with mock.patch.object(editor.pickers, "open_listbox_selector") as picker:
+                self.assertEqual(self.click_sounds(button), ["click"])
+            picker.assert_called_once()
+            self.assertEqual(picker.call_args.args[3], [("Alpha Republic", "Alpha")])
+            screen.data = {"Alpha": []}
+            self.assertEqual(self.click_sounds(button), ["info"])
+
+    def test_removing_a_tracked_country_works_without_a_map(self):
+        from screens.editors import historical_leaders_editor as editor
+
+        screen = editor.Historical_Leaders_Editor()
+        self.assertIsNone(screen.map_screen)
+        screen.data = {"Alpha": []}
+        data = {"Alpha": {"is_playable": True, "name": "Alpha Republic"}}
+        with mock.patch.object(editor.queries, "get_country_data", return_value=data), \
+                mock.patch.object(editor.dialogs, "ask_yes_no") as ask:
+            screen.remove_country("Alpha")
+        self.assertIn("Alpha Republic", ask.call_args.args[1])
+
+    def test_data_refresh_confirm_clicks_only_when_maps_were_found(self):
+        from screens.setup import new_game
+
+        screen = new_game.New_Game()
+        with mock.patch.object(new_game.pickers, "open_checkbox_list") as picker:
+            screen.trigger_global_data_refresh()
+        self.assertIsNone(picker.call_args.kwargs["confirm_sound"])
+        on_picked = picker.call_args.args[4]
+        for started, expected in ((True, ["click"]), (False, [])):
+            with self.subTest(started=started), \
+                    mock.patch.object(new_game.map_refresh, "refresh_map_directories", return_value=started), \
+                    mock.patch.object(new_game, "play_ui_sound") as sound:
+                on_picked([])
+                self.assertEqual([call.args[0] for call in sound.call_args_list], expected)
+
+    def test_checkbox_lists_click_on_confirm_by_default(self):
+        from ui.dialogs.checkbox_list_screen import CheckboxListScreen
+
+        screen = CheckboxListScreen(self.controller, "T", "P", [], lambda _keys: None)
+        self.assertEqual(self.click_sounds(button_named(screen, "Confirm")), ["click"])
+
+    def test_token_page_clicks_unless_the_browser_fails(self):
+        from screens.multiplayer import realtime_multiplayer as realtime
+        from ui.widgets import ui_elements
+
+        screen = object.__new__(realtime.Realtime_Relay_Setup)
+        with mock.patch.object(realtime, "IS_WEB", False), \
+                mock.patch.object(realtime, "play_ui_sound") as sound, \
+                mock.patch.object(ui_elements, "play_ui_sound", sound):
+            with mock.patch.object(realtime.webbrowser, "open"):
+                screen.open_token_page()
+            sound.assert_called_once_with("click")
+            sound.reset_mock()
+            with mock.patch.object(realtime.webbrowser, "open", side_effect=OSError):
+                screen.open_token_page()
+            sound.assert_called_once_with("info")
+
+    def test_realtime_details_plays_only_the_table_sound(self):
+        game = app_harness.boot_map()
+        button = game.btn_realtime_details
+        # It is hidden outside a real-time match.
+        with mock.patch.object(game, "realtime_session", None), mock.patch.object(button, "visible", True), \
+                mock.patch.object(button, "disabled", False):
+            self.assertEqual(self.click_sounds(button), ["table"])
+
+
 class KeybindSoundTests(SharedUiTestCase):
     def test_orders_and_production_keys_play_the_view_button_sound_once(self):
         from screens.game import map_input

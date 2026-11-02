@@ -38,10 +38,11 @@ class CheckboxListScreen(ModalScreen):
 
     def __init__(self, game_state, title, prompt, items, on_confirm,
                  confirm_label="Confirm", show_select_all=True, extra_buttons=None,
-                 footnote=None):
+                 footnote=None, confirm_sound="click"):
         super().__init__(game_state, title)
         self.on_confirm = on_confirm
         self.confirm_label = confirm_label
+        self.confirm_sound = confirm_sound
         self.show_select_all = show_select_all
         # Each entry is (label, color_preset, callback(screen)).
         self.extra_buttons = list(extra_buttons or [])
@@ -162,7 +163,7 @@ class CheckboxListScreen(ModalScreen):
 
         btn_y = p.bottom - 52
         self.elements.append(Button(p.x + self.PAD, btn_y - 5, "medium", "green",
-                                    self.confirm_label, self._confirm))
+                                    self.confirm_label, self._confirm, sound_kind=self.confirm_sound))
         cancel_w, _h = c.SIZES["small"]
         self.elements.append(Button(p.right - self.PAD - cancel_w, btn_y, "small", "red", "Cancel",
                                     self.exit_screen, sound_kind="back"))

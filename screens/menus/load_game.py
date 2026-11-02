@@ -49,10 +49,10 @@ class Load_Game(FolderListState):
         for i, btn_y in self.layout_list_rows(len(folders), self.ROW_HEIGHT, self.ROW_TOP):
             folder = folders[i]
             for x, size, color, label, handler in self.ROW_BUTTONS:
-                # open_history_menu plays its own sound, which depends on what it finds.
+                # These two play their own sound, which depends on what they find.
                 btn = Button(x, btn_y, size, color, label or folder,
                             lambda f=folder, h=handler: getattr(self, h)(f),
-                            sound_kind=None if handler == "open_history_menu" else "click")
+                            sound_kind=None if handler in ("load_specific_save", "open_history_menu") else "click")
                 self.add_list_row(btn)
 
     def additional_events(self, event):
@@ -66,6 +66,11 @@ class Load_Game(FolderListState):
 
     def open_history_menu(self, folder_name):
         save_dir = os.path.join(self.managed_dir, folder_name)
+        # Refused here, because a click on a turn in the list already plays a sound.
+        message = newer_version_message(save_dir)
+        if message:
+            dialogs.show_info("Update Required", message)
+            return
         turn_dates = history_io.read_turn_dates(save_dir)
 
         if not turn_dates:
@@ -96,6 +101,9 @@ class Load_Game(FolderListState):
         if message:
             dialogs.show_info("Update Required", message)
             return
+        # A turn chosen from the history list has already played its row's click.
+        if history_turn is None:
+            play_ui_sound("click")
         self.selected_save_path = os.path.join(self.managed_dir, folder_name)
         self.selected_history_turn = history_turn
         self.go_to("MAP")

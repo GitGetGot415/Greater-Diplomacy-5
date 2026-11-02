@@ -120,14 +120,17 @@ class New_Game(RefreshingMenuListScreen):
             if options["include_custom"]:
                 dirs_to_check.append(c.SCENARIOS_CUSTOM_DIR)
 
-            map_refresh.refresh_map_directories(self, dirs_to_check,
-                                            success_message="Synced scenarios successfully.", options=options)
+            # Confirm is silent so that an empty result plays only the popup's sound.
+            if map_refresh.refresh_map_directories(self, dirs_to_check,
+                                                   success_message="Synced scenarios successfully.", options=options):
+                play_ui_sound("click")
 
         pickers.open_checkbox_list(
             self, "Refresh Options", "Select what to forcefully reset:",
             [CheckboxItem(key, label) for key, label in self.REFRESH_FIELDS],
             on_picked,
-            footnote="If you don't know what you're doing, this might ruin your saved maps!")
+            footnote="If you don't know what you're doing, this might ruin your saved maps!",
+            confirm_sound=None)
 
     def exit_screen(self):
         self.set_sub_state("CATEGORY")

@@ -15,7 +15,10 @@ from ui import dialogs
 
 
 def refresh_map_directories(screen, dirs_to_check, success_message="Data refreshed successfully!", options=None, *, context=None):
-    """Headlessly instantiates maps on a background thread to prevent UI freezing."""
+    """Headlessly instantiates maps on a background thread to prevent UI freezing.
+
+    Returns whether a refresh started. With no maps it shows a popup instead.
+    """
     # An empty dict behaves the same as None below (every lookup defaults to True),
     # so this also keeps refresh_nation_data's own default-options branch out of play.
     options = options or {}
@@ -34,7 +37,7 @@ def refresh_map_directories(screen, dirs_to_check, success_message="Data refresh
     
     if total_maps == 0:
         dialogs.show_info("Data Refresh", "No maps found to refresh.")
-        return
+        return False
 
     # Setup screen state for UI
     screen.is_refreshing = True
@@ -145,3 +148,4 @@ def refresh_map_directories(screen, dirs_to_check, success_message="Data refresh
 
     # Fire and forget the background process
     run_background(_refresh_thread)
+    return True

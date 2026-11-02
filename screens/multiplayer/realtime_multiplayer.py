@@ -57,7 +57,7 @@ from data.platform import IS_WEB
 from ui.navigation.game_state import GameState, MenuListScreen
 from ui.rendering.font_manager import fonts
 from ui import dialogs
-from ui.widgets.ui_elements import Button, UI_ICONS, make_back_button
+from ui.widgets.ui_elements import Button, UI_ICONS, make_back_button, play_ui_sound
 from ui.widgets.flag_icons import flag_surface
 
 from data.map.load_map import load_backend_state
@@ -249,7 +249,7 @@ class Realtime_Host_Setup(_RealtimeScreen):
             Button("centered-150", 500, "medium", "purple",
                    "Temporary Relay: ON" if self.relay_enabled else "Temporary Relay: Off",
                    lambda: self.go_to("REALTIME_RELAY_SETUP")),
-            Button("centered+150", 500, "medium", "light_blue", "Networking Help", self.show_network_help),
+            Button("centered+150", 500, "medium", "light_blue", "Networking Help", self.show_network_help, sound_kind=None),
             make_back_button(self.exit_screen),
         ]
 
@@ -403,7 +403,7 @@ class Realtime_Relay_Setup(_RealtimeScreen):
             Button("centered", 130, "medium", "blue", "DigitalOcean Token: SET" if token_set else "DigitalOcean Token", self.edit_token),
             Button("centered", 210, "medium", "blue", f"Region: {self.host_setup.relay_region}", self.edit_region),
             Button("centered", 290, "medium", "blue", f"Droplet Size: {self.host_setup.relay_size}", self.edit_size),
-            Button("centered", 370, "medium", "light_blue", "Open DigitalOcean Token Page", self.open_token_page),
+            Button("centered", 370, "medium", "light_blue", "Open DigitalOcean Token Page", self.open_token_page, sound_kind=None),
             Button("centered-120", 460, "medium", "green" if token_set else "grey",
                    "Use Temporary Relay" if token_set else "Enter Token First", self.enable),
             Button("centered+120", 460, "medium", "orange", "Use Direct Hosting", self.disable),
@@ -436,9 +436,11 @@ class Realtime_Relay_Setup(_RealtimeScreen):
 
     def open_token_page(self):
         if IS_WEB:
+            play_ui_sound("click")
             return
         try:
             webbrowser.open("https://cloud.digitalocean.com/account/api/tokens", new=2)
+            play_ui_sound("click")
         except OSError:
             dialogs.show_info("DigitalOcean Token", "Open DigitalOcean, then go to API > Personal Access Tokens.")
 
@@ -625,12 +627,12 @@ class Realtime_Lobby(_RealtimeLobby):
         ])
         self.elements.extend([
             Button("centered-220", 100, "medium", "blue",
-                   "Copy Relay Invite" if self.temporary_relay else "Copy LAN Invite", self.show_lan_invite),
+                   "Copy Relay Invite" if self.temporary_relay else "Copy LAN Invite", self.show_lan_invite, sound_kind=None),
             Button("centered", 100, "medium", "green", "Start Match", self.start_match),
             Button("centered+220", 100, "medium", "red", "End Lobby", self.request_end_lobby),
             Button("centered-120", 150, "medium", self.internet_button_color(),
-                   self.internet_button_label(), self.show_internet_invite),
-            Button("centered+120", 150, "medium", "light_blue", "Networking Status", self.show_network_status),
+                   self.internet_button_label(), self.show_internet_invite, sound_kind=None),
+            Button("centered+120", 150, "medium", "light_blue", "Networking Status", self.show_network_status, sound_kind=None),
         ])
         countries = sorted(self.session.countries, key=str.casefold)
         # Compact rows leave room for a genuinely useful viewport rather than
@@ -1195,10 +1197,10 @@ class Realtime_Remote_Lobby(_RealtimeLobby):
 
     def refresh_ui(self):
         self.elements = self._personal_buttons() + [
-            Button(20, 145, "left_ui_button", "purple", "Copy Reconnect Code", self.copy_reconnect_code,
+            Button(20, 145, "left_ui_button", "purple", "Copy Reconnect Code", self.copy_reconnect_code, sound_kind=None,
                    font_preset="tiny"),
             Button(20, 180, "left_ui_button", "blue", "Rename", self.edit_name),
-            Button(20, 215, "left_ui_button", "purple", "Match Rules", self.show_match_rules),
+            Button(20, 215, "left_ui_button", "purple", "Match Rules", self.show_match_rules, sound_kind=None),
             Button("centered+280", 100, "medium", "red", "Leave Lobby", self.request_leave),
         ]
         if not self.view:

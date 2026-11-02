@@ -37,7 +37,7 @@ def _clear_phantom_hover(game_state):
 
 
 def open_checkbox_list(game_state, title, prompt, items, on_result, confirm_label="Confirm",
-                       show_select_all=True, extra_buttons=None, footnote=None):
+                       show_select_all=True, extra_buttons=None, footnote=None, confirm_sound="click"):
     """In-engine multi-toggle picker: replaces the scrollable tk.Checkbutton panels.
 
     `items` are ui.dialogs.checkbox_list_screen CheckboxItem / SectionHeader objects.
@@ -54,7 +54,8 @@ def open_checkbox_list(game_state, title, prompt, items, on_result, confirm_labe
                                           lambda keys: result.setdefault("keys", keys),
                                           confirm_label=confirm_label,
                                           show_select_all=show_select_all,
-                                          extra_buttons=extra_buttons, footnote=footnote),
+                                          extra_buttons=extra_buttons, footnote=footnote,
+                                          confirm_sound=confirm_sound),
                on_done=_on_done, caption=title)
 
 

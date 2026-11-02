@@ -644,7 +644,8 @@ def _build_general_buttons(map_screen):
     map_screen.btn_exit_to_menu = Button(TOP_RIGHT_BTN_X, c.TOP_BAR_UI_CENTER_Y, "small", "red", "Exit", map_screen.exit_to_menu, sound_kind="back")
     map_screen.btn_realtime_details = Button(TOP_RIGHT_BTN_X + 30, c.TOP_BAR_UI_CENTER_Y + 120,
                                               "tiny", "blue", "Details",
-                                              lambda: realtime_status_panel.show_details(map_screen))
+                                              lambda: realtime_status_panel.show_details(map_screen),
+                                              sound_kind=None)
     map_screen.btn_view_foreign_politics = Button(
         *c.PROVINCE_UI["foreign_politics_button"][:2],
         c.PROVINCE_UI["foreign_politics_button"][2:], "purple", "View Their Politics",
