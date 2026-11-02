@@ -4,26 +4,22 @@ import pygame
 import data.constants as c
 from ui.background_styles import EDITOR_PANEL_STYLES
 from data import queries
-from ui.navigation.game_state import MapOverlayScreen, NationListOverlayScreen
+from ui.navigation.game_state import EditorOverlayScreen, NationListOverlayScreen
 from ui.widgets.ui_elements import Button, TextField, make_back_button
 from ui import dialogs
 from ui.navigation.screen_runner import _run_pygame_sub_screen
 
 
-class Editor_Metadata_Screen(MapOverlayScreen):
+class Editor_Metadata_Screen(EditorOverlayScreen):
     """Edit scenario information as a draft until Apply is selected."""
-    pans_camera = False
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_EDIT
     PANEL_STYLE = EDITOR_PANEL_STYLES["metadata"]
     PANEL_TITLE = "Metadata"
-    TITLE_PRESET = "heading2"
-    TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
     PANEL_WIDTH, PANEL_HEIGHT = 780, 360
     FIELD_LEFT, FIELD_TOP, FIELD_GAP, FIELD_HEIGHT = 205, 80, 70, 40
 
     def __init__(self, map_screen):
         super().__init__(map_screen, pygame.Rect(0, 0, self.PANEL_WIDTH, self.PANEL_HEIGHT))
-        self.back_state = "MAP"
         metadata = queries.normalized_scenario_metadata(map_screen.scenario_metadata)
         values = (("name", "Scenario Name:", map_screen.editor_scenario_name),
                   ("author", "Author:", metadata["author"]),
@@ -62,17 +58,13 @@ class Editor_Metadata_Screen(MapOverlayScreen):
 # SET START DATE
 # ==========================================
 
-class Editor_Date_Screen(MapOverlayScreen):
-    pans_camera = False
+class Editor_Date_Screen(EditorOverlayScreen):
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_EDIT
     PANEL_STYLE = EDITOR_PANEL_STYLES["date"]
     PANEL_TITLE = "Set Start Date"
-    TITLE_PRESET = "heading2"
-    TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
 
     def __init__(self, map_screen):
         super().__init__(map_screen, pygame.Rect(0, 0, 440, 420))
-        self.back_state = "MAP"
 
         tm = map_screen.time_manager
         field_x = self.panel_rect.centerx - 30
@@ -141,16 +133,12 @@ class Editor_Date_Screen(MapOverlayScreen):
 # STARTING ECONOMY EDITOR
 # ==========================================
 
-class Starting_Economy_Edit_Screen(MapOverlayScreen):
-    pans_camera = False
+class Starting_Economy_Edit_Screen(EditorOverlayScreen):
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_INFO
     PANEL_STYLE = EDITOR_PANEL_STYLES["starting_economy"]
-    TITLE_PRESET = "heading2"
-    TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
 
     def __init__(self, map_screen, country_id):
         super().__init__(map_screen, pygame.Rect(0, 0, 400, 360))
-        self.back_state = "MAP"
         self.country_id = country_id
 
         data = map_screen.nation_data.get(country_id, {})
@@ -192,13 +180,10 @@ class Starting_Economy_Edit_Screen(MapOverlayScreen):
         self.draw_panel(surface)
 
 class Starting_Economy_List_Screen(NationListOverlayScreen):
-    pans_camera = False
     scroll_anywhere = True
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_CONFIRM
     PANEL_STYLE = EDITOR_PANEL_STYLES["starting_economy_list"]
     PANEL_TITLE = "Starting Economy Editor"
-    TITLE_PRESET = "heading2"
-    TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
 
     def list_header_elements(self):
         p = self.panel_rect

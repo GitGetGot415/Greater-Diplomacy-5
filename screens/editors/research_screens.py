@@ -4,7 +4,7 @@ import pygame
 import data.constants as c
 from ui.background_styles import EDITOR_PANEL_STYLES
 from data import queries
-from ui.navigation.game_state import MapOverlayScreen
+from ui.navigation.game_state import EditorOverlayScreen, NationListOverlayScreen
 from ui.widgets.ui_elements import Button, TextField, make_back_button
 from ui import dialogs
 from ui.bars import ui_bars
@@ -18,19 +18,15 @@ from screens.game.research import Research_Screen
 # MAP RESEARCH (TECH) EDITOR
 # ==========================================
 
-class Research_Edit_Screen(MapOverlayScreen):
+class Research_Edit_Screen(EditorOverlayScreen):
     """Shared editor for a single country, all countries in bulk, or the map default."""
-    pans_camera = False
     scroll_anywhere = True
     ROW_HEIGHT = 36
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_EDIT
     PANEL_STYLE = EDITOR_PANEL_STYLES["research"]
-    TITLE_PRESET = "heading2"
-    TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
 
     def __init__(self, map_screen, screen_title, base_data, tech_tree, on_save):
         super().__init__(map_screen, pygame.Rect(0, 0, 640, c.SCREEN_HEIGHT - 100))
-        self.back_state = "MAP"
         self.screen_title = screen_title
         self.tech_tree = tech_tree
         self.on_save = on_save
@@ -78,16 +74,12 @@ class Research_Edit_Screen(MapOverlayScreen):
                 checked = kind[1]
                 btn = Button(p.right - 100, y, "tiny_square", "green" if checked else "grey",
                             "ON" if checked else "OFF", lambda t=tech: self.toggle_checkbox(t), font_preset="tiny")
-                btn.is_scrollable = True
-                btn.click_guard = self.scroll_click_guard
-                self.elements.append(btn)
+                self.add_list_row(btn)
             else:
                 _, text, _max_lvl = kind
                 field = TextField(p.right - 160, y, 100, 30, text, numeric=True)
                 field.entry_apply = lambda text, t=tech: self._store_entry(t, text)
-                field.is_scrollable = True
-                field.click_guard = self.scroll_click_guard
-                self.elements.append(field)
+                self.add_list_row(field)
 
         self.list_view_h = view_h
 
@@ -135,25 +127,22 @@ class Research_Edit_Screen(MapOverlayScreen):
 
         self.draw_list_scrollbar(surface, p.right - 15, p.y + 60, view_h)
 
-class Research_List_Screen(MapOverlayScreen):
-    pans_camera = False
+class Research_List_Screen(NationListOverlayScreen):
     scroll_anywhere = True
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_EDIT
     PANEL_STYLE = EDITOR_PANEL_STYLES["research_list"]
     PANEL_TITLE = "Map Research Editor"
-    TITLE_PRESET = "heading2"
-    TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
+    LIST_PANEL_SIZE = (500, c.SCREEN_HEIGHT - 120)
+    LIST_HEADER_HEIGHT = 170
+    ROW_INSET = 20
 
     def __init__(self, map_screen):
-        super().__init__(map_screen, pygame.Rect(0, 0, 500, c.SCREEN_HEIGHT - 120))
-        self.back_state = "MAP"
-        self.active_countries = sorted(queries.get_living_nations(map_screen.map_data))
-        self.default_research = self._get_default_research()
-        self.refresh_ui()
+        # The base __init__ builds the rows, and each row reads this value.
+        self.default_research = self._get_default_research(map_screen)
+        super().__init__(map_screen)
 
-    def _get_default_research(self):
-        map_screen = self.map_screen
-        struct = queries.get_tech_tree(self.map_screen)
+    def _get_default_research(self, map_screen):
+        struct = queries.get_tech_tree(map_screen)
         fresh_template = {tech: (1800 if data["max_lvl"] == 9999 else 0) for tech, data in struct.items()}
         if "infantry_type" in fresh_template: fresh_template["infantry_type"] = 1
         if "cavalry" in fresh_template: fresh_template["cavalry"] = 1
@@ -169,7 +158,7 @@ class Research_List_Screen(MapOverlayScreen):
 
         return fresh_template
 
-    def refresh_ui(self):
+    def list_header_elements(self):
         p = self.panel_rect
         force_time_appropriate_on = queries.get_scenario_flag(
             "force_time_appropriate_research", c.DEFAULT_FORCE_TIME_APPROPRIATE_RESEARCH,
@@ -179,33 +168,22 @@ class Research_List_Screen(MapOverlayScreen):
                           self.toggle_force_time_appropriate)
         ftap_btn.is_selected = force_time_appropriate_on
 
-        self.elements = [
-            make_back_button(self.exit_screen, style="map"),
+        return [
             Button(p.x + 20, p.y + 60, "medium", "red", "Edit ALL (Bulk)", self.edit_all),
             Button(p.right - 220, p.y + 60, "medium", "orange", "Edit Map Default", self.edit_default),
             ftap_btn,
         ]
 
-        row_top = p.y + 170
-        view_h = p.height - 190
-        row_x = p.x + 20
-        row_w = p.width - 40
-        cull_top, cull_bottom = p.y + 160, p.bottom - 20
-        self.scroll_content_rect = pygame.Rect(p.x, cull_top, p.width, cull_bottom - cull_top)
-        for i, y in self.layout_list_rows(len(self.active_countries), 40, row_top, view_h=view_h,
-                                          cull_top=cull_top, cull_bottom=cull_bottom):
-            cid = self.active_countries[i]
-            c_res = self.map_screen.nation_data.get(cid, {}).get("research", {})
-            is_diff = any(c_res.get(k, v) != v for k, v in self.default_research.items())
-            name = queries.get_country_display_name(cid, self.map_screen.nation_data)
-            label = f"[MODIFIED] {name}" if is_diff else name
-            btn = Button(row_x, y, "list_row", "blue", label, lambda cc=cid: self.edit_country(cc))
-            btn.rect.width = row_w
-            btn.is_scrollable = True
-            btn.click_guard = self.scroll_click_guard
-            self.elements.append(btn)
-
-        self.list_view_h = view_h
+    def country_button(self, country_id, x, y):
+        # These rows fill the narrower panel instead of the centred default.
+        p = self.panel_rect
+        c_res = self.map_screen.nation_data.get(country_id, {}).get("research", {})
+        is_diff = any(c_res.get(k, v) != v for k, v in self.default_research.items())
+        name = queries.get_country_display_name(country_id, self.map_screen.nation_data)
+        label = f"[MODIFIED] {name}" if is_diff else name
+        btn = Button(p.x + self.ROW_INSET, y, "list_row", "blue", label, lambda cc=country_id: self.edit_country(cc))
+        btn.rect.width = p.width - 2 * self.ROW_INSET
+        return btn
 
     def _open_editor(self, title, base_data, on_save):
         for k, v in self.default_research.items():
@@ -287,8 +265,3 @@ class Research_List_Screen(MapOverlayScreen):
             self.refresh_ui()
 
         dialogs.ask_yes_no("Force Time-Appropriate Research", msg, on_confirm)
-
-    def draw_content(self, surface):
-        p = self.panel_rect
-        self.draw_panel(surface)
-        self.draw_list_scrollbar(surface, p.right - 15, p.y + 170, self.list_view_h)

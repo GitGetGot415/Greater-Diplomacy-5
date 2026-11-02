@@ -18,7 +18,6 @@ import data.constants as c
 from ui.background_styles import EDITOR_PANEL_STYLES
 from data import queries
 from ui import dialogs
-from ui.bars import ui_bars
 from ui.widgets import ui_elements
 from ui.navigation.modal_screen import ModalScreen
 from ui.widgets.ui_elements import Button, Slider, TextField, make_back_button
@@ -247,24 +246,18 @@ class TurnEditorScreen(ModalScreen):
                     p.right - self.PAD - self.CONVERSION_SLIDER_WIDTH - 20, y + 32,
                     self.CONVERSION_SLIDER_WIDTH, int(values[btype]),
                     lambda value, name=btype, target=values: target.__setitem__(name, str(value)))
-                slider.is_scrollable = True
-                slider.click_guard = self.scroll_click_guard
-                self.elements.append(slider)
+                self.add_list_row(slider)
                 continue
             field = TextField(check_x - 10 - 100, y, 100, 28, self.tab["values"][btype], numeric=True)
             field.entry_ref = self.tab["values"]
             field.entry_key = btype
-            field.is_scrollable = True
-            field.click_guard = self.scroll_click_guard
-            self.elements.append(field)
+            self.add_list_row(field)
 
             is_enabled = btype not in disabled_set
             check_btn = Button(check_x, y + (self.ROW_HEIGHT - self.CHECK_SIZE) // 2, "tiny_square",
                                "green" if is_enabled else "red", "ON" if is_enabled else "OFF",
                                lambda bt=btype: self.toggle_disabled(bt), font_preset="button_small")
-            check_btn.is_scrollable = True
-            check_btn.click_guard = self.scroll_click_guard
-            self.elements.append(check_btn)
+            self.add_list_row(check_btn)
 
         btn_y = p.bottom - 52
         self.elements.append(make_back_button(self.exit_screen, pos=(p.x + self.PAD, btn_y)))
@@ -294,7 +287,7 @@ class TurnEditorScreen(ModalScreen):
             msg = font.render("Nothing to edit.", True, c.UI_TEXT_LIGHT)
             surface.blit(msg, msg.get_rect(center=(p.centerx, self.list_top + self.list_view_h // 2)))
 
-    def draw_elements(self, surface):
+    def draw_scroll_backdrop(self, surface):
         """Row striping and the per-row default hint are drawn inside the same
         clip region as the fields they sit behind."""
         p = self.panel_rect
@@ -302,38 +295,28 @@ class TurnEditorScreen(ModalScreen):
         names = self.tab["names"]
         row_height = self.row_height
 
-        for el in self.elements:
-            if not getattr(el, "is_scrollable", False):
-                el.draw(surface)
+        for i, y in self._row_layout:
+            btype = names[i]
+            if i % 2 == 0:
+                ui_elements.draw_pixel_background(
+                    surface, pygame.Rect(p.x + self.PAD, y, p.width - 2 * self.PAD, row_height),
+                    EDITOR_PANEL_STYLES["construction_turns_row"])
 
-        with ui_bars.clip_scroll_region(surface, self.scroll_content_rect,
-                                        draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll):
-            for i, y in self._row_layout:
-                btype = names[i]
-                if i % 2 == 0:
-                    ui_elements.draw_pixel_background(
-                        surface, pygame.Rect(p.x + self.PAD, y, p.width - 2 * self.PAD, row_height),
-                        EDITOR_PANEL_STYLES["construction_turns_row"])
+            label_x = p.x + self.PAD + self.ROW_LABEL_INSET
+            if self.active_tab in ("unit", "building"):
+                icon = self.tab["icons"].get(btype)
+                if icon is not None:
+                    center = (label_x + self.ROW_ICON_SIZE[0] // 2, y + row_height // 2)
+                    surface.blit(icon, icon.get_rect(center=center))
+                label_x += self.ROW_ICON_SIZE[0] + self.ROW_ICON_GAP
+            label = font.render(btype, True, (225, 225, 225))
+            surface.blit(label, label.get_rect(midleft=(label_x, y + row_height // 2)))
 
-                label_x = p.x + self.PAD + self.ROW_LABEL_INSET
-                if self.active_tab in ("unit", "building"):
-                    icon = self.tab["icons"].get(btype)
-                    if icon is not None:
-                        center = (label_x + self.ROW_ICON_SIZE[0] // 2, y + row_height // 2)
-                        surface.blit(icon, icon.get_rect(center=center))
-                    label_x += self.ROW_ICON_SIZE[0] + self.ROW_ICON_GAP
-                label = font.render(btype, True, (225, 225, 225))
-                surface.blit(label, label.get_rect(midleft=(label_x, y + row_height // 2)))
-
-                default = self.tab["defaults"][btype]
-                hint = small.render(f"default: {default}", True, (150, 150, 165))
-                hint_right = (p.right - self.PAD - self.CONVERSION_SLIDER_WIDTH - 50
-                              if self.active_tab == "conversion" else p.right - self.PAD - 159)
-                surface.blit(hint, hint.get_rect(midright=(hint_right, y + row_height // 2)))
-
-            for el in self.elements:
-                if getattr(el, "is_scrollable", False):
-                    el.draw(surface)
+            default = self.tab["defaults"][btype]
+            hint = small.render(f"default: {default}", True, (150, 150, 165))
+            hint_right = (p.right - self.PAD - self.CONVERSION_SLIDER_WIDTH - 50
+                          if self.active_tab == "conversion" else p.right - self.PAD - 159)
+            surface.blit(hint, hint.get_rect(midright=(hint_right, y + row_height // 2)))
 
     def draw_foreground(self, surface):
         p = self.panel_rect

@@ -92,9 +92,7 @@ class ListSelectScreen(ModalScreen):
             label = text_utils.truncate_chars(item_label, self.ROW_LABEL_MAX_CHARS)
             btn = Button(row_x, y, "list_row", "blue", label, lambda it=item: self.select(it))
             btn.apply_state(enabled=self._item_enabled(item), color="blue")
-            btn.is_scrollable = True
-            btn.click_guard = self.scroll_click_guard
-            self.elements.append(btn)
+            self.add_list_row(btn)
 
     def handle_back_key(self):
         # Escape clears an active filter first; only closes the screen once

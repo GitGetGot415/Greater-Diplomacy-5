@@ -56,9 +56,7 @@ class Load_Game(FolderListState):
                 btn = Button(x, btn_y, size, color, label or folder,
                             lambda f=folder, h=handler: getattr(self, h)(f),
                             sound_kind="time_select" if handler == "open_history_menu" else "click")
-                btn.is_scrollable = True
-                btn.click_guard = self.scroll_click_guard
-                self.elements.append(btn)
+                self.add_list_row(btn)
 
     def additional_events(self, event):
         if not self.handle_name_prompt_event(event):

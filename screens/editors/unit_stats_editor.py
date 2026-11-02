@@ -9,7 +9,6 @@ from ui.background_styles import EDITOR_PANEL_STYLES
 from ui.rendering import symbol_loader
 from ui.rendering.font_manager import fonts
 from ui import dialogs
-from ui.bars import ui_bars
 from ui.widgets import ui_elements
 from ui.navigation.modal_screen import ModalScreen
 from ui.widgets.ui_elements import Button, TextField, make_back_button
@@ -130,9 +129,7 @@ class UnitStatsEditorScreen(ModalScreen):
         field = TextField(x, y, self.FIELD_WIDTH, 28, self.values[family][key], numeric=True)
         field.entry_ref = self.values[family]
         field.entry_key = key
-        field.is_scrollable = True
-        field.click_guard = self.scroll_click_guard
-        self.elements.append(field)
+        self.add_list_row(field)
 
     def additional_events(self, event):
         self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
@@ -146,48 +143,40 @@ class UnitStatsEditorScreen(ModalScreen):
                         ("+ per level", p.right - self.STEP_RIGHT_OFF - self.FIELD_WIDTH)):
             self.label(surface, text, (x, self.list_top - 24))
 
-    def draw_elements(self, surface):
+    def draw_scroll_backdrop(self, surface):
         p = self.panel_rect
         font, small = fonts.get("normal"), fonts.get("small")
-        for element in self.elements:
-            if not getattr(element, "is_scrollable", False):
-                element.draw(surface)
-        with ui_bars.clip_scroll_region(surface, self.scroll_content_rect,
-                                        draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll):
-            for index, y in self._row_layout:
-                family, key = self.rows[index]
-                if family is None:
-                    label = font.render("Aircraft", True, c.UI_TEXT_DIM)
-                    rect = label.get_rect(center=(p.centerx, y + self.ROW_HEIGHT // 2))
-                    pygame.draw.line(surface, c.UI_TEXT_DIM,
-                                     (p.x + self.PAD + self.ROW_LABEL_INSET, rect.centery),
-                                     (rect.left - self.DIVIDER_LABEL_GAP, rect.centery))
-                    pygame.draw.line(surface, c.UI_TEXT_DIM,
-                                     (rect.right + self.DIVIDER_LABEL_GAP, rect.centery),
-                                     (p.right - self.PAD - self.ROW_LABEL_INSET, rect.centery))
-                    surface.blit(label, rect)
-                    continue
-                if index % 2 == 0:
-                    ui_elements.draw_pixel_background(
-                        surface, pygame.Rect(p.x + self.PAD, y, p.width - 2 * self.PAD, self.ROW_HEIGHT),
-                        EDITOR_PANEL_STYLES["unit_stats_row"])
-                icon_x = p.x + self.PAD + self.ROW_LABEL_INSET
-                icon = self.icons.get(family)
-                if icon is not None:
-                    center = (icon_x + self.ROW_ICON_SIZE[0] // 2, y + self.ROW_HEIGHT // 2)
-                    surface.blit(icon, icon.get_rect(center=center))
-                label_x = icon_x + self.ROW_ICON_SIZE[0] + self.ROW_ICON_GAP
-                surface.blit(font.render(family, True, c.UI_TEXT_LIGHT), (label_x, y + 4))
-                default = self.defaults[family]
-                if key == "bombard_range":
-                    hint = f"Bombardment (tiles); default: {default[key]:g}"
-                else:
-                    hint = (f"Flight (map px); default: {default[key]:g}"
-                            f" + {default['air_range_per_level']:g} per level")
-                surface.blit(small.render(hint, True, c.UI_TEXT_DIM), (label_x, y + 29))
-            for element in self.elements:
-                if getattr(element, "is_scrollable", False):
-                    element.draw(surface)
+        for index, y in self._row_layout:
+            family, key = self.rows[index]
+            if family is None:
+                label = font.render("Aircraft", True, c.UI_TEXT_DIM)
+                rect = label.get_rect(center=(p.centerx, y + self.ROW_HEIGHT // 2))
+                pygame.draw.line(surface, c.UI_TEXT_DIM,
+                                 (p.x + self.PAD + self.ROW_LABEL_INSET, rect.centery),
+                                 (rect.left - self.DIVIDER_LABEL_GAP, rect.centery))
+                pygame.draw.line(surface, c.UI_TEXT_DIM,
+                                 (rect.right + self.DIVIDER_LABEL_GAP, rect.centery),
+                                 (p.right - self.PAD - self.ROW_LABEL_INSET, rect.centery))
+                surface.blit(label, rect)
+                continue
+            if index % 2 == 0:
+                ui_elements.draw_pixel_background(
+                    surface, pygame.Rect(p.x + self.PAD, y, p.width - 2 * self.PAD, self.ROW_HEIGHT),
+                    EDITOR_PANEL_STYLES["unit_stats_row"])
+            icon_x = p.x + self.PAD + self.ROW_LABEL_INSET
+            icon = self.icons.get(family)
+            if icon is not None:
+                center = (icon_x + self.ROW_ICON_SIZE[0] // 2, y + self.ROW_HEIGHT // 2)
+                surface.blit(icon, icon.get_rect(center=center))
+            label_x = icon_x + self.ROW_ICON_SIZE[0] + self.ROW_ICON_GAP
+            surface.blit(font.render(family, True, c.UI_TEXT_LIGHT), (label_x, y + 4))
+            default = self.defaults[family]
+            if key == "bombard_range":
+                hint = f"Bombardment (tiles); default: {default[key]:g}"
+            else:
+                hint = (f"Flight (map px); default: {default[key]:g}"
+                        f" + {default['air_range_per_level']:g} per level")
+            surface.blit(small.render(hint, True, c.UI_TEXT_DIM), (label_x, y + 29))
 
     def draw_foreground(self, surface):
         self.draw_list_scrollbar(surface, self.panel_rect.right - 26, self.list_top, self.list_view_h)

@@ -4,7 +4,7 @@ import pygame
 import data.constants as c
 from ui.background_styles import EDITOR_PANEL_STYLES
 from data import queries
-from ui.navigation.game_state import MapOverlayScreen
+from ui.navigation.game_state import EditorOverlayScreen
 from ui.widgets.ui_elements import Button, TextField, make_back_button
 from ui.widgets.scroll_panes import ScrollPanes
 from ui.widgets import text_utils
@@ -19,7 +19,7 @@ from map_logic.diplomacy.faction_actions import rename_faction
 # GLOBAL DIPLOMACY & FACTIONS EDITOR
 # ==========================================
 
-class Diplomacy_Editor_Screen(ScrollPanes, MapOverlayScreen):
+class Diplomacy_Editor_Screen(ScrollPanes, EditorOverlayScreen):
     """The map's diplomatic relationships on a single screen.
 
     Keeps the shape of the tkinter original: nations down the left, and the
@@ -28,13 +28,10 @@ class Diplomacy_Editor_Screen(ScrollPanes, MapOverlayScreen):
     reloads from nation_data, so switching away drops unsaved edits. Saving
     leaves the screen open so several nations can be edited in a row.
     """
-    pans_camera = False
     overlay_alpha = 220
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_INFO
     PANEL_STYLE = EDITOR_PANEL_STYLES["diplomacy"]
     PANEL_TITLE = "Global Diplomacy, Factions & Agreements"
-    TITLE_PRESET = "heading2"
-    TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
 
     ROW_HEIGHT = 30
     NAT_W = 260
@@ -49,7 +46,6 @@ class Diplomacy_Editor_Screen(ScrollPanes, MapOverlayScreen):
 
     def __init__(self, map_screen):
         super().__init__(map_screen, pygame.Rect(0, 0, 1240, 660))
-        self.back_state = "MAP"
 
         self.countries = sorted(queries.get_living_nations(map_screen.map_data))
         self.target = None

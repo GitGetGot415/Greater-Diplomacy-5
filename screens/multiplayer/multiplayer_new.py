@@ -40,9 +40,7 @@ class Multiplayer_New(GameState):
         for i, btn_y in self.layout_list_rows(len(scenarios), self.ROW_HEIGHT, self.ROW_TOP, pad=20):
             btn = Button("centered", btn_y, "large", "blue", scenarios[i],
                         lambda n=scenarios[i], d=scenario_dir: self.start_host_setup(n, d))
-            btn.is_scrollable = True
-            btn.click_guard = self.scroll_click_guard
-            self.elements.append(btn)
+            self.add_list_row(btn)
 
     def scenario_settings(self):
         # Point Scenario_Settings back here, the same way New_Game claims it,

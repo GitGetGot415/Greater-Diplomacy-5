@@ -1,6 +1,6 @@
 """Native pygame replacements for the map editor's tkinter tool windows.
 
-Each class here is a MapOverlayScreen launched with
+Each class here is an EditorOverlayScreen launched with
 ui.navigation.screen_runner._run_pygame_sub_screen. Everything the map editor's
 bottom/side bars open lives in one of the sibling modules below, has become a
 TableScreen, or -- for the scripted events editor -- has its own module.

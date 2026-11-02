@@ -1,5 +1,5 @@
 import pygame
-from ui.navigation.game_state import GameState
+from ui.navigation.game_state import GameState, host_map_screen
 import data.constants as c
 from ui.bars import ui_bars
 from ui.widgets import text_utils, ui_elements
@@ -40,7 +40,7 @@ class TableScreen(GameState):
     def __init__(self, game_state, title, columns, rows, empty_message="Nothing to show.",
                  on_row_click=None, row_tint=None):
         super().__init__()
-        self.map_screen = getattr(game_state, "map_screen", None) or game_state
+        self.map_screen = host_map_screen(game_state)
         self.bg_color = (25, 28, 35)
         self.title = title
         self.columns = columns

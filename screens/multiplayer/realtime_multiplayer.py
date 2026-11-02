@@ -120,14 +120,18 @@ def _scenario_entries():
     return entries
 
 
-class Realtime_Host_Setup(GameState):
+class _RealtimeScreen(GameState):
+    """Background color and default title height of the real-time screens."""
+    bg_color = (12, 28, 50)
+    title_y = 35
+
+
+class Realtime_Host_Setup(_RealtimeScreen):
     back_state = "REAL_TIME_MULTIPLAYER"
     title = "Host Real-Time Match"
-    title_y = 35
 
     def __init__(self):
         super().__init__()
-        self.bg_color = (12, 28, 50)
         self.scenario_path = os.path.join(c.SCENARIOS_HISTORICAL_DIR, "1939")
         self.settings = copy.deepcopy(queries.get_scenario_settings() or {})
         self.host_name = "Host"
@@ -288,15 +292,14 @@ class Realtime_Host_Setup(GameState):
         self.realtime_lan_invite = self.realtime_invite
 
 
-class Realtime_Relay_Setup(GameState):
+class Realtime_Relay_Setup(_RealtimeScreen):
     """Memory-only credentials for the host's own temporary relay account."""
     back_state = "REALTIME_HOST_SETUP"
     title = "Temporary Internet Relay"
-    title_y = 35
 
     def __init__(self):
         super().__init__()
-        self.bg_color, self.host_setup = (12, 28, 50), None
+        self.host_setup = None
         self.refresh_ui()
 
     def bind_host(self, host_setup):
@@ -365,7 +368,7 @@ class Realtime_Relay_Setup(GameState):
         self.go_to("REALTIME_HOST_SETUP")
 
 
-class Realtime_Relay_Provision(GameState):
+class Realtime_Relay_Provision(_RealtimeScreen):
     """Non-blocking provisioning screen while DigitalOcean starts the VPS."""
     back_state = "REALTIME_HOST_SETUP"
     title = "Creating Temporary Relay"
@@ -373,7 +376,7 @@ class Realtime_Relay_Provision(GameState):
 
     def __init__(self):
         super().__init__()
-        self.bg_color, self.host_setup = (12, 28, 50), None
+        self.host_setup = None
         self._relay_transitioned = False
         self.elements = [Button("centered", 450, "medium", "red", "Cancel and Delete Relay", self.cancel)]
 
@@ -421,16 +424,14 @@ class Realtime_Relay_Provision(GameState):
         surface.blit(font.render(text, True, (235, 235, 235)), (85, 270))
 
 
-class Realtime_Scenario_Select(GameState):
+class Realtime_Scenario_Select(_RealtimeScreen):
     host_setup = None
 
     back_state = "REALTIME_HOST_SETUP"
     title = "Select Real-Time Scenario"
-    title_y = 35
 
     def __init__(self):
         super().__init__()
-        self.bg_color = (12, 28, 50)
         self.lobby = None
         self.scroll_y = 0
         self.refresh_ui()
@@ -454,9 +455,7 @@ class Realtime_Scenario_Select(GameState):
             label, path = self.entries[index]
             button = Button("centered", button_y, "new_game", "blue", label,
                             lambda selected=path: self.select(selected))
-            button.is_scrollable = True
-            button.click_guard = self.scroll_click_guard
-            self.elements.append(button)
+            self.add_list_row(button)
 
     def additional_events(self, event):
         self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
@@ -477,7 +476,7 @@ class Realtime_Scenario_Select(GameState):
         self.go_to("REALTIME_HOST_SETUP")
 
 
-class Realtime_Lobby(GameState):
+class Realtime_Lobby(_RealtimeScreen):
     host_setup = None
     advertiser = None
     _lobby_signature = None
@@ -488,7 +487,6 @@ class Realtime_Lobby(GameState):
 
     def __init__(self):
         super().__init__()
-        self.bg_color = (12, 28, 50)
         self.session = None
         self.server = None
         self.server_map = None
@@ -582,9 +580,7 @@ class Realtime_Lobby(GameState):
                 flag = None
             button = Button("centered", button_y, (600, 32), color, label,
                             lambda country_id=country: self.choose_host_country(country_id), image=flag)
-            button.is_scrollable = True
-            button.click_guard = self.scroll_click_guard
-            self.elements.append(button)
+            self.add_list_row(button)
         ready = self.session.players[host].ready
         self.elements.append(Button("centered", 550, (200, 36), "green" if ready else "orange",
                                     "Host Ready" if ready else "Mark Host Ready", self.toggle_ready))
@@ -928,7 +924,7 @@ class Realtime_Lobby(GameState):
             surface.blit(font.render(text, True, (230, 230, 230)), (30, 605 + index * 22))
 
 
-class Realtime_Join(GameState):
+class Realtime_Join(_RealtimeScreen):
     client = None
 
     back_state = "REAL_TIME_MULTIPLAYER"
@@ -937,7 +933,6 @@ class Realtime_Join(GameState):
 
     def __init__(self):
         super().__init__()
-        self.bg_color = (12, 28, 50)
         self.invite_text = ""
         self.name, self.password, self.reconnect_token = "Player", "", ""
         self._shown_reconnect_session = None
@@ -1074,16 +1069,14 @@ class Realtime_Join(GameState):
             "Anyone with it can rejoin as you for this match.")
 
 
-class Realtime_Lan_Browser(GameState):
+class Realtime_Lan_Browser(_RealtimeScreen):
     """A no-address, no-port join path for matches announced on the LAN."""
 
     back_state = "REALTIME_JOIN"
     title = "Find LAN Matches"
-    title_y = 35
 
     def __init__(self):
         super().__init__()
-        self.bg_color = (12, 28, 50)
         self.join_screen = None
         self.matches = []
         self._signature = None
@@ -1132,14 +1125,13 @@ class Realtime_Lan_Browser(GameState):
         super().update()
 
 
-class Realtime_Remote_Lobby(GameState):
+class Realtime_Remote_Lobby(_RealtimeScreen):
     back_state = "REAL_TIME_MULTIPLAYER"
     title = "Real-Time Lobby"
     title_y = 30
 
     def __init__(self):
         super().__init__()
-        self.bg_color = (12, 28, 50)
         self.client = self.view = None
         self.reconnect_token = ""
         self.scroll_y = 0
@@ -1189,9 +1181,7 @@ class Realtime_Remote_Lobby(GameState):
                             f"{queries.get_country_display_name(country, nation_data)}: {selected or 'Available'}",
                             lambda picked=country: self.client.send("select_country", {"country_id": picked}),
                             image=flag)
-            button.is_scrollable = True
-            button.click_guard = self.scroll_click_guard
-            self.elements.append(button)
+            self.add_list_row(button)
         if me:
             self.elements.append(Button("centered", 555, (200, 36), "orange" if not me.ready else "green",
                                         "Ready" if me.ready else "Mark Ready",

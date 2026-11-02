@@ -5,7 +5,7 @@ import data.constants as c
 from ui.background_styles import EDITOR_PANEL_STYLES
 from data import queries
 from ui.dialogs import pickers
-from ui.navigation.game_state import MapOverlayScreen
+from ui.navigation.game_state import EditorOverlayScreen
 from ui.widgets.ui_elements import Button, TextField, make_back_button
 from ui import dialogs
 from ui.rendering.font_manager import fonts
@@ -14,18 +14,14 @@ from ui.rendering.font_manager import fonts
 # CONVOY / TRUCK CONVERTER
 # ==========================================
 
-class Convoy_Converter_Screen(MapOverlayScreen):
-    pans_camera = False
+class Convoy_Converter_Screen(EditorOverlayScreen):
     scroll_anywhere = True
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_CONFIRM
     PANEL_STYLE = EDITOR_PANEL_STYLES["convoy_converter"]
     PANEL_TITLE = "Convert Units"
-    TITLE_PRESET = "heading2"
-    TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
 
     def __init__(self, map_screen, province):
         super().__init__(map_screen, pygame.Rect(0, 0, 560, c.SCREEN_HEIGHT - 160))
-        self.back_state = "MAP"
         self.province = province
         self.unit_lib = queries.get_unit_library(map_screen)
         self.selected = {i for i, unit in enumerate(province.get("units", [])) if "original_type" in unit}
@@ -62,9 +58,7 @@ class Convoy_Converter_Screen(MapOverlayScreen):
             label = f"{'[X]' if checked else '[ ]'} {queries.get_unit_display_name(name, self.unit_lib)} {suffix}"
             btn = Button(row_x, y, "list_row", "green" if checked else "grey", label, lambda ii=i: self.toggle(ii))
             btn.rect.width = row_w
-            btn.is_scrollable = True
-            btn.click_guard = self.scroll_click_guard
-            self.elements.append(btn)
+            self.add_list_row(btn)
 
         self.list_view_h = view_h
 
@@ -97,18 +91,14 @@ class Convoy_Converter_Screen(MapOverlayScreen):
 # RESOURCE BRUSH
 # ==========================================
 
-class Resource_Brush_Screen(MapOverlayScreen):
-    pans_camera = False
+class Resource_Brush_Screen(EditorOverlayScreen):
     RESOURCE_TYPES = ["Iron", "Coal", "Oil", "Wheat", "None"]
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_SPECIAL
     PANEL_STYLE = EDITOR_PANEL_STYLES["resource_brush"]
     PANEL_TITLE = "Resource Brush"
-    TITLE_PRESET = "heading2"
-    TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
 
     def __init__(self, map_screen):
         super().__init__(map_screen, pygame.Rect(0, 0, 400, 300))
-        self.back_state = "MAP"
         self.selected_resource = "Iron"
         self.amount_field = TextField(0, 0, 150, 40, "50", numeric=True)
         self.refresh_ui()
@@ -161,20 +151,16 @@ class Resource_Brush_Screen(MapOverlayScreen):
 # BULK MAP CHANGES
 # ==========================================
 
-class Bulk_Edit_Screen(MapOverlayScreen):
+class Bulk_Edit_Screen(EditorOverlayScreen):
     """Choose map-wide setup changes through shared editor rules."""
-    pans_camera = False
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_SPECIAL
     PANEL_STYLE = EDITOR_PANEL_STYLES["resource_brush"]
     PANEL_TITLE = "Bulk Edit Map"
-    TITLE_PRESET = "heading2"
-    TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
     PANEL_WIDTH, PANEL_HEIGHT = 620, 400
     BUTTON_TOP, BUTTON_GAP = 90, 65
 
     def __init__(self, map_screen):
         super().__init__(map_screen, pygame.Rect(0, 0, self.PANEL_WIDTH, self.PANEL_HEIGHT))
-        self.back_state = "MAP"
         self.refresh_ui()
 
     def refresh_ui(self):
@@ -264,13 +250,10 @@ class Bulk_Edit_Screen(MapOverlayScreen):
         self.draw_panel(surface)
 
 
-class Clear_Map_Screen(MapOverlayScreen):
-    pans_camera = False
+class Clear_Map_Screen(EditorOverlayScreen):
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_DANGER
     PANEL_STYLE = EDITOR_PANEL_STYLES["clear_map"]
     PANEL_TITLE = "Clear Map Items"
-    TITLE_PRESET = "heading2"
-    TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
 
     OPTIONS = [
         "all units", "all buildings", "all resources",
@@ -282,7 +265,6 @@ class Clear_Map_Screen(MapOverlayScreen):
 
     def __init__(self, map_screen):
         super().__init__(map_screen, pygame.Rect(0, 0, 600, 420))
-        self.back_state = "MAP"
 
         self.selected_option = self.OPTIONS[0]
         self.selected_country = ""

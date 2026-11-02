@@ -159,9 +159,7 @@ class CheckboxListScreen(ModalScreen):
                          f"{mark} {item.label}", lambda it=item: self.toggle(it),
                          font_preset="button_small")
             btn.is_selected = item.checked
-            btn.is_scrollable = True
-            btn.click_guard = self.scroll_click_guard
-            self.elements.append(btn)
+            self.add_list_row(btn)
 
         btn_y = p.bottom - 52
         self.elements.append(Button(p.x + self.PAD, btn_y, "small", "red", "Cancel", self.exit_screen, sound_kind="back"))

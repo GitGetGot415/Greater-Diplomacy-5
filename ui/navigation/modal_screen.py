@@ -21,7 +21,7 @@ cycle back through screens.game.map.
 import pygame
 
 import data.constants as c
-from ui.navigation.game_state import GameState
+from ui.navigation.game_state import GameState, host_map_screen
 from ui.rendering.font_manager import fonts
 from ui.widgets import text_utils
 from ui.bars import ui_bars
@@ -53,7 +53,7 @@ class ModalScreen(ScrollPanes, GameState):
     def __init__(self, game_state, title, panel_size=None):
         super().__init__()
         # Only used to resolve custom keybinds (BACK/ORDERS) and to host sub-pickers.
-        self.map_screen = getattr(game_state, "map_screen", None) or game_state
+        self.map_screen = host_map_screen(game_state)
         self.title = title
 
         surface = pygame.display.get_surface()
@@ -131,13 +131,7 @@ class ModalScreen(ScrollPanes, GameState):
             surface.fill(self.FALLBACK_BG)
         ui_bars.draw_fullscreen_overlay(surface, self.OVERLAY_ALPHA)
 
-        style = self.PANEL_STYLE
-        ui_bars.draw_panel_frame(surface, self.panel_rect, self.title,
-                                 bg=style["color"] if style else self.PANEL_BG, border=self.PANEL_BORDER,
-                                 border_width=self.PANEL_BORDER_WIDTH,
-                                 title_dy=self.TITLE_Y_OFFSET,
-                                 font_preset=self.TITLE_PRESET,
-                                 gradient_strength=style["gradient_strength"] if style else 1.0)
+        ui_bars.draw_screen_panel(surface, self, self.title)
 
         self.draw_body(surface)
         self.draw_elements(surface)

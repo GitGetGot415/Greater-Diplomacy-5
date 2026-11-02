@@ -142,24 +142,18 @@ class Mods(FolderListState):
         name_btn.text_align = "left"
         name_btn.rect.width = 815
         name_btn.disabled = not info["valid"]
-        name_btn.is_scrollable = True
-        name_btn.click_guard = self.scroll_click_guard
-        self.elements.append(name_btn)
+        self.add_list_row(name_btn)
 
         sandbox_btn = Button(845, btn_y, "tiny_square", sandbox_color, sandbox_label,
                              lambda f=filename: self.toggle_sandbox(f), font_preset="tiny")
         sandbox_btn.rect.width = 150
         sandbox_btn.disabled = not info["valid"] or IS_WEB
-        sandbox_btn.is_scrollable = True
-        sandbox_btn.click_guard = self.scroll_click_guard
-        self.elements.append(sandbox_btn)
+        self.add_list_row(sandbox_btn)
 
         del_btn = Button(1005, btn_y, "tiny_square", "red", "X",
                          lambda f=filename: self.start_delete(f))
         del_btn.text_align = "left"
-        del_btn.is_scrollable = True
-        del_btn.click_guard = self.scroll_click_guard
-        self.elements.append(del_btn)
+        self.add_list_row(del_btn)
 
         subtext = f"-> {info['target']}" if info["target"] else ""
         if info["error"]:

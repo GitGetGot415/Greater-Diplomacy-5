@@ -130,9 +130,7 @@ class Select_Base_Map(FolderListState):
             if not is_custom:
                 btn = Button("centered", btn_y, "new_game", "blue", name,
                             lambda n=name, d=directory: self.start_editor_with_map(n, d))
-                btn.is_scrollable = True
-                btn.click_guard = self.scroll_click_guard
-                self.elements.append(btn)
+                self.add_list_row(btn)
                 continue
 
             if self.is_row_hidden(name):
@@ -149,9 +147,7 @@ class Select_Base_Map(FolderListState):
                        lambda n=name: self.start_delete(n)),
             ]
             for btn in row_buttons:
-                btn.is_scrollable = True
-                btn.click_guard = self.scroll_click_guard
-            self.elements.extend(row_buttons)
+                self.add_list_row(btn)
 
     def trigger_base_map_data_refresh(self):
         """Calls the unified data refresh query for base maps."""

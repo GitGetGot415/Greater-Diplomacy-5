@@ -771,10 +771,7 @@ class Battle_Screen(ModalScreen):
             return
 
         p = self.panel_rect
-        ui_bars.draw_panel_frame(
-            surface, p, title=None, bg=self.PANEL_STYLE["color"], border=self.PANEL_BORDER,
-            border_width=self.PANEL_BORDER_WIDTH,
-            gradient_strength=self.PANEL_STYLE["gradient_strength"])
+        ui_bars.draw_screen_panel(surface, self, None)
         title_font = fonts.get("heading2")
         title = fit_text(self.get_panel_title(), title_font, p.width - (2 * self.PAD))
         title_surf = title_font.render(title, True, (255, 255, 255))

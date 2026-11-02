@@ -155,15 +155,9 @@ class _HelpScreen(_ModalScreen):
         p = self.panel_rect
         font = fonts.get("normal")
         clip_rect = pygame.Rect(p.x + 4, self.body_top, p.width - 8, self.view_h)
-        self.scroll_content_rect = clip_rect
-        with ui_bars.clip_scroll_region(surface, clip_rect,
-                                        draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll):
-            y = self.body_top + self.scroll_y
-            for line in self.lines:
-                if y + self.LINE_H > self.body_top and y < self.body_top + self.view_h:
-                    color = c.COLOR_GOLD_HIGHLIGHT if line.strip().startswith("===") else (220, 220, 220)
-                    surface.blit(font.render(line, True, color), (p.x + self.PAD, y))
-                y += self.LINE_H
+        self.draw_scrolling_lines(
+            surface, self.lines, font, p.x + self.PAD, self.body_top, self.view_h, self.LINE_H, clip_rect,
+            lambda line: c.COLOR_GOLD_HIGHLIGHT if line.strip().startswith("===") else (220, 220, 220))
         self.draw_list_scrollbar(surface, p.right - 26, self.body_top, self.view_h)
 
 

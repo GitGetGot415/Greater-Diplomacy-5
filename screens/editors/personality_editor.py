@@ -15,7 +15,7 @@ import pygame
 import data.constants as c
 from ui.background_styles import EDITOR_PANEL_STYLES
 from data import queries
-from ui.navigation.game_state import MapOverlayScreen, NationListOverlayScreen
+from ui.navigation.game_state import EditorOverlayScreen, NationListOverlayScreen
 from ui.widgets.ui_elements import Button, Slider, make_back_button
 from ui.navigation.screen_runner import _run_pygame_sub_screen
 from ui.rendering.font_manager import fonts
@@ -31,19 +31,15 @@ TRAIT_POLES = {
 }
 
 
-class Personality_Edit_Screen(MapOverlayScreen):
-    pans_camera = False
+class Personality_Edit_Screen(EditorOverlayScreen):
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_SPECIAL
     PANEL_STYLE = EDITOR_PANEL_STYLES["personality"]
-    TITLE_PRESET = "heading2"
-    TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
 
     SLIDER_W = 300
     ROW_STEP = 62
 
     def __init__(self, map_screen, country_id):
         super().__init__(map_screen, pygame.Rect(0, 0, 520, 520))
-        self.back_state = "MAP"
         self.country_id = country_id
 
         # Reading through ai_personality rather than nation_data means a nation
@@ -116,13 +112,10 @@ class Personality_Edit_Screen(MapOverlayScreen):
 
 
 class Personality_List_Screen(NationListOverlayScreen):
-    pans_camera = False
     scroll_anywhere = True
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_SPECIAL
     PANEL_STYLE = EDITOR_PANEL_STYLES["personality_list"]
     PANEL_TITLE = "AI Personalities"
-    TITLE_PRESET = "heading2"
-    TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
 
     def country_button(self, country_id, x, y):
         stored = self.map_screen.nation_data.get(country_id, {}).get("personality") or {}

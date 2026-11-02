@@ -89,9 +89,7 @@ class New_Game(GameState):
         for i, btn_y in self.layout_list_rows(len(scenarios), self.ROW_HEIGHT, self.ROW_TOP, pad=20):
             btn = Button("centered", btn_y, "new_game", "blue", scenarios[i],
                         lambda n=scenarios[i], d=scenario_dir: self.start_scenario(n, d))
-            btn.is_scrollable = True
-            btn.click_guard = self.scroll_click_guard
-            self.elements.append(btn)
+            self.add_list_row(btn)
 
     def update(self):
         super().update()

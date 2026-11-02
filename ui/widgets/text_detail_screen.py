@@ -10,7 +10,7 @@ here, where the text has the whole screen and scrolls.
 import pygame
 
 import data.constants as c
-from ui.navigation.game_state import GameState
+from ui.navigation.game_state import GameState, host_map_screen
 from ui.rendering.font_manager import fonts
 from ui.widgets import text_utils
 from ui.bars import ui_bars
@@ -24,7 +24,7 @@ class TextDetailScreen(GameState):
 
     def __init__(self, game_state, title, body, subtitle=""):
         super().__init__()
-        self.map_screen = getattr(game_state, "map_screen", None) or game_state
+        self.map_screen = host_map_screen(game_state)
         self.bg_color = (25, 28, 35)
         self.title = title
         self.subtitle = subtitle
@@ -50,18 +50,11 @@ class TextDetailScreen(GameState):
 
         view_h = c.SCREEN_HEIGHT - self.BODY_TOP - 40
         clip = pygame.Rect(self.SIDE_MARGIN, self.BODY_TOP - 10, width, view_h)
-        self.scroll_content_rect = clip
 
         # max_scroll is zero or negative here, as everywhere else in this
         # codebase: scroll_y counts down from 0 towards it.
-        with ui_bars.clip_scroll_region(surface, clip,
-                                        draw_top=self.scroll_y != 0,
-                                        draw_bottom=self.scroll_y > self.max_scroll):
-            for i, y in self.layout_list_rows(
-                    len(lines), self.LINE_HEIGHT, self.BODY_TOP, view_h=view_h,
-                    cull_top=self.BODY_TOP - 20, cull_bottom=c.SCREEN_HEIGHT - 20):
-                surf = body_font.render(lines[i], True, c.UI_TEXT_BRIGHT)
-                surface.blit(surf, (self.SIDE_MARGIN, y))
+        self.draw_scrolling_lines(surface, lines, body_font, self.SIDE_MARGIN, self.BODY_TOP, view_h,
+                                  self.LINE_HEIGHT, clip, lambda _line: c.UI_TEXT_BRIGHT)
 
         self.draw_list_scrollbar(surface, self.SIDE_MARGIN + width + 15,
                                  self.BODY_TOP, view_h)

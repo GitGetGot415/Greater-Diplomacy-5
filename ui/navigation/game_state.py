@@ -23,6 +23,11 @@ def resolve_keybind(state, action, default):
     return queries.get_keybind(action, default)
 
 
+def host_map_screen(game_state):
+    """The map a screen is layered over, or the opener when it has no map."""
+    return getattr(game_state, "map_screen", None) or game_state
+
+
 # Keys currently acting as held mouse buttons.  This suppresses repeated
 # KEYDOWN events and lets a key release produce the matching mouse release
 # even if its binding changes while it is held.
@@ -174,6 +179,11 @@ class GameState:
     scroll_content_rect = None
     content_drag_state = None
     scroll_click_guard = None
+
+    # Optional method taking the surface. It draws row striping and labels inside
+    # the scroll clip, under the is_scrollable elements. A screen that defines it
+    # gets the backdrop even on a frame with no scrollable elements.
+    draw_scroll_backdrop = None
 
     def __init__(self):
         self.done = False
@@ -467,6 +477,31 @@ class GameState:
             if y + row_h > cull_top and y < cull_bottom:
                 yield i, y
 
+    def add_list_row(self, element):
+        """Registers an element built inside a layout_list_rows loop.
+
+        Call this after layout_list_rows has published scroll_click_guard.
+        The element is cropped to scroll_content_rect, and a click on its
+        cropped part does not fire.
+        """
+        element.is_scrollable = True
+        element.click_guard = self.scroll_click_guard
+        self.elements.append(element)
+        return element
+
+    def draw_scrolling_lines(self, surface, lines, font, x, top, view_h, line_h, clip_rect, color_for):
+        """Draws one column of text lines that scrolls inside clip_rect.
+
+        Sets the scroll limit from the line count. `color_for` takes a line and
+        returns its text color.
+        """
+        self.scroll_content_rect = clip_rect
+        with ui_bars.clip_scroll_region(surface, clip_rect,
+                                        draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll):
+            for i, y in self.layout_list_rows(len(lines), line_h, top, view_h=view_h,
+                                              cull_top=clip_rect.top, cull_bottom=clip_rect.bottom):
+                surface.blit(font.render(lines[i], True, color_for(lines[i])), (x, y))
+
     def content_hover_guard(self):
         """A `click_guard` for rows a screen laid out by hand rather than through
         layout_list_rows: it keeps a click landing in a row's cropped sliver,
@@ -609,12 +644,14 @@ class GameState:
             else:
                 el.draw(surface)
 
-        if not scrollable:
+        if not scrollable and self.draw_scroll_backdrop is None:
             return
 
         if self.scroll_content_rect:
             with ui_bars.clip_scroll_region(surface, self.scroll_content_rect,
                                             draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll):
+                if self.draw_scroll_backdrop is not None:
+                    self.draw_scroll_backdrop(surface)
                 for el in scrollable:
                     el.draw(surface)
         else:
@@ -655,7 +692,7 @@ class FolderListState(GameState):
     # Geometry of the rename box, relative to the row being renamed.
     rename_box_size = (300, 50)
     # Size of the centred "Delete X?" confirmation popup.
-    delete_popup_size = (500, 200)
+    delete_popup_size = ui_bars.DELETE_POPUP_SIZE
 
     def __init__(self):
         super().__init__()
@@ -756,19 +793,8 @@ class FolderListState(GameState):
 
     def draw_delete_confirm(self, surface, center=None):
         """Dims the screen and asks for Enter/Escape on the pending deletion."""
-        ui_bars.draw_fullscreen_overlay(surface, 180)
+        ui_bars.draw_delete_confirm(surface, self.deleting_item, center=center, size=self.delete_popup_size)
 
-        pop_rect = pygame.Rect((0, 0), self.delete_popup_size)
-        pop_rect.center = center or (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)
-        bg, border, border_width = c.PANEL_THEME_DANGER
-        ui_bars.draw_modal_box(surface, pop_rect, bg_color=bg,
-                               border_color=border, border_width=border_width)
-
-        msg = fonts.get("heading2").render(f"Delete '{self.deleting_item}'?", True, (255, 255, 255))
-        surface.blit(msg, msg.get_rect(center=(pop_rect.centerx, pop_rect.centery - 25)))
-
-        sub_msg = fonts.get("normal").render("Press Enter to Confirm or Esc to Cancel", True, c.UI_TEXT_LIGHT)
-        surface.blit(sub_msg, sub_msg.get_rect(center=(pop_rect.centerx, pop_rect.centery + 25)))
 
 class MapOverlayScreen(GameState):
     """Base for screens drawn on top of the live map (claims, peace, trade, puppets...).
@@ -854,13 +880,7 @@ class MapOverlayScreen(GameState):
         the post-treaty map underneath its panel), call this at the point the
         old draw_modal_box call sat, so the layering is unchanged.
         """
-        style = self.PANEL_STYLE
-        ui_bars.draw_panel_frame(surface, self.panel_rect, self.get_panel_title(),
-                                 bg=style["color"] if style else self.PANEL_BG, border=self.PANEL_BORDER,
-                                 border_width=self.PANEL_BORDER_WIDTH,
-                                 title_dy=self.TITLE_Y_OFFSET,
-                                 font_preset=self.TITLE_PRESET,
-                                 gradient_strength=style["gradient_strength"] if style else 1.0)
+        ui_bars.draw_screen_panel(surface, self, self.get_panel_title())
 
     def update(self):
         self.map_screen.camera.update(self.map_screen, c.SCREEN_HEIGHT)
@@ -884,10 +904,22 @@ class MapOverlayScreen(GameState):
         pass
 
 
-class NationListOverlayScreen(MapOverlayScreen):
+class EditorOverlayScreen(MapOverlayScreen):
+    """Settings shared by the map editor's tool windows.
+
+    The map does not pan behind them, Back returns to the map, and they use the
+    modal title style.
+    """
+    pans_camera = False
+    back_state = "MAP"
+    TITLE_PRESET = "heading2"
+    TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
+
+
+class NationListOverlayScreen(EditorOverlayScreen):
     """Standard scrollable picker for the living nations on an editor map.
 
-    Starting economy, politics, and AI personality each had the same panel,
+    Starting economy, politics, AI personality, and research each had the same panel,
     scroll bounds, button wiring, and scrollbar contract. They now only say
     how to label/color one country, what opening it should perform, and any
     header content unique to that tool. Geometry remains class-local so a
@@ -902,7 +934,6 @@ class NationListOverlayScreen(MapOverlayScreen):
 
     def __init__(self, map_screen):
         super().__init__(map_screen, pygame.Rect(0, 0, *self.LIST_PANEL_SIZE))
-        self.back_state = "MAP"
         self.active_countries = sorted(queries.get_living_nations(map_screen.map_data))
         self.refresh_ui()
 
@@ -934,9 +965,7 @@ class NationListOverlayScreen(MapOverlayScreen):
                                               row_top, view_h=view_h, cull_top=cull_top,
                                               cull_bottom=cull_bottom):
             button = self.country_button(self.active_countries[index], row_x, y)
-            button.is_scrollable = True
-            button.click_guard = self.scroll_click_guard
-            self.elements.append(button)
+            self.add_list_row(button)
 
         self.list_view_h = view_h
 

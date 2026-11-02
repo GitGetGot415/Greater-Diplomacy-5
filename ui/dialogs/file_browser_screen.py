@@ -435,9 +435,7 @@ class FileBrowserScreen(ModalScreen):
             if kind == "file":
                 full = self._full_path(name)
                 btn.is_selected = full in self.selected if self.mode == "open_files" else full == self.selected_file
-            btn.is_scrollable = True
-            btn.click_guard = self.scroll_click_guard
-            self.elements.append(btn)
+            self.add_list_row(btn)
 
         # -- Bottom bar
         btn_y = panel.bottom - 56

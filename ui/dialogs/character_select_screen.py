@@ -174,9 +174,7 @@ class CharacterSelectScreen(ModalScreen):
     def _add_tile(self, x, y):
         btn = Button(x, y, "character_portrait_tile", "green", "+ Add New",
                     self.add_custom_portrait, show_text=True, font_preset="small")
-        btn.is_scrollable = True
-        btn.click_guard = self.scroll_click_guard
-        self.elements.append(btn)
+        self.add_list_row(btn)
 
     def _portrait_tile(self, rel_path, x, y, font):
         tile_w, _tile_h = c.SIZES["character_portrait_tile"]
@@ -186,7 +184,7 @@ class CharacterSelectScreen(ModalScreen):
                     lambda p=rel_path: self.select(p), image=self._thumbnail(rel_path),
                     show_text=True, layout="vertical", font_preset="small")
         btn.is_selected = (rel_path == self.current_path)
-        btn.is_scrollable = True
+        self.add_list_row(btn)
 
         if is_custom_portrait(rel_path):
             # Sits flush in the tile's top-right corner, on top of it in both
@@ -194,19 +192,13 @@ class CharacterSelectScreen(ModalScreen):
             # guard below refuses clicks landing inside the X's rect).
             del_btn = Button(x + tile_w - 30, y, "tiny_square", "red", "X",
                              lambda p=rel_path: self.start_delete_custom(p))
-            del_btn.is_scrollable = True
-            del_btn.click_guard = self.scroll_click_guard
 
             scroll_guard = self.scroll_click_guard
             def tile_guard(dbtn=del_btn, sg=scroll_guard):
                 return not dbtn.rect.collidepoint(pygame.mouse.get_pos()) and sg()
             btn.click_guard = tile_guard
 
-            self.elements.append(btn)
-            self.elements.append(del_btn)
-        else:
-            btn.click_guard = self.scroll_click_guard
-            self.elements.append(btn)
+            self.add_list_row(del_btn)
 
     def additional_events(self, event):
         if self.deleting_item:
@@ -227,24 +219,4 @@ class CharacterSelectScreen(ModalScreen):
         self.draw_list_scrollbar(surface, self.panel_rect.right - 30, self.panel_rect.y + self.GRID_TOP,
                                  self.panel_rect.height - self.GRID_TOP - 20)
         if self.deleting_item:
-            self._draw_delete_confirm(surface)
-
-    def _draw_delete_confirm(self, surface):
-        """Dims the panel and asks for Enter/Escape -- same shape as
-        game_state.FolderListState.draw_delete_confirm, hand-rolled here since
-        this screen isn't (and doesn't otherwise need to be) a FolderListState."""
-
-        ui_bars.draw_fullscreen_overlay(surface, 180)
-
-        pop_rect = pygame.Rect(0, 0, 500, 200)
-        pop_rect.center = self.panel_rect.center
-        bg, border, border_width = c.PANEL_THEME_DANGER
-        ui_bars.draw_modal_box(surface, pop_rect, bg_color=bg, border_color=border,
-                               border_width=border_width)
-
-        name = _label_for(self.deleting_item)
-        msg = fonts.get("heading2").render(f"Delete '{name}'?", True, (255, 255, 255))
-        surface.blit(msg, msg.get_rect(center=(pop_rect.centerx, pop_rect.centery - 25)))
-
-        sub_msg = fonts.get("normal").render("Press Enter to Confirm or Esc to Cancel", True, c.UI_TEXT_LIGHT)
-        surface.blit(sub_msg, sub_msg.get_rect(center=(pop_rect.centerx, pop_rect.centery + 25)))
+            ui_bars.draw_delete_confirm(surface, _label_for(self.deleting_item), center=self.panel_rect.center)
