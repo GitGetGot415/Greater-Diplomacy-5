@@ -111,6 +111,50 @@ class BuildManifestTests(unittest.TestCase):
                                 cwd=ROOT, capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_asset_inventory_batches_git_rules_and_refreshes_each_scan(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            subprocess.run(["git", "init", "-q", str(root)], check=True, capture_output=True)
+            (root / ".gitignore").write_text("*.tmp\n/assets/fallback.json\n", encoding="utf-8")
+            assets = root / "assets"
+            nested = assets / "nested"
+            nested.mkdir(parents=True)
+            (nested / ".gitignore").write_text("!keep.tmp\n", encoding="utf-8")
+            for relative in ("ignored.tmp", "nested/keep.tmp", "visible space é.txt", "fallback.mp3", "full.mp3"):
+                (assets / relative).write_text("fixture", encoding="utf-8")
+            for name in ("fallback.json", "full.json"):
+                (assets / name).write_text(json.dumps({"format": "BeepBox", "channels": []}), encoding="utf-8")
+            for platform in ("web", "windows", "macos"):
+                with self.subTest(platform=platform), patch.object(
+                        support.subprocess, "run", wraps=subprocess.run) as run:
+                    inventory = {relative.as_posix() for _, relative in support.distributed_files(root, platform)}
+                self.assertEqual(run.call_count, 1)
+                self.assertIn("--stdin", run.call_args.args[0])
+                self.assertIn("-z", run.call_args.args[0])
+                self.assertIn("assets/nested/keep.tmp", inventory)
+                self.assertIn("assets/visible space é.txt", inventory)
+                self.assertIn("assets/full.json", inventory)
+                self.assertNotIn("assets/ignored.tmp", inventory)
+                self.assertNotIn("assets/fallback.json", inventory)
+                self.assertNotIn("assets/full.mp3", inventory)
+                self.assertEqual("assets/fallback.mp3" in inventory, platform == "web")
+            (root / ".gitignore").write_text("", encoding="utf-8")
+            inventory = {relative.as_posix() for _, relative in support.distributed_files(root, "web")}
+            self.assertIn("assets/ignored.tmp", inventory)
+            self.assertIn("assets/fallback.json", inventory)
+            self.assertNotIn("assets/fallback.mp3", inventory)
+
+    def test_git_inventory_preserves_missing_git_and_non_repository_behavior(self):
+        path = Path(ROOT, "assets/fixture.txt")
+        for failure in (FileNotFoundError("git is unavailable"),
+                        subprocess.CompletedProcess([], 128, stdout=b"", stderr=b"not a repository")):
+            options = {"side_effect": failure} if isinstance(failure, OSError) else {"return_value": failure}
+            with self.subTest(failure=failure), patch.object(support.subprocess, "run", **options):
+                self.assertEqual(support.git_ignored_paths(ROOT, [path]), set())
+        with patch.object(support.subprocess, "run") as run:
+            self.assertEqual(support.git_ignored_paths(ROOT, []), set())
+            run.assert_not_called()
+
     def test_staged_sources_saves_settings_and_scratch(self):
         with tempfile.TemporaryDirectory() as temporary:
             source = Path(temporary, "source")
@@ -141,7 +185,7 @@ class BuildManifestTests(unittest.TestCase):
             image.write_bytes(b"\x89PNG\r\n\x1a\nfixture")
             for platform in ("web", "windows", "macos"):
                 destination = Path(temporary, platform)
-                with patch.object(support, "is_git_ignored", return_value=False):
+                with patch.object(support, "git_ignored_paths", return_value=set()):
                     support.stage_release(source, destination, platform)
                 for directory in manifest.EMPTY_DIRS:
                     self.assertEqual(list((destination / directory).iterdir()), [])
@@ -161,7 +205,7 @@ class BuildManifestTests(unittest.TestCase):
                 (destination / "assets/image.png").write_bytes(b"wrong format")
                 self.assertEqual(support.png_signature_mismatches(destination), [str(destination / "assets/image.png")])
                 if platform == "macos":
-                    with patch.object(support, "is_git_ignored", return_value=False):
+                    with patch.object(support, "git_ignored_paths", return_value=set()):
                         mac_files = {Path(f).relative_to(source) for _, files in support.mac_data_files(source) for f in files}
                     self.assertIn(Path("data/runtime.py"), mac_files)
                     self.assertNotIn(Path("saves/local/save.json"), mac_files)

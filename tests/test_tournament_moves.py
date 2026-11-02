@@ -16,6 +16,7 @@ from unittest import mock
 import data.constants as c
 from tests.stub_map_screen import fill_state_defaults, map_double, synchronous_progress
 from tests.research_fixtures import research_lock_cases
+from tests.tournament_fixtures import fast_tournament_crypto
 from data import queries
 from ui.dialogs import pickers
 from data.multiplayer.tournament import files as tournament_files
@@ -86,6 +87,7 @@ class Host:
         self.syncs += 1
 
 
+@fast_tournament_crypto()
 class TournamentMoveTests(unittest.TestCase):
     keys = {"Leader": "leader-key", "Member": "member-key"}
 

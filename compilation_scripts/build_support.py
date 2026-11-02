@@ -18,18 +18,38 @@ def is_git_ignored(path):
         return False
 
 
-def include_asset(path, platform):
+def git_ignored_paths(root, paths):
+    """Check one inventory with Git. Discard the result after this inventory."""
+    names = dict.fromkeys(os.fsencode(Path(path).resolve()) for path in paths)
+    if not names:
+        return set()
+    try:
+        result = subprocess.run(
+            ["git", "check-ignore", "--stdin", "-z"], cwd=root,
+            input=b"\0".join(names) + b"\0", capture_output=True)
+    except OSError as error:
+        print(f"Error checking git ignore for {root}: {error}")
+        return set()
+    if result.returncode not in (0, 1):
+        print(f"Error checking git ignore for {root}: {os.fsdecode(result.stderr).strip()}")
+        return set()
+    return {Path(os.fsdecode(name)).resolve() for name in result.stdout.split(b"\0") if name}
+
+
+def include_asset(path, platform, *, ignore_check=None):
     # Import the audio file predicate only. It does not initialize an engine.
     from beepbox_audio import has_beepbox_replacement
-    if is_git_ignored(path):
+    if ignore_check is None:
+        ignore_check = is_git_ignored
+    if ignore_check(path):
         return False
     if has_beepbox_replacement(str(path)):
         # Web cannot use a replacement JSON which its own filter excludes.
-        return platform == "web" and is_git_ignored(Path(path).with_suffix(".json"))
+        return platform == "web" and ignore_check(Path(path).with_suffix(".json"))
     return True
 
 
-def include_file(path, relative, platform):
+def include_file(path, relative, platform, *, ignore_check=None):
     """Apply common filters and retain each platform's source policy."""
     relative = Path(relative)
     parts = relative.parts
@@ -41,7 +61,7 @@ def include_file(path, relative, platform):
     if root == "scenarios" and "map_editor" in parts:
         return False
     if root == "assets":
-        return include_asset(path, platform)
+        return include_asset(path, platform, ignore_check=ignore_check)
     if platform == "web":
         return not any(relative.as_posix().startswith(pkg.replace(".", "/") + "/")
                        for pkg in manifest.WEB_EXCLUDED_SUBPACKAGES)
@@ -65,13 +85,19 @@ def distributed_files(root, platform):
         yield root / name, Path(name)
     for directory in manifest.SOURCE_PACKAGES + manifest.DATA_DIRS:
         base = root / directory
+        candidates = []
         for parent, directories, filenames in os.walk(base):
             directories[:] = [name for name in directories if name != "__pycache__"]
-            for name in filenames:
-                path = Path(parent) / name
-                relative = path.relative_to(root)
-                if include_file(path, relative, platform):
-                    yield path, relative
+            candidates.extend(Path(parent) / name for name in filenames)
+        ignore_check = None
+        if directory == "assets":
+            # Include companion JSON paths so web audio keeps its existing filter rule.
+            ignored = git_ignored_paths(root, candidates + [path.with_suffix(".json") for path in candidates])
+            ignore_check = lambda path: Path(path).resolve() in ignored
+        for path in candidates:
+            relative = path.relative_to(root)
+            if include_file(path, relative, platform, ignore_check=ignore_check):
+                yield path, relative
 
 
 def reset_runtime_files(destination):

@@ -3,6 +3,7 @@
 import base64
 import copy
 import gzip
+import hashlib
 import json
 from pathlib import Path
 import random
@@ -18,6 +19,7 @@ from data.multiplayer.tournament import files as io
 from data.map import history_io
 from tests.test_tournament_moves import Host, nation
 from tests.stub_map_screen import synchronous_progress
+from tests.tournament_fixtures import fast_tournament_crypto
 
 
 class TournamentArchiveTests(unittest.TestCase):
@@ -147,6 +149,23 @@ class TournamentArchiveTests(unittest.TestCase):
         self.assertEqual(json.loads(gzip.decompress(plaintext)), data)
         corrupt = salt_text + ":" + cipher.encrypt(b'\x1f\x8bcorrupt gzip').decode()
         self.assertIsNone(io.decrypt_dict(corrupt, "fixture-key"))
+
+    def test_production_password_derivation_keeps_its_work_factor(self):
+        password, salt = "fixture-key", b"fixture-salt"
+        expected = base64.urlsafe_b64encode(hashlib.pbkdf2_hmac(
+            "sha256", password.encode("utf-8"), salt, 200_000))
+        self.assertEqual(io.generate_fernet_key_from_password(password, salt), expected)
+
+    def test_rule_crypto_fixture_checks_keys_and_restores_production_derivation(self):
+        production_derivation = io.generate_fernet_key_from_password
+        with fast_tournament_crypto():
+            self.assertIsNot(io.generate_fernet_key_from_password, production_derivation)
+            token = io.encrypt_dict({"fixture": True}, "right-key")
+            self.assertEqual(io.decrypt_dict(token, "right-key"), {"fixture": True})
+            self.assertIsNone(io.decrypt_dict(token, "wrong-key"))
+            self.assertNotEqual(io.generate_fernet_key_from_password("right-key", b"first-salt"),
+                                io.generate_fernet_key_from_password("right-key", b"other-salt"))
+        self.assertIs(io.generate_fernet_key_from_password, production_derivation)
 
     def test_compression_does_not_expand_small_tournament_payloads(self):
         data = {"a": 1}

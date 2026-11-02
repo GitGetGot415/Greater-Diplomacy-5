@@ -354,10 +354,12 @@ macOS retains explicit py2app packages, the tkinter recipe workaround, and the d
 Desktop packages retain loose source copies for the existing source-replacement loader.
 Web retains libdragoman.so, the HTML template, and staged audio conversion.
 Native and web audio filters retain their separate replacement rules.
+Each asset inventory checks Git ignore rules in one batch. A new inventory reads the rules again.
 Distributed saves and mods remain empty. Local settings, playlist choices, and editor scratch scenarios are excluded or reset.
 
 tests/test_build_manifest.py compares manifest declarations with independent repository scans.
 It also checks actual staging with temporary directories.
+Tournament rule tests use fast password derivation from tests/tournament_fixtures.py. Archive encryption tests retain production password derivation.
 Platform builds and browser checks remain separate verification steps.
 
 MUSIC PLAYBACK

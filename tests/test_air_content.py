@@ -17,6 +17,7 @@ from map_logic.ai import ai_tech_eval, ai_unit_eval
 from map_logic.system32.research_processor import process_national_research
 from tests import app_harness
 from tests.research_fixtures import research_lock_cases
+from tests.tournament_fixtures import fast_tournament_crypto
 from tests.stub_map_screen import map_double, sample_map_screen
 from tests import test_tournament_moves as tournament_harness
 
@@ -393,6 +394,7 @@ class AirRulesTests(unittest.TestCase):
                 self.assertEqual(path.read_bytes()[:8], b"\x89PNG\r\n\x1a\n")
 
 
+@fast_tournament_crypto()
 class AirRealtimeTests(unittest.TestCase):
     def setUp(self):
         province = {"id": 1, "owner": "A", "cores": ["A"], "is_coastal": False,
