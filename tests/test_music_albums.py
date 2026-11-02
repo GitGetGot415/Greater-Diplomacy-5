@@ -83,6 +83,32 @@ class AlbumTileTests(unittest.TestCase):
         self.assertEqual([b.text for b in self.album_buttons(player)],
                          ["Alpha", "Zulu", NEW_ALBUM_LABEL])
 
+    def test_tiles_without_a_cover_stack_up_to_the_limit(self):
+        pygame.display.init()
+        pygame.display.set_mode((10, 10))
+        with tempfile.TemporaryDirectory() as music_dir:
+            os.makedirs(os.path.join(music_dir, "Cover"))
+            pygame.image.save(pygame.Surface((8, 8)), os.path.join(music_dir, "Cover", "cover.png"))
+            plain = [f"Plain{index}" for index in range(music_player.ALBUM_MAX_TEXT_STACK + 1)]
+            for album in plain:
+                os.makedirs(os.path.join(music_dir, album))
+            order = ["Cover"] + plain
+            player = self.make_player(order)
+            with mock.patch.object(c, "MUSIC_DIR", music_dir),                     mock.patch.object(music_player, "ALBUM_ORDER", order):
+                player.refresh_ui()
+
+        tiles = {b.text: b for b in self.album_buttons(player) if b.text != "X"}
+        first_column_x = tiles["Cover"].rect.x
+        second_column_x = tiles["Plain0"].rect.x
+        self.assertNotEqual(first_column_x, second_column_x)
+        stacked = [tiles[name] for name in plain[:music_player.ALBUM_MAX_TEXT_STACK]]
+        self.assertEqual({b.rect.x for b in stacked}, {second_column_x})
+        self.assertEqual([b.rect.y for b in stacked], sorted({b.rect.y for b in stacked}))
+        self.assertEqual(len({b.rect.y for b in stacked}), len(stacked))
+        # The tile past the limit is not stacked in the same slot.
+        self.assertNotEqual((tiles[plain[-1]].rect.x, tiles[plain[-1]].rect.y),
+                            (second_column_x, stacked[-1].rect.bottom + music_player.ALBUM_GAP))
+
     def test_only_deletable_albums_get_a_delete_button(self):
         player = self.make_player(["Mine", "Shipped"])
         with mock.patch.object(queries, "is_deletable_album", side_effect=lambda album: album == "Mine"):

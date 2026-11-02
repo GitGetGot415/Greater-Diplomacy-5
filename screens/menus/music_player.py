@@ -32,6 +32,8 @@ ALBUM_MARGIN = 20
 ALBUM_GAP = 10
 ALBUM_TILE_SIZE = (140, 170)
 ALBUM_TEXT_TILE_SIZE = (140, 50)
+# Tiles without a cover stack under each other in one slot, up to this many.
+ALBUM_MAX_TEXT_STACK = 3
 # Every cover is stretched to this size so all tiles look alike.
 ALBUM_COVER_SIZE = (120, 120)
 ALBUM_COVER_BOTTOM_MARGIN = 10
@@ -207,10 +209,14 @@ class Music_Player(ScrollPanes, GameState):
         pinned = [album for album in ALBUM_ORDER if album in self.controller.all_albums]
         albums = pinned + sorted((album for album in self.controller.all_albums if album not in pinned),
                                  reverse=True)
-        row_height = 0
+        # A row has ALBUM_COLUMNS slots. Each slot holds one cover tile, or a
+        # stack of up to ALBUM_MAX_TEXT_STACK tiles without a cover.
+        slot_heights = [0] * ALBUM_COLUMNS
+        column = -1
+        text_stack = 0
         # None stands for the new-album tile, which always comes last.
         tiles = albums + [None]
-        for album_index, album in enumerate(tiles):
+        for album in tiles:
             is_active = album is not None and album in self.controller.active_albums
             color = "green" if is_active else "grey"
             
@@ -234,21 +240,27 @@ class Music_Player(ScrollPanes, GameState):
             album_cb = self.start_new_album if album is None else (lambda a=album: self.toggle_album(a))
             album_guard = lambda: pygame.mouse.get_pos()[1] >= 120
 
-            column = album_index % ALBUM_COLUMNS
+            if icon_img is None and text_stack and text_stack < ALBUM_MAX_TEXT_STACK:
+                # Directly under the previous tile, which has no cover either.
+                text_stack += 1
+            else:
+                column += 1
+                if column == ALBUM_COLUMNS:
+                    y_offset += max(slot_heights)
+                    album_content_h += max(slot_heights)
+                    slot_heights = [0] * ALBUM_COLUMNS
+                    column = 0
+                text_stack = 0 if icon_img else 1
             tile_x = ALBUM_MARGIN + column * (ALBUM_TILE_SIZE[0] + ALBUM_GAP)
+            tile_y = y_offset + slot_heights[column]
             if icon_img:
-                btn = Button(tile_x, y_offset, ALBUM_TILE_SIZE, color, album,
+                btn = Button(tile_x, tile_y, ALBUM_TILE_SIZE, color, album,
                              album_cb, image=icon_img, show_text=True, layout="vertical")
             elif album is None:
-                btn = Button(tile_x, y_offset, ALBUM_TEXT_TILE_SIZE, "blue", NEW_ALBUM_LABEL, album_cb)
+                btn = Button(tile_x, tile_y, ALBUM_TEXT_TILE_SIZE, "blue", NEW_ALBUM_LABEL, album_cb)
             else:
-                btn = Button(tile_x, y_offset, ALBUM_TEXT_TILE_SIZE, color, album, album_cb)
-            row_height = max(row_height, btn.height)
-            # A row ends after its last column, or after the final tile.
-            if column == ALBUM_COLUMNS - 1 or album_index == len(tiles) - 1:
-                y_offset += row_height + ALBUM_GAP
-                album_content_h += row_height + ALBUM_GAP
-                row_height = 0
+                btn = Button(tile_x, tile_y, ALBUM_TEXT_TILE_SIZE, color, album, album_cb)
+            slot_heights[column] += btn.height + ALBUM_GAP
             btn.click_guard = album_guard
             btn.fit_text = True
             btn.image_bottom_margin = ALBUM_COVER_BOTTOM_MARGIN
@@ -271,6 +283,7 @@ class Music_Player(ScrollPanes, GameState):
                 btn.click_guard = lambda dbtn=delete_btn: (
                     not dbtn.rect.collidepoint(pygame.mouse.get_pos()) and album_guard())
 
+        album_content_h += max(slot_heights)
         # Calculate max boundary for Album scrolling
         self._max_album = min(0, c.SCREEN_HEIGHT - 120 - album_content_h - 20)
 
