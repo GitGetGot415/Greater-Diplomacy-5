@@ -2,7 +2,7 @@ import secrets
 import re
 
 import os
-from ui.navigation.game_state import GameState
+from ui.navigation.game_state import MenuListScreen
 from ui.widgets.ui_elements import Button, make_back_button
 import data.constants as c
 from data import queries
@@ -11,7 +11,7 @@ from data.multiplayer.tournament import files as tournament_files
 from screens.setup.scenario_settings import Scenario_Settings
 from screens.game.map import Map
 from ui import dialogs
-class Multiplayer_New(GameState):
+class Multiplayer_New(MenuListScreen):
     back_state = "MULTIPLAYER_HOST"
 
     title = "HOST CUSTOM MAP"
@@ -101,9 +101,3 @@ class Multiplayer_New(GameState):
             dialogs.ask_string("Host Key", "Enter a Master Key for this tournament:", on_key)
 
         ask_tour_name()
-
-    def additional_events(self, event):
-        self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
-
-    def additional_draw(self, surface):
-        self.draw_menu_list_scrollbar(surface)

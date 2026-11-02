@@ -139,4 +139,13 @@ The save format, settings keys, content paths, and game version remain unchanged
 
 Test files keep their existing module names for focused commands.
 The sandbox cases also run during normal test discovery.
+The test runner reports discovery time, slow tests, and slow test groups.
+Group times include shared fixture work that individual test times omit.
+Use `python run_tests.py tests.test_import_smoke` to time one module.
+Use `--durations 0` to hide timing details. Use `--quiet` to hide per-test progress.
+Import and sandbox probes run up to four child processes concurrently.
+Each probe keeps its own interpreter. Sandbox probes also keep separate temporary folders.
+Game tests run sequentially because they share pygame state and patched globals.
+Air UI tests use fresh in-memory maps. Persistence tests still save and load real files.
+The ODTL module supplies a discovery hook for its standalone function tests.
 Builds do not include offline tools from `scripts/`.

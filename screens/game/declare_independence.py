@@ -3,7 +3,7 @@ import copy
 from ui.navigation.game_state import MapOverlayScreen
 import data.constants as c
 from ui.widgets import text_utils
-from ui.widgets.ui_elements import Button, process_text_input, make_back_button, draw_text_box
+from ui.widgets.ui_elements import Button, TextField, make_back_button
 from ui.rendering.font_manager import fonts
 from data import queries
 from ui.dialogs import pickers
@@ -25,10 +25,10 @@ class Declare_Independence_Screen(MapOverlayScreen):
 
     def __init__(self, map_screen):
         super().__init__(map_screen, pygame.Rect(c.SCREEN_WIDTH // 2 - 350, c.SCREEN_HEIGHT // 2 - 200, 700, 420))
-        self.bg_color = (40, 20, 20)
-        self.new_country_name = "Free Republic"
+        self.name_field = TextField(self.panel_rect.x + 30, self.panel_rect.y + self.input_y + 80,
+                                    self.input_rect_x, 40, "Free Republic", max_length=c.COUNTRY_NAME_MAX_LENGTH,
+                                    on_submit=self.confirm_independence, pad_x=10)
         self.new_country_color = [200, 50, 50]
-        self.active_input = False
         self.selected_core = None
         self.available_cores = []
 
@@ -41,24 +41,24 @@ class Declare_Independence_Screen(MapOverlayScreen):
         self.refresh_ui()
 
     @property
-    def name_input_rect(self):
-        return pygame.Rect(self.panel_rect.x + 30, self.panel_rect.y + self.input_y + 80, self.input_rect_x, 40)
+    def listening_for(self):
+        return self.name_field.active
 
     def select_core(self, core_tag):
         self.selected_core = core_tag
         if core_tag is None:
-            self.new_country_name = "Free Republic"
+            self.name_field.text = "Free Republic"
         else:
             core_name = self.map_screen.nation_data.get(core_tag, {}).get("name", core_tag)
-            self.new_country_name = f"Free {core_name}"
+            self.name_field.text = f"Free {core_name}"
         self.refresh_ui()
 
     def refresh_ui(self):
-        self.elements = [make_back_button(self.exit_screen)]
-        
+        self.elements = [make_back_button(self.exit_screen), self.name_field]
+
         panel_x, panel_y = self.panel_rect.topleft
 
-        self.elements.append(Button(c.SCREEN_WIDTH // 2 - 120, panel_y + 350, "medium", "green", "Confirm", self.confirm_independence))
+        self.elements.append(Button(self.centered_x("medium"), panel_y + 350, "medium", "green", "Confirm", self.confirm_independence))
         self.elements.append(Button(panel_x + 80, panel_y + self.input_y + 150, "small", "orange", "Pick Color", self.pick_color))
         
         btn_x = panel_x + 450
@@ -90,7 +90,7 @@ class Declare_Independence_Screen(MapOverlayScreen):
                 or self.map_screen.multiplayer_mode):
             self.map_screen.show_feedback("Tactical independence is unavailable in multiplayer.")
             return
-        if not self.new_country_name.strip():
+        if not self.name_field.text.strip():
             self.map_screen.show_feedback("Please enter a name!")
             return
             
@@ -102,7 +102,7 @@ class Declare_Independence_Screen(MapOverlayScreen):
         old_tag = self.map_screen.player_country
         
         # 1. Create new tag safely avoiding duplicates
-        base_tag = self.new_country_name.strip()
+        base_tag = self.name_field.text.strip()
         new_tag = base_tag
         suffix = 1
         while new_tag in self.map_screen.nation_data:
@@ -183,23 +183,10 @@ class Declare_Independence_Screen(MapOverlayScreen):
 
     def handle_back_key(self):
         # Escape leaves the name box before it leaves the screen.
-        if self.active_input:
-            self.active_input = False
+        if self.name_field.active:
+            self.name_field.active = False
         else:
             self.exit_screen()
-
-    def additional_events(self, event):
-        super().additional_events(event)
-
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            self.active_input = self.name_input_rect.collidepoint(event.pos)
-
-        elif event.type == pygame.KEYDOWN and self.active_input:
-            self.new_country_name, status = process_text_input(event, self.new_country_name, max_length=c.COUNTRY_NAME_MAX_LENGTH)
-            if status == "SUBMIT":
-                self.confirm_independence()
-            elif status == "CANCEL":
-                self.active_input = False
 
     def draw_content(self, surface):
         panel_rect = self.panel_rect
@@ -225,9 +212,6 @@ class Declare_Independence_Screen(MapOverlayScreen):
             
         surface.blit(font.render("Country Name:", True, (255, 255, 255)), (panel_rect.x + 30, panel_rect.y + self.input_y + 60))
         surface.blit(font.render("Claim Heritage (Cores):", True, c.COLOR_GOLD_HIGHLIGHT), (panel_rect.x + 450, panel_rect.y + 60))
-        
-        draw_text_box(surface, self.name_input_rect, self.new_country_name,
-                      active=bool(self.active_input), font=font)
 
         color_rect = pygame.Rect(panel_rect.x + 30, panel_rect.y + self.input_y + 150, 40, 40)
         pygame.draw.rect(surface, self.new_country_color, color_rect)

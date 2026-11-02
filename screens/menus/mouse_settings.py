@@ -9,7 +9,7 @@ from data import queries
 from ui.navigation.game_state import GameState
 from ui.rendering.font_manager import fonts
 from ui.bars import ui_bars
-from ui.widgets.ui_elements import Button, make_back_button
+from ui.widgets.ui_elements import Button, make_back_button, make_toggle_button
 from ui.widgets import ui_elements
 
 
@@ -106,12 +106,11 @@ class Mouse_Settings(GameState):
                 option_size = (MOUSE_PAN_BUTTON_SIZE if action == PAN_ACTION
                                else MOUSE_ACTION_BUTTON_SIZE)
                 self.elements.append(
-                    Button(option_x,
-                           CARD_ACTION_START_Y + row * CARD_ACTION_GAP_Y,
-                           option_size, "green" if enabled else "red",
-                           f"{pan_label}: {'ON' if enabled else 'OFF'}",
-                           lambda b=button, a=action: self.toggle_action(b, a),
-                           font_preset="tiny"))
+                    make_toggle_button(option_x,
+                                       CARD_ACTION_START_Y + row * CARD_ACTION_GAP_Y,
+                                       option_size, pan_label, enabled,
+                                       lambda b=button, a=action: self.toggle_action(b, a),
+                                       font_preset="tiny"))
                 if action == PAN_ACTION:
                     exclude = Button(
                         option_x + MOUSE_PAN_BUTTON_SIZE[0] + MOUSE_PAN_EXCLUDE_GAP_X,

@@ -12,6 +12,8 @@ import pygame
 
 from data import queries
 import data.constants as c
+from data import runtime_rules
+from map_logic.system32.time_handler import TimeHandler
 from tests.stub_map_screen import map_double
 
 
@@ -86,6 +88,52 @@ def world():
         current_player_index=0, script_variables={}, default_research={},
         time_manager=SimpleNamespace(day=1, month_index=0, year=1939, total_turns=4),
         multiplayer_session_key="air-test-session", submitted_moves=set())
+
+
+def patrol_world(*, patrol_type="Biplane Fighter I", priority="STRONGEST", legacy_truck=False):
+    """Build independent patrol and transport state for UI and persistence tests."""
+    game = world()
+    base = tile(game, 1, 8)
+    tile(game, 2, 30, owner="B")
+    fighter = wing(base, patrol_type, order={"type": "AIR_PATROL", "priority": priority})
+    rocket = wing(base, "V2 Rocket I")
+    queries.load_transport(rocket, "Convoy")
+    if legacy_truck:
+        rocket.update(type="Truck (V2 Rocket)", max_health=c.TRUCK_MAX_HP,
+                      health=c.TRUCK_MAX_HP * 0.4, naval_unit=False)
+    game.raw_json_data = {p["json_key"]: dict(p) for p in game.map_data.values()}
+    game.terrain_map = game.id_map.copy()
+    game.political_map = game.id_map.copy()
+    game.cores_map = game.id_map.copy()
+    game.is_editor = False
+    game.history = {}
+    return game, fighter, rocket
+
+
+def runtime_map(*, force_editor=False):
+    """Construct a real map with fresh fixture data and surfaces, without save files."""
+    # Pure air-rule tests do not need to import the map screen.
+    from screens.game.map import Map
+
+    game, _fighter, _rocket = patrol_world()
+
+    def load_fixture(target, load_path, scenario_settings=None):
+        for name in ("map_data", "id_to_province", "nation_data", "raw_json_data", "history",
+                     "scenario_settings", "script_variables", "default_research", "loop_map",
+                     "active_players", "current_player_index", "id_map", "terrain_map",
+                     "political_map", "cores_map"):
+            setattr(target, name, getattr(game, name))
+        target.time_manager = TimeHandler(start_year=1939)
+        target.time_manager.total_turns = 4
+        target.player_country = "Editor" if force_editor else "A"
+        target.nation_colors = {"A": (80, 100, 120), "B": (140, 160, 180), "C": (200, 220, 240)}
+        for name, color in target.nation_colors.items():
+            target.nation_data[name]["color"] = color
+        runtime_rules.rebuild(target)
+        queries.build_air_geometry(target)
+
+    with patch("screens.game.map.load_map.load_map_assets", side_effect=load_fixture):
+        return Map(load_path="air-fixture", force_editor=force_editor, skip_initial_income=True)
 
 
 def tile(game, pid, x, owner="A", water=False, width=4, center=None):

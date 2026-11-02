@@ -39,12 +39,12 @@ class DefenseAreaScreen(MapOverlayScreen):
     def refresh_ui(self):
         panel = self.panel_rect
         self.elements = [
-            Button(panel.x + 36, panel.bottom - 44, "small", "grey", "Cancel",
-                   self.exit_screen, font_preset="normal", sound_kind="back"),
-            Button(panel.centerx - 75, panel.bottom - 44, "small", "orange", "Clear",
-                   self.clear_selection, font_preset="normal"),
-            Button(panel.right - 224, panel.bottom - 44, "medium", "green", "Confirm",
+            Button(panel.x + 24, panel.bottom - 44, "medium", "green", "Confirm",
                    self.confirm, font_preset="normal"),
+            Button(panel.centerx - 25, panel.bottom - 44, "small", "orange", "Clear",
+                   self.clear_selection, font_preset="normal"),
+            Button(panel.right - 136, panel.bottom - 44, "small", "grey", "Cancel",
+                   self.exit_screen, font_preset="normal", sound_kind="back"),
         ]
 
     def clear_selection(self):

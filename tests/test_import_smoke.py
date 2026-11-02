@@ -12,9 +12,11 @@ import subprocess
 import sys
 import unittest
 
-
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
+
+# The standalone command must find the project's shared test helpers.
+from tests import run_process_probes
 
 # Directories that hold no runtime game code.
 SKIP_DIRS = {
@@ -91,15 +93,18 @@ class ImportSmokeTests(unittest.TestCase):
             "screens.game.map", "screens.game.orders",
             "screens.setup.player_setup", "ui.dialogs",
         ]
-        failures = []
-        for name in dict.fromkeys(probes):
+        def check(name):
             proc = subprocess.run(
                 [sys.executable, "-c", f"import {name}"],
                 cwd=ROOT, capture_output=True, text=True,
                 env={**os.environ, "PYTHONPATH": ROOT},
+                timeout=60,
             )
-            if proc.returncode != 0:
-                failures.append(f"{name}: {proc.stderr.strip().splitlines()[-1:]}")
+            return name, proc
+
+        failures = [f"{name}: {proc.stderr.strip().splitlines()[-1:]}"
+                    for name, proc in run_process_probes(check, dict.fromkeys(probes))
+                    if proc.returncode != 0]
         self.assertEqual(failures, [], "modules failed to import standalone:\n  "
                                        + "\n  ".join(failures))
 

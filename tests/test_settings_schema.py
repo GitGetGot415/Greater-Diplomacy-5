@@ -339,10 +339,13 @@ class SettingsScreenTests(unittest.TestCase):
             self.assertEqual(screen.active_input, "OPENROUTER_KEY")
             self.assertEqual([box for box, _y, _label in screen.ai_field_rows()], ["KEY", "MOD"])
             screen.set_field("KEY", " test-key ")
-            screen.active_input = "OPENROUTER_MOD"
+            mod_y = next(y for box, y, _ in screen.ai_field_rows() if box == "MOD")
+            screen.handle_events([pygame.event.Event(pygame.MOUSEBUTTONDOWN,
+                button=1, pos=(c.SETTINGS_BOX_X + 5, mod_y + 5))])
+            self.assertEqual(screen.active_input, "OPENROUTER_MOD")
             screen.set_field("MOD", "")
-            screen.additional_events(pygame.event.Event(
-                pygame.KEYDOWN, key=pygame.K_v, unicode="vendor/test-chat-model", mod=0))
+            screen.handle_events([pygame.event.Event(
+                pygame.KEYDOWN, key=pygame.K_v, unicode="vendor/test-chat-model", mod=0)])
             self.assertEqual(controller.openrouter_model, "vendor/test-chat-model")
             self.assertEqual(controller.openrouter_api_key, "test-key")
             screen.set_ai_mode("KIMI")

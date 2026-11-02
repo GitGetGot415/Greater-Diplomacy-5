@@ -1,13 +1,12 @@
 import os
 from ui import dialogs
-from ui.navigation.game_state import FolderListState
+from ui.navigation.game_state import FolderListState, RefreshingMenuListScreen
 from ui.widgets.ui_elements import Button, make_back_button
 import data.constants as c
 from data import queries
 from ui.dialogs import file_exchange
 from screens.setup import map_refresh
-from ui.panels import turn_progress
-class Select_Base_Map(FolderListState):
+class Select_Base_Map(RefreshingMenuListScreen, FolderListState):
     back_state = "MENU"
 
     # sub_state -> (button/header label, data.constants directory attribute name)
@@ -25,13 +24,6 @@ class Select_Base_Map(FolderListState):
 
         self.last_custom_count = -1
         self.last_base_count = -1
-
-        # --- REFRESH STATE ---
-        self.is_refreshing = False
-        self.refresh_total = 0
-        self.refresh_completed = 0
-        self.refresh_status = ""
-
         self.refresh_ui()
 
     @property
@@ -49,9 +41,10 @@ class Select_Base_Map(FolderListState):
             return self.OTHER_MAP_CATEGORIES[self.sub_state][0].upper()
         return ""
 
-    def update(self):
-        super().update()
+    def has_menu_list(self):
+        return self.sub_state != "OTHER_CATEGORY"
 
+    def update(self):
         # Automatically refresh if the number of maps has changed since last viewed
         current_custom = len(os.listdir(c.SCENARIOS_CUSTOM_DIR)) if os.path.exists(c.SCENARIOS_CUSTOM_DIR) else 0
         current_base = len(os.listdir(c.BASE_MAPS_DIR)) if os.path.exists(c.BASE_MAPS_DIR) else 0
@@ -61,9 +54,8 @@ class Select_Base_Map(FolderListState):
             self.last_base_count = current_base
             self.refresh_ui()
 
-        # Forcefully hide all UI buttons while the loading screen is active
-        for el in self.elements:
-            el.visible = not self.is_refreshing
+        # After the rebuild above, so new buttons also hide during a data refresh.
+        super().update()
 
     def refresh_ui(self):
         self.elements = []
@@ -167,25 +159,3 @@ class Select_Base_Map(FolderListState):
             self.set_sub_state("OTHER_CATEGORY")
         else:
             self.exit_screen()
-
-    def handle_events(self, events):
-        if self.is_refreshing:
-            return
-
-        super().handle_events(events)
-
-    def additional_events(self, event):
-        if self.sub_state != "OTHER_CATEGORY":
-            self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
-
-    def additional_draw(self, surface):
-        if self.sub_state != "OTHER_CATEGORY":
-            self.draw_menu_list_scrollbar(surface)
-
-    def draw(self, surface):
-        super().draw(surface)
-
-        # --- Draw Progress Bar Overlay ---
-        if self.is_refreshing:
-            turn_progress.draw_simple_refresh_bar(surface, self.refresh_status,
-                                                   self.refresh_completed, self.refresh_total)

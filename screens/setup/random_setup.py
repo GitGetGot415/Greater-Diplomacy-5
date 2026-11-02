@@ -2,7 +2,7 @@ import os
 from ui.navigation.game_state import GameState
 import data.constants as c
 from ui.bars import ui_bars
-from ui.widgets.ui_elements import Button, Slider, make_back_button
+from ui.widgets.ui_elements import Button, Slider, make_back_button, make_toggle_button
 from data import queries
 
 from screens.setup.scenario_settings import Scenario_Settings
@@ -125,7 +125,7 @@ class Random_Setup(GameState):
             self.resource_slider,
             
             # Controls
-            Button((c.SCREEN_WIDTH/2) + 120, 470, "medium", "green" if self.single_tile_start else "red", f"1-Tile Start: {'ON' if self.single_tile_start else 'OFF'}", self.toggle_single_tile),
+            make_toggle_button((c.SCREEN_WIDTH/2) + 120, 470, "medium", "1-Tile Start", self.single_tile_start, self.toggle_single_tile),
             Button("centered", 550, "medium", "grey", "Reset Defaults", self.do_reset),
             Button("centered", 630, "large", "green", "START GAME", self.start_game),
         ]

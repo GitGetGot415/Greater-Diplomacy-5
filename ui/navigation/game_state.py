@@ -8,6 +8,7 @@ from data.platform import sync_persisted_dir
 from ui.bars import ui_bars
 
 from ui.information import feedback_text
+from ui.panels import turn_progress
 from map_logic.diplomacy import diplomacy_processor
 from ui.widgets.ui_elements import Button, make_back_button
 from ui.rendering.font_manager import fonts
@@ -182,14 +183,6 @@ class GameState:
     # the scroll clip, under the is_scrollable elements. A screen that defines it
     # gets the backdrop even on a frame with no scrollable elements.
     draw_scroll_backdrop = None
-
-    # One layout for the full-screen scenario and map lists. The list stops above
-    # the buttons that some of these screens place along the bottom.
-    MENU_LIST_ROW_HEIGHT = 60
-    MENU_LIST_TOP = 150
-    MENU_LIST_BOTTOM = c.SCREEN_HEIGHT - 120
-    MENU_LIST_CLIP_TOP = 100
-    MENU_LIST_PAD = 20
 
     def __init__(self):
         self.done = False
@@ -495,24 +488,6 @@ class GameState:
         self.elements.append(element)
         return element
 
-    def layout_menu_list(self, count):
-        """Publishes the menu list's clip area and yields (index, y) for visible rows."""
-        self.scroll_content_rect = pygame.Rect(0, self.MENU_LIST_CLIP_TOP, c.SCREEN_WIDTH,
-                                               self.MENU_LIST_BOTTOM - self.MENU_LIST_CLIP_TOP)
-        return self.layout_list_rows(count, self.MENU_LIST_ROW_HEIGHT, self.MENU_LIST_TOP,
-                                     pad=self.MENU_LIST_PAD, cull_top=self.MENU_LIST_CLIP_TOP,
-                                     cull_bottom=self.MENU_LIST_BOTTOM)
-
-    def add_menu_list(self, rows, on_pick):
-        """Builds a centered button for each (label, value) row. A click passes the value to on_pick."""
-        for i, y in self.layout_menu_list(len(rows)):
-            label, value = rows[i]
-            self.add_list_row(Button("centered", y, "new_game", "blue", label, lambda v=value: on_pick(v)))
-
-    def draw_menu_list_scrollbar(self, surface):
-        self.draw_list_scrollbar(surface, c.SCREEN_WIDTH - 40, self.MENU_LIST_TOP,
-                                 self.MENU_LIST_BOTTOM - self.MENU_LIST_TOP)
-
     def draw_scrolling_lines(self, surface, lines, font, x, top, view_h, line_h, clip_rect, color_for):
         """Draws one column of text lines that scrolls inside clip_rect.
 
@@ -736,6 +711,72 @@ class ButtonMenuScreen(GameState):
             surface.blit(text, text.get_rect(midtop=(c.SCREEN_WIDTH // 2, self.CAPTION_Y)))
 
 
+class MenuListScreen(GameState):
+    """A title, one centered scrolling list, and Back: the scenario and map pickers.
+
+    The list stops above the buttons that some of these screens place along the
+    bottom. A screen with other views overrides has_menu_list for those views.
+    """
+    MENU_LIST_ROW_HEIGHT = 60
+    MENU_LIST_TOP = 150
+    MENU_LIST_BOTTOM = c.SCREEN_HEIGHT - 120
+    MENU_LIST_CLIP_TOP = 100
+    MENU_LIST_PAD = 20
+
+    def has_menu_list(self):
+        return True
+
+    def layout_menu_list(self, count):
+        """Publishes the menu list's clip area and yields (index, y) for visible rows."""
+        self.scroll_content_rect = pygame.Rect(0, self.MENU_LIST_CLIP_TOP, c.SCREEN_WIDTH,
+                                               self.MENU_LIST_BOTTOM - self.MENU_LIST_CLIP_TOP)
+        return self.layout_list_rows(count, self.MENU_LIST_ROW_HEIGHT, self.MENU_LIST_TOP,
+                                     pad=self.MENU_LIST_PAD, cull_top=self.MENU_LIST_CLIP_TOP,
+                                     cull_bottom=self.MENU_LIST_BOTTOM)
+
+    def add_menu_list(self, rows, on_pick):
+        """Builds a centered button for each (label, value) row. A click passes the value to on_pick."""
+        for i, y in self.layout_menu_list(len(rows)):
+            label, value = rows[i]
+            self.add_list_row(Button("centered", y, "new_game", "blue", label, lambda v=value: on_pick(v)))
+
+    def additional_events(self, event):
+        if self.has_menu_list():
+            self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
+
+    def additional_draw(self, surface):
+        if self.has_menu_list():
+            self.draw_list_scrollbar(surface, c.SCREEN_WIDTH - 40, self.MENU_LIST_TOP,
+                                     self.MENU_LIST_BOTTOM - self.MENU_LIST_TOP)
+
+
+class RefreshingMenuListScreen(MenuListScreen):
+    """A menu list that can show map_refresh's progress bar over itself.
+
+    map_refresh.refresh_map_directories writes the four refresh values below.
+    While it runs, the buttons are hidden and input is ignored.
+    """
+    is_refreshing = False
+    refresh_total = 0
+    refresh_completed = 0
+    refresh_status = ""
+
+    def update(self):
+        super().update()
+        for el in self.elements:
+            el.visible = not self.is_refreshing
+
+    def handle_events(self, events):
+        if not self.is_refreshing:
+            super().handle_events(events)
+
+    def draw(self, surface):
+        super().draw(surface)
+        if self.is_refreshing:
+            turn_progress.draw_simple_refresh_bar(surface, self.refresh_status,
+                                                  self.refresh_completed, self.refresh_total)
+
+
 class FolderListState(GameState):
     """Base for the menus that list folders on disk (saves, custom maps).
 
@@ -875,6 +916,10 @@ class MapOverlayScreen(GameState):
     def get_clicked_province(self, mouse_pos):
         return queries.get_clicked_province(mouse_pos, self.map_screen)
 
+    def centered_x(self, size_preset):
+        """The x that centers a button of this size in the panel."""
+        return self.panel_rect.centerx - c.SIZES[size_preset][0] // 2
+
     def get_panel_title(self):
         """The header drawn inside the panel, or None for a bare box."""
         return self.PANEL_TITLE
@@ -921,6 +966,84 @@ class EditorOverlayScreen(MapOverlayScreen):
     TITLE_PRESET = "heading2"
     TITLE_Y_OFFSET = c.MODAL_TITLE_Y_OFFSET
 
+    def draw_content(self, surface):
+        self.draw_panel(surface)
+
+
+class EditorFormScreen(EditorOverlayScreen):
+    """Editor tool window with one column of text fields and one action button.
+
+    A subclass sets self.fields (a dict of TextField) before it calls refresh_ui
+    and implements apply. The field column is placed from the panel center.
+    """
+    FIELD_CENTER_OFFSET = 0
+    FIELD_TOP = 80
+    FIELD_GAP = 70
+    ACTION_LABEL = "Apply"
+    ACTION_COLOR = "green"
+
+    @property
+    def listening_for(self):
+        return any(field.active for field in self.fields.values())
+
+    def apply(self):
+        raise NotImplementedError
+
+    def refresh_ui(self):
+        p = self.panel_rect
+        for row, field in enumerate(self.fields.values()):
+            field.rect.topleft = (p.centerx + self.FIELD_CENTER_OFFSET, p.y + self.FIELD_TOP + row * self.FIELD_GAP)
+        self.elements = [
+            make_back_button(self.exit_screen, style="map"),
+            Button(self.centered_x("medium"), p.bottom - 55, "medium", self.ACTION_COLOR,
+                   self.ACTION_LABEL, self.apply),
+        ] + list(self.fields.values())
+
+
+class EditorSliderScreen(EditorOverlayScreen):
+    """Editor tool window with labelled sliders, Reset, and Save.
+
+    A subclass returns (slider, low label, high label) rows from slider_rows and
+    implements reset and save. Each label sits at one end of its slider.
+    """
+    PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_SPECIAL
+    SLIDER_X = 150
+    SLIDER_W = 300
+    POLE_LABEL_X = 30
+    POLE_LABEL_GAP = 14
+    POLE_LABEL_Y_OFFSET = -2
+    FOOTER_Y_OFFSET = 55
+    RESET_X = 30
+    SAVE_RIGHT_OFFSET = 190
+    RESET_LABEL = "Reset"
+
+    def slider_rows(self):
+        raise NotImplementedError
+
+    def reset(self):
+        raise NotImplementedError
+
+    def save(self):
+        raise NotImplementedError
+
+    def refresh_ui(self):
+        p = self.panel_rect
+        self.rows = self.slider_rows()
+        footer_y = p.bottom - self.FOOTER_Y_OFFSET
+        self.elements = [
+            make_back_button(self.exit_screen, style="map"),
+            Button(p.x + self.RESET_X, footer_y, "medium", "grey", self.RESET_LABEL, self.reset),
+            Button(p.right - self.SAVE_RIGHT_OFFSET, footer_y, "medium", "green", "Save", self.save),
+        ] + [slider for slider, _low, _high in self.rows]
+
+    def draw_content(self, surface):
+        self.draw_panel(surface)
+        small = fonts.get("small")
+        for slider, low, high in self.rows:
+            y = slider.rect.y + self.POLE_LABEL_Y_OFFSET
+            surface.blit(small.render(low, True, c.UI_TEXT_MUTED), (self.panel_rect.x + self.POLE_LABEL_X, y))
+            surface.blit(small.render(high, True, c.UI_TEXT_MUTED), (slider.rect.right + self.POLE_LABEL_GAP, y))
+
 
 class NationListOverlayScreen(EditorOverlayScreen):
     """Standard scrollable picker for the living nations on an editor map.
@@ -931,12 +1054,18 @@ class NationListOverlayScreen(EditorOverlayScreen):
     header content unique to that tool. Geometry remains class-local so a
     future editor can intentionally choose a different list shape.
     """
+    scroll_anywhere = True
 
     LIST_PANEL_SIZE = (620, 560)
     LIST_ROW_HEIGHT = 40
     LIST_HEADER_HEIGHT = 90
     LIST_BOTTOM_MARGIN = 20
     LIST_SCROLLBAR_WIDTH = 15
+    LIST_NOTE_POS = (24, 58)
+    #: Explanatory text above the rows, or None for no note.
+    LIST_NOTE = None
+    #: The screen edit() opens, built as EDIT_SCREEN(map_screen, country_id).
+    EDIT_SCREEN = None
 
     def __init__(self, map_screen):
         super().__init__(map_screen, pygame.Rect(0, 0, *self.LIST_PANEL_SIZE))
@@ -951,9 +1080,20 @@ class NationListOverlayScreen(EditorOverlayScreen):
         """Builds the one row that represents ``country_id`` in this tool."""
         raise NotImplementedError
 
+    def edit(self, country_id):
+        """Opens EDIT_SCREEN for one country and rebuilds the rows afterward."""
+        # screen_runner imports this module, so this import must stay local.
+        from ui.navigation.screen_runner import _run_pygame_sub_screen
+
+        _run_pygame_sub_screen(self.map_screen, self.EDIT_SCREEN(self.map_screen, country_id),
+                               on_done=self.refresh_ui)
+
     def draw_list_header(self, surface):
-        """Screen-specific explanatory text drawn above the scrolling rows."""
-        pass
+        """Draws LIST_NOTE above the scrolling rows."""
+        if self.LIST_NOTE:
+            note = fonts.get("small").render(self.LIST_NOTE, True, c.UI_TEXT_MUTED)
+            surface.blit(note, (self.panel_rect.x + self.LIST_NOTE_POS[0],
+                                self.panel_rect.y + self.LIST_NOTE_POS[1]))
 
     def refresh_ui(self):
 

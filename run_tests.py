@@ -7,15 +7,62 @@ Audio uses a silent driver; the application harness skips startup music and
 the native desktop audio engine.
 """
 
+import argparse
 import os
 import sys
+import time
 import unittest
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 TESTS_DIR = os.path.join(ROOT, "tests")
 
 
-def main():
+class TimingResult(unittest.TextTestResult):
+    """Measure each test, including its setup and cleanup."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.test_times = []
+        self.group_times = []
+
+    def startTest(self, test):
+        super().startTest(test)
+        self._test_started = time.perf_counter()
+
+    def stopTest(self, test):
+        self.test_times.append((time.perf_counter() - self._test_started, test.id()))
+        super().stopTest(test)
+
+
+class TimingSuite(unittest.TestSuite):
+    """Measure test groups, including shared fixture work outside test methods."""
+
+    def run(self, result, debug=False):
+        tests = list(self)
+        # The loader groups methods by class. Parent suites contain suites.
+        is_group = bool(tests) and all(isinstance(test, unittest.TestCase) for test in tests)
+        started = time.perf_counter()
+        try:
+            return super().run(result, debug)
+        finally:
+            if is_group:
+                if isinstance(tests[0], unittest.FunctionTestCase):
+                    label = tests[0]._testFunc.__module__
+                else:
+                    label = tests[0].id().rsplit(".", 1)[0]
+                result.group_times.append((time.perf_counter() - started, label))
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("tests", nargs="*", help="Optional unittest module, class, or method names.")
+    parser.add_argument("--durations", type=int, default=10,
+                        help="Show this many slow tests and groups; zero hides timing details.")
+    parser.add_argument("-q", "--quiet", action="store_true", help="Hide per-test progress.")
+    args = parser.parse_args(argv)
+    if args.durations < 0:
+        parser.error("--durations must be zero or greater")
+
     # Works no matter which directory the editor launched us from
     sys.path.insert(0, ROOT)
     from tests import configure_test_audio
@@ -31,12 +78,29 @@ def main():
     # GD5_RUN_NATIVE_AUDIO_TESTS=1; ordinary test runs avoid native audio
     # stress processes.
 
-    suite = unittest.defaultTestLoader.discover(start_dir=TESTS_DIR, top_level_dir=ROOT)
-    result = unittest.TextTestRunner(verbosity=2).run(suite)
+    loader = unittest.TestLoader()
+    loader.suiteClass = TimingSuite
+    started = time.perf_counter()
+    if args.tests:
+        suite = loader.loadTestsFromNames(args.tests)
+    else:
+        suite = loader.discover(start_dir=TESTS_DIR, top_level_dir=ROOT)
+    discovery_seconds = time.perf_counter() - started
+    started = time.perf_counter()
+    result = unittest.TextTestRunner(
+        verbosity=0 if args.quiet else 2, resultclass=TimingResult).run(suite)
+    execution_seconds = time.perf_counter() - started
 
     print()
+    print(f"Discovery: {discovery_seconds:.3f}s; execution: {execution_seconds:.3f}s")
+    if args.durations:
+        for title, timings in (("Slowest tests (includes per-test setup and cleanup)", result.test_times),
+                               ("Slowest groups (includes shared fixture work)", result.group_times)):
+            print(title + ":")
+            for seconds, name in sorted(timings, reverse=True)[:args.durations]:
+                print(f"  {seconds:8.3f}s  {name}")
     if result.wasSuccessful():
-        print(f"All {result.testsRun} tests passed.")
+        print(f"All {result.testsRun} tests passed; {len(result.skipped)} skipped.")
     else:
         print(f"{len(result.failures)} failed, {len(result.errors)} errored, "
               f"out of {result.testsRun} tests.")

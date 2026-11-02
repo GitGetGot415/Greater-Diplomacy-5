@@ -795,8 +795,8 @@ class _EventEditScreen(_ModalScreen):
         self.elements += [
             self.button(p.x + self.PAD, btn_y, 200, "blue", "Add Conditional", self.add_condition, preset="medium"),
             self.button(p.x + self.PAD + 210, btn_y, 200, "purple", "Add Action", self.add_action, preset="medium"),
-            self.button(p.x + self.PAD + 430, btn_y, 120, "red", "Cancel", self.exit_screen, preset="medium", sound_kind="back"),
-            self.button(p.right - self.PAD - 200, btn_y, 200, "green", "Save Event", self.save_event, preset="medium"),
+            self.button(p.x + self.PAD + 430, btn_y, 200, "green", "Save Event", self.save_event, preset="medium"),
+            self.button(p.right - self.PAD - 120, btn_y, 120, "red", "Cancel", self.exit_screen, preset="medium", sound_kind="back"),
         ]
 
     def show_help(self):

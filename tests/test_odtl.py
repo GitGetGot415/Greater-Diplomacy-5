@@ -15,13 +15,21 @@ did.
 
 import os
 import shutil
-import sys
 import tempfile
+import unittest
 import zipfile
 
 
 from map_logic.imports import odtl  # noqa: E402
 import data.constants as c  # noqa: E402
+
+
+def load_tests(loader, suite, pattern):
+    """Include the standalone function tests in unittest discovery."""
+    suite.addTests(unittest.FunctionTestCase(check)
+                   for name, check in sorted(globals().items())
+                   if name.startswith("test_") and callable(check))
+    return suite
 
 
 def _first_base_map():
@@ -172,6 +180,8 @@ def test_the_upload_poll_is_cheap_enough_to_run_every_frame():
     stay small and must not carry a file back."""
     original = odtl._js  # noqa: SLF001
     work = tempfile.mkdtemp(prefix="odtl-upload-")
+    original_upload_dir = odtl._UPLOAD_DIR
+    odtl._UPLOAD_DIR = os.path.join(work, "uploads")
     try:
         window = _with_fake_window()
         assert odtl.take_upload(work) == ""
@@ -197,26 +207,8 @@ def test_the_upload_poll_is_cheap_enough_to_run_every_frame():
             assert max(len(e) for e in window.evals) < 256
     finally:
         odtl._js = original  # noqa: SLF001
+        odtl._UPLOAD_DIR = original_upload_dir
         shutil.rmtree(work, ignore_errors=True)
-        shutil.rmtree(odtl._UPLOAD_DIR, ignore_errors=True)  # noqa: SLF001
-
-
-if __name__ == "__main__":
-    failures = 0
-    for name, test in sorted(globals().items()):
-        if not name.startswith("test_") or not callable(test):
-            continue
-        try:
-            test()
-            print(f"  ok    {name}")
-        except AssertionError as exc:
-            print(f"  FAIL  {name}: {exc}")
-            failures += 1
-        except Exception as exc:  # noqa: BLE001
-            print(f"  ERROR {name}: {type(exc).__name__}: {exc}")
-            failures += 1
-    print("all passed" if not failures else f"{failures} failed")
-    sys.exit(1 if failures else 0)
 
 
 def test_a_gd5_map_crosses_to_unciv_and_back():
@@ -265,3 +257,7 @@ def test_an_unknown_target_format_is_refused_rather_than_guessed():
     ok, notes = odtl._convert("whatever", "wherever", "freeciv")
     assert not ok
     assert "freeciv" in notes[0]
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

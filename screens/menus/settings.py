@@ -1,6 +1,6 @@
 import pygame
 from ui.widgets import ui_elements
-from ui.widgets.ui_elements import Button, Slider, make_info_button
+from ui.widgets.ui_elements import Button, Slider, TextField, make_info_button, make_toggle_button
 from ui.navigation.game_state import GameState
 import data.constants as c
 from data import queries
@@ -116,28 +116,23 @@ def render_settings_buttons(settings_screen):
     settings_screen.elements = [
         ui_elements.make_back_button(settings_screen.save_and_go_back, pos=SETTINGS_BACK_POS),
         Button(keybind_x, SETTINGS_FULLSCREEN_Y, SETTINGS_OPTION_SIZE, "blue", "Toggle Fullscreen", settings_screen.toggle_full),
-        Button(keybind_x, SETTINGS_CHECKERBOARD_WATER_Y, SETTINGS_OPTION_SIZE, "green" if settings_screen.checkerboard_water else "red",
-               f"Checkerboard Water: {'ON' if settings_screen.checkerboard_water else 'OFF'}", settings_screen.toggle_checkerboard_water),
-        Button(keybind_x, SETTINGS_FPS_TOGGLE_Y, SETTINGS_OPTION_SIZE, "green" if settings_screen.show_fps else "red",
-               f"Show FPS: {'ON' if settings_screen.show_fps else 'OFF'}", settings_screen.toggle_fps),
-        Button(keybind_x, SETTINGS_SHOW_UNCLAIMED_Y, SETTINGS_OPTION_SIZE,
-               "green" if settings_screen.show_unclaimed else "red",
-               f"Show Unassigned: {'ON' if settings_screen.show_unclaimed else 'OFF'}",
-               settings_screen.toggle_show_unclaimed),
-        Button(keybind_x, SETTINGS_INTRO_POPUP_Y, SETTINGS_OPTION_SIZE,
-               "green" if settings_screen.show_intro_popup else "red",
-               f"Show Tutorial Popup: {'ON' if settings_screen.show_intro_popup else 'OFF'}",
-               settings_screen.toggle_intro_popup),
+        make_toggle_button(keybind_x, SETTINGS_CHECKERBOARD_WATER_Y, SETTINGS_OPTION_SIZE, "Checkerboard Water",
+                           settings_screen.checkerboard_water, settings_screen.toggle_checkerboard_water),
+        make_toggle_button(keybind_x, SETTINGS_FPS_TOGGLE_Y, SETTINGS_OPTION_SIZE, "Show FPS",
+                           settings_screen.show_fps, settings_screen.toggle_fps),
+        make_toggle_button(keybind_x, SETTINGS_SHOW_UNCLAIMED_Y, SETTINGS_OPTION_SIZE, "Show Unassigned",
+                           settings_screen.show_unclaimed, settings_screen.toggle_show_unclaimed),
+        make_toggle_button(keybind_x, SETTINGS_INTRO_POPUP_Y, SETTINGS_OPTION_SIZE, "Show Tutorial Popup",
+                           settings_screen.show_intro_popup, settings_screen.toggle_intro_popup),
         Button(keybind_x, SETTINGS_MAP_NAV_Y, SETTINGS_OPTION_SIZE, "purple",
                f"Map Navigation: {settings_screen.map_navigation_mode.title()}",
                settings_screen.toggle_map_navigation_mode),
         Button(keybind_x, SETTINGS_BATTLE_DISPLAY_Y, SETTINGS_OPTION_SIZE, "purple",
                f"Battle Display: {settings_screen.battle_display_mode.title()}",
                settings_screen.toggle_battle_display_mode),
-        Button(keybind_x, SETTINGS_ARMY_GROUP_ANIMATIONS_Y, SETTINGS_OPTION_SIZE,
-               "green" if settings_screen.army_group_animations else "red",
-               f"Army Group Animations: {'ON' if settings_screen.army_group_animations else 'OFF'}",
-               settings_screen.toggle_army_group_animations, font_preset="small"),
+        make_toggle_button(keybind_x, SETTINGS_ARMY_GROUP_ANIMATIONS_Y, SETTINGS_OPTION_SIZE, "Army Group Animations",
+                           settings_screen.army_group_animations, settings_screen.toggle_army_group_animations,
+                           font_preset="small"),
     ]
     settings_screen.elements.extend(
         make_info_button(SETTINGS_INFO_X, y,
@@ -149,10 +144,10 @@ def render_settings_buttons(settings_screen):
     # --- MASTER AI TOGGLE BUTTON ---
     ai_is_on = settings_screen.ai_mode != "OFF"
     settings_screen.elements.append(
-        Button(*SETTINGS_AI_TOGGLE_POS, "small", "green" if ai_is_on else "red",
-               "LLM AI: ON" if ai_is_on else "LLM AI: OFF",
-               settings_screen.toggle_ai_enabled, font_preset="normal")
+        make_toggle_button(*SETTINGS_AI_TOGGLE_POS, "small", "LLM AI", ai_is_on,
+                           settings_screen.toggle_ai_enabled, font_preset="normal")
     )
+    settings_screen.ai_fields = {}
 
     # --- Only render the sub-options if AI is currently turned ON ---
     if ai_is_on:
@@ -175,10 +170,16 @@ def render_settings_buttons(settings_screen):
         # Clear buttons use the same rows as the editable fields.
         clear_x = c.SETTINGS_BOX_X + c.SETTINGS_BOX_W + SETTINGS_CLEAR_BTN_GAP_X
         for box_type, box_y, _label in settings_screen.ai_field_rows():
-            settings_screen.elements.append(
+            field = TextField(c.SETTINGS_BOX_X, box_y, c.SETTINGS_BOX_W, c.SETTINGS_BOX_H,
+                              settings_screen.get_field(box_type),
+                              max_length=c.MAX_MODEL_NAME_LENGTH if box_type == "MOD" else c.MAX_API_KEY_LENGTH,
+                              on_change=lambda text, b=box_type: settings_screen.set_field(b, text), pad_x=5)
+            settings_screen.ai_fields[box_type] = field
+            settings_screen.elements.extend([
+                field,
                 Button(clear_x, box_y, "small_square", "red", "X",
-                       lambda b=box_type: settings_screen.clear_input(b))
-            )
+                       lambda b=box_type: settings_screen.clear_input(b)),
+            ])
 
     # Sliders
     settings_screen.checkerboard_gradient_slider = Slider(
@@ -242,6 +243,8 @@ class Settings(GameState):
     player_slider = None
     fps_slider = None
     ai_thread_slider = None
+    #: The active provider's TextField per box type, rebuilt with the buttons.
+    ai_fields = {}
 
     # Hosted providers use API keys and model names. Ollama uses a base URL.
     AI_MODES = ["OFF", "OLLAMA", "GEMINI", "CHATGPT", "CLAUDE", "DEEPSEEK", "KIMI", "OPENROUTER"]
@@ -301,8 +304,6 @@ class Settings(GameState):
         self.show_intro_popup = self.controller.show_intro_popup
         self.show_unclaimed = self.controller.show_unclaimed
 
-        self.active_input = None # Dynamically track which box is selected: "{MODE}_KEY" or "{MODE}_MOD"
-
         self.ai_threads = self.controller.ai_threads
         self.show_fps = self.controller.show_fps
         self.checkerboard_water = self.controller.checkerboard_water
@@ -352,6 +353,14 @@ class Settings(GameState):
         """Controller attribute for an editable field in the active mode."""
         return self.provider_field_attr(self.ai_mode, box_type)
 
+    @property
+    def active_input(self):
+        """The focused box as "{MODE}_KEY" or "{MODE}_MOD", or None."""
+        for box_type, field in self.ai_fields.items():
+            if field.active:
+                return f"{self.ai_mode}_{box_type}"
+        return None
+
     def get_field(self, box_type):
         return getattr(self, f"{self.field_attr(box_type)}_text", "")
 
@@ -360,6 +369,8 @@ class Settings(GameState):
         attr = self.field_attr(box_type)
         setattr(self, f"{attr}_text", text)
         setattr(self.controller, attr, text.strip())
+        if box_type in self.ai_fields:
+            self.ai_fields[box_type].text = text
 
     def toggle_fps(self):
         self.show_fps = not self.show_fps
@@ -444,7 +455,6 @@ class Settings(GameState):
     def set_ai_mode(self, mode):
         self.ai_mode = mode
         self.controller.ai_mode = mode
-        self.active_input = None # Deselect input box when switching modes
         # Provider clients and the shared HTTP session are cached between turns;
         # drop them so the next call is built against the provider just picked.
         ai_handler.reset_clients()
@@ -458,7 +468,6 @@ class Settings(GameState):
     def clear_input(self, box_type):
         """Generic method to clear the currently visible input box."""
         self.set_field(box_type, "")
-        self.active_input = None
         self.refresh_ui()
 
     def refresh_ui(self):
@@ -588,33 +597,6 @@ class Settings(GameState):
         if self.fps_slider is not None:
             self.fps_slider.text = f"Max FPS: {fps}"
 
-    def handle_events(self, events):
-        for event in events:
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                mx, my = event.pos
-                
-                # Check for Input Box Selection Dynamically
-                if self.ai_mode != "OFF":
-                    self.active_input = None
-                    for box_type, box_y, _label in self.ai_field_rows():
-                        rect = pygame.Rect(c.SETTINGS_BOX_X, box_y, c.SETTINGS_BOX_W, c.SETTINGS_BOX_H)
-                        if rect.collidepoint(mx, my):
-                            self.active_input = f"{self.ai_mode}_{box_type}"
-                            break
-
-            for el in self.elements:
-                el.handle_event(event)
-            self.additional_events(event)
-
-    def additional_events(self, event):
-        if self.active_input and self.ai_mode != "OFF":
-            box_type = self.active_input.rsplit("_", 1)[-1]
-            if box_type in self.AI_FIELD_SUFFIX:
-                limit = c.MAX_MODEL_NAME_LENGTH if box_type == "MOD" else c.MAX_API_KEY_LENGTH
-                new_text, _status = ui_elements.process_text_input(event, self.get_field(box_type),
-                                                                  max_length=limit)
-                self.set_field(box_type, new_text)
-
     # ------------------------------------------------------------------ #
     #                             RENDERING                              #
     # ------------------------------------------------------------------ #
@@ -623,13 +605,9 @@ class Settings(GameState):
     def dir_box_x(self):
         return c.SCREEN_WIDTH // 2 - self.DIR_BOX_W // 2 + 50
 
-    def draw_text_field(self, surface, rect, text, active=False):
-        """Draws one of the screen's read-only/editable text boxes.
-
-        Used for the path boxes and the API key/model boxes alike; `active`
-        lights the fill and appends the caret.
-        """
-        ui_elements.draw_text_box(surface, rect, text, active=active, pad_x=5)
+    def draw_path_box(self, surface, rect, text):
+        """Draws one of the screen's read-only path boxes."""
+        ui_elements.draw_text_box(surface, rect, text, pad_x=5)
 
     def additional_draw(self, surface):
         font = fonts.get("normal")
@@ -641,7 +619,7 @@ class Settings(GameState):
 
             if kind == "dir":
                 surface.blit(font.render(label, True, (240, 240, 240)), (x, y - 20))
-                self.draw_text_field(surface, pygame.Rect(x, y, self.DIR_BOX_W, self.DIR_BOX_H), value)
+                self.draw_path_box(surface, pygame.Rect(x, y, self.DIR_BOX_W, self.DIR_BOX_H), value)
             else:
                 # Color rows label to the right of the row and show a swatch
                 surface.blit(font.render(label, True, (240, 240, 240)), (x, y + 10))
@@ -653,11 +631,8 @@ class Settings(GameState):
         if self.ai_mode == "OFF":
             return
 
-        for box_type, box_y, label in self.ai_field_rows():
+        for _box_type, box_y, label in self.ai_field_rows():
             surface.blit(font.render(label, True, c.UI_TEXT_LIGHT), (c.SETTINGS_BOX_X, box_y - 25))
-            rect = pygame.Rect(c.SETTINGS_BOX_X, box_y, c.SETTINGS_BOX_W, c.SETTINGS_BOX_H)
-            self.draw_text_field(surface, rect, self.get_field(box_type),
-                                 active=self.active_input == f"{self.ai_mode}_{box_type}")
 
     def set_players(self, val):
         self.num_players = 1 + int(val * 7)

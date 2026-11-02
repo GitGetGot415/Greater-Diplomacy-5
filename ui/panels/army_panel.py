@@ -348,8 +348,8 @@ def _handle_custom_symbol_event(map_screen, event):
     if clear.collidepoint(event.pos):
         custom_state["pixels"] = _blank_custom_symbol()
         return True
-    cancel = pygame.Rect(rect.right - 224, rect.bottom - 42, 94, 26)
-    done = pygame.Rect(rect.right - 120, rect.bottom - 42, 94, 26)
+    cancel = pygame.Rect(rect.right - 120, rect.bottom - 42, 94, 26)
+    done = pygame.Rect(rect.right - 224, rect.bottom - 42, 94, 26)
     if cancel.collidepoint(event.pos):
         map_screen.army_custom_symbol_state = None
     elif done.collidepoint(event.pos):
@@ -441,8 +441,8 @@ def _handle_editor_event(map_screen, event):
     if flip.collidepoint(event.pos):
         state["symbol_flipped"] = not state["symbol_flipped"]
         return True
-    save = pygame.Rect(rect.right - 122, rect.bottom - 42, 98, 26)
-    cancel = pygame.Rect(rect.right - 230, rect.bottom - 42, 98, 26)
+    save = pygame.Rect(rect.right - 230, rect.bottom - 42, 98, 26)
+    cancel = pygame.Rect(rect.right - 122, rect.bottom - 42, 98, 26)
     if save.collidepoint(event.pos):
         _save_editor(map_screen)
     elif cancel.collidepoint(event.pos):
@@ -520,8 +520,8 @@ def _draw_editor(map_screen, surface):
     ui_elements.draw_pixel_button(surface, flip, (39, 60, 95), selected=state["symbol_flipped"])
     label = text_font.render("Flip", True, (235, 245, 255))
     surface.blit(label, label.get_rect(center=flip.center))
-    cancel = pygame.Rect(rect.right - 230, rect.bottom - 42, 98, 26)
-    save = pygame.Rect(rect.right - 122, rect.bottom - 42, 98, 26)
+    cancel = pygame.Rect(rect.right - 122, rect.bottom - 42, 98, 26)
+    save = pygame.Rect(rect.right - 230, rect.bottom - 42, 98, 26)
     for button, text, color in ((cancel, "Cancel", (84, 100, 130)),
                                 (save, "Save", (55, 120, 78))):
         ui_elements.draw_pixel_button(surface, button, color)
@@ -574,8 +574,8 @@ def _draw_custom_symbol_editor(map_screen, surface):
     ui_elements.draw_pixel_button(surface, clear, (72, 84, 110))
     clear_label = text_font.render("Clear", True, (245, 245, 250))
     surface.blit(clear_label, clear_label.get_rect(center=clear.center))
-    cancel = pygame.Rect(rect.right - 224, rect.bottom - 42, 94, 26)
-    done = pygame.Rect(rect.right - 120, rect.bottom - 42, 94, 26)
+    cancel = pygame.Rect(rect.right - 120, rect.bottom - 42, 94, 26)
+    done = pygame.Rect(rect.right - 224, rect.bottom - 42, 94, 26)
     for button, text, color in ((cancel, "Cancel", (84, 100, 130)),
                                 (done, "Done", (55, 120, 78))):
         ui_elements.draw_pixel_button(surface, button, color)

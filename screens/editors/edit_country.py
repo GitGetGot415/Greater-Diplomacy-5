@@ -3,7 +3,7 @@ import pygame
 import os
 import unicodedata
 from ui.navigation.game_state import GameState
-from ui.widgets.ui_elements import process_text_input, draw_text_box, Button
+from ui.widgets.ui_elements import TextField, Button
 from ui.widgets import ui_elements
 from ui.rendering.font_manager import fonts
 import data.constants as c
@@ -47,6 +47,22 @@ EDIT_COUNTRY_NULL_COLOR_Y = 105
 input_box_x = c.EDIT_COUNTRY_UI_X1
 second_right_ui_x = c.EDIT_COUNTRY_UI_X2
 right_ui_x = c.EDIT_COUNTRY_UI_X3
+
+# (key, label, y) of each identity text field.
+EDIT_COUNTRY_FIELDS = (
+    ("COUNTRY_NAME", "Country Name:", 480),
+    ("ADJECTIVE", "Adjective:", 540),
+    ("NAME", "Leader Name:", 600),
+    ("TITLE", "Leader Title:", 660),
+)
+EDIT_COUNTRY_FIELD_SIZE = (300, 40)
+EDIT_COUNTRY_FIELD_LABEL_GAP = 20
+
+
+def _field_text(key):
+    """Exposes one identity field's text as an ordinary screen attribute."""
+    return property(lambda screen: screen.fields[key].text,
+                    lambda screen, text: setattr(screen.fields[key], "text", text))
 
 
 def render_edit_country_buttons(edit_screen):
@@ -122,10 +138,16 @@ def render_edit_country_buttons(edit_screen):
         Button(side_tool_x, EDIT_COUNTRY_BRUSH_COLOR_Y, "small_square", "light_grey", "Brush Color", edit_screen.pick_custom_brush_color, image=icons.get("colors"), show_text=False),
         Button(side_tool_x, EDIT_COUNTRY_NULL_COLOR_Y, "small_square", "light_grey", "Null Color", lambda: edit_screen.set_color((0, 0, 0, 0)), image=icons.get("red_line"), show_text=False)
     ])
+    edit_screen.elements.extend(edit_screen.fields.values())
 
 class Edit_Country_Screen(GameState):
 
     back_state = "MAP"
+
+    country_name = _field_text("COUNTRY_NAME")
+    adjective = _field_text("ADJECTIVE")
+    leader_name = _field_text("NAME")
+    leader_title = _field_text("TITLE")
 
     def __init__(self):
         super().__init__()
@@ -152,16 +174,14 @@ class Edit_Country_Screen(GameState):
         # Editor State
         self.active_color = (0, 0, 0)
         self.draw_mode = "BRUSH" # Can be "BRUSH" or "FILL"
-        self.active_input = None # "COUNTRY_NAME", "NAME", or "TITLE"
-        
+        self.fields = {key: TextField(input_box_x, y, *EDIT_COUNTRY_FIELD_SIZE,
+                                      max_length=c.COUNTRY_NAME_MAX_LENGTH, pad_x=10)
+                       for key, _label, y in EDIT_COUNTRY_FIELDS}
+
         self.is_drawing = False
         self.history = []
         self.history_index = -1
-        
-        self.country_name = ""
-        self.adjective = ""
-        self.leader_name = ""
-        self.leader_title = ""
+
         self.new_map_color = list(DEFAULT_NATION_COLOR)
 
         # Original state trackers for unsaved changes popup
@@ -460,22 +480,26 @@ class Edit_Country_Screen(GameState):
         elif self.portrait_rect.collidepoint(mx, my):
             apply(self.portrait_surf, self.portrait_rect, self.portrait_scale)
 
+    @property
+    def listening_for(self):
+        return any(field.active for field in self.fields.values())
+
+    def handle_events(self, events):
+        # Undo and redo go to the canvases and never reach a focused text field.
+        for event in events:
+            if event.type == pygame.KEYDOWN and pygame.key.get_mods() & (pygame.KMOD_CTRL | pygame.KMOD_GUI):
+                if event.key == pygame.K_z:
+                    self.undo()
+                    continue
+                if event.key == pygame.K_y:
+                    self.redo()
+                    continue
+            super().handle_events([event])
+
     def additional_events(self, event):
-        # 1. Text Input Selection Logic
+        # 1. Fire a drawing execute on click
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             mx, my = event.pos
-            if pygame.Rect(input_box_x, 480, 300, 40).collidepoint(mx, my):
-                self.active_input = "COUNTRY_NAME"
-            elif pygame.Rect(input_box_x, 540, 300, 40).collidepoint(mx, my):
-                self.active_input = "ADJECTIVE"
-            elif pygame.Rect(input_box_x, 600, 300, 40).collidepoint(mx, my):
-                self.active_input = "NAME"
-            elif pygame.Rect(input_box_x, 660, 300, 40).collidepoint(mx, my):
-                self.active_input = "TITLE"
-            else:
-                self.active_input = None
-            
-            # Fire a drawing execute on click
             if self.flag_rect.collidepoint(mx, my) or self.portrait_rect.collidepoint(mx, my):
                 self.is_drawing = True
             self.execute_draw(mx, my, is_click=True)
@@ -489,25 +513,6 @@ class Edit_Country_Screen(GameState):
         elif event.type == pygame.MOUSEMOTION and pygame.mouse.get_pressed()[0]:
             mx, my = event.pos
             self.execute_draw(mx, my, is_click=False)
-
-        # 3. Keyboard Logic
-        elif event.type == pygame.KEYDOWN:
-            mods = pygame.key.get_mods()
-            # Handle Undo / Redo
-            if event.key == pygame.K_z and (mods & pygame.KMOD_CTRL or mods & pygame.KMOD_GUI):
-                self.undo()
-            elif event.key == pygame.K_y and (mods & pygame.KMOD_CTRL or mods & pygame.KMOD_GUI):
-                self.redo()
-            else:
-                if self.active_input:
-                    if self.active_input == "COUNTRY_NAME":
-                        self.country_name, _ = process_text_input(event, self.country_name, max_length=c.COUNTRY_NAME_MAX_LENGTH)
-                    elif self.active_input == "ADJECTIVE":
-                        self.adjective, _ = process_text_input(event, self.adjective, max_length=c.COUNTRY_NAME_MAX_LENGTH)
-                    elif self.active_input == "NAME":
-                        self.leader_name, _ = process_text_input(event, self.leader_name, max_length=c.COUNTRY_NAME_MAX_LENGTH)
-                    elif self.active_input == "TITLE":
-                        self.leader_title, _ = process_text_input(event, self.leader_title, max_length=c.COUNTRY_NAME_MAX_LENGTH)
 
     def additional_draw(self, surface):
         title_font = fonts.get("title")
@@ -559,18 +564,10 @@ class Edit_Country_Screen(GameState):
         pygame.draw.rect(surface, self.new_map_color, (map_color_x, map_color_y, 60, 40))
         pygame.draw.rect(surface, (255, 255, 255), (map_color_x, map_color_y, 60, 40), 2)
 
-        # Draw Text Inputs
-        
-        def draw_input_box(y_pos, label_text, input_state, value):
-            surface.blit(normal_font.render(label_text, True, c.UI_TEXT_LIGHT), (input_box_x, y_pos - 20))
-            rect = pygame.Rect(input_box_x, y_pos, 300, 40)
-            draw_text_box(surface, rect, value, active=self.active_input == input_state,
-                          font=normal_font)
-
-        draw_input_box(480, "Country Name:", "COUNTRY_NAME", self.country_name)
-        draw_input_box(540, "Adjective:", "ADJECTIVE", self.adjective)
-        draw_input_box(600, "Leader Name:", "NAME", self.leader_name)
-        draw_input_box(660, "Leader Title:", "TITLE", self.leader_title)
+        # Text field labels sit above their boxes, which draw with the other elements.
+        for _key, label, y in EDIT_COUNTRY_FIELDS:
+            surface.blit(normal_font.render(label, True, c.UI_TEXT_LIGHT),
+                         (input_box_x, y - EDIT_COUNTRY_FIELD_LABEL_GAP))
 
         # --- Draw Original Key Country ID block ---
         id_display_x = EDIT_COUNTRY_ID_DISPLAY_X

@@ -3,7 +3,7 @@ import data.constants as c
 from data import queries
 from ui.dialogs import pickers
 from ui.navigation.game_state import MapOverlayScreen
-from ui.widgets.ui_elements import Button, Slider, make_back_button
+from ui.widgets.ui_elements import Button, Slider, make_back_button, make_toggle_button, on_off_color
 from ui.rendering.font_manager import fonts
 from ui.rendering import overlay_renderer
 from ui.bars import ui_bars
@@ -26,7 +26,6 @@ class Puppets_Screen(MapOverlayScreen):
 
     def __init__(self, map_screen):
         super().__init__(map_screen, pygame.Rect(c.SCREEN_WIDTH//2 - 400, 100, 800, c.SCREEN_HEIGHT - 200))
-        self.bg_color = (30, 35, 40)
         self.back_state = "MAP"
         self.y_space_between_puppets = 120
         self.refresh_ui()
@@ -273,10 +272,9 @@ class Create_Puppet_Screen(MapOverlayScreen):
             button.apply_state(enabled=enabled, color="blue")
             button.is_selected = enabled and self.release_type == release_type
             self.elements.append(button)
-        keep = Button(self.panel_rect.centerx - 100, self.panel_rect.y + self.KEEP_CORES_Y,
-                      "medium", "green" if self.keep_cores else "red",
-                      f"Keep Cores: {'ON' if self.keep_cores else 'OFF'}", self.toggle_keep_cores)
-        keep.apply_state(enabled=enabled, color="green" if self.keep_cores else "red")
+        keep = make_toggle_button(self.centered_x("medium"), self.panel_rect.y + self.KEEP_CORES_Y,
+                                  "medium", "Keep Cores", self.keep_cores, self.toggle_keep_cores)
+        keep.apply_state(enabled=enabled, color=on_off_color(self.keep_cores))
         self.elements.append(keep)
 
         self.scroll_content_rect = pygame.Rect(self.panel_rect.x + 5, self.panel_rect.y + self.CONTENT_TOP,

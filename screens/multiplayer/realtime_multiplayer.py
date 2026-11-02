@@ -54,7 +54,7 @@ from data.multiplayer.realtime.relay import (
     destroy_temporary_relay,
 )
 from data.platform import IS_WEB
-from ui.navigation.game_state import GameState
+from ui.navigation.game_state import GameState, MenuListScreen
 from ui.rendering.font_manager import fonts
 from ui import dialogs
 from ui.widgets.ui_elements import Button, UI_ICONS, make_back_button
@@ -121,10 +121,97 @@ def _scenario_entries():
     return entries
 
 
+def _client_nation_data(client):
+    """The client-side snapshot used to label lobby country assignments."""
+    bundle = getattr(client, "map_bundle", {}) if client else {}
+    nation_data = bundle.get("snapshot", {}).get("nation_data", {}) if isinstance(bundle, dict) else {}
+    return nation_data if isinstance(nation_data, dict) else {}
+
+
 class _RealtimeScreen(GameState):
     """Background color and default title height of the real-time screens."""
     bg_color = (12, 28, 50)
     title_y = 35
+
+
+class _RealtimeLobby(_RealtimeScreen):
+    """The controls and status text that the host and guest lobbies share.
+
+    The host changes its session directly and a guest sends requests to the
+    server, so each subclass supplies the callbacks.
+    """
+    title = "Real-Time Lobby"
+    title_y = 30
+
+    COUNTRY_ROW_HEIGHT = 38
+    COUNTRY_ROW_SIZE = (600, 32)
+    COUNTRY_LIST_PAD = 8
+    COUNTRY_LIST_WIDTH = 620
+    COUNTRY_SCROLLBAR_GAP = 320
+    COUNTRY_SCROLLBAR_WIDTH = 22
+    READY_BUTTON_SIZE = (200, 36)
+    PLAYER_LINES_MAX = 5
+    PLAYER_LINES_POS = (30, 605)
+    PLAYER_LINE_HEIGHT = 22
+    #: Vertical layout that differs between the two lobbies.
+    COUNTRY_LIST_TOP = 0
+    COUNTRY_LIST_BOTTOM = 0
+    READY_BUTTON_Y = 0
+    SUMMARY_Y = 0
+
+    def _personal_buttons(self):
+        return [
+            Button(20, 75, "left_ui_button", "pink", "Settings", lambda: self.go_to("SETTINGS"),
+                   image=UI_ICONS.get("settings"), sound_kind="open_settings"),
+            Button(20, 110, "left_ui_button", "pink", "Music", lambda: self.go_to("MUSIC_PLAYER"),
+                   image=UI_ICONS.get("music"), sound_kind="open_music"),
+        ]
+
+    def _add_country_rows(self, countries, players, own_country, nation_data, on_pick):
+        """Adds one scrolling row per country. A click passes the country id to on_pick."""
+        top, bottom = self.COUNTRY_LIST_TOP, self.COUNTRY_LIST_BOTTOM
+        pad = self.COUNTRY_LIST_PAD
+        self.scroll_content_rect = pygame.Rect(c.SCREEN_WIDTH // 2 - self.COUNTRY_LIST_WIDTH // 2, top - pad,
+                                               self.COUNTRY_LIST_WIDTH, bottom - top + pad)
+        for index, button_y in self.layout_list_rows(
+                len(countries), self.COUNTRY_ROW_HEIGHT, top, pad=pad, cull_top=top - pad,
+                cull_bottom=bottom):
+            country = countries[index]
+            selected = next((p.name for p in players.values() if p.country_id == country), None)
+            label = f"{queries.get_country_display_name(country, nation_data)}: {selected or 'Available'}"
+            color = ("blue" if own_country == country
+                     else "green" if not selected else "grey")
+            try:
+                flag = flag_surface(country, nation_data)
+            except (KeyError, TypeError, ValueError, pygame.error):
+                flag = None
+            self.add_list_row(Button("centered", button_y, self.COUNTRY_ROW_SIZE, color, label,
+                                     lambda country_id=country: on_pick(country_id), image=flag))
+
+    def _ready_button(self, ready, ready_label, unready_label, on_click):
+        return Button("centered", self.READY_BUTTON_Y, self.READY_BUTTON_SIZE, "green" if ready else "orange",
+                      ready_label if ready else unready_label, on_click)
+
+    def additional_events(self, event):
+        self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
+
+    def _draw_lobby_status(self, surface, config, players, host_id, nation_data):
+        """Draws the country scrollbar, the match summary, and the player lines."""
+        pad = self.COUNTRY_LIST_PAD
+        self.draw_list_scrollbar(surface, c.SCREEN_WIDTH // 2 + self.COUNTRY_SCROLLBAR_GAP,
+                                 self.COUNTRY_LIST_TOP - pad,
+                                 self.COUNTRY_LIST_BOTTOM - self.COUNTRY_LIST_TOP + pad,
+                                 width=self.COUNTRY_SCROLLBAR_WIDTH)
+        font = fonts.get("small")
+        summary = font.render(_lobby_config_summary(config), True, (230, 230, 230))
+        surface.blit(summary, summary.get_rect(center=(c.SCREEN_WIDTH // 2, self.SUMMARY_Y)))
+        x, y = self.PLAYER_LINES_POS
+        for index, player in enumerate(list(players.values())[:self.PLAYER_LINES_MAX]):
+            country = (queries.get_country_display_name(player.country_id, nation_data)
+                       if player.country_id else "No country")
+            text = (f"{player.name} — {_ping_label(player, host_id)} — "
+                    f"{country} — {'READY' if player.ready else 'waiting'}")
+            surface.blit(font.render(text, True, (230, 230, 230)), (x, y + index * self.PLAYER_LINE_HEIGHT))
 
 
 class Realtime_Host_Setup(_RealtimeScreen):
@@ -425,7 +512,7 @@ class Realtime_Relay_Provision(_RealtimeScreen):
         surface.blit(font.render(text, True, (235, 235, 235)), (85, 270))
 
 
-class Realtime_Scenario_Select(_RealtimeScreen):
+class Realtime_Scenario_Select(MenuListScreen, _RealtimeScreen):
     host_setup = None
 
     back_state = "REALTIME_HOST_SETUP"
@@ -451,12 +538,6 @@ class Realtime_Scenario_Select(_RealtimeScreen):
         self.entries = sorted(_scenario_entries(), key=lambda entry: entry[0].casefold())
         self.add_menu_list(self.entries, self.select)
 
-    def additional_events(self, event):
-        self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
-
-    def additional_draw(self, surface):
-        self.draw_menu_list_scrollbar(surface)
-
     def select(self, path):
         if self.lobby:
             if self.lobby.apply_scenario(path):
@@ -470,14 +551,16 @@ class Realtime_Scenario_Select(_RealtimeScreen):
         self.go_to("REALTIME_HOST_SETUP")
 
 
-class Realtime_Lobby(_RealtimeScreen):
+class Realtime_Lobby(_RealtimeLobby):
     host_setup = None
     advertiser = None
     _lobby_signature = None
 
     back_state = "REALTIME_HOST_SETUP"
-    title = "Real-Time Lobby"
-    title_y = 30
+    COUNTRY_LIST_TOP = 210
+    COUNTRY_LIST_BOTTOM = 540
+    READY_BUTTON_Y = 550
+    SUMMARY_Y = 72
 
     def __init__(self):
         super().__init__()
@@ -519,11 +602,7 @@ class Realtime_Lobby(_RealtimeScreen):
         # A running lobby is a shared session, not an ordinary menu.  Keep
         # its explicit End Lobby control as the visible way out so a host
         # cannot mistake Back for harmless navigation.
-        self.elements = [
-            Button(20, 75, "left_ui_button", "pink", "Settings", lambda: self.go_to("SETTINGS"),
-                   image=UI_ICONS.get("settings"), sound_kind="open_settings"),
-            Button(20, 110, "left_ui_button", "pink", "Music", lambda: self.go_to("MUSIC_PLAYER"),
-                   image=UI_ICONS.get("music"), sound_kind="open_music"),
+        self.elements = self._personal_buttons() + [
             Button(20, 145, "left_ui_button", "blue", "Rename", self.edit_host_name),
         ]
         if not self.session:
@@ -556,28 +635,10 @@ class Realtime_Lobby(_RealtimeScreen):
         countries = sorted(self.session.countries, key=str.casefold)
         # Compact rows leave room for a genuinely useful viewport rather than
         # forcing a page-like experience on scenarios with many countries.
-        list_top, list_bottom = 210, 540
-        self.scroll_content_rect = pygame.Rect(c.SCREEN_WIDTH // 2 - 310, list_top - 8,
-                                                620, list_bottom - list_top + 8)
-        nation_data = getattr(self.server_map, "nation_data", {})
-        for index, button_y in self.layout_list_rows(
-                len(countries), 38, list_top, pad=8, cull_top=list_top - 8,
-                cull_bottom=list_bottom):
-            country = countries[index]
-            selected = next((p.name for p in self.session.players.values() if p.country_id == country), None)
-            label = f"{queries.get_country_display_name(country, nation_data)}: {selected or 'Available'}"
-            color = ("blue" if self.session.players[host].country_id == country
-                     else "green" if not selected else "grey")
-            try:
-                flag = flag_surface(country, nation_data)
-            except (KeyError, TypeError, ValueError, pygame.error):
-                flag = None
-            button = Button("centered", button_y, (600, 32), color, label,
-                            lambda country_id=country: self.choose_host_country(country_id), image=flag)
-            self.add_list_row(button)
-        ready = self.session.players[host].ready
-        self.elements.append(Button("centered", 550, (200, 36), "green" if ready else "orange",
-                                    "Host Ready" if ready else "Mark Host Ready", self.toggle_ready))
+        self._add_country_rows(countries, self.session.players, self.session.players[host].country_id,
+                               self._lobby_nation_data(), self.choose_host_country)
+        self.elements.append(self._ready_button(self.session.players[host].ready, "Host Ready",
+                                                "Mark Host Ready", self.toggle_ready))
         # Lobby administration ends at game start.  Until then, give the host
         # a direct control beside every guest rather than forcing them to
         # identify a player from an opaque connection ID.
@@ -588,8 +649,8 @@ class Realtime_Lobby(_RealtimeScreen):
                                         lambda target=player.player_id, name=player.name:
                                         self.request_kick(target, name)))
 
-    def additional_events(self, event):
-        self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
+    def _lobby_nation_data(self):
+        return getattr(self.server_map, "nation_data", {})
 
     def choose_host_country(self, country_id):
         try:
@@ -898,24 +959,17 @@ class Realtime_Lobby(_RealtimeScreen):
 
     def additional_draw(self, surface):
         if not self.session: return
-        self.draw_list_scrollbar(surface, c.SCREEN_WIDTH // 2 + 320, 202, 338, width=22)
-        font = fonts.get("small")
         # The host sees the same current configuration summary guests see,
-        # rather than having to infer it from five edit controls.
-        summary = font.render(_lobby_config_summary(self.session.config), True, (230, 230, 230))
-        # The host owns the invite/start/network controls at y=100/150, so
-        # place this read-only summary in the clear title strip above them.
-        surface.blit(summary, summary.get_rect(center=(c.SCREEN_WIDTH // 2, 72)))
+        # rather than having to infer it from five edit controls. The host owns
+        # the invite/start/network controls at y=100/150, so SUMMARY_Y places
+        # this read-only summary in the clear title strip above them.
+        self._draw_lobby_status(surface, self.session.config, self.session.players,
+                                self.session.host_id, self._lobby_nation_data())
         panel = pygame.Rect(10, 200, 290, 251)
         pygame.draw.rect(surface, (50, 35, 90), panel)
         pygame.draw.rect(surface, (150, 120, 220), panel, 2)
         heading = fonts.get("normal").render("Match Setup (Host)", True, (235, 235, 255))
         surface.blit(heading, heading.get_rect(center=(panel.centerx, panel.y + 12)))
-        players = list(self.session.players.values())
-        for index, player in enumerate(players[:5]):
-            text = (f"{player.name} — {_ping_label(player, self.session.host_id)} — "
-                    f"{queries.get_country_display_name(player.country_id, self.server_map.nation_data) if player.country_id else 'No country'} — {'READY' if player.ready else 'waiting'}")
-            surface.blit(font.render(text, True, (230, 230, 230)), (30, 605 + index * 22))
 
 
 class Realtime_Join(_RealtimeScreen):
@@ -935,10 +989,7 @@ class Realtime_Join(_RealtimeScreen):
         self.refresh_ui()
 
     def _lobby_nation_data(self):
-        """The client-side snapshot used to label lobby country assignments."""
-        bundle = getattr(self.client, "map_bundle", {}) if self.client else {}
-        nation_data = bundle.get("snapshot", {}).get("nation_data", {}) if isinstance(bundle, dict) else {}
-        return nation_data if isinstance(nation_data, dict) else {}
+        return _client_nation_data(self.client)
 
     def refresh_ui(self):
         invite_set = bool(self.invite_text)
@@ -1119,10 +1170,12 @@ class Realtime_Lan_Browser(_RealtimeScreen):
         super().update()
 
 
-class Realtime_Remote_Lobby(_RealtimeScreen):
+class Realtime_Remote_Lobby(_RealtimeLobby):
     back_state = "REAL_TIME_MULTIPLAYER"
-    title = "Real-Time Lobby"
-    title_y = 30
+    COUNTRY_LIST_TOP = 175
+    COUNTRY_LIST_BOTTOM = 545
+    READY_BUTTON_Y = 555
+    SUMMARY_Y = 70
 
     def __init__(self):
         super().__init__()
@@ -1137,12 +1190,11 @@ class Realtime_Remote_Lobby(_RealtimeScreen):
         self.scroll_y = 0
         self.refresh_ui()
 
+    def _lobby_nation_data(self):
+        return _client_nation_data(self.client)
+
     def refresh_ui(self):
-        self.elements = [
-            Button(20, 75, "left_ui_button", "pink", "Settings", lambda: self.go_to("SETTINGS"),
-                   image=UI_ICONS.get("settings"), sound_kind="open_settings"),
-            Button(20, 110, "left_ui_button", "pink", "Music", lambda: self.go_to("MUSIC_PLAYER"),
-                   image=UI_ICONS.get("music"), sound_kind="open_music"),
+        self.elements = self._personal_buttons() + [
             Button(20, 145, "left_ui_button", "purple", "Copy Reconnect Code", self.copy_reconnect_code,
                    font_preset="tiny"),
             Button(20, 180, "left_ui_button", "blue", "Rename", self.edit_name),
@@ -1153,36 +1205,12 @@ class Realtime_Remote_Lobby(_RealtimeScreen):
             return
         me = self.view.players.get(self.view.player_id)
         countries = sorted(getattr(self.view, "available_countries", ()), key=str.casefold)
-        list_top, list_bottom = 175, 545
-        self.scroll_content_rect = pygame.Rect(c.SCREEN_WIDTH // 2 - 310, list_top - 8,
-                                                620, list_bottom - list_top + 8)
-        bundle = getattr(self.client, "map_bundle", {}) if self.client else {}
-        nation_data = bundle.get("snapshot", {}).get("nation_data", {}) if isinstance(bundle, dict) else {}
-        if not isinstance(nation_data, dict):
-            nation_data = {}
-        for index, button_y in self.layout_list_rows(
-                len(countries), 38, list_top, pad=8, cull_top=list_top - 8,
-                cull_bottom=list_bottom):
-            country = countries[index]
-            selected = next((p.name for p in self.view.players.values() if p.country_id == country), None)
-            try:
-                flag = flag_surface(country, nation_data)
-            except (KeyError, TypeError, ValueError, pygame.error):
-                flag = None
-            button = Button("centered", button_y, (600, 32),
-                            "blue" if me and me.country_id == country else
-                            "green" if not selected else "grey",
-                            f"{queries.get_country_display_name(country, nation_data)}: {selected or 'Available'}",
-                            lambda picked=country: self.client.send("select_country", {"country_id": picked}),
-                            image=flag)
-            self.add_list_row(button)
+        self._add_country_rows(countries, self.view.players, me.country_id if me else None,
+                               self._lobby_nation_data(),
+                               lambda picked: self.client.send("select_country", {"country_id": picked}))
         if me:
-            self.elements.append(Button("centered", 555, (200, 36), "orange" if not me.ready else "green",
-                                        "Ready" if me.ready else "Mark Ready",
-                                        lambda: self.client.send("ready", {"ready": not me.ready})))
-
-    def additional_events(self, event):
-        self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
+            self.elements.append(self._ready_button(me.ready, "Ready", "Mark Ready",
+                                                    lambda: self.client.send("ready", {"ready": not me.ready})))
 
     def update(self):
         if self.client:
@@ -1269,12 +1297,5 @@ class Realtime_Remote_Lobby(_RealtimeScreen):
 
     def additional_draw(self, surface):
         if self.view:
-            self.draw_list_scrollbar(surface, c.SCREEN_WIDTH // 2 + 320, 167, 378, width=22)
-        if not self.view: return
-        font = fonts.get("small")
-        summary = font.render(_lobby_config_summary(self.view.config), True, (230, 230, 230))
-        surface.blit(summary, summary.get_rect(center=(c.SCREEN_WIDTH // 2, 70)))
-        for index, player in enumerate(list(self.view.players.values())[:5]):
-            text = (f"{player.name} — {_ping_label(player, self.view.host_id)} — "
-                    f"{queries.get_country_display_name(player.country_id, self._lobby_nation_data()) if player.country_id else 'No country'} — {'READY' if player.ready else 'waiting'}")
-            surface.blit(font.render(text, True, (230, 230, 230)), (30, 605 + index * 22))
+            self._draw_lobby_status(surface, self.view.config, self.view.players,
+                                    self.view.host_id, self._lobby_nation_data())

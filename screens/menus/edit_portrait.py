@@ -7,7 +7,7 @@ from ui.background_styles import PORTRAIT_EDITOR_STYLES
 from ui.dialogs import pickers
 from ui.navigation.game_state import GameState
 from ui.widgets import ui_elements
-from ui.widgets.ui_elements import Button, Slider, make_back_button
+from ui.widgets.ui_elements import Button, Slider, make_back_button, make_toggle_button
 
 # --- Layout ---
 PREVIEW_RECT = pygame.Rect(80, 110, 480, 460)
@@ -110,20 +110,16 @@ class Edit_Portrait(GameState):
         # gradient itself: the Stepped button is disabled without it.
         self.strength_slider.disabled = not enabled
         self.bands_slider.disabled = not (enabled and stepped)
-        stepped_button = Button(CONTROLS_X, style_y, "medium", "green" if stepped else "red",
-                                f"Stepped: {'ON' if stepped else 'OFF'}", self.toggle_stepped)
+        stepped_button = make_toggle_button(CONTROLS_X, style_y, "medium", "Stepped", stepped, self.toggle_stepped)
         stepped_button.disabled = not enabled
         dithering = menu.hildehrand_gradient_dithering
-        dithering_button = Button(
-            CONTROLS_X, CONTROLS_Y + 3 * CONTROLS_GAP_Y, "medium",
-            "green" if dithering else "red",
-            f"Dithering: {'ON' if dithering else 'OFF'}", self.toggle_dithering)
+        dithering_button = make_toggle_button(
+            CONTROLS_X, CONTROLS_Y + 3 * CONTROLS_GAP_Y, "medium", "Dithering", dithering, self.toggle_dithering)
         dithering_button.disabled = not (enabled and stepped)
         self.elements = [
             make_back_button(self.exit_screen),
             Button(CONTROLS_X, CONTROLS_Y, "medium", "purple", "Choose Portrait", self.open_picker),
-            Button(CONTROLS_X, gradient_y, "medium", "green" if enabled else "red",
-                   f"Gradient: {'ON' if enabled else 'OFF'}", self.toggle_gradient),
+            make_toggle_button(CONTROLS_X, gradient_y, "medium", "Gradient", enabled, self.toggle_gradient),
             stepped_button,
             dithering_button,
             self.strength_slider,

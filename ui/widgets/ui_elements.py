@@ -816,9 +816,14 @@ def make_back_button(on_click, style="menu", pos=None, label="Back", color="red"
     return Button(x, y, "small", color, label, on_click, sound_kind="back")
 
 
-def toggle_color(is_on):
-    """The button color for a control that is on or off."""
-    return "green" if is_on else "grey"
+def toggle_color(is_selected):
+    """The button color for a row or tab that is selected or not."""
+    return "green" if is_selected else "grey"
+
+
+def on_off_color(is_on):
+    """The button color for a control labelled ON or OFF."""
+    return "green" if is_on else "red"
 
 
 def checkbox_label(text, is_checked):
@@ -828,8 +833,14 @@ def checkbox_label(text, is_checked):
 
 def make_on_off_button(x, y, is_on, on_click):
     """The small ON/OFF button in a list row."""
-    return Button(x, y, "tiny_square", toggle_color(is_on), "ON" if is_on else "OFF", on_click,
+    return Button(x, y, "tiny_square", on_off_color(is_on), "ON" if is_on else "OFF", on_click,
                   font_preset="button_small")
+
+
+def make_toggle_button(x, y, size_preset, label, is_on, on_click, **button_options):
+    """A button labelled "<label>: ON" or "<label>: OFF"."""
+    return Button(x, y, size_preset, on_off_color(is_on), f"{label}: {'ON' if is_on else 'OFF'}",
+                  on_click, **button_options)
 
 
 def make_info_button(x, y, on_click, y_offset=0):
@@ -1050,15 +1061,19 @@ class TextField:
     Click to focus; typing while focused edits `.text`. Enter calls on_submit
     (if given) and unfocuses; Escape just unfocuses. Screens that need Tab-like
     behaviour between fields should defocus other fields themselves on click.
+    on_change receives the new text after each edit, for a screen that applies
+    the value while the player types.
     """
     def __init__(self, x, y, width, height, initial_text="", numeric=False,
-                max_length=None, on_submit=None, label=None):
+                max_length=None, on_submit=None, label=None, on_change=None, pad_x=8):
         self.rect = pygame.Rect(x, y, width, height)
         self.text = str(initial_text)
         self.numeric = numeric
         self.max_length = max_length
         self.on_submit = on_submit
         self.label = label
+        self.on_change = on_change
+        self.pad_x = pad_x
         self.active = False
         self.visible = True
         self.click_guard = None
@@ -1082,8 +1097,12 @@ class TextField:
         if not self.active or event.type != pygame.KEYDOWN:
             return
 
-        self.text, status = process_text_input(event, self.text, max_length=self.max_length,
-                                                validation_func=self._valid_char)
+        text, status = process_text_input(event, self.text, max_length=self.max_length,
+                                          validation_func=self._valid_char)
+        if text != self.text:
+            self.text = text
+            if self.on_change:
+                self.on_change(text)
         if status == "SUBMIT":
             self.active = False
             if self.on_submit:
@@ -1100,7 +1119,7 @@ class TextField:
             label_surf = label_font.render(self.label, True, c.UI_TEXT_BRIGHT)
             surface.blit(label_surf, label_surf.get_rect(midright=(self.rect.x - 10, self.rect.centery)))
 
-        draw_text_box(surface, self.rect, self.text, active=self.active, pad_x=8)
+        draw_text_box(surface, self.rect, self.text, active=self.active, pad_x=self.pad_x)
 
 def _clipboard_text():
     """Returns OS clipboard text, or an empty string when it is unavailable."""

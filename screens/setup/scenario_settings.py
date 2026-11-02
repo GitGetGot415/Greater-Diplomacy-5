@@ -1,6 +1,6 @@
 import pygame
 from ui.navigation.game_state import GameState
-from ui.widgets.ui_elements import Button, Slider, parse_pos, make_back_button, make_info_button
+from ui.widgets.ui_elements import Button, Slider, parse_pos, make_back_button, make_info_button, make_toggle_button
 import data.constants as c
 from data import queries
 from ui import dialogs
@@ -194,9 +194,8 @@ class Scenario_Settings(GameState):
             is_on = queries.get_scenario_flag(key, default, self.settings)
             self.elements.append(self.make_info_button(LEFT_INFO_X, y, label, tooltip))
             self.elements.append(
-                Button(LEFT_BTN_X, y, "scenario_setting_button", "green" if is_on else "red",
-                       f"{label}: {'ON' if is_on else 'OFF'}",
-                       lambda k=key, d=default: self.toggle(k, d), font_preset="button_small")
+                make_toggle_button(LEFT_BTN_X, y, "scenario_setting_button", label, is_on,
+                                   lambda k=key, d=default: self.toggle(k, d), font_preset="button_small")
             )
 
         self.elements.append(self.build_fog_slider())
@@ -263,8 +262,8 @@ class Scenario_Settings(GameState):
 
         elements = [
             self.make_info_button(AI_INFO_X, AI_TOP_Y, "AI", AI_TOGGLE_TOOLTIP),
-            Button(AI_BTN_X, AI_TOP_Y, "scenario_setting_button", "red" if ai_disabled else "green",
-                   "AI: OFF" if ai_disabled else "AI: ON", self.toggle_ai_disabled, font_preset="button_small"),
+            make_toggle_button(AI_BTN_X, AI_TOP_Y, "scenario_setting_button", "AI", not ai_disabled,
+                               self.toggle_ai_disabled, font_preset="button_small"),
             self.make_info_button(AI_INFO_X, AI_TOP_Y + ROW_H, "Turns Before War", AI_TURNS_TOOLTIP),
             self.build_ai_slider("turns_slider", AI_TOP_Y + ROW_H, "turns_to_wait_before_war",
                                  c.TURNS_TO_WAIT_BEFORE_WAR, MAX_TURNS_BEFORE_WAR,

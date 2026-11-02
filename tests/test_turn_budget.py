@@ -572,20 +572,27 @@ class CallMeterTests(Patcher):
         self.patch(ai_handler, "_CALL_SECONDS", [0.0])
 
     def test_a_request_is_timed(self):
-        self.patch(ai_handler, "_dispatch", lambda *a: time.sleep(0.02) or {"message": "hi"})
+        clock = FakeClock(100)
+        self.patch(ai_handler, "time", clock)
+        def reply(*args):
+            clock.now += 2
+            return {"message": "hi"}
+        self.patch(ai_handler, "_dispatch", reply)
         ai_handler._call_provider("CLAUDE", "s", "u", None)
-        self.assertGreater(ai_handler.typical_call_seconds(), 0.01)
+        self.assertEqual(ai_handler.typical_call_seconds(), 2)
 
     def test_a_request_that_fails_is_still_timed(self):
         """A provider that has gone slow and then errors is exactly the case
         the estimate exists for."""
+        clock = FakeClock(100)
+        self.patch(ai_handler, "time", clock)
         def boom(*a):
-            time.sleep(0.02)
+            clock.now += 3
             raise RuntimeError("provider died")
         self.patch(ai_handler, "_dispatch", boom)
         with self.assertRaises(RuntimeError):
             ai_handler._call_provider("CLAUDE", "s", "u", None)
-        self.assertGreater(ai_handler.typical_call_seconds(), 0.01)
+        self.assertEqual(ai_handler.typical_call_seconds(), 3)
 
     def test_one_slow_call_does_not_rewrite_the_estimate(self):
         """A cold start costs three times a warm call on the same machine;

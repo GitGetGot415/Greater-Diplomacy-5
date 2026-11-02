@@ -15,9 +15,8 @@ import pygame
 import data.constants as c
 from ui.background_styles import EDITOR_PANEL_STYLES
 from data import queries
-from ui.navigation.game_state import EditorOverlayScreen, NationListOverlayScreen
-from ui.widgets.ui_elements import Button, Slider, make_back_button
-from ui.navigation.screen_runner import _run_pygame_sub_screen
+from ui.navigation.game_state import EditorSliderScreen, NationListOverlayScreen
+from ui.widgets.ui_elements import Button, Slider
 from ui.rendering.font_manager import fonts
 from map_logic.ai import ai_personality
 
@@ -31,11 +30,11 @@ TRAIT_POLES = {
 }
 
 
-class Personality_Edit_Screen(EditorOverlayScreen):
-    PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_SPECIAL
+class Personality_Edit_Screen(EditorSliderScreen):
     PANEL_STYLE = EDITOR_PANEL_STYLES["personality"]
+    RESET_LABEL = "Reset to Procedural"
 
-    SLIDER_W = 300
+    SLIDER_TOP = 90
     ROW_STEP = 62
 
     def __init__(self, map_screen, country_id):
@@ -48,29 +47,19 @@ class Personality_Edit_Screen(EditorOverlayScreen):
         traits = ai_personality.get(map_screen.nation_data, country_id,
                                     map_screen.scenario_settings)
         self.values = {t: float(traits.get(t, 0.5)) for t in ai_personality.TRAITS}
-        self.sliders = {}
         self.refresh_ui()
 
     def _set(self, trait, value):
         self.values[trait] = value
 
-    def refresh_ui(self):
+    def slider_rows(self):
         p = self.panel_rect
-        x = p.x + 150
-        y = p.y + 90
-
-        self.sliders = {}
-        for name in ai_personality.TRAITS:
-            slider = Slider(x, y, self.SLIDER_W, name.capitalize(), self.values[name],
-                            lambda v, n=name: self._set(n, v))
-            self.sliders[name] = slider
-            y += self.ROW_STEP
-
-        self.elements = [
-            make_back_button(self.exit_screen, style="map"),
-            Button(p.x + 30, p.bottom - 55, "medium", "grey", "Reset to Procedural", self.reset),
-            Button(p.right - 190, p.bottom - 55, "medium", "green", "Save", self.save),
-        ] + list(self.sliders.values())
+        rows = []
+        for row, name in enumerate(ai_personality.TRAITS):
+            slider = Slider(p.x + self.SLIDER_X, p.y + self.SLIDER_TOP + row * self.ROW_STEP, self.SLIDER_W,
+                            name.capitalize(), self.values[name], lambda v, n=name: self._set(n, v))
+            rows.append((slider, *TRAIT_POLES.get(name, ("low", "high"))))
+        return rows
 
     def reset(self):
         """Back to the seeded values, and back to being regenerated on load."""
@@ -94,17 +83,9 @@ class Personality_Edit_Screen(EditorOverlayScreen):
         return queries.get_country_display_name(self.country_id, self.map_screen.nation_data) + " Personality"
 
     def draw_content(self, surface):
+        super().draw_content(surface)
         p = self.panel_rect
-        self.draw_panel(surface)
-
         small = fonts.get("small")
-        for name, slider in self.sliders.items():
-            low, high = TRAIT_POLES.get(name, ("low", "high"))
-            surface.blit(small.render(low, True, c.UI_TEXT_MUTED),
-                         (p.x + 30, slider.rect.y - 2))
-            hi_surf = small.render(high, True, c.UI_TEXT_MUTED)
-            surface.blit(hi_surf, (slider.rect.right + 14, slider.rect.y - 2))
-
         note = ai_personality.describe(self.map_screen.nation_data, self.country_id,
                                        self.map_screen.scenario_settings)
         summary = small.render(f"Currently saved as: {note}", True, c.UI_TEXT_DIM)
@@ -112,10 +93,11 @@ class Personality_Edit_Screen(EditorOverlayScreen):
 
 
 class Personality_List_Screen(NationListOverlayScreen):
-    scroll_anywhere = True
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_SPECIAL
     PANEL_STYLE = EDITOR_PANEL_STYLES["personality_list"]
     PANEL_TITLE = "AI Personalities"
+    LIST_NOTE = "Unmarked nations use procedural traits, seeded from the scenario."
+    EDIT_SCREEN = Personality_Edit_Screen
 
     def country_button(self, country_id, x, y):
         stored = self.map_screen.nation_data.get(country_id, {}).get("personality") or {}
@@ -124,14 +106,3 @@ class Personality_List_Screen(NationListOverlayScreen):
         label = f"[AUTHORED] {country_name}" if authored else country_name
         return Button(x, y, "list_row", "green" if authored else "blue", label,
                       lambda cid=country_id: self.edit(cid))
-
-    def edit(self, cid):
-        _run_pygame_sub_screen(self.map_screen, Personality_Edit_Screen(self.map_screen, cid),
-                               on_done=self.refresh_ui)
-
-    def draw_list_header(self, surface):
-        p = self.panel_rect
-        note = fonts.get("small").render(
-            "Unmarked nations use procedural traits, seeded from the scenario.",
-            True, c.UI_TEXT_MUTED)
-        surface.blit(note, (p.x + 24, p.y + 58))

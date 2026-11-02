@@ -161,10 +161,11 @@ class CheckboxListScreen(ModalScreen):
             self.add_list_row(btn)
 
         btn_y = p.bottom - 52
-        self.elements.append(Button(p.x + self.PAD, btn_y, "small", "red", "Cancel", self.exit_screen, sound_kind="back"))
-        confirm_w, _h = c.SIZES["medium"]
-        self.elements.append(Button(p.right - self.PAD - confirm_w, btn_y - 5, "medium", "green",
+        self.elements.append(Button(p.x + self.PAD, btn_y - 5, "medium", "green",
                                     self.confirm_label, self._confirm))
+        cancel_w, _h = c.SIZES["small"]
+        self.elements.append(Button(p.right - self.PAD - cancel_w, btn_y, "small", "red", "Cancel",
+                                    self.exit_screen, sound_kind="back"))
 
     def additional_events(self, event):
         self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")

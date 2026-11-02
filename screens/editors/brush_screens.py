@@ -38,7 +38,7 @@ class Convoy_Converter_Screen(EditorOverlayScreen):
         p = self.panel_rect
         self.elements = [
             make_back_button(self.exit_screen, style="map"),
-            Button(p.centerx - 110, p.bottom - 55, "medium", "green", "Save Changes", self.save),
+            Button(self.centered_x("medium"), p.bottom - 55, "medium", "green", "Save Changes", self.save),
         ]
 
         units = self.province.get("units", [])
@@ -109,18 +109,14 @@ class Resource_Brush_Screen(EditorOverlayScreen):
 
         self.elements = [
             make_back_button(self.exit_screen, style="map"),
-            Button(p.centerx - 130, p.y + 90, "medium", "blue", f"Resource: {self.selected_resource}", self.pick_resource),
+            Button(self.centered_x("medium"), p.y + 90, "medium", "blue", f"Resource: {self.selected_resource}", self.pick_resource),
             Button(p.centerx - 100, p.bottom - 55, "medium", "purple", "Confirm Selection", self.confirm),
             self.amount_field,
         ]
 
     def pick_resource(self):
-        def on_pick(val):
-            self.selected_resource = val
-            self.refresh_ui()
-        pickers.open_listbox_selector(self.map_screen, "Select Resource Type", "Choose a resource type:",
-                                      self.RESOURCE_TYPES, on_pick)
-        self.refresh_ui()
+        pickers.open_attribute_picker(self, "selected_resource", "Select Resource Type",
+                                      "Choose a resource type:", self.RESOURCE_TYPES)
 
     def confirm(self):
         try:
@@ -246,9 +242,6 @@ class Bulk_Edit_Screen(EditorOverlayScreen):
             "Volunteers and resources held for offers return home. Territory, cores, and message history stay unchanged.\n"
             "This clears Map Undo and Redo history. Save a copy first if you need the current setup.", apply)
 
-    def draw_content(self, surface):
-        self.draw_panel(surface)
-
 
 class Clear_Map_Screen(EditorOverlayScreen):
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_DANGER
@@ -299,62 +292,38 @@ class Clear_Map_Screen(EditorOverlayScreen):
 
         self.elements = [
             make_back_button(self.exit_screen, style="map"),
-            Button(p.centerx - 130, p.bottom - 55, "editor_ui", "red", "Confirm Clear", self.confirm_clear),
+            Button(self.centered_x("editor_ui"), p.bottom - 55, "editor_ui", "red", "Confirm Clear", self.confirm_clear),
             opt_btn,
         ]
 
-        y = p.y + 190
+        rows = []
         if self.needs_country():
-            label = self.selected_country or "Select Country..."
-            btn = Button(p.x + 30, y, "editor_ui", "orange", f"Country: {label}", self.pick_country)
-            btn.rect.width = p.width - 60
-            self.elements.append(btn)
-            y += 60
+            rows.append((f"Country: {self.selected_country or 'Select Country...'}", self.pick_country))
         if self.needs_unit_type():
             label = queries.get_unit_display_name(self.selected_unit_type, context=self.map_screen) or "Select Unit..."
-            btn = Button(p.x + 30, y, "editor_ui", "orange", f"Unit: {label}", self.pick_unit_type)
-            btn.rect.width = p.width - 60
-            self.elements.append(btn)
-            y += 60
+            rows.append((f"Unit: {label}", self.pick_unit_type))
         if self.needs_resource_type():
-            label = self.selected_resource_type or "Select Resource..."
-            btn = Button(p.x + 30, y, "editor_ui", "orange", f"Resource: {label}", self.pick_resource_type)
+            rows.append((f"Resource: {self.selected_resource_type or 'Select Resource...'}", self.pick_resource_type))
+        for row, (text, callback) in enumerate(rows):
+            btn = Button(p.x + 30, p.y + 190 + row * 60, "editor_ui", "orange", text, callback)
             btn.rect.width = p.width - 60
             self.elements.append(btn)
-            y += 60
 
     def pick_option(self):
-        def on_pick(val):
-            self.selected_option = val
-            self.refresh_ui()
-        pickers.open_listbox_selector(self.map_screen, "Select What to Clear", "Choose an option:", self.OPTIONS, on_pick)
-        self.refresh_ui()
+        pickers.open_attribute_picker(self, "selected_option", "Select What to Clear", "Choose an option:", self.OPTIONS)
 
     def pick_country(self):
-        def on_pick(val):
-            self.selected_country = val
-            self.refresh_ui()
-        pickers.open_listbox_selector(self.map_screen, "Select Country", "Choose a country:",
-                                      queries.country_picker_items(
-                                          self.available_countries,
-                                          self.map_screen.nation_data), on_pick)
-        self.refresh_ui()
+        pickers.open_attribute_picker(self, "selected_country", "Select Country", "Choose a country:",
+                                      queries.country_picker_items(self.available_countries,
+                                                                   self.map_screen.nation_data))
 
     def pick_unit_type(self):
-        def on_pick(val):
-            self.selected_unit_type = val
-            self.refresh_ui()
-        pickers.open_listbox_selector(self.map_screen, "Select Unit Type", "Choose a unit type:",
-                                      queries.unit_picker_items(self.available_unit_types, context=self.map_screen), on_pick)
-        self.refresh_ui()
+        pickers.open_attribute_picker(self, "selected_unit_type", "Select Unit Type", "Choose a unit type:",
+                                      queries.unit_picker_items(self.available_unit_types, context=self.map_screen))
 
     def pick_resource_type(self):
-        def on_pick(val):
-            self.selected_resource_type = val
-            self.refresh_ui()
-        pickers.open_listbox_selector(self.map_screen, "Select Resource", "Choose a resource:",
-                                      self.RESOURCE_TYPES, on_pick)
-        self.refresh_ui()
+        pickers.open_attribute_picker(self, "selected_resource_type", "Select Resource", "Choose a resource:",
+                                      self.RESOURCE_TYPES)
 
     def confirm_clear(self):
         opt = self.selected_option
@@ -420,6 +389,3 @@ class Clear_Map_Screen(EditorOverlayScreen):
             self.done = True
 
         dialogs.ask_yes_no("Confirm Clear", msg, on_confirm)
-
-    def draw_content(self, surface):
-        self.draw_panel(surface)

@@ -28,6 +28,10 @@ import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_LOADER = os.path.join(os.path.dirname(HERE), "mod_loader.py")
+sys.path.insert(0, os.path.dirname(HERE))
+
+# The standalone command must find the project's shared test helpers.
+from tests import run_process_probes
 
 # A game function that touches the filesystem, for the hop-through case.
 IO_HELPER = (
@@ -248,10 +252,17 @@ class ModLoaderSecurityTests(unittest.TestCase):
     """Run each sandbox case in its own interpreter during normal discovery."""
 
     def test_sandbox_cases(self):
-        for name, _detail, check in CASES:
+        for name, _detail, (ok, output) in run_cases(DEFAULT_LOADER):
             with self.subTest(case=name):
-                ok, output = check(DEFAULT_LOADER)
                 self.assertTrue(ok, output)
+
+
+def run_cases(loader):
+    """Run each case with separate files and interpreters."""
+    def check(item):
+        name, detail, probe = item
+        return name, detail, probe(loader)
+    return run_process_probes(check, CASES)
 
 
 def main():
@@ -267,8 +278,7 @@ def main():
     print(f"mod_loader under test: {loader}\n")
 
     failed = 0
-    for name, detail, fn in CASES:
-        ok, out = fn(loader)
+    for name, detail, (ok, out) in run_cases(loader):
         print(f"[{'PASS' if ok else 'FAIL'}] {name} -- {detail}")
         if not ok:
             failed += 1

@@ -1,17 +1,16 @@
 import os
-from ui.navigation.game_state import GameState
+from ui.navigation.game_state import RefreshingMenuListScreen
 from ui.widgets.ui_elements import Button, make_back_button
 import data.constants as c
 from data import queries
 from ui.dialogs import pickers
 from screens.setup import map_refresh
-from ui.panels import turn_progress
 from screens.setup.scenario_settings import Scenario_Settings
 from screens.editors.historical_leaders_editor import open_historical_leaders_editor
 from ui.dialogs.checkbox_list_screen import CheckboxItem
 
 
-class New_Game(GameState):
+class New_Game(RefreshingMenuListScreen):
     back_state = "MENU"
 
     # sub_state -> (header text, scenario directory). None means the category menu.
@@ -28,17 +27,13 @@ class New_Game(GameState):
         self.selected_scenario_path = None
         self.settings_data = {"fog_of_war": c.DEFAULT_FOG_OF_WAR}
         self.sub_state = "CATEGORY" # "CATEGORY", "HISTORICAL", "ALTERNATE"
-
-        # --- REFRESH STATE ---
-        self.is_refreshing = False
-        self.refresh_total = 0
-        self.refresh_completed = 0
-        self.refresh_status = ""
-
         self.refresh_ui()
 
     def get_title(self):
         return self.CATEGORIES[self.sub_state][0]
+
+    def has_menu_list(self):
+        return self.sub_state != "CATEGORY"
 
     @property
     def scenario_dir(self):
@@ -84,32 +79,6 @@ class New_Game(GameState):
         # Standard centered layout for all playable scenarios
         self.add_menu_list([(name, name) for name in scenarios],
                            lambda name, d=scenario_dir: self.start_scenario(name, d))
-
-    def update(self):
-        super().update()
-
-        # Forcefully hide all UI buttons while the loading screen is active
-        for el in self.elements:
-            el.visible = not self.is_refreshing
-
-    def additional_events(self, event):
-        if self.sub_state != "CATEGORY":
-            self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
-
-    def handle_events(self, events):
-        # GameState.handle_events already dispatches additional_events, so this
-        # only adds the "ignore input while refreshing" gate.
-        if self.is_refreshing:
-            return
-        super().handle_events(events)
-
-    def additional_draw(self, surface):
-        if self.sub_state != "CATEGORY":
-            self.draw_menu_list_scrollbar(surface)
-
-        # --- Draw Progress Bar Overlay ---
-        if self.is_refreshing:
-            turn_progress.draw_simple_refresh_bar(surface, self.refresh_status, self.refresh_completed, self.refresh_total)
 
     def scenario_settings(self):
         Scenario_Settings.back_state = "NEW_GAME"

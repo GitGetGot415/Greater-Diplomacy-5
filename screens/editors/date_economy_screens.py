@@ -4,19 +4,20 @@ import pygame
 import data.constants as c
 from ui.background_styles import EDITOR_PANEL_STYLES
 from data import queries
-from ui.navigation.game_state import EditorOverlayScreen, NationListOverlayScreen
-from ui.widgets.ui_elements import Button, TextField, make_back_button
+from ui.navigation.game_state import EditorFormScreen, NationListOverlayScreen
+from ui.widgets.ui_elements import Button, TextField
 from ui import dialogs
-from ui.navigation.screen_runner import _run_pygame_sub_screen
 
 
-class Editor_Metadata_Screen(EditorOverlayScreen):
+class Editor_Metadata_Screen(EditorFormScreen):
     """Edit scenario information as a draft until Apply is selected."""
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_EDIT
     PANEL_STYLE = EDITOR_PANEL_STYLES["metadata"]
     PANEL_TITLE = "Metadata"
     PANEL_WIDTH, PANEL_HEIGHT = 780, 360
-    FIELD_LEFT, FIELD_TOP, FIELD_GAP, FIELD_HEIGHT = 205, 80, 70, 40
+    FIELD_LEFT, FIELD_HEIGHT = 205, 40
+    FIELD_CENTER_OFFSET = FIELD_LEFT - PANEL_WIDTH // 2
+    ACTION_LABEL = "Apply Metadata"
 
     def __init__(self, map_screen):
         super().__init__(map_screen, pygame.Rect(0, 0, self.PANEL_WIDTH, self.PANEL_HEIGHT))
@@ -29,18 +30,6 @@ class Editor_Metadata_Screen(EditorOverlayScreen):
                        for key, label, value in values}
         self.refresh_ui()
 
-    @property
-    def listening_for(self):
-        return any(field.active for field in self.fields.values())
-
-    def refresh_ui(self):
-        p = self.panel_rect
-        for row, field in enumerate(self.fields.values()):
-            field.rect.topleft = (p.x + self.FIELD_LEFT, p.y + self.FIELD_TOP + row * self.FIELD_GAP)
-        self.elements = [make_back_button(self.exit_screen, style="map"),
-                         Button(p.centerx - 100, p.bottom - 55, "medium", "green", "Apply Metadata", self.apply)]
-        self.elements.extend(self.fields.values())
-
     def apply(self):
         try:
             queries.set_editor_metadata(self.map_screen, *(self.fields[key].text
@@ -51,51 +40,36 @@ class Editor_Metadata_Screen(EditorOverlayScreen):
         self.map_screen.show_feedback("Scenario metadata updated. Save the map to write it to disk.")
         self.done = True
 
-    def draw_content(self, surface):
-        self.draw_panel(surface)
-
 # ==========================================
 # SET START DATE
 # ==========================================
 
-class Editor_Date_Screen(EditorOverlayScreen):
+class Editor_Date_Screen(EditorFormScreen):
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_EDIT
     PANEL_STYLE = EDITOR_PANEL_STYLES["date"]
     PANEL_TITLE = "Set Start Date"
+    FIELD_CENTER_OFFSET = -30
+    ACTION_LABEL = "Apply Date"
+    ACTION_COLOR = "orange"
 
     def __init__(self, map_screen):
         super().__init__(map_screen, pygame.Rect(0, 0, 440, 420))
 
         tm = map_screen.time_manager
-        field_x = self.panel_rect.centerx - 30
-        field_w, field_h = 160, 40
-        self.day_field = TextField(field_x, 0, field_w, field_h, str(tm.day), numeric=True, label="Day (1-30):")
-        self.month_field = TextField(field_x, 0, field_w, field_h, str(tm.month_index + 1), numeric=True, label="Month (1-12):")
-        self.year_field = TextField(field_x, 0, field_w, field_h, str(tm.year), numeric=True, label="Year:")
         dpt = queries.get_days_per_turn(map_screen.scenario_settings)
-        self.dpt_field = TextField(field_x, 0, field_w, field_h, str(dpt), numeric=True, label="Days/Turn:")
+        values = (("day", "Day (1-30):", tm.day), ("month", "Month (1-12):", tm.month_index + 1),
+                  ("year", "Year:", tm.year), ("days_per_turn", "Days/Turn:", dpt))
+        self.fields = {key: TextField(0, 0, 160, 40, str(value), numeric=True, label=label)
+                       for key, label, value in values}
 
         self.refresh_ui()
 
-    def refresh_ui(self):
-        p = self.panel_rect
-        self.day_field.rect.topleft = (p.centerx - 30, p.y + 80)
-        self.month_field.rect.topleft = (p.centerx - 30, p.y + 150)
-        self.year_field.rect.topleft = (p.centerx - 30, p.y + 220)
-        self.dpt_field.rect.topleft = (p.centerx - 30, p.y + 290)
-
-        self.elements = [
-            make_back_button(self.exit_screen, style="map"),
-            Button(p.centerx - 90, p.bottom - 55, "medium", "orange", "Apply Date", self.apply_date),
-            self.day_field, self.month_field, self.year_field, self.dpt_field,
-        ]
-
-    def apply_date(self):
+    def apply(self):
         try:
-            d = int(self.day_field.text)
-            m = int(self.month_field.text) - 1
-            y = int(self.year_field.text)
-            b_dpt = int(self.dpt_field.text)
+            d = int(self.fields["day"].text)
+            m = int(self.fields["month"].text) - 1
+            y = int(self.fields["year"].text)
+            b_dpt = int(self.fields["days_per_turn"].text)
         except ValueError:
             dialogs.show_error("Error", "Please enter valid integers.")
             return
@@ -126,16 +100,17 @@ class Editor_Date_Screen(EditorOverlayScreen):
         self.map_screen.show_feedback(feedback)
         self.done = True
 
-    def draw_content(self, surface):
-        self.draw_panel(surface)
-
 # ==========================================
 # STARTING ECONOMY EDITOR
 # ==========================================
 
-class Starting_Economy_Edit_Screen(EditorOverlayScreen):
+class Starting_Economy_Edit_Screen(EditorFormScreen):
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_INFO
     PANEL_STYLE = EDITOR_PANEL_STYLES["starting_economy"]
+    FIELD_CENTER_OFFSET = -20
+    FIELD_TOP = 90
+    FIELD_GAP = 60
+    ACTION_LABEL = "Save Economy"
 
     def __init__(self, map_screen, country_id):
         super().__init__(map_screen, pygame.Rect(0, 0, 400, 360))
@@ -149,19 +124,7 @@ class Starting_Economy_Edit_Screen(EditorOverlayScreen):
 
         self.refresh_ui()
 
-    def refresh_ui(self):
-        p = self.panel_rect
-        y = p.y + 90
-        for field in self.fields.values():
-            field.rect.topleft = (p.centerx - 20, y)
-            y += 60
-
-        self.elements = [
-            make_back_button(self.exit_screen, style="map"),
-            Button(p.centerx - 100, p.bottom - 55, "medium", "green", "Save Economy", self.save),
-        ] + list(self.fields.values())
-
-    def save(self):
+    def apply(self):
         data = self.map_screen.nation_data.get(self.country_id)
         if data:
             for res, field in self.fields.items():
@@ -176,14 +139,11 @@ class Starting_Economy_Edit_Screen(EditorOverlayScreen):
     def get_panel_title(self):
         return queries.get_country_display_name(self.country_id, self.map_screen.nation_data) + " Economy"
 
-    def draw_content(self, surface):
-        self.draw_panel(surface)
-
 class Starting_Economy_List_Screen(NationListOverlayScreen):
-    scroll_anywhere = True
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_CONFIRM
     PANEL_STYLE = EDITOR_PANEL_STYLES["starting_economy_list"]
     PANEL_TITLE = "Starting Economy Editor"
+    EDIT_SCREEN = Starting_Economy_Edit_Screen
 
     def list_header_elements(self):
         p = self.panel_rect
@@ -198,9 +158,6 @@ class Starting_Economy_List_Screen(NationListOverlayScreen):
         label = f"[MODIFIED] {country_name}" if is_modified else country_name
         return Button(x, y, "list_row", "blue", label,
                       lambda cid=country_id: self.edit(cid))
-
-    def edit(self, cid):
-        _run_pygame_sub_screen(self.map_screen, Starting_Economy_Edit_Screen(self.map_screen, cid), on_done=self.refresh_ui)
 
     def reset_all(self):
         def on_confirm(ok):

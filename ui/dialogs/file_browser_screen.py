@@ -438,12 +438,16 @@ class FileBrowserScreen(ModalScreen):
 
         # -- Bottom bar
         btn_y = panel.bottom - 56
-        self.elements.append(Button(panel.x + self.SIDEBAR_OFF, btn_y, "small", "red", "Cancel", self.exit_screen, sound_kind="back"))
+        confirm_w, _confirm_h = c.SIZES["medium"]
+        confirm_btn = Button(panel.x + self.SIDEBAR_OFF, btn_y - 5, "medium", "green",
+                             self._confirm_text(), self._confirm)
+        confirm_btn.apply_state(enabled=self._has_valid_selection(), color="green")
+        self.elements.append(confirm_btn)
 
         # The toggles carry longer labels than a button font fits, so they drop a size.
         tool_w, _tool_h = c.SIZES["browser_tool"]
         tool_font = fonts.get("normal")
-        tool_x = panel.x + self.SIDEBAR_OFF + 120
+        tool_x = panel.x + self.SIDEBAR_OFF + confirm_w + 20
         hidden_btn = Button(tool_x, btn_y, "browser_tool", "light_blue",
                             "Hidden files: On" if self.show_hidden else "Hidden files: Off",
                             self._toggle_hidden, font_preset="normal")
@@ -461,11 +465,9 @@ class FileBrowserScreen(ModalScreen):
             filter_btn.is_selected = not self.show_all_types
             self.elements.append(filter_btn)
 
-        confirm_w, _confirm_h = c.SIZES["medium"]
-        confirm_btn = Button(panel.right - self.SIDEBAR_OFF - confirm_w, btn_y - 5, "medium", "green",
-                             self._confirm_text(), self._confirm)
-        confirm_btn.apply_state(enabled=self._has_valid_selection(), color="green")
-        self.elements.append(confirm_btn)
+        cancel_w, _cancel_h = c.SIZES["small"]
+        self.elements.append(Button(panel.right - self.SIDEBAR_OFF - cancel_w, btn_y, "small", "red", "Cancel",
+                                    self.exit_screen, sound_kind="back"))
 
     def additional_events(self, event):
         self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")

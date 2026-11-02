@@ -21,6 +21,14 @@ def open_listbox_selector(game_state, title, prompt, items, on_confirm_callback,
     _run_pygame_sub_screen(game_state, screen)
 
 
+def open_attribute_picker(screen, attr, title, prompt, items):
+    """Opens a listbox that stores the picked value on screen.attr and rebuilds the screen."""
+    def on_pick(value):
+        setattr(screen, attr, value)
+        screen.refresh_ui()
+    open_listbox_selector(screen.map_screen, title, prompt, items, on_pick)
+
+
 def _clear_phantom_hover(game_state):
     """Drops the hover a blocking sub-screen left behind, like _run_pygame_sub_screen does."""
     host = getattr(game_state, "map_screen", None) or game_state

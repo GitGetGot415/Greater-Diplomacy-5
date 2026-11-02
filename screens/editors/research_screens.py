@@ -126,7 +126,6 @@ class Research_Edit_Screen(EditorOverlayScreen):
         self.draw_list_scrollbar(surface, p.right - 15, p.y + 60, view_h)
 
 class Research_List_Screen(NationListOverlayScreen):
-    scroll_anywhere = True
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_EDIT
     PANEL_STYLE = EDITOR_PANEL_STYLES["research_list"]
     PANEL_TITLE = "Map Research Editor"

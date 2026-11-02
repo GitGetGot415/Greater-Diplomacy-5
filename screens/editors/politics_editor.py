@@ -17,9 +17,8 @@ import pygame
 import data.constants as c
 from ui.background_styles import EDITOR_PANEL_STYLES
 from data import queries
-from ui.navigation.game_state import EditorOverlayScreen, NationListOverlayScreen
-from ui.widgets.ui_elements import Button, Slider, make_back_button
-from ui.navigation.screen_runner import _run_pygame_sub_screen
+from ui.navigation.game_state import EditorSliderScreen, NationListOverlayScreen
+from ui.widgets.ui_elements import Button, Slider
 from ui.rendering.font_manager import fonts
 from map_logic import politics
 
@@ -36,11 +35,11 @@ def _from_slider(fraction):
     return politics.clamp(c.POLITICS_MIN + fraction * span)
 
 
-class Politics_Edit_Screen(EditorOverlayScreen):
-    PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_SPECIAL
+class Politics_Edit_Screen(EditorSliderScreen):
     PANEL_STYLE = EDITOR_PANEL_STYLES["politics"]
+    RESET_LABEL = "Reset to Centre"
 
-    SLIDER_W = 300
+    SLIDER_Y = 150
 
     def __init__(self, map_screen, country_id):
         super().__init__(map_screen, pygame.Rect(0, 0, 520, 400))
@@ -52,17 +51,11 @@ class Politics_Edit_Screen(EditorOverlayScreen):
     def _set(self, fraction):
         self.value = _from_slider(fraction)
 
-    def refresh_ui(self):
+    def slider_rows(self):
         p = self.panel_rect
-        self.slider = Slider(p.x + 150, p.y + 150, self.SLIDER_W,
+        self.slider = Slider(p.x + self.SLIDER_X, p.y + self.SLIDER_Y, self.SLIDER_W,
                              "Political Position", _to_slider(self.value), self._set)
-
-        self.elements = [
-            make_back_button(self.exit_screen, style="map"),
-            Button(p.x + 30, p.bottom - 55, "medium", "grey", "Reset to Centre", self.reset),
-            Button(p.right - 190, p.bottom - 55, "medium", "green", "Save", self.save),
-            self.slider,
-        ]
+        return [(self.slider, "libertarian", "authoritarian")]
 
     def reset(self):
         self.value = c.POLITICS_START
@@ -84,14 +77,9 @@ class Politics_Edit_Screen(EditorOverlayScreen):
             self.country_id, self.map_screen.nation_data)
 
     def draw_content(self, surface):
+        super().draw_content(surface)
         p = self.panel_rect
-        self.draw_panel(surface)
-
         small = fonts.get("small")
-        surface.blit(small.render("libertarian", True, c.UI_TEXT_MUTED),
-                     (p.x + 30, self.slider.rect.y - 2))
-        surface.blit(small.render("authoritarian", True, c.UI_TEXT_MUTED),
-                     (self.slider.rect.right + 14, self.slider.rect.y - 2))
 
         # The brighter of the palette's two shades: these are button fills, and
         # the base one is chosen to sit under white text rather than to be it.
@@ -109,10 +97,11 @@ class Politics_Edit_Screen(EditorOverlayScreen):
 
 
 class Politics_List_Screen(NationListOverlayScreen):
-    scroll_anywhere = True
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_SPECIAL
     PANEL_STYLE = EDITOR_PANEL_STYLES["politics_list"]
     PANEL_TITLE = "Starting Politics"
+    LIST_NOTE = "Blue libertarian, green liberal, yellow centrist, orange statist, red authoritarian."
+    EDIT_SCREEN = Politics_Edit_Screen
 
     def country_button(self, country_id, x, y):
         value = politics.value(self.map_screen.nation_data, country_id)
@@ -124,14 +113,3 @@ class Politics_List_Screen(NationListOverlayScreen):
         # map opens uniformly yellow because centrist *is* a position.
         return Button(x, y, "list_row", politics.palette(value), label,
                       lambda cid=country_id: self.edit(cid))
-
-    def edit(self, cid):
-        _run_pygame_sub_screen(self.map_screen, Politics_Edit_Screen(self.map_screen, cid),
-                               on_done=self.refresh_ui)
-
-    def draw_list_header(self, surface):
-        p = self.panel_rect
-        note = fonts.get("small").render(
-            "Blue libertarian, green liberal, yellow centrist, orange statist, red authoritarian.",
-            True, c.UI_TEXT_MUTED)
-        surface.blit(note, (p.x + 24, p.y + 58))
