@@ -1,5 +1,6 @@
 import os
 from ui.navigation.screen import ButtonMenuScreen, RefreshingMenuListScreen
+from screens.game import map_launch
 from ui.widgets.ui_elements import play_ui_sound
 from ui.widgets.ui_elements import Button, make_back_button
 import data.constants as c
@@ -29,6 +30,10 @@ class New_Game(RefreshingMenuListScreen):
         self.settings_data = {"fog_of_war": c.DEFAULT_FOG_OF_WAR}
         self.sub_state = "CATEGORY" # "CATEGORY", "HISTORICAL", "ALTERNATE"
         self.refresh_ui()
+
+    def prepare_map(self, app):
+        map_launch.open_saved_map(app, self.selected_save_path)
+        return True
 
     def get_title(self):
         return self.CATEGORIES[self.sub_state][0]

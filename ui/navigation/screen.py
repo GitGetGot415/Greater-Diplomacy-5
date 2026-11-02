@@ -190,6 +190,32 @@ class Screen:
         self.elements = []
         self.bg_image_path = None # Added support for generic background images
 
+    def on_enter(self, app, previous):
+        """Prepare this screen when the controller makes it the active screen."""
+
+    def prepare_map(self, app):
+        """Build the map before this screen opens MAP. Return False to stay on this screen."""
+        return True
+
+    def return_to_previous_context(self, app, previous):
+        """Set back_state for a screen that can open over a live game or lobby."""
+        if previous == app.states["MAP"]:
+            self.back_state = "MAP"
+        elif previous == app.states["REALTIME_LOBBY"]:
+            # These are convenience overlays while a host waits in the
+            # lobby. Returning must preserve the live server/session.
+            self.back_state = "REALTIME_LOBBY"
+        elif previous == app.states["REALTIME_REMOTE_LOBBY"]:
+            self.back_state = "REALTIME_REMOTE_LOBBY"
+        # Returning from a Settings sub-screen (e.g. Unit Art, Keybinds)
+        # isn't a fresh entry into Settings -- it must not overwrite the
+        # MAP/MENU back_state Settings already picked up when it was
+        # first opened, or Back from the sub-screen would dump the
+        # player at the menu even when they opened Settings from a live game.
+        elif previous not in (app.states.get("UNIT_ART"), app.states.get("KEYBINDS"),
+                              app.states.get("MOUSE_SETTINGS")):
+            self.back_state = "MENU"
+
     def handle_events(self, events):
         for event in events:
             for el in self.elements:

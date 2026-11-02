@@ -33,6 +33,9 @@ class Faction_Screen(Screen):
         self.max_scroll = 0
         self.scroll_content_rect = None
 
+    def on_enter(self, app, previous):
+        self.start_faction(app.states["MAP"])
+
     def start_faction(self, map_ref):
         self.map_screen = map_ref
         self.scroll_y = 0
@@ -286,6 +289,9 @@ class Faction_Territories_Screen(Screen):
     def __init__(self):
         super().__init__()
         self.map_screen = None
+
+    def on_enter(self, app, previous):
+        self.start_view(app.states["MAP"])
 
     def start_view(self, map_ref):
         self.map_screen = map_ref

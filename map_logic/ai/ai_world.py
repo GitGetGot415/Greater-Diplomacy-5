@@ -465,9 +465,9 @@ class AIWorld:
         return self._economies
 
 
-def build(map_screen):
+def build(context):
     """Snapshots the map for this turn's AI passes."""
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     total_turns = 0
     time_manager = world_state.time_manager
     if time_manager is not None:
@@ -475,10 +475,10 @@ def build(map_screen):
 
     return AIWorld(world_state.map_data, world_state.nation_data,
                    world_state.id_to_province, total_turns,
-                   human_players=session_for(map_screen).active_players)
+                   human_players=session_for(context).active_players)
 
 
-def for_screen(map_screen):
+def for_screen(context):
     """This turn's snapshot, or a throwaway one if the caller is outside a turn.
 
     prepare_turn builds the shared snapshot and clears it again afterwards, so
@@ -487,5 +487,5 @@ def for_screen(map_screen):
     one on the spot costs a sweep, which is still what the code did before the
     cache existed, and keeps every AI entry point callable on its own.
     """
-    world = map_screen.ai_world
-    return world if world is not None else build(map_screen)
+    world = context.ai_world
+    return world if world is not None else build(context)

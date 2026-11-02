@@ -316,6 +316,12 @@ class Settings(Screen):
 
         self.refresh_ui()
 
+    def on_enter(self, app, previous):
+        self.return_to_previous_context(app, previous)
+        # The navigation tutorial may persist its opt-out while Settings
+        # is closed; rebuild so its toggle always reflects that value.
+        self.refresh_ui()
+
     def draw_background(self, surface):
         """Show the checkerboard through the settings background's transparent areas."""
         self.draw_checkerboard_background(surface, SETTINGS_CHECKERBOARD_COLOR)

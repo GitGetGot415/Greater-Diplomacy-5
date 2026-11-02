@@ -219,6 +219,11 @@ class Orders_Screen(Screen):
 
         self.unit_library = queries.get_unit_library(self.map_screen)
 
+    def on_enter(self, app, previous):
+        game_map = app.states["MAP"]
+        if game_map.selected_province:
+            self.start_with_province(game_map.selected_province, game_map)
+
     def _mark_draft_changed(self):
         """Publish one order-edit boundary to the hosting map cache/sync path."""
         self.map_screen.invalidate_map_presentation_cache()

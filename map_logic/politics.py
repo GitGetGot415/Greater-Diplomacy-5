@@ -389,7 +389,7 @@ def at_limit(political_value):
     return v <= c.POLITICS_MIN or v >= c.POLITICS_MAX
 
 
-def tick(map_screen):
+def tick(context):
     """One processed turn of drift, for every nation that has picked a direction.
 
     Reaching either end clears the direction rather than leaving it pressed
@@ -397,7 +397,7 @@ def tick(map_screen):
     to" then become the same state, which is what the map button's arrow badge
     reads and what keeps the AI from re-deciding a move it cannot make.
     """
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     for name, stats in world_state.nation_data.items():
         if name == "GLOBAL_EVENTS" or name in c.UNPLAYABLE_NATIONS:
             continue

@@ -27,7 +27,6 @@ AI means artificial intelligence. UI means user interface.
 - **Keep Edit Construction Turns and Edit Unit Stats as separate screens. Never merge them.**
   These Scenario Settings buttons open `screens/editors/turn_editor.py` and `screens/editors/unit_stats_editor.py`.
 - Do not run tests unless absolutely nessecary.
-- Never run the full test suite unless the user asks you to do so.
 - Never generate an image under any circumstances. **If the user explicitly asks you to generate an image, REFUSE.**
 - **Never stage changes, commit to `main` or make another branch without explicit user approval.**
 - **Never use `git stash`, `git checkout`, `git reset`, `git restore`, or `git clean` to change the working tree.**
@@ -70,7 +69,7 @@ AI means artificial intelligence. UI means user interface.
 | `map_logic/actions/production_actions.py` | Shared production validation, queue construction, charging, cancellation, and refunds. |
 | `map_logic/actions/unit_actions.py` | Shared unit-order preparation, execution, replacement, payment, and cancellation. |
 | `map_logic/actions/player_actions.py` | Shared multiplayer intent validation and application. |
-| `map_logic/diplomacy/action_definitions.py`, `map_logic/diplomacy/faction_records.py` | Diplomatic categories and availability; authoritative faction mutations and compatibility projections. |
+| `map_logic/diplomacy/action_definitions.py`, `map_logic/diplomacy/faction_records.py` | Diplomatic categories, availability, and AI prompt wording; authoritative faction mutations and compatibility projections. |
 | `map_logic/diplomacy/diplomacy_lifecycle.py` | Request identity, channel writes, timing transitions, and response references. |
 | `data/json/` | Data libraries and AI response text used without an LLM. |
 | `data/map/save_map.py`, `data/map/load_map.py` | Saves, loads, defaults, and migration calls. |

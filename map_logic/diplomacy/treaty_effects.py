@@ -103,6 +103,155 @@ def with_separate_peace_cost(agreement, proposer, accepter, nation_data):
     return deal_mod.add_clause(agreement, {"type": deal_mod.FACTION_EXIT, "nation": proposer})
 
 
+def _accept_faction_invite(host, action, proposer, accepter, params, escrow):
+    # The accepter is being invited into the proposer's faction.
+    nation_data = host.nation_data
+    if not queries.can_choose_own_faction(accepter, nation_data):
+        return _blocked("PUPPET_CANNOT_CHOOSE_FACTION")
+    if nation_data[accepter].get("faction", ""):
+        return _blocked("ACCEPT_FACTION_ALREADY_IN")
+    leadership_error = queries.faction_request_leadership_error(proposer, accepter, action, nation_data)
+    if leadership_error:
+        return TreatyOutcome(leadership_error, None)
+    finalize_faction_join(host.map_data, nation_data, proposer, accepter)
+    return _NOTHING
+
+
+def _accept_join_request(host, action, proposer, accepter, params, escrow):
+    # The proposer is asking to join the accepter's faction.
+    nation_data = host.nation_data
+    if not queries.can_choose_own_faction(proposer, nation_data):
+        return _blocked("PUPPET_CANNOT_CHOOSE_FACTION")
+    if nation_data[proposer].get("faction", ""):
+        return _blocked("ACCEPT_FACTION_JOIN_ALREADY_IN")
+    leadership_error = queries.faction_request_leadership_error(proposer, accepter, action, nation_data)
+    if leadership_error:
+        return TreatyOutcome(leadership_error, None)
+    finalize_faction_join(host.map_data, nation_data, accepter, proposer)
+    return _NOTHING
+
+
+def _accept_create_faction(host, action, proposer, accepter, params, escrow):
+    nation_data = host.nation_data
+    if nation_data[accepter].get("faction", "") or nation_data[proposer].get("faction", ""):
+        return _blocked("CREATE_FACTION_CONFLICT")
+    finalize_create_faction(host.map_data, nation_data, proposer)
+    finalize_faction_join(host.map_data, nation_data, proposer, accepter)
+    log_global_event(nation_data,
+                     f"{proposer} and {accepter} have formed a new global faction!")
+    return _NOTHING
+
+
+def _accept_peace(host, action, proposer, accepter, params, escrow):
+    nation_data = host.nation_data
+    # A puppet's wars are its master's business. This is the one place all
+    # thirteen paths that can settle a war converge, so the backstop lives
+    # here even though the friendlier guards upstream catch it first.
+    for side, other in ((proposer, accepter), (accepter, proposer)):
+        if not queries.can_negotiate_peace(side, other, nation_data):
+            return _blocked("PUPPET_CANNOT_MAKE_PEACE")
+    if not peace_scope.has_settleable_war(proposer, accepter, nation_data):
+        return _blocked("NO_WAR_TO_SETTLE")
+
+    # A bare CEASEFIRE carries no terms by definition; a PEACE_TREATY may
+    # carry an itemized deal, an old peace sentence from a save made before
+    # the rework, or -- the AI's habit until now -- nothing at all, which
+    # coerce reads as the white peace it always silently executed as.
+    agreement = (_bloc_ceasefire(proposer, accepter, nation_data) if action == "CEASEFIRE"
+                 else deal_mod.coerce(params, proposer, accepter, kind=deal_mod.KIND_PEACE))
+    agreement = with_separate_peace_cost(agreement, proposer, accepter, nation_data)
+
+    # Whoever the leader bound gets a say before it takes effect. In an
+    # ordinary game every bound member is an AI and answers on the spot, so
+    # this settles now and the extra turn only appears when a human is asked.
+    if ratification.open_round(host, proposer, accepter, agreement,
+                               escrow=escrow):
+        return _canned("ACCEPT_PEACE") if action == "PEACE_TREATY" else _NOTHING
+    return TreatyOutcome(None, _AWAITING_RATIFICATION)
+
+
+def _accept_trade(host, action, proposer, accepter, params, escrow):
+    agreement = deal_mod.coerce(params, proposer, accepter, kind=deal_mod.KIND_TRADE)
+    deal_effects.execute(host, agreement, escrowed=_escrow_pool(proposer, escrow))
+    return _canned("ACCEPT_TRADE")
+
+
+def _accept_call_to_arms(host, action, proposer, accepter, params, escrow):
+    nation_data = host.nation_data
+    # The backstop for war_calls, at the point every path converges -- the
+    # same place the puppet-peace rule is enforced, and for the same reason:
+    # an offer sits in the inbox for turns, and the wars it was about can
+    # end while it waits. Answering a call to arms that has nothing left to
+    # answer used to run join_faction_wars over an empty list and announce
+    # an escalation that had not happened.
+    if not war_calls.is_honest(action, proposer, accepter, nation_data):
+        return _blocked("NO_WAR_TO_JOIN")
+    join_faction_wars(host.map_data, nation_data, accepter, proposer)
+    log_global_event(nation_data,
+                     f"ESCALATION: {accepter} answered the call to arms of {proposer}!")
+    return _NOTHING
+
+
+def _accept_join_wars(host, action, proposer, accepter, params, escrow):
+    nation_data = host.nation_data
+    if not war_calls.is_honest(action, proposer, accepter, nation_data):
+        return _blocked("NO_WAR_TO_JOIN")
+    join_faction_wars(host.map_data, nation_data, proposer, accepter)
+    log_global_event(nation_data,
+                     f"ESCALATION: {proposer} has joined the wars of {accepter}!")
+    return _NOTHING
+
+
+def _accept_military_access(host, action, proposer, accepter, params, escrow):
+    nation_data = host.nation_data
+    # The accepter grants the proposer passage through their territory.
+    # Deliberately one-way: the proposer gets no say over the reverse.
+    if proposer == accepter or queries.are_at_war(proposer, accepter, nation_data):
+        return _blocked("INVALID_MILITARY_ACCESS")
+    granted = nation_data.setdefault(accepter, {}).setdefault("military_access", [])
+    if proposer not in granted:
+        granted.append(proposer)
+
+    shared_enemy = bool(set(queries.get_enemies(accepter, nation_data)) &
+                        set(queries.get_enemies(proposer, nation_data)))
+    if shared_enemy:
+        nation_data[accepter].setdefault("military_access_reasons", {})[proposer] = "war"
+
+    return _canned("ACCEPT_MILITARY_ACCESS")
+
+
+def _accept_military_attache(host, action, proposer, accepter, params, escrow):
+    nation_data = host.nation_data
+    sent, reason = military_attaches.send(proposer, accepter, nation_data)
+    if not sent:
+        return TreatyOutcome(reason, None)
+    log_global_event(nation_data,
+                     f"{proposer} has sent a military attaché to {accepter}.")
+    return TreatyOutcome(None, "Military attaché accepted.")
+
+
+def _accept_volunteers(host, action, proposer, accepter, params, escrow):
+    accepted, reason = volunteers.accept_offer(host, proposer, accepter)
+    if not accepted:
+        return _blocked(reason)
+    return _canned("ACCEPT_GENERIC")
+
+
+_ACCEPTANCE_EFFECTS = {
+    "FACTION_INVITE": _accept_faction_invite,
+    "JOIN_FACTION_REQ": _accept_join_request,
+    "CREATE_FACTION": _accept_create_faction,
+    "CEASEFIRE": _accept_peace,
+    "PEACE_TREATY": _accept_peace,
+    "TRADE": _accept_trade,
+    "CALL_TO_ARMS": _accept_call_to_arms,
+    "JOIN_WARS": _accept_join_wars,
+    "REQ_MILITARY_ACCESS": _accept_military_access,
+    "SEND_MILITARY_ATTACHE": _accept_military_attache,
+    "SEND_VOLUNTEERS": _accept_volunteers,
+}
+
+
 def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=None):
     """Applies an accepted proposal and returns a TreatyOutcome.
 
@@ -114,120 +263,7 @@ def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=No
     payment half of a trade or a reparations clause is delivered rather than
     charged twice. See deal_effects for why that no longer lives in the UI.
     """
-
-    nation_data = host.nation_data
-    map_data = host.map_data
-
-    if action == "FACTION_INVITE":
-        # The accepter is being invited into the proposer's faction.
-        if not queries.can_choose_own_faction(accepter, nation_data):
-            return _blocked("PUPPET_CANNOT_CHOOSE_FACTION")
-        if nation_data[accepter].get("faction", ""):
-            return _blocked("ACCEPT_FACTION_ALREADY_IN")
-        leadership_error = queries.faction_request_leadership_error(proposer, accepter, action, nation_data)
-        if leadership_error:
-            return TreatyOutcome(leadership_error, None)
-        finalize_faction_join(map_data, nation_data, proposer, accepter)
-
-    elif action == "JOIN_FACTION_REQ":
-        # The proposer is asking to join the accepter's faction.
-        if not queries.can_choose_own_faction(proposer, nation_data):
-            return _blocked("PUPPET_CANNOT_CHOOSE_FACTION")
-        if nation_data[proposer].get("faction", ""):
-            return _blocked("ACCEPT_FACTION_JOIN_ALREADY_IN")
-        leadership_error = queries.faction_request_leadership_error(proposer, accepter, action, nation_data)
-        if leadership_error:
-            return TreatyOutcome(leadership_error, None)
-        finalize_faction_join(map_data, nation_data, accepter, proposer)
-
-    elif action == "CREATE_FACTION":
-        if nation_data[accepter].get("faction", "") or nation_data[proposer].get("faction", ""):
-            return _blocked("CREATE_FACTION_CONFLICT")
-        finalize_create_faction(map_data, nation_data, proposer)
-        finalize_faction_join(map_data, nation_data, proposer, accepter)
-        log_global_event(nation_data,
-                         f"{proposer} and {accepter} have formed a new global faction!")
-
-    elif action in ("CEASEFIRE", "PEACE_TREATY"):
-        # A puppet's wars are its master's business. This is the one place all
-        # thirteen paths that can settle a war converge, so the backstop lives
-        # here even though the friendlier guards upstream catch it first.
-        for side, other in ((proposer, accepter), (accepter, proposer)):
-            if not queries.can_negotiate_peace(side, other, nation_data):
-                return _blocked("PUPPET_CANNOT_MAKE_PEACE")
-        if not peace_scope.has_settleable_war(proposer, accepter, nation_data):
-            return _blocked("NO_WAR_TO_SETTLE")
-
-        # A bare CEASEFIRE carries no terms by definition; a PEACE_TREATY may
-        # carry an itemized deal, an old peace sentence from a save made before
-        # the rework, or -- the AI's habit until now -- nothing at all, which
-        # coerce reads as the white peace it always silently executed as.
-        agreement = (_bloc_ceasefire(proposer, accepter, nation_data) if action == "CEASEFIRE"
-                     else deal_mod.coerce(params, proposer, accepter, kind=deal_mod.KIND_PEACE))
-        agreement = with_separate_peace_cost(agreement, proposer, accepter, nation_data)
-
-        # Whoever the leader bound gets a say before it takes effect. In an
-        # ordinary game every bound member is an AI and answers on the spot, so
-        # this settles now and the extra turn only appears when a human is asked.
-        if ratification.open_round(host, proposer, accepter, agreement,
-                                   escrow=escrow):
-            return _canned("ACCEPT_PEACE") if action == "PEACE_TREATY" else _NOTHING
-        return TreatyOutcome(None, _AWAITING_RATIFICATION)
-
-    elif action == "TRADE":
-        agreement = deal_mod.coerce(params, proposer, accepter, kind=deal_mod.KIND_TRADE)
-        deal_effects.execute(host, agreement, escrowed=_escrow_pool(proposer, escrow))
-        return _canned("ACCEPT_TRADE")
-
-    elif action == "CALL_TO_ARMS":
-        # The backstop for war_calls, at the point every path converges -- the
-        # same place the puppet-peace rule is enforced, and for the same reason:
-        # an offer sits in the inbox for turns, and the wars it was about can
-        # end while it waits. Answering a call to arms that has nothing left to
-        # answer used to run join_faction_wars over an empty list and announce
-        # an escalation that had not happened.
-        if not war_calls.is_honest(action, proposer, accepter, nation_data):
-            return _blocked("NO_WAR_TO_JOIN")
-        join_faction_wars(map_data, nation_data, accepter, proposer)
-        log_global_event(nation_data,
-                         f"ESCALATION: {accepter} answered the call to arms of {proposer}!")
-
-    elif action == "JOIN_WARS":
-        if not war_calls.is_honest(action, proposer, accepter, nation_data):
-            return _blocked("NO_WAR_TO_JOIN")
-        join_faction_wars(map_data, nation_data, proposer, accepter)
-        log_global_event(nation_data,
-                         f"ESCALATION: {proposer} has joined the wars of {accepter}!")
-
-    elif action == "REQ_MILITARY_ACCESS":
-        # The accepter grants the proposer passage through their territory.
-        # Deliberately one-way: the proposer gets no say over the reverse.
-        if proposer == accepter or queries.are_at_war(proposer, accepter, nation_data):
-            return _blocked("INVALID_MILITARY_ACCESS")
-        granted = nation_data.setdefault(accepter, {}).setdefault("military_access", [])
-        if proposer not in granted:
-            granted.append(proposer)
-
-        shared_enemy = bool(set(queries.get_enemies(accepter, nation_data)) &
-                            set(queries.get_enemies(proposer, nation_data)))
-        if shared_enemy:
-            nation_data[accepter].setdefault("military_access_reasons", {})[proposer] = "war"
-
-        return _canned("ACCEPT_MILITARY_ACCESS")
-
-    elif action == "SEND_MILITARY_ATTACHE":
-
-        sent, reason = military_attaches.send(proposer, accepter, nation_data)
-        if not sent:
-            return TreatyOutcome(reason, None)
-        log_global_event(nation_data,
-                         f"{proposer} has sent a military attaché to {accepter}.")
-        return TreatyOutcome(None, "Military attaché accepted.")
-
-    elif action == "SEND_VOLUNTEERS":
-        accepted, reason = volunteers.accept_offer(host, proposer, accepter)
-        if not accepted:
-            return _blocked(reason)
-        return _canned("ACCEPT_GENERIC")
-
-    return _NOTHING
+    effect = _ACCEPTANCE_EFFECTS.get(action)
+    if effect is None:
+        return _NOTHING
+    return effect(host, action, proposer, accepter, params, escrow)

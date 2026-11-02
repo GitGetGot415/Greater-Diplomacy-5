@@ -17,7 +17,7 @@ from map_logic.diplomacy import faction_records
 from map_logic.system32 import unit_events, air_processor
 
 
-async def prepare_turn(map_screen):
+async def prepare_turn(context):
     """Phase 1: Calculate diplomacy and generate AI movement paths.
 
     Yields with `await asyncio.sleep(0)` between phases so run_background
@@ -26,15 +26,15 @@ async def prepare_turn(map_screen):
     browser tab/audio scheduling alive instead of freezing for the whole
     turn; on desktop it's a no-op since this runs on its own thread/loop.
     """
-    world_state = world_for(map_screen)
-    session_state = session_for(map_screen)
+    world_state = world_for(context)
+    session_state = session_for(context)
     print("\n" + "="*40)
     print("--- [PHASE 1] AI PREPARATION START ---")
 
     # The turn's model time starts running here, once, and the three phases
     # below draw shares from the same clock. They used to ask for the budget
     # separately, each measuring it from its own start, so `45` bought 135.
-    ai_llm_runner.begin_turn(map_screen)
+    ai_llm_runner.begin_turn(context)
 
     # --- NEW: Check if AI is turned off ---
     ai_disabled = queries.get_scenario_flag("ai_disabled", c.DEFAULT_AI_DISABLED, world_state.scenario_settings)
@@ -52,40 +52,40 @@ async def prepare_turn(map_screen):
         # Built after the tactical hide so the masked unit is excluded from
         # strength exactly as it is from every other AI query, and torn down in
         # the finally so nothing can read a stale one next turn.
-        map_screen.ai_world = ai_world.build(map_screen)
+        context.ai_world = ai_world.build(context)
 
         try:
             # --- AI-to-AI summits ---
             # Before the proactive pass, so an agreement reached here is already
             # binding when each nation works out what it wants to do.
             session_state.loading_status_text = "Holding Summits..."
-            ai_diplomacy.process_summits(map_screen)
+            ai_diplomacy.process_summits(context)
             await asyncio.sleep(0)
 
             # --- Basic Proactive AI & Grand Strategy ---
             print("[SYSTEM] Running Proactive AI...")
-            ai_diplomacy.process_basic_proactive_ai(map_screen)
+            ai_diplomacy.process_basic_proactive_ai(context)
             await asyncio.sleep(0)
 
             session_state.loading_status_text = "Running AI Research..."
             print("[SYSTEM] Running AI Research...")
-            ai_research.process_ai_research(map_screen)
+            ai_research.process_ai_research(context)
             await asyncio.sleep(0)
 
             session_state.loading_status_text = "Running AI Economy & Construction..."
             print("[SYSTEM] Running AI Economy & Construction...")
-            ai_construction.process_ai_economy_decisions(map_screen)
+            ai_construction.process_ai_economy_decisions(context)
             await asyncio.sleep(0)
 
             session_state.loading_status_text = "Generating AI Movement Orders..."
             print("[SYSTEM] Generating AI Movement Orders...")
 
-            ai_movement.process_ai_unit_orders(map_screen)
+            ai_movement.process_ai_unit_orders(context)
             await asyncio.sleep(0)
 
             session_state.loading_status_text = "Drafting Proactive Responses..."
             print("[SYSTEM] Drafting Proactive Responses...")
-            ai_diplomacy.process_proactive_llm_tasks(map_screen)
+            ai_diplomacy.process_proactive_llm_tasks(context)
             await asyncio.sleep(0)
         finally:
             # --- TACTICAL RESTORE ---
@@ -97,7 +97,7 @@ async def prepare_turn(map_screen):
             # Every AI pass is done. Scripted events below can hand provinces
             # between nations, which would make the cached fronts and strengths
             # wrong, so the snapshot never outlives the passes it was built for.
-            map_screen.ai_world = None
+            context.ai_world = None
     else:
         print("[SYSTEM] AI is OFF. Skipping standard AI actions...")
 
@@ -112,19 +112,19 @@ async def prepare_turn(map_screen):
     # Moved here so AI can't immediately issue orders to units spawned by events this turn
     session_state.loading_status_text = "Running Scripted Events..."
     print("[SYSTEM] Running Scripted Events...")
-    scripted_events.process_scripted_events(map_screen)
+    scripted_events.process_scripted_events(context)
     await asyncio.sleep(0)
 
     # MOVED: Diplomacy is now processed AFTER AI movement generation.
     session_state.loading_status_text = "Processing Pending Diplomacy..."
     print("[SYSTEM] Processing Pending Diplomacy...")
-    diplomacy_processor.process_diplomacy_turn(map_screen)
+    diplomacy_processor.process_diplomacy_turn(context)
     await asyncio.sleep(0)
 
     print("--- [PHASE 1] COMPLETE ---")
 
-def snapshot_history(map_screen):
-    world_state = world_for(map_screen)
+def snapshot_history(context):
+    world_state = world_for(context)
     turn_idx = str(world_state.time_manager.total_turns)
 
     # History is JSON data, so recursively copy its lists and dictionaries.
@@ -162,19 +162,19 @@ def snapshot_history(map_screen):
         snapshot["provinces"][data["json_key"]] = copy_history_value(saved_province)
     world_state.history[turn_idx] = snapshot
 
-async def resolve_turn_logic(map_screen):
-    with unit_events.record_turn(map_screen):
-        await _resolve_turn_logic(map_screen)
+async def resolve_turn_logic(context):
+    with unit_events.record_turn(context):
+        await _resolve_turn_logic(context)
 
 
-async def _resolve_turn_logic(map_screen): # Renamed from resolve_turn
+async def _resolve_turn_logic(context): # Renamed from resolve_turn
     """Executes time, combat, movement, and economy logic (no refreshes).
 
     Yields with `await asyncio.sleep(0)` between the major sub-phases -- see
     prepare_turn's docstring for why.
     """
-    world_state = world_for(map_screen)
-    session_state = session_for(map_screen)
+    world_state = world_for(context)
+    session_state = session_for(context)
     print("\n--- [PHASE 2] TURN RESOLUTION START ---")
     
     recovering_units = [unit for province in world_state.map_data.values()
@@ -196,37 +196,37 @@ async def _resolve_turn_logic(map_screen): # Renamed from resolve_turn
     # political value rather than shooting under the old one and researching
     # under the new. The direction was chosen last turn -- by the player in the
     # Politics tab, by the AI in prepare_turn -- and this is where it lands.
-    politics.tick(map_screen)
+    politics.tick(context)
     
     print("[SYSTEM] Executing Unit Orders & Combat...")
-    unit_events.run_step(map_screen, "Conversions", movement_processor.process_conversions)
-    unit_events.run_step(map_screen, "Disbanding", movement_processor.process_disbands)
-    unit_events.run_step(map_screen, "Repairs", movement_processor.process_repairs)
-    unit_events.run_step(map_screen, "Upgrades", movement_processor.process_upgrades)
+    unit_events.run_step(context, "Conversions", movement_processor.process_conversions)
+    unit_events.run_step(context, "Disbanding", movement_processor.process_disbands)
+    unit_events.run_step(context, "Repairs", movement_processor.process_repairs)
+    unit_events.run_step(context, "Upgrades", movement_processor.process_upgrades)
     await asyncio.sleep(0)
 
     # Process Queues (Deployments) so new units can defend
     print("[SYSTEM] Processing Queues (Deployments)...")
-    unit_events.run_step(map_screen, "Deployments", economy_processor.process_queues)
+    unit_events.run_step(context, "Deployments", economy_processor.process_queues)
     await asyncio.sleep(0)
 
     # Pre-Movement Combat Mechanics
-    unit_events.run_step(map_screen, "Air missions", air_processor.process_air_orders)
-    unit_events.run_step(map_screen, "Bombardment", combat_processor.process_bombardments)
-    unit_events.run_step(map_screen, "Pinning", combat_processor.process_pinning)
-    unit_events.run_step(map_screen, "Meeting engagements", combat_processor.process_meeting_engagements)
+    unit_events.run_step(context, "Air missions", air_processor.process_air_orders)
+    unit_events.run_step(context, "Bombardment", combat_processor.process_bombardments)
+    unit_events.run_step(context, "Pinning", combat_processor.process_pinning)
+    unit_events.run_step(context, "Meeting engagements", combat_processor.process_meeting_engagements)
 
-    unit_events.run_step(map_screen, "Movement", movement_processor.process_movement)
-    unit_events.run_step(map_screen, "Ground combat", combat_processor.process_combat)
-    combat_processor.check_for_post_combat_captures(map_screen)
+    unit_events.run_step(context, "Movement", movement_processor.process_movement)
+    unit_events.run_step(context, "Ground combat", combat_processor.process_combat)
+    combat_processor.check_for_post_combat_captures(context)
     await asyncio.sleep(0)
 
     # Exile any units left standing on foreign soil without a legal right to be there
-    unit_events.run_step(map_screen, "Return from foreign territory", movement_processor.process_stranded_units)
+    unit_events.run_step(context, "Return from foreign territory", movement_processor.process_stranded_units)
 
     # ...and re-embark anything left standing in the sea, which is the other way
     # a unit ends the turn somewhere it could never legally have moved to.
-    unit_events.run_step(map_screen, "Naval transport", movement_processor.process_beached_units)
+    unit_events.run_step(context, "Naval transport", movement_processor.process_beached_units)
 
     # Re-sync the turn-start snapshot to the now-settled owner. It must stay stale
     # (pre-capture) through combat/stranding above so order-of-execution doesn't
@@ -238,7 +238,7 @@ async def _resolve_turn_logic(map_screen): # Renamed from resolve_turn
         prov["_turn_start_owner"] = prov.get("owner", "Unclaimed")
 
     # Kill orphaned units and ghost wars
-    unit_events.run_step(map_screen, "Country removal", movement_processor.process_dead_nations)
+    unit_events.run_step(context, "Country removal", movement_processor.process_dead_nations)
     # Disbands, combat losses, captures, and nation death can all change the
     # set of live units.  Armies are organizational metadata, so prune their
     # membership only after authoritative turn resolution has settled.
@@ -247,7 +247,7 @@ async def _resolve_turn_logic(map_screen): # Renamed from resolve_turn
     # Target-area returns are deliberately queued only after every submitted
     # movement order has resolved. They therefore become choices for the next
     # planning phase, never a hidden edit to a turn a player already submitted.
-    queued_target_returns = queries.queue_idle_army_defense_orders(map_screen)
+    queued_target_returns = queries.queue_idle_army_defense_orders(context)
     if queued_target_returns:
         print(f"[SYSTEM] Queued {queued_target_returns} army target-area return order(s).")
     await asyncio.sleep(0)
@@ -262,10 +262,10 @@ async def _resolve_turn_logic(map_screen): # Renamed from resolve_turn
                 u["morale"] = min(100.0, float(u.get("morale", c.DEFAULT_UNIT_MORALE)) + 5.0)
 
     print("[SYSTEM] Calculating Economy...")
-    economy_processor.process_economy(map_screen)
+    economy_processor.process_economy(context)
     await asyncio.sleep(0)
 
-    research_processor.process_national_research(map_screen)
+    research_processor.process_national_research(context)
     await asyncio.sleep(0)
 
     if c.RECORD_HISTORY:
@@ -278,7 +278,7 @@ async def _resolve_turn_logic(map_screen): # Renamed from resolve_turn
             pass # Skip deepcopying thousands of dictionaries on skipped turns
         else:
             print("[SYSTEM] Saving Turn History Snapshot...")
-            snapshot_history(map_screen)
+            snapshot_history(context)
     else:
         print("[SYSTEM] History Recording Disabled. Skipping Snapshot...")
     
@@ -290,8 +290,8 @@ async def _resolve_turn_logic(map_screen): # Renamed from resolve_turn
     if player and player != "Spectator":
         auto = world_state.nation_data.get(player, {}).get("automation", {})
         if auto.get("construction"):
-            automation_logic.automate_player_construction(map_screen)
+            automation_logic.automate_player_construction(context)
         if auto.get("movement"):
-            automation_logic.automate_player_movement(map_screen)
+            automation_logic.automate_player_movement(context)
         if auto.get("research"):
-            automation_logic.automate_player_research(map_screen)
+            automation_logic.automate_player_research(context)

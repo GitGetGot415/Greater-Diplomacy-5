@@ -44,21 +44,21 @@ def structure_error(player_data):
     return None
 
 
-def prepare(map_ref, cid, player_data):
+def prepare(context, cid, player_data):
     """Validate a snapshot without changing host state. Raises ValueError if it is invalid."""
-    world_state = world_for(map_ref)
+    world_state = world_for(context)
     nd, provs = player_data["nation_data"], player_data["provinces"]
     if not isinstance(world_state.nation_data.get(cid), dict):
         raise ValueError("The country does not exist in the host's game.")
     research_snapshot = {"nation_data": {cid: copy.deepcopy(nd)}}
     if "research_years" in player_data:
         research_snapshot["research_years"] = player_data["research_years"]
-    tech_tree = queries.get_tech_tree(map_ref)
+    tech_tree = queries.get_tech_tree(context)
     migrations.migrate_infantry_research(research_snapshot, tech_tree)
     migrations.clamp_research_levels(research_snapshot, tech_tree)
     nd = research_snapshot["nation_data"][cid]
     # The host clamped its own queues on load, so the move's copies must match them.
-    building_library = queries.get_building_library(context=map_ref)
+    building_library = queries.get_building_library(context=context)
     for province in provs.values():
         if isinstance(province, dict) and isinstance(province.get("building_queue"), list):
             migrations.clamp_building_queue(province["building_queue"], building_library)
@@ -69,25 +69,25 @@ def prepare(map_ref, cid, player_data):
     releases = player_data.get("release_subjects", existing_releases)
     canonical_releases = canonical_puppet_release_queue(
         world_state.map_data, world_state.nation_data, cid, releases, existing_releases)
-    warnings = _validate_administrative_orders(map_ref, cid, provs)
-    warnings.extend(_validate_production_projection(map_ref, cid, provs))
+    warnings = _validate_administrative_orders(context, cid, provs)
+    warnings.extend(_validate_production_projection(context, cid, provs))
     transport_view, transport_commands = queries.air_transport_draft(
-        map_ref, cid, player_data.get("air_transport", []))
+        context, cid, player_data.get("air_transport", []))
     cargo_ids = {u["unit_id"] for p in world_state.map_data.values()
                  for plane in p.get("units", []) for u in plane.get("air_cargo", [])}
     cargo_ids.update(uid for command in transport_commands for uid in command["cargo_ids"])
-    warnings.extend(_validate_move_snapshot(map_ref, cid, nd, provs, cargo_ids))
+    warnings.extend(_validate_move_snapshot(context, cid, nd, provs, cargo_ids))
     live_aircraft, aircraft_orders = _validate_aircraft_orders(
         transport_view, cid, player_data, provs, cargo_ids)
     nd = dict(nd)
     nd["release_puppet_queue"] = canonical_releases
-    merged = migrations.legacy_player_country(map_ref, cid, nd)
+    merged = migrations.legacy_player_country(context, cid, nd)
     return SnapshotMove(nd, merged, provs, warnings, live_aircraft, aircraft_orders, transport_commands)
 
 
-def apply(map_ref, cid, player_data, move, summary):
+def apply(context, cid, player_data, move, summary):
     """Apply a prepared snapshot after any host review and record the result in summary."""
-    world_state = world_for(map_ref)
+    world_state = world_for(context)
     if move.warnings:
         summary["overridden"] += 1
     if "tournament_session" not in player_data or "tournament_turn" not in player_data:
@@ -96,25 +96,25 @@ def apply(map_ref, cid, player_data, move, summary):
     existing = world_state.nation_data[cid]
     world_state.nation_data[cid] = move.merged_country
     summary["faction_renames"] += _apply_faction_renames(
-        map_ref, cid, player_data, move.country_update)
+        context, cid, player_data, move.country_update)
     if any(existing.get(key) != move.merged_country.get(key)
            for key in ("name", "adjective", "leader_name", "leader_title",
                        "flag_data", "portrait_data", "color")):
-        _sync_appearance_caches(map_ref, cid, move.merged_country)
-    queries.apply_air_transport_commands(map_ref, cid, move.transport_commands)
+        _sync_appearance_caches(context, cid, move.merged_country)
+    queries.apply_air_transport_commands(context, cid, move.transport_commands)
     summary["appearance_updates"] += _apply_appearance_updates(
-        map_ref, cid, player_data)
+        context, cid, player_data)
     summary["puppet_siphon_updates"] += _apply_puppet_siphon_updates(
-        map_ref, cid, player_data)
+        context, cid, player_data)
 
     _apply_unit_projection(
-        map_ref, cid, move.provinces, move.live_aircraft, move.aircraft_orders,
+        context, cid, move.provinces, move.live_aircraft, move.aircraft_orders,
         replace_units=player_data.get("unit_snapshot") is True or bool(move.provinces))
 
 
-def _apply_unit_projection(map_ref, country_id, provs, live_aircraft, aircraft_orders, *, replace_units):
+def _apply_unit_projection(context, country_id, provs, live_aircraft, aircraft_orders, *, replace_units):
     """Apply a validated snapshot's units. This preserves approved stats and queue overrides."""
-    world_state = world_for(map_ref)
+    world_state = world_for(context)
     # ``unit_snapshot`` was added after the original .gd5move format.
     # Preserve old files' behavior, but make every newly-created move
     # replace even an empty army so disbands and volunteer offers survive.
@@ -143,7 +143,7 @@ def _apply_unit_projection(map_ref, country_id, provs, live_aircraft, aircraft_o
                     target_prov["units"] = []
                 target_prov["units"].extend(u for u in updates["units"] if isinstance(u, dict)
                     and u.get("owner") == country_id and u.get("unit_id") not in live_aircraft
-                    and not queries.is_air_unit(u, context=map_ref) and not queries.is_air_transport(u, context=map_ref)
+                    and not queries.is_air_unit(u, context=context) and not queries.is_air_transport(u, context=context)
                     and not (isinstance(u.get("order"), dict)
                              and isinstance(u["order"].get("type"), str)
                              and u["order"].get("type") in queries.AIR_ORDER_TYPES))
@@ -164,24 +164,24 @@ def _is_valid_map_color(color):
                     for channel in color))
 
 
-def _sync_appearance_caches(map_ref, country_id, nation_data):
+def _sync_appearance_caches(context, country_id, nation_data):
     """Keep cached country colors and labels consistent with a move import."""
     color = nation_data.get("color")
-    if _is_valid_map_color(color) and hasattr(map_ref, "nation_colors"):
-        map_ref.nation_colors[country_id] = tuple(color)
+    if _is_valid_map_color(color) and hasattr(context, "nation_colors"):
+        context.nation_colors[country_id] = tuple(color)
 
     from ui.rendering import country_names
-    country_names.clear_country_name_cache(map_ref)
+    country_names.clear_country_name_cache(context)
 
 
-def _apply_faction_renames(map_ref, country_id, player_data, nation_update):
+def _apply_faction_renames(context, country_id, player_data, nation_update):
     """Apply a player's faction-rename commands before merging their move.
 
     A command is checked against the host's current roster, not the player's
     stale copy.  That prevents a non-leader from renaming a faction and means
     a later move from another member cannot undo an already accepted rename.
     """
-    world_state = world_for(map_ref)
+    world_state = world_for(context)
 
     has_commands = "faction_renames" in player_data
     commands = player_data.get("faction_renames", ())
@@ -221,11 +221,11 @@ def _apply_faction_renames(map_ref, country_id, player_data, nation_update):
 
     if applied:
         from ui.rendering import country_names
-        country_names.clear_country_name_cache(map_ref)
+        country_names.clear_country_name_cache(context)
     return applied
 
 
-def _apply_appearance_updates(map_ref, country_id, player_data):
+def _apply_appearance_updates(context, country_id, player_data):
     """Apply permitted integrated-puppet appearance edits from one move.
 
     The puppet editor intentionally lets a country customise its integrated
@@ -233,7 +233,7 @@ def _apply_appearance_updates(map_ref, country_id, player_data):
     country's move file.  The host verifies the ownership relationship and
     limits the payload to the fields that screen actually edits.
     """
-    world_state = world_for(map_ref)
+    world_state = world_for(context)
     updates = player_data.get("appearance_updates", ())
     if not isinstance(updates, list):
         return 0
@@ -265,11 +265,11 @@ def _apply_appearance_updates(map_ref, country_id, player_data):
                 target = update.get("country_id")
                 target_data = world_state.nation_data.get(target)
                 if isinstance(target_data, dict):
-                    _sync_appearance_caches(map_ref, target, target_data)
+                    _sync_appearance_caches(context, target, target_data)
     return applied
 
 
-def _apply_puppet_siphon_updates(map_ref, country_id, player_data):
+def _apply_puppet_siphon_updates(context, country_id, player_data):
     """Apply integrated-puppet resource siphons controlled by one player.
 
     The subject record belongs to a different country id, so it is deliberately
@@ -277,7 +277,7 @@ def _apply_puppet_siphon_updates(map_ref, country_id, player_data):
     here against the host's current relationship and the same slider limit the
     normal UI uses.
     """
-    world_state = world_for(map_ref)
+    world_state = world_for(context)
     updates = player_data.get("puppet_siphon_updates", ())
     if not isinstance(updates, list):
         return 0
@@ -311,13 +311,13 @@ def _apply_puppet_siphon_updates(map_ref, country_id, player_data):
     return applied
 
 
-def _validate_aircraft_orders(map_ref, country_id, player_data, provinces, cargo_ids=()):
+def _validate_aircraft_orders(context, country_id, player_data, provinces, cargo_ids=()):
     """Validate aircraft order commands before any import mutation."""
-    world_state = world_for(map_ref)
+    world_state = world_for(context)
     live = {unit.get("unit_id"): (unit, province)
             for province in world_state.map_data.values()
             for unit in queries.units_with_air_cargo(province.get("units", []))
-            if queries.is_air_unit(unit, context=map_ref) or queries.is_air_transport(unit, context=map_ref)
+            if queries.is_air_unit(unit, context=context) or queries.is_air_transport(unit, context=context)
             or unit.get("unit_id") in cargo_ids or queries.unit_is_air_drop_recovering(unit)}
     for updates in provinces.values():
         if not isinstance(updates, dict) or not isinstance(updates.get("units", []), list):
@@ -328,9 +328,9 @@ def _validate_aircraft_orders(map_ref, country_id, player_data, provinces, cargo
                 raise ValueError("Invalid snapshot unit.")
             if not isinstance(unit.get("type", ""), str):
                 raise ValueError("Invalid snapshot unit type.")
-            if unit.get("air_cargo") and not queries.is_air_unit(unit, context=map_ref):
+            if unit.get("air_cargo") and not queries.is_air_unit(unit, context=context):
                 raise ValueError("Unauthorized snapshot cargo.")
-            if queries.is_air_unit(unit, context=map_ref) or queries.is_air_transport(unit, context=map_ref):
+            if queries.is_air_unit(unit, context=context) or queries.is_air_transport(unit, context=context):
                 if unit.get("unit_id") not in live or unit.get("owner") != country_id:
                     raise ValueError("Unauthorized snapshot aircraft.")
     commands = player_data.get("aircraft_orders", [])
@@ -359,7 +359,7 @@ def _validate_aircraft_orders(map_ref, country_id, player_data, provinces, cargo
         if uid in cargo_ids and not any(current is unit for current in province.get("units", [])):
             raise ValueError("Units inside aircraft cannot receive ground orders.")
         queries.validate_air_drop_recovery_draft(unit, command)
-        order = queries.canonical_unit_order(map_ref, country_id, province, unit, command.get("order"))
+        order = queries.canonical_unit_order(context, country_id, province, unit, command.get("order"))
         if isinstance(order, dict):
             order.pop("realtime_cost", None)  # Tournament resources are already in the nation draft.
         name = command.get("custom_name")
@@ -370,15 +370,15 @@ def _validate_aircraft_orders(map_ref, country_id, player_data, provinces, cargo
     return live, validated
 
 
-def _validate_administrative_orders(map_ref, country_id, provinces):
+def _validate_administrative_orders(context, country_id, provinces):
     """Validate new core orders against host settings before merging any state.
 
     Existing entries retain their progress; older moves without administrative
     orders need no new fields. Players cannot change the host's action settings.
     """
-    world_state = world_for(map_ref)
+    world_state = world_for(context)
     # Lightweight legacy hosts may not carry scenario settings.
-    settings = map_ref.scenario_settings
+    settings = context.scenario_settings
     by_key = {p.get("json_key"): p for p in world_state.map_data.values()}
     warnings = []
     for key, updates in provinces.items():
@@ -411,9 +411,9 @@ def _validate_administrative_orders(map_ref, country_id, provinces):
     return warnings
 
 
-def _validate_move_snapshot(map_ref, country_id, nation_update, provinces, protected_unit_ids=()):
+def _validate_move_snapshot(context, country_id, nation_update, provinces, protected_unit_ids=()):
     """Reject malformed snapshots. Report numeric unit differences separately."""
-    world_state = world_for(map_ref)
+    world_state = world_for(context)
     for resource in c.ECON_RESOURCE_KEYS:
         if resource in nation_update:
             value = nation_update[resource]
@@ -465,11 +465,11 @@ def _validate_move_snapshot(map_ref, country_id, nation_update, provinces, prote
             if isinstance(order, dict) and order.get("type") == "CONVERT":
                 # Legacy snapshots without IDs cannot supply trusted progress.
                 source = original if original is not None else dict(unit, order=None)
-                if (queries.truck_ship_conversion_order(source, context=map_ref) is not None
+                if (queries.truck_ship_conversion_order(source, context=context) is not None
                         or order.get("to") in ("Truck", "Ship")):
                     if original is not None and not any(current is original for current in province.get("units", [])):
                         raise ValueError("A converting unit cannot change province.")
-                    unit["order"] = queries.canonical_unit_order(map_ref, country_id, province, source, order)
+                    unit["order"] = queries.canonical_unit_order(context, country_id, province, source, order)
             for stat in TOURNAMENT_UNIT_STATS:
                 if stat in unit:
                     value = unit[stat]
@@ -481,15 +481,15 @@ def _validate_move_snapshot(map_ref, country_id, nation_update, provinces, prote
                         and stat in original and unit.get(stat) != original[stat]
                         and uid not in protected_unit_ids
                         and not queries.unit_is_air_drop_recovering(original)
-                        and not queries.is_air_unit(unit, context=map_ref) and not queries.is_air_transport(unit, context=map_ref)):
+                        and not queries.is_air_unit(unit, context=context) and not queries.is_air_transport(unit, context=context)):
                     warnings.append(f"Unit {uid}, {stat}: move has {unit.get(stat)!r}; "
                                     f"host has {original[stat]!r}.")
     return warnings
 
 
-def _validate_production_projection(map_ref, country_id, provinces):
+def _validate_production_projection(context, country_id, provinces):
     """Use shared production rules while retaining numeric host-review overrides."""
-    world = world_for(map_ref)
+    world = world_for(context)
     by_key = {province.get("json_key"): province for province in world.map_data.values()}
     commands, warnings = [], []
     for key, update in provinces.items():
@@ -501,7 +501,7 @@ def _validate_production_projection(map_ref, country_id, provinces):
                 continue
             if province.get("owner") != country_id:
                 raise ValueError("Foreign production order.")
-            command = production_actions.reconstruct_queue(map_ref, country_id, province, queue, update[queue])
+            command = production_actions.reconstruct_queue(context, country_id, province, queue, update[queue])
             normalized = []
             for supplied, expected in zip(update[queue], command["items"]):
                 supplied = migrations.normalize_production_order(supplied, expected)

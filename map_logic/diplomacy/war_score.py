@@ -50,14 +50,14 @@ prewar_index = deal_mod.prewar_index
 original_owner = deal_mod.original_owner
 
 
-def occupation(map_screen, side_a, side_b):
+def occupation(context, side_a, side_b):
     """How much of each side's homeland the other is sitting on, 0..1 each.
 
     Measured in the same currency deals are priced in, so taking one industrial
     heartland counts for more than taking five empty tiles -- which is also what
     stops a side that has overrun a wasteland from reading as the winner.
     """
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     prewar = prewar_index(world_state.nation_data)
     a, b = set(side_a), set(side_b)
 
@@ -86,7 +86,7 @@ def occupation(map_screen, side_a, side_b):
 # STRENGTH
 # ==========================================
 
-def nation_power(map_screen, nation, world=None):
+def nation_power(context, nation, world=None):
     """One nation's weight: its army plus a hundredth of its economy.
 
     The game's answer to "how strong is this country", and the unit _bloc_power
@@ -94,27 +94,27 @@ def nation_power(map_screen, nation, world=None):
     against another and must use the same scale the peace table does -- two
     definitions of strength would be two different answers to the same question.
     """
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     if world is not None:
         return world.military(nation) + world.econ_power(nation) / 100.0
     return (queries.get_military_strength(nation, world_state.map_data)
             + queries.get_economic_power(nation, world_state.nation_data) / 100.0)
 
 
-def _bloc_power(map_screen, members, world=None):
+def _bloc_power(context, members, world=None):
     """Armies plus economy for a whole side.
 
     Summed per member rather than through get_alliance_military_strength, which
     walks each nation's own friend list and would count a faction of four once
     per member.
     """
-    return sum(nation_power(map_screen, nation, world) for nation in members)
+    return sum(nation_power(context, nation, world) for nation in members)
 
 
-def strength_share(map_screen, side_a, side_b, world=None):
+def strength_share(context, side_a, side_b, world=None):
     """Side a's share of the two blocs' combined power, 0..1."""
-    power_a = _bloc_power(map_screen, side_a, world)
-    power_b = _bloc_power(map_screen, side_b, world)
+    power_a = _bloc_power(context, side_a, world)
+    power_b = _bloc_power(context, side_b, world)
     combined = power_a + power_b
     if combined <= 0:
         return 0.5
@@ -125,7 +125,7 @@ def strength_share(map_screen, side_a, side_b, world=None):
 # THE HAND
 # ==========================================
 
-def leverage(map_screen, side_a, side_b, world=None):
+def leverage(context, side_a, side_b, world=None):
     """Each side's position at the table.
 
     Returns {"a": 0..1, "b": 0..1, "parts": {...}} where a and b sum to 1, so the
@@ -142,8 +142,8 @@ def leverage(map_screen, side_a, side_b, world=None):
     strength figures; the answer is the same without it.
     """
     side_a, side_b = list(side_a), list(side_b)
-    occ_a, occ_b = occupation(map_screen, side_a, side_b)
-    share_a = strength_share(map_screen, side_a, side_b, world)
+    occ_a, occ_b = occupation(context, side_a, side_b)
+    share_a = strength_share(context, side_a, side_b, world)
 
     parts_a = {"occupation": occ_a, "strength": share_a}
     parts_b = {"occupation": occ_b, "strength": 1.0 - share_a}
@@ -167,17 +167,17 @@ def _raw(parts):
             + c.WAR_SCORE_W_STRENGTH * parts["strength"])
 
 
-def between(map_screen, nation, opponent, world=None):
+def between(context, nation, opponent, world=None):
     """Leverage from `nation`'s point of view, sides resolved from the war itself.
 
     The convenience form: peace_scope decides who is actually bound by a
     settlement between these two, and this reports it as
     {"mine": 0..1, "theirs": 0..1, ...}.
     """
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
 
     side_mine, side_theirs = peace_scope.war_sides(nation, opponent, world_state.nation_data)
-    scores = leverage(map_screen, side_mine, side_theirs, world)
+    scores = leverage(context, side_mine, side_theirs, world)
     return {"mine": scores["a"], "theirs": scores["b"],
             "parts": scores["parts"]["a"], "their_parts": scores["parts"]["b"],
             "sides": (side_mine, side_theirs)}

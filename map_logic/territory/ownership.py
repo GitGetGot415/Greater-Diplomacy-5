@@ -10,26 +10,26 @@ from data import queries
 from map_logic.diplomacy import faction_leadership
 
 
-def apply_editor_territory_brush(map_screen, province, remove=False):
+def apply_editor_territory_brush(context, province, remove=False):
     """Apply Brush or Paint to territory or cores. Return changed map layers."""
-    world_state = world_for(map_screen)
-    session_state = session_for(map_screen)
+    world_state = world_for(context)
+    session_state = session_for(context)
 
-    mode = map_screen.editor_mode
+    mode = context.editor_mode
     if (not session_state.is_editor or mode not in ("NATION", "CORE")
             or not province or province.get("owner") in c.WATER_NATIONS):
         return set()
     # Collect the full region before changing its owner or cores.
     targets = (queries.get_editor_paint_region(province, world_state.id_to_province, mode)
-               if map_screen.editor_selection_tool == "PAINT" else [province])
-    nation = map_screen.brush_nation
+               if context.editor_selection_tool == "PAINT" else [province])
+    nation = context.brush_nation
     layers = set()
-    fill = map_screen.editor_selection_tool == "PAINT"
+    fill = context.editor_selection_tool == "PAINT"
     for index, target in enumerate(targets):
         if mode == "NATION":
             if not remove and target.get("owner") != nation:
                 # A fill has one previous owner. Check its remaining land once.
-                conquer_province(map_screen, target, nation,
+                conquer_province(context, target, nation,
                                  refresh_visuals=not fill,
                                  check_landless=not fill or index == len(targets) - 1)
                 layers.update(("political", "relations", "factions", "faction_territories"))
@@ -38,28 +38,28 @@ def apply_editor_territory_brush(map_screen, province, remove=False):
             if remove:
                 if nation not in cores:
                     continue
-                remove_core(map_screen, target, nation, refresh_visuals=not fill)
+                remove_core(context, target, nation, refresh_visuals=not fill)
             elif nation in c.UNOWNED_LAND_OWNERS:
                 if not cores:
                     continue
-                clear_cores(map_screen, target, refresh_visuals=not fill)
+                clear_cores(context, target, refresh_visuals=not fill)
             else:
                 if nation in cores:
                     continue
-                add_core(map_screen, target, nation, refresh_visuals=not fill)
-            map_screen.centers_need_update = True
+                add_core(context, target, nation, refresh_visuals=not fill)
+            context.centers_need_update = True
             layers.add("cores")
     return layers
 
 
-def conquer_province(map_screen, province, new_owner, *, refresh_visuals=True, check_landless=True,
+def conquer_province(context, province, new_owner, *, refresh_visuals=True, check_landless=True,
                      apply_capture_rules=True):
     """Apply ownership. Batch callers can defer visuals and retirement.
 
     Spectator country removal can bypass capture rerouting and new claims.
     """
-    world_state = world_for(map_screen)
-    session_state = session_for(map_screen)
+    world_state = world_for(context)
+    session_state = session_for(context)
     if province:
         # --- NEW: Integrated Puppet Capture Reroute ---
         if apply_capture_rules and not session_state.is_editor and new_owner in world_state.nation_data:
@@ -74,7 +74,7 @@ def conquer_province(map_screen, province, new_owner, *, refresh_visuals=True, c
         old_owner = province.get("owner", "Unclaimed")
         if (apply_capture_rules and old_owner not in c.UNPLAYABLE_NATIONS
                 and old_owner != new_owner and not session_state.is_editor):
-            add_claim(map_screen, province, old_owner)
+            add_claim(context, province, old_owner)
 
         # 1. Logic Update
         province["owner"] = new_owner
@@ -84,38 +84,38 @@ def conquer_province(map_screen, province, new_owner, *, refresh_visuals=True, c
             province["building_queue"] = [q for q in province["building_queue"] if q.get("order_type") != "CORE"]
         
         # 2. Visual Update
-        if (refresh_visuals and map_screen.presentation_enabled
+        if (refresh_visuals and context.presentation_enabled
                 and not session_state.viewing_ai_moves and not session_state.ai_is_thinking):
             nations_dict = country_io.get_nation_colors()
             new_color = list(nations_dict.get(new_owner, (255, 255, 255))) # Fallback to white if unclaimed
             
             new_color = map_utils.avoid_chroma(new_color)
             
-            refresh_map.invalidate_map_surface_cache(map_screen, "political_map")
+            refresh_map.invalidate_map_surface_cache(context, "political_map")
             map_utils.update_single_province_surface(
-                map_screen.political_map, 
-                map_screen.id_map, 
+                context.political_map, 
+                context.id_map, 
                 province["map_color"], 
                 new_color
             )
             
             # 3. Sync the active view
-            if map_screen.map_mode == "POLITICAL":
-                map_screen.active_map = map_screen.political_map
+            if context.map_mode == "POLITICAL":
+                context.active_map = context.political_map
                 
         # 4. UPDATE COUNTRY CENTER FOR TEXT RENDERING
         # Flag this for an update later rather than doing the heavy math instantly
-        map_screen.centers_need_update = True
+        context.centers_need_update = True
 
         # --- A nation that just lost its last province leaves the world stage ---
         if check_landless and old_owner != new_owner and old_owner in world_state.nation_data:
             landless = not any(p.get("owner") == old_owner
                                for p in world_state.map_data.values())
             if landless:
-                retire_landless_nation(map_screen, old_owner)
+                retire_landless_nation(context, old_owner)
 
 
-def retire_exhausted_factions(map_screen):
+def retire_exhausted_factions(context):
     """Retire every member of a faction that no longer has any territory.
 
     The faction action clears shared membership and border history; routing the
@@ -123,7 +123,7 @@ def retire_exhausted_factions(map_screen):
     ordinary per-nation cleanup consistently, whether collapse happened after
     a capture or was discovered while loading a save.
     """
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     from map_logic.diplomacy.faction_actions import disband_exhausted_factions
 
     dissolved = disband_exhausted_factions(
@@ -131,11 +131,11 @@ def retire_exhausted_factions(map_screen):
     for _faction, members in dissolved:
         for member in members:
             if member in world_state.nation_data:
-                retire_landless_nation(map_screen, member)
+                retire_landless_nation(context, member)
     return dissolved
 
 
-def retire_landless_nation(map_screen, nation, *, force=False):
+def retire_landless_nation(context, nation, *, force=False):
     """Retires a landless nation unless its faction sustains it in exile.
 
     force=True permits spectator annexation to end a faction-backed exile.
@@ -155,7 +155,7 @@ def retire_landless_nation(map_screen, nation, *, force=False):
     scenario authored keeps its cores when you annex it, one you created and
     re-annexed does not.
     """
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     data = world_state.nation_data.get(nation)
     if data is None:
         return
@@ -164,7 +164,7 @@ def retire_landless_nation(map_screen, nation, *, force=False):
     # what repainting one looks like halfway through -- so losing its treaties
     # for it would be destructive rather than tidy. Only the erase-entirely
     # half below still runs there, as it always has.
-    if not session_for(map_screen).is_editor:
+    if not session_for(context).is_editor:
         # A faction can restore territory to its original member through the
         # normal faction-core transfer rule. Do not dissolve the very
         # membership and historical border record that make that possible --
@@ -172,7 +172,7 @@ def retire_landless_nation(map_screen, nation, *, force=False):
         # possible restorer, so retire the whole exhausted roster now instead
         # of allowing a dead bloc to remain at war indefinitely.
         if data.get("faction", "") and not force:
-            retire_exhausted_factions(map_screen)
+            retire_exhausted_factions(context)
             # Either the roster was exhausted and this nation has already been
             # retired by the helper, or another member still owns land and it
             # remains a valid government in exile.
@@ -192,7 +192,7 @@ def retire_landless_nation(map_screen, nation, *, force=False):
             # province falls rather than waiting for the next tick, because the
             # player may well be trying to settle with that bloc this turn.
             if was_leader:
-                faction_leadership.promote(map_screen, fac)
+                faction_leadership.promote(context, fac)
 
         # Its own proposals die with it. Territory changes hands in phase 2 and
         # diplomacy resolves in phase 1, so an offer queued before the last
@@ -233,7 +233,7 @@ def retire_landless_nation(map_screen, nation, *, force=False):
     for p in world_state.map_data.values():
         if nation in p.get("cores", []):
             p["cores"].remove(nation)
-            refresh_core_tint(map_screen, p, p["cores"])
+            refresh_core_tint(context, p, p["cores"])
 
     for n_id, n_data in list(world_state.nation_data.items()):
         if not isinstance(n_data, dict):
@@ -271,7 +271,7 @@ def get_mixed_core_color(cores):
     color = (r // valid, g // valid, b // valid) if valid > 0 else (255, 255, 255)
     return map_utils.avoid_chroma(color)
 
-def refresh_core_tint(map_screen, province, cores=None):
+def refresh_core_tint(context, province, cores=None):
     """Repaints one tile on the cores overlay after its core list changed.
 
     Four callers -- add, remove, clear, and wiping a dead nation's cores -- each
@@ -279,69 +279,69 @@ def refresh_core_tint(map_screen, province, cores=None):
     AI is moving" guard that keeps the overlay from flickering mid-turn.
     Pass cores=None to paint the blank tile the eraser leaves behind.
     """
-    session_state = session_for(map_screen)
-    if (not map_screen.presentation_enabled
+    session_state = session_for(context)
+    if (not context.presentation_enabled
             or session_state.viewing_ai_moves or session_state.ai_is_thinking):
         return
     color = get_mixed_core_color(cores) if cores is not None else (255, 255, 255)
-    refresh_map.invalidate_map_surface_cache(map_screen, "cores_map")
+    refresh_map.invalidate_map_surface_cache(context, "cores_map")
     map_utils.update_single_province_surface(
-        map_screen.cores_map, map_screen.id_map, province["map_color"], color)
-    if map_screen.map_mode == "CORES":
-        map_screen.active_map = map_screen.cores_map
+        context.cores_map, context.id_map, province["map_color"], color)
+    if context.map_mode == "CORES":
+        context.active_map = context.cores_map
 
 
-def add_core(map_screen, province, nation, *, refresh_visuals=True):
+def add_core(context, province, nation, *, refresh_visuals=True):
     if province and nation:
         cores = province.setdefault("cores", [])
         if nation not in cores:
             cores.insert(0, nation) # Insert at front as primary
         
         if refresh_visuals:
-            refresh_core_tint(map_screen, province, cores)
+            refresh_core_tint(context, province, cores)
 
-def remove_core(map_screen, province, nation, *, refresh_visuals=True):
+def remove_core(context, province, nation, *, refresh_visuals=True):
     if province and nation:
         cores = province.setdefault("cores", [])
         if nation in cores:
             cores.remove(nation)
         
         if refresh_visuals:
-            refresh_core_tint(map_screen, province, cores)
+            refresh_core_tint(context, province, cores)
 
-def clear_cores(map_screen, province, *, refresh_visuals=True):
+def clear_cores(context, province, *, refresh_visuals=True):
     """Wipes all cores from the tile for the Unclaimed Eraser brush."""
     if province:
         province["cores"] = []
         
         if refresh_visuals:
-            refresh_core_tint(map_screen, province)
+            refresh_core_tint(context, province)
 
-def add_claim(map_screen, province, nation):
-    world_state = world_for(map_screen)
+def add_claim(context, province, nation):
+    world_state = world_for(context)
     if province and nation:
         prov_id = province["id"]
         claims = world_state.nation_data.setdefault(nation, {}).setdefault("claims", [])
         if prov_id not in claims:
             claims.append(prov_id)
         # Force a label text realignment
-        map_screen.centers_need_update = True
+        context.centers_need_update = True
 
-def remove_claim(map_screen, province, nation):
-    world_state = world_for(map_screen)
+def remove_claim(context, province, nation):
+    world_state = world_for(context)
     if province and nation:
         prov_id = province["id"]
         claims = world_state.nation_data.get(nation, {}).get("claims", [])
         if prov_id in claims:
             claims.remove(prov_id)
-        map_screen.centers_need_update = True
+        context.centers_need_update = True
 
-def clear_claims(map_screen, province):
-    world_state = world_for(map_screen)
+def clear_claims(context, province):
+    world_state = world_for(context)
     if province:
         prov_id = province["id"]
         for n_data in world_state.nation_data.values():
             claims = n_data.get("claims", [])
             if prov_id in claims:
                 claims.remove(prov_id)
-        map_screen.centers_need_update = True
+        context.centers_need_update = True

@@ -1,4 +1,5 @@
 from ui.navigation.screen import ButtonMenuScreen
+from screens.game import map_launch
 import data.constants as c
 from ui.dialogs import pickers
 
@@ -28,3 +29,6 @@ class TournamentPickerScreen(ButtonMenuScreen):
 
         pickers.open_file_browser(self, "Select Tournament File", c.TOURNAMENT_SAVES_DIR,
                                   extensions=[".gd5tour"], on_result=after_file)
+
+    def prepare_map(self, app):
+        return map_launch.open_tournament_map(app, self)

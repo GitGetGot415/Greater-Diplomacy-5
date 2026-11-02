@@ -110,28 +110,28 @@ def get_tactical_fuel_cost_per_tile(unit, fuel_inc):
     return math.ceil(fuel_inc / (calc_speed * 0.75)) if calc_speed > 0 else 0
 
 
-def air_move_order(map_screen, unit, base, destination, mission=None):
+def air_move_order(context, unit, base, destination, mission=None):
     """Retarget flights; idle aircraft choose a mission from the visible destination."""
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     if mission is None:
         current = air_unit_mission(unit)
         mission = current if current in AIR_TARGET_MISSION_TYPES else (
-            "AIR_DROP" if air_unit_can_air_drop(unit, context=map_screen) and air_drop_target_is_legal(
+            "AIR_DROP" if air_unit_can_air_drop(unit, context=context) and air_drop_target_is_legal(
                 unit, destination, world_state.nation_data) else
-            "STRIKE" if air_move_is_strike(map_screen, unit, destination) else "MOVE")
+            "STRIKE" if air_move_is_strike(context, unit, destination) else "MOVE")
     if mission not in AIR_TARGET_MISSION_TYPES:
         raise ValueError("Choose Move, Strike, or Air Drop before selecting an air target.")
-    if mission not in available_air_missions(map_screen, unit, base):
+    if mission not in available_air_missions(context, unit, base):
         raise ValueError("Air missions require a land base outside ground combat.")
-    if mission == "STRIKE" and not air_move_is_strike(map_screen, unit, destination):
+    if mission == "STRIKE" and not air_move_is_strike(context, unit, destination):
         raise ValueError("Air strikes require enemy territory or visible enemy units.")
-    if mission == "MOVE" and air_unit_can_move_on_ground(unit, context=map_screen):
+    if mission == "MOVE" and air_unit_can_move_on_ground(unit, context=context):
         path = find_unit_move_path(unit, base, destination["id"],
-                                   world_state.id_to_province, world_state.nation_data, context=map_screen)
+                                   world_state.id_to_province, world_state.nation_data, context=context)
         if path is None:
             raise ValueError("No legal ground route exists for this aircraft.")
-        return canonical_unit_order(map_screen, unit["owner"], base, unit,
+        return canonical_unit_order(context, unit["owner"], base, unit,
                                     {"type": "MOVE", "path": path})
     kind = AIR_TARGET_MISSION_TYPES[mission]
-    return queries.canonical_air_order(map_screen, unit, base,
+    return queries.canonical_air_order(context, unit, base,
                                {"type": kind, "target_id": destination["id"]})

@@ -201,10 +201,10 @@ def get_front_and_relief(units, count=None, terrain=None):
     return sorted(units, key=calculate_unit_strength, reverse=True)[:count]
 
 
-def get_combat_predictions(map_screen):
+def get_combat_predictions(context):
     """Generates predictions for meeting engagements and province clashes."""
-    world_state = world_for(map_screen)
-    session_state = session_for(map_screen)
+    world_state = world_for(context)
+    session_state = session_for(context)
     map_data = world_state.map_data
     nation_data = world_state.nation_data
 
@@ -245,7 +245,7 @@ def get_combat_predictions(map_screen):
     incoming = {}
     for prov in map_data.values():
         for u in prov.get("units", []):
-            if (is_air_unit(u, context=map_screen) and not air_unit_can_move_on_ground(u, context=map_screen)) or id(u) in meeting_unit_ids:
+            if (is_air_unit(u, context=context) and not air_unit_can_move_on_ground(u, context=context)) or id(u) in meeting_unit_ids:
                 continue
             order = u.get("order")
             if order and order.get("type") == "MOVE" and order.get("path"):

@@ -82,7 +82,7 @@ def decode_saved_json(payload):
     return json.loads(payload.decode('utf-8'))
 
 
-def legacy_player_country(map_ref, country_id, nation_update):
+def legacy_player_country(context, country_id, nation_update):
     """Prepare a player's record without changing host state.
 
     Faction membership is shared state.  The player can queue a leave/invite
@@ -91,7 +91,7 @@ def legacy_player_country(map_ref, country_id, nation_update):
     restore the previous faction string after its leader has renamed the bloc.
     """
     from data import queries
-    world_state = world_for(map_ref)
+    world_state = world_for(context)
     if not isinstance(nation_update, dict) or country_id not in world_state.nation_data:
         raise ValueError("The move does not contain a valid country record.")
 
@@ -142,7 +142,7 @@ def legacy_player_country(map_ref, country_id, nation_update):
                     or (reference is not None and reference != host_record.get("request_id"))):
                 raise ValueError("A travelling request does not belong to this move.")
         else:
-            available = availability(map_ref, country_id, target, record.get("action", ""))
+            available = availability(context, country_id, target, record.get("action", ""))
             if not available.allowed:
                 # Older snapshots discard invalid drafts while retaining unrelated choices.
                 continue

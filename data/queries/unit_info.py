@@ -755,14 +755,14 @@ def get_ordered_unit_groups(unit_library, *, context=None):
     return tuple(groups[group] for group in UNIT_GROUPS)
 
 
-def province_for_order(map_screen, province_id):
-    world_state = world_for(map_screen)
+def province_for_order(context, province_id):
+    world_state = world_for(context)
     if type(province_id) is not int or province_id not in world_state.id_to_province:
         raise ValueError("Unknown province in order.")
     return world_state.id_to_province[province_id]
 
 
-def canonical_unit_order(map_screen, country_id, province, unit, order):
+def canonical_unit_order(context, country_id, province, unit, order):
     """Preserve the public order-validation interface."""
     from map_logic.actions.unit_actions import canonical_order
-    return canonical_order(map_screen, country_id, province, unit, order)
+    return canonical_order(context, country_id, province, unit, order)

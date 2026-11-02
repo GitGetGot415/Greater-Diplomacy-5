@@ -269,7 +269,7 @@ def _deliver(nation_data, owner, entry):
         del inbox[c.INBOX_MAX_MESSAGES:]
 
 
-def send_message(map_screen, sender, receiver, content, msg_type="TEXT", extra=None,
+def send_message(context, sender, receiver, content, msg_type="TEXT", extra=None,
                  llm=False):
     """Delivers one message to the receiver and files a sent copy for the sender.
 
@@ -287,7 +287,7 @@ def send_message(map_screen, sender, receiver, content, msg_type="TEXT", extra=N
     travels the identical path -- so there was no way to see which of the
     things a country said it had actually thought of.
     """
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     nation_data = world_state.nation_data
     date_str = world_state.time_manager.get_date_string()
 
@@ -323,7 +323,7 @@ def send_message(map_screen, sender, receiver, content, msg_type="TEXT", extra=N
     return incoming
 
 
-def forward_message(map_screen, sender, receiver, original_message, source_owner=None):
+def forward_message(context, sender, receiver, original_message, source_owner=None):
     """Delivers a forwarded copy with immutable, visible provenance metadata.
 
     `sender` is the country doing the forwarding, while `original_sender` is
@@ -331,7 +331,7 @@ def forward_message(map_screen, sender, receiver, original_message, source_owner
     carried over so a forwarded war declaration or treaty remains machine-
     readable to the next country.
     """
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     if not isinstance(original_message, dict):
         return None
     content = original_message.get("content", "")
@@ -369,7 +369,7 @@ def forward_message(map_screen, sender, receiver, original_message, source_owner
         if key in original_message:
             extra[key] = copy.deepcopy(original_message[key])
 
-    return send_message(map_screen, sender, receiver, content,
+    return send_message(context, sender, receiver, content,
                         original_message.get("type", "TEXT"), extra=extra,
                         llm=bool(original_message.get("llm")))
 
@@ -399,7 +399,7 @@ def announcement_for(action, custom_msg=""):
     return default
 
 
-def send_treaty_message(map_screen, sender, receiver, action, custom_msg="", parameters=None,
+def send_treaty_message(context, sender, receiver, action, custom_msg="", parameters=None,
                         llm=False, note=""):
     """Announces an outgoing diplomatic action to its recipient.
 
@@ -413,7 +413,7 @@ def send_treaty_message(map_screen, sender, receiver, action, custom_msg="", par
     itemized terms. It is quoted under them so the thread reads as one letter.
     """
     extra = {"action": action}
-    request = get_pending(world_for(map_screen).nation_data, sender, receiver)
+    request = get_pending(world_for(context).nation_data, sender, receiver)
     if request.get("request_id"):
         extra["request_id"] = request["request_id"]
     if parameters:
@@ -422,7 +422,7 @@ def send_treaty_message(map_screen, sender, receiver, action, custom_msg="", par
     body = announcement_for(action, custom_msg)
     if note:
         body = f"{body}\n\n\"{note}\""
-    send_message(map_screen, sender, receiver, body, "DIPLOMACY", extra=extra, llm=llm)
+    send_message(context, sender, receiver, body, "DIPLOMACY", extra=extra, llm=llm)
 
 
 def message_category(msg):

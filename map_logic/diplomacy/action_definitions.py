@@ -25,6 +25,10 @@ class ActionDefinition:
     lite_response: the AI_FALLBACK_RESPONSES key the AI answers with when the LLM is
         not consulted. Other actions use a plain accept or reject line.
     cancelled_by_war: a simultaneous declaration of war makes this proposal moot.
+    proactive_context: how an AI describes this move when it starts it ({target}).
+    unilateral_notice: how an AI learns of this move when it cannot refuse ({sender}).
+    proposal_notice: how an AI learns of this proposal ({sender}, {terms}).
+        A notice that includes {terms} replaces the "official message" line.
     """
     category: str
     phase: str
@@ -32,6 +36,9 @@ class ActionDefinition:
     announcement: object = None
     lite_response: str | None = None
     cancelled_by_war: bool = False
+    proactive_context: str | None = None
+    unilateral_notice: str | None = None
+    proposal_notice: str | None = None
 
 
 def _check_existing(context, sender, target, action_type, nation_data, sender_data, target_data):
@@ -83,12 +90,16 @@ def _check_ceasefire(context, sender, target, action_type, nation_data, sender_d
         return (False, 'there is no war these countries may settle')
     return True, ""
 
-def _check_faction_invite(context, sender, target, action_type, nation_data, sender_data, target_data):
+def _factions_disabled(context):
     from data import queries
     import data.constants as c
     from data.state_access import world_for
-    world_state = world_for(context)
-    if queries.get_scenario_flag("disable_factions", c.DEFAULT_DISABLE_FACTIONS, getattr(world_state, "scenario_settings", {})):
+    return queries.get_scenario_flag("disable_factions", c.DEFAULT_DISABLE_FACTIONS,
+                                     getattr(world_for(context), "scenario_settings", {}))
+
+def _check_faction_invite(context, sender, target, action_type, nation_data, sender_data, target_data):
+    from data import queries
+    if _factions_disabled(context):
         return (False, 'factions are disabled')
     leadership_error = queries.faction_request_leadership_error(sender, target, action_type, nation_data)
     if leadership_error:
@@ -101,10 +112,7 @@ def _check_faction_invite(context, sender, target, action_type, nation_data, sen
 
 def _check_join_faction_req(context, sender, target, action_type, nation_data, sender_data, target_data):
     from data import queries
-    import data.constants as c
-    from data.state_access import world_for
-    world_state = world_for(context)
-    if queries.get_scenario_flag("disable_factions", c.DEFAULT_DISABLE_FACTIONS, getattr(world_state, "scenario_settings", {})):
+    if _factions_disabled(context):
         return (False, 'factions are disabled')
     if not queries.can_choose_own_faction(sender, nation_data):
         return (False, "a puppet follows its master's faction")
@@ -119,10 +127,7 @@ def _check_join_faction_req(context, sender, target, action_type, nation_data, s
 
 def _check_create_faction(context, sender, target, action_type, nation_data, sender_data, target_data):
     from data import queries
-    import data.constants as c
-    from data.state_access import world_for
-    world_state = world_for(context)
-    if queries.get_scenario_flag("disable_factions", c.DEFAULT_DISABLE_FACTIONS, getattr(world_state, "scenario_settings", {})):
+    if _factions_disabled(context):
         return (False, 'factions are disabled')
     if not queries.can_choose_own_faction(sender, nation_data) or not queries.can_choose_own_faction(target, nation_data):
         return (False, 'puppets cannot found factions independently')
@@ -175,26 +180,32 @@ ACTION_DEFINITIONS = {
     "WAR_DECLARATION": ActionDefinition(
         "unilateral", "send", _check_war_declaration,
         lite_response="BETRAYAL",
+        proactive_context="declaring war on {target} to reclaim rightful core territory, you are not negotiating",
+        unilateral_notice="{sender} has DECLARED WAR on us!",
     ),
     "BREAK_ALLIANCE": ActionDefinition(
         "unilateral", "send", _check_existing,
         announcement=("BREAK_ALLIANCE", "We have broken our alliance."),
         lite_response="ALLIANCE_BROKEN",
+        unilateral_notice="{sender} has broken their alliance with us!",
     ),
     "KICK_FACTION_MEMBER": ActionDefinition(
         "unilateral", "send", _check_faction_control,
         announcement=("KICKED_FROM_FACTION", "We will not forget being expelled from the alliance."),
         lite_response="KICKED_FROM_FACTION",
+        unilateral_notice="{sender} has expelled us from the faction!",
     ),
     "LEAVE_FACTION": ActionDefinition(
         "unilateral", "send", _check_leave_faction,
         announcement=("FACTION_ABANDONED", "We will not forget your abandonment."),
         lite_response="FACTION_ABANDONED",
+        unilateral_notice="{sender} has abandoned our faction!",
     ),
     "DISBAND_FACTION": ActionDefinition(
         "unilateral", "send", _check_faction_control,
         announcement=("FACTION_DISBANDED", "It is a shame to see our alliance broken."),
         lite_response="FACTION_DISBANDED",
+        unilateral_notice="{sender} has disbanded our faction!",
     ),
     "CLAIM_FACTION_LEADERSHIP": ActionDefinition(
         "unilateral", "send", _check_existing,
@@ -235,48 +246,68 @@ ACTION_DEFINITIONS = {
         "bilateral", "reply", _check_join_wars,
         announcement=("REQUEST_JOIN_WARS", "We request permission to join your ongoing wars."),
         lite_response="ACCEPTED_HELP",
+        proactive_context="mobilizing our forces to join your war against {target}",
+        unilateral_notice="{sender} has mobilized their forces to join our ongoing wars!",
+        proposal_notice="{sender} is offering to join YOUR ongoing wars.",
     ),
     "FACTION_INVITE": ActionDefinition(
         "bilateral", "reply", _check_faction_invite,
         announcement="We invite your nation to join our faction.",
         cancelled_by_war=True,
+        proactive_context="inviting you into our faction, since we are on good terms and would both be stronger for it",
+        proposal_notice="{sender} is inviting you to join THEIR faction.",
     ),
     "JOIN_FACTION_REQ": ActionDefinition(
         "bilateral", "reply", _check_join_faction_req,
         announcement="We formally request to join your faction.",
         cancelled_by_war=True,
+        proactive_context="requesting to join your faction to stand against our mutual enemies",
+        proposal_notice="{sender} is requesting to join YOUR faction.",
     ),
     "CEASEFIRE": ActionDefinition(
         "bilateral", "reply", _check_ceasefire,
         announcement="We offer terms for a ceasefire.",
         cancelled_by_war=True,
+        proactive_context="offering a ceasefire because our nations cannot physically reach each other",
+        proposal_notice="{sender} has proposed terms to end the war. Terms: {terms}",
     ),
     "CALL_TO_ARMS": ActionDefinition(
         "bilateral", "reply", _check_join_wars,
         announcement="We request your aid in our ongoing conflicts!",
         lite_response="ANSWERED_CALL",
+        proactive_context="calling you to arms in our war against {target}",
+        proposal_notice="{sender} is calling YOU to arms to join THEIR ongoing wars.",
     ),
     "CREATE_FACTION": ActionDefinition(
         "bilateral", "reply", _check_create_faction,
         announcement="We propose establishing a new faction together.",
         cancelled_by_war=True,
+        proactive_context="proposing to create a new faction together to combat mutual threats",
     ),
     "PEACE_TREATY": ActionDefinition(
         "bilateral", "reply", _check_ceasefire,
         announcement="We propose terms to end this war.",
         cancelled_by_war=True,
+        proactive_context="offering terms to end the war between us, which has gone badly for us",
+        proposal_notice="{sender} has proposed terms to end the war. Terms: {terms}",
     ),
     "TRADE": ActionDefinition(
         "bilateral", "reply", _check_existing,
         announcement="We propose a trade agreement.",
+        proactive_context="proposing an exchange of resources, each of us sending what the other lacks",
+        proposal_notice="{sender} has proposed a Trade Agreement. Terms: {terms}",
     ),
     "REQ_MILITARY_ACCESS": ActionDefinition(
         "bilateral", "reply", _check_req_military_access,
         announcement="We formally request military access to move our troops through your territory.",
+        proactive_context="requesting military access through your territory since we are both fighting a common enemy",
+        proposal_notice="{sender} is requesting military access to move their troops through your territory.",
     ),
     "SEND_MILITARY_ATTACHE": ActionDefinition(
         "bilateral", "reply", _check_send_military_attache,
         announcement="We request to send a military attaché to observe your war.",
+        proactive_context="requesting to send a military attaché to observe your war",
+        proposal_notice="{sender} is requesting to send a military attaché to observe your war.",
     ),
     "SEND_VOLUNTEERS": ActionDefinition(
         "bilateral", "reply", _check_existing,

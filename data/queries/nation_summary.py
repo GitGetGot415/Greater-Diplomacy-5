@@ -63,11 +63,11 @@ def get_shared_country_economy_summaries(viewer, map_data, nation_data, *, conte
         economies.get(country_id, {}).get("upkeep", empty)) for country_id in shared}
 
 
-def can_view_country_economy(map_screen, country_id):
+def can_view_country_economy(context, country_id):
     """Permit shared economics and unrestricted local inspection."""
-    world_state = world_for(map_screen)
-    session_state = session_for(map_screen)
-    viewer = get_viewing_country(map_screen)
+    world_state = world_for(context)
+    session_state = session_for(context)
+    viewer = get_viewing_country(context)
     if viewer == c.TOURNAMENT_SPECTATOR:
         return False
     if shares_country_economy(viewer, country_id, world_state.nation_data):
@@ -81,22 +81,22 @@ def can_view_country_economy(map_screen, country_id):
         "fog_of_war", c.DEFAULT_FOG_OF_WAR, world_state.scenario_settings)
 
 
-def get_country_summary(map_screen, country_id):
+def get_country_summary(context, country_id):
     """Build a read-only country summary from information available to its viewer.
 
     Foreign military totals count visible units, without revealing transported cargo.
     Economy figures use the existing projections only when private information is available.
     Call this when opening the summary, never during frame rendering.
     """
-    world_state = world_for(map_screen)
-    session_state = session_for(map_screen)
+    world_state = world_for(context)
+    session_state = session_for(context)
     from map_logic.system32 import combat_rules
 
     nation_data = world_state.nation_data
     if country_id not in nation_data or country_id in c.UNPLAYABLE_NATIONS:
         raise ValueError("Choose a country to view its summary.")
     country = nation_data[country_id]
-    viewer = get_viewing_country(map_screen)
+    viewer = get_viewing_country(context)
     networked = (session_state.realtime_multiplayer
                  or session_state.multiplayer_mode)
     unrestricted = (not networked and viewer != c.TOURNAMENT_SPECTATOR
@@ -106,7 +106,7 @@ def get_country_summary(map_screen, country_id):
     units = []
     for province in world_state.map_data.values():
         if (not complete_army and fog
-                and not queries.is_province_visible(map_screen, province["id"])):
+                and not queries.is_province_visible(context, province["id"])):
             continue
         visible_units = province.get("units", [])
         if not complete_army:
@@ -114,20 +114,20 @@ def get_country_summary(map_screen, country_id):
         candidates = units_with_air_cargo(visible_units) if complete_army else visible_units
         units.extend(unit for unit in candidates if unit.get("owner") == country_id)
 
-    economy_available = can_view_country_economy(map_screen, country_id)
+    economy_available = can_view_country_economy(context, country_id)
     economy = {"available": False, "resources": []}
     if economy_available:
         # Older local maps and test doubles have no network presentation cache.
-        shared_economies = getattr(map_screen, "country_economy_summaries", {})
+        shared_economies = getattr(context, "country_economy_summaries", {})
         if networked and country_id != viewer and country_id in shared_economies:
             economy = copy.deepcopy(shared_economies[country_id])
         elif not (session_state.realtime_multiplayer and country_id != viewer
-                  and not map_screen.realtime_server_map):
+                  and not context.realtime_server_map):
             # Remote clients without server totals keep the economy private.
             # Economy queries can initialize missing siphon rates. Inspection must
             # not initialize or change any saved country state.
             income, expenses, _breakdown = queries.get_economy_projections(
-                country_id, world_state.map_data, copy.deepcopy(nation_data), context=map_screen)
+                country_id, world_state.map_data, copy.deepcopy(nation_data), context=context)
             economy = _country_economy_summary(country, income, expenses)
 
     faction = country.get("faction", "")

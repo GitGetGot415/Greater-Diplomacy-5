@@ -202,6 +202,9 @@ class Music_Player(ScrollPanes, Screen):
         
         self.refresh_ui()
 
+    def on_enter(self, app, previous):
+        self.return_to_previous_context(app, previous)
+
     def refresh_ui(self):
         self.elements = []
 

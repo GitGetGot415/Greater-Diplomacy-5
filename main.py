@@ -9,7 +9,6 @@
 # non-interactive scripts (main.py), which hangs instead of resuming. Harmless
 # comment for desktop Python.
 
-import shutil
 import json
 import random
 
@@ -422,218 +421,16 @@ class Controller:
         }
         self.active_state = self.states["MENU"]
 
-    def _enter_realtime_map(self, realtime_map, session, player_id, country_id, after_layers=None):
-        """Make a loaded map the active real-time board for one player."""
-        realtime_map.selection_mode = False
-        realtime_map.pending_selection = None
-        realtime_map.show_player_ready_screen = False
-        realtime_map.realtime_multiplayer = True
-        realtime_map.realtime_session = session
-        realtime_map.realtime_player_id = player_id
-        realtime_map.player_country = country_id
-        realtime_map.active_players = [p.country_id for p in session.players.values() if p.country_id]
-        realtime_map.set_play_view_defaults()
-        # Map construction initially suppresses fog while scenario country
-        # selection is active. Rebuild the player-dependent layers immediately
-        # instead of waiting for the first processed turn to do it.
-        realtime_map.refresh_map_layers("relations", "faction_territories", "fog")
-        if after_layers:
-            after_layers()
-        self.states["MAP"] = realtime_map
-        from screens.game.map import render_buttons
-        render_buttons(realtime_map)
-
-    @staticmethod
-    def _apply_initial_snapshot(realtime_map, view):
-        from data.multiplayer.realtime.session import apply_authoritative_snapshot
-        if view.snapshot:
-            apply_authoritative_snapshot(realtime_map, view.snapshot)
-            realtime_map._realtime_snapshot_turn = view.turn_number
-            realtime_map._realtime_snapshot_phase = view.phase
-
     def flip_state(self):
-        """Unified flip_state logic"""
+        """Switch to the screen that the active screen asked for."""
         previous_state = self.active_state
-        next_state_name = self.active_state.next_state
-
-        # 1. Data Handoff
-        if next_state_name in ["PRODUCTION", "ORDERS", "NAVY", "EDIT_COUNTRY"]:
-            map_ref = self.states["MAP"]
-            if next_state_name == "EDIT_COUNTRY":
-                self.states["EDIT_COUNTRY"].start_editor(map_ref)
-            elif map_ref.selected_province:
-                self.states[next_state_name].start_with_province(map_ref.selected_province, map_ref)
-
-        if next_state_name in ["RESEARCH", "ECONOMY", "MESSAGES", "FACTION", "FACTION_TERRITORIES"]:
-            map_ref = self.states["MAP"]
-            if next_state_name == "RESEARCH":
-                self.states["RESEARCH"].start_research(map_ref)
-            elif next_state_name == "ECONOMY":
-                self.states["ECONOMY"].start_economy(map_ref)
-            elif next_state_name == "MESSAGES":
-                self.states["MESSAGES"].start_messages(map_ref)
-            elif next_state_name == "FACTION":
-                self.states["FACTION"].start_faction(map_ref)
-            elif next_state_name == "FACTION_TERRITORIES":
-                self.states["FACTION_TERRITORIES"].start_view(map_ref)
-
-        if next_state_name in ["SETTINGS", "MUSIC_PLAYER"]:
-            if previous_state == self.states["MAP"]:
-                self.states[next_state_name].back_state = "MAP"
-            elif previous_state == self.states["REALTIME_LOBBY"]:
-                # These are convenience overlays while a host waits in the
-                # lobby. Returning must preserve the live server/session.
-                self.states[next_state_name].back_state = "REALTIME_LOBBY"
-            elif previous_state == self.states["REALTIME_REMOTE_LOBBY"]:
-                self.states[next_state_name].back_state = "REALTIME_REMOTE_LOBBY"
-            # Returning from a Settings sub-screen (e.g. Unit Art, Keybinds)
-            # isn't a fresh entry into Settings -- it must not overwrite the
-            # MAP/MENU back_state Settings already picked up when it was
-            # first opened, or Back from the sub-screen would dump the
-            # player at the menu even when they opened Settings from a live game.
-            elif previous_state not in (self.states.get("UNIT_ART"), self.states.get("KEYBINDS"),
-                                        self.states.get("MOUSE_SETTINGS")):
-                self.states[next_state_name].back_state = "MENU"
-
-        # 2. Map Persistence
-        if next_state_name == "MAP":
-            if hasattr(previous_state, "selected_realtime_session"):
-                # The host's visible board is a second map instance. The
-                # server-owned map stays inside MapRealtimeDriver, preventing
-                # host UI edits from bypassing authoritative validation.
-                realtime_map = Map(load_path=previous_state.selected_realtime_scenario_path,
-                                   is_scenario=True,
-                                   map_settings=previous_state.selected_realtime_settings,
-                                   num_players=len(previous_state.selected_realtime_session.players))
-                session = previous_state.selected_realtime_session
-                host_player = session.players[previous_state.selected_realtime_player_id]
-                realtime_map.realtime_server = previous_state.selected_realtime_server
-                realtime_map.realtime_server_map = previous_state.selected_realtime_server_map
-                realtime_map.realtime_port_mapping = previous_state.selected_realtime_port_mapping
-                realtime_map.realtime_temporary_relay = previous_state.selected_realtime_temporary_relay
-                realtime_map.realtime_relay_token = previous_state.selected_realtime_relay_token
-                # Scenario loading supplies the finalized map, but the host
-                # selected a country in the lobby already.  Do not re-enter
-                # the ordinary single-player country-selection flow.
-                self._enter_realtime_map(realtime_map, session, host_player.player_id, host_player.country_id)
-            elif hasattr(previous_state, "selected_realtime_client"):
-                view = previous_state.selected_realtime_view
-                from data.multiplayer.realtime.session import materialize_map_bundle
-                bundle_path = materialize_map_bundle(previous_state.selected_realtime_client.map_bundle)
-                try:
-                    realtime_map = Map(load_path=bundle_path, is_scenario=False,
-                                       num_players=len(view.players))
-                finally:
-                    shutil.rmtree(bundle_path, ignore_errors=True)
-                me = view.players[view.player_id]
-                realtime_map.realtime_client = previous_state.selected_realtime_client
-                # The map was loaded before the remote player's country was
-                # known; the shared entry initializes that player's visibility.
-                self._enter_realtime_map(realtime_map, view, view.player_id, me.country_id,
-                                         lambda: self._apply_initial_snapshot(realtime_map, view))
-            elif previous_state == self.states["RANDOM_SETUP"]:
-                self.states["MAP"] = Map(is_scenario=True, is_random=True, random_settings=previous_state.random_settings, num_players=self.num_players)
-
-            elif hasattr(previous_state, 'selected_tournament_path'):
-                path = previous_state.selected_tournament_path
-                key = previous_state.selected_tournament_key
-
-                from data.multiplayer.tournament import files as tournament_files
-                res = tournament_files.load_tournament(path, key)
-                if len(res) >= 8:
-                    success, role, cid, temp_dir, keys_dict, msg, session_key, ver_table = res[:8]
-                else:
-                    success, role, cid, temp_dir, keys_dict, msg = res[:6]
-                    session_key, ver_table = None, {}
-
-                if success:
-                    self.states["MAP"] = Map(load_path=temp_dir, is_scenario=False, force_editor=False, num_players=self.num_players)
-                    self.states["MAP"].loaded_tournament_path = path
-                    self.states["MAP"].multiplayer_tournament_dir = os.path.dirname(path)
-                    self.states["MAP"].multiplayer_session_key = session_key
-
-                    player_enc_cache = {}
-                    if ver_table:
-                        for h, v_entry in ver_table.items():
-                            if v_entry.get("role") == "PLAYER":
-                                r_cid = v_entry.get("country_id")
-                                if r_cid and r_cid in keys_dict:
-                                    player_enc_cache[r_cid] = (keys_dict[r_cid], h, v_entry["enc_session"])
-                    self.states["MAP"].multiplayer_player_enc_cache = player_enc_cache
-
-                    if role == "HOST":
-                        self.states["MAP"].multiplayer_host_mode = True
-                        self.states["MAP"].player_country = "Spectator"
-                        self.states["MAP"].multiplayer_master_key = key
-                        self.states["MAP"].multiplayer_keys_dict = keys_dict
-                    elif role == "PLAYER":
-                        self.states["MAP"].multiplayer_player_key = key
-                        tournament_files.strip_sensitive_data_for_player(self.states["MAP"], cid)
-                    elif role == c.TOURNAMENT_SPECTATOR_ROLE:
-                        tournament_files.strip_sensitive_data_for_tournament_spectator(
-                            self.states["MAP"])
-
-                    shutil.rmtree(temp_dir, ignore_errors=True)
-
-                    self.states["MAP"].refresh_all_maps()
-                    from screens.game.map import render_buttons
-                    render_buttons(self.states["MAP"])
-                else:
-                    print(f"Failed to load tournament: {msg}")
-
-                    # Show popup to user
-                    from ui import dialogs 
-                    dialogs.show_error("Load Failed", msg)
-
-                    # Abort transition
-                    self.active_state.done = False
-                    self.active_state.next_state = "MULTIPLAYER_HUB"
-                    return
-
-            elif hasattr(previous_state, 'selected_save_path'):
-                path = previous_state.selected_save_path
-
-                if path == "RANDOM":
-                    self.states["MAP"] = Map(load_path=None, is_scenario=True, is_random=True, num_players=self.num_players)
-                else:
-                    is_scen = "scenarios" in path
-                    is_map_editor = (previous_state == self.states["SELECT_BASE_MAP"])
-
-                    history_turn = getattr(previous_state, 'selected_history_turn', None)
-
-                    self.states["MAP"] = Map(load_path=path, is_scenario=is_scen, force_editor=is_map_editor, num_players=self.num_players, history_turn=history_turn)
-
-            elif previous_state in [self.states["MENU"], self.states["NEW_GAME"]]:
-                self.states["MAP"] = Map(num_players=self.num_players)
-
-        # Refresh file browsers on entry. Frame updates use cached entries.
-        if next_state_name in ("LOAD_GAME", "SELECT_BASE_MAP"):
-            self.states[next_state_name].reload_entries()
-        elif next_state_name == "EDIT_PORTRAIT":
-            self.states["EDIT_PORTRAIT"].refresh_ui()
-        elif next_state_name == "SETTINGS":
-            # The navigation tutorial may persist its opt-out while Settings
-            # is closed; rebuild so its toggle always reflects that value.
-            self.states["SETTINGS"].refresh_ui()
-
-        if next_state_name == "REALTIME_SCENARIO_SELECT":
-            selector = self.states["REALTIME_SCENARIO_SELECT"]
-            if previous_state == self.states["REALTIME_LOBBY"]:
-                selector.bind_lobby(previous_state)
-            else:
-                selector.bind_host(self.states["REALTIME_HOST_SETUP"])
-            selector.refresh_ui()
-        elif next_state_name in ("REALTIME_RELAY_SETUP", "REALTIME_RELAY_PROVISION"):
-            self.states[next_state_name].bind_host(self.states["REALTIME_HOST_SETUP"])
-        elif next_state_name == "REALTIME_LOBBY":
-            self.states["REALTIME_LOBBY"].bind_host(self.states["REALTIME_HOST_SETUP"])
-        elif next_state_name == "REALTIME_REMOTE_LOBBY":
-            self.states["REALTIME_REMOTE_LOBBY"].bind_join(self.states["REALTIME_JOIN"])
-        elif next_state_name == "REALTIME_LAN_BROWSER":
-            self.states["REALTIME_LAN_BROWSER"].bind_join(self.states["REALTIME_JOIN"])
-
-        self.active_state.done = False
-        self.active_state = self.states[next_state_name]
+        next_state_name = previous_state.next_state
+        if next_state_name == "MAP" and not previous_state.prepare_map(self):
+            return
+        next_state = self.states[next_state_name]
+        next_state.on_enter(self, previous_state)
+        previous_state.done = False
+        self.active_state = next_state
 
     def load_music_data(self):
         import beepbox_audio

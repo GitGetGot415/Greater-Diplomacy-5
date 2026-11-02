@@ -14,7 +14,7 @@ import pygame
 
 from tests import app_harness
 
-# The state-machine keys main.py's flip_state() dispatches on. Hardcoded here
+# The state-machine keys that screens and flip_state() use. Hardcoded here
 # rather than read back from Controller so that deleting one fails the test.
 EXPECTED_STATES = {
     "MENU", "NEW_GAME", "RANDOM_SETUP", "LOAD_GAME", "SETTINGS", "UNIT_ART", "CREDITS",
@@ -35,6 +35,7 @@ PROTOCOL = (
     "handle_events", "additional_events", "update", "draw", "draw_background",
     "draw_title", "draw_elements", "draw_feedback", "additional_draw",
     "go_to", "exit_screen", "handle_back_key", "get_title", "refresh_ui",
+    "on_enter", "prepare_map",
 )
 
 
@@ -71,7 +72,7 @@ class ControllerConstructionTests(unittest.TestCase):
 
     def test_map_is_built_lazily(self):
         """MAP is intentionally None until a scenario is chosen; if that ever
-        changes, flip_state()'s Map-construction branch needs revisiting.
+        changes, the prepare_map hooks need revisiting.
 
         Read off what boot() recorded rather than off the live controller: it is
         cached per interpreter, and any earlier test file that called boot_map()

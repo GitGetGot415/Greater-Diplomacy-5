@@ -495,14 +495,14 @@ def find_unit_move_paths_to_destinations(unit, start_province, destination_ids,
     return paths
 
 
-def _queue_army_balanced_area_orders(map_screen, country_id, army, destination_ids,
+def _queue_army_balanced_area_orders(context, country_id, army, destination_ids,
                                      only_idle=False, excluded_unit_object_ids=()):
     """Queue balanced legal routes to one army's target-area tiles.
 
     Existing members count as defenders, reachable gaps are filled first, then
     reinforcements go to the least-covered destination.
     """
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     destinations = list(dict.fromkeys(destination_ids or ()))
     destinations = [province_id for province_id in destinations
                     if province_id in world_state.id_to_province]
@@ -525,7 +525,7 @@ def _queue_army_balanced_area_orders(map_screen, country_id, army, destination_i
             province_id = province.get("id")
             if province_id in coverage:
                 coverage[province_id] += 1
-                if air_unit_has_mission(unit, context=map_screen):
+                if air_unit_has_mission(unit, context=context):
                     continue
                 if (not only_idle and isinstance(order, dict)
                         and order.get("type") == "MOVE"):
@@ -533,7 +533,7 @@ def _queue_army_balanced_area_orders(map_screen, country_id, army, destination_i
                     # defender rather than continue along an old route.
                     unit.pop("order", None)
                 continue
-            if (id(unit) in excluded or air_unit_has_mission(unit, context=map_screen)
+            if (id(unit) in excluded or air_unit_has_mission(unit, context=context)
                     or (only_idle and unit_has_active_order(unit))):
                 continue
             if (not only_idle and isinstance(order, dict)
@@ -541,7 +541,7 @@ def _queue_army_balanced_area_orders(map_screen, country_id, army, destination_i
                 continue
             paths = find_unit_move_paths_to_destinations(
                 unit, province, destinations, world_state.id_to_province,
-                world_state.nation_data, context=map_screen)
+                world_state.nation_data, context=context)
             if not paths:
                 continue
             candidates.append((unit, paths))
@@ -597,30 +597,30 @@ def _queue_army_balanced_area_orders(map_screen, country_id, army, destination_i
     return len(assignments)
 
 
-def _army_record(map_screen, country_id, army_id):
-    world_state = world_for(map_screen)
+def _army_record(context, country_id, army_id):
+    world_state = world_for(context)
     return next((item for item in get_armies(
         country_id, world_state.nation_data, world_state.map_data)
                  if item.get("id") == army_id), None)
 
 
-def queue_army_defense_orders(map_screen, country_id, army_id, only_idle=False,
+def queue_army_defense_orders(context, country_id, army_id, only_idle=False,
                               excluded_unit_object_ids=()):
     """Queue balanced legal routes to one army's saved target area."""
     if army_id == c.UNASSIGNED_ARMY_ID:
         return 0
-    army = _army_record(map_screen, country_id, army_id)
+    army = _army_record(context, country_id, army_id)
     if army is None:
         return 0
     return _queue_army_balanced_area_orders(
-        map_screen, country_id, army, army.get("defense_area", []), only_idle,
+        context, country_id, army, army.get("defense_area", []), only_idle,
         excluded_unit_object_ids)
 
 
-def queue_idle_army_defense_orders(map_screen):
+def queue_idle_army_defense_orders(context):
     """Prepare target-area returns for idle units after this turn resolves."""
-    world_state = world_for(map_screen)
-    moved_or_ordered = map_screen._units_with_move_order_this_turn
+    world_state = world_for(context)
+    moved_or_ordered = context._units_with_move_order_this_turn
     queued = 0
     for country_id, country in world_state.nation_data.items():
         if not isinstance(country, dict):
@@ -628,12 +628,12 @@ def queue_idle_army_defense_orders(map_screen):
         for army in country.get("armies", []):
             if isinstance(army, dict):
                 queued += queue_army_defense_orders(
-                    map_screen, country_id, army.get("id"), only_idle=True,
+                    context, country_id, army.get("id"), only_idle=True,
                     excluded_unit_object_ids=moved_or_ordered)
     # This is turn-local evidence, not saved game state.  Clearing it here
     # makes the next resolution evaluate only the moves actually submitted for
     # that next turn.
-    map_screen._units_with_move_order_this_turn = set()
+    context._units_with_move_order_this_turn = set()
     return queued
 
 

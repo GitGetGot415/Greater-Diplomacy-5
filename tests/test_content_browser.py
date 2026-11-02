@@ -263,13 +263,16 @@ class ContentBrowserTests(unittest.TestCase):
 
     def test_controller_refreshes_browsers_on_entry(self):
         import main
+        from screens.menus.load_game import Load_Game
+        from screens.setup.select_base_map import Select_Base_Map
 
-        for state in ("LOAD_GAME", "SELECT_BASE_MAP"):
+        for state, screen_class in (("LOAD_GAME", Load_Game), ("SELECT_BASE_MAP", Select_Base_Map)):
             previous = SimpleNamespace(next_state=state, done=True)
-            target = mock.Mock()
+            target = screen_class.__new__(screen_class)
             controller = SimpleNamespace(active_state=previous, states={state: target})
-            main.Controller.flip_state(controller)
-            target.reload_entries.assert_called_once()
+            with mock.patch.object(screen_class, "reload_entries") as reload_entries:
+                main.Controller.flip_state(controller)
+            reload_entries.assert_called_once()
             self.assertIs(controller.active_state, target)
 
     def test_summary_uses_existing_metadata_and_display_names_without_loading_history(self):

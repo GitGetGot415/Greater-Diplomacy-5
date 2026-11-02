@@ -17,7 +17,7 @@ from map_logic.territory import ownership
 @dataclass(frozen=True)
 class EventRun:
     """State shared by every condition and action in one pass over the scripted events."""
-    map_screen: object
+    context: object
     world: object
     active_nations: set
     human_players: list
@@ -88,12 +88,12 @@ def _variable(run, _nation, condition):
 def _volunteers_sent(run, nation, condition):
     # This count follows the volunteer picker. A division in an outstanding
     # offer, travelling, or deployed is committed capacity.
-    return _numeric_condition(volunteers.committed_count(run.map_screen, nation),
+    return _numeric_condition(volunteers.committed_count(run.context, nation),
                               condition.get("operator", "=="), condition.get("value", ""), _int_value)
 
 
 def _volunteer_capacity(run, nation, condition):
-    return _numeric_condition(volunteers.remaining_capacity(run.map_screen, nation),
+    return _numeric_condition(volunteers.remaining_capacity(run.context, nation),
                               condition.get("operator", "=="), condition.get("value", ""), _int_value)
 
 
@@ -318,9 +318,9 @@ def _edit_color(run, nation, data, _pending, act):
         return
     if len(color) == 3:
         data["color"] = list(color)
-        if hasattr(run.map_screen, "nation_colors"):
-            run.map_screen.nation_colors[nation] = color
-        run.map_screen.centers_need_update = True
+        if hasattr(run.context, "nation_colors"):
+            run.context.nation_colors[nation] = color
+        run.context.centers_need_update = True
 
 
 def _queue_claims(run, _nation, data, _pending, act):
@@ -368,13 +368,13 @@ def _target_provinces(run, nation, act):
 
 def _give_territory(run, nation, _data, _pending, act):
     for target, province in _target_provinces(run, nation, act):
-        ownership.conquer_province(run.map_screen, province, target)
+        ownership.conquer_province(run.context, province, target)
 
 
 def _spawn_unit(run, nation, _data, _pending, act):
-    library = queries.get_unit_library(run.map_screen)
+    library = queries.get_unit_library(run.context)
     unit_type = act.get("unit_type") or queries.get_unit_for_family_year(
-        library, "Infantry Type", c.DEFAULT_EQUIPMENT_YEAR, context=run.map_screen)
+        library, "Infantry Type", c.DEFAULT_EQUIPMENT_YEAR, context=run.context)
     for target, province in _target_provinces(run, nation, act):
         province.setdefault("units", []).append(queries.create_unit_dict(unit_type, target, library))
 
@@ -426,9 +426,9 @@ def _offer_volunteers(run, nation, pending, target, act):
         count = 1
     count = max(1, count)
     if act.get("send_up_to", False):
-        count = min(count, volunteers.remaining_capacity(run.map_screen, nation))
-    chosen = volunteers.available_units(run.map_screen, nation)[:count]
-    details, error = volunteers.create_offer(run.map_screen, nation, target, chosen)
+        count = min(count, volunteers.remaining_capacity(run.context, nation))
+    chosen = volunteers.available_units(run.context, nation)[:count]
+    details, error = volunteers.create_offer(run.context, nation, target, chosen)
     if not error:
         lifecycle.put_request(run.world.nation_data, nation, target, **{
             "action": volunteers.ACTION,
@@ -447,7 +447,7 @@ def _send_request(run, nation, pending, target, act, action):
     # guard before entering pending_diplomacy. This keeps an authored event from
     # starting an illegal war, faction change, or diplomatic request merely
     # because the board changed since it was made.
-    legal, reason = action_is_legal(run.map_screen, nation, target, action)
+    legal, reason = action_is_legal(run.context, nation, target, action)
     if not legal:
         print(f"[SCRIPTED EVENT] Skipping {action} from {nation} to {target}: {reason}.")
         return
@@ -560,9 +560,9 @@ def _scripted_event_response(actions, sender_nation, request_action):
     return matched, response
 
 
-def scripted_event_response_preview(map_screen, nation, sender, action):
+def scripted_event_response_preview(context, nation, sender, action):
     """Predict a scripted response without mutating state or consuming RNG."""
-    return process_scripted_events(map_screen, preview_request=(nation, sender, action))
+    return process_scripted_events(context, preview_request=(nation, sender, action))
 
 
 def _event_can_fire(event, index, fired_events, nation, human_players):
@@ -576,14 +576,14 @@ def _event_can_fire(event, index, fired_events, nation, human_players):
     return bool(event.get("conditions", []))
 
 
-def process_scripted_events(map_screen, preview_request=None):
+def process_scripted_events(context, preview_request=None):
     """Processes scenario-specific scripted events for AI nations."""
-    world_state = world_for(map_screen)
-    session_state = session_for(map_screen)
+    world_state = world_for(context)
+    session_state = session_for(context)
     if not queries.get_scenario_flag("use_scripted_events", c.DEFAULT_USE_SCRIPTED_EVENTS, world_state.scenario_settings):
         return None
 
-    run = EventRun(map_screen, world_state, set(queries.get_living_nations(world_state.map_data)),
+    run = EventRun(context, world_state, set(queries.get_living_nations(world_state.map_data)),
                    session_state.active_players, queries.get_total_turns(world_state.time_manager), preview_request)
     preview_response = None
     preview_unknown = False

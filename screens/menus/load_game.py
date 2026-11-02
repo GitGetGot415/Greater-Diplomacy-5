@@ -4,6 +4,7 @@ from ui.dialogs import pickers
 from ui.dialogs import file_exchange
 from data.map import history_io
 from ui.widgets.content_browser import ContentBrowserScreen
+from screens.game import map_launch
 from ui.widgets.ui_elements import Button, make_back_button, play_ui_sound
 import data.constants as c
 
@@ -19,6 +20,15 @@ class Load_Game(ContentBrowserScreen):
         super().__init__()
         self.bg_color = (50, 0, 50)
         self.refresh_ui()
+
+    def on_enter(self, app, previous):
+        # Refresh on entry. Frame updates use cached entries.
+        self.reload_entries()
+
+    def prepare_map(self, app):
+        map_launch.open_saved_map(app, self.selected_save_path,
+                                  history_turn=self.selected_history_turn)
+        return True
 
     @property
     def managed_dir(self):

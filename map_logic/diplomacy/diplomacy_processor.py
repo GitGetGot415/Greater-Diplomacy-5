@@ -131,9 +131,9 @@ def toggle_diplomatic_response(nation_data, player_name, sender_name, verdict, a
 # run, so each can be read (and the diff for a future change to just one of
 # them reviewed) on its own.
 
-def _decay_modifiers_and_truces(map_screen):
+def _decay_modifiers_and_truces(context):
     """Ages down temporary relation modifiers, truces, and war-duration counters."""
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     for country_name, data in list(world_state.nation_data.items()):
         if not isinstance(data, dict):
             continue
@@ -189,25 +189,25 @@ def _decay_modifiers_and_truces(map_screen):
                 del war_durs[enemy]
 
 
-def action_is_legal(map_screen, sender, target, action_type):
+def action_is_legal(context, sender, target, action_type):
     """Preserve the AI follow-up policy around shared gameplay legality."""
-    result = availability(map_screen, sender, target, action_type)
+    result = availability(context, sender, target, action_type)
     if result.allowed and action_type == "LEAVE_FACTION":
-        blocked = why_an_ai_may_not_leave(sender, world_for(map_screen).nation_data)
+        blocked = why_an_ai_may_not_leave(sender, world_for(context).nation_data)
         if blocked:
             return False, blocked
     return result.allowed, result.reason
 
 
-def _follow_up_is_legal(map_screen, sender, target, action_type):
+def _follow_up_is_legal(context, sender, target, action_type):
     """Compatibility wrapper for AI follow-ups using the shared legality gate."""
-    return action_is_legal(map_screen, sender, target, action_type)[0]
+    return action_is_legal(context, sender, target, action_type)[0]
 
 
-def _flush_queued_ai_actions(map_screen):
+def _flush_queued_ai_actions(context):
     """Turns each nation's queued_ai_actions (from a follow-up action or a
     multi-turn AI plan) into a fresh pending_diplomacy entry for this turn."""
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     for country_name, data in world_state.nation_data.items():
         if isinstance(data, dict) and "queued_ai_actions" in data and data["queued_ai_actions"]:
             pending = data.setdefault("pending_diplomacy", {})
@@ -220,7 +220,7 @@ def _flush_queued_ai_actions(map_screen):
                 if action_type in ["LEAVE_FACTION", "DISBAND_FACTION"]:
                     target = country_name
 
-                if not _follow_up_is_legal(map_screen, country_name, target, action_type):
+                if not _follow_up_is_legal(context, country_name, target, action_type):
                     print(f"[AI GUARDRAIL] Dropping follow-up {action_type} from {country_name} to {target}.")
                     continue
 
@@ -237,24 +237,24 @@ def _flush_queued_ai_actions(map_screen):
             data["queued_ai_actions"] = []
 
 
-def _resolve_cross_action(map_screen, nation_a, nation_b, a_data, b_data, msg_key):
+def _resolve_cross_action(context, nation_a, nation_b, a_data, b_data, msg_key):
     """Helper to cleanly resolve contradictory simultaneous requests and strip them from the queue."""
     msg = ai_prompts.AI_FALLBACK_RESPONSES[msg_key]
-    send_message(map_screen, nation_a, nation_b, msg, "DIPLOMACY")
-    send_message(map_screen, nation_b, nation_a, msg, "DIPLOMACY")
+    send_message(context, nation_a, nation_b, msg, "DIPLOMACY")
+    send_message(context, nation_b, nation_a, msg, "DIPLOMACY")
     if a_data and nation_b in a_data: lifecycle.remove_request(a_data, nation_b)
     if b_data and nation_a in b_data: lifecycle.remove_request(b_data, nation_a)
 
 
-def _war_cancels_response(map_screen, declarer, victim):
+def _war_cancels_response(context, declarer, victim):
     """A declaration of war voids any answer the victim had queued for the declarer."""
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     resp = get_response(world_state.nation_data, victim, declarer)
     if not resp or resp.get("action") not in WAR_CANCELLED_ACTIONS:
         return
     action_name = resp.get("action", "").split('_')[0].lower()
     msg = ai_prompts.AI_FALLBACK_RESPONSES["CROSS_WAR_DECLARATION"].format(action=action_name)
-    send_message(map_screen, declarer, victim, msg, "DIPLOMACY")
+    send_message(context, declarer, victim, msg, "DIPLOMACY")
     clear_response(world_state.nation_data, victim, declarer)
 
 
@@ -278,11 +278,11 @@ def _pending_clash_pairs(nation_data):
     return [(nations[left], nations[right]) for left, right in sorted(pairs)]
 
 
-def _resolve_simultaneous_clashes(map_screen):
+def _resolve_simultaneous_clashes(context):
     """Settles every pair of nations that queued contradictory actions against
     each other this turn (e.g. both requesting to join each other's faction,
     or one declaring war while the other proposed something a war voids)."""
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     for nation_a, nation_b in _pending_clash_pairs(world_state.nation_data):
 
         a_data = world_state.nation_data[nation_a].get("pending_diplomacy", {})
@@ -295,9 +295,9 @@ def _resolve_simultaneous_clashes(map_screen):
         # queued for us. Responses live outside pending_diplomacy now, so they
         # need checking even when only one side has a pending action.
         if isinstance(a_info, dict) and a_info.get("turns", 0) == 0 and a_info.get("action") == "WAR_DECLARATION":
-            _war_cancels_response(map_screen, nation_a, nation_b)
+            _war_cancels_response(context, nation_a, nation_b)
         if isinstance(b_info, dict) and b_info.get("turns", 0) == 0 and b_info.get("action") == "WAR_DECLARATION":
-            _war_cancels_response(map_screen, nation_b, nation_a)
+            _war_cancels_response(context, nation_b, nation_a)
 
         if isinstance(a_info, dict) and a_info.get("turns", 0) == 0 and \
            isinstance(b_info, dict) and b_info.get("turns", 0) == 0:
@@ -309,30 +309,30 @@ def _resolve_simultaneous_clashes(map_screen):
                     and queries.can_invite_to_faction(nation_b, world_state.nation_data)):
                 if finalize_faction_join(world_state.map_data, world_state.nation_data, nation_b, nation_a):
                     log_global_event(world_state.nation_data, f"{nation_a} and {nation_b} have united their factions!")
-                _resolve_cross_action(map_screen, nation_a, nation_b, a_data, b_data, "CROSS_FACTION_JOIN")
+                _resolve_cross_action(context, nation_a, nation_b, a_data, b_data, "CROSS_FACTION_JOIN")
 
             elif (b_action == "JOIN_FACTION_REQ" and a_action == "FACTION_INVITE"
                   and queries.can_invite_to_faction(nation_a, world_state.nation_data)):
                 if finalize_faction_join(world_state.map_data, world_state.nation_data, nation_a, nation_b):
                     log_global_event(world_state.nation_data, f"{nation_a} and {nation_b} have united their factions!")
-                _resolve_cross_action(map_screen, nation_a, nation_b, a_data, b_data, "CROSS_FACTION_JOIN")
+                _resolve_cross_action(context, nation_a, nation_b, a_data, b_data, "CROSS_FACTION_JOIN")
 
             elif a_action == "WAR_DECLARATION" and b_action in WAR_CANCELLED_ACTIONS:
                 action_name = b_action.split('_')[0].lower()
                 msg = ai_prompts.AI_FALLBACK_RESPONSES["CROSS_WAR_DECLARATION"].format(action=action_name)
-                send_message(map_screen, nation_a, nation_b, msg, "DIPLOMACY")
+                send_message(context, nation_a, nation_b, msg, "DIPLOMACY")
                 lifecycle.remove_request(b_data, nation_a)
 
             elif b_action == "WAR_DECLARATION" and a_action in WAR_CANCELLED_ACTIONS:
                 action_name = a_action.split('_')[0].lower()
                 msg = ai_prompts.AI_FALLBACK_RESPONSES["CROSS_WAR_DECLARATION"].format(action=action_name)
-                send_message(map_screen, nation_b, nation_a, msg, "DIPLOMACY")
+                send_message(context, nation_b, nation_a, msg, "DIPLOMACY")
                 lifecycle.remove_request(a_data, nation_b)
 
             elif a_action == "CEASEFIRE" and b_action == "CEASEFIRE":
                 finalize_neutral(world_state.nation_data, nation_a, nation_b)
                 log_global_event(world_state.nation_data, f"{nation_a} and {nation_b} have signed a mutual ceasefire.")
-                _resolve_cross_action(map_screen, nation_a, nation_b, a_data, b_data, "CROSS_CEASEFIRE")
+                _resolve_cross_action(context, nation_a, nation_b, a_data, b_data, "CROSS_CEASEFIRE")
 
             elif (a_action == "CALL_TO_ARMS" and b_action == "JOIN_WARS") or \
                  (a_action == "JOIN_WARS" and b_action == "CALL_TO_ARMS"):
@@ -340,10 +340,10 @@ def _resolve_simultaneous_clashes(map_screen):
                 join_faction_wars(world_state.map_data, world_state.nation_data, nation_a, nation_b)
                 join_faction_wars(world_state.map_data, world_state.nation_data, nation_b, nation_a)
                 log_global_event(world_state.nation_data, f"ESCALATION: {nation_a} and {nation_b} have formally combined their war efforts!")
-                _resolve_cross_action(map_screen, nation_a, nation_b, a_data, b_data, "CROSS_CALL_TO_ARMS")
+                _resolve_cross_action(context, nation_a, nation_b, a_data, b_data, "CROSS_CALL_TO_ARMS")
 
 
-def _forward_war_declaration_to_masters(map_screen, declared_country, declarer,
+def _forward_war_declaration_to_masters(context, declared_country, declarer,
                                         declaration_message):
     """Pass a declaration up the entire puppet chain before war state changes.
 
@@ -353,7 +353,7 @@ def _forward_war_declaration_to_masters(map_screen, declared_country, declarer,
     subject. Walking the chain also covers nested puppets without requiring a
     second event pass.
     """
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     current_country = declared_country
     current_message = declaration_message
     visited = set()
@@ -365,7 +365,7 @@ def _forward_war_declaration_to_masters(map_screen, declared_country, declarer,
         visited.add(master)
 
         forwarded = forward_message(
-            map_screen, current_country, master, current_message,
+            context, current_country, master, current_message,
             source_owner=declared_country)
         if forwarded is None:
             return
@@ -373,11 +373,11 @@ def _forward_war_declaration_to_masters(map_screen, declared_country, declarer,
         current_message = forwarded
 
 
-def _gather_ai_tasks(map_screen):
+def _gather_ai_tasks(context):
     """Collects every pending action (turn 1, not aimed at a human) that needs
     an AI reply this turn, as a flat list the LLM batch runner can chew through."""
-    world_state = world_for(map_screen)
-    session_state = session_for(map_screen)
+    world_state = world_for(context)
+    session_state = session_for(context)
     ai_tasks = []
     for country_name, data in list(world_state.nation_data.items()):
         if not isinstance(data, dict):
@@ -455,12 +455,12 @@ def _get_fallback_ai_result(task, nation_data=None, world=None, map_data=None,
     }
 
 
-def _execute_ai_tasks(map_screen, ai_tasks, active_nations_list):
+def _execute_ai_tasks(context, ai_tasks, active_nations_list):
     """Runs every gathered AI task through the LLM batch runner (or straight to
     its canned fallback) and returns the {(sender, target, action): reply} map
     Passes 1/2 read back from."""
-    world_state = world_for(map_screen)
-    session_state = session_for(map_screen)
+    world_state = world_for(context)
+    session_state = session_for(context)
     ai_results = {}
 
     if not ai_tasks:
@@ -481,7 +481,7 @@ def _execute_ai_tasks(map_screen, ai_tasks, active_nations_list):
     # Diplomacy resolves after the AI phases have torn down their snapshot, so
     # this pass builds its own. Verdicts read relations, war odds and prices off
     # it; without one they fall back to the old threshold rules.
-    verdict_world = ai_world.for_screen(map_screen)
+    verdict_world = ai_world.for_screen(context)
     scenario_settings = world_state.scenario_settings
 
     def call(task):
@@ -514,7 +514,7 @@ def _execute_ai_tasks(map_screen, ai_tasks, active_nations_list):
     # level the game recommends. The queue below is now the same list the bar is
     # sized from, so there is nothing left to keep in step.
     count = ai_llm_runner.make_progress_counter(
-        map_screen, "Processing Global Responses",
+        context, "Processing Global Responses",
         "responsive_tasks_completed", "responsive_tasks_total")
 
     # Filtered once, up front. The three paths used to disagree about an
@@ -571,13 +571,184 @@ def _execute_ai_tasks(map_screen, ai_tasks, active_nations_list):
         on_progress=count,
         should_abort=lambda: session_state.force_skip_llm,
         max_workers=queries.get_ai_threads(),
-        deadline=ai_llm_runner.turn_deadline(map_screen, c.AI_BUDGET_SHARE_RESPONSES))
-    ai_llm_runner.report_unserved(map_screen, outcome, "Answering proposals")
+        deadline=ai_llm_runner.turn_deadline(context, c.AI_BUDGET_SHARE_RESPONSES))
+    ai_llm_runner.report_unserved(context, outcome, "Answering proposals")
 
     return ai_results
 
 
-def _process_ai_retaliation(map_screen, active_nations_list, delayed_responses, country_name, reply_dict, default_target=None):
+@dataclass
+class _Retaliation:
+    """One reactive move an AI decided on in its reply to a message."""
+    world_state: object
+    country: str
+    target: str
+    reply: dict
+    delayed_responses: list
+
+    def queue(self, action, target, message):
+        self.delayed_responses.append((self.country, target, action, 0, message))
+
+    def worded(self, fallback_key, default):
+        """The leader's own line for the move it just decided to make.
+
+        Every handler had the reply in hand as reply["message"] and
+        threw it away for a hardcoded constant, so a nation the model had just
+        driven into a ceasefire announced it in the same words as one running
+        off the canned table. A war declaration is the exception: its message
+        field carries the wargoal rather than prose, which is the same exception
+        PROACTIVE_PROPOSALS.queued_message already makes.
+        """
+        own_words = (self.reply.get("message") or "").strip()
+        if own_words and not ai_prompts.reads_as_third_person(
+                own_words, self.country, self.world_state.nation_data):
+            return own_words
+        return ai_prompts.AI_FALLBACK_RESPONSES.get(fallback_key, default)
+
+
+def _retaliate_war_declaration(move):
+    nation_data = move.world_state.nation_data
+    if not c.AI_LLM_DIRECT_RETALIATION:
+        # Filed as a request rather than executed. Declaring here skipped
+        # every prerequisite the proactive pass enforces -- the waiting
+        # period at the start of a game, the requirement to share a border,
+        # the need for a wargoal at all -- and went to war with WARGOAL_NO_CB
+        # on a nation the AI might not even be able to reach. Next turn's
+        # candidate generation drains this and puts it through the same
+        # legality and desirability checks as everything else, so a demand
+        # that survives is one the nation could legitimately have made.
+        requests = nation_data[move.country].setdefault("ai_requests", [])
+        requests.append({
+            "action": "WAR_DECLARATION", "target": move.target,
+            "reason": move.reply.get("message", "")[:c.AI_REQUEST_REASON_LENGTH],
+            "turn": queries.get_total_turns(move.world_state.time_manager),
+        })
+        log_global_event(
+            nation_data,
+            f"RUMOR: Hawks in {move.country} are pressing for war with {move.target}.")
+    elif queries.are_in_same_faction(move.country, move.target, nation_data):
+        if queries.is_faction_leader(move.country, nation_data):
+            move.queue("KICK_FACTION_MEMBER", move.target, "You are expelled from the faction.")
+        else:
+            move.queue("LEAVE_FACTION", move.country, "")
+        ai_queue = nation_data[move.country].setdefault("queued_ai_actions", [])
+        ai_queue.append({"target": move.target, "action": "WAR_DECLARATION"})
+    else:
+        move.queue("WAR_DECLARATION", move.target, c.WARGOAL_NO_CB)
+
+
+def _retaliate_join_wars(move):
+    nation_data = move.world_state.nation_data
+    if queries.are_in_same_faction(move.country, move.target, nation_data):
+        move.queue("JOIN_WARS", move.target, move.worded("PROACTIVE_JOIN_WAR", "We stand with you."))
+    elif war_calls.are_pledged(move.country, move.target, nation_data):
+        # A puppet is bound to its master without necessarily sharing its
+        # faction, and offering to join the wars it is already being dragged
+        # into is the one diplomatic move it has. It used to fall through to
+        # the branch below and file a war declaration on every enemy of its
+        # own overlord.
+        move.queue("JOIN_WARS", move.target, move.worded("PROACTIVE_JOIN_WAR", "We stand with you."))
+    elif not c.AI_LLM_DIRECT_RETALIATION:
+        # Asking to join a non-faction-mate's war used to silently expand
+        # into a declaration on every one of that nation's enemies at once.
+        # Filed as requests, one per enemy, each judged on its own merits.
+        requests = nation_data[move.country].setdefault("ai_requests", [])
+        for enemy in queries.get_enemies(move.target, nation_data):
+            requests.append({
+                "action": "WAR_DECLARATION", "target": enemy,
+                "reason": f"to stand with {move.target}",
+                "turn": queries.get_total_turns(move.world_state.time_manager),
+            })
+    else:
+        for enemy in queries.get_enemies(move.target, nation_data):
+            if queries.has_active_truce(move.country, enemy, nation_data): continue
+            move.queue("WAR_DECLARATION", enemy, ai_prompts.AI_FALLBACK_RESPONSES.get("PROACTIVE_DECLARE_WAR", "We have declared WAR upon you!"))
+
+
+def _retaliate_leave_faction(move):
+    # Vetted like every other move in this chain, which this one alone was
+    # not. See why_an_ai_may_not_leave for the rules and for
+    # what an unvetted LEAVE_FACTION did to the Allies.
+    blocked = why_an_ai_may_not_leave(move.country, move.world_state.nation_data)
+    if blocked:
+        print(f"[AI GUARDRAIL] Aborting LEAVE_FACTION: {move.country} may not leave -- {blocked}.")
+    else:
+        move.queue("LEAVE_FACTION", move.country, "")
+
+
+def _retaliate_join_faction_request(move):
+    if not move.world_state.nation_data[move.country].get("faction", ""):
+        move.queue("JOIN_FACTION_REQ", move.target, move.worded("PROACTIVE_JOIN_FACTION", "We formally request to join your faction."))
+
+
+def _retaliate_ceasefire(move):
+    nation_data = move.world_state.nation_data
+    # You cannot stop a war you are not fighting. This branch had none of
+    # the checks its neighbours above have, and get_valid_target falls back
+    # to `default_target` -- the nation whose message is being answered --
+    # so a model reply of {"action": "CEASEFIRE", "target": "NONE"} to a
+    # faction-mate's call to arms queued a ceasefire offer at that
+    # faction-mate, in peacetime. Accepting it ran finalize_neutral, which
+    # wrote a 12-turn truce, and join_faction_wars skips a truced pair --
+    # so an ally silently opted out of the bloc's wars for twelve turns.
+    if not peace_scope.has_settleable_war(move.country, move.target, nation_data):
+        print(f"[AI GUARDRAIL] Aborting CEASEFIRE: {move.country} is not at war with {move.target}.")
+    elif not peace_scope.negotiation_role(move.country, move.target, nation_data):
+        print(f"[AI GUARDRAIL] Aborting CEASEFIRE: {move.country} may not settle with {move.target}.")
+    else:
+        move.queue("CEASEFIRE", move.target, move.worded("PROACTIVE_CEASEFIRE", "We offer terms for a ceasefire."))
+
+
+def _retaliate_call_to_arms(move):
+    # The one branch in this chain that checked nothing at all. Its
+    # neighbours test faction, war state and negotiating rights; this queued
+    # whatever the model said, so a nation in no faction and at war with
+    # nobody could call the player to arms, and a puppet could call its own
+    # master into wars that were the master's to begin with.
+    #
+    # war_calls decides which of the pair the two nations' war lists
+    # actually support. A puppet asking for aid it cannot need is a puppet
+    # that meant "let us join you", so that is what it sends -- with the
+    # wording that goes with it, rather than "we request your aid" arriving
+    # from somebody offering theirs.
+    honest = war_calls.intended_action(move.country, move.target, move.world_state.nation_data)
+    if honest == war_calls.CALL_TO_ARMS:
+        move.queue("CALL_TO_ARMS", move.target, move.worded("PROACTIVE_CALL_TO_ARMS", "We request your aid!"))
+    elif honest == war_calls.JOIN_WARS:
+        print(f"[AI GUARDRAIL] Rewriting CALL_TO_ARMS from {move.country} as JOIN_WARS: "
+              f"{move.target} is the one at war.")
+        move.queue("JOIN_WARS", move.target, move.worded("PROACTIVE_JOIN_WAR", "We stand with you."))
+    else:
+        print(f"[AI GUARDRAIL] Aborting CALL_TO_ARMS: {move.country} has no war "
+              f"{move.target} could be called into.")
+
+
+def _retaliate_create_faction(move):
+    move.queue("CREATE_FACTION", move.target, move.worded("PROACTIVE_CREATE_FACTION", "We propose establishing a new faction."))
+
+
+def _retaliate_kick_member(move):
+    move.queue("KICK_FACTION_MEMBER", move.target, move.worded("KICKED_FROM_FACTION", "You are expelled."))
+
+
+def _retaliate_disband_faction(move):
+    move.queue("DISBAND_FACTION", move.country, "")
+
+
+_RETALIATION_HANDLERS = {
+    "WAR_DECLARATION": _retaliate_war_declaration,
+    "JOIN_WARS": _retaliate_join_wars,
+    "LEAVE_FACTION": _retaliate_leave_faction,
+    "JOIN_FACTION_REQ": _retaliate_join_faction_request,
+    "CEASEFIRE": _retaliate_ceasefire,
+    "CALL_TO_ARMS": _retaliate_call_to_arms,
+    "CREATE_FACTION": _retaliate_create_faction,
+    "KICK_FACTION_MEMBER": _retaliate_kick_member,
+    "DISBAND_FACTION": _retaliate_disband_faction,
+}
+
+
+def _process_ai_retaliation(context, active_nations_list, delayed_responses, country_name, reply_dict, default_target=None):
     """Processes reactive diplomatic actions appended by the LLM.
 
     New proposals it decides to send land in `delayed_responses` for
@@ -585,27 +756,11 @@ def _process_ai_retaliation(map_screen, active_nations_list, delayed_responses, 
     while resolving this turn can't also inject a fresh pending action into a
     dict Pass 2 is still iterating.
     """
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     ai_action = reply_dict.get("action", "NONE")
     follow_up = reply_dict.get("follow_up_action", "NONE")
     raw_act_target = reply_dict.get("action_target", "NONE")
     raw_f_up_target = reply_dict.get("follow_up_target", "NONE")
-
-    def worded(fallback_key, default):
-        """The leader's own line for the move it just decided to make.
-
-        Every branch below had the reply in hand as reply_dict["message"] and
-        threw it away for a hardcoded constant, so a nation the model had just
-        driven into a ceasefire announced it in the same words as one running
-        off the canned table. A war declaration is the exception: its message
-        field carries the wargoal rather than prose, which is the same exception
-        PROACTIVE_PROPOSALS.queued_message already makes.
-        """
-        own_words = (reply_dict.get("message") or "").strip()
-        if own_words and not ai_prompts.reads_as_third_person(
-                own_words, country_name, world_state.nation_data):
-            return own_words
-        return ai_prompts.AI_FALLBACK_RESPONSES.get(fallback_key, default)
 
     def get_valid_target(raw_target):
         if not raw_target or raw_target == "NONE": return default_target if default_target else "NONE"
@@ -650,117 +805,9 @@ def _process_ai_retaliation(map_screen, active_nations_list, delayed_responses, 
             # on the way out. Proposals are rate-limited when they get turned down.
             queries.set_ai_diplo_cooldown(country_name, act_target, ai_action, world_state.nation_data)
 
-    if ai_action == "WAR_DECLARATION":
-        if not c.AI_LLM_DIRECT_RETALIATION:
-            # Filed as a request rather than executed. Declaring here skipped
-            # every prerequisite the proactive pass enforces -- the waiting
-            # period at the start of a game, the requirement to share a border,
-            # the need for a wargoal at all -- and went to war with WARGOAL_NO_CB
-            # on a nation the AI might not even be able to reach. Next turn's
-            # candidate generation drains this and puts it through the same
-            # legality and desirability checks as everything else, so a demand
-            # that survives is one the nation could legitimately have made.
-            requests = world_state.nation_data[country_name].setdefault("ai_requests", [])
-            requests.append({
-                "action": "WAR_DECLARATION", "target": act_target,
-                "reason": reply_dict.get("message", "")[:c.AI_REQUEST_REASON_LENGTH],
-                "turn": queries.get_total_turns(world_state.time_manager),
-            })
-            log_global_event(
-                world_state.nation_data,
-                f"RUMOR: Hawks in {country_name} are pressing for war with {act_target}.")
-        elif queries.are_in_same_faction(country_name, act_target, world_state.nation_data):
-            if queries.is_faction_leader(country_name, world_state.nation_data):
-                delayed_responses.append((country_name, act_target, "KICK_FACTION_MEMBER", 0, "You are expelled from the faction."))
-            else:
-                delayed_responses.append((country_name, country_name, "LEAVE_FACTION", 0, ""))
-            ai_queue = world_state.nation_data[country_name].setdefault("queued_ai_actions", [])
-            ai_queue.append({"target": act_target, "action": "WAR_DECLARATION"})
-        else:
-            delayed_responses.append((country_name, act_target, "WAR_DECLARATION", 0, c.WARGOAL_NO_CB))
-    elif ai_action == "JOIN_WARS":
-        if queries.are_in_same_faction(country_name, act_target, world_state.nation_data):
-            delayed_responses.append((country_name, act_target, "JOIN_WARS", 0, worded("PROACTIVE_JOIN_WAR", "We stand with you.")))
-        elif war_calls.are_pledged(country_name, act_target, world_state.nation_data):
-            # A puppet is bound to its master without necessarily sharing its
-            # faction, and offering to join the wars it is already being dragged
-            # into is the one diplomatic move it has. It used to fall through to
-            # the branch below and file a war declaration on every enemy of its
-            # own overlord.
-            delayed_responses.append((country_name, act_target, "JOIN_WARS", 0, worded("PROACTIVE_JOIN_WAR", "We stand with you.")))
-        elif not c.AI_LLM_DIRECT_RETALIATION:
-            # Asking to join a non-faction-mate's war used to silently expand
-            # into a declaration on every one of that nation's enemies at once.
-            # Filed as requests, one per enemy, each judged on its own merits.
-            requests = world_state.nation_data[country_name].setdefault("ai_requests", [])
-            for enemy in queries.get_enemies(act_target, world_state.nation_data):
-                requests.append({
-                    "action": "WAR_DECLARATION", "target": enemy,
-                    "reason": f"to stand with {act_target}",
-                    "turn": queries.get_total_turns(world_state.time_manager),
-                })
-        else:
-            target_enemies = queries.get_enemies(act_target, world_state.nation_data)
-            if target_enemies:
-                for enemy in target_enemies:
-                    if queries.has_active_truce(country_name, enemy, world_state.nation_data): continue
-                    delayed_responses.append((country_name, enemy, "WAR_DECLARATION", 0, ai_prompts.AI_FALLBACK_RESPONSES.get("PROACTIVE_DECLARE_WAR", "We have declared WAR upon you!")))
-    elif ai_action == "LEAVE_FACTION":
-        # Vetted like every other move in this chain, which this one alone was
-        # not. See why_an_ai_may_not_leave for the rules and for
-        # what an unvetted LEAVE_FACTION did to the Allies.
-        blocked = why_an_ai_may_not_leave(country_name, world_state.nation_data)
-        if blocked:
-            print(f"[AI GUARDRAIL] Aborting LEAVE_FACTION: {country_name} may not leave -- {blocked}.")
-        else:
-            delayed_responses.append((country_name, country_name, "LEAVE_FACTION", 0, ""))
-    elif ai_action == "JOIN_FACTION_REQ":
-        if not world_state.nation_data[country_name].get("faction", ""):
-            delayed_responses.append((country_name, act_target, "JOIN_FACTION_REQ", 0, worded("PROACTIVE_JOIN_FACTION", "We formally request to join your faction.")))
-    elif ai_action == "CEASEFIRE":
-        # You cannot stop a war you are not fighting. This branch had none of
-        # the checks its neighbours above have, and get_valid_target falls back
-        # to `default_target` -- the nation whose message is being answered --
-        # so a model reply of {"action": "CEASEFIRE", "target": "NONE"} to a
-        # faction-mate's call to arms queued a ceasefire offer at that
-        # faction-mate, in peacetime. Accepting it ran finalize_neutral, which
-        # wrote a 12-turn truce, and join_faction_wars skips a truced pair --
-        # so an ally silently opted out of the bloc's wars for twelve turns.
-        if not peace_scope.has_settleable_war(country_name, act_target,
-                                              world_state.nation_data):
-            print(f"[AI GUARDRAIL] Aborting CEASEFIRE: {country_name} is not at war with {act_target}.")
-        elif not peace_scope.negotiation_role(country_name, act_target, world_state.nation_data):
-            print(f"[AI GUARDRAIL] Aborting CEASEFIRE: {country_name} may not settle with {act_target}.")
-        else:
-            delayed_responses.append((country_name, act_target, "CEASEFIRE", 0, worded("PROACTIVE_CEASEFIRE", "We offer terms for a ceasefire.")))
-    elif ai_action == "CALL_TO_ARMS":
-        # The one branch in this chain that checked nothing at all. Its
-        # neighbours test faction, war state and negotiating rights; this queued
-        # whatever the model said, so a nation in no faction and at war with
-        # nobody could call the player to arms, and a puppet could call its own
-        # master into wars that were the master's to begin with.
-        #
-        # war_calls decides which of the pair the two nations' war lists
-        # actually support. A puppet asking for aid it cannot need is a puppet
-        # that meant "let us join you", so that is what it sends -- with the
-        # wording that goes with it, rather than "we request your aid" arriving
-        # from somebody offering theirs.
-        honest = war_calls.intended_action(country_name, act_target, world_state.nation_data)
-        if honest == war_calls.CALL_TO_ARMS:
-            delayed_responses.append((country_name, act_target, "CALL_TO_ARMS", 0, worded("PROACTIVE_CALL_TO_ARMS", "We request your aid!")))
-        elif honest == war_calls.JOIN_WARS:
-            print(f"[AI GUARDRAIL] Rewriting CALL_TO_ARMS from {country_name} as JOIN_WARS: "
-                  f"{act_target} is the one at war.")
-            delayed_responses.append((country_name, act_target, "JOIN_WARS", 0, worded("PROACTIVE_JOIN_WAR", "We stand with you.")))
-        else:
-            print(f"[AI GUARDRAIL] Aborting CALL_TO_ARMS: {country_name} has no war "
-                  f"{act_target} could be called into.")
-    elif ai_action == "CREATE_FACTION":
-        delayed_responses.append((country_name, act_target, "CREATE_FACTION", 0, worded("PROACTIVE_CREATE_FACTION", "We propose establishing a new faction.")))
-    elif ai_action == "KICK_FACTION_MEMBER":
-        delayed_responses.append((country_name, act_target, "KICK_FACTION_MEMBER", 0, worded("KICKED_FROM_FACTION", "You are expelled.")))
-    elif ai_action == "DISBAND_FACTION":
-        delayed_responses.append((country_name, country_name, "DISBAND_FACTION", 0, ""))
+    handler = _RETALIATION_HANDLERS.get(ai_action)
+    if handler:
+        handler(_Retaliation(world_state, country_name, act_target, reply_dict, delayed_responses))
 
     if follow_up and follow_up != "NONE":
         final_f_up_target = country_name if follow_up in ["LEAVE_FACTION", "DISBAND_FACTION"] else f_up_target
@@ -769,13 +816,13 @@ def _process_ai_retaliation(map_screen, active_nations_list, delayed_responses, 
         log_global_event(world_state.nation_data, f"RUMOR: Internal shuffling suggests {country_name} is preparing further diplomatic moves regarding {f_up_target}...")
 
 
-def _decline_cooldown(map_screen, sender, target, action):
+def _decline_cooldown(context, sender, target, action):
     """Records that `target` said no, so the AI waits before asking again.
 
     Stamped when a proposal actually fails rather than when it is sent, so a
     nation keeps offering help every turn until it is genuinely turned down.
     """
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     if action in c.BILATERAL_ACTIONS:
         queries.set_ai_diplo_cooldown(sender, target, action, world_state.nation_data)
 
@@ -784,7 +831,7 @@ def _offer_kind(action):
     return deal_mod.KIND_PEACE if action in ("PEACE_TREATY", "CEASEFIRE") else deal_mod.KIND_TRADE
 
 
-def _hold_offer_escrow(map_screen, sender, target, info):
+def _hold_offer_escrow(context, sender, target, info):
     """Takes what an offer promises out of the sender's hands as it leaves.
 
     Held on the entry itself as `escrow`, so the refund knows what was actually
@@ -797,14 +844,14 @@ def _hold_offer_escrow(map_screen, sender, target, info):
     from thin air, and cancel_trade_escrow then handed the AI a refund for an
     offer it had never funded. Both sides go through here now.
     """
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
 
     params = info.get("parameters")
     if not params:
         return
     agreement = deal_mod.coerce(params, sender, target, kind=_offer_kind(info.get("action")))
     held = deal_effects.hold_escrow(world_state.nation_data, agreement, sender,
-                                    deal_effects.economies_for(map_screen))
+                                    deal_effects.economies_for(context))
     if any(held.values()):
         info["escrow"] = held
 
@@ -817,7 +864,7 @@ def _refund_offer_escrow(nation_data, sender, info):
         deal_effects.release_escrow(nation_data, held, sender)
 
 
-def _process_queued_responses(map_screen):
+def _process_queued_responses(context):
     """PASS 0.5: settles every queued answer to an incoming proposal (turns == 0).
 
     Runs ahead of Pass 1 so a deal we accepted is settled before our own fresh
@@ -825,7 +872,7 @@ def _process_queued_responses(map_screen):
     nations answering each other never share a slot, so nothing is clobbered
     and one-way agreements (military access) stay one-way.
     """
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     lifecycle.normalize_diplomatic_records(world_state.nation_data)
     for country_name, data in list(world_state.nation_data.items()):
         if not isinstance(data, dict):
@@ -862,7 +909,7 @@ def _process_queued_responses(map_screen):
                 # `sender` proposed and `country_name` accepted. The AI-accepted
                 # pass below runs the same rules -- see treaty_effects.
                 outcome = treaty_effects.apply_treaty_effect(
-                    map_screen, orig_action, sender, country_name, params,
+                    context, orig_action, sender, country_name, params,
                     escrow=their_request.pop("escrow", None))
                 if outcome.blocked:
                     msg_text = outcome.blocked
@@ -870,7 +917,7 @@ def _process_queued_responses(map_screen):
                 elif not custom_msg and outcome.canned:
                     msg_text = outcome.canned
 
-                send_message(map_screen, country_name, sender, msg_text, "DIPLOMACY",
+                send_message(context, country_name, sender, msg_text, "DIPLOMACY",
                              extra=answered, llm=wrote_it)
 
                 if msg_text == custom_msg or "accepted" in msg_text.lower():
@@ -883,11 +930,11 @@ def _process_queued_responses(map_screen):
                 # Whatever the proposer put up for this offer goes home.
                 _refund_offer_escrow(world_state.nation_data, sender, their_request)
                 if orig_action == volunteers.ACTION:
-                    volunteers.reject_offer(map_screen, sender, country_name)
+                    volunteers.reject_offer(context, sender, country_name)
 
-                send_message(map_screen, country_name, sender, msg_text, "DIPLOMACY",
+                send_message(context, country_name, sender, msg_text, "DIPLOMACY",
                              extra=answered, llm=wrote_it)
-                _decline_cooldown(map_screen, sender, country_name, orig_action)
+                _decline_cooldown(context, sender, country_name, orig_action)
 
             # Their request has now been answered either way.
             their_pending = world_state.nation_data.get(sender, {}).get("pending_diplomacy", {})
@@ -905,7 +952,7 @@ def _process_queued_responses(map_screen):
 @dataclass(frozen=True)
 class _OutgoingAction:
     """One pending action that is due this turn, as Pass 1 hands it to its handler."""
-    map_screen: object
+    context: object
     world: object
     session: object
     country: str
@@ -918,7 +965,7 @@ class _OutgoingAction:
 
 
 def _announce(send, recipient=None, **details):
-    send_treaty_message(send.map_screen, send.country, recipient or send.target, send.action,
+    send_treaty_message(send.context, send.country, recipient or send.target, send.action,
                         send.custom_msg, llm=send.wrote_it, **details)
 
 
@@ -926,10 +973,10 @@ def _announced_change(send, changed, event, message, failure):
     """Report a one-sided change that the action's owner has already tried to apply."""
     if changed:
         log_global_event(send.world.nation_data, event)
-        send_message(send.map_screen, send.country, send.target, message, "DIPLOMACY",
+        send_message(send.context, send.country, send.target, message, "DIPLOMACY",
                      extra={"action": send.action}, llm=send.wrote_it)
     elif send.country == send.session.player_country:
-        send.map_screen.show_feedback(failure)
+        send.context.show_feedback(failure)
     return True
 
 
@@ -952,7 +999,7 @@ def _send_justify_wargoal(send):
     world.nation_data[send.country].setdefault("wargoals", {})[send.target] = {"type": c.WARGOAL_TAKE_CLAIMS}
     log_global_event(world.nation_data, f"{send.country} has justified a wargoal against {send.target}.")
     if send.country == send.session.player_country:
-        send.map_screen.show_feedback(f"Wargoal Justification Complete against {send.target}!")
+        send.context.show_feedback(f"Wargoal Justification Complete against {send.target}!")
     return True
 
 
@@ -970,10 +1017,10 @@ def _send_war_declaration(send):
     words = send.info.get("prose") or "We have declared war!"
     goal = f" Goal: {send.custom_msg}" if send.custom_msg else ""
     declaration_message = send_message(
-        send.map_screen, send.country, send.target, f"{words}{goal}",
+        send.context, send.country, send.target, f"{words}{goal}",
         "DIPLOMACY", extra={"action": send.action}, llm=send.wrote_it)
     _forward_war_declaration_to_masters(
-        send.map_screen, send.target, send.country, declaration_message)
+        send.context, send.target, send.country, declaration_message)
     finalize_war(world.map_data, world.nation_data, send.country, send.target)
     return True
 
@@ -983,7 +1030,7 @@ def _send_join_wars(send):
         # DO NOT execute the war join here! Just send the proposal message.
         _announce(send)
         return False
-    send_message(send.map_screen, send.country, send.target,
+    send_message(send.context, send.country, send.target,
                  ai_prompts.AI_FALLBACK_RESPONSES["REJECT_JOIN_WAR_NO_ALLIANCE"],
                  "DIPLOMACY", extra={"action": send.action})
     return True
@@ -1007,7 +1054,7 @@ def _send_volunteer_recall(send):
     # A recall is unilateral, but still announced to the host.
     # It runs at turn resolution, not on the click, so the
     # player can undo it while it remains a same-turn draft.
-    if volunteers.recall(send.map_screen, send.country, send.target):
+    if volunteers.recall(send.context, send.country, send.target):
         _announce(send)
     return True
 
@@ -1016,7 +1063,7 @@ def _send_volunteers_home(send):
     # The host controls whether foreign volunteers may remain
     # in its war, while the donor still owns the divisions.
     return _announced_change(
-        send, volunteers.send_home_by_host(send.map_screen, send.country, send.target),
+        send, volunteers.send_home_by_host(send.context, send.country, send.target),
         f"{send.country} has sent {send.target}'s volunteer divisions home.",
         "Your volunteer divisions are being sent home.",
         "That country has no volunteers assigned to you.")
@@ -1061,18 +1108,18 @@ def _send_break_alliance(send):
 
 
 def _send_annex_puppet(send):
-    finalize_annexation(send.world.map_data, send.world.nation_data, send.country, send.target, send.map_screen)
+    finalize_annexation(send.world.map_data, send.world.nation_data, send.country, send.target, send.context)
     return True
 
 
 def _send_release_puppet(send):
-    finalize_release(send.world.map_data, send.world.nation_data, send.country, send.target, send.map_screen)
+    finalize_release(send.world.map_data, send.world.nation_data, send.country, send.target, send.context)
     return True
 
 
 def _send_take_puppets(send):
     finalize_take_puppets(send.world.map_data, send.world.nation_data, send.country, send.target)
-    send.map_screen.show_feedback(f"Assumed control of {send.target}'s puppets.")
+    send.context.show_feedback(f"Assumed control of {send.target}'s puppets.")
     return True
 
 
@@ -1097,7 +1144,7 @@ def _send_revoke_military_access(send):
 
 
 def _send_forward(send):
-    forward_message(send.map_screen, send.country, send.target, send.info.get("forwarded_message"),
+    forward_message(send.context, send.country, send.target, send.info.get("forwarded_message"),
                     source_owner=send.info.get("forwarded_source", send.country))
     return True
 
@@ -1108,7 +1155,7 @@ def _send_offer(send):
     # read what was agreed after the offer itself is cleared.
     # Peace reparations are promised the moment the offer leaves, the
     # same as a trade's goods.
-    _hold_offer_escrow(send.map_screen, send.country, send.target, send.info)
+    _hold_offer_escrow(send.context, send.country, send.target, send.info)
     _announce(send, parameters=send.info.get("parameters"), note=send.info.get("note", ""))
     return False
 
@@ -1152,7 +1199,7 @@ def _send_leadership_claim(send):
     nation_data = send.world.nation_data
     fac = nation_data[send.country].get("faction", "")
     old = queries.get_faction_leader(fac, nation_data) if fac else ""
-    if not faction_leadership.can_claim(send.map_screen, send.country):
+    if not faction_leadership.can_claim(send.context, send.country):
         print(f"[GUARDRAIL] {send.country} no longer has a claim on "
               f"{fac or 'any faction'}'s leadership.")
         return True
@@ -1208,16 +1255,12 @@ _SEND_HANDLERS = {
 }
 
 
-def _process_pass1_immediate_actions(map_screen):
-    """PASS 1: executes every action that fires the instant it's queued (turns == 0),
-    and advances everything else to turns == 1 for Pass 2 to pick up."""
-    world_state = world_for(map_screen)
-    session_state = session_for(map_screen)
+def _leadership_contest_winners(context):
     # Leadership claims that execute in this pass are a single contest. Choose
     # winners before iterating nations so dictionary order cannot hand the
     # faction to a weaker claimant first.
     leadership_claimants = []
-    for nation, data in world_state.nation_data.items():
+    for nation, data in world_for(context).nation_data.items():
         if not isinstance(data, dict):
             continue
         for info in data.get("pending_diplomacy", {}).values():
@@ -1228,8 +1271,16 @@ def _process_pass1_immediate_actions(map_screen):
                     or (timer <= 0 and info.get("turns", 0) == 0)):
                 leadership_claimants.append(nation)
                 break
-    leadership_winners = faction_leadership.strongest_claimants(
-        map_screen, leadership_claimants, map_screen.ai_world)
+    return faction_leadership.strongest_claimants(
+        context, leadership_claimants, context.ai_world)
+
+
+def _process_pass1_immediate_actions(context):
+    """PASS 1: executes every action that fires the instant it's queued (turns == 0),
+    and advances everything else to turns == 1 for Pass 2 to pick up."""
+    world_state = world_for(context)
+    session_state = session_for(context)
+    leadership_winners = _leadership_contest_winners(context)
 
     for country_name, data in list(world_state.nation_data.items()):
         if not isinstance(data, dict):
@@ -1261,7 +1312,7 @@ def _process_pass1_immediate_actions(map_screen):
                     turns = 0 # Force execution this turn
 
             if turns == 0:
-                available = availability(map_screen, country_name, target, action, phase="send")
+                available = availability(context, country_name, target, action, phase="send")
                 if not available.allowed:
                     actions_to_clear.append(target)
                     continue
@@ -1271,12 +1322,12 @@ def _process_pass1_immediate_actions(map_screen):
                 if leadership_error:
                     actions_to_clear.append(target)
                     if country_name == session_state.player_country:
-                        map_screen.show_feedback(leadership_error)
+                        context.show_feedback(leadership_error)
                     continue
                 info["_processed_this_turn"] = True
                 # DELIVER messages to inbox on Turn 0
                 if action.startswith("MSG:"):
-                    send_message(map_screen, country_name, target, action[4:], "TEXT")
+                    send_message(context, country_name, target, action[4:], "TEXT")
                     msg_delivered.add(target)
                 else:
                     # An action added to the bilateral list without its own handler
@@ -1285,7 +1336,7 @@ def _process_pass1_immediate_actions(map_screen):
                     handler = _SEND_HANDLERS.get(
                         action, _send_announcement if action in c.BILATERAL_ACTIONS else None)
                     if handler and handler(_OutgoingAction(
-                            map_screen, world_state, session_state, country_name, target, action, info,
+                            context, world_state, session_state, country_name, target, action, info,
                             custom_msg, wrote_it, leadership_winners)):
                         actions_to_clear.append(target)
 
@@ -1310,16 +1361,131 @@ def _process_pass1_immediate_actions(map_screen):
             for d_target, d_messages in list(draft_lists.items()):
                 if d_messages and d_target not in msg_delivered:
                     combined_msg = "\n".join(d_messages)
-                    send_message(map_screen, country_name, d_target, combined_msg, "TEXT")
+                    send_message(context, country_name, d_target, combined_msg, "TEXT")
             data["draft_lists"] = {}
 
 
-def _process_pass2_delayed_actions(map_screen, ai_results, active_nations_list, delayed_responses):
+def _react_to_reply(context, active_nations_list, delayed_responses, replier, sender, reply_dict):
+    """Apply the opinion change and reactive move in one AI reply."""
+    op_val = reply_dict.get("opinion_change", 0)
+    if op_val != 0:
+        queries.add_temporary_modifier(replier, sender, "general", op_val, world_for(context).nation_data)
+    _process_ai_retaliation(context, active_nations_list, delayed_responses, replier, reply_dict, default_target=sender)
+
+
+def _withdraw_offer(context, sender, target, action, info):
+    """Return what an unaccepted offer held from its sender."""
+    _refund_offer_escrow(world_for(context).nation_data, sender, info)
+    if action == volunteers.ACTION:
+        volunteers.reject_offer(context, sender, target)
+
+
+def _auto_decline(context, sender, target, action, info):
+    _withdraw_offer(context, sender, target, action, info)
+    send_message(context, target, sender, "Your proposal was ignored and automatically declined.", "DIPLOMACY",
+                 extra={"action": action})
+    _decline_cooldown(context, sender, target, action)
+
+
+def _resolve_unilateral_replies(context, ai_results, active_nations_list, delayed_responses, sender, target, action, info):
+    session_state = session_for(context)
+    if action in ("DISBAND_FACTION", "LEAVE_FACTION"):
+        fallback = (ai_prompts.AI_FALLBACK_RESPONSES.get("FACTION_DISBANDED", "It is a shame to see our alliance broken.")
+                    if action == "DISBAND_FACTION"
+                    else ai_prompts.AI_FALLBACK_RESPONSES.get("FACTION_ABANDONED", "We will not forget your abandonment."))
+        for member in info.get("cached_members", []):
+            if member != sender and member not in session_state.active_players:
+                reply_dict = ai_results.get((sender, member, action), {})
+                msg_text = reply_dict.get("message", fallback)
+                _react_to_reply(context, active_nations_list, delayed_responses, member, sender, reply_dict)
+                send_message(context, member, sender, msg_text, "DIPLOMACY",
+                             extra={"action": action},
+                             llm=bool(reply_dict.get("llm")))
+
+    elif target not in session_state.active_players:
+        reply_dict = ai_results.get((sender, target, action), {})
+        message = reply_dict.get("message", ai_prompts.AI_FALLBACK_RESPONSES.get("GENERIC_MESSAGE", "Message received."))
+        _react_to_reply(context, active_nations_list, delayed_responses, target, sender, reply_dict)
+        send_message(context, target, sender, message, "DIPLOMACY",
+                     extra={"action": action},
+                     llm=bool(reply_dict.get("llm")))
+
+
+def _resolve_ai_message_reply(context, ai_results, active_nations_list, delayed_responses, sender, target):
+    reply_dict = ai_results.get((sender, target, "CUSTOM_MSG"), {})
+    message = reply_dict.get("message", "Message received.")
+    _react_to_reply(context, active_nations_list, delayed_responses, target, sender, reply_dict)
+    msg_type = "TEXT" if reply_dict.get("action", "NONE") == "NONE" else "DIPLOMACY"
+    send_message(context, target, sender, message, msg_type,
+                 llm=bool(reply_dict.get("llm")))
+
+
+def _resolve_human_answer(context, sender, target, action, info):
+    """Return whether an offer to a human player is finished."""
+    # A queued answer is resolved by Pass 0.5, which also deletes
+    # this entry -- so if we still see it here, they answered
+    # something else or nothing at all.
+    target_resp = get_response(world_for(context).nation_data, target, sender)
+    if target_resp.get("action") == action:
+        # Answer is in hand, let Pass 0.5 settle it next tick
+        lifecycle.advance_request(info)
+        return False
+    # Auto-decline since the human player did not respond immediately on their turn
+    _auto_decline(context, sender, target, action, info)
+    return True
+
+
+def _resolve_ai_answer(context, ai_results, active_nations_list, delayed_responses, sender, target, action, info):
+    reply_dict = ai_results.get((sender, target, action), {})
+    accepted = reply_dict.get("accepted", False)
+    message = reply_dict.get("message", "Timeout.")
+    wrote_it = bool(reply_dict.get("llm"))
+
+    _react_to_reply(context, active_nations_list, delayed_responses, target, sender, reply_dict)
+
+    if accepted:
+        # `sender` proposed and `target` accepted,
+        # mirroring the player-accepted pass above. The AI
+        # wrote its own reply, so only a blocked agreement
+        # replaces it.
+        outcome = treaty_effects.apply_treaty_effect(
+            context, action, sender, target, info.get("parameters"),
+            escrow=info.pop("escrow", None))
+        if outcome.blocked:
+            message = outcome.blocked
+            wrote_it = False
+    else:
+        _withdraw_offer(context, sender, target, action, info)
+        _decline_cooldown(context, sender, target, action)
+
+    send_message(context, target, sender, message, "DIPLOMACY",
+                 extra={"action": action}, llm=wrote_it)
+
+
+def _resolve_awaited_action(context, ai_results, active_nations_list, delayed_responses, sender, target, action, info):
+    """Settle an action in its answer turn. Return whether its request is finished."""
+    is_human_target = target in session_for(context).active_players
+    if action in c.UNILATERAL_ACTIONS:
+        _resolve_unilateral_replies(context, ai_results, active_nations_list, delayed_responses,
+                                    sender, target, action, info)
+        return True
+    if action.startswith("MSG:"):
+        if not is_human_target:
+            _resolve_ai_message_reply(context, ai_results, active_nations_list, delayed_responses, sender, target)
+        return True
+    if action in c.BILATERAL_ACTIONS:
+        if is_human_target:
+            return _resolve_human_answer(context, sender, target, action, info)
+        _resolve_ai_answer(context, ai_results, active_nations_list, delayed_responses, sender, target, action, info)
+        return True
+    return False
+
+
+def _process_pass2_delayed_actions(context, ai_results, active_nations_list, delayed_responses):
     """PASS 2: resolves everything that had to wait a turn for an answer
     (turns >= 1) -- LLM-evaluated proposals/messages, and human replies picked
     up via Pass 0.5. Anything that outlives its response window auto-declines."""
-    world_state = world_for(map_screen)
-    session_state = session_for(map_screen)
+    world_state = world_for(context)
     for country_name, data in list(world_state.nation_data.items()):
         if not isinstance(data, dict):
             continue
@@ -1330,135 +1496,20 @@ def _process_pass2_delayed_actions(map_screen, ai_results, active_nations_list, 
         for target, info in list(pending.items()):
             action = info.get("action", "")
             turns = info.get("turns", 0)
-            custom_msg = info.get("message", "")
-
-            is_unilateral = action in c.UNILATERAL_ACTIONS
 
             # Skip actions that were already handled in Pass 1
             if info.pop("_processed_this_turn", False):
                 continue
 
             if turns == 1:
-                is_human_target = target in session_state.active_players
-
-                if is_unilateral:
-                    if action == "DISBAND_FACTION" or action == "LEAVE_FACTION":
-                        members = info.get("cached_members", [])
-                        for m in members:
-                            if m != country_name and m not in session_state.active_players:
-                                if action == "DISBAND_FACTION":
-                                    reply_dict = ai_results.get((country_name, m, action), {})
-                                    msg_text = reply_dict.get("message", ai_prompts.AI_FALLBACK_RESPONSES.get("FACTION_DISBANDED", "It is a shame to see our alliance broken."))
-                                else:
-                                    reply_dict = ai_results.get((country_name, m, action), {})
-                                    msg_text = reply_dict.get("message", ai_prompts.AI_FALLBACK_RESPONSES.get("FACTION_ABANDONED", "We will not forget your abandonment."))
-
-                                op_val = reply_dict.get("opinion_change", 0)
-                                if op_val != 0:
-                                    queries.add_temporary_modifier(m, country_name, "general", op_val, world_state.nation_data)
-
-                                _process_ai_retaliation(map_screen, active_nations_list, delayed_responses, m, reply_dict, default_target=country_name)
-                                send_message(map_screen, m, country_name, msg_text, "DIPLOMACY",
-                                             extra={"action": action},
-                                             llm=bool(reply_dict.get("llm")))
-
-                    elif not is_human_target:
-                        reply_dict = ai_results.get((country_name, target, action), {})
-
-                        message = reply_dict.get("message", ai_prompts.AI_FALLBACK_RESPONSES.get("GENERIC_MESSAGE", "Message received."))
-
-                        op_val = reply_dict.get("opinion_change", 0)
-                        if op_val != 0:
-                            queries.add_temporary_modifier(target, country_name, "general", op_val, world_state.nation_data)
-
-                        _process_ai_retaliation(map_screen, active_nations_list, delayed_responses, target, reply_dict, default_target=country_name)
-                        send_message(map_screen, target, country_name, message, "DIPLOMACY",
-                                     extra={"action": action},
-                                     llm=bool(reply_dict.get("llm")))
-
+                if _resolve_awaited_action(context, ai_results, active_nations_list, delayed_responses,
+                                           country_name, target, action, info):
                     actions_to_clear.append(target)
-
-                elif action.startswith("MSG:"):
-                    if not is_human_target:
-                        reply_dict = ai_results.get((country_name, target, "CUSTOM_MSG"), {})
-
-                        message = reply_dict.get("message", "Message received.")
-
-                        op_val = reply_dict.get("opinion_change", 0)
-                        if op_val != 0:
-                            queries.add_temporary_modifier(target, country_name, "general", op_val, world_state.nation_data)
-
-                        _process_ai_retaliation(map_screen, active_nations_list, delayed_responses, target, reply_dict, default_target=country_name)
-
-                        msg_type = "TEXT" if reply_dict.get("action", "NONE") == "NONE" else "DIPLOMACY"
-                        send_message(map_screen, target, country_name, message, msg_type,
-                                     llm=bool(reply_dict.get("llm")))
-
-                    actions_to_clear.append(target)
-
-                elif action in c.BILATERAL_ACTIONS:
-                    if is_human_target:
-                        # A queued answer is resolved by Pass 0.5, which also deletes
-                        # this entry -- so if we still see it here, they answered
-                        # something else or nothing at all.
-                        target_resp = get_response(world_state.nation_data, target, country_name)
-
-                        if target_resp.get("action") == action:
-                            # Answer is in hand, let Pass 0.5 settle it next tick
-                            lifecycle.advance_request(info)
-                        else:
-                            # Auto-decline since the human player did not respond immediately on their turn
-                            _refund_offer_escrow(world_state.nation_data, country_name, info)
-                            if action == volunteers.ACTION:
-                                volunteers.reject_offer(map_screen, country_name, target)
-                            send_message(map_screen, target, country_name, "Your proposal was ignored and automatically declined.", "DIPLOMACY",
-                                     extra={"action": action})
-                            _decline_cooldown(map_screen, country_name, target, action)
-                            actions_to_clear.append(target)
-                    else:
-                        reply_dict = ai_results.get((country_name, target, action), {})
-
-                        accepted = reply_dict.get("accepted", False)
-                        message = reply_dict.get("message", "Timeout.")
-                        wrote_it = bool(reply_dict.get("llm"))
-
-                        op_val = reply_dict.get("opinion_change", 0)
-                        if op_val != 0:
-                            queries.add_temporary_modifier(target, country_name, "general", op_val, world_state.nation_data)
-
-                        _process_ai_retaliation(map_screen, active_nations_list, delayed_responses, target, reply_dict, default_target=country_name)
-
-                        if accepted:
-                            # `country_name` proposed and `target` accepted,
-                            # mirroring the player-accepted pass above. The AI
-                            # wrote its own reply, so only a blocked agreement
-                            # replaces it.
-                            outcome = treaty_effects.apply_treaty_effect(
-                                map_screen, action, country_name, target, info.get("parameters"),
-                                escrow=info.pop("escrow", None))
-                            if outcome.blocked:
-                                message = outcome.blocked
-                                wrote_it = False
-                        else:
-                            _refund_offer_escrow(world_state.nation_data, country_name, info)
-                            if action == volunteers.ACTION:
-                                volunteers.reject_offer(map_screen, country_name, target)
-                            _decline_cooldown(map_screen, country_name, target, action)
-
-                        send_message(map_screen, target, country_name, message, "DIPLOMACY",
-                                     extra={"action": action}, llm=wrote_it)
-                        actions_to_clear.append(target)
 
             elif turns > 1:
                 # Auto-decline anything that outlived its response window
                 if action in c.BILATERAL_ACTIONS:
-                    _refund_offer_escrow(world_state.nation_data, country_name, info)
-                    if action == volunteers.ACTION:
-                        volunteers.reject_offer(map_screen, country_name, target)
-
-                    send_message(map_screen, target, country_name, "Your proposal was ignored and automatically declined.", "DIPLOMACY",
-                                     extra={"action": action})
-                    _decline_cooldown(map_screen, country_name, target, action)
+                    _auto_decline(context, country_name, target, action, info)
                     actions_to_clear.append(target)
                 else:
                     lifecycle.advance_request(info)
@@ -1468,21 +1519,21 @@ def _process_pass2_delayed_actions(map_screen, ai_results, active_nations_list, 
                 lifecycle.remove_request(pending, t)
 
 
-def _apply_delayed_responses(map_screen, delayed_responses):
+def _apply_delayed_responses(context, delayed_responses):
     """Converts the proposals _process_ai_retaliation queued up (like war
     declarations) into normal pending_diplomacy actions for next turn."""
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     for sender, receiver, act, tns, msg in delayed_responses:
         pd = world_state.nation_data.get(sender, {}).setdefault("pending_diplomacy", {})
         if receiver not in pd or (isinstance(pd[receiver], dict) and pd[receiver].get("turns", 0) == 0):
             lifecycle.put_request(world_state.nation_data, sender, receiver, act, turns=tns, message=msg)
 
 
-def _process_claim_queues(map_screen):
+def _process_claim_queues(context):
     """Ticks down every nation's claim/revoke/return/puppet-release queues by
     one turn, applying whichever entries finish this turn."""
-    world_state = world_for(map_screen)
-    session_state = session_for(map_screen)
+    world_state = world_for(context)
+    session_state = session_for(context)
     for country_name, data in list(world_state.nation_data.items()):
         if not isinstance(data, dict):
             continue
@@ -1498,7 +1549,7 @@ def _process_claim_queues(map_screen):
                 claim_queue.pop(0)
 
                 if country_name == session_state.player_country:
-                    map_screen.show_feedback(f"Claim on Province {prov_id} complete!")
+                    context.show_feedback(f"Claim on Province {prov_id} complete!")
 
         # --- PROCESS REVOKE QUEUE (Simultaneous) ---
         revoke_queue = data.get("revoke_queue", [])
@@ -1522,7 +1573,7 @@ def _process_claim_queues(map_screen):
                     revoke_queue.pop(i)
 
                     if country_name == session_state.player_country:
-                        map_screen.show_feedback(f"Claim on Province {prov_id} revoked!")
+                        context.show_feedback(f"Claim on Province {prov_id} revoked!")
         # --- PROCESS RETURN QUEUE (Simultaneous) ---
         return_queue = data.get("return_queue", [])
         if return_queue:
@@ -1537,10 +1588,10 @@ def _process_claim_queues(map_screen):
                     prov = world_state.id_to_province.get(prov_id)
                     if prov and prov.get("owner") == country_name:
                         # Return the province to the intended recipient!
-                        ownership.conquer_province(map_screen, prov, recipient)
+                        ownership.conquer_province(context, prov, recipient)
 
                         if country_name == session_state.player_country:
-                            map_screen.show_feedback(f"Returned Province {prov_id} to {recipient}!")
+                            context.show_feedback(f"Returned Province {prov_id} to {recipient}!")
 
                     return_queue.pop(i)
 
@@ -1558,68 +1609,68 @@ def _process_claim_queues(map_screen):
                 keep_cores = rq.get("keep_cores", False)
                 release_type = rq["release_type"]
                 created = finalize_create_puppet(world_state.map_data, world_state.nation_data,
-                                                country_name, core_nation, map_screen, keep_cores, release_type)
+                                                country_name, core_nation, context, keep_cores, release_type)
                 if created and country_name == session_state.player_country:
                     core_name = queries.get_country_display_name(core_nation, world_state.nation_data)
-                    map_screen.show_feedback(f"Released {release_type.lower()} country from {core_name} cores!")
+                    context.show_feedback(f"Released {release_type.lower()} country from {core_name} cores!")
 
 
-def _process_scheduled_ai_attache_revocations(map_screen):
+def _process_scheduled_ai_attache_revocations(context):
     """Apply the AI hosts' attaché revocations from the previous turn."""
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     for sender, host in military_attaches.process_scheduled_revocations(
             world_state.nation_data):
         log_global_event(world_state.nation_data,
                          f"{host} has revoked {sender}'s military attaché for supporting its enemy.")
-        send_message(map_screen, host, sender,
+        send_message(context, host, sender,
                      "Your military attaché has been revoked because you are supporting a country we are fighting.",
                      "DIPLOMACY", extra={"action": military_attaches.REVOKE_ACTION})
 
 
-def _process_scheduled_ai_volunteer_send_homes(map_screen):
+def _process_scheduled_ai_volunteer_send_homes(context):
     """Apply the AI hosts' volunteer return orders from the previous turn."""
-    world_state = world_for(map_screen)
-    for donor, host in volunteers.process_scheduled_send_homes(map_screen):
+    world_state = world_for(context)
+    for donor, host in volunteers.process_scheduled_send_homes(context):
         log_global_event(world_state.nation_data,
                          f"{host} has sent {donor}'s volunteer divisions home for supporting its enemy.")
-        send_message(map_screen, host, donor,
+        send_message(context, host, donor,
                      "Your volunteer divisions are being sent home because you are supporting a country we are fighting.",
                      "DIPLOMACY", extra={"action": volunteers.SEND_HOME_ACTION})
 
 
-def _schedule_conflicting_ai_attache_revocations(map_screen):
+def _schedule_conflicting_ai_attache_revocations(context):
     """Record new AI attaché conflicts for processing on the next turn."""
-    world_state = world_for(map_screen)
-    human_hosts = set(session_for(map_screen).active_players)
-    human_hosts.add(session_for(map_screen).player_country)
+    world_state = world_for(context)
+    human_hosts = set(session_for(context).active_players)
+    human_hosts.add(session_for(context).player_country)
     military_attaches.schedule_conflict_revocations_for_ai_hosts(
         world_state.nation_data, human_hosts)
 
 
-def _schedule_conflicting_ai_volunteer_send_homes(map_screen):
+def _schedule_conflicting_ai_volunteer_send_homes(context):
     """Record AI volunteer conflicts for processing on the next turn."""
-    world_state = world_for(map_screen)
-    human_hosts = set(session_for(map_screen).active_players)
-    human_hosts.add(session_for(map_screen).player_country)
+    world_state = world_for(context)
+    human_hosts = set(session_for(context).active_players)
+    human_hosts.add(session_for(context).player_country)
     volunteers.schedule_conflict_send_homes_for_ai_hosts(
         world_state.nation_data, human_hosts)
 
 
-def process_diplomacy_turn(map_screen):
-    world_state = world_for(map_screen)
+def process_diplomacy_turn(context):
+    world_state = world_for(context)
     lifecycle.normalize_diplomacy_channels(world_state.nation_data)
-    _decay_modifiers_and_truces(map_screen)
-    volunteers.tick(map_screen)
-    _process_scheduled_ai_attache_revocations(map_screen)
-    _process_scheduled_ai_volunteer_send_homes(map_screen)
+    _decay_modifiers_and_truces(context)
+    volunteers.tick(context)
+    _process_scheduled_ai_attache_revocations(context)
+    _process_scheduled_ai_volunteer_send_homes(context)
     # Ages every faction member's claim on the leadership. Before anything acts,
     # so the button a player sees, the number an AI decides on and the state a
     # claim executes against are one measurement rather than three.
-    faction_leadership.tick(map_screen, map_screen.ai_world)
+    faction_leadership.tick(context, context.ai_world)
     # Settles promises that ran their course or were broken this turn. After the
     # modifier decay so a fresh betrayal grudge is not aged on the turn it lands.
-    ai_commitments.tick(map_screen)
-    _flush_queued_ai_actions(map_screen)
+    ai_commitments.tick(context)
+    _flush_queued_ai_actions(context)
 
     # --- 0. FIND ALIVE NATIONS ---
     active_nations = queries.get_politically_active_nations(
@@ -1627,13 +1678,13 @@ def process_diplomacy_turn(map_screen):
     active_nations_list = sorted(list(active_nations))
 
     # --- 1. SIMULTANEOUS ACTION CLASH RESOLUTION ---
-    _resolve_simultaneous_clashes(map_screen)
+    _resolve_simultaneous_clashes(context)
 
     # --- 2. GATHER AI TASKS ---
-    ai_tasks = _gather_ai_tasks(map_screen)
+    ai_tasks = _gather_ai_tasks(context)
 
     # --- 3. EXECUTE AI THREADS ---
-    ai_results = _execute_ai_tasks(map_screen, ai_tasks, active_nations_list)
+    ai_results = _execute_ai_tasks(context, ai_tasks, active_nations_list)
 
     # --- 4. STANDARD RESOLUTION (APPLY AI RESULTS) ---
     delayed_responses = [] # Store AI actions here to queue them for the next turn
@@ -1641,19 +1692,19 @@ def process_diplomacy_turn(map_screen):
     # A bloc treaty accepted last turn may still be waiting on a human member's
     # answer. Settled before this turn's offers go out, for the same reason
     # Pass 0.5 runs before Pass 1.
-    ratification.process_ratifications(map_screen)
+    ratification.process_ratifications(context)
 
-    _process_queued_responses(map_screen)
-    _process_pass1_immediate_actions(map_screen)
-    _process_pass2_delayed_actions(map_screen, ai_results, active_nations_list, delayed_responses)
-    _apply_delayed_responses(map_screen, delayed_responses)
+    _process_queued_responses(context)
+    _process_pass1_immediate_actions(context)
+    _process_pass2_delayed_actions(context, ai_results, active_nations_list, delayed_responses)
+    _apply_delayed_responses(context, delayed_responses)
 
     # --- PROCESS CLAIM QUEUES ---
-    _process_claim_queues(map_screen)
+    _process_claim_queues(context)
     # Direct editor/multiplayer state changes can bypass their normal mutation
     # helpers. Keep temporary diplomatic state valid even on those paths.
     guarantees.reconcile(world_state.nation_data)
     war_actions.reconcile_military_access(world_state.nation_data)
     military_attaches.reconcile(world_state.nation_data)
-    _schedule_conflicting_ai_attache_revocations(map_screen)
-    _schedule_conflicting_ai_volunteer_send_homes(map_screen)
+    _schedule_conflicting_ai_attache_revocations(context)
+    _schedule_conflicting_ai_volunteer_send_homes(context)

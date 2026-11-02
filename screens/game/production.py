@@ -158,6 +158,11 @@ class Production_Screen(Screen):
         self.artillery_mode = "normal"
         self.custom_artillery_modes = {}
 
+    def on_enter(self, app, previous):
+        game_map = app.states["MAP"]
+        if game_map.selected_province:
+            self.start_with_province(game_map.selected_province, game_map)
+
     def can_edit_realtime(self):
         return queries.require_realtime_turn_open(self.map_screen, "production")
 

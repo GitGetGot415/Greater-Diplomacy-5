@@ -34,7 +34,7 @@ Read `general_info.txt` for state ownership, storage, and build policy.
 | `ui/rendering/` | Cached map surfaces, overlays, labels, fonts, and symbols. |
 | `ui/camera/` | Map camera interaction and viewing transforms. |
 | `ui/dialogs/` | Shared dialogs, notifications, and reusable pickers. `pickers.py` opens pickers. `file_exchange.py` exports and imports player files. |
-| `ui/navigation/` | Screen runners, modal screens, and the modal stack. |
+| `ui/navigation/` | The `Screen` base class, screen runners, modal screens, and the modal stack. |
 | `ui/panels/` | Persistent map panels, progress drawing, status displays, and shared panel layout. |
 | `ui/widgets/` | Text, flags, tables, and scrolling support. |
 | `ui/bars/` | The map heads-up display and view controls. |
@@ -81,6 +81,9 @@ Keep this name unless the user explicitly requests a different name.
 | Change territory ownership or cores | `map_logic/territory/ownership.py` |
 | Change turn sequencing | `map_logic/system32/turn_processor.py` and `turn_manager.py` |
 | Change map buttons or map input | `screens/game/map.py` and `map_input.py` |
+| Change what a screen does when it opens | The `on_enter` method of that screen |
+| Change how a screen opens the map | The `prepare_map` method of that screen and `screens/game/map_launch.py` |
+| Add or change a diplomatic action | `map_logic/diplomacy/action_definitions.py`, `treaty_effects.py`, and `diplomacy_processor.py` |
 | Change initial country or tactical-unit selection | `screens/setup/player_setup.py` |
 | Change country-edit controls | `screens/editors/edit_country.py` |
 | Change application settings buttons | `screens/menus/settings.py` |

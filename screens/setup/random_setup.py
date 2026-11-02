@@ -1,5 +1,6 @@
 import os
 from ui.navigation.screen import Screen
+from screens.game import map_launch
 import data.constants as c
 from ui.bars import ui_bars
 from ui.widgets.ui_elements import Button, Slider, make_back_button, make_toggle_button
@@ -35,6 +36,10 @@ class Random_Setup(Screen):
         
         self.reset_to_defaults()
         self.refresh_ui()
+
+    def prepare_map(self, app):
+        map_launch.open_new_map(app, is_scenario=True, is_random=True, random_settings=self.random_settings)
+        return True
 
     def calculate_max_countries(self):
         data = queries.get_country_data()

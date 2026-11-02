@@ -11,9 +11,9 @@ from map_logic.territory import ownership
 from map_logic.diplomacy.diplomacy_events import log_global_event
 
 
-def process_dead_nations(map_screen):
+def process_dead_nations(context):
     """Removes defunct units and updates wars, preserving faction exiles."""
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     # A government in exile survives only while another member still has land
     # from which it could restore the defeated country. Do this before deriving
     # political activity so an exhausted faction's units and wars are cleaned
@@ -49,10 +49,10 @@ def process_dead_nations(map_screen):
             break_puppet_link(world_state.nation_data, master, nation)
             log_global_event(world_state.nation_data, f"{nation} has achieved independence following the collapse of {master}!")
 
-def process_disbands(map_screen):
+def process_disbands(context):
     """Processes the 1-turn timer for disbanding units and refunds their cost."""
-    world_state = world_for(map_screen)
-    unit_library = queries.get_unit_library(map_screen)
+    world_state = world_for(context)
+    unit_library = queries.get_unit_library(context)
 
     for province in world_state.map_data.values():
         units_to_keep = []
@@ -78,10 +78,10 @@ def process_disbands(map_screen):
         # Overwrite with the surviving units
         province["units"] = units_to_keep
 
-def process_upgrades(map_screen):
+def process_upgrades(context):
     """Processes the 1-turn timer for upgrading units to a new type."""
-    world_state = world_for(map_screen)
-    unit_library = queries.get_unit_library(map_screen)
+    world_state = world_for(context)
+    unit_library = queries.get_unit_library(context)
 
     for province in world_state.map_data.values():
         if not province.get("units"):
@@ -97,14 +97,14 @@ def process_upgrades(map_screen):
         for unit in province["units"]:
             order = unit.get("order")
             if isinstance(order, dict) and order.get("type") == "UPGRADE":
-                if queries.is_air_unit(unit, context=map_screen):
+                if queries.is_air_unit(unit, context=context):
                     # Aircraft upgrades must retain their family at resolution.
                     try:
-                        queries.canonical_unit_order(map_screen, unit["owner"], province, unit, order)
+                        queries.canonical_unit_order(context, unit["owner"], province, unit, order)
                     except ValueError:
                         unit["order"] = {"type": "MOVE", "path": []}
                         continue
-                if not has_factory or queries.get_unit_tier(unit.get("type", ""), context=map_screen) <= 0:
+                if not has_factory or queries.get_unit_tier(unit.get("type", ""), context=context) <= 0:
                     unit["order"] = {"type": "MOVE", "path": []}
                     continue
 
@@ -120,9 +120,9 @@ def process_upgrades(map_screen):
                     # Reset back to a blank move order
                     unit["order"] = {"type": "MOVE", "path": []}
 
-def process_repairs(map_screen):
+def process_repairs(context):
     """Processes the 1-turn timer for repairing units to full health."""
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     for province in world_state.map_data.values():
         for unit in province.get("units", []):
             order = unit.get("order")
@@ -139,16 +139,16 @@ def process_repairs(map_screen):
                     # Reset back to a blank move order so they can be selected again
                     unit["order"] = {"type": "MOVE", "path": []}
 
-def process_conversions(map_screen):
+def process_conversions(context):
     """Processes the timer for transferring units into Convoys/Trucks and back."""
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     for province in world_state.map_data.values():
         for unit in province.get("units", []):
             order = unit.get("order")
             if isinstance(order, dict) and order.get("type") == "CONVERT":
-                if queries.is_air_unit(unit, context=map_screen) or queries.is_air_transport(unit, context=map_screen):
+                if queries.is_air_unit(unit, context=context) or queries.is_air_transport(unit, context=context):
                     try:
-                        queries.canonical_unit_order(map_screen, unit["owner"], province, unit, order)
+                        queries.canonical_unit_order(context, unit["owner"], province, unit, order)
                     except ValueError:
                         unit["order"] = {"type": "MOVE", "path": []}
                         continue
@@ -158,14 +158,14 @@ def process_conversions(map_screen):
                     target = order.get("to")
 
                     if target in ["Convoy", "Truck"]:
-                        queries.load_transport(unit, target, context=map_screen)
+                        queries.load_transport(unit, target, context=context)
                     else:
-                        queries.revert_transport(unit, context=map_screen)
+                        queries.revert_transport(unit, context=context)
 
                     # Reset back to a blank move order so they can be selected again
                     unit["order"] = {"type": "MOVE", "path": []}
 
-def _resolve_step_swaps(map_screen, moving_units, step, get_eff_speed):
+def _resolve_step_swaps(context, moving_units, step, get_eff_speed):
     """Fights same-step tile swaps that combat_rules.find_meeting_pairs can't see.
 
     That check only compares turn-start positions against a unit's very first
@@ -179,7 +179,7 @@ def _resolve_step_swaps(map_screen, moving_units, step, get_eff_speed):
     resolves any hits with the shared combat_processor.resolve_meeting_engagement.
     Returns moving_units with anyone killed in the process removed.
     """
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     eligible = [
         u for u in moving_units
         if not u.get("_skip_remaining_steps", False)
@@ -239,14 +239,14 @@ def _resolve_step_swaps(map_screen, moving_units, step, get_eff_speed):
         return moving_units
     return [u for u in moving_units if id(u) not in dead_ids]
 
-def process_movement(map_screen):
-    world_state = world_for(map_screen)
-    session_state = session_for(map_screen)
+def process_movement(context):
+    world_state = world_for(context)
+    session_state = session_for(context)
     moving_units = []
     # Defense areas only reassign units that began this turn idle.  Keep this
     # evidence on the live map controller rather than unit dictionaries so it
     # can never leak into a save or a multiplayer unit snapshot.
-    map_screen._units_with_move_order_this_turn = set()
+    context._units_with_move_order_this_turn = set()
     for province in world_state.map_data.values():
         units_to_keep = []
         for unit in province.get("units", []):
@@ -257,18 +257,18 @@ def process_movement(map_screen):
                 continue
 
             order = unit.get("order")
-            if queries.is_air_unit(unit, context=map_screen) and not queries.air_unit_can_move_on_ground(unit, context=map_screen):
+            if queries.is_air_unit(unit, context=context) and not queries.air_unit_can_move_on_ground(unit, context=context):
                 units_to_keep.append(unit)
                 continue
             if order and order.get("type") == "MOVE" and order.get("path"):
-                if queries.is_air_unit(unit, context=map_screen) or queries.is_air_transport(unit, context=map_screen):
+                if queries.is_air_unit(unit, context=context) or queries.is_air_transport(unit, context=context):
                     try:
-                        queries.canonical_unit_order(map_screen, unit["owner"], province, unit, order)
+                        queries.canonical_unit_order(context, unit["owner"], province, unit, order)
                     except ValueError:
                         unit["order"] = {"type": "MOVE", "path": []}
                         units_to_keep.append(unit)
                         continue
-                map_screen._units_with_move_order_this_turn.add(id(unit))
+                context._units_with_move_order_this_turn.add(id(unit))
                 unit["_current_province_id"] = province["id"]
                 unit["_skip_remaining_steps"] = False
                 moving_units.append(unit)
@@ -278,8 +278,8 @@ def process_movement(map_screen):
 
     if not moving_units: return
 
-    if not hasattr(map_screen, 'cached_unit_library'):
-        map_screen.cached_unit_library = queries.get_unit_library(map_screen)
+    if not hasattr(context, 'cached_unit_library'):
+        context.cached_unit_library = queries.get_unit_library(context)
 
     # --- NEW HELPER FOR TACTICAL SPEED ---
     def get_eff_speed(u):
@@ -291,7 +291,7 @@ def process_movement(map_screen):
     max_speed = max(get_eff_speed(u) for u in moving_units)
 
     for step in range(max_speed):
-        moving_units = _resolve_step_swaps(map_screen, moving_units, step, get_eff_speed)
+        moving_units = _resolve_step_swaps(context, moving_units, step, get_eff_speed)
 
         for unit in moving_units:
             # Explicitly check if this individual unit has run out of moves or is skipping
@@ -304,7 +304,7 @@ def process_movement(map_screen):
             target_id = order["path"][0]
             target_prov = world_state.id_to_province.get(target_id)
             if not target_prov: continue
-            if ((queries.is_air_unit(unit, context=map_screen) or queries.is_air_transport(unit, context=map_screen))
+            if ((queries.is_air_unit(unit, context=context) or queries.is_air_transport(unit, context=context))
                     and not queries.is_water_province(target_prov)
                     and not queries.air_unit_can_land(unit, target_prov, world_state.nation_data)):
                 order["path"] = []
@@ -341,7 +341,7 @@ def process_movement(map_screen):
             if is_convoy:
                 is_naval = True
             else:
-                stats = map_screen.cached_unit_library.get(u_type, {})
+                stats = context.cached_unit_library.get(u_type, {})
                 is_naval = stats.get("naval_unit", False)
 
             if is_naval and not is_convoy and not queries.can_ships_enter(combat_owner, target_prov, world_state.nation_data):
@@ -391,8 +391,8 @@ def process_movement(map_screen):
 
                 # --- INSTANT CONVERT FOR CONVOYS UPON LANDING ---
                 if is_convoy and not dest_is_water:
-                    queries.revert_transport(unit, context=map_screen)
-                    if queries.is_air_unit(unit, context=map_screen):
+                    queries.revert_transport(unit, context=context)
+                    if queries.is_air_unit(unit, context=context):
                         # Aircraft unload at the landing boundary, then must use
                         # flight orders (or a new ground route for missiles).
                         order["path"] = []
@@ -402,11 +402,11 @@ def process_movement(map_screen):
                 if not defenders:
                     if dest_owner == "Unclaimed" or dest_owner in player_data.get("at_war_with", []):
                         # Prevent capturing water tiles via movement
-                        if not queries.is_water_province(target_prov) and not queries.is_air_unit(unit, context=map_screen):
+                        if not queries.is_water_province(target_prov) and not queries.is_air_unit(unit, context=context):
                             capturer = combat_owner
                             # faction core transfer stuff
                             true_owner = queries.get_faction_core_transfer_target(capturer, target_prov, world_state.nation_data)
-                            ownership.conquer_province(map_screen, target_prov, true_owner)
+                            ownership.conquer_province(context, target_prov, true_owner)
 
                 # Stop if an enemy was present
                 if defenders:
@@ -467,7 +467,7 @@ def _find_nearest_owned_province(start_prov, owner, id_to_province):
 
     return None
 
-def send_unit_home(map_screen, province, unit):
+def send_unit_home(context, province, unit):
     """Teleports one unit off `province` to the nearest tile its owner holds.
 
     The EU4-style exiled army, lifted out of process_stranded_units so a deal
@@ -475,7 +475,7 @@ def send_unit_home(map_screen, province, unit):
     end of the turn -- see deal_effects. Returns False, leaving the unit where
     it is, if its owner has no ground left to stand on.
     """
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     home_prov = _find_nearest_owned_province(province, unit["owner"], world_state.id_to_province)
     if home_prov is None:
         return False  # nation holds no territory to return the unit to
@@ -497,7 +497,7 @@ def is_land_unit(unit, unit_library=None):
     return not (stats.get("air_role") or unit.get("naval_unit") or stats.get("naval_unit", False))
 
 
-def process_beached_units(map_screen):
+def process_beached_units(context):
     """Puts anything that walks back aboard ship when it is found out at sea.
 
     A land unit has no legal way into a water province -- can_land_units_enter
@@ -513,8 +513,8 @@ def process_beached_units(map_screen):
     fixed). This is the net under that: it heals the saves the old rule already
     damaged, and closes off any other route to the same state.
     """
-    world_state = world_for(map_screen)
-    unit_library = queries.get_unit_library(map_screen)
+    world_state = world_for(context)
+    unit_library = queries.get_unit_library(context)
 
     for province in world_state.map_data.values():
         if not queries.is_water_province(province):
@@ -527,12 +527,12 @@ def process_beached_units(map_screen):
             # A Truck is a land transport, so it is caught by the same net.
             # Unload it first rather than wrapping one carrier inside another.
             if unit.get("type", "").startswith("Truck ("):
-                queries.revert_transport(unit, context=map_screen)
+                queries.revert_transport(unit, context=context)
 
-            queries.load_transport(unit, "Convoy", context=map_screen)
+            queries.load_transport(unit, "Convoy", context=context)
 
 
-def process_stranded_units(map_screen):
+def process_stranded_units(context):
     """Exiles armies that end up occupying foreign soil without a legal right to be there.
 
     A unit can find itself standing in territory it no longer has any claim to enter
@@ -541,8 +541,8 @@ def process_stranded_units(map_screen):
     like a real retreat, we just teleport it to the nearest province it still owns,
     mirroring EU4-style "exiled army" handling.
     """
-    world_state = world_for(map_screen)
-    unit_library = queries.get_unit_library(map_screen)
+    world_state = world_for(context)
+    unit_library = queries.get_unit_library(context)
 
     for province in list(world_state.map_data.values()):
         owner = province.get("owner")
@@ -573,4 +573,4 @@ def process_stranded_units(map_screen):
             continue
 
         for unit in stranded:
-            send_unit_home(map_screen, province, unit)
+            send_unit_home(context, province, unit)

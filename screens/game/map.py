@@ -1193,25 +1193,30 @@ def _update_volunteer_buttons(map_screen, owner, pending_action, pending_turns):
     return volunteer_state
 
 
+def _set_commitment_button(button, legal, active, pending_start, pending_end, texts, color):
+    """Show a commitment button. `texts` is (undo start, undo end, end, start)."""
+    undo_start, undo_end, end, start = texts
+    if pending_start:
+        text = undo_start
+    elif pending_end:
+        text = undo_end
+    elif active:
+        text = end
+    else:
+        text = start
+    set_btn(button, True, pending_start or pending_end or active or (legal and not active), text, color)
+
+
 def _update_guarantee_button(map_screen, owner, pending_action, pending_turns):
     guarantee_legal, _guarantee_reason = guarantees.is_eligible(
         map_screen.player_country, owner, map_screen.nation_data)
     already_guaranteed = owner in guarantees.guaranteed_targets(
         map_screen.player_country, map_screen.nation_data)
-    pending_guarantee = (pending_action == guarantees.ACTION and pending_turns == 0)
-    pending_revoke = (pending_action == guarantees.REVOKE_ACTION and pending_turns == 0)
-    if pending_guarantee:
-        guarantee_text = "Undo Guarantee"
-    elif pending_revoke:
-        guarantee_text = "Undo Revoke Guarantee"
-    elif already_guaranteed:
-        guarantee_text = "Revoke Guarantee"
-    else:
-        guarantee_text = "Guarantee Independence"
-    set_btn(map_screen.btn_guarantee, True,
-            pending_guarantee or pending_revoke or already_guaranteed
-            or (guarantee_legal and not already_guaranteed),
-            guarantee_text, "blue")
+    _set_commitment_button(
+        map_screen.btn_guarantee, guarantee_legal, already_guaranteed,
+        pending_action == guarantees.ACTION and pending_turns == 0,
+        pending_action == guarantees.REVOKE_ACTION and pending_turns == 0,
+        ("Undo Guarantee", "Undo Revoke Guarantee", "Revoke Guarantee", "Guarantee Independence"), "blue")
 
 
 def _update_attache_buttons(map_screen, owner, pending_action, pending_turns):
@@ -1224,18 +1229,10 @@ def _update_attache_buttons(map_screen, owner, pending_action, pending_turns):
                        and pending_turns == 0)
     pending_withdraw_attache = (pending_action == military_attaches.WITHDRAW_ACTION
                                  and pending_turns == 0)
-    if pending_attache:
-        attache_text = "Undo Attaché Request"
-    elif pending_withdraw_attache:
-        attache_text = "Undo Attaché Withdrawal"
-    elif attached:
-        attache_text = "Withdraw Military Attaché"
-    else:
-        attache_text = "Send Military Attaché"
-    set_btn(map_screen.btn_military_attache, True,
-            pending_attache or pending_withdraw_attache or attached
-            or (attache_legal and not attached),
-            attache_text, "orange")
+    _set_commitment_button(
+        map_screen.btn_military_attache, attache_legal, attached, pending_attache, pending_withdraw_attache,
+        ("Undo Attaché Request", "Undo Attaché Withdrawal", "Withdraw Military Attaché", "Send Military Attaché"),
+        "orange")
 
     hosting_their_attache = map_screen.player_country in military_attaches.hosts_for(
         owner, map_screen.nation_data)
@@ -1249,40 +1246,11 @@ def _update_attache_buttons(map_screen, owner, pending_action, pending_turns):
     return not attached and not pending_attache and not pending_withdraw_attache
 
 
-def _update_foreign_country_buttons(map_screen, owner):
-    at_war = queries.are_at_war(map_screen.player_country, owner, map_screen.nation_data)
-    in_same_faction = queries.are_in_same_faction(map_screen.player_country, owner, map_screen.nation_data)
-    pending_action, pending_turns = queries.get_diplomatic_status(map_screen.player_country, owner, map_screen.nation_data)
-
-    is_unilateral_pending = pending_action in c.UNILATERAL_ACTIONS
-    if is_unilateral_pending and pending_turns > 0:
-        pending_action = ""
-        pending_turns = 0
-
-    is_sending = (pending_turns == 0 and pending_action)
-    def get_status_text(base):
-        return f"UNDO {base}" if is_sending else "WAITING..."
-
+def _update_faction_offer_buttons(map_screen, owner, set_offer, at_war, in_same_faction):
+    """Update the faction buttons and return what each proposal can forecast."""
     my_faction = map_screen.nation_data[map_screen.player_country].get("faction", "")
     target_faction = map_screen.nation_data[owner].get("faction", "")
     i_am_leader = queries.is_faction_leader(map_screen.player_country, map_screen.nation_data)
-
-    _update_war_button(map_screen, owner, pending_action, pending_turns, at_war, in_same_faction)
-
-    target_wars = queries.get_enemies(owner, map_screen.nation_data)
-    player_wars = queries.get_enemies(map_screen.player_country, map_screen.nation_data)
-    can_join_wars = bool(in_same_faction and any(w for w in target_wars if w not in player_wars))
-    jw_text = get_status_text("JOIN WARS") if pending_action == "JOIN_WARS" else "Join Wars"
-    set_btn(map_screen.btn_join_wars, True, can_join_wars or pending_action == "JOIN_WARS", jw_text, "orange")
-
-    can_call_to_arms = bool(in_same_faction and any(w for w in player_wars if w not in target_wars))
-    ca_text = get_status_text("CALL TO ARMS") if pending_action == "CALL_TO_ARMS" else "Call to Arms"
-    set_btn(map_screen.btn_call_to_arms, True, can_call_to_arms or pending_action == "CALL_TO_ARMS", ca_text, "red")
-
-    volunteer_state = _update_volunteer_buttons(map_screen, owner, pending_action, pending_turns)
-    _update_guarantee_button(map_screen, owner, pending_action, pending_turns)
-    can_forecast_attache = _update_attache_buttons(map_screen, owner, pending_action, pending_turns)
-
     factions_disabled = queries.get_scenario_flag("disable_factions", c.DEFAULT_DISABLE_FACTIONS, map_screen.scenario_settings)
 
     # A puppet's alignment is its master's, both ways round: it may
@@ -1294,59 +1262,88 @@ def _update_foreign_country_buttons(map_screen, owner):
     # Keep membership controls clickable so refusal feedback is reachable.
     can_try_invite = bool(not factions_disabled and my_faction and not target_faction
                           and not at_war and they_are_free)
-    inv_text = get_status_text("INVITE") if pending_action == "FACTION_INVITE" else "Invite to Faction"
-    set_btn(map_screen.btn_fac_invite, True, can_try_invite or pending_action == "FACTION_INVITE", inv_text, "green")
-
     can_try_req_join = bool(not factions_disabled and not my_faction and target_faction
                             and not at_war and i_am_free)
-    req_text = get_status_text("JOIN REQ") if pending_action == "JOIN_FACTION_REQ" else "Req. Join Faction"
-    set_btn(map_screen.btn_fac_join_req, True, can_try_req_join or pending_action == "JOIN_FACTION_REQ", req_text, "green")
-
     can_kick = bool(not factions_disabled and in_same_faction and i_am_leader)
-    kick_text = get_status_text("KICK") if pending_action == "KICK_FACTION_MEMBER" else "Kick from Faction"
-    set_btn(map_screen.btn_fac_kick, True, can_kick or pending_action == "KICK_FACTION_MEMBER", kick_text, "red")
-
     can_create_fac = bool(not factions_disabled and not my_faction and not target_faction and not at_war)
-    create_text = get_status_text("CREATE") if pending_action == "CREATE_FACTION" else "Create Faction"
-    set_btn(map_screen.btn_fac_create, True, can_create_fac or pending_action == "CREATE_FACTION", create_text, "blue")
 
+    forecasts = [
+        (map_screen.btn_fac_invite, "FACTION_INVITE",
+         set_offer(map_screen.btn_fac_invite, "FACTION_INVITE", "INVITE", "Invite to Faction", "green", can_try_invite)),
+        (map_screen.btn_fac_join_req, "JOIN_FACTION_REQ",
+         set_offer(map_screen.btn_fac_join_req, "JOIN_FACTION_REQ", "JOIN REQ", "Req. Join Faction", "green", can_try_req_join)),
+    ]
+    set_offer(map_screen.btn_fac_kick, "KICK_FACTION_MEMBER", "KICK", "Kick from Faction", "red", can_kick)
+    forecasts.append((map_screen.btn_fac_create, "CREATE_FACTION",
+                      set_offer(map_screen.btn_fac_create, "CREATE_FACTION", "CREATE", "Create Faction", "blue", can_create_fac)))
+    return forecasts
+
+
+def _update_access_buttons(map_screen, owner, set_offer, at_war, in_same_faction):
+    """Update the military access buttons and return whether a request can be forecast."""
     has_access_to_them = queries.has_military_access(map_screen.player_country, owner, map_screen.nation_data)
     they_have_access_to_me = queries.has_military_access(owner, map_screen.player_country, map_screen.nation_data)
 
-    can_req_access = not has_access_to_them and not at_war and not in_same_faction
-    req_acc_text = get_status_text("REQ ACCESS") if pending_action == "REQ_MILITARY_ACCESS" else "Request Mil. Access"
-
+    forecast_request = False
     if has_access_to_them:
-        cancel_acc_text = get_status_text("CANCEL ACCESS") if pending_action == "CANCEL_MILITARY_ACCESS" else "Cancel Mil. Access"
-        set_btn(map_screen.btn_cancel_mil_access, True, True, cancel_acc_text, "orange")
+        set_offer(map_screen.btn_cancel_mil_access, "CANCEL_MILITARY_ACCESS", "CANCEL ACCESS", "Cancel Mil. Access", "orange", True)
         set_btn(map_screen.btn_req_mil_access, False, False, "", "blue")
     else:
         set_btn(map_screen.btn_cancel_mil_access, False, False, "", "orange")
-        set_btn(map_screen.btn_req_mil_access, True, can_req_access or pending_action == "REQ_MILITARY_ACCESS", req_acc_text, "blue")
+        can_req_access = not at_war and not in_same_faction
+        forecast_request = set_offer(map_screen.btn_req_mil_access, "REQ_MILITARY_ACCESS", "REQ ACCESS", "Request Mil. Access", "blue", can_req_access)
 
     if they_have_access_to_me:
-        revoke_acc_text = get_status_text("REVOKE ACCESS") if pending_action == "REVOKE_MILITARY_ACCESS" else "Revoke Mil. Access"
-        set_btn(map_screen.btn_revoke_mil_access, True, True, revoke_acc_text, "red")
+        set_offer(map_screen.btn_revoke_mil_access, "REVOKE_MILITARY_ACCESS", "REVOKE ACCESS", "Revoke Mil. Access", "red", True)
     else:
         set_btn(map_screen.btn_revoke_mil_access, False, False, "", "red")
+    return forecast_request
+
+
+def _update_foreign_country_buttons(map_screen, owner):
+    at_war = queries.are_at_war(map_screen.player_country, owner, map_screen.nation_data)
+    in_same_faction = queries.are_in_same_faction(map_screen.player_country, owner, map_screen.nation_data)
+    pending_action, pending_turns = queries.get_diplomatic_status(map_screen.player_country, owner, map_screen.nation_data)
+
+    is_unilateral_pending = pending_action in c.UNILATERAL_ACTIONS
+    if is_unilateral_pending and pending_turns > 0:
+        pending_action = ""
+        pending_turns = 0
+
+    def set_offer(button, action, status, label, color, allowed):
+        """Show one offer button and return whether its reply can be forecast."""
+        pending = pending_action == action
+        if pending:
+            label = f"UNDO {status}" if pending_turns == 0 else "WAITING..."
+        set_btn(button, True, allowed or pending, label, color)
+        return allowed and not pending
+
+    _update_war_button(map_screen, owner, pending_action, pending_turns, at_war, in_same_faction)
+
+    target_wars = queries.get_enemies(owner, map_screen.nation_data)
+    player_wars = queries.get_enemies(map_screen.player_country, map_screen.nation_data)
+    can_join_wars = bool(in_same_faction and any(w for w in target_wars if w not in player_wars))
+    forecast_join_wars = set_offer(map_screen.btn_join_wars, "JOIN_WARS", "JOIN WARS", "Join Wars", "orange", can_join_wars)
+
+    can_call_to_arms = bool(in_same_faction and any(w for w in player_wars if w not in target_wars))
+    forecast_call_to_arms = set_offer(map_screen.btn_call_to_arms, "CALL_TO_ARMS", "CALL TO ARMS", "Call to Arms", "red", can_call_to_arms)
+
+    volunteer_state = _update_volunteer_buttons(map_screen, owner, pending_action, pending_turns)
+    _update_guarantee_button(map_screen, owner, pending_action, pending_turns)
+    can_forecast_attache = _update_attache_buttons(map_screen, owner, pending_action, pending_turns)
+
+    faction_forecasts = _update_faction_offer_buttons(map_screen, owner, set_offer, at_war, in_same_faction)
+    forecast_access = _update_access_buttons(map_screen, owner, set_offer, at_war, in_same_faction)
 
     # Forecast every offer this menu can send to the selected
     # country. Indicators are hidden while a button is performing
     # a different follow-up action (undo, recall, withdrawal,
     # etc.), because those actions do not ask for a fresh reply.
     predictions = (
-        (map_screen.btn_join_wars, "JOIN_WARS",
-         can_join_wars and pending_action != "JOIN_WARS"),
-        (map_screen.btn_call_to_arms, "CALL_TO_ARMS",
-         can_call_to_arms and pending_action != "CALL_TO_ARMS"),
-        (map_screen.btn_fac_invite, "FACTION_INVITE",
-         can_try_invite and pending_action != "FACTION_INVITE"),
-        (map_screen.btn_fac_join_req, "JOIN_FACTION_REQ",
-         can_try_req_join and pending_action != "JOIN_FACTION_REQ"),
-        (map_screen.btn_fac_create, "CREATE_FACTION",
-         can_create_fac and pending_action != "CREATE_FACTION"),
-        (map_screen.btn_req_mil_access, "REQ_MILITARY_ACCESS",
-         can_req_access and pending_action != "REQ_MILITARY_ACCESS"),
+        (map_screen.btn_join_wars, "JOIN_WARS", forecast_join_wars),
+        (map_screen.btn_call_to_arms, "CALL_TO_ARMS", forecast_call_to_arms),
+        *faction_forecasts,
+        (map_screen.btn_req_mil_access, "REQ_MILITARY_ACCESS", forecast_access),
         (map_screen.btn_volunteers, volunteers.ACTION,
          volunteer_state not in (volunteers.AWAITING,
                                  volunteers.OUTBOUND,
@@ -1524,13 +1521,57 @@ class Map(StateAccess, Screen):
         super().__init__()
         self.presentation_enabled = True
 
+        self.history_turn = history_turn
+        self.num_players = num_players
+        self._init_session_state()
+        self._init_view_mode(load_path, is_scenario, force_editor)
+
+        # --- 2. Data Loading ---
+        if is_random and random_settings:
+            self.random_settings = random_settings
+            load_map.load_map_assets(self, random_settings["map_path"], scenario_settings=map_settings)
+            self.time_manager.year = random_settings["year"]
+        else:
+            load_map.load_map_assets(self, load_path, scenario_settings=map_settings)
+
+        self._init_ui_layout()
+        self._init_selection_state()
+
+        self.relations_map = self.id_map.copy()
+        self.factions_map = self.id_map.copy()
+        self.faction_territories_map = self.id_map.copy()
+
+        # --- 3. RUN THE RANDOMIZER ---
+        if is_random and random_settings:
+            random_map_generator.randomize_all_provinces(self, random_settings)
+
+        # --- 4. REFRESH MAPS ---
+        self.refresh_map_layers(*self.ALL_MAP_LAYERS)
+
+        render_buttons(self)
+
+        diplomacy_lifecycle.normalize_diplomacy_channels(self.nation_data)
+
+        # A loaded save may have been written immediately before a faction join
+        # or war was resolved. Reconcile once on load so its UI never advertises
+        # a guarantee or military-access grant that is no longer valid.
+        guarantees.reconcile(self.nation_data)
+        war_actions.reconcile_military_access(self.nation_data)
+
+        self.update_country_centers()
+
+        # --- 5. INITIALIZE INCOME ---
+        # Provide 1 turn of simulated income so nations don't spawn with 0 resources
+        economy_processor.initialize_income(self, skip=skip_initial_income)
+        # Build unit membership after loading, before any planning-frame draw.
+        overlay_renderer._unit_render_index(self)
+
+    def _init_session_state(self):
         self.country_actions_scroll_rect = pygame.Rect(
             DIPLO_BTN_X, ACTION_BTN_START_Y, ACTION_SCROLL_WIDTH, ACTION_SCROLL_HEIGHT)
         self.country_actions_scroll_y = 0
         self.country_actions_scroll_max = 0
 
-        self.history_turn = history_turn
-        self.num_players = num_players
         self.active_players = [] # Usually empty on boot unless loaded from save
         self.current_player_index = 0
         self.show_player_ready_screen = False
@@ -1638,6 +1679,7 @@ class Map(StateAccess, Screen):
         # so the player can assess the nation they are about to command.
         self.show_country_names = True
 
+    def _init_view_mode(self, load_path, is_scenario, force_editor):
         # --- 1. Basic State Variables ---
         self.camera_tilt_slider_val = 0.0 # Starts fully top-down
         self.selection_mode = is_scenario
@@ -1671,14 +1713,7 @@ class Map(StateAccess, Screen):
         self.viewing_ai_moves = False
         self.skip_ai_view = False
 
-        # --- 2. Data Loading ---
-        if is_random and random_settings:
-            self.random_settings = random_settings
-            load_map.load_map_assets(self, random_settings["map_path"], scenario_settings=map_settings)
-            self.time_manager.year = random_settings["year"]
-        else:
-            load_map.load_map_assets(self, load_path, scenario_settings=map_settings)
-
+    def _init_ui_layout(self):
         # --- 3. Visuals & UI Setup ---
         self.bg_color = (20, 20, 20)
         self.font = fonts.get("normal")
@@ -1702,6 +1737,7 @@ class Map(StateAccess, Screen):
         self.active_map = self.political_map if self.base_layer == "POLITICAL" else self.terrain_map
         self.map_mode = self.base_layer
 
+    def _init_selection_state(self):
         self.selected_province = self.hovered_province = self.last_hovered_id = None
         self._tooltip_building_stamp = None
         self._tooltip_building_yields = []
@@ -1738,35 +1774,6 @@ class Map(StateAccess, Screen):
 
         self.show_exit_confirmation = False
         self.confirm_box_rect = pygame.Rect(0, 0, 400, 200)
-
-        self.relations_map = self.id_map.copy()
-        self.factions_map = self.id_map.copy()
-        self.faction_territories_map = self.id_map.copy()
-
-        # --- 3. RUN THE RANDOMIZER ---
-        if is_random and random_settings:
-            random_map_generator.randomize_all_provinces(self, random_settings)
-
-        # --- 4. REFRESH MAPS ---
-        self.refresh_map_layers(*self.ALL_MAP_LAYERS)
-
-        render_buttons(self)
-
-        diplomacy_lifecycle.normalize_diplomacy_channels(self.nation_data)
-
-        # A loaded save may have been written immediately before a faction join
-        # or war was resolved. Reconcile once on load so its UI never advertises
-        # a guarantee or military-access grant that is no longer valid.
-        guarantees.reconcile(self.nation_data)
-        war_actions.reconcile_military_access(self.nation_data)
-
-        self.update_country_centers()
-
-        # --- 5. INITIALIZE INCOME ---
-        # Provide 1 turn of simulated income so nations don't spawn with 0 resources
-        economy_processor.initialize_income(self, skip=skip_initial_income)
-        # Build unit membership after loading, before any planning-frame draw.
-        overlay_renderer._unit_render_index(self)
 
     def draw_clean_map_background(self, surface):
         """Temporarily hides UI elements and province selection to draw a clean map background."""

@@ -5,14 +5,14 @@ from data import queries
 from map_logic.system32 import combat_rules, combat_processor, unit_events
 
 
-def _cleanup(map_screen):
-    world_state = world_for(map_screen)
+def _cleanup(context):
+    world_state = world_for(context)
     for province in world_state.map_data.values():
         province["units"] = [u for u in province.get("units", []) if u.get("health", 0) > 0]
 
 
-def process_air_orders(map_screen):
-    world_state = world_for(map_screen)
+def process_air_orders(context):
+    world_state = world_for(context)
     missions = {}
     patrols = []
     reposition = []
@@ -20,14 +20,14 @@ def process_air_orders(map_screen):
         # A base already occupied by hostile troops cannot launch aircraft out
         # of an ongoing ground engagement to evade immediate destruction.
         queries.prepare_aircraft_for_ground_combat(base.get("units", []), world_state.nation_data,
-                                                 on_land=not queries.is_water_province(base), context=map_screen)
+                                                 on_land=not queries.is_water_province(base), context=context)
         for unit in base.get("units", []):
             order = unit.get("order")
             if (not isinstance(order, dict) or not isinstance(order.get("type"), str)
                     or order["type"] not in queries.AIR_ORDER_TYPES):
                 continue
             try:
-                order = queries.canonical_air_order(map_screen, unit, base, order)
+                order = queries.canonical_air_order(context, unit, base, order)
             except ValueError:
                 unit["order"] = {"type": "MOVE", "path": []}
                 continue
@@ -40,10 +40,10 @@ def process_air_orders(map_screen):
                 # All interceptable aircraft aiming at this target form one
                 # battle, including multiple hostile powers (the shared lanes
                 # decide their wars). V2s form a separate immune mission.
-                immune = bool(queries.air_unit_stats(unit, context=map_screen).get("air_interception_immune"))
+                immune = bool(queries.air_unit_stats(unit, context=context).get("air_interception_immune"))
                 missions.setdefault((order["target_id"], immune), []).append(unit)
 
-    coverage = {id(unit): queries.get_air_targets(map_screen, unit, base, "AIR_PATROL")
+    coverage = {id(unit): queries.get_air_targets(context, unit, base, "AIR_PATROL")
                 for unit, base, _order in patrols}
     strengths = {key: sum(queries.calculate_unit_strength(u) for u in force)
                  for key, force in missions.items()}
@@ -103,7 +103,7 @@ def process_air_orders(map_screen):
                 for lane in battle.lanes:
                     for unit in lane.a.front + lane.b.front:
                         unit["_in_combat_this_turn"] = True
-                _cleanup(map_screen)
+                _cleanup(context)
 
         survivors = [unit for unit in force if unit.get("health", 0) > 0]
         target = world_state.id_to_province[key[0]]
@@ -155,15 +155,15 @@ def process_air_orders(map_screen):
         fort_hits = 0
         for owner, wings in by_owner.items():
             if queries.are_at_war(owner, target.get("owner"), world_state.nation_data):
-                fort_hits += sum(queries.air_unit_can_damage_forts(wing, context=map_screen) for wing in wings)
+                fort_hits += sum(queries.air_unit_can_damage_forts(wing, context=context) for wing in wings)
         for _ in range(fort_hits):
-            queries.damage_fort(target, world_state.nation_data, world_state.map_data, context=map_screen)
+            queries.damage_fort(target, world_state.nation_data, world_state.map_data, context=context)
         for unit in survivors:
             unit["order"] = {"type": "MOVE", "path": []}
-            if queries.air_unit_stats(unit, context=map_screen).get("air_consumable"):
+            if queries.air_unit_stats(unit, context=context).get("air_consumable"):
                 unit_events.record_expended(unit, target["id"])
                 unit["health"] = 0
-        _cleanup(map_screen)
+        _cleanup(context)
 
     # Reposition cannot capture or invoke adjacency/access rules. Aircraft on
     # either end can still be attacked there in the subsequent ground phase.

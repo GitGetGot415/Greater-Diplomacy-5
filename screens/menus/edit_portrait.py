@@ -49,6 +49,9 @@ class Edit_Portrait(Screen):
         self._slider_changed = False
         self.strength_slider = None
         self.bands_slider = None
+
+    def on_enter(self, app, previous):
+        self.refresh_ui()
         # Controls are built by refresh_ui() on entry, when the menu exists.
 
     @property

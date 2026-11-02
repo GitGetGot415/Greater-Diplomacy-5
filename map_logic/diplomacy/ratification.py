@@ -44,7 +44,7 @@ RATIFY = "RATIFY"
 REFUSE = "REFUSE"
 
 
-def _members_with_something_to_lose(map_screen, deal, signatory):
+def _members_with_something_to_lose(context, deal, signatory):
     """Everyone on `signatory`'s side the deal takes something from.
 
     Puppets are left out. A subject state does not choose its own alignment --
@@ -63,7 +63,7 @@ def _members_with_something_to_lose(map_screen, deal, signatory):
     Swiss provinces its leader gave back on its behalf. What a treaty does not
     say is exactly what a member most needs a vote on.
     """
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
 
     nation_data = world_state.nation_data
     ours = set(deal["sides"][deal_mod.side_of(deal, signatory) or "a"])
@@ -93,15 +93,15 @@ def _members_with_something_to_lose(map_screen, deal, signatory):
     return bound
 
 
-def _ai_ratifies(map_screen, member, deal):
-    world_state = world_for(map_screen)
+def _ai_ratifies(context, member, deal):
+    world_state = world_for(context)
 
-    world = map_screen.ai_world or ai_world.for_screen(map_screen)
+    world = context.ai_world or ai_world.for_screen(context)
     return ai_opinion.ratifies(world, member, deal, world_state.map_data,
                                world_state.scenario_settings)
 
 
-def open_round(map_screen, signatory, opponent, deal, escrow=None):
+def open_round(context, signatory, opponent, deal, escrow=None):
     """Puts a bloc treaty to the members it binds.
 
     Returns True when the treaty settled immediately -- nobody had to be asked,
@@ -109,8 +109,8 @@ def open_round(map_screen, signatory, opponent, deal, escrow=None):
     an answer, in which case the deal waits in `pending_treaty` and
     process_ratifications finishes it.
     """
-    world_state = world_for(map_screen)
-    session_state = session_for(map_screen)
+    world_state = world_for(context)
+    session_state = session_for(context)
     nation_data = world_state.nation_data
 
     # Both negotiators, because either of them can be speaking for a bloc. The
@@ -118,7 +118,7 @@ def open_round(map_screen, signatory, opponent, deal, escrow=None):
     # always the one that drafted the terms.
     bound, asked = [], set()
     for binder, other in ((signatory, opponent), (opponent, signatory)):
-        for member in _members_with_something_to_lose(map_screen, deal, binder):
+        for member in _members_with_something_to_lose(context, deal, binder):
             if member in asked or member in (signatory, opponent):
                 continue
             asked.add(member)
@@ -130,11 +130,11 @@ def open_round(map_screen, signatory, opponent, deal, escrow=None):
         if member in session_state.active_players:
             nation_data.setdefault(member, {})["pending_ratification"] = {
                 "signatory": binder, "opponent": other, "deal": deal, "turns": 0, "treaty_id": treaty_id}
-            send_message(map_screen, binder, member,
+            send_message(context, binder, member,
                          _ask_text(binder, other), "DIPLOMACY",
                          extra={"action": "RATIFY_TREATY", "parameters": deal})
             awaiting.append(member)
-        elif not _ai_ratifies(map_screen, member, deal):
+        elif not _ai_ratifies(context, member, deal):
             refused.append(member)
 
     if awaiting:
@@ -143,7 +143,7 @@ def open_round(map_screen, signatory, opponent, deal, escrow=None):
             "awaiting": awaiting, "refused": refused, "turns": 0, "treaty_id": treaty_id}
         return False
 
-    settle(map_screen, signatory, deal, opponent, refused, escrow)
+    settle(context, signatory, deal, opponent, refused, escrow)
     return True
 
 
@@ -169,14 +169,14 @@ def pending_for(nation_data, member):
     return entry if isinstance(entry, dict) else {}
 
 
-def process_ratifications(map_screen):
+def process_ratifications(context):
     """Collects replies and settles any treaty that has all of them.
 
     A human member that says nothing is taken to consent after
     RATIFICATION_TURNS: a leader's authority is the whole point of bloc peace,
     and silence should not be able to hold a settlement open forever.
     """
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     nation_data = world_state.nation_data
 
     for signatory, data in list(nation_data.items()):
@@ -206,18 +206,18 @@ def process_ratifications(map_screen):
             continue
 
         del data["pending_treaty"]
-        settle(map_screen, signatory, treaty["deal"], treaty.get("opponent", ""),
+        settle(context, signatory, treaty["deal"], treaty.get("opponent", ""),
                treaty.get("refused", []), treaty.get("escrow"))
 
 
-def settle(map_screen, signatory, deal, opponent, refused, escrow=None):
+def settle(context, signatory, deal, opponent, refused, escrow=None):
     """Executes a bloc treaty, minus whoever would not sign it.
 
     A refusing member's terms come out of the deal and it comes off the roster,
     so finalize_neutral never runs for it: it keeps its land, loses its faction,
     and is still at war with the other side in the morning.
     """
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
 
     nation_data = world_state.nation_data
 
@@ -228,11 +228,11 @@ def settle(map_screen, signatory, deal, opponent, refused, escrow=None):
         log_global_event(nation_data,
                          f"{member} refused the terms {signatory} agreed with {opponent}, "
                          f"broke with the faction, and fights on.")
-        send_message(map_screen, member, signatory,
+        send_message(context, member, signatory,
                      "We will not be signed away. We leave your faction and fight on.",
                      "DIPLOMACY")
 
-    dropped = deal_effects.execute(map_screen, deal,
+    dropped = deal_effects.execute(context, deal,
                                    escrowed={signatory: escrow} if escrow else None)
-    deal_effects.announce(map_screen, deal, dropped)
+    deal_effects.announce(context, deal, dropped)
     return deal

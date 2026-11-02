@@ -46,6 +46,9 @@ war_actions.py, puppet_actions.py, and faction_actions.py own their respective a
 Callers import each action from its owner module.
 The processor retains its existing phase order. Treaty effects remain in treaty_effects.py and the agreement modules.
 action_definitions.py declares action categories, availability handlers, and existing execution phases.
+action_definitions.py also holds the wording that AI prompts use for each action.
+treaty_effects.py maps each proposal to one acceptance effect in a table.
+diplomacy_processor.py maps each reactive AI move to one handler in a table.
 Controls, AI candidates, scripts, current multiplayer drafts, and send processing use shared availability.
 Request cancellation precedes new-proposal checks. A changed leadership position cannot block cancellation of an unsent invitation.
 Effect owners retain their existing resolution checks. AI preferences remain separate from gameplay availability.

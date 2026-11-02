@@ -3,6 +3,7 @@ import os
 import data.constants as c
 from ui import dialogs
 from ui.dialogs import file_exchange
+from screens.game import map_launch
 from ui.widgets.content_browser import ContentBrowserScreen
 from ui.widgets.ui_elements import Button, make_back_button, play_ui_sound
 from screens.setup import map_refresh
@@ -28,6 +29,14 @@ class Select_Base_Map(ContentBrowserScreen):
         self.selected_save_path = None
         self.sub_state = "CUSTOM_MAPS"
         self.refresh_ui()
+
+    def on_enter(self, app, previous):
+        # Refresh on entry. Frame updates use cached entries.
+        self.reload_entries()
+
+    def prepare_map(self, app):
+        map_launch.open_saved_map(app, self.selected_save_path, force_editor=True)
+        return True
 
     @property
     def managed_dir(self):

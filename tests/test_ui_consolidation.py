@@ -411,14 +411,14 @@ class BackKeySoundTests(SharedUiTestCase):
     """The back key sounds like a Back button when it goes back, and only then."""
 
     def back_sounds(self, screen):
-        from ui.navigation import game_state
+        from ui.navigation import screen as screen_module
         from ui.widgets import ui_elements
 
         with mock.patch.object(ui_elements, "play_ui_sound") as sound, \
-                mock.patch.object(game_state, "play_ui_sound", sound), \
+                mock.patch.object(screen_module, "play_ui_sound", sound), \
                 mock.patch("ui.navigation.screen.queries.get_keybind",
                            side_effect=lambda _action, default: default):
-            game_state.dispatch_global_keys(screen, key(pygame.K_ESCAPE))
+            screen_module.dispatch_global_keys(screen, key(pygame.K_ESCAPE))
         return [call.args[0] for call in sound.call_args_list]
 
     def test_leaving_an_ordinary_screen_plays_back_once(self):

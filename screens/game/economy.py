@@ -142,6 +142,9 @@ class Economy_Screen(Screen):
         self.bg_color = (30, 35, 40)
         self.map_screen = None
 
+    def on_enter(self, app, previous):
+        self.start_economy(app.states["MAP"])
+
     def start_economy(self, map_ref):
         self.map_screen = map_ref
         self.refresh_ui()

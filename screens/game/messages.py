@@ -70,6 +70,9 @@ class Messages_Screen(Screen):
         
         self.show_all_contacts = False
 
+    def on_enter(self, app, previous):
+        self.start_messages(app.states["MAP"])
+
     def start_messages(self, map_ref):
         self.map_screen = map_ref
         self.selected_recipient = None

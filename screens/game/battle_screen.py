@@ -87,8 +87,8 @@ class Battle_Screen(ModalScreen):
     """A tile's lanes, and the player's units in them.
 
     Not a registered state like Orders_Screen: that would need an entry in
-    main.py's state table, a handoff branch in flip_state and a row in the test
-    harness's MAP_HANDOFFS, which is three files of state-machine wiring for a
+    main.py's state table, an on_enter hook and a row in the test harness's
+    MAP_LAYERED_STATES, which is three files of state-machine wiring for a
     screen that inspects one province and closes. It normally runs as a panel
     owned by Orders_Screen; ModalScreen remains available for legacy direct
     callers and gives that fallback the dimmed freeze-frame and chrome.

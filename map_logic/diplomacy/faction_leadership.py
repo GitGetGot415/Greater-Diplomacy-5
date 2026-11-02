@@ -30,9 +30,9 @@ from data import queries
 from map_logic.diplomacy import war_score
 
 
-def power_of(map_screen, nation, world=None):
+def power_of(context, nation, world=None):
     """How heavy this nation is, on the same scale the peace table uses."""
-    return war_score.nation_power(map_screen, nation, world)
+    return war_score.nation_power(context, nation, world)
 
 
 def _leader_of(nation, nation_data):
@@ -55,19 +55,19 @@ def eligible(nation, nation_data):
     return queries.can_choose_own_faction(nation, nation_data)
 
 
-def outweighs(map_screen, nation, world=None):
+def outweighs(context, nation, world=None):
     """Whether `nation` is far enough ahead of its leader to be gaining ground.
 
     False for anyone with no leader to be ahead of, so a caller can ask this of
     any nation without checking first.
     """
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     leader = _leader_of(nation, world_state.nation_data)
     if not leader:
         return False
 
-    mine = power_of(map_screen, nation, world)
-    theirs = power_of(map_screen, leader, world)
+    mine = power_of(context, nation, world)
+    theirs = power_of(context, leader, world)
     if mine <= 0:
         return False
     return mine >= theirs * c.FACTION_CHALLENGE_MARGIN
@@ -78,24 +78,24 @@ def turns_held(nation, nation_data):
     return int(nation_data.get(nation, {}).get("faction_pressure", 0) or 0)
 
 
-def can_claim(map_screen, nation):
+def can_claim(context, nation):
     """Whether the claim would succeed if it were made this turn."""
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     return (eligible(nation, world_state.nation_data)
             and turns_held(nation, world_state.nation_data) >= c.FACTION_CHALLENGE_TURNS)
 
 
-def strongest_claimants(map_screen, nations, world=None):
+def strongest_claimants(context, nations, world=None):
     """Pick one winner per faction from claims resolving in the same turn.
 
     Only currently qualified members are considered. Power uses the same
     nation_power measure as the challenge rule. If powers tie exactly, choose
     randomly among the strongest members.
     """
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     grouped = {}
     for nation in set(nations):
-        if not can_claim(map_screen, nation):
+        if not can_claim(context, nation):
             continue
         faction = world_state.nation_data.get(nation, {}).get("faction", "")
         if faction:
@@ -103,24 +103,24 @@ def strongest_claimants(map_screen, nations, world=None):
 
     winners = {}
     for faction, members in grouped.items():
-        strongest_power = max(power_of(map_screen, nation, world) for nation in members)
+        strongest_power = max(power_of(context, nation, world) for nation in members)
         strongest = [nation for nation in members
-                     if power_of(map_screen, nation, world) == strongest_power]
+                     if power_of(context, nation, world) == strongest_power]
         winners[faction] = random.choice(strongest)
     return winners
 
 
-def standing(map_screen, nation, world=None):
+def standing(context, nation, world=None):
     """(turns held, turns needed, ahead right now) for a member, or None.
 
     What the faction screen prints. None when the question does not apply --
     no faction, already leading it, or a puppet.
     """
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     if not eligible(nation, world_state.nation_data):
         return None
     return (turns_held(nation, world_state.nation_data), c.FACTION_CHALLENGE_TURNS,
-            outweighs(map_screen, nation, world))
+            outweighs(context, nation, world))
 
 
 def contenders(nation_data, faction):
@@ -140,13 +140,13 @@ def contenders(nation_data, faction):
     return out
 
 
-def _holds_land(map_screen, nation):
+def _holds_land(context, nation):
     """Whether this nation is still on the map at all."""
     return any(prov.get("owner") == nation
-               for prov in world_for(map_screen).map_data.values())
+               for prov in world_for(context).map_data.values())
 
 
-def promote(map_screen, faction, world=None):
+def promote(context, faction, world=None):
     """Puts the strongest surviving member at the head of a leaderless faction.
 
     A faction whose leader was annexed used to keep its roster and lose its
@@ -162,13 +162,13 @@ def promote(map_screen, faction, world=None):
     in which case the empty faction is cleared away rather than left as a name
     on a dead nation's roster.
     """
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     nation_data = world_state.nation_data
     if not faction or queries.get_faction_leader(faction, nation_data):
         return None
 
     roster = [n for n in queries.get_faction_members(faction, nation_data)
-              if queries.can_choose_own_faction(n, nation_data) and _holds_land(map_screen, n)]
+              if queries.can_choose_own_faction(n, nation_data) and _holds_land(context, n)]
 
     if not roster:
         # Nothing left to lead. Puppets in here follow their masters, who are
@@ -180,12 +180,12 @@ def promote(map_screen, faction, world=None):
         (nation_data.get("FACTION_WAR_MAPS") or {}).pop(faction, None)
         return None
 
-    heir = max(roster, key=lambda n: (power_of(map_screen, n, world), n))
+    heir = max(roster, key=lambda n: (power_of(context, n, world), n))
     transfer(nation_data, None, heir)
     return heir
 
 
-def repair_leaderless_factions(map_screen, world=None):
+def repair_leaderless_factions(context, world=None):
     """Give every surviving faction exactly one leader.
 
     A normal turn calls :func:`tick`, which repairs an orphaned chair before it
@@ -198,19 +198,19 @@ def repair_leaderless_factions(map_screen, world=None):
     Returns the factions whose roster changed.  The deterministic order keeps
     load migration stable when several old factions need repair at once.
     """
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     nation_data = world_state.nation_data
     factions = sorted({data.get("faction", "") for data in nation_data.values()
                        if isinstance(data, dict) and data.get("faction")})
     repaired = []
     for faction in factions:
         if not queries.get_faction_leader(faction, nation_data):
-            promote(map_screen, faction, world)
+            promote(context, faction, world)
             repaired.append(faction)
     return repaired
 
 
-def tick(map_screen, world=None):
+def tick(context, world=None):
     """Ages every member's claim on its faction's leadership by one turn.
 
     Walks factions rather than nations so each leader is weighed once instead of
@@ -218,7 +218,7 @@ def tick(map_screen, world=None):
     sees, the number the AI decides on and the state the claim executes against
     are the same one.
     """
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     nation_data = world_state.nation_data
 
     leaders = {}
@@ -251,18 +251,18 @@ def tick(map_screen, world=None):
             # peace with anybody. promote clears every counter on its way past,
             # so the new leader is a new bar and nobody is credited a turn they
             # spent outweighing somebody who is no longer there.
-            leader = promote(map_screen, faction, world)
+            leader = promote(context, faction, world)
             if not leader:
                 continue
 
-        bar = power_of(map_screen, leader, world) * c.FACTION_CHALLENGE_MARGIN
+        bar = power_of(context, leader, world) * c.FACTION_CHALLENGE_MARGIN
         for nation in roster:
             data = nation_data[nation]
             if nation == leader or not queries.can_choose_own_faction(nation, nation_data):
                 data.pop("faction_pressure", None)
                 continue
 
-            mine = power_of(map_screen, nation, world)
+            mine = power_of(context, nation, world)
             if mine > 0 and mine >= bar:
                 data["faction_pressure"] = turns_held(nation, nation_data) + 1
             else:

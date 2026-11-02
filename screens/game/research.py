@@ -488,6 +488,9 @@ class Research_Screen(Screen):
 
         self.setup_nodes()
 
+    def on_enter(self, app, previous):
+        self.start_research(app.states["MAP"])
+
     @property
     def subject(self):
         """Whose research this screen is showing.
