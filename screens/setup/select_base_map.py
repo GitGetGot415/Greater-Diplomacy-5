@@ -70,10 +70,7 @@ class Select_Base_Map(ContentBrowserScreen):
         refresh_button.apply_state(enabled=self.sub_state == "BASE_MAPS", color="purple")
         self.elements.append(refresh_button)
         label = "Edit Map" if is_custom else "Create from Base" if self.sub_state == "BASE_MAPS" else "Edit Copy"
-        self.open_button = Button(c.SCREEN_WIDTH - 244, c.SCREEN_HEIGHT - 64, (220, 44), "green", label,
-                                  self.activate_selected, sound_kind=None)
-        self.open_button.apply_state(enabled=self.selection_can_open, color="green")
-        self.elements.append(self.open_button)
+        self.open_button = self.add_primary_action(label)
 
     def import_custom_map(self):
         self.set_sub_state("CUSTOM_MAPS")

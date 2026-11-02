@@ -54,10 +54,11 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
     CATEGORY_Y = 94
     CONTROL_Y = 166
     PANEL_Y = 212
-    FOOTER_HEIGHT = 88
+    BOTTOM_MARGIN = 24
     ROW_HEIGHT = 66
     ACTION_HEIGHT = 36
     ACTION_GAP = 8
+    PRIMARY_ACTION_SIZE = (220, 44)
     content_label = "items"
     category_caption = ""
     SORTS = (("recent", "Recently modified"), ("name", "Name A-Z"), ("reverse_name", "Name Z-A"))
@@ -128,11 +129,12 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
         margin, gap = self.MARGIN, self.GAP
         width = c.SCREEN_WIDTH - margin * 2
         list_width = int((width - gap) * 0.58)
-        panel_height = c.SCREEN_HEIGHT - self.PANEL_Y - self.FOOTER_HEIGHT
+        panel_height = c.SCREEN_HEIGHT - self.PANEL_Y - self.BOTTOM_MARGIN
         self.list_panel = pygame.Rect(margin, self.PANEL_Y, list_width, panel_height)
         self.detail_panel = pygame.Rect(self.list_panel.right + gap, self.PANEL_Y,
                                         width - list_width - gap, panel_height)
-        self.action_top = self.detail_panel.bottom - 2 * (self.ACTION_HEIGHT + self.ACTION_GAP) - margin
+        self.action_top = (self.detail_panel.bottom - margin - self.PRIMARY_ACTION_SIZE[1]
+                           - self.ACTION_GAP - 2 * (self.ACTION_HEIGHT + self.ACTION_GAP))
         self.regions = {
             "items": pygame.Rect(self.list_panel.x + 12, self.list_panel.y + 42,
                                  self.list_panel.width - 42, self.list_panel.height - 54),
@@ -239,6 +241,16 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
         self.elements.append(button)
         return button
 
+    def add_primary_action(self, label):
+        """Place the selected item's primary action below the other actions."""
+        width, height = self.PRIMARY_ACTION_SIZE
+        button = Button(self.detail_panel.right - self.MARGIN - width,
+                        self.detail_panel.bottom - self.MARGIN - height,
+                        (width, height), "green", label, self.activate_selected, sound_kind=None)
+        button.apply_state(enabled=self.selection_can_open, color="green")
+        self.elements.append(button)
+        return button
+
     def finish_rename(self, old_name, new_name):
         super().finish_rename(old_name, new_name)
         name = (new_name or "").strip()
@@ -305,7 +317,9 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
                      (self.list_panel.x + 14, self.list_panel.y + 12))
         surface.blit(self.detail_heading, (self.detail_panel.x + self.MARGIN, self.detail_panel.y + 20))
         count = f"{len(self.filtered_entries)} of {len(self.entries)} {self.content_label}"
-        surface.blit(font.render(count, True, c.UI_TEXT_LIGHT), (self.MARGIN, c.SCREEN_HEIGHT - 54))
+        count_surface = font.render(count, True, c.UI_TEXT_LIGHT)
+        surface.blit(count_surface, (self.list_panel.right - 14 - count_surface.get_width(),
+                                     self.list_panel.y + 12))
         if not self.filtered_entries:
             message = self.directory_error or ("No matching items. Clear Search to show all items."
                                                if self.search_field.text.strip() else self.empty_message)
