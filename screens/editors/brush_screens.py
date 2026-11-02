@@ -6,7 +6,7 @@ from ui.background_styles import EDITOR_PANEL_STYLES
 from data import queries
 from ui.dialogs import pickers
 from ui.navigation.game_state import EditorOverlayScreen
-from ui.widgets.ui_elements import Button, TextField, make_back_button
+from ui.widgets.ui_elements import Button, TextField, checkbox_label, make_back_button, toggle_color
 from ui import dialogs
 from ui.rendering.font_manager import fonts
 
@@ -55,8 +55,8 @@ class Convoy_Converter_Screen(EditorOverlayScreen):
             is_naval = self.unit_lib.get(name, {}).get("naval_unit", False)
             suffix = "(Truck)" if is_naval else "(Convoy)"
             checked = i in self.selected
-            label = f"{'[X]' if checked else '[ ]'} {queries.get_unit_display_name(name, self.unit_lib)} {suffix}"
-            btn = Button(row_x, y, "list_row", "green" if checked else "grey", label, lambda ii=i: self.toggle(ii))
+            label = checkbox_label(f"{queries.get_unit_display_name(name, self.unit_lib)} {suffix}", checked)
+            btn = Button(row_x, y, "list_row", toggle_color(checked), label, lambda ii=i: self.toggle(ii))
             btn.rect.width = row_w
             self.add_list_row(btn)
 

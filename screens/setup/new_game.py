@@ -1,5 +1,4 @@
 import os
-import pygame
 from ui.navigation.game_state import GameState
 from ui.widgets.ui_elements import Button, make_back_button
 import data.constants as c
@@ -15,8 +14,6 @@ from ui.dialogs.checkbox_list_screen import CheckboxItem
 class New_Game(GameState):
     back_state = "MENU"
 
-    ROW_HEIGHT = 60
-    ROW_TOP = 200
     # sub_state -> (header text, scenario directory). None means the category menu.
     CATEGORIES = {
         "CATEGORY": ("NEW GAME", None),
@@ -85,11 +82,8 @@ class New_Game(GameState):
         scenarios = [s for s in os.listdir(scenario_dir) if not s.startswith(".")]
 
         # Standard centered layout for all playable scenarios
-        self.scroll_content_rect = pygame.Rect(0, 100, c.SCREEN_WIDTH, (c.SCREEN_HEIGHT - 50) - 100)
-        for i, btn_y in self.layout_list_rows(len(scenarios), self.ROW_HEIGHT, self.ROW_TOP, pad=20):
-            btn = Button("centered", btn_y, "new_game", "blue", scenarios[i],
-                        lambda n=scenarios[i], d=scenario_dir: self.start_scenario(n, d))
-            self.add_list_row(btn)
+        self.add_menu_list([(name, name) for name in scenarios],
+                           lambda name, d=scenario_dir: self.start_scenario(name, d))
 
     def update(self):
         super().update()
@@ -111,7 +105,7 @@ class New_Game(GameState):
 
     def additional_draw(self, surface):
         if self.sub_state != "CATEGORY":
-            self.draw_list_scrollbar(surface, 40, 160, c.SCREEN_HEIGHT - 200)
+            self.draw_menu_list_scrollbar(surface)
 
         # --- Draw Progress Bar Overlay ---
         if self.is_refreshing:

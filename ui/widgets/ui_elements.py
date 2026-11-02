@@ -816,6 +816,22 @@ def make_back_button(on_click, style="menu", pos=None, label="Back", color="red"
     return Button(x, y, "small", color, label, on_click, sound_kind="back")
 
 
+def toggle_color(is_on):
+    """The button color for a control that is on or off."""
+    return "green" if is_on else "grey"
+
+
+def checkbox_label(text, is_checked):
+    """The text of a list row that is ticked or not ticked."""
+    return f"{'[X]' if is_checked else '[  ]'} {text}"
+
+
+def make_on_off_button(x, y, is_on, on_click):
+    """The small ON/OFF button in a list row."""
+    return Button(x, y, "tiny_square", toggle_color(is_on), "ON" if is_on else "OFF", on_click,
+                  font_preset="button_small")
+
+
 def make_info_button(x, y, on_click, y_offset=0):
     """Builds the standard small help button beside a settings control.
 

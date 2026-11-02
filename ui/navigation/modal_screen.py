@@ -26,7 +26,7 @@ from ui.rendering.font_manager import fonts
 from ui.widgets import text_utils
 from ui.bars import ui_bars
 from ui.widgets.scroll_panes import ScrollPanes
-from ui.widgets.ui_elements import Button
+from ui.widgets.ui_elements import Button, checkbox_label, toggle_color
 
 from data import queries
 from ui.dialogs import pickers
@@ -104,9 +104,8 @@ class ModalScreen(ScrollPanes, GameState):
         self.refresh_ui()
 
     def toggle(self, x, y, width, checked, text, callback):
-        label = text_utils.truncate_chars(f"[{'X' if checked else '  '}] {text}",
-                                          max(4, (width - 14) // 9))
-        btn = self.button(x, y, width, "green" if checked else "grey", label, callback)
+        label = text_utils.truncate_chars(checkbox_label(text, checked), max(4, (width - 14) // 9))
+        btn = self.button(x, y, width, toggle_color(checked), label, callback)
         btn.is_selected = checked
         return btn
 

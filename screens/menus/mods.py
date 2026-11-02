@@ -94,10 +94,7 @@ class Mods(FolderListState):
         mods = self.list_folders()
         self.scroll_content_rect = pygame.Rect(0, 110, c.SCREEN_WIDTH, (c.SCREEN_HEIGHT - 50) - 110)
         for i, btn_y in self.layout_list_rows(len(mods), self.ROW_HEIGHT, self.ROW_TOP):
-            filename = mods[i]
-            if self.is_row_hidden(filename):
-                continue
-            self._add_row(filename, btn_y)
+            self._add_row(mods[i], btn_y)
 
     def _add_row(self, filename, btn_y):
         info = mod_loader.describe_mod(filename)
@@ -161,8 +158,7 @@ class Mods(FolderListState):
         self._row_subtext.append((subtext, 25, btn_y + 32))
 
     def additional_events(self, event):
-        if not self.handle_name_prompt_event(event):
-            self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
+        self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
 
     def additional_draw(self, surface):
         clip = surface.get_clip()
@@ -178,8 +174,5 @@ class Mods(FolderListState):
 
         fonts.draw_text_with_shadow(surface, "Restart the game for changes to take effect.",
                                     20, c.SCREEN_HEIGHT - 35, "small", (180, 180, 180))
-
-        if self.deleting_item:
-            self.draw_delete_confirm(surface)
 
         self.draw_list_scrollbar(surface, c.SCREEN_WIDTH - 40, self.ROW_TOP, c.SCREEN_HEIGHT - 200)

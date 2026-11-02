@@ -20,7 +20,7 @@ from ui.bars import ui_bars
 from ui.navigation.modal_screen import ModalScreen
 from ui.background_styles import DIALOG_STYLES
 from ui.widgets import text_utils
-from ui.widgets.ui_elements import Button, TextField
+from ui.widgets.ui_elements import Button, TextField, checkbox_label
 from ui.rendering.font_manager import fonts
 
 from ui.navigation import screen_runner
@@ -392,8 +392,7 @@ class FileBrowserScreen(ModalScreen):
             display = _drive_label(name) if self.current_dir == DRIVE_VIEW else name
             return _fit_text(f"[DIR]  {display}", font, max_width)
         if self.mode == "open_files":
-            mark = "[x]" if self._full_path(name) in self.selected else "[  ]"
-            return _fit_text(f"{mark} {name}", font, max_width)
+            return _fit_text(checkbox_label(name, self._full_path(name) in self.selected), font, max_width)
         return _fit_text(name, font, max_width)
 
     def refresh_ui(self):

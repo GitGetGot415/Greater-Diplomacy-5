@@ -9,7 +9,7 @@ from ui.bars import ui_bars
 
 from ui.information import feedback_text
 from map_logic.diplomacy import diplomacy_processor
-from ui.widgets.ui_elements import process_text_input, draw_text_box, make_back_button
+from ui.widgets.ui_elements import Button, make_back_button
 from ui.rendering.font_manager import fonts
 
 
@@ -85,7 +85,6 @@ def keyboard_input_is_captured(state):
         bool(getattr(state, "listening_for", None))
         or bool(getattr(state, "active_input", None))
         or bool(getattr(state, "mail_input_active", False))
-        or bool(getattr(state, "renaming_item", None))
         or getattr(state, "renaming_unit_index", None) is not None
         or bool(getattr(state, "is_renaming", False))
         or bool(getattr(state, "text_input_active", False))
@@ -184,6 +183,14 @@ class GameState:
     # the scroll clip, under the is_scrollable elements. A screen that defines it
     # gets the backdrop even on a frame with no scrollable elements.
     draw_scroll_backdrop = None
+
+    # One layout for the full-screen scenario and map lists. The list stops above
+    # the buttons that some of these screens place along the bottom.
+    MENU_LIST_ROW_HEIGHT = 60
+    MENU_LIST_TOP = 150
+    MENU_LIST_BOTTOM = c.SCREEN_HEIGHT - 120
+    MENU_LIST_CLIP_TOP = 100
+    MENU_LIST_PAD = 20
 
     def __init__(self):
         self.done = False
@@ -489,6 +496,24 @@ class GameState:
         self.elements.append(element)
         return element
 
+    def layout_menu_list(self, count):
+        """Publishes the menu list's clip area and yields (index, y) for visible rows."""
+        self.scroll_content_rect = pygame.Rect(0, self.MENU_LIST_CLIP_TOP, c.SCREEN_WIDTH,
+                                               self.MENU_LIST_BOTTOM - self.MENU_LIST_CLIP_TOP)
+        return self.layout_list_rows(count, self.MENU_LIST_ROW_HEIGHT, self.MENU_LIST_TOP,
+                                     pad=self.MENU_LIST_PAD, cull_top=self.MENU_LIST_CLIP_TOP,
+                                     cull_bottom=self.MENU_LIST_BOTTOM)
+
+    def add_menu_list(self, rows, on_pick):
+        """Builds a centered button for each (label, value) row. A click passes the value to on_pick."""
+        for i, y in self.layout_menu_list(len(rows)):
+            label, value = rows[i]
+            self.add_list_row(Button("centered", y, "new_game", "blue", label, lambda v=value: on_pick(v)))
+
+    def draw_menu_list_scrollbar(self, surface):
+        self.draw_list_scrollbar(surface, c.SCREEN_WIDTH - 40, self.MENU_LIST_TOP,
+                                 self.MENU_LIST_BOTTOM - self.MENU_LIST_TOP)
+
     def draw_scrolling_lines(self, surface, lines, font, x, top, view_h, line_h, clip_rect, color_for):
         """Draws one column of text lines that scrolls inside clip_rect.
 
@@ -681,24 +706,50 @@ class GameState:
     def update(self):
         pass
 
+class ButtonMenuScreen(GameState):
+    """A title, an optional caption, one centered column of large buttons, and Back."""
+    title_y = 100
+    title_shadow = True
+    caption = None
+
+    CAPTION_Y = 165
+    BUTTON_TOP = 220
+    BUTTON_GAP = 110
+
+    def __init__(self):
+        super().__init__()
+        self.refresh_ui()
+
+    def menu_buttons(self):
+        """Returns one (label, color, callback) row per button, with an optional fourth icon."""
+        raise NotImplementedError
+
+    def refresh_ui(self):
+        self.elements = []
+        for i, (label, color, callback, *icon) in enumerate(self.menu_buttons()):
+            self.elements.append(Button("centered", self.BUTTON_TOP + i * self.BUTTON_GAP, "large", color, label,
+                                        callback, image=icon[0] if icon else None))
+        self.elements.append(make_back_button(self.exit_screen))
+
+    def additional_draw(self, surface):
+        if self.caption:
+            text = fonts.get("normal").render(self.caption, True, (220, 220, 220))
+            surface.blit(text, text.get_rect(midtop=(c.SCREEN_WIDTH // 2, self.CAPTION_Y)))
+
+
 class FolderListState(GameState):
     """Base for the menus that list folders on disk (saves, custom maps).
 
-    Subclasses point `managed_dir` at a directory and get the inline rename
-    box, the delete confirmation prompt and their keyboard handling for free.
-    Both were previously reimplemented per screen with the same layout and the
-    same Enter/Escape contract, just different attribute names.
+    Subclasses point `managed_dir` at a directory and get the rename popup, the
+    delete confirmation popup and their input handling for free. While the delete
+    popup is open, it covers the screen and takes all mouse and keyboard input.
     """
-    # Geometry of the rename box, relative to the row being renamed.
-    rename_box_size = (300, 50)
     # Size of the centred "Delete X?" confirmation popup.
     delete_popup_size = ui_bars.DELETE_POPUP_SIZE
 
     def __init__(self):
         super().__init__()
-        self.renaming_item = None
         self.deleting_item = None
-        self.new_name_text = ""
 
     # -- the directory being managed; a property so sub-state screens can swap it
     @property
@@ -716,23 +767,28 @@ class FolderListState(GameState):
     #                         RENAME / DELETE                          #
     # ---------------------------------------------------------------- #
 
-    def start_rename(self, name):
-        self.renaming_item = name
-        self.new_name_text = name
-        self.refresh_ui()
+    @staticmethod
+    def is_valid_name_char(char):
+        return char.isalnum() or char in " _-"
 
-    def finish_rename(self):
-        name = self.new_name_text.strip()
-        if name and name != self.renaming_item:
-            old_path = os.path.join(self.managed_dir, self.renaming_item)
+    def start_rename(self, name):
+        """Opens the popup that asks for a new name."""
+        # ui.dialogs imports this module, so this import must stay local.
+        from ui import dialogs
+
+        dialogs.ask_string("Rename", f"Enter a new name for '{name}':",
+                           lambda new_name: self.finish_rename(name, new_name),
+                           initial=name, is_valid_char=self.is_valid_name_char)
+
+    def finish_rename(self, old_name, new_name):
+        """Applies the popup's answer. Cancel gives None, which changes nothing."""
+        name = (new_name or "").strip()
+        if name and name != old_name:
+            old_path = os.path.join(self.managed_dir, old_name)
             new_path = os.path.join(self.managed_dir, name)
             if not os.path.exists(new_path):
                 os.rename(old_path, new_path)
                 sync_persisted_dir(self.managed_dir)
-        self.cancel_rename()
-
-    def cancel_rename(self):
-        self.renaming_item = None
         self.refresh_ui()
 
     def start_delete(self, name):
@@ -751,45 +807,30 @@ class FolderListState(GameState):
         self.deleting_item = None
         self.refresh_ui()
 
-    def handle_name_prompt_event(self, event):
-        """Feeds an event to whichever prompt is open. True means it was consumed."""
-        if self.renaming_item:
-            is_valid_char = lambda ch: ch.isalnum() or ch in " _-"
-            self.new_name_text, status = process_text_input(event, self.new_name_text,
-                                                           validation_func=is_valid_char)
-            if status == "SUBMIT":
-                self.finish_rename()
-            elif status == "CANCEL":
-                self.cancel_rename()
-            return True
-
-        if self.deleting_item:
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_RETURN:
+    def handle_events(self, events):
+        for event in events:
+            if self.deleting_item:
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
                     self.confirm_delete()
-                elif event.key == resolve_keybind(self, "BACK", pygame.K_ESCAPE):
-                    self.cancel_delete()
-            return True
+                continue
+            super().handle_events([event])
 
-        return False
-
-    def is_row_hidden(self, name):
-        """True while a row is replaced by the rename box or the delete prompt."""
-        return name in (self.renaming_item, self.deleting_item)
+    def handle_back_key(self):
+        # The global BACK key runs before handle_events, so it closes the popup here.
+        if self.deleting_item:
+            self.cancel_delete()
+        else:
+            super().handle_back_key()
 
     # ---------------------------------------------------------------- #
     #                            RENDERING                             #
     # ---------------------------------------------------------------- #
 
-    def draw_rename_box(self, surface, x, y):
-        """Draws the inline name-entry box in place of the row being renamed."""
-        input_rect = pygame.Rect(x, y, *self.rename_box_size)
-        # Only drawn in place of the row being renamed, so always focused.
-        draw_text_box(surface, input_rect, self.new_name_text, active=True,
-                      font=fonts.get("heading2"))
-
-        instr = fonts.get("normal").render("Enter: Save | Esc: Cancel", True, c.UI_TEXT_LIGHT)
-        surface.blit(instr, (input_rect.x, input_rect.y - 25))
+    def draw(self, surface):
+        super().draw(surface)
+        # After the buttons, so that the popup covers them.
+        if self.deleting_item:
+            self.draw_delete_confirm(surface)
 
     def draw_delete_confirm(self, surface, center=None):
         """Dims the screen and asks for Enter/Escape on the pending deletion."""

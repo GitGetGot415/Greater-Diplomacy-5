@@ -1,5 +1,4 @@
 import os
-import pygame
 from ui import dialogs
 from ui.navigation.game_state import FolderListState
 from ui.widgets.ui_elements import Button, make_back_button
@@ -10,10 +9,6 @@ from screens.setup import map_refresh
 from ui.panels import turn_progress
 class Select_Base_Map(FolderListState):
     back_state = "MENU"
-
-    ROW_HEIGHT = 60
-    ROW_TOP = 150
-    ROW_CULL_BOTTOM_MARGIN = 120
 
     # sub_state -> (button/header label, data.constants directory attribute name)
     # for browsing maps that live in other scenario directories.
@@ -55,7 +50,6 @@ class Select_Base_Map(FolderListState):
         return ""
 
     def set_sub_state(self, state):
-        self.renaming_item = None
         self.deleting_item = None
         super().set_sub_state(state)
 
@@ -115,26 +109,18 @@ class Select_Base_Map(FolderListState):
             directory = c.BASE_MAPS_DIR
 
         names = self.list_folders(directory)
-        cull_bottom = c.SCREEN_HEIGHT - self.ROW_CULL_BOTTOM_MARGIN
-        self.scroll_content_rect = pygame.Rect(0, 100, c.SCREEN_WIDTH, cull_bottom - 100)
-        rows = self.layout_list_rows(len(names), self.ROW_HEIGHT, self.ROW_TOP, pad=20,
-                                    cull_bottom=cull_bottom)
 
-        for i, btn_y in rows:
+        # Base maps and maps from other scenario directories are read-only
+        # here: one centred button that opens the map into the editor as
+        # a copy (saving from the editor always writes a new map, it
+        # never overwrites the original).
+        if not is_custom:
+            self.add_menu_list([(name, name) for name in names],
+                               lambda name, d=directory: self.start_editor_with_map(name, d))
+            return
+
+        for i, btn_y in self.layout_menu_list(len(names)):
             name = names[i]
-
-            # Base maps and maps from other scenario directories are read-only
-            # here: one centred button that opens the map into the editor as
-            # a copy (saving from the editor always writes a new map, it
-            # never overwrites the original).
-            if not is_custom:
-                btn = Button("centered", btn_y, "new_game", "blue", name,
-                            lambda n=name, d=directory: self.start_editor_with_map(n, d))
-                self.add_list_row(btn)
-                continue
-
-            if self.is_row_hidden(name):
-                continue
 
             row_buttons = [
                 Button(c.SCREEN_WIDTH // 2 - 250, btn_y, "new_game", "blue", name,
@@ -176,8 +162,10 @@ class Select_Base_Map(FolderListState):
         super().exit_screen()
 
     def handle_back_key(self):
-        # Escape steps back up the sub-state tree before it leaves the screen.
-        if self.sub_state == "BASE_MAPS":
+        # Escape closes the popup, then steps back up the sub-state tree before it leaves the screen.
+        if self.deleting_item:
+            self.cancel_delete()
+        elif self.sub_state == "BASE_MAPS":
             self.set_sub_state("CUSTOM_MAPS")
         elif self.sub_state == "OTHER_CATEGORY":
             self.set_sub_state("CUSTOM_MAPS")
@@ -190,26 +178,15 @@ class Select_Base_Map(FolderListState):
         if self.is_refreshing:
             return
 
-        for event in events:
-            if self.handle_name_prompt_event(event):
-                continue
+        super().handle_events(events)
 
-            if self.sub_state != "OTHER_CATEGORY":
-                self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
-            super().handle_events([event])
+    def additional_events(self, event):
+        if self.sub_state != "OTHER_CATEGORY":
+            self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
 
     def additional_draw(self, surface):
         if self.sub_state != "OTHER_CATEGORY":
-            self.draw_list_scrollbar(surface, c.SCREEN_WIDTH - 40, self.ROW_TOP, c.SCREEN_HEIGHT - 200)
-
-        if self.renaming_item:
-            names = self.list_folders()
-            idx = names.index(self.renaming_item) if self.renaming_item in names else 0
-            self.draw_rename_box(surface, c.SCREEN_WIDTH // 2 - 250,
-                                 self.ROW_TOP + (idx * self.ROW_HEIGHT) + self.scroll_y)
-
-        if self.deleting_item:
-            self.draw_delete_confirm(surface)
+            self.draw_menu_list_scrollbar(surface)
 
     def draw(self, surface):
         super().draw(surface)

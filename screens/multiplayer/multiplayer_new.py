@@ -2,7 +2,6 @@ import secrets
 import re
 
 import os
-import pygame
 from ui.navigation.game_state import GameState
 from ui.widgets.ui_elements import Button, make_back_button
 import data.constants as c
@@ -16,8 +15,6 @@ class Multiplayer_New(GameState):
     back_state = "MULTIPLAYER_HOST"
 
     title = "HOST CUSTOM MAP"
-    ROW_HEIGHT = 60
-    ROW_TOP = 150
 
     def __init__(self):
         super().__init__()
@@ -36,11 +33,8 @@ class Multiplayer_New(GameState):
             os.makedirs(scenario_dir)
         scenarios = os.listdir(scenario_dir)
 
-        self.scroll_content_rect = pygame.Rect(0, 100, c.SCREEN_WIDTH, (c.SCREEN_HEIGHT - 50) - 100)
-        for i, btn_y in self.layout_list_rows(len(scenarios), self.ROW_HEIGHT, self.ROW_TOP, pad=20):
-            btn = Button("centered", btn_y, "large", "blue", scenarios[i],
-                        lambda n=scenarios[i], d=scenario_dir: self.start_host_setup(n, d))
-            self.add_list_row(btn)
+        self.add_menu_list([(name, name) for name in scenarios],
+                           lambda name, d=scenario_dir: self.start_host_setup(name, d))
 
     def scenario_settings(self):
         # Point Scenario_Settings back here, the same way New_Game claims it,
@@ -112,4 +106,4 @@ class Multiplayer_New(GameState):
         self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
 
     def additional_draw(self, surface):
-        self.draw_list_scrollbar(surface, 40, 160, c.SCREEN_HEIGHT - 200)
+        self.draw_menu_list_scrollbar(surface)

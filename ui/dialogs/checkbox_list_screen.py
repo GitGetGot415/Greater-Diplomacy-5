@@ -10,7 +10,7 @@ import pygame
 import data.constants as c
 from ui.bars import ui_bars
 from ui.navigation.modal_screen import ModalScreen
-from ui.widgets.ui_elements import Button
+from ui.widgets.ui_elements import Button, checkbox_label, toggle_color
 from ui.widgets import text_utils
 from ui.rendering.font_manager import fonts
 
@@ -154,9 +154,8 @@ class CheckboxListScreen(ModalScreen):
             item = self.items[i]
             if isinstance(item, SectionHeader):
                 continue  # Drawn as a label in draw(), not as a clickable row.
-            mark = "[X]" if item.checked else "[  ]"
-            btn = Button(self.row_x, y, "checkbox_row", "green" if item.checked else "blue",
-                         f"{mark} {item.label}", lambda it=item: self.toggle(it),
+            btn = Button(self.row_x, y, "checkbox_row", toggle_color(item.checked),
+                         checkbox_label(item.label, item.checked), lambda it=item: self.toggle(it),
                          font_preset="button_small")
             btn.is_selected = item.checked
             self.add_list_row(btn)

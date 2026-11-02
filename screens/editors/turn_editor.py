@@ -20,7 +20,7 @@ from data import queries
 from ui import dialogs
 from ui.widgets import ui_elements
 from ui.navigation.modal_screen import ModalScreen
-from ui.widgets.ui_elements import Button, Slider, TextField, make_back_button
+from ui.widgets.ui_elements import Button, Slider, TextField, make_back_button, make_on_off_button
 from ui.rendering import symbol_loader
 from ui.rendering.font_manager import fonts
 
@@ -254,10 +254,8 @@ class TurnEditorScreen(ModalScreen):
             self.add_list_row(field)
 
             is_enabled = btype not in disabled_set
-            check_btn = Button(check_x, y + (self.ROW_HEIGHT - self.CHECK_SIZE) // 2, "tiny_square",
-                               "green" if is_enabled else "red", "ON" if is_enabled else "OFF",
-                               lambda bt=btype: self.toggle_disabled(bt), font_preset="button_small")
-            self.add_list_row(check_btn)
+            self.add_list_row(make_on_off_button(check_x, y + (self.ROW_HEIGHT - self.CHECK_SIZE) // 2, is_enabled,
+                                                 lambda bt=btype: self.toggle_disabled(bt)))
 
         btn_y = p.bottom - 52
         self.elements.append(make_back_button(self.exit_screen, pos=(p.x + self.PAD, btn_y)))

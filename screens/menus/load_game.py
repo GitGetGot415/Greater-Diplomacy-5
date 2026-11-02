@@ -48,10 +48,6 @@ class Load_Game(FolderListState):
         self.scroll_content_rect = pygame.Rect(0, 100, c.SCREEN_WIDTH, (c.SCREEN_HEIGHT - 50) - 100)
         for i, btn_y in self.layout_list_rows(len(folders), self.ROW_HEIGHT, self.ROW_TOP):
             folder = folders[i]
-            # The row being renamed or deleted is replaced by its prompt
-            if self.is_row_hidden(folder):
-                continue
-
             for x, size, color, label, handler in self.ROW_BUTTONS:
                 btn = Button(x, btn_y, size, color, label or folder,
                             lambda f=folder, h=handler: getattr(self, h)(f),
@@ -59,18 +55,9 @@ class Load_Game(FolderListState):
                 self.add_list_row(btn)
 
     def additional_events(self, event):
-        if not self.handle_name_prompt_event(event):
-            self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
+        self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
 
     def additional_draw(self, surface):
-        if self.renaming_item:
-            folders = self.list_folders()
-            idx = folders.index(self.renaming_item) if self.renaming_item in folders else 0
-            self.draw_rename_box(surface, 200, self.ROW_TOP + (idx * self.ROW_HEIGHT) + self.scroll_y)
-
-        if self.deleting_item:
-            self.draw_delete_confirm(surface)
-
         self.draw_list_scrollbar(surface, c.SCREEN_WIDTH - 40, self.ROW_TOP, c.SCREEN_HEIGHT - 200)
 
     def export_save_zip(self, folder_name):

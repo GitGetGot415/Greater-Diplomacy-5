@@ -5,7 +5,7 @@ import data.constants as c
 from ui.background_styles import EDITOR_PANEL_STYLES
 from data import queries
 from ui.navigation.game_state import EditorOverlayScreen, NationListOverlayScreen
-from ui.widgets.ui_elements import Button, TextField, make_back_button
+from ui.widgets.ui_elements import Button, TextField, make_back_button, make_on_off_button
 from ui import dialogs
 from ui.bars import ui_bars
 from ui.navigation.screen_runner import _run_pygame_sub_screen
@@ -72,9 +72,7 @@ class Research_Edit_Screen(EditorOverlayScreen):
             kind = self.tech_state[tech]
             if kind[0] == "checkbox":
                 checked = kind[1]
-                btn = Button(p.right - 100, y, "tiny_square", "green" if checked else "grey",
-                            "ON" if checked else "OFF", lambda t=tech: self.toggle_checkbox(t), font_preset="tiny")
-                self.add_list_row(btn)
+                self.add_list_row(make_on_off_button(p.right - 100, y, checked, lambda t=tech: self.toggle_checkbox(t)))
             else:
                 _, text, _max_lvl = kind
                 field = TextField(p.right - 160, y, 100, 30, text, numeric=True)

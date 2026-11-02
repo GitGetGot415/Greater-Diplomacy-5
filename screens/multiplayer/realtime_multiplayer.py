@@ -55,6 +55,7 @@ from data.multiplayer.realtime.relay import (
 )
 from data.platform import IS_WEB
 from ui.navigation.game_state import GameState
+from ui.rendering.font_manager import fonts
 from ui import dialogs
 from ui.widgets.ui_elements import Button, UI_ICONS, make_back_button
 from ui.widgets.flag_icons import flag_surface
@@ -414,7 +415,7 @@ class Realtime_Relay_Provision(_RealtimeScreen):
         super().update()
 
     def additional_draw(self, surface):
-        font = pygame.font.Font(None, 28)
+        font = fonts.get("normal")
         text = "DigitalOcean is creating a small relay. This can take a minute or two."
         surface.blit(font.render(text, True, (235, 235, 235)), (55, 180))
         task = getattr(self.host_setup, "relay_task", None) if self.host_setup else None
@@ -448,20 +449,13 @@ class Realtime_Scenario_Select(_RealtimeScreen):
     def refresh_ui(self):
         self.elements = [make_back_button(self.exit_screen)]
         self.entries = sorted(_scenario_entries(), key=lambda entry: entry[0].casefold())
-        top, bottom = 105, c.SCREEN_HEIGHT - 55
-        self.scroll_content_rect = pygame.Rect(90, 90, c.SCREEN_WIDTH - 180, bottom - 90)
-        for index, button_y in self.layout_list_rows(
-                len(self.entries), 60, top, pad=16, cull_top=90, cull_bottom=bottom):
-            label, path = self.entries[index]
-            button = Button("centered", button_y, "new_game", "blue", label,
-                            lambda selected=path: self.select(selected))
-            self.add_list_row(button)
+        self.add_menu_list(self.entries, self.select)
 
     def additional_events(self, event):
         self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
 
     def additional_draw(self, surface):
-        self.draw_list_scrollbar(surface, c.SCREEN_WIDTH - 55, 100, c.SCREEN_HEIGHT - 155)
+        self.draw_menu_list_scrollbar(surface)
 
     def select(self, path):
         if self.lobby:
@@ -905,7 +899,7 @@ class Realtime_Lobby(_RealtimeScreen):
     def additional_draw(self, surface):
         if not self.session: return
         self.draw_list_scrollbar(surface, c.SCREEN_WIDTH // 2 + 320, 202, 338, width=22)
-        font = pygame.font.Font(None, 22)
+        font = fonts.get("small")
         # The host sees the same current configuration summary guests see,
         # rather than having to infer it from five edit controls.
         summary = font.render(_lobby_config_summary(self.session.config), True, (230, 230, 230))
@@ -915,7 +909,7 @@ class Realtime_Lobby(_RealtimeScreen):
         panel = pygame.Rect(10, 200, 290, 251)
         pygame.draw.rect(surface, (50, 35, 90), panel)
         pygame.draw.rect(surface, (150, 120, 220), panel, 2)
-        heading = pygame.font.Font(None, 24).render("Match Setup (Host)", True, (235, 235, 255))
+        heading = fonts.get("normal").render("Match Setup (Host)", True, (235, 235, 255))
         surface.blit(heading, heading.get_rect(center=(panel.centerx, panel.y + 12)))
         players = list(self.session.players.values())
         for index, player in enumerate(players[:5]):
@@ -1277,7 +1271,7 @@ class Realtime_Remote_Lobby(_RealtimeScreen):
         if self.view:
             self.draw_list_scrollbar(surface, c.SCREEN_WIDTH // 2 + 320, 167, 378, width=22)
         if not self.view: return
-        font = pygame.font.Font(None, 22)
+        font = fonts.get("small")
         summary = font.render(_lobby_config_summary(self.view.config), True, (230, 230, 230))
         surface.blit(summary, summary.get_rect(center=(c.SCREEN_WIDTH // 2, 70)))
         for index, player in enumerate(list(self.view.players.values())[:5]):

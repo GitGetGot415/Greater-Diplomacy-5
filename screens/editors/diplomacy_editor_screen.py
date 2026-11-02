@@ -5,7 +5,7 @@ import data.constants as c
 from ui.background_styles import EDITOR_PANEL_STYLES
 from data import queries
 from ui.navigation.game_state import EditorOverlayScreen
-from ui.widgets.ui_elements import Button, TextField, make_back_button
+from ui.widgets.ui_elements import Button, TextField, checkbox_label, make_back_button, toggle_color
 from ui.widgets.scroll_panes import ScrollPanes
 from ui.widgets import text_utils
 from ui.rendering.font_manager import fonts
@@ -310,8 +310,8 @@ class Diplomacy_Editor_Screen(ScrollPanes, EditorOverlayScreen):
             for i, y in self.pane_rows(region, len(rows), self.lists_top, self.LIST_VIEW_H):
                 name = rows[i]
                 checked = is_checked(name)
-                label = text_utils.truncate_chars(name, 28) if single else f"{'[X]' if checked else '[  ]'} {text_utils.truncate_chars(name, 24)}"
-                btn = self._row(col_x, y, self.COL_W - 24, "green" if checked else "blue", label,
+                label = text_utils.truncate_chars(name, 28) if single else checkbox_label(text_utils.truncate_chars(name, 24), checked)
+                btn = self._row(col_x, y, self.COL_W - 24, toggle_color(checked), label,
                                 lambda n=name, cb=on_click: cb(n))
                 btn.is_selected = checked
                 btn.pane = region

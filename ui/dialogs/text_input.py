@@ -134,11 +134,14 @@ def ask_integer(title, message, on_result, minvalue=None, maxvalue=None, initial
     _run_text_input_dialog(title, message, initial_text, tk_parent, char_allowed, validate, on_result)
 
 
-def ask_string(title, message, on_result, initial="", tk_parent=None, allow_empty=True):
-    """Answers on_result(str) once confirmed, or on_result(None) if cancelled."""
+def ask_string(title, message, on_result, initial="", tk_parent=None, allow_empty=True, is_valid_char=None):
+    """Answers on_result(str) once confirmed, or on_result(None) if cancelled.
+
+    is_valid_char(char) limits the typed and pasted characters. The default accepts printable characters.
+    """
 
     def char_allowed(ch, current_text):
-        return ch.isprintable()
+        return is_valid_char(ch) if is_valid_char else ch.isprintable()
 
     def validate(text):
         if not allow_empty and not text.strip():

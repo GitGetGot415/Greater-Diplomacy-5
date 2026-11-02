@@ -1,21 +1,15 @@
-from ui.navigation.game_state import GameState
+from ui.navigation.game_state import ButtonMenuScreen
 import data.constants as c
 from ui.dialogs import pickers
 
 from ui import dialogs
 
 
-class TournamentPickerScreen(GameState):
+class TournamentPickerScreen(ButtonMenuScreen):
     """Open a tournament file after the player gives its key."""
 
     back_state = "MULTIPLAYER_HUB"
-
-    title_y = 100
-    title_shadow = True
-
-    def __init__(self):
-        super().__init__()
-        self.bg_color = (10, 10, 40)
+    bg_color = (10, 10, 40)
 
     def pick_tournament(self, key_title, key_prompt):
 

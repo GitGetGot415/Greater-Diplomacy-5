@@ -1,16 +1,13 @@
 from screens.multiplayer.tournament_picker import TournamentPickerScreen
-from ui.widgets.ui_elements import Button, make_back_button
 
 
 class Multiplayer_Host(TournamentPickerScreen):
     title = "Host Dashboard"
 
-    def __init__(self):
-        super().__init__()
-        self.elements = [
-            Button("centered", "centered - 50", "medium", "green", "Start New Multiplayer Game", self.start_new),
-            Button("centered", "centered + 50", "medium", "green", "Load Existing Tournament", self.load_existing),
-            make_back_button(self.exit_screen)
+    def menu_buttons(self):
+        return [
+            ("Start New Multiplayer Game", "green", self.start_new),
+            ("Load Existing Tournament", "green", self.load_existing),
         ]
 
     def start_new(self):

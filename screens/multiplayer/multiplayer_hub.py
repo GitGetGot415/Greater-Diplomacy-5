@@ -1,25 +1,24 @@
-from ui.navigation.game_state import GameState
-from ui.widgets.ui_elements import Button, make_back_button
+from ui.navigation.game_state import ButtonMenuScreen
+from ui.widgets.ui_elements import Button
 import data.constants as c
 from data import queries
 
 from ui import dialogs
-class Multiplayer_Hub(GameState):
+class Multiplayer_Hub(ButtonMenuScreen):
     back_state = "MULTIPLAYER_MENU"
 
     title = "Asynchronous Multiplayer"
-    title_y = 100
-    title_shadow = True
+    bg_color = (10, 10, 40)
 
-    def __init__(self):
-        super().__init__()
-        self.bg_color = (10, 10, 40)
-        self.elements = [
-            Button("centered", 250, "medium", "green", "Host Game", self.host_game),
-            Button("centered", 350, "medium", "blue", "Join Game", self.join_game),
-            make_back_button(self.exit_screen),
-            Button(c.SCREEN_WIDTH - 120, 20, "small", "blue", "Help", self.show_help)
+    def menu_buttons(self):
+        return [
+            ("Host Game", "green", self.host_game),
+            ("Join Game", "blue", self.join_game),
         ]
+
+    def refresh_ui(self):
+        super().refresh_ui()
+        self.elements.append(Button(c.SCREEN_WIDTH - 120, 20, "small", "blue", "Help", self.show_help))
 
     def show_help(self):
         help_text = (

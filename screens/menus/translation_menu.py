@@ -1,4 +1,4 @@
-from ui.navigation.game_state import GameState
+from ui.navigation.game_state import ButtonMenuScreen, GameState
 from ui.widgets.ui_elements import Button, make_back_button
 from ui.rendering.font_manager import fonts
 from map_logic.imports import gd4_translation, gdhex_translation
@@ -8,30 +8,20 @@ import data.constants as c
 import os
 
 
-class Translation_Menu(GameState):
+class Translation_Menu(ButtonMenuScreen):
     """Choose which game's map format should be used for translation."""
 
     back_state = "MENU"
     title = "TRANSLATE MAPS"
+    bg_color = (20, 45, 55)
+    caption = "Choose the map format you want to translate."
 
-    def __init__(self):
-        super().__init__()
-        self.bg_color = (20, 45, 55)
-        self.elements = [
-            make_back_button(self.exit_screen),
-            Button(260, 180, "large", "green", "Open Doctrines",
-                   lambda: self.go_to("TRANSLATE")),
-            Button(260, 280, "large", "light_blue", "Greater Diplomacy 4",
-                   lambda: self.go_to("TRANSLATE_GD4")),
-            Button(260, 380, "large", "orange", "GD Hex Edition",
-                   lambda: self.go_to("TRANSLATE_GDHEX")),
+    def menu_buttons(self):
+        return [
+            ("Open Doctrines", "green", lambda: self.go_to("TRANSLATE")),
+            ("Greater Diplomacy 4", "light_blue", lambda: self.go_to("TRANSLATE_GD4")),
+            ("GD Hex Edition", "orange", lambda: self.go_to("TRANSLATE_GDHEX")),
         ]
-
-    def additional_draw(self, surface):
-        text = "Choose the map format you want to translate."
-        font = fonts.get("normal")
-        text_surface = font.render(text, True, (220, 220, 220))
-        surface.blit(text_surface, text_surface.get_rect(midtop=(c.SCREEN_WIDTH // 2, 130)))
 
 
 class SaveTranslationScreen(GameState):
