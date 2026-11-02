@@ -39,7 +39,8 @@ class DefenseAreaScreen(MapOverlayScreen):
     def refresh_ui(self):
         panel = self.panel_rect
         self.elements = [
-            Button(panel.x + 24, panel.bottom - 44, "medium", "green", "Confirm",
+            # As tall as the buttons beside it: a full "medium" hangs below this short panel.
+            Button(panel.x + 24, panel.bottom - 44, (c.SIZES["medium"][0], c.SIZES["small"][1]), "green", "Confirm",
                    self.confirm, font_preset="normal"),
             Button(panel.centerx - 25, panel.bottom - 44, "small", "orange", "Clear",
                    self.clear_selection, font_preset="normal"),

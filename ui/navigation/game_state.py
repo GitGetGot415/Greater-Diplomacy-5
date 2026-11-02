@@ -1014,7 +1014,7 @@ class EditorSliderScreen(EditorOverlayScreen):
     POLE_LABEL_Y_OFFSET = -2
     FOOTER_Y_OFFSET = 55
     RESET_X = 30
-    SAVE_RIGHT_OFFSET = 190
+    SAVE_RIGHT_OFFSET = 230
     RESET_LABEL = "Reset"
 
     def slider_rows(self):

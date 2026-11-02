@@ -59,7 +59,7 @@ class Research_Edit_Screen(EditorOverlayScreen):
         p = self.panel_rect
         self.elements = [
             make_back_button(self.exit_screen, style="map"),
-            Button(p.right - 170, p.bottom - 55, "medium", "green", "Save", self.save),
+            Button(p.right - 220, p.bottom - 55, "medium", "green", "Save", self.save),
         ]
 
         row_top = p.y + 70
