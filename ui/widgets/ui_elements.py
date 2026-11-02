@@ -19,6 +19,7 @@ from data import queries
 from ui.background_styles import SLIDER_STYLES, TEXT_INPUT_STYLES
 from ui.rendering.font_manager import fonts
 from ui.rendering import symbol_loader
+from ui.widgets.text_utils import wrap_text
 
 soloud_engine = None
 click_sound = None
@@ -74,8 +75,13 @@ _BUTTON_SHADOW = 50
 _BUTTON_PRESSED_DARKEN = 40
 _BUTTON_BORDER_WIDTH = 2
 _BUTTON_SELECTED_BORDER_WIDTH = 3
-# Vertical (image) button labels shrink to fit, but never below this point size.
-_BUTTON_MIN_FIT_FONT_SIZE = 10
+# Fitted labels shrink on one line down to the first size; if that is still too
+# wide they wrap to two lines, starting no larger than the second size and
+# shrinking down to the third.
+_BUTTON_FIT_ONE_LINE_MIN_SIZE = 14
+_BUTTON_FIT_TWO_LINE_MAX_SIZE = 16
+_BUTTON_FIT_MIN_SIZE = 10
+_BUTTON_FIT_MAX_LINES = 2
 _BUTTON_LABEL_MARGIN = 6
 _SLIDER_OUTLINE_COLOR = (20, 20, 20)
 
@@ -624,24 +630,36 @@ class Button:
         if color is not None or enabled is not None:
             self.set_palette("grey" if self.disabled else (color or "green"))
 
-    def fitted_font(self, text, max_width):
-        """Returns the button font, or the largest smaller one that fits max_width."""
-        size = self.font_point_size
-        font = self.font
-        while size > _BUTTON_MIN_FIT_FONT_SIZE and max(
-                font.size(line)[0] for line in text.splitlines() or [text]) > max_width:
-            size -= 1
-            font = fonts.get_size(size)
-        return font
+    def fit_label(self, text, max_width):
+        """Returns (font, text) with the label shrunk, then wrapped, to fit max_width."""
+        def attempt(size, max_lines):
+            font = self.font if size == self.font_point_size else fonts.get_size(size)
+            # Only the wrapped pass may split a word that is too wide for one line.
+            lines = wrap_text(text, font, max_width, break_long_words=max_lines > 1)
+            fits = len(lines) <= max_lines and all(font.size(line)[0] <= max_width for line in lines)
+            return fits, font, "\n".join(lines)
+
+        for size in range(self.font_point_size, _BUTTON_FIT_ONE_LINE_MIN_SIZE - 1, -1):
+            fits, font, fitted = attempt(size, 1)
+            if fits:
+                return font, fitted
+        start = min(self.font_point_size, _BUTTON_FIT_TWO_LINE_MAX_SIZE)
+        for size in range(start, _BUTTON_FIT_MIN_SIZE - 1, -1):
+            fits, font, fitted = attempt(size, _BUTTON_FIT_MAX_LINES)
+            if fits:
+                break
+        return font, fitted
 
     def draw_label(self, surface, text, max_width=None, **anchor):
         """Blits the button's text with its standard 1px drop shadow.
 
         `anchor` takes any pygame rect keyword (center=, midleft=, midtop=...),
         which is what lets every layout branch below share one blit path.
-        `max_width` shrinks the font until the text fits (down to a readable minimum).
+        `max_width` shrinks, then wraps, the text until it fits (down to a readable minimum).
         """
-        font = self.fitted_font(text, max_width) if max_width else self.font
+        font = self.font
+        if max_width:
+            font, text = self.fit_label(text, max_width)
         if "\n" in text:
             lines = [(line, font.render(line, True, (255, 255, 255)))
                      for line in text.splitlines()]

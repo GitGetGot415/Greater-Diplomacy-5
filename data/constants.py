@@ -943,7 +943,6 @@ SIZES = {
     "medium_square": (50, 50),
     # Preserve named presets for callers outside the research screen.
     **{name: tuple(size) for name, size in research_display.get_config()["button_sizes"].items()},
-    "album_square": (200, 200),
     "left_ui_button": (120, 30),
     "new_game": (300, 50),
     "production": (130, 30),

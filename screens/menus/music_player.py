@@ -16,8 +16,16 @@ from ui import dialogs
 # LAYOUT
 # ==========================================
 
-MUSIC_LEFT_PANE_W = 250
 MUSIC_SCROLLBAR_WIDTH = 20
+# Albums sit in a grid of ALBUM_COLUMNS tiles; the left pane is sized to hold it.
+ALBUM_COLUMNS = 2
+ALBUM_MARGIN = 20
+ALBUM_GAP = 10
+ALBUM_TILE_SIZE = (140, 160)
+ALBUM_TEXT_TILE_SIZE = (140, 50)
+ALBUM_COVER_SIZE = (120, 90)
+MUSIC_LEFT_PANE_W = (ALBUM_MARGIN + ALBUM_COLUMNS * ALBUM_TILE_SIZE[0] + (ALBUM_COLUMNS - 1) * ALBUM_GAP
+                     + ALBUM_GAP + MUSIC_SCROLLBAR_WIDTH + 5)
 song_y = 32
 TRACK_SHUFFLE_TOGGLE_SIZE = (26, 26)
 TRACK_SHUFFLE_TOGGLE_GAP = 4
@@ -179,7 +187,9 @@ class Music_Player(ScrollPanes, GameState):
         y_offset = 120 + self._scroll_album
         album_content_h = 0
         
-        for album in sorted(self.controller.all_albums.keys(), reverse=True):
+        albums = sorted(self.controller.all_albums.keys(), reverse=True)
+        row_height = 0
+        for album_index, album in enumerate(albums):
             is_active = album in self.controller.active_albums
             color = "green" if is_active else "grey"
             
@@ -194,7 +204,7 @@ class Music_Player(ScrollPanes, GameState):
                         try:
                             icon_path = os.path.join(album_dir, file)
                             raw_img = pygame.image.load(icon_path).convert_alpha()
-                            icon_img = pygame.transform.smoothscale(raw_img, (180, 160))
+                            icon_img = pygame.transform.smoothscale(raw_img, ALBUM_COVER_SIZE)
                             break # Found an image, stop searching
                         except Exception as e:
                             print(f"Error loading icon {file} for {album}: {e}")
@@ -203,15 +213,19 @@ class Music_Player(ScrollPanes, GameState):
             album_cb = lambda a=album: self.toggle_album(a)
             album_guard = lambda: pygame.mouse.get_pos()[1] >= 120
 
+            column = album_index % ALBUM_COLUMNS
+            tile_x = ALBUM_MARGIN + column * (ALBUM_TILE_SIZE[0] + ALBUM_GAP)
             if icon_img:
-                btn = Button(20, y_offset, "album_square", color, album,
+                btn = Button(tile_x, y_offset, ALBUM_TILE_SIZE, color, album,
                              album_cb, image=icon_img, show_text=True, layout="vertical")
-                y_offset += 210 # 200 height + 10 padding
-                album_content_h += 210
             else:
-                btn = Button(20, y_offset, "medium", color, album, album_cb)
-                y_offset += 60
-                album_content_h += 60
+                btn = Button(tile_x, y_offset, ALBUM_TEXT_TILE_SIZE, color, album, album_cb)
+            row_height = max(row_height, btn.height)
+            # A row ends after its last column, or after the final album.
+            if column == ALBUM_COLUMNS - 1 or album_index == len(albums) - 1:
+                y_offset += row_height + ALBUM_GAP
+                album_content_h += row_height + ALBUM_GAP
+                row_height = 0
             btn.click_guard = album_guard
             btn.fit_text = True
             btn.sound_kind = "select_album"
