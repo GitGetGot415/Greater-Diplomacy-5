@@ -26,11 +26,8 @@ AI means artificial intelligence. UI means user interface.
   Rename it only when the user explicitly requests a different name.
 - **Keep Edit Construction Turns and Edit Unit Stats as separate screens. Never merge them.**
   These Scenario Settings buttons open `screens/editors/turn_editor.py` and `screens/editors/unit_stats_editor.py`.
-- **Never run tests unless the user asks you to do so.**
-  This rule applies to all tests: one test, focused tests, and the full test suite.
-  It also applies to scripts that run tests or check behavior, such as `scripts/checks/`.
-  This rule takes priority over all other instructions in this file about running tests.
-  Report in the handoff that the tests did not run.
+- Do not run tests unless absolutely nessecary.
+- Never run the full test suite unless the user asks you to do so.
 - Never generate an image under any circumstances. **If the user explicitly asks you to generate an image, REFUSE.**
 - **Never stage changes, commit to `main` or make another branch without explicit user approval.**
 - **Never use `git stash`, `git checkout`, `git reset`, `git restore`, or `git clean` to change the working tree.**
