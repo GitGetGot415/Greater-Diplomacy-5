@@ -6,6 +6,7 @@ from ui.navigation.game_state import GameState, ScreenLayer
 from ui.bars import ui_bars
 from ui.background_styles import MUSIC_PANEL_STYLES
 from ui.widgets.scroll_panes import ScrollPanes
+from ui.widgets.text_utils import fit_text
 from ui.widgets.ui_elements import Button, Slider, make_back_button, make_info_button
 from ui.rendering.font_manager import fonts
 import data.constants as c
@@ -31,6 +32,11 @@ MUSIC_LEFT_PANE_W = (ALBUM_MARGIN + ALBUM_COLUMNS * ALBUM_TILE_SIZE[0] + (ALBUM_
 song_y = 32
 TRACK_SHUFFLE_TOGGLE_SIZE = (26, 26)
 TRACK_SHUFFLE_TOGGLE_GAP = 4
+# The right pane holds the audio sliders and the starting-song controls.
+MUSIC_RIGHT_PANE_W = 260
+MUSIC_RIGHT_PANE_X = c.SCREEN_WIDTH - MUSIC_RIGHT_PANE_W
+MUSIC_RIGHT_CONTROL_W = 200
+MUSIC_RIGHT_CONTROL_X = MUSIC_RIGHT_PANE_X + (MUSIC_RIGHT_PANE_W - MUSIC_RIGHT_CONTROL_W) // 2
 MUSIC_PROGRESS_X = MUSIC_LEFT_PANE_W + 20
 MUSIC_PROGRESS_Y = 155
 MUSIC_PROGRESS_SIZE = (400, 15)
@@ -183,7 +189,7 @@ class Music_Player(ScrollPanes, GameState):
         self.elements = []
 
         self._content_album = pygame.Rect(0, 120, MUSIC_LEFT_PANE_W, c.SCREEN_HEIGHT - 120)
-        self._content_track = pygame.Rect(MUSIC_LEFT_PANE_W, 200, c.SCREEN_WIDTH - MUSIC_LEFT_PANE_W, c.SCREEN_HEIGHT - 200)
+        self._content_track = pygame.Rect(MUSIC_LEFT_PANE_W, 200, MUSIC_RIGHT_PANE_X - MUSIC_LEFT_PANE_W, c.SCREEN_HEIGHT - 200)
 
         # --- 1. Left Column: Albums (Scrolling) ---
         y_offset = 120 + self._scroll_album
@@ -321,7 +327,7 @@ class Music_Player(ScrollPanes, GameState):
         ))
         
         # --- 4. Top Layer: Audio Sliders ---
-        slider_x = c.SCREEN_WIDTH - 250
+        slider_x = MUSIC_RIGHT_CONTROL_X
         
         self.elements.append(Slider(slider_x, 40, 200, "SFX Vol", self.controller.sfx_volume, self.set_sfx_volume))
         self.elements.append(Slider(slider_x, 100, 200, "SFX Pitch", self.controller.sfx_pitch, self.set_sfx_pitch))
@@ -802,10 +808,13 @@ class Music_Player(ScrollPanes, GameState):
             self.draw_album_background(surface)
         finally:
             surface.set_clip(clip)
-        header = pygame.Rect(MUSIC_LEFT_PANE_W, 0, c.SCREEN_WIDTH - MUSIC_LEFT_PANE_W, 200)
+        header = pygame.Rect(MUSIC_LEFT_PANE_W, 0, MUSIC_RIGHT_PANE_X - MUSIC_LEFT_PANE_W, 200)
         ui_elements.draw_pixel_background(surface, header, MUSIC_PANEL_STYLES["header"])
-        pygame.draw.line(surface, (100, 100, 100),
-                         (MUSIC_LEFT_PANE_W, 0), (MUSIC_LEFT_PANE_W, c.SCREEN_HEIGHT), 2)
+        right_pane = pygame.Rect(MUSIC_RIGHT_PANE_X, 0, MUSIC_RIGHT_PANE_W, c.SCREEN_HEIGHT)
+        ui_elements.draw_pixel_background(surface, right_pane, MUSIC_PANEL_STYLES["controls"])
+        for divider_x in (MUSIC_LEFT_PANE_W, MUSIC_RIGHT_PANE_X):
+            pygame.draw.line(surface, (100, 100, 100),
+                             (divider_x, 0), (divider_x, c.SCREEN_HEIGHT), 2)
 
         font_title = fonts.get("heading1")
         font_norm = fonts.get("normal")
@@ -819,8 +828,9 @@ class Music_Player(ScrollPanes, GameState):
         """Fixed HUD label showing which track, if any, starts on boot."""
         font = fonts.get("normal")
         name = os.path.basename(self.controller.starting_song) if self.controller.starting_song else "None (Random)"
-        surface.blit(font.render(f"Starting Song: {name}", True, c.COLOR_GOLD_HIGHLIGHT),
-                     (c.SCREEN_WIDTH - 250, c.SCREEN_HEIGHT - 150))
+        label = fit_text(f"Starting Song: {name}", font, MUSIC_RIGHT_CONTROL_W)
+        surface.blit(font.render(label, True, c.COLOR_GOLD_HIGHLIGHT),
+                     (MUSIC_RIGHT_CONTROL_X, c.SCREEN_HEIGHT - 150))
 
     def draw_elements(self, surface):
         """Two independent scrolling panes, each cropped to its own rect."""
@@ -837,5 +847,5 @@ class Music_Player(ScrollPanes, GameState):
         # --- DYNAMIC SCROLLBAR RENDERING ---
         self.draw_pane_scrollbar(surface, "album", MUSIC_LEFT_PANE_W - MUSIC_SCROLLBAR_WIDTH - 5, 120,
                                  c.SCREEN_HEIGHT - 120, width=MUSIC_SCROLLBAR_WIDTH)
-        self.draw_pane_scrollbar(surface, "track", c.SCREEN_WIDTH - 275, 200,
+        self.draw_pane_scrollbar(surface, "track", MUSIC_RIGHT_PANE_X - MUSIC_SCROLLBAR_WIDTH - 5, 200,
                                  c.SCREEN_HEIGHT - 200, width=MUSIC_SCROLLBAR_WIDTH)

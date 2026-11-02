@@ -137,6 +137,7 @@ RESEARCH_PANEL_STYLES = {
 MUSIC_PANEL_STYLES = {
     "albums": {"color": (35, 35, 45), "gradient_strength": 1.0},
     "header": {"color": (25, 25, 30), "gradient_strength": 0.5},
+    "controls": {"color": (35, 35, 45), "gradient_strength": 1.0},
 }
 
 PORTRAIT_EDITOR_STYLES = {
