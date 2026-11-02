@@ -982,10 +982,9 @@ SIZES = {
     "FTAP": (400, 40),
     "large": (300, 80),
     "list_row": (520, 34),
-    # File browser: sidebar shortcut, entry row, toolbar nav and bottom toggle.
+    # File browser sidebar shortcut.
     "browser_place": (210, 30),
-    "browser_row": (890, 30),
-    "browser_nav": (70, 32),
+    # Tab button in the turn and unit stats editors.
     "browser_tool": (170, 40),
     # Checkbox list: one toggleable row, and the small buttons above it.
     "checkbox_row": (700, 30),
