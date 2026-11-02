@@ -434,6 +434,7 @@ def get_starting_song():
 
 #: Fallback portrait -- the game's original default look.
 DEFAULT_PORTRAIT = "Hildehrand/F/4.png"
+DEFAULT_PORTRAIT_DITHERING = False
 
 #: Extensions accepted both when scanning assets/characters/ and when
 #: importing a new custom portrait. Broader than the curated set's plain
@@ -507,13 +508,14 @@ def get_hildehrand_gradient():
 
 
 def get_hildehrand_dithering():
-    """Read portrait dithering. Older settings keep square transitions enabled."""
+    """Read portrait dithering, or use the default when it is not saved."""
     data = _load_cached_json("hildehrand_choice")
-    return bool(data.get("gradient_dithering", True)) if isinstance(data, dict) else True
+    return (bool(data.get("gradient_dithering", DEFAULT_PORTRAIT_DITHERING))
+            if isinstance(data, dict) else DEFAULT_PORTRAIT_DITHERING)
 
 
 def save_hildehrand_portrait(variant, gradient, gradient_strength, gradient_stepped,
-                             gradient_bands, *, gradient_dithering=True):
+                             gradient_bands, *, gradient_dithering=DEFAULT_PORTRAIT_DITHERING):
     """Remembers the menu portrait and its gradient: on or off, strength, and stepped or smooth, and band count."""
     save_cached_json("hildehrand_choice", {"variant": variant, "gradient": gradient,
                                            "gradient_strength": gradient_strength,

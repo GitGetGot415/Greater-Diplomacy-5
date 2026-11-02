@@ -17,7 +17,7 @@ class EditPortraitTests(unittest.TestCase):
         self.menu = self.controller.states["MENU"]
         self.screen = self.controller.states["EDIT_PORTRAIT"]
         self.screen.refresh_ui()
-        names = ("hildehrand_gradient", "hildehrand_gradient_strength", "hildehrand_gradient_stepped",
+        names = ("hildehrand_choice", "_hildehrand_plain_image", "hildehrand_gradient", "hildehrand_gradient_strength", "hildehrand_gradient_stepped",
                  "hildehrand_gradient_bands", "hildehrand_gradient_dithering")
         saved = [getattr(self.menu, name) for name in names]
         self.addCleanup(lambda: ([setattr(self.menu, n, v) for n, v in zip(names, saved)],
@@ -30,6 +30,24 @@ class EditPortraitTests(unittest.TestCase):
         self.menu.edit_portrait_btn.callback()
         self.assertEqual(self.menu.next_state, "EDIT_PORTRAIT")
         self.menu.done, self.menu.next_state = False, None
+
+    def test_reset_restores_and_saves_all_defaults(self):
+        from data import queries
+
+        self.menu.hildehrand_gradient = not c.HILDEHRAND_GRADIENT_DEFAULT_ENABLED
+        self.menu.hildehrand_gradient_strength = 0
+        self.menu.hildehrand_gradient_stepped = not c.HILDEHRAND_GRADIENT_DEFAULT_STEPPED
+        self.menu.hildehrand_gradient_bands = c.HILDEHRAND_GRADIENT_MIN_BANDS
+        self.menu.hildehrand_gradient_dithering = not queries.DEFAULT_PORTRAIT_DITHERING
+        button = next(e for e in self.screen.elements if getattr(e, "text", "") == "Reset to Default")
+        button.callback()
+        self.save.assert_called_once_with(
+            queries.DEFAULT_PORTRAIT, c.HILDEHRAND_GRADIENT_DEFAULT_ENABLED,
+            c.HILDEHRAND_GRADIENT_DEFAULT_STRENGTH, c.HILDEHRAND_GRADIENT_DEFAULT_STEPPED,
+            c.HILDEHRAND_GRADIENT_DEFAULT_BANDS,
+            gradient_dithering=queries.DEFAULT_PORTRAIT_DITHERING)
+        self.assertEqual(self.screen.strength_slider.value, c.HILDEHRAND_GRADIENT_DEFAULT_STRENGTH)
+        self.assertEqual(self.screen.bands_slider.value, c.HILDEHRAND_GRADIENT_DEFAULT_BANDS)
 
     def test_menu_and_portrait_forward_independent_dithering_options(self):
         from screens.menus import menu as menu_module
@@ -87,11 +105,11 @@ class EditPortraitTests(unittest.TestCase):
             self.assertTrue(self.menu.hildehrand_gradient_dithering)
         self.save.assert_not_called()
 
-    def test_dithering_settings_round_trip_and_old_default(self):
+    def test_dithering_settings_round_trip_and_default(self):
         from data.queries import content
 
         with mock.patch.object(content, "_load_cached_json", return_value={}):
-            self.assertTrue(content.get_hildehrand_dithering())
+            self.assertFalse(content.get_hildehrand_dithering())
         for dithering in (False, True):
             with mock.patch.object(content, "save_cached_json") as write:
                 content.save_hildehrand_portrait("portrait.png", True, 1.0, True, 4,

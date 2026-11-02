@@ -3,6 +3,7 @@
 import pygame
 
 import data.constants as c
+from data import queries
 from ui.background_styles import PORTRAIT_EDITOR_STYLES
 from ui.dialogs import pickers
 from ui.navigation.game_state import GameState
@@ -57,6 +58,17 @@ class Edit_Portrait(GameState):
     def open_picker(self):
         menu = self.menu
         pickers.open_character_picker(self, menu.hildehrand_choice, menu.set_hildehrand_choice)
+
+    def reset_settings(self):
+        menu = self.menu
+        menu.hildehrand_gradient = c.HILDEHRAND_GRADIENT_DEFAULT_ENABLED
+        menu.hildehrand_gradient_strength = c.HILDEHRAND_GRADIENT_DEFAULT_STRENGTH
+        menu.hildehrand_gradient_stepped = c.HILDEHRAND_GRADIENT_DEFAULT_STEPPED
+        menu.hildehrand_gradient_bands = c.HILDEHRAND_GRADIENT_DEFAULT_BANDS
+        menu.hildehrand_gradient_dithering = queries.DEFAULT_PORTRAIT_DITHERING
+        menu.set_hildehrand_choice(queries.DEFAULT_PORTRAIT)
+        self._slider_changed = False
+        self.refresh_ui()
 
     def toggle_gradient(self):
         self.menu.toggle_hildehrand_gradient()
@@ -122,6 +134,7 @@ class Edit_Portrait(GameState):
             make_toggle_button(CONTROLS_X, gradient_y, "medium", "Gradient", enabled, self.toggle_gradient),
             stepped_button,
             dithering_button,
+            Button(CONTROLS_X, CONTROLS_Y + 4 * CONTROLS_GAP_Y, "medium", "red", "Reset to Default", self.reset_settings),
             self.strength_slider,
             self.bands_slider,
         ]

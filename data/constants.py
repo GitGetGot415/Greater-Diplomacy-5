@@ -2341,7 +2341,7 @@ HILDEHRAND_CHOICE_PATH = "data/json/hildehrand_choice.json"
 HILDEHRAND_GRADIENT_DEFAULT_ENABLED = True
 HILDEHRAND_GRADIENT_DEFAULT_STRENGTH = 1.0
 HILDEHRAND_GRADIENT_MAX_STRENGTH = 3.0
-# Stepped bands with dithered edges, like a button, instead of fine smooth bands.
+# Stepped bands instead of fine smooth bands.
 HILDEHRAND_GRADIENT_DEFAULT_STEPPED = False
 # Stepped style: how many color bands the portrait gradient has.
 HILDEHRAND_GRADIENT_DEFAULT_BANDS = 10
