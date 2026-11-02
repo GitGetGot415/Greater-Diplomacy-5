@@ -77,6 +77,28 @@ def add_song_to_album(source_path, album):
     return file_name
 
 
+def is_deletable_song(track_path):
+    """True when the song's album folder is not in c.UNDELETABLE_ALBUMS."""
+    return is_deletable_album(os.path.basename(os.path.dirname(track_path)))
+
+
+def delete_song(track_path):
+    """Deletes one song file from its album folder.
+
+    Raises ValueError for a song in an undeletable album, a path outside an album
+    folder, a missing file, or a delete that fails.
+    """
+    album = os.path.basename(os.path.dirname(track_path))
+    album_dir = os.path.join(c.MUSIC_DIR, album)
+    if (not is_deletable_album(album) or os.path.normpath(os.path.dirname(track_path)) != os.path.normpath(album_dir)
+            or not os.path.isfile(track_path)):
+        raise ValueError(f"{os.path.basename(track_path)} cannot be deleted here.")
+    try:
+        os.remove(track_path)
+    except OSError as error:
+        raise ValueError(f"Could not delete the song: {error}") from error
+
+
 def delete_album(album):
     """Deletes an album folder.
 

@@ -95,6 +95,40 @@ class AddSongTests(unittest.TestCase):
                     queries.add_song_to_album(self.source("song.mp3"), album)
 
 
+class DeleteSongTests(AddSongTests):
+    def make_song(self, album="Mine", name="song.mp3"):
+        path = f"{c.MUSIC_DIR}/{album}/{name}"
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "wb") as song:
+            song.write(b"data")
+        return path
+
+    def test_song_in_a_deletable_album_is_deleted(self):
+        path = self.make_song()
+        self.assertTrue(queries.is_deletable_song(path))
+
+        queries.delete_song(path)
+
+        self.assertFalse(os.path.exists(path))
+
+    def test_song_in_an_undeletable_album_is_kept(self):
+        path = self.make_song("Shipped")
+        with mock.patch.object(c, "UNDELETABLE_ALBUMS", ("Shipped",)):
+            self.assertFalse(queries.is_deletable_song(path))
+            with self.assertRaises(ValueError):
+                queries.delete_song(path)
+        self.assertTrue(os.path.exists(path))
+
+    def test_paths_outside_an_album_folder_are_refused(self):
+        outside = self.source("keep.mp3")
+        nested = self.make_song("Mine", "sub/deep.mp3")
+        for path in (outside, nested, f"{c.MUSIC_DIR}/Mine/missing.mp3"):
+            with self.subTest(path=path), self.assertRaises(ValueError):
+                queries.delete_song(path)
+        self.assertTrue(os.path.exists(outside))
+        self.assertTrue(os.path.exists(nested))
+
+
 class AlbumTileTests(unittest.TestCase):
     def make_player(self, albums):
         pygame.font.init()
@@ -202,6 +236,45 @@ class AlbumTileTests(unittest.TestCase):
         with mock.patch.object(queries, "add_song_to_album", side_effect=ValueError("bad")),                 mock.patch("ui.dialogs.show_error") as show_error:
             player.add_song("Mine", "song.txt")
         show_error.assert_called_once()
+
+    def test_only_songs_in_deletable_albums_get_a_delete_button(self):
+        player = self.make_player(["Mine", "Shipped"])
+        player.controller.playlist = [f"{c.MUSIC_DIR}/Mine/a.mp3", f"{c.MUSIC_DIR}/Shipped/b.mp3"]
+        with mock.patch.object(queries, "is_deletable_song", side_effect=lambda path: "/Mine/" in path):
+            player.refresh_ui()
+
+        deletes = [b for b in player.elements if getattr(b, "pane", None) == "track"
+                   and b.text == "X" and b.rect.width == music_player.SONG_DELETE_BUTTON_SIZE[0]]
+        self.assertEqual(len(deletes), 1)
+
+    def test_delete_song_needs_confirmation_and_spares_the_playing_song(self):
+        player = self.make_player([])
+        player.delete_song = mock.Mock()
+        with mock.patch("ui.dialogs.ask_yes_no") as ask:
+            player.start_delete_song("music/Mine/a.mp3")
+            callback = ask.call_args.args[2]
+        callback(False)
+        player.delete_song.assert_not_called()
+        callback(True)
+        player.delete_song.assert_called_once_with("music/Mine/a.mp3")
+
+        player = self.make_player([])
+        player.controller.now_playing = "music/Mine/a.mp3"
+        with mock.patch.object(queries, "delete_song") as delete, \
+                mock.patch("ui.dialogs.show_error") as show_error:
+            player.delete_song("music\\Mine\\a.mp3")
+        delete.assert_not_called()
+        show_error.assert_called_once()
+
+    def test_deleting_a_song_reloads_the_music(self):
+        player = self.make_player([])
+        player.refresh_ui = mock.Mock()
+        player._max_track = 0
+        player._scroll_track = 0
+        with mock.patch.object(queries, "delete_song") as delete:
+            player.delete_song("music/Mine/a.mp3")
+        delete.assert_called_once_with("music/Mine/a.mp3")
+        player.controller.load_music_data.assert_called_once()
 
     def test_only_deletable_albums_get_a_delete_button(self):
         player = self.make_player(["Mine", "Shipped"])

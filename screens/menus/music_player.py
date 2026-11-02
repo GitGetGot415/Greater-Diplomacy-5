@@ -32,6 +32,9 @@ ALBUM_DELETE_BUTTON_SIZE = (22, 22)
 ALBUM_DELETE_OVERHANG = 6
 ALBUM_MARGIN = 20
 ADD_SONG_LABEL = "+ Add Song"
+# Sits inside the top-right corner of a song button. Songs are only 2px apart,
+# so unlike the album button it cannot stick out.
+SONG_DELETE_BUTTON_SIZE = (18, 18)
 SONG_FILE_EXTENSIONS = list(c.MUSIC_AUDIO_EXTENSIONS) + [".json"]
 ALBUM_GAP = 10
 ALBUM_TILE_SIZE = (140, 170)
@@ -325,6 +328,18 @@ class Music_Player(ScrollPanes, GameState):
             shuffle_toggle.click_guard = lambda: pygame.mouse.get_pos()[1] >= 200
             shuffle_toggle.pane = "track"
             self.elements.append(shuffle_toggle)
+
+            if queries.is_deletable_song(track_path):
+                song_guard = track_btn.click_guard
+                delete_btn = Button(track_btn.rect.right - SONG_DELETE_BUTTON_SIZE[0], track_btn.rect.y,
+                                    SONG_DELETE_BUTTON_SIZE, "red", "X",
+                                    lambda p=track_path: self.start_delete_song(p), font_preset="tiny")
+                delete_btn.click_guard = song_guard
+                delete_btn.pane = "track"
+                self.elements.append(delete_btn)
+                track_btn.hover_blocker = delete_btn
+                track_btn.click_guard = lambda dbtn=delete_btn, guard=song_guard: (
+                    not dbtn.rect.collidepoint(pygame.mouse.get_pos()) and guard())
             track_y += song_y
             track_content_h += song_y
 
@@ -864,6 +879,28 @@ class Music_Player(ScrollPanes, GameState):
             return
         self.controller.load_music_data()
         self.refresh_ui()
+
+    def start_delete_song(self, track_path):
+        dialogs.ask_yes_no(
+            "Delete Song", f"Delete {os.path.basename(track_path)}? This cannot be undone.",
+            lambda confirmed, p=track_path: self.delete_song(p) if confirmed else None)
+
+    def delete_song(self, track_path):
+        if self.controller.now_playing.replace("\\", "/") == track_path.replace("\\", "/"):
+            # The playing file stays open, which blocks deleting it.
+            dialogs.show_error("Delete Song", "This song is playing. Play another song first.")
+            return
+        try:
+            queries.delete_song(track_path)
+        except ValueError as error:
+            dialogs.show_error("Delete Song", str(error))
+            return
+        self.controller.load_music_data()
+        self.refresh_ui()
+        # The shorter list can leave the pane scrolled past its new end.
+        if self._scroll_track < self._max_track:
+            self._scroll_track = self._max_track
+            self.refresh_ui()
 
     def start_new_album(self):
         dialogs.ask_string("New Album", "Album name:", self.create_album, allow_empty=False)
