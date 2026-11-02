@@ -270,9 +270,10 @@ def draw_pixel_panel(surface, rect, color, border_color=(20, 20, 20), *, gradien
         pygame.draw.rect(surface, border_color, rect, border_width)
 
 
-def _button_style(rect, color, hover_color, pressed_color, selected, disabled, pressed, border_color=None):
+def _button_style(rect, color, hover_color, pressed_color, selected, disabled, pressed, border_color=None,
+                  hover_blocked=False):
     """Resolve shared button colors, outline width, and pressed state."""
-    hovered = rect.collidepoint(pygame.mouse.get_pos())
+    hovered = not hover_blocked and rect.collidepoint(pygame.mouse.get_pos())
     if pressed is None:
         pressed = pygame.mouse.get_pressed()[0]
     depressed = not disabled and pressed and hovered
@@ -588,6 +589,9 @@ class Button:
         # Opt-in for vertical layouts: sit the image this far above the bottom
         # edge instead of at the default offset, so it fills the space below the label.
         self.image_bottom_margin = None
+        # Optional Button drawn over this one: while the mouse is on it, this
+        # button does not show its hover highlight.
+        self.hover_blocker = None
         self.notification_count = 0
         # Overrides notification_count's digit text with an arbitrary string
         # (e.g. "!"). Same badge, just not a count.
@@ -690,7 +694,9 @@ class Button:
 
         current_color, outline, width, depressed = _button_style(
             self.rect, self.color, self.hover_color, self.pressed_color,
-            self.is_selected, self.disabled, self.is_pressed)
+            self.is_selected, self.disabled, self.is_pressed,
+            hover_blocked=self.hover_blocker is not None
+            and self.hover_blocker.rect.collidepoint(pygame.mouse.get_pos()))
         if self.shading:
             self.draw_gradient_rect(surface, current_color, self.rect, pressed=depressed)
         else:

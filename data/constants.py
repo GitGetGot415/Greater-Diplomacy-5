@@ -2264,9 +2264,12 @@ BACKGROUNDS_DIR = "assets/backgrounds"
 FLAGS_DIR = "assets/flags"
 PORTRAITS_DIR = "assets/portraits"
 MUSIC_DIR = "assets/music"
-# Created in an album folder that the player made in the music screen. Shipped
-# albums never have it, which is how the screen knows it may delete a folder.
-USER_ALBUM_MARKER = "user_album.txt"
+# Album folder names the music screen never deletes. Every other album folder
+# gets a delete button. Add the name of each album that ships with the game.
+UNDELETABLE_ALBUMS = (
+    "Experimental", "Greater Diplomacy 1", "Greater Diplomacy 2", "Greater Diplomacy 3",
+    "Greater Diplomacy 4", "Greater Diplomacy 5", "PenguinMod-ObjectLibraries",
+)
 # These three are rebindable in Settings, so main.py overwrites them at startup
 # with whatever was persisted. The DEFAULT_ forms are the shipped values, and
 # are what settings loading falls back to -- reading the mutable name there

@@ -26,12 +26,12 @@ def validated_scenario_name(name, label="Scenario Name"):
     return name
 
 
-def is_user_album(album):
-    """True for an album folder made in the music screen, which may be deleted."""
-    return os.path.isfile(os.path.join(c.MUSIC_DIR, album, c.USER_ALBUM_MARKER))
+def is_deletable_album(album):
+    """True unless the album is listed in c.UNDELETABLE_ALBUMS."""
+    return album not in c.UNDELETABLE_ALBUMS
 
 
-def create_user_album(name):
+def create_album(name):
     """Makes an empty album folder under c.MUSIC_DIR and returns its folder name.
 
     Raises ValueError with a player-readable message when the name cannot be used.
@@ -45,20 +45,18 @@ def create_user_album(name):
     album_dir = os.path.join(c.MUSIC_DIR, name)
     try:
         os.makedirs(album_dir)
-        with open(os.path.join(album_dir, c.USER_ALBUM_MARKER), "w", encoding="utf-8") as marker:
-            marker.write("Made in the music screen. Remove this file to stop the music screen from deleting this album.\n")
     except OSError as error:
         raise ValueError(f"Could not create the album: {error}") from error
     return name
 
 
-def delete_user_album(album):
-    """Deletes an album folder made in the music screen.
+def delete_album(album):
+    """Deletes an album folder.
 
-    Raises ValueError for a shipped album, or when the folder cannot be removed.
+    Raises ValueError for an album in c.UNDELETABLE_ALBUMS, or when the folder cannot be removed.
     """
-    if not is_user_album(album):
-        raise ValueError(f"{album} is not an album made in the music screen, so it cannot be deleted here.")
+    if not is_deletable_album(album):
+        raise ValueError(f"{album} ships with the game, so it cannot be deleted here.")
     try:
         shutil.rmtree(os.path.join(c.MUSIC_DIR, album))
     except OSError as error:

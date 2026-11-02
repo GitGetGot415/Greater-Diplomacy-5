@@ -46,7 +46,7 @@ class ShuffleExclusionTests(unittest.TestCase):
 
         album_buttons = [
             button for button in player.elements
-            if getattr(button, "pane", None) == "album"
+            if getattr(button, "pane", None) == "album" and button.text != "X"  # skip delete buttons
         ]
         self.assertEqual(
             [button.text for button in album_buttons],

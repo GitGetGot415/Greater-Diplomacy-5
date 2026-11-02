@@ -25,7 +25,9 @@ ALBUM_COLUMNS = 2
 ALBUM_ORDER = ["Greater Diplomacy 5", "Greater Diplomacy 4", "Greater Diplomacy 3", "Greater Diplomacy 2", "Greater Diplomacy 1", "Experimental", "PenguinMod-ObjectLibraries"]
 # The tile that makes a new album is always the last tile, after every album.
 NEW_ALBUM_LABEL = "+ New Album"
-ALBUM_DELETE_BUTTON_SIZE = "tiny_square"
+ALBUM_DELETE_BUTTON_SIZE = (22, 22)
+# How far the delete button sticks out past the tile's top-right corner.
+ALBUM_DELETE_OVERHANG = 6
 ALBUM_MARGIN = 20
 ALBUM_GAP = 10
 ALBUM_TILE_SIZE = (140, 170)
@@ -198,8 +200,9 @@ class Music_Player(ScrollPanes, GameState):
         self._content_track = pygame.Rect(MUSIC_LEFT_PANE_W, 200, MUSIC_RIGHT_PANE_X - MUSIC_LEFT_PANE_W, c.SCREEN_HEIGHT - 200)
 
         # --- 1. Left Column: Albums (Scrolling) ---
-        y_offset = 120 + self._scroll_album
-        album_content_h = 0
+        # Room above the first row so the delete buttons are not cut off.
+        y_offset = 120 + ALBUM_DELETE_OVERHANG + self._scroll_album
+        album_content_h = ALBUM_DELETE_OVERHANG
         
         pinned = [album for album in ALBUM_ORDER if album in self.controller.all_albums]
         albums = pinned + sorted((album for album in self.controller.all_albums if album not in pinned),
@@ -253,16 +256,18 @@ class Music_Player(ScrollPanes, GameState):
             btn.pane = "album"
             self.elements.append(btn)
 
-            if album is not None and queries.is_user_album(album):
-                # Flush in the tile's top-right corner, on top of it in z-order
+            if album is not None and queries.is_deletable_album(album):
+                # Sticks out of the tile's top-right corner, on top of it in z-order
                 # (appended after) and in click priority (the tile's guard
                 # refuses clicks that land inside the X).
-                delete_btn = Button(btn.rect.right - c.SIZES[ALBUM_DELETE_BUTTON_SIZE][0], btn.rect.y,
+                delete_btn = Button(btn.rect.right - ALBUM_DELETE_BUTTON_SIZE[0] + ALBUM_DELETE_OVERHANG,
+                                    btn.rect.y - ALBUM_DELETE_OVERHANG,
                                     ALBUM_DELETE_BUTTON_SIZE, "red", "X",
-                                    lambda a=album: self.start_delete_album(a))
+                                    lambda a=album: self.start_delete_album(a), font_preset="tiny")
                 delete_btn.click_guard = album_guard
                 delete_btn.pane = "album"
                 self.elements.append(delete_btn)
+                btn.hover_blocker = delete_btn
                 btn.click_guard = lambda dbtn=delete_btn: (
                     not dbtn.rect.collidepoint(pygame.mouse.get_pos()) and album_guard())
 
@@ -809,7 +814,7 @@ class Music_Player(ScrollPanes, GameState):
         if name is None:
             return
         try:
-            queries.create_user_album(name)
+            queries.create_album(name)
         except ValueError as error:
             dialogs.show_error("New Album", str(error))
             return
@@ -828,7 +833,7 @@ class Music_Player(ScrollPanes, GameState):
             dialogs.show_error("Delete Album", f"A song from {album} is playing. Play a song from another album first.")
             return
         try:
-            queries.delete_user_album(album)
+            queries.delete_album(album)
         except ValueError as error:
             dialogs.show_error("Delete Album", str(error))
             return

@@ -21,27 +21,35 @@ class AlbumFolderTests(unittest.TestCase):
         self.addCleanup(patcher.stop)
 
     def test_created_album_can_be_deleted(self):
-        name = queries.create_user_album("  My Album ")
+        name = queries.create_album("  My Album ")
         self.assertEqual(name, "My Album")
-        self.assertTrue(queries.is_user_album("My Album"))
+        self.assertTrue(queries.is_deletable_album("My Album"))
 
-        queries.delete_user_album("My Album")
+        queries.delete_album("My Album")
 
         self.assertFalse(os.path.exists(os.path.join(self._dir.name, "My Album")))
 
-    def test_shipped_album_cannot_be_deleted(self):
+    def test_undeletable_album_cannot_be_deleted(self):
         os.makedirs(os.path.join(self._dir.name, "Shipped"))
 
-        self.assertFalse(queries.is_user_album("Shipped"))
-        with self.assertRaises(ValueError):
-            queries.delete_user_album("Shipped")
+        with mock.patch.object(c, "UNDELETABLE_ALBUMS", ("Shipped",)):
+            self.assertFalse(queries.is_deletable_album("Shipped"))
+            with self.assertRaises(ValueError):
+                queries.delete_album("Shipped")
         self.assertTrue(os.path.isdir(os.path.join(self._dir.name, "Shipped")))
+
+    def test_album_without_a_marker_file_can_be_deleted(self):
+        os.makedirs(os.path.join(self._dir.name, "Dropped In"))
+
+        queries.delete_album("Dropped In")
+
+        self.assertFalse(os.path.exists(os.path.join(self._dir.name, "Dropped In")))
 
     def test_unusable_names_are_refused(self):
         os.makedirs(os.path.join(self._dir.name, "Taken"))
         for bad_name in ("", "   ", "a/b", "..", "CON", "taken"):
             with self.subTest(name=bad_name), self.assertRaises(ValueError):
-                queries.create_user_album(bad_name)
+                queries.create_album(bad_name)
 
 
 class AlbumTileTests(unittest.TestCase):
@@ -69,15 +77,15 @@ class AlbumTileTests(unittest.TestCase):
     def test_new_album_tile_is_last_even_when_pinned_by_order(self):
         player = self.make_player(["Alpha", "Zulu"])
         with mock.patch.object(music_player, "ALBUM_ORDER", ["Alpha"]), \
-                mock.patch.object(queries, "is_user_album", return_value=False):
+                mock.patch.object(queries, "is_deletable_album", return_value=False):
             player.refresh_ui()
 
         self.assertEqual([b.text for b in self.album_buttons(player)],
                          ["Alpha", "Zulu", NEW_ALBUM_LABEL])
 
-    def test_only_user_albums_get_a_delete_button(self):
+    def test_only_deletable_albums_get_a_delete_button(self):
         player = self.make_player(["Mine", "Shipped"])
-        with mock.patch.object(queries, "is_user_album", side_effect=lambda album: album == "Mine"):
+        with mock.patch.object(queries, "is_deletable_album", side_effect=lambda album: album == "Mine"):
             player.refresh_ui()
 
         delete_buttons = [b for b in self.album_buttons(player) if b.text == "X"]
@@ -93,12 +101,12 @@ class AlbumTileTests(unittest.TestCase):
     def test_create_album_reloads_and_reports_bad_names(self):
         player = self.make_player([])
         player.refresh_ui = mock.Mock()
-        with mock.patch.object(queries, "create_user_album") as create:
+        with mock.patch.object(queries, "create_album") as create:
             player.create_album("Fresh")
         create.assert_called_once_with("Fresh")
         player.controller.load_music_data.assert_called_once()
 
-        with mock.patch.object(queries, "create_user_album", side_effect=ValueError("bad")), \
+        with mock.patch.object(queries, "create_album", side_effect=ValueError("bad")), \
                 mock.patch("ui.dialogs.show_error") as show_error:
             player.create_album("???")
         show_error.assert_called_once()
@@ -117,7 +125,7 @@ class AlbumTileTests(unittest.TestCase):
     def test_album_with_the_playing_song_is_not_deleted(self):
         player = self.make_player([])
         player.controller.now_playing = f"{c.MUSIC_DIR}/Mine/song.mp3"
-        with mock.patch.object(queries, "delete_user_album") as delete, \
+        with mock.patch.object(queries, "delete_album") as delete, \
                 mock.patch("ui.dialogs.show_error") as show_error:
             player.delete_album("Mine")
         delete.assert_not_called()
