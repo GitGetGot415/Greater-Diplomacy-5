@@ -2335,7 +2335,7 @@ SHUFFLE_DISABLED_TRACKS_PATH = "data/json/shuffle_disabled_tracks.json"
 STARTING_SONG_PATH = "data/json/starting_song.json"
 HILDEHRAND_CHOICE_PATH = "data/json/hildehrand_choice.json"
 # Menu portrait gradient: strength 1 matches a standard button; the slider runs 0 to the maximum.
-HILDEHRAND_GRADIENT_DEFAULT_ENABLED = False
+HILDEHRAND_GRADIENT_DEFAULT_ENABLED = True
 HILDEHRAND_GRADIENT_DEFAULT_STRENGTH = 1.0
 HILDEHRAND_GRADIENT_MAX_STRENGTH = 3.0
 # Stepped bands with dithered edges, like a button, instead of fine smooth bands.
