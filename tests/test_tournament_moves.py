@@ -18,6 +18,7 @@ from tests.stub_map_screen import fill_state_defaults, map_double, synchronous_p
 from tests.research_fixtures import research_lock_cases
 from tests.tournament_fixtures import fast_tournament_crypto
 from data import queries
+from data.runtime_rules import RuntimeRules
 from ui.dialogs import pickers
 from data.multiplayer.tournament import files as tournament_files
 from map_logic.actions import production_actions
@@ -127,10 +128,13 @@ class TournamentMoveTests(unittest.TestCase):
     def test_factory_output_research_intents_require_host_prerequisites_and_current_turn(self):
         tree = queries.get_tech_tree()
         cases = research_lock_cases(tree)
+        # These hosts have the same scenario settings and separate mutable state.
+        rules = RuntimeRules()
         for tech, locked, unlocked in cases:
             for mode in ("valid", "locked", "malformed", "stale", "wrong_key"):
                 with self.subTest(tech=tech, mode=mode), tempfile.TemporaryDirectory() as directory:
                     host = Host()
+                    host.runtime_rules = rules
                     host.nation_data["Leader"]["research"] = dict(locked if mode == "locked" else unlocked)
                     move = {"player_intents": [{"type": "research_queue",
                             "tech_names": tech if mode == "malformed" else [tech], "points_remaining": 0}],

@@ -15,6 +15,7 @@ from unittest import mock
 from data import constants as c, migrations, queries
 from data.map import history_io, load_map
 from map_logic.diplomacy import diplomacy_lifecycle
+from tests import add_test_cases
 
 ROOT = Path(__file__).resolve().parents[1]
 #: The release that the newest version step converts.
@@ -450,7 +451,10 @@ class LoadRepairTests(unittest.TestCase):
 class BuiltInMapTests(unittest.TestCase):
     """Every shipped base map and scenario loads through the version steps."""
 
-    def built_in_maps(self):
+    parallel_cases = True
+
+    @staticmethod
+    def built_in_maps():
         for root in (c.BASE_MAPS_DIR, c.SCENARIOS_HISTORICAL_DIR, c.SCENARIOS_ALTERNATE_DIR):
             if not os.path.isdir(ROOT / root):
                 continue
@@ -459,21 +463,24 @@ class BuiltInMapTests(unittest.TestCase):
                 if os.path.isfile(os.path.join(path, "map_data.json")):
                     yield path
 
-    def test_built_in_maps_load_and_round_trip(self):
+    def test_built_in_maps_exist(self):
+        self.assertTrue(list(self.built_in_maps()))
+
+    def map_round_trip(self, path):
         from data.map.load_map import load_backend_state
-        maps = list(self.built_in_maps())
-        self.assertTrue(maps)
-        for path in maps:
-            with self.subTest(map=path):
-                context = load_backend_state(path, is_scenario=True)
-                self.assertTrue(context.map_data)
-                save = round_trip(queries.build_save_dict(context, include_provinces=False))
-                self.assertEqual(save["version"], c.GAME_VERSION)
-                map_data = round_trip(queries.build_map_data_save(context))
-                before = copy.deepcopy((save, map_data))
-                # A current save passes through every step unchanged.
-                migrations.upgrade_save(save, map_data, {})
-                self.assertEqual((save, map_data), before)
+        context = load_backend_state(path, is_scenario=True)
+        self.assertTrue(context.map_data)
+        save = round_trip(queries.build_save_dict(context, include_provinces=False))
+        self.assertEqual(save["version"], c.GAME_VERSION)
+        map_data = round_trip(queries.build_map_data_save(context))
+        before = copy.deepcopy((save, map_data))
+        # A current save passes through every step unchanged.
+        migrations.upgrade_save(save, map_data, {})
+        self.assertEqual((save, map_data), before)
+
+
+add_test_cases(BuiltInMapTests, BuiltInMapTests.map_round_trip,
+               ((path, path) for path in BuiltInMapTests.built_in_maps()))
 
 
 class LibraryAndTournamentTests(unittest.TestCase):

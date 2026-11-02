@@ -438,13 +438,13 @@ class OutputResearchScreenTests(unittest.TestCase):
         tree = queries.get_tech_tree(self.game)
         techs = [key for key, entry in tree.items() if entry["category"] == "INDUSTRY" and entry["max_lvl"] == 1]
         self.assertTrue(techs)
+        screen = Research_Screen()
         for tech in techs:
             with self.subTest(tech=tech):
                 country = self.game.nation_data[self.country]
                 levels = queries.edited_research_levels({}, tech, 1, True, context=self.game)
                 levels.pop(tech)
                 country.update(research=levels, research_queue=[], research_progress={})
-                screen = Research_Screen()
                 screen.start_research(self.game)
                 screen.set_category("INDUSTRY")
                 button = next(button for button in screen.elements

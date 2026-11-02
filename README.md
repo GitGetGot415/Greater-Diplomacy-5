@@ -34,6 +34,17 @@ xattr -dr com.apple.quarantine /path/to/the/GD5/main.app
 ## Real Time Multiplayer
 
 desktop real-time multiplayer hosts use TLS. Source and packaging environments need the `cryptography` Python package (`pip install cryptography`); the Windows and macOS build recipes bundle it automatically. Browser builds intentionally show real-time multiplayer as desktop-only.
+## Running Tests
+
+Run `python run_tests.py` for the full suite. It uses up to eight worker processes.
+Use `--jobs 4` to use fewer processes, or `--jobs 1` for a sequential run.
+Use `python run_tests.py tests.test_tournament_moves` to run one module.
+
+The runner stores measured durations in the ignored local `.test_durations.json` file.
+Later runs use these timings to balance work. Missing or invalid timing data does not prevent a run.
+Ordinary modules stay together to preserve their fixtures and discovery hooks.
+Independent map and song cases can run on separate workers.
+
 ## Benchmarking with Objective Judge Horizon
 
 [Objective Judge Horizon](https://github.com/Pr1nted/objective-judge-horizon) compares turn-based strategy games on the same machine. `scripts/benchmarks/ojh_benchmark.py` lets it measure Greater Diplomacy 5 through the game's own code rather than an outside driver:

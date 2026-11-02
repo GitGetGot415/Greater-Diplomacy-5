@@ -17,6 +17,7 @@ from beepbox_audio import (
     is_beepbox_song, has_beepbox_replacement,
 )
 from compilation_scripts import build_support
+from tests import add_test_cases
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -108,8 +109,7 @@ class UltraBoxFileTests(unittest.TestCase):
                     self.assertTrue(_synth_source({"format": format_name}))
 
 
-@unittest.skipUnless(importlib.util.find_spec("quickjs"), "QuickJS is not installed")
-class UltraBoxSynthTests(unittest.TestCase):
+class UltraBoxSynthFixture:
     def make_context(self, song=None):
         # QuickJS stays a test dependency. Desktop playback uses V8.
         import quickjs
@@ -128,6 +128,9 @@ class UltraBoxSynthTests(unittest.TestCase):
         self.assertTrue(context.eval("gd5SamplesReady()"))
         return json.loads(result)["length"]
 
+
+@unittest.skipUnless(importlib.util.find_spec("quickjs"), "QuickJS is not installed")
+class UltraBoxSynthTests(UltraBoxSynthFixture, unittest.TestCase):
     def test_embedded_sample_synthesizes_and_supports_seeking_and_speed(self):
         context, song = self.make_context()
         length = self.initialize(context, song)
@@ -173,17 +176,6 @@ class UltraBoxSynthTests(unittest.TestCase):
         target = math.log(2) + 1 / 44100
         context.eval(f"gd5Seek({target},1)")
         self.assertAlmostEqual(context.eval("gd5Synth.playhead"), 1, places=4)
-
-    def test_bundled_embedded_examples_produce_audio(self):
-        for path in sorted((ROOT / "assets/music/Ultrabox JSON").glob("*.json")):
-            song = _read_song(str(path))
-            if not all(_sample_url.startswith("data:") for _sample_url in
-                       [ref.split("!", 2)[-1] for ref in song.get("customSamples", [])]):
-                continue
-            with self.subTest(song=path.name):
-                context, song = self.make_context(song)
-                self.initialize(context, song, seconds=20)
-                self.assertTrue(any(base64.b64decode(context.eval("gd5Render(2048)"))))
 
     def test_browser_controls_and_switching_preserve_both_engines(self):
         context, song = self.make_context()
@@ -256,6 +248,23 @@ class UltraBoxSynthTests(unittest.TestCase):
             context.eval("gd5SamplesReady()")
         context.eval("gd5BeginSampleLoad()")
         self.assertTrue(context.eval("gd5SamplesReady()"))
+
+
+@unittest.skipUnless(importlib.util.find_spec("quickjs"), "QuickJS is not installed")
+class UltraBoxBundledSongTests(UltraBoxSynthFixture, unittest.TestCase):
+    parallel_cases = True
+
+    def bundled_song(self, path):
+        song = _read_song(str(path))
+        if not all(ref.split("!", 2)[-1].startswith("data:") for ref in song.get("customSamples", [])):
+            self.skipTest("This song requires external samples.")
+        context, song = self.make_context(song)
+        self.initialize(context, song, seconds=20)
+        self.assertTrue(any(base64.b64decode(context.eval("gd5Render(2048)"))))
+
+
+add_test_cases(UltraBoxBundledSongTests, UltraBoxBundledSongTests.bundled_song,
+               ((path.name, path) for path in sorted((ROOT / "assets/music/Ultrabox JSON").glob("*.json"))))
 
 
 class UltraBoxNativeTests(unittest.TestCase):

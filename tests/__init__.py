@@ -1,7 +1,26 @@
 """Shared test setup, applied before importing game modules."""
 
 import os
+import re
 from concurrent.futures import ThreadPoolExecutor
+
+
+def add_test_cases(case_type, check, cases):
+    """Expose each named content item as a normal unittest method.
+
+    Set parallel_cases on a class only when each method can run independently.
+    Shared class and module fixtures must also support separate processes.
+    """
+    for index, (label, value) in enumerate(cases):
+        name = f"test_{check.__name__}_{index:03d}_{re.sub(r'[^a-zA-Z0-9]+', '_', str(label))}"
+
+        def test(self, value=value):
+            check(self, value)
+
+        test.__name__ = name
+        test.__qualname__ = f"{case_type.__qualname__}.{name}"
+        test.__doc__ = str(label)
+        setattr(case_type, name, test)
 
 
 def run_process_probes(check, items, *, workers=None):

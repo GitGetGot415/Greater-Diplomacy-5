@@ -11,6 +11,7 @@ from unittest import mock
 
 import data.constants as c
 from data import queries
+from data.runtime_rules import RuntimeRules
 from ui.dialogs import pickers
 from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError
 from map_logic.ai import ai_tech_eval, ai_unit_eval
@@ -400,6 +401,14 @@ class AirRulesTests(unittest.TestCase):
 @fast_tournament_crypto()
 class AirRealtimeTests(unittest.TestCase):
     def setUp(self):
+        self.rules = RuntimeRules()
+        self.reset_map()
+        queries.get_unit_library(self.map)
+        before = copy.deepcopy(self.rules.libraries)
+        self.addCleanup(self.assertEqual, self.rules.libraries, before)
+
+    def reset_map(self):
+        """Reset mutable game state while retaining this test's fixed scenario rules."""
         province = {"id": 1, "owner": "A", "cores": ["A"], "is_coastal": False,
                     "buildings": ["Basic Factory"], "unit_queue": [], "units": []}
         country = {"research": {}, "research_queue": []}
@@ -407,7 +416,7 @@ class AirRealtimeTests(unittest.TestCase):
             country[resource] = 1 + sum(stats.get(f"cost_{resource}", 0)
                                       for stats in queries.get_unit_library().values())
         self.map = map_double(map_data={"home": province}, id_to_province={1: province},
-                                   nation_data={"A": country}, scenario_settings={})
+                             nation_data={"A": country}, scenario_settings={}, runtime_rules=self.rules)
         self.driver = MapRealtimeDriver(self.map)
 
     def test_aircraft_gates_use_authoritative_research(self):
@@ -453,7 +462,7 @@ class AirRealtimeTests(unittest.TestCase):
 
     def test_new_bomber_research_is_authoritative(self):
         for tech_key, unit_name in (("biplane_bomber", "Biplane Bomber I"), ("zeppelin", "Zeppelin I")):
-            self.setUp()
+            self.reset_map()
             command = {"type": "research_queue", "tech_names": [tech_key]}
             requirements = queries.get_tech_tree()[tech_key]["req"]
             if requirements:
@@ -467,7 +476,7 @@ class AirRealtimeTests(unittest.TestCase):
 
     def test_unit_orders_need_research_and_ownership_and_use_server_stats(self):
         for tech_key, unit_name in aircraft_cases():
-            self.setUp()
+            self.reset_map()
             command = {"type": "province_queue", "province_id": 1, "queue": "unit_queue",
                        "items": [{"unit_type": unit_name, "turns_remaining": 0, "refund": {}}]}
             with self.assertRaises(RealtimeError):
@@ -485,9 +494,10 @@ class AirRealtimeTests(unittest.TestCase):
     def test_tournament_import_preserves_air_in_existing_move_fields(self):
         from map_logic.actions import production_actions
         for tech_key, unit_name in aircraft_cases():
-            self.setUp()
+            self.reset_map()
             harness = tournament_harness.TournamentMoveTests()
             host = tournament_harness.Host()
+            host.runtime_rules = self.rules
             province = copy.deepcopy(self.map.map_data["home"])
             province.update(json_key="home", owner="Leader", cores=["Leader"],
                             is_coastal=queries.get_unit_metadata(unit_name)["recruitment"]["coastal"])

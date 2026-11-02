@@ -37,6 +37,7 @@ import data.constants as c
 from tests.research_fixtures import research_lock_cases
 import json
 from data import migrations
+from data.runtime_rules import RuntimeRules
 from data.multiplayer.realtime.relay import (
     RelayHostTransport,
     relay_cloud_init,
@@ -761,9 +762,10 @@ class RealtimeSessionTests(unittest.TestCase):
         from data import queries
         tree = queries.get_tech_tree()
         cases = research_lock_cases(tree)
+        rules = RuntimeRules()
         for tech, locked, unlocked in cases:
             map_ref = map_double(nation_data={"A": {"research": dict(locked), "research_queue": []}},
-                                      map_data={}, id_to_province={})
+                                 map_data={}, id_to_province={}, runtime_rules=rules)
             driver = MapRealtimeDriver(map_ref)
             command = {"type": "research_queue", "tech_names": [tech], "points_remaining": 0,
                        "research": unlocked}

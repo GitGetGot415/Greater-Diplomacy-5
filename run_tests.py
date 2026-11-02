@@ -5,7 +5,9 @@ no arguments, no typing. Everything under tests/ named test_*.py is picked up
 automatically, so new test files need no wiring up here.
 Audio uses a silent driver; the application harness skips startup music and
 the native desktop audio engine.
-Full runs use up to four processes. Use --jobs 1 for sequential execution.
+Full runs use up to eight processes. Use --jobs 1 for sequential execution.
+The local .test_durations.json cache balances work using previous timings.
+Ordinary modules stay together. Classes marked parallel_cases opt into splitting.
 """
 
 import argparse
@@ -13,14 +15,17 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from concurrent.futures.process import BrokenProcessPool
 import contextlib
 import io
+import json
 import multiprocessing
 import os
 import sys
+import tempfile
 import time
 import unittest
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 TESTS_DIR = os.path.join(ROOT, "tests")
+TIMINGS_PATH = os.path.join(ROOT, ".test_durations.json")
 
 
 class TimingResult(unittest.TextTestResult):
@@ -30,6 +35,7 @@ class TimingResult(unittest.TextTestResult):
         super().__init__(*args, **kwargs)
         self.test_times = []
         self.group_times = []
+        self.work_times = []
 
     def startTest(self, test):
         super().startTest(test)
@@ -51,6 +57,8 @@ class TimingSuite(unittest.TestSuite):
         try:
             return super().run(result, debug)
         finally:
+            if hasattr(self, "work_label"):
+                result.work_times.append((time.perf_counter() - started, self.work_label))
             if is_group:
                 if isinstance(tests[0], unittest.FunctionTestCase):
                     label = tests[0]._testFunc.__module__
@@ -77,20 +85,123 @@ def configure_environment():
     # stress processes.
 
 
-def run_serial(names, quiet, *, shard=0, shards=1):
-    """Keep each discovered module suite together, including discovery hooks."""
+def load_suite(names):
+    """Apply the same discovery hooks in the planner and fresh workers."""
     configure_environment()
     loader = unittest.TestLoader()
     loader.suiteClass = TimingSuite
-    started = time.perf_counter()
     if names:
-        suite = loader.loadTestsFromNames(names)
+        return loader.loadTestsFromNames(names)
+    return loader.discover(start_dir=TESTS_DIR, top_level_dir=ROOT)
+
+
+def work_items(suite):
+    """Keep module suites intact unless a class explicitly permits independent cases."""
+    def separate(node):
+        if isinstance(node, unittest.TestCase):
+            if getattr(type(node), "parallel_cases", False):
+                return None, [node]
+            return node, []
+        remaining, independent = [], []
+        for child in node:
+            regular, cases = separate(child)
+            if regular is not None:
+                remaining.append(regular)
+            independent.extend(cases)
+        if not independent:
+            return node, []
+        return TimingSuite(remaining) if remaining else None, independent
+
+    def first_test(node):
+        if isinstance(node, unittest.TestCase):
+            return node
+        for child in node:
+            first = first_test(child)
+            if first is not None:
+                return first
+        return None
+
+    items = {}
+    for module_suite in suite:
+        regular, independent = separate(module_suite)
+        candidates = ([regular] if regular is not None else []) + independent
+        for candidate in candidates:
+            first = first_test(candidate)
+            if first is None:
+                continue
+            # A group and its first independent case must have different keys.
+            label = ("case:" if isinstance(candidate, unittest.TestCase) else "suite:") + first.id()
+            if label in items:
+                # Repeated command-line selections still run as often as requested.
+                label += f":{len(items)}"
+            group = TimingSuite([candidate])
+            group.work_label = label
+            items[label] = group
+    return items
+
+
+def read_work_times():
+    """Ignore absent or invalid local timing data. It never selects tests."""
+    try:
+        with open(TIMINGS_PATH, encoding="utf-8") as handle:
+            saved = json.load(handle)
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(saved, dict):
+        return {}
+    return {name: seconds for name, seconds in saved.items()
+            if isinstance(seconds, (int, float)) and not isinstance(seconds, bool)
+            and 0 <= seconds <= sys.float_info.max}
+
+
+def save_work_times(timings):
+    """Replace the optional cache atomically, including results from focused runs."""
+    if not timings:
+        return
+    saved = read_work_times()
+    saved.update({name: seconds for seconds, name in timings})
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=os.path.dirname(TIMINGS_PATH),
+                                         prefix=".test_durations.", suffix=".json", delete=False) as handle:
+            temporary = handle.name
+            json.dump(saved, handle, indent=2, sort_keys=True)
+        os.replace(temporary, TIMINGS_PATH)
+    except OSError as exc:
+        print(f"Could not save test timings: {exc}", file=sys.stderr)
+    finally:
+        if temporary is not None and os.path.exists(temporary):
+            os.unlink(temporary)
+
+
+def balance_work(items, jobs, timings):
+    """Assign the longest groups first. Use test counts before timings exist."""
+    estimates = {label: timings.get(label, group.countTestCases() * 0.01)
+                 for label, group in items.items()}
+    assignments = [[] for _ in range(jobs)]
+    loads = [0.0] * jobs
+    for label in sorted(items, key=lambda name: estimates[name], reverse=True):
+        index = min(range(jobs), key=lambda worker: (loads[worker], len(assignments[worker]), worker))
+        assignments[index].append(label)
+        loads[index] += estimates[label]
+    # Keep discovery order within each process to reduce shared-fixture surprises.
+    return [set(assignment) for assignment in assignments]
+
+
+def run_serial(names, quiet, *, shard=0, shards=1, selected=None):
+    """Keep ordinary module suites and their discovery hooks together."""
+    started = time.perf_counter()
+    suite = load_suite(names)
+    if selected is not None:
+        items = work_items(suite)
+        missing = selected - items.keys()
+        if missing:
+            raise RuntimeError(f"Test discovery changed after scheduling: {sorted(missing)}")
+        suite = TimingSuite(group for label, group in items.items() if label in selected)
+    elif shards > 1:
+        suite = TimingSuite(list(suite)[shard::shards])
     else:
-        suite = loader.discover(start_dir=TESTS_DIR, top_level_dir=ROOT)
-    if shards > 1:
-        # Discovery yields one suite per module. Do not flatten these suites:
-        # class fixtures and module load_tests hooks must retain their behavior.
-        suite = loader.suiteClass(list(suite)[shard::shards])
+        suite = TimingSuite(work_items(suite).values())
     discovery_seconds = time.perf_counter() - started
     started = time.perf_counter()
     result = unittest.TextTestRunner(
@@ -100,19 +211,19 @@ def run_serial(names, quiet, *, shard=0, shards=1):
 
 
 RESULT_LISTS = ("failures", "errors", "skipped", "expectedFailures", "unexpectedSuccesses",
-                "test_times", "group_times")
+                "test_times", "group_times", "work_times")
 
 
-def run_worker(names, quiet, shard, shards):
+def run_worker(names, quiet, shard, shards, selected=None):
     """Return printable results without sending game objects between processes."""
     output = io.StringIO()
     with contextlib.redirect_stdout(output), contextlib.redirect_stderr(output):
-        result, discovery, execution = run_serial(names, quiet, shard=shard, shards=shards)
+        result, discovery, execution = run_serial(names, quiet, shard=shard, shards=shards, selected=selected)
     data = {"testsRun": result.testsRun, "discovery": discovery, "execution": execution,
             "output": output.getvalue()}
     for field in RESULT_LISTS:
         values = getattr(result, field)
-        if field in ("test_times", "group_times"):
+        if field in ("test_times", "group_times", "work_times"):
             data[field] = values
         elif field == "unexpectedSuccesses":
             data[field] = [str(test) for test in values]
@@ -124,17 +235,21 @@ def run_worker(names, quiet, shard, shards):
 def run_parallel(names, quiet, jobs):
     """Use fresh interpreters so workers cannot share patches or SDL state."""
     result = TimingResult(io.StringIO(), False, 0)
-    discovery_seconds = execution_seconds = 0.0
+    started = time.perf_counter()
+    assignments = balance_work(work_items(load_suite(names)), jobs, read_work_times())
+    discovery_seconds = time.perf_counter() - started
+    execution_seconds = 0.0
     # Spawn isolates native libraries. A process must not execute two shards,
     # even when one shard finishes before all processes have started.
     with ProcessPoolExecutor(max_workers=jobs, mp_context=multiprocessing.get_context("spawn"),
                              max_tasks_per_child=1) as pool:
-        futures = {pool.submit(run_worker, names, quiet, shard, jobs): shard + 1 for shard in range(jobs)}
+        futures = {pool.submit(run_worker, names, quiet, shard, jobs, selected): shard + 1
+                   for shard, selected in enumerate(assignments)}
         for future in as_completed(futures):
             number = futures[future]
             try:
                 data = future.result()
-            except BrokenProcessPool as exc:
+            except (BrokenProcessPool, RuntimeError) as exc:
                 # A native crash must fail the run even without a test report.
                 message = f"Worker {number}/{jobs} stopped without complete results: {exc}"
                 result.errors.append((f"worker {number}", message))
@@ -157,18 +272,19 @@ def main(argv=None):
                         help="Show this many slow tests and groups; zero hides timing details.")
     parser.add_argument("-q", "--quiet", action="store_true", help="Hide per-test progress.")
     parser.add_argument("-j", "--jobs", type=int,
-                        help="Worker processes; default: up to four for full runs, one for focused runs.")
+                        help="Worker processes; default: up to eight for full runs, one for focused runs.")
     args = parser.parse_args(argv)
     if args.durations < 0:
         parser.error("--durations must be zero or greater")
     if args.jobs is not None and args.jobs < 1:
         parser.error("--jobs must be one or greater")
-    jobs = args.jobs if args.jobs is not None else (1 if args.tests else min(4, os.cpu_count() or 1))
+    jobs = args.jobs if args.jobs is not None else (1 if args.tests else min(8, os.cpu_count() or 1))
     started = time.perf_counter()
     if jobs == 1:
         result, discovery_seconds, execution_seconds = run_serial(args.tests, args.quiet)
     else:
         result, discovery_seconds, execution_seconds = run_parallel(args.tests, args.quiet, jobs)
+    save_work_times(result.work_times)
 
     print()
     if jobs == 1:
