@@ -5,6 +5,13 @@ from ui.dialogs.base import _BaseModal, _back_key, open_modal
 from ui.widgets.ui_elements import process_text_input, draw_text_input_background
 
 
+# What makes the entry box read as "type here": a gold border, a hint while it is
+# empty, and a caret that blinks.
+INPUT_HINT = "Type here..."
+CARET_BLINK_MS = 500
+CARET_WIDTH = 2
+
+
 class _TextInputModal(_BaseModal):
     BOX_MAX_W = 480
     BOX_MIN_H = 230
@@ -64,17 +71,24 @@ class _TextInputModal(_BaseModal):
                     self._finish(None)
 
     def draw_content(self, surface):
-        border_color = (220, 80, 80) if self.error_text else c.UI_TEXT_LIGHT
+        border_color = (220, 80, 80) if self.error_text else c.COLOR_GOLD_HIGHLIGHT
         draw_text_input_background(surface, self.input_rect, active=True,
                                    style_name="dialog", border_color=border_color)
         clear_color = (135, 45, 45) if self.text else (85, 85, 85)
         self.draw_button(surface, self.clear_rect, "Clear", clear_color,
                          (180, 65, 65) if self.text else (115, 115, 115))
-        input_surf = self.msg_font.render(self.text or " ", True, (255, 255, 255))
         text_rect = self.input_rect.inflate(-8, -6)
+        input_surf = self.msg_font.render(self.text or INPUT_HINT, True,
+                                          (255, 255, 255) if self.text else c.UI_TEXT_MUTED)
+        # A value wider than the box slides left so the caret stays in view.
+        shift = min(0, text_rect.width - CARET_WIDTH - 4 - input_surf.get_width()) if self.text else 0
+        text_x = text_rect.x + 2 + shift
         surface.set_clip(text_rect)
-        surface.blit(input_surf, input_surf.get_rect(midleft=(text_rect.x + 2,
-                                                             self.input_rect.centery)))
+        surface.blit(input_surf, input_surf.get_rect(midleft=(text_x, self.input_rect.centery)))
+        if pygame.time.get_ticks() // CARET_BLINK_MS % 2 == 0:
+            caret_x = text_x + (input_surf.get_width() if self.text else 0) + 1
+            pygame.draw.rect(surface, (255, 255, 255),
+                             (caret_x, text_rect.y + 2, CARET_WIDTH, text_rect.height - 4))
         surface.set_clip(None)
 
         if self.error_text:
