@@ -24,6 +24,7 @@ from typing import NamedTuple, Optional
 
 import pygame
 import data.constants as c
+from data.platform import downloads_dir
 from data.queries.content import IMAGE_EXTENSIONS
 from ui.bars import ui_bars
 from ui.navigation.modal_screen import ModalScreen
@@ -55,6 +56,8 @@ GAME_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__
 # Item          # Icon
 
 # Folder	    # Folder.png
+# Home folder	# Home.png
+# Downloads	    # Downloads.png
 # Drive	        # Drive.png
 # Generic file	# Generic File.png
 # Images	    # Image.png
@@ -62,9 +65,16 @@ GAME_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__
 # .zip	        # Zip.png
 # .json	        # JSON.png
 # .py	        # Python.png
+# .gd5tour	    # GD5TOUR.png
+# .gd5move	    # GD5MOVE.png
+# .gd4map	    # GD4MAP.png
+# .svg	        # SVG.png
+# .txt	        # Text.png
 
 # Files in c.FILE_SYSTEM_ICONS_DIR.
 FOLDER_ICON = "Folder.png"
+HOME_ICON = "Home.png"
+DOWNLOADS_ICON = "Downloads.png"
 DRIVE_ICON = "Drive.png"
 FILE_ICON = "Generic File.png"
 EXTENSION_ICONS = {
@@ -73,6 +83,11 @@ EXTENSION_ICONS = {
     ".zip": "Zip.png",
     ".json": "JSON.png",
     ".py": "Python.png",
+    ".gd5tour": "GD5TOUR.png",
+    ".gd5move": "GD5MOVE.png",
+    ".gd4map": "GD4MAP.png",
+    ".svg": "SVG.png",
+    ".txt": "Text.png",
 }
 
 ROW_SELECTED_STYLE = {"color": c.UI_COLORS["blue"][0], "gradient_strength": 1.0}
@@ -204,6 +219,17 @@ def format_modified(timestamp):
         return time.strftime(MODIFIED_FORMAT, time.localtime(timestamp))
     except (OSError, OverflowError, ValueError):
         return ""
+
+
+def folder_icon_name(path):
+    """The icon for a folder, the same in the sidebar and the details list."""
+    if path == DRIVE_VIEW:
+        return DRIVE_ICON
+    if _same_path(path, os.path.expanduser("~")):
+        return HOME_ICON
+    if _same_path(path, downloads_dir()):
+        return DOWNLOADS_ICON
+    return FOLDER_ICON
 
 
 def build_places(start_dir=None):
@@ -871,7 +897,7 @@ class FileBrowserScreen(ModalScreen):
         if self.current_dir == DRIVE_VIEW:
             return self._icon(DRIVE_ICON)
         if entry.kind == "dir":
-            return self._icon(FOLDER_ICON)
+            return self._icon(folder_icon_name(self._full_path(entry.name)))
         return self._icon(EXTENSION_ICONS.get(os.path.splitext(entry.name)[1].lower(), FILE_ICON))
 
     def _chrome_button(self, x, y, size, text, callback, font_preset="button_small"):
@@ -947,7 +973,7 @@ class FileBrowserScreen(ModalScreen):
         font = fonts.get("button_small")
         x = self.sidebar_rect.x + self.PANE_GAP
         for i, (label, path) in enumerate(self.places):
-            icon = self._icon(DRIVE_ICON if path == DRIVE_VIEW else FOLDER_ICON)
+            icon = self._icon(folder_icon_name(path))
             button = Button(x, self.sidebar_rect.y + self.PANE_GAP + i * (place_h + self.PLACE_GAP),
                             "browser_place", "light_blue", _fit_text(label, font, place_w - 46),
                             lambda p=path: self._navigate(p), image=icon, font_preset="button_small")

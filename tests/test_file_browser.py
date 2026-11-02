@@ -310,9 +310,10 @@ class FileBrowserTests(unittest.TestCase):
         self.assertEqual(fb.format_modified(None), "")
 
     def test_every_icon_name_has_a_file(self):
-        names = {fb.FOLDER_ICON, fb.DRIVE_ICON, fb.FILE_ICON, *fb.EXTENSION_ICONS.values()}
-        for name in names:
-            self.assertTrue(os.path.isfile(os.path.join(c.FILE_SYSTEM_ICONS_DIR, name)), name)
+        names = {fb.FOLDER_ICON, fb.HOME_ICON, fb.DOWNLOADS_ICON, fb.DRIVE_ICON, fb.FILE_ICON,
+                 *fb.EXTENSION_ICONS.values()}
+        # Compares exact names, because macOS and Linux paths are case-sensitive.
+        self.assertLessEqual(names, set(os.listdir(c.FILE_SYSTEM_ICONS_DIR)))
 
     def test_entry_icon_follows_the_kind_and_extension(self):
         screen = self.browser()
@@ -322,6 +323,28 @@ class FileBrowserTests(unittest.TestCase):
             self.assertEqual(screen._entry_icon(fb.Entry("a.unknown", "file", 1, 0, "")), fb.FILE_ICON)
             screen._show(fb.DRIVE_VIEW)
             self.assertEqual(screen._entry_icon(screen.entries[0]), fb.DRIVE_ICON)
+
+    def test_tournament_files_have_their_own_icons(self):
+        self.assertEqual(fb.EXTENSION_ICONS[".gd5tour"], "GD5TOUR.png")
+        self.assertEqual(fb.EXTENSION_ICONS[".gd5move"], "GD5MOVE.png")
+
+    def test_map_vector_and_text_files_have_their_own_icons(self):
+        self.assertEqual(fb.EXTENSION_ICONS[".gd4map"], "GD4MAP.png")
+        self.assertEqual(fb.EXTENSION_ICONS[".svg"], "SVG.png")
+        self.assertEqual(fb.EXTENSION_ICONS[".txt"], "Text.png")
+
+    def test_home_and_downloads_folders_get_their_icons_in_the_list_and_sidebar(self):
+        home, downloads = self.path("alpha"), self.path("beta")
+        screen = self.browser()
+        with mock.patch.object(fb.os.path, "expanduser", return_value=home), \
+                mock.patch.object(fb, "downloads_dir", return_value=downloads), \
+                mock.patch.object(screen, "_icon", side_effect=lambda name: name):
+            self.assertEqual(screen._entry_icon(self.entry(screen, "alpha")), fb.HOME_ICON)
+            self.assertEqual(screen._entry_icon(self.entry(screen, "beta")), fb.DOWNLOADS_ICON)
+            screen.places = [("Home", home), ("Downloads", downloads), ("Other", self.root)]
+            screen.refresh_ui()
+            icons = [el.image for el in screen.elements if isinstance(el, fb.Button) and el.image]
+        self.assertEqual(icons, [fb.HOME_ICON, fb.DOWNLOADS_ICON, fb.FOLDER_ICON])
 
 
 if __name__ == "__main__":
