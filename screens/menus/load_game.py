@@ -14,7 +14,6 @@ class Load_Game(ContentBrowserScreen):
     back_state = "MENU"
     title = "LOAD GAME"
     content_label = "saves"
-    category_caption = "Select a save to view details. Load its current turn or choose History."
 
     def __init__(self):
         super().__init__()

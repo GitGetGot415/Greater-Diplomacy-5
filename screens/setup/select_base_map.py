@@ -37,7 +37,7 @@ class Select_Base_Map(ContentBrowserScreen):
         _label, directory_attr = self.CATEGORIES[self.sub_state]
         directory = getattr(c, directory_attr)
         is_custom = self.sub_state == "CUSTOM_MAPS"
-        note = ("Open this map in the editor. Save to keep your changes." if is_custom else
+        note = ("" if is_custom else
                 "Open this source as a new custom map. Saving creates a copy and keeps the source unchanged.")
         self.build_browser(directory, "No maps in this category. Import a custom map or choose another category.", note)
         self.elements.extend([

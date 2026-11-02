@@ -754,9 +754,6 @@ def draw(map_screen, surface, orders_screen=None, draw_editors=True, selected_id
     title_font, text_font = fonts.get("tiny"), fonts.get("tiny")
     title = title_font.render("ARMIES", True, (185, 215, 255))
     surface.blit(title, (tray.x + 8, tray.y + 5))
-    if show_create:
-        hint = text_font.render("Right-click: assign", True, (165, 195, 235))
-        surface.blit(hint, (tray.x + 69, tray.y + 6))
     clip = surface.get_clip()
     surface.set_clip(tray)
     if selected_ids is None:

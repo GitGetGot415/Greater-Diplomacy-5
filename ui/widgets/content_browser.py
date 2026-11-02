@@ -306,8 +306,6 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
         surface.blit(self.detail_heading, (self.detail_panel.x + self.MARGIN, self.detail_panel.y + 20))
         count = f"{len(self.filtered_entries)} of {len(self.entries)} {self.content_label}"
         surface.blit(font.render(count, True, c.UI_TEXT_LIGHT), (self.MARGIN, c.SCREEN_HEIGHT - 54))
-        hint = "Select a row. Use arrows to browse and Enter to open."
-        surface.blit(fonts.get("small").render(hint, True, c.UI_TEXT_MUTED), (self.MARGIN, c.SCREEN_HEIGHT - 30))
         if not self.filtered_entries:
             message = self.directory_error or ("No matching items. Clear Search to show all items."
                                                if self.search_field.text.strip() else self.empty_message)
