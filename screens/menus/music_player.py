@@ -21,10 +21,11 @@ MUSIC_SCROLLBAR_WIDTH = 20
 ALBUM_COLUMNS = 2
 ALBUM_MARGIN = 20
 ALBUM_GAP = 10
-ALBUM_TILE_SIZE = (140, 160)
+ALBUM_TILE_SIZE = (140, 170)
 ALBUM_TEXT_TILE_SIZE = (140, 50)
 # Every cover is stretched to this size so all tiles look alike.
-ALBUM_COVER_SIZE = (120, 100)
+ALBUM_COVER_SIZE = (120, 120)
+ALBUM_COVER_BOTTOM_MARGIN = 10
 MUSIC_LEFT_PANE_W = (ALBUM_MARGIN + ALBUM_COLUMNS * ALBUM_TILE_SIZE[0] + (ALBUM_COLUMNS - 1) * ALBUM_GAP
                      + ALBUM_GAP + MUSIC_SCROLLBAR_WIDTH + 5)
 song_y = 32
@@ -229,6 +230,7 @@ class Music_Player(ScrollPanes, GameState):
                 row_height = 0
             btn.click_guard = album_guard
             btn.fit_text = True
+            btn.image_bottom_margin = ALBUM_COVER_BOTTOM_MARGIN
             btn.sound_kind = "select_album"
             btn.pane = "album"
             self.elements.append(btn)

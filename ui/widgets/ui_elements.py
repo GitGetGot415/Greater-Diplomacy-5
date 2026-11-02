@@ -585,6 +585,9 @@ class Button:
         self.text_align = "center"
         # Opt-in: shrink a plain (image-less) label to fit the button width.
         self.fit_text = False
+        # Opt-in for vertical layouts: sit the image this far above the bottom
+        # edge instead of at the default offset, so it fills the space below the label.
+        self.image_bottom_margin = None
         self.notification_count = 0
         # Overrides notification_count's digit text with an arbitrary string
         # (e.g. "!"). Same badge, just not a count.
@@ -708,8 +711,11 @@ class Button:
             if not labelled:
                 img_anchor = {"center": self.rect.center}
             elif self.layout == 'vertical':
-                # Shifted down slightly to make room for the text above it
-                img_anchor = {"center": (self.rect.centerx, self.rect.centery + 10)}
+                if self.image_bottom_margin is None:
+                    # Shifted down slightly to make room for the text above it
+                    img_anchor = {"center": (self.rect.centerx, self.rect.centery + 10)}
+                else:
+                    img_anchor = {"midbottom": (self.rect.centerx, self.rect.bottom - self.image_bottom_margin)}
             else:
                 img_anchor = {"midleft": (self.rect.x + 10, self.rect.centery)}
             img_rect = self.image.get_rect(**img_anchor)
