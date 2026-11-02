@@ -1,6 +1,7 @@
-"""ZIP extraction, music album folders, research-project construction, and country appearance helpers."""
+"""File operations, saved-content summaries, research projects, and country appearance helpers."""
 
 import copy
+import json
 import data.constants as c
 import os
 import re
@@ -9,6 +10,54 @@ import zipfile
 import beepbox_audio
 from data.queries.tech import get_tech_requirements
 from data import queries
+from data import migrations
+
+
+def read_saved_content_summary(directory):
+    """Read browser details without loading map geometry, images, or history."""
+    result = {"details": [], "error": ""}
+    if not os.path.isfile(os.path.join(directory, "map_data.json")):
+        result["error"] = "map_data.json is missing. Import a complete map or save."
+    meta_path = os.path.join(directory, "meta.json")
+    if not os.path.exists(meta_path):
+        return result
+    try:
+        with open(meta_path, encoding="utf-8") as source:
+            meta = json.load(source)
+        if not isinstance(meta, dict):
+            raise ValueError("meta.json must contain an object.")
+        migrations.check_version(meta.get("version"))
+        metadata = queries.normalized_scenario_metadata(meta.get("scenario_metadata", {}))
+    except (OSError, ValueError) as error:
+        result["error"] = f"Cannot open this item: {error}"
+        return result
+
+    details = result["details"]
+    date = meta.get("date", {})
+    if isinstance(date, dict):
+        # Dates are display-only here. The loader owns defaults and conversion.
+        day, month, year = date.get("day"), date.get("month"), date.get("year")
+        if all(isinstance(value, int) for value in (day, month, year)) and 0 <= month < 12:
+            details.append(f"Game date: {day}/{month + 1}/{year} (day/month/year)")
+        if isinstance(date.get("total_turns"), int):
+            details.append(f"Turn: {date['total_turns']}")
+    country = meta.get("player_country")
+    if country and country != "None":
+        if country == "Spectator":
+            details.append("Player: Spectator")
+        elif isinstance(country, str):
+            nations = dict(queries.get_country_data())
+            saved_nations = meta.get("nation_data", {})
+            if isinstance(saved_nations, dict):
+                nations.update({key: value for key, value in saved_nations.items() if value})
+            details.append(f"Player: {queries.get_country_display_name(country, nations)}")
+    if meta.get("version"):
+        details.append(f"Game version: {meta['version']}")
+    if metadata["author"]:
+        details.append(f"Author: {metadata['author']}")
+    if metadata["description"]:
+        details.extend(("", metadata["description"]))
+    return result
 
 
 def validated_scenario_name(name, label="Scenario Name"):

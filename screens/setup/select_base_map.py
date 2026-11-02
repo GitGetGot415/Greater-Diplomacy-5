@@ -1,133 +1,94 @@
 import os
-from ui import dialogs
-from ui.navigation.game_state import ButtonMenuScreen, FolderListState, RefreshingMenuListScreen
-from ui.widgets.ui_elements import Button, make_back_button, play_ui_sound
-import data.constants as c
-from data import queries
-from ui.dialogs import file_exchange
-from screens.setup import map_refresh
-class Select_Base_Map(RefreshingMenuListScreen, FolderListState):
-    back_state = "MENU"
 
-    # sub_state -> (button/header label, data.constants directory attribute name)
-    # for browsing maps that live in other scenario directories.
-    OTHER_MAP_CATEGORIES = {
+import data.constants as c
+from ui import dialogs
+from ui.dialogs import file_exchange
+from ui.widgets.content_browser import ContentBrowserScreen
+from ui.widgets.ui_elements import Button, make_back_button, play_ui_sound
+from screens.setup import map_refresh
+
+
+class Select_Base_Map(ContentBrowserScreen):
+    back_state = "MENU"
+    title = "MAP EDITOR"
+    content_label = "maps"
+
+    # Resolve directory settings when the screen refreshes.
+    CATEGORIES = {
+        "CUSTOM_MAPS": ("Custom Maps", "SCENARIOS_CUSTOM_DIR"),
+        "BASE_MAPS": ("Base Maps", "BASE_MAPS_DIR"),
         "OTHER_HISTORICAL": ("Historical Scenarios", "SCENARIOS_HISTORICAL_DIR"),
         "OTHER_ALTERNATE": ("Alternate Scenarios", "SCENARIOS_ALTERNATE_DIR"),
     }
+    CATEGORY_WIDTH = 232
 
     def __init__(self):
         super().__init__()
         self.bg_color = (40, 20, 60)
         self.selected_save_path = None
         self.sub_state = "CUSTOM_MAPS"
-
-        self.last_custom_count = -1
-        self.last_base_count = -1
         self.refresh_ui()
 
     @property
     def managed_dir(self):
         return c.SCENARIOS_CUSTOM_DIR
 
-    def get_title(self):
-        if self.sub_state == "CUSTOM_MAPS":
-            return "EDIT EXISTING MAP"
-        if self.sub_state == "BASE_MAPS":
-            return "CREATE NEW MAP FROM BASE"
-        if self.sub_state == "OTHER_CATEGORY":
-            return "EDIT MAP FROM OTHER DIRECTORY"
-        if self.sub_state in self.OTHER_MAP_CATEGORIES:
-            return self.OTHER_MAP_CATEGORIES[self.sub_state][0].upper()
-        return ""
-
-    def has_menu_list(self):
-        return self.sub_state != "OTHER_CATEGORY"
-
-    def update(self):
-        # Automatically refresh if the number of maps has changed since last viewed
-        current_custom = len(os.listdir(c.SCENARIOS_CUSTOM_DIR)) if os.path.exists(c.SCENARIOS_CUSTOM_DIR) else 0
-        current_base = len(os.listdir(c.BASE_MAPS_DIR)) if os.path.exists(c.BASE_MAPS_DIR) else 0
-
-        if self.last_custom_count != current_custom or self.last_base_count != current_base:
-            self.last_custom_count = current_custom
-            self.last_base_count = current_base
-            self.refresh_ui()
-
-        # After the rebuild above, so new buttons also hide during a data refresh.
-        super().update()
-
     def refresh_ui(self):
-        self.elements = []
-
-        if self.sub_state == "OTHER_CATEGORY":
-            self.elements = [make_back_button(lambda: self.set_sub_state("CUSTOM_MAPS"))]
-            self.elements += ButtonMenuScreen.build_menu_buttons(
-                [(label, "blue", lambda s=state: self.set_sub_state(s))
-                 for state, (label, _attr) in self.OTHER_MAP_CATEGORIES.items()])
-            return
-
+        _label, directory_attr = self.CATEGORIES[self.sub_state]
+        directory = getattr(c, directory_attr)
         is_custom = self.sub_state == "CUSTOM_MAPS"
-        is_other_list = self.sub_state in self.OTHER_MAP_CATEGORIES
+        note = ("Open this map in the editor. Save to keep your changes." if is_custom else
+                "Open this source as a new custom map. Saving creates a copy and keeps the source unchanged.")
+        self.build_browser(directory, "No maps in this category. Import a custom map or choose another category.", note)
+        self.elements.extend([
+            make_back_button(self.exit_screen),
+            Button(c.SCREEN_WIDTH - 324, 24, (160, 40), "green", "Import .zip", self.import_custom_map,
+                   font_preset="button_small"),
+            Button(c.SCREEN_WIDTH - 152, 24, (128, 40), "grey", "Refresh", self.reload_entries,
+                   font_preset="button_small"),
+        ])
+        for index, (state, (label, _attr)) in enumerate(self.CATEGORIES.items()):
+            button = Button(self.MARGIN + index * (self.CATEGORY_WIDTH + self.ACTION_GAP), self.CATEGORY_Y,
+                            (self.CATEGORY_WIDTH, 38), "grey", label,
+                            lambda category=state: self.set_sub_state(category), font_preset="button_small")
+            button.is_selected = state == self.sub_state
+            self.elements.append(button)
+        self.add_browser_action("Rename", lambda: self.manage_selected(self.start_rename), 0, enabled=is_custom)
+        self.add_browser_action("Export", lambda: self.manage_selected(self.export_scenario_zip), 1, "green", enabled=is_custom)
+        self.add_browser_action("Delete…", lambda: self.manage_selected(self.start_delete), 2, "red", enabled=is_custom)
+        refresh_button = Button(c.SCREEN_WIDTH - 252, self.CATEGORY_Y, (228, 38), "purple", "Data Refresh",
+                                self.trigger_base_map_data_refresh, font_preset="button_small")
+        refresh_button.apply_state(enabled=self.sub_state == "BASE_MAPS", color="purple")
+        self.elements.append(refresh_button)
+        label = "Edit Map" if is_custom else "Create from Base" if self.sub_state == "BASE_MAPS" else "Edit Copy"
+        self.open_button = Button(c.SCREEN_WIDTH - 244, c.SCREEN_HEIGHT - 64, (220, 44), "green", label,
+                                  self.activate_selected, sound_kind=None)
+        self.open_button.apply_state(enabled=self.selection_can_open, color="green")
+        self.elements.append(self.open_button)
 
-        if is_custom:
-            self.elements.extend([
-                make_back_button(self.exit_screen),
-                Button(160, 20, "medium", "green", "Import .zip",
-                       lambda: file_exchange.import_zip_to_dir(self, self.managed_dir, self.refresh_ui)),
-                Button("centered-160", c.SCREEN_HEIGHT - 100, "large", "purple", "New Map",
-                       lambda: self.set_sub_state("BASE_MAPS")),
-                Button("centered+160", c.SCREEN_HEIGHT - 100, "large", "orange", "Edit Existing Map",
-                       lambda: self.set_sub_state("OTHER_CATEGORY")),
-            ])
-            directory = c.SCENARIOS_CUSTOM_DIR
-        elif is_other_list:
-            _label, attr = self.OTHER_MAP_CATEGORIES[self.sub_state]
-            directory = getattr(c, attr)
-            self.elements.extend([
-                make_back_button(lambda: self.set_sub_state("OTHER_CATEGORY")),
-            ])
-        else:
-            self.elements.extend([
-                make_back_button(lambda: self.set_sub_state("CUSTOM_MAPS")),
-                Button(c.SCREEN_WIDTH - 220, 20, "medium", "purple", "Data Refresh",
-                       self.trigger_base_map_data_refresh),
-            ])
-            directory = c.BASE_MAPS_DIR
+    def import_custom_map(self):
+        self.set_sub_state("CUSTOM_MAPS")
+        file_exchange.import_zip_to_dir(self, self.managed_dir, self.reload_entries)
 
-        names = self.list_folders(directory)
+    def manage_selected(self, handler):
+        if self.sub_state == "CUSTOM_MAPS":
+            self.call_selected(handler)
 
-        # Base maps and maps from other scenario directories are read-only
-        # here: one centred button that opens the map into the editor as
-        # a copy (saving from the editor always writes a new map, it
-        # never overwrites the original).
-        if not is_custom:
-            self.add_menu_list([(name, name) for name in names],
-                               lambda name, d=directory: self.start_editor_with_map(name, d))
-            return
-
-        for i, btn_y in self.layout_menu_list(len(names)):
-            name = names[i]
-
-            row_buttons = [
-                Button(c.SCREEN_WIDTH // 2 - 250, btn_y, "new_game", "blue", name,
-                       lambda n=name: self.start_editor_with_map(n, c.SCENARIOS_CUSTOM_DIR)),
-                Button(c.SCREEN_WIDTH // 2 + 70, btn_y + 5, "small", "grey", "Rename",
-                       lambda n=name: self.start_rename(n)),
-                Button(c.SCREEN_WIDTH // 2 + 190, btn_y + 5, "small", "green", "Export",
-                       lambda n=name: self.export_scenario_zip(n)),
-                Button(c.SCREEN_WIDTH // 2 + 310, btn_y + 5, "small_square", "red", "X",
-                       lambda n=name: self.start_delete(n)),
-            ]
-            for btn in row_buttons:
-                self.add_list_row(btn)
+    def activate_selected(self):
+        if self.selection_can_open:
+            entry = self.selected_entry
+            play_ui_sound("click")
+            self.start_editor_with_map(entry.name, os.path.dirname(entry.path))
 
     def trigger_base_map_data_refresh(self):
-        """Calls the unified data refresh query for base maps."""
+        """Refresh base map data after confirmation."""
+        if self.sub_state != "BASE_MAPS":
+            return
+
         def on_confirm(confirm):
             if confirm:
                 map_refresh.refresh_map_directories(self, [c.BASE_MAPS_DIR],
-                                                success_message="Synced base maps successfully.")
+                                                   success_message="Synced base maps successfully.")
 
         dialogs.ask_yes_no(
             "Confirm Data Refresh",
@@ -137,7 +98,7 @@ class Select_Base_Map(RefreshingMenuListScreen, FolderListState):
 
     def export_scenario_zip(self, scenario_name):
         file_exchange.export_dir_as_zip(os.path.join(self.managed_dir, scenario_name),
-                                  f"{scenario_name}_scenario.zip")
+                                        f"{scenario_name}_scenario.zip")
 
     def start_editor_with_map(self, map_name, directory):
         self.selected_save_path = os.path.join(directory, map_name)
@@ -149,12 +110,10 @@ class Select_Base_Map(RefreshingMenuListScreen, FolderListState):
         super().exit_screen()
 
     def handle_back_key(self):
-        # Escape steps back up the sub-state tree before it leaves the screen.
-        if self.sub_state == "CUSTOM_MAPS":
-            self.go_back()
-            return
-        play_ui_sound("back")
-        if self.sub_state in self.OTHER_MAP_CATEGORIES:
-            self.set_sub_state("OTHER_CATEGORY")
-        else:
+        if self.search_field.active:
+            self.finish_search()
+        elif self.sub_state != "CUSTOM_MAPS":
+            play_ui_sound("back")
             self.set_sub_state("CUSTOM_MAPS")
+        else:
+            self.go_back()

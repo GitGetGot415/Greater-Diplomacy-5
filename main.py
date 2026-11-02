@@ -606,9 +606,9 @@ class Controller:
             elif previous_state in [self.states["MENU"], self.states["NEW_GAME"]]:
                 self.states["MAP"] = Map(num_players=self.num_players)
 
-        # 3. Load Game Refresh
-        if next_state_name == "LOAD_GAME":
-            self.states["LOAD_GAME"].refresh_ui()
+        # Refresh file browsers on entry. Frame updates use cached entries.
+        if next_state_name in ("LOAD_GAME", "SELECT_BASE_MAP"):
+            self.states[next_state_name].reload_entries()
         elif next_state_name == "EDIT_PORTRAIT":
             self.states["EDIT_PORTRAIT"].refresh_ui()
         elif next_state_name == "SETTINGS":

@@ -1,7 +1,7 @@
 GUIDE INDEX
 ===========
 
-documentation/general_info.txt: storage, scenario settings, state ownership, build policy, and project files.
+documentation/general_info.txt: file browsers, storage, scenario settings, state ownership, build policy, and project files.
 documentation/code_layout.md: directory responsibilities and task-to-code references.
 documentation/non_llm_ai.txt: rule-based AI and shared combat rules.
 documentation/ai_movement.txt: AI unit orders, movement caches, aircraft missions, attack checks, rotation, and movement tuning.
@@ -132,6 +132,32 @@ Saved games and multiplayer snapshots retain the scenario settings.
 Only scenario setup changes these settings. Player move files cannot change the host's durations.
 Pending orders retain their remaining turns.
 The map editor's direct unit converter changes starting forms immediately.
+
+SAVED GAME AND MAP BROWSERS
+==========================
+
+Load Game and Map Editor use ui/widgets/content_browser.py.
+Select a row to read its details. Use the bottom-right button or Enter to open the selected item.
+Use the arrow keys to change the selection. Enter in the search field finishes the search without opening an item.
+
+Search filters names without matching capitalization. Clear Search shows all items.
+The Sort button cycles through modification date, ascending name, and descending name.
+The modification date comes from the folder. It is separate from the game date in the details panel.
+
+Rename, Export, and Delete apply to the selected save or custom map. Delete requires confirmation.
+History opens the selected save's turn list. Choose a turn to load that snapshot.
+Import .zip uses the existing desktop file picker or browser upload control.
+
+The Map Editor tabs select custom maps, base maps, historical scenarios, or alternate scenarios.
+Base maps and shipped scenarios open as copies. Their source folders cannot be renamed or deleted from this browser.
+Data Refresh is available in the Base Maps tab. It requires confirmation before it changes the source data.
+
+Browsers read directory entries when they open, after file operations, and when the player clicks Refresh.
+Use Refresh after an external file change. Frame updates and scrolling use cached entries and metadata.
+Details read existing meta.json fields without loading map geometry, images, or history.
+
+Maps without meta.json remain supported. Incomplete maps and unreadable metadata show an error and cannot open from the browser.
+Files from a newer game version show an update message. Rename, Export, and Delete remain available for managed items.
 
 REGULAR SAVE HISTORY
 ====================

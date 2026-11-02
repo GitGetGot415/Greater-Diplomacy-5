@@ -1,5 +1,6 @@
 """Behavior of the shared menu lists, lobby, editor windows, and text fields."""
 
+import os
 import unittest
 from types import SimpleNamespace
 from unittest import mock
@@ -19,6 +20,18 @@ def click(pos):
 
 def button_named(screen, text):
     return next(el for el in screen.elements if getattr(el, "text", None) == text)
+
+
+def save_browser():
+    from screens.menus.load_game import Load_Game
+    from ui.widgets.content_browser import ContentEntry
+
+    screen = Load_Game()
+    entry = ContentEntry("Save", os.path.join(screen.managed_dir, "Save"), 0, "Fixture date")
+    screen.entries = [entry]
+    screen.summary_cache = {entry.path: {"details": [], "error": ""}}
+    screen.refresh_ui()
+    return screen
 
 
 class SharedUiTestCase(unittest.TestCase):
@@ -262,16 +275,13 @@ class ToggleAndFooterTests(SharedUiTestCase):
 
 
 class FolderRowTests(SharedUiTestCase):
-    def test_save_row_buttons_call_their_handlers_with_the_folder(self):
-        from screens.menus.load_game import Load_Game
-
-        screen = Load_Game()
-        with mock.patch.object(screen, "layout_list_rows", return_value=[(0, 120)]), \
-                mock.patch.object(screen, "list_folders", return_value=["Save"]):
-            screen.scroll_click_guard = lambda: True
-            screen.refresh_ui()
-        for label, handler in (("Save", "load_specific_save"), ("History", "open_history_menu"),
-                               ("Rename", "start_rename"), ("Export", "export_save_zip"), ("Del", "start_delete")):
+    def test_save_selection_and_actions_use_the_selected_folder(self):
+        screen = save_browser()
+        with mock.patch.object(screen, "load_specific_save") as load:
+            button_named(screen, "Save").callback()
+        load.assert_not_called()
+        for label, handler in (("Load Game", "load_specific_save"), ("History", "open_history_menu"),
+                               ("Rename", "start_rename"), ("Export", "export_save_zip"), ("Delete…", "start_delete")):
             with self.subTest(label=label), mock.patch.object(screen, handler) as called:
                 button_named(screen, label).callback()
                 called.assert_called_once_with("Save")
@@ -281,11 +291,7 @@ class FolderRowTests(SharedUiTestCase):
         from screens.menus import load_game
         from ui.widgets import ui_elements
 
-        screen = load_game.Load_Game()
-        with mock.patch.object(screen, "layout_list_rows", return_value=[(0, 120)]), \
-                mock.patch.object(screen, "list_folders", return_value=["Save"]):
-            screen.scroll_click_guard = lambda: True
-            screen.refresh_ui()
+        screen = save_browser()
         button = button_named(screen, "History")
         with mock.patch.object(load_game.history_io, "read_turn_dates", return_value=turn_dates), \
                 mock.patch.object(load_game.pickers, "open_listbox_selector"), \
@@ -316,11 +322,10 @@ class ButtonMenuPageTests(SharedUiTestCase):
         self.assertEqual(screen.sub_state, "ALTERNATE")
         screen.draw(self.surface)
 
-    def test_other_directory_page_opens_a_category(self):
+    def test_map_browser_tab_opens_a_category(self):
         from screens.setup.select_base_map import Select_Base_Map
 
         screen = Select_Base_Map()
-        screen.set_sub_state("OTHER_CATEGORY")
         button_named(screen, "Historical Scenarios").callback()
         self.assertEqual(screen.sub_state, "OTHER_HISTORICAL")
 
@@ -548,19 +553,13 @@ class OneSoundPerClickTests(SharedUiTestCase):
         self.assertEqual(self.click_sounds(button_named(screen, "Networking Help")), ["info"])
 
     def load_game_row(self, label):
-        from screens.menus.load_game import Load_Game
-
-        screen = Load_Game()
-        with mock.patch.object(screen, "layout_list_rows", return_value=[(0, 120)]), \
-                mock.patch.object(screen, "list_folders", return_value=["Save"]):
-            screen.scroll_click_guard = lambda: True
-            screen.refresh_ui()
+        screen = save_browser()
         return screen, button_named(screen, label)
 
     def test_save_row_clicks_when_it_loads_and_plays_info_when_refused(self):
         from screens.menus import load_game
 
-        screen, row = self.load_game_row("Save")
+        screen, row = self.load_game_row("Load Game")
         with mock.patch.object(load_game, "newer_version_message", return_value="Update the game."):
             self.assertEqual(self.click_sounds(row, load_game), ["info"])
         self.assertFalse(screen.done)
