@@ -51,6 +51,7 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
 
     MARGIN = 24
     GAP = 16
+    LIST_AND_SEARCH_WIDTH = 470
     CATEGORY_Y = 94
     CONTROL_Y = 166
     PANEL_Y = 212
@@ -76,7 +77,7 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
         self.empty_message = "No items available."
         self._search_was_active = False
         self._was_refreshing = False
-        self.search_field = TextField(self.MARGIN, self.CONTROL_Y, 470, 38,
+        self.search_field = TextField(self.MARGIN, self.CONTROL_Y, self.LIST_AND_SEARCH_WIDTH, 38,
                                       on_change=self.filter_entries, on_submit=self.finish_search)
 
     @property
@@ -128,7 +129,7 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
 
         margin, gap = self.MARGIN, self.GAP
         width = c.SCREEN_WIDTH - margin * 2
-        list_width = int((width - gap) * 0.58)
+        list_width = self.LIST_AND_SEARCH_WIDTH
         panel_height = c.SCREEN_HEIGHT - self.PANEL_Y - self.BOTTOM_MARGIN
         self.list_panel = pygame.Rect(margin, self.PANEL_Y, list_width, panel_height)
         self.detail_panel = pygame.Rect(self.list_panel.right + gap, self.PANEL_Y,
@@ -146,7 +147,7 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
             setattr(self, f"_content_{name}", rect)
         self._apply_filter()
         self.elements = [self.search_field]
-        self.elements.append(Button(510, self.CONTROL_Y, (130, 38), "grey", "Clear Search", self.clear_search,
+        self.elements.append(Button(self.list_panel.right + gap, self.CONTROL_Y, (130, 38), "grey", "Clear Search", self.clear_search,
                                     font_preset="button_small"))
         sort_label = self.SORTS[self.sort_index][1]
         self.elements.append(Button(c.SCREEN_WIDTH - margin - 310, self.CONTROL_Y, (310, 38), "grey",
