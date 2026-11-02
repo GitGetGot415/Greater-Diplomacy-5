@@ -238,9 +238,9 @@ class DialogTests(unittest.TestCase):
             self.assertFalse(modal._resolved)
             sound.assert_not_called()
             modal.handle_events([release(modal.ok_rect.center)])
-            sound.assert_called_once_with("click")
+            sound.assert_called_once_with("back")
             modal.handle_events([click(modal.ok_rect.center), release(modal.ok_rect.center)])
-            sound.assert_called_once_with("click")
+            sound.assert_called_once_with("back")
         self.settle()
         self.assertEqual(calls, [True])
         self.assertTrue(modal_stack.is_empty())
@@ -256,9 +256,44 @@ class DialogTests(unittest.TestCase):
             self.assertFalse(modal._resolved)
             sound.assert_not_called()
             modal.handle_events([click(modal.ok_rect.center), release(modal.ok_rect.center)])
-            sound.assert_called_once_with("click")
+            sound.assert_called_once_with("back")
         self.settle()
         self.assertTrue(modal_stack.is_empty())
+
+    def test_only_the_blue_popups_play_the_help_and_back_sounds(self):
+        for kind, opened, clicked in (("info", ["help"], "back"), ("success", [], "click"),
+                                      ("warning", [], "click"), ("error", [], "click")):
+            with self.subTest(kind=kind), mock.patch.object(ui_elements, "play_ui_sound") as sound:
+                dialogs.show_message("T", "Body.", kind=kind)
+                modal = modal_stack.active()
+                self.assertEqual([call.args[0] for call in sound.call_args_list], opened)
+                sound.reset_mock()
+                modal.handle_events([click(modal.ok_rect.center), release(modal.ok_rect.center)])
+                sound.assert_called_once_with(clicked)
+                modal_stack.pop()
+
+    def test_credits_popup_uses_the_blue_popup_button_and_sounds(self):
+        with mock.patch.object(ui_elements, "play_ui_sound") as sound:
+            dialogs.show_person_info("Name", "Some blurb.", [])
+            sound.assert_called_once_with("help")
+            sound.reset_mock()
+            modal = modal_stack.active()
+            self.assertEqual(modal.ok_button.text, "OK")
+            modal.handle_events([click(modal.ok_rect.center)])
+            self.assertFalse(modal._resolved)
+            modal.handle_events([release(modal.ok_rect.center)])
+            sound.assert_called_once_with("back")
+        self.settle()
+        self.assertTrue(modal_stack.is_empty())
+
+    def test_info_button_leaves_the_help_sound_to_the_popup(self):
+        from ui.widgets.ui_elements import make_info_button
+        with mock.patch.object(ui_elements, "play_ui_sound") as sound:
+            button = make_info_button(10, 10, lambda: dialogs.show_info("T", "Help text."))
+            button.handle_event(click(button.rect.center))
+            button.handle_event(release(button.rect.center))
+            sound.assert_called_once_with("help")
+        modal_stack.pop()
 
     def test_message_kinds_all_render(self):
         for kind in ("info", "success", "warning", "error"):
@@ -398,7 +433,7 @@ class DialogTests(unittest.TestCase):
                     self.assertEqual(modal.scroll_y, modal.max_scroll)
                     modal.draw(surface)
                     self.assertEqual(surface.get_clip(), surface.get_rect())
-                    modal.handle_events([click(modal.ok_rect.center)])
+                    modal.handle_events([click(modal.ok_rect.center), release(modal.ok_rect.center)])
                     self.assertTrue(modal._resolved)
 
     def test_credit_images_forwarded_from_clickable_name(self):
@@ -409,10 +444,9 @@ class DialogTests(unittest.TestCase):
             screen = credits.Credits()
         person = screen.credits_list[0]["people_links"][0]
         self.assertTrue(person["has_popup"])
-        with mock.patch.object(credits, "show_person_info") as show,                 mock.patch.object(credits, "play_ui_sound") as play_sound:
+        with mock.patch.object(credits, "show_person_info") as show:
             screen.additional_events(click(person["link_rect"].center))
         show.assert_called_once_with("Artist", "", [], "center", images=images)
-        play_sound.assert_called_once_with("help")
 
     def test_credit_links_use_scrolled_hitboxes(self):
         from ui.dialogs.person_info import _PersonInfoModal

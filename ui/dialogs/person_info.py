@@ -5,9 +5,9 @@ import webbrowser
 import pygame
 import data.constants as c
 from ui.rendering.font_manager import fonts
-from ui.dialogs.base import _BaseModal, _back_key, _lighten, open_modal
-from ui.widgets import text_utils, ui_elements
-from ui.dialogs.message_box import _KIND_ACCENTS
+from ui.dialogs.base import _back_key, open_modal
+from ui.widgets import text_utils
+from ui.dialogs.message_box import _MessageModal
 from ui.bars import ui_bars
 
 _LINK_COLOR = (100, 100, 255)
@@ -58,16 +58,9 @@ def expand_credit_images(images):
     return expanded
 
 
-class _PersonInfoModal(_BaseModal):
-    """Popup for a Credits entry: a title, an optional free-text info section,
-    optional labeled images, and clickable links below it."""
-
-    BOX_MAX_W = 560
-    BOX_MIN_H = 220
-    BOX_CHROME_H = 180   # 110 of chrome plus the 70 the Close row occupies
-    BORDER_COLOR = _KIND_ACCENTS["info"]
-    BORDER_WIDTH = 3
-    PASSES_RESULT = False
+class _PersonInfoModal(_MessageModal):
+    """The blue information popup for a Credits entry: a title, an optional
+    free-text info section, optional labeled images, and clickable links below it."""
 
     def __init__(self, surface, name, info_text, links, on_result, align="center", images=None):
         self.align = align if align in ("left", "center", "right") else "center"
@@ -108,15 +101,11 @@ class _PersonInfoModal(_BaseModal):
         images_h = sum(max(cell["height"] for cell in row) + _IMAGE_ROW_GAP for row in grid_rows)
 
         links_h = len(self.links) * (self.link_font.get_height() + 8)
-        super().__init__(surface, name, info_text, on_result,
+        super().__init__(surface, name, info_text, on_result, "info",
                          extra_h=images_h + (_CONTENT_GAP if self.image_rows else 0)
                          + links_h + (_CONTENT_GAP if self.links else 0))
-        if self.image_rows:
-            self.box_rect.height = min(self.box_rect.height, surface.get_height() - _CONTENT_MARGIN)
-            self.box_rect.centery = surface.get_height() // 2
 
         self.name = name
-        self.ok_rect = pygame.Rect(self.box_rect.centerx - 60, self.box_rect.bottom - 55, 120, 40)
         self.text_y_start = self.box_rect.y + self.BODY_DY
 
         left_x, right_x = self.box_rect.x + _CONTENT_MARGIN, self.box_rect.right - _CONTENT_MARGIN
@@ -156,6 +145,9 @@ class _PersonInfoModal(_BaseModal):
         self.max_scroll = max(0, y - self.content_rect.bottom) if self.image_rows else 0
         self._sync_scrollbar()
 
+    def _clamps_to_viewport(self):
+        return bool(self.image_rows)
+
     def _sync_scrollbar(self):
         self.scroll_track_rect, self.scroll_handle_rect = ui_bars.get_standard_scrollbar_rects(
             -self.scroll_y, -self.max_scroll,
@@ -183,6 +175,9 @@ class _PersonInfoModal(_BaseModal):
 
     def handle_events(self, events):
         for event in events:
+            if self._resolved:
+                return
+            self.ok_button.handle_event(event)
             if event.type == pygame.MOUSEWHEEL and self.image_rows:
                 self._set_scroll(self.scroll_y - event.y * _SCROLL_STEP)
             elif event.type == pygame.MOUSEMOTION and self._scroll_drag_offset is not None:
@@ -199,10 +194,6 @@ class _PersonInfoModal(_BaseModal):
                     step = _SCROLL_STEP if event.key == pygame.K_DOWN else -_SCROLL_STEP
                     self._set_scroll(self.scroll_y + step)
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                if self.ok_rect.collidepoint(event.pos):
-                    ui_elements.play_ui_sound("back")
-                    self._finish()
-                    return
                 if self.scroll_track_rect is not None and self.scroll_track_rect.collidepoint(event.pos):
                     # Preserve where the thumb was grabbed so the first motion
                     # doesn't jump. Track clicks center the thumb at the pointer.
@@ -232,8 +223,7 @@ class _PersonInfoModal(_BaseModal):
             surface, -self.scroll_y, -self.max_scroll,
             self.content_rect.right + _SCROLLBAR_GAP, self.content_rect.top,
             self.content_rect.height, width=_SCROLLBAR_WIDTH)
-        accent = _KIND_ACCENTS["info"]
-        self.draw_button(surface, self.ok_rect, "Close", accent, _lighten(accent))
+        super().draw_content(surface)
 
     def _draw_extra_content(self, surface):
         mx, my = pygame.mouse.get_pos()
@@ -264,7 +254,7 @@ def show_person_info(name, info_text="", links=None, align="center", tk_parent=N
     optional "recursive": True and "exclude": [filename/relative-path globs].
     Only PNG files are discovered. Labels default to filenames/relative paths. Overflow
     content scrolls with a draggable scrollbar, mouse wheel or arrow keys while
-    Close stays visible.
+    OK stays visible.
     """
     open_modal(lambda surface, callback: _PersonInfoModal(surface, name, info_text, links, callback, align, images),
                on_result, tk_parent)

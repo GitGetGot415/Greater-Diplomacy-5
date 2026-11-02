@@ -861,10 +861,10 @@ def make_info_button(x, y, on_click, y_offset=0):
 
     Each screen owns its own local ``y_offset`` because its neighboring control
     size is local layout, while the button's behavior and visual identity stay
-    consistent everywhere.
+    consistent everywhere. The popup it opens plays the help sound.
     """
     return Button(x, y + y_offset, "scenario_setting_info", "light_blue", "?", on_click,
-                  sound_kind="help")
+                  sound_kind=None)
 
 
 def draw_slider(surface, rect, handle_rect, *, dragging=False, allowed_ratio=1.0,

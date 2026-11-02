@@ -19,6 +19,8 @@ _KIND_ACCENTS = {
 
 
 class _MessageModal(_BaseModal):
+    """A titled message with one OK button. The "info" kind is the blue popup:
+    it plays Help.mp3 when it opens and Back.wav when OK is clicked."""
     BOX_MAX_W = 520
     BOX_CHROME_H = 170   # 110 of chrome plus the 60 the OK row occupies
     BORDER_WIDTH = 3
@@ -27,26 +29,33 @@ class _MessageModal(_BaseModal):
     BODY_BUTTON_GAP = 10
     VIEWPORT_MARGIN = 20
 
-    def __init__(self, surface, title, message, on_result, kind, inline_parts=None):
+    def __init__(self, surface, title, message, on_result, kind, inline_parts=None, extra_h=0):
         self.accent = _KIND_ACCENTS.get(kind, _KIND_ACCENTS["info"])
+        is_info = self.accent == _KIND_ACCENTS["info"]
+        if is_info:
+            ui_elements.play_ui_sound("help")
         self.inline_lines = (render_inline_text(inline_parts, fonts.get("normal"),
                              min(self.BOX_MAX_W, surface.get_width() - 40) - 2 * self.BODY_MARGIN,
                              (210, 210, 210), wrap=True) if inline_parts is not None else None)
         self.inline_height = sum(line.get_height() + 2 for line in self.inline_lines or [])
-        super().__init__(surface, title, message, on_result)
-        if self.inline_lines is not None:
+        super().__init__(surface, title, message, on_result, extra_h=extra_h)
+        if self._clamps_to_viewport():
             self.box_rect.height = min(self.box_rect.height, surface.get_height() - 2 * self.VIEWPORT_MARGIN)
             self.box_rect.centery = surface.get_height() // 2
         self.BORDER_COLOR = self.accent
         self.ok_rect = pygame.Rect(self.box_rect.centerx - 60, self.box_rect.bottom - 55, 120, 40)
         self.ok_button = ui_elements.Button(*self.ok_rect.topleft, self.ok_rect.size, "blue", "OK",
-                                            self._finish)
+                                            self._finish, sound_kind="back" if is_info else "click")
         self.ok_button.set_colors(self.accent, _lighten(self.accent))
         self.body_rect = pygame.Rect(self.box_rect.x + self.BODY_MARGIN, self.box_rect.y + self.BODY_DY,
                                     self.box_rect.width - 2 * self.BODY_MARGIN,
                                     self.ok_rect.top - self.BODY_BUTTON_GAP - (self.box_rect.y + self.BODY_DY))
         self.body_scroll = 0
         self.body_scroll_limit = max(0, self.body_height() - self.body_rect.height)
+
+    def _clamps_to_viewport(self):
+        """Whether the content can outgrow the window, so the box must stop at its edge."""
+        return self.inline_lines is not None
 
     def body_height(self):
         if self.inline_lines is None:
