@@ -1,6 +1,6 @@
 import pygame
 from ui.navigation.game_state import GameState
-from ui.widgets.ui_elements import make_back_button
+from ui.widgets.ui_elements import make_back_button, play_ui_sound
 import data.constants as c
 from ui.rendering.font_manager import fonts
 from ui.dialogs import show_person_info
@@ -81,6 +81,7 @@ class Credits(GameState):
             for item in self.credits_list:
                 for person in item.get("people_links", []):
                     if person["has_popup"] and person["link_text"] and person["link_rect"].collidepoint(event.pos):
+                        play_ui_sound("help")
                         show_person_info(person["link_text"], person["info"], person["links"], person["align"],
                                          images=person["images"])
 

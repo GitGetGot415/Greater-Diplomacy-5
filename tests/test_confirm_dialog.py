@@ -402,9 +402,10 @@ class DialogTests(unittest.TestCase):
             screen = credits.Credits()
         person = screen.credits_list[0]["people_links"][0]
         self.assertTrue(person["has_popup"])
-        with mock.patch.object(credits, "show_person_info") as show:
+        with mock.patch.object(credits, "show_person_info") as show,                 mock.patch.object(credits, "play_ui_sound") as play_sound:
             screen.additional_events(click(person["link_rect"].center))
         show.assert_called_once_with("Artist", "", [], "center", images=images)
+        play_sound.assert_called_once_with("help")
 
     def test_credit_links_use_scrolled_hitboxes(self):
         from ui.dialogs.person_info import _PersonInfoModal
