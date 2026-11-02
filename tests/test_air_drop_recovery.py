@@ -22,8 +22,10 @@ from screens.game.battle_screen import Battle_Screen
 from screens.game.map import Map
 from tests import test_air_transport as transport_tests
 from tests.air_fixtures import tile, wing
+from tests.tournament_fixtures import fast_tournament_crypto
 
 
+@fast_tournament_crypto()
 class AirDropRecoveryTests(unittest.TestCase):
     def setUp(self):
         self.fixture = transport_tests.TransportTests()

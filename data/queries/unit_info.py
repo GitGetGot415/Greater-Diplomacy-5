@@ -181,11 +181,22 @@ def unit_is_air_drop_recovering(unit):
     return air_drop_recovery_turns(unit) > 0
 
 
+# Metadata objects that passed validation, by id. Holding each object keeps its id
+# from being reused. Clearing at the limit releases the copies of rebuilt worlds.
+_VALIDATED_METADATA = {}
+_VALIDATED_METADATA_LIMIT = 20_000
+
+
 def get_unit_metadata(unit_name, unit_library=None, *, context=None):
-    """Read active identity metadata. Infer names only for older content."""
+    """Read active identity metadata. Infer names only for older content.
+
+    Each metadata object is validated once. This function has very many callers per turn.
+    """
     library = queries.get_unit_library(context) if unit_library is None else unit_library
     stats = library.get(unit_name, {})
     metadata = stats.get("metadata")
+    if metadata is not None and _VALIDATED_METADATA.get(id(metadata)) is metadata:
+        return metadata
     if "metadata" not in stats:
         return migrations.legacy_unit_metadata(unit_name, stats)
     if not isinstance(metadata, dict):
@@ -213,6 +224,9 @@ def get_unit_metadata(unit_name, unit_library=None, *, context=None):
         raise ValueError(f"Unit {unit_name}: metadata.recruitment.industry must be industry, basic_factory, or none.")
     if not isinstance(recruitment.get("coastal"), bool):
         raise ValueError(f"Unit {unit_name}: metadata.recruitment.coastal must be boolean.")
+    if len(_VALIDATED_METADATA) >= _VALIDATED_METADATA_LIMIT:
+        _VALIDATED_METADATA.clear()
+    _VALIDATED_METADATA[id(metadata)] = metadata
     return metadata
 
 
