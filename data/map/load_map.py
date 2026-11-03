@@ -489,7 +489,10 @@ def load_map_assets(context, load_path, scenario_settings=None, *, load_presenta
 
     # 2. Read the save and convert it to the current version before any of it is used.
     save_meta, raw_map_data, history = read_save_files(load_path)
-    migrations.upgrade_save(save_meta if save_meta is not None else {}, raw_map_data, history)
+    migrations.upgrade_save(save_meta if save_meta is not None else {}, raw_map_data)
+    # Other snapshots stay in their saved format. Only the selected turn becomes live state.
+    if context.history_turn is not None:
+        migrations.upgrade_history_turn(history.get(str(context.history_turn)), raw_map_data)
     restore_scenario_metadata(context, save_meta, load_path if has_explicit_path else None)
 
     _apply_saved_scenario_settings(context, save_meta)
@@ -505,12 +508,16 @@ def load_map_assets(context, load_path, scenario_settings=None, *, load_presenta
 
     if save_meta:
         # These compare saved research with the active tree, so they run after it is selected.
+        # Every snapshot shares the save's research_years, so this one converts all history.
         migrations.migrate_infantry_research(save_meta, tech_tree, world_state.history)
-        migrations.clamp_research_levels(save_meta, tech_tree, world_state.history)
-        migrations.grant_research_prerequisites(save_meta, tech_tree, world_state.history)
 
     if context.history_turn is not None and save_meta:
         _apply_history_snapshot(save_meta, world_state.history, context.history_turn)
+
+    if save_meta:
+        # These change only live state, so they run after a selected turn becomes live.
+        migrations.clamp_research_levels(save_meta, tech_tree)
+        migrations.grant_research_prerequisites(save_meta, tech_tree)
 
     _load_nation_records(context, save_meta, disabled_tech_keys)
 

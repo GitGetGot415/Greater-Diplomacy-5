@@ -27,11 +27,13 @@ def round_trip(value):
 
 
 def upgraded(save_meta=None, map_data=None, history=None):
-    """Convert unstamped fixture data and return the three parts."""
+    """Convert unstamped fixture data as a load does. Convert each snapshot as a selected turn."""
     save_meta = {} if save_meta is None else save_meta
     map_data = {} if map_data is None else map_data
     history = {} if history is None else history
-    migrations.upgrade_save(save_meta, map_data, history)
+    migrations.upgrade_save(save_meta, map_data)
+    for snapshot in history.values():
+        migrations.upgrade_history_turn(snapshot, map_data)
     return save_meta, map_data, history
 
 
@@ -51,7 +53,7 @@ class GameVersionTests(unittest.TestCase):
     def test_newer_saves_are_refused_with_an_update_message(self):
         newer = f"v{migrations.CURRENT_VERSION + 1}"
         with self.assertRaisesRegex(migrations.NewerVersionError, "Update the game"):
-            migrations.upgrade_save({"version": newer}, {}, {})
+            migrations.upgrade_save({"version": newer}, {})
         with tempfile.TemporaryDirectory() as directory:
             with open(os.path.join(directory, "meta.json"), "w") as file:
                 json.dump({"version": newer}, file)
@@ -67,7 +69,7 @@ class GameVersionTests(unittest.TestCase):
                 saved = {"nation_data": {"A": {"allied_with": ["B"]}}}
                 if stamp is not None:
                     saved["version"] = stamp
-                migrations.upgrade_save(saved, {}, {})
+                migrations.upgrade_save(saved, {})
                 self.assertNotIn("allied_with", saved["nation_data"]["A"])
                 self.assertEqual(saved["version"], c.GAME_VERSION)
 
@@ -87,11 +89,19 @@ class GameVersionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "older than v46"):
             migrations.upgrade_move({"nation_data": {}, "provinces": {}})
 
+    def test_saves_leave_history_until_a_player_selects_a_turn(self):
+        snapshot = {"nation_data": {"A": {"allied_with": ["B"]}}}
+        history = {"1": snapshot}
+        migrations.upgrade_save({}, {})
+        self.assertEqual(snapshot, {"nation_data": {"A": {"allied_with": ["B"]}}})
+        migrations.upgrade_history_turn(history["1"], {})
+        self.assertEqual(snapshot, {"nation_data": {"A": {}}})
+
     def test_conversion_is_safe_to_repeat(self):
         saved = {"nation_data": {"A": {"allied_with": ["B"], "research_queue": [{"tech_name": "a"}]}}}
         upgraded(saved)
         once = copy.deepcopy(saved)
-        migrations.upgrade_save(saved, {}, {})
+        migrations.upgrade_save(saved, {})
         self.assertEqual(saved, once)
 
 
@@ -115,7 +125,7 @@ class OlderFormatTests(unittest.TestCase):
                 raw = {"P": copy.deepcopy(province)}
                 history = {"1": {"nation_data": {"A": copy.deepcopy(country)},
                                  "provinces": {"P": copy.deepcopy(province)}}}
-                migrations.upgrade_save(saved, raw, history)
+                upgraded(saved, raw, history)
                 for record in (saved, history["1"]):
                     self.assertEqual(record["nation_data"]["A"]["custom_production_units"], [current])
                     self.assertEqual(record["nation_data"]["A"]["scripted_events"][0]
@@ -131,7 +141,7 @@ class OlderFormatTests(unittest.TestCase):
                                      [{"unit_type": current, "turns_remaining": 3, "paid_materials": 17}])
                 self.assertEqual(saved["future_field"], [7])
                 once = copy.deepcopy((saved, raw, history))
-                migrations.upgrade_save(saved, raw, history)
+                upgraded(saved, raw, history)
                 self.assertEqual((saved, raw, history), once)
                 self.assertEqual(round_trip(saved), saved)
 
@@ -311,16 +321,14 @@ class ResearchChangeTests(unittest.TestCase):
     def test_owned_technologies_receive_their_prerequisites_once(self):
         country = {"research": {"top": 1, "capped": 2, "unknown_tech": 5, "infantry_type": 30}}
         complete = {"research": {"base": 3, "middle": 2, "top": 2}}
-        history = {"1": {"nation_data": {"A": copy.deepcopy(country)}}}
         saved = {"nation_data": {"A": country, "B": complete}, "default_research": {"top": 1}}
-        migrations.grant_research_prerequisites(saved, self.TREE, history)
-        for record in (country, history["1"]["nation_data"]["A"]):
-            self.assertEqual(record["research"], {"top": 1, "middle": 1, "base": 2, "capped": 2,
-                                                   "unknown_tech": 5, "infantry_type": 30})
+        migrations.grant_research_prerequisites(saved, self.TREE)
+        self.assertEqual(country["research"], {"top": 1, "middle": 1, "base": 2, "capped": 2,
+                                               "unknown_tech": 5, "infantry_type": 30})
         self.assertEqual(saved["default_research"], {"top": 1, "middle": 1, "base": 2})
         self.assertEqual(complete["research"], {"base": 3, "middle": 2, "top": 2})
         once = copy.deepcopy(saved)
-        migrations.grant_research_prerequisites(saved, self.TREE, history)
+        migrations.grant_research_prerequisites(saved, self.TREE)
         self.assertEqual(saved, once)
 
     def test_levels_above_the_active_maximum_are_lowered_and_finished_projects_removed(self):
@@ -329,14 +337,12 @@ class ResearchChangeTests(unittest.TestCase):
                                       {"tech_name": "base", "points_remaining": 5}],
                    "research_progress": {"capped": 3}, "current_research": "capped"}
         saved = {"nation_data": {"A": country}, "default_research": {"capped": 7}}
-        history = {"1": {"nation_data": {"A": copy.deepcopy(country)}}}
-        migrations.clamp_research_levels(saved, self.TREE, history)
-        for record in (country, history["1"]["nation_data"]["A"]):
-            # The equipment tracks keep levels beyond a content cap. See migrate_infantry_research.
-            self.assertEqual(record["research"], {"capped": 4, "base": 1, "infantry_type": 500})
-            self.assertEqual(record["research_queue"], [{"tech_name": "base", "points_remaining": 5}])
-            self.assertEqual(record["research_progress"], {})
-            self.assertIsNone(record["current_research"])
+        migrations.clamp_research_levels(saved, self.TREE)
+        # The equipment tracks keep levels beyond a content cap. See migrate_infantry_research.
+        self.assertEqual(country["research"], {"capped": 4, "base": 1, "infantry_type": 500})
+        self.assertEqual(country["research_queue"], [{"tech_name": "base", "points_remaining": 5}])
+        self.assertEqual(country["research_progress"], {})
+        self.assertIsNone(country["current_research"])
         self.assertEqual(saved["default_research"], {"capped": 4})
 
 
@@ -455,7 +461,7 @@ class BuiltInMapTests(unittest.TestCase):
         map_data = round_trip(queries.build_map_data_save(context))
         before = copy.deepcopy((save, map_data))
         # Every conversion rule leaves a current save unchanged.
-        migrations.upgrade_save(save, map_data, {})
+        migrations.upgrade_save(save, map_data)
         self.assertEqual((save, map_data), before)
 
 

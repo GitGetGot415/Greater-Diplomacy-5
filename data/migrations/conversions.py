@@ -24,10 +24,11 @@ LEGACY_RESEARCH_POINTS_PER_DAY = 10
 V46_MOVE_SECTIONS = ("nation_data", "provinces", "aircraft_orders", "release_subjects")
 
 
-def convert_save(save_meta, map_data, history):
-    """Convert meta.json, map_data.json, and every history snapshot in place.
+def convert_save(save_meta, map_data):
+    """Convert meta.json and map_data.json in place.
 
-    A selected history turn becomes live state, so every snapshot is converted too.
+    History snapshots stay in their saved format. Only a selected history turn becomes
+    live state, and convert_history_turn converts it then.
     """
     _nations(save_meta.get("nation_data"))
     for province in map_data.values():
@@ -35,20 +36,27 @@ def convert_save(save_meta, map_data, history):
     for key, province in (save_meta.get("provinces") or {}).items():
         if isinstance(province, dict):
             _province(province, map_data.get(key, {}).get("terrain"))
-    for snapshot in history.values():
-        if not isinstance(snapshot, dict):
-            continue
-        _nations(snapshot.get("nation_data"))
-        for key, province in (snapshot.get("provinces") or {}).items():
-            if isinstance(province, dict):
-                _province(province, map_data.get(key, {}).get("terrain"))
     # Completed real-time saves made before offline_view open as spectator replays.
     realtime_match = save_meta.get("realtime_match")
     if isinstance(realtime_match, dict) and realtime_match.get("format") == "gd5-realtime-v1":
         realtime_match.setdefault("offline_view", "spectator")
     aliases = {**LEGACY_UNIT_NAMES, **equipment_stage_aliases()}
-    for records in (save_meta, map_data, history):
+    for records in (save_meta, map_data):
         _unit_records(records, aliases)
+
+
+def convert_history_turn(snapshot, map_data):
+    """Convert one history snapshot in place before it becomes live state.
+
+    map_data gives each province's terrain by JSON key.
+    """
+    if not isinstance(snapshot, dict):
+        return
+    _nations(snapshot.get("nation_data"))
+    for key, province in (snapshot.get("provinces") or {}).items():
+        if isinstance(province, dict):
+            _province(province, map_data.get(key, {}).get("terrain"))
+    _unit_records(snapshot, {**LEGACY_UNIT_NAMES, **equipment_stage_aliases()})
 
 
 def convert_move(player_data):
@@ -210,9 +218,11 @@ def _unit_records(records, aliases):
                 return prefix + converted(name[len(prefix):-1]) + ")"
         return aliases.get(name, name)
 
+    # Recurse only into containers. A large save holds many plain values.
     if isinstance(records, list):
         for item in records:
-            _unit_records(item, aliases)
+            if isinstance(item, (dict, list)):
+                _unit_records(item, aliases)
     elif isinstance(records, dict):
         for field, value in records.items():
             if field in ("type", "unit_type", "original_type", "target_type"):
@@ -224,7 +234,7 @@ def _unit_records(records, aliases):
                     if name not in choices:
                         choices.append(name)
                 records[field] = choices
-            else:
+            elif isinstance(value, (dict, list)):
                 _unit_records(value, aliases)
 
 

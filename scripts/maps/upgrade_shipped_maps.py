@@ -32,7 +32,7 @@ def upgrade_map(directory, *, write=False):
     directory = Path(directory)
     save_meta, map_data, history = load_map.read_save_files(directory)
     before = copy.deepcopy((save_meta, map_data, history))
-    migrations.upgrade_save(save_meta if save_meta is not None else {}, map_data, history)
+    migrations.upgrade_save(save_meta if save_meta is not None else {}, map_data)
     changed = [name for name, old, new in (("meta.json", before[0], save_meta),
                                            ("map_data.json", before[1], map_data),
                                            ("history", before[2], history))

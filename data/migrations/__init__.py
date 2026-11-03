@@ -28,6 +28,7 @@ from data.migrations.versions import (
     CURRENT_VERSION,
     check_version,
     upgrade_save,
+    upgrade_history_turn,
     move_version,
     upgrade_move,
 )

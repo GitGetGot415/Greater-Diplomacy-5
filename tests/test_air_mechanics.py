@@ -34,7 +34,7 @@ from tests.tournament_fixtures import fast_tournament_crypto
 
 def load_old_units(game):
     """Convert fixture units as a load does: the conversion rules, then the load repairs."""
-    migrations.upgrade_save({}, game.map_data, {})
+    migrations.upgrade_save({}, game.map_data)
     queries.refresh_unit_stats(game.map_data, game.nation_data, queries.get_unit_library())
     queries.normalize_air_orders(game.map_data)
 

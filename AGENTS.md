@@ -263,7 +263,8 @@ Keep tuning data in its source files:
   Use global settings only when the user explicitly requests a preference across all games.
 - Preserve unknown or older valid data where possible.
   Migration must produce predictable results and be safe to run once on load.
-- The conversion rules also convert every history snapshot. A selected history turn becomes live game state.
+- History snapshots convert only when a player selects that turn. A selected history turn becomes live game state.
+  Do not convert every snapshot on load. migrate_infantry_research is the exception, because snapshots share research_years.
 - The conversion rules convert tournament moves from v46 and every later release.
   The host must approve a move whose stamp differs from the host's version. The converted move then passes all normal validation.
 - Load repairs fix invalid current data on every load. Library conversions compare saved data with the active libraries on every load.

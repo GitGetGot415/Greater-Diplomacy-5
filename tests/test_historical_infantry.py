@@ -229,7 +229,8 @@ class HistoricalInfantryTests(unittest.TestCase):
         saved = {"version": "v46", "nation_data": nations, "provinces": copy.deepcopy(raw),
                  "unknown": {"keep": "unchanged"}}
         history = {"1": {"provinces": copy.deepcopy(raw)}}
-        migrations.upgrade_save(saved, raw, history)
+        migrations.upgrade_save(saved, raw)
+        migrations.upgrade_history_turn(history["1"], raw)
         for older, current in aliases.items():
             with self.subTest(older=older):
                 self.assertEqual(saved["nation_data"][older]["custom_production_units"], [current])
@@ -246,7 +247,8 @@ class HistoricalInfantryTests(unittest.TestCase):
                 self.assertEqual(unit["health"], self.library[current]["health"] / 4)
                 self.assertEqual((unit["unit_id"], unit["unknown"]), ("keep-id", [7]))
         once = copy.deepcopy((saved, raw, history))
-        migrations.upgrade_save(saved, raw, history)
+        migrations.upgrade_save(saved, raw)
+        migrations.upgrade_history_turn(history["1"], raw)
         self.assertEqual((saved, raw, history), once)
 
     def test_tournament_conversion_preserves_intents_and_projection_agreement(self):
@@ -400,11 +402,27 @@ class HistoricalResearchMigrationTests(unittest.TestCase):
         migrations.migrate_infantry_research(restored, self.tree)
         self.assertEqual(restored, saved)
 
-    def test_malformed_year_lists_are_rejected(self):
+    def test_malformed_year_lists_keep_their_levels(self):
+        # A malformed list cannot tell what its levels mean. The load must not stop.
         for source in (None, [], [1910, 1800], [1910, 1910], ["1910"]):
-            with self.subTest(source=source), self.assertRaises(ValueError):
-                migrations.migrate_infantry_research({"research_years": {"infantry_type": source},
-                    "nation_data": {"A": {"research": {"infantry_type": 1}}}}, self.tree)
+            with self.subTest(source=source):
+                saved = {"research_years": {"infantry_type": source},
+                         "nation_data": {"A": {"research": {"infantry_type": 3}}}}
+                migrations.migrate_infantry_research(saved, self.tree)
+                self.assertEqual(saved["nation_data"]["A"]["research"]["infantry_type"], 3)
+        saved = {"research_years": "invalid", "nation_data": {"A": {"research": {"infantry_type": 3}}}}
+        migrations.migrate_infantry_research(saved, self.tree)
+        self.assertEqual(saved["nation_data"]["A"]["research"]["infantry_type"], 3)
+
+    def test_unreadable_levels_read_as_the_nearest_whole_level(self):
+        for level, expected in ((2.6, 3), (-4, 0), ("5", 0), (None, 0), (True, 0), (float("nan"), 0)):
+            with self.subTest(level=level):
+                saved = {"research_years": {"infantry_type": list(self.tree["infantry_type"]["years"])},
+                         "nation_data": {"A": {"research": {"infantry_type": level}}}}
+                history = {"1": {"nation_data": {"A": {"research": {"infantry_type": level}}}}}
+                migrations.migrate_infantry_research(saved, self.tree, history)
+                self.assertEqual(saved["nation_data"]["A"]["research"]["infantry_type"], expected)
+                self.assertEqual(history["1"]["nation_data"]["A"]["research"]["infantry_type"], expected)
 
     def test_condensed_stages_keep_completed_years_and_unfinished_points(self):
         tree = {"infantry_type": {"years": [1800, 1905, 1915, 1925]}}

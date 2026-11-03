@@ -690,7 +690,7 @@ class RealtimeSessionTests(unittest.TestCase):
         # The first real-time format already existed before offline_view was
         # stored. The conversion rules keep those completed saves usable too.
         legacy = {"player_country": "None", "realtime_match": {"format": "gd5-realtime-v1"}}
-        migrations.upgrade_save(legacy, {}, {})
+        migrations.upgrade_save(legacy, {})
         legacy_player, legacy_active = _saved_player_view(legacy)
         self.assertEqual((legacy_player, legacy_active), ("Spectator", []))
 

@@ -150,13 +150,32 @@ Some renames do not use years. Examples are `Piston Fighter` and `WW1 Tank`.
 
 1. `read_save_files` reads `meta.json`, `map_data.json`, and the turn history.
 2. `upgrade_save` refuses a newer save. It then runs every conversion rule and stamps the current version.
-   The rules also convert every history snapshot. A selected history turn becomes live game state.
+   `upgrade_history_turn` converts the selected history turn, if there is one.
 3. Scenario settings select the active libraries.
-4. `migrate_infantry_research`, `clamp_research_levels`, and `grant_research_prerequisites` convert research.
+4. `migrate_infantry_research` converts research levels, in all history too.
 5. A selected history turn replaces the current country and province state.
+   `clamp_research_levels` and `grant_research_prerequisites` then repair the live research.
 6. Country records load. Province repairs drop or clamp content that the active libraries do not contain.
 7. `refresh_unit_stats` copies unit statistics from the active library.
 8. Faction repair removes members that cannot be in their faction.
+
+### History Snapshots
+
+The loader does not convert every history snapshot.
+Only a selected history turn becomes live game state, so only that snapshot converts.
+The other snapshots stay in their saved format. The rules convert them if a player selects them later.
+Conversion of every snapshot added several seconds to each load of a large save.
+
+`migrate_infantry_research` is the exception. A save has one `research_years` list for all snapshots.
+That function changes the list, so it must convert the levels in every snapshot at the same time.
+
+### Broken Research Data
+
+Broken research data does not stop a load:
+
+- An unreadable equipment level reads as the nearest whole level, or 0.
+- A malformed year list cannot tell what its levels mean, so those levels stay as they are.
+- A missing year list uses the original GD5 dates in `LEGACY_INFANTRY_RESEARCH_YEARS`.
 
 The loader does not write the save during conversion.
 The next save writes the current format.

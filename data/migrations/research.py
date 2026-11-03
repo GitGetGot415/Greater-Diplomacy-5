@@ -1,5 +1,7 @@
 """Convert saved research levels to the active technology tree."""
 
+import math
+
 import data.constants as c
 
 
@@ -12,30 +14,45 @@ LEGACY_INFANTRY_RESEARCH_YEARS = {
 }
 
 
+def _valid_years(years):
+    return (isinstance(years, list) and bool(years)
+            and all(type(year) is int for year in years) and years == sorted(set(years)))
+
+
+def _saved_level(level):
+    """Read a saved equipment level as a nonnegative whole number. Unreadable levels read as 0."""
+    if type(level) is int:
+        return max(0, level)
+    if isinstance(level, float) and math.isfinite(level):
+        return max(0, round(level))
+    return 0
+
+
 def migrate_infantry_research(saved, tech_tree, history=None):
-    """Map completed equipment years to the active stages. Keep unfinished points."""
-    sources = saved.get("research_years", LEGACY_INFANTRY_RESEARCH_YEARS)
-    if not isinstance(sources, dict):
-        raise ValueError("Saved research_years must contain technology year lists.")
+    """Map completed equipment years to the active stages. Keep unfinished points.
+
+    It converts every history snapshot too. All snapshots share the save's research_years.
+    Broken saved data does not stop a load. An unreadable level reads as the nearest whole
+    level, or 0. A malformed year list cannot tell what its levels mean, so those levels stay.
+    """
+    saved_years = saved.get("research_years", LEGACY_INFANTRY_RESEARCH_YEARS)
     targets = {key: list(tech_tree[key]["years"])
                for key in c.DATED_UNIT_RESEARCH_TRACKS if key in tech_tree}
+    sources = {}
+    if isinstance(saved_years, dict):
+        sources = {key: saved_years[key] if _valid_years(saved_years[key]) else target
+                   for key, target in targets.items() if key in saved_years}
 
     def convert(research, pending=()):
         if not isinstance(research, dict):
             return
         for key, target in targets.items():
-            if key not in sources or key not in research:
+            if key not in research:
                 continue
-            source = sources[key]
-            if source == target:
+            level = research[key] = _saved_level(research[key])
+            source = sources.get(key)
+            if source is None or source == target:
                 continue
-            if (not isinstance(source, list) or not source
-                    or any(type(year) is not int for year in source)
-                    or source != sorted(set(source))):
-                raise ValueError(f"Saved research years for {key} must be increasing integers.")
-            level = research[key]
-            if type(level) is not int or level < 0:
-                raise ValueError(f"Saved research level for {key} must be a nonnegative integer.")
             if level:
                 # Retain levels beyond an older content cap instead of discarding them.
                 year = source[min(level, len(source)) - 1]
@@ -75,9 +92,10 @@ def migrate_infantry_research(saved, tech_tree, history=None):
     return saved
 
 
-def clamp_research_levels(saved, tech_tree, history=None):
+def clamp_research_levels(saved, tech_tree):
     """Lower research levels above the active maximum. Drop projects the new maximum completes.
 
+    It changes only the live state. A selected history turn becomes live state first.
     The equipment tracks keep their levels. migrate_infantry_research retains levels
     beyond a content cap on purpose.
     """
@@ -108,18 +126,16 @@ def clamp_research_levels(saved, tech_tree, history=None):
     if isinstance(saved.get("default_research"), dict):
         clamp({"research": saved["default_research"]})
     clamp_countries(saved.get("nation_data"))
-    for snapshot in (history or {}).values():
-        if isinstance(snapshot, dict):
-            clamp_countries(snapshot.get("nation_data"))
     return saved
 
 
-def grant_research_prerequisites(saved, tech_tree, history=None):
+def grant_research_prerequisites(saved, tech_tree):
     """Grant the prerequisite levels of technologies that a country already has.
 
     Without them a country cannot research further levels of what it owns. Older saves
     have technologies whose prerequisites were added later. The grant uses the active
     research tree. The equipment tracks are not changed, and no prerequisite uses them.
+    It changes only the live state. A selected history turn becomes live state first.
     """
     from data import queries
 
@@ -148,7 +164,4 @@ def grant_research_prerequisites(saved, tech_tree, history=None):
 
     grant(saved.get("default_research"))
     grant_countries(saved.get("nation_data"))
-    for snapshot in (history or {}).values():
-        if isinstance(snapshot, dict):
-            grant_countries(snapshot.get("nation_data"))
     return saved

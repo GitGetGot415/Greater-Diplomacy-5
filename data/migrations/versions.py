@@ -38,17 +38,22 @@ def check_version(version, subject="This save"):
     return number
 
 
-def upgrade_save(save_meta, map_data, history):
+def upgrade_save(save_meta, map_data):
     """Convert one loaded save to the current format in place.
 
-    save_meta is meta.json, map_data is map_data.json by JSON key, and history
-    holds the decoded turn snapshots. Every conversion rule runs, whatever version
-    wrote the save. Return the saved version number.
+    save_meta is meta.json, and map_data is map_data.json by JSON key. Every conversion
+    rule runs, whatever version wrote the save. History snapshots are not converted here.
+    upgrade_history_turn converts a snapshot when a player selects it. Return the saved version number.
     """
     version = check_version(save_meta.get("version"))
-    conversions.convert_save(save_meta, map_data, history)
+    conversions.convert_save(save_meta, map_data)
     save_meta["version"] = c.GAME_VERSION
     return version
+
+
+def upgrade_history_turn(snapshot, map_data):
+    """Convert one history snapshot to the current format in place, before it becomes live state."""
+    conversions.convert_history_turn(snapshot, map_data)
 
 
 def move_version(player_data):

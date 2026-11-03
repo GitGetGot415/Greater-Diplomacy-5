@@ -203,14 +203,14 @@ class AirRulesTests(unittest.TestCase):
                    "custom_production_units": ["Biplane Fighter", "Zeppelin"]}
         saved = {"nation_data": {"A": country}}
         with mock.patch.object(queries, "get_tech_tree", return_value=tree):
-            migrations.upgrade_save(saved, {"P": province}, {})
+            migrations.upgrade_save(saved, {"P": province})
             self.assertEqual(province["units"][0]["type"], "Biplane Fighter I")
             self.assertEqual(province["units"][0]["order"]["target_type"], "Biplane Fighter I")
             self.assertEqual(country["custom_production_units"], ["Biplane Fighter I", "Zeppelin I"])
             self.assertEqual(country["research"], {"test_aircraft": 1, "flight_basics": 2})
             self.assertEqual(country["research_progress"], {"test_aircraft": 123})
             expected = copy.deepcopy((province, country))
-            migrations.upgrade_save(saved, {"P": province}, {})
+            migrations.upgrade_save(saved, {"P": province})
             self.assertEqual((province, country), expected)
         for new in migrations.LEGACY_AIRCRAFT_NAMES.values():
             self.assertIn(new, queries.get_unit_library())
@@ -278,7 +278,7 @@ class AirRulesTests(unittest.TestCase):
         province["units"].append({"type": "Truck (Piston Bomber)", "original_type": "Piston Bomber",
                                   "unit_id": "bomber", "max_health": c.TRUCK_MAX_HP,
                                   "health": c.TRUCK_MAX_HP / 2, "original_max_health": 100})
-        migrations.upgrade_save({}, {"P": province}, {})
+        migrations.upgrade_save({}, {"P": province})
         self.assertEqual([unit["type"] for unit in province["units"][:-1]], list(names.values()))
         self.assertEqual([item["unit_type"] for item in province["unit_queue"]], list(names.values()))
         bomber = province["units"][-1]
