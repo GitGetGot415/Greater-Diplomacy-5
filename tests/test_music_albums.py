@@ -151,6 +151,26 @@ class AlbumTileTests(unittest.TestCase):
     def album_buttons(self, player):
         return [b for b in player.elements if getattr(b, "pane", None) == "album"]
 
+    def test_background_drag_pulls_only_the_grabbed_panes_content_down(self):
+        player = self.make_player([f"Fixture {index}" for index in range(24)])
+        player.controller.playlist = [
+            f"assets/music/Fixture {index // 10}/song {index}.ogg" for index in range(20)]
+        for pane, other in (("album", "track"), ("track", "album")):
+            with self.subTest(pane=pane):
+                player._scroll_album = player._scroll_track = -100
+                player.refresh_ui()
+                start = player.pane_rects()[pane].center
+                end = (start[0], start[1] + 30)
+                for event in (
+                    pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=start, button=1),
+                    pygame.event.Event(pygame.MOUSEMOTION, pos=end, rel=(0, 30), buttons=(1, 0, 0)),
+                    pygame.event.Event(pygame.MOUSEBUTTONUP, pos=end, button=1),
+                ):
+                    player.additional_events(event)
+                self.assertEqual(player.pane_scroll(pane), -70)
+                self.assertEqual(player.pane_scroll(other), -100)
+                self.assertFalse(player.is_content_dragging(f"_scroll_{pane}"))
+
     def test_clear_starting_button_clears_and_saves_the_song(self):
         player = self.make_player([])
         player.controller.starting_song = "assets/music/Fixture/start.ogg"

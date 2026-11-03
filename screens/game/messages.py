@@ -402,7 +402,7 @@ class Messages_Screen(Screen):
 
         elif event.type == pygame.MOUSEMOTION:
             if self.is_dragging_messages:
-                self.msg_scroll_y -= event.rel[1] # Subtract so dragging down pulls up newer messages
+                self.msg_scroll_y += event.rel[1] # Dragging down pulls the thread down.
                 self.msg_scroll_y = max(0, min(self.msg_scroll_y, self.max_msg_scroll))
                 
         # --- Text Input Logic ---

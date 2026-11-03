@@ -199,12 +199,12 @@ class ContentBrowserTests(unittest.TestCase):
         screen.draw(self.surface)
         row = button_named(screen, "Save 02")
         start = row.rect.center
-        end = (start[0], start[1] + 50)
+        end = (start[0], start[1] - 50)
         with mock.patch("pygame.mouse.get_pos", return_value=end), \
                 mock.patch.object(screen, "select_entry") as select:
             screen.handle_events([
                 pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=start),
-                pygame.event.Event(pygame.MOUSEMOTION, pos=end, rel=(0, 50), buttons=(1, 0, 0)),
+                pygame.event.Event(pygame.MOUSEMOTION, pos=end, rel=(0, -50), buttons=(1, 0, 0)),
                 pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=end),
             ])
         select.assert_not_called()

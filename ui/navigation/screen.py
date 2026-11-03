@@ -328,13 +328,7 @@ class Screen:
                               and ((handle and handle.collidepoint(event.pos))
                                    or track.collidepoint(event.pos)))
 
-        # invert=True here because this list also has a real scrollbar (below):
-        # handle_content_drag defaults to touch-pan feel (drag down reveals
-        # earlier rows), but the scrollbar/wheel on the same scroll_y move the
-        # opposite way (down reveals later rows). Grabbing the list body has to
-        # agree with dragging its own scrollbar, not fight it.
-        #
-        # But a click that lands on the scrollbar itself must never be allowed
+        # A click that lands on the scrollbar itself must never be allowed
         # to arm (or keep driving) the content-drag: content-drag moves scroll_y
         # 1:1 with mouse pixels in *content* space, while the handle is supposed
         # to snap to the mouse's ratio *along the track*. Since the content is
@@ -355,7 +349,7 @@ class Screen:
         if grabbing_scrollbar or getattr(self, drag_attr, False):
             setattr(self, content_drag_attr, None)
         elif content_rect_attr and self.handle_content_drag(event, attr, limit_attr, content_rect_attr,
-                                                             drag_attr=content_drag_attr, invert=True):
+                                                             drag_attr=content_drag_attr):
             return True
 
         if not track:
@@ -394,15 +388,15 @@ class Screen:
         A small pixel threshold has to be crossed before a press is treated as
         a drag (and any button pressed under the cursor gets un-armed), so an
         ordinary click on a button inside the list still registers normally.
-        Content tracks the mouse 1:1 via `event.rel`, like a touch/trackpad pan.
-        `axis="x"` drags horizontally (a timeline) instead of the usual vertical list.
+        Dragging down pulls content down. Dragging right pulls horizontal content right.
+        `axis="x"` selects horizontal scrolling.
 
         `lo`/`hi` bound the resulting value; by default `hi` is 0 and `lo` is
         the list's own `max_scroll`-style limit (the mixin's usual negative-range
         convention where the offset is added to a row's y). Pass explicit bounds
         for screens using a 0..max convention instead -- and if that convention
         *subtracts* the offset from content's y (as the map HUD panels do), pass
-        `invert=True` so dragging down still pulls content down, not up.
+        `invert=True` so dragging down still pulls content down.
         Pass `refresh=False` for a screen whose `update()` already repositions
         scrolled elements every frame off `attr` alone (e.g. a base_y + scroll_y
         offset), so a full refresh_ui() rebuild isn't needed on every drag pixel.

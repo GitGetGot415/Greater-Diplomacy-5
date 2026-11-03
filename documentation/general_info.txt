@@ -480,6 +480,10 @@ The helper disables destination alpha blending on the window surface.
 macOS can supply an alpha-enabled surface. Zero destination alpha can make transparent text backgrounds appear white.
 Text and image surfaces keep their transparency when drawn onto the opaque display.
 
+Dragging a scrollable list's content down pulls that content down and moves its scrollbar handle up.
+Dragging horizontal content right pulls it right. This rule also applies to map information panels.
+Mouse wheel controls and scrollbar dragging retain their existing directions.
+
 Scrolling checkerboard buffers store red, green, and blue (RGB) values without a pixel-alpha channel.
 Fractional scrolling and overlay opacity use whole-surface alpha.
 These buffers do not inherit pixel alpha from the macOS display.
