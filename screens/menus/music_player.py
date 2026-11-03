@@ -49,6 +49,8 @@ MUSIC_LEFT_PANE_W = (ALBUM_MARGIN + ALBUM_COLUMNS * ALBUM_TILE_SIZE[0] + (ALBUM_
 song_y = 32
 TRACK_SHUFFLE_TOGGLE_SIZE = (26, 26)
 TRACK_SHUFFLE_TOGGLE_GAP = 4
+TRACK_ALBUM_HEADER_HEIGHT = 32
+TRACK_ALBUM_LABEL_GAP = 10
 # The right pane holds the audio sliders and the starting-song controls.
 MUSIC_RIGHT_PANE_W = 260
 MUSIC_RIGHT_PANE_X = c.SCREEN_WIDTH - MUSIC_RIGHT_PANE_W
@@ -298,8 +300,30 @@ class Music_Player(ScrollPanes, Screen):
         # --- 2. Right Column: Tracks (Scrolling) ---
         track_y = 200 + self._scroll_track # Adjusted to start below new scrubber
         track_content_h = 0
+        self._track_album_headers = []
+        previous_album = None
+        header_width = c.SIZES["song"][0] + TRACK_SHUFFLE_TOGGLE_GAP + TRACK_SHUFFLE_TOGGLE_SIZE[0]
+        header_font = fonts.get("small")
         
         for track_path in self.controller.playlist:
+            album = os.path.basename(os.path.dirname(track_path.replace("\\", "/")))
+            if album != previous_album:
+                header = pygame.Surface((header_width, TRACK_ALBUM_HEADER_HEIGHT), pygame.SRCALPHA)
+                label = header_font.render(
+                    fit_text(album, header_font, header_width - 4 * TRACK_ALBUM_LABEL_GAP),
+                    True, c.UI_TEXT_DIM)
+                label_rect = label.get_rect(center=header.get_rect().center)
+                pygame.draw.line(header, c.UI_TEXT_DIM, (0, label_rect.centery),
+                                 (label_rect.left - TRACK_ALBUM_LABEL_GAP, label_rect.centery))
+                pygame.draw.line(header, c.UI_TEXT_DIM,
+                                 (label_rect.right + TRACK_ALBUM_LABEL_GAP, label_rect.centery),
+                                 (header_width - 1, label_rect.centery))
+                header.blit(label, label_rect)
+                self._track_album_headers.append((
+                    header, header.get_rect(topleft=(MUSIC_LEFT_PANE_W + 20, track_y))))
+                track_y += TRACK_ALBUM_HEADER_HEIGHT
+                track_content_h += TRACK_ALBUM_HEADER_HEIGHT
+                previous_album = album
             track_name = os.path.basename(track_path)
             is_playing = (self.controller.now_playing == track_path)
             excluded_from_shuffle = self.controller.is_shuffle_disabled(track_path)
@@ -993,7 +1017,12 @@ class Music_Player(ScrollPanes, Screen):
 
     def draw_elements(self, surface):
         """Two independent scrolling panes, each cropped to its own rect."""
-        self.draw_panes(surface)
+        self.draw_panes(surface, foregrounds={"track": self.draw_track_album_headers})
+
+    def draw_track_album_headers(self, surface):
+        """Draw cached album dividers inside the song pane's clip region."""
+        for header, rect in self._track_album_headers:
+            surface.blit(header, rect)
 
     def draw_album_background(self, surface):
         left_pane = pygame.Rect(0, 0, MUSIC_LEFT_PANE_W, c.SCREEN_HEIGHT)
