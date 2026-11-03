@@ -7,6 +7,7 @@ import shutil
 import subprocess
 
 from compilation_scripts import build_manifest as manifest
+from data.io.starting_defaults import read_starting_defaults
 
 
 def is_git_ignored(path):
@@ -106,8 +107,9 @@ def reset_runtime_files(destination):
         (destination / directory).mkdir(parents=True, exist_ok=True)
     json_dir = destination / "data" / "json"
     if json_dir.is_dir():
-        for name, value in manifest.RUNTIME_JSON_DEFAULTS.items():
-            (json_dir / name).write_text(json.dumps(value), encoding="utf-8")
+        defaults = read_starting_defaults(destination / manifest.STARTING_DEFAULTS_PATH)
+        for name, value in defaults.items():
+            (json_dir / name).write_text(json.dumps(value, indent=4) + "\n", encoding="utf-8")
 
 
 def stage_release(root, destination, platform):

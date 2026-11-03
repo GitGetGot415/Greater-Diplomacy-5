@@ -1,0 +1,112 @@
+{
+    "scenario_settings.json": {
+        "fog_of_war": true,
+        "casus_belli_required": true,
+        "days_per_turn": "Default",
+        "use_scripted_events": true,
+        "ai_disabled": false,
+        "force_time_appropriate_research": false,
+        "unit_turn_overrides": {},
+        "unit_disabled": [],
+        "building_turn_overrides": {},
+        "building_disabled": [],
+        "administrative_turn_overrides": {},
+        "administrative_disabled": [],
+        "conversion_turn_overrides": {},
+        "damage_at_zero_health": 0.0,
+        "fog_of_war_strength": "normal",
+        "unit_range_overrides": {},
+        "free_repairs": false,
+        "surprise_attack": false,
+        "disable_factions": false,
+        "battle_royale": false,
+        "bounce_tiebreaker": false,
+        "disable_cores": false,
+        "truce_turns": 12,
+        "turns_to_wait_before_war": 12,
+        "ai_war_declaration_chance": 0.5,
+        "defense_at_zero_health": 0.0
+    },
+    "settings_config.json": {
+        "keybinds": {},
+        "sfx_volume": 1.0,
+        "music_volume": 1.0,
+        "num_players": 1,
+        "ai_mode": "OFF",
+        "gemini_api_key": "",
+        "chatgpt_api_key": "",
+        "claude_api_key": "",
+        "ollama_base_url": "",
+        "gemini_model": "gemini-2.5-flash",
+        "chatgpt_model": "gpt-4o-mini",
+        "claude_model": "claude-3-haiku-20240307",
+        "ollama_model": "llama3",
+        "ai_immersion_level": "LITE",
+        "music_pitch": 0.5,
+        "sfx_pitch": 0.5,
+        "target_fps": 60,
+        "ai_threads": 4,
+        "show_fps": false,
+        "show_intro_popup": true,
+        "saves_dir": "saves",
+        "custom_scenarios_dir": "scenarios/map_editor",
+        "ocean_light_color": [
+            40,
+            100,
+            180
+        ],
+        "ocean_dark_color": [
+            10,
+            20,
+            40
+        ],
+        "tournament_saves_dir": "tournament_saves",
+        "checkerboard_water": false,
+        "deepseek_api_key": "",
+        "kimi_api_key": "",
+        "deepseek_model": "deepseek-chat",
+        "kimi_model": "kimi-k2-0711-preview",
+        "ai_turn_budget_seconds": 0,
+        "unit_art_style": "classic",
+        "map_navigation_mode": "CLASSIC",
+        "orders_key_changes_screen": true,
+        "economy_key_changes_screen": true,
+        "battle_display_mode": "FULL",
+        "mouse_button_actions": {
+            "left": {
+                "select_units": true,
+                "box_select_units": true,
+                "pan_map": false,
+                "exclude_orders": false,
+                "issue_orders": false
+            },
+            "middle": {
+                "select_units": false,
+                "box_select_units": false,
+                "pan_map": true,
+                "exclude_orders": false,
+                "issue_orders": false
+            },
+            "right": {
+                "select_units": false,
+                "box_select_units": false,
+                "pan_map": true,
+                "exclude_orders": true,
+                "issue_orders": true
+            }
+        },
+        "army_group_animations": true,
+        "music_pitch_timeline": "STATIC",
+        "show_unclaimed": true,
+        "openrouter_api_key": "",
+        "openrouter_model": "inclusionai/ling-3.0-tiny:free",
+        "checkerboard_gradient_strength": 0.0,
+        "checkerboard_scroll_speed": 16
+    },
+    "active_albums.json": [],
+    "shuffle_disabled_tracks.json": [],
+    "starting_song.json": {
+        "track": null
+    },
+    "hildehrand_choice.json": {}
+}

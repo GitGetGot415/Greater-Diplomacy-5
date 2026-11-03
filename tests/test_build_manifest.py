@@ -176,6 +176,11 @@ class BuildManifestTests(unittest.TestCase):
                 "scenarios/map_editor/scratch.json": "private",
                 "scenarios/historical/map.json": "{}", "base_maps/map.json": "{}",
             }
+            defaults = json.loads(json.dumps(manifest.RUNTIME_JSON_DEFAULTS))
+            defaults["active_albums.json"] = ["Fixture Album"]
+            defaults["starting_song.json"] = {"track": "assets/music/Fixture Album/start.ogg"}
+            defaults["scenario_settings.json"] = {"fog_of_war": False}
+            files[manifest.STARTING_DEFAULTS_PATH] = json.dumps(defaults)
             for relative, content in files.items():
                 target = source / relative
                 target.parent.mkdir(parents=True, exist_ok=True)
@@ -193,8 +198,9 @@ class BuildManifestTests(unittest.TestCase):
                 self.assertTrue((destination / "scenarios/historical/map.json").exists())
                 self.assertFalse((destination / "data/__pycache__/runtime.pyc").exists())
                 self.assertFalse((destination / "scripts/editors/tool.py").exists())
-                for name, value in manifest.RUNTIME_JSON_DEFAULTS.items():
+                for name, value in defaults.items():
                     self.assertEqual(json.loads((destination / "data/json" / name).read_text()), value)
+                self.assertEqual(json.loads((destination / manifest.STARTING_DEFAULTS_PATH).read_text()), defaults)
                 self.assertEqual(json.loads((destination / "data/json/research_display.json").read_text()),
                                  {"defaults": {"icon_scale": 3}})
                 for name in ("data/runtime.py", "screens/game/runtime.py", "ui/rendering/widget.py",

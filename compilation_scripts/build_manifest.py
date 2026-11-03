@@ -3,6 +3,8 @@
 This module must remain safe to import without game or packaging engines.
 """
 
+from data.io.starting_defaults import STARTING_DEFAULTS_PATH, read_starting_defaults
+
 SOURCE_PACKAGES = ("data", "ui", "screens", "map_logic")
 SOURCE_FILES = ("main.py", "mod_loader.py", "beepbox_audio.py")
 DESKTOP_SOURCE_FILES = SOURCE_FILES + ("soloud.py",)
@@ -32,6 +34,7 @@ HIDDEN_IMPORTS = (
     "data.runtime_rules", "data.world_nations",
     "data.game_state", "data.session_state", "data.state_access",
     "data.research_display",
+    "data.io.starting_defaults",
     "ui.background_styles",
     "ui.widgets.content_browser",
 )
@@ -49,11 +52,7 @@ RUNTIME_PACKAGES = (
 NATIVE_PACKAGES = ("dragoman", "cryptography", "quickjs", "py_mini_racer")
 MAC_INCLUDES = tuple(dict.fromkeys(("soloud", "pygame", "tkinter") + HIDDEN_IMPORTS))
 NATIVE_BINARIES = ("win64-libsoloud.dll", "mac64-libsoloud.dylib", "lin64-libsoloud.so")
-RUNTIME_JSON_DEFAULTS = {
-    "active_albums.json": [], "shuffle_disabled_tracks.json": [],
-    "scenario_settings.json": {}, "settings_config.json": {},
-    "starting_song.json": {}, "hildehrand_choice.json": {},
-}
+RUNTIME_JSON_DEFAULTS = read_starting_defaults()
 
 
 def windows_arguments():

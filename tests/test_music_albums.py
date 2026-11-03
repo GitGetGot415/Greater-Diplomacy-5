@@ -151,6 +151,22 @@ class AlbumTileTests(unittest.TestCase):
     def album_buttons(self, player):
         return [b for b in player.elements if getattr(b, "pane", None) == "album"]
 
+    def test_clear_starting_button_clears_and_saves_the_song(self):
+        player = self.make_player([])
+        player.controller.starting_song = "assets/music/Fixture/start.ogg"
+        player.controller.save_starting_song = mock.Mock()
+        player.refresh_ui()
+        button = next(b for b in player.elements
+                      if isinstance(b, music_player.Button) and b.text == "Clear Starting")
+        self.assertFalse(button.disabled)
+
+        button.callback()
+
+        self.assertIsNone(player.controller.starting_song)
+        player.controller.save_starting_song.assert_called_once_with()
+        self.assertTrue(next(b for b in player.elements
+                             if isinstance(b, music_player.Button) and b.text == "Clear Starting").disabled)
+
     def test_new_album_tile_is_last_even_when_pinned_by_order(self):
         player = self.make_player(["Alpha", "Zulu"])
         with mock.patch.object(music_player, "ALBUM_ORDER", ["Alpha"]), \

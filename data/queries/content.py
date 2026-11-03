@@ -9,22 +9,22 @@ import pygame
 from data.state_access import world_for
 from data.migrations import normalize_cached_json_names
 from data.runtime_rules import rebuild, ActiveLibrary, for_world
-from data.io import settings_schema
+from data.io import settings_schema, starting_defaults
 from data import queries
 
 
 # By mapping the path directly to the cache, we can automate loading and saving!
 _JSON_CACHE = {
-    "settings": {"path": c.SETTINGS_CONFIG_PATH, "data": None},
-    "scenario_settings": {"path": "data/json/scenario_settings.json", "data": None},
+    "settings": {"path": c.SETTINGS_CONFIG_PATH, "data": None, "default": "settings_config.json"},
+    "scenario_settings": {"path": "data/json/scenario_settings.json", "data": None, "default": "scenario_settings.json"},
     "unit_library": {"path": c.UNIT_DATA_PATH, "data": None},
     "building_library": {"path": c.BUILDING_DATA_PATH, "data": None},
     "tech_tree": {"path": c.RESEARCH_TEMPLATE_PATH, "data": None},
     "country_data": {"path": c.COUNTRIES_DATA_PATH, "data": None},
-    "active_albums": {"path": c.ACTIVE_ALBUMS_PATH, "data": None},
-    "shuffle_disabled_tracks": {"path": c.SHUFFLE_DISABLED_TRACKS_PATH, "data": None},
-    "starting_song": {"path": c.STARTING_SONG_PATH, "data": None},
-    "hildehrand_choice": {"path": c.HILDEHRAND_CHOICE_PATH, "data": None},
+    "active_albums": {"path": c.ACTIVE_ALBUMS_PATH, "data": None, "default": "active_albums.json"},
+    "shuffle_disabled_tracks": {"path": c.SHUFFLE_DISABLED_TRACKS_PATH, "data": None, "default": "shuffle_disabled_tracks.json"},
+    "starting_song": {"path": c.STARTING_SONG_PATH, "data": None, "default": "starting_song.json"},
+    "hildehrand_choice": {"path": c.HILDEHRAND_CHOICE_PATH, "data": None, "default": "hildehrand_choice.json"},
     "historical_leaders": {"path": c.HISTORICAL_LEADERS_PATH, "data": None},
     "ai_responses": {"path": c.AI_RESPONSES_PATH, "data": None},
 }
@@ -138,6 +138,11 @@ def get_scenario_settings():
     return _load_cached_json("scenario_settings")
 
 
+def get_default_scenario_settings():
+    """Return editable starting rules without changing saved world settings."""
+    return starting_defaults.get_starting_default("scenario_settings.json")
+
+
 def get_days_per_turn(scenario_settings):
     """Resolves the number of days that pass per turn."""
     if not scenario_settings:
@@ -209,7 +214,8 @@ def _load_cached_json(cache_key, *, reload=False):
                 print(f"Error loading {file_path}: {e}")
                 cache_obj["data"] = {}
         else:
-            cache_obj["data"] = {}
+            default_file = cache_obj.get("default")
+            cache_obj["data"] = starting_defaults.get_starting_default(default_file) if default_file else {}
 
         normalize_cached_json_names(cache_key, cache_obj["data"])
         if reload and isinstance(previous_data, dict):

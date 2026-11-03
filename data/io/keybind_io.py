@@ -2,7 +2,7 @@ import os
 import pygame
 import data.constants as c
 from data import migrations, queries
-from data.io import settings_schema
+from data.io import settings_schema, starting_defaults
 
 CONFIG_PATH = c.SETTINGS_CONFIG_PATH
 
@@ -81,11 +81,9 @@ def load_settings_result(default_binds, default_volume=0.5, default_music_volume
     fallback["sfx_volume"] = default_volume
     fallback["music_volume"] = default_music_volume
 
-    if not os.path.exists(CONFIG_PATH):
-        return settings_schema.SettingsLoadResult(dict(default_binds), fallback)
-
     try:
-        saved_data = queries.get_settings()
+        saved_data = (queries.get_settings() if os.path.exists(CONFIG_PATH)
+                      else starting_defaults.get_starting_default("settings_config.json"))
         saved_data = saved_data if isinstance(saved_data, dict) else {}
 
         values = settings_schema.from_json_dict(saved_data)

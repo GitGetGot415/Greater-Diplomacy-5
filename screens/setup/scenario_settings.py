@@ -167,19 +167,15 @@ class Scenario_Settings(Screen):
             queries.save_scenario_settings(self.settings)
 
     def default_settings(self):
-        """Every scenario and AI rule this screen owns, at its constants.py default."""
-        defaults = {key: default for key, default, _label, _tip in TOGGLE_ROWS}
-        defaults["fog_of_war_strength"] = c.DEFAULT_FOG_OF_WAR_STRENGTH
-        defaults["use_scripted_events"] = c.DEFAULT_USE_SCRIPTED_EVENTS
-        defaults["days_per_turn"] = "Default"
-        defaults["truce_turns"] = c.DEFAULT_TRUCE_TURNS
-        defaults["ai_disabled"] = c.DEFAULT_AI_DISABLED
-        defaults["turns_to_wait_before_war"] = c.TURNS_TO_WAIT_BEFORE_WAR
-        defaults["ai_war_declaration_chance"] = c.AI_WAR_DECLARATION_CHANCE
-        defaults["damage_at_zero_health"] = c.DAMAGE_AT_ZERO_HEALTH
-        defaults["defense_at_zero_health"] = c.DEFENSE_AT_ZERO_HEALTH
-        defaults["force_time_appropriate_research"] = c.DEFAULT_FORCE_TIME_APPROPRIATE_RESEARCH
-        return defaults
+        """Return starting values for this screen. Keep separate editor settings."""
+        keys = [key for key, _default, _label, _tip in TOGGLE_ROWS] + [
+            "fog_of_war_strength", "use_scripted_events", "days_per_turn",
+            "truce_turns", "ai_disabled", "turns_to_wait_before_war",
+            "ai_war_declaration_chance", "damage_at_zero_health",
+            "defense_at_zero_health", "force_time_appropriate_research",
+        ]
+        starting = queries.get_default_scenario_settings()
+        return {key: starting[key] for key in keys}
 
     def make_info_button(self, x, y, tooltip_title, tooltip_text):
         return make_info_button(x, y,

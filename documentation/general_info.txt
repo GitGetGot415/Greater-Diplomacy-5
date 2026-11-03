@@ -377,11 +377,30 @@ See documentation/data_migrations.txt for libraries without metadata and invalid
 SETTINGS LOADING
 ================
 
-data/io/settings_schema.py owns defaults, current JSON keys, aliases, coercion, and serialization.
+data/json/starting_defaults.json contains the preferences used for game distribution and first use.
+Its sections use preference filenames. They cover scenario settings, general settings, albums, shuffle exclusions, the starting song, and portrait selection.
+data/io/starting_defaults.py reads this file. Each caller receives a separate copy.
+data/io/settings_schema.py owns current JSON keys, compatibility defaults, aliases, coercion, and serialization.
 keybind_io.load_settings_result returns named keybinds and normalized values.
 The controller reads that result directly.
 load_settings retains its positional result for older callers.
 The positional order is an interface contract. Settings files use JSON keys.
+
+To change distribution defaults:
+1. Edit data/json/starting_defaults.json with a text editor. Keep all six sections.
+2. Set scenario rules in scenario_settings.json and general preferences in settings_config.json within that file.
+3. Set active_albums.json to a list of album folder names. An empty list selects no albums.
+4. Set starting_song.json to {"track": "assets/music/Album/Song.ogg"}, using an existing song path.
+5. Use {"track": null} for no fixed starting song. Restart the game after changes.
+
+Builds copy these values into their preference files. They exclude the developer's local preferences.
+The game uses these defaults when a preference file is missing.
+Existing preference files and saved games keep their own values.
+For an installed copy, use game controls or edit the matching preference file to change existing choices.
+Scenario Settings uses this file for Reset to Defaults. This reset preserves the separate editors' settings.
+Keep keybinds in settings_config.json. An empty object retains the standard key assignments.
+Do not put private API keys in distribution defaults.
+Browser builds include the file in their virtual filesystem. Change distributed defaults before building the browser package.
 
 assets/sounds/volumes.json controls sound effect volume and start offsets by filename.
 A number sets the volume multiplier. For example, 1.0 uses the original level.
@@ -395,8 +414,9 @@ An offset at or past the sound length plays no sound. Restart the game after cha
 BUILD POLICY
 ============
 
-compilation_scripts/build_manifest.py owns source inventory, dynamic imports, native dependencies, platform exclusions, and runtime JSON defaults.
+compilation_scripts/build_manifest.py owns source inventory, dynamic imports, native dependencies, platform exclusions, and the distribution defaults declaration.
 compilation_scripts/build_support.py owns filtering, staging, empty directories, resets, and build-path checks.
+Runtime preference values come from data/json/starting_defaults.json. See SETTINGS LOADING for editing instructions.
 Both modules are safe to import without game or native audio initialization.
 Platform entry points retain their packaging tools and native archive procedures.
 
@@ -406,7 +426,7 @@ Desktop packages retain loose source copies for the existing source-replacement 
 Web retains libdragoman.so, the HTML template, and staged audio conversion.
 Native and web audio filters retain their separate replacement rules.
 Each asset inventory checks Git ignore rules in one batch. A new inventory reads the rules again.
-Distributed saves and mods remain empty. Local settings, playlist choices, and editor scratch scenarios are excluded or reset.
+Distributed saves and mods remain empty. Builds replace local preferences with distribution defaults and exclude editor scratch scenarios.
 
 tests/test_build_manifest.py compares manifest declarations with independent repository scans.
 It also checks actual staging with temporary directories.
@@ -418,6 +438,7 @@ MUSIC PLAYBACK
 
 Desktop startup music begins after the first rendered frame is displayed.
 Browser startup music waits for the first mouse click or key press.
+Clear Starting removes the fixed starting song. It does not restore a distribution default.
 
 beepbox_audio.py owns BeepBox and UltraBox JSON recognition, sample loading, and playback.
 Put song JSON files in an album folder under assets/music/.

@@ -421,7 +421,7 @@ class Music_Player(ScrollPanes, Screen):
         self.elements.append(set_start_btn)
 
         reset_start_btn = Button(slider_x, c.SCREEN_HEIGHT - 70, "medium", "red",
-                                  "Reset Starting Song", self.reset_starting_song)
+                                  "Clear Starting Song", self.reset_starting_song)
         reset_start_btn.disabled = not self.controller.starting_song
         self.elements.append(reset_start_btn)
 
