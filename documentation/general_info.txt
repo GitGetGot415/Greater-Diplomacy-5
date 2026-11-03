@@ -447,6 +447,7 @@ The "+ New Album" tile in the music screen asks for a name and makes an empty al
 Every album shows a delete button, except the albums named in UNDELETABLE_ALBUMS in data/constants.py.
 Add the name of each album that ships with the game to that list.
 The "+ Add Song" button is the last row of the song list.
+A line separates this button from the last song when the list contains songs.
 It asks for an album, then for a file, and copies the file into that album folder.
 It lists only albums that are not in UNDELETABLE_ALBUMS.
 The file must be MP3, WAV, OGG, or a BeepBox or UltraBox JSON song.

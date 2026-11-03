@@ -51,6 +51,7 @@ TRACK_SHUFFLE_TOGGLE_SIZE = (26, 26)
 TRACK_SHUFFLE_TOGGLE_GAP = 4
 TRACK_ALBUM_HEADER_HEIGHT = 32
 TRACK_ALBUM_LABEL_GAP = 10
+TRACK_ADD_SONG_DIVIDER_HEIGHT = 12
 # The right pane holds the audio sliders and the starting-song controls.
 MUSIC_RIGHT_PANE_W = 260
 MUSIC_RIGHT_PANE_X = c.SCREEN_WIDTH - MUSIC_RIGHT_PANE_W
@@ -300,7 +301,7 @@ class Music_Player(ScrollPanes, Screen):
         # --- 2. Right Column: Tracks (Scrolling) ---
         track_y = 200 + self._scroll_track # Adjusted to start below new scrubber
         track_content_h = 0
-        self._track_album_headers = []
+        self._track_dividers = []
         previous_album = None
         header_width = c.SIZES["song"][0] + TRACK_SHUFFLE_TOGGLE_GAP + TRACK_SHUFFLE_TOGGLE_SIZE[0]
         header_font = fonts.get("small")
@@ -319,7 +320,7 @@ class Music_Player(ScrollPanes, Screen):
                                  (label_rect.right + TRACK_ALBUM_LABEL_GAP, label_rect.centery),
                                  (header_width - 1, label_rect.centery))
                 header.blit(label, label_rect)
-                self._track_album_headers.append((
+                self._track_dividers.append((
                     header, header.get_rect(topleft=(MUSIC_LEFT_PANE_W + 20, track_y))))
                 track_y += TRACK_ALBUM_HEADER_HEIGHT
                 track_content_h += TRACK_ALBUM_HEADER_HEIGHT
@@ -369,6 +370,16 @@ class Music_Player(ScrollPanes, Screen):
                     not dbtn.rect.collidepoint(pygame.mouse.get_pos()) and guard())
             track_y += song_y
             track_content_h += song_y
+
+        if self.controller.playlist:
+            divider = pygame.Surface((header_width, TRACK_ADD_SONG_DIVIDER_HEIGHT), pygame.SRCALPHA)
+            pygame.draw.line(divider, c.UI_TEXT_DIM,
+                             (0, TRACK_ADD_SONG_DIVIDER_HEIGHT // 2),
+                             (header_width - 1, TRACK_ADD_SONG_DIVIDER_HEIGHT // 2))
+            self._track_dividers.append((
+                divider, divider.get_rect(topleft=(MUSIC_LEFT_PANE_W + 20, track_y))))
+            track_y += TRACK_ADD_SONG_DIVIDER_HEIGHT
+            track_content_h += TRACK_ADD_SONG_DIVIDER_HEIGHT
 
         # Always the last row of the song list.
         add_song_btn = Button(MUSIC_LEFT_PANE_W + 20, track_y, "song", "blue", ADD_SONG_LABEL,
@@ -1017,12 +1028,12 @@ class Music_Player(ScrollPanes, Screen):
 
     def draw_elements(self, surface):
         """Two independent scrolling panes, each cropped to its own rect."""
-        self.draw_panes(surface, foregrounds={"track": self.draw_track_album_headers})
+        self.draw_panes(surface, foregrounds={"track": self.draw_track_dividers})
 
-    def draw_track_album_headers(self, surface):
-        """Draw cached album dividers inside the song pane's clip region."""
-        for header, rect in self._track_album_headers:
-            surface.blit(header, rect)
+    def draw_track_dividers(self, surface):
+        """Draw cached dividers inside the song pane's clip region."""
+        for divider, rect in self._track_dividers:
+            surface.blit(divider, rect)
 
     def draw_album_background(self, surface):
         left_pane = pygame.Rect(0, 0, MUSIC_LEFT_PANE_W, c.SCREEN_HEIGHT)
