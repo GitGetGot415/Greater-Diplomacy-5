@@ -85,14 +85,15 @@ class ContentBrowserTests(unittest.TestCase):
             with self.subTest(name=name):
                 self.assertIsNone(screen.selected_entry)
                 self.assertFalse(screen.selection_can_open)
-                self.assertTrue(screen.open_button.disabled)
+                self.assertIsNone(screen.open_button)
                 self.click(screen, button_named(screen, name))
                 self.assertEqual(screen.selected_entry.name, name)
                 self.assertTrue(screen.selection_can_open)
+                self.assertIsNotNone(screen.open_button)
                 self.click(screen, button_named(screen, name))
                 self.assertIsNone(screen.selected_entry)
                 self.assertFalse(screen.selection_can_open)
-                self.assertTrue(screen.open_button.disabled)
+                self.assertIsNone(screen.open_button)
                 screen.handle_events([key(pygame.K_DOWN)])
                 self.assertEqual(screen.selected_entry.name, name)
 

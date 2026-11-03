@@ -85,7 +85,7 @@ class Select_Base_Map(ScenarioLibraryScreen):
             self.add_browser_action("Rename", lambda: self.manage_selected(self.start_rename), 0, "blue")
             self.add_browser_action("Export", lambda: self.manage_selected(self.export_scenario_zip), 1, "green")
             self.add_browser_action("Delete…", lambda: self.manage_selected(self.start_delete), 2, "red")
-        self.open_button = self.add_primary_action("Edit Map")
+        self.open_button = self.add_primary_action("Edit Map") if self.selection_can_open else None
 
     def return_to_sources(self):
         self.choosing_sources = True
