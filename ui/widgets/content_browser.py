@@ -27,7 +27,7 @@ class ContentRow(Button):
     """Use standard button input and shading with two cached text lines."""
 
     def __init__(self, rect, entry, selected, callback):
-        super().__init__(rect.x, rect.y, rect.size, "grey", entry.name, callback)
+        super().__init__(rect.x, rect.y, rect.size, "grey", entry.name, callback, sound_kind="select_sub_category")
         self.is_selected = selected
         self.lines = [
             fonts.get(preset).render(fit_text(text, fonts.get(preset), rect.width - 28), True, color)

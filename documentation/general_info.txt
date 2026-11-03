@@ -411,9 +411,14 @@ The sound effects volume setting multiplies the configured volume. This file doe
 Both values must be finite numbers of zero or greater. Missing volume and offset values use 1.0 and 0.0.
 An offset at or past the sound length plays no sound. Restart the game after changes.
 
-Select Category.wav plays for music albums, New Game and New Map categories, and folders in View Assets.
-Select Sub-Category.wav plays for songs, scenario and map choices, and file choices in View Assets.
-It also plays for map and algorithm choices in Random Scenario setup.
+Select Category.wav plays when a control selects a browsing group or country scope.
+This includes research and construction tabs, art styles, editor country lists, message contacts, and folders.
+Select Sub-Category.wav plays when a control selects an item within a group.
+This includes songs, scenarios, saved content, art filters, portraits, events, variables, multiplayer countries, and picker rows.
+Map and algorithm choices in Random Scenario setup also use this sound.
+Checkbox selection uses the item sound. Confirm buttons retain their action sound.
+Automatic selection during screen setup stays silent. Research and unit actions retain their specific sounds.
+Table.wav plays when Credits or Assets opens from the menu, or Identity opens from the game.
 
 BUILD POLICY
 ============

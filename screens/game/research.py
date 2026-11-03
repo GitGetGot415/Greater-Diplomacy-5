@@ -793,7 +793,7 @@ class Research_Screen(Screen):
             self.elements.append(make_choice_button(
                 CATEGORY_BTN_START_X + i * (category_width + CATEGORY_BTN_GAP), CATEGORY_BTN_Y,
                 (category_width, category_height), cat, self.current_category == cat,
-                lambda c=cat: self.set_category(c)))
+                lambda c=cat: self.set_category(c), sound_kind="select_category"))
 
         if self.current_category == "COMPLETED":
             self.cache_completed_text_list(res_levels)

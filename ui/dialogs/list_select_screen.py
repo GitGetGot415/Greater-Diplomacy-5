@@ -90,7 +90,8 @@ class ListSelectScreen(ModalScreen):
             item = self.visible_items[i]
             item_label = self._item_label(item)
             label = text_utils.truncate_chars(item_label, self.ROW_LABEL_MAX_CHARS)
-            btn = Button(row_x, y, "list_row", "blue", label, lambda it=item: self.select(it))
+            btn = Button(row_x, y, "list_row", "blue", label, lambda it=item: self.select(it),
+                         sound_kind="select_sub_category")
             btn.apply_state(enabled=self._item_enabled(item), color="blue")
             self.add_list_row(btn)
 

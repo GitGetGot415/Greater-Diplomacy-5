@@ -520,7 +520,7 @@ class Historical_Leaders_Editor(ScrollPanes, Screen):
             label = f"{country} ({len(self.data.get(country, []))})"
             btn = make_choice_button(self.roster_rect.x, y, "list_row", text_utils.truncate_chars(label, 28),
                                      country == self.active_country, lambda cc=country: self.select_country(cc),
-                                     font_preset="button_small")
+                                     font_preset="button_small", sound_kind="select_category")
             btn.rect.width = self.roster_rect.width - 50
             btn.pane = "roster"
             btn.click_guard = self._guard_roster

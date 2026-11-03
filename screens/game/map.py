@@ -500,7 +500,7 @@ def _build_left_bar_buttons(map_screen):
     )
     for attr, row, label, icon_name, action in left_bar_buttons:
         sound_kind = {"btn_gp_music": "open_music", "btn_gp_settings": "open_settings",
-                      "btn_gp_rd": "research"}.get(attr, "click")
+                      "btn_gp_rd": "research", "btn_gp_edit": "table"}.get(attr, "click")
         if attr == "btn_gp_msgs" and not map_screen.is_editor and map_screen.player_country == "Spectator":
             sound_kind = None
         setattr(map_screen, attr, Button(LEFT_UI_BAR_X, LEFT_UI_BAR_START_Y + LEFT_UI_BAR_STEP_Y * row,

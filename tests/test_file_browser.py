@@ -68,6 +68,23 @@ class FileBrowserTests(unittest.TestCase):
         screen._set_sort("size")
         self.assertEqual(self.names(screen), ["beta", "alpha", "a.zip", "c.zip", "b.zip"])
 
+    def test_folder_and_file_rows_play_one_selection_sound_and_keep_their_targets(self):
+        for name, expected_sound in (("alpha", "select_category"), ("a.zip", "select_sub_category")):
+            with self.subTest(name=name):
+                screen = self.browser()
+                index = self.names(screen).index(name)
+                row = [element for element in screen.elements if isinstance(element, fb.FileRow)][index]
+                with mock.patch.object(fb.ui_elements, "play_ui_sound") as sound, \
+                        mock.patch.object(pygame.mouse, "get_pos", return_value=row.rect.center):
+                    for event in (
+                        pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=row.rect.center, button=1),
+                        pygame.event.Event(pygame.MOUSEBUTTONUP, pos=row.rect.center, button=1),
+                    ):
+                        row.handle_event(event)
+                sound.assert_called_once_with(expected_sound)
+                self.assertEqual(screen.cursor, self.path(name))
+                self.assertEqual(self.picked, [])
+
     def test_one_click_selects_a_folder_and_a_double_click_opens_it(self):
         screen = self.browser()
         self.click(screen, "alpha")

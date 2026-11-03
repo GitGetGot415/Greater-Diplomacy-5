@@ -499,7 +499,8 @@ class Messages_Screen(Screen):
                 if unread > 0 and self.selected_recipient != country:
                     color = "red"
 
-                btn = Button(20, y_off, "medium", color, display_text, lambda c_name=country: self.select_recipient(c_name))
+                btn = Button(20, y_off, "medium", color, display_text, lambda c_name=country: self.select_recipient(c_name),
+                             sound_kind="select_category")
                 btn.is_scrollable = True
                 self.elements.append(btn)
                 y_off += 60

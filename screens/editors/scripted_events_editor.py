@@ -368,7 +368,7 @@ class _VariablesScreen(_ModalScreen):
             v = self.variables[i]
             btn = self.button(self.list_x, y, self.LIST_W - 24, "blue",
                               text_utils.truncate_chars(f"{v['name']} ({v['type']}) = {v['value']}", 40),
-                              lambda idx=i: self.select(idx))
+                              lambda idx=i: self.select(idx), sound_kind="select_sub_category")
             btn.is_selected = i == self.selected
             btn.is_scrollable = True
             btn.click_guard = self._guard_vars
@@ -1021,7 +1021,7 @@ class Scripted_Events_Editor_Screen(_ModalScreen):
                                  self.nations_view_h, row_h=30):
             cid = self.countries[i]
             btn = self.button(self.nat_x, y, self.NAT_W - 24, "blue", text_utils.truncate_chars(cid, 26),
-                              lambda cc=cid: self.select_nation(cc))
+                              lambda cc=cid: self.select_nation(cc), sound_kind="select_category")
             btn.is_selected = cid == self.target
             btn.is_scrollable = True
             btn.pane = "nations"
@@ -1036,7 +1036,7 @@ class Scripted_Events_Editor_Screen(_ModalScreen):
         for i, y in self.pane_rows("events", len(events), self.events_top, self.events_view_h):
             btn = self.button(self.events_x, y, row_w, "blue",
                               text_utils.truncate_chars(self._event_summary(events[i], i), row_w // 9),
-                              lambda idx=i: self.select_event(idx))
+                              lambda idx=i: self.select_event(idx), sound_kind="select_sub_category")
             btn.is_selected = i == self.selected_event
             btn.is_scrollable = True
             btn.pane = "events"

@@ -99,7 +99,7 @@ class Load_Game(ContentBrowserScreen):
         if message:
             dialogs.show_info("Update Required", message)
             return
-        # A turn chosen from the history list has already played its row's click.
+        # A history row already played its selection sound.
         if history_turn is None:
             play_ui_sound("click")
         self.selected_save_path = os.path.join(self.managed_dir, folder_name)

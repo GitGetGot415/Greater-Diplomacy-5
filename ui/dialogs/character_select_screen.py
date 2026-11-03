@@ -162,7 +162,7 @@ class CharacterSelectScreen(ModalScreen):
         tile_color = "purple" if is_custom_portrait(rel_path) else "blue"
         btn = Button(x, y, "character_portrait_tile", tile_color, label,
                     lambda p=rel_path: self.select(p), image=self._thumbnail(rel_path),
-                    show_text=True, layout="vertical", font_preset="small")
+                    show_text=True, layout="vertical", font_preset="small", sound_kind="select_sub_category")
         btn.is_selected = (rel_path == self.current_path)
         self.add_list_row(btn)
 

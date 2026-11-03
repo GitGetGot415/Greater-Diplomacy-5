@@ -187,7 +187,8 @@ class _RealtimeLobby(_RealtimeScreen):
             except (KeyError, TypeError, ValueError, pygame.error):
                 flag = None
             self.add_list_row(Button("centered", button_y, self.COUNTRY_ROW_SIZE, color, label,
-                                     lambda country_id=country: on_pick(country_id), image=flag))
+                                     lambda country_id=country: on_pick(country_id), image=flag,
+                                     sound_kind="select_sub_category"))
 
     def _ready_button(self, ready, ready_label, unready_label, on_click):
         return Button("centered", self.READY_BUTTON_Y, self.READY_BUTTON_SIZE, "green" if ready else "orange",

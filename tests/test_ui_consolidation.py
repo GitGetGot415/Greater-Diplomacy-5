@@ -525,6 +525,76 @@ class OneSoundPerClickTests(SharedUiTestCase):
 
         self.assertEqual(self.click_sounds(button_named(Multiplayer_Hub(), "Help")), ["info"])
 
+    def test_assets_and_identity_play_table_once_and_open_their_screens(self):
+        menu = self.controller.states["MENU"]
+        with mock.patch.object(menu, "go_to") as navigate, \
+                mock.patch.object(menu.assets_btn, "visible", True):
+            self.assertEqual(self.click_sounds(menu.assets_btn), ["table"])
+        navigate.assert_called_once_with("VIEW_ASSETS")
+
+        game = app_harness.boot_map()
+        with app_harness.patch_map(game, is_editor=False), \
+                mock.patch.object(game, "editing_country", "", create=True), \
+                mock.patch.object(game.btn_gp_edit, "visible", True), \
+                mock.patch.object(game.btn_gp_edit, "disabled", False), \
+                mock.patch.object(game, "change_state") as navigate:
+            self.assertEqual(self.click_sounds(game.btn_gp_edit), ["table"])
+            self.assertEqual(game.editing_country, game.player_country)
+        navigate.assert_called_once_with("EDIT_COUNTRY")
+
+    def test_list_and_checkbox_selection_play_subcategory_once(self):
+        from ui.dialogs.list_select_screen import ListSelectScreen
+        from ui.dialogs.checkbox_list_screen import CheckboxItem, CheckboxListScreen
+
+        picked = []
+        screen = ListSelectScreen(self.controller, "Pick", "Choose", [("Choice", "value")], picked.append)
+        self.assertEqual(self.click_sounds(button_named(screen, "Choice")), ["select_sub_category"])
+        self.assertEqual(picked, ["value"])
+        self.assertTrue(screen.done)
+
+        item = CheckboxItem("value", "Choice")
+        screen = CheckboxListScreen(self.controller, "Pick", "Choose", [item], picked.append)
+        row = next(element for element in screen.elements if getattr(element, "is_scrollable", False))
+        self.assertEqual(self.click_sounds(row), ["select_sub_category"])
+        self.assertTrue(item.checked)
+        self.assertEqual(self.click_sounds(button_named(screen, "Deselect All")), ["select_sub_category"])
+        self.assertFalse(item.checked)
+
+    def test_portrait_selection_plays_subcategory_once_and_returns_the_path(self):
+        from ui.dialogs.character_select_screen import CharacterSelectScreen
+
+        picked = []
+        path = "Fixture/portrait.png"
+        with mock.patch("ui.dialogs.character_select_screen.discover_character_images", return_value=[path]), \
+                mock.patch.object(CharacterSelectScreen, "_thumbnail", return_value=None):
+            screen = CharacterSelectScreen(self.controller, "", picked.append)
+        row = next(element for element in screen.elements
+                   if getattr(element, "is_scrollable", False) and element.text != "+ Add New")
+        self.assertEqual(self.click_sounds(row), ["select_sub_category"])
+        self.assertEqual(picked, [path])
+
+    def test_multiplayer_country_choice_plays_subcategory_and_sends_only_a_request(self):
+        screen = LobbyTests().guest_lobby()
+        self.assertEqual(self.click_sounds(button_named(screen, "Beta: Host")), ["select_sub_category"])
+        screen.client.send.assert_called_once_with("select_country", {"country_id": "Beta"})
+
+    def test_saved_content_selection_plays_subcategory_without_loading(self):
+        screen = save_browser()
+        with mock.patch.object(screen, "load_specific_save") as load:
+            self.assertEqual(self.click_sounds(button_named(screen, "Save")), ["select_sub_category"])
+        load.assert_not_called()
+        self.assertIsNone(screen.selected_entry)
+
+    def test_country_editor_selection_plays_category_once(self):
+        from screens.editors.personality_editor import Personality_List_Screen
+        from tests.stub_map_screen import map_double
+
+        game = map_double(map_data={(0, 0, 0): {"id": 1, "owner": "A"}}, nation_data={"A": {"name": "A"}})
+        screen = Personality_List_Screen(game)
+        with mock.patch.object(screen, "edit") as edit:
+            self.assertEqual(self.click_sounds(button_named(screen, "A")), ["select_category"])
+        edit.assert_called_once_with("A")
+
     def test_asset_folder_and_file_clicks_play_selection_sounds_once(self):
         from screens.menus import view_assets
         from ui.widgets import ui_elements

@@ -132,10 +132,10 @@ class CheckboxListScreen(ModalScreen):
         x = p.x + self.PAD
         if self.show_select_all:
             self.elements.append(Button(x, self.tool_y, "checkbox_tool", "light_blue", "Select All",
-                                        lambda: self._set_all(True), font_preset="normal"))
+                                        lambda: self._set_all(True), font_preset="normal", sound_kind="select_sub_category"))
             x += tool_w + 8
             self.elements.append(Button(x, self.tool_y, "checkbox_tool", "light_blue", "Deselect All",
-                                        lambda: self._set_all(False), font_preset="normal"))
+                                        lambda: self._set_all(False), font_preset="normal", sound_kind="select_sub_category"))
             x += tool_w + 8
         for label, color, callback in self.extra_buttons:
             self.elements.append(Button(x, self.tool_y, "checkbox_tool", color, label,
@@ -157,7 +157,7 @@ class CheckboxListScreen(ModalScreen):
                 continue  # Drawn as a label in draw(), not as a clickable row.
             btn = Button(self.row_x, y, "checkbox_row", toggle_color(item.checked),
                          checkbox_label(item.label, item.checked), lambda it=item: self.toggle(it),
-                         font_preset="button_small")
+                         font_preset="button_small", sound_kind="select_sub_category")
             btn.is_selected = item.checked
             self.add_list_row(btn)
 

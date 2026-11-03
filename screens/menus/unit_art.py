@@ -341,7 +341,7 @@ class Unit_Art(Screen):
         for style in c.UNIT_ART_STYLES:
             self.elements.append(make_choice_button(20, y, "medium", STYLE_LABELS.get(style, style.title()),
                                                     style == self.style, lambda s=style: self.set_style(s),
-                                                    idle_color="grey"))
+                                                    idle_color="grey", sound_kind="select_category"))
             y += 60
 
         self.elements.extend(self._build_country_tabs())
@@ -458,7 +458,7 @@ class Unit_Art(Screen):
 
             btn = make_choice_button(x, y, "asset_folder", label, value == self.country,
                                      lambda v=value: self.set_country_filter(v), idle_color="grey",
-                                     font_preset=TAB_FONT)
+                                     font_preset=TAB_FONT, sound_kind="select_sub_category")
             btn.rect.width = w
             btn.rect.height = TAB_H
             buttons.append(btn)
@@ -480,7 +480,8 @@ class Unit_Art(Screen):
         x = c.SCREEN_WIDTH - 30 - w
 
         btn = make_choice_button(x, SHOW_ALL_ART_Y, "asset_folder", SHOW_ALL_ART_LABEL, self.show_all_art,
-                                 self.toggle_show_all_art, idle_color="grey", font_preset=SHOW_ALL_ART_FONT)
+                                 self.toggle_show_all_art, idle_color="grey", font_preset=SHOW_ALL_ART_FONT,
+                                 sound_kind="select_sub_category")
         btn.rect.width = w
         btn.rect.height = SHOW_ALL_ART_H
         return btn
@@ -503,7 +504,7 @@ class Unit_Art(Screen):
 
             btn = make_choice_button(x, LEVEL_TOGGLE_Y, "asset_folder", label, mode == self.level_display,
                                      lambda m=mode: self.set_level_display(m), idle_color="grey",
-                                     font_preset=LEVEL_TOGGLE_FONT)
+                                     font_preset=LEVEL_TOGGLE_FONT, sound_kind="select_sub_category")
             btn.rect.width = w
             btn.rect.height = LEVEL_TOGGLE_H
             buttons.append(btn)

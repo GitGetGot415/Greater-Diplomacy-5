@@ -257,7 +257,8 @@ class Diplomacy_Editor_Screen(ScrollPanes, EditorOverlayScreen):
     # ------------------------------------------------------------------ #
 
     def _row(self, x, y, width, color, text, callback):
-        btn = Button(x, y, "list_row", color, text, callback, font_preset="button_small")
+        btn = Button(x, y, "list_row", color, text, callback, font_preset="button_small",
+                     sound_kind="select_sub_category")
         btn.rect.width = width
         return btn
 
@@ -297,6 +298,7 @@ class Diplomacy_Editor_Screen(ScrollPanes, EditorOverlayScreen):
             btn = self._row(self.nat_x, y, self.NAT_W - 24, "blue", text_utils.truncate_chars(cid, 26),
                             lambda cc=cid: self.select_nation(cc))
             btn.is_selected = cid == self.target
+            btn.sound_kind = "select_category"
             btn.pane = "nations"
             btn.click_guard = self._guard_nations
             self.elements.append(btn)
@@ -320,10 +322,12 @@ class Diplomacy_Editor_Screen(ScrollPanes, EditorOverlayScreen):
 
         core_button = make_choice_button(self.cols_x, self.row_a_y - 2, "editor_ui", "Wars, Factions & Puppets",
                                          self.relationship_view == "core",
-                                         lambda: self.set_relationship_view("core"), font_preset="button_small")
+                                         lambda: self.set_relationship_view("core"), font_preset="button_small",
+                                         sound_kind="select_category")
         agreement_button = make_choice_button(self.cols_x + 310, self.row_a_y - 2, "editor_ui", "Diplomatic Agreements",
                                               self.relationship_view == "agreements",
-                                              lambda: self.set_relationship_view("agreements"), font_preset="button_small")
+                                              lambda: self.set_relationship_view("agreements"), font_preset="button_small",
+                                              sound_kind="select_category")
         self.elements += [core_button, agreement_button]
 
         if self.relationship_view == "core":

@@ -290,11 +290,12 @@ class FileRow:
     Rows are rebuilt on refresh_ui, not per frame, so the cell text renders once.
     """
 
-    def __init__(self, rect, icon, cells, is_selected, on_click):
+    def __init__(self, rect, icon, cells, is_selected, on_click, *, sound_kind="click"):
         self.rect = rect
         self.icon = icon
         self.is_selected = is_selected
         self.on_click = on_click
+        self.sound_kind = sound_kind
         self.visible = True
         self.is_pressed = False
         self.click_guard = None
@@ -317,7 +318,8 @@ class FileRow:
         elif event.type == pygame.MOUSEBUTTONUP and event.button == 1 and self.is_pressed:
             self.is_pressed = False
             if self._accepts(event.pos):
-                ui_elements.play_ui_sound("click")
+                if self.sound_kind is not None:
+                    ui_elements.play_ui_sound(self.sound_kind)
                 self.on_click()
 
     def draw(self, surface):
@@ -958,6 +960,7 @@ class FileBrowserScreen(ModalScreen):
             crumb = self._chrome_button(x, y, (width, self.CRUMB_H),
                                         _fit_text(label, font, width - self.CRUMB_PAD),
                                         lambda p=path: self._navigate(p))
+            crumb.sound_kind = "select_category"
             self._crumbs.append(crumb)
             self.elements.append(crumb)
             x += width
@@ -974,7 +977,8 @@ class FileBrowserScreen(ModalScreen):
             icon = self._icon(folder_icon_name(path))
             button = Button(x, self.sidebar_rect.y + self.PANE_GAP + i * (place_h + self.PLACE_GAP),
                             "browser_place", "light_blue", _fit_text(label, font, place_w - 46),
-                            lambda p=path: self._navigate(p), image=icon, font_preset="button_small")
+                            lambda p=path: self._navigate(p), image=icon, font_preset="button_small",
+                            sound_kind="select_category")
             button.is_selected = self._is_current(path)
             self.elements.append(button)
 
@@ -998,7 +1002,8 @@ class FileBrowserScreen(ModalScreen):
             self.add_list_row(FileRow(pygame.Rect(rows.x, y, rows.width, self.ROW_HEIGHT),
                                       self._entry_icon(entry), self._row_cells(entry),
                                       full in self.selected or full == self.selected_folder,
-                                      lambda e=entry: self._row_click(e)))
+                                      lambda e=entry: self._row_click(e),
+                                      sound_kind="select_category" if entry.kind == "dir" else "select_sub_category"))
 
     def _add_form(self):
         btn_size = (self.FORM_BTN_W, self.FORM_ROW_H)

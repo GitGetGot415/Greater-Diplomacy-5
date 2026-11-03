@@ -218,7 +218,7 @@ class TurnEditorScreen(ModalScreen):
                                        ("administrative", "Administrative"), ("conversion", "Conversions"))):
             btn = Button(p.x + self.PAD + i * (tab_w + 10), p.y + 56, "browser_tool",
                          "green" if key == self.active_tab else "light_blue", label,
-                         lambda k=key: self.select_tab(k))
+                         lambda k=key: self.select_tab(k), sound_kind="select_category")
             btn.is_selected = key == self.active_tab
             self.elements.append(btn)
 

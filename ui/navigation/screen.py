@@ -767,7 +767,8 @@ class MenuListScreen(Screen):
         """Builds a centered button for each (label, value) row. A click passes the value to on_pick."""
         for i, y in self.layout_menu_list(len(rows)):
             label, value = rows[i]
-            self.add_list_row(Button("centered", y, "new_game", "blue", label, lambda v=value: on_pick(v)))
+            self.add_list_row(Button("centered", y, "new_game", "blue", label, lambda v=value: on_pick(v),
+                                     sound_kind="select_sub_category"))
 
     def additional_events(self, event):
         if self.has_menu_list():
@@ -1151,6 +1152,7 @@ class NationListOverlayScreen(EditorOverlayScreen):
                                               row_top, view_h=view_h, cull_top=cull_top,
                                               cull_bottom=cull_bottom):
             button = self.country_button(self.active_countries[index], row_x, y)
+            button.sound_kind = "select_category"
             self.add_list_row(button)
 
         self.list_view_h = view_h
