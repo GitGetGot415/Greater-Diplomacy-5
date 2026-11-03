@@ -52,7 +52,11 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
     MARGIN = 24
     GAP = 16
     LIST_AND_SEARCH_WIDTH = 470
-    CLEAR_BUTTON_WIDTH = 90
+    CLEAR_BUTTON_WIDTH = 60
+    SORT_BUTTON_WIDTH = 120
+    CONTROL_HEIGHT = 38
+    CONTROL_GAP = 6
+    SEARCH_FONT = "small"
     CATEGORY_Y = 94
     CONTROL_Y = 166
     PANEL_Y = 212
@@ -65,7 +69,7 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
     content_label = "items"
     category_caption = ""
     EMPTY_DETAILS = ("Select an item to see its details.",)
-    SORTS = (("recent", "Recently modified"), ("name", "Name A-Z"), ("reverse_name", "Name Z-A"))
+    SORTS = (("recent", "Modified"), ("name", "A-Z"), ("reverse_name", "Z-A"))
 
     def __init__(self):
         super().__init__()
@@ -81,8 +85,9 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
         self._search_was_active = False
         self._was_refreshing = False
         self.search_field = TextField(self.MARGIN, self.CONTROL_Y,
-                                      self.LIST_AND_SEARCH_WIDTH - self.GAP - self.CLEAR_BUTTON_WIDTH, 38,
-                                      on_change=self.filter_entries, on_submit=self.finish_search)
+                                      self.LIST_AND_SEARCH_WIDTH, self.CONTROL_HEIGHT,
+                                      on_change=self.filter_entries, on_submit=self.finish_search,
+                                      font_preset=self.SEARCH_FONT)
 
     @property
     def text_input_active(self):
@@ -175,17 +180,28 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
         }
         for name, rect in self.regions.items():
             setattr(self, f"_content_{name}", rect)
-        self.search_field.rect.topleft = (margin, self.CONTROL_Y)
+        self.layout_search_controls(self.CONTROL_Y)
+
+    def layout_search_controls(self, y):
+        """Keep Search, Clear, and Sort together above the item list."""
+        width = self.list_panel.width - self.CLEAR_BUTTON_WIDTH - self.SORT_BUTTON_WIDTH - 2 * self.CONTROL_GAP
+        self.search_field.rect = pygame.Rect(self.list_panel.x, y, width, self.CONTROL_HEIGHT)
+        self.search_field.font_preset = self.SEARCH_FONT
 
     def build_browser_controls(self):
         """Build the search and sort controls for this layout."""
-        margin = self.MARGIN
-        self.elements.append(Button(self.list_panel.right - self.CLEAR_BUTTON_WIDTH, self.CONTROL_Y,
-                                    (self.CLEAR_BUTTON_WIDTH, 38), "red", "Clear", self.clear_search,
-                                    font_preset="button_small"))
-        sort_label = self.SORTS[self.sort_index][1]
-        self.elements.append(Button(c.SCREEN_WIDTH - margin - 310, self.CONTROL_Y, (310, 38), "grey",
-                                    f"Sort: {sort_label}", self.cycle_sort, font_preset="button_small"))
+        y = self.search_field.rect.y
+        clear_x = self.search_field.rect.right + self.CONTROL_GAP
+        sort_x = clear_x + self.CLEAR_BUTTON_WIDTH + self.CONTROL_GAP
+        sort_button = Button(sort_x, y, (self.SORT_BUTTON_WIDTH, self.CONTROL_HEIGHT), "grey",
+                             f"Sort: {self.SORTS[self.sort_index][1]}", self.cycle_sort, font_preset="small")
+        sort_button.fit_text = True
+        sort_button.fit_single_line = True
+        self.elements.extend([
+            Button(clear_x, y, (self.CLEAR_BUTTON_WIDTH, self.CONTROL_HEIGHT), "red", "Clear",
+                   self.clear_search, font_preset="small"),
+            sort_button,
+        ])
 
     def make_content_row(self, rect, entry):
         return ContentRow(rect, entry, self.selected_entry == entry, lambda: self.toggle_entry(entry))
@@ -356,7 +372,8 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
         font = fonts.get("normal")
         if self.category_caption:
             surface.blit(font.render(self.category_caption, True, c.UI_TEXT_LIGHT), (self.MARGIN, self.CATEGORY_Y))
-        surface.blit(font.render("Search by name", True, c.UI_TEXT_DIM), (self.MARGIN, self.CONTROL_Y - 23))
+        surface.blit(fonts.get(self.SEARCH_FONT).render("Search by name", True, c.UI_TEXT_DIM),
+                     (self.MARGIN, self.CONTROL_Y - 23))
         surface.blit(font.render("Name / Last modified", True, c.UI_TEXT_DIM),
                      (self.list_panel.x + 14, self.list_panel.y + 12))
         surface.blit(self.detail_heading, (self.detail_panel.x + self.MARGIN, self.detail_panel.y + 20))
@@ -425,9 +442,7 @@ class ScenarioLibraryScreen(ContentBrowserScreen):
 
     def layout_browser(self):
         if not self.library_mode:
-            super().layout_browser()
-            self.search_field.rect.width = self.LIST_AND_SEARCH_WIDTH - self.GAP - self.CLEAR_BUTTON_WIDTH
-            return
+            return super().layout_browser()
         margin, gap = self.MARGIN, self.GAP
         available_height = c.SCREEN_HEIGHT - self.LIBRARY_PANEL_Y - self.BOTTOM_MARGIN
         self.category_panel = pygame.Rect(margin, self.LIBRARY_PANEL_Y, self.LIBRARY_CATEGORY_WIDTH, available_height)
@@ -445,21 +460,15 @@ class ScenarioLibraryScreen(ContentBrowserScreen):
         }
         for name, rect in self.regions.items():
             setattr(self, f"_content_{name}", rect)
-        self.search_field.rect = pygame.Rect(self.list_panel.x, self.LIBRARY_CONTROL_Y,
-                                             self.list_panel.width - 82, 38)
+        self.layout_search_controls(self.LIBRARY_CONTROL_Y)
 
     def build_browser_controls(self):
+        super().build_browser_controls()
         if not self.library_mode:
-            return super().build_browser_controls()
+            return
         y = self.LIBRARY_CONTROL_Y
-        self.elements.extend([
-            Button(self.list_panel.right - 74, y, (74, 38), "red", "Clear", self.clear_search,
-                   font_preset="button_small"),
-            Button(self.detail_panel.x, y, (self.detail_panel.width - 144, 38), "grey",
-                   f"Sort: {self.SORTS[self.sort_index][1]}", self.cycle_sort, font_preset="button_small"),
-            Button(self.detail_panel.right - 128, y, (128, 38), "grey", "Refresh", self.reload_entries,
-                   font_preset="button_small"),
-        ])
+        self.elements.append(Button(self.detail_panel.right - 128, y, (128, 38), "grey", "Refresh", self.reload_entries,
+                                    font_preset="button_small"))
         for index, (state, (label, directory_attr)) in enumerate(self.library_categories.items()):
             rect = self.category_button_rect(index)
             tile = Button(rect.x, rect.y, rect.size, self.CATEGORY_COLORS[directory_attr], label,
@@ -512,9 +521,10 @@ class ScenarioLibraryScreen(ContentBrowserScreen):
         self.library_labels = [
             (font.render(text, True, c.UI_TEXT_LIGHT), position) for text, position in (
                 ("Categories", (self.category_panel.x + 16, self.category_panel.y + 12)),
-                ("Search", (self.list_panel.x, self.LIBRARY_CONTROL_Y - 24)),
                 (label, (self.list_panel.x + 14, self.list_panel.y + 12)))
         ]
+        self.library_labels.append((fonts.get(self.SEARCH_FONT).render("Search", True, c.UI_TEXT_LIGHT),
+                                    (self.list_panel.x, self.LIBRARY_CONTROL_Y - 24)))
         count = font.render(f"{len(self.filtered_entries)} / {len(self.entries)}", True, c.UI_TEXT_DIM)
         self.library_labels.append((count, (self.list_panel.right - count.get_width() - 14, self.list_panel.y + 12)))
         if not self.filtered_entries:

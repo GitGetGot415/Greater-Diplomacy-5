@@ -18,7 +18,7 @@ class New_Game(ScenarioLibraryScreen):
     content_label = "scenarios"
     CORNER_BUTTON_SIZE = (220, 40)
     CORNER_MARGIN = 24
-    SORTS = (("name", "Name A-Z"), ("reverse_name", "Name Z-A"), ("recent", "Recently modified"))
+    SORTS = ScenarioLibraryScreen.SORTS[1:] + ScenarioLibraryScreen.SORTS[:1]
 
     # Resolve directory settings when the browser refreshes.
     CATEGORIES = {

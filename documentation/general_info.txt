@@ -141,6 +141,7 @@ Use the bottom-right button or Enter to open the selected item.
 Use the arrow keys to change the selection. Enter in the search field finishes the search without opening an item.
 
 Search filters names without matching capitalization. Clear shows all items.
+Search, Clear, and Sort share one row above each browser's item list.
 The Sort button cycles through modification date, ascending name, and descending name.
 The modification date comes from the folder. It is separate from the game date in the details panel.
 
