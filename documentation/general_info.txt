@@ -503,13 +503,14 @@ DISPLAY SUPPORT
 
 ui/bars/ui_bars.py creates display surfaces through set_display_mode.
 Game startup, fullscreen changes, and standalone tools use this helper.
-The helper disables destination alpha blending on the window surface.
-macOS can supply an alpha-enabled surface. Zero destination alpha can make transparent text backgrounds appear white.
+On macOS, the helper sets SDL_FRAMEBUFFER_ACCELERATION to "opengl" before it creates the window.
+The default Metal window surface has an alpha channel, and most blits set that alpha to zero.
+pygame reads zero destination alpha as transparent.
+Faded icons then draw at full strength, and copies of the display show text as black boxes.
+The OpenGL window surface has no alpha channel, as on Windows.
+The helper also disables destination alpha blending on the window surface.
+Zero destination alpha can make transparent text backgrounds appear white.
 Text and image surfaces keep their transparency when drawn onto the opaque display.
-Most blits onto the macOS display set its alpha byte to zero.
-Do not call set_alpha on an image that has pixel alpha.
-pygame then copies the image colors without blending where the display alpha is zero.
-Use map_utils.fade_pixel_alpha, or the alpha argument of symbol_loader.get_symbol.
 On Apple Silicon, pygame.transform.grayscale damages pixel alpha. get_symbol restores the source alpha after it.
 
 Dragging a scrollable list's content down pulls that content down and moves its scrollbar handle up.

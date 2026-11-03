@@ -571,7 +571,7 @@ def _draw_combat_bubble_turns(surface, rect, bubble, record, zoom):
                    max(1, int(text.get_height() * scale))))
 
     alpha = _combat_bubble_alpha(record)
-    map_utils.fade_pixel_alpha(text, alpha)
+    text.set_alpha(alpha)
     shadow = text.copy()
     shadow.fill((0, 0, 0, alpha), special_flags=pygame.BLEND_RGBA_MULT)
 

@@ -8,7 +8,6 @@ import data.constants as c
 
 from data import queries, research_display
 from data.queries import get_base_item_name
-from ui.rendering import map_utils
 
 
 SYMBOLS = {}
@@ -881,7 +880,8 @@ def get_symbol(name, zoom, color=None, alpha=255, style=None, country=None, *, f
         # into the alpha of every second pixel. Keep the source alpha.
         pygame.surfarray.pixels_alpha(gray)[...] = pygame.surfarray.array_alpha(scaled)
         scaled = gray
-    map_utils.fade_pixel_alpha(scaled, alpha)
+    if alpha < 255:
+        scaled.set_alpha(alpha)
 
     if len(SCALED_SYMBOLS) >= SCALED_CACHE_LIMIT:
         SCALED_SYMBOLS.clear()

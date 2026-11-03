@@ -1,5 +1,6 @@
 import pygame
 import os
+import sys
 import math
 from contextlib import contextmanager
 from functools import lru_cache
@@ -299,9 +300,16 @@ def draw_screen_panel(surface, screen, title):
 
 def set_display_mode(size, flags=0):
     """Create an opaque display surface for the game and standalone tools."""
+    if sys.platform == "darwin":
+        # The default Metal window surface on macOS has an alpha channel.
+        # Most blits set that alpha to zero. Later blits with set_alpha, and
+        # copies of the display, then read that zero as transparent: faded
+        # icons draw at full strength, and text and bubble corners turn black.
+        # The OpenGL window surface has no alpha channel, as on Windows.
+        os.environ.setdefault("SDL_FRAMEBUFFER_ACCELERATION", "opengl")
     surface = pygame.display.set_mode(size, flags)
-    # macOS can supply an alpha-enabled window surface. Its alpha channel is
-    # not window transparency. Zero destination alpha can turn text into white rectangles.
+    # If the window surface still has an alpha channel, do not blend onto it.
+    # Zero destination alpha can turn text into white rectangles.
     surface.set_alpha(None)
     return surface
 

@@ -15,19 +15,6 @@ def avoid_chroma(color):
         return (r - 1, g, b)
     return color
 
-def fade_pixel_alpha(surface, alpha):
-    """Multiplies the per-pixel alpha of a SRCALPHA surface by alpha / 255.
-
-    Use this instead of set_alpha on images with per-pixel alpha.
-    The macOS window surface has an alpha byte, and most blits set it to zero.
-    pygame blends surface alpha with per-pixel alpha in a different blitter.
-    That blitter copies source colors without blending where the destination alpha is zero.
-    Transparent pixels then show as black squares, and faded icons show at full strength.
-    """
-    if alpha < 255:
-        surface.fill((255, 255, 255, alpha), special_flags=pygame.BLEND_RGBA_MULT)
-    return surface
-
 def update_single_province_surface(political_surf, id_map, province_color_id, new_nation_color):
     """
     Updates exactly one province using a clean mask blit. 
