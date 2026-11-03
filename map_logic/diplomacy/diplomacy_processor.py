@@ -1637,7 +1637,7 @@ def _process_claim_queues(context):
                                                 country_name, core_nation, context, keep_cores, release_type)
                 if created and country_name == session_state.player_country:
                     core_name = queries.get_country_display_name(core_nation, world_state.nation_data)
-                    context.show_feedback(f"Released {release_type.lower()} country from {core_name} cores!")
+                    context.show_feedback(f"Created {release_type.lower()} country from {core_name} cores!")
 
 
 def _process_scheduled_ai_attache_revocations(context):

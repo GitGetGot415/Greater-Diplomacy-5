@@ -690,7 +690,8 @@ class Button:
             setattr(block_rect, anchor_name, anchor_value)
             y = block_rect.y
             for line_text, line in lines:
-                line_rect = line.get_rect(centerx=block_rect.centerx, y=y)
+                line_rect = (line.get_rect(left=block_rect.left, y=y) if self.text_align == "left"
+                             else line.get_rect(centerx=block_rect.centerx, y=y))
                 shadow = font.render(line_text, True, (0, 0, 0))
                 surface.blit(shadow, (line_rect.x + 1, line_rect.y + 1))
                 surface.blit(line, line_rect)

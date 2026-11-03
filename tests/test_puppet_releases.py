@@ -309,7 +309,7 @@ class PuppetManagementControlTests(unittest.TestCase):
         self.screen.refresh_ui()
         offset = self.screen.scroll_y
         with mock.patch.object(puppets_screen, "_run_pygame_sub_screen") as launch:
-            self.click(self.button("Release Nation"))
+            self.click(self.button("Create Nation"))
             self.assertIsInstance(launch.call_args.args[1], puppets_screen.Create_Puppet_Screen)
             launch.call_args.kwargs["on_done"]()
         self.assertEqual(self.screen.selected_subject, "Fixture4")
@@ -387,7 +387,7 @@ class PuppetManagementControlTests(unittest.TestCase):
         self.assertTrue(self.button("Move Up").disabled)
         self.assertTrue(self.button("Move Down").disabled)
         with mock.patch.object(puppets_screen, "_run_pygame_sub_screen") as launch:
-            self.click(self.button("Release Nation"))
+            self.click(self.button("Create Nation"))
             launch.assert_called_once()
         self.click(self.button("Back"))
         self.assertTrue(self.screen.done)

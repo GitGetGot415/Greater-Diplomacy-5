@@ -2,6 +2,7 @@ import pygame
 import data.constants as c
 from data import queries
 from ui.dialogs import pickers
+from ui.widgets import flag_icons
 from ui.navigation.screen import MapOverlayScreen, Screen
 from ui.widgets.ui_elements import Button, Slider, make_back_button, make_toggle_button, on_off_color
 from ui.rendering.font_manager import fonts
@@ -28,13 +29,17 @@ class Puppets_Screen(Screen):
     COLUMN_GAP = 24
     CONTROL_GAP = 16
     CONTROL_HEIGHT = 40
-    RELEASE_BUTTON_WIDTH = 180
+    CREATE_BUTTON_WIDTH = 180
     ROW_HEIGHT = 60
     ROW_GAP = 6
     ROW_TEXT_PADDING = 24
+    ROW_FLAG_SIZE = (30, 20)
+    ROW_FLAG_GAP = 10
     SCROLLBAR_WIDTH = 12
     SCROLLBAR_GAP = 8
     NAME_HEIGHT = 64
+    HEADER_FLAG_SIZE = (72, 48)
+    HEADER_FLAG_GAP = 16
     STATUS_HEIGHT = 26
     RESOURCE_TOP = 146
     RESOURCE_ROW_HEIGHT = 56
@@ -97,14 +102,14 @@ class Puppets_Screen(Screen):
         p = self.panel_rect
         header_y = p.top + self.TITLE_Y_OFFSET
         self.elements = [make_back_button(self.exit_screen, pos=(p.left + self.PADDING, header_y))]
-        release = Button(p.right - self.PADDING - self.RELEASE_BUTTON_WIDTH, header_y,
-                         (self.RELEASE_BUTTON_WIDTH, self.CONTROL_HEIGHT),
-                         "blue", "Release Nation", self.open_create_puppet)
+        create = Button(p.right - self.PADDING - self.CREATE_BUTTON_WIDTH, header_y,
+                        (self.CREATE_BUTTON_WIDTH, self.CONTROL_HEIGHT),
+                        "blue", "Create Nation", self.open_create_puppet)
         editable = (not (self.map_screen.is_editor or self.map_screen.tactical_mode)
                     and self.player == self.map_screen.player_country
                     and queries.realtime_turn_open(self.map_screen))
-        release.apply_state(enabled=editable and queries.can_release_nations_for(self.map_screen, self.player), color="blue")
-        self.elements.append(release)
+        create.apply_state(enabled=editable and queries.can_release_nations_for(self.map_screen, self.player), color="blue")
+        self.elements.append(create)
         self.master_label = None
         player_data = self.map_screen.nation_data.get(self.player, {})
         master = player_data.get("master", "")
@@ -130,10 +135,12 @@ class Puppets_Screen(Screen):
                 continue
             data = self.map_screen.nation_data.get(subject, {})
             name = queries.get_country_display_name(subject, self.map_screen.nation_data)
-            label = fit_text(name, font, row_width - self.ROW_TEXT_PADDING)
+            text_width = row_width - self.ROW_TEXT_PADDING - self.ROW_FLAG_SIZE[0] - self.ROW_FLAG_GAP
+            label = fit_text(name, font, text_width)
             label += "\n" + data.get("puppet_type", c.PUPPET_TYPE_AUTONOMOUS)
             button = Button(self.list_rect.left, y, (row_width, self.ROW_HEIGHT - self.ROW_GAP),
                             "blue", label, lambda nation=subject: self.select_subject(nation), font_preset="normal",
+                            image=flag_icons.flag_surface(subject, self.map_screen.nation_data, self.ROW_FLAG_SIZE),
                             sound_kind="select_category")
             button.text_align = "left"
             button.is_selected = subject == self.selected_subject
@@ -170,12 +177,16 @@ class Puppets_Screen(Screen):
         integrated = data.get("puppet_type") == c.PUPPET_TYPE_INTEGRATED
         name = queries.get_country_display_name(subject, self.map_screen.nation_data)
         heading = fonts.get("heading2")
-        lines = wrap_text(name, heading, detail.width, break_long_words=True)
+        flag = flag_icons.flag_surface(subject, self.map_screen.nation_data, self.HEADER_FLAG_SIZE)
+        self.detail_surface.blit(flag, (0, (self.NAME_HEIGHT - flag.get_height()) // 2))
+        name_x = self.HEADER_FLAG_SIZE[0] + self.HEADER_FLAG_GAP
+        name_width = detail.width - name_x
+        lines = wrap_text(name, heading, name_width, break_long_words=True)
         line_height = self.NAME_HEIGHT // 2
         for index, line in enumerate(lines[:2]):
             if index == 1 and len(lines) > 2:
-                line = fit_text(" ".join(lines[1:]), heading, detail.width)
-            self.detail_surface.blit(heading.render(line, True, c.UI_TEXT_BRIGHT), (0, index * line_height))
+                line = fit_text(" ".join(lines[1:]), heading, name_width)
+            self.detail_surface.blit(heading.render(line, True, c.UI_TEXT_BRIGHT), (name_x, index * line_height))
 
         subject_count = len(data.get("puppets", []))
         info = f"{data.get('puppet_type', c.PUPPET_TYPE_AUTONOMOUS)} | Subjects: {subject_count}"
@@ -309,7 +320,7 @@ class Puppets_Screen(Screen):
 
 class Create_Puppet_Screen(MapOverlayScreen):
     overlay_alpha = 0
-    # Keep the land visible beside the release controls.
+    # Keep the land visible beside the nation creation controls.
     CENTER_PANEL = False
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_INFO_OVER_MAP
     PANEL_STYLE = PUPPET_PANEL_STYLES["release_nations"]
@@ -337,12 +348,12 @@ class Create_Puppet_Screen(MapOverlayScreen):
         self.refresh_ui()
 
     def get_panel_title(self):
-        return "Release Nations: " + queries.get_country_display_name(
+        return "Create Nation: " + queries.get_country_display_name(
             self.releasing_country, self.map_screen.nation_data)
 
     def can_edit_realtime(self):
         if not queries.can_release_nations_for(self.map_screen, self.releasing_country):
-            self.map_screen.show_feedback("You cannot release nations for this country.")
+            self.map_screen.show_feedback("You cannot create nations from this country.")
             return False
         return can_edit_diplomacy(self.map_screen)
 
@@ -350,7 +361,7 @@ class Create_Puppet_Screen(MapOverlayScreen):
         if not self.can_edit_realtime():
             return
         if release_type not in c.PUPPET_RELEASE_TYPES:
-            raise ValueError("Unknown nation release type.")
+            raise ValueError("Unknown nation creation type.")
         self.release_type = release_type
         self.refresh_ui()
 
@@ -408,7 +419,7 @@ class Create_Puppet_Screen(MapOverlayScreen):
                 row_text, True, text_color))
             y_pos = self.panel_rect.y + self.ROW_TOP + index * self.ROW_HEIGHT + self.scroll_y
             button = Button(self.panel_rect.x + 320, y_pos, "small", "red" if entry else "green",
-                            "Cancel" if entry else "Release",
+                            "Cancel" if entry else "Create",
                             lambda value=subject, cancel=bool(entry): self.cancel_queue(value) if cancel else self.queue_creation(value))
             button.apply_state(enabled=enabled and (entry is not None or bool(available)),
                                color="red" if entry else "green",
@@ -418,7 +429,7 @@ class Create_Puppet_Screen(MapOverlayScreen):
             button.base_y = y_pos - self.scroll_y
             self.elements.append(button)
 
-        # Cache the map highlights in release order, using the same territory rule.
+        # Cache the map highlights in creation order, using the same territory rule.
         self.queued_highlights = []
         colors = ((255, 105, 180), (105, 255, 180), (105, 180, 255), (255, 255, 105), (255, 150, 100))
         prior = []
@@ -452,7 +463,7 @@ class Create_Puppet_Screen(MapOverlayScreen):
             return
         country.setdefault("release_puppet_queue", [])[:] = canonical
         name = queries.get_country_display_name(subject, self.map_screen.nation_data)
-        self.map_screen.show_feedback(f"{self.release_type} release of {name} queued (1 turn).")
+        self.map_screen.show_feedback(f"Creation of {name} ({self.release_type}) queued (1 turn).")
         self.refresh_ui()
 
     def cancel_queue(self, subject):
@@ -468,7 +479,7 @@ class Create_Puppet_Screen(MapOverlayScreen):
         self.draw_panel(surface)
         font = fonts.get("normal")
         if not self.release_rows:
-            surface.blit(font.render("No potential subjects available.", True, c.UI_TEXT_MUTED),
+            surface.blit(font.render("No nations available to create.", True, c.UI_TEXT_MUTED),
                          (self.panel_rect.x + 30, self.panel_rect.y + self.ROW_TOP))
         else:
             with ui_bars.clip_scroll_region(surface, self.scroll_content_rect,
@@ -489,7 +500,7 @@ def open_puppets_menu(map_screen):
         if (map_screen.multiplayer_mode
                 or map_screen.realtime_multiplayer
                 or map_screen.is_editor or map_screen.tactical_mode):
-            map_screen.show_feedback("Spectator releases are available only in a local strategic game.")
+            map_screen.show_feedback("Spectators can create nations only in a local strategic game.")
             return
 
         def selected(country_id):
@@ -497,7 +508,7 @@ def open_puppets_menu(map_screen):
                 _run_pygame_sub_screen(map_screen, Create_Puppet_Screen(map_screen, country_id))
 
         countries = sorted(queries.get_living_nations(map_screen.map_data))
-        pickers.open_listbox_selector(map_screen, "Release Nations", "Choose a country to release nations for:",
+        pickers.open_listbox_selector(map_screen, "Create Nation", "Choose a country to create a nation from:",
                                       queries.country_picker_items(countries, map_screen.nation_data), selected,
                                       close_on_select=False)
         return

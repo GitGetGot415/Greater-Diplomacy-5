@@ -2709,7 +2709,7 @@ class Map(StateAccess, Screen):
     def draw_background(self, surface):
         # Recomputed here (not just in update()) so callers that draw this
         # background without running Map_Screen.update() first -- Orders_Screen,
-        # MapOverlayScreen (claims/peace/trade/nation release) -- still get a live,
+        # MapOverlayScreen (claims/peace/trade/nation creation) -- still get a live,
         # zoom-responsive color instead of a stale one. The shared renderer
         # anchors the sky and optional water reflection to the map camera.
         self.bg_color = camera_handler.get_dynamic_ocean_color(self.camera, self.min_zoom)

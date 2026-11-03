@@ -397,7 +397,7 @@ class PlayerActions:
         if not all(isinstance(value, dict) for value in (siphons, appearances)):
             raise PlayerActionError("Invalid puppet settings.")
         if not isinstance(releases, list) or len(releases) > self._MAX_CLAIM_DRAFTS:
-            raise PlayerActionError("Invalid puppet release queue.")
+            raise PlayerActionError("Invalid nation creation queue.")
         canonical_siphons = {}
         for puppet, values in siphons.items():
             puppet_data = self.world.nation_data.get(puppet)

@@ -341,14 +341,14 @@ def finalize_take_puppets(map_data, nation_data, master, target_puppet):
         assign_puppet(map_data, nation_data, master, p, p_type)
 
 def canonical_puppet_release_queue(map_data, nation_data, master, entries, old_queue=()):
-    """Validate release choices. Preserve host countdowns."""
+    """Validate nation creation choices. Preserve host countdowns."""
     if master not in nation_data or master in c.UNPLAYABLE_NATIONS or not isinstance(entries, list):
-        raise ValueError("Invalid releasing country or release queue.")
+        raise ValueError("Invalid source country or nation creation queue.")
     previous = {entry["core_nation"]: entry for entry in old_queue}
     result, seen = [], set()
     for entry in entries:
         if not isinstance(entry, dict):
-            raise ValueError("Invalid nation release entry.")
+            raise ValueError("Invalid nation creation entry.")
         subject = entry.get("core_nation")
         keep_cores = entry.get("keep_cores", False)
         # A request can omit its release type. Integrated is the default.
@@ -356,14 +356,14 @@ def canonical_puppet_release_queue(map_data, nation_data, master, entries, old_q
         if (not isinstance(subject, str) or subject == master or subject in c.UNPLAYABLE_NATIONS
                 or subject in seen or not isinstance(keep_cores, bool)
                 or not isinstance(release_type, str) or release_type not in c.PUPPET_RELEASE_TYPES):
-            raise ValueError("Invalid nation release choice.")
+            raise ValueError("Invalid nation creation choice.")
         old = previous.get(subject)
         if old:
             if (old.get("keep_cores", False) != keep_cores
                     or old["release_type"] != release_type):
-                raise ValueError("Cancel the existing release before changing its options.")
+                raise ValueError("Cancel the existing nation creation before changing its options.")
         elif not queries.get_puppet_release_provinces(master, subject, map_data, keep_cores, result):
-            raise ValueError("That country has no eligible core territory to release.")
+            raise ValueError("That nation has no eligible core territory for creation.")
         result.append({"core_nation": subject, "keep_cores": keep_cores, "release_type": release_type,
                        "turns_left": old.get("turns_left", 1) if old else 1})
         seen.add(subject)
@@ -372,7 +372,7 @@ def canonical_puppet_release_queue(map_data, nation_data, master, entries, old_q
 
 def finalize_create_puppet(map_data, nation_data, master, core_nation, context,
                          keep_cores=False, release_type=c.PUPPET_TYPE_INTEGRATED):
-    """Release eligible core land as an Integrated, Autonomous, or Independent country."""
+    """Create an Integrated, Autonomous, or Independent country from eligible core land."""
     if release_type not in c.PUPPET_RELEASE_TYPES or master not in nation_data:
         return None
     territory = queries.get_puppet_release_provinces(master, core_nation, map_data, keep_cores)
@@ -411,7 +411,7 @@ def finalize_create_puppet(map_data, nation_data, master, core_nation, context,
     new_data = copy.deepcopy(base_data)
     new_data["name"] = new_name
 
-    # Only Integrated releases use the master's appearance.
+    # Only Integrated nations use the master's appearance.
     # Older country records may omit color. Use the shared country default.
     release_color = (master_data.get("color", [255, 255, 255]) if integrated
                      else base_data.get("color", country_io.DEFAULT_NATION_COLOR))
@@ -445,7 +445,7 @@ def finalize_create_puppet(map_data, nation_data, master, core_nation, context,
 
     nation_data[new_id] = new_data
 
-    # Independent releases do not inherit the master's faction or wars.
+    # Independent nations do not inherit the master's faction or wars.
     if release_type != c.PUPPET_RELEASE_INDEPENDENT:
         assign_puppet(map_data, nation_data, master, new_id, release_type)
 
