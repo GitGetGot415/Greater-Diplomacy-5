@@ -161,7 +161,8 @@ Selecting the same item again clears the selection. Search and sorting use the s
 Back from New Map returns to custom maps. Back from New Game returns to the menu.
 
 Random Scenario is below Custom Scenarios and opens its existing setup screen.
-Scenario Settings is in the bottom-right corner of New Game. Historical Leaders is in the top-right corner.
+Scenario Settings is above Data Refresh at the bottom of New Game's left panel.
+Historical Leaders is in the top-right corner.
 Returning from Scenario Settings keeps the selected category and scenario.
 Base maps and shipped scenarios open as copies. Their source folders cannot be renamed or deleted from this browser.
 
@@ -175,7 +176,8 @@ Use Refresh after an external file change. Frame updates and scrolling use cache
 Details read existing meta.json fields without loading map geometry, images, or history.
 
 New Game and New Map use compact text buttons without map previews or category icons.
-The category and item panels extend to the bottom screen margin. The details panel has a fixed height.
+All three panels extend to the bottom screen margin. The details panel keeps its width at the right screen margin.
+The middle panel fills the space between the category and details panels.
 Panel sizes stay constant when you select, search, or change categories. Long lists and details use scrolling.
 Category metadata is cached when the category opens. Refresh reloads folder entries and metadata.
 

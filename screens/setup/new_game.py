@@ -64,10 +64,8 @@ class New_Game(ScenarioLibraryScreen):
             make_back_button(self.exit_screen),
             leaders_button,
             random_button,
-            Button(corner_x, c.SCREEN_HEIGHT - self.CORNER_MARGIN - self.CORNER_BUTTON_SIZE[1],
-                   self.CORNER_BUTTON_SIZE, "pink", "Scenario Settings",
-                   self.scenario_settings, font_preset="button_small"),
         ])
+        self.add_category_footer_action("Scenario Settings", self.scenario_settings, "pink", slot=1)
         self.add_category_footer_action("Data Refresh", self.trigger_global_data_refresh, "purple")
         self.open_button = self.add_primary_action("Start Game")
 

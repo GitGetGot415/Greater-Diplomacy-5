@@ -395,9 +395,7 @@ class ScenarioLibraryScreen(ContentBrowserScreen):
     """Use compact category buttons, scenario rows, and text details."""
 
     LIBRARY_CATEGORY_WIDTH = 224
-    LIBRARY_LIST_WIDTH = 400
     LIBRARY_DETAIL_WIDTH = 432
-    LIBRARY_DETAIL_HEIGHT = 300
     LIBRARY_PANEL_Y = 154
     LIBRARY_CONTROL_Y = 104
     LIBRARY_ROW_HEIGHT = 36
@@ -446,10 +444,11 @@ class ScenarioLibraryScreen(ContentBrowserScreen):
         margin, gap = self.MARGIN, self.GAP
         available_height = c.SCREEN_HEIGHT - self.LIBRARY_PANEL_Y - self.BOTTOM_MARGIN
         self.category_panel = pygame.Rect(margin, self.LIBRARY_PANEL_Y, self.LIBRARY_CATEGORY_WIDTH, available_height)
-        self.list_panel = pygame.Rect(self.category_panel.right + gap, self.LIBRARY_PANEL_Y,
-                                      self.LIBRARY_LIST_WIDTH, available_height)
-        self.detail_panel = pygame.Rect(self.list_panel.right + gap, self.LIBRARY_PANEL_Y,
-                                        self.LIBRARY_DETAIL_WIDTH, min(available_height, self.LIBRARY_DETAIL_HEIGHT))
+        self.detail_panel = pygame.Rect(c.SCREEN_WIDTH - margin - self.LIBRARY_DETAIL_WIDTH, self.LIBRARY_PANEL_Y,
+                                        self.LIBRARY_DETAIL_WIDTH, available_height)
+        list_x = self.category_panel.right + gap
+        self.list_panel = pygame.Rect(list_x, self.LIBRARY_PANEL_Y,
+                                      self.detail_panel.left - gap - list_x, available_height)
         detail_width = self.detail_panel.width - margin * 2 - 16
         self.action_top = self.detail_panel.bottom - margin - self.LIBRARY_ACTION_HEIGHT
         self.regions = {
@@ -544,10 +543,11 @@ class ScenarioLibraryScreen(ContentBrowserScreen):
         self.elements.append(button)
         return button
 
-    def add_category_footer_action(self, label, callback, color="grey", *, enabled=True):
+    def add_category_footer_action(self, label, callback, color="grey", *, enabled=True, slot=0):
         """Anchor an action at the bottom of the category panel."""
         rect = self.category_button_rect(0)
-        rect.bottom = self.category_panel.bottom - self.LIBRARY_CATEGORY_INSET
+        rect.bottom = (self.category_panel.bottom - self.LIBRARY_CATEGORY_INSET
+                       - slot * (self.LIBRARY_CATEGORY_HEIGHT + self.LIBRARY_CATEGORY_GAP))
         button = Button(rect.x, rect.y, rect.size,
                         color, label, callback, font_preset="button_small")
         button.fit_text = True
