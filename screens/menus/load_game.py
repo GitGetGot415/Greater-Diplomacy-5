@@ -51,9 +51,7 @@ class Load_Game(ContentBrowserScreen):
             self.add_browser_action("Rename", lambda: self.call_selected(self.start_rename), 1, "blue")
             self.add_browser_action("Export", lambda: self.call_selected(self.export_save_zip), 2, "green")
             self.add_browser_action("Delete…", lambda: self.call_selected(self.start_delete), 3, "red")
-            self.open_button = self.add_primary_action("Load Game")
-        else:
-            self.open_button = self.add_primary_action("New Game", lambda: self.go_to("NEW_GAME"))
+        self.open_button = self.add_primary_action("Load Game")
 
     def activate_selected(self):
         if self.selection_can_open:

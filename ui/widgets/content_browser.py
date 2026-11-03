@@ -69,6 +69,12 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
     content_label = "items"
     category_caption = ""
     SORTS = (("recent", "Modified"), ("name", "A-Z"), ("reverse_name", "Z-A"))
+    # A screen sets this to (label, callback) to start its list with an action row.
+    leading_row = None
+
+    @property
+    def leading_row_count(self):
+        return 0 if self.leading_row is None else 1
 
     def __init__(self):
         super().__init__()
@@ -130,13 +136,19 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
         self.elements = [self.search_field]
         self.build_browser_controls()
         rect = self.regions["items"]
-        limit = min(0, rect.height - len(self.filtered_entries) * self.ROW_HEIGHT)
+        offset = self.leading_row_count
+        row_count = len(self.filtered_entries) + offset
+        limit = min(0, rect.height - row_count * self.ROW_HEIGHT)
         self._scroll_items = max(limit, min(0, self.pane_scroll("items")))
-        for index, y in self.layout_list_rows(len(self.filtered_entries), self.ROW_HEIGHT, rect.y,
+        for index, y in self.layout_list_rows(row_count, self.ROW_HEIGHT, rect.y,
                                               cull_top=rect.top, cull_bottom=rect.bottom,
                                               attr="_scroll_items", limit_attr="_max_items"):
-            entry = self.filtered_entries[index]
-            row = self.make_content_row(pygame.Rect(rect.x, y, rect.width, self.ROW_HEIGHT - 6), entry)
+            row_rect = pygame.Rect(rect.x, y, rect.width, self.ROW_HEIGHT - 6)
+            if index < offset:
+                label, callback = self.leading_row
+                row = Button(*row_rect.topleft, row_rect.size, "green", label, callback, font_preset="normal")
+            else:
+                row = self.make_content_row(row_rect, self.filtered_entries[index - offset])
             self.add_pane_row("items", row)
             row.click_guard = lambda r=rect: r.collidepoint(pygame.mouse.get_pos())
         self._prepare_details()
@@ -341,11 +353,12 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
                 index = max(0, min(len(self.filtered_entries) - 1, index + (1 if event.key == pygame.K_DOWN else -1)))
             rect = self.regions["items"]
             scroll = self.pane_scroll("items")
-            top = index * self.ROW_HEIGHT + scroll
+            row = index + self.leading_row_count
+            top = row * self.ROW_HEIGHT + scroll
             if top < 0:
-                self._scroll_items = -index * self.ROW_HEIGHT
+                self._scroll_items = -row * self.ROW_HEIGHT
             elif top + self.ROW_HEIGHT > rect.height:
-                self._scroll_items = rect.height - (index + 1) * self.ROW_HEIGHT
+                self._scroll_items = rect.height - (row + 1) * self.ROW_HEIGHT
             self.select_entry(self.filtered_entries[index])
 
     def handle_events(self, events):
@@ -383,9 +396,11 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
         if not self.filtered_entries:
             message = self.directory_error or ("No matching items. Clear the search to show all items."
                                                if self.search_field.text.strip() else self.empty_message)
+            # The leading row is the only row here, so the message goes below it.
+            message_top = self.leading_row_count * self.ROW_HEIGHT
             for index, line in enumerate(wrap_text(message, font, self.regions["items"].width - 24)):
                 surface.blit(font.render(line, True, c.UI_TEXT_LIGHT),
-                             (self.regions["items"].x + 12, self.regions["items"].y + 20 + index * 26))
+                             (self.regions["items"].x + 12, self.regions["items"].y + message_top + 20 + index * 26))
         for name, rect in self.regions.items():
             self.draw_pane_scrollbar(surface, name, rect.right + 7, rect.top, rect.height)
 

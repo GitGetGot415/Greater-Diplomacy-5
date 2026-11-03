@@ -58,6 +58,11 @@ class Select_Base_Map(ScenarioLibraryScreen):
     def managed_dir(self):
         return c.SCENARIOS_CUSTOM_DIR
 
+    @property
+    def leading_row(self):
+        # New Map is the first row of the map list, so it scrolls with the maps.
+        return None if self.choosing_sources else ("New Map", self.return_to_sources)
+
     def refresh_ui(self):
         _label, directory_attr = self.CATEGORIES[self.sub_state]
         directory = getattr(c, directory_attr)
@@ -80,9 +85,7 @@ class Select_Base_Map(ScenarioLibraryScreen):
             self.add_browser_action("Rename", lambda: self.manage_selected(self.start_rename), 0, "blue")
             self.add_browser_action("Export", lambda: self.manage_selected(self.export_scenario_zip), 1, "green")
             self.add_browser_action("Delete…", lambda: self.manage_selected(self.start_delete), 2, "red")
-            self.open_button = self.add_primary_action("Edit Map")
-        else:
-            self.open_button = self.add_primary_action("New Map", self.return_to_sources)
+        self.open_button = self.add_primary_action("Edit Map")
 
     def return_to_sources(self):
         self.choosing_sources = True

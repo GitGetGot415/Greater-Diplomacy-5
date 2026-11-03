@@ -80,30 +80,21 @@ class ContentBrowserTests(unittest.TestCase):
     def test_selection_starts_empty_and_clicking_selected_row_clears_it(self):
         self.bundle("Save")
         self.bundle("Map", "SCENARIOS_CUSTOM_DIR")
-        for screen, name, action, new_action in ((self.save_screen(), "Save", "Load Game", "New Game"),
-                                                 (self.map_screen(), "Map", "Edit Map", "New Map")):
+        for screen, name, action in ((self.save_screen(), "Save", "Load Game"),
+                                     (self.map_screen(), "Map", "Edit Map")):
             with self.subTest(name=name):
                 self.assertIsNone(screen.selected_entry)
                 self.assertFalse(screen.selection_can_open)
-                button_named(screen, new_action)
+                self.assertTrue(screen.open_button.disabled)
                 self.click(screen, button_named(screen, name))
                 self.assertEqual(screen.selected_entry.name, name)
                 self.assertTrue(screen.selection_can_open)
                 self.click(screen, button_named(screen, name))
                 self.assertIsNone(screen.selected_entry)
                 self.assertFalse(screen.selection_can_open)
-                self.assertFalse(any(getattr(element, "text", None) == action for element in screen.elements))
-                button_named(screen, new_action)
+                self.assertTrue(screen.open_button.disabled)
                 screen.handle_events([key(pygame.K_DOWN)])
                 self.assertEqual(screen.selected_entry.name, name)
-
-    def test_new_game_button_opens_new_game_screen_and_clicks_once(self):
-        screen = self.save_screen()
-        with mock.patch("ui.widgets.ui_elements.play_ui_sound") as sound:
-            self.click(screen, button_named(screen, "New Game"))
-        sound.assert_called_once_with("click")
-        self.assertEqual(screen.next_state, "NEW_GAME")
-        self.assertTrue(screen.done)
 
     def test_new_game_and_new_map_play_category_and_item_selection_sounds_once(self):
         self.bundle("Fixture", "SCENARIOS_ALTERNATE_DIR")
@@ -291,9 +282,7 @@ class ContentBrowserTests(unittest.TestCase):
         screen = self.map_screen()
         self.assertIsNone(screen.selected_entry)
         self.assertFalse(any(getattr(element, "text", None) == "Base Maps" for element in screen.elements))
-        with mock.patch("ui.widgets.ui_elements.play_ui_sound") as sound:
-            self.click(screen, button_named(screen, "New Map"))
-        sound.assert_called_once_with("click")
+        screen.return_to_sources()
         self.assertFalse(any(getattr(element, "text", None) == "Custom Maps" for element in screen.elements))
         screen.draw(self.surface)
         self.click(screen, button_named(screen, "Base Maps"))
