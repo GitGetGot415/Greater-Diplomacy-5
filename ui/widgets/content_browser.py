@@ -249,14 +249,14 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
         self.elements.append(button)
         return button
 
-    def add_primary_action(self, label):
+    def add_primary_action(self, label, callback=None):
         """Place the selected item's primary action below the other actions."""
         width = self.detail_panel.width - self.MARGIN * 2
         button = Button(self.detail_panel.x + self.MARGIN,
                         self.detail_panel.bottom - self.MARGIN - self.PRIMARY_ACTION_HEIGHT,
-                        (width, self.PRIMARY_ACTION_HEIGHT), "orange", label, self.activate_selected,
+                        (width, self.PRIMARY_ACTION_HEIGHT), "orange", label, callback or self.activate_selected,
                         font_preset="heading1", sound_kind=None)
-        button.apply_state(enabled=self.selection_can_open, color="orange")
+        button.apply_state(enabled=callback is not None or self.selection_can_open, color="orange")
         self.elements.append(button)
         return button
 

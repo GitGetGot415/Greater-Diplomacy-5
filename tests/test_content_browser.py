@@ -71,21 +71,28 @@ class ContentBrowserTests(unittest.TestCase):
     def test_selection_starts_empty_and_clicking_selected_row_clears_it(self):
         self.bundle("Save")
         self.bundle("Map", "SCENARIOS_CUSTOM_DIR")
-        for screen, name, action in ((self.save_screen(), "Save", "Load Game"),
-                                     (self.map_screen(), "Map", "Edit Map")):
+        for screen, name, action, new_action in ((self.save_screen(), "Save", "Load Game", "New Game"),
+                                                 (self.map_screen(), "Map", "Edit Map", "New Map")):
             with self.subTest(name=name):
                 self.assertIsNone(screen.selected_entry)
                 self.assertFalse(screen.selection_can_open)
+                button_named(screen, new_action)
                 self.click(screen, button_named(screen, name))
                 self.assertEqual(screen.selected_entry.name, name)
                 self.assertTrue(screen.selection_can_open)
                 self.click(screen, button_named(screen, name))
                 self.assertIsNone(screen.selected_entry)
                 self.assertFalse(screen.selection_can_open)
-                self.click(screen, button_named(screen, action))
-                self.assertIsNone(screen.selected_entry)
+                self.assertFalse(any(getattr(element, "text", None) == action for element in screen.elements))
+                button_named(screen, new_action)
                 screen.handle_events([key(pygame.K_DOWN)])
                 self.assertEqual(screen.selected_entry.name, name)
+
+    def test_new_game_button_opens_new_game_screen(self):
+        screen = self.save_screen()
+        self.click(screen, button_named(screen, "New Game"))
+        self.assertEqual(screen.next_state, "NEW_GAME")
+        self.assertTrue(screen.done)
 
     def test_selection_does_not_open_and_primary_action_loads_the_selected_save(self):
         self.bundle("Alpha")
@@ -227,10 +234,13 @@ class ContentBrowserTests(unittest.TestCase):
         self.persist.assert_has_calls([mock.call(self.constants.SAVES_DIR), mock.call(self.constants.SAVES_DIR)])
 
     def test_map_tabs_open_sources_without_management_permissions(self):
-        custom = self.bundle("Custom", "SCENARIOS_CUSTOM_DIR")
+        self.bundle("Custom", "SCENARIOS_CUSTOM_DIR")
         self.bundle("Base", "BASE_MAPS_DIR")
         screen = self.map_screen()
         self.assertIsNone(screen.selected_entry)
+        self.assertFalse(any(getattr(element, "text", None) == "Base Maps" for element in screen.elements))
+        self.click(screen, button_named(screen, "New Map"))
+        screen.draw(self.surface)
         self.click(screen, button_named(screen, "Base Maps"))
         self.assertEqual(screen.sub_state, "BASE_MAPS")
         self.click(screen, button_named(screen, "Base"))
@@ -240,6 +250,8 @@ class ContentBrowserTests(unittest.TestCase):
         with mock.patch.object(screen, "start_editor_with_map") as edit:
             self.click(screen, button_named(screen, "Create from Base"))
         edit.assert_called_once_with("Base", self.constants.BASE_MAPS_DIR)
+        screen.handle_back_key()
+        self.assertEqual(screen.sub_state, "SOURCES")
         screen.handle_back_key()
         self.assertEqual(screen.sub_state, "CUSTOM_MAPS")
         self.click(screen, button_named(screen, "Custom"))

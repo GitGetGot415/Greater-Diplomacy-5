@@ -45,12 +45,15 @@ class Load_Game(ContentBrowserScreen):
             Button(c.SCREEN_WIDTH - 152, 24, (128, 40), "grey", "Refresh", self.reload_entries,
                    font_preset="button_small"),
         ])
-        self.add_browser_action("History", lambda: self.call_selected(self.open_history_menu), 0, "purple",
-                                enabled=self.selection_can_open, sound_kind=None)
-        self.add_browser_action("Rename", lambda: self.call_selected(self.start_rename), 1, "blue")
-        self.add_browser_action("Export", lambda: self.call_selected(self.export_save_zip), 2, "green")
-        self.add_browser_action("Delete…", lambda: self.call_selected(self.start_delete), 3, "red")
-        self.open_button = self.add_primary_action("Load Game")
+        if self.selected_entry:
+            self.add_browser_action("History", lambda: self.call_selected(self.open_history_menu), 0, "purple",
+                                    enabled=self.selection_can_open, sound_kind=None)
+            self.add_browser_action("Rename", lambda: self.call_selected(self.start_rename), 1, "blue")
+            self.add_browser_action("Export", lambda: self.call_selected(self.export_save_zip), 2, "green")
+            self.add_browser_action("Delete…", lambda: self.call_selected(self.start_delete), 3, "red")
+            self.open_button = self.add_primary_action("Load Game")
+        else:
+            self.open_button = self.add_primary_action("New Game", lambda: self.go_to("NEW_GAME"))
 
     def activate_selected(self):
         if self.selection_can_open:

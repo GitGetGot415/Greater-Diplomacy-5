@@ -328,6 +328,7 @@ class ButtonMenuPageTests(SharedUiTestCase):
         from screens.setup.select_base_map import Select_Base_Map
 
         screen = Select_Base_Map()
+        button_named(screen, "New Map").callback()
         button_named(screen, "Historical Scenarios").callback()
         self.assertEqual(screen.sub_state, "OTHER_HISTORICAL")
 
