@@ -23,7 +23,10 @@ def _load_and_scale_local_image(file_path, size):
     """Helper to safely load and scale a local image file."""
     if os.path.exists(file_path):
         try:
-            img = pygame.image.load(file_path).convert_alpha()
+            img = pygame.image.load(file_path)
+            # Turn processing can copy flag data without a display, including on multiplayer servers.
+            if pygame.display.get_surface() is not None:
+                img = img.convert_alpha()
             return pygame.transform.scale(img, size)
         except (pygame.error, OSError, ValueError):
             pass

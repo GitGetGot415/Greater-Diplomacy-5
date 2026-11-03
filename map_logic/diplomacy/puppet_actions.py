@@ -410,8 +410,12 @@ def finalize_create_puppet(map_data, nation_data, master, core_nation, context,
 
     new_data = copy.deepcopy(base_data)
     new_data["name"] = new_name
+    # DEFAULT resolves against a country ID. Copy the source image before using the new ID.
+    if not new_data.get("flag_data") or new_data["flag_data"] == "DEFAULT":
+        flag = queries.decode_b64_to_surf("DEFAULT", c.FLAG_SIZE, country_name=core_nation)
+        new_data["flag_data"] = queries.encode_surf_to_b64(flag)
 
-    # Only Integrated nations use the master's appearance.
+    # Only Integrated nations use the master's color.
     # Older country records may omit color. Use the shared country default.
     release_color = (master_data.get("color", [255, 255, 255]) if integrated
                      else base_data.get("color", country_io.DEFAULT_NATION_COLOR))

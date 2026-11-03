@@ -366,6 +366,7 @@ Integrated nations use the master's color and adjective in the generated name.
 Autonomous and Independent nations keep the core nation's name, adjective, and color.
 Add a number to the generated name when it conflicts with an existing country.
 All three choices inherit the source country's research.
+All three choices copy the core nation's flag. The flag remains when a subject becomes independent.
 
 release_puppet_queue entries store core_nation, keep_cores, release_type, and turns_left.
 The save loader preserves these nested queue fields.

@@ -2,7 +2,10 @@
 
 import copy
 import json
+import shutil
+import tempfile
 import unittest
+from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
@@ -10,6 +13,8 @@ import pygame
 
 import data.constants as c
 from data import queries
+from data.map import load_map
+from data.queries import images
 from ui.dialogs import pickers
 from map_logic.actions.player_actions import collect_map_commands
 from map_logic.diplomacy import diplomacy_processor, puppet_actions
@@ -218,6 +223,81 @@ class PuppetReleaseRuleTests(unittest.TestCase):
             created = loaded.map_data["1"]["owner"]
             self.assertEqual(loaded.nation_data[created]["puppet_type"],
                              "" if release_type == c.PUPPET_RELEASE_INDEPENDENT else release_type)
+
+
+class PuppetFlagInheritanceTests(unittest.TestCase):
+    def setUp(self):
+        self.flag_directory = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        # Use an existing, distinct image as the source country's flag fixture.
+        shutil.copyfile(c.DEFAULT_PORTRAIT_PATH, self.flag_directory / "Core.png")
+        self.enterContext(mock.patch.object(c, "FLAGS_DIR", str(self.flag_directory)))
+        self.enterContext(mock.patch.dict(images._local_image_b64_cache, {}, clear=True))
+        queries.clear_image_cache()
+        self.addCleanup(queries.clear_image_cache)
+        self.expected_flag = queries.encode_surf_to_b64(
+            queries.decode_b64_to_surf("DEFAULT", c.FLAG_SIZE, country_name="Core"))
+
+    def create(self, world, kind):
+        world.nation_data["Master"]["release_puppet_queue"] = puppet_actions.canonical_puppet_release_queue(
+            world.map_data, world.nation_data, "Master", [{"core_nation": "Core", "release_type": kind}])
+        diplomacy_processor._process_claim_queues(world)
+        return world.map_data["1"]["owner"]
+
+    def test_default_flag_follows_core_country_through_creation_save_and_independence(self):
+        for kind in c.PUPPET_RELEASE_TYPES:
+            with self.subTest(kind=kind):
+                world = release_map()
+                world.nation_data["Core"]["flag_data"] = "DEFAULT"
+                created = self.create(world, kind)
+                self.assertNotEqual(created, "Core")
+                self.assertEqual(world.nation_data[created]["flag_data"], self.expected_flag)
+                self.assertEqual(world.nation_data["Core"]["flag_data"], "DEFAULT")
+                if kind != c.PUPPET_RELEASE_INDEPENDENT:
+                    puppet_actions.finalize_release(world.map_data, world.nation_data, "Master", created, world)
+                self.assertEqual(world.nation_data[created]["flag_data"], self.expected_flag)
+
+                saved_map = sample_map_screen()
+                saved_map.nation_data = world.nation_data
+                saved_map.map_data = world.map_data
+                payload = json.loads(json.dumps(queries.build_save_dict(saved_map)))
+                loaded = release_map()
+                loaded.nation_data = payload["nation_data"]
+                with mock.patch.object(queries, "get_country_data", return_value={}):
+                    queries.merge_country_templates(loaded.nation_data)
+                load_map._load_default_images(loaded)
+                self.assertEqual(loaded.nation_data[created]["flag_data"], self.expected_flag)
+
+    def test_missing_source_record_still_copies_its_local_flag(self):
+        for kind in c.PUPPET_RELEASE_TYPES:
+            with self.subTest(kind=kind):
+                world = release_map()
+                source = world.nation_data.pop("Core")
+                with mock.patch.object(puppet_actions.country_io, "get_country_stats", return_value=source):
+                    created = self.create(world, kind)
+                self.assertEqual(world.nation_data[created]["flag_data"], self.expected_flag)
+
+    def test_custom_source_flag_is_preserved_without_loading_a_default(self):
+        custom_flag = queries.get_default_b64()
+        for kind in c.PUPPET_RELEASE_TYPES:
+            with self.subTest(kind=kind):
+                world = release_map()
+                world.nation_data["Core"]["flag_data"] = custom_flag
+                with mock.patch.object(queries, "decode_b64_to_surf", side_effect=AssertionError("Custom flag replaced")):
+                    created = self.create(world, kind)
+                self.assertEqual(world.nation_data[created]["flag_data"], custom_flag)
+
+    def test_creation_can_copy_local_flags_without_a_display(self):
+        surface = pygame.display.get_surface()
+        previous_size = surface.get_size() if surface is not None else None
+        pygame.display.quit()
+        try:
+            queries.clear_image_cache()
+            created_world = release_map()
+            created = self.create(created_world, c.PUPPET_TYPE_INTEGRATED)
+            self.assertEqual(created_world.nation_data[created]["flag_data"], self.expected_flag)
+        finally:
+            if previous_size is not None:
+                pygame.display.set_mode(previous_size)
 
 
 class PuppetManagementControlTests(unittest.TestCase):
