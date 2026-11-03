@@ -286,6 +286,12 @@ Keep tuning data in its source files:
 - Use a pixel-art style with rectangular shapes, square corners, solid outlines, and raised or recessed bevels.
 - Use stepped shade bands and small square dithering where space permits. Avoid smooth gradients and flat control backgrounds.
 - Keep slider and scrollbar handles free of grip lines.
+- Use the same content drag direction in every scrollable list, panel, menu, dialog, and editor.
+  Dragging the content or its background down must move the content down and the scrollbar handle up.
+  Dragging horizontal content right must move the content right and the scrollbar handle left.
+  Reverse these directions when the player drags up or left.
+  Preserve existing directions for mouse wheel scrolling and direct scrollbar dragging.
+  Use the shared `Screen.handle_content_drag` and `Screen.handle_list_scroll` helpers in `ui/navigation/screen.py`.
 - Keep color swatches flat so they show the selected color.
 - Draw simple panels, bars, and control backgrounds in code. Reserve image assets for artwork, icons, portraits, and similar content.
 - Keep `assets/backgrounds/Province.png` for the province menu unless the user requests its replacement.
