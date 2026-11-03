@@ -34,6 +34,7 @@ from map_logic.diplomacy import diplomacy_messages, peace_scope, reach, war_scor
 from ui.rendering import overlay_renderer, refresh_map
 from ui.rendering.font_manager import fonts
 from ui.widgets import text_utils
+from ui.widgets import ui_elements
 from ui.bars import ui_bars
 from ui.navigation.screen_runner import _run_pygame_sub_screen
 from ui.widgets.ui_elements import Button, draw_text_box, make_choice_button, process_text_input
@@ -786,7 +787,8 @@ class Deal_Screen(MapOverlayScreen):
         confirm = "Update Offer" if self.is_editing else "Send Proposal"
         buttons_y = self.panel_rect.y + self.Y_BUTTONS
         self.elements.append(Button(self.panel_rect.right - 220, buttons_y,
-                                    "medium", "green", confirm, self.confirm))
+                                    "medium", "green", confirm, self.confirm,
+                                    sound_kind="click" if self.is_peace else None))
         if self.is_editing:
             self.elements.append(Button(self.panel_rect.right - 440, buttons_y,
                                         "medium", "red", "Cancel Offer", self.revoke_offer))
@@ -993,6 +995,8 @@ class Deal_Screen(MapOverlayScreen):
 
         self._clear_draft()
         self.map_screen.show_feedback("Offer Updated!" if self.is_editing else "Offer Sent!")
+        if not self.is_peace:
+            ui_elements.play_ui_sound("send_message")
         self.done = True
 
     def revoke_offer(self):

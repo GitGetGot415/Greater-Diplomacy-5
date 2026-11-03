@@ -208,12 +208,15 @@ class Messages_Screen(Screen):
 
     def send_message(self):
         if self.selected_recipient:
-            if self.compose_text.strip():
-                self.drafts.append(self.compose_text.strip())
+            message = self.compose_text.strip()
+            if message:
+                self.drafts.append(message)
                 self.compose_text = ""
                 self.map_screen.show_feedback("Message queued.")
             
             self.save_current_draft()
+            if message:
+                ui_elements.play_ui_sound("send_message")
             self.refresh_ui()
 
     def _forward_targets(self, message):
@@ -516,7 +519,8 @@ class Messages_Screen(Screen):
             if is_tactical:
                 self.elements.append(Button(btn_x, btn_y, "small", "grey", "Tactical: Read Only", lambda: None))
             else:
-                self.elements.append(Button(btn_x, btn_y, "small", "blue", "Queue", self.send_message))
+                self.elements.append(Button(btn_x, btn_y, "small", "blue", "Queue", self.send_message,
+                                            sound_kind=None))
                 
             # Integrated puppets used to be barred from trading with anyone but
             # their master. They trade like anyone else now.

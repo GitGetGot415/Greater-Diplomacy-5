@@ -31,6 +31,8 @@ pygame_music_ui_sounds = {}
 MUSIC_UI_SOUND_PATHS = {
     "back": "assets/sounds/Back.wav",
     "table": "assets/sounds/Table.wav",
+    "puppets": "assets/sounds/Puppets.wav",
+    "send_message": "assets/sounds/Send Message.mp3",
     "open_settings": "assets/sounds/Open Settings.mp3",
     "info": "assets/sounds/Info.mp3",
     "create_army": "assets/sounds/Create Army.mp3",

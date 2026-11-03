@@ -414,11 +414,15 @@ An offset at or past the sound length plays no sound. Restart the game after cha
 Select Category.wav plays when a control selects a browsing group or country scope.
 This includes research and construction tabs, art styles, editor country lists, message contacts, and folders.
 Select Sub-Category.wav plays when a control selects an item within a group.
-This includes songs, scenarios, saved content, art filters, portraits, events, variables, multiplayer countries, and picker rows.
+This includes research items, songs, scenarios, saved content, art filters, portraits, events, variables, multiplayer countries, and picker rows.
 Map and algorithm choices in Random Scenario setup also use this sound.
 Checkbox selection uses the item sound. Confirm buttons retain their action sound.
 Automatic selection during screen setup stays silent. Research and unit actions retain their specific sounds.
-Table.wav plays when Credits or Assets opens from the menu, or Identity opens from the game.
+Table.wav plays when Credits or Assets opens from the menu.
+It also plays for Identity and Claims in the left UI bar, and Metadata in the map editor.
+Puppets.wav plays when Puppets opens from the left UI bar.
+Send Message.mp3 plays when text is queued in Messages or a trade offer is sent or updated.
+Empty text and invalid trade offers do not play this sound. Opening the trade editor does not play it.
 
 BUILD POLICY
 ============

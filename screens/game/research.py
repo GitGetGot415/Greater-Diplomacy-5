@@ -895,7 +895,8 @@ class Research_Screen(Screen):
             }
             
             btn = Button(base_x + self.scroll_x, node_y, (btn_w, btn_h), btn_color, display_name,
-                         lambda n=node_info: self.open_modal(n), image=icon, show_text=False)
+                         lambda n=node_info: self.open_modal(n), image=icon, show_text=False,
+                         sound_kind="select_sub_category")
 
             # A gold percentage badge marks every not-yet-completed level for
             # which faction partners can share finished research. The resolver

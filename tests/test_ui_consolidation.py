@@ -560,6 +560,110 @@ class OneSoundPerClickTests(SharedUiTestCase):
         self.assertEqual(self.click_sounds(button_named(screen, "Deselect All")), ["select_sub_category"])
         self.assertFalse(item.checked)
 
+    def test_puppets_plays_its_sound_once_and_opens_the_menu(self):
+        from screens.game import map as map_module
+
+        game = SimpleNamespace(is_editor=False, player_country="A", save_map_data=mock.Mock(),
+                               change_state=mock.Mock(), camera_tilt_slider_val=0.5, set_camera_tilt=mock.Mock())
+        with mock.patch.object(map_module.player_diplomacy_actions, "open_puppets_menu") as open_puppets:
+            map_module._build_left_bar_buttons(game)
+            self.assertEqual(self.click_sounds(game.btn_gp_puppets), ["puppets"])
+        open_puppets.assert_called_once_with(game)
+
+    def message_screen(self, text):
+        from screens.game.messages import Messages_Screen
+        from tests.stub_map_screen import map_double
+
+        screen = Messages_Screen()
+        screen.map_screen = map_double(
+            player_country="A", tactical_mode=False, show_feedback=mock.Mock(),
+            map_data={(0, 0, 0): {"id": 1, "owner": "A"}, (1, 0, 0): {"id": 2, "owner": "B"}},
+            nation_data={"A": {"name": "A", "inbox": []}, "B": {"name": "B"}})
+        screen.selected_recipient = "B"
+        screen.compose_text = text
+        screen.refresh_ui()
+        return screen
+
+    def test_queuing_a_message_plays_send_once_and_keeps_the_draft(self):
+        from map_logic.diplomacy import diplomacy_messages
+
+        screen = self.message_screen("  Fixture message  ")
+        self.assertEqual(self.click_sounds(button_named(screen, "Queue")), ["send_message"])
+        self.assertEqual(screen.compose_text, "")
+        self.assertEqual(screen.drafts, ["Fixture message"])
+        pending = diplomacy_messages.get_pending(screen.map_screen.nation_data, "A", "B")
+        self.assertEqual(pending["message"], "Fixture message")
+
+    def test_empty_message_or_missing_recipient_does_not_play_send(self):
+        from ui.widgets import ui_elements
+
+        screen = self.message_screen("   ")
+        self.assertEqual(self.click_sounds(button_named(screen, "Queue")), [])
+        screen.selected_recipient = None
+        screen.compose_text = "Fixture message"
+        with mock.patch.object(ui_elements, "play_ui_sound") as sound:
+            screen.send_message()
+        sound.assert_not_called()
+
+    def test_enter_queues_a_message_with_one_send_sound(self):
+        from ui.widgets import ui_elements
+
+        screen = self.message_screen("Fixture message")
+        with mock.patch.object(ui_elements, "play_ui_sound") as sound:
+            screen.additional_events(key(pygame.K_RETURN, "\r"))
+        sound.assert_called_once_with("send_message")
+        self.assertEqual(screen.drafts, ["Fixture message"])
+
+    def test_trade_send_sound_only_plays_after_successful_validation(self):
+        from screens.game import deal_screen
+
+        for problems in ([], ["Fixture rejection"]):
+            for editing in (False, True):
+                with self.subTest(problems=problems, editing=editing):
+                    screen = object.__new__(deal_screen.Deal_Screen)
+                    screen.kind = deal_screen.deal_mod.KIND_TRADE
+                    screen.map_screen = SimpleNamespace(map_data={}, nation_data={}, show_feedback=mock.Mock())
+                    screen.player, screen.target_nation = "A", "B"
+                    screen.note = "Fixture note"
+                    screen.reach = {}
+                    screen.is_editing = editing
+                    screen.done = False
+                    screen.build_deal = mock.Mock(return_value={"fixture": True})
+                    screen._clear_draft = mock.Mock()
+                    with mock.patch.object(deal_screen.deal_mod, "validate", return_value=problems), \
+                            mock.patch.object(deal_screen.deal_mod, "describe", return_value=["Fixture terms"]), \
+                            mock.patch.object(deal_screen.diplomacy_messages, "set_pending") as queue, \
+                            mock.patch.object(deal_screen.ui_elements, "play_ui_sound") as sound:
+                        screen.confirm()
+                    if problems:
+                        sound.assert_not_called()
+                        queue.assert_not_called()
+                        self.assertFalse(screen.done)
+                    else:
+                        sound.assert_called_once_with("send_message")
+                        self.assertEqual(queue.call_args.args[3], "TRADE")
+                        self.assertTrue(screen.done)
+
+    def test_claims_and_editor_metadata_play_table_once_and_call_their_handlers(self):
+        from screens.game import map as map_module
+
+        for is_editor in (False, True):
+            game = SimpleNamespace(is_editor=is_editor, player_country="A", save_map_data=mock.Mock(),
+                                   change_state=mock.Mock(), camera_tilt_slider_val=0.5, set_camera_tilt=mock.Mock())
+            with self.subTest(is_editor=is_editor), \
+                    mock.patch.object(map_module.player_diplomacy_actions, "open_claims_menu") as open_claims, \
+                    mock.patch.object(map_module.editor_menus, "open_editor_metadata") as open_metadata:
+                # Metadata and Mail share a button. Rebuild it for each mode.
+                map_module._build_left_bar_buttons(game)
+                self.assertEqual(self.click_sounds(game.btn_gp_claims), ["table"])
+                open_claims.assert_called_once_with(game)
+                if is_editor:
+                    self.assertEqual(self.click_sounds(game.btn_gp_msgs), ["table"])
+                    open_metadata.assert_called_once_with(game)
+                else:
+                    self.assertEqual(self.click_sounds(game.btn_gp_msgs), ["click"])
+                    game.change_state.assert_called_once_with("MESSAGES")
+
     def test_portrait_selection_plays_subcategory_once_and_returns_the_path(self):
         from ui.dialogs.character_select_screen import CharacterSelectScreen
 
