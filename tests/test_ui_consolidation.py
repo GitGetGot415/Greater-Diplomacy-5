@@ -55,16 +55,14 @@ class TextFieldTests(SharedUiTestCase):
 
 
 class MenuListTests(SharedUiTestCase):
-    def test_category_page_has_no_list_input(self):
+    def test_scenario_library_routes_input_through_its_panes(self):
         from screens.setup.new_game import New_Game
 
         screen = New_Game()
-        with mock.patch.object(screen, "handle_list_scroll") as scroll:
-            screen.additional_events(click((0, 0)))
-            scroll.assert_not_called()
-            screen.set_sub_state("HISTORICAL")
-            screen.additional_events(click((0, 0)))
-            scroll.assert_called_once()
+        with mock.patch.object(screen, "route_pane_scroll") as scroll:
+            event = click((0, 0))
+            screen.additional_events(event)
+            scroll.assert_called_once_with(event)
 
     def test_refresh_hides_buttons_and_ignores_input(self):
         from screens.setup.new_game import New_Game
@@ -431,15 +429,15 @@ class BackKeySoundTests(SharedUiTestCase):
         self.assertEqual(self.back_sounds(screen), ["back"])
         self.assertTrue(screen.done)
 
-    def test_stepping_back_inside_a_screen_plays_back_once(self):
-        from screens.setup import new_game
+    def test_leaving_new_map_sources_plays_back_once(self):
+        from screens.setup import select_base_map
 
-        screen = new_game.New_Game()
-        screen.set_sub_state("HISTORICAL")
-        with mock.patch.object(new_game, "play_ui_sound") as sound:
+        screen = select_base_map.Select_Base_Map()
+        screen.return_to_sources()
+        with mock.patch.object(select_base_map, "play_ui_sound") as sound:
             screen.handle_back_key()
         sound.assert_called_once_with("back")
-        self.assertEqual(screen.sub_state, "CATEGORY")
+        self.assertEqual(screen.sub_state, "CUSTOM_MAPS")
         self.assertFalse(screen.done)
 
     def test_leaving_a_text_box_is_silent(self):

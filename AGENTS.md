@@ -272,6 +272,11 @@ Keep tuning data in its source files:
 
 ### UI Appearance
 
+- **NEVER take up space just to fill the screen.**
+  If a UI can work in a small area, keep it small.
+  Do not enlarge controls, panels, or spacing to use empty screen space.
+- **UI panels must always remain a constant size during gameplay.**
+  Never force panels to resize when their content, selection, or game state changes.
 - **Do not add UI help text, hints, or instructional placeholders unless the user explicitly requests them.**
   Do not add text merely because it might be helpful or fill empty space.
 - When the user requests a gradient, interpolate directly between the specified start and end colors.

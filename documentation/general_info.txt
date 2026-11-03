@@ -149,15 +149,30 @@ History opens the selected save's turn list. Choose a turn to load that snapshot
 Import .zip uses the existing desktop file picker or browser upload control.
 
 When no item is selected, New Game opens the new game screen.
-In Map Editor, New Map opens a screen to select a map source.
-The sources are base maps, historical scenarios, and alternate scenarios.
-Select a source, then select a map in the list to open the editor.
+New Game and New Map use the shared category library in ui/widgets/content_browser.py.
+Category buttons remain visible while you select an item.
+New Game lists historical scenarios, alternate scenarios, and custom scenarios.
+New Map lists base maps, historical scenarios, and alternate scenarios.
+
+Select a scenario or map to view its starting date, author, and description when available.
+Select Start Game or Create Map, or press Enter, to open the selected item.
+Selecting the same item again clears the selection. Search and sorting use the shared browser controls.
+Back from New Map returns to custom maps. Back from New Game returns to the menu.
+
+Random Scenario opens its existing setup screen. Scenario Settings remains available while you browse New Game.
+Returning from Scenario Settings keeps the selected category and scenario.
 Base maps and shipped scenarios open as copies. Their source folders cannot be renamed or deleted from this browser.
-Data Refresh is available in the Base Maps list. It requires confirmation before it changes the source data.
+
+New Map enables Data Refresh for Base Maps. It requires confirmation before it changes the source data.
+New Game keeps its Data Refresh options. Historical Leaders is enabled in Historical Scenarios.
 
 Browsers read directory entries when they open, after file operations, and when the player clicks Refresh.
 Use Refresh after an external file change. Frame updates and scrolling use cached entries and metadata.
 Details read existing meta.json fields without loading map geometry, images, or history.
+
+New Game and New Map use compact text buttons without map previews or category icons.
+Panels use the space required by their contents, within the available screen area.
+Category metadata is cached when the category opens. Refresh reloads folder entries and metadata.
 
 Maps without meta.json remain supported. Incomplete maps and unreadable metadata show an error and cannot open from the browser.
 Files from a newer game version show an update message. Rename, Export, and Delete remain available for managed items.

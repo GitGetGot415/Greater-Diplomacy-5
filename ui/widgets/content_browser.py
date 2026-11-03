@@ -64,6 +64,7 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
     PRIMARY_ACTION_HEIGHT = 90
     content_label = "items"
     category_caption = ""
+    EMPTY_DETAILS = ("Select an item to see its details.",)
     SORTS = (("recent", "Recently modified"), ("name", "Name A-Z"), ("reverse_name", "Name Z-A"))
 
     def __init__(self):
@@ -116,20 +117,46 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
         self.empty_message, self.detail_note = empty_message, note
         if self.browser_directory != directory:
             self.browser_directory = directory
-            self.directory_error = ""
-            self.entries = []
-            try:
-                os.makedirs(directory, exist_ok=True)
-                with os.scandir(directory) as files:
-                    for entry in files:
-                        if not entry.name.startswith(".") and entry.is_dir():
-                            modified = entry.stat().st_mtime
-                            label = datetime.fromtimestamp(modified).strftime("Modified %d %b %Y, %H:%M")
-                            self.entries.append(ContentEntry(entry.name, entry.path, modified, label))
-            except OSError as error:
-                self.directory_error = f"Cannot read this directory: {error}"
+            self.entries, self.directory_error = self.read_directory(directory)
             self.summary_cache.clear()
+            self.prepare_entries()
 
+        self._apply_filter()
+        self.layout_browser()
+        self.elements = [self.search_field]
+        self.build_browser_controls()
+        rect = self.regions["items"]
+        limit = min(0, rect.height - len(self.filtered_entries) * self.ROW_HEIGHT)
+        self._scroll_items = max(limit, min(0, self.pane_scroll("items")))
+        for index, y in self.layout_list_rows(len(self.filtered_entries), self.ROW_HEIGHT, rect.y,
+                                              cull_top=rect.top, cull_bottom=rect.bottom,
+                                              attr="_scroll_items", limit_attr="_max_items"):
+            entry = self.filtered_entries[index]
+            row = self.make_content_row(pygame.Rect(rect.x, y, rect.width, self.ROW_HEIGHT - 6), entry)
+            self.add_pane_row("items", row)
+            row.click_guard = lambda r=rect: r.collidepoint(pygame.mouse.get_pos())
+        self._prepare_details()
+
+    def read_directory(self, directory):
+        """Read visible folders. Call only at entry, refresh, or category changes."""
+        entries = []
+        try:
+            os.makedirs(directory, exist_ok=True)
+            with os.scandir(directory) as files:
+                for entry in files:
+                    if not entry.name.startswith(".") and entry.is_dir():
+                        modified = entry.stat().st_mtime
+                        label = datetime.fromtimestamp(modified).strftime("Modified %d %b %Y, %H:%M")
+                        entries.append(ContentEntry(entry.name, entry.path, modified, label))
+        except OSError as error:
+            return entries, f"Cannot read this directory: {error}"
+        return entries, ""
+
+    def prepare_entries(self):
+        """Prepare extra presentation data when the directory changes."""
+
+    def layout_browser(self):
+        """Place the list, details, and input regions."""
         margin, gap = self.MARGIN, self.GAP
         width = c.SCREEN_WIDTH - margin * 2
         list_width = self.LIST_AND_SEARCH_WIDTH
@@ -148,26 +175,28 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
         }
         for name, rect in self.regions.items():
             setattr(self, f"_content_{name}", rect)
-        self._apply_filter()
-        self.elements = [self.search_field]
+        self.search_field.rect.topleft = (margin, self.CONTROL_Y)
+
+    def build_browser_controls(self):
+        """Build the search and sort controls for this layout."""
+        margin = self.MARGIN
         self.elements.append(Button(self.list_panel.right - self.CLEAR_BUTTON_WIDTH, self.CONTROL_Y,
                                     (self.CLEAR_BUTTON_WIDTH, 38), "red", "Clear", self.clear_search,
                                     font_preset="button_small"))
         sort_label = self.SORTS[self.sort_index][1]
         self.elements.append(Button(c.SCREEN_WIDTH - margin - 310, self.CONTROL_Y, (310, 38), "grey",
                                     f"Sort: {sort_label}", self.cycle_sort, font_preset="button_small"))
-        rect = self.regions["items"]
-        limit = min(0, rect.height - len(self.filtered_entries) * self.ROW_HEIGHT)
-        self._scroll_items = max(limit, min(0, self.pane_scroll("items")))
-        for index, y in self.layout_list_rows(len(self.filtered_entries), self.ROW_HEIGHT, rect.y,
-                                              cull_top=rect.top, cull_bottom=rect.bottom,
-                                              attr="_scroll_items", limit_attr="_max_items"):
-            entry = self.filtered_entries[index]
-            row = ContentRow(pygame.Rect(rect.x, y, rect.width, self.ROW_HEIGHT - 6), entry,
-                             self.selected_entry == entry, lambda item=entry: self.toggle_entry(item))
-            self.add_pane_row("items", row)
-            row.click_guard = lambda r=rect: r.collidepoint(pygame.mouse.get_pos())
-        self._prepare_details()
+
+    def make_content_row(self, rect, entry):
+        return ContentRow(rect, entry, self.selected_entry == entry, lambda: self.toggle_entry(entry))
+
+    def summary_for(self, entry):
+        if entry.path not in self.summary_cache:
+            self.summary_cache[entry.path] = queries.read_saved_content_summary(entry.path)
+        return self.summary_cache[entry.path]
+
+    def detail_texts(self, entry, summary):
+        return [entry.modified_label, *summary["details"]]
 
     def _apply_filter(self):
         search = self.search_field.text.strip().casefold()
@@ -205,21 +234,24 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
     def toggle_entry(self, entry):
         self.select_entry(None if self.selected_entry == entry else entry)
 
-    def _prepare_details(self):
-        rect = self.regions["details"]
+    def selected_detail_texts(self):
+        """Use the same selected details for layout and rendering."""
         self.selection_error = ""
-        texts = ["Select an item to see its details."]
+        texts = list(self.EMPTY_DETAILS)
         if self.selected_entry:
             entry = self.selected_entry
-            if entry.path not in self.summary_cache:
-                self.summary_cache[entry.path] = queries.read_saved_content_summary(entry.path)
-            summary = self.summary_cache[entry.path]
+            summary = self.summary_for(entry)
             self.selection_error = summary["error"]
-            texts = [entry.modified_label, *summary["details"]]
+            texts = self.detail_texts(entry, summary)
             if self.selection_error:
                 texts = [self.selection_error, "", *texts]
             if self.detail_note:
                 texts.extend(("", self.detail_note))
+        return texts
+
+    def _prepare_details(self):
+        rect = self.regions["details"]
+        texts = self.selected_detail_texts()
         font = fonts.get("normal")
         self.detail_lines = [font.render(line, True, c.UI_TEXT_LIGHT)
                              for text in texts for line in wrap_text(text, font, rect.width)]
@@ -340,3 +372,187 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
                              (self.regions["items"].x + 12, self.regions["items"].y + 20 + index * 26))
         for name, rect in self.regions.items():
             self.draw_pane_scrollbar(surface, name, rect.right + 7, rect.top, rect.height)
+
+
+class ScenarioLibraryScreen(ContentBrowserScreen):
+    """Use compact category buttons, scenario rows, and text details."""
+
+    LIBRARY_CATEGORY_WIDTH = 224
+    LIBRARY_LIST_WIDTH = 400
+    LIBRARY_DETAIL_WIDTH = 432
+    LIBRARY_PANEL_Y = 154
+    LIBRARY_CONTROL_Y = 104
+    LIBRARY_ROW_HEIGHT = 36
+    LIBRARY_CATEGORY_HEIGHT = 36
+    LIBRARY_CATEGORY_GAP = 8
+    LIBRARY_CATEGORY_ACTION_COUNT = 3
+    LIBRARY_ACTION_HEIGHT = 36
+    CATEGORY_COLORS = {
+        "SCENARIOS_HISTORICAL_DIR": "blue",
+        "SCENARIOS_ALTERNATE_DIR": "purple",
+        "SCENARIOS_CUSTOM_DIR": "green",
+        "BASE_MAPS_DIR": "orange",
+    }
+
+    @property
+    def library_mode(self):
+        return True
+
+    @property
+    def ROW_HEIGHT(self):
+        return self.LIBRARY_ROW_HEIGHT if self.library_mode else ContentBrowserScreen.ROW_HEIGHT
+
+    @property
+    def EMPTY_DETAILS(self):
+        return () if self.library_mode else ContentBrowserScreen.EMPTY_DETAILS
+
+    @property
+    def library_categories(self):
+        return self.CATEGORIES
+
+    @property
+    def category_color(self):
+        return self.CATEGORY_COLORS[self.library_categories[self.sub_state][1]]
+
+    def prepare_entries(self):
+        if not self.library_mode:
+            return
+        # Cache metadata when a category opens. Frames and scrolling reuse it.
+        for entry in self.entries:
+            self.summary_for(entry)
+
+    def layout_browser(self):
+        if not self.library_mode:
+            super().layout_browser()
+            self.search_field.rect.width = self.LIST_AND_SEARCH_WIDTH - self.GAP - self.CLEAR_BUTTON_WIDTH
+            return
+        margin, gap = self.MARGIN, self.GAP
+        available_height = c.SCREEN_HEIGHT - self.LIBRARY_PANEL_Y - self.BOTTOM_MARGIN
+        category_height = (44 + len(self.library_categories) * (self.LIBRARY_CATEGORY_HEIGHT + self.LIBRARY_CATEGORY_GAP)
+                           + gap + self.LIBRARY_CATEGORY_ACTION_COUNT * 44)
+        self.category_panel = pygame.Rect(margin, self.LIBRARY_PANEL_Y, self.LIBRARY_CATEGORY_WIDTH, category_height)
+        list_height = min(available_height, 56 + max(1, len(self.filtered_entries)) * self.ROW_HEIGHT)
+        self.list_panel = pygame.Rect(self.category_panel.right + gap, self.LIBRARY_PANEL_Y,
+                                      self.LIBRARY_LIST_WIDTH, list_height)
+        self.detail_panel = pygame.Rect(self.list_panel.right + gap, self.LIBRARY_PANEL_Y,
+                                        self.LIBRARY_DETAIL_WIDTH, available_height)
+        font = fonts.get("normal")
+        detail_width = self.detail_panel.width - margin * 2 - 16
+        line_count = sum(len(wrap_text(text, font, detail_width)) for text in self.selected_detail_texts())
+        detail_height = line_count * (font.get_linesize() + 5)
+        self.detail_panel.height = min(available_height, 64 + detail_height + gap + self.LIBRARY_ACTION_HEIGHT + margin)
+        self.action_top = self.detail_panel.bottom - margin - self.LIBRARY_ACTION_HEIGHT
+        self.regions = {
+            "items": pygame.Rect(self.list_panel.x + 12, self.list_panel.y + 44,
+                                 self.list_panel.width - 42, self.list_panel.height - 56),
+            "details": pygame.Rect(self.detail_panel.x + margin, self.detail_panel.y + 64,
+                                   detail_width, self.action_top - self.detail_panel.y - 64 - gap),
+        }
+        for name, rect in self.regions.items():
+            setattr(self, f"_content_{name}", rect)
+        self.search_field.rect = pygame.Rect(self.list_panel.x, self.LIBRARY_CONTROL_Y,
+                                             self.list_panel.width - 82, 38)
+
+    def build_browser_controls(self):
+        if not self.library_mode:
+            return super().build_browser_controls()
+        y = self.LIBRARY_CONTROL_Y
+        self.elements.extend([
+            Button(self.list_panel.right - 74, y, (74, 38), "red", "Clear", self.clear_search,
+                   font_preset="button_small"),
+            Button(self.detail_panel.x, y, (self.detail_panel.width - 144, 38), "grey",
+                   f"Sort: {self.SORTS[self.sort_index][1]}", self.cycle_sort, font_preset="button_small"),
+            Button(self.detail_panel.right - 128, y, (128, 38), "grey", "Refresh", self.reload_entries,
+                   font_preset="button_small"),
+        ])
+        for index, (state, (label, directory_attr)) in enumerate(self.library_categories.items()):
+            rect = pygame.Rect(self.category_panel.x + 16,
+                               self.category_panel.y + 44 + index * (self.LIBRARY_CATEGORY_HEIGHT + self.LIBRARY_CATEGORY_GAP),
+                               self.category_panel.width - 32, self.LIBRARY_CATEGORY_HEIGHT)
+            tile = Button(rect.x, rect.y, rect.size, self.CATEGORY_COLORS[directory_attr], label,
+                          lambda category=state: self.set_sub_state(category), font_preset="button_small")
+            tile.fit_text = True
+            tile.fit_single_line = True
+            tile.is_selected = self.sub_state == state
+            self.elements.append(tile)
+
+    def make_content_row(self, rect, entry):
+        if not self.library_mode:
+            return super().make_content_row(rect, entry)
+        row = Button(rect.x, rect.y, rect.size, self.category_color, entry.name,
+                     lambda: self.toggle_entry(entry), font_preset="button_small")
+        row.fit_text = True
+        row.fit_single_line = True
+        row.text_align = "left"
+        row.is_selected = self.selected_entry == entry
+        return row
+
+    def detail_texts(self, entry, summary):
+        if not self.library_mode:
+            return super().detail_texts(entry, summary)
+        texts = []
+        if summary["date_label"]:
+            texts.append(f"Start date: {summary['date_label']} (day/month/year)")
+        if summary["author"]:
+            texts.append(f"Author: {summary['author']}")
+        if summary["description"]:
+            texts.extend(("", summary["description"]))
+        return texts
+
+    def _prepare_details(self):
+        super()._prepare_details()
+        if not self.library_mode:
+            return
+        label = self.library_categories[self.sub_state][0]
+        if self.selected_entry is None:
+            font = fonts.get("heading2")
+            self.detail_heading = font.render(
+                fit_text(label, font, self.detail_panel.width - self.MARGIN * 2), True, c.UI_TEXT_BRIGHT)
+        font = fonts.get("normal")
+        self.library_labels = [
+            (font.render(text, True, c.UI_TEXT_LIGHT), position) for text, position in (
+                ("Categories", (self.category_panel.x + 16, self.category_panel.y + 12)),
+                ("Search", (self.list_panel.x, self.LIBRARY_CONTROL_Y - 24)),
+                (label, (self.list_panel.x + 14, self.list_panel.y + 12)))
+        ]
+        count = font.render(f"{len(self.filtered_entries)} / {len(self.entries)}", True, c.UI_TEXT_DIM)
+        self.library_labels.append((count, (self.list_panel.right - count.get_width() - 14, self.list_panel.y + 12)))
+        if not self.filtered_entries:
+            message = self.directory_error or ("No matching items." if self.search_field.text.strip() else self.empty_message)
+            for index, line in enumerate(wrap_text(message, font, self.regions["items"].width - 24)):
+                self.library_labels.append((font.render(line, True, c.UI_TEXT_LIGHT),
+                                            (self.regions["items"].x + 12, self.regions["items"].y + 20 + index * 26)))
+
+    def add_primary_action(self, label, callback=None):
+        if not self.library_mode:
+            return super().add_primary_action(label, callback)
+        rect = self.detail_panel
+        button = Button(rect.x + self.MARGIN, self.action_top,
+                        (rect.width - self.MARGIN * 2, self.LIBRARY_ACTION_HEIGHT), "orange", label,
+                        callback or self.activate_selected, font_preset="button_small", sound_kind=None)
+        button.apply_state(enabled=callback is not None or self.selection_can_open, color="orange")
+        self.elements.append(button)
+        return button
+
+    def add_category_action(self, label, callback, slot, color="grey", *, enabled=True):
+        """Place controls directly below the category buttons."""
+        panel = self.category_panel
+        y = panel.y + 44 + len(self.library_categories) * (self.LIBRARY_CATEGORY_HEIGHT + self.LIBRARY_CATEGORY_GAP) + self.GAP
+        button = Button(panel.x + 16, y + slot * 44, (panel.width - 32, 36),
+                        color, label, callback, font_preset="button_small")
+        button.fit_text = True
+        button.apply_state(enabled=enabled, color=color)
+        self.elements.append(button)
+        return button
+
+    def additional_draw(self, surface):
+        if not self.library_mode:
+            return super().additional_draw(surface)
+        for panel in (self.category_panel, self.list_panel, self.detail_panel):
+            draw_pixel_panel(surface, panel, (35, 40, 52), recessed=True)
+        for text, position in self.library_labels:
+            surface.blit(text, position)
+        surface.blit(self.detail_heading, (self.detail_panel.x + self.MARGIN, self.detail_panel.y + 20))
+        for name, rect in self.regions.items():
+            if rect.height:
+                self.draw_pane_scrollbar(surface, name, rect.right + 7, rect.top, rect.height)

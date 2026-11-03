@@ -61,6 +61,15 @@ class ContentBrowserTests(unittest.TestCase):
         from screens.setup.select_base_map import Select_Base_Map
         return Select_Base_Map()
 
+    def new_game_screen(self):
+        from screens.setup.new_game import New_Game
+        return New_Game()
+
+    def library_screens(self):
+        editor = self.map_screen()
+        editor.return_to_sources()
+        return self.new_game_screen(), editor
+
     def click(self, screen, button):
         with mock.patch("pygame.mouse.get_pos", return_value=button.rect.center):
             screen.handle_events([
@@ -233,7 +242,7 @@ class ContentBrowserTests(unittest.TestCase):
         self.assertEqual(screen.entries, [])
         self.persist.assert_has_calls([mock.call(self.constants.SAVES_DIR), mock.call(self.constants.SAVES_DIR)])
 
-    def test_new_map_sources_open_items_directly(self):
+    def test_new_map_sources_select_before_opening_and_back_returns_to_custom_maps(self):
         self.bundle("Custom", "SCENARIOS_CUSTOM_DIR")
         self.bundle("Base", "BASE_MAPS_DIR")
         screen = self.map_screen()
@@ -249,15 +258,175 @@ class ContentBrowserTests(unittest.TestCase):
         screen.draw(self.surface)
         with mock.patch.object(screen, "start_editor_with_map") as edit:
             self.click(screen, button_named(screen, "Base"))
+            edit.assert_not_called()
+            self.click(screen, button_named(screen, "Create Map"))
         edit.assert_called_once_with("Base", self.constants.BASE_MAPS_DIR)
-        screen.handle_back_key()
-        self.assertEqual(screen.sub_state, "SOURCES")
         screen.handle_back_key()
         self.assertEqual(screen.sub_state, "CUSTOM_MAPS")
         self.click(screen, button_named(screen, "Custom"))
         with mock.patch.object(screen, "start_editor_with_map") as edit:
             self.click(screen, button_named(screen, "Edit Map"))
         edit.assert_called_once_with("Custom", self.constants.SCENARIOS_CUSTOM_DIR)
+
+    def test_both_libraries_require_selection_and_launch_the_selected_path(self):
+        from screens.game import map_launch
+
+        scenario = self.bundle("Scenario", "SCENARIOS_HISTORICAL_DIR")
+        base = self.bundle("Base", "BASE_MAPS_DIR")
+        game_screen, editor_screen = self.library_screens()
+        for screen, name, path, action, editor in (
+                (game_screen, "Scenario", scenario, "Start Game", False),
+                (editor_screen, "Base", base, "Create Map", True)):
+            with self.subTest(editor=editor):
+                self.assertTrue(button_named(screen, action).disabled)
+                screen.handle_events([key(pygame.K_RETURN)])
+                self.assertFalse(screen.done)
+                self.click(screen, button_named(screen, name))
+                self.assertFalse(screen.done)
+                self.assertFalse(button_named(screen, action).disabled)
+                self.click(screen, button_named(screen, action))
+                self.assertEqual(screen.selected_save_path, str(path))
+                self.assertEqual(screen.next_state, "MAP")
+                with mock.patch.object(map_launch, "open_saved_map") as launch:
+                    screen.prepare_map(self.controller)
+                if editor:
+                    launch.assert_called_once_with(self.controller, str(path), force_editor=True)
+                else:
+                    launch.assert_called_once_with(self.controller, str(path))
+
+    def test_library_category_switch_clears_selection_search_and_uses_the_new_directory(self):
+        self.bundle("Same Name", "SCENARIOS_HISTORICAL_DIR")
+        alternate = self.bundle("Same Name", "SCENARIOS_ALTERNATE_DIR")
+        self.bundle("Base", "BASE_MAPS_DIR")
+        for screen in self.library_screens():
+            with self.subTest(screen=type(screen).__name__):
+                screen.handle_events([key(pygame.K_DOWN)])
+                self.assertIsNotNone(screen.selected_entry)
+                screen.search_field.text = "Same"
+                self.click(screen, button_named(screen, "Alternate Scenarios"))
+                self.assertEqual(screen.search_field.text, "")
+                self.assertIsNone(screen.selected_entry)
+                self.assertEqual([entry.path for entry in screen.entries], [str(alternate)])
+                self.assertFalse(screen.selection_can_open)
+                if "BASE_MAPS" in screen.library_categories:
+                    self.assertTrue(button_named(screen, "Data Refresh").disabled)
+                screen.draw(self.surface)
+
+    def test_libraries_block_bad_metadata_and_refresh_after_external_repairs(self):
+        from data import queries
+
+        scenario = self.bundle("Scenario", "SCENARIOS_HISTORICAL_DIR")
+        base = self.bundle("Base", "BASE_MAPS_DIR")
+        for path in (scenario, base):
+            (path / "meta.json").write_text("{broken", encoding="utf-8")
+        for screen in self.library_screens():
+            with self.subTest(screen=type(screen).__name__):
+                screen.handle_events([key(pygame.K_DOWN)])
+                path = Path(screen.selected_entry.path)
+                self.assertTrue(screen.selection_error)
+                with mock.patch.object(screen, "go_to") as go:
+                    screen.handle_events([key(pygame.K_RETURN)])
+                go.assert_not_called()
+                (path / "meta.json").write_text(json.dumps({"scenario_metadata": {
+                    "author": "Creator", "description": "Repaired"}}), encoding="utf-8")
+                self.click(screen, button_named(screen, "Refresh"))
+                self.assertTrue(screen.selection_can_open)
+                self.assertEqual(screen.summary_for(screen.selected_entry)["description"], "Repaired")
+                # Unknown metadata cannot replace browser validation fields.
+                (path / "meta.json").write_text(json.dumps({"scenario_metadata": {
+                    "error": "Injected", "details": None}}), encoding="utf-8")
+                self.assertEqual(queries.read_saved_content_summary(str(path))["error"], "")
+
+    def test_library_draw_scroll_search_and_sort_reuse_cached_files(self):
+        from data import queries
+        from ui.widgets.content_browser import ScenarioLibraryScreen
+
+        count = self.constants.SCREEN_HEIGHT // ScenarioLibraryScreen.LIBRARY_ROW_HEIGHT + 2
+        for setting in ("SCENARIOS_HISTORICAL_DIR", "BASE_MAPS_DIR"):
+            for index in range(count):
+                self.bundle(f"Item {index:02d}", setting, meta={"scenario_metadata": {
+                    "description": "Details " * 150}})
+        for screen in self.library_screens():
+            with self.subTest(screen=type(screen).__name__):
+                screen.handle_events([key(pygame.K_DOWN)])
+                with mock.patch("os.scandir", side_effect=AssertionError("Unexpected directory scan")), \
+                        mock.patch.object(queries, "read_saved_content_summary", side_effect=AssertionError("Unexpected metadata read")), \
+                        mock.patch("pygame.image.load", side_effect=AssertionError("Unexpected image read")), \
+                        mock.patch("builtins.open", side_effect=AssertionError("Unexpected file read")):
+                    screen.update()
+                    screen.draw(self.surface)
+                    for pane in ("items", "details"):
+                        with mock.patch("pygame.mouse.get_pos", return_value=screen.regions[pane].center):
+                            screen.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, y=-2, x=0)])
+                    screen.search_field.text = "Item"
+                    screen.filter_entries("Item")
+                    screen.cycle_sort()
+                    screen.handle_events([key(pygame.K_DOWN) for _ in range(count + 2)])
+                    screen.draw(self.surface)
+                self.assertEqual(screen.selected_entry, screen.filtered_entries[-1])
+                self.assertLess(screen.pane_scroll("items"), 0)
+
+    def test_libraries_do_not_load_map_images(self):
+        for setting in ("SCENARIOS_HISTORICAL_DIR", "BASE_MAPS_DIR"):
+            self.bundle("Scenario", setting)
+        with mock.patch("pygame.image.load", side_effect=AssertionError("Unexpected image read")):
+            screens = self.library_screens()
+            for screen in screens:
+                with self.subTest(screen=type(screen).__name__):
+                    self.click(screen, button_named(screen, "Scenario"))
+                    self.assertTrue(screen.selection_can_open)
+                    screen.draw(self.surface)
+
+    def test_refresh_uses_live_directory_settings(self):
+        for screen in self.library_screens():
+            with self.subTest(screen=type(screen).__name__):
+                setting = screen.library_categories[screen.sub_state][1]
+                with tempfile.TemporaryDirectory() as replacement:
+                    path = Path(replacement) / "Replacement"
+                    path.mkdir()
+                    (path / "map_data.json").write_text("{}", encoding="utf-8")
+                    with mock.patch.object(self.constants, setting, replacement):
+                        self.click(screen, button_named(screen, "Refresh"))
+                        self.assertEqual([entry.path for entry in screen.entries], [str(path)])
+                        screen.handle_events([key(pygame.K_DOWN)])
+                        self.assertTrue(screen.selection_can_open)
+
+    def test_return_from_scenario_settings_preserves_category_and_selection(self):
+        scenario = self.bundle("Alternate", "SCENARIOS_ALTERNATE_DIR")
+        screen = self.new_game_screen()
+        self.click(screen, button_named(screen, "Alternate Scenarios"))
+        self.click(screen, button_named(screen, "Alternate"))
+        self.click(screen, button_named(screen, "Scenario Settings"))
+        self.assertEqual(screen.next_state, "SCENARIO_SETTINGS")
+        settings = object()
+        screen.on_enter(SimpleNamespace(states={"SCENARIO_SETTINGS": settings}), settings)
+        self.assertEqual(screen.sub_state, "ALTERNATE")
+        self.assertEqual(screen.selected_entry.path, str(scenario))
+        self.click(screen, button_named(screen, "Random Scenario"))
+        self.assertEqual(screen.next_state, "RANDOM_SETUP")
+
+    def test_library_search_enter_and_escape_follow_shared_browser_navigation(self):
+        from ui.navigation.screen import dispatch_global_keys
+
+        self.bundle("Scenario", "SCENARIOS_HISTORICAL_DIR")
+        self.bundle("Base", "BASE_MAPS_DIR")
+        for screen in self.library_screens():
+            screen.handle_events([key(pygame.K_DOWN)])
+            screen.search_field.active = True
+            with mock.patch.object(screen, "activate_selected") as activate:
+                screen.handle_events([key(pygame.K_RETURN)])
+            activate.assert_not_called()
+            screen.search_field.active = True
+            dispatch_global_keys(screen, key(pygame.K_ESCAPE))
+            self.assertFalse(screen.search_field.active)
+            self.assertFalse(screen.done)
+            dispatch_global_keys(screen, key(pygame.K_ESCAPE))
+            if "BASE_MAPS" in screen.library_categories:
+                self.assertFalse(screen.choosing_sources)
+                self.assertFalse(screen.done)
+                dispatch_global_keys(screen, key(pygame.K_ESCAPE))
+            self.assertTrue(screen.done)
+            self.assertEqual(screen.next_state, "MENU")
 
     def test_import_uses_existing_exchange_and_refreshes_after_success(self):
         from ui.dialogs import file_exchange
