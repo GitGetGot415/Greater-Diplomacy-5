@@ -22,6 +22,8 @@ class SessionState:
     multiplayer_mode: bool = False
     realtime_multiplayer: bool = False
     unit_event_read_turns: dict = field(default_factory=dict)
+    # Local conversation appearance. Only disk saves include these preferences.
+    conversation_colors: dict = field(default_factory=dict)
     ai_is_thinking: bool = False
     ai_processing_complete: bool = False
     is_refreshing: bool = False

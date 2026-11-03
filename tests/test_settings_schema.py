@@ -96,6 +96,11 @@ class RoundTripTests(unittest.TestCase):
         values = settings_schema.from_json_dict({"ocean_light_color": [4, 5, 6]})
         self.assertEqual(values["ocean_light_color"], (4, 5, 6))
 
+    def test_conversation_colors_are_not_global_settings(self):
+        saved = {"conversation_colors": {"A": [1, 2, 3]}}
+        self.assertNotIn("conversation_colors", settings_schema.from_json_dict(saved))
+        self.assertNotIn("conversation_colors", settings_schema.to_json_dict(saved))
+
     def test_missing_keys_fall_back_to_defaults(self):
         values = settings_schema.from_json_dict({})
         self.assertEqual(values, settings_schema.defaults())

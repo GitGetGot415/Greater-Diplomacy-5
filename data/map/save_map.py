@@ -59,7 +59,7 @@ async def save_map_data(self, save_name=None, *, overwrite=False):
         # map_data.json now carries the full current province state. Keep the
         # separate meta.json province block only in multiplayer snapshots.
         save_dict = queries.build_save_dict(
-            self, include_provinces=False, compact_nations=True)
+            self, include_provinces=False, compact_nations=True, include_local_preferences=True)
         self.save_progress_completed = 1
         await asyncio.sleep(0)
 

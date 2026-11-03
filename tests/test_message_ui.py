@@ -13,6 +13,8 @@ no way to see afterwards what they had agreed to.
 """
 
 import unittest
+import copy
+import json
 from unittest import mock
 
 
@@ -741,6 +743,105 @@ class ConversationInteractionTests(unittest.TestCase):
                                  if index == f"FORMAL_{dm.FORWARD_ACTION}")
         screen.additional_events(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=rectangle.center))
         self.assertEqual(dm.get_pending(screen.map_screen.nation_data, "P", "B"), previous)
+
+
+class ConversationThemeTests(unittest.TestCase):
+    make_screen = ConversationInteractionTests.make_screen
+
+    def setUp(self):
+        from data import queries
+
+        self.settings = {"keybinds": {"BACK": "escape"}, "music_volume": 0.37,
+                         "conversation_colors": {"A": [100, 110, 120]}}
+        patcher = mock.patch.object(queries, "get_settings", return_value=self.settings)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        writer = mock.patch.object(queries, "save_cached_json")
+        self.settings_writer = writer.start()
+        self.addCleanup(writer.stop)
+
+    def open_picker(self, screen):
+        with mock.patch("screens.game.messages.pickers.open_color_picker") as picker:
+            next(button for button in screen.elements if button.text == "Theme").callback()
+        return picker
+
+    def test_theme_confirmation_changes_only_this_game_and_preserves_messages(self):
+        screen = self.make_screen()
+        other_game = self.make_screen()
+        settings_before = copy.deepcopy(self.settings)
+        screen.select_recipient("A")
+        screen.compose_text = "Still typing"
+        screen.drafts = ["Already queued"]
+        state = copy.deepcopy(screen.map_screen.nation_data)
+        picker = self.open_picker(screen)
+        # A modal can finish after the underlying screen's selection changes.
+        screen.selected_recipient = "B"
+        picker.call_args.args[3]((12, 34, 56))
+        self.assertEqual(screen.map_screen.conversation_colors, {"A": [12, 34, 56]})
+        self.assertEqual(other_game.map_screen.conversation_colors, {})
+        self.assertEqual(screen.map_screen.nation_data, state)
+        self.assertEqual(screen.compose_text, "Still typing")
+        self.assertEqual(screen.drafts, ["Already queued"])
+        self.assertEqual(self.settings, settings_before)
+        self.settings_writer.assert_not_called()
+
+    def test_reset_removes_only_the_selected_override_in_the_save(self):
+        from data import queries
+
+        screen = self.make_screen()
+        screen.select_recipient("A")
+        self.open_picker(screen).call_args.args[3]((12, 34, 56))
+        screen.select_recipient("B")
+        self.open_picker(screen).call_args.args[3]((78, 90, 12))
+        saved = json.loads(json.dumps(queries.build_save_dict(
+            screen.map_screen, include_provinces=False, include_local_preferences=True)))
+        self.assertEqual(saved["conversation_colors"], {"A": [12, 34, 56], "B": [78, 90, 12]})
+        self.open_picker(screen).call_args.kwargs["on_reset"]()
+        saved = queries.build_save_dict(screen.map_screen, include_provinces=False, include_local_preferences=True)
+        self.assertEqual(saved["conversation_colors"], {"A": [12, 34, 56]})
+        self.settings_writer.assert_not_called()
+
+    def test_opening_another_game_in_the_same_screen_does_not_copy_colors(self):
+        screen = self.make_screen()
+        screen.select_recipient("A")
+        self.open_picker(screen).call_args.args[3]((12, 34, 56))
+        first_game = screen.map_screen
+        second_game = self.make_screen().map_screen
+        screen.start_messages(second_game)
+        screen.select_recipient("A")
+        self.assertEqual(second_game.conversation_colors, {})
+        self.open_picker(screen).call_args.args[3]((78, 90, 12))
+        self.assertEqual(first_game.conversation_colors, {"A": [12, 34, 56]})
+        self.assertEqual(second_game.conversation_colors, {"A": [78, 90, 12]})
+
+    def test_picker_opened_for_a_previous_game_cannot_color_the_new_game(self):
+        screen = self.make_screen()
+        screen.select_recipient("A")
+        picker = self.open_picker(screen)
+        first_game = screen.map_screen
+        second_game = self.make_screen().map_screen
+        screen.start_messages(second_game)
+        picker.call_args.args[3]((12, 34, 56))
+        self.assertEqual(first_game.conversation_colors, {"A": [12, 34, 56]})
+        self.assertEqual(second_game.conversation_colors, {})
+
+    def test_no_selection_cannot_open_picker_and_cancel_does_not_save(self):
+        screen = self.make_screen()
+        button = next(button for button in screen.elements if button.text == "Theme")
+        self.assertTrue(button.disabled)
+        self.open_picker(screen).assert_not_called()
+        screen.select_recipient("A")
+        self.open_picker(screen).assert_called_once()
+        self.assertEqual(screen.map_screen.conversation_colors, {})
+        self.settings_writer.assert_not_called()
+
+    def test_local_theme_is_available_in_tactical_mode(self):
+        screen = self.make_screen(tactical=True)
+        screen.select_recipient("A")
+        button = next(button for button in screen.elements if button.text == "Theme")
+        self.assertFalse(button.disabled)
+        self.open_picker(screen).call_args.args[3]((12, 34, 56))
+        self.assertEqual(dm.get_pending(screen.map_screen.nation_data, "P", "A"), {})
 
 
 if __name__ == "__main__":

@@ -88,8 +88,20 @@ Messages keeps conversations on the left and the selected conversation on the ri
 Each conversation row shows its latest message preview and unread count.
 Country flags appear before names in the conversation list and header.
 Add Contact uses compact rows with a flag and country name.
-Trade and Mark Unread are in the conversation header.
+Theme, Trade, and Mark Unread are in the conversation header.
 Treaty reply controls use a fixed area above the text field and Queue button.
+
+Theme changes the background color for the selected country's conversation.
+The country's button in the left list uses the same color, including in Add Contact.
+Selecting a country keeps its button color. A marker identifies the selected country.
+
+The color picker has OK, Reset, and Cancel buttons.
+Reset restores the default Messages background and country button colors.
+Colors are local preferences in each game's meta.json. Save the game to keep changes.
+Loading another game uses that save's colors. Older saves and new games use the default colors.
+
+Tournament moves and real-time broadcasts exclude these preferences. Real-time updates keep each client's local colors.
+Colors do not change messages or multiplayer state.
 
 The conversation header, reply area, and text field are hidden when no country is selected.
 They roll in when the player selects a country. They roll out when the player clears the selection.

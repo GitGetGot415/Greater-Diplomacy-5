@@ -953,6 +953,7 @@ class TournamentMoveTests(unittest.TestCase):
 
     def test_export_records_session_turn_and_pending_shared_updates(self):
         host = Host()
+        host.conversation_colors = {"Leader": [12, 34, 56]}
         host.player_country = "Leader"
         host.active_players = ["Leader"]
         host.current_player_index = 0
@@ -977,6 +978,8 @@ class TournamentMoveTests(unittest.TestCase):
         self.assertEqual(data["game_version"], c.GAME_VERSION)
         self.assertEqual(data["faction_renames"][0]["new_name"], "New Pact")
         self.assertEqual(data["appearance_updates"][0]["country_id"], "Subject")
+        self.assertNotIn("conversation_colors", data)
+        self.assertEqual(host.conversation_colors, {"Leader": [12, 34, 56]})
 
     def test_export_includes_empty_unit_snapshot_and_puppet_siphons(self):
         host = Host()

@@ -17,9 +17,10 @@ _HEX_RE = re.compile(r"^[0-9A-Fa-f]{6}$")
 class ColorPickerScreen(ModalScreen):
     PANEL_SIZE = (460, 440)
 
-    def __init__(self, game_state, title, initial_color, on_confirm):
+    def __init__(self, game_state, title, initial_color, on_confirm, *, on_reset=None):
         super().__init__(game_state, title)
         self.on_confirm = on_confirm
+        self.on_reset = on_reset
 
         r, g, b = (int(v) for v in initial_color[:3])
         self.current_color = [r, g, b]
@@ -77,12 +78,22 @@ class ColorPickerScreen(ModalScreen):
         self.on_confirm(tuple(self.current_color))
         self.exit_screen()
 
+    def _reset(self):
+        if self.on_reset is not None:
+            self.on_reset()
+            self.exit_screen()
+
     def refresh_ui(self):
+        confirm_x = self.panel_rect.centerx - (170 if self.on_reset is not None else 130)
+        cancel_x = self.panel_rect.centerx + (70 if self.on_reset is not None else 10)
         self.elements = list(self.sliders) + [
             self.hex_field,
-            Button(self.panel_rect.centerx - 130, self.panel_rect.bottom - 55, "small", "green", "OK", self._confirm),
-            Button(self.panel_rect.centerx + 10, self.panel_rect.bottom - 55, "small", "red", "Cancel", self.exit_screen, sound_kind="back"),
+            Button(confirm_x, self.panel_rect.bottom - 55, "small", "green", "OK", self._confirm),
+            Button(cancel_x, self.panel_rect.bottom - 55, "small", "red", "Cancel", self.exit_screen, sound_kind="back"),
         ]
+        if self.on_reset is not None:
+            self.elements.append(Button(self.panel_rect.centerx - 50, self.panel_rect.bottom - 55,
+                                        "small", "orange", "Reset", self._reset))
 
     def draw_body(self, surface):
         swatch_rect = pygame.Rect(0, 0, 80, 80)

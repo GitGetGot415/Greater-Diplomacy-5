@@ -248,6 +248,10 @@ Keep tuning data in its source files:
   Preserve migration order, saved references, unknown valid fields, and permission checks.
 - Keep settings keys consistent across the schema, controller, readers, writers, defaults, and settings UI.
   Check settings defaults, saves, and loads after related changes.
+- Keep game-specific UI preferences in each save, not in global settings.
+  This includes conversation themes and country-specific display colors.
+  Loading or starting another game must not inherit these preferences from an unrelated save.
+  Use global settings only when the user explicitly requests a preference across all games.
 - Preserve unknown or older valid data where possible.
   Migration must produce predictable results and be safe to run once on load.
 - A save step also converts every history snapshot. A selected history turn becomes live game state.

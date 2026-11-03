@@ -158,6 +158,7 @@ def _clear_loaded_world(context):
     replace_mapping(world_state, "history", {})
     replace_mapping(world_state, "raw_json_data", {})
     replace_mapping(world_state, "scenario_metadata", {})
+    session_state.conversation_colors = {}
     session_state.editor_scenario_name = ""
 
 
@@ -362,7 +363,9 @@ def _restore_session_properties(context, save_meta):
         world_state.script_variables = []
         world_state.time_manager = TimeHandler(start_year=c.START_YEAR)
 
-    unit_events.restore(context, {} if session_state.selection_mode or session_state.is_editor else save_meta or {})
+    local_metadata = {} if session_state.selection_mode or session_state.is_editor else save_meta or {}
+    session_state.conversation_colors = queries.normalized_conversation_colors(local_metadata.get("conversation_colors"))
+    unit_events.restore(context, local_metadata)
 
     # Loading a scenario supplies its saved/default player metadata, which is
     # deliberately ``None`` for an unstarted map.  The editor is not an

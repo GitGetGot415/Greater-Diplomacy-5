@@ -59,11 +59,11 @@ def open_checkbox_list(game_state, title, prompt, items, on_result, confirm_labe
                on_done=_on_done, caption=title)
 
 
-def open_color_picker(game_state, title, initial_color, on_confirm_callback):
+def open_color_picker(game_state, title, initial_color, on_confirm_callback, *, on_reset=None):
     """In-engine RGB/hex color picker: replaces tkinter.colorchooser.askcolor."""
     from ui.dialogs.color_picker_screen import ColorPickerScreen
     from ui.navigation.screen_runner import _run_pygame_sub_screen
-    screen = ColorPickerScreen(game_state, title, initial_color, on_confirm_callback)
+    screen = ColorPickerScreen(game_state, title, initial_color, on_confirm_callback, on_reset=on_reset)
     _run_pygame_sub_screen(game_state, screen)
 
 

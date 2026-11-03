@@ -3,6 +3,7 @@
 import asyncio
 import json
 import os
+import shutil
 import tempfile
 import unittest
 import zipfile
@@ -16,6 +17,61 @@ from tests.stub_map_screen import map_double, sample_map_screen
 
 
 class MapSaveFormatTests(unittest.TestCase):
+    def test_conversation_colors_normalize_only_at_the_save_boundary(self):
+        raw = {"A": [1, 2, 3], "B": [True, 2, 3], "C": [-1, 2, 3],
+               "D": [256, 2, 3], "E": [1, 2], "F": "123", "": [1, 2, 3]}
+        self.assertEqual(queries.normalized_conversation_colors(raw), {"A": [1, 2, 3]})
+        copied = queries.normalized_conversation_colors(raw)
+        copied["A"][0] = 20
+        self.assertEqual(raw["A"], [1, 2, 3])
+        for invalid in (None, [], "invalid"):
+            with self.subTest(value=invalid):
+                self.assertEqual(queries.normalized_conversation_colors(invalid), {})
+
+    def test_older_saves_new_scenarios_and_procedural_loads_clear_previous_colors(self):
+        context = sample_map_screen()
+        metadata = queries.build_save_dict(context)
+        for saved, selection, editor in ((metadata, False, False), (None, False, False),
+                                          (dict(metadata, conversation_colors={"A": [1, 2, 3]}), True, False),
+                                          (dict(metadata, conversation_colors={"A": [1, 2, 3]}), False, True)):
+            with self.subTest(saved=saved is not None, selection=selection, editor=editor):
+                context.conversation_colors = {"Previous game": [4, 5, 6]}
+                context.selection_mode = selection
+                context.is_editor = editor
+                load_map._restore_session_properties(context, saved)
+                self.assertEqual(context.conversation_colors, {})
+        context.conversation_colors = {"Previous game": [4, 5, 6]}
+        load_map._clear_loaded_world(context)
+        self.assertEqual(context.conversation_colors, {})
+
+    def test_local_conversation_colors_are_not_in_multiplayer_snapshots(self):
+        context = sample_map_screen()
+        context.conversation_colors = {"Avaria": [1, 2, 3]}
+        self.assertNotIn("conversation_colors", queries.build_save_dict(context))
+        self.assertEqual(queries.build_save_dict(context, include_local_preferences=True)["conversation_colors"],
+                         {"Avaria": [1, 2, 3]})
+
+    def test_conversation_colors_survive_backend_disk_load_and_ignore_old_global_preferences(self):
+        context = map_double(conversation_colors={"A": [12, 34, 56]})
+        metadata = queries.build_save_dict(context, include_provinces=False, include_local_preferences=True)
+        with tempfile.TemporaryDirectory() as directory, \
+                mock.patch.object(queries, "get_country_data", return_value={}), \
+                mock.patch.object(queries, "get_settings", return_value={"conversation_colors": {"B": [1, 2, 3]}}):
+            meta_path = os.path.join(directory, "meta.json")
+            with open(meta_path, "w", encoding="utf-8") as handle:
+                json.dump(metadata, handle)
+            with open(os.path.join(directory, "map_data.json"), "w", encoding="utf-8") as handle:
+                json.dump({}, handle)
+            # The backend reads dimensions from an existing PNG without drawing it.
+            shutil.copyfile(os.path.join(c.BACKGROUNDS_DIR, "Province.png"), os.path.join(directory, "id_map.png"))
+            loaded = load_map.load_backend_state(directory, skip_initial_income=True)
+            self.assertEqual(loaded.session.conversation_colors, {"A": [12, 34, 56]})
+            metadata.pop("conversation_colors")
+            with open(meta_path, "w", encoding="utf-8") as handle:
+                json.dump(metadata, handle)
+            older = load_map.load_backend_state(directory, skip_initial_income=True)
+            self.assertEqual(older.session.conversation_colors, {})
+
     def test_geometry_omits_only_fields_with_a_separate_state_record(self):
         raw = {"p": {"terrain": "fixture", "owner": "old", "unknown": {"keep": [1]}},
                "extra": {"owner": "preserved", "units": [{"fixture": True}]}}
@@ -84,6 +140,7 @@ class MapSaveFormatTests(unittest.TestCase):
 
     def test_disk_save_writes_current_state_readably_without_meta_overlay(self):
         map_screen = sample_map_screen()
+        map_screen.conversation_colors = {"Avaria": [12, 34, 56]}
         map_screen.is_editor = False
         map_screen.history = {"1": {"nation_data": {}, "provinces": {}}}
         map_screen.political_map = object()
@@ -115,6 +172,12 @@ class MapSaveFormatTests(unittest.TestCase):
             has_cores_cache = os.path.exists(os.path.join(save_dir, "cores.png"))
 
         self.assertNotIn("provinces", meta)
+        self.assertEqual(meta["conversation_colors"], {"Avaria": [12, 34, 56]})
+        loaded = sample_map_screen()
+        load_map._restore_session_properties(loaded, meta)
+        self.assertEqual(loaded.conversation_colors, map_screen.conversation_colors)
+        loaded.conversation_colors["Avaria"][0] = 99
+        self.assertEqual(map_screen.conversation_colors, {"Avaria": [12, 34, 56]})
         self.assertEqual(meta["nation_data"], map_screen.nation_data)
         self.assertEqual(meta["date"], {
             "day": 15, "month": 5, "year": 1939, "total_turns": 12,

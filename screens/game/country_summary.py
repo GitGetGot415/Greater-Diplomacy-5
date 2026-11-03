@@ -40,7 +40,7 @@ class CountrySummaryScreen(Screen):
         self.flag = flag_icons.flag_surface(country_id, map_screen.nation_data, HEADER_FLAG_SIZE)
         self._layout_width = None
         self.refresh_ui()
-        ui_elements.play_ui_sound("table")
+        ui_elements.play_ui_sound("paper")
 
     def _country_parts(self, country_ids):
         parts = []

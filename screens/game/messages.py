@@ -10,6 +10,7 @@ from ui.widgets.ui_elements import Button, process_text_input
 from ui.rendering.font_manager import fonts
 from map_logic.diplomacy import diplomacy_messages, diplomacy_processor, volunteers
 from data import queries
+from data.state_access import session_for
 from ui.dialogs import pickers
 from ui.background_styles import MESSAGE_PANEL_STYLES
 
@@ -35,6 +36,7 @@ MSG_CONTROL_GAP = 12
 MSG_HEADER_BUTTON_H = 36
 MSG_HEADER_BUTTON_Y = (MSG_HEADER_H - MSG_HEADER_BUTTON_H) // 2
 MSG_HEADER_TRADE_W = 116
+MSG_HEADER_THEME_W = 100
 MSG_HEADER_UNREAD_W = 146
 MSG_CONTACT_TOOLBAR_Y = MSG_HEADER_H + MSG_HEADER_BUTTON_Y
 MSG_CONTACT_FLAG_SIZE = (24, 16)
@@ -71,9 +73,7 @@ MSG_BUBBLE_AI = (60, 60, 80)
 MSG_DIPLO_ACCENT = (208, 162, 76)
 MSG_SELECTED_ACCENT = (112, 181, 242)
 MSG_PANEL_BORDER = (13, 17, 24)
-MSG_CONTACT_COLOR = (36, 43, 55)
-MSG_CONTACT_HOVER = (47, 57, 72)
-MSG_CONTACT_SELECTED = (39, 69, 101)
+MSG_CONTACT_THEME_HOVER_LIGHTEN = 20
 MSG_BUBBLE_FORWARDED = (65, 105, 75)
 MSG_BUBBLE_MAX_WIDTH_RATIO = 0.6
 MSG_FORWARD_BUTTON_SIZE = (82, 24)
@@ -90,13 +90,14 @@ def _draw_cached_flag(surface, flag, x, center_y):
 class ConversationRow(Button):
     """A conversation row with cached text and the shared button input behavior."""
 
-    def __init__(self, x, y, width, name, preview, unread, selected, callback, flag, *, compact=False):
+    def __init__(self, x, y, width, name, preview, unread, selected, callback, flag, *, compact=False, theme_color=None):
         height = MSG_NEW_CONTACT_ROW_H if compact else MSG_CONTACT_ROW_H
         super().__init__(x, y, (width, height), "grey", name, callback,
                          sound_kind="select_category")
         self.is_selected = selected
-        self.set_colors(MSG_CONTACT_SELECTED if selected else MSG_CONTACT_COLOR,
-                        MSG_CONTACT_HOVER if not selected else (48, 83, 120))
+        base = tuple(theme_color) if theme_color is not None else MSG_BG_DARK
+        hover = tuple(min(255, channel + MSG_CONTACT_THEME_HOVER_LIGHTEN) for channel in base)
+        self.set_colors(base, hover)
         name_font = fonts.get_size(18, bold=bool(unread))
         preview_font = fonts.get("small")
         badge_font = fonts.get("tiny")
@@ -276,6 +277,25 @@ class Messages_Screen(Screen):
         self.show_all_contacts = not self.show_all_contacts
         self.contact_scroll_y = 0
         self.refresh_ui()
+
+    def edit_conversation_theme(self):
+        if not self.selected_recipient:
+            return
+        country = self.selected_recipient
+        colors = session_for(self.map_screen).conversation_colors
+        name = queries.get_country_display_name(country, self.map_screen.nation_data)
+        pickers.open_color_picker(
+            self.map_screen, f"{name}: Conversation Theme", self.bg_color,
+            lambda color: self._set_conversation_color(colors, country, color),
+            on_reset=lambda: self._set_conversation_color(colors, country, None))
+
+    def _set_conversation_color(self, colors, country, color):
+        if color is None:
+            colors.pop(country, None)
+        else:
+            colors[country] = list(color)
+        if self.map_screen and session_for(self.map_screen).conversation_colors is colors:
+            self.refresh_ui()
 
     def select_new_contact(self, target):
         self.show_all_contacts = False
@@ -558,6 +578,8 @@ class Messages_Screen(Screen):
             element.rect.y = base_y + (top_dy if is_top else bottom_dy)
 
     def _build_ui(self):
+        colors = session_for(self.map_screen).conversation_colors if self.map_screen else {}
+        self.bg_color = tuple(colors.get(self.selected_recipient, MSG_BG_DARK))
         self.elements = [Button(MSG_MARGIN, MSG_HEADER_BUTTON_Y, (70, MSG_HEADER_BUTTON_H), "red", "Exit", self.exit_screen,
                                 font_preset="button_small", sound_kind="back")]
         self.elements.append(Button(94, MSG_HEADER_BUTTON_Y, (170, MSG_HEADER_BUTTON_H), "blue", "Mark All Read", self.mark_all_read,
@@ -573,12 +595,13 @@ class Messages_Screen(Screen):
         self._prepare_composer()
         unread_x = c.SCREEN_WIDTH - MSG_MARGIN - MSG_HEADER_UNREAD_W
         trade_x = unread_x - MSG_CONTROL_GAP - MSG_HEADER_TRADE_W
+        theme_x = trade_x - MSG_CONTROL_GAP - MSG_HEADER_THEME_W
         header = queries.get_country_display_name(self.selected_recipient, self.map_screen.nation_data) if self.selected_recipient else "Messages"
         header_font = fonts.get("heading2")
         self.header_flag = (flag_icons.flag_surface(self.selected_recipient, self.map_screen.nation_data, MSG_HEADER_FLAG_SIZE)
                             if self.selected_recipient else None)
         flag_space = self.header_flag.get_width() + MSG_FLAG_GAP if self.header_flag is not None else 0
-        header_width = trade_x - MSG_LEFT_PANE_W - 2 * MSG_MARGIN - flag_space
+        header_width = theme_x - MSG_LEFT_PANE_W - 2 * MSG_MARGIN - flag_space
         self.header_surface = header_font.render(text_utils.fit_text(header, header_font, header_width), True, (241, 245, 250))
         self.sidebar_title_surface = fonts.get("normal").render("Messages", True, (220, 229, 240))
         self.empty_thread_surface = header_font.render("Select a nation to view communications.", True, c.UI_TEXT_MUTED)
@@ -629,7 +652,7 @@ class Messages_Screen(Screen):
             display_list = [n for n in playable if n not in history_contacts]
         else:
             self.elements.append(Button(132, MSG_CONTACT_TOOLBAR_Y, (132, MSG_HEADER_BUTTON_H), "blue", "+ Add Contact", self.toggle_add_contact,
-                                        font_preset="button_small"))
+                                        font_preset="button_small", sound_kind="paper"))
             display_list = [n for n in playable if n in history_contacts]
         previews = {}
         unread_counts = {}
@@ -658,7 +681,7 @@ class Messages_Screen(Screen):
                                   self.selected_recipient == country,
                                   lambda target=country, select=callback: select(target),
                                   flag=flag_icons.flag_surface(country, self.map_screen.nation_data, MSG_CONTACT_FLAG_SIZE),
-                                  compact=self.show_all_contacts)
+                                  compact=self.show_all_contacts, theme_color=colors.get(country))
             row.is_scrollable = True
             row.click_guard = self.content_hover_guard()
             self.elements.append(row)
@@ -680,6 +703,10 @@ class Messages_Screen(Screen):
                               font_preset="button_small")
         trade_button.disabled = not self.selected_recipient or is_tactical
         self.elements.append(trade_button)
+        theme_button = Button(theme_x, MSG_HEADER_BUTTON_Y, (MSG_HEADER_THEME_W, MSG_HEADER_BUTTON_H), "blue", "Theme",
+                              self.edit_conversation_theme, font_preset="button_small")
+        theme_button.disabled = not self.selected_recipient
+        self.elements.append(theme_button)
 
         # Ratification has its own channel. A leader can ask several members without replacing unrelated offers.
         # Its controls take priority over ordinary bilateral replies.

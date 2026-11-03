@@ -106,6 +106,15 @@ class FakeAddressProbe:
 
 
 class HostSnapshotTests(unittest.TestCase):
+    def test_authoritative_snapshot_keeps_local_conversation_colors(self):
+        client = map_double(player_country="A", nation_data={"A": {}}, map_data={},
+                            conversation_colors={"B": [1, 2, 3]}, refresh_all_maps=mock.Mock())
+        apply_authoritative_snapshot(client, {"nation_data": {"A": {}},
+                                             "conversation_colors": {"B": [4, 5, 6]}})
+        self.assertEqual(client.conversation_colors, {"B": [1, 2, 3]})
+        apply_authoritative_snapshot(client, {"nation_data": {"A": {}}})
+        self.assertEqual(client.conversation_colors, {"B": [1, 2, 3]})
+
     def test_shared_economy_totals_replace_cached_values_and_clear_on_older_snapshots(self):
         client = map_double(player_country="A", nation_data={"A": {}}, map_data={},
                                  refresh_all_maps=mock.Mock())

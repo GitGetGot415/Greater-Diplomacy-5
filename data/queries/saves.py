@@ -22,6 +22,16 @@ def normalized_scenario_metadata(metadata):
     return result
 
 
+def normalized_conversation_colors(value):
+    """Copy valid country RGB preferences at the save boundary."""
+    if not isinstance(value, dict):
+        return {}
+    return {country: list(color) for country, color in value.items()
+            if isinstance(country, str) and country
+            and isinstance(color, (list, tuple)) and len(color) == 3
+            and all(type(channel) is int and 0 <= channel <= 255 for channel in color)}
+
+
 def merge_country_templates(nation_data):
     """Restore catalog countries and add missing fields in place.
 
@@ -203,11 +213,12 @@ def compact_save_nation_data(save_dict, map_data):
     return save_dict
 
 
-def build_save_dict(context, *, include_provinces=True, compact_nations=False):
+def build_save_dict(context, *, include_provinces=True, compact_nations=False, include_local_preferences=False):
     """Standardize save state; only disk saves opt into country compaction.
 
     Network snapshots keep complete records for projection and authentication;
     they do not rely on the recipient having an identical country catalog.
+    Disk saves opt into local display preferences. Network snapshots omit them.
     """
     world_state = world_for(context)
     if hasattr(world_state, "factions"):
@@ -248,6 +259,8 @@ def build_save_dict(context, *, include_provinces=True, compact_nations=False):
         "unit_event_log": unit_events.saved_log(context),
         "unit_event_read_turns": unit_events.saved_reads(context),
     }
+    if include_local_preferences:
+        save_dict["conversation_colors"] = normalized_conversation_colors(session_state.conversation_colors)
     if include_provinces:
         save_dict["provinces"] = {}
     realtime_metadata = context.realtime_match_metadata

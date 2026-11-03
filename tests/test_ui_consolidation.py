@@ -529,7 +529,7 @@ class OneSoundPerClickTests(SharedUiTestCase):
         menu = self.controller.states["MENU"]
         with mock.patch.object(menu, "go_to") as navigate, \
                 mock.patch.object(menu.assets_btn, "visible", True):
-            self.assertEqual(self.click_sounds(menu.assets_btn), ["table"])
+            self.assertEqual(self.click_sounds(menu.assets_btn), ["paper"])
         navigate.assert_called_once_with("VIEW_ASSETS")
 
         game = app_harness.boot_map()
@@ -538,7 +538,7 @@ class OneSoundPerClickTests(SharedUiTestCase):
                 mock.patch.object(game.btn_gp_edit, "visible", True), \
                 mock.patch.object(game.btn_gp_edit, "disabled", False), \
                 mock.patch.object(game, "change_state") as navigate:
-            self.assertEqual(self.click_sounds(game.btn_gp_edit), ["table"])
+            self.assertEqual(self.click_sounds(game.btn_gp_edit), ["paper"])
             self.assertEqual(game.editing_country, game.player_country)
         navigate.assert_called_once_with("EDIT_COUNTRY")
 
@@ -583,6 +583,26 @@ class OneSoundPerClickTests(SharedUiTestCase):
         screen.compose_text = text
         screen.refresh_ui()
         return screen
+
+    def test_add_contact_plays_paper_once_and_opens_the_contact_picker(self):
+        screen = self.message_screen("")
+        self.assertEqual(self.click_sounds(button_named(screen, "+ Add Contact")), ["paper"])
+        self.assertTrue(screen.show_all_contacts)
+
+    def test_color_picker_reset_and_cancel_keep_separate_callbacks(self):
+        from ui.dialogs import pickers
+        from ui.navigation import modal_stack
+
+        for label in ("Reset", "Cancel", "OK"):
+            with self.subTest(action=label):
+                confirm, reset = mock.Mock(), mock.Mock()
+                pickers.open_color_picker(self.controller, "Conversation Theme", (12, 34, 56), confirm, on_reset=reset)
+                screen = modal_stack.active().screen
+                self.click_sounds(button_named(screen, label))
+                self.assertTrue(screen.done)
+                self.assertEqual(confirm.call_count, int(label == "OK"))
+                self.assertEqual(reset.call_count, int(label == "Reset"))
+                modal_stack.pop()
 
     def test_queuing_a_message_plays_send_once_and_keeps_the_draft(self):
         from map_logic.diplomacy import diplomacy_messages
@@ -729,10 +749,10 @@ class OneSoundPerClickTests(SharedUiTestCase):
                     mock.patch.object(map_module.editor_menus, "open_editor_metadata") as open_metadata:
                 # Metadata and Mail share a button. Rebuild it for each mode.
                 map_module._build_left_bar_buttons(game)
-                self.assertEqual(self.click_sounds(game.btn_gp_claims), ["table"])
+                self.assertEqual(self.click_sounds(game.btn_gp_claims), ["paper"])
                 open_claims.assert_called_once_with(game)
                 if is_editor:
-                    self.assertEqual(self.click_sounds(game.btn_gp_msgs), ["table"])
+                    self.assertEqual(self.click_sounds(game.btn_gp_msgs), ["paper"])
                     open_metadata.assert_called_once_with(game)
                 else:
                     self.assertEqual(self.click_sounds(game.btn_gp_msgs), ["open_mail"])
@@ -924,7 +944,7 @@ class OneSoundPerClickTests(SharedUiTestCase):
         # It is hidden outside a real-time match.
         with mock.patch.object(game, "realtime_session", None), mock.patch.object(button, "visible", True), \
                 mock.patch.object(button, "disabled", False):
-            self.assertEqual(self.click_sounds(button), ["table"])
+            self.assertEqual(self.click_sounds(button), ["paper"])
 
 
 class KeybindSoundTests(SharedUiTestCase):

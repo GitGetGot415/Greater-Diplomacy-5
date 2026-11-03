@@ -76,7 +76,7 @@ class TableScreen(Screen):
                 self.group_spans.append((group, start_x, span_w))
 
         self.refresh_ui()
-        ui_elements.play_ui_sound("table")
+        ui_elements.play_ui_sound("paper")
 
     def sort_by(self, col):
         reverse = self.sort_reverse.get(col.key, False)
