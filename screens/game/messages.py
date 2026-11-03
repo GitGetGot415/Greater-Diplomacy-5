@@ -5,7 +5,7 @@ from ui.navigation.screen import Screen
 import data.constants as c
 from ui.bars import ui_bars
 from ui.widgets import text_utils
-from ui.widgets import ui_elements
+from ui.widgets import flag_icons, ui_elements
 from ui.widgets.ui_elements import Button, process_text_input
 from ui.rendering.font_manager import fonts
 from map_logic.diplomacy import diplomacy_messages, diplomacy_processor, volunteers
@@ -28,6 +28,7 @@ MSG_HEADER_H = 64
 MSG_REQUEST_H = 64
 MSG_MARGIN = 16
 MSG_CONTACT_ROW_H = 64
+MSG_NEW_CONTACT_ROW_H = 36
 MSG_CONTACT_ROW_GAP = 2
 MSG_QUEUE_W = 112
 MSG_CONTROL_GAP = 12
@@ -36,6 +37,9 @@ MSG_HEADER_BUTTON_Y = (MSG_HEADER_H - MSG_HEADER_BUTTON_H) // 2
 MSG_HEADER_TRADE_W = 116
 MSG_HEADER_UNREAD_W = 146
 MSG_CONTACT_TOOLBAR_Y = MSG_HEADER_H + MSG_HEADER_BUTTON_Y
+MSG_CONTACT_FLAG_SIZE = (24, 16)
+MSG_HEADER_FLAG_SIZE = (36, 24)
+MSG_FLAG_GAP = 8
 
 # The conversation header, reply bar and composer roll in while a country is
 # selected and roll out when none is. The contact header keeps Exit reachable.
@@ -75,11 +79,20 @@ MSG_BUBBLE_MAX_WIDTH_RATIO = 0.6
 MSG_FORWARD_BUTTON_SIZE = (82, 24)
 
 
+def _draw_cached_flag(surface, flag, x, center_y):
+    """Draw a prepared flag without reading country data during a frame."""
+    rect = flag.get_rect(midleft=(x, center_y))
+    surface.blit(flag, rect)
+    pygame.draw.rect(surface, (100, 100, 100), rect, 1)
+    return rect.right + MSG_FLAG_GAP
+
+
 class ConversationRow(Button):
     """A conversation row with cached text and the shared button input behavior."""
 
-    def __init__(self, x, y, width, name, preview, unread, selected, callback):
-        super().__init__(x, y, (width, MSG_CONTACT_ROW_H), "grey", name, callback,
+    def __init__(self, x, y, width, name, preview, unread, selected, callback, flag, *, compact=False):
+        height = MSG_NEW_CONTACT_ROW_H if compact else MSG_CONTACT_ROW_H
+        super().__init__(x, y, (width, height), "grey", name, callback,
                          sound_kind="select_category")
         self.is_selected = selected
         self.set_colors(MSG_CONTACT_SELECTED if selected else MSG_CONTACT_COLOR,
@@ -87,12 +100,15 @@ class ConversationRow(Button):
         name_font = fonts.get_size(18, bold=bool(unread))
         preview_font = fonts.get("small")
         badge_font = fonts.get("tiny")
+        self.flag = flag
         self.badge = badge_font.render(str(unread), True, (255, 255, 255)) if unread else None
         self.badge_width = max(24, self.badge.get_width() + 12) if self.badge else 0
-        text_width = width - 32 - (self.badge_width + 8 if unread else 0)
+        flag_space = self.flag.get_width() + MSG_FLAG_GAP
+        text_width = width - 32 - flag_space - (self.badge_width + 8 if unread else 0)
         self.name_surface = name_font.render(text_utils.fit_text(name, name_font, text_width), True, (241, 245, 250))
-        self.preview_surface = preview_font.render(
-            text_utils.fit_text(preview, preview_font, width - 32), True, (174, 185, 200))
+        self.name_y = (height - self.name_surface.get_height()) // 2 if compact else 10
+        self.preview_surface = (preview_font.render(
+            text_utils.fit_text(preview, preview_font, width - 32), True, (174, 185, 200)) if not compact else None)
 
     def draw(self, surface):
         if not self.visible:
@@ -104,8 +120,11 @@ class ConversationRow(Button):
         if self.is_selected:
             pygame.draw.rect(surface, MSG_SELECTED_ACCENT,
                              (self.rect.x + 2, self.rect.y + 2, 4, self.rect.height - 4))
-        surface.blit(self.name_surface, (self.rect.x + 16, self.rect.y + 10))
-        surface.blit(self.preview_surface, (self.rect.x + 16, self.rect.y + 36))
+        name_x = _draw_cached_flag(surface, self.flag, self.rect.x + 16,
+                                   self.rect.y + self.name_y + self.name_surface.get_height() // 2)
+        surface.blit(self.name_surface, (name_x, self.rect.y + self.name_y))
+        if self.preview_surface is not None:
+            surface.blit(self.preview_surface, (self.rect.x + 16, self.rect.y + 36))
         if self.badge:
             badge_rect = pygame.Rect(self.rect.right - self.badge_width - 10,
                                      self.rect.y + 10, self.badge_width, 22)
@@ -529,7 +548,7 @@ class Messages_Screen(Screen):
             rect = element.rect
             if rect.x >= MSG_LEFT_PANE_W and rect.bottom <= MSG_HEADER_H:
                 self.bar_elements.append((element, rect.y, True))
-            elif rect.top >= self.thread_rect.bottom:
+            elif rect.x >= MSG_LEFT_PANE_W and rect.top >= self.thread_rect.bottom:
                 self.bar_elements.append((element, rect.y, False))
         self._apply_bar_offsets()
 
@@ -556,7 +575,10 @@ class Messages_Screen(Screen):
         trade_x = unread_x - MSG_CONTROL_GAP - MSG_HEADER_TRADE_W
         header = queries.get_country_display_name(self.selected_recipient, self.map_screen.nation_data) if self.selected_recipient else "Messages"
         header_font = fonts.get("heading2")
-        header_width = trade_x - MSG_LEFT_PANE_W - 2 * MSG_MARGIN
+        self.header_flag = (flag_icons.flag_surface(self.selected_recipient, self.map_screen.nation_data, MSG_HEADER_FLAG_SIZE)
+                            if self.selected_recipient else None)
+        flag_space = self.header_flag.get_width() + MSG_FLAG_GAP if self.header_flag is not None else 0
+        header_width = trade_x - MSG_LEFT_PANE_W - 2 * MSG_MARGIN - flag_space
         self.header_surface = header_font.render(text_utils.fit_text(header, header_font, header_width), True, (241, 245, 250))
         self.sidebar_title_surface = fonts.get("normal").render("Messages", True, (220, 229, 240))
         self.empty_thread_surface = header_font.render("Select a nation to view communications.", True, c.UI_TEXT_MUTED)
@@ -619,7 +641,8 @@ class Messages_Screen(Screen):
             if not outgoing and not message.get("read", False):
                 unread_counts[country] = unread_counts.get(country, 0) + 1
 
-        row_step = MSG_CONTACT_ROW_H + MSG_CONTACT_ROW_GAP
+        row_height = MSG_NEW_CONTACT_ROW_H if self.show_all_contacts else MSG_CONTACT_ROW_H
+        row_step = row_height + MSG_CONTACT_ROW_GAP
         self.max_contact_scroll = min(0, self.scroll_content_rect.height - len(display_list) * row_step)
         self.contact_scroll_y = max(self.max_contact_scroll, min(0, self.contact_scroll_y))
         for index, country in enumerate(display_list):
@@ -633,7 +656,9 @@ class Messages_Screen(Screen):
             row = ConversationRow(MSG_MARGIN, y, self.scroll_content_rect.width,
                                   display_name, previews.get(country, ""), unread,
                                   self.selected_recipient == country,
-                                  lambda target=country, select=callback: select(target))
+                                  lambda target=country, select=callback: select(target),
+                                  flag=flag_icons.flag_surface(country, self.map_screen.nation_data, MSG_CONTACT_FLAG_SIZE),
+                                  compact=self.show_all_contacts)
             row.is_scrollable = True
             row.click_guard = self.content_hover_guard()
             self.elements.append(row)
@@ -969,7 +994,10 @@ class Messages_Screen(Screen):
         self._draw_panel(surface, pygame.Rect(MSG_LEFT_PANE_W, top_dy, c.SCREEN_WIDTH - MSG_LEFT_PANE_W, MSG_HEADER_H), "header")
         sidebar_title_y = MSG_CONTACT_TOOLBAR_Y + (MSG_HEADER_BUTTON_H - self.sidebar_title_surface.get_height()) // 2
         surface.blit(self.sidebar_title_surface, (MSG_MARGIN, sidebar_title_y))
-        surface.blit(self.header_surface, (MSG_LEFT_PANE_W + MSG_MARGIN,
+        header_x = MSG_LEFT_PANE_W + MSG_MARGIN
+        if self.header_flag is not None:
+            header_x = _draw_cached_flag(surface, self.header_flag, header_x, top_dy + MSG_HEADER_H // 2)
+        surface.blit(self.header_surface, (header_x,
                                            top_dy + (MSG_HEADER_H - self.header_surface.get_height()) // 2))
         self.draw_list_scrollbar(surface, MSG_LEFT_PANE_W - 20, MSG_CONTACT_LIST_TOP_Y,
                                  self.scroll_content_rect.height, width=10,

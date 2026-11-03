@@ -362,6 +362,28 @@ class ConversationInteractionTests(unittest.TestCase):
             row.handle_event(pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=point))
         self.assertIsNone(screen.selected_recipient)
 
+    def test_new_contact_picker_can_scroll_to_and_open_the_last_country(self):
+        from screens.game.messages import ConversationRow
+
+        screen = self.make_screen()
+        for index in range(20):
+            country = f"C{index:02}"
+            screen.map_screen.nation_data[country] = nation(name=f"Country {index:02}", is_playable=True)
+            screen.map_screen.map_data[100 + index] = {"owner": country}
+        screen.toggle_add_contact()
+        screen.contact_scroll_y = screen.max_contact_scroll
+        screen.refresh_ui()
+        row = next(element for element in screen.elements if isinstance(element, ConversationRow) and element.text == "Country 19")
+        screen.draw(pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT)))
+        with mock.patch.object(pygame.mouse, "get_pos", return_value=row.rect.center):
+            screen.handle_events([
+                pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=row.rect.center),
+                pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=row.rect.center)])
+        self.assertEqual(screen.selected_recipient, "C19")
+        self.assertFalse(screen.show_all_contacts)
+        self.assertTrue(screen.text_input_active)
+        self.assertEqual(dm.get_pending(screen.map_screen.nation_data, "P", "C19"), {})
+
     def test_fixed_controls_cannot_scroll_or_activate_hidden_thread_actions(self):
         screen = self.make_screen()
         screen.select_recipient("A")
@@ -392,6 +414,7 @@ class ConversationInteractionTests(unittest.TestCase):
         prepared = screen.processed_messages
         with mock.patch.object(dm, "get_pending", side_effect=AssertionError("Draw read diplomacy")), \
                 mock.patch.object(dm, "describe_trade", side_effect=AssertionError("Draw described terms")), \
+                mock.patch.object(messages_module.flag_icons, "flag_surface", side_effect=AssertionError("Draw rebuilt flags")), \
                 mock.patch.object(messages_module.text_utils, "wrap_text", side_effect=AssertionError("Draw wrapped messages")):
             screen.draw(pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT)))
             screen.draw(pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT)))

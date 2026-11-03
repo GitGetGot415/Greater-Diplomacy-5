@@ -86,6 +86,8 @@ Message timing
 
 Messages keeps conversations on the left and the selected conversation on the right.
 Each conversation row shows its latest message preview and unread count.
+Country flags appear before names in the conversation list and header.
+Add Contact uses compact rows with a flag and country name.
 Trade and Mark Unread are in the conversation header.
 Treaty reply controls use a fixed area above the text field and Queue button.
 
