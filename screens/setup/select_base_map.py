@@ -62,6 +62,7 @@ class Select_Base_Map(ContentBrowserScreen):
                                  (label, color, lambda category=state: self.set_sub_state(category))
                                  for (state, (label, _attr)), color in zip(
                                      self.CATEGORIES.items(), ("green", "orange", "blue", "purple"))
+                                 if state != "CUSTOM_MAPS"
                              ])]
             return
         _label, directory_attr = self.CATEGORIES[self.sub_state]

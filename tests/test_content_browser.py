@@ -240,6 +240,7 @@ class ContentBrowserTests(unittest.TestCase):
         self.assertIsNone(screen.selected_entry)
         self.assertFalse(any(getattr(element, "text", None) == "Base Maps" for element in screen.elements))
         self.click(screen, button_named(screen, "New Map"))
+        self.assertFalse(any(getattr(element, "text", None) == "Custom Maps" for element in screen.elements))
         screen.draw(self.surface)
         self.click(screen, button_named(screen, "Base Maps"))
         self.assertEqual(screen.sub_state, "BASE_MAPS")
