@@ -60,6 +60,7 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
     ROW_HEIGHT = 66
     ACTION_HEIGHT = 36
     ACTION_GAP = 8
+    ACTION_COUNT = 4
     PRIMARY_ACTION_SIZE = (220, 44)
     content_label = "items"
     category_caption = ""
@@ -137,7 +138,7 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
         self.detail_panel = pygame.Rect(self.list_panel.right + gap, self.PANEL_Y,
                                         width - list_width - gap, panel_height)
         self.action_top = (self.detail_panel.bottom - margin - self.PRIMARY_ACTION_SIZE[1]
-                           - self.ACTION_GAP - 2 * (self.ACTION_HEIGHT + self.ACTION_GAP))
+                           - self.ACTION_GAP - self.ACTION_HEIGHT)
         self.regions = {
             "items": pygame.Rect(self.list_panel.x + 12, self.list_panel.y + 42,
                                  self.list_panel.width - 42, self.list_panel.height - 54),
@@ -236,10 +237,10 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
 
     def add_browser_action(self, label, callback, slot, color="grey", *, enabled=True, sound_kind="click"):
         """Place a screen's action in the shared details panel."""
-        width = (self.detail_panel.width - self.MARGIN * 2 - self.ACTION_GAP) // 2
-        x = self.detail_panel.x + self.MARGIN + slot % 2 * (width + self.ACTION_GAP)
-        y = self.action_top + slot // 2 * (self.ACTION_HEIGHT + self.ACTION_GAP)
-        button = Button(x, y, (width, self.ACTION_HEIGHT), color, label, callback,
+        width = (self.detail_panel.width - self.MARGIN * 2
+                 - self.ACTION_GAP * (self.ACTION_COUNT - 1)) // self.ACTION_COUNT
+        x = self.detail_panel.x + self.MARGIN + slot * (width + self.ACTION_GAP)
+        button = Button(x, self.action_top, (width, self.ACTION_HEIGHT), color, label, callback,
                         font_preset="button_small", sound_kind=sound_kind)
         button.apply_state(enabled=enabled and self.selected_entry is not None, color=color)
         self.elements.append(button)

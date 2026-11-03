@@ -13,6 +13,7 @@ class Select_Base_Map(ContentBrowserScreen):
     back_state = "MENU"
     title = "MAP EDITOR"
     content_label = "maps"
+    ACTION_COUNT = 3
 
     # Resolve directory settings when the screen refreshes.
     CATEGORIES = {
@@ -62,7 +63,7 @@ class Select_Base_Map(ContentBrowserScreen):
                             lambda category=state: self.set_sub_state(category), font_preset="button_small")
             button.is_selected = state == self.sub_state
             self.elements.append(button)
-        self.add_browser_action("Rename", lambda: self.manage_selected(self.start_rename), 0, enabled=is_custom)
+        self.add_browser_action("Rename", lambda: self.manage_selected(self.start_rename), 0, "blue", enabled=is_custom)
         self.add_browser_action("Export", lambda: self.manage_selected(self.export_scenario_zip), 1, "green", enabled=is_custom)
         self.add_browser_action("Delete…", lambda: self.manage_selected(self.start_delete), 2, "red", enabled=is_custom)
         refresh_button = Button(c.SCREEN_WIDTH - 252, self.CATEGORY_Y, (228, 38), "purple", "Data Refresh",

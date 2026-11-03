@@ -46,7 +46,7 @@ class Load_Game(ContentBrowserScreen):
         ])
         self.add_browser_action("History", lambda: self.call_selected(self.open_history_menu), 0, "purple",
                                 enabled=self.selection_can_open, sound_kind=None)
-        self.add_browser_action("Rename", lambda: self.call_selected(self.start_rename), 1)
+        self.add_browser_action("Rename", lambda: self.call_selected(self.start_rename), 1, "blue")
         self.add_browser_action("Export", lambda: self.call_selected(self.export_save_zip), 2, "green")
         self.add_browser_action("Delete…", lambda: self.call_selected(self.start_delete), 3, "red")
         self.open_button = self.add_primary_action("Load Game")
