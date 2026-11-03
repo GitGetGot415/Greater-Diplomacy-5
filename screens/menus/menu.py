@@ -377,7 +377,8 @@ class Menu(Screen):
                 image=ui_elements.UI_ICONS.get(button_data.get("image")),
                 font_size=button_data.get("text_size"),
                 sound_kind={"MUSIC_PLAYER": "open_music", "SETTINGS": "open_settings",
-                            "CREDITS": "table", "VIEW_ASSETS": "table"}.get(
+                            "CREDITS": "table", "VIEW_ASSETS": "table",
+                            "MODS": "table", "TRANSLATION_MENU": "table"}.get(
                     button_data["state"], "click"),
             )
             setattr(self, button_data["attribute"], button)

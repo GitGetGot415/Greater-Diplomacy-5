@@ -418,7 +418,7 @@ This includes research items, songs, scenarios, saved content, art filters, port
 Map and algorithm choices in Random Scenario setup also use this sound.
 Checkbox selection uses the item sound. Confirm buttons retain their action sound.
 Automatic selection during screen setup stays silent. Research and unit actions retain their specific sounds.
-Table.wav plays when Credits or Assets opens from the menu.
+Table.wav plays when Credits, Assets, Mods, or Translate opens from the main menu.
 It also plays for Identity and Claims in the left UI bar, and Metadata in the map editor.
 Puppets.wav plays when Puppets opens from the left UI bar.
 Send Message.mp3 plays when text is queued in Messages or a trade offer is sent or updated.
