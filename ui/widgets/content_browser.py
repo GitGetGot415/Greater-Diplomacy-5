@@ -61,7 +61,7 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
     ACTION_HEIGHT = 36
     ACTION_GAP = 8
     ACTION_COUNT = 4
-    PRIMARY_ACTION_SIZE = (220, 44)
+    PRIMARY_ACTION_HEIGHT = 90
     content_label = "items"
     category_caption = ""
     SORTS = (("recent", "Recently modified"), ("name", "Name A-Z"), ("reverse_name", "Name Z-A"))
@@ -137,7 +137,7 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
         self.list_panel = pygame.Rect(margin, self.PANEL_Y, list_width, panel_height)
         self.detail_panel = pygame.Rect(self.list_panel.right + gap, self.PANEL_Y,
                                         width - list_width - gap, panel_height)
-        self.action_top = (self.detail_panel.bottom - margin - self.PRIMARY_ACTION_SIZE[1]
+        self.action_top = (self.detail_panel.bottom - margin - self.PRIMARY_ACTION_HEIGHT
                            - self.ACTION_GAP - self.ACTION_HEIGHT)
         self.regions = {
             "items": pygame.Rect(self.list_panel.x + 12, self.list_panel.y + 42,
@@ -248,11 +248,12 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
 
     def add_primary_action(self, label):
         """Place the selected item's primary action below the other actions."""
-        width, height = self.PRIMARY_ACTION_SIZE
-        button = Button(self.detail_panel.right - self.MARGIN - width,
-                        self.detail_panel.bottom - self.MARGIN - height,
-                        (width, height), "green", label, self.activate_selected, sound_kind=None)
-        button.apply_state(enabled=self.selection_can_open, color="green")
+        width = self.detail_panel.width - self.MARGIN * 2
+        button = Button(self.detail_panel.x + self.MARGIN,
+                        self.detail_panel.bottom - self.MARGIN - self.PRIMARY_ACTION_HEIGHT,
+                        (width, self.PRIMARY_ACTION_HEIGHT), "orange", label, self.activate_selected,
+                        font_preset="heading1", sound_kind=None)
+        button.apply_state(enabled=self.selection_can_open, color="orange")
         self.elements.append(button)
         return button
 
