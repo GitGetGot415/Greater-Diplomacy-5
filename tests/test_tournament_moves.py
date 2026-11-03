@@ -783,11 +783,10 @@ class TournamentMoveTests(unittest.TestCase):
         self.assertIn("turn", summary["rejections"][0]["reason"])
         self.assertEqual(host.nation_data, before)
 
-    def test_moves_that_no_step_converts_are_refused_with_an_update_message(self):
+    def test_moves_that_cannot_convert_are_refused_with_an_update_message(self):
         from data import migrations
         newer = {"game_version": f"v{migrations.CURRENT_VERSION + 1}"}
-        too_old = {"game_version": f"v{migrations.LAST_UNSTAMPED_VERSION - 1}"}
-        for name, version in (("newer", newer), ("stamped before v46", too_old), ("before v46", None)):
+        for name, version in (("newer", newer), ("before v46", None)):
             with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
                 host = Host()
                 if version is None:

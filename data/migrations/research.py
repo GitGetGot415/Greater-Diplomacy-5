@@ -112,3 +112,43 @@ def clamp_research_levels(saved, tech_tree, history=None):
         if isinstance(snapshot, dict):
             clamp_countries(snapshot.get("nation_data"))
     return saved
+
+
+def grant_research_prerequisites(saved, tech_tree, history=None):
+    """Grant the prerequisite levels of technologies that a country already has.
+
+    Without them a country cannot research further levels of what it owns. Older saves
+    have technologies whose prerequisites were added later. The grant uses the active
+    research tree. The equipment tracks are not changed, and no prerequisite uses them.
+    """
+    from data import queries
+
+    def grant(research):
+        if not isinstance(research, dict):
+            return
+        for tech, level in list(research.items()):
+            if (tech not in tech_tree or tech in c.DATED_UNIT_RESEARCH_TRACKS
+                    or type(level) is not int or level < 1):
+                continue
+            level = min(level, tech_tree[tech]["max_lvl"])
+            if queries.check_tech_requirements(
+                    research, queries.get_tech_requirements(tech_tree[tech], level), level):
+                continue
+            try:
+                research.update(queries.edited_research_levels(research, tech, level, True, tech_tree))
+            except ValueError:
+                # A prerequisite the active tree cannot supply. Keep the saved levels.
+                continue
+
+    def grant_countries(countries):
+        if isinstance(countries, dict):
+            for country in countries.values():
+                if isinstance(country, dict):
+                    grant(country.get("research"))
+
+    grant(saved.get("default_research"))
+    grant_countries(saved.get("nation_data"))
+    for snapshot in (history or {}).values():
+        if isinstance(snapshot, dict):
+            grant_countries(snapshot.get("nation_data"))
+    return saved

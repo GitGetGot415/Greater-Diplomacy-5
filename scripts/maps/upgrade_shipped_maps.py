@@ -7,9 +7,10 @@ Upgrade an existing save or editor scenario explicitly:
 
 With no paths, only base_maps and shipped scenarios are visited. Personal saves,
 tournament files and scenarios/map_editor are never included implicitly.
-The tool runs the version steps on the files. It does not load the map, so no
+The tool runs the conversion rules on the files. It does not load the map, so no
 load-time choice (such as time-appropriate research) is written into a file.
-Run it after adding a version step. See documentation/data_migrations.txt.
+Built-in maps convert on every load. This tool only writes them in the current format.
+See data/migrations/MIGRATIONS.md.
 This developer tool is not required or shipped by any platform build.
 """
 
@@ -27,7 +28,7 @@ from data.map import history_io, load_map
 
 
 def upgrade_map(directory, *, write=False):
-    """Return the names of the files the version steps change, optionally writing them."""
+    """Return the names of the files the conversion rules change, optionally writing them."""
     directory = Path(directory)
     save_meta, map_data, history = load_map.read_save_files(directory)
     before = copy.deepcopy((save_meta, map_data, history))

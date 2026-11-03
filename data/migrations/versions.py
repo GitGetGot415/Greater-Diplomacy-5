@@ -1,14 +1,15 @@
-"""Game version stamps, the version steps, and the conversion entry points.
+"""Game version stamps and the conversion entry points.
 
-The game version is the save version. Each version step converts all older data
-to the format of one game version. See documentation/data_migrations.txt.
-Register each new version's steps in SAVE_STEPS and MOVE_STEPS at the end of this file.
+The version stamp records which game wrote a file. It refuses files from a newer game,
+matches real-time players, and tells a tournament host that a move needs approval.
+Conversion never depends on it. Every rule in conversions.py runs on every load.
+See data/migrations/MIGRATIONS.md.
 """
 
 import re
 
 import data.constants as c
-from data.migrations import v47
+from data.migrations import conversions
 
 
 class NewerVersionError(ValueError):
@@ -38,54 +39,30 @@ def check_version(version, subject="This save"):
 
 
 def upgrade_save(save_meta, map_data, history):
-    """Convert one loaded save to the current version in place.
+    """Convert one loaded save to the current format in place.
 
     save_meta is meta.json, map_data is map_data.json by JSON key, and history
-    holds the decoded turn snapshots. A selected history turn becomes live
-    state, so every step also converts every snapshot. Return the saved version.
+    holds the decoded turn snapshots. Every conversion rule runs, whatever version
+    wrote the save. Return the saved version number.
     """
     version = check_version(save_meta.get("version"))
-    for target, step in SAVE_STEPS:
-        if version < target:
-            step(save_meta, map_data, history)
+    conversions.convert_save(save_meta, map_data, history)
     save_meta["version"] = c.GAME_VERSION
     return version
 
 
-#: Move files gained game_version after v46. An unstamped move is from v46 or earlier.
-#: v46 is also the oldest move version that converts, because older moves lack the v46 sections.
-LAST_UNSTAMPED_VERSION = 46
-
-
 def move_version(player_data):
-    """Return a move's version number. Refuse a move that no step can convert.
-
-    Moves from v46 and every later release convert. MOVE_STEPS run in order.
-    """
-    version = (check_version(player_data["game_version"], "This move")
-               if "game_version" in player_data else LAST_UNSTAMPED_VERSION)
-    if version < LAST_UNSTAMPED_VERSION:
-        raise ValueError(
-            f"This move was made with a game version older than v{LAST_UNSTAMPED_VERSION}. "
-            f"The player must update to {c.GAME_VERSION} and export the move again.")
-    return version
+    """Return a move's version number, or 0 for an unstamped move. Refuse a newer move."""
+    return check_version(player_data.get("game_version"), "This move")
 
 
 def upgrade_move(player_data):
-    """Convert a move file from any supported older release in place.
+    """Convert a tournament move to the current format in place.
 
-    A move from several releases ago runs every step newer than its version.
-    The host approves each converted move. The move then passes normal validation.
+    Every conversion rule runs, whatever version wrote the move. The host approves
+    a move from another version first. The move then passes normal validation.
     """
     version = move_version(player_data)
-    for target, step in MOVE_STEPS:
-        if version < target:
-            step(player_data)
+    conversions.convert_move(player_data)
     player_data["game_version"] = c.GAME_VERSION
     return version
-
-
-SAVE_STEPS = ((47, v47.convert_save),)
-
-
-MOVE_STEPS = ((47, v47.convert_move),)

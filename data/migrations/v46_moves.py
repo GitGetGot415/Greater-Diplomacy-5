@@ -56,6 +56,7 @@ def prepare(context, cid, player_data):
     tech_tree = queries.get_tech_tree(context)
     migrations.migrate_infantry_research(research_snapshot, tech_tree)
     migrations.clamp_research_levels(research_snapshot, tech_tree)
+    migrations.grant_research_prerequisites(research_snapshot, tech_tree)
     nd = research_snapshot["nation_data"][cid]
     # The host clamped its own queues on load, so the move's copies must match them.
     building_library = queries.get_building_library(context=context)

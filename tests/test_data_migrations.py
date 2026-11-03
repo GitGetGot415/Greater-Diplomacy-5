@@ -18,7 +18,7 @@ from map_logic.diplomacy import diplomacy_lifecycle
 from tests import add_test_cases
 
 ROOT = Path(__file__).resolve().parents[1]
-#: The release that the newest version step converts.
+#: A stamp from an older release. Conversion does not depend on it.
 PREVIOUS_VERSION = f"v{migrations.CURRENT_VERSION - 1}"
 
 
@@ -27,7 +27,7 @@ def round_trip(value):
 
 
 def upgraded(save_meta=None, map_data=None, history=None):
-    """Run every save step on unstamped fixture data and return the three parts."""
+    """Convert unstamped fixture data and return the three parts."""
     save_meta = {} if save_meta is None else save_meta
     map_data = {} if map_data is None else map_data
     history = {} if history is None else history
@@ -48,12 +48,6 @@ class GameVersionTests(unittest.TestCase):
         released = (ROOT / "version.txt").read_text(encoding="utf-8").strip()
         self.assertGreaterEqual(migrations.CURRENT_VERSION, migrations.version_number(released))
 
-    def test_steps_target_released_versions_or_the_next_release(self):
-        for steps in (migrations.SAVE_STEPS, migrations.MOVE_STEPS):
-            targets = [target for target, _step in steps]
-            self.assertEqual(targets, sorted(set(targets)))
-            self.assertLessEqual(targets[-1], migrations.CURRENT_VERSION + 1)
-
     def test_newer_saves_are_refused_with_an_update_message(self):
         newer = f"v{migrations.CURRENT_VERSION + 1}"
         with self.assertRaisesRegex(migrations.NewerVersionError, "Update the game"):
@@ -66,36 +60,34 @@ class GameVersionTests(unittest.TestCase):
                 json.dump({"version": c.GAME_VERSION}, file)
             self.assertIsNone(load_map.newer_version_message(directory))
 
-    def test_only_steps_newer_than_the_save_run_and_the_save_is_stamped(self):
-        calls = []
-        steps = ((migrations.CURRENT_VERSION, lambda *parts: calls.append("this release")),
-                 (migrations.CURRENT_VERSION + 1, lambda *parts: calls.append("next release")))
-        with mock.patch.object(migrations.versions, "SAVE_STEPS", steps):
-            old = {"version": f"v{migrations.CURRENT_VERSION - 1}"}
-            migrations.upgrade_save(old, {}, {})
-            self.assertEqual(calls, ["this release", "next release"])
-            self.assertEqual(old["version"], c.GAME_VERSION)
-            calls.clear()
-            # A save of this release runs only the step for the next release.
-            migrations.upgrade_save(old, {}, {})
-            self.assertEqual(calls, ["next release"])
+    def test_every_save_converts_whatever_version_wrote_it(self):
+        # Conversion never depends on the stamp. The stamp only refuses newer saves.
+        for stamp in (None, "v20", PREVIOUS_VERSION, c.GAME_VERSION):
+            with self.subTest(stamp=stamp):
+                saved = {"nation_data": {"A": {"allied_with": ["B"]}}}
+                if stamp is not None:
+                    saved["version"] = stamp
+                migrations.upgrade_save(saved, {}, {})
+                self.assertNotIn("allied_with", saved["nation_data"]["A"])
+                self.assertEqual(saved["version"], c.GAME_VERSION)
 
-    def test_moves_from_every_older_release_since_v46_run_each_newer_step_in_order(self):
-        calls = []
-        steps = tuple((target, lambda move, target=target: calls.append(target)) for target in (47, 48, 49))
-        with mock.patch.object(migrations.versions, "MOVE_STEPS", steps),                 mock.patch.object(migrations.versions, "CURRENT_VERSION", 49):
-            for stamp, expected in ((None, [47, 48, 49]), ("v47", [48, 49]), ("v48", [49]), ("v49", [])):
-                with self.subTest(stamp=stamp):
-                    calls.clear()
-                    move = {} if stamp is None else {"game_version": stamp}
-                    self.assertEqual(migrations.upgrade_move(move),
-                                     migrations.LAST_UNSTAMPED_VERSION if stamp is None
-                                     else migrations.version_number(stamp))
-                    self.assertEqual(calls, expected)
-            with self.assertRaisesRegex(ValueError, "older than v46"):
-                migrations.upgrade_move({"game_version": f"v{migrations.LAST_UNSTAMPED_VERSION - 1}"})
+    def test_every_move_converts_whatever_version_wrote_it(self):
+        for stamp in (None, PREVIOUS_VERSION, c.GAME_VERSION):
+            with self.subTest(stamp=stamp):
+                move = {"nation_data": {"allied_with": ["B"]}, "provinces": {},
+                        "aircraft_orders": [], "release_subjects": []}
+                if stamp is not None:
+                    move["game_version"] = stamp
+                self.assertEqual(migrations.upgrade_move(move), migrations.version_number(stamp))
+                self.assertNotIn("allied_with", move["nation_data"])
+                self.assertEqual(move["game_version"], c.GAME_VERSION)
+        with self.assertRaisesRegex(migrations.NewerVersionError, "Update the game"):
+            migrations.upgrade_move({"game_version": f"v{migrations.CURRENT_VERSION + 1}"})
+        # Every v46 export wrote these sections. An unstamped move without them is older.
+        with self.assertRaisesRegex(ValueError, "older than v46"):
+            migrations.upgrade_move({"nation_data": {}, "provinces": {}})
 
-    def test_the_next_release_step_is_safe_to_repeat_on_this_release(self):
+    def test_conversion_is_safe_to_repeat(self):
         saved = {"nation_data": {"A": {"allied_with": ["B"], "research_queue": [{"tech_name": "a"}]}}}
         upgraded(saved)
         once = copy.deepcopy(saved)
@@ -103,7 +95,7 @@ class GameVersionTests(unittest.TestCase):
         self.assertEqual(saved, once)
 
 
-class Version47StepTests(unittest.TestCase):
+class OlderFormatTests(unittest.TestCase):
     def test_older_unit_names_convert_in_all_saved_references_and_repeat_safely(self):
         for older, current in migrations.LEGACY_UNIT_NAMES.items():
             with self.subTest(unit=older):
@@ -310,38 +302,26 @@ class Version47StepTests(unittest.TestCase):
 
 
 class ResearchChangeTests(unittest.TestCase):
-    """v47 gave technologies new prerequisites and lowered some maximum levels."""
+    """Technologies gained new prerequisites, and some maximum levels went down."""
     TREE = {"base": {"max_lvl": 3, "req": {}},
             "middle": {"max_lvl": 2, "req": {"base": 2}},
             "top": {"max_lvl": 2, "req": {"middle": 1}},
             "capped": {"max_lvl": 4, "req": {}}}
 
-    def patched_tree(self):
-        return mock.patch.object(queries, "get_tech_tree", return_value=self.TREE)
-
-    def test_the_v47_step_grants_prerequisites_of_owned_technologies_once(self):
+    def test_owned_technologies_receive_their_prerequisites_once(self):
         country = {"research": {"top": 1, "capped": 2, "unknown_tech": 5, "infantry_type": 30}}
         complete = {"research": {"base": 3, "middle": 2, "top": 2}}
         history = {"1": {"nation_data": {"A": copy.deepcopy(country)}}}
-        saved = {"version": PREVIOUS_VERSION, "nation_data": {"A": country, "B": complete},
-                 "default_research": {"top": 1}}
-        with self.patched_tree():
-            migrations.upgrade_save(saved, {}, history)
-            for record in (country, history["1"]["nation_data"]["A"]):
-                self.assertEqual(record["research"], {"top": 1, "middle": 1, "base": 2, "capped": 2,
-                                                       "unknown_tech": 5, "infantry_type": 30})
-            self.assertEqual(saved["default_research"], {"top": 1, "middle": 1, "base": 2})
-            self.assertEqual(complete["research"], {"base": 3, "middle": 2, "top": 2})
-            once = copy.deepcopy(saved)
-            migrations.upgrade_save(saved, {}, {})
-            self.assertEqual(saved, once)
-
-    def test_the_v47_step_grants_prerequisites_in_tournament_moves(self):
-        move = {"game_version": PREVIOUS_VERSION, "nation_data": {"research": {"top": 2}},
-                "provinces": {}, "aircraft_orders": [], "release_subjects": []}
-        with self.patched_tree():
-            migrations.upgrade_move(move)
-        self.assertEqual(move["nation_data"]["research"], {"top": 2, "middle": 1, "base": 2})
+        saved = {"nation_data": {"A": country, "B": complete}, "default_research": {"top": 1}}
+        migrations.grant_research_prerequisites(saved, self.TREE, history)
+        for record in (country, history["1"]["nation_data"]["A"]):
+            self.assertEqual(record["research"], {"top": 1, "middle": 1, "base": 2, "capped": 2,
+                                                   "unknown_tech": 5, "infantry_type": 30})
+        self.assertEqual(saved["default_research"], {"top": 1, "middle": 1, "base": 2})
+        self.assertEqual(complete["research"], {"base": 3, "middle": 2, "top": 2})
+        once = copy.deepcopy(saved)
+        migrations.grant_research_prerequisites(saved, self.TREE, history)
+        self.assertEqual(saved, once)
 
     def test_levels_above_the_active_maximum_are_lowered_and_finished_projects_removed(self):
         country = {"research": {"capped": 9, "base": 1, "infantry_type": 500},
@@ -449,7 +429,7 @@ class LoadRepairTests(unittest.TestCase):
 
 
 class BuiltInMapTests(unittest.TestCase):
-    """Every shipped base map and scenario loads through the version steps."""
+    """Every shipped base map and scenario loads through the conversion rules."""
 
     parallel_cases = True
 
@@ -474,7 +454,7 @@ class BuiltInMapTests(unittest.TestCase):
         self.assertEqual(save["version"], c.GAME_VERSION)
         map_data = round_trip(queries.build_map_data_save(context))
         before = copy.deepcopy((save, map_data))
-        # A current save passes through every step unchanged.
+        # Every conversion rule leaves a current save unchanged.
         migrations.upgrade_save(save, map_data, {})
         self.assertEqual((save, map_data), before)
 

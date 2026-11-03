@@ -697,6 +697,7 @@ def load_move_files(context, move_file_paths, keys_dict, *, accept_stat_mismatch
     Return counts and per-file rejection details. keys_dict maps country IDs to keys.
     accept_stat_mismatches permits numeric differences only. All other checks still apply.
     accept_older_versions converts moves from older releases, back to v46. They are then validated normally.
+    A move whose stamp differs from the host's version, or has no stamp, needs this approval.
     A rejection the host can override names its override: "stats" or "version".
     loaded_countries preserves batch duplicate checks during a host's review callbacks.
     """
@@ -757,15 +758,16 @@ def load_move_files(context, move_file_paths, keys_dict, *, accept_stat_mismatch
         except ValueError as error:
             reject(file_path, cid, str(error))
             continue
-        older_release = version < migrations.CURRENT_VERSION
+        # The stamp only decides whether the host is asked. Conversion runs on every move.
+        older_release = version != migrations.CURRENT_VERSION
         if older_release and not accept_older_versions:
+            made_with = f"game version v{version}" if version else "an older game version"
             reject(file_path, cid,
-                   f"This move was made with game version v{version}. The host runs {c.GAME_VERSION}. "
+                   f"This move was made with {made_with}. The host runs {c.GAME_VERSION}. "
                    "The host can convert it. The converted move must then pass all normal checks.",
                    override="version")
             continue
         try:
-            # Convert the move from its release to this one.
             migrations.upgrade_move(player_data)
         except ValueError as error:
             reject(file_path, cid, str(error))

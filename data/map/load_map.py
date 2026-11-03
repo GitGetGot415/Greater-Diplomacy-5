@@ -504,9 +504,10 @@ def load_map_assets(context, load_path, scenario_settings=None, *, load_presenta
     replace_mapping(world_state, "history", history)
 
     if save_meta:
-        # This compares saved research years with the active tree, so it runs on every load.
+        # These compare saved research with the active tree, so they run after it is selected.
         migrations.migrate_infantry_research(save_meta, tech_tree, world_state.history)
         migrations.clamp_research_levels(save_meta, tech_tree, world_state.history)
+        migrations.grant_research_prerequisites(save_meta, tech_tree, world_state.history)
 
     if context.history_turn is not None and save_meta:
         _apply_history_snapshot(save_meta, world_state.history, context.history_turn)

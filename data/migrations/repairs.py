@@ -1,6 +1,6 @@
 """Load repairs. They compare saved data with the active libraries and run on every load.
 
-They are not version steps. A changed library changes their result without a new version.
+They are not conversion rules for older formats. A changed library changes their result.
 """
 
 import copy

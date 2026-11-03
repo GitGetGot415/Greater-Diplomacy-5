@@ -2,7 +2,8 @@ SAVED DATA MIGRATIONS
 ====================
 
 Migration means conversion from an older Greater Diplomacy 5 (GD5) data format to the current format.
-The data/migrations/ package owns version steps, older GD5 identifiers, and the v46 move adapter.
+The data/migrations/ package owns the conversion rules, older GD5 identifiers, and the v46 move adapter.
+data/migrations/MIGRATIONS.md gives an overview of the process.
 Save imports from other games belong in their separate translation modules.
 Greater Diplomacy 4 (GD4) and Greater Diplomacy Hex Edition are separate games, not older GD5 versions.
 
@@ -10,9 +11,9 @@ OWNERSHIP
 ---------
 
 Keep all conversion of older GD5 data in the data/migrations/ package. Its __init__.py lists each file.
-Each game version has its own file, such as v47.py. versions.py registers the steps.
+conversions.py holds every conversion rule for older formats. versions.py holds the version stamp.
 Callers import names from the package: from data import migrations.
-Tests that replace SAVE_STEPS, MOVE_STEPS, or CURRENT_VERSION replace them in data.migrations.versions.
+Tests that replace CURRENT_VERSION replace it in data.migrations.versions.
 Keep GD4 conversion rules in map_logic/imports/gd4_translation.py.
 Keep Greater Diplomacy Hex Edition conversion rules in map_logic/imports/gdhex_translation.py.
 Keep current settings fields and compatibility defaults in data/io/settings_schema.py.
@@ -21,7 +22,7 @@ Keep current gameplay rules and validation in their shared rule modules.
 Keep saved-file access, compression formats, and storage synchronization in their input and output modules.
 
 Load repairs are not migrations. They fix invalid current data on every load.
-The clamps in data/migrations/repairs.py and research.py are load repairs. They share the package but are not version steps.
+The clamps in data/migrations/repairs.py and research.py are load repairs. They share the package but are not conversion rules.
 The armies.py, units.py, saves.py, and air.py modules in data/queries/ own unit identities, unit statistics, province overlays, air order repair, and spawned-territory repair.
 map_logic/diplomacy/diplomacy_lifecycle.py owns request, response, and treaty identities.
 map_logic/diplomacy/faction_records.py owns faction record validation.
@@ -33,7 +34,7 @@ SCENARIO INFORMATION
 WorldState.scenario_metadata owns optional Author and Description text.
 The shared save builder writes scenario_metadata to meta.json, saves, and multiplayer snapshots.
 The loader supplies empty text when an older file omits this optional field.
-This additive field does not change an older field's meaning or require a version step.
+This additive field does not change an older field's meaning or require a conversion rule.
 Scenario information remains the same when a selected history turn becomes live state.
 Only local map editors can change it. Multiplayer commands cannot change it.
 
@@ -50,44 +51,60 @@ GAME_VERSION in data/constants.py holds the version in development.
 Set it to the new version when work on that version starts.
 version.txt holds the last released version. Players download it to check for updates.
 Only the owner changes version.txt, at release. Never change it during development.
-A step uses the version in GAME_VERSION. A save from the previous version runs it once.
 
 Saves, tournament files, and move files record the version that wrote them.
 Saves use the version field. Move files use the game_version field.
-A save without a version field is older than every version step.
-A move file without a game_version field is from v46 or earlier.
+Saves have the version field since v20. Move files gained the game_version field after v46.
 
-A file from a newer version is refused with an error that tells the player to update.
-The load screen and the tournament loader show this error. The map loader also refuses the file.
-Real-time messages carry game_version. Every player needs the host's version.
-The host tells a guest with a different version why the connection closed.
+The version stamp has three uses:
+- The game refuses a file from a newer version with an error that tells the player to update.
+  The load screen and the tournament loader show this error. The map loader also refuses the file.
+- Real-time messages carry game_version. Every player needs the host's version.
+  The host tells a guest with a different version why the connection closed.
+- A tournament host approves a move whose stamp differs from the host's version, or has no stamp.
+The stamp never selects conversion rules.
 
-VERSION STEPS
--------------
+CONVERSION RULES
+----------------
 
-A version step converts all older data to the format of one game version.
-SAVE_STEPS and MOVE_STEPS in data/migrations/versions.py list the steps in version order.
-migrations.upgrade_save runs each save step that is newer than the save's version.
-It then sets the save's version to GAME_VERSION.
+Never add version-numbered conversion steps or a chain of steps.
+An older save must load and be playable in any later game. Exact older values are less important.
+A save from many releases ago must not need one step for each release since then.
 
-A save step converts meta.json, map_data.json, and every history snapshot.
+data/migrations/conversions.py holds every conversion rule for older formats.
+Every rule runs on every load, whatever version wrote the file.
+A rule finds an older shape in the data and converts it to the current format.
+A rule must do nothing to current data. Then it is safe on every load.
+The rules run in one fixed order. A rule that uses the result of another rule comes after it.
+
+migrations.upgrade_save refuses a newer save, runs convert_save, and stamps GAME_VERSION.
+convert_save converts meta.json, map_data.json, and every history snapshot.
 A selected history turn becomes live game state, so its snapshot must also be current.
 The loader writes nothing during conversion. The next save writes the current format.
 Gameplay, UI, and AI code read only the current format.
 
-Some conversions compare saved data with the active libraries. They run on every load:
+Never reuse a saved field or identifier with a new meaning. Give the new meaning a new name.
+Or save the data that is necessary to read the older meaning. research_years is an example.
+Otherwise no rule can tell older data from current data.
+
+Some conversions compare saved data with the active libraries.
+They run later in the load, after scenario settings select the libraries:
 - migrate_infantry_research compares saved research years with the active research tree.
 - clamp_research_levels lowers a research level above the active maximum. The equipment tracks keep their levels.
   It removes queued projects, progress, and current research for a technology that the new maximum completes.
+- grant_research_prerequisites gives countries the prerequisite levels of technologies they already have.
+  Older saves have technologies whose prerequisites were added later.
+  Without them a country cannot research further levels of what it owns.
+  The grant uses the active research tree. It covers saves, history, default research, and v46 moves.
+  Equipment tracks are not changed, and no prerequisite uses them.
 - queries.refresh_unit_stats copies unit statistics from the active unit library.
-These are not version steps. A changed library changes their result without a new version.
+A changed library changes their result. A library change needs no new conversion rule.
 
-VERSION 47
-----------
+CURRENT CONVERSION RULES
+------------------------
 
-The v47 step converts released v46 data to the v47 format.
-It also retains support for older save formats accepted by v46.
-Its rules describe differences from released data, not changes made only during v47 development.
+These rules convert formats from released versions up to v46.
+They also keep support for older save formats that v46 accepted.
 
 - Country records lose the obsolete allied_with field. Factions and subjects do not change.
 - deployment_queue entries move into unit_queue and building_queue.
@@ -106,19 +123,16 @@ Its rules describe differences from released data, not changes made only during 
 - Transport names, aircraft cargo, production queues, upgrade targets, custom production lists, and scripted spawns use the same conversion.
 - Map overlays, every history snapshot, and tournament move intents receive these conversions.
 - Duplicate custom production entries combine when their older units become the same stage.
-- Countries receive the prerequisite levels of technologies they already have.
-  v47 added prerequisites, so a country could not research further levels of what it owned.
-  The grant uses the default technology tree and covers saves, history, default research, and moves.
-  Equipment tracks are not changed, and no prerequisite uses them.
 
 LOAD ORDER
 ----------
 
 1. read_save_files in data/map/load_map.py reads meta.json, map_data.json, and the history.
-2. migrations.upgrade_save converts all three to the current version.
+2. migrations.upgrade_save runs every conversion rule on all three.
 3. Scenario settings select the active libraries.
 4. migrate_infantry_research converts research levels to the active research tree.
    clamp_research_levels then lowers levels above the active maximum.
+   grant_research_prerequisites then gives countries the prerequisites of technologies they have.
 5. A selected history turn replaces the current country and province state.
 6. Country templates fill empty catalog records and missing fields.
 7. Province repairs drop buildings and units that the active libraries do not contain.
@@ -144,7 +158,7 @@ Library loading converts AEROSPACE to AIR and Aerospace to Air.
 Older unnumbered unit library keys convert to their canonical level-I identifiers.
 Current keys take priority if a library contains both names. Unknown valid entry fields remain intact.
 Research IDs stay unchanged in saves and multiplayer files.
-Equipment unit IDs use stage names. Older IDs convert through the v47 step.
+Equipment unit IDs use stage names. Older IDs convert through the conversion rules.
 
 Equipment research saves include research_years for infantry, cavalry, militia, and artillery.
 data/queries/saves.py copies these public year lists from the active research library when it builds a save.
@@ -230,22 +244,21 @@ TOURNAMENT MOVE VERSIONS
 ------------------------
 
 Moves from v46 and every later release convert. v46 is the oldest supported move.
-A host that runs v48 converts v46 and v47 moves.
-A move from an older release runs every step in MOVE_STEPS that is newer than its version, in order.
-A move from the host's own version needs no conversion and no host question.
+migrations.upgrade_move runs convert_move on every move, whatever version wrote it.
+convert_move uses the same country, province, and unit rules as convert_save.
 
-1. The host loads a move from an older release.
+1. The host loads a move whose stamp differs from the host's version, or has no stamp.
 2. The import rejects the move with a "version" override. The rejection does not change host state.
 3. The host chooses Convert or Reject.
-4. After Convert, the import runs MOVE_STEPS on the move.
+4. After Convert, the import runs the conversion rules on the move.
 5. The converted move then passes every normal check, including session, turn, and permission checks.
 6. A converted move with statistic differences then asks for the "stats" override.
 
+A move with the host's version needs no host question. The conversion rules still run, and do nothing.
 A move from a newer version, or from before v46, is refused.
 It cannot be overridden. The rejection tells the player to update and export again.
-Keep every move step. A step is only removed when the user asks to drop support for that release.
 Every v46 move contains nation_data, provinces, aircraft_orders, and release_subjects.
-A move without them is from before v46, and conversion refuses it.
+An unstamped move without them is from before v46, and conversion refuses it.
 
 CURRENT AND OLDER TOURNAMENT CHOICES
 -----------------------------------
@@ -271,27 +284,27 @@ These adapters retain session checks, turn checks, duplicate detection, submissi
 Tournament encryption, fog policy, file downloads, and storage synchronization remain with the tournament input and output module.
 The real-time adapter retains server authority, identity checks, recipient filtering, submission locks, and network limits.
 
-ADDING A VERSION STEP
----------------------
+ADDING A CONVERSION RULE
+------------------------
 
-Add a step when a saved field changes meaning, moves, or changes shape.
-An additive field with a default that keeps old behavior needs no step.
+Add a rule when a saved field changes meaning, moves, or changes shape.
+An additive field with a default that keeps old behavior needs no rule.
+A change to library content needs no rule. Library conversions and the stat refresh adapt to it.
+Never add a version-numbered step, a per-version file, or a list of steps.
 
-Describe the source release, the target release, and the required data conversions.
 Include only identifiers and formats that existed in supported released data.
-Do not add migration rules for content introduced and changed only during development of the target release.
-Keep existing support for earlier releases where required.
+Do not add rules for content introduced and changed only during development of the next release.
+Keep existing rules. Remove a rule only when the user asks to drop support for that older format.
 
-1. Set GAME_VERSION in data/constants.py to the new version. Use that version for the step.
-   Never change version.txt.
-2. Write the step in a new file in data/migrations/, named for that version, such as v48.py.
-3. Convert country records, province records, meta.json fields, and every history snapshot.
-4. Add the step to SAVE_STEPS in data/migrations/versions.py.
-   If move files contain the changed data, add a move step to MOVE_STEPS there.
-   Add the new file to the list in data/migrations/__init__.py.
+1. Give a changed meaning a new field or identifier name. Do not reuse the older name.
+2. Add the rule to data/migrations/conversions.py. Put it after any rule whose result it uses.
+3. Make the rule find the older shape and do nothing to current data.
+4. Convert country records, province records, meta.json fields, and every history snapshot.
+   If move files contain the changed data, make convert_move apply the rule too.
 5. Change gameplay code to read only the new format. Remove any read-time adapter for the old format.
 6. Preserve unknown valid fields and references held by other modules.
-7. Test older data, current data, and a save/load round trip.
-8. Test affected multiplayer validation and player modes.
-9. Run tests/test_data_migrations.py. It loads every built-in map through the steps.
-10. Run scripts/maps/upgrade_shipped_maps.py to write the built-in maps in the new format.
+7. Add the rule to CURRENT CONVERSION RULES in this guide.
+8. Test older data, current data, and a save/load round trip.
+9. Test affected multiplayer validation and player modes.
+10. Run tests/test_data_migrations.py. It loads every built-in map and checks that current saves do not change.
+11. Optional: run scripts/maps/upgrade_shipped_maps.py to write the built-in maps in the current format.

@@ -62,7 +62,7 @@ AI means artificial intelligence. UI means user interface.
 | --- | --- |
 | `data/constants.py` | Constants and tuning values shared across modules. |
 | `data/queries/` | Shared state queries, rule helpers, caches, and the save-dictionary builder. One module per topic. |
-| `data/migrations/` | All conversion of older GD5 data: identifiers, version steps, load repairs, and the v46 move adapter. One file per concern. |
+| `data/migrations/` | All conversion of older GD5 data: identifiers, conversion rules, load repairs, and the v46 move adapter. One file per concern. |
 | `data/game_state.py`, `data/session_state.py` | World data, participants, control permissions, and processing progress. |
 | `data/runtime_rules.py`, `data/world_nations.py` | World-specific active libraries, derived indexes, and explicit country-mapping context. |
 | `data/state_access.py` | Explicit state access, map compatibility properties, and backend execution context. |
@@ -220,22 +220,31 @@ Keep tuning data in its source files:
   `version.txt` names the last released version. Never edit it (see Required Rules).
   Every save, tournament file, and move file records the version that wrote it.
   Do not add another version number, schema name, or numbered format.
-- A version step converts all older data to the format of one game version.
-  Put each step in its own file in `data/migrations/`. List it in `SAVE_STEPS` or `MOVE_STEPS` in `data/migrations/versions.py`.
-  Give the step the version in `GAME_VERSION`.
-  See `documentation/data_migrations.txt` for the procedure.
+  The stamp refuses files from a newer game and matches real-time players.
+  It also asks a tournament host to approve a move from another version. It never selects conversion rules.
+- **Never add version-numbered conversion steps or a chain of steps.**
+  Do not write per-version files such as `v48.py`. Do not add step lists such as `SAVE_STEPS`.
+  An older save must load and be playable in any later game. Exact older values are less important.
+  A save from many releases ago must not need one step for each release since then.
+- Put every conversion rule for older saves and moves in `data/migrations/conversions.py`.
+  Every rule runs on every load, whatever version wrote the file.
+  A rule finds an older shape in the data and converts it. It must do nothing to current data.
+  See `data/migrations/MIGRATIONS.md` and `documentation/data_migrations.txt`.
+- **Never reuse a saved field or identifier with a new meaning.** Give the new meaning a new name.
+  Or save the data that is necessary to read the older meaning, as `research_years` does.
+  Otherwise no rule can tell older data from current data.
 - A file from a newer version is refused with an error that tells the player to update.
 - Prefer additive, optional fields with defaults that preserve old behavior.
-  Add a version step when a field changes meaning, moves, or changes shape.
+  Add a conversion rule when a field changes meaning, moves, or changes shape.
   Keep existing field meanings stable.
 - Adapt supported older data at the input boundary.
   Keep adaptation rules in one clear place and use one consistent representation internally.
 - Base compatibility handling on actual supported formats and callers.
   Do not invent hypothetical legacy cases.
-- Convert older saves in their version step. Gameplay, UI, and AI code read only the current format.
+- Convert older saves with the conversion rules when they load. Gameplay, UI, and AI code read only the current format.
   Do not add read-time adapters for older save shapes.
 - Do not remove existing compatibility mechanisms merely to simplify code.
-  Move an adapter into a version step instead.
+  Move an adapter into `data/migrations/conversions.py` instead.
 - Explain concrete compatibility conflicts before making a breaking change.
 - Treat a new saved field as a data-format change.
   Define its owner, writer, loader, and old-save default.
@@ -254,10 +263,11 @@ Keep tuning data in its source files:
   Use global settings only when the user explicitly requests a preference across all games.
 - Preserve unknown or older valid data where possible.
   Migration must produce predictable results and be safe to run once on load.
-- A save step also converts every history snapshot. A selected history turn becomes live game state.
-- Tournament move steps convert moves from v46 and every later release. A move from an older release runs every newer step.
-  The host must approve each converted move. The converted move then passes all normal validation.
-- Load repairs are not version steps. They run on every load and fix invalid current data.
+- The conversion rules also convert every history snapshot. A selected history turn becomes live game state.
+- The conversion rules convert tournament moves from v46 and every later release.
+  The host must approve a move whose stamp differs from the host's version. The converted move then passes all normal validation.
+- Load repairs fix invalid current data on every load. Library conversions compare saved data with the active libraries on every load.
+  Both are separate from the conversion rules for older formats.
   Examples are unit identities, army rosters, faction leaders, and units or buildings missing from the active library.
 - Reuse caches instead of reading disk in frame or turn loops.
   Pass an explicit world context to active library queries. No-context library access reads shared default content.

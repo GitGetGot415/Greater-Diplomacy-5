@@ -2,11 +2,11 @@
 
 Every conversion of older GD5 data lives in this package. See documentation/data_migrations.txt.
 
-versions.py       Version stamps, SAVE_STEPS and MOVE_STEPS, and the conversion entry points.
-v47.py            The version 47 step. Each new version gets its own file.
+versions.py       Version stamps and the conversion entry points, upgrade_save and upgrade_move.
+conversions.py    Every conversion rule for older saves and moves. Every rule runs on every load.
 settings.py       Older settings names and mouse-button controls.
 units.py          Older unit identifiers, categories, and unit metadata.
-research.py       Saved research levels and the active technology tree.
+research.py       Saved research levels, prerequisites, and the active technology tree.
 repairs.py        Load repairs against the active libraries, and faction roster repair.
 tournament.py     Tournament move projections and encrypted-file payloads.
 v46_moves.py      The input adapter for released v46 move files. Import it by module name.
@@ -16,8 +16,10 @@ Loaders own saved-file access. Shared gameplay modules own current rules and val
 Queries import this package. Keep query imports local to avoid that cycle.
 Preserve unknown valid fields.
 
-Callers import names from this package. Tests that replace SAVE_STEPS, MOVE_STEPS, or
-CURRENT_VERSION must replace them in data.migrations.versions, which reads them.
+Never add version-numbered steps or a chain of steps. See MIGRATIONS.md.
+
+Callers import names from this package. Tests that replace CURRENT_VERSION
+must replace it in data.migrations.versions, which reads it.
 """
 
 from data.migrations.versions import (
@@ -26,11 +28,8 @@ from data.migrations.versions import (
     CURRENT_VERSION,
     check_version,
     upgrade_save,
-    LAST_UNSTAMPED_VERSION,
     move_version,
     upgrade_move,
-    SAVE_STEPS,
-    MOVE_STEPS,
 )
 from data.migrations.settings import (
     SETTING_ALIASES,
@@ -46,6 +45,7 @@ from data.migrations.research import (
     LEGACY_INFANTRY_RESEARCH_YEARS,
     migrate_infantry_research,
     clamp_research_levels,
+    grant_research_prerequisites,
 )
 from data.migrations.units import (
     normalize_air_category,
@@ -69,7 +69,7 @@ from data.migrations.tournament import (
     decode_saved_json,
     legacy_player_country,
 )
-from data.migrations.v47 import (
+from data.migrations.conversions import (
     LEGACY_RESEARCH_DEFAULT_DAYS,
     LEGACY_RESEARCH_POINTS_PER_DAY,
 )

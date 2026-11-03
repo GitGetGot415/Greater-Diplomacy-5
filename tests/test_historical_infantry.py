@@ -337,7 +337,7 @@ class HistoricalInfantryTests(unittest.TestCase):
         game.nation_data[game.player_country]["research"] = {"infantry_type": 2, "militia": 0}
         saved = queries.build_save_dict(game)
         saved.pop("research_years")
-        # A save from the previous release runs the newest version step.
+        # A save from an older release. Conversion does not depend on the stamp.
         saved["version"] = f"v{migrations.CURRENT_VERSION - 1}"
         saved["default_research"] = {"infantry_type": 1}
         history = {"1": {"nation_data": copy.deepcopy(saved["nation_data"]),
