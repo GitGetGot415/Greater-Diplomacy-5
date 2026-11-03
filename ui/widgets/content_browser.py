@@ -66,6 +66,8 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
     ACTION_GAP = 8
     ACTION_COUNT = 4
     PRIMARY_ACTION_HEIGHT = 90
+    PREVIEW_HEIGHT = 180
+    show_map_preview = True
     content_label = "items"
     category_caption = ""
     SORTS = (("recent", "Modified"), ("name", "A-Z"), ("reverse_name", "Z-A"))
@@ -83,6 +85,7 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
         self.filtered_entries = []
         self.selected_entry = None
         self.summary_cache = {}
+        self.preview_cache = {}
         self.sort_index = 0
         self.directory_error = ""
         self.detail_note = ""
@@ -105,6 +108,7 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
         """Refresh after screen entry, a file operation, or an explicit request."""
         self.browser_directory = None
         self.summary_cache.clear()
+        self.preview_cache.clear()
         self.refresh_ui()
 
     def update(self):
@@ -129,6 +133,7 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
             self.browser_directory = directory
             self.entries, self.directory_error = self.read_directory(directory)
             self.summary_cache.clear()
+            self.preview_cache.clear()
             self.prepare_entries()
 
         self._apply_filter()
@@ -279,15 +284,42 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
     def _prepare_details(self):
         rect = self.regions["details"]
         texts = self.selected_detail_texts()
+        self.detail_preview = self.selected_map_preview(rect)
+        self.detail_text_offset = self.detail_preview.get_height() + self.GAP if self.detail_preview is not None else 0
         font = fonts.get("normal")
         self.detail_lines = [font.render(line, True, c.UI_TEXT_LIGHT)
                              for text in texts for line in wrap_text(text, font, rect.width)]
         self.detail_line_height = font.get_linesize() + 5
-        self._max_details = min(0, rect.height - len(self.detail_lines) * self.detail_line_height)
+        content_height = self.detail_text_offset + len(self.detail_lines) * self.detail_line_height
+        self._max_details = min(0, rect.height - content_height)
         self._scroll_details = max(self._max_details, min(0, self.pane_scroll("details")))
         heading = self.selected_entry.name if self.selected_entry else ""
         self.detail_heading = fonts.get("heading2").render(
             fit_text(heading, fonts.get("heading2"), self.detail_panel.width - self.MARGIN * 2), True, c.UI_TEXT_BRIGHT)
+
+    def selected_map_preview(self, rect):
+        """Cache the selected terrain image. Missing or unreadable images do not block loading."""
+        if not self.show_map_preview or self.selected_entry is None:
+            return None
+        bounds = (rect.width, min(self.PREVIEW_HEIGHT, rect.height // 2))
+        if min(bounds) <= 0:
+            return None
+        path = os.path.join(self.selected_entry.path, "terrain.png")
+        key = (path, bounds)
+        if key not in self.preview_cache:
+            preview = None
+            try:
+                with open(path, "rb") as source:
+                    if source.read(8) == b"\x89PNG\r\n\x1a\n":
+                        source.seek(0)
+                        image = pygame.image.load(source, "terrain.png")
+                        scale = min(bounds[0] / image.get_width(), bounds[1] / image.get_height(), 1)
+                        size = (max(1, int(image.get_width() * scale)), max(1, int(image.get_height() * scale)))
+                        preview = pygame.transform.scale(image, size)
+            except (OSError, pygame.error):
+                pass
+            self.preview_cache[key] = preview
+        return self.preview_cache[key]
 
     @property
     def selection_can_open(self):
@@ -373,8 +405,11 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
 
     def _draw_details(self, surface):
         rect = self.regions["details"]
+        top = rect.y + self.pane_scroll("details")
+        if self.detail_preview is not None:
+            surface.blit(self.detail_preview, self.detail_preview.get_rect(midtop=(rect.centerx, top)))
         for index, line in enumerate(self.detail_lines):
-            y = rect.y + self.pane_scroll("details") + index * self.detail_line_height
+            y = top + self.detail_text_offset + index * self.detail_line_height
             if y + self.detail_line_height > rect.top and y < rect.bottom:
                 surface.blit(line, (rect.x, y))
 
@@ -428,6 +463,10 @@ class ScenarioLibraryScreen(ContentBrowserScreen):
     @property
     def library_mode(self):
         return True
+
+    @property
+    def show_map_preview(self):
+        return not self.library_mode
 
     @property
     def ROW_HEIGHT(self):

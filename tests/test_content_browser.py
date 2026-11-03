@@ -3,6 +3,7 @@
 import json
 import os
 from pathlib import Path
+import shutil
 import tempfile
 from types import SimpleNamespace
 import unittest
@@ -455,6 +456,71 @@ class ContentBrowserTests(unittest.TestCase):
                     self.click(screen, button_named(screen, "Scenario"))
                     self.assertTrue(screen.selection_can_open)
                     screen.draw(self.surface)
+
+    def test_load_browsers_cache_previews_after_selection_and_reuse_them_during_input(self):
+        for setting, make_screen in (("SAVES_DIR", self.save_screen),
+                                     ("SCENARIOS_CUSTOM_DIR", self.map_screen)):
+            with self.subTest(setting=setting):
+                for name in ("First", "Second"):
+                    directory = self.bundle(name, setting)
+                    shutil.copyfile(self.constants.DEFAULT_FLAG_PATH, directory / "terrain.png")
+                with mock.patch("pygame.image.load", wraps=pygame.image.load) as load:
+                    screen = make_screen()
+                    load.assert_not_called()
+                    self.click(screen, button_named(screen, "First"))
+                    self.assertIsNotNone(screen.detail_preview)
+                    self.assertEqual(load.call_count, 1)
+                    with mock.patch("builtins.open", side_effect=AssertionError("Unexpected file read")):
+                        screen.draw(self.surface)
+                        screen.update()
+                        screen.refresh_ui()
+                        screen.cycle_sort()
+                        with mock.patch("pygame.mouse.get_pos", return_value=screen.regions["details"].center):
+                            screen.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, y=-1, x=0)])
+                        self.click(screen, button_named(screen, "First"))
+                        self.assertIsNone(screen.detail_preview)
+                        self.click(screen, button_named(screen, "First"))
+                        self.assertIsNotNone(screen.detail_preview)
+                    self.assertEqual(load.call_count, 1)
+                    self.click(screen, button_named(screen, "Second"))
+                    self.assertEqual(load.call_count, 2)
+                    self.assertIsNotNone(screen.detail_preview)
+
+    def test_missing_and_invalid_previews_do_not_block_loading(self):
+        for setting, make_screen, action in (("SAVES_DIR", self.save_screen, "Load Game"),
+                                             ("SCENARIOS_CUSTOM_DIR", self.map_screen, "Edit Map")):
+            for name, contents in (("Missing", None), ("Wrong format", b"not a PNG"),
+                                    ("Damaged PNG", b"\x89PNG\r\n\x1a\ninvalid")):
+                with self.subTest(setting=setting, name=name):
+                    directory = self.bundle(name, setting)
+                    if contents is not None:
+                        (directory / "terrain.png").write_bytes(contents)
+                    screen = make_screen()
+                    self.click(screen, button_named(screen, name))
+                    self.assertIsNone(screen.detail_preview)
+                    self.assertTrue(screen.selection_can_open)
+                    screen.draw(self.surface)
+                    self.click(screen, button_named(screen, action))
+                    self.assertEqual(screen.next_state, "MAP")
+                    self.assertEqual(screen.selected_save_path, str(directory))
+
+    def test_refresh_reloads_preview_after_external_file_changes(self):
+        for setting, make_screen in (("SAVES_DIR", self.save_screen),
+                                     ("SCENARIOS_CUSTOM_DIR", self.map_screen)):
+            with self.subTest(setting=setting):
+                directory = self.bundle("Map", setting)
+                screen = make_screen()
+                self.click(screen, button_named(screen, "Map"))
+                self.assertIsNone(screen.detail_preview)
+                terrain = directory / "terrain.png"
+                shutil.copyfile(self.constants.DEFAULT_FLAG_PATH, terrain)
+                screen.refresh_ui()
+                self.assertIsNone(screen.detail_preview)
+                self.click(screen, button_named(screen, "Refresh"))
+                self.assertIsNotNone(screen.detail_preview)
+                terrain.unlink()
+                self.click(screen, button_named(screen, "Refresh"))
+                self.assertIsNone(screen.detail_preview)
 
     def test_refresh_uses_live_directory_settings(self):
         for screen in self.library_screens():
