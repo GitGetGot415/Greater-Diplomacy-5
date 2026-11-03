@@ -233,7 +233,7 @@ class ContentBrowserTests(unittest.TestCase):
         self.assertEqual(screen.entries, [])
         self.persist.assert_has_calls([mock.call(self.constants.SAVES_DIR), mock.call(self.constants.SAVES_DIR)])
 
-    def test_map_tabs_open_sources_without_management_permissions(self):
+    def test_new_map_sources_open_items_directly(self):
         self.bundle("Custom", "SCENARIOS_CUSTOM_DIR")
         self.bundle("Base", "BASE_MAPS_DIR")
         screen = self.map_screen()
@@ -243,12 +243,11 @@ class ContentBrowserTests(unittest.TestCase):
         screen.draw(self.surface)
         self.click(screen, button_named(screen, "Base Maps"))
         self.assertEqual(screen.sub_state, "BASE_MAPS")
-        self.click(screen, button_named(screen, "Base"))
-        with mock.patch.object(screen, "start_rename") as rename:
-            button_named(screen, "Rename").callback()
-        rename.assert_not_called()
+        self.assertFalse(any(getattr(element, "text", None) == "Rename" for element in screen.elements))
+        button_named(screen, "Data Refresh")
+        screen.draw(self.surface)
         with mock.patch.object(screen, "start_editor_with_map") as edit:
-            self.click(screen, button_named(screen, "Create from Base"))
+            self.click(screen, button_named(screen, "Base"))
         edit.assert_called_once_with("Base", self.constants.BASE_MAPS_DIR)
         screen.handle_back_key()
         self.assertEqual(screen.sub_state, "SOURCES")

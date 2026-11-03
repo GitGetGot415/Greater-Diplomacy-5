@@ -7,7 +7,7 @@ from screens.game import map_launch
 from ui.widgets.content_browser import ContentBrowserScreen
 from ui.widgets.ui_elements import Button, make_back_button, play_ui_sound
 from screens.setup import map_refresh
-from ui.navigation.screen import ButtonMenuScreen, Screen
+from ui.navigation.screen import ButtonMenuScreen, MenuListScreen, Screen
 
 
 class Select_Base_Map(ContentBrowserScreen):
@@ -23,6 +23,7 @@ class Select_Base_Map(ContentBrowserScreen):
         "OTHER_HISTORICAL": ("Historical Scenarios", "SCENARIOS_HISTORICAL_DIR"),
         "OTHER_ALTERNATE": ("Alternate Scenarios", "SCENARIOS_ALTERNATE_DIR"),
     }
+
     def __init__(self):
         super().__init__()
         self.bg_color = (40, 20, 60)
@@ -39,7 +40,12 @@ class Select_Base_Map(ContentBrowserScreen):
         self.reload_entries()
 
     def get_title(self):
-        return "NEW MAP" if self.sub_state == "SOURCES" else self.title
+        if self.sub_state == "SOURCES":
+            return "NEW MAP"
+        return self.CATEGORIES[self.sub_state][0].upper() if self.choosing_sources else self.title
+
+    def has_menu_list(self):
+        return self.sub_state != "SOURCES"
 
     def prepare_map(self, app):
         map_launch.open_saved_map(app, self.selected_save_path, force_editor=True)
@@ -60,28 +66,32 @@ class Select_Base_Map(ContentBrowserScreen):
             return
         _label, directory_attr = self.CATEGORIES[self.sub_state]
         directory = getattr(c, directory_attr)
-        is_custom = self.sub_state == "CUSTOM_MAPS"
-        note = ("" if is_custom else
-                "Open this source as a new custom map. Saving creates a copy and keeps the source unchanged.")
-        self.build_browser(directory, "No maps in this category. Import a custom map or choose another category.", note)
+        if self.choosing_sources:
+            self.elements = [make_back_button(self.return_to_sources)]
+            if self.sub_state == "BASE_MAPS":
+                self.elements.append(Button(c.SCREEN_WIDTH - 252, self.CATEGORY_Y, (228, 38), "purple", "Data Refresh",
+                                            self.trigger_base_map_data_refresh, font_preset="button_small"))
+            os.makedirs(directory, exist_ok=True)
+            with os.scandir(directory) as files:
+                names = [entry.name for entry in files if not entry.name.startswith(".") and entry.is_dir()]
+            self.add_menu_list([(name, name) for name in names],
+                               lambda name: self.start_editor_with_map(name, directory))
+            return
+        self.build_browser(directory, "No maps in this category. Import a custom map or choose another category.")
         self.elements.extend([
-            make_back_button(self.return_to_sources if self.choosing_sources else self.exit_screen),
+            make_back_button(self.exit_screen),
             Button(c.SCREEN_WIDTH - 324, 24, (160, 40), "green", "Import .zip", self.import_custom_map,
                    font_preset="button_small"),
             Button(c.SCREEN_WIDTH - 152, 24, (128, 40), "grey", "Refresh", self.reload_entries,
                    font_preset="button_small"),
         ])
         if self.selected_entry:
-            self.add_browser_action("Rename", lambda: self.manage_selected(self.start_rename), 0, "blue", enabled=is_custom)
-            self.add_browser_action("Export", lambda: self.manage_selected(self.export_scenario_zip), 1, "green", enabled=is_custom)
-            self.add_browser_action("Delete…", lambda: self.manage_selected(self.start_delete), 2, "red", enabled=is_custom)
-            label = "Edit Map" if is_custom else "Create from Base" if self.sub_state == "BASE_MAPS" else "Edit Copy"
-            self.open_button = self.add_primary_action(label)
+            self.add_browser_action("Rename", lambda: self.manage_selected(self.start_rename), 0, "blue")
+            self.add_browser_action("Export", lambda: self.manage_selected(self.export_scenario_zip), 1, "green")
+            self.add_browser_action("Delete…", lambda: self.manage_selected(self.start_delete), 2, "red")
+            self.open_button = self.add_primary_action("Edit Map")
         else:
             self.open_button = self.add_primary_action("New Map", self.return_to_sources)
-        if self.sub_state == "BASE_MAPS":
-            self.elements.append(Button(c.SCREEN_WIDTH - 252, self.CATEGORY_Y, (228, 38), "purple", "Data Refresh",
-                                        self.trigger_base_map_data_refresh, font_preset="button_small"))
 
     def return_to_sources(self):
         self.choosing_sources = True
@@ -92,17 +102,21 @@ class Select_Base_Map(ContentBrowserScreen):
         self.set_sub_state("CUSTOM_MAPS")
 
     def additional_draw(self, surface):
-        if self.sub_state != "SOURCES":
+        if self.choosing_sources and self.sub_state != "SOURCES":
+            MenuListScreen.additional_draw(self, surface)
+        elif not self.choosing_sources:
             super().additional_draw(surface)
 
     def draw_elements(self, surface):
-        if self.sub_state == "SOURCES":
+        if self.choosing_sources:
             Screen.draw_elements(self, surface)
         else:
             super().draw_elements(surface)
 
     def additional_events(self, event):
-        if self.sub_state != "SOURCES":
+        if self.choosing_sources and self.sub_state != "SOURCES":
+            MenuListScreen.additional_events(self, event)
+        elif not self.choosing_sources:
             super().additional_events(event)
 
     def import_custom_map(self):

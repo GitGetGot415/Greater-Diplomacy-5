@@ -151,6 +151,7 @@ Import .zip uses the existing desktop file picker or browser upload control.
 When no item is selected, New Game opens the new game screen.
 In Map Editor, New Map opens a screen to select a map source.
 The sources are custom maps, base maps, historical scenarios, and alternate scenarios.
+Select a source, then select a map in the list to open the editor.
 Base maps and shipped scenarios open as copies. Their source folders cannot be renamed or deleted from this browser.
 Data Refresh is available in the Base Maps list. It requires confirmation before it changes the source data.
 
