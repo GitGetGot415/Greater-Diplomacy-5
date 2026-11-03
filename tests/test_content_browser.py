@@ -98,7 +98,7 @@ class ContentBrowserTests(unittest.TestCase):
         with mock.patch.object(screen, "load_specific_save") as load:
             screen.activate_selected()
         load.assert_not_called()
-        self.click(screen, button_named(screen, "Clear Search"))
+        self.click(screen, button_named(screen, "Clear"))
         self.assertEqual(len(screen.filtered_entries), 2)
 
     def test_sort_order_and_refresh_preserve_selection(self):

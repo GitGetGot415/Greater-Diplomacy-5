@@ -52,6 +52,7 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
     MARGIN = 24
     GAP = 16
     LIST_AND_SEARCH_WIDTH = 470
+    CLEAR_BUTTON_WIDTH = 90
     CATEGORY_Y = 94
     CONTROL_Y = 166
     PANEL_Y = 212
@@ -77,7 +78,8 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
         self.empty_message = "No items available."
         self._search_was_active = False
         self._was_refreshing = False
-        self.search_field = TextField(self.MARGIN, self.CONTROL_Y, self.LIST_AND_SEARCH_WIDTH, 38,
+        self.search_field = TextField(self.MARGIN, self.CONTROL_Y,
+                                      self.LIST_AND_SEARCH_WIDTH - self.GAP - self.CLEAR_BUTTON_WIDTH, 38,
                                       on_change=self.filter_entries, on_submit=self.finish_search)
 
     @property
@@ -147,7 +149,8 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
             setattr(self, f"_content_{name}", rect)
         self._apply_filter()
         self.elements = [self.search_field]
-        self.elements.append(Button(self.list_panel.right + gap, self.CONTROL_Y, (130, 38), "grey", "Clear Search", self.clear_search,
+        self.elements.append(Button(self.list_panel.right - self.CLEAR_BUTTON_WIDTH, self.CONTROL_Y,
+                                    (self.CLEAR_BUTTON_WIDTH, 38), "red", "Clear", self.clear_search,
                                     font_preset="button_small"))
         sort_label = self.SORTS[self.sort_index][1]
         self.elements.append(Button(c.SCREEN_WIDTH - margin - 310, self.CONTROL_Y, (310, 38), "grey",
@@ -322,7 +325,7 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
         surface.blit(count_surface, (self.list_panel.right - 14 - count_surface.get_width(),
                                      self.list_panel.y + 12))
         if not self.filtered_entries:
-            message = self.directory_error or ("No matching items. Clear Search to show all items."
+            message = self.directory_error or ("No matching items. Clear the search to show all items."
                                                if self.search_field.text.strip() else self.empty_message)
             for index, line in enumerate(wrap_text(message, font, self.regions["items"].width - 24)):
                 surface.blit(font.render(line, True, c.UI_TEXT_LIGHT),
