@@ -39,8 +39,18 @@ MSG_CONTACT_TOOLBAR_Y = MSG_HEADER_H + MSG_HEADER_BUTTON_Y
 
 # The conversation header, reply bar and composer roll in while a country is
 # selected and roll out when none is. The contact header keeps Exit reachable.
+# Animation times are positive seconds. Entry slows down; exit speeds up.
 MSG_BAR_ANIM_SECONDS = 0.2
+MSG_BAR_EXIT_ANIM_SECONDS = 0.2
 MSG_BUBBLE_ANIM_SECONDS = 0.2
+MSG_BUBBLE_EXIT_ANIM_SECONDS = 0.2
+# A power of 1 is linear. Higher values make the easing stronger.
+MSG_ENTER_EASING_POWER = 3.0
+MSG_EXIT_EASING_POWER = 3.0
+# Background opacity: 0 is transparent, 1 is opaque. Text and borders stay opaque.
+MSG_QUEUED_BUBBLE_OPACITY = 0.5
+# Shared gradient strength: 0 is flat, 1 is the standard stepped gradient.
+MSG_BUBBLE_GRADIENT_STRENGTH = 1.0
 MSG_BOTTOM_BARS_H = MSG_REQUEST_H + MSG_INPUT_H
 
 # Fixed controls stay above the scrollable conversation rows.
@@ -143,6 +153,7 @@ class Messages_Screen(Screen):
         self.bar_elements = []
         # Start time of each bubble's slide-in, kept so a rebuild does not replay it.
         self.bubble_starts = {}
+        self.exiting_thread = None
 
     def on_enter(self, app, previous):
         self.start_messages(app.states["MAP"])
@@ -164,6 +175,7 @@ class Messages_Screen(Screen):
         self.bar_target = 0.0
         self.bar_anim = None
         self.bubble_starts = {}
+        self.exiting_thread = None
         self.refresh_ui()
 
     @property
@@ -205,15 +217,17 @@ class Messages_Screen(Screen):
 
     def select_recipient(self, target):
         self.save_current_draft()
-        self.bubble_starts = {}
 
         if self.selected_recipient == target:
+            self._start_thread_exit()
             self.selected_recipient = None
             self.compose_text = ""
             self.drafts = []
             self.refresh_ui()
             return
-        
+
+        self.exiting_thread = None
+        self.bubble_starts = {}
         self.selected_recipient = target
         self.message_drag_state = None
         self.msg_scroll_y = 0
@@ -338,6 +352,7 @@ class Messages_Screen(Screen):
                 
         # Deselect recipient to return to contact list
         self.save_current_draft()
+        self._start_thread_exit()
         self.selected_recipient = None
         self.compose_text = ""
         self.drafts = []
@@ -471,16 +486,34 @@ class Messages_Screen(Screen):
     def update(self):
         target = 1.0 if self.selected_recipient else 0.0
         now = time.monotonic()
+        if self.exiting_thread and now - self.exiting_thread["started_at"] >= MSG_BUBBLE_EXIT_ANIM_SECONDS:
+            self.exiting_thread = None
         if target != self.bar_target:
             self.bar_target = target
             self.bar_anim = (now, self.bar_shown)
         if self.bar_anim:
             start, origin = self.bar_anim
-            progress = min(1.0, (now - start) / MSG_BAR_ANIM_SECONDS)
-            self.bar_shown = origin + (target - origin) * (1 - (1 - progress) ** 3)
+            entering = target > origin
+            duration = MSG_BAR_ANIM_SECONDS if entering else MSG_BAR_EXIT_ANIM_SECONDS
+            progress = max(0.0, min(1.0, (now - start) / duration))
+            eased = 1 - (1 - progress) ** MSG_ENTER_EASING_POWER if entering else progress ** MSG_EXIT_EASING_POWER
+            self.bar_shown = origin + (target - origin) * eased
             if progress >= 1.0:
                 self.bar_anim = None
             self._apply_bar_offsets()
+
+    def _start_thread_exit(self):
+        """Keep cached bubbles until their exit animation ends. Disable their controls immediately."""
+        now = time.monotonic()
+        messages = []
+        for prepared in self.processed_messages:
+            progress = max(0.0, min(1.0, (now - prepared["anim_start"]) / MSG_BUBBLE_ANIM_SECONDS))
+            messages.append(dict(prepared, exit_offset=(1 - progress) ** MSG_ENTER_EASING_POWER))
+        self.exiting_thread = {"messages": messages, "started_at": now, "rect": self.thread_rect.copy(),
+                               "scroll_y": self.msg_scroll_y, "max_scroll": self.max_msg_scroll} if messages else None
+        self.message_drag_state = None
+        self.draft_edit_rects = []
+        self.forward_button_rects = []
 
     def _bar_offsets(self):
         """Vertical shift of the top and bottom conversation bars at the current roll."""
@@ -890,7 +923,10 @@ class Messages_Screen(Screen):
                 color = MSG_BUBBLE_FORWARDED
             border = c.COLOR_GOLD_HIGHLIGHT if msg["is_draft"] or msg["forwarded_header"] else MSG_PANEL_BORDER
             bubble = pygame.Rect(0, header_h, width, bubble_h)
-            ui_elements.draw_pixel_panel(cached, bubble, color, border, gradient_strength=0.25)
+            if msg["is_draft"]:
+                color = (*color, round(255 * MSG_QUEUED_BUBBLE_OPACITY))
+            ui_elements.draw_pixel_panel(cached, bubble, color, border,
+                                         gradient_strength=MSG_BUBBLE_GRADIENT_STRENGTH)
             if msg["is_diplo"]:
                 pygame.draw.rect(cached, MSG_DIPLO_ACCENT, (2, header_h + 2, 3, bubble_h - 4))
             for index, line in enumerate(lines):
@@ -953,37 +989,50 @@ class Messages_Screen(Screen):
         with ui_bars.clip_scroll_region(surface, text_rect, draw_top=False, draw_bottom=False):
             x = text_rect.x - max(0, self.compose_surface.get_width() - text_rect.width)
             surface.blit(self.compose_surface, (x, text_rect.centery - self.compose_surface.get_height() // 2))
-        if not self.selected_recipient:
+        if not self.selected_recipient and not self.exiting_thread:
             surface.blit(self.empty_thread_surface, self.empty_thread_surface.get_rect(center=self.thread_rect.center))
-        current_y = self.thread_rect.bottom - 20 + self.msg_scroll_y
         self.draft_edit_rects = []
         self.forward_button_rects = []
+        if self.exiting_thread:
+            thread = self.exiting_thread
+            self._draw_thread(surface, thread["messages"], thread["rect"], thread["scroll_y"],
+                              thread["max_scroll"], exit_started=thread["started_at"])
+        else:
+            self._draw_thread(surface, self.processed_messages, self.thread_rect, self.msg_scroll_y, self.max_msg_scroll)
+
+    def _draw_thread(self, surface, messages, rect, scroll_y, max_scroll, *, exit_started=None):
+        current_y = rect.bottom - 20 + scroll_y
         now = time.monotonic()
-        with ui_bars.clip_scroll_region(surface, self.thread_rect,
-                                        draw_top=self.msg_scroll_y < self.max_msg_scroll, draw_bottom=self.msg_scroll_y != 0):
-            for prepared in self.processed_messages:
+        interactive = self.selected_recipient is not None and exit_started is None
+        exit_progress = max(0.0, min(1.0, (now - exit_started) / MSG_BUBBLE_EXIT_ANIM_SECONDS)) if exit_started is not None else None
+        with ui_bars.clip_scroll_region(surface, rect, draw_top=scroll_y < max_scroll, draw_bottom=scroll_y != 0):
+            for prepared in messages:
                 current_y -= prepared["box_height"]
                 msg = prepared["msg_data"]
-                if current_y + prepared["box_height"] >= self.thread_rect.top and current_y < self.thread_rect.bottom:
-                    x = (self.thread_rect.right - prepared["box_width"] - 30 if msg["is_player"]
-                         else self.thread_rect.left + 30)
-                    # Sent bubbles enter from the right edge, received ones from the left.
-                    start_x = self.thread_rect.right if msg["is_player"] else self.thread_rect.left - prepared["box_width"]
-                    progress = min(1.0, (now - prepared["anim_start"]) / MSG_BUBBLE_ANIM_SECONDS)
-                    x += round((start_x - x) * (1 - progress) ** 3)
+                if current_y + prepared["box_height"] >= rect.top and current_y < rect.bottom:
+                    x = rect.right - prepared["box_width"] - 30 if msg["is_player"] else rect.left + 30
+                    # Each bubble enters and leaves through its sender's side.
+                    edge_x = rect.right if msg["is_player"] else rect.left - prepared["box_width"]
+                    if exit_progress is None:
+                        progress = max(0.0, min(1.0, (now - prepared["anim_start"]) / MSG_BUBBLE_ANIM_SECONDS))
+                        offset = (1 - progress) ** MSG_ENTER_EASING_POWER
+                    else:
+                        initial = prepared["exit_offset"]
+                        offset = initial + (1 - initial) * exit_progress ** MSG_EXIT_EASING_POWER
+                    x += round((edge_x - x) * offset)
                     surface.blit(prepared["surface"], (x, current_y))
                     button_y = current_y + prepared["header_h"] + prepared["bubble_h"] // 2
-                    if msg["is_draft"] and not self.map_screen.tactical_mode:
+                    if interactive and msg["is_draft"] and not self.map_screen.tactical_mode:
                         delete_rect = pygame.Rect(x - 35, button_y - 12, 25, 25)
-                        self.draft_edit_rects.append((delete_rect.clip(self.thread_rect), msg["draft_idx"]))
+                        self.draft_edit_rects.append((delete_rect.clip(rect), msg["draft_idx"]))
                         ui_elements.draw_pixel_button(surface, delete_rect, (130, 48, 48))
                         surface.blit(self.delete_label, self.delete_label.get_rect(center=delete_rect.center))
                     forward = prepared["forward_button"]
-                    if forward:
+                    if interactive and forward:
                         forward.rect.topleft = (x + prepared["box_width"] + 8,
                                                  button_y - MSG_FORWARD_BUTTON_SIZE[1] // 2)
                         forward.draw(surface)
-                        self.forward_button_rects.append((forward.rect.clip(self.thread_rect), msg["forward_source"]))
+                        self.forward_button_rects.append((forward.rect.clip(rect), msg["forward_source"]))
                 current_y -= 15
 
     def exit_screen(self):

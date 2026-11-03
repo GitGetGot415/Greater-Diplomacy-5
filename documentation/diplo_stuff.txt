@@ -88,12 +88,30 @@ Messages keeps conversations on the left and the selected conversation on the ri
 Each conversation row shows its latest message preview and unread count.
 Trade and Mark Unread are in the conversation header.
 Treaty reply controls use a fixed area above the text field and Queue button.
+
 The conversation header, reply area, and text field are hidden when no country is selected.
 They roll in when the player selects a country. They roll out when the player clears the selection.
-Each roll takes the time set by MSG_BAR_ANIM_SECONDS and slows toward the end.
+Entry uses ease-out motion. Exit uses ease-in motion, which starts slowly and speeds up.
+
 A message bubble slides in once when it first appears in a conversation.
 Bubbles that the player sent come in from the right. Bubbles from the other country come in from the left.
+
+When the player deselects a country, each bubble leaves through the side where it entered.
+Bubble controls stop accepting input immediately. The exit uses cached presentation data and does not change stored messages.
+
 The left header with Exit and Mark All Read stays visible.
+
+Queued bubble backgrounds use 50% opacity until they are sent. Their text and borders stay opaque.
+Bubbles use the shared stepped gradient.
+
+Edit the animation and bubble settings near the top of screens/game/messages.py. Restart the game after changes.
+MSG_BAR_ANIM_SECONDS and MSG_BUBBLE_ANIM_SECONDS set entry times. MSG_BAR_EXIT_ANIM_SECONDS and MSG_BUBBLE_EXIT_ANIM_SECONDS set exit times.
+These times must be positive numbers of seconds.
+
+MSG_ENTER_EASING_POWER and MSG_EXIT_EASING_POWER set easing strength. A value of 1 is linear; higher values give stronger easing.
+
+MSG_QUEUED_BUBBLE_OPACITY sets background opacity from 0, transparent, to 1, opaque.
+MSG_BUBBLE_GRADIENT_STRENGTH sets shading strength. Zero is flat; 1 uses the standard stepped gradient.
 
 Accept, Decline, and View Offer stay visible. Unavailable controls are disabled.
 Queued replies keep their undo control. Treaty and trade terms remain viewable while a reply is queued.

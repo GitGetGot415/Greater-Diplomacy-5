@@ -467,6 +467,84 @@ class ConversationInteractionTests(unittest.TestCase):
         self.assertIsNot(screen.compose_surface, old_text)
         self.assertIs(screen.processed_messages, prepared)
 
+    def test_deselect_keeps_only_cached_bubbles_and_disables_their_actions_until_exit_finishes(self):
+        import copy
+        from screens.game import messages as messages_module
+
+        for name, seconds in (("MSG_BAR_ANIM_SECONDS", 0.1), ("MSG_BUBBLE_ANIM_SECONDS", 0.1),
+                              ("MSG_BAR_EXIT_ANIM_SECONDS", 1.0), ("MSG_BUBBLE_EXIT_ANIM_SECONDS", 1.0)):
+            patcher = mock.patch.object(messages_module, name, seconds)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+        screen = self.make_screen()
+        surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
+        with mock.patch.object(messages_module.time, "monotonic", return_value=10.0):
+            screen.select_recipient("A")
+            screen.compose_text = "Keep this queued message"
+            screen.send_message()
+            screen.update()
+        with mock.patch.object(messages_module.time, "monotonic", return_value=11.0):
+            screen.update()
+            screen.draw(surface)
+            forward_rect = next(rect for rect, _message in screen.forward_button_rects if rect.width and rect.height)
+            delete_rect = next(rect for rect, _index in screen.draft_edit_rects if rect.width and rect.height)
+            state = copy.deepcopy(screen.map_screen.nation_data)
+            surfaces = [prepared["surface"] for prepared in screen.processed_messages]
+            screen.select_recipient("A")
+            screen.update()
+        self.assertIsNone(screen.selected_recipient)
+        self.assertFalse(screen.text_input_active)
+        self.assertEqual([prepared["surface"] for prepared in screen.exiting_thread["messages"]], surfaces)
+        self.assertEqual(screen.map_screen.nation_data, state)
+        halfway = 11.0 + messages_module.MSG_BUBBLE_EXIT_ANIM_SECONDS / 2
+        with mock.patch.object(messages_module.time, "monotonic", return_value=halfway), \
+                mock.patch.object(dm, "get_pending", side_effect=AssertionError("Exit read diplomacy")), \
+                mock.patch.object(messages_module.text_utils, "wrap_text", side_effect=AssertionError("Exit rebuilt text")), \
+                mock.patch.object(screen, "open_forward_picker") as forward:
+            screen.update()
+            screen.draw(surface)
+            self.assertIsNotNone(screen.exiting_thread)
+            self.assertIsNotNone(screen.bar_anim)
+            self.assertEqual(screen.forward_button_rects, [])
+            self.assertEqual(screen.draft_edit_rects, [])
+            screen.additional_events(pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=forward_rect.center))
+            screen.additional_events(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=delete_rect.center))
+            forward.assert_not_called()
+        self.assertEqual(screen.map_screen.nation_data, state)
+        with mock.patch.object(messages_module.time, "monotonic", return_value=11.0 + messages_module.MSG_BUBBLE_EXIT_ANIM_SECONDS + 0.001):
+            screen.update()
+        self.assertIsNone(screen.exiting_thread)
+        self.assertIsNone(screen.bar_anim)
+
+    def test_selecting_a_country_during_exit_releases_the_old_cache_and_keeps_its_draft(self):
+        from screens.game import messages as messages_module
+
+        screen = self.make_screen()
+        with mock.patch.object(messages_module.time, "monotonic", return_value=20.0):
+            screen.select_recipient("A")
+            screen.compose_text = "Saved on deselect"
+            screen.select_recipient("A")
+            self.assertIsNotNone(screen.exiting_thread)
+            screen.select_recipient("B")
+        self.assertIsNone(screen.exiting_thread)
+        self.assertEqual(screen.selected_recipient, "B")
+        self.assertTrue(screen.text_input_active)
+        self.assertEqual([prepared["msg_data"]["content"] for prepared in screen.processed_messages], ["Other conversation"])
+        self.assertEqual(screen.map_screen.nation_data["P"]["draft_lists"]["A"], ["Saved on deselect"])
+
+    def test_mark_unread_uses_exit_cache_and_still_marks_the_conversation_unread(self):
+        from screens.game import messages as messages_module
+
+        screen = self.make_screen()
+        with mock.patch.object(messages_module.time, "monotonic", return_value=30.0):
+            screen.select_recipient("A")
+            screen.mark_thread_unread()
+        self.assertIsNone(screen.selected_recipient)
+        self.assertIsNotNone(screen.exiting_thread)
+        self.assertFalse(screen.map_screen.nation_data["P"]["inbox"][0]["read"])
+        screen.start_messages(screen.map_screen)
+        self.assertIsNone(screen.exiting_thread)
+
     def test_follow_up_can_be_typed_and_queued_after_sending_a_message(self):
         import copy
 
