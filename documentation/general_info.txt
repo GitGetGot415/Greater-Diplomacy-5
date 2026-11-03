@@ -171,7 +171,8 @@ Use Refresh after an external file change. Frame updates and scrolling use cache
 Details read existing meta.json fields without loading map geometry, images, or history.
 
 New Game and New Map use compact text buttons without map previews or category icons.
-Panels use the space required by their contents, within the available screen area.
+The category and item panels extend to the bottom screen margin. The details panel has a fixed height.
+Panel sizes stay constant when you select, search, or change categories. Long lists and details use scrolling.
 Category metadata is cached when the category opens. Refresh reloads folder entries and metadata.
 
 Maps without meta.json remain supported. Incomplete maps and unreadable metadata show an error and cannot open from the browser.

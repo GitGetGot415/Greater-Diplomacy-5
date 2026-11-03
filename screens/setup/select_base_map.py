@@ -14,7 +14,6 @@ class Select_Base_Map(ScenarioLibraryScreen):
     title = "MAP EDITOR"
     content_label = "maps"
     ACTION_COUNT = 3
-    LIBRARY_CATEGORY_ACTION_COUNT = 1
 
     # Resolve directory settings when the screen refreshes.
     CATEGORIES = {

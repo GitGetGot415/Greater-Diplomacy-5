@@ -380,12 +380,12 @@ class ScenarioLibraryScreen(ContentBrowserScreen):
     LIBRARY_CATEGORY_WIDTH = 224
     LIBRARY_LIST_WIDTH = 400
     LIBRARY_DETAIL_WIDTH = 432
+    LIBRARY_DETAIL_HEIGHT = 300
     LIBRARY_PANEL_Y = 154
     LIBRARY_CONTROL_Y = 104
     LIBRARY_ROW_HEIGHT = 36
     LIBRARY_CATEGORY_HEIGHT = 36
     LIBRARY_CATEGORY_GAP = 8
-    LIBRARY_CATEGORY_ACTION_COUNT = 3
     LIBRARY_ACTION_HEIGHT = 36
     CATEGORY_COLORS = {
         "SCENARIOS_HISTORICAL_DIR": "blue",
@@ -428,19 +428,12 @@ class ScenarioLibraryScreen(ContentBrowserScreen):
             return
         margin, gap = self.MARGIN, self.GAP
         available_height = c.SCREEN_HEIGHT - self.LIBRARY_PANEL_Y - self.BOTTOM_MARGIN
-        category_height = (44 + len(self.library_categories) * (self.LIBRARY_CATEGORY_HEIGHT + self.LIBRARY_CATEGORY_GAP)
-                           + gap + self.LIBRARY_CATEGORY_ACTION_COUNT * 44)
-        self.category_panel = pygame.Rect(margin, self.LIBRARY_PANEL_Y, self.LIBRARY_CATEGORY_WIDTH, category_height)
-        list_height = min(available_height, 56 + max(1, len(self.filtered_entries)) * self.ROW_HEIGHT)
+        self.category_panel = pygame.Rect(margin, self.LIBRARY_PANEL_Y, self.LIBRARY_CATEGORY_WIDTH, available_height)
         self.list_panel = pygame.Rect(self.category_panel.right + gap, self.LIBRARY_PANEL_Y,
-                                      self.LIBRARY_LIST_WIDTH, list_height)
+                                      self.LIBRARY_LIST_WIDTH, available_height)
         self.detail_panel = pygame.Rect(self.list_panel.right + gap, self.LIBRARY_PANEL_Y,
-                                        self.LIBRARY_DETAIL_WIDTH, available_height)
-        font = fonts.get("normal")
+                                        self.LIBRARY_DETAIL_WIDTH, min(available_height, self.LIBRARY_DETAIL_HEIGHT))
         detail_width = self.detail_panel.width - margin * 2 - 16
-        line_count = sum(len(wrap_text(text, font, detail_width)) for text in self.selected_detail_texts())
-        detail_height = line_count * (font.get_linesize() + 5)
-        self.detail_panel.height = min(available_height, 64 + detail_height + gap + self.LIBRARY_ACTION_HEIGHT + margin)
         self.action_top = self.detail_panel.bottom - margin - self.LIBRARY_ACTION_HEIGHT
         self.regions = {
             "items": pygame.Rect(self.list_panel.x + 12, self.list_panel.y + 44,
