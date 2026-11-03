@@ -152,6 +152,99 @@ class RangeTests(unittest.TestCase):
         self.assertEqual(defender["order"]["path"], [3])
 
 
+class MissionSweepTests(unittest.TestCase):
+    """A whole-map sweep resolves the mission once, not once per province."""
+
+    def setUp(self):
+        install_air_fixture(self)
+        self.game = world()
+        self.base = tile(self.game, 1, 8)
+        self.plane = wing(self.base)
+        self.radius = queries.air_order_radius(self.plane, "AIR_ATTACK")
+
+    def spread_a_world(self):
+        """Land, water, in range and out, so a sweep has something to reject."""
+        tile(self.game, 2, 30, owner="B")
+        tile(self.game, 3, int(11 + self.radius), owner="B")
+        tile(self.game, 4, 34, water=True)
+        tile(self.game, 5, 36, owner="A")
+        tile(self.game, 6, 900, owner="B")
+        queries.build_air_geometry(self.game)
+
+    def test_the_sweep_returns_exactly_what_the_rule_admits(self):
+        """Measured against the rule's own parts rather than a recorded target
+        list, so a range or terrain change cannot make this pass for the wrong
+        reason."""
+        self.spread_a_world()
+        # The fixture families carry no transport airframe, and a loaded
+        # transport is the only aircraft that can drop -- without one the sweep
+        # refuses every air drop before it measures a single province, and the
+        # terrain rule for drops would go unmeasured.
+        queries.get_unit_library(self.game)["Zeppelin I"]["air_transport_capacity"] = 4
+        transport = wing(self.base, "Zeppelin I")
+        transport["air_cargo"] = [queries.create_unit_dict(
+            "Infantry", transport["owner"], queries.get_unit_library())]
+        fleet = [self.plane, wing(self.base, "V1 Flying Bomb I"), transport]
+        for capability in (queries.air_unit_can_strike, queries.air_unit_can_patrol,
+                           queries.air_unit_can_air_drop):
+            self.assertEqual({capability(unit, context=self.game) for unit in fleet}, {True, False},
+                             f"the fleet stopped spanning {capability.__name__}")
+        for unit in fleet:
+            for kind in sorted(queries.AIR_ORDER_TYPES):
+                with self.subTest(unit=unit["type"], kind=kind):
+                    radius_squared = queries.air_mission_radius_squared(
+                        self.game, unit, self.base, kind)
+                    if radius_squared is None:
+                        self.assertEqual(queries.get_air_targets(
+                            self.game, unit, self.base, kind), set())
+                        continue
+                    admitted = {pid for pid, province in self.game.id_to_province.items()
+                                if not (kind in ("AIR_REPOSITION", "AIR_DROP")
+                                        and queries.is_water_province(province))
+                                and queries.air_distance_squared(
+                                    self.game, self.base, pid) <= radius_squared}
+                    self.assertEqual(admitted, queries.get_air_targets(
+                        self.game, unit, self.base, kind))
+
+    def test_one_tile_and_the_whole_map_answer_alike(self):
+        """Validating a command and previewing the map share one rule."""
+        self.spread_a_world()
+        for kind in sorted(queries.AIR_ORDER_TYPES):
+            swept = queries.get_air_targets(self.game, self.plane, self.base, kind)
+            for target_id in self.game.id_to_province:
+                with self.subTest(kind=kind, target=target_id):
+                    self.assertEqual(target_id in swept, queries.air_target_in_range(
+                        self.game, self.plane, self.base, kind, target_id))
+
+    def test_the_sweep_resolves_the_mission_once_not_once_per_province(self):
+        """What makes a whole-map sweep affordable: the airframe's role, its
+        capabilities and its radius are facts about the aircraft, so a sweep may
+        not re-derive them for every province it measures."""
+        for province_id in range(2, 14):
+            tile(self.game, province_id, 20 + province_id * 3, owner="B")
+        queries.build_air_geometry(self.game)
+        with patch.object(queries, "air_order_radius",
+                          wraps=queries.air_order_radius) as radius, \
+             patch.object(queries, "air_unit_can_strike",
+                          wraps=queries.air_unit_can_strike) as strike:
+            targets = queries.get_air_targets(self.game, self.plane, self.base, "AIR_ATTACK")
+        self.assertTrue(targets)
+        for counter in (radius, strike):
+            self.assertLess(counter.call_count, len(self.game.id_to_province))
+
+    def test_a_mission_no_tile_can_satisfy_sweeps_nothing(self):
+        """The mission is refused before any province is measured."""
+        tile(self.game, 2, 30, owner="B")
+        queries.build_air_geometry(self.game)
+        land_unit = wing(self.base, "Infantry")
+        self.assertIsNone(queries.air_mission_radius_squared(
+            self.game, land_unit, self.base, "AIR_ATTACK"))
+        with patch.object(queries, "air_distance_squared",
+                          side_effect=AssertionError("swept the map for a unit that cannot fly")):
+            self.assertEqual(queries.get_air_targets(
+                self.game, land_unit, self.base, "AIR_ATTACK"), set())
+
+
 class AirResolutionTests(unittest.TestCase):
     def setUp(self):
         install_air_fixture(self)

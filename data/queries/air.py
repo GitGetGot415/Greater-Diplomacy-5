@@ -380,6 +380,20 @@ def air_distance_squared(context, base, target_id):
     return distance
 
 
+def air_mission_radius_squared(map_screen, unit, base, kind):
+    """The part of an air mission's legality no target can change, and the
+    squared radius every target is then measured against. None when the unit,
+    its base or the order kind rules out every tile.
+
+    air_target_in_range and get_air_targets share it, so one sweep resolves the
+    mission once instead of re-deriving it for each of a thousand provinces.
+    """
+    if kind not in AIR_ORDER_TYPES or not is_air_unit(unit, context=map_screen) or is_water_province(base):
+        return None
+    stats = air_unit_stats(unit, context=map_screen)
+    if (kind == "AIR_PATROL" and not air_unit_can_patrol(unit, context=map_screen)
+            or kind == "AIR_ATTACK" and not air_unit_can_strike(unit, context=map_screen)
+            or kind == "AIR_DROP" and not air_unit_can_air_drop(unit, context=map_screen)
 def air_target_in_range(context, unit, base, kind, target_id):
     """One tile's mission reach; validating a command never sweeps the map."""
     world_state = world_for(context)
@@ -390,16 +404,37 @@ def air_target_in_range(context, unit, base, kind, target_id):
             or kind == "AIR_ATTACK" and not air_unit_can_strike(unit, context=context)
             or kind == "AIR_DROP" and not air_unit_can_air_drop(unit, context=context)
             or kind == "AIR_REPOSITION" and stats.get("air_consumable", False)):
-        return False
+        return None
+    radius = queries.air_order_radius(unit, kind, context=map_screen)
+    return radius * radius
+
+
+def _air_target_within(map_screen, world_state, base, kind, target_id, radius_squared):
+    """One tile against an already-resolved mission radius."""
     target = world_state.id_to_province.get(target_id)
     if target is None or kind in ("AIR_REPOSITION", "AIR_DROP") and is_water_province(target):
         return False
+    return queries.air_distance_squared(map_screen, base, target_id) <= radius_squared
+
+
+def air_target_in_range(map_screen, unit, base, kind, target_id):
+    """One tile's mission reach; validating a command never sweeps the map."""
+    radius_squared = air_mission_radius_squared(map_screen, unit, base, kind)
+    if radius_squared is None:
+        return False
+    return _air_target_within(map_screen, world_for(map_screen), base, kind, target_id, radius_squared)
     radius = queries.air_order_radius(unit, kind, context=context)
     return queries.air_distance_squared(context, base, target_id) <= radius * radius
 
 
 def get_air_targets(context, unit, base, kind):
     """Geometry-only preview: never reads fogged units or private orders."""
+    radius_squared = air_mission_radius_squared(map_screen, unit, base, kind)
+    if radius_squared is None:
+        return set()
+    world_state = world_for(map_screen)
+    return {pid for pid in world_state.id_to_province
+            if _air_target_within(map_screen, world_state, base, kind, pid, radius_squared)}
     world_state = world_for(context)
     return {pid for pid in world_state.id_to_province
             if air_target_in_range(context, unit, base, kind, pid)}
