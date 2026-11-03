@@ -2,7 +2,7 @@ import secrets
 import re
 
 import os
-from ui.navigation.game_state import MenuListScreen
+from ui.navigation.screen import MenuListScreen
 from ui.widgets.ui_elements import Button, make_back_button
 import data.constants as c
 from data import queries

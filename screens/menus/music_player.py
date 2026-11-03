@@ -2,7 +2,7 @@ import pygame
 import os
 from data import queries
 from ui.widgets import ui_elements
-from ui.navigation.game_state import GameState, ScreenLayer
+from ui.navigation.screen import Screen, ScreenLayer
 from ui.bars import ui_bars
 from ui.background_styles import MUSIC_PANEL_STYLES
 from ui.widgets.scroll_panes import ScrollPanes
@@ -165,7 +165,7 @@ class MusicScrubber:
                                 dragging=self.is_dragging, progress_ratio=self.value)
 
 
-class Music_Player(ScrollPanes, GameState):
+class Music_Player(ScrollPanes, Screen):
     progress_slider = None
 
     def __init__(self, controller):
@@ -201,6 +201,9 @@ class Music_Player(ScrollPanes, GameState):
         self._track_lengths = {}
         
         self.refresh_ui()
+
+    def on_enter(self, app, previous):
+        self.return_to_previous_context(app, previous)
 
     def refresh_ui(self):
         self.elements = []
@@ -948,7 +951,7 @@ class Music_Player(ScrollPanes, GameState):
         self.refresh_ui()
 
     # The two panes are ordinary scrollable lists, so they both go through
-    # GameState.handle_list_scroll / draw_list_scrollbar with their own attrs.
+    # Screen.handle_list_scroll / draw_list_scrollbar with their own attrs.
     def pane_rects(self):
         return {"album": self._content_album, "track": self._content_track}
 

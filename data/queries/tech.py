@@ -15,7 +15,7 @@ from data.queries.air import get_air_unit_traits
 from data import queries
 
 
-def apply_time_appropriate_research_to_map(map_screen, year):
+def apply_time_appropriate_research_to_map(context, year):
     """Overwrites the map default and every living nation's research with the
     time-appropriate levels for `year`.
 
@@ -23,8 +23,8 @@ def apply_time_appropriate_research_to_map(map_screen, year):
     auto-recompute (when "force_time_appropriate_research" is on), so the two
     can't drift into computing this differently.
     """
-    world_state = world_for(map_screen)
-    time_app_res = get_time_appropriate_research(year, context=map_screen)
+    world_state = world_for(context)
+    time_app_res = get_time_appropriate_research(year, context=context)
     world_state.default_research = time_app_res.copy()
     for cid in queries.get_living_nations(world_state.map_data):
         world_state.nation_data[cid]["research"] = time_app_res.copy()
@@ -328,16 +328,16 @@ def edited_research_levels(research, tech_key, level, researched, tech_tree=None
     return result
 
 
-def can_edit_starting_research(map_screen, country_id):
+def can_edit_starting_research(context, country_id):
     """Starting research edits belong to a local map editor and a living country."""
-    return bool(session_for(map_screen).is_editor
-                and can_edit_country_research(map_screen, country_id))
+    return bool(session_for(context).is_editor
+                and can_edit_country_research(context, country_id))
 
 
-def can_edit_country_research(map_screen, country_id):
+def can_edit_country_research(context, country_id):
     """Allow direct research changes in a local editor or permitted spectator game."""
-    world_state = world_for(map_screen)
-    session_state = session_for(map_screen)
+    world_state = world_for(context)
+    session_state = session_for(context)
     return bool((session_state.is_editor
                  or (session_state.player_country == "Spectator"
                      and c.SPECTATOR_CAN_EDIT_RESEARCH))
@@ -349,20 +349,20 @@ def can_edit_country_research(map_screen, country_id):
                 and country_id in queries.get_living_nations(world_state.map_data))
 
 
-def toggle_starting_research(map_screen, country_id, tech_key, level):
+def toggle_starting_research(context, country_id, tech_key, level):
     """Apply a map editor click through the shared country research editor."""
-    if not can_edit_starting_research(map_screen, country_id):
+    if not can_edit_starting_research(context, country_id):
         raise ValueError("Starting research can only be changed for a country in the local map editor.")
-    return toggle_country_research(map_screen, country_id, tech_key, level)
+    return toggle_country_research(context, country_id, tech_key, level)
 
 
-def toggle_country_research(map_screen, country_id, tech_key, level):
+def toggle_country_research(context, country_id, tech_key, level):
     """Apply a permitted click and clear projects invalidated by changed research."""
-    world_state = world_for(map_screen)
-    if not can_edit_country_research(map_screen, country_id):
+    world_state = world_for(context)
+    if not can_edit_country_research(context, country_id):
         raise ValueError("Research editing requires a local map editor or permitted spectator.")
     country = world_state.nation_data[country_id]
-    state, _ = preview_country_research_edit(country, tech_key, level, context=map_screen)
+    state, _ = preview_country_research_edit(country, tech_key, level, context=context)
     changed = {key for key, value in state["research"].items() if value != country.get("research", {}).get(key, 0)}
     _apply_country_research_state(country, state)
     return changed
@@ -422,13 +422,13 @@ def _apply_country_research_state(country, state):
             country[key] = value
 
 
-def confirm_country_research_edit(map_screen, country_id, original, draft):
+def confirm_country_research_edit(context, country_id, original, draft):
     """Save a permitted spectator draft only if the live research is unchanged."""
-    world_state = world_for(map_screen)
-    session_state = session_for(map_screen)
+    world_state = world_for(context)
+    session_state = session_for(context)
     if (session_state.player_country != "Spectator"
             or session_state.is_editor
-            or not can_edit_country_research(map_screen, country_id)):
+            or not can_edit_country_research(context, country_id)):
         raise ValueError("Research editing requires a permitted local spectator.")
     country = world_state.nation_data[country_id]
     if country_research_edit_state(country) != original:

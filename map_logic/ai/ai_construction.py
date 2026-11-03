@@ -66,7 +66,7 @@ def _short_of_runway(deficits, upkeep, income, stockpiles):
     return short
 
 
-def tactical_player_unit(map_screen):
+def tactical_player_unit(context):
     """The division a tactical-mode player *is*, or None.
 
     Their host country is run by the AI on purpose -- get_active_ai_nations
@@ -79,7 +79,7 @@ def tactical_player_unit(map_screen):
     Both passes skip it at selection rather than refusing to disband at the end,
     so the host still balances its books; it just gives up the next unit along.
     """
-    session_state = session_for(map_screen)
+    session_state = session_for(context)
     if not session_state.tactical_mode:
         return None
     return session_state.player_unit
@@ -113,7 +113,7 @@ def _disband_peacetime_militia(ai_name, my_provs, at_war, protected=None, *, con
                                           {"type": "DISBAND"}, authority="ai")
 
 
-def _compute_economy_ratios(map_screen, ai_name, data, my_provs, econ, unit_library):
+def _compute_economy_ratios(context, ai_name, data, my_provs, econ, unit_library):
     """Section 1: upkeep-vs-income ratios (including the pending build queue,
     so the AI doesn't bankrupt itself on units that haven't spawned yet) and
     which resources are in deficit."""
@@ -222,13 +222,13 @@ def _update_fuel_conversion_slider(data, state):
         data["mat_to_fuel_slider"] = 0.0
 
 
-def _is_frontline(map_screen, ai_name, prov):
+def _is_frontline(context, ai_name, prov):
     """Whether a province is in combat or has an enemy standing next door.
 
     Same two questions the panic-militia pass asks, in the same order, since
     "somewhere the war is" is one idea and not two.
     """
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     if queries.is_nation_in_combat_here(ai_name, prov, world_state.nation_data):
         return True
     for n_id in prov.get("neighbors", []):
@@ -242,7 +242,7 @@ def _is_frontline(map_screen, ai_name, prov):
     return False
 
 
-def _disband_worst_unit_if_deficit(map_screen, data, my_provs, ai_name, deficits,
+def _disband_worst_unit_if_deficit(context, data, my_provs, ai_name, deficits,
                                    unit_library, values=None):
     """If any resource is in deficit, gives up the one unit worth least to this
     nation that costs a resource it is short of.
@@ -281,12 +281,12 @@ def _disband_worst_unit_if_deficit(map_screen, data, my_provs, ai_name, deficits
     money for. `deficits` is already narrowed to what is actually running out
     (see _short_of_runway); this narrows the other axis.
     """
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     if not deficits:
         return
 
     values = values or {}
-    protected = tactical_player_unit(map_screen)
+    protected = tactical_player_unit(context)
     on_order = {q.get("unit_type") for prov in my_provs
                 for q in prov.get("unit_queue", []) if q.get("unit_type")}
 
@@ -299,7 +299,7 @@ def _disband_worst_unit_if_deficit(map_screen, data, my_provs, ai_name, deficits
 
     candidates = []
     for prov in my_provs:
-        if _is_frontline(map_screen, ai_name, prov):
+        if _is_frontline(context, ai_name, prov):
             continue
         for u in prov.get("units", []):
             if u.get("owner") != ai_name or u.get("order", {}).get("type") == "DISBAND":
@@ -325,7 +325,7 @@ def _disband_worst_unit_if_deficit(map_screen, data, my_provs, ai_name, deficits
         # and this passed "Heavy Tank I", so the primary sort key never matched
         # a level-suffixed unit and ranking fell entirely to value.score.
         # ai_unit_eval asks the same question the same way.
-        is_obs = queries.is_unit_obsolete(queries.get_base_unit_name(u_type, context=map_screen), res_levels)
+        is_obs = queries.is_unit_obsolete(queries.get_base_unit_name(u_type, context=context), res_levels)
         value = values.get(u_type)
         # Outdated units (is_obs=True) have priority (0). Then the one the
         # nation's own valuation rates lowest. An unscored type sorts first
@@ -338,15 +338,15 @@ def _disband_worst_unit_if_deficit(map_screen, data, my_provs, ai_name, deficits
     worst_unit = candidates[0][0]
     province = next(province for province in my_provs
                     if any(unit is worst_unit for unit in province.get("units", [])))
-    unit_actions.apply_action(map_screen, ai_name, province, worst_unit,
+    unit_actions.apply_action(context, ai_name, province, worst_unit,
                               {"type": "DISBAND"}, authority="ai")
 
 
-def _panic_militia_and_tally_forces(map_screen, ai_name, data, my_provs, unit_library, state, roles):
+def _panic_militia_and_tally_forces(context, ai_name, data, my_provs, unit_library, state, roles):
     """Section: per-province pass that clears losing tiles' build queues,
     panic-queues a Militia on any core threatened by an adjacent enemy, and
     tallies current + queued forces (by role) and land/sea border counts."""
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     role_counts = {}
     land_border_count = 0
     sea_border_count = 0
@@ -396,24 +396,24 @@ def _panic_militia_and_tally_forces(map_screen, ai_name, data, my_provs, unit_li
                 if queue:
                     first_item = queue[0]
                     u_type = first_item.get("unit_type", "")
-                    is_naval = queries.is_naval_unit(u_type, context=map_screen) if u_type else False
+                    is_naval = queries.is_naval_unit(u_type, context=context) if u_type else False
                     turns = first_item.get("turns_remaining", 999)
 
                     if not is_naval and turns <= 1:
                         safe_to_panic = False # Let the ground unit finish!
 
-                militia_name = queries.get_best_preferred_unit(data.get("research", {}), unit_library, ["Militia"], context=map_screen)
+                militia_name = queries.get_best_preferred_unit(data.get("research", {}), unit_library, ["Militia"], context=context)
                 militia_stats = unit_library.get(militia_name, {})
                 militia_time = militia_stats.get("production_time", 1)
 
                 if not restrictions.can_raise_units(ai_name, world_state.nation_data):
                     safe_to_panic = False  # demilitarized by treaty; not even in a panic
 
-                if militia_name and safe_to_panic and militia_time == 1 and (not queue or queries.get_base_unit_name(queue[0].get("unit_type", ""), context=map_screen) != "Militia"):
+                if militia_name and safe_to_panic and militia_time == 1 and (not queue or queries.get_base_unit_name(queue[0].get("unit_type", ""), context=context) != "Militia"):
                     # Cancel existing queue
                     while queue:
                         production_actions.cancel_production(
-                            map_screen, ai_name, prov, "unit_queue", 0,
+                            context, ai_name, prov, "unit_queue", 0,
                             authority="ai", recorded_refund_only=True)
 
                     # Queue Militia
@@ -423,7 +423,7 @@ def _panic_militia_and_tally_forces(map_screen, ai_name, data, my_provs, unit_li
 
                     if data.get("materials", 0) >= c_mat and data.get("manpower", 0) >= c_man and data.get("fuel", 0) >= c_fuel:
                         production_actions.submit_production(
-                            map_screen, ai_name, prov, "unit_queue", {"unit_type": militia_name},
+                            context, ai_name, prov, "unit_queue", {"unit_type": militia_name},
                             authority="ai", unit_library=unit_library)
 
                         # Adjust upkeep tracking
@@ -492,7 +492,7 @@ def _naval_need(land_border_count, sea_border_count):
     return float(sea_border_count) * c.AI_NAVY_PER_COAST_TILE
 
 
-def _recruit_sites(map_screen, ai_name, my_provs):
+def _recruit_sites(context, ai_name, my_provs):
     """Where each kind of unit can be built, worked out once for the whole turn.
 
     The same gates the Production screen applies to a player -- cored, not in
@@ -501,7 +501,7 @@ def _recruit_sites(map_screen, ai_name, my_provs):
     per iteration meant rescanning every province the nation owns up to six
     hundred times a turn, which was most of what this pass cost.
     """
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     usable = [p for p in my_provs
               if queries.has_core(ai_name, p)
               and not queries.is_nation_in_combat_here(ai_name, p, world_state.nation_data)]
@@ -538,7 +538,7 @@ def _affordable_within(stats, data, econ, turns):
     return True
 
 
-def _run_purchase_loop(map_screen, ai_name, data, my_provs, unit_library, tech_tree, state):
+def _run_purchase_loop(context, ai_name, data, my_provs, unit_library, tech_tree, state):
     """Spends this nation's budget on whatever is worth the most to it right now.
 
     Every purchase is the argmax of ai_unit_eval's marginal score over what the
@@ -555,7 +555,7 @@ def _run_purchase_loop(map_screen, ai_name, data, my_provs, unit_library, tech_t
       - the fuel_shortage boolean and both of its fallback branches, subsumed by
         pricing fuel against the nation's own income and reserves
     """
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     target_man, target_mat = state["target_man"], state["target_mat"]
     target_fuel = state["target_fuel"]
     inc_man, inc_mat, inc_fuel = state["inc_man"], state["inc_mat"], state["inc_fuel"]
@@ -577,7 +577,7 @@ def _run_purchase_loop(map_screen, ai_name, data, my_provs, unit_library, tech_t
     best_overall = max((v.score for v in values.values()), default=0.0)
     floor = best_overall * c.AI_MARGINAL_FLOOR
 
-    sites = _recruit_sites(map_screen, ai_name, my_provs)
+    sites = _recruit_sites(context, ai_name, my_provs)
     deployable = {name: _sites_for(sites, name) for name in values}
     values = {n: v for n, v in values.items() if deployable[n]}
     if not values:
@@ -651,7 +651,7 @@ def _run_purchase_loop(map_screen, ai_name, data, my_provs, unit_library, tech_t
         # Spread the load rather than stacking one province's queue.
         target_prov = min(deployable[pick.name], key=lambda p: len(p.get("unit_queue", [])))
         production_actions.submit_production(
-            map_screen, ai_name, target_prov, "unit_queue", {"unit_type": pick.name},
+            context, ai_name, target_prov, "unit_queue", {"unit_type": pick.name},
             authority="ai", unit_library=unit_library)
 
 
@@ -664,10 +664,10 @@ def _run_purchase_loop(map_screen, ai_name, data, my_provs, unit_library, tech_t
     state["role_counts"] = have
 
 
-def _apply_coring_priority(map_screen, ai_name, data, my_provs):
+def _apply_coring_priority(context, ai_name, data, my_provs):
     """Section: AI CORING PRIORITY -- spends surplus manpower coring the best
     available uncored province (prioritizing ones with factories)."""
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     # Nothing to core when cores are disabled -- every tile already counts
     # as cored, so skip straight past this without spending resources.
     surplus_manpower = c.AI_SURPLUS_MANPOWER_FOR_CORING
@@ -691,15 +691,15 @@ def _apply_coring_priority(map_screen, ai_name, data, my_provs):
     core_data = queries.get_core_cost(ai_name, world_state.map_data, world_state.scenario_settings)
     if queries.can_afford(data, core_data):
         production_actions.submit_production(
-            map_screen, ai_name, target_core_prov, "building_queue", {"order_type": "CORE"}, authority="ai")
+            context, ai_name, target_core_prov, "building_queue", {"order_type": "CORE"}, authority="ai")
 
 
 
-def _apply_construction_logic(map_screen, ai_name, data, my_provs, building_library):
+def _apply_construction_logic(context, ai_name, data, my_provs, building_library):
     """Section: EVALUATE CONSTRUCTION LOGIC -- if the AI has an excess hoard
     of materials, invests it back into the next industry or recruitment
     building tier it has available and a free build slot for, one per turn."""
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     if data.get("materials", 0) <= c.AI_MIN_MATERIALS_FOR_CONSTRUCTION:
         return
 
@@ -765,7 +765,7 @@ def _apply_construction_logic(map_screen, ai_name, data, my_provs, building_libr
 
             if data.get("materials", 0) >= c_mat and data.get("fuel", 0) >= c_fuel:
                 production_actions.submit_production(
-                    map_screen, ai_name, prov, "building_queue",
+                    context, ai_name, prov, "building_queue",
                     {"order_type": "BUILDING", "item_name": target_bldg},
                     authority="ai", policy=production_actions.AI_POLICY, building_library=building_library)
 
@@ -774,19 +774,19 @@ def _apply_construction_logic(map_screen, ai_name, data, my_provs, building_libr
                 break
 
 
-def process_ai_economy_decisions(map_screen):
+def process_ai_economy_decisions(context):
     """Handles AI unit recruitment and building construction based on economy."""
-    world_state = world_for(map_screen)
-    unit_library = queries.get_unit_library(map_screen)
-    building_library = queries.get_building_library(map_screen)
+    world_state = world_for(context)
+    unit_library = queries.get_unit_library(context)
+    building_library = queries.get_building_library(context)
 
-    tech_tree = queries.get_tech_tree(map_screen)
+    tech_tree = queries.get_tech_tree(context)
 
-    all_econ = queries.calculate_all_economies(world_state.map_data, world_state.nation_data, context=map_screen)
+    all_econ = queries.calculate_all_economies(world_state.map_data, world_state.nation_data, context=context)
 
     # Border and coast counts, and the enemy stacks each nation is facing, all
     # come off this turn's snapshot rather than being re-derived per nation.
-    world = ai_world.for_screen(map_screen)
+    world = ai_world.for_screen(context)
 
     # Pre-group provinces by owner for efficiency
     nation_provs = {}
@@ -796,7 +796,7 @@ def process_ai_economy_decisions(map_screen):
         if owner and not queries.is_water_province(prov):
             nation_provs.setdefault(owner, []).append(prov)
 
-    ai_nations = queries.get_active_ai_nations(map_screen)
+    ai_nations = queries.get_active_ai_nations(context)
 
     for ai_name in ai_nations:
         data = world_state.nation_data[ai_name]
@@ -813,7 +813,7 @@ def process_ai_economy_decisions(map_screen):
         random.shuffle(my_provs)
 
         # --- 1. EVALUATE RECRUITMENT RATIOS ---
-        state = _compute_economy_ratios(map_screen, ai_name, data, my_provs, econ, unit_library)
+        state = _compute_economy_ratios(context, ai_name, data, my_provs, econ, unit_library)
 
         # --- 1b. VALUE EVERY UNIT THIS NATION COULD FIELD ---
         # Scored against the war it is actually in: what its fronts are being
@@ -854,12 +854,12 @@ def process_ai_economy_decisions(map_screen):
         _update_conscription_slider(data, state)
         _update_fuel_conversion_slider(data, state)
 
-        _disband_worst_unit_if_deficit(map_screen, data, my_provs, ai_name,
+        _disband_worst_unit_if_deficit(context, data, my_provs, ai_name,
                                        state["disband_deficits"], unit_library, all_values)
 
         # --- NEW: Panic Militia & Combat Queue Clearing ---
         force_tally = _panic_militia_and_tally_forces(
-            map_screen, ai_name, data, my_provs, unit_library, state, roles)
+            context, ai_name, data, my_provs, unit_library, state, roles)
 
         state.update(force_tally)
         state["econ"] = econ
@@ -872,14 +872,14 @@ def process_ai_economy_decisions(map_screen):
             values=buildable_values)
 
         # Allow the AI to purchase multiple units per turn until its budget maxes out
-        _run_purchase_loop(map_screen, ai_name, data, my_provs, unit_library, tech_tree, state)
+        _run_purchase_loop(context, ai_name, data, my_provs, unit_library, tech_tree, state)
 
         # After the purchases, so it can see what was actually ordered.
         _disband_peacetime_militia(ai_name, my_provs, state["at_war"],
-                                   protected=tactical_player_unit(map_screen), context=map_screen)
+                                   protected=tactical_player_unit(context), context=context)
 
         # --- AI CORING PRIORITY ---
-        _apply_coring_priority(map_screen, ai_name, data, my_provs)
+        _apply_coring_priority(context, ai_name, data, my_provs)
 
         # --- 2. EVALUATE CONSTRUCTION LOGIC ---
-        _apply_construction_logic(map_screen, ai_name, data, my_provs, building_library)
+        _apply_construction_logic(context, ai_name, data, my_provs, building_library)

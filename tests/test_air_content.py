@@ -197,18 +197,21 @@ class AirRulesTests(unittest.TestCase):
         province = {"terrain": "plains",
                     "units": [{"type": "Biplane Fighter", "unit_id": "old-wing",
                                "order": {"type": "UPGRADE", "target_type": "Biplane Fighter"}}]}
-        country = {"research": {"biplane": 1}, "research_progress": {"biplane": 123},
+        tree = {"flight_basics": {"max_lvl": 2, "req": {}},
+                "test_aircraft": {"max_lvl": 1, "req": {"flight_basics": 2}}}
+        country = {"research": {"test_aircraft": 1}, "research_progress": {"test_aircraft": 123},
                    "custom_production_units": ["Biplane Fighter", "Zeppelin"]}
         saved = {"nation_data": {"A": country}}
-        migrations.upgrade_save(saved, {"P": province}, {})
-        self.assertEqual(province["units"][0]["type"], "Biplane Fighter I")
-        self.assertEqual(province["units"][0]["order"]["target_type"], "Biplane Fighter I")
-        self.assertEqual(country["custom_production_units"], ["Biplane Fighter I", "Zeppelin I"])
-        self.assertEqual(country["research"], {"biplane": 1})
-        self.assertEqual(country["research_progress"], {"biplane": 123})
-        expected = copy.deepcopy((province, country))
-        migrations.upgrade_save(saved, {"P": province}, {})
-        self.assertEqual((province, country), expected)
+        with mock.patch.object(queries, "get_tech_tree", return_value=tree):
+            migrations.upgrade_save(saved, {"P": province}, {})
+            self.assertEqual(province["units"][0]["type"], "Biplane Fighter I")
+            self.assertEqual(province["units"][0]["order"]["target_type"], "Biplane Fighter I")
+            self.assertEqual(country["custom_production_units"], ["Biplane Fighter I", "Zeppelin I"])
+            self.assertEqual(country["research"], {"test_aircraft": 1, "flight_basics": 2})
+            self.assertEqual(country["research_progress"], {"test_aircraft": 123})
+            expected = copy.deepcopy((province, country))
+            migrations.upgrade_save(saved, {"P": province}, {})
+            self.assertEqual((province, country), expected)
         for new in migrations.LEGACY_AIRCRAFT_NAMES.values():
             self.assertIn(new, queries.get_unit_library())
 

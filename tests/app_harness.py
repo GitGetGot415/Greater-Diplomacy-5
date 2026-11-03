@@ -43,19 +43,9 @@ STATES_UNBUILT_AT_BOOT = set()
 # under a second headlessly.
 SCENARIO_PATH = "scenarios/historical/1939"
 
-# How flip_state() hands the map to each map-layered screen (main.py's
-# "1. Data Handoff" block). Screens taking a province go through
-# start_with_province; the rest each have their own one-argument entry point.
-MAP_HANDOFFS = {
-    "PRODUCTION": "start_with_province",
-    "ORDERS": "start_with_province",
-    "EDIT_COUNTRY": "start_editor",
-    "RESEARCH": "start_research",
-    "ECONOMY": "start_economy",
-    "MESSAGES": "start_messages",
-    "FACTION": "start_faction",
-    "FACTION_TERRITORIES": "start_view",
-}
+# The screens whose on_enter hook hands them the map.
+MAP_LAYERED_STATES = ("PRODUCTION", "ORDERS", "EDIT_COUNTRY", "RESEARCH", "ECONOMY",
+                      "MESSAGES", "FACTION", "FACTION_TERRITORIES")
 
 
 def boot():
@@ -131,12 +121,8 @@ def boot_map():
                                       if p.get("owner") == living[0])
 
     controller.states["MAP"] = game_map
-    for state_name, handoff in MAP_HANDOFFS.items():
-        screen = controller.states[state_name]
-        if handoff == "start_with_province":
-            screen.start_with_province(game_map.selected_province, game_map)
-        else:
-            getattr(screen, handoff)(game_map)
+    for state_name in MAP_LAYERED_STATES:
+        controller.states[state_name].on_enter(controller, game_map)
 
     _map = game_map
     return game_map

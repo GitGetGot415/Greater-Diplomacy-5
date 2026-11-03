@@ -185,9 +185,9 @@ def validate_terms(world, a, b, raw_terms):
     return out
 
 
-def apply_terms(map_screen, a, b, terms, total_turns):
+def apply_terms(context, a, b, terms, total_turns):
     """Turns validated terms into commitments, and returns what was agreed."""
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     made = []
     for term in terms:
         entry = ai_commitments.make(

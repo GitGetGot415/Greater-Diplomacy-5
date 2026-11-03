@@ -128,9 +128,9 @@ def repair_costs(context, unit, unit_library=None):
     return {key: int(stats.get(key, 0) * missing) for key in COST_KEYS}
 
 
-def canonical_order(map_screen, country_id, province, unit, order):
+def canonical_order(context, country_id, province, unit, order):
     """Host/server validation shared with tournament aircraft commands."""
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     if queries.unit_is_air_drop_recovering(unit):
         queries.validate_air_drop_recovery_draft(unit, {"order": order})
         return copy.deepcopy(unit["order"])
@@ -142,7 +142,7 @@ def canonical_order(map_screen, country_id, province, unit, order):
     if not isinstance(kind, str):
         raise ValueError("Invalid unit order type.")
     if kind in queries.AIR_ORDER_TYPES:
-        return queries.canonical_air_order(map_screen, unit, province, order)
+        return queries.canonical_air_order(context, unit, province, order)
     if kind == "MOVE":
         path = order.get("path", [])
         if (not isinstance(path, list) or len(path) > queries.MAX_UNIT_ORDER_PATH
@@ -151,22 +151,22 @@ def canonical_order(map_screen, country_id, province, unit, order):
             raise ValueError("Invalid movement path.")
         previous = province
         for province_id in path:
-            destination = queries.province_for_order(map_screen, province_id)
+            destination = queries.province_for_order(context, province_id)
             if not queries.can_unit_move_step(
-                    unit, previous, destination, world_state.nation_data, context=map_screen):
+                    unit, previous, destination, world_state.nation_data, context=context):
                 raise ValueError("That unit cannot enter a province in this path.")
             previous = destination
         return {"type": "MOVE", "path": list(path)}
     if kind == "BOMBARD":
-        if queries.is_air_unit(unit, context=map_screen):
+        if queries.is_air_unit(unit, context=context):
             raise ValueError("Aircraft must use a supported air mission.")
-        target = queries.province_for_order(map_screen, order.get("target_id"))
+        target = queries.province_for_order(context, order.get("target_id"))
         unit_type = unit.get("type", "")
         if (queries.is_water_province(province)
-                and not (unit.get("naval_unit") or queries.is_naval_unit(unit_type, context=map_screen))):
+                and not (unit.get("naval_unit") or queries.is_naval_unit(unit_type, context=context))):
             raise ValueError("That unit cannot bombard from water.")
         targets = queries.get_bombardment_targets(
-            province, world_state.id_to_province, queries.get_bombardment_range(unit_type, context=map_screen))
+            province, world_state.id_to_province, queries.get_bombardment_range(unit_type, context=context))
         if target["id"] not in targets:
             raise ValueError("Bombardment target is out of range.")
         return {"type": "BOMBARD", "target_id": target["id"]}
@@ -177,16 +177,16 @@ def canonical_order(map_screen, country_id, province, unit, order):
     if kind == "REPAIR":
         if queries.is_nation_in_combat_here(country_id, province, world_state.nation_data):
             raise ValueError("Units cannot repair in combat.")
-        cost = repair_costs(map_screen, unit)
+        cost = repair_costs(context, unit)
         return {"type": "REPAIR", "turns_left": 1, "refund": cost, "realtime_cost": cost}
     if kind == "UPGRADE":
         target_type = order.get("target_type")
-        unit_library = queries.get_unit_library(map_screen)
+        unit_library = queries.get_unit_library(context)
         research = world_state.nation_data[country_id].get("research", {})
         if (not isinstance(target_type, str) or target_type not in unit_library
                 or target_type != queries.get_upgrade_target(unit.get("type", ""), research,
-                                                     unit_library, queries.get_tech_tree(map_screen))
-                or not queries.is_unit_unlocked(target_type, research, context=map_screen)
+                                                     unit_library, queries.get_tech_tree(context))
+                or not queries.is_unit_unlocked(target_type, research, context=context)
                 or not queries.has_industry(province)
                 or queries.is_nation_in_combat_here(country_id, province, world_state.nation_data)):
             raise ValueError("Invalid unit upgrade.")
@@ -195,17 +195,17 @@ def canonical_order(map_screen, country_id, province, unit, order):
         source = unit.get("type", "")
         if queries.is_nation_in_combat_here(country_id, province, world_state.nation_data):
             raise ValueError("Units cannot convert in combat.")
-        air_conversion = queries.air_conversion_order(unit, context=map_screen)
+        air_conversion = queries.air_conversion_order(unit, context=context)
         if air_conversion:
             if queries.is_water_province(province):
                 raise ValueError("Aircraft conversion requires land.")
-            if queries.is_air_unit(unit, context=map_screen) and not province.get("is_coastal", False):
+            if queries.is_air_unit(unit, context=context) and not province.get("is_coastal", False):
                 raise ValueError("Convoy conversion requires a coast.")
             expected, turns = air_conversion["to"], air_conversion["turns_left"]
         elif source.startswith("Convoy"):
             expected, turns = "Land Unit", 1
-        elif source.startswith("Truck") or queries.is_naval_unit(source, context=map_screen):
-            conversion = queries.truck_ship_conversion_order(unit, world_state.scenario_settings, context=map_screen)
+        elif source.startswith("Truck") or queries.is_naval_unit(source, context=context):
+            conversion = queries.truck_ship_conversion_order(unit, world_state.scenario_settings, context=context)
             if (conversion["to"] == "Truck"
                     and world_state.nation_data[country_id].get("research", {}).get("trucks", 0) < 1):
                 raise ValueError("Trucks research is required for this conversion.")

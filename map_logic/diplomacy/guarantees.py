@@ -49,24 +49,14 @@ def grant(guarantor, target, nation_data):
     if not eligible:
         return False, reason
 
-    promises = nation_data[guarantor].setdefault("guarantees", [])
-    if not isinstance(promises, list):
-        promises = nation_data[guarantor]["guarantees"] = []
-    if target in promises:
+    if not queries.add_nation_list_entry(nation_data, guarantor, "guarantees", target):
         return False, "You already guarantee that country."
-    promises.append(target)
     return True, ""
 
 
 def revoke(guarantor, target, nation_data):
     """Remove one promise, returning whether anything changed."""
-    promises = nation_data.get(guarantor, {}).get("guarantees", [])
-    if not isinstance(promises, list) or target not in promises:
-        return False
-    promises.remove(target)
-    if not promises:
-        nation_data[guarantor].pop("guarantees", None)
-    return True
+    return queries.remove_nation_list_entry(nation_data, guarantor, "guarantees", target)
 
 
 def reconcile(nation_data):

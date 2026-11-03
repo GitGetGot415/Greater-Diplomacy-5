@@ -18,12 +18,14 @@ from map_logic.system32.research_processor import process_national_research
 from tests.research_fixtures import research_lock_cases
 from tests.stub_map_screen import sample_map_screen
 from tests import test_tournament_moves as tournament_harness
+from tests.tournament_fixtures import fast_tournament_crypto
 
 
 SHIPS = {"Carrack": "carrack", "Ironclad": "ironclad", "Pre-Dreadnought": "pre-dreadnought",
          "Dreadnought": "dreadnought", "Battleship": "battleship"}
 
 
+@fast_tournament_crypto()
 class NavalContentTests(unittest.TestCase):
     def setUp(self):
         self.library = queries.get_unit_library()

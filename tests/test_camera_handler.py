@@ -93,7 +93,7 @@ class MapCameraBoundsTests(unittest.TestCase):
                 allow_right_drag=True)
 
         self.assertEqual(camera.pos, pygame.Vector2(-15, -10))
-        self.assertTrue(camera.finish_right_drag())
+        self.assertTrue(camera.finish_pan_drag(3))
 
         with patch("ui.camera.camera_handler.pygame.mouse.get_pressed",
                    return_value=(0, 0, 0)):

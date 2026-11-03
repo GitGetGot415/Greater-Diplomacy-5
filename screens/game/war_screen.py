@@ -2,7 +2,7 @@ import pygame
 import data.constants as c
 from data import queries
 from map_logic.diplomacy import diplomacy_messages
-from ui.navigation.game_state import MapOverlayScreen
+from ui.navigation.screen import MapOverlayScreen
 from ui.rendering.font_manager import fonts
 from ui.widgets.ui_elements import Button, make_choice_button
 from ui.navigation.screen_runner import _run_pygame_sub_screen

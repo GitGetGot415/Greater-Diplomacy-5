@@ -1,6 +1,6 @@
 import pygame
 import copy
-from ui.navigation.game_state import MapOverlayScreen
+from ui.navigation.screen import MapOverlayScreen
 import data.constants as c
 from ui.widgets import text_utils
 from ui.widgets.ui_elements import Button, TextField, make_back_button, make_choice_button

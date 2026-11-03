@@ -55,52 +55,52 @@ def normalize_log(value, turn):
     return empty
 
 
-def saved_log(map_screen):
-    world_state = world_for(map_screen)
+def saved_log(context):
+    world_state = world_for(context)
     return normalize_log(world_state.unit_event_log, world_state.time_manager.total_turns)
 
 
-def saved_reads(map_screen):
-    world_state = world_for(map_screen)
-    reads = session_for(map_screen).unit_event_read_turns
+def saved_reads(context):
+    world_state = world_for(context)
+    reads = session_for(context).unit_event_read_turns
     return {owner: turn for owner, turn in reads.items()
             if isinstance(owner, str) and type(turn) is int and turn == world_state.time_manager.total_turns}
 
 
-def restore(map_screen, metadata):
-    world_state = world_for(map_screen)
-    session_state = session_for(map_screen)
+def restore(context, metadata):
+    world_state = world_for(context)
+    session_state = session_for(context)
     world_state.unit_event_log = normalize_log(metadata.get("unit_event_log"), world_state.time_manager.total_turns)
     reads = metadata.get("unit_event_read_turns", {})
     session_state.unit_event_read_turns = {
         owner: turn for owner, turn in reads.items()
         if isinstance(owner, str) and type(turn) is int and turn == world_state.time_manager.total_turns
     } if isinstance(reads, dict) else {}
-    event_filter_for(map_screen)
+    event_filter_for(context)
 
 
-def set_event_filter(map_screen, event):
+def set_event_filter(context, event):
     """Keep the event filter local to this report. Do not save or send it."""
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     if event is not None and event not in EVENT_LABELS:
         raise ValueError("Select a known unit event type or None.")
-    map_screen.unit_event_filter = event
-    map_screen.unit_event_filter_turn = world_state.time_manager.total_turns
+    context.unit_event_filter = event
+    context.unit_event_filter_turn = world_state.time_manager.total_turns
 
 
-def event_filter_for(map_screen):
+def event_filter_for(context):
     """Clear the local filter when a new turn arrives."""
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     # Lightweight map fixtures can omit local display preferences.
-    if map_screen.unit_event_filter_turn != world_state.time_manager.total_turns:
-        set_event_filter(map_screen, None)
-    return map_screen.unit_event_filter
+    if context.unit_event_filter_turn != world_state.time_manager.total_turns:
+        set_event_filter(context, None)
+    return context.unit_event_filter
 
 
-def entries_for(map_screen):
+def entries_for(context):
     """Limit reports to the viewer's units, including casualties no longer on the map."""
-    session_state = session_for(map_screen)
-    rows = saved_log(map_screen)["events"]
+    session_state = session_for(context)
+    rows = saved_log(context)["events"]
     if session_state.is_editor or session_state.player_country == c.TOURNAMENT_SPECTATOR:
         return []
     if session_state.player_country == "Spectator":
@@ -112,39 +112,39 @@ def entries_for(map_screen):
     return rows
 
 
-def refresh_presentation(map_screen):
+def refresh_presentation(context):
     """Prepare the badge at a state or viewer boundary, never in a frame loop."""
-    world_state = world_for(map_screen)
-    session_state = session_for(map_screen)
-    event_filter_for(map_screen)
-    map_screen._unit_event_view = entries_for(map_screen)
+    world_state = world_for(context)
+    session_state = session_for(context)
+    event_filter_for(context)
+    context._unit_event_view = entries_for(context)
     turn = world_state.time_manager.total_turns
     reads = session_state.unit_event_read_turns
-    map_screen._unit_event_unread = (0 if reads.get(session_state.player_country) == turn
-                                    else len(map_screen._unit_event_view))
+    context._unit_event_unread = (0 if reads.get(session_state.player_country) == turn
+                                    else len(context._unit_event_view))
 
 
-def mark_read(map_screen):
+def mark_read(context):
     # Read status is a local presentation preference, including on network clients.
-    world_state = world_for(map_screen)
-    session_state = session_for(map_screen)
+    world_state = world_for(context)
+    session_state = session_for(context)
     reads = session_state.unit_event_read_turns
     turn = world_state.time_manager.total_turns
     session_state.unit_event_read_turns = {owner: value for owner, value in reads.items() if value == turn}
     session_state.unit_event_read_turns[session_state.player_country] = turn
-    refresh_presentation(map_screen)
+    refresh_presentation(context)
 
 
-def mark_unread(map_screen):
+def mark_unread(context):
     """Mark only the current viewer's last-turn report as unread."""
-    session_state = session_for(map_screen)
-    session_state.unit_event_read_turns = saved_reads(map_screen)
+    session_state = session_for(context)
+    session_state.unit_event_read_turns = saved_reads(context)
     session_state.unit_event_read_turns.pop(session_state.player_country, None)
-    refresh_presentation(map_screen)
+    refresh_presentation(context)
 
 
-def _state(map_screen):
-    world_state = world_for(map_screen)
+def _state(context):
+    world_state = world_for(context)
     return {id(unit): (unit, province["id"], unit.get("type", ""),
                       unit.get("health", 0))
             for province in world_state.map_data.values()
@@ -152,11 +152,11 @@ def _state(map_screen):
 
 
 class _TurnRecorder:
-    def __init__(self, map_screen):
-        world_state = world_for(map_screen)
-        self.map_screen = map_screen
+    def __init__(self, context):
+        world_state = world_for(context)
+        self.context = context
         queries.ensure_unit_ids(world_state.map_data)
-        self.state = _state(map_screen)
+        self.state = _state(context)
         self.locations = {identity: state[1] for identity, state in self.state.items()}
         self.rows = []
         self.visibility = {}
@@ -172,7 +172,7 @@ class _TurnRecorder:
     def add(self, unit, event, tile=None, amount=0, details="", detail_parts=None):
         # Queue deployments also receive stable IDs before their first report.
         if not unit.get("unit_id"):
-            queries.ensure_unit_ids(self.map_screen.map_data)
+            queries.ensure_unit_ids(self.context.map_data)
         row = {"owner": unit.get("owner", ""), "unit_id": unit.get("unit_id", ""),
                           "unit_name": unit_name(unit), "event": event,
                           "tile_id": self.tile(unit) if tile is None else tile,
@@ -185,17 +185,17 @@ class _TurnRecorder:
         tile = self.tile(unit)
         if unit.get("owner") != viewer:
             if viewer not in self.visibility:
-                tactical = self.map_screen.tactical_mode and viewer == self.map_screen.player_country
-                view = SimpleNamespace(player_country=viewer, map_data=self.map_screen.map_data,
-                    nation_data=self.map_screen.nation_data, id_to_province=self.map_screen.id_to_province,
-                    tactical_mode=tactical, player_unit=self.map_screen.player_unit if tactical else None)
+                tactical = self.context.tactical_mode and viewer == self.context.player_country
+                view = SimpleNamespace(player_country=viewer, map_data=self.context.map_data,
+                    nation_data=self.context.nation_data, id_to_province=self.context.id_to_province,
+                    tactical_mode=tactical, player_unit=self.context.player_unit if tactical else None)
                 self.visibility[viewer] = queries.get_visible_provinces(view)[0]
             visible = self.visibility[viewer]
-            province = self.map_screen.id_to_province.get(tile)
+            province = self.context.id_to_province.get(tile)
             fog = queries.get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR,
-                                           self.map_screen.scenario_settings)
+                                           self.context.scenario_settings)
             if (province is None or fog and visible is not None and tile not in visible
-                    or not queries.is_unit_visible_to(unit, viewer, province, self.map_screen.nation_data)):
+                    or not queries.is_unit_visible_to(unit, viewer, province, self.context.nation_data)):
                 tile = "???"
         return {"text": f"{unit_name(unit)} (tile {tile})", "owner": unit["owner"]}
 
@@ -225,7 +225,7 @@ class _TurnRecorder:
                      "".join(part["text"] for part in parts), detail_parts=parts)
 
     def finish_step(self):
-        current = _state(self.map_screen)
+        current = _state(self.context)
         for identity, (unit, tile, old_type, health) in self.state.items():
             after = current.get(identity)
             if after is None:
@@ -259,16 +259,16 @@ class _TurnRecorder:
 
 
 @contextmanager
-def record_turn(map_screen):
-    world_state = world_for(map_screen)
-    session_state = session_for(map_screen)
-    recorder = _TurnRecorder(map_screen)
+def record_turn(context):
+    world_state = world_for(context)
+    session_state = session_for(context)
+    recorder = _TurnRecorder(context)
     token = _RECORDER.set(recorder)
     try:
         yield
         world_state.unit_event_log = {"turn": world_state.time_manager.total_turns, "events": recorder.rows}
         session_state.unit_event_read_turns = {}
-        set_event_filter(map_screen, None)
+        set_event_filter(context, None)
     finally:
         _RECORDER.reset(token)
 
@@ -287,11 +287,11 @@ def record_phase(label):
             recorder.phase = previous
 
 
-def run_step(map_screen, label, function):
+def run_step(context, label, function):
     recorder = _RECORDER.get()
     if recorder is not None:
         recorder.phase = label
-    function(map_screen)
+    function(context)
     if recorder is not None:
         recorder.finish_step()
 

@@ -8,6 +8,7 @@
 # through the same cache as unit_data.json and the rest -- see resolve() for
 # the shape, and the _README key in the file itself for the authoring notes.
 
+from map_logic.diplomacy.action_definitions import ACTION_DEFINITIONS
 import random
 
 from data import queries
@@ -298,29 +299,10 @@ def build_world_context(current_date, ai_nation, active_nations_str, manpower, m
 
 def get_proactive_action_context(action_type, target=None):
     # Returns the descriptive context for when an AI initiates a diplomatic move.
-    if action_type == "CEASEFIRE":
-        return "offering a ceasefire because our nations cannot physically reach each other"
-    elif action_type == "CALL_TO_ARMS":
-        return f"calling you to arms in our war against {target}"
-    elif action_type == "JOIN_WARS":
-        return f"mobilizing our forces to join your war against {target}"
-    elif action_type == "WAR_DECLARATION":
-        return f"declaring war on {target} to reclaim rightful core territory, you are not negotiating"
-    elif action_type == "JOIN_FACTION_REQ":
-        return "requesting to join your faction to stand against our mutual enemies"
-    elif action_type == "CREATE_FACTION":
-        return "proposing to create a new faction together to combat mutual threats"
-    elif action_type == "REQ_MILITARY_ACCESS":
-        return "requesting military access through your territory since we are both fighting a common enemy"
-    elif action_type == "SEND_MILITARY_ATTACHE":
-        return "requesting to send a military attaché to observe your war"
-    elif action_type == "PEACE_TREATY":
-        return "offering terms to end the war between us, which has gone badly for us"
-    elif action_type == "FACTION_INVITE":
-        return "inviting you into our faction, since we are on good terms and would both be stronger for it"
-    elif action_type == "TRADE":
-        return "proposing an exchange of resources, each of us sending what the other lacks"
-    elif action_type.startswith("ACCEPT_"):
+    definition = ACTION_DEFINITIONS.get(action_type)
+    if definition and definition.proactive_context:
+        return definition.proactive_context.format(target=target)
+    if action_type.startswith("ACCEPT_"):
         return f"accepting the {action_type.replace('ACCEPT_', '').replace('_', ' ').lower()} proposal"
     elif action_type.startswith("REJECT_"):
         return f"rejecting the {action_type.replace('REJECT_', '').replace('_', ' ').lower()} proposal"
@@ -330,20 +312,11 @@ def get_proactive_action_context(action_type, target=None):
 
 def get_unilateral_receive_context(action_type, sender_nation, custom_msg=""):
     # Returns the context for when an AI receives an un-rejectable action (like War).
+    definition = ACTION_DEFINITIONS.get(action_type)
     context = ""
-    if action_type == "WAR_DECLARATION":
-        context = f"{sender_nation} has DECLARED WAR on us!"
-    elif action_type == "LEAVE_FACTION":
-        context = f"{sender_nation} has abandoned our faction!"
-    elif action_type == "DISBAND_FACTION":
-        context = f"{sender_nation} has disbanded our faction!"
-    elif action_type == "JOIN_WARS":
-        context = f"{sender_nation} has mobilized their forces to join our ongoing wars!"
-    elif action_type == "BREAK_ALLIANCE":
-        context = f"{sender_nation} has broken their alliance with us!"
-    elif action_type == "KICK_FACTION_MEMBER":
-        context = f"{sender_nation} has expelled us from the faction!"
-        
+    if definition and definition.unilateral_notice:
+        context = definition.unilateral_notice.format(sender=sender_nation)
+
     if custom_msg:
         context += f" They included this official message: '{custom_msg}'"
     return context
@@ -358,27 +331,12 @@ def get_bilateral_receive_context(action_type, sender_nation, custom_msg="", not
     or attach them to a trade and have the model never see the terms at all.
     Terms are generated from the deal now; `note` is what the player wrote.
     """
-    if action_type == "JOIN_WARS":
-        context = f"{sender_nation} is offering to join YOUR ongoing wars."
-    elif action_type == "CALL_TO_ARMS":
-        context = f"{sender_nation} is calling YOU to arms to join THEIR ongoing wars."
-    elif action_type == "FACTION_INVITE":
-        context = f"{sender_nation} is inviting you to join THEIR faction."
-    elif action_type == "JOIN_FACTION_REQ":
-        context = f"{sender_nation} is requesting to join YOUR faction."
-    elif action_type == "TRADE":
-        context = f"{sender_nation} has proposed a Trade Agreement. Terms: {custom_msg}"
-    elif action_type in ("PEACE_TREATY", "CEASEFIRE"):
-        context = (f"{sender_nation} has proposed terms to end the war. "
-                   f"Terms: {custom_msg}")
-    elif action_type == "REQ_MILITARY_ACCESS":
-        context = f"{sender_nation} is requesting military access to move their troops through your territory."
-    elif action_type == "SEND_MILITARY_ATTACHE":
-        context = f"{sender_nation} is requesting to send a military attaché to observe your war."
-    else:
-        context = f"{sender_nation} has proposed a {action_type.replace('_', ' ').title()}."
+    definition = ACTION_DEFINITIONS.get(action_type)
+    notice = (definition.proposal_notice if definition else None) or "{sender} has proposed a {name}."
+    context = notice.format(sender=sender_nation, terms=custom_msg,
+                            name=action_type.replace('_', ' ').title())
 
-    if custom_msg and action_type not in ("TRADE", "PEACE_TREATY", "CEASEFIRE"):
+    if custom_msg and "{terms}" not in notice:
         context += f" They included this official message: '{custom_msg}'"
     if note:
         context += f" Their government adds: '{note}'"

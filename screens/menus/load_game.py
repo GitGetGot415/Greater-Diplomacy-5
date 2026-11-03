@@ -1,65 +1,63 @@
 import os
-import json
-import pygame
 from ui import dialogs
-from data import queries
 from ui.dialogs import pickers
 from ui.dialogs import file_exchange
 from data.map import history_io
-from ui.navigation.game_state import FolderListState
+from ui.widgets.content_browser import ContentBrowserScreen
+from screens.game import map_launch
 from ui.widgets.ui_elements import Button, make_back_button, play_ui_sound
 import data.constants as c
 
 from data.map.load_map import newer_version_message
 
 
-class Load_Game(FolderListState):
+class Load_Game(ContentBrowserScreen):
     back_state = "MENU"
-
-    ROW_HEIGHT = 40
-    ROW_TOP = 120
-    # (x, size preset, color, label, handler name) for the buttons on every save row.
-    # A None label falls back to the folder name.
-    ROW_BUTTONS = [
-        (20, "save_file", "blue", None, "load_specific_save"),
-        (785, "small_save_button", "purple", "History", "open_history_menu"),
-        (895, "small_save_button", "grey", "Rename", "start_rename"),
-        (1005, "small_save_button", "green", "Export", "export_save_zip"),
-        (1115, "small_save_button", "red", "Del", "start_delete"),
-    ]
+    title = "LOAD GAME"
+    content_label = "saves"
 
     def __init__(self):
         super().__init__()
         self.bg_color = (50, 0, 50)
         self.refresh_ui()
 
+    def on_enter(self, app, previous):
+        # Refresh on entry. Frame updates use cached entries.
+        self.selected_entry = None
+        self.reload_entries()
+
+    def prepare_map(self, app):
+        map_launch.open_saved_map(app, self.selected_save_path,
+                                  history_turn=self.selected_history_turn)
+        return True
+
     @property
     def managed_dir(self):
         return c.SAVES_DIR
 
     def refresh_ui(self):
-        self.elements = [
+        self.build_browser(self.managed_dir, "No saves yet. Save a game or import a .zip archive.")
+        self.elements.extend([
             make_back_button(self.exit_screen),
-            Button(160, 20, "medium", "green", "Import .zip",
-                   lambda: file_exchange.import_zip_to_dir(self, self.managed_dir, self.refresh_ui))
-        ]
+            Button(c.SCREEN_WIDTH - 324, 24, (160, 40), "green", "Import .zip",
+                   lambda: file_exchange.import_zip_to_dir(self, self.managed_dir, self.reload_entries),
+                   font_preset="button_small"),
+            Button(c.SCREEN_WIDTH - 152, 24, (128, 40), "grey", "Refresh", self.reload_entries,
+                   font_preset="button_small"),
+        ])
+        if self.selected_entry:
+            self.add_browser_action("History", lambda: self.call_selected(self.open_history_menu), 0, "purple",
+                                    enabled=self.selection_can_open, sound_kind=None)
+            self.add_browser_action("Rename", lambda: self.call_selected(self.start_rename), 1, "blue")
+            self.add_browser_action("Export", lambda: self.call_selected(self.export_save_zip), 2, "green")
+            self.add_browser_action("Delete…", lambda: self.call_selected(self.start_delete), 3, "red")
+            self.open_button = self.add_primary_action("Load Game")
+        else:
+            self.open_button = self.add_primary_action("New Game", lambda: self.go_to("NEW_GAME"))
 
-        folders = self.list_folders()
-        self.scroll_content_rect = pygame.Rect(0, 100, c.SCREEN_WIDTH, (c.SCREEN_HEIGHT - 50) - 100)
-        for i, btn_y in self.layout_list_rows(len(folders), self.ROW_HEIGHT, self.ROW_TOP):
-            folder = folders[i]
-            for x, size, color, label, handler in self.ROW_BUTTONS:
-                # These two play their own sound, which depends on what they find.
-                btn = Button(x, btn_y, size, color, label or folder,
-                            lambda f=folder, h=handler: getattr(self, h)(f),
-                            sound_kind=None if handler in ("load_specific_save", "open_history_menu") else "click")
-                self.add_list_row(btn)
-
-    def additional_events(self, event):
-        self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
-
-    def additional_draw(self, surface):
-        self.draw_list_scrollbar(surface, c.SCREEN_WIDTH - 40, self.ROW_TOP, c.SCREEN_HEIGHT - 200)
+    def activate_selected(self):
+        if self.selection_can_open:
+            self.call_selected(self.load_specific_save)
 
     def export_save_zip(self, folder_name):
         file_exchange.export_dir_as_zip(os.path.join(self.managed_dir, folder_name), f"{folder_name}.zip")

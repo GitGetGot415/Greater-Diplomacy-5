@@ -1,7 +1,8 @@
 import os
-from ui.navigation.game_state import ButtonMenuScreen, RefreshingMenuListScreen
+from screens.game import map_launch
 from ui.widgets.ui_elements import play_ui_sound
 from ui.widgets.ui_elements import Button, make_back_button
+from ui.widgets.content_browser import ScenarioLibraryScreen
 import data.constants as c
 from data import queries
 from ui.dialogs import pickers
@@ -11,77 +12,68 @@ from screens.editors.historical_leaders_editor import open_historical_leaders_ed
 from ui.dialogs.checkbox_list_screen import CheckboxItem
 
 
-class New_Game(RefreshingMenuListScreen):
+class New_Game(ScenarioLibraryScreen):
     back_state = "MENU"
+    title = "NEW GAME"
+    content_label = "scenarios"
+    CORNER_BUTTON_SIZE = (220, 40)
+    CORNER_MARGIN = 24
+    SORTS = ScenarioLibraryScreen.SORTS[1:] + ScenarioLibraryScreen.SORTS[:1]
 
-    # sub_state -> (header text, scenario directory). None means the category menu.
+    # Resolve directory settings when the browser refreshes.
     CATEGORIES = {
-        "CATEGORY": ("NEW GAME", None),
-        "HISTORICAL": ("HISTORICAL SCENARIOS", "SCENARIOS_HISTORICAL_DIR"),
-        "ALTERNATE": ("ALTERNATE SCENARIOS", "SCENARIOS_ALTERNATE_DIR"),
-        "MAP_EDITOR": ("MAP EDITOR SCENARIOS", "SCENARIOS_CUSTOM_DIR"),
+        "HISTORICAL": ("Historical Scenarios", "SCENARIOS_HISTORICAL_DIR"),
+        "ALTERNATE": ("Alternate Scenarios", "SCENARIOS_ALTERNATE_DIR"),
+        "MAP_EDITOR": ("Custom Scenarios", "SCENARIOS_CUSTOM_DIR"),
     }
 
     def __init__(self):
         super().__init__()
         self.bg_color = (0, 50, 0)
-        self.selected_scenario_path = None
-        self.settings_data = {"fog_of_war": c.DEFAULT_FOG_OF_WAR}
-        self.sub_state = "CATEGORY" # "CATEGORY", "HISTORICAL", "ALTERNATE"
+        self.selected_save_path = None
+        self.sub_state = "HISTORICAL"
         self.refresh_ui()
 
-    def get_title(self):
-        return self.CATEGORIES[self.sub_state][0]
+    def on_enter(self, app, previous):
+        if previous is not app.states.get("SCENARIO_SETTINGS"):
+            self.selected_entry = None
+        self.reload_entries()
 
-    def has_menu_list(self):
-        return self.sub_state != "CATEGORY"
+    def prepare_map(self, app):
+        map_launch.open_saved_map(app, self.selected_save_path)
+        return True
 
     @property
     def scenario_dir(self):
-        """Directory for the current sub-state, or None on the category menu.
-
-        Resolved off `c` by name each time so the Settings screen's live
-        directory overrides are picked up.
-        """
+        """Use the current directory override for the selected category."""
         attr = self.CATEGORIES[self.sub_state][1]
-        return getattr(c, attr) if attr else None
+        return getattr(c, attr)
 
     def refresh_ui(self):
-        settings_btn = Button(c.SCREEN_WIDTH - 220, c.SCREEN_HEIGHT - 80, "medium", "pink",
-                              "Scenario Settings", self.scenario_settings)
+        self.build_browser(self.scenario_dir, "No scenarios in this category.")
+        corner_x = c.SCREEN_WIDTH - self.CORNER_MARGIN - self.CORNER_BUTTON_SIZE[0]
+        leaders_button = Button(corner_x, self.CORNER_MARGIN, self.CORNER_BUTTON_SIZE, "blue", "Historical Leaders",
+                                self.open_historical_leaders_editor, font_preset="button_small")
+        leaders_button.apply_state(enabled=self.sub_state == "HISTORICAL", color="blue")
+        random_rect = self.category_button_rect(len(self.library_categories))
+        random_button = Button(random_rect.x, random_rect.y, random_rect.size, "orange", "Random Scenario",
+                               self.start_random_scenario, font_preset="button_small")
+        random_button.fit_text = True
+        random_button.fit_single_line = True
+        self.elements.extend([
+            make_back_button(self.exit_screen),
+            leaders_button,
+            random_button,
+        ])
+        self.add_category_footer_action("Scenario Settings", self.scenario_settings, "pink", slot=1)
+        self.add_category_footer_action("Data Refresh", self.trigger_global_data_refresh, "purple")
+        self.open_button = self.add_primary_action("Start Game")
 
-        if self.sub_state == "CATEGORY":
-            self.elements = [
-                make_back_button(self.exit_screen),
-                *ButtonMenuScreen.build_menu_buttons([
-                    ("Historical Scenarios", "blue", lambda: self.set_sub_state("HISTORICAL")),
-                    ("Alternate Scenarios", "purple", lambda: self.set_sub_state("ALTERNATE")),
-                    ("Map Editor Scenarios", "green", lambda: self.set_sub_state("MAP_EDITOR")),
-                    ("Random Scenario", "orange", self.start_random_scenario),
-                ]),
-                Button(c.SCREEN_WIDTH - 220, c.SCREEN_HEIGHT - 160, "medium", "purple", "Data Refresh", self.trigger_global_data_refresh),
-                settings_btn,
-            ]
-            return
-
-        self.elements = [
-            make_back_button(lambda: self.set_sub_state("CATEGORY")),
-            settings_btn,
-        ]
-
-        if self.sub_state == "HISTORICAL":
-            history_btn = Button(c.SCREEN_WIDTH - 240, 20, "medium", "purple", "Historical Leaders",
-                                 self.open_historical_leaders_editor)
-            self.elements.append(history_btn)
-
-        scenario_dir = self.scenario_dir
-        if not os.path.exists(scenario_dir):
-            os.makedirs(scenario_dir)
-        scenarios = [s for s in os.listdir(scenario_dir) if not s.startswith(".")]
-
-        # Standard centered layout for all playable scenarios
-        self.add_menu_list([(name, name) for name in scenarios],
-                           lambda name, d=scenario_dir: self.start_scenario(name, d))
+    def activate_selected(self):
+        if self.selection_can_open:
+            play_ui_sound("click")
+            entry = self.selected_entry
+            self.start_scenario(entry.name, os.path.dirname(entry.path))
 
     def scenario_settings(self):
         Scenario_Settings.back_state = "NEW_GAME"
@@ -94,7 +86,6 @@ class New_Game(RefreshingMenuListScreen):
         self.selected_save_path = os.path.join(directory, scenario_name)
         # Pass the settings to the Map class
         self.map_settings = queries.get_scenario_settings() 
-        self.set_sub_state("CATEGORY")
         self.go_to("MAP")
 
     REFRESH_FIELDS = [
@@ -132,18 +123,5 @@ class New_Game(RefreshingMenuListScreen):
             footnote="If you don't know what you're doing, this might ruin your saved maps!",
             confirm_sound=None)
 
-    def exit_screen(self):
-        self.set_sub_state("CATEGORY")
-        super().exit_screen()
-
-    def handle_back_key(self):
-        # Escape steps back up the category tree before it leaves the screen.
-        if self.sub_state != "CATEGORY":
-            play_ui_sound("back")
-            self.set_sub_state("CATEGORY")
-        else:
-            self.go_back()
-
     def start_random_scenario(self):
-        self.set_sub_state("CATEGORY")
         self.go_to("RANDOM_SETUP")

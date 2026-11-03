@@ -314,12 +314,6 @@ class AIWorld:
         """Countries next door by land or a short navigable sea crossing."""
         return self.neighbors[nation] | self.sea_targets.get(nation, {}).keys()
 
-    def thinks_it_can_win(self, ai_nation, target_nation):
-        """queries.ai_thinks_it_can_win, from the cached ratios."""
-        border_ratio, global_ratio = self.power_ratio(ai_nation, target_nation)
-        return (border_ratio >= c.AI_WAR_STRENGTH_THRESHOLD
-                and global_ratio >= c.AI_GLOBAL_STRENGTH_THRESHOLD)
-
     def is_weaker_neighbor(self, ai_nation, target_nation):
         """queries.is_weaker_neighbor -- note this one ignores the border and distraction."""
         my_total = self.alliance_strength(ai_nation) + self.econ_power(ai_nation) / 100.0
@@ -471,9 +465,9 @@ class AIWorld:
         return self._economies
 
 
-def build(map_screen):
+def build(context):
     """Snapshots the map for this turn's AI passes."""
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     total_turns = 0
     time_manager = world_state.time_manager
     if time_manager is not None:
@@ -481,10 +475,10 @@ def build(map_screen):
 
     return AIWorld(world_state.map_data, world_state.nation_data,
                    world_state.id_to_province, total_turns,
-                   human_players=session_for(map_screen).active_players)
+                   human_players=session_for(context).active_players)
 
 
-def for_screen(map_screen):
+def for_screen(context):
     """This turn's snapshot, or a throwaway one if the caller is outside a turn.
 
     prepare_turn builds the shared snapshot and clears it again afterwards, so
@@ -493,5 +487,5 @@ def for_screen(map_screen):
     one on the spot costs a sweep, which is still what the code did before the
     cache existed, and keeps every AI entry point callable on its own.
     """
-    world = map_screen.ai_world
-    return world if world is not None else build(map_screen)
+    world = context.ai_world
+    return world if world is not None else build(context)

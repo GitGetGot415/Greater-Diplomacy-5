@@ -1,8 +1,11 @@
+import os
 import unicodedata
 import re
+from datetime import datetime
 import data.constants as c
-from data.map import load_map
+from data.map import load_map, save_map
 from data import queries
+from data.state_access import session_for
 from ui.dialogs import pickers
 from ui import dialogs
 
@@ -71,6 +74,41 @@ def editor_load_map(map_screen):
 
     pickers.open_file_browser(map_screen, "Select Map Folder to Edit", c.SCENARIOS_CUSTOM_DIR,
                               mode="select_folder", on_result=on_picked)
+
+
+def prepare_editor_save(context, on_ready):
+    """Choose a destination on the UI thread before starting background writes."""
+    if not queries.can_bulk_edit_map(context):
+        return
+    try:
+        name = queries.validated_scenario_name(session_for(context).editor_scenario_name)
+        if not name:
+            name = "MapExport_" + datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        path = save_map.editor_save_path(name)
+    except ValueError as error:
+        dialogs.show_error("Save Scenario", str(error))
+        return
+
+    def ready(name, overwrite):
+        if queries.can_bulk_edit_map(context):
+            on_ready(name, overwrite)
+
+    if not os.path.lexists(path):
+        ready(name, False)
+    elif not os.path.isdir(path):
+        ready(save_map.available_editor_name(name), False)
+    else:
+        def confirmed(answer):
+            if answer is True:
+                ready(name, True)
+            elif answer is False:
+                ready(save_map.available_editor_name(name), False)
+        dialogs.ask_yes_no(
+            "Scenario Already Exists",
+            f'A scenario named "{name}" already exists.\n'
+            "Overwrite it, save a numbered copy, or cancel?",
+            confirmed, yes_label="Overwrite", no_label="Save Copy", back_label="Cancel")
+
 
 def _select_brush(map_screen, mode, attr, items, title, prompt, feedback_label="Brush"):
     """Opens a listbox, stores the pick on `attr` and arms the matching editor mode."""

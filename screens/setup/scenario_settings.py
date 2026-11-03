@@ -1,5 +1,5 @@
 import pygame
-from ui.navigation.game_state import GameState
+from ui.navigation.screen import Screen
 from ui.widgets.ui_elements import Button, Slider, parse_pos, make_back_button, make_info_button, make_toggle_button
 import data.constants as c
 from data import queries
@@ -121,7 +121,7 @@ AI_TURNS_TOOLTIP = ("Minimum number of turns from the start of the game the AI "
 AI_CHANCE_TOOLTIP = "Chance each turn that an AI meeting the conditions for war actually declares it."
 
 
-class Scenario_Settings(GameState):
+class Scenario_Settings(Screen):
     _session_bound = False
     _session_on_close = None
 

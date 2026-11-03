@@ -1,5 +1,5 @@
 import pygame
-from ui.navigation.game_state import GameState, host_map_screen
+from ui.navigation.screen import Screen, host_map_screen
 import data.constants as c
 from ui.bars import ui_bars
 from ui.widgets import text_utils, ui_elements
@@ -27,7 +27,7 @@ class TableColumn:
         # Optional callback returns the complete cached cell surface.
         self.render = render
 
-class TableScreen(GameState):
+class TableScreen(Screen):
     """Full-screen sortable data table -- the pygame stand-in for the old
     read-only ttk.Treeview overviews (global economy, messages, expenses).
     """

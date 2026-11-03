@@ -157,7 +157,7 @@ class BuildManifestTests(unittest.TestCase):
 
     def test_staged_sources_saves_settings_and_scratch(self):
         with tempfile.TemporaryDirectory() as temporary:
-            source = Path(temporary, "source")
+            source = Path(temporary, "source").resolve()
             for relative in set(manifest.DESKTOP_SOURCE_FILES + manifest.WEB_SOURCE_FILES + ("mac64-libsoloud.dylib",)):
                 target = source / relative
                 target.parent.mkdir(parents=True, exist_ok=True)

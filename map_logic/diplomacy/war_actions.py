@@ -288,17 +288,17 @@ def finalize_neutral(nation_data, a, b):
     clear_own_pre_war_map_if_peace(nation_data, b)
     military_attaches.reconcile(nation_data)
 
-def execute_peace_treaty(map_data, nation_data, proposer, target, peace_type, map_screen):
+def execute_peace_treaty(map_data, nation_data, proposer, target, peace_type, context):
     """Settles a war on one of the three old peace sentences.
 
     Terms are itemized deals now -- see map_logic/diplomacy/deal.py -- and the
     real work lives in deal_effects.execute. This remains as the entry point for
     a `peace_type` string, which is what a save made before the rework can still
     have travelling in pending_diplomacy, and what the spectator's forced-peace
-    cheat hands in. `map_data`/`nation_data` are read off `map_screen` by the
+    cheat hands in. `map_data`/`nation_data` are read off `context` by the
     deal path; they stay in the signature because a mod may be calling this function.
     """
     from map_logic.diplomacy import deal_effects
 
     agreement = deal_mod.coerce(peace_type, proposer, target, kind=deal_mod.KIND_PEACE)
-    return deal_effects.execute(map_screen, agreement)
+    return deal_effects.execute(context, agreement)

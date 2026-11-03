@@ -87,8 +87,8 @@ class Battle_Screen(ModalScreen):
     """A tile's lanes, and the player's units in them.
 
     Not a registered state like Orders_Screen: that would need an entry in
-    main.py's state table, a handoff branch in flip_state and a row in the test
-    harness's MAP_HANDOFFS, which is three files of state-machine wiring for a
+    main.py's state table, an on_enter hook and a row in the test harness's
+    MAP_LAYERED_STATES, which is three files of state-machine wiring for a
     screen that inspects one province and closes. It normally runs as a panel
     owned by Orders_Screen; ModalScreen remains available for legacy direct
     callers and gives that fallback the dimmed freeze-frame and chrome.
@@ -122,7 +122,7 @@ class Battle_Screen(ModalScreen):
         self.regions = {}
         self.lane_outcome = None
         # {pane: [(rect, payload)]}, filled by refresh_ui and read by the
-        # foreground painters. Safe to cache because GameState.scroll_by calls
+        # foreground painters. Safe to cache because Screen.scroll_by calls
         # refresh_ui on every wheel notch, so the rects never go stale.
         self.row_paint = {}
         self.refresh_ui()
@@ -679,7 +679,7 @@ class Battle_Screen(ModalScreen):
     def draw_elements(self, surface):
         """Rows crop to their own pane, and their decoration crops with them.
 
-        Without this the screen leaned on GameState.draw_elements, which clips
+        Without this the screen leaned on Screen.draw_elements, which clips
         to a single content rect -- there are four here, so nothing was clipped
         at all and a long roster painted straight over the footer buttons.
         """

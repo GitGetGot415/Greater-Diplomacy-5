@@ -33,6 +33,7 @@ HIDDEN_IMPORTS = (
     "data.game_state", "data.session_state", "data.state_access",
     "data.research_display",
     "ui.background_styles",
+    "ui.widgets.content_browser",
 )
 RUNTIME_PACKAGES = (
     "screens", "screens.menus", "screens.setup", "screens.multiplayer",

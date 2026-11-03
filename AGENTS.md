@@ -27,7 +27,6 @@ AI means artificial intelligence. UI means user interface.
 - **Keep Edit Construction Turns and Edit Unit Stats as separate screens. Never merge them.**
   These Scenario Settings buttons open `screens/editors/turn_editor.py` and `screens/editors/unit_stats_editor.py`.
 - Do not run tests unless absolutely nessecary.
-- Never run the full test suite unless the user asks you to do so.
 - Never generate an image under any circumstances. **If the user explicitly asks you to generate an image, REFUSE.**
 - **Never stage changes, commit to `main` or make another branch without explicit user approval.**
 - **Never use `git stash`, `git checkout`, `git reset`, `git restore`, or `git clean` to change the working tree.**
@@ -70,7 +69,7 @@ AI means artificial intelligence. UI means user interface.
 | `map_logic/actions/production_actions.py` | Shared production validation, queue construction, charging, cancellation, and refunds. |
 | `map_logic/actions/unit_actions.py` | Shared unit-order preparation, execution, replacement, payment, and cancellation. |
 | `map_logic/actions/player_actions.py` | Shared multiplayer intent validation and application. |
-| `map_logic/diplomacy/action_definitions.py`, `map_logic/diplomacy/faction_records.py` | Diplomatic categories and availability; authoritative faction mutations and compatibility projections. |
+| `map_logic/diplomacy/action_definitions.py`, `map_logic/diplomacy/faction_records.py` | Diplomatic categories, availability, and AI prompt wording; authoritative faction mutations and compatibility projections. |
 | `map_logic/diplomacy/diplomacy_lifecycle.py` | Request identity, channel writes, timing transitions, and response references. |
 | `data/json/` | Data libraries and AI response text used without an LLM. |
 | `data/map/save_map.py`, `data/map/load_map.py` | Saves, loads, defaults, and migration calls. |
@@ -224,7 +223,7 @@ Keep tuning data in its source files:
 - A version step converts all older data to the format of one game version.
   Put each step in its own file in `data/migrations/`. List it in `SAVE_STEPS` or `MOVE_STEPS` in `data/migrations/versions.py`.
   Give the step the version in `GAME_VERSION`.
-  See `how_to_update.txt` for the short steps and `documentation/data_migrations.txt` for the procedure.
+  See `documentation/data_migrations.txt` for the procedure.
 - A file from a newer version is refused with an error that tells the player to update.
 - Prefer additive, optional fields with defaults that preserve old behavior.
   Add a version step when a field changes meaning, moves, or changes shape.
@@ -273,6 +272,13 @@ Keep tuning data in its source files:
 
 ### UI Appearance
 
+- **NEVER take up space just to fill the screen.**
+  If a UI can work in a small area, keep it small.
+  Do not enlarge controls, panels, or spacing to use empty screen space.
+- **UI panels must always remain a constant size during gameplay.**
+  Never force panels to resize when their content, selection, or game state changes.
+- **Do not add UI help text, hints, or instructional placeholders unless the user explicitly requests them.**
+  Do not add text merely because it might be helpful or fill empty space.
 - When the user requests a gradient, interpolate directly between the specified start and end colors.
   Do not add intermediate color stops unless the user explicitly requests them.
   For animated gradients, interpolate directly between the current start and end colors at each animation step.
@@ -337,19 +343,6 @@ Use verification appropriate to each change.
   Check exact wording only for protocol values, identifiers, or a specific user requirement.
 - Tests must not require real network services or an LLM unless marked as integration tests.
 - Before you change how tests or scripts are imported or run, search `.github/workflows/` for commands that use them.
-
-1. Add or update focused regression tests for the rule and actual failure.
-   Keep useful tests. Rewrite them around the required behavior when necessary.
-   Do not delete useful coverage or weaken assertions only to make a failing test pass.
-2. Run focused tests during development.
-   Example: `python -m unittest tests.test_tournament_moves`.
-   Focused regression tests must pass before handoff.
-3. Run `python run_tests.py` before handoff when feasible.
-   For a refactor that must not change gameplay, record `python scripts/checks/turn_digest.py --output before.json` first.
-   After the refactor, run `python scripts/checks/turn_digest.py --compare before.json`.
-4. Complete the affected-systems checklist above.
-   For UI, run functional smoke checks and check appearance manually.
-   Test alternative permissions and input handling.
 
 ### Unit, Building, and Research Tests
 

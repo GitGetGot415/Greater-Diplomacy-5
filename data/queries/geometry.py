@@ -63,27 +63,27 @@ def get_wrapped_x(x1, x2, map_w, loop_map):
     return x2
 
 
-def get_clicked_province(mouse_pos, map_screen):
+def get_clicked_province(mouse_pos, context):
     """Resolves the province dictionary corresponding to a screen click."""
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     mx, my = mouse_pos
-    cam = map_screen.camera
+    cam = context.camera
     wx = (mx / cam.zoom) + cam.pos.x
     if world_state.loop_map:
         wx %= world_state.map_w
-    wy = ((my - map_screen.top_ui_height) / (cam.zoom * cam.tilt_factor)) + cam.pos.y
+    wy = ((my - context.top_ui_height) / (cam.zoom * cam.tilt_factor)) + cam.pos.y
     
     if 0 <= wy < world_state.map_h:
         safe_x = max(0, min(int(wx), world_state.map_w - 1))
         safe_y = max(0, min(int(wy), world_state.map_h - 1))
-        color = map_screen.id_map.get_at((safe_x, safe_y))
+        color = context.id_map.get_at((safe_x, safe_y))
         return world_state.map_data.get((color.r, color.g, color.b))
     return None
 
 
-def world_to_screen(world_pos, map_screen, offset=0):
+def world_to_screen(world_pos, context, offset=0):
     """Converts world map coordinates to screen pixel coordinates."""
-    cam = map_screen.camera
+    cam = context.camera
     sx = (world_pos[0] + offset - cam.pos.x) * cam.zoom
-    sy = (world_pos[1] - cam.pos.y) * cam.zoom * cam.tilt_factor + map_screen.top_ui_height
+    sy = (world_pos[1] - cam.pos.y) * cam.zoom * cam.tilt_factor + context.top_ui_height
     return sx, sy

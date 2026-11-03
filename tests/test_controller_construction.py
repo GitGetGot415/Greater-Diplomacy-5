@@ -1,5 +1,5 @@
 """Guards the frozen application surface: state keys, screen constructors, and
-the GameState virtual protocol.
+the Screen virtual protocol.
 
 Every screen class name, constructor arity and state-machine string key is
 effectively public API -- main.py hardcodes them, and a mod that replaces a
@@ -14,7 +14,7 @@ import pygame
 
 from tests import app_harness
 
-# The state-machine keys main.py's flip_state() dispatches on. Hardcoded here
+# The state-machine keys that screens and flip_state() use. Hardcoded here
 # rather than read back from Controller so that deleting one fails the test.
 EXPECTED_STATES = {
     "MENU", "NEW_GAME", "RANDOM_SETUP", "LOAD_GAME", "SETTINGS", "UNIT_ART", "CREDITS",
@@ -28,13 +28,14 @@ EXPECTED_STATES = {
     "TRANSLATION_MENU", "TRANSLATE_GD4", "TRANSLATE_GDHEX", "KEYBINDS", "MOUSE_SETTINGS", "EDIT_PORTRAIT",
 }
 
-# GameState's virtual methods. Screens override these; mods rely on them.
+# Screen's virtual methods. Screens override these; mods rely on them.
 # draw_content is deliberately absent: it belongs to MapOverlayScreen, not to
 # every screen.
 PROTOCOL = (
     "handle_events", "additional_events", "update", "draw", "draw_background",
     "draw_title", "draw_elements", "draw_feedback", "additional_draw",
     "go_to", "exit_screen", "handle_back_key", "get_title", "refresh_ui",
+    "on_enter", "prepare_map",
 )
 
 
@@ -71,7 +72,7 @@ class ControllerConstructionTests(unittest.TestCase):
 
     def test_map_is_built_lazily(self):
         """MAP is intentionally None until a scenario is chosen; if that ever
-        changes, flip_state()'s Map-construction branch needs revisiting.
+        changes, the prepare_map hooks need revisiting.
 
         Read off what boot() recorded rather than off the live controller: it is
         cached per interpreter, and any earlier test file that called boot_map()
@@ -143,14 +144,14 @@ class ControllerConstructionTests(unittest.TestCase):
                          [(pygame.K_q, ["Pan Left", "Orders"])])
 
     def test_keybind_mouse_events_preserve_physical_mouse_input(self):
-        from ui.navigation.game_state import synthesize_keybind_mouse_events
+        from ui.navigation.screen import synthesize_keybind_mouse_events
 
         physical_click = pygame.event.Event(pygame.MOUSEBUTTONDOWN,
                                             button=1, pos=(20, 30))
         events = [physical_click,
                   pygame.event.Event(pygame.KEYDOWN, key=pygame.K_a),
                   pygame.event.Event(pygame.KEYUP, key=pygame.K_a)]
-        with mock.patch("ui.navigation.game_state.pygame.mouse.get_pos", return_value=(80, 90)):
+        with mock.patch("ui.navigation.screen.pygame.mouse.get_pos", return_value=(80, 90)):
             translated = synthesize_keybind_mouse_events(
                 events, {"MOUSE_LEFT_CLICK": pygame.K_a})
 
@@ -324,18 +325,18 @@ class GlobalKeyDispatchTests(unittest.TestCase):
             self.cleared += 1
 
     def test_clear_orders_key_routes_to_optional_screen_handler(self):
-        from ui.navigation.game_state import dispatch_global_keys
+        from ui.navigation.screen import dispatch_global_keys
 
         state = self.State()
         event = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_DELETE)
-        with mock.patch("ui.navigation.game_state.queries.get_keybind",
+        with mock.patch("ui.navigation.screen.queries.get_keybind",
                         side_effect=lambda _action, default: default):
             dispatch_global_keys(state, event)
 
         self.assertEqual(state.cleared, 1)
 
     def test_clear_orders_key_honours_rebinding(self):
-        from ui.navigation.game_state import dispatch_global_keys
+        from ui.navigation.screen import dispatch_global_keys
 
         state = self.State()
         event = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_x)
@@ -343,42 +344,42 @@ class GlobalKeyDispatchTests(unittest.TestCase):
         def binding(action, default):
             return pygame.K_x if action == "CLEAR_ORDERS" else default
 
-        with mock.patch("ui.navigation.game_state.queries.get_keybind", side_effect=binding):
+        with mock.patch("ui.navigation.screen.queries.get_keybind", side_effect=binding):
             dispatch_global_keys(state, event)
 
         self.assertEqual(state.cleared, 1)
 
     def test_keybinds_do_not_fire_while_a_text_bar_has_focus(self):
-        from ui.navigation.game_state import dispatch_global_keys
+        from ui.navigation.screen import dispatch_global_keys
 
         state = self.State()
         state.active_input = "MODEL"
         event = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_DELETE)
-        with mock.patch("ui.navigation.game_state.queries.get_keybind",
+        with mock.patch("ui.navigation.screen.queries.get_keybind",
                         side_effect=lambda _action, default: default):
             dispatch_global_keys(state, event)
 
         self.assertEqual(state.cleared, 0)
 
     def test_back_key_still_reaches_a_focused_text_bar(self):
-        from ui.navigation.game_state import dispatch_global_keys
+        from ui.navigation.screen import dispatch_global_keys
 
         state = self.State()
         state.active_input = "MODEL"
         event = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_ESCAPE)
-        with mock.patch("ui.navigation.game_state.queries.get_keybind",
+        with mock.patch("ui.navigation.screen.queries.get_keybind",
                         side_effect=lambda _action, default: default):
             dispatch_global_keys(state, event)
 
         self.assertEqual(state.back, 1)
 
     def test_keybinds_do_not_fire_while_an_army_name_editor_is_open(self):
-        from ui.navigation.game_state import dispatch_global_keys
+        from ui.navigation.screen import dispatch_global_keys
 
         state = self.State()
         state.map_screen = mock.Mock(army_editor_state={"name": "Northern Command"})
         event = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_DELETE)
-        with mock.patch("ui.navigation.game_state.queries.get_keybind",
+        with mock.patch("ui.navigation.screen.queries.get_keybind",
                         side_effect=lambda _action, default: default):
             dispatch_global_keys(state, event)
 

@@ -29,6 +29,7 @@ from screens.game.map import Map
 from tests.stub_map_screen import synchronous_progress
 from tests.air_fixtures import install_air_fixture, patrol_world, runtime_map, tile, wing, world
 from tests.stub_map_screen import bare_orders_screen
+from tests.tournament_fixtures import fast_tournament_crypto
 
 
 def load_old_units(game):
@@ -802,6 +803,7 @@ class AirResolutionTests(unittest.TestCase):
             self.assertEqual(queries.air_order_radius(unit, "AIR_ATTACK"), queries.air_unit_stats(unit)["air_range_px"])
 
 
+@fast_tournament_crypto()
 class AirIntegrationTests(unittest.TestCase):
     def setUp(self):
         self.content_library = queries.get_unit_library()
@@ -1913,6 +1915,7 @@ class GroupAirMissionSelectionTests(unittest.TestCase):
             v46_moves._validate_aircraft_orders(self.game, "B", {"aircraft_orders": tournament}, {})
 
 
+@fast_tournament_crypto()
 class AirAppSmokeTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

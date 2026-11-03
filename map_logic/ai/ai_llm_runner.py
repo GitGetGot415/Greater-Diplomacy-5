@@ -37,18 +37,18 @@ from map_logic.ai import ai_settings, ai_handler
 BatchOutcome = namedtuple("BatchOutcome", "total served abandoned reason")
 
 
-def make_progress_counter(map_screen, label, done_attr, total):
+def make_progress_counter(context, label, done_attr, total):
     """An `on_progress` callback that ticks a counter and retitles the bar.
 
-    All three phases wrote the same closure: bump `map_screen.<done_attr>`, then
+    All three phases wrote the same closure: bump `context.<done_attr>`, then
     format "Label (done/total)...". `total` is either an attribute name on
-    map_screen or a plain number, since the summit phase counts a local list
+    context or a plain number, since the summit phase counts a local list
     rather than publishing a total.
 
     The returned callable takes (and ignores) the job, which is the shape
     run_llm_batch hands its on_progress.
     """
-    session_state = session_for(map_screen)
+    session_state = session_for(context)
     def count(_job=None):
         done = getattr(session_state, done_attr, 0) + 1
         setattr(session_state, done_attr, done)
@@ -58,7 +58,7 @@ def make_progress_counter(map_screen, label, done_attr, total):
     return count
 
 
-def begin_turn(map_screen):
+def begin_turn(context):
     """Opens the turn's LLM budget, once, before any phase spends from it.
 
     Without this every phase measured `ai_turn_budget_seconds` from its own
@@ -68,10 +68,10 @@ def begin_turn(map_screen):
     """
 
     budget = queries.get_ai_turn_budget_seconds()
-    map_screen.llm_deadline = time.monotonic() + budget if budget else None
+    context.llm_deadline = time.monotonic() + budget if budget else None
 
 
-def turn_deadline(map_screen=None, share=1.0):
+def turn_deadline(context=None, share=1.0):
     """This phase's slice of what the turn has left, or None for no limit.
 
     A share rather than a fixed number of seconds, taken against the remaining
@@ -84,7 +84,7 @@ def turn_deadline(map_screen=None, share=1.0):
     measured from now, which is what it used to do for everyone.
     """
 
-    end = getattr(map_screen, "llm_deadline", None)
+    end = getattr(context, "llm_deadline", None)
     if end is None:
         budget = queries.get_ai_turn_budget_seconds()
         if not budget:
@@ -97,7 +97,7 @@ def turn_deadline(map_screen=None, share=1.0):
     return time.monotonic() + remaining * max(0.0, min(1.0, share))
 
 
-def report_unserved(map_screen, outcome, what):
+def report_unserved(context, outcome, what):
     """Tells the player when the model did not get to everyone.
 
     A batch that ran out of budget looked identical to a batch with nothing to
@@ -136,7 +136,7 @@ def report_unserved(map_screen, outcome, what):
                 f"{outcome.abandoned} used their staff's plan. Raise "
                 f"{levers} to reach more.")
     print(f"[AI] {note}")
-    show = getattr(map_screen, "show_feedback", None)
+    show = getattr(context, "show_feedback", None)
     if show:
         show(note)
 

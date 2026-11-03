@@ -1,7 +1,7 @@
 import pygame
 import os
 import shutil
-from ui.navigation.game_state import GameState, ScreenLayer
+from ui.navigation.screen import Screen, ScreenLayer
 from ui.bars import ui_bars
 from ui.widgets import text_utils
 from ui.widgets import ui_elements
@@ -49,7 +49,7 @@ def _wrap_text(text, font, max_width):
 EXCLUDED_ASSET_FOLDERS = {"sounds", "fonts"}
 
 
-class View_Assets(ScrollPanes, GameState):
+class View_Assets(ScrollPanes, Screen):
     def __init__(self):
         super().__init__()
         self.bg_color = (25, 25, 30)

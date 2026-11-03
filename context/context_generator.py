@@ -116,7 +116,7 @@ files_to_skip_but_list = [
     "data\editors/**/*.py",
     "soloud.py",
     "compilation_scripts\setup.py",
-    "ui/navigation/game_state.py",
+    "ui/navigation/screen.py",
     "main.py",
     "ui/widgets/ui_elements.py",
     "data\constants.py",

@@ -444,43 +444,33 @@ class RealtimeSession:
             player.name, player.ready = name, False
             self._broadcast()
 
+    def _set_config_locked(self, field: str, value: int) -> None:
+        """Change one lobby setting, restoring the old value if validation fails."""
+        previous = getattr(self.config, field)
+        setattr(self.config, field, value)
+        try:
+            self.config.validate(len(self.countries))
+        except Exception:
+            setattr(self.config, field, previous)
+            raise
+        self._broadcast()
+
     def set_capacity(self, host_id: str, capacity: int) -> None:
         with self.lock:
             self._require_host_lobby(host_id)
             if len(self.players) > capacity:
                 raise RealtimeError("Remove players before reducing capacity.")
-            previous = self.config.max_players
-            self.config.max_players = capacity
-            try:
-                self.config.validate(len(self.countries))
-            except Exception:
-                self.config.max_players = previous
-                raise
-            self._broadcast()
+            self._set_config_locked("max_players", capacity)
 
     def set_turn_limit(self, host_id: str, max_turns: int) -> None:
         with self.lock:
             self._require_host_lobby(host_id)
-            previous = self.config.max_turns
-            self.config.max_turns = max_turns
-            try:
-                self.config.validate(len(self.countries))
-            except Exception:
-                self.config.max_turns = previous
-                raise
-            self._broadcast()
+            self._set_config_locked("max_turns", max_turns)
 
     def set_turn_minutes(self, host_id: str, turn_minutes: int) -> None:
         with self.lock:
             self._require_host_lobby(host_id)
-            previous = self.config.turn_minutes
-            self.config.turn_minutes = turn_minutes
-            try:
-                self.config.validate(len(self.countries))
-            except Exception:
-                self.config.turn_minutes = previous
-                raise
-            self._broadcast()
+            self._set_config_locked("turn_minutes", turn_minutes)
 
     def set_scenario_settings(self, host_id: str, settings: dict[str, Any]) -> None:
         """Replace the pre-game rule bundle and notify every lobby client."""
@@ -782,7 +772,7 @@ class MapRealtimeDriver(PlayerActions):
     def configure_scenario_settings(self, settings):
         """Apply host lobby ranges before snapshots or player commands use them."""
         self.world.scenario_settings = copy.deepcopy(settings)
-        rebuild(self.map_ref)
+        rebuild(self.context)
 
     def start_game(self, countries: list[str]) -> None:
         self.session.active_players = list(countries)
@@ -792,8 +782,8 @@ class MapRealtimeDriver(PlayerActions):
 
     def process_turn(self, drafts: dict[str, list[dict[str, Any]]]) -> None:
         self.apply_validated_drafts(drafts)
-        asyncio.run(turn_processor.prepare_turn(self.map_ref))
-        asyncio.run(turn_processor.resolve_turn_logic(self.map_ref))
+        asyncio.run(turn_processor.prepare_turn(self.context))
+        asyncio.run(turn_processor.resolve_turn_logic(self.context))
         # In a normal game this hook runs *after* resolution, so its orders
         # genuinely prepare the next turn.  The server has no local player and
         # therefore cannot use that single-player hook directly; replay it for
@@ -806,11 +796,11 @@ class MapRealtimeDriver(PlayerActions):
                     continue
                 self.session.player_country = country_id
                 if automation.get("construction"):
-                    automation_logic.automate_player_construction(self.map_ref)
+                    automation_logic.automate_player_construction(self.context)
                 if automation.get("movement"):
-                    automation_logic.automate_player_movement(self.map_ref)
+                    automation_logic.automate_player_movement(self.context)
                 if automation.get("research"):
-                    automation_logic.automate_player_research(self.map_ref)
+                    automation_logic.automate_player_research(self.context)
         finally:
             self.session.player_country = original_player
 
@@ -819,11 +809,11 @@ class MapRealtimeDriver(PlayerActions):
             self.world.map_data, self.world.nation_data)
 
     def snapshot(self) -> dict[str, Any]:
-        return queries.build_save_dict(self.map_ref)
+        return queries.build_save_dict(self.context)
 
     def map_bundle(self) -> dict[str, Any]:
         """Self-contained initial map payload for a joining desktop client."""
-        source = self.map_ref.load_path
+        source = self.context.load_path
         if not source or not os.path.isdir(source):
             raise RealtimeError("The host map cannot be bundled.")
         images = {}
@@ -877,19 +867,19 @@ class RemoteSessionView:
         return self.client.send("unsubmit", {"turn": turn})
 
 
-def apply_authoritative_snapshot(map_ref, snapshot: dict[str, Any]) -> None:
+def apply_authoritative_snapshot(context, snapshot: dict[str, Any]) -> None:
     """Replace mutable game state on a client map after a server broadcast."""
-    world_state = world_for(map_ref)
+    world_state = world_for(context)
     if not isinstance(snapshot, dict):
         return
     world_state.scenario_metadata = queries.normalized_scenario_metadata(snapshot.get("scenario_metadata", {}))
     settings = snapshot.get("scenario_settings")
     if isinstance(settings, dict):
         world_state.scenario_settings = copy.deepcopy(settings)
-        rebuild(map_ref)
+        rebuild(context)
     # Badges are local preferences. Server broadcasts must not mark them unread again.
-    local_event_reads = unit_events.saved_reads(map_ref) if hasattr(map_ref, "time_manager") else {}
-    clear_selection = getattr(map_ref, "clear_map_unit_selection", None)
+    local_event_reads = unit_events.saved_reads(context) if hasattr(context, "time_manager") else {}
+    clear_selection = getattr(context, "clear_map_unit_selection", None)
     if clear_selection:
         clear_selection()
     # Message read and popup flags are local UI state, not game-state changes.
@@ -898,8 +888,8 @@ def apply_authoritative_snapshot(map_ref, snapshot: dict[str, Any]) -> None:
     # while replacing the authoritative diplomatic/game data, otherwise every
     # state broadcast makes an already handled offer look new again.
     local_message_state = {}
-    player_country = map_ref.player_country
-    current_player = map_ref.nation_data.get(player_country, {})
+    player_country = context.player_country
+    current_player = context.nation_data.get(player_country, {})
     for message in current_player.get("inbox", []) if isinstance(current_player, dict) else []:
         if not isinstance(message, dict):
             continue
@@ -915,7 +905,7 @@ def apply_authoritative_snapshot(map_ref, snapshot: dict[str, Any]) -> None:
         research_snapshot = {"nation_data": nation_data}
         if "research_years" in snapshot:
             research_snapshot["research_years"] = snapshot["research_years"]
-        migrations.migrate_infantry_research(research_snapshot, queries.get_tech_tree(map_ref))
+        migrations.migrate_infantry_research(research_snapshot, queries.get_tech_tree(context))
     diplomacy_lifecycle.normalize_diplomatic_records(nation_data)
     incoming_player = nation_data.get(player_country, {}) if isinstance(nation_data, dict) else {}
     for message in incoming_player.get("inbox", []) if isinstance(incoming_player, dict) else []:
@@ -924,12 +914,12 @@ def apply_authoritative_snapshot(map_ref, snapshot: dict[str, Any]) -> None:
         saved_state = local_message_state.get(message.get("message_id"))
         if saved_state:
             message.update(saved_state)
-    replace_mapping(world_for(map_ref), "nation_data", nation_data)
+    replace_mapping(world_for(context), "nation_data", nation_data)
     # Older snapshot fixtures use flat contexts without a declared faction mapping.
     if not hasattr(world_state, "factions"):
         world_state.factions = {}
-    faction_records.restore(map_ref, snapshot.get("factions"))
-    map_ref.country_economy_summaries = copy.deepcopy(snapshot.get("country_economy_summaries", {}))
+    faction_records.restore(context, snapshot.get("factions"))
+    context.country_economy_summaries = copy.deepcopy(snapshot.get("country_economy_summaries", {}))
     by_json_key = {province.get("json_key"): province for province in world_state.map_data.values()}
     for json_key, update in snapshot.get("provinces", {}).items():
         province = by_json_key.get(json_key)
@@ -939,21 +929,21 @@ def apply_authoritative_snapshot(map_ref, snapshot: dict[str, Any]) -> None:
             if key in update:
                 province[key] = copy.deepcopy(update[key])
     date = snapshot.get("date", {})
-    if isinstance(date, dict) and hasattr(map_ref, "time_manager"):
+    if isinstance(date, dict) and hasattr(context, "time_manager"):
         world_state.time_manager.day = date.get("day", world_state.time_manager.day)
         world_state.time_manager.month_index = date.get("month", world_state.time_manager.month_index)
         world_state.time_manager.year = date.get("year", world_state.time_manager.year)
         world_state.time_manager.total_turns = date.get("total_turns", world_state.time_manager.total_turns)
-    if hasattr(map_ref, "time_manager"):
-        unit_events.restore(map_ref, snapshot | {"unit_event_read_turns": local_event_reads})
+    if hasattr(context, "time_manager"):
+        unit_events.restore(context, snapshot | {"unit_event_read_turns": local_event_reads})
     # These are local intent buffers.  The processed server snapshot has now
     # either applied or rejected them, so carrying them into the next turn
     # would replay an old subject edit or volunteer offer.
-    if map_ref.realtime_multiplayer:
-        map_ref.realtime_pending_appearance_updates = {}
-        map_ref.realtime_volunteer_drafts = {}
-    if map_ref.presentation_enabled:
-        map_ref.refresh_all_maps()
+    if context.realtime_multiplayer:
+        context.realtime_pending_appearance_updates = {}
+        context.realtime_volunteer_drafts = {}
+    if context.presentation_enabled:
+        context.refresh_all_maps()
 
 
 def materialize_map_bundle(bundle: dict[str, Any]) -> str:
@@ -1332,19 +1322,19 @@ class RealtimeServer:
 
     def _project_payload(self, payload, player_id):
         """Guests never receive the host's canonical hidden state."""
-        map_ref = getattr(self.session.driver, "map_ref", None)
-        if map_ref is None:  # Protocol-only drivers have no game snapshot.
+        context = getattr(self.session.driver, "context", None)
+        if context is None:  # Protocol-only drivers have no game snapshot.
             return payload
         player = self.session.players.get(player_id)
         country = player.country_id if player else ""
         projected = copy.deepcopy(payload)
         state = projected.get("state")
         if state and "game_state" in state:
-            state["game_state"] = queries.player_snapshot_projection(map_ref, state["game_state"], country)
+            state["game_state"] = queries.player_snapshot_projection(context, state["game_state"], country)
         bundle = projected.get("map_bundle")
         if bundle:
             snapshot = dict(bundle["snapshot"], _raw_map_data=bundle["raw_map_data"])
-            snapshot = queries.player_snapshot_projection(map_ref, snapshot, country)
+            snapshot = queries.player_snapshot_projection(context, snapshot, country)
             bundle["raw_map_data"] = snapshot.pop("_raw_map_data")
             bundle["snapshot"] = snapshot
         return projected

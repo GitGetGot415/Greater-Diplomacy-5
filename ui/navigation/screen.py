@@ -24,9 +24,9 @@ def resolve_keybind(state, action, default):
     return queries.get_keybind(action, default)
 
 
-def host_map_screen(game_state):
+def host_map_screen(screen):
     """The map a screen is layered over, or the opener when it has no map."""
-    return getattr(game_state, "map_screen", None) or game_state
+    return getattr(screen, "map_screen", None) or screen
 
 
 # Keys currently acting as held mouse buttons.  This suppresses repeated
@@ -144,7 +144,7 @@ class ScreenLayer:
     def draw(self, surface):
         getattr(self.screen, self.draw_method)(surface)
 
-class GameState:
+class Screen:
     bg_color = c.DEFAULT_BG_COLOR
     _armed_drag_attrs = ()
 
@@ -189,6 +189,32 @@ class GameState:
         self.next_state = None
         self.elements = []
         self.bg_image_path = None # Added support for generic background images
+
+    def on_enter(self, app, previous):
+        """Prepare this screen when the controller makes it the active screen."""
+
+    def prepare_map(self, app):
+        """Build the map before this screen opens MAP. Return False to stay on this screen."""
+        return True
+
+    def return_to_previous_context(self, app, previous):
+        """Set back_state for a screen that can open over a live game or lobby."""
+        if previous == app.states["MAP"]:
+            self.back_state = "MAP"
+        elif previous == app.states["REALTIME_LOBBY"]:
+            # These are convenience overlays while a host waits in the
+            # lobby. Returning must preserve the live server/session.
+            self.back_state = "REALTIME_LOBBY"
+        elif previous == app.states["REALTIME_REMOTE_LOBBY"]:
+            self.back_state = "REALTIME_REMOTE_LOBBY"
+        # Returning from a Settings sub-screen (e.g. Unit Art, Keybinds)
+        # isn't a fresh entry into Settings -- it must not overwrite the
+        # MAP/MENU back_state Settings already picked up when it was
+        # first opened, or Back from the sub-screen would dump the
+        # player at the menu even when they opened Settings from a live game.
+        elif previous not in (app.states.get("UNIT_ART"), app.states.get("KEYBINDS"),
+                              app.states.get("MOUSE_SETTINGS")):
+            self.back_state = "MENU"
 
     def handle_events(self, events):
         for event in events:
@@ -685,7 +711,7 @@ class GameState:
     def update(self):
         pass
 
-class ButtonMenuScreen(GameState):
+class ButtonMenuScreen(Screen):
     """A title, an optional caption, one centered column of large buttons, and Back."""
     title_y = 100
     title_shadow = True
@@ -720,7 +746,7 @@ class ButtonMenuScreen(GameState):
             surface.blit(text, text.get_rect(midtop=(c.SCREEN_WIDTH // 2, self.CAPTION_Y)))
 
 
-class MenuListScreen(GameState):
+class MenuListScreen(Screen):
     """A title, one centered scrolling list, and Back: the scenario and map pickers.
 
     The list stops above the buttons that some of these screens place along the
@@ -775,11 +801,11 @@ class RefreshingMenuListScreen(MenuListScreen):
 
     @property
     def title_y(self):
-        return GameState.title_y if self.has_menu_list() else ButtonMenuScreen.title_y
+        return Screen.title_y if self.has_menu_list() else ButtonMenuScreen.title_y
 
     @property
     def title_shadow(self):
-        return GameState.title_shadow if self.has_menu_list() else ButtonMenuScreen.title_shadow
+        return Screen.title_shadow if self.has_menu_list() else ButtonMenuScreen.title_shadow
 
     def update(self):
         super().update()
@@ -797,7 +823,7 @@ class RefreshingMenuListScreen(MenuListScreen):
                                                   self.refresh_completed, self.refresh_total)
 
 
-class FolderListState(GameState):
+class FolderListState(Screen):
     """Base for the menus that list folders on disk (saves, custom maps).
 
     Subclasses point `managed_dir` at a directory and get the rename and delete
@@ -863,7 +889,7 @@ class FolderListState(GameState):
         self.refresh_ui()
 
 
-class MapOverlayScreen(GameState):
+class MapOverlayScreen(Screen):
     """Base for screens drawn on top of the live map (claims, peace, trade, puppets...).
 
     Handles the camera pass-through, panel scrolling and the standard

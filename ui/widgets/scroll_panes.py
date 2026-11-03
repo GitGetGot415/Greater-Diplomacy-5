@@ -15,7 +15,7 @@ They had also drifted in two ways worth naming, since this mixin settles both:
   boundary, which sends a notch over a pane's gutter to the wrong list.
 
 Kept dependency-free apart from pygame and data.constants so it stays a leaf in
-the import graph -- it is a mixin rather than a GameState subclass precisely so
+the import graph -- it is a mixin rather than a Screen subclass precisely so
 it doesn't have to import game_state and can be combined with anything.
 """
 
@@ -26,7 +26,7 @@ from ui.bars import ui_bars
 
 
 class ScrollPanes:
-    """Adds multi-pane scrolling to any GameState subclass.
+    """Adds multi-pane scrolling to any Screen subclass.
 
     A screen supplies pane_rects(); everything else is derived. Buttons are
     tagged with `el.pane = "<name>"` to bind them to a pane, and anything
@@ -51,7 +51,7 @@ class ScrollPanes:
 
         Underscore-prefixed so a pane can never shadow a method: a pane called
         "events" would otherwise publish its scrollbar handle as
-        self.handle_events and overwrite GameState.handle_events.
+        self.handle_events and overwrite Screen.handle_events.
         """
         return {"attr": f"_scroll_{name}", "limit_attr": f"_max_{name}",
                 "track_attr": f"_track_{name}", "handle_attr": f"_handle_{name}",

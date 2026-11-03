@@ -76,24 +76,14 @@ def send(sender, host, nation_data):
     legal, reason = is_eligible(sender, host, nation_data)
     if not legal:
         return False, reason
-    hosts = nation_data[sender].setdefault("military_attaches", [])
-    if not isinstance(hosts, list):
-        hosts = nation_data[sender]["military_attaches"] = []
-    if host in hosts:
+    if not queries.add_nation_list_entry(nation_data, sender, "military_attaches", host):
         return False, "You already have a military attaché there."
-    hosts.append(host)
     return True, ""
 
 
 def withdraw(sender, host, nation_data):
     """Recall an attaché, returning whether there was one to recall."""
-    hosts = nation_data.get(sender, {}).get("military_attaches", [])
-    if not isinstance(hosts, list) or host not in hosts:
-        return False
-    hosts.remove(host)
-    if not hosts:
-        nation_data[sender].pop("military_attaches", None)
-    return True
+    return queries.remove_nation_list_entry(nation_data, sender, "military_attaches", host)
 
 
 def revoke_by_host(host, sender, nation_data):

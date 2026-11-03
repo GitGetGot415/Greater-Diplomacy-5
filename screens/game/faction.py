@@ -1,5 +1,5 @@
 import pygame
-from ui.navigation.game_state import GameState
+from ui.navigation.screen import Screen
 import data.constants as c
 from ui.bars import ui_bars
 from ui.widgets.flag_icons import draw_flag_centered
@@ -22,7 +22,7 @@ ROSTER_BOTTOM_BUTTON_GAP = 245
 ROSTER_ROW_HEIGHT = 30
 ROSTER_SECTION_GAP = 16
 
-class Faction_Screen(GameState):
+class Faction_Screen(Screen):
     back_state = "MAP"
 
     def __init__(self):
@@ -32,6 +32,9 @@ class Faction_Screen(GameState):
         self.scroll_y = 0
         self.max_scroll = 0
         self.scroll_content_rect = None
+
+    def on_enter(self, app, previous):
+        self.start_faction(app.states["MAP"])
 
     def start_faction(self, map_ref):
         self.map_screen = map_ref
@@ -280,12 +283,15 @@ class Faction_Screen(GameState):
             return f"{name} (Government in Exile)"
         return name
 
-class Faction_Territories_Screen(GameState):
+class Faction_Territories_Screen(Screen):
     back_state = "FACTION"
 
     def __init__(self):
         super().__init__()
         self.map_screen = None
+
+    def on_enter(self, app, previous):
+        self.start_view(app.states["MAP"])
 
     def start_view(self, map_ref):
         self.map_screen = map_ref

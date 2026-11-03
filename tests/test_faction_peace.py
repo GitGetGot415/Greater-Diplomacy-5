@@ -272,7 +272,7 @@ class RatificationRouteTests(unittest.TestCase):
         self.game.player_country = "S"
 
     def test_the_member_is_told_there_is_something_to_answer(self):
-        self.assertTrue(player_diplomacy_actions.has_treaty_to_ratify(self.game))
+        self.assertTrue(ratification.pending_for(self.game.nation_data, "S"))
 
     def test_the_ask_arrives_in_the_inbox(self):
         received = self.game.inbound("S", "A")
@@ -293,11 +293,11 @@ class RatificationRouteTests(unittest.TestCase):
         self.game.run_turn()
 
         self.assertEqual(self.game.nation_data["S"]["faction"], "")
-        self.assertFalse(player_diplomacy_actions.has_treaty_to_ratify(self.game))
+        self.assertFalse(ratification.pending_for(self.game.nation_data, "S"))
 
     def test_a_nation_with_nothing_pending_is_not_asked_to_answer(self):
         self.game.player_country = "A"
-        self.assertFalse(player_diplomacy_actions.has_treaty_to_ratify(self.game))
+        self.assertFalse(ratification.pending_for(self.game.nation_data, "A"))
         self.assertEqual(player_diplomacy_actions.handle_ratify_treaty(self.game, True), "")
 
 

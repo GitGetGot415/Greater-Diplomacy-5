@@ -26,7 +26,7 @@ The submodules are layered. A module imports only from modules earlier in this l
     nation_summary  Per-country summaries and shared-economy views.
     saves           Save-dictionary builders and country-record compaction.
     images          Flag and portrait image encoding, decoding, and caching.
-    files           ZIP extraction, music album folders, research-project construction, and country appearance helpers.
+    files           ZIP extraction, import folder names, music album folders, research-project construction, and country appearance helpers.
     editor          Map editor paint regions and undo/redo state.
 
 Patch seams: tests and a few callers rebind a name on this package, for example

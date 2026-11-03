@@ -2,7 +2,7 @@
 import pygame
 import os
 import unicodedata
-from ui.navigation.game_state import GameState
+from ui.navigation.screen import Screen
 from ui.widgets.ui_elements import TextField, Button
 from ui.widgets import ui_elements
 from ui.rendering.font_manager import fonts
@@ -140,7 +140,7 @@ def render_edit_country_buttons(edit_screen):
     ])
     edit_screen.elements.extend(edit_screen.fields.values())
 
-class Edit_Country_Screen(GameState):
+class Edit_Country_Screen(Screen):
 
     back_state = "MAP"
 
@@ -192,6 +192,9 @@ class Edit_Country_Screen(GameState):
         self.orig_map_color = list(DEFAULT_NATION_COLOR)
         
         self.palette = c.EDITOR_COLOR_PALETTE
+
+    def on_enter(self, app, previous):
+        self.start_editor(app.states["MAP"])
 
     def start_editor(self, map_ref):
         self.map_screen = map_ref

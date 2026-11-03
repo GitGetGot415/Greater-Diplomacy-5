@@ -1,7 +1,7 @@
 import pygame
 from math import sqrt
 import data.constants as c
-from ui.navigation.game_state import GameState, resolve_keybind
+from ui.navigation.screen import Screen, resolve_keybind
 from ui.widgets.ui_elements import Button, process_text_input, draw_text_box
 from ui.rendering.font_manager import fonts
 from data import queries
@@ -154,7 +154,7 @@ class _OrdersRowHitbox(Button):
         pass
 
 
-class Orders_Screen(GameState):
+class Orders_Screen(Screen):
     back_state = "MAP"
     PANEL_X = 10
     PANEL_WIDTH = 440
@@ -218,6 +218,11 @@ class Orders_Screen(GameState):
         self.panel_max_h = self.panel_rect.bottom - self.panel_top
 
         self.unit_library = queries.get_unit_library(self.map_screen)
+
+    def on_enter(self, app, previous):
+        game_map = app.states["MAP"]
+        if game_map.selected_province:
+            self.start_with_province(game_map.selected_province, game_map)
 
     def _mark_draft_changed(self):
         """Publish one order-edit boundary to the hosting map cache/sync path."""
@@ -1787,7 +1792,7 @@ class Orders_Screen(GameState):
                     self.scroll_by(event, attr="scroll_y", limit_attr="max_scroll_y",
                                    speed=WHEEL_SCROLL_STEP)
 
-            # GameState dispatches additional_events after the widgets. Doing
+            # Screen dispatches additional_events after the widgets. Doing
             # it again can overwrite a mission with movement on the same click.
             super().handle_events([event])
 
@@ -1981,18 +1986,6 @@ class Orders_Screen(GameState):
             else:
                 self.map_screen.last_hovered_id = None
                 self.map_screen.hover_glow_surf = None
-
-    def can_unit_enter(self, unit, dest):
-        """Compatibility wrapper for callers of the former Orders-only rule.
-
-        Map routing and real-time validation now share the canonical query;
-        retaining this narrow wrapper keeps integrations such as volunteers
-        from recreating the old local implementation.
-        """
-        order = unit.get("order", {})
-        path = order.get("path", []) if isinstance(order, dict) else []
-        current = self.map_screen.id_to_province.get(path[-1]) if path else self.target_province
-        return queries.can_unit_move_step(unit, current, dest, self.map_screen.nation_data, context=self.map_screen)
 
     def _order_summary(self, unit_index, unit):
         """Short status text and color for a compact roster row."""
@@ -2498,7 +2491,7 @@ class Orders_Screen(GameState):
     def draw(self, surface):
         """Draw army editing modals after Orders' button elements.
 
-        GameState draws elements after ``additional_draw``.  The army tray is
+        Screen draws elements after ``additional_draw``.  The army tray is
         map content, but its editor is modal UI and must sit over the command
         buttons rather than behind them.
         """

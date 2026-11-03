@@ -1,4 +1,4 @@
-from ui.navigation.game_state import ButtonMenuScreen
+from ui.navigation.screen import ButtonMenuScreen
 from ui.widgets.ui_elements import Button
 import data.constants as c
 from data import queries

@@ -112,3 +112,11 @@ class UnitMetadataTests(unittest.TestCase):
         for value in (None, {}, dict(fixture_metadata(), tier_order=-1)):
             with self.subTest(value=value), self.assertRaisesRegex(ValueError, "Unit custom: metadata"):
                 queries.get_unit_metadata("custom", {"custom": {"metadata": value}})
+
+    def test_replaced_metadata_is_validated_again(self):
+        library = {"custom": {"metadata": fixture_metadata()}}
+        self.assertIs(queries.get_unit_metadata("custom", library), library["custom"]["metadata"])
+        self.assertIs(queries.get_unit_metadata("custom", library), library["custom"]["metadata"])
+        library["custom"]["metadata"] = dict(fixture_metadata(), tier_order=-1)
+        with self.assertRaisesRegex(ValueError, "Unit custom: metadata"):
+            queries.get_unit_metadata("custom", library)

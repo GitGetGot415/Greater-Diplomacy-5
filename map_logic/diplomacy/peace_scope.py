@@ -93,14 +93,6 @@ def war_sides(nation, opponent, nation_data):
     return (belligerents(mine, theirs, nation), belligerents(theirs, mine, opponent))
 
 
-def leader_of(nation, nation_data):
-    """Who speaks for this nation's side, or the nation itself if unaligned."""
-    faction = _faction_of(nation, nation_data)
-    if not faction:
-        return nation
-    return queries.get_faction_leader(faction, nation_data) or nation
-
-
 def negotiation_role(nation, opponent, nation_data):
     """What `nation` may propose to `opponent`, or None if nothing.
 

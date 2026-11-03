@@ -268,7 +268,7 @@ class RoleTests(unittest.TestCase):
         self.assertEqual(values["Bunkers"].role, ue.ROLE_LINE)
 
     def test_renaming_a_unit_does_not_change_its_role(self):
-        """is_ai_tank matched the substring "Tank"; nothing here reads the name."""
+        """A role comes from unit data; nothing here reads the name."""
         library = {"Daffodil": LIBRARY["Tanks"], "Panzer VIII": LIBRARY["Bunkers"]}
         values = ue.evaluate(list(library), library, context())
         self.assertEqual(values["Daffodil"].role, ue.ROLE_ASSAULT)

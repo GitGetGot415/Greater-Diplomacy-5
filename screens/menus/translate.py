@@ -1,6 +1,6 @@
 import os
 import pygame
-from ui.navigation.game_state import GameState
+from ui.navigation.screen import Screen
 from ui.widgets.ui_elements import Button, make_back_button, make_choice_button
 from ui.rendering.font_manager import fonts
 from map_logic.imports import odtl
@@ -9,7 +9,7 @@ from ui.dialogs import pickers
 import data.constants as c
 
 
-class Translate(GameState):
+class Translate(Screen):
     """Translate maps between GD5 and Open Doctrines, in both directions.
 
     The two games describe the same kind of world and share no file format.

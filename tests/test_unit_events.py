@@ -19,6 +19,7 @@ from map_logic.system32.time_handler import TimeHandler
 from tests import app_harness
 from tests import test_tournament_moves as tournament_tests
 from tests.stub_map_screen import map_double
+from tests.tournament_fixtures import fast_tournament_crypto
 
 
 def fixture():
@@ -380,6 +381,7 @@ class UnitEventRulesTests(unittest.TestCase):
         self.assertEqual([part["owner"] for part in received["detail_parts"] if "owner" in part], [attacker["owner"]])
 
 
+@fast_tournament_crypto()
 class UnitEventPersistenceTests(unittest.TestCase):
     def test_mark_unread_preserves_other_players_and_survives_save_and_broadcast(self):
         game = fixture()

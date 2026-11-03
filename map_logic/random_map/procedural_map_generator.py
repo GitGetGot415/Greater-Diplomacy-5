@@ -9,7 +9,7 @@ from data import queries
 
 # vectorized loops make generating maps faster!
 
-def generate_new_world(map_screen):
+def generate_new_world(context):
     """Generates the geometric map surfaces and data structures from scratch."""
     
     # 1. Gather variables from settings or constants
@@ -17,17 +17,17 @@ def generate_new_world(map_screen):
     height = c.PROCEDURAL_MAP_HEIGHT
     num_provinces = c.PROCEDURAL_PROVINCE_COUNT
     
-    proc_type = (map_screen.random_settings or {}).get("procedural_type", "Grid")
+    proc_type = (context.random_settings or {}).get("procedural_type", "Grid")
 
     # 2. Route to the requested algorithm
     if proc_type == "Voronoi":
-        _generate_voronoi(map_screen, width, height, num_provinces)
+        _generate_voronoi(context, width, height, num_provinces)
     elif proc_type == "Cellular Automata":
-        _generate_tectonic(map_screen, width, height, num_provinces)
+        _generate_tectonic(context, width, height, num_provinces)
     else:
-        _generate_grid(map_screen, width, height, num_provinces)
+        _generate_grid(context, width, height, num_provinces)
 
-def _generate_grid(map_screen, width, height, num_provinces):
+def _generate_grid(context, width, height, num_provinces):
     """Option A: Evenly spaced grid distribution"""
     rows = max(1, int(np.sqrt(num_provinces * height / width)))
     cols = max(1, num_provinces // rows)
@@ -44,9 +44,9 @@ def _generate_grid(map_screen, width, height, num_provinces):
             x_start, x_end = int(c_idx * cell_w), int((c_idx + 1) * cell_w)
             grid[y_start:y_end, x_start:x_end] = idx
             
-    _process_grid_to_map(map_screen, grid, width, height, actual_num)
+    _process_grid_to_map(context, grid, width, height, actual_num)
 
-def _generate_voronoi(map_screen, width, height, num_provinces):
+def _generate_voronoi(context, width, height, num_provinces):
     """Option B: Pure NumPy Voronoi mapping via point distancing"""
     seeds_y = np.random.randint(0, height, num_provinces)
     seeds_x = np.random.randint(0, width, num_provinces)
@@ -61,9 +61,9 @@ def _generate_voronoi(map_screen, width, height, num_provinces):
         min_dist[mask] = dist[mask]
         grid[mask] = i + 1
         
-    _process_grid_to_map(map_screen, grid, width, height, num_provinces)
+    _process_grid_to_map(context, grid, width, height, num_provinces)
 
-def _generate_tectonic(map_screen, width, height, num_provinces):
+def _generate_tectonic(context, width, height, num_provinces):
     """Option C: Tectonic plates using cellular automata (organic iterative dilation)"""
     grid = np.zeros((height, width), dtype=np.int32)
     seeds_y = np.random.randint(0, height, num_provinces)
@@ -88,7 +88,7 @@ def _generate_tectonic(map_screen, width, height, num_provinces):
             
         empty_mask = grid == 0
         
-    _process_grid_to_map(map_screen, grid, width, height, num_provinces)
+    _process_grid_to_map(context, grid, width, height, num_provinces)
 
 def _summarize_grid_provinces(grid, num_provinces):
     """Collect province pixel counts, centers, and edge contact in one grid pass."""
@@ -113,9 +113,9 @@ def _summarize_grid_provinces(grid, num_provinces):
     touches_edge = np.bincount(edge_ids, minlength=min_size) > 0
     return pixel_counts[:min_size], centers, touches_edge[:min_size]
 
-def _process_grid_to_map(map_screen, grid, width, height, num_provinces):
+def _process_grid_to_map(context, grid, width, height, num_provinces):
     """Takes a generated ID map and securely converts it to Pygame surfarrays & game dictionaries."""
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     colors = {}
     centers = {}
     terrains = {}
@@ -225,9 +225,9 @@ def _process_grid_to_map(map_screen, grid, width, height, num_provinces):
     terrain_surf = pygame.surfarray.make_surface(terrain_surf_array)
     
     # 5. Connect cleanly to the game pipeline
-    map_screen.terrain_map = terrain_surf
-    map_screen.id_map = id_surf
-    map_screen.political_map = id_surf.copy()
-    map_screen.cores_map = id_surf.copy()
+    context.terrain_map = terrain_surf
+    context.id_map = id_surf
+    context.political_map = id_surf.copy()
+    context.cores_map = id_surf.copy()
     replace_mapping(world_state, "raw_json_data", world_state.map_data)
-    queries.build_air_geometry(map_screen)
+    queries.build_air_geometry(context)

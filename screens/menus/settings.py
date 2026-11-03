@@ -1,7 +1,7 @@
 import pygame
 from ui.widgets import ui_elements
 from ui.widgets.ui_elements import Button, Slider, TextField, make_info_button, make_toggle_button
-from ui.navigation.game_state import GameState
+from ui.navigation.screen import Screen
 import data.constants as c
 from data import queries
 from ui.dialogs import pickers
@@ -239,7 +239,7 @@ def render_settings_buttons(settings_screen):
         ])
 
 
-class Settings(GameState):
+class Settings(Screen):
     player_slider = None
     fps_slider = None
     ai_thread_slider = None
@@ -314,6 +314,12 @@ class Settings(GameState):
         for key in list(self.DIR_FIELDS) + list(self.COLOR_FIELDS):
             setattr(self, key, getattr(self.controller, key))
 
+        self.refresh_ui()
+
+    def on_enter(self, app, previous):
+        self.return_to_previous_context(app, previous)
+        # The navigation tutorial may persist its opt-out while Settings
+        # is closed; rebuild so its toggle always reflects that value.
         self.refresh_ui()
 
     def draw_background(self, surface):

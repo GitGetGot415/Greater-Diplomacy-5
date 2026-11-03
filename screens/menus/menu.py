@@ -10,7 +10,7 @@ import urllib.error
 import ssl
 from ui.widgets import ui_elements
 from ui.bars import ui_bars
-from ui.navigation.game_state import GameState
+from ui.navigation.screen import Screen
 from ui.widgets.ui_elements import Button
 import data.constants as c
 from data import queries
@@ -156,7 +156,7 @@ def _load_scaled_image(path, factor):
     size = (int(raw.get_width() * factor), int(raw.get_height() * factor))
     return pygame.transform.scale(raw, size)
 
-class Menu(GameState):
+class Menu(Screen):
     # Intro animation timings, in ms. Title drops from above, sign slides in
     # from the right. Center buttons rise together with their panel.
     # Other controls and bottom text keep their separate entrance timings.

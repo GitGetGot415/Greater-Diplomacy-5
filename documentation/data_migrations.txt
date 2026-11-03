@@ -38,6 +38,8 @@ Only local map editors can change it. Multiplayer commands cannot change it.
 
 SessionState.editor_scenario_name is an editor draft. It is not saved in scenario data.
 The loader derives the name from the selected folder.
+screens/editors/menus.py owns save confirmation dialogs.
+data/map/save_map.py validates folders and writes scenario files.
 
 GAME VERSIONS
 -------------
@@ -280,7 +282,7 @@ Do not add migration rules for content introduced and changed only during develo
 Keep existing support for earlier releases where required.
 
 1. Set GAME_VERSION in data/constants.py to the new version. Use that version for the step.
-   Never change version.txt. See how_to_update.txt in the repository root.
+   Never change version.txt.
 2. Write the step in a new file in data/migrations/, named for that version, such as v48.py.
 3. Convert country records, province records, meta.json fields, and every history snapshot.
 4. Add the step to SAVE_STEPS in data/migrations/versions.py.

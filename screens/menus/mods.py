@@ -2,7 +2,7 @@ import os
 import pygame
 from data import queries
 from ui.dialogs import file_exchange
-from ui.navigation.game_state import FolderListState
+from ui.navigation.screen import FolderListState
 from ui.widgets.ui_elements import Button, make_back_button
 from ui.rendering.font_manager import fonts
 import data.constants as c

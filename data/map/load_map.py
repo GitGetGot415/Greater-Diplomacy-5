@@ -93,16 +93,16 @@ def _repair_province(province, building_library):
     resources = province.get("resources", {})
     province["resources"] = resources if isinstance(resources, dict) else {}
 
-def _load_default_images(map_obj, *, scrub_images=True):
+def _load_default_images(context, *, scrub_images=True):
     """Helper to ensure image data keys exist."""
     os.makedirs(c.FLAGS_DIR, exist_ok=True)
     os.makedirs(c.PORTRAITS_DIR, exist_ok=True)
 
     # Scrub existing massive b64 strings that match defaults instantly upon load to free RAM
     if scrub_images:
-        queries.scrub_default_images(map_obj.nation_data)
+        queries.scrub_default_images(context.nation_data)
 
-    for country_name, n_data in map_obj.nation_data.items():
+    for country_name, n_data in context.nation_data.items():
         if not n_data.get("flag_data"):
             n_data["flag_data"] = "DEFAULT"
         if not n_data.get("portrait_data"):
@@ -145,22 +145,24 @@ def _apply_history_snapshot(save_meta, history, history_turn):
     return True
 
 
-def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_presentation=True):
+def _clear_loaded_world(context):
+    world_state = world_for(context)
+    session_state = session_for(context)
     # Ensure no residual data from a previous map persists during the load
-    world_state = world_for(map_screen)
-    session_state = session_for(map_screen)
     replace_mapping(world_state, "map_data", {})
     replace_mapping(world_state, "id_to_province", {})
     replace_mapping(world_state, "nation_data", {})
     world_state.factions = {}
     world_state.factions_initialized = False
-    map_screen.country_economy_summaries = {}
+    context.country_economy_summaries = {}
     replace_mapping(world_state, "history", {})
     replace_mapping(world_state, "raw_json_data", {})
     replace_mapping(world_state, "scenario_metadata", {})
     session_state.editor_scenario_name = ""
-    has_explicit_path = bool(load_path)
 
+
+def _store_scenario_settings(context, scenario_settings):
+    world_state = world_for(context)
     # --- UNIFIED SETTINGS LOADING ---
     if scenario_settings is None:
         scenario_settings = queries.get_scenario_settings()
@@ -173,24 +175,27 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
         "force_time_appropriate_research": c.DEFAULT_FORCE_TIME_APPROPRIATE_RESEARCH,
     })
 
-    # --- PROCEDURAL INTERCEPT ---
-    if load_path == "PROCEDURAL":
-        procedural_map_generator.generate_new_world(map_screen)
 
-        # After generating the base geography, setup standard variables
-        session_state.player_country = "None"
-        session_state.active_players = []
-        session_state.current_player_index = 0
-        world_state.loop_map = True
-        world_state.time_manager = TimeHandler(start_year=c.START_YEAR)
+def _load_procedural_world(context, load_presentation):
+    world_state = world_for(context)
+    session_state = session_for(context)
+    procedural_map_generator.generate_new_world(context)
 
-        # Load the base nation templates so they are ready for the randomizer
-        replace_mapping(world_state, "nation_data", copy.deepcopy(country_io.load_all_country_data()))
-        _load_default_images(map_screen, scrub_images=load_presentation)
-        map_screen.nation_colors = country_io.nation_colors_from(world_state.nation_data)
-        rebuild(map_screen)
-        return
+    # After generating the base geography, setup standard variables
+    session_state.player_country = "None"
+    session_state.active_players = []
+    session_state.current_player_index = 0
+    world_state.loop_map = True
+    world_state.time_manager = TimeHandler(start_year=c.START_YEAR)
 
+    # Load the base nation templates so they are ready for the randomizer
+    replace_mapping(world_state, "nation_data", copy.deepcopy(country_io.load_all_country_data()))
+    _load_default_images(context, scrub_images=load_presentation)
+    context.nation_colors = country_io.nation_colors_from(world_state.nation_data)
+    rebuild(context)
+
+
+def _resolve_load_path(load_path):
     # --- ZIP FILE INTERCEPT ---
     if load_path and str(load_path).lower().endswith(".zip"):
         extract_target = str(load_path)[:-4] # Strip the .zip extension
@@ -207,28 +212,32 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
 
     if not load_path or not os.path.exists(load_path):
         raise FileNotFoundError(f"CRITICAL: No valid map found. Make sure {c.BASE_MAPS_DIR} contains at least one map folder.")
+    return load_path
 
+
+def _load_map_images(context, load_path, load_presentation):
+    world_state = world_for(context)
     if load_presentation:
         # --- 1. Image Assets ---
         # We no longer need the 'if load_path:' check because we guaranteed a path above
-        map_screen.terrain_map = pygame.image.load(os.path.join(load_path, "terrain.png")).convert()
-        map_screen.id_map = pygame.image.load(os.path.join(load_path, "id_map.png")).convert()
+        context.terrain_map = pygame.image.load(os.path.join(load_path, "terrain.png")).convert()
+        context.id_map = pygame.image.load(os.path.join(load_path, "id_map.png")).convert()
 
         # --- ADD THIS: Update map dimensions and camera constraints ---
-        world_state.map_w, world_state.map_h = map_screen.id_map.get_size()
-        map_screen.min_zoom = (c.SCREEN_HEIGHT - 120) / world_state.map_h
+        world_state.map_w, world_state.map_h = context.id_map.get_size()
+        context.min_zoom = (c.SCREEN_HEIGHT - 120) / world_state.map_h
 
         try:
-            map_screen.political_map = pygame.image.load(
+            context.political_map = pygame.image.load(
                 os.path.join(load_path, OPTIONAL_LAYER_FILES["political"])).convert()
         except Exception:
-            map_screen.political_map = pygame.image.load(os.path.join(load_path, "id_map.png")).convert()
+            context.political_map = pygame.image.load(os.path.join(load_path, "id_map.png")).convert()
 
         try:
-            map_screen.cores_map = pygame.image.load(
+            context.cores_map = pygame.image.load(
                 os.path.join(load_path, OPTIONAL_LAYER_FILES["cores"])).convert()
         except Exception:
-            map_screen.cores_map = map_screen.id_map.copy()
+            context.cores_map = context.id_map.copy()
 
     else:
         with open(os.path.join(load_path, "id_map.png"), "rb") as stream:
@@ -237,11 +246,10 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
             raise ValueError("The map id_map.png must be a PNG image.")
         world_state.map_w, world_state.map_h = struct.unpack(">II", header[16:24])
 
-    # 2. Read the save and convert it to the current version before any of it is used.
-    save_meta, raw_map_data, history = read_save_files(load_path)
-    migrations.upgrade_save(save_meta if save_meta is not None else {}, raw_map_data, history)
-    restore_scenario_metadata(map_screen, save_meta, load_path if has_explicit_path else None)
 
+def _apply_saved_scenario_settings(context, save_meta):
+    world_state = world_for(context)
+    session_state = session_for(context)
     # 3. OVERRIDE: If we are loading an existing save file, prefer settings from inside the save
     # Do NOT override if we are in selection mode (starting a new scenario), so player UI choices are respected.
     if save_meta and "scenario_settings" in save_meta:
@@ -272,29 +280,13 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
         c.DEFAULT_FORCE_TIME_APPROPRIATE_RESEARCH,
     )
 
-    # Active libraries and indexes belong to this world.
-    runtime = rebuild(map_screen)
-    unit_lib = runtime.libraries["unit_library"]
-    building_lib = runtime.libraries["building_library"]
-    tech_tree = runtime.libraries["tech_tree"]
-    disabled_tech_keys = runtime.disabled_tech_keys
-    disabled_units = set(world_state.scenario_settings.get("unit_disabled", []))
-    disabled_buildings = set(world_state.scenario_settings.get("building_disabled", []))
 
-    replace_mapping(world_state, "history", history)
-
-    if save_meta:
-        # This compares saved research years with the active tree, so it runs on every load.
-        migrations.migrate_infantry_research(save_meta, tech_tree, world_state.history)
-        migrations.clamp_research_levels(save_meta, tech_tree, world_state.history)
-
-    if map_screen.history_turn is not None and save_meta:
-        _apply_history_snapshot(save_meta, world_state.history, map_screen.history_turn)
-
+def _load_nation_records(context, save_meta, disabled_tech_keys):
+    world_state = world_for(context)
     # --- 3. Load Nation Data (The Critical Fix) ---
     if save_meta and "nation_data" in save_meta:
         replace_mapping(world_state, "nation_data", save_meta["nation_data"])
-        map_screen.country_economy_summaries = save_meta.get("country_economy_summaries", {})
+        context.country_economy_summaries = save_meta.get("country_economy_summaries", {})
     else:
         # Fallback to default starting data
         replace_mapping(world_state, "nation_data", {})
@@ -320,8 +312,8 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
             c_data["puppets"] = []
             c_data["at_war_with"] = [other for other in playable_nations if other != c_name]
 
-    if map_screen.random_settings and "base_days_per_turn" in map_screen.random_settings:
-        world_state.scenario_settings["base_days_per_turn"] = map_screen.random_settings["base_days_per_turn"]
+    if context.random_settings and "base_days_per_turn" in context.random_settings:
+        world_state.scenario_settings["base_days_per_turn"] = context.random_settings["base_days_per_turn"]
 
     if disabled_tech_keys:
         # Every country template starts with a handful of techs pre-researched
@@ -336,10 +328,10 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
                 for key in disabled_tech_keys:
                     research.pop(key, None)
 
-    _load_default_images(map_screen, scrub_images=load_presentation)
-    # --- THE FIX: Use .get() with a fallback color ---
-    map_screen.nation_colors = country_io.nation_colors_from(world_state.nation_data)
 
+def _restore_session_properties(context, save_meta):
+    world_state = world_for(context)
+    session_state = session_for(context)
     # --- 4. Set Player/Map Properties ---
     if save_meta:
         saved_player_country, saved_active_players = _saved_player_view(save_meta)
@@ -370,7 +362,7 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
         world_state.script_variables = []
         world_state.time_manager = TimeHandler(start_year=c.START_YEAR)
 
-    unit_events.restore(map_screen, {} if session_state.selection_mode or session_state.is_editor else save_meta or {})
+    unit_events.restore(context, {} if session_state.selection_mode or session_state.is_editor else save_meta or {})
 
     # Loading a scenario supplies its saved/default player metadata, which is
     # deliberately ``None`` for an unstarted map.  The editor is not an
@@ -382,27 +374,23 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
         session_state.current_player_index = 0
         session_state.selection_mode = False
 
-    # --- HISTORICAL LEADERS TIMELINE ---
-    # Only scenarios launched straight out of scenarios/historical get the
-    # Historical Leaders Editor's dated overrides -- alternate/custom/random
-    # maps and in-progress saves (which live under saves/) are untouched.
-    if load_path and c.SCENARIOS_HISTORICAL_DIR.replace("\\", "/") in str(load_path).replace("\\", "/"):
-        tm = world_state.time_manager
-        queries.apply_historical_leader_timeline(world_state.nation_data, tm.year, tm.month_index, tm.day)
 
+def _unit_base_type(unit, context):
+    """Resolves a stored unit's real type down to its turn-editor base type,
+    unwrapping Convoy/Truck transports the same way sync_units_to_data does."""
+    u_type = unit.get("original_type") or unit.get("type", "")
+    if u_type.startswith("Convoy (") or u_type.startswith("Truck ("):
+        match = re.search(r'\((.*?)\)', u_type)
+        if match:
+            u_type = match.group(1).strip()
+    return queries.get_base_item_name(u_type, context=context)
+
+
+def _load_provinces(context, raw_map_data, save_meta, disabled_units):
+    world_state = world_for(context)
     # --- 5. Province Processing ---
     replace_mapping(world_state, "raw_json_data", raw_map_data)
-    bldg_lib = queries.get_building_library(map_screen)
-
-    def _unit_base_type(unit):
-        """Resolves a stored unit's real type down to its turn-editor base type,
-        unwrapping Convoy/Truck transports the same way sync_units_to_data does."""
-        u_type = unit.get("original_type") or unit.get("type", "")
-        if u_type.startswith("Convoy (") or u_type.startswith("Truck ("):
-            match = re.search(r'\((.*?)\)', u_type)
-            if match:
-                u_type = match.group(1).strip()
-        return queries.get_base_item_name(u_type, context=map_screen)
+    bldg_lib = queries.get_building_library(context)
 
     # Older saves kept mutable province values in meta.json. New saves store
     # those values directly in map_data.json; this overlay remains for old saves
@@ -428,8 +416,8 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
             cargo = unit.get("air_cargo")
             if isinstance(cargo, list):
                 unit["air_cargo"] = [carried for carried in cargo
-                                     if _unit_base_type(carried) not in disabled_units]
-        v["units"] = [u for u in v.get("units", []) if _unit_base_type(u) not in disabled_units]
+                                     if _unit_base_type(carried, context) not in disabled_units]
+        v["units"] = [u for u in v.get("units", []) if _unit_base_type(u, context) not in disabled_units]
         _repair_province(v, bldg_lib)
 
         v["json_key"], v["map_color"] = k, color_tuple
@@ -437,43 +425,38 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
         world_state.map_data[color_tuple] = v
         world_state.id_to_province[v["id"]] = v
 
-    # Units always take their stats from the active library.
-    queries.refresh_unit_stats(world_state.map_data, world_state.nation_data, unit_lib)
-    queries.normalize_air_orders(world_state.map_data)
-    if load_presentation:
-        queries.build_air_geometry(map_screen)
-    else:
-        # Geometry needs pixels, but a backend retains no display surface.
-        queries.build_air_geometry(map_screen, pygame.image.load(os.path.join(load_path, "id_map.png")))
 
+def _repair_factions(context, save_meta):
+    world_state = world_for(context)
+    session_state = session_for(context)
     # --- REPAIR FACTION ROSTERS ---
     # Runs before the pre-war maps below, which are built off the rosters.
     diplomacy_lifecycle.normalize_diplomacy_channels(world_state.nation_data)
     if save_meta and "factions" in save_meta:
-        faction_records.restore(map_screen, save_meta["factions"])
+        faction_records.restore(context, save_meta["factions"])
     else:
         # Preserve the established repair order before converting old country fields.
         migrations.repair_faction_rosters(dict(world_state.nation_data), world_state.map_data)
-        faction_records.restore(map_screen)
+        faction_records.restore(context)
     if (queries.get_scenario_flag("disable_factions", c.DEFAULT_DISABLE_FACTIONS, world_state.scenario_settings)
             or queries.get_scenario_flag("battle_royale", c.DEFAULT_BATTLE_ROYALE, world_state.scenario_settings)):
         world_state.factions.clear()
-        faction_records.project(map_screen)
+        faction_records.project(context)
 
     # A saved game can be written immediately after the last territorial
     # faction member falls. Do not revive that exhausted bloc on load: without
     # a member that owns land, its exiles have no path back into the world.
     if not session_state.is_editor:
-        exhausted_factions = ownership.retire_exhausted_factions(map_screen)
+        exhausted_factions = ownership.retire_exhausted_factions(context)
         if exhausted_factions:
             # Retiring a normal nation removes its diplomacy immediately; this
             # completes the other half of ordinary cleanup for former exiles.
-            movement_processor.process_dead_nations(map_screen)
+            movement_processor.process_dead_nations(context)
 
     # A faction needs a chair before any screen, peace negotiation, or AI can
     # reason about it.  Turn processing heals this state too, but a loaded save
     # must already be internally consistent before its first turn.
-    faction_leadership.repair_leaderless_factions(map_screen)
+    faction_leadership.repair_leaderless_factions(context)
 
     # Init Pre-War Maps for Factions starting at war
     world_state.nation_data.setdefault("FACTION_WAR_MAPS", {})
@@ -483,6 +466,77 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
             if fac not in world_state.nation_data["FACTION_WAR_MAPS"]:
                 queries.save_faction_pre_war_map(fac, world_state.map_data, world_state.nation_data)
 
+
+def load_map_assets(context, load_path, scenario_settings=None, *, load_presentation=True):
+    world_state = world_for(context)
+    session_state = session_for(context)
+    _clear_loaded_world(context)
+    has_explicit_path = bool(load_path)
+
+    _store_scenario_settings(context, scenario_settings)
+
+    # --- PROCEDURAL INTERCEPT ---
+    if load_path == "PROCEDURAL":
+        _load_procedural_world(context, load_presentation)
+        return
+
+    load_path = _resolve_load_path(load_path)
+
+    _load_map_images(context, load_path, load_presentation)
+
+    # 2. Read the save and convert it to the current version before any of it is used.
+    save_meta, raw_map_data, history = read_save_files(load_path)
+    migrations.upgrade_save(save_meta if save_meta is not None else {}, raw_map_data, history)
+    restore_scenario_metadata(context, save_meta, load_path if has_explicit_path else None)
+
+    _apply_saved_scenario_settings(context, save_meta)
+
+    # Active libraries and indexes belong to this world.
+    runtime = rebuild(context)
+    unit_lib = runtime.libraries["unit_library"]
+    tech_tree = runtime.libraries["tech_tree"]
+    disabled_tech_keys = runtime.disabled_tech_keys
+    disabled_units = set(world_state.scenario_settings.get("unit_disabled", []))
+
+    replace_mapping(world_state, "history", history)
+
+    if save_meta:
+        # This compares saved research years with the active tree, so it runs on every load.
+        migrations.migrate_infantry_research(save_meta, tech_tree, world_state.history)
+        migrations.clamp_research_levels(save_meta, tech_tree, world_state.history)
+
+    if context.history_turn is not None and save_meta:
+        _apply_history_snapshot(save_meta, world_state.history, context.history_turn)
+
+    _load_nation_records(context, save_meta, disabled_tech_keys)
+
+    _load_default_images(context, scrub_images=load_presentation)
+    # --- THE FIX: Use .get() with a fallback color ---
+    context.nation_colors = country_io.nation_colors_from(world_state.nation_data)
+
+    _restore_session_properties(context, save_meta)
+
+    # --- HISTORICAL LEADERS TIMELINE ---
+    # Only scenarios launched straight out of scenarios/historical get the
+    # Historical Leaders Editor's dated overrides -- alternate/custom/random
+    # maps and in-progress saves (which live under saves/) are untouched.
+    if load_path and c.SCENARIOS_HISTORICAL_DIR.replace("\\", "/") in str(load_path).replace("\\", "/"):
+        tm = world_state.time_manager
+        queries.apply_historical_leader_timeline(world_state.nation_data, tm.year, tm.month_index, tm.day)
+
+    _load_provinces(context, raw_map_data, save_meta, disabled_units)
+
+    # Units always take their stats from the active library.
+    queries.refresh_unit_stats(world_state.map_data, world_state.nation_data, unit_lib)
+    queries.normalize_air_orders(world_state.map_data)
+    if load_presentation:
+        queries.build_air_geometry(context)
+    else:
+        # Geometry needs pixels, but a backend retains no display surface.
+        queries.build_air_geometry(context, pygame.image.load(os.path.join(load_path, "id_map.png")))
+
+    _repair_factions(context, save_meta)
+
     queries.repair_spawned_territories(world_state.nation_data, world_state.map_data)
 
     # --- AUTO NAME STARTING UNITS ---
@@ -490,7 +544,7 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
     for prov in world_state.map_data.values():
         for unit in queries.units_with_air_cargo(prov.get("units", [])):
             if not unit.get("custom_name"):
-                unit["custom_name"] = queries.generate_unit_custom_name(unit, unit_counters, context=map_screen)
+                unit["custom_name"] = queries.generate_unit_custom_name(unit, unit_counters, context=context)
 
     # Army rosters are saved on countries while their members live in
     # provinces.  Repair both ends together after every map load, including
@@ -506,7 +560,7 @@ def load_map_assets(map_screen, load_path, scenario_settings=None, *, load_prese
     if session_state.selection_mode and queries.get_scenario_flag(
             "force_time_appropriate_research", c.DEFAULT_FORCE_TIME_APPROPRIATE_RESEARCH,
             world_state.scenario_settings):
-        queries.apply_time_appropriate_research_to_map(map_screen, world_state.time_manager.year)
+        queries.apply_time_appropriate_research_to_map(context, world_state.time_manager.year)
 
 
 def load_backend_state(load_path, *, is_scenario=False, scenario_settings=None, history_turn=None,

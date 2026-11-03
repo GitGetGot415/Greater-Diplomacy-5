@@ -27,7 +27,7 @@ import pygame
 
 import data.constants as c
 from data import queries
-from ui.navigation.game_state import MapOverlayScreen
+from ui.navigation.screen import MapOverlayScreen
 from map_logic.ai import ai_opinion, ai_world
 from map_logic.diplomacy import deal as deal_mod
 from map_logic.diplomacy import diplomacy_messages, peace_scope, reach, war_score

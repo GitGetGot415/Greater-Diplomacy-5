@@ -2,7 +2,7 @@ import pygame
 import data.constants as c
 from data import queries
 from ui.dialogs import pickers
-from ui.navigation.game_state import MapOverlayScreen
+from ui.navigation.screen import MapOverlayScreen
 from ui.widgets.ui_elements import Button, Slider, make_back_button, make_toggle_button, on_off_color
 from ui.rendering.font_manager import fonts
 from ui.rendering import overlay_renderer

@@ -1,4 +1,4 @@
-from ui.navigation.game_state import ButtonMenuScreen, GameState
+from ui.navigation.screen import ButtonMenuScreen, Screen
 from ui.widgets.ui_elements import Button, make_back_button
 from ui.rendering.font_manager import fonts
 from map_logic.imports import gd4_translation, gdhex_translation
@@ -24,7 +24,7 @@ class Translation_Menu(ButtonMenuScreen):
         ]
 
 
-class SaveTranslationScreen(GameState):
+class SaveTranslationScreen(Screen):
     """Import a save from another game into a new GD5 save."""
 
     back_state = "TRANSLATION_MENU"

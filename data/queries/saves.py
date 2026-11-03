@@ -91,14 +91,14 @@ def build_saved_province_data(data):
     }
 
 
-def build_map_data_save(map_screen):
+def build_map_data_save(context):
     """Return a self-contained map snapshot with current province state.
 
     Province state is stored in map_data.json for new saves. This makes the
     separate meta.json province overlay unnecessary while retaining the
     structural and unknown fields already attached to each live province.
     """
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     return {
         data["json_key"]: copy.deepcopy(data)
         for data in world_state.map_data.values()
@@ -203,16 +203,16 @@ def compact_save_nation_data(save_dict, map_data):
     return save_dict
 
 
-def build_save_dict(map_screen, *, include_provinces=True, compact_nations=False):
+def build_save_dict(context, *, include_provinces=True, compact_nations=False):
     """Standardize save state; only disk saves opt into country compaction.
 
     Network snapshots keep complete records for projection and authentication;
     they do not rely on the recipient having an identical country catalog.
     """
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     if hasattr(world_state, "factions"):
         faction_records.records_for(world_state)
-    session_state = session_for(map_screen)
+    session_state = session_for(context)
     from map_logic.system32 import unit_events
     diplomacy_lifecycle.normalize_diplomatic_records(world_state.nation_data)
     scenario_settings = world_state.scenario_settings or {}
@@ -241,16 +241,16 @@ def build_save_dict(map_screen, *, include_provinces=True, compact_nations=False
         "scenario_metadata": normalized_scenario_metadata(world_state.scenario_metadata),
         "script_variables": world_state.script_variables,
         "default_research": world_state.default_research,
-        "research_years": get_research_years(context=map_screen),
+        "research_years": get_research_years(context=context),
         "nation_data": world_state.nation_data,
         "factions": copy.deepcopy(world_state.factions) if hasattr(world_state, "factions")
                     else faction_records.canonical_records(world_state.nation_data),
-        "unit_event_log": unit_events.saved_log(map_screen),
-        "unit_event_read_turns": unit_events.saved_reads(map_screen),
+        "unit_event_log": unit_events.saved_log(context),
+        "unit_event_read_turns": unit_events.saved_reads(context),
     }
     if include_provinces:
         save_dict["provinces"] = {}
-    realtime_metadata = map_screen.realtime_match_metadata
+    realtime_metadata = context.realtime_match_metadata
     if isinstance(realtime_metadata, dict):
         # Additive metadata keeps the normal save/load format compatible with
         # old single-player and tournament files.
@@ -264,9 +264,9 @@ def build_save_dict(map_screen, *, include_provinces=True, compact_nations=False
     return save_dict
 
 
-def player_snapshot_projection(map_screen, snapshot, country_id):
+def player_snapshot_projection(context, snapshot, country_id):
     """Filter a network save before transmission, including raw map geometry."""
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     result = copy.deepcopy(snapshot)
     from map_logic.system32 import unit_events
     report = unit_events.normalize_log(result.get("unit_event_log"),
@@ -284,7 +284,7 @@ def player_snapshot_projection(map_screen, snapshot, country_id):
     fog = queries.get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR,
                             world_state.scenario_settings)
     result["country_economy_summaries"] = get_shared_country_economy_summaries(
-        country_id, world_state.map_data, world_state.nation_data, context=map_screen)
+        country_id, world_state.map_data, world_state.nation_data, context=context)
     private_fields = ("production_queue", "current_research", "research_queue", "research_progress",
         "research", "inbox", "pending_diplomacy", "diplo_responses", "diplo_draft_lists",
         "queued_ai_actions", "orders", "armies", "automation", "materials", "manpower", "fuel",

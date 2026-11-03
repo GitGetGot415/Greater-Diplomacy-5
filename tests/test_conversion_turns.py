@@ -11,8 +11,10 @@ from map_logic.system32 import air_processor, movement_processor
 from tests import test_air_transport as transport_tests
 from tests.air_fixtures import tile, wing
 from tests.stub_map_screen import sample_map_screen
+from tests.tournament_fixtures import fast_tournament_crypto
 
 
+@fast_tournament_crypto()
 class ConversionTurnsTests(unittest.TestCase):
     def setUp(self):
         self.fixture = transport_tests.TransportTests()

@@ -4,7 +4,7 @@ import pygame
 
 import data.constants as c
 from data import queries
-from ui.navigation.game_state import GameState
+from ui.navigation.screen import Screen
 from ui.rendering.font_manager import fonts
 from ui.widgets import flag_icons, ui_elements
 from ui.bars import ui_bars
@@ -30,7 +30,7 @@ ECONOMY_ROW_HEIGHT = 27
 ECONOMY_COLUMN_FRACTIONS = (0.36, 0.56, 0.76, 0.96)
 
 
-class CountrySummaryScreen(GameState):
+class CountrySummaryScreen(Screen):
     def __init__(self, map_screen, country_id):
         super().__init__()
         self.map_screen = map_screen

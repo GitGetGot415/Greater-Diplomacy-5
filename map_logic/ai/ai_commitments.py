@@ -138,7 +138,7 @@ def _find_mirror(nation_data, partner, entry_id):
     return None
 
 
-def tick(map_screen):
+def tick(context):
     """Ages every commitment a turn, settling the ones that ended.
 
     A promise kept to its end earns goodwill from both sides. A promise broken
@@ -146,7 +146,7 @@ def tick(map_screen):
     is stored with decay 0 precisely so this still stings in fifty turns, which
     is what makes keeping one worth anything.
     """
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
 
     nation_data = world_state.nation_data
     handled = set()
@@ -169,7 +169,7 @@ def tick(map_screen):
             if violated:
                 handled.add(entry_id)
                 wronged = partner if broken_by == nation else nation
-                _break(map_screen, nation_data, entry, broken_by, wronged, log_global_event)
+                _break(context, nation_data, entry, broken_by, wronged, log_global_event)
                 continue
 
             entry["turns_left"] = int(entry.get("turns_left", 0)) - 1
@@ -204,7 +204,7 @@ def _violation(nation_data, map_data, nation, partner, entry):
     return True, None
 
 
-def _break(map_screen, nation_data, entry, breaker, wronged, log_global_event):
+def _break(context, nation_data, entry, breaker, wronged, log_global_event):
     for owner in {entry.get("_owner"), breaker, wronged} - {None}:
         mirror = _find_mirror(nation_data, owner, entry.get("id"))
         if mirror:

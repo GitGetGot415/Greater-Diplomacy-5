@@ -28,7 +28,7 @@ from map_logic.actions.player_actions import collect_map_commands, PlayerActions
 
 TOURNAMENT_GZIP_LEVEL = 6
 
-def active_owners_of(map_ref):
+def active_owners_of(context):
     """Every nation entitled to a tournament move right now.
 
     This includes faction-backed governments in exile: their units and
@@ -36,11 +36,11 @@ def active_owners_of(map_ref):
     hold no province. Empty when there is no map loaded, which callers read as
     "no filter".
     """
-    world_state = world_for(map_ref)
-    if not map_ref.map_data:
+    world_state = world_for(context)
+    if not context.map_data:
         return set()
     return queries.get_politically_active_nations(
-        world_state.map_data, map_ref.nation_data)
+        world_state.map_data, context.nation_data)
 
 
 def run_with_progress(jobs, worker, caption, on_result):
@@ -117,14 +117,14 @@ def decrypt_dict(encrypted_str, password):
         # Bad ciphertext and non-JSON plaintext are malformed player data.
         return None
 
-def strip_sensitive_data_for_player(map_ref, country_id):
+def strip_sensitive_data_for_player(context, country_id):
     """
-    Modifies the active map_ref in place to hide information that the player should not see.
+    Modifies the active context in place to hide information that the player should not see.
     """
-    world_state = world_for(map_ref)
-    session_state = session_for(map_ref)
-    map_ref.country_economy_summaries = queries.get_shared_country_economy_summaries(
-        country_id, world_state.map_data, world_state.nation_data, context=map_ref)
+    world_state = world_for(context)
+    session_state = session_for(context)
+    context.country_economy_summaries = queries.get_shared_country_economy_summaries(
+        country_id, world_state.map_data, world_state.nation_data, context=context)
     session_state.multiplayer_mode = True
     session_state.player_country = country_id
     session_state.active_players = [country_id]
@@ -146,7 +146,7 @@ def strip_sensitive_data_for_player(map_ref, country_id):
             country["research_queue"] = []
 
 
-def strip_sensitive_data_for_tournament_spectator(map_ref):
+def strip_sensitive_data_for_tournament_spectator(context):
     """Project a tournament archive into the fog-limited spectator view.
 
     A tournament archive necessarily contains the canonical world so it can be
@@ -154,9 +154,9 @@ def strip_sensitive_data_for_tournament_spectator(map_ref):
     planning/economy data and gives the viewer no country, so all remaining map
     presentation flows through the existing no-territory fog rules.
     """
-    world_state = world_for(map_ref)
-    session_state = session_for(map_ref)
-    map_ref.country_economy_summaries = {}
+    world_state = world_for(context)
+    session_state = session_for(context)
+    context.country_economy_summaries = {}
     session_state.multiplayer_mode = True
     session_state.player_country = c.TOURNAMENT_SPECTATOR
     session_state.active_players = [c.TOURNAMENT_SPECTATOR]
@@ -249,7 +249,7 @@ def build_tournament_spectator_save(save_dict):
 
     return spectator_save
 
-def write_host_keys(map_ref, keys_dict, output_dir=None):
+def write_host_keys(context, keys_dict, output_dir=None):
     if output_dir is None:
         output_dir = c.TOURNAMENT_SAVES_DIR
     os.makedirs(output_dir, exist_ok=True)
@@ -257,8 +257,8 @@ def write_host_keys(map_ref, keys_dict, output_dir=None):
     all_keys_path = os.path.join(output_dir, "ALL_Host_Keys.txt")
     keys_path = os.path.join(output_dir, "Host_Keys.txt")
     
-    active_owners = active_owners_of(map_ref)
-    nation_data = map_ref.nation_data
+    active_owners = active_owners_of(context)
+    nation_data = context.nation_data
     
     with open(all_keys_path, 'w') as f:
         f.write("Every key for every possible country:\n\n")
@@ -284,11 +284,11 @@ def write_host_keys(map_ref, keys_dict, output_dir=None):
 
     return keys_path, all_keys_path
 
-def export_tournament(map_ref, file_path, master_key, keys_dict):
+def export_tournament(context, file_path, master_key, keys_dict):
     """
     keys_dict maps Country_ID -> Country_Key
     """
-    world_state = world_for(map_ref)
+    world_state = world_for(context)
     if is_reserved_tournament_key(master_key):
         raise ValueError("'Spectator' is reserved for tournament spectator access and cannot be a Master Key.")
 
@@ -296,22 +296,22 @@ def export_tournament(map_ref, file_path, master_key, keys_dict):
     os.makedirs(output_dir, exist_ok=True)
     
     # Process pending key regenerations if any
-    pending_regen = map_ref.multiplayer_pending_key_regen
+    pending_regen = context.multiplayer_pending_key_regen
     regenerated_keys = {}
     if pending_regen:
         for cid in list(pending_regen):
             new_key = secrets.token_hex(4)
             keys_dict[cid] = new_key
-            map_ref.multiplayer_keys_dict[cid] = new_key
-            nation_data = map_ref.nation_data
+            context.multiplayer_keys_dict[cid] = new_key
+            nation_data = context.nation_data
             name = queries.get_country_display_name(cid, nation_data)
             regenerated_keys[cid] = (name, new_key)
-        map_ref.multiplayer_pending_key_regen.clear()
+        context.multiplayer_pending_key_regen.clear()
 
-    keys_path, all_keys_path = write_host_keys(map_ref, keys_dict, output_dir=output_dir)
+    keys_path, all_keys_path = write_host_keys(context, keys_dict, output_dir=output_dir)
     
     if regenerated_keys:
-        turn = world_state.time_manager.total_turns if hasattr(map_ref, 'time_manager') else 0
+        turn = world_state.time_manager.total_turns if hasattr(context, 'time_manager') else 0
         regen_keys_path = os.path.join(output_dir, f"Turn_{turn}_Regenerated_Keys.txt")
         with open(regen_keys_path, 'w') as f:
             f.write(f"Regenerated keys for Turn {turn}:\n\n")
@@ -320,10 +320,10 @@ def export_tournament(map_ref, file_path, master_key, keys_dict):
 
     queries.scrub_default_images(world_state.nation_data)
     queries.ensure_unit_ids(world_state.map_data)
-    save_dict = queries.build_save_dict(map_ref)
+    save_dict = queries.build_save_dict(context)
     
     # Embed the raw geometry so the tournament file is self-contained
-    if hasattr(map_ref, 'raw_json_data'):
+    if hasattr(context, 'raw_json_data'):
         save_dict["_raw_map_data"] = queries.build_map_geometry_save(
             world_state.raw_json_data, save_dict["provinces"])
         
@@ -333,8 +333,8 @@ def export_tournament(map_ref, file_path, master_key, keys_dict):
     
     try:
         img_names = {
-            "terrain.png": getattr(map_ref, 'terrain_map', None),
-            "id_map.png": getattr(map_ref, 'id_map', None),
+            "terrain.png": getattr(context, 'terrain_map', None),
+            "id_map.png": getattr(context, 'id_map', None),
         }
         
         for name, surf in img_names.items():
@@ -349,14 +349,14 @@ def export_tournament(map_ref, file_path, master_key, keys_dict):
     
     save_dict["_images"] = images
     
-    session_key = map_ref.multiplayer_session_key
+    session_key = context.multiplayer_session_key
     if not session_key:
         session_key = base64.urlsafe_b64encode(secrets.token_bytes(32)).decode('utf-8')
-        map_ref.multiplayer_session_key = session_key
+        context.multiplayer_session_key = session_key
 
-    player_enc_cache = map_ref.multiplayer_player_enc_cache
+    player_enc_cache = context.multiplayer_player_enc_cache
     
-    active_owners = active_owners_of(map_ref)
+    active_owners = active_owners_of(context)
 
     tasks_to_encrypt = []
     for cid, ckey in keys_dict.items():
@@ -409,7 +409,7 @@ def export_tournament(map_ref, file_path, master_key, keys_dict):
         run_with_progress(tasks_to_encrypt, _encrypt_player,
                           "Encrypting Player Keys...", _record)
 
-    map_ref.multiplayer_player_enc_cache = player_enc_cache
+    context.multiplayer_player_enc_cache = player_enc_cache
             
     game_data_enc = encrypt_dict(save_dict, session_key, compress=True)
     spectator_game_data_enc = encrypt_dict(
@@ -436,7 +436,7 @@ def export_tournament(map_ref, file_path, master_key, keys_dict):
 
 def load_tournament(file_path, key):
     """
-    Loads a tournament file, authenticates with input_key, and applies it to map_ref.
+    Loads a tournament file, authenticates with input_key, and applies it to context.
     Returns (Success: bool, Role: str, Country_ID: int/None, ErrorMsg: str)
     """
     if not os.path.exists(file_path):
@@ -542,7 +542,7 @@ def load_tournament(file_path, key):
 
     return True, role, cid, temp_dir, keys_dict, "Loaded successfully", session_key, ver_table
 
-def export_move_file(map_ref, file_path, player_key):
+def export_move_file(context, file_path, player_key):
     """
     Exports a .gd5move file containing ONLY the submitting player's changes
     for the current tournament turn.
@@ -552,14 +552,14 @@ def export_move_file(map_ref, file_path, player_key):
     host.  They live inside the encrypted player payload so they cannot be
     altered without that player's key.
     """
-    world_state = world_for(map_ref)
-    session_state = session_for(map_ref)
+    world_state = world_for(context)
+    session_state = session_for(context)
     cid = session_state.player_country
     if cid not in world_state.nation_data:
         raise ValueError("Only a tournament country player may export a move file.")
 
     queries.ensure_unit_ids(world_state.map_data)
-    save_dict = queries.build_save_dict(map_ref)
+    save_dict = queries.build_save_dict(context)
     
     player_data = {
         "nation_data": copy.deepcopy(save_dict.get("nation_data", {}).get(cid, {})),
@@ -572,7 +572,7 @@ def export_move_file(map_ref, file_path, player_key):
         # the submitting country's complete map-unit snapshot atomically.
         "unit_snapshot": True,
         "aircraft_orders": [],
-        "air_transport": queries.air_transport_commands(map_ref, cid),
+        "air_transport": queries.air_transport_commands(context, cid),
         "game_version": c.GAME_VERSION,
         "release_subjects": [{"core_nation": entry["core_nation"],
                               "keep_cores": entry.get("keep_cores", False),
@@ -580,20 +580,20 @@ def export_move_file(map_ref, file_path, player_key):
                              for entry in save_dict.get("nation_data", {}).get(cid, {}).get("release_puppet_queue", [])],
     }
 
-    session_key = map_ref.multiplayer_session_key
+    session_key = context.multiplayer_session_key
     if session_key:
         player_data["tournament_session"] = session_key
-    if hasattr(map_ref, "time_manager"):
+    if hasattr(context, "time_manager"):
         player_data["tournament_turn"] = world_state.time_manager.total_turns
 
     # A faction rename affects every member, while normal move data contains
     # only one nation record.  Preserve it as a separate host-validated command
     # rather than allowing the renamed leader to drift away from its members.
-    pending_renames = map_ref.multiplayer_pending_faction_renames
+    pending_renames = context.multiplayer_pending_faction_renames
     if pending_renames:
         player_data["faction_renames"] = list(pending_renames)
 
-    pending_appearances = map_ref.multiplayer_pending_appearance_updates
+    pending_appearances = context.multiplayer_pending_appearance_updates
     if pending_appearances:
         player_data["appearance_updates"] = [
             {"country_id": target, "appearance": appearance}
@@ -616,7 +616,7 @@ def export_move_file(map_ref, file_path, player_key):
     if siphon_updates:
         player_data["puppet_siphon_updates"] = siphon_updates
 
-    player_data["player_intents"] = collect_map_commands(map_ref, cid)
+    player_data["player_intents"] = collect_map_commands(context, cid)
     for command in player_data["player_intents"]:
         if command["type"] == "army_roster":
             player_data["nation_data"]["armies"] = copy.deepcopy(command["armies"])
@@ -640,7 +640,7 @@ def export_move_file(map_ref, file_path, player_key):
         for unit in prov_data.get("units", []):
             if unit.get("owner") != cid:
                 continue
-            if queries.is_air_unit(unit, context=map_ref) or queries.is_air_transport(unit, context=map_ref):
+            if queries.is_air_unit(unit, context=context) or queries.is_air_transport(unit, context=context):
                 # Position, health and transported stats always belong to the
                 # host. A planning file carries only identity and desired orders.
                 player_data["aircraft_orders"].append({
@@ -668,20 +668,20 @@ def export_move_file(map_ref, file_path, player_key):
     # tab. No-op on desktop.
     sync_persisted_dir(c.TOURNAMENT_SAVES_DIR)
 
-def _move_context_error(map_ref, player_data):
+def _move_context_error(context, player_data):
     """Returns a reason a move targets the wrong tournament turn, if any.
 
     Old move files did not contain these fields, so they remain loadable for
     an in-progress tournament created by an earlier release.  Every newly
     exported move carries both values and is checked strictly.
     """
-    expected_session = map_ref.multiplayer_session_key
+    expected_session = context.multiplayer_session_key
     move_session = player_data.get("tournament_session")
     if move_session is not None and move_session != expected_session:
         return "belongs to a different tournament"
 
     if "tournament_turn" in player_data:
-        time_manager = map_ref.time_manager
+        time_manager = context.time_manager
         expected_turn = getattr(time_manager, "total_turns", None)
         if player_data["tournament_turn"] != expected_turn:
             return f"is for turn {player_data['tournament_turn']!r}; the host expects turn {expected_turn}"
@@ -689,7 +689,7 @@ def _move_context_error(map_ref, player_data):
     return None
 
 
-def load_move_files(map_ref, move_file_paths, keys_dict, *, accept_stat_mismatches=False,
+def load_move_files(context, move_file_paths, keys_dict, *, accept_stat_mismatches=False,
                     accept_older_versions=False, loaded_countries=()):
     """
     Loads a list of .gd5move files and applies their orders to the host's map.
@@ -700,7 +700,7 @@ def load_move_files(map_ref, move_file_paths, keys_dict, *, accept_stat_mismatch
     A rejection the host can override names its override: "stats" or "version".
     loaded_countries preserves batch duplicate checks during a host's review callbacks.
     """
-    world_state = world_for(map_ref)
+    world_state = world_for(context)
     processed_move_cids = set(loaded_countries)
     summary = {"loaded": 0, "rejected": 0, "legacy": 0, "converted": 0,
                "faction_renames": 0, "appearance_updates": 0,
@@ -772,7 +772,7 @@ def load_move_files(map_ref, move_file_paths, keys_dict, *, accept_stat_mismatch
             continue
         summary["converted"] += older_release
 
-        context_error = _move_context_error(map_ref, player_data)
+        context_error = _move_context_error(context, player_data)
         if context_error:
             reject(file_path, cid, f"The move {context_error}.")
             continue
@@ -792,7 +792,7 @@ def load_move_files(map_ref, move_file_paths, keys_dict, *, accept_stat_mismatch
         if has_intents:
             try:
                 commands = migrations.tournament_player_intents(player_data, world_state.map_data)
-                service = PlayerActions(map_ref)
+                service = PlayerActions(context)
                 validated = service.validate_draft(cid, commands)
             except ValueError as error:
                 reject(file_path, cid, str(error))
@@ -800,23 +800,23 @@ def load_move_files(map_ref, move_file_paths, keys_dict, *, accept_stat_mismatch
             service.apply_validated_drafts({cid: validated})
         else:
             try:
-                snapshot = v46_moves.prepare(map_ref, cid, player_data)
+                snapshot = v46_moves.prepare(context, cid, player_data)
             except ValueError as error:
                 reject(file_path, cid, str(error))
                 continue
             if snapshot.warnings and not accept_stat_mismatches:
                 reject(file_path, cid, "\n".join(snapshot.warnings), override="stats")
                 continue
-            v46_moves.apply(map_ref, cid, player_data, snapshot, summary)
+            v46_moves.apply(context, cid, player_data, snapshot, summary)
         processed_move_cids.add(cid)
 
         # Also mark this country as having submitted a move
-        map_ref.submitted_moves.add(cid)
+        context.submitted_moves.add(cid)
         summary["loaded"] += 1
         summary["loaded_countries"].append(cid)
         
-    if summary["loaded"] and hasattr(map_ref, 'sync_units_to_data'):
-        map_ref.sync_units_to_data()
+    if summary["loaded"] and hasattr(context, 'sync_units_to_data'):
+        context.sync_units_to_data()
     if summary["loaded"] and any(
             isinstance(country, dict) and "armies" in country
             for country in world_state.nation_data.values()):

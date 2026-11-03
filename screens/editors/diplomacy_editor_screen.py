@@ -4,7 +4,7 @@ import pygame
 import data.constants as c
 from ui.background_styles import EDITOR_PANEL_STYLES
 from data import queries
-from ui.navigation.game_state import EditorOverlayScreen
+from ui.navigation.screen import EditorOverlayScreen
 from ui.widgets.ui_elements import Button, TextField, checkbox_label, make_back_button, make_choice_button, toggle_color
 from ui.widgets.scroll_panes import ScrollPanes
 from ui.widgets import text_utils

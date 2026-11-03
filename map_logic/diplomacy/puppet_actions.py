@@ -173,8 +173,8 @@ def pull_puppets_out_of_faction(master, nation_data):
         queries.set_faction_leadership(nation_data, p, False)
     apply_to_puppets_recursively(master, nation_data, _clear_fac)
 
-def finalize_annexation(map_data, nation_data, master, puppet, map_screen, *, force=False):
-    if force and (not queries.can_use_spectator_country_actions(map_screen)
+def finalize_annexation(map_data, nation_data, master, puppet, context, *, force=False):
+    if force and (not queries.can_use_spectator_country_actions(context)
                   or master == puppet or not queries.is_playable(master, nation_data)
                   or not queries.is_playable(puppet, nation_data)):
         return False
@@ -187,7 +187,7 @@ def finalize_annexation(map_data, nation_data, master, puppet, map_screen, *, fo
     for prov in map_data.values():
         if prov.get("owner") == puppet:
             ownership.conquer_province(
-                map_screen, prov, master, refresh_visuals=not force,
+                context, prov, master, refresh_visuals=not force,
                 check_landless=not force, apply_capture_rules=not force)
         for unit in prov.get("units", []):
             if unit.get("owner") == puppet:
@@ -197,7 +197,7 @@ def finalize_annexation(map_data, nation_data, master, puppet, map_screen, *, fo
     # loser once its last one changes hands -- but a puppet that already held
     # nothing never enters that loop, and used to stay on its faction's roster
     # for the rest of the game.
-    retire_landless_nation(map_screen, puppet, force=force)
+    retire_landless_nation(context, puppet, force=force)
 
     break_puppet_link(nation_data, master, puppet)
 
@@ -248,11 +248,11 @@ def _clear_country_relationships(nation_data, country):
                     del borders[province_id]
 
 
-def finalize_spectator_country_removal(map_screen, country, annexer=None):
+def finalize_spectator_country_removal(context, country, annexer=None):
     """Annex a country immediately, or delete its live state and preserve history."""
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     nation_data, map_data = world_state.nation_data, world_state.map_data
-    if (not queries.can_use_spectator_country_actions(map_screen)
+    if (not queries.can_use_spectator_country_actions(context)
             or not queries.is_playable(country, nation_data)):
         return False
     if annexer is not None and (annexer == country or not queries.is_playable(annexer, nation_data)
@@ -260,7 +260,7 @@ def finalize_spectator_country_removal(map_screen, country, annexer=None):
         return False
     from map_logic.diplomacy import faction_actions
     country_name = queries.get_country_display_name(country, nation_data)
-    volunteers.end_country_missions(map_screen, country, annexer)
+    volunteers.end_country_missions(context, country, annexer)
     for province in map_data.values():
         for unit in queries.units_with_air_cargo(province.get("units", [])):
             if unit.get("owner") == country:
@@ -274,12 +274,12 @@ def finalize_spectator_country_removal(map_screen, country, annexer=None):
             spawned = nation_data[annexer].setdefault("spawned_territories", [])
             spawned.extend(p["id"] for p in map_data.values()
                            if p.get("owner") == country and p["id"] not in spawned)
-        finalize_annexation(map_data, nation_data, annexer, country, map_screen, force=True)
+        finalize_annexation(map_data, nation_data, annexer, country, context, force=True)
     else:
         for province in map_data.values():
             if province.get("owner") == country:
                 ownership.conquer_province(
-                    map_screen, province, "Unclaimed", refresh_visuals=False,
+                    context, province, "Unclaimed", refresh_visuals=False,
                     check_landless=False, apply_capture_rules=False)
                 province["unit_queue"] = []
                 province["building_queue"] = []
@@ -292,9 +292,9 @@ def finalize_spectator_country_removal(map_screen, country, annexer=None):
         deleted = nation_data["GLOBAL_EVENTS"].setdefault("deleted_countries", [])
         if country not in deleted:
             deleted.append(country)
-        faction_leadership.promote(map_screen, faction)
-        if hasattr(map_screen, "nation_colors"):
-            map_screen.nation_colors.pop(country, None)
+        faction_leadership.promote(context, faction)
+        if hasattr(context, "nation_colors"):
+            context.nation_colors.pop(country, None)
     for province in map_data.values():
         survivors = []
         for unit in province.get("units", []):
@@ -326,10 +326,10 @@ def finalize_spectator_country_removal(map_screen, country, annexer=None):
                     volunteer_missions={}, scripted_events=[], armies=[], claim_queue=[],
                     revoke_queue=[], return_queue=[], release_puppet_queue=[])
     queries.normalize_armies(nation_data, map_data)
-    map_screen.centers_need_update = True
+    context.centers_need_update = True
     return True
 
-def finalize_release(map_data, nation_data, master, puppet, map_screen):
+def finalize_release(map_data, nation_data, master, puppet, context):
     break_puppet_link(nation_data, master, puppet)
 
     log_global_event(nation_data, f"{master} has released {puppet} as an independent nation.")
@@ -370,12 +370,7 @@ def canonical_puppet_release_queue(map_data, nation_data, master, entries, old_q
     return result
 
 
-def finalize_create_integrated_puppet(map_data, nation_data, master, core_nation, map_screen, keep_cores=False):
-    """Compatibility entry point for an Integrated release."""
-    return finalize_create_puppet(map_data, nation_data, master, core_nation, map_screen, keep_cores)
-
-
-def finalize_create_puppet(map_data, nation_data, master, core_nation, map_screen,
+def finalize_create_puppet(map_data, nation_data, master, core_nation, context,
                          keep_cores=False, release_type=c.PUPPET_TYPE_INTEGRATED):
     """Release eligible core land as an Integrated, Autonomous, or Independent country."""
     if release_type not in c.PUPPET_RELEASE_TYPES or master not in nation_data:
@@ -422,9 +417,9 @@ def finalize_create_puppet(map_data, nation_data, master, core_nation, map_scree
                      else base_data.get("color", country_io.DEFAULT_NATION_COLOR))
     new_data["color"] = list(release_color)
 
-    # Update map_screen's color cache so the white default bug doesn't happen ---
-    if hasattr(map_screen, 'nation_colors'):
-        map_screen.nation_colors[new_id] = tuple(release_color)
+    # Update context's color cache so the white default bug doesn't happen ---
+    if hasattr(context, 'nation_colors'):
+        context.nation_colors[new_id] = tuple(release_color)
 
     # Inherit Master's Research exactly
     master_research = nation_data.get(master, {}).get("research", {})
@@ -462,7 +457,7 @@ def finalize_create_puppet(map_data, nation_data, master, core_nation, map_scree
 
             if prov["id"] in territory_ids:
                 nation_data[new_id]["spawned_territories"].append(prov["id"])
-                ownership.conquer_province(map_screen, prov, new_id)
+                ownership.conquer_province(context, prov, new_id)
 
     log_global_event(nation_data, f"{master_name} has formed {new_name}.")
     return new_id

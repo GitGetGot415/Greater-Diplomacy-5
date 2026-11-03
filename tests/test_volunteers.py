@@ -4,7 +4,7 @@ import unittest
 from types import SimpleNamespace
 
 
-from tests.stub_map_screen import StubMapScreen, bare_orders_screen
+from tests.stub_map_screen import StubMapScreen
 from data import queries
 import data.constants as c
 from map_logic.ai import ai_evaluation
@@ -177,10 +177,8 @@ class VolunteerTests(unittest.TestCase):
         unit = division("A")
         unit["volunteer_host"] = "B"
         host_home["units"] = [unit]
-        screen = bare_orders_screen()
-        screen.map_screen = game
-        screen.target_province = host_home
-        self.assertTrue(screen.can_unit_enter(unit, host_extension))
+        self.assertTrue(queries.can_unit_move_step(unit, host_home, host_extension,
+                                                   game.nation_data, context=game))
 
     def test_recall_uses_return_travel_then_send_unit_home(self):
         game = self.game()

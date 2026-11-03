@@ -9,7 +9,6 @@ from data.map import history_io
 from data.map.map_cache import remove_optional_layer_files
 from data.platform import sync_persisted_dir
 from data.state_access import session_for
-from ui import dialogs
 
 
 def editor_save_path(name):
@@ -32,40 +31,6 @@ def available_editor_name(name):
         candidate = f"{name}-{number}"
         number += 1
     return candidate
-
-
-def prepare_editor_save(context, on_ready):
-    """Choose a destination on the UI thread before starting background writes."""
-    if not queries.can_bulk_edit_map(context):
-        return
-    try:
-        name = queries.validated_scenario_name(session_for(context).editor_scenario_name)
-        if not name:
-            name = "MapExport_" + datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        path = editor_save_path(name)
-    except ValueError as error:
-        dialogs.show_error("Save Scenario", str(error))
-        return
-
-    def ready(name, overwrite):
-        if queries.can_bulk_edit_map(context):
-            on_ready(name, overwrite)
-
-    if not os.path.lexists(path):
-        ready(name, False)
-    elif not os.path.isdir(path):
-        ready(available_editor_name(name), False)
-    else:
-        def confirmed(answer):
-            if answer is True:
-                ready(name, True)
-            elif answer is False:
-                ready(available_editor_name(name), False)
-        dialogs.ask_yes_no(
-            "Scenario Already Exists",
-            f'A scenario named "{name}" already exists.\n'
-            "Overwrite it, save a numbered copy, or cancel?",
-            confirmed, yes_label="Overwrite", no_label="Save Copy", back_label="Cancel")
 
 
 async def save_map_data(self, save_name=None, *, overwrite=False):

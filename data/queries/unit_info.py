@@ -181,11 +181,22 @@ def unit_is_air_drop_recovering(unit):
     return air_drop_recovery_turns(unit) > 0
 
 
+# Metadata objects that passed validation, by id. Holding each object keeps its id
+# from being reused. Clearing at the limit releases the copies of rebuilt worlds.
+_VALIDATED_METADATA = {}
+_VALIDATED_METADATA_LIMIT = 20_000
+
+
 def get_unit_metadata(unit_name, unit_library=None, *, context=None):
-    """Read active identity metadata. Infer names only for older content."""
+    """Read active identity metadata. Infer names only for older content.
+
+    Each metadata object is validated once. This function has very many callers per turn.
+    """
     library = queries.get_unit_library(context) if unit_library is None else unit_library
     stats = library.get(unit_name, {})
     metadata = stats.get("metadata")
+    if metadata is not None and _VALIDATED_METADATA.get(id(metadata)) is metadata:
+        return metadata
     if "metadata" not in stats:
         return migrations.legacy_unit_metadata(unit_name, stats)
     if not isinstance(metadata, dict):
@@ -213,6 +224,9 @@ def get_unit_metadata(unit_name, unit_library=None, *, context=None):
         raise ValueError(f"Unit {unit_name}: metadata.recruitment.industry must be industry, basic_factory, or none.")
     if not isinstance(recruitment.get("coastal"), bool):
         raise ValueError(f"Unit {unit_name}: metadata.recruitment.coastal must be boolean.")
+    if len(_VALIDATED_METADATA) >= _VALIDATED_METADATA_LIMIT:
+        _VALIDATED_METADATA.clear()
+    _VALIDATED_METADATA[id(metadata)] = metadata
     return metadata
 
 
@@ -428,11 +442,6 @@ AI_FORCE_TANKS = "TANKS"
 
 
 AI_FORCE_NAVY = "NAVY"
-
-
-def is_ai_tank(unit_type, *, context=None):
-    """Whether the AI counts this unit towards its armour quota."""
-    return bool(queries.get_unit_metadata(unit_type, context=context).get("ai_tank", False))
 
 
 def ai_force_category(unit_type, *, context=None):
@@ -746,14 +755,14 @@ def get_ordered_unit_groups(unit_library, *, context=None):
     return tuple(groups[group] for group in UNIT_GROUPS)
 
 
-def province_for_order(map_screen, province_id):
-    world_state = world_for(map_screen)
+def province_for_order(context, province_id):
+    world_state = world_for(context)
     if type(province_id) is not int or province_id not in world_state.id_to_province:
         raise ValueError("Unknown province in order.")
     return world_state.id_to_province[province_id]
 
 
-def canonical_unit_order(map_screen, country_id, province, unit, order):
+def canonical_unit_order(context, country_id, province, unit, order):
     """Preserve the public order-validation interface."""
     from map_logic.actions.unit_actions import canonical_order
-    return canonical_order(map_screen, country_id, province, unit, order)
+    return canonical_order(context, country_id, province, unit, order)

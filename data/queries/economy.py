@@ -656,19 +656,19 @@ def format_number(value):
     return f"{sign}{text}{suffix}"
 
 
-def get_resource_hud_strings(map_screen, include_net=False, target_nation=None):
+def get_resource_hud_strings(context, include_net=False, target_nation=None):
     """Generates unified resource tracking strings and colors for all UI HUDs."""
-    world_state = world_for(map_screen)
-    session_state = session_for(map_screen)
+    world_state = world_for(context)
+    session_state = session_for(context)
     is_tactical = session_state.tactical_mode and session_state.player_unit
 
     if target_nation is None:
         target_nation = session_state.player_country
         
     if is_tactical and target_nation == session_state.player_country:
-        manpower = int(map_screen.player_manpower)
-        materials = int(map_screen.player_materials)
-        fuel = int(map_screen.player_fuel)
+        manpower = int(context.player_manpower)
+        materials = int(context.player_materials)
+        fuel = int(context.player_fuel)
     else:
         n_data = world_state.nation_data.get(target_nation, {})
         manpower = int(n_data.get("manpower", 0))
@@ -687,18 +687,18 @@ def get_resource_hud_strings(map_screen, include_net=False, target_nation=None):
     if include_net:
         if is_tactical and target_nation == session_state.player_country:
             u_type = session_state.player_unit.get("original_type", session_state.player_unit.get("type"))
-            stats = queries.get_unit_library(map_screen).get(u_type, {})
+            stats = queries.get_unit_library(context).get(u_type, {})
             total_inc = get_unit_upkeep(stats)
             morale = session_state.player_unit.get("morale", c.DEFAULT_UNIT_MORALE)
             desertion_cost = total_inc.get("manpower", 0) * ((100.0 - float(morale)) / 100.0)
             total_upkeep["manpower"] = desertion_cost
         else:
-            if not hasattr(map_screen, 'econ_cache_time') or pygame.time.get_ticks() - map_screen.econ_cache_time > 1000 or getattr(map_screen, 'econ_cache_target', None) != target_nation:
-                map_screen.econ_cache = queries.get_economy_projections(target_nation, world_state.map_data, world_state.nation_data, context=map_screen)
-                map_screen.econ_cache_time = pygame.time.get_ticks()
-                map_screen.econ_cache_target = target_nation
+            if not hasattr(context, 'econ_cache_time') or pygame.time.get_ticks() - context.econ_cache_time > 1000 or getattr(context, 'econ_cache_target', None) != target_nation:
+                context.econ_cache = queries.get_economy_projections(target_nation, world_state.map_data, world_state.nation_data, context=context)
+                context.econ_cache_time = pygame.time.get_ticks()
+                context.econ_cache_target = target_nation
                 
-            cached = map_screen.econ_cache
+            cached = context.econ_cache
             if cached and len(cached) == 3:
                 total_inc, total_upkeep, _ = cached
 

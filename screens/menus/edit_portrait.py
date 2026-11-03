@@ -6,7 +6,7 @@ import data.constants as c
 from data import queries
 from ui.background_styles import PORTRAIT_EDITOR_STYLES
 from ui.dialogs import pickers
-from ui.navigation.game_state import GameState
+from ui.navigation.screen import Screen
 from ui.widgets import ui_elements
 from ui.widgets.ui_elements import Button, Slider, make_back_button, make_toggle_button
 
@@ -35,7 +35,7 @@ class _BandSlider(Slider):
         return f"{self.text}: {self.bands_for(self.value)}"
 
 
-class Edit_Portrait(GameState):
+class Edit_Portrait(Screen):
     """The Menu owns the portrait settings and their saving; this screen is the
     editor for them, so the menu shows every change as soon as the player goes back."""
 
@@ -49,6 +49,9 @@ class Edit_Portrait(GameState):
         self._slider_changed = False
         self.strength_slider = None
         self.bands_slider = None
+
+    def on_enter(self, app, previous):
+        self.refresh_ui()
         # Controls are built by refresh_ui() on entry, when the menu exists.
 
     @property

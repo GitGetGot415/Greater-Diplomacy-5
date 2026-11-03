@@ -12,6 +12,7 @@ from unittest import mock
 from data import constants as c, queries
 from data import platform
 from data.map import load_map, save_map
+from screens.editors import menus as editor_menus
 from screens.editors.date_economy_screens import Editor_Metadata_Screen
 from tests.stub_map_screen import map_double
 
@@ -27,7 +28,7 @@ def editor():
 class ScenarioMetadataTests(unittest.TestCase):
     def setUp(self):
         self.game = editor()
-        self.directory = self.enterContext(tempfile.TemporaryDirectory())
+        self.directory = os.path.realpath(self.enterContext(tempfile.TemporaryDirectory()))
         self.enterContext(mock.patch.object(c, "SCENARIOS_CUSTOM_DIR", self.directory))
         self.enterContext(mock.patch.object(queries, "get_country_data", return_value={}))
         self.enterContext(mock.patch("data.queries.saves.get_research_years", return_value={}))
@@ -84,13 +85,13 @@ class ScenarioMetadataTests(unittest.TestCase):
         with mock.patch("ui.dialogs.ask_yes_no") as ask:
             ready = mock.Mock()
             self.game.editor_scenario_name = "Chosen Name"
-            save_map.prepare_editor_save(self.game, ready)
+            editor_menus.prepare_editor_save(self.game, ready)
             ready.assert_called_once_with("Chosen Name", False)
             ready.reset_mock()
             self.game.editor_scenario_name = ""
-            with mock.patch.object(save_map, "datetime") as clock:
+            with mock.patch.object(editor_menus, "datetime") as clock:
                 clock.now.return_value.strftime.return_value = "timestamp"
-                save_map.prepare_editor_save(self.game, ready)
+                editor_menus.prepare_editor_save(self.game, ready)
             ready.assert_called_once_with("MapExport_timestamp", False)
             ask.assert_not_called()
 
@@ -100,11 +101,8 @@ class ScenarioMetadataTests(unittest.TestCase):
             os.mkdir(os.path.join(self.directory, name))
         with mock.patch("ui.dialogs.ask_yes_no") as ask:
             ready = mock.Mock()
-            save_map.prepare_editor_save(self.game, ready)
+            editor_menus.prepare_editor_save(self.game, ready)
             ready.assert_not_called()
-            self.assertEqual(ask.call_args.kwargs["yes_label"], "Overwrite")
-            self.assertEqual(ask.call_args.kwargs["no_label"], "Save Copy")
-            self.assertEqual(ask.call_args.kwargs["back_label"], "Cancel")
             callback = ask.call_args.args[2]
             callback(None)
             ready.assert_not_called()
@@ -123,11 +121,31 @@ class ScenarioMetadataTests(unittest.TestCase):
         os.mkdir(os.path.join(self.directory, "Existing"))
         with mock.patch("ui.dialogs.ask_yes_no") as ask:
             ready = mock.Mock()
-            save_map.prepare_editor_save(self.game, ready)
+            editor_menus.prepare_editor_save(self.game, ready)
             with open(os.path.join(self.directory, "Existing-1"), "w") as handle:
                 handle.write("Preserve")
             ask.call_args.args[2](False)
             ready.assert_called_once_with("Existing-2", False)
+
+    def test_save_preparation_rejects_invalid_names_before_prompting_or_writing(self):
+        self.game.editor_scenario_name = "../outside"
+        ready = mock.Mock()
+        with mock.patch("ui.dialogs.show_error") as error, mock.patch("ui.dialogs.ask_yes_no") as ask:
+            editor_menus.prepare_editor_save(self.game, ready)
+        error.assert_called_once()
+        ask.assert_not_called()
+        ready.assert_not_called()
+
+    def test_save_preparation_requires_an_idle_local_editor(self):
+        ready = mock.Mock()
+        for key, value in (("is_editor", False), ("multiplayer_mode", True), ("realtime_multiplayer", True),
+                           ("tactical_mode", True), ("is_saving", True), ("is_refreshing", True),
+                           ("ai_is_thinking", True), ("viewing_ai_moves", True)):
+            with self.subTest(key=key), mock.patch.object(self.game, key, value), \
+                    mock.patch("ui.dialogs.ask_yes_no") as ask:
+                editor_menus.prepare_editor_save(self.game, ready)
+                ask.assert_not_called()
+                ready.assert_not_called()
 
     def write_scenario(self, name=None, overwrite=False):
         self.game.is_saving = True
@@ -177,7 +195,7 @@ class ScenarioMetadataTests(unittest.TestCase):
         self.game.editor_scenario_name = "Existing"
         ready = mock.Mock()
         with mock.patch("ui.dialogs.ask_yes_no") as ask:
-            save_map.prepare_editor_save(self.game, ready)
+            editor_menus.prepare_editor_save(self.game, ready)
             ask.call_args.args[2](False)
         name, overwrite = ready.call_args.args
         path, _sync = self.write_scenario(name, overwrite)

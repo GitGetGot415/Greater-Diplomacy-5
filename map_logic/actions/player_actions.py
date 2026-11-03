@@ -38,10 +38,10 @@ class PlayerActions:
     _MAX_CLAIM_DRAFTS = 100
     _MAX_QUEUE_ITEMS = 100
 
-    def __init__(self, map_ref, session=None):
-        self.map_ref = BackendState(map_ref, session) if isinstance(map_ref, WorldState) else map_ref
-        self.world = world_for(self.map_ref)
-        self.session = session_for(self.map_ref)
+    def __init__(self, context, session=None):
+        self.context = BackendState(context, session) if isinstance(context, WorldState) else context
+        self.world = world_for(self.context)
+        self.session = session_for(self.context)
 
     def validate_draft(self, country_id: str, commands: list[dict[str, Any]]) -> list[dict[str, Any]]:
         if not isinstance(commands, list):
@@ -73,7 +73,7 @@ class PlayerActions:
                                         "faction_rename", "ratification_response", "army_roster"}:
                 raise PlayerActionError("Only one command is allowed for that game action.")
             if kind == "unit_order":
-                validated = self._validate_unit_order(country_id, command, map_ref=transport_view)
+                validated = self._validate_unit_order(country_id, command, context=transport_view)
                 identity = (validated["province_id"], validated["unit_index"])
                 if identity in seen_units:
                     raise PlayerActionError("Only one order is allowed per unit.")
@@ -108,22 +108,22 @@ class PlayerActions:
             elif kind == "ratification_response":
                 canonical.append(self._validate_ratification_response(country_id, command))
             elif kind == "army_roster":
-                canonical.append(self._validate_army_roster(country_id, command, map_ref=transport_view))
+                canonical.append(self._validate_army_roster(country_id, command, context=transport_view))
             elif kind == "volunteer_draft":
-                canonical.append(self._validate_volunteer_draft(country_id, command, map_ref=transport_view))
+                canonical.append(self._validate_volunteer_draft(country_id, command, context=transport_view))
             else:
                 raise PlayerActionError("That order type is not supported by the server.")
             seen.add(kind)
         self._validate_queue_budget(country_id, canonical)
-        self._validate_volunteer_commands(country_id, canonical, map_ref=planning_view)
+        self._validate_volunteer_commands(country_id, canonical, context=planning_view)
         return canonical
 
-    def _validate_army_roster(self, country_id: str, command: dict[str, Any], *, map_ref=None) -> dict[str, Any]:
+    def _validate_army_roster(self, country_id: str, command: dict[str, Any], *, context=None) -> dict[str, Any]:
         """Validate organization metadata without trusting client unit ownership."""
         supplied = command.get("armies", [])
         if not isinstance(supplied, list) or len(supplied) > 200:
             raise PlayerActionError("Invalid army roster.")
-        world = self.world if map_ref is None else world_for(map_ref)
+        world = self.world if context is None else world_for(context)
         owned = {unit.get("unit_id") for province in world.map_data.values()
                  for unit in queries.units_with_air_cargo(province.get("units", []))
                  if unit.get("owner") == country_id}
@@ -185,7 +185,7 @@ class PlayerActions:
             raise PlayerActionError(str(exc)) from exc
         return {"type": "army_roster", "armies": armies}
 
-    def _validate_volunteer_commands(self, country_id: str, commands: list[dict[str, Any]], *, map_ref=None) -> None:
+    def _validate_volunteer_commands(self, country_id: str, commands: list[dict[str, Any]], *, context=None) -> None:
         """Keep a volunteer request and its reserved divisions inseparable."""
         pending_targets = set()
         offered_targets, offered_count = set(), 0
@@ -208,7 +208,7 @@ class PlayerActions:
         if pending_targets != offered_targets:
             raise PlayerActionError("Volunteer offers must include their selected divisions.")
         if offered_count:
-            view = volunteers.draft_context(self.map_ref if map_ref is None else map_ref, country_id,
+            view = volunteers.draft_context(self.context if context is None else context, country_id,
                                             always_copy=True)
             if offered_count > volunteers.remaining_capacity(view, country_id):
                 raise PlayerActionError("The selected volunteer divisions exceed your available capacity.")
@@ -221,8 +221,8 @@ class PlayerActions:
 
     def _planning_view(self, country_id, commands):
         if any(isinstance(command, dict) and command.get("type") == "country_diplomacy" for command in commands):
-            return volunteers.draft_context(self.map_ref, country_id)
-        return self.map_ref
+            return volunteers.draft_context(self.context, country_id)
+        return self.context
 
     def _validate_country_preferences(self, country_id: str, command: dict[str, Any]) -> dict[str, Any]:
         """Validate politics, automation, economy, and custom unit choices."""
@@ -250,9 +250,9 @@ class PlayerActions:
                 or any(not isinstance(name, str) for name in custom_units)
                 or len(set(custom_units)) != len(custom_units)):
             raise PlayerActionError("Invalid custom production selection.")
-        unit_library = queries.get_unit_library(self.map_ref)
+        unit_library = queries.get_unit_library(self.context)
         research = country.get("research", {})
-        if any(name not in unit_library or not queries.is_unit_unlocked(name, research, context=self.map_ref)
+        if any(name not in unit_library or not queries.is_unit_unlocked(name, research, context=self.context)
                for name in custom_units):
             raise PlayerActionError("A selected custom unit is not researched.")
         try:
@@ -460,7 +460,7 @@ class PlayerActions:
             raise PlayerActionError("That ratification refers to an expired treaty.")
         return {"type": "ratification_response", "verdict": verdict, "treaty_id": reference}
 
-    def _validate_volunteer_draft(self, country_id: str, command: dict[str, Any], *, map_ref=None) -> dict[str, Any]:
+    def _validate_volunteer_draft(self, country_id: str, command: dict[str, Any], *, context=None) -> dict[str, Any]:
         """Identify divisions by their authoritative province/index, never data."""
         target, units = command.get("target"), command.get("units", [])
         if (not isinstance(target, str) or target == country_id or target not in self.world.nation_data
@@ -473,7 +473,7 @@ class PlayerActions:
         for ref in units:
             if not isinstance(ref, dict):
                 raise PlayerActionError("Invalid volunteer division.")
-            view = self.map_ref if map_ref is None else map_ref
+            view = self.context if context is None else context
             province = queries.province_for_order(view, ref.get("province_id"))
             index = ref.get("unit_index")
             if "unit_id" in ref:
@@ -537,7 +537,7 @@ class PlayerActions:
                 text(action[4:], "message")
             elif action not in allowed_actions:
                 raise PlayerActionError("Unknown diplomatic action.")
-            available = availability(self.map_ref, country_id, target, action)
+            available = availability(self.context, country_id, target, action)
             if not available.allowed:
                 raise PlayerActionError(available.reason)
             leadership_error = queries.faction_request_leadership_error(
@@ -603,10 +603,10 @@ class PlayerActions:
         except (KeyError, TypeError, ValueError) as exc:
             raise PlayerActionError("Unknown province in order.") from exc
 
-    def _validate_unit_order(self, country_id: str, command: dict[str, Any], *, map_ref=None) -> dict[str, Any]:
-        map_ref = self.map_ref if map_ref is None else map_ref
+    def _validate_unit_order(self, country_id: str, command: dict[str, Any], *, context=None) -> dict[str, Any]:
+        context = self.context if context is None else context
         try:
-            province = queries.province_for_order(map_ref, command.get("province_id"))
+            province = queries.province_for_order(context, command.get("province_id"))
         except ValueError as exc:
             raise PlayerActionError(str(exc)) from exc
         index = command.get("unit_index")
@@ -630,7 +630,7 @@ class PlayerActions:
         if order is not None and not isinstance(order, dict):
             raise PlayerActionError("Invalid unit order.")
         try:
-            prepared = unit_actions.prepare_action(map_ref, country_id, province, unit, order)
+            prepared = unit_actions.prepare_action(context, country_id, province, unit, order)
         except ValueError as error:
             raise PlayerActionError(str(error)) from error
         canonical_order = copy.deepcopy(prepared.order)
@@ -666,7 +666,7 @@ class PlayerActions:
             raise PlayerActionError("Invalid province queue contents.")
         try:
             return production_actions.reconstruct_queue(
-                self.map_ref, country_id, province, queue_type, items,
+                self.context, country_id, province, queue_type, items,
                 policy=production_actions.REALTIME_POLICY)
         except ValueError as error:
             raise PlayerActionError(str(error)) from error
@@ -676,7 +676,7 @@ class PlayerActions:
         """Reconstruct untrusted client intent through shared production rules."""
         try:
             result = production_actions.prepare_production(
-                self.map_ref, country_id, province, queue_type, intent,
+                self.context, country_id, province, queue_type, intent,
                 policy=production_actions.REALTIME_POLICY)
         except ValueError as error:
             raise PlayerActionError(str(error)) from error
@@ -701,7 +701,7 @@ class PlayerActions:
         try:
             result = queries.canonical_research_selection(self.world.nation_data.get(country_id),
                                                           command.get("tech_names"),
-                                                          queries.get_tech_tree(self.map_ref), context=self.map_ref)
+                                                          queries.get_tech_tree(self.context), context=self.context)
         except ValueError as error:
             raise PlayerActionError(str(error)) from error
         return {"type": "research_queue", **result}
@@ -718,10 +718,10 @@ class PlayerActions:
                   for country, commands in drafts.items()}
         for country_id, commands in drafts.items():
             if any(command["type"] == "country_diplomacy" for command in commands):
-                volunteers.release_draft_reservations(self.map_ref, country_id)
+                volunteers.release_draft_reservations(self.context, country_id)
             country_data = self.world.nation_data[country_id]
             settle_draft_budget(country_data, commands)
-            queries.apply_air_transport_commands(self.map_ref, country_id,
+            queries.apply_air_transport_commands(self.context, country_id,
                 [command for command in commands if command["type"] == "air_transport"])
             for command in commands:
                 if command["type"] == "air_transport":
@@ -730,7 +730,7 @@ class PlayerActions:
                     province = self._province(command["province_id"])
                     unit = (next(u for u in province["units"] if u.get("unit_id") == command["unit_id"])
                             if command.get("unit_id") else province["units"][command["unit_index"]])
-                    apply_action(self.map_ref, country_id, province, unit,
+                    apply_action(self.context, country_id, province, unit,
                                  command["order"], authority="server", payment_settled=True)
                     for key in ("custom_name", "combat_stance", "lane_target"):
                         value = command.get(key)
@@ -739,7 +739,7 @@ class PlayerActions:
                         else:
                             unit[key] = value
                 elif command["type"] == "province_queue":
-                    apply_queue_change(self.map_ref, country_id, command, payment_settled=True)
+                    apply_queue_change(self.context, country_id, command, payment_settled=True)
                 elif command["type"] == "research_queue":
                     apply_research_selection(country_data, command)
                 elif command["type"] == "country_preferences":
@@ -760,7 +760,7 @@ class PlayerActions:
                     country_data["return_queue"] = copy.deepcopy(command["returns"])
                 elif command["type"] == "country_appearance":
                     queries.apply_country_appearance(self.world.nation_data, country_id, command["appearance"])
-                    self.map_ref.nation_colors[country_id] = tuple(country_data["color"])
+                    self.context.nation_colors[country_id] = tuple(country_data["color"])
                 elif command["type"] == "country_diplomacy":
                     # A proposal already travelling belongs to the server and
                     # cannot be cancelled or rewritten by a stale client view.
@@ -774,7 +774,7 @@ class PlayerActions:
                     for puppet, appearance in command["appearances"].items():
                         subject = self.world.nation_data[puppet]
                         queries.apply_country_appearance(self.world.nation_data, puppet, appearance)
-                        self.map_ref.nation_colors[puppet] = tuple(subject["color"])
+                        self.context.nation_colors[puppet] = tuple(subject["color"])
                 elif command["type"] == "faction_rename" and command.get("name"):
                     faction_actions.rename_faction(self.world.nation_data, country_id,
                                                    country_data.get("faction", ""), command["name"])
@@ -798,7 +798,7 @@ class PlayerActions:
                     unit = (next(unit for unit in province["units"] if unit.get("unit_id") == ref["unit_id"])
                             if ref.get("unit_id") else province["units"][ref["unit_index"]])
                     chosen.append((province, unit))
-                _details, error = volunteers.create_offer(self.map_ref, country_id, command["target"], chosen)
+                _details, error = volunteers.create_offer(self.context, country_id, command["target"], chosen)
                 if error:
                     raise PlayerActionError(error)
 
@@ -809,28 +809,28 @@ class PlayerActions:
         refreshed = []
         for command in commands:
             if command["type"] == "unit_order":
-                command = self._validate_unit_order(country_id, command, map_ref=view)
+                command = self._validate_unit_order(country_id, command, context=view)
             elif command["type"] == "province_queue":
                 command = self._validate_queue(country_id, command)
             refreshed.append(command)
         self._validate_queue_budget(country_id, refreshed)
         return refreshed
 
-def collect_map_commands(map_ref, country_id: str) -> list[dict[str, Any]]:
+def collect_map_commands(context, country_id: str) -> list[dict[str, Any]]:
     """Serialize supported local order controls into server commands.
 
     This deliberately reads only player choices, never mutable combat,
     resource, research-progress, or claim-timer fields from the client map.
     """
-    held_offers = volunteers.unsent_offers(map_ref, country_id)
+    held_offers = volunteers.unsent_offers(context, country_id)
     volunteer_choices = {target: [{"province_id": entry["origin_id"],
                                   "unit_id": entry["unit"].get("unit_id")}
                                  for entry in mission.get("held_units", [])]
                          for target, mission in held_offers.items()}
-    map_ref = volunteers.draft_context(map_ref, country_id)
-    world_state = world_for(map_ref)
+    context = volunteers.draft_context(context, country_id)
+    world_state = world_for(context)
     queries.ensure_unit_ids(world_state.map_data)
-    commands: list[dict[str, Any]] = queries.air_transport_commands(map_ref, country_id)
+    commands: list[dict[str, Any]] = queries.air_transport_commands(context, country_id)
     for province in world_state.map_data.values():
         for index, unit in enumerate(province.get("units", [])):
             if unit.get("owner") == country_id:
@@ -914,13 +914,13 @@ def collect_map_commands(map_ref, country_id: str) -> list[dict[str, Any]]:
                                            "release_type": entry["release_type"]}
                                           for entry in country_data.get("release_puppet_queue", [])
                                           if isinstance(entry, dict)],
-                     "appearances": copy.deepcopy(map_ref.realtime_pending_appearance_updates)})
+                     "appearances": copy.deepcopy(context.realtime_pending_appearance_updates)})
     commands.append({"type": "faction_rename", "name": country_data.get("faction", "")})
     pending_ratification = country_data.get("pending_ratification", {})
     commands.append({"type": "ratification_response",
                      "verdict": pending_ratification.get("verdict") if isinstance(pending_ratification, dict) else None,
                      "treaty_id": pending_ratification.get("treaty_id") if isinstance(pending_ratification, dict) else None})
-    volunteer_drafts = map_ref.realtime_volunteer_drafts
+    volunteer_drafts = context.realtime_volunteer_drafts
     if isinstance(volunteer_drafts, dict):
         volunteer_choices.update(volunteer_drafts)
     for target, units in volunteer_choices.items():

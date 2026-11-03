@@ -32,8 +32,8 @@ def get_editor_paint_region(province, id_to_province, mode):
     return region
 
 
-def _get_current_map_state(map_screen):
-    world_state = world_for(map_screen)
+def _get_current_map_state(context):
+    world_state = world_for(context)
     state = {}
     for color_key, prov in world_state.map_data.items():
         state[color_key] = {
@@ -46,8 +46,8 @@ def _get_current_map_state(map_screen):
     return state
 
 
-def _apply_map_state(map_screen, state):
-    world_state = world_for(map_screen)
+def _apply_map_state(context, state):
+    world_state = world_for(context)
     for color_key, saved_prov in state.items():
         prov = world_state.map_data.get(color_key)
         if prov:
@@ -58,46 +58,46 @@ def _apply_map_state(map_screen, state):
             prov["units"] = copy.deepcopy(saved_prov["units"])
             
     # Apply the changes visually
-    map_screen.refresh_all_maps()
+    context.refresh_all_maps()
 
 
-def save_editor_state(map_screen):
+def save_editor_state(context):
     """Snapshots the current map data for the undo feature, clearing redo history."""
     # Any new physical edit destroys the active redo-timeline
-    map_screen.editor_redo_history = []
+    context.editor_redo_history = []
         
-    map_screen.editor_history.append(_get_current_map_state(map_screen))
+    context.editor_history.append(_get_current_map_state(context))
     
-    if len(map_screen.editor_history) > c.MAX_EDITOR_HISTORY:
-        map_screen.editor_history.pop(0)
+    if len(context.editor_history) > c.MAX_EDITOR_HISTORY:
+        context.editor_history.pop(0)
 
 
-def restore_editor_state(map_screen):
+def restore_editor_state(context):
     """Restores the last map state from the editor history (Undo)."""
-    if not map_screen.editor_history:
-        map_screen.show_feedback("Nothing to undo!")
+    if not context.editor_history:
+        context.show_feedback("Nothing to undo!")
         return
         
     # Save the current state to the redo stack before replacing it
-    map_screen.editor_redo_history.append(_get_current_map_state(map_screen))
+    context.editor_redo_history.append(_get_current_map_state(context))
         
-    last_state = map_screen.editor_history.pop()
-    _apply_map_state(map_screen, last_state)
-    map_screen.show_feedback("Undo Successful")
+    last_state = context.editor_history.pop()
+    _apply_map_state(context, last_state)
+    context.show_feedback("Undo Successful")
 
 
-def redo_editor_state(map_screen):
+def redo_editor_state(context):
     """Restores the next map state from the redo history (Redo)."""
-    if not map_screen.editor_redo_history:
-        map_screen.show_feedback("Nothing to redo!")
+    if not context.editor_redo_history:
+        context.show_feedback("Nothing to redo!")
         return
         
     # Save the current state to the undo stack before replacing it
-    map_screen.editor_history.append(_get_current_map_state(map_screen))
+    context.editor_history.append(_get_current_map_state(context))
         
-    next_state = map_screen.editor_redo_history.pop()
-    _apply_map_state(map_screen, next_state)
-    map_screen.show_feedback("Redo Successful")
+    next_state = context.editor_redo_history.pop()
+    _apply_map_state(context, next_state)
+    context.show_feedback("Redo Successful")
 
 
 def can_bulk_edit_map(context):
@@ -152,16 +152,6 @@ def set_editor_buildings(context, group, target):
             buildings[index] = target
         context.queue_editor_visual_refresh()
     return len(changes)
-
-
-def editor_factory_targets(context):
-    """Keep the factory-specific interface on the shared building-group query."""
-    return editor_building_targets(context, "industry")
-
-
-def set_editor_factories(context, target):
-    """Keep the factory-specific interface on the shared building editor."""
-    return set_editor_buildings(context, "industry", target)
 
 
 def editor_unit_targets(context, mode, value):

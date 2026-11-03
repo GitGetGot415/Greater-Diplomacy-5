@@ -1078,7 +1078,7 @@ class TextField:
     the value while the player types.
     """
     def __init__(self, x, y, width, height, initial_text="", numeric=False,
-                max_length=None, on_submit=None, label=None, on_change=None, pad_x=8):
+                max_length=None, on_submit=None, label=None, on_change=None, pad_x=8, font_preset="normal"):
         self.rect = pygame.Rect(x, y, width, height)
         self.text = str(initial_text)
         self.numeric = numeric
@@ -1087,6 +1087,7 @@ class TextField:
         self.label = label
         self.on_change = on_change
         self.pad_x = pad_x
+        self.font_preset = font_preset
         self.active = False
         self.visible = True
         self.click_guard = None
@@ -1132,7 +1133,8 @@ class TextField:
             label_surf = label_font.render(self.label, True, c.UI_TEXT_BRIGHT)
             surface.blit(label_surf, label_surf.get_rect(midright=(self.rect.x - 10, self.rect.centery)))
 
-        draw_text_box(surface, self.rect, self.text, active=self.active, pad_x=self.pad_x)
+        draw_text_box(surface, self.rect, self.text, active=self.active,
+                      font=fonts.get(self.font_preset), pad_x=self.pad_x)
 
 def _clipboard_text():
     """Returns OS clipboard text, or an empty string when it is unavailable."""

@@ -78,7 +78,7 @@ class MouseSettingsTests(unittest.TestCase):
         actions["middle"]["issue_orders"] = True
         c.apply_runtime_settings({"mouse_button_actions": actions})
         self.assertTrue(map_input.mouse_button_has_action(2, "issue_orders"))
-        self.assertIn(2, map_input.mouse_buttons_with_actions("pan_map"))
+        self.assertTrue(map_input.mouse_button_has_action(2, "pan_map"))
 
 
 if __name__ == "__main__":

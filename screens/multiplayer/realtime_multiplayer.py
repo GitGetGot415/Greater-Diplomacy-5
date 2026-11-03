@@ -54,7 +54,8 @@ from data.multiplayer.realtime.relay import (
     destroy_temporary_relay,
 )
 from data.platform import IS_WEB
-from ui.navigation.game_state import GameState, MenuListScreen
+from ui.navigation.screen import Screen, MenuListScreen
+from screens.game import map_launch
 from ui.rendering.font_manager import fonts
 from ui import dialogs
 from ui.widgets.ui_elements import Button, UI_ICONS, make_back_button, play_ui_sound
@@ -128,7 +129,7 @@ def _client_nation_data(client):
     return nation_data if isinstance(nation_data, dict) else {}
 
 
-class _RealtimeScreen(GameState):
+class _RealtimeScreen(Screen):
     """Background color and default title height of the real-time screens."""
     bg_color = (12, 28, 50)
     title_y = 35
@@ -390,6 +391,9 @@ class Realtime_Relay_Setup(_RealtimeScreen):
         self.host_setup = None
         self.refresh_ui()
 
+    def on_enter(self, app, previous):
+        self.bind_host(app.states["REALTIME_HOST_SETUP"])
+
     def bind_host(self, host_setup):
         self.host_setup = host_setup
         self.refresh_ui()
@@ -470,6 +474,9 @@ class Realtime_Relay_Provision(_RealtimeScreen):
         self._relay_transitioned = False
         self.elements = [Button("centered", 450, "medium", "red", "Cancel and Delete Relay", self.cancel)]
 
+    def on_enter(self, app, previous):
+        self.bind_host(app.states["REALTIME_HOST_SETUP"])
+
     def bind_host(self, host_setup):
         self.host_setup = host_setup
         self._relay_transitioned = False
@@ -526,6 +533,13 @@ class Realtime_Scenario_Select(MenuListScreen, _RealtimeScreen):
         self.scroll_y = 0
         self.refresh_ui()
 
+    def on_enter(self, app, previous):
+        if previous == app.states["REALTIME_LOBBY"]:
+            self.bind_lobby(previous)
+        else:
+            self.bind_host(app.states["REALTIME_HOST_SETUP"])
+        self.refresh_ui()
+
     def bind_host(self, host_setup):
         self.lobby = None
         self.host_setup = host_setup
@@ -579,6 +593,13 @@ class Realtime_Lobby(_RealtimeLobby):
         self.relay_token = ""
         self.scroll_y = 0
         self.refresh_ui()
+
+    def on_enter(self, app, previous):
+        self.bind_host(app.states["REALTIME_HOST_SETUP"])
+
+    def prepare_map(self, app):
+        map_launch.open_hosted_realtime_map(app, self)
+        return True
 
     def bind_host(self, host_setup):
         self.session = host_setup.realtime_session
@@ -908,15 +929,6 @@ class Realtime_Lobby(_RealtimeLobby):
             dialogs.show_error("Cannot Start", str(exc)); return
         if self.advertiser:
             self.advertiser.stop()
-        self.selected_realtime_session = self.session
-        self.selected_realtime_server = self.server
-        self.selected_realtime_server_map = self.server_map
-        self.selected_realtime_port_mapping = self.port_mapping
-        self.selected_realtime_temporary_relay = self.temporary_relay
-        self.selected_realtime_relay_token = self.relay_token
-        self.selected_realtime_scenario_path = self.session.config.scenario_id
-        self.selected_realtime_settings = copy.deepcopy(self.session.config.scenario_settings)
-        self.selected_realtime_player_id = self.session.host_id
         self.go_to("MAP")
 
     def request_end_lobby(self):
@@ -1129,6 +1141,9 @@ class Realtime_Lan_Browser(_RealtimeScreen):
         self._signature = None
         self.refresh_ui()
 
+    def on_enter(self, app, previous):
+        self.bind_join(app.states["REALTIME_JOIN"])
+
     def bind_join(self, join_screen):
         self.join_screen = join_screen
         self._signature = None
@@ -1186,6 +1201,13 @@ class Realtime_Remote_Lobby(_RealtimeLobby):
         self.scroll_y = 0
         self.refresh_ui()
 
+    def on_enter(self, app, previous):
+        self.bind_join(app.states["REALTIME_JOIN"])
+
+    def prepare_map(self, app):
+        map_launch.open_joined_realtime_map(app, self)
+        return True
+
     def bind_join(self, join_screen):
         self.client, self.view = join_screen.realtime_client, join_screen.realtime_view
         self.reconnect_token = join_screen.reconnect_token
@@ -1226,8 +1248,6 @@ class Realtime_Remote_Lobby(_RealtimeLobby):
                     self.view.available_countries = getattr(self.view, "available_countries", [])
                     self.refresh_ui()
                     if self.view.phase in ("TURN", "PROCESSING", "GAME_OVER"):
-                        self.selected_realtime_client = self.client
-                        self.selected_realtime_view = self.view
                         self.go_to("MAP")
                 elif event.get("type") == "map_bundle":
                     # The matching state update carries country names/config;

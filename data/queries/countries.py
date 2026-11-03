@@ -50,11 +50,11 @@ def get_viewing_country(context):
     return viewer if viewer is not None else session.player_country
 
 
-def get_visible_provinces(map_screen):
+def get_visible_provinces(context):
     """Calculates and returns sets of province IDs currently visible and partially visible to the player."""
-    world_state = world_for(map_screen)
-    session_state = session_for(map_screen)
-    player_country = get_viewing_country(map_screen)
+    world_state = world_for(context)
+    session_state = session_for(context)
+    player_country = get_viewing_country(context)
     map_data = world_state.map_data
     nation_data = world_state.nation_data
     id_to_province = world_state.id_to_province
@@ -138,10 +138,10 @@ def get_visible_provinces(map_screen):
     return visible_set, partial_set
 
 
-def is_province_visible(map_screen, prov_id):
+def is_province_visible(context, prov_id):
     """Standardized check for fog of war visibility."""
-    if map_screen and map_screen.visible_provinces is not None:
-        return prov_id in map_screen.visible_provinces
+    if context and context.visible_provinces is not None:
+        return prov_id in context.visible_provinces
     return True
 
 
@@ -199,10 +199,10 @@ def get_nearby_nations_across_water(map_data, id_to_province, max_water_tiles=No
     return nearby
 
 
-def can_release_nations_for(map_screen, country_id):
+def can_release_nations_for(context, country_id):
     """Permit own-country releases or local spectator releases for a selected country."""
-    world_state = world_for(map_screen)
-    session_state = session_for(map_screen)
+    world_state = world_for(context)
+    session_state = session_for(context)
     if (country_id not in world_state.nation_data or country_id in c.UNPLAYABLE_NATIONS
             or session_state.is_editor or session_state.tactical_mode):
         return False
@@ -212,9 +212,9 @@ def can_release_nations_for(map_screen, country_id):
     return country_id == session_state.player_country
 
 
-def can_use_spectator_country_actions(map_screen):
+def can_use_spectator_country_actions(context):
     """Permit immediate country changes only during local spectator planning."""
-    session_state = session_for(map_screen)
+    session_state = session_for(context)
     return (session_state.player_country == "Spectator"
             and not (session_state.is_editor or session_state.tactical_mode or session_state.selection_mode
                      or session_state.ai_is_thinking or session_state.viewing_ai_moves
@@ -223,25 +223,25 @@ def can_use_spectator_country_actions(map_screen):
                      or session_state.realtime_multiplayer))
 
 
-def realtime_turn_open(map_screen):
+def realtime_turn_open(context):
     """Whether the viewer may still change their own draft this turn.
 
     Outside real-time multiplayer there is no shared turn to close. In a real-time
     game the player must be in the turn phase, unsubmitted, and not eliminated.
     """
-    if not session_for(map_screen).realtime_multiplayer:
+    if not session_for(context).realtime_multiplayer:
         return True
-    session = map_screen.realtime_session
-    player = session.players.get(map_screen.realtime_player_id) if session else None
+    session = context.realtime_session
+    player = session.players.get(context.realtime_player_id) if session else None
     return bool(session and session.phase == "TURN" and player
                 and not player.submitted and not player.eliminated)
 
 
-def require_realtime_turn_open(map_screen, subject):
+def require_realtime_turn_open(context, subject):
     """Return realtime_turn_open, and tell the player why when it is closed."""
-    if realtime_turn_open(map_screen):
+    if realtime_turn_open(context):
         return True
-    map_screen.show_feedback(f"Turn submitted or unavailable; unsubmit to change {subject}.")
+    context.show_feedback(f"Turn submitted or unavailable; unsubmit to change {subject}.")
     return False
 
 
@@ -358,10 +358,10 @@ def is_foreign_playable(owner, player_country, nation_data):
     return owner != player_country and owner in nation_data and nation_data[owner].get("is_playable", False)
 
 
-def get_active_ai_nations(map_screen):
+def get_active_ai_nations(context):
     """Returns a list of all playable, active AI nations (excluding the human player)."""
-    world_state = world_for(map_screen)
-    session_state = session_for(map_screen)
+    world_state = world_for(context)
+    session_state = session_for(context)
     ai_nations = []
     # Account for potential hotseat active_players lists or standard player_country setups
     human_players = session_state.active_players if session_state.active_players else [session_state.player_country]
@@ -374,8 +374,8 @@ def get_active_ai_nations(map_screen):
     # Cross-reference with nations that actually own territory
     living_nations = queries.get_living_nations(world_state.map_data)
     
-    submitted = map_screen.submitted_moves
-    protected = map_screen.multiplayer_protected_countries
+    submitted = context.submitted_moves
+    protected = context.multiplayer_protected_countries
 
     for name, data in world_state.nation_data.items():
         if (submitted and name in submitted) or (protected and name in protected):

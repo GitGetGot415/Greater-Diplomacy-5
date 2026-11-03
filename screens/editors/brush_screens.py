@@ -5,7 +5,7 @@ import data.constants as c
 from ui.background_styles import EDITOR_PANEL_STYLES
 from data import queries
 from ui.dialogs import pickers
-from ui.navigation.game_state import EditorOverlayScreen
+from ui.navigation.screen import EditorOverlayScreen
 from ui.widgets.ui_elements import Button, TextField, checkbox_label, make_back_button, toggle_color
 from ui import dialogs
 from ui.rendering.font_manager import fonts

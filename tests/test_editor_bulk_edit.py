@@ -103,9 +103,9 @@ class BulkEditTests(unittest.TestCase):
         self.assertEqual(self.game.editor_history, [])
 
     def test_factories_change_across_owners_and_support_undo_redo(self):
-        self.assertEqual(queries.editor_factory_targets(self.game),
+        self.assertEqual(queries.editor_building_targets(self.game, "industry"),
                          ["Basic Factory", "Factory Lvl 2", "Factory Lvl 4"])
-        self.assertEqual(queries.set_editor_factories(self.game, "Factory Lvl 2"), 2)
+        self.assertEqual(queries.set_editor_buildings(self.game, "industry", "Factory Lvl 2"), 2)
         self.assertEqual(self.game.map_data["a"]["buildings"], ["Factory Lvl 2", "Other"])
         self.assertNotIn("buildings", self.game.map_data["empty"])
         self.assertEqual(len(self.game.editor_history), 1)
@@ -116,9 +116,9 @@ class BulkEditTests(unittest.TestCase):
 
     def test_invalid_and_unchanged_factories_do_not_create_history(self):
         with self.assertRaises(ValueError):
-            queries.set_editor_factories(self.game, "Other")
+            queries.set_editor_buildings(self.game, "industry", "Other")
         self.game.map_data["b"]["buildings"] = []
-        self.assertEqual(queries.set_editor_factories(self.game, "Basic Factory"), 0)
+        self.assertEqual(queries.set_editor_buildings(self.game, "industry", "Basic Factory"), 0)
         self.assertEqual(self.game.editor_history, [])
 
     def test_year_uses_equipment_and_numbered_research_dates_inclusively(self):
@@ -181,8 +181,7 @@ class BulkEditTests(unittest.TestCase):
             with self.subTest(field=field), mock.patch.object(self.game, field, value):
                 actions = [(queries.set_editor_buildings, (group, queries.editor_building_targets(self.game, group)[0]))
                            for group in queries.EDITOR_BUILDING_GROUPS]
-                actions.extend(((queries.set_editor_factories, ("Factory Lvl 2",)),
-                                (queries.set_editor_units, ("year", 1850)),
+                actions.extend(((queries.set_editor_units, ("year", 1850)),
                                 (queries.reset_editor_diplomacy, ())))
                 for action, args in actions:
                     with self.assertRaises(ValueError):

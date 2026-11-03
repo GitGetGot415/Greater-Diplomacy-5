@@ -11,7 +11,7 @@ does, using the picker every other converted tool already uses.
 """
 import re
 import pygame
-from ui.navigation.game_state import GameState
+from ui.navigation.screen import Screen
 import data.constants as c
 from ui.background_styles import EDITOR_PANEL_STYLES
 from data import queries

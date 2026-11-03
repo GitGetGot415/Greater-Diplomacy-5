@@ -19,8 +19,10 @@ from screens.game.orders import Orders_Screen, _AirMissionSelectScreen
 from tests import test_air_mechanics as air_tests
 from tests.air_fixtures import install_air_fixture, tile, wing, world
 from tests.stub_map_screen import synchronous_progress
+from tests.tournament_fixtures import fast_tournament_crypto
 
 
+@fast_tournament_crypto()
 class TransportTests(unittest.TestCase):
     def setUp(self):
         install_air_fixture(self)

@@ -19,6 +19,7 @@ from map_logic.diplomacy import faction_actions, faction_leadership, faction_rec
 from map_logic.diplomacy.action_definitions import availability
 from tests.research_fixtures import fixture_metadata
 from tests.stub_map_screen import synchronous_progress
+from tests.tournament_fixtures import fast_tournament_crypto
 
 
 def game():
@@ -160,6 +161,7 @@ class FactionOwnerTests(unittest.TestCase):
         self.assertNotIn("private_plan", snapshot["factions"][identity])
 
 
+@fast_tournament_crypto()
 class SharedActionTests(unittest.TestCase):
     def test_previews_repeated_repairs_and_cancellation_do_not_duplicate_payment(self):
         context = game()

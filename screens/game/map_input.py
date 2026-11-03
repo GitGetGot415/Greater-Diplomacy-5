@@ -119,13 +119,6 @@ def mouse_button_has_action(button_number, action):
     return bool(button and c.MOUSE_BUTTON_ACTIONS[button].get(action, False))
 
 
-def mouse_buttons_with_actions(*actions):
-    """Return physical buttons that carry any requested map-pan action."""
-    return {number for number, button, _label in c.MOUSE_BUTTONS
-            if any(c.MOUSE_BUTTON_ACTIONS[button].get(action, False)
-                   for action in actions)}
-
-
 def mouse_buttons_for_map_panning(in_orders=False):
     """Return pan buttons, optionally respecting their Exclude Orders toggle."""
     return {number for number, button, _label in c.MOUSE_BUTTONS
@@ -384,7 +377,7 @@ def _handle_panel_scrolling(map_screen, event, mx, my):
 
     # --- SCROLLABLE INFO PANEL DRAG INTERCEPT ---
     # Lets the same three panels be grabbed and dragged directly, alongside the
-    # wheel scrolling above -- see GameState.handle_content_drag.
+    # wheel scrolling above -- see Screen.handle_content_drag.
     if (event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION)
             and _panels_are_live(map_screen)):
         for name in MAP_PANELS:

@@ -6,7 +6,7 @@ import pygame
 
 import data.constants as c
 from data import queries
-from ui.navigation.game_state import GameState
+from ui.navigation.screen import Screen
 from ui.rendering.font_manager import fonts
 from ui.bars import ui_bars
 from ui.widgets.ui_elements import Button, make_back_button, make_toggle_button
@@ -52,7 +52,7 @@ def mouse_control_warnings(actions):
     return warnings
 
 
-class Mouse_Settings(GameState):
+class Mouse_Settings(Screen):
     """Settings sub-screen for actions assigned to left, middle and right mouse."""
 
     back_state = "SETTINGS"

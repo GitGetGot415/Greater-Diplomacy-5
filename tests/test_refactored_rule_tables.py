@@ -26,10 +26,24 @@ class DiplomaticActionTableTests(unittest.TestCase):
         self.assertEqual(diplomacy_messages.announcement_for("FIXTURE_ACTION"), "We propose fixture action.")
 
     def test_an_unhandled_bilateral_action_uses_the_shared_announcement(self):
-        send = SimpleNamespace(map_screen=None, country="A", target="B", action="FIXTURE", custom_msg="", wrote_it=False)
+        send = SimpleNamespace(context=None, country="A", target="B", action="FIXTURE", custom_msg="", wrote_it=False)
         with patch.object(diplomacy_processor, "send_treaty_message") as announce:
             self.assertFalse(diplomacy_processor._send_announcement(send))
         announce.assert_called_once_with(None, "A", "B", "FIXTURE", "", llm=False)
+
+
+class ActionTableTests(unittest.TestCase):
+    def test_every_acceptance_effect_belongs_to_a_proposal(self):
+        from map_logic.diplomacy import treaty_effects
+        self.assertLessEqual(set(treaty_effects._ACCEPTANCE_EFFECTS), set(action_definitions.BILATERAL_ACTIONS))
+
+    def test_every_retaliation_handler_belongs_to_a_defined_action(self):
+        self.assertLessEqual(set(diplomacy_processor._RETALIATION_HANDLERS), set(action_definitions.ACTION_DEFINITIONS))
+
+    def test_only_proposals_have_a_proposal_notice(self):
+        for action, definition in action_definitions.ACTION_DEFINITIONS.items():
+            if definition.proposal_notice:
+                self.assertEqual(definition.category, "bilateral", action)
 
 
 class FastUnitPathTests(unittest.TestCase):
@@ -66,8 +80,8 @@ class RealtimeMapEntryTests(unittest.TestCase):
     def setUp(self):
         from tests import app_harness
         app_harness.boot()
-        import main
-        self.controller_class = main.Controller
+        global map_launch
+        from screens.game import map_launch
         self.session = SimpleNamespace(players={"p1": SimpleNamespace(country_id="A"), "p2": SimpleNamespace(country_id=None),
                                                 "p3": SimpleNamespace(country_id="B")})
         self.board = Mock(selection_mode=True, pending_selection="X", show_player_ready_screen=True)
@@ -75,7 +89,7 @@ class RealtimeMapEntryTests(unittest.TestCase):
 
     def enter(self, after_layers=None):
         with patch("screens.game.map.render_buttons") as render:
-            self.controller_class._enter_realtime_map(self.controller, self.board, self.session, "p1", "A", after_layers)
+            map_launch.enter_realtime_map(self.controller, self.board, self.session, "p1", "A", after_layers)
         render.assert_called_once_with(self.board)
 
     def test_entry_skips_country_selection_and_binds_the_player(self):
@@ -104,7 +118,7 @@ class RealtimeMapEntryTests(unittest.TestCase):
     def test_initial_snapshot_records_its_turn_and_phase(self):
         view = SimpleNamespace(snapshot={"state": 1}, turn_number=7, phase="TURN")
         with patch("data.multiplayer.realtime.session.apply_authoritative_snapshot") as apply_snapshot:
-            self.controller_class._apply_initial_snapshot(self.board, view)
+            map_launch.apply_initial_snapshot(self.board, view)
         apply_snapshot.assert_called_once_with(self.board, view.snapshot)
         self.assertEqual((self.board._realtime_snapshot_turn, self.board._realtime_snapshot_phase), (7, "TURN"))
 

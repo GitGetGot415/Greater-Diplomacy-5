@@ -5,11 +5,11 @@ import data.constants as c
 from data import queries
 from map_logic import politics
 
-def process_national_research(map_screen):
+def process_national_research(context):
     # Load template to know costs (REPLACED WITH CACHE)
-    world_state = world_for(map_screen)
-    session_state = session_for(map_screen)
-    template = queries.get_tech_tree(map_screen)
+    world_state = world_for(context)
+    session_state = session_for(context)
+    template = queries.get_tech_tree(context)
     
     # Uses the new constant
     days_per_turn = queries.get_days_per_turn(world_state.scenario_settings)
@@ -57,7 +57,7 @@ def process_national_research(map_screen):
                     country_data["research_progress"].pop(tech_key, None)
                 
                 if country_name == session_state.player_country:
-                    map_screen.show_feedback(f"TECH FINISHED: {queries.get_tech_display_name(tech_key, context=map_screen)}")
+                    context.show_feedback(f"TECH FINISHED: {queries.get_tech_display_name(tech_key, context=context)}")
                 
                 # Remove completed tech from queue
                 queue.pop(i)

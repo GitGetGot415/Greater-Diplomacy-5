@@ -26,7 +26,7 @@ from map_logic.diplomacy.puppet_actions import assign_puppet
 from map_logic.diplomacy.war_actions import finalize_neutral, remove_enemy
 
 
-def _hand_over_the_land_only(map_screen, prov, receiver):
+def _hand_over_the_land_only(context, prov, receiver):
     """Marches everyone else's army off a province that has just changed hands.
 
     A treaty moves ground. It does not move the men standing on it, and it never
@@ -50,17 +50,17 @@ def _hand_over_the_land_only(map_screen, prov, receiver):
             continue
         if not movement_processor.is_land_unit(unit):
             continue
-        movement_processor.send_unit_home(map_screen, prov, unit)
+        movement_processor.send_unit_home(context, prov, unit)
 
 
-def _provinces_by_id(map_screen):
-    world_state = world_for(map_screen)
+def _provinces_by_id(context):
+    world_state = world_for(context)
     if world_state.id_to_province:
         return world_state.id_to_province
     return {prov["id"]: prov for prov in world_state.map_data.values()}
 
 
-def economies_for(map_screen):
+def economies_for(context):
     """This turn's economy snapshot, for deal.resource_cap.
 
     Three sources in order of how much they cost. One already computed and
@@ -74,20 +74,20 @@ def economies_for(map_screen):
     rather than a ceiling of zero, so a caller that cannot know what a nation
     produces does not silently cancel every payment in the treaty.
     """
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
 
-    supplied = getattr(map_screen, "economies", None)
+    supplied = getattr(context, "economies", None)
     if supplied:
         return supplied
 
-    world = map_screen.ai_world
+    world = context.ai_world
     if world is not None:
         return world.economies
 
     map_data = world_state.map_data
     if not map_data:
         return None
-    return queries.calculate_all_economies(map_data, world_state.nation_data, context=map_screen)
+    return queries.calculate_all_economies(map_data, world_state.nation_data, context=context)
 
 
 def _provinces(count):
@@ -103,18 +103,18 @@ def _side_containing(deal, nation):
     return {nation}
 
 
-def prune(deal, map_screen):
+def prune(deal, context):
     """The deal minus any term the world has since made impossible.
 
     Returns (deal, dropped) where `dropped` is a list of sentences describing
     what fell away, for the message that reports the settlement.
     """
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
 
-    by_id = _provinces_by_id(map_screen)
+    by_id = _provinces_by_id(context)
     nation_data = world_state.nation_data
     prewar = deal_mod.prewar_index(nation_data)
-    economies = economies_for(map_screen)
+    economies = economies_for(context)
     # Every treaty in the game funnels through here on its way to executing, so
     # this is where the reach rule actually binds -- on the AI's offers and on
     # scripted ones as much as on anything a player built in the deal screen.
@@ -213,7 +213,7 @@ def prune(deal, map_screen):
     return deal_mod.with_clauses(deal, kept), dropped
 
 
-def execute(map_screen, deal, escrowed=None):
+def execute(context, deal, escrowed=None):
     """Applies an accepted deal. Returns the list of terms that had to be dropped.
 
     `escrowed` is {nation: {resource: amount}} already taken out of a payer's
@@ -226,23 +226,23 @@ def execute(map_screen, deal, escrowed=None):
     act of the treaty -- which is the order execute_peace_treaty used, and the
     order the message the players receive describes.
     """
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
 
     if not deal_mod.is_deal(deal):
         return []
 
-    deal, dropped = prune(deal, map_screen)
+    deal, dropped = prune(deal, context)
     nation_data = world_state.nation_data
-    by_id = _provinces_by_id(map_screen)
+    by_id = _provinces_by_id(context)
 
     # --- 1. Territory ---
     transfers = deal_mod.tile_transfers(deal, world_state.map_data, nation_data)
     for prov_id, receiver in transfers.items():
         prov = by_id.get(int(prov_id))
         if prov is not None and prov.get("owner") != receiver:
-            ownership.conquer_province(map_screen, prov, receiver)
+            ownership.conquer_province(context, prov, receiver)
             # The land, and only the land. See _hand_over_the_land_only.
-            _hand_over_the_land_only(map_screen, prov, prov.get("owner"))
+            _hand_over_the_land_only(context, prov, prov.get("owner"))
 
     # --- 2. Payments ---
     # A payer who escrowed when the offer went out has already been charged, so
@@ -329,7 +329,7 @@ def execute(map_screen, deal, escrowed=None):
 
     # --- 4. The war itself ---
     if deal_mod.ends_war(deal):
-        dropped.extend(restore_occupied(map_screen, deal, set(transfers)))
+        dropped.extend(restore_occupied(context, deal, set(transfers)))
         for ours in deal["sides"]["a"]:
             for theirs in deal["sides"]["b"]:
                 _clear_wargoals(nation_data, ours, theirs)
@@ -338,7 +338,7 @@ def execute(map_screen, deal, escrowed=None):
     return dropped
 
 
-def restore_occupied(map_screen, deal, ceded):
+def restore_occupied(context, deal, ceded):
     """Hands back every province one side holds of the other's and did not win
     in the treaty. Returns notes for the settlement message.
 
@@ -363,7 +363,7 @@ def restore_occupied(map_screen, deal, ceded):
     live map while execution measured against the pre-war one -- the game
     priced, drew and explained a different treaty from the one it carried out.
     """
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     baseline = deal_mod.baseline_owners(deal, world_state.map_data, world_state.nation_data)
 
     returned = 0
@@ -374,7 +374,7 @@ def restore_occupied(map_screen, deal, ceded):
         if was is None or was == prov.get("owner"):
             continue
 
-        ownership.conquer_province(map_screen, prov, was)
+        ownership.conquer_province(context, prov, was)
         returned += 1
 
     if returned:
@@ -389,14 +389,14 @@ def _clear_wargoals(nation_data, a, b):
         wargoals.pop(other, None)
 
 
-def announce(map_screen, deal, dropped=()):
+def announce(context, deal, dropped=()):
     """Files a settlement in the global log, so the world hears about it.
 
     Wars only. An ordinary trade is between the two of them and already produces
     a "diplomatic agreement reached" line in diplomacy_processor; announcing
     every exchange of fuel as world news would bury the wars that end.
     """
-    world_state = world_for(map_screen)
+    world_state = world_for(context)
     if not deal_mod.ends_war(deal):
         return
 

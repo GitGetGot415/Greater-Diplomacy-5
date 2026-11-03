@@ -3,7 +3,7 @@
 # state_access constructs WorldState, which imports RuntimeRules. Keep queries and state_access imports local to avoid that cycle.
 
 
-import copy
+import pickle
 from dataclasses import dataclass, field
 
 import data.constants as c
@@ -28,7 +28,9 @@ class RuntimeRules:
         """Replace derived content in place. Saved settings remain authoritative."""
         from data import queries
 
-        active = {name: copy.deepcopy(dict(library)) for name, library in defaults.items()}
+        # Each world owns its copy. Pickle copies this JSON data faster than deepcopy.
+        active = {name: pickle.loads(pickle.dumps(dict(library), pickle.HIGHEST_PROTOCOL))
+                  for name, library in defaults.items()}
         units = active['unit_library']
         buildings = active['building_library']
         tree = active['tech_tree']

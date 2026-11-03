@@ -9,9 +9,9 @@ from data import queries
 
 import traceback
 
-def advance_time(map_screen):
-    session_state = session_for(map_screen)
-    diplomatic_popups.clear_popups(map_screen)
+def advance_time(context):
+    session_state = session_for(context)
+    diplomatic_popups.clear_popups(context)
 
     session_state.turn_start_time = pygame.time.get_ticks()
 
@@ -27,7 +27,7 @@ def advance_time(map_screen):
         # background coroutine below to yield often enough to let that render
         # loop keep running, which is what actually fixes the "loading bar
         # never shows up, tab just freezes" bug on web.
-        run_background(_resolve_turn_and_refresh, map_screen)
+        run_background(_resolve_turn_and_refresh, context)
         return
 
     # PHASE 1: Prepare the turn and generate AI moves
@@ -37,18 +37,18 @@ def advance_time(map_screen):
         if session_state.current_player_index < len(session_state.active_players):
             # Next player's turn to issue orders
             session_state.player_country = session_state.active_players[session_state.current_player_index]
-            map_screen.show_player_ready_screen = True
+            context.show_player_ready_screen = True
         else:
             # All players have gone, loop back to player 1 and PREPARE the turn!
             session_state.current_player_index = 0
             session_state.player_country = "n/a"
-            trigger_ai_thread(map_screen)
+            trigger_ai_thread(context)
     else:
-        trigger_ai_thread(map_screen)
+        trigger_ai_thread(context)
         
-def trigger_ai_thread(map_screen):
+def trigger_ai_thread(context):
     """Helper to lock the UI and start the background thread."""
-    session_state = session_for(map_screen)
+    session_state = session_for(context)
     session_state.ai_is_thinking = True
     session_state.loading_status_text = "Initializing Turn..."
     session_state.force_skip_llm = False # Reset the skip flag
@@ -58,7 +58,7 @@ def trigger_ai_thread(map_screen):
     ai_handler.CURRENT_TURN_ID += 1
         
     # Pre-calculate determinable totals so the UI instantly knows the workload
-    session_state.proactive_tasks_total = len(queries.get_active_ai_nations(map_screen))
+    session_state.proactive_tasks_total = len(queries.get_active_ai_nations(context))
     session_state.proactive_tasks_completed = 0
     
     # Dynamic LLM tasks cannot be known until previous phases finish. Mark as -1 (Pending)
@@ -81,29 +81,29 @@ def trigger_ai_thread(map_screen):
 
     # Force the loading screen to actually appear before run_background either
     # spawns a thread (desktop) or, on web, blocks the frame running synchronously.
-    map_screen.draw(pygame.display.get_surface())
+    context.draw(pygame.display.get_surface())
     pygame.display.flip()
 
     # Fire and forget the background process
-    run_background(run_ai_processing_thread, map_screen)
+    run_background(run_ai_processing_thread, context)
 
-async def run_ai_processing_thread(map_screen):
+async def run_ai_processing_thread(context):
     """This runs in the background. Pygame keeps running!"""
-    session_state = session_for(map_screen)
+    session_state = session_for(context)
     try:
-        await turn_processor.prepare_turn(map_screen)
+        await turn_processor.prepare_turn(context)
     except Exception as e:
         session_state.thread_error = traceback.format_exc()
         print(f"BACKGROUND CRASH CAUGHT:\n{session_state.thread_error}")
     finally:
         session_state.ai_processing_complete = True # Always signal the main thread we are done
 
-async def _resolve_turn_and_refresh(map_screen):
+async def _resolve_turn_and_refresh(context):
     """Background body for advance_time's Phase 2 (see run_background)."""
-    session_state = session_for(map_screen)
+    session_state = session_for(context)
     try:
         # 1. Run the heavy logic (Combat, Movement, etc.)
-        await turn_processor.resolve_turn_logic(map_screen)
+        await turn_processor.resolve_turn_logic(context)
 
         # --- MULTI-TURN OPTIMIZATION ---
         is_multi = session_state.multi_turns_total > 0
@@ -111,13 +111,13 @@ async def _resolve_turn_and_refresh(map_screen):
 
         # 2. Define Refresh Tasks
         refresh_steps = [
-            ("Refreshing Political Map...", lambda: map_screen.refresh_map_layers("political")),
-            ("Refreshing Relations Map...", lambda: map_screen.refresh_map_layers("relations")),
-            ("Refreshing Factions Map...", lambda: map_screen.refresh_map_layers("factions")),
-            ("Refreshing Core Map...", lambda: map_screen.refresh_map_layers("cores")),
-            ("Refreshing Territories...", lambda: map_screen.refresh_map_layers("faction_territories")),
-            ("Refreshing Fog of War...", lambda: map_screen.refresh_map_layers("fog")),
-            ("Updating Map Labels...", map_screen.update_country_centers)
+            ("Refreshing Political Map...", lambda: context.refresh_map_layers("political")),
+            ("Refreshing Relations Map...", lambda: context.refresh_map_layers("relations")),
+            ("Refreshing Factions Map...", lambda: context.refresh_map_layers("factions")),
+            ("Refreshing Core Map...", lambda: context.refresh_map_layers("cores")),
+            ("Refreshing Territories...", lambda: context.refresh_map_layers("faction_territories")),
+            ("Refreshing Fog of War...", lambda: context.refresh_map_layers("fog")),
+            ("Updating Map Labels...", context.update_country_centers)
         ]
 
         session_state.refresh_tasks_total = len(refresh_steps)
@@ -141,14 +141,14 @@ async def _resolve_turn_and_refresh(map_screen):
 
         if len(session_state.active_players) > 1:
             session_state.player_country = session_state.active_players[session_state.current_player_index]
-            map_screen.show_player_ready_screen = True
+            context.show_player_ready_screen = True
 
         # The map imports turn_manager. Load its UI helper after both modules initialize.
         from screens.game.map import render_buttons
-        render_buttons(map_screen)
+        render_buttons(context)
 
         elapsed_seconds = (pygame.time.get_ticks() - session_state.turn_start_time) / 1000.0
-        map_screen.show_feedback(f"Turn resolved in {elapsed_seconds:.2f}s")
+        context.show_feedback(f"Turn resolved in {elapsed_seconds:.2f}s")
     except Exception:
         session_state.thread_error = traceback.format_exc()
         print(f"BACKGROUND CRASH CAUGHT:\n{session_state.thread_error}")
