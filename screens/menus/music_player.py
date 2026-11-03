@@ -52,6 +52,8 @@ TRACK_SHUFFLE_TOGGLE_GAP = 4
 TRACK_ALBUM_HEADER_HEIGHT = 32
 TRACK_ALBUM_LABEL_GAP = 10
 TRACK_ADD_SONG_DIVIDER_HEIGHT = 12
+TRACK_ADD_SONG_DIVIDER_TOP_GAP = 8
+TRACK_ADD_SONG_GAP = 8
 # The right pane holds the audio sliders and the starting-song controls.
 MUSIC_RIGHT_PANE_W = 260
 MUSIC_RIGHT_PANE_X = c.SCREEN_WIDTH - MUSIC_RIGHT_PANE_W
@@ -372,14 +374,16 @@ class Music_Player(ScrollPanes, Screen):
             track_content_h += song_y
 
         if self.controller.playlist:
+            track_y += TRACK_ADD_SONG_DIVIDER_TOP_GAP
+            track_content_h += TRACK_ADD_SONG_DIVIDER_TOP_GAP
             divider = pygame.Surface((header_width, TRACK_ADD_SONG_DIVIDER_HEIGHT), pygame.SRCALPHA)
             pygame.draw.line(divider, c.UI_TEXT_DIM,
                              (0, TRACK_ADD_SONG_DIVIDER_HEIGHT // 2),
                              (header_width - 1, TRACK_ADD_SONG_DIVIDER_HEIGHT // 2))
             self._track_dividers.append((
                 divider, divider.get_rect(topleft=(MUSIC_LEFT_PANE_W + 20, track_y))))
-            track_y += TRACK_ADD_SONG_DIVIDER_HEIGHT
-            track_content_h += TRACK_ADD_SONG_DIVIDER_HEIGHT
+            track_y += TRACK_ADD_SONG_DIVIDER_HEIGHT + TRACK_ADD_SONG_GAP
+            track_content_h += TRACK_ADD_SONG_DIVIDER_HEIGHT + TRACK_ADD_SONG_GAP
 
         # Always the last row of the song list.
         add_song_btn = Button(MUSIC_LEFT_PANE_W + 20, track_y, "song", "blue", ADD_SONG_LABEL,
