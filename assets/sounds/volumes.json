@@ -8,7 +8,7 @@
     "Open Music.wav":           4.0,
     "Open Settings.mp3":        {"volume": 2.0, "offset": 0.05},
     "Open Mail.mp3":            1.0,
-    "Info.mp3":                {"volume": 1.0, "offset": 0.05},
+    "Info.mp3":                 {"volume": 1.0, "offset": 0.05},
     "Create Army.mp3":          1.0,
     "Research.mp3":             2.0,
     "Table.wav":                1.0,
