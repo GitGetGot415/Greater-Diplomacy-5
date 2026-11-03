@@ -1,6 +1,8 @@
 """Behavior of the shared menu lists, lobby, editor windows, and text fields."""
 
 import os
+from pathlib import Path
+import tempfile
 import unittest
 from types import SimpleNamespace
 from unittest import mock
@@ -522,6 +524,24 @@ class OneSoundPerClickTests(SharedUiTestCase):
         from screens.multiplayer.multiplayer_hub import Multiplayer_Hub
 
         self.assertEqual(self.click_sounds(button_named(Multiplayer_Hub(), "Help")), ["info"])
+
+    def test_asset_folder_and_file_clicks_play_selection_sounds_once(self):
+        from screens.menus import view_assets
+        from ui.widgets import ui_elements
+
+        with tempfile.TemporaryDirectory() as temporary:
+            for folder in ("First", "Second"):
+                directory = Path(temporary, folder)
+                directory.mkdir()
+                (directory / "fixture.txt").write_text("Fixture text", encoding="utf-8")
+            with mock.patch.object(view_assets.c, "ASSETS_ROOT_DIR", temporary), \
+                    mock.patch.object(ui_elements, "play_ui_sound") as sound:
+                screen = view_assets.View_Assets()
+                sound.assert_not_called()
+                self.assertEqual(self.click_sounds(button_named(screen, "Second")), ["select_category"])
+                self.assertEqual(screen.current_folder, "Second")
+                self.assertEqual(self.click_sounds(button_named(screen, "fixture.txt")), ["select_sub_category"])
+                self.assertEqual(screen.current_file, "fixture.txt")
 
     def test_guest_lobby_popup_buttons_play_only_info(self):
         lobby = LobbyTests().guest_lobby()

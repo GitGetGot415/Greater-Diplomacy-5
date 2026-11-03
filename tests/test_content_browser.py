@@ -105,6 +105,47 @@ class ContentBrowserTests(unittest.TestCase):
         self.assertEqual(screen.next_state, "NEW_GAME")
         self.assertTrue(screen.done)
 
+    def test_new_game_and_new_map_play_category_and_item_selection_sounds_once(self):
+        self.bundle("Fixture", "SCENARIOS_ALTERNATE_DIR")
+        for screen in self.library_screens():
+            with self.subTest(screen=type(screen).__name__), \
+                    mock.patch("ui.widgets.ui_elements.play_ui_sound") as sound:
+                self.click(screen, button_named(screen, "Alternate Scenarios"))
+                sound.assert_called_once_with("select_category")
+                sound.reset_mock()
+                self.click(screen, button_named(screen, "Fixture"))
+                sound.assert_called_once_with("select_sub_category")
+                self.assertEqual(screen.selected_entry.name, "Fixture")
+                self.assertFalse(screen.done)
+
+    def test_random_scenario_category_plays_one_selection_sound(self):
+        screen = self.new_game_screen()
+        with mock.patch("ui.widgets.ui_elements.play_ui_sound") as sound:
+            self.click(screen, button_named(screen, "Random Scenario"))
+        sound.assert_called_once_with("select_category")
+        self.assertEqual(screen.next_state, "RANDOM_SETUP")
+
+    def test_random_scenario_map_and_algorithm_choices_play_one_selection_sound(self):
+        from screens.setup.random_setup import Random_Setup
+
+        self.bundle("Fixture Map", "BASE_MAPS_DIR")
+        with mock.patch.object(Random_Setup, "calculate_max_countries", return_value=50):
+            screen = Random_Setup()
+        with mock.patch("ui.widgets.ui_elements.play_ui_sound") as sound:
+            self.click(screen, button_named(screen, "Random Map"))
+            sound.assert_called_once_with("select_sub_category")
+            self.assertTrue(screen.procedural_world)
+            sound.reset_mock()
+            algorithm = next(item for item in screen.elements
+                             if getattr(item, "text", "").startswith("Type: "))
+            self.click(screen, algorithm)
+            sound.assert_called_once_with("select_sub_category")
+            self.assertEqual(screen.proc_type_index, 1)
+            sound.reset_mock()
+            self.click(screen, button_named(screen, "Fixture Map"))
+            sound.assert_called_once_with("select_sub_category")
+            self.assertFalse(screen.procedural_world)
+
     def test_selection_does_not_open_and_primary_action_loads_the_selected_save(self):
         self.bundle("Alpha")
         beta = self.bundle("Beta", modified=200)

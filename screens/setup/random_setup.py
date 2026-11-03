@@ -144,17 +144,20 @@ class Random_Setup(Screen):
             proc_x = (c.SCREEN_WIDTH // 2) - 210
             type_x = (c.SCREEN_WIDTH // 2) + 10
             
-            proc_btn = Button(random_map_x, random_map_y, "medium", "blue", "Random Map", self.toggle_procedural)
+            proc_btn = Button(random_map_x, random_map_y, "medium", "blue", "Random Map", self.toggle_procedural,
+                              sound_kind="select_sub_category")
             proc_btn.is_selected = True
             self.elements.append(proc_btn)
             
             map_type_str = self.procedural_types[self.proc_type_index]
             self.elements.append(
-                Button(random_map_x + 210, random_map_y, "medium", "red", f"Type: {map_type_str}", self.toggle_procedural_type)
+                Button(random_map_x + 210, random_map_y, "medium", "red", f"Type: {map_type_str}", self.toggle_procedural_type,
+                       sound_kind="select_sub_category")
             )
         else:
             # Perfectly centered when it's the lone option
-            proc_btn = Button(random_map_x, random_map_y, "medium", "blue", "Random Map", self.toggle_procedural)
+            proc_btn = Button(random_map_x, random_map_y, "medium", "blue", "Random Map", self.toggle_procedural,
+                              sound_kind="select_sub_category")
             self.elements.append(proc_btn)
         
         # 2. Base Maps Table Layout
@@ -168,7 +171,8 @@ class Random_Setup(Screen):
             grid_idx = i  # Reset to 0 base since Random Map isn't taking slot 0 anymore
             col = grid_idx % cols
             row = grid_idx // cols
-            btn = Button(start_x + (col * 210), start_y + (row * 60), "medium", "blue", map_name, lambda idx=i: self.select_map(idx))
+            btn = Button(start_x + (col * 210), start_y + (row * 60), "medium", "blue", map_name, lambda idx=i: self.select_map(idx),
+                         sound_kind="select_sub_category")
             if not self.procedural_world and i == self.map_index:
                 btn.is_selected = True 
             self.elements.append(btn)

@@ -57,7 +57,7 @@ class New_Game(ScenarioLibraryScreen):
         leaders_button.apply_state(enabled=self.sub_state == "HISTORICAL", color="blue")
         random_rect = self.category_button_rect(len(self.library_categories))
         random_button = Button(random_rect.x, random_rect.y, random_rect.size, "orange", "Random Scenario",
-                               self.start_random_scenario, font_preset="button_small")
+                               self.start_random_scenario, font_preset="button_small", sound_kind="select_category")
         random_button.fit_text = True
         random_button.fit_single_line = True
         self.elements.extend([

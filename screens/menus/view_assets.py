@@ -243,7 +243,8 @@ class View_Assets(ScrollPanes, Screen):
         folder_content_h = 0
         for folder in self.folders:
             btn = make_choice_button(20, y, "asset_folder", folder, folder == self.current_folder,
-                                     lambda f=folder: self.select_folder(f), idle_color="grey")
+                                     lambda f=folder: self.select_folder(f), idle_color="grey",
+                                     sound_kind="select_category")
             btn.click_guard = lambda: pygame.mouse.get_pos()[1] >= HEADER_H
             btn.pane = "folder"
             self.elements.append(btn)
@@ -264,7 +265,8 @@ class View_Assets(ScrollPanes, Screen):
             cb = lambda n=name: self.select_file(n)
             label = _truncate_text(name, file_font, file_btn_w - 20)
 
-            btn = Button(FOLDER_PANE_W + 15, y, "asset_file", color, label, cb, font_preset=FILE_FONT_PRESET)
+            btn = Button(FOLDER_PANE_W + 15, y, "asset_file", color, label, cb, font_preset=FILE_FONT_PRESET,
+                         sound_kind="select_sub_category")
             btn.click_guard = lambda: pygame.mouse.get_pos()[1] >= HEADER_H
             btn.pane = "file"
             self.elements.append(btn)

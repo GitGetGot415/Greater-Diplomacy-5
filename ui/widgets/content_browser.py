@@ -466,7 +466,8 @@ class ScenarioLibraryScreen(ContentBrowserScreen):
         for index, (state, (label, directory_attr)) in enumerate(self.library_categories.items()):
             rect = self.category_button_rect(index)
             tile = Button(rect.x, rect.y, rect.size, self.CATEGORY_COLORS[directory_attr], label,
-                          lambda category=state: self.set_sub_state(category), font_preset="button_small")
+                          lambda category=state: self.set_sub_state(category), font_preset="button_small",
+                          sound_kind="select_category")
             tile.fit_text = True
             tile.fit_single_line = True
             tile.is_selected = self.sub_state == state
@@ -483,7 +484,7 @@ class ScenarioLibraryScreen(ContentBrowserScreen):
         if not self.library_mode:
             return super().make_content_row(rect, entry)
         row = Button(rect.x, rect.y, rect.size, self.category_color, entry.name,
-                     lambda: self.toggle_entry(entry), font_preset="button_small")
+                     lambda: self.toggle_entry(entry), font_preset="button_small", sound_kind="select_sub_category")
         row.fit_text = True
         row.fit_single_line = True
         row.text_align = "left"

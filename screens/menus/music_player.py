@@ -277,7 +277,7 @@ class Music_Player(ScrollPanes, Screen):
             btn.click_guard = album_guard
             btn.fit_text = True
             btn.image_bottom_margin = ALBUM_COVER_BOTTOM_MARGIN
-            btn.sound_kind = "select_album"
+            btn.sound_kind = "select_category"
             btn.pane = "album"
             self.elements.append(btn)
 
@@ -341,7 +341,7 @@ class Music_Player(ScrollPanes, Screen):
             track_btn.click_guard = lambda: pygame.mouse.get_pos()[1] >= 200
             track_btn.fit_text = True
             track_btn.fit_single_line = True
-            track_btn.sound_kind = "select_song"
+            track_btn.sound_kind = "select_sub_category"
             track_btn.pane = "track"
             self.elements.append(track_btn)
 

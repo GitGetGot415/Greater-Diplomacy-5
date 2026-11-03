@@ -67,24 +67,24 @@ class PygameSfxPitchTests(unittest.TestCase):
         self.assertEqual(len(ui_elements._pygame_sfx_pitch_cache["slider"]), 1)
 
     def test_volume_config_loads_filename_multipliers_and_defaults(self):
-        values = {"Slider.wav": 2.5, "Select Song.wav": 0}
+        values = {"Slider.wav": 2.5, "Select Sub-Category.wav": 0}
         with patch("builtins.open", mock_open(read_data=json.dumps(values))):
             ui_elements.load_sound_volumes()
         ui_elements.global_sfx_volume = 0.4
         with patch.object(ui_elements.c, "SOUND_CLICK_PATH", "assets/sounds/Slider.wav"):
             self.assertEqual(ui_elements._ui_sound_volume("click"), 1.0)
-        self.assertEqual(ui_elements._ui_sound_volume("select_song"), 0)
+        self.assertEqual(ui_elements._ui_sound_volume("select_sub_category"), 0)
         self.assertEqual(ui_elements._ui_sound_volume("open_music"), 0.4)
         with patch("builtins.open", side_effect=FileNotFoundError):
             ui_elements.load_sound_volumes()
-        self.assertEqual(ui_elements._ui_sound_volume("select_song"), 0.4)
+        self.assertEqual(ui_elements._ui_sound_volume("select_sub_category"), 0.4)
 
     def test_volume_config_rejects_invalid_values_and_json(self):
         for value in [-1, True, "2", None, float("inf"), float("nan")]:
             with self.subTest(value=value):
-                contents = json.dumps({"Select Song.wav": value})
+                contents = json.dumps({"Select Sub-Category.wav": value})
                 with patch("builtins.open", mock_open(read_data=contents)):
-                    with self.assertRaisesRegex(ValueError, "Select Song.wav"):
+                    with self.assertRaisesRegex(ValueError, "Select Sub-Category.wav"):
                         ui_elements.load_sound_volumes()
         for contents in ["[]", "{"]:
             with patch("builtins.open", mock_open(read_data=contents)):
@@ -92,15 +92,15 @@ class PygameSfxPitchTests(unittest.TestCase):
                     ui_elements.load_sound_volumes()
 
     def test_sound_config_accepts_numbers_and_optional_object_fields(self):
-        values = {"Slider.wav": 2.5, "Select Song.wav": {"volume": 0.5, "offset": 0.25},
+        values = {"Slider.wav": 2.5, "Select Sub-Category.wav": {"volume": 0.5, "offset": 0.25},
                   "Info.mp3": {"offset": 0.1}, "Table.wav": {"volume": 2}, "Open Music.wav": {}}
         with patch("builtins.open", mock_open(read_data=json.dumps(values))):
             ui_elements.load_sound_volumes()
         self.assertEqual(ui_elements.sound_volume_multipliers,
-                         {"Slider.wav": 2.5, "Select Song.wav": 0.5, "Info.mp3": 1.0,
+                         {"Slider.wav": 2.5, "Select Sub-Category.wav": 0.5, "Info.mp3": 1.0,
                           "Table.wav": 2, "Open Music.wav": 1.0})
         self.assertEqual(ui_elements.sound_start_offsets,
-                         {"Slider.wav": 0.0, "Select Song.wav": 0.25, "Info.mp3": 0.1,
+                         {"Slider.wav": 0.0, "Select Sub-Category.wav": 0.25, "Info.mp3": 0.1,
                           "Table.wav": 0.0, "Open Music.wav": 0.0})
 
     def test_sound_config_rejects_invalid_values_and_preserves_previous_settings(self):
@@ -140,8 +140,8 @@ class PygameSfxPitchTests(unittest.TestCase):
         np.testing.assert_array_equal(pygame.sndarray.array(source), samples)
 
     def test_soloud_seeks_paused_at_normal_speed_before_playback(self):
-        ui_elements.sound_start_offsets["Select Song.wav"] = 0.25
-        ui_elements.sound_volume_multipliers["Select Song.wav"] = 1.0
+        ui_elements.sound_start_offsets["Select Sub-Category.wav"] = 0.25
+        ui_elements.sound_volume_multipliers["Select Sub-Category.wav"] = 1.0
         ui_elements.global_sfx_volume = 0.5
         ui_elements.global_sfx_pitch = 1.0
         sound = Mock()
@@ -150,8 +150,8 @@ class PygameSfxPitchTests(unittest.TestCase):
         engine.seek.return_value = 0
         with patch.object(ui_elements.c, "USE_SOLOUD", True), \
                 patch.object(ui_elements, "soloud_engine", engine), \
-                patch.dict(ui_elements.music_ui_sounds, select_song=sound):
-            ui_elements.play_ui_sound("select_song")
+                patch.dict(ui_elements.music_ui_sounds, select_sub_category=sound):
+            ui_elements.play_ui_sound("select_sub_category")
             handle = engine.play.return_value
             self.assertEqual(engine.mock_calls, [
                 unittest.mock.call.play(sound, aPaused=1),
@@ -161,13 +161,13 @@ class PygameSfxPitchTests(unittest.TestCase):
                 unittest.mock.call.set_pause(handle, False),
             ])
             engine.reset_mock()
-            ui_elements.sound_start_offsets["Select Song.wav"] = 1.0
-            ui_elements.play_ui_sound("select_song")
+            ui_elements.sound_start_offsets["Select Sub-Category.wav"] = 1.0
+            ui_elements.play_ui_sound("select_sub_category")
             engine.play.assert_not_called()
             engine.reset_mock()
-            ui_elements.sound_start_offsets["Select Song.wav"] = 0.25
+            ui_elements.sound_start_offsets["Select Sub-Category.wav"] = 0.25
             engine.seek.return_value = 1
-            ui_elements.play_ui_sound("select_song")
+            ui_elements.play_ui_sound("select_sub_category")
             engine.stop.assert_called_once_with(handle)
             engine.set_pause.assert_not_called()
 
@@ -195,31 +195,31 @@ class PygameSfxPitchTests(unittest.TestCase):
         self.assertIsNot(boosted, ui_elements._pygame_sound_at_pitch("click", 2))
 
     def test_backend_volume_uses_master_times_multiplier(self):
-        ui_elements.sound_volume_multipliers["Select Song.wav"] = 4
+        ui_elements.sound_volume_multipliers["Select Sub-Category.wav"] = 4
         ui_elements.global_sfx_volume = 0.5
         engine = Mock()
         sound = Mock()
         with patch.object(ui_elements.c, "USE_SOLOUD", True), \
                 patch.object(ui_elements, "soloud_engine", engine), \
-                patch.dict(ui_elements.music_ui_sounds, select_song=sound):
-            ui_elements.play_ui_sound("select_song")
+                patch.dict(ui_elements.music_ui_sounds, select_sub_category=sound):
+            ui_elements.play_ui_sound("select_sub_category")
             engine.set_volume.assert_called_once_with(engine.play.return_value, 2)
         with patch.object(ui_elements.c, "USE_SOLOUD", False), \
                 patch.object(ui_elements, "_pygame_sound_at_pitch", return_value=sound) as prepare:
-            ui_elements.play_ui_sound("select_song")
-            prepare.assert_called_once_with("select_song", 2)
+            ui_elements.play_ui_sound("select_sub_category")
+            prepare.assert_called_once_with("select_sub_category", 2)
             sound.set_volume.assert_called_once_with(1)
             ui_elements.global_sfx_volume = 0.125
-            ui_elements.play_ui_sound("select_song")
-            prepare.assert_called_with("select_song", 1)
+            ui_elements.play_ui_sound("select_sub_category")
+            prepare.assert_called_with("select_sub_category", 1)
             sound.set_volume.assert_called_with(0.5)
             sound.play.reset_mock()
             ui_elements.global_sfx_volume = 0
-            ui_elements.play_ui_sound("select_song")
+            ui_elements.play_ui_sound("select_sub_category")
             sound.play.assert_not_called()
             ui_elements.global_sfx_volume = 1
-            ui_elements.sound_volume_multipliers["Select Song.wav"] = 0
-            ui_elements.play_ui_sound("select_song")
+            ui_elements.sound_volume_multipliers["Select Sub-Category.wav"] = 0
+            ui_elements.play_ui_sound("select_sub_category")
             sound.play.assert_not_called()
 
 
