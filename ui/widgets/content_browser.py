@@ -164,7 +164,7 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
                                               attr="_scroll_items", limit_attr="_max_items"):
             entry = self.filtered_entries[index]
             row = ContentRow(pygame.Rect(rect.x, y, rect.width, self.ROW_HEIGHT - 6), entry,
-                             self.selected_entry == entry, lambda item=entry: self.select_entry(item))
+                             self.selected_entry == entry, lambda item=entry: self.toggle_entry(item))
             self.add_pane_row("items", row)
             row.click_guard = lambda r=rect: r.collidepoint(pygame.mouse.get_pos())
         self._prepare_details()
@@ -179,7 +179,7 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
             entries.sort(key=lambda entry: (entry.name.casefold(), entry.name), reverse=sort == "reverse_name")
         selected_path = self.selected_entry.path if self.selected_entry else None
         self.filtered_entries = entries
-        selected = next((entry for entry in entries if entry.path == selected_path), entries[0] if entries else None)
+        selected = next((entry for entry in entries if entry.path == selected_path), None)
         if selected != self.selected_entry:
             self._scroll_details = 0
         self.selected_entry = selected
@@ -201,6 +201,9 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
         self.selected_entry = entry
         self._scroll_details = 0
         self.refresh_ui()
+
+    def toggle_entry(self, entry):
+        self.select_entry(None if self.selected_entry == entry else entry)
 
     def _prepare_details(self):
         rect = self.regions["details"]
@@ -284,8 +287,11 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
             if not self._search_was_active:
                 self.activate_selected()
         elif event.key in (pygame.K_UP, pygame.K_DOWN) and self.filtered_entries:
-            index = self.filtered_entries.index(self.selected_entry)
-            index = max(0, min(len(self.filtered_entries) - 1, index + (1 if event.key == pygame.K_DOWN else -1)))
+            if self.selected_entry is None:
+                index = 0 if event.key == pygame.K_DOWN else len(self.filtered_entries) - 1
+            else:
+                index = self.filtered_entries.index(self.selected_entry)
+                index = max(0, min(len(self.filtered_entries) - 1, index + (1 if event.key == pygame.K_DOWN else -1)))
             rect = self.regions["items"]
             scroll = self.pane_scroll("items")
             top = index * self.ROW_HEIGHT + scroll

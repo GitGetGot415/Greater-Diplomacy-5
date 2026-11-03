@@ -68,6 +68,25 @@ class ContentBrowserTests(unittest.TestCase):
                 pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=button.rect.center),
             ])
 
+    def test_selection_starts_empty_and_clicking_selected_row_clears_it(self):
+        self.bundle("Save")
+        self.bundle("Map", "SCENARIOS_CUSTOM_DIR")
+        for screen, name, action in ((self.save_screen(), "Save", "Load Game"),
+                                     (self.map_screen(), "Map", "Edit Map")):
+            with self.subTest(name=name):
+                self.assertIsNone(screen.selected_entry)
+                self.assertFalse(screen.selection_can_open)
+                self.click(screen, button_named(screen, name))
+                self.assertEqual(screen.selected_entry.name, name)
+                self.assertTrue(screen.selection_can_open)
+                self.click(screen, button_named(screen, name))
+                self.assertIsNone(screen.selected_entry)
+                self.assertFalse(screen.selection_can_open)
+                self.click(screen, button_named(screen, action))
+                self.assertIsNone(screen.selected_entry)
+                screen.handle_events([key(pygame.K_DOWN)])
+                self.assertEqual(screen.selected_entry.name, name)
+
     def test_selection_does_not_open_and_primary_action_loads_the_selected_save(self):
         self.bundle("Alpha")
         beta = self.bundle("Beta", modified=200)
@@ -106,6 +125,7 @@ class ContentBrowserTests(unittest.TestCase):
         self.bundle("beta", modified=200)
         screen = self.save_screen()
         self.assertEqual([entry.name for entry in screen.filtered_entries], ["beta", "Alpha"])
+        self.click(screen, button_named(screen, "beta"))
         screen.cycle_sort()
         self.assertEqual([entry.name for entry in screen.filtered_entries], ["Alpha", "beta"])
         self.assertEqual(screen.selected_entry.name, "beta")
@@ -129,6 +149,7 @@ class ContentBrowserTests(unittest.TestCase):
         for index in range(12):
             self.bundle(f"Save {index:02d}", meta={"scenario_metadata": {"description": "Details " * 150}})
         screen = self.save_screen()
+        self.click(screen, button_named(screen, "Save 00"))
         screen.draw(self.surface)
         with mock.patch("os.scandir", side_effect=AssertionError("Unexpected directory scan")), \
                 mock.patch.object(queries, "read_saved_content_summary", side_effect=AssertionError("Unexpected metadata read")):
@@ -190,6 +211,7 @@ class ContentBrowserTests(unittest.TestCase):
 
         self.bundle("Original")
         screen = self.save_screen()
+        self.click(screen, button_named(screen, "Original"))
         with mock.patch.object(dialogs, "ask_string") as ask:
             self.click(screen, button_named(screen, "Rename"))
         ask.call_args.args[2]("Renamed")
@@ -208,9 +230,10 @@ class ContentBrowserTests(unittest.TestCase):
         custom = self.bundle("Custom", "SCENARIOS_CUSTOM_DIR")
         self.bundle("Base", "BASE_MAPS_DIR")
         screen = self.map_screen()
-        self.assertEqual(screen.selected_entry.path, str(custom))
+        self.assertIsNone(screen.selected_entry)
         self.click(screen, button_named(screen, "Base Maps"))
         self.assertEqual(screen.sub_state, "BASE_MAPS")
+        self.click(screen, button_named(screen, "Base"))
         with mock.patch.object(screen, "start_rename") as rename:
             button_named(screen, "Rename").callback()
         rename.assert_not_called()
@@ -219,6 +242,7 @@ class ContentBrowserTests(unittest.TestCase):
         edit.assert_called_once_with("Base", self.constants.BASE_MAPS_DIR)
         screen.handle_back_key()
         self.assertEqual(screen.sub_state, "CUSTOM_MAPS")
+        self.click(screen, button_named(screen, "Custom"))
         with mock.patch.object(screen, "start_editor_with_map") as edit:
             self.click(screen, button_named(screen, "Edit Map"))
         edit.assert_called_once_with("Custom", self.constants.SCENARIOS_CUSTOM_DIR)
@@ -235,7 +259,8 @@ class ContentBrowserTests(unittest.TestCase):
                 self.assertEqual(args[:2], (screen, directory))
                 self.bundle("Imported", "SAVES_DIR" if directory == self.constants.SAVES_DIR else "SCENARIOS_CUSTOM_DIR")
                 args[2]()
-                self.assertEqual(screen.selected_entry.name, "Imported")
+                self.assertIsNone(screen.selected_entry)
+                self.assertEqual(screen.entries[0].name, "Imported")
 
     def test_export_uses_the_selected_directory_and_existing_exchange(self):
         from ui.dialogs import file_exchange
@@ -246,6 +271,7 @@ class ContentBrowserTests(unittest.TestCase):
                                        (self.map_screen(), custom, "Custom_scenario.zip")):
             with self.subTest(screen=type(screen).__name__), \
                     mock.patch.object(file_exchange, "export_dir_as_zip") as export:
+                self.click(screen, button_named(screen, path.name))
                 self.click(screen, button_named(screen, "Export"))
                 export.assert_called_once_with(str(path), filename)
 
@@ -302,6 +328,7 @@ class ContentBrowserTests(unittest.TestCase):
             with self.subTest(payload=payload):
                 (path / "meta.json").write_text(payload, encoding="utf-8")
                 screen = self.save_screen()
+                self.click(screen, button_named(screen, path.name))
                 self.assertTrue(screen.selection_error)
                 with mock.patch.object(screen, "load_specific_save") as load:
                     screen.activate_selected()

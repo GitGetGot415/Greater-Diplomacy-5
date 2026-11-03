@@ -33,6 +33,7 @@ class Select_Base_Map(ContentBrowserScreen):
 
     def on_enter(self, app, previous):
         # Refresh on entry. Frame updates use cached entries.
+        self.selected_entry = None
         self.reload_entries()
 
     def prepare_map(self, app):

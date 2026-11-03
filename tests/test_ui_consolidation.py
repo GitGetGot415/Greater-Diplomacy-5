@@ -30,6 +30,7 @@ def save_browser():
     entry = ContentEntry("Save", os.path.join(screen.managed_dir, "Save"), 0, "Fixture date")
     screen.entries = [entry]
     screen.summary_cache = {entry.path: {"details": [], "error": ""}}
+    screen.selected_entry = entry
     screen.refresh_ui()
     return screen
 
@@ -277,6 +278,7 @@ class ToggleAndFooterTests(SharedUiTestCase):
 class FolderRowTests(SharedUiTestCase):
     def test_save_selection_and_actions_use_the_selected_folder(self):
         screen = save_browser()
+        screen.select_entry(None)
         with mock.patch.object(screen, "load_specific_save") as load:
             button_named(screen, "Save").callback()
         load.assert_not_called()
