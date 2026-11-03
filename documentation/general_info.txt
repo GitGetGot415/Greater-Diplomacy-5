@@ -159,12 +159,15 @@ Select Start Game or Create Map, or press Enter, to open the selected item.
 Selecting the same item again clears the selection. Search and sorting use the shared browser controls.
 Back from New Map returns to custom maps. Back from New Game returns to the menu.
 
-Random Scenario opens its existing setup screen. Scenario Settings remains available while you browse New Game.
+Random Scenario is below Custom Scenarios and opens its existing setup screen.
+Scenario Settings is in the bottom-right corner of New Game. Historical Leaders is in the top-right corner.
 Returning from Scenario Settings keeps the selected category and scenario.
 Base maps and shipped scenarios open as copies. Their source folders cannot be renamed or deleted from this browser.
 
-New Map enables Data Refresh for Base Maps. It requires confirmation before it changes the source data.
-New Game keeps its Data Refresh options. Historical Leaders is enabled in Historical Scenarios.
+New Map places Data Refresh at the bottom of the left panel and enables it for Base Maps.
+It requires confirmation before it changes the source data.
+New Game keeps its Data Refresh options at the bottom of the left panel.
+Historical Leaders is enabled in Historical Scenarios.
 
 Browsers read directory entries when they open, after file operations, and when the player clicks Refresh.
 Use Refresh after an external file change. Frame updates and scrolling use cached entries and metadata.

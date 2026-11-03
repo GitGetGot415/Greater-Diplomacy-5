@@ -386,6 +386,8 @@ class ScenarioLibraryScreen(ContentBrowserScreen):
     LIBRARY_ROW_HEIGHT = 36
     LIBRARY_CATEGORY_HEIGHT = 36
     LIBRARY_CATEGORY_GAP = 8
+    LIBRARY_CATEGORY_INSET = 16
+    LIBRARY_CATEGORY_TOP = 44
     LIBRARY_ACTION_HEIGHT = 36
     CATEGORY_COLORS = {
         "SCENARIOS_HISTORICAL_DIR": "blue",
@@ -459,15 +461,20 @@ class ScenarioLibraryScreen(ContentBrowserScreen):
                    font_preset="button_small"),
         ])
         for index, (state, (label, directory_attr)) in enumerate(self.library_categories.items()):
-            rect = pygame.Rect(self.category_panel.x + 16,
-                               self.category_panel.y + 44 + index * (self.LIBRARY_CATEGORY_HEIGHT + self.LIBRARY_CATEGORY_GAP),
-                               self.category_panel.width - 32, self.LIBRARY_CATEGORY_HEIGHT)
+            rect = self.category_button_rect(index)
             tile = Button(rect.x, rect.y, rect.size, self.CATEGORY_COLORS[directory_attr], label,
                           lambda category=state: self.set_sub_state(category), font_preset="button_small")
             tile.fit_text = True
             tile.fit_single_line = True
             tile.is_selected = self.sub_state == state
             self.elements.append(tile)
+
+    def category_button_rect(self, index):
+        """Align category buttons and category shortcuts in the same column."""
+        panel = self.category_panel
+        return pygame.Rect(panel.x + self.LIBRARY_CATEGORY_INSET,
+                           panel.y + self.LIBRARY_CATEGORY_TOP + index * (self.LIBRARY_CATEGORY_HEIGHT + self.LIBRARY_CATEGORY_GAP),
+                           panel.width - 2 * self.LIBRARY_CATEGORY_INSET, self.LIBRARY_CATEGORY_HEIGHT)
 
     def make_content_row(self, rect, entry):
         if not self.library_mode:
@@ -527,11 +534,11 @@ class ScenarioLibraryScreen(ContentBrowserScreen):
         self.elements.append(button)
         return button
 
-    def add_category_action(self, label, callback, slot, color="grey", *, enabled=True):
-        """Place controls directly below the category buttons."""
-        panel = self.category_panel
-        y = panel.y + 44 + len(self.library_categories) * (self.LIBRARY_CATEGORY_HEIGHT + self.LIBRARY_CATEGORY_GAP) + self.GAP
-        button = Button(panel.x + 16, y + slot * 44, (panel.width - 32, 36),
+    def add_category_footer_action(self, label, callback, color="grey", *, enabled=True):
+        """Anchor an action at the bottom of the category panel."""
+        rect = self.category_button_rect(0)
+        rect.bottom = self.category_panel.bottom - self.LIBRARY_CATEGORY_INSET
+        button = Button(rect.x, rect.y, rect.size,
                         color, label, callback, font_preset="button_small")
         button.fit_text = True
         button.apply_state(enabled=enabled, color=color)

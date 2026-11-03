@@ -64,8 +64,8 @@ class Select_Base_Map(ScenarioLibraryScreen):
         if self.choosing_sources:
             self.build_browser(directory, "No maps in this category.")
             self.elements.append(make_back_button(self.return_to_maps))
-            self.add_category_action("Data Refresh", self.trigger_base_map_data_refresh, 0, "purple",
-                                     enabled=self.sub_state == "BASE_MAPS")
+            self.add_category_footer_action("Data Refresh", self.trigger_base_map_data_refresh, "purple",
+                                            enabled=self.sub_state == "BASE_MAPS")
             self.open_button = self.add_primary_action("Create Map")
             return
         self.build_browser(directory, "No maps in this category. Import a custom map or choose another category.")

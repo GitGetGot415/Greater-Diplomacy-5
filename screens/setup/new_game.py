@@ -16,6 +16,8 @@ class New_Game(ScenarioLibraryScreen):
     back_state = "MENU"
     title = "NEW GAME"
     content_label = "scenarios"
+    CORNER_BUTTON_SIZE = (220, 40)
+    CORNER_MARGIN = 24
     SORTS = (("name", "Name A-Z"), ("reverse_name", "Name Z-A"), ("recent", "Recently modified"))
 
     # Resolve directory settings when the browser refreshes.
@@ -49,15 +51,24 @@ class New_Game(ScenarioLibraryScreen):
 
     def refresh_ui(self):
         self.build_browser(self.scenario_dir, "No scenarios in this category.")
+        corner_x = c.SCREEN_WIDTH - self.CORNER_MARGIN - self.CORNER_BUTTON_SIZE[0]
+        leaders_button = Button(corner_x, self.CORNER_MARGIN, self.CORNER_BUTTON_SIZE, "blue", "Historical Leaders",
+                                self.open_historical_leaders_editor, font_preset="button_small")
+        leaders_button.apply_state(enabled=self.sub_state == "HISTORICAL", color="blue")
+        random_rect = self.category_button_rect(len(self.library_categories))
+        random_button = Button(random_rect.x, random_rect.y, random_rect.size, "orange", "Random Scenario",
+                               self.start_random_scenario, font_preset="button_small")
+        random_button.fit_text = True
+        random_button.fit_single_line = True
         self.elements.extend([
             make_back_button(self.exit_screen),
-            Button(c.SCREEN_WIDTH - 244, 24, (220, 40), "pink", "Scenario Settings",
+            leaders_button,
+            random_button,
+            Button(corner_x, c.SCREEN_HEIGHT - self.CORNER_MARGIN - self.CORNER_BUTTON_SIZE[1],
+                   self.CORNER_BUTTON_SIZE, "pink", "Scenario Settings",
                    self.scenario_settings, font_preset="button_small"),
         ])
-        self.add_category_action("Random Scenario", self.start_random_scenario, 0, "orange")
-        self.add_category_action("Historical Leaders", self.open_historical_leaders_editor, 1, "blue",
-                                 enabled=self.sub_state == "HISTORICAL")
-        self.add_category_action("Data Refresh", self.trigger_global_data_refresh, 2, "purple")
+        self.add_category_footer_action("Data Refresh", self.trigger_global_data_refresh, "purple")
         self.open_button = self.add_primary_action("Start Game")
 
     def activate_selected(self):
