@@ -506,6 +506,11 @@ Game startup, fullscreen changes, and standalone tools use this helper.
 The helper disables destination alpha blending on the window surface.
 macOS can supply an alpha-enabled surface. Zero destination alpha can make transparent text backgrounds appear white.
 Text and image surfaces keep their transparency when drawn onto the opaque display.
+Most blits onto the macOS display set its alpha byte to zero.
+Do not call set_alpha on an image that has pixel alpha.
+pygame then copies the image colors without blending where the display alpha is zero.
+Use map_utils.fade_pixel_alpha, or the alpha argument of symbol_loader.get_symbol.
+On Apple Silicon, pygame.transform.grayscale damages pixel alpha. get_symbol restores the source alpha after it.
 
 Dragging a scrollable list's content down pulls that content down and moves its scrollbar handle up.
 Dragging horizontal content right pulls it right. This rule also applies to map information panels.

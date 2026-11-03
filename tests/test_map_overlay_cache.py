@@ -106,11 +106,14 @@ class SymbolCacheTests(unittest.TestCase):
         faded the surface it was handed, whichever drew last decided how solid
         the other one looked."""
         solid = symbol_loader.get_symbol(self.name, 2.0)
+        solid_alpha = pygame.surfarray.array_alpha(solid)
         faded = symbol_loader.get_symbol(self.name, 2.0, alpha=180)
 
         self.assertIsNot(solid, faded)
-        self.assertEqual(faded.get_alpha(), 180)
-        self.assertEqual(solid.get_alpha(), 255)
+        # The fade is in the pixel alpha, not in set_alpha (see map_utils.fade_pixel_alpha).
+        self.assertEqual(faded.get_alpha(), 255)
+        self.assertTrue((pygame.surfarray.array_alpha(faded) < solid_alpha).any())
+        self.assertTrue((pygame.surfarray.array_alpha(solid) == solid_alpha).all())
 
     def test_an_unknown_name_is_still_None(self):
         self.assertIsNone(symbol_loader.get_symbol("Not A Real Symbol", 2.0))
