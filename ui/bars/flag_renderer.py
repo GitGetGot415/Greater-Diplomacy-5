@@ -42,9 +42,15 @@ def _highlighted_flag(flag):
     return highlighted
 
 
+def country_header_hidden(map_screen):
+    """True while the flag and the country name beside it are not shown."""
+    return (map_screen.hide_flag or map_screen.show_player_ready_screen
+            or map_screen.show_exit_confirmation)
+
+
 def draw_flag(map_screen, surface):
     """Draw the cached flag and highlight its country summary control on hover."""
-    if map_screen.hide_top_info or map_screen.hide_flag:
+    if map_screen.hide_top_info or country_header_hidden(map_screen):
         return
     country = displayed_country(map_screen)
     flag = flag_icons.flag_surface(country, map_screen.nation_data, FLAG_RECT.size)

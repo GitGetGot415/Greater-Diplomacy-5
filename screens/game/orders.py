@@ -2350,15 +2350,7 @@ class Orders_Screen(Screen):
         if not self.map_screen or not self.target_province:
             return
 
-        # Orders owns the top-left command panel, so the map's large nation
-        # flag is intentionally suppressed for this embedded draw only. The
-        # independent flag guard leaves the country/date text behavior alone.
-        previous_hide_flag = self.map_screen.hide_flag
-        self.map_screen.hide_flag = True
-        try:
-            self.map_screen.draw_clean_map_background(surface)
-        finally:
-            self.map_screen.hide_flag = previous_hide_flag
+        self.map_screen.draw_clean_map_background(surface)
 
         # Range outlines sit on the map below the command-panel controls.
         self.draw_range_previews(surface)

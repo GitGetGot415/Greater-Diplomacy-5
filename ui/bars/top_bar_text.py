@@ -1,7 +1,7 @@
 import pygame
 import data.constants as c
 from ui.rendering.font_manager import fonts
-from ui.bars import ui_bars
+from ui.bars import flag_renderer, ui_bars
 
 # ==========================================
 # LAYOUT
@@ -18,8 +18,11 @@ TOP_BAR_TEXT_BORDER_COLOR = (100, 100, 100)
 DATE_X = 300
 DATE_Y_OFFSET = -50
 
-def draw_top_text(map_screen, surface):
-    """Draws the current date/time and the 'Playing As' country name."""
+def draw_top_text(map_screen, surface, show_country=True):
+    """Draws the current date/time and the 'Playing As' country name.
+
+    The country name follows the flag: it is skipped wherever the flag is hidden.
+    """
     if map_screen.hide_top_info:
         return
 
@@ -40,6 +43,9 @@ def draw_top_text(map_screen, surface):
     date_str = map_screen.time_manager.get_date_string()
     date_surf = fonts.get("date_bar").render(date_str, True, (255, 255, 255))
     draw_with_bg(date_surf, DATE_X, c.BOTTOM_BAR_UI_CENTER_Y + DATE_Y_OFFSET)
+
+    if not show_country or flag_renderer.country_header_hidden(map_screen):
+        return
 
     # 2. Draw "Playing As" Name / Selected Province Owner / Tactical Unit Name
     if map_screen.tactical_mode and map_screen.player_unit:

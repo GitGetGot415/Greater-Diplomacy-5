@@ -1791,15 +1791,19 @@ class Map(StateAccess, Screen):
         prev_tooltip = self.hide_tooltip
         prev_hud = self.hide_resource_hud
         prev_mini = self.hide_minimap
+        prev_flag = self.hide_flag
 
         self.hide_raised_rect = True
         self.hide_tooltip = True
         self.hide_resource_hud = True
         self.hide_minimap = True
+        # Screens drawn over the map are not about the player's own country.
+        self.hide_flag = True
 
         self.additional_draw(surface)
 
         # Restore original states
+        self.hide_flag = prev_flag
         self.hide_raised_rect = prev_raised
         self.hide_tooltip = prev_tooltip
         self.hide_resource_hud = prev_hud

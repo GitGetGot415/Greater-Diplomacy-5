@@ -226,8 +226,7 @@ def draw_map_screen(map_screen, surface):
             turn_progress.draw_turn_loading_screen(map_screen, surface)
         ui_bars.draw_ui_bars(map_screen, surface)
         if not map_screen.selection_mode:
-            flag_renderer.draw_flag(map_screen, surface)
-            top_bar_text.draw_top_text(map_screen, surface)
+            top_bar_text.draw_top_text(map_screen, surface, show_country=False)
         return
 
     # --- LAYER 2: SELECTION & HOVER ---
