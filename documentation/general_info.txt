@@ -177,11 +177,11 @@ Historical Leaders is enabled in Historical Scenarios.
 Browsers read directory entries when they open, after file operations, and when the player clicks Refresh.
 Use Refresh after an external file change. Frame updates and scrolling use cached entries and metadata.
 Details read existing meta.json fields without loading map geometry or history.
-Load Game and Load Map show the selected item's terrain.png above its details.
+Load Game, Load Map, New Game, and New Map show the selected item's terrain.png above its details.
 Previews keep the image proportions. Missing or unreadable images do not block the browser.
 Previews are cached until Refresh, a file operation, or a directory change.
 
-New Game and New Map use compact text buttons without map previews or category icons.
+New Game and New Map use compact text buttons without category icons.
 All three panels extend to the bottom screen margin. The details panel keeps its width at the right screen margin.
 The middle panel fills the space between the category and details panels.
 Panel sizes stay constant when you select, search, or change categories. Long lists and details use scrolling.

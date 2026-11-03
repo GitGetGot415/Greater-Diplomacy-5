@@ -69,6 +69,12 @@ class ContentBrowserTests(unittest.TestCase):
     def library_screens(self):
         return self.new_game_screen(), self.map_screen(choosing_sources=True)
 
+    def preview_browsers(self):
+        return (("SAVES_DIR", self.save_screen, "Load Game"),
+                ("SCENARIOS_CUSTOM_DIR", self.map_screen, "Edit Map"),
+                ("SCENARIOS_HISTORICAL_DIR", self.new_game_screen, "Start Game"),
+                ("BASE_MAPS_DIR", lambda: self.map_screen(choosing_sources=True), "Create Map"))
+
     def click(self, screen, button):
         with mock.patch("pygame.mouse.get_pos", return_value=button.rect.center):
             screen.handle_events([
@@ -441,31 +447,46 @@ class ContentBrowserTests(unittest.TestCase):
                     screen.search_field.text = "Item"
                     screen.filter_entries("Item")
                     screen.cycle_sort()
-                    screen.handle_events([key(pygame.K_DOWN) for _ in range(count + 2)])
+                    screen.draw(self.surface)
+                # A new selection can read its preview. Frames must reuse it.
+                screen.handle_events([key(pygame.K_DOWN) for _ in range(count + 2)])
+                with mock.patch("builtins.open", side_effect=AssertionError("Unexpected file read")), \
+                        mock.patch("pygame.image.load", side_effect=AssertionError("Unexpected image read")):
+                    screen.update()
                     screen.draw(self.surface)
                 self.assertEqual(screen.selected_entry, screen.filtered_entries[-1])
                 self.assertLess(screen.pane_scroll("items"), 0)
 
-    def test_libraries_do_not_load_map_images(self):
-        for setting in ("SCENARIOS_HISTORICAL_DIR", "BASE_MAPS_DIR"):
-            self.bundle("Scenario", setting)
-        with mock.patch("pygame.image.load", side_effect=AssertionError("Unexpected image read")):
+    def test_library_categories_load_only_the_selected_preview_and_clear_it_on_category_change(self):
+        for setting in ("SCENARIOS_HISTORICAL_DIR", "SCENARIOS_ALTERNATE_DIR",
+                        "SCENARIOS_CUSTOM_DIR", "BASE_MAPS_DIR"):
+            directory = self.bundle("Scenario", setting)
+            shutil.copyfile(self.constants.DEFAULT_FLAG_PATH, directory / "terrain.png")
+        with mock.patch("pygame.image.load", wraps=pygame.image.load) as load:
             screens = self.library_screens()
+            load.assert_not_called()
             for screen in screens:
-                with self.subTest(screen=type(screen).__name__):
-                    self.click(screen, button_named(screen, "Scenario"))
-                    self.assertTrue(screen.selection_can_open)
-                    screen.draw(self.surface)
+                for label, _setting in screen.library_categories.values():
+                    with self.subTest(screen=type(screen).__name__, category=label):
+                        load.reset_mock()
+                        self.click(screen, button_named(screen, label))
+                        self.assertIsNone(screen.detail_preview)
+                        load.assert_not_called()
+                        self.click(screen, button_named(screen, "Scenario"))
+                        self.assertIsNotNone(screen.detail_preview)
+                        load.assert_called_once()
+                        self.assertTrue(screen.selection_can_open)
+                        screen.draw(self.surface)
 
-    def test_load_browsers_cache_previews_after_selection_and_reuse_them_during_input(self):
-        for setting, make_screen in (("SAVES_DIR", self.save_screen),
-                                     ("SCENARIOS_CUSTOM_DIR", self.map_screen)):
+    def test_browsers_cache_previews_after_selection_and_reuse_them_during_input(self):
+        for setting, make_screen, _action in self.preview_browsers():
             with self.subTest(setting=setting):
                 for name in ("First", "Second"):
                     directory = self.bundle(name, setting)
                     shutil.copyfile(self.constants.DEFAULT_FLAG_PATH, directory / "terrain.png")
+                screen = make_screen()
+                screen.draw(self.surface)
                 with mock.patch("pygame.image.load", wraps=pygame.image.load) as load:
-                    screen = make_screen()
                     load.assert_not_called()
                     self.click(screen, button_named(screen, "First"))
                     self.assertIsNotNone(screen.detail_preview)
@@ -481,14 +502,13 @@ class ContentBrowserTests(unittest.TestCase):
                         self.assertIsNone(screen.detail_preview)
                         self.click(screen, button_named(screen, "First"))
                         self.assertIsNotNone(screen.detail_preview)
-                    self.assertEqual(load.call_count, 1)
+                    self.assertEqual(load.call_count, 1, load.call_args_list)
                     self.click(screen, button_named(screen, "Second"))
                     self.assertEqual(load.call_count, 2)
                     self.assertIsNotNone(screen.detail_preview)
 
-    def test_missing_and_invalid_previews_do_not_block_loading(self):
-        for setting, make_screen, action in (("SAVES_DIR", self.save_screen, "Load Game"),
-                                             ("SCENARIOS_CUSTOM_DIR", self.map_screen, "Edit Map")):
+    def test_missing_and_invalid_previews_do_not_block_opening(self):
+        for setting, make_screen, action in self.preview_browsers():
             for name, contents in (("Missing", None), ("Wrong format", b"not a PNG"),
                                     ("Damaged PNG", b"\x89PNG\r\n\x1a\ninvalid")):
                 with self.subTest(setting=setting, name=name):
@@ -505,8 +525,7 @@ class ContentBrowserTests(unittest.TestCase):
                     self.assertEqual(screen.selected_save_path, str(directory))
 
     def test_refresh_reloads_preview_after_external_file_changes(self):
-        for setting, make_screen in (("SAVES_DIR", self.save_screen),
-                                     ("SCENARIOS_CUSTOM_DIR", self.map_screen)):
+        for setting, make_screen, _action in self.preview_browsers():
             with self.subTest(setting=setting):
                 directory = self.bundle("Map", setting)
                 screen = make_screen()

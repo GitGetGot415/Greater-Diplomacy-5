@@ -465,10 +465,6 @@ class ScenarioLibraryScreen(ContentBrowserScreen):
         return True
 
     @property
-    def show_map_preview(self):
-        return not self.library_mode
-
-    @property
     def ROW_HEIGHT(self):
         return self.LIBRARY_ROW_HEIGHT if self.library_mode else ContentBrowserScreen.ROW_HEIGHT
 
