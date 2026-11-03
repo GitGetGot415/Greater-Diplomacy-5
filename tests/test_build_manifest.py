@@ -225,7 +225,7 @@ class BuildManifestTests(unittest.TestCase):
             support.verified_build_path(ROOT, "..")
         with self.assertRaises(ValueError):
             support.verified_build_path(ROOT, ".")
-        self.assertEqual(support.verified_build_path(ROOT, "dist"), str(Path(ROOT, "dist")))
+        self.assertEqual(support.verified_build_path(ROOT, "dist"), str(Path(ROOT, "dist").resolve()))
 
 
 if __name__ == "__main__":
