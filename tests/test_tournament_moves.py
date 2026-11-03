@@ -125,6 +125,82 @@ class TournamentMoveTests(unittest.TestCase):
         result.update(extra)
         return result
 
+    def test_forward_and_text_move_preserve_host_message_and_reject_invalid_references(self):
+        from map_logic.diplomacy import diplomacy_messages as dm
+
+        for explicit_commands in (False, True):
+            for mode in ("valid", "missing_source", "malformed_source", "stale", "wrong_key"):
+                with self.subTest(commands=explicit_commands, mode=mode), tempfile.TemporaryDirectory() as directory:
+                    host = Host()
+                    source = {"message_id": "received-id", "sender": "Member", "content": "Original text", "read": False}
+                    host.nation_data["Leader"]["inbox"] = [source]
+                    local = copy.deepcopy(host.nation_data)
+                    dm.queue_text_message(local, "Leader", "Outsider", "Ordinary text")
+                    dm.queue_forwarded_message(local, "Leader", "Outsider", "Leader", source)
+                    request = local["Leader"]["pending_diplomacy"]["Outsider"]
+                    request["forwarded_message"]["content"] = "Forged text"
+                    request["forwarded_source"] = "Member"
+                    if mode == "missing_source":
+                        request["forwarded_message"]["message_id"] = "not-received"
+                    elif mode == "malformed_source":
+                        request["forwarded_message"] = None
+                    move = self.player_data("Leader", host)
+                    move["nation_data"] = local["Leader"]
+                    if explicit_commands:
+                        move["player_intents"] = [{"type": "country_diplomacy",
+                            "pending": local["Leader"]["pending_diplomacy"], "responses": {},
+                            "draft_lists": local["Leader"]["draft_lists"]}]
+                    if mode == "stale":
+                        move["tournament_turn"] -= 1
+                    path = self.write_move(directory, "forward.gd5move", "Leader", move)
+                    if mode == "wrong_key":
+                        with open(path) as stream:
+                            envelope = json.load(stream)
+                        envelope["hash"] = tournament_files.hash_key("incorrect-key")
+                        with open(path, "w") as stream:
+                            json.dump(envelope, stream)
+                    summary = self.import_moves(host, [path])
+                    self.assertEqual(summary["loaded"], int(mode == "valid"), summary)
+                    if mode == "valid":
+                        pending = dm.get_pending(host.nation_data, "Leader", "Outsider")
+                        self.assertEqual(pending["forwarded_message"], source)
+                        self.assertEqual(pending["forwarded_source"], "Leader")
+                        self.assertEqual(host.nation_data["Leader"]["draft_lists"], {"Outsider": ["Ordinary text"]})
+                    else:
+                        self.assertEqual(dm.get_pending(host.nation_data, "Leader", "Outsider"), {})
+
+    def test_forward_after_previous_turn_preserves_reply_record_in_tournament_moves(self):
+        from map_logic.actions.player_actions import collect_map_commands
+        from map_logic.diplomacy import diplomacy_messages as dm
+
+        for explicit_commands in (False, True):
+            for mode in ("valid", "missing_source", "stale_reference"):
+                with self.subTest(commands=explicit_commands, mode=mode), tempfile.TemporaryDirectory() as directory:
+                    host = Host()
+                    source = {"message_id": "received-id", "sender": "Member", "content": "Original text", "read": False}
+                    host.nation_data["Leader"]["inbox"] = [source]
+                    previous = copy.deepcopy(dm.set_pending(host.nation_data, "Leader", "Outsider", "MSG:Previous turn", turns=1))
+                    local = map_double(map_data={}, id_to_province={}, nation_colors={}, nation_data=copy.deepcopy(host.nation_data))
+                    dm.queue_forwarded_message(local.nation_data, "Leader", "Outsider", "Leader", source)
+                    command = next(item for item in collect_map_commands(local, "Leader") if item["type"] == "country_diplomacy")
+                    request = dm.get_pending(local.nation_data, "Leader", "Outsider")
+                    if mode == "missing_source":
+                        request["forwarded_message"]["message_id"] = "not-received"
+                        command["pending"]["Outsider"]["forwarded_message"]["message_id"] = "not-received"
+                    elif mode == "stale_reference":
+                        request["request_id"] = "expired-request"
+                        command["pending"]["Outsider"]["request_id"] = "expired-request"
+                    move = self.player_data("Leader", host)
+                    move["nation_data"] = local.nation_data["Leader"]
+                    if explicit_commands:
+                        move["player_intents"] = [command]
+                    path = self.write_move(directory, "forward.gd5move", "Leader", move)
+                    summary = self.import_moves(host, [path])
+                    self.assertEqual(summary["loaded"], int(mode == "valid"), summary)
+                    pending = dm.get_pending(host.nation_data, "Leader", "Outsider")
+                    expected = dict(previous, forwarded_message=source, forwarded_source="Leader") if mode == "valid" else previous
+                    self.assertEqual(pending, expected)
+
     def test_factory_output_research_intents_require_host_prerequisites_and_current_turn(self):
         tree = queries.get_tech_tree()
         cases = research_lock_cases(tree)

@@ -41,7 +41,10 @@ DIALOG_STYLES = {
 }
 
 MESSAGE_PANEL_STYLES = {
-    "contacts": {"color": (35, 35, 45), "gradient_strength": 1.0},
+    "contacts": {"color": (29, 35, 46), "gradient_strength": 0.25},
+    "header": {"color": (46, 56, 72), "gradient_strength": 0.5},
+    "requests": {"color": (36, 42, 53), "gradient_strength": 0.25},
+    "composer": {"color": (46, 56, 72), "gradient_strength": 0.5},
 }
 
 # Game panels retain their borders and layout in their screen modules.

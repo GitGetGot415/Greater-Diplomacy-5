@@ -13,7 +13,7 @@ from map_logic.diplomacy import (
 from map_logic.diplomacy.diplomacy_messages import (
     get_pending_action, send_message, send_treaty_message, forward_message,
     get_response, get_response_map, set_response, clear_response, RESPONSE_ACCEPT,
-    FORWARD_ACTION
+    FORWARD_ACTION, has_queued_forward, cancel_queued_forward
 )
 from map_logic.diplomacy.war_actions import finalize_war, finalize_neutral
 from map_logic.diplomacy.puppet_actions import finalize_annexation, finalize_release, finalize_take_puppets
@@ -1301,6 +1301,12 @@ def _process_pass1_immediate_actions(context):
             # Set beside `message` by whoever queued it, so the flag travels
             # with the text it belongs to rather than being guessed at here.
             wrote_it = bool(info.get("llm"))
+
+            if turns > 0 and action.startswith("MSG:") and has_queued_forward(info):
+                if availability(context, country_name, target, FORWARD_ACTION, phase="send").allowed:
+                    forward_message(context, country_name, target, info["forwarded_message"],
+                                    source_owner=info["forwarded_source"])
+                cancel_queued_forward(world_state.nation_data, country_name, target)
 
             is_unilateral = action in c.UNILATERAL_ACTIONS
 

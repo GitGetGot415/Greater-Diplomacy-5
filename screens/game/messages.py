@@ -22,24 +22,78 @@ from screens.game.deal_screen import open_trade_menu
 
 MSG_LEFT_PANE_W = 280
 MSG_INPUT_H = 80
+MSG_HEADER_H = 64
+MSG_REQUEST_H = 64
+MSG_MARGIN = 16
+MSG_CONTACT_ROW_H = 64
+MSG_CONTACT_ROW_GAP = 2
+MSG_QUEUE_W = 112
+MSG_CONTROL_GAP = 12
+MSG_HEADER_BUTTON_H = 36
+MSG_HEADER_BUTTON_Y = (MSG_HEADER_H - MSG_HEADER_BUTTON_H) // 2
+MSG_HEADER_TRADE_W = 116
+MSG_HEADER_UNREAD_W = 146
+MSG_CONTACT_TOOLBAR_Y = MSG_HEADER_H + MSG_HEADER_BUTTON_Y
 
-# Top of the scrollable contact list. Pushed down from the header row to make
-# room for the fixed Exit / Mark All Read buttons above it.
-MSG_CONTACT_LIST_TOP_Y = 120
+# Fixed controls stay above the scrollable conversation rows.
+MSG_CONTACT_LIST_TOP_Y = 128
 
 # Diplomacy buttons sit in a row above the compose box.
-MSG_DIPLO_BTN_ROW_OFFSET_Y = -60
+MSG_DIPLO_BTN_ROW_OFFSET_Y = -MSG_REQUEST_H + 7
 MSG_DIPLO_BTN_START_X = MSG_LEFT_PANE_W + 20
 MSG_DIPLO_BTN_STEP_X = 220
 
 MSG_BG_DARK = (25, 25, 30)
-MSG_BUBBLE_PLAYER = (40, 100, 200)
-MSG_BUBBLE_PLAYER_DIPLO = (180, 60, 60) # Player diplomatic red
-MSG_BUBBLE_AI = (60, 60, 80)
-MSG_BUBBLE_AI_DIPLO = (200, 100, 0) # AI diplomatic orange
+MSG_BUBBLE_PLAYER = (42, 77, 119)
+MSG_BUBBLE_AI = (47, 52, 65)
+MSG_DIPLO_ACCENT = (208, 162, 76)
+MSG_SELECTED_ACCENT = (112, 181, 242)
+MSG_PANEL_BORDER = (13, 17, 24)
+MSG_CONTACT_COLOR = (36, 43, 55)
+MSG_CONTACT_HOVER = (47, 57, 72)
+MSG_CONTACT_SELECTED = (39, 69, 101)
 MSG_BUBBLE_FORWARDED = (65, 105, 75)
 MSG_BUBBLE_MAX_WIDTH_RATIO = 0.6
 MSG_FORWARD_BUTTON_SIZE = (82, 24)
+
+
+class ConversationRow(Button):
+    """A conversation row with cached text and the shared button input behavior."""
+
+    def __init__(self, x, y, width, name, preview, unread, selected, callback):
+        super().__init__(x, y, (width, MSG_CONTACT_ROW_H), "grey", name, callback,
+                         sound_kind="select_category")
+        self.is_selected = selected
+        self.set_colors(MSG_CONTACT_SELECTED if selected else MSG_CONTACT_COLOR,
+                        MSG_CONTACT_HOVER if not selected else (48, 83, 120))
+        name_font = fonts.get_size(18, bold=bool(unread))
+        preview_font = fonts.get("small")
+        badge_font = fonts.get("tiny")
+        self.badge = badge_font.render(str(unread), True, (255, 255, 255)) if unread else None
+        self.badge_width = max(24, self.badge.get_width() + 12) if self.badge else 0
+        text_width = width - 32 - (self.badge_width + 8 if unread else 0)
+        self.name_surface = name_font.render(text_utils.fit_text(name, name_font, text_width), True, (241, 245, 250))
+        self.preview_surface = preview_font.render(
+            text_utils.fit_text(preview, preview_font, width - 32), True, (174, 185, 200))
+
+    def draw(self, surface):
+        if not self.visible:
+            return
+        ui_elements.draw_pixel_button(
+            surface, self.rect, self.color, hover_color=self.hover_color,
+            pressed_color=self.pressed_color, pressed=self.is_pressed,
+            disabled=self.disabled, border_color=MSG_PANEL_BORDER, gradient_strength=0.25)
+        if self.is_selected:
+            pygame.draw.rect(surface, MSG_SELECTED_ACCENT,
+                             (self.rect.x + 2, self.rect.y + 2, 4, self.rect.height - 4))
+        surface.blit(self.name_surface, (self.rect.x + 16, self.rect.y + 10))
+        surface.blit(self.preview_surface, (self.rect.x + 16, self.rect.y + 36))
+        if self.badge:
+            badge_rect = pygame.Rect(self.rect.right - self.badge_width - 10,
+                                     self.rect.y + 10, self.badge_width, 22)
+            ui_elements.draw_pixel_panel(surface, badge_rect, (52, 103, 158), MSG_PANEL_BORDER,
+                                         gradient_strength=0.25)
+            surface.blit(self.badge, self.badge.get_rect(center=badge_rect.center))
 
 
 class Messages_Screen(Screen):
@@ -65,10 +119,13 @@ class Messages_Screen(Screen):
         self.contact_scroll_y = 0
         self.max_contact_scroll = 0
         self.is_dragging_contacts = False
-        self.is_dragging_messages = False # Tracks dragging inside the message pane
+        self.message_drag_state = None
         self.forward_button_rects = []
         
         self.show_all_contacts = False
+        self.processed_messages = []
+        self.compose_surface = None
+        self.compose_enabled = False
 
     def on_enter(self, app, previous):
         self.start_messages(app.states["MAP"])
@@ -83,7 +140,7 @@ class Messages_Screen(Screen):
         self.max_msg_scroll = 0
         self.contact_scroll_y = 0
         self.is_dragging_contacts = False
-        self.is_dragging_messages = False
+        self.message_drag_state = None
         self.forward_button_rects = []
         self.show_all_contacts = False
         self.refresh_ui()
@@ -127,6 +184,14 @@ class Messages_Screen(Screen):
                 self.compose_text = ""
                 
             existing = pending_dict.get(self.selected_recipient, {})
+
+            if existing.get("turns", 0) > 0 and existing.get("action", "").startswith("MSG:"):
+                # Keep the sent message and its reply reference while saving local text drafts.
+                if self.drafts:
+                    draft_lists[self.selected_recipient] = self.drafts.copy()
+                else:
+                    draft_lists.pop(self.selected_recipient, None)
+                return
 
             action_str = ""
             existing_action = existing.get("action") or ""
@@ -173,6 +238,7 @@ class Messages_Screen(Screen):
             return
         
         self.selected_recipient = target
+        self.message_drag_state = None
         self.msg_scroll_y = 0
         
         p_data = self.map_screen.nation_data.get(self.map_screen.player_country, {})
@@ -207,6 +273,8 @@ class Messages_Screen(Screen):
         self.select_recipient(target)
 
     def send_message(self):
+        if self.map_screen.tactical_mode:
+            return
         if self.selected_recipient:
             message = self.compose_text.strip()
             if message:
@@ -314,12 +382,23 @@ class Messages_Screen(Screen):
     def additional_events(self, event):
         mx, my = getattr(event, "pos", pygame.mouse.get_pos())
         is_tactical = self.map_screen.tactical_mode
+        in_thread = self.thread_rect.collidepoint((mx, my))
+        if self.selected_recipient and event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION):
+            clicked_action = any(rect.collidepoint((mx, my)) for rect, _ in
+                                 self.draft_edit_rects + self.forward_button_rects)
+            if not (event.type == pygame.MOUSEBUTTONDOWN and clicked_action):
+                if self.handle_content_drag(event, attr="msg_scroll_y", limit_attr="max_msg_scroll",
+                                            rect_attr="thread_rect", drag_attr="message_drag_state",
+                                            lo=0, hi=self.max_msg_scroll, refresh=False):
+                    self.draft_edit_rects = []
+                    self.forward_button_rects = []
+                    return
         
         # --- Handle Draft Delete Clicks ---
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             # Guarded to the visible message pane so a delete box scrolled
             # behind the compose box (clipped, no longer drawn) can't fire.
-            if not is_tactical and my < c.SCREEN_HEIGHT - MSG_INPUT_H:
+            if not is_tactical and in_thread:
                 for del_rect, idx in self.draft_edit_rects:
                     if del_rect.collidepoint(mx, my):
                         
@@ -341,7 +420,10 @@ class Messages_Screen(Screen):
                             pending = diplomacy_messages.get_pending(
                                 self.map_screen.nation_data, self.map_screen.player_country,
                                 self.selected_recipient)
-                            if act_name == volunteers.ACTION:
+                            if act_name == diplomacy_messages.FORWARD_ACTION:
+                                diplomacy_messages.cancel_queued_forward(
+                                    self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient)
+                            elif act_name == volunteers.ACTION:
                                 if pending.get("turns", 0) == 0:
                                     volunteers.cancel_offer(
                                         self.map_screen, self.map_screen.player_country,
@@ -371,10 +453,10 @@ class Messages_Screen(Screen):
         # making them ordinary screen elements, so a clipped/off-screen button
         # can never be clicked from stale geometry.
         if (event.type == pygame.MOUSEBUTTONUP and event.button == 1
-                and not is_tactical and my < c.SCREEN_HEIGHT - MSG_INPUT_H):
+                and not is_tactical and in_thread):
             for forward_rect, message in reversed(self.forward_button_rects):
                 if forward_rect.collidepoint((mx, my)):
-                    self.is_dragging_messages = False
+                    self.message_drag_state = None
                     self.open_forward_picker(message)
                     return
 
@@ -388,50 +470,45 @@ class Messages_Screen(Screen):
                 return
 
         # --- Message Thread Scrolling ---
-        if event.type == pygame.MOUSEWHEEL and mx >= MSG_LEFT_PANE_W:
+        if event.type == pygame.MOUSEWHEEL and in_thread:
             self.msg_scroll_y += event.y * 40
             self.msg_scroll_y = max(0, min(self.msg_scroll_y, self.max_msg_scroll))
+            self.draft_edit_rects = []
+            self.forward_button_rects = []
 
-        # --- Drag to Scroll Logic (message thread only) ---
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            if self.selected_recipient and mx >= MSG_LEFT_PANE_W and my < c.SCREEN_HEIGHT - MSG_INPUT_H:
-                # Ensure we aren't dragging when we're actually trying to click 'Delete Draft'
-                clicked_del = False
-                for del_rect, _ in self.draft_edit_rects:
-                    if del_rect.collidepoint(mx, my):
-                        clicked_del = True
-                        break
-                clicked_forward = any(
-                    rect.collidepoint((mx, my)) for rect, _ in self.forward_button_rects)
-                if not clicked_del and not clicked_forward:
-                    self.is_dragging_messages = True
-
-        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-            self.is_dragging_messages = False
-
-        elif event.type == pygame.MOUSEMOTION:
-            if self.is_dragging_messages:
-                self.msg_scroll_y += event.rel[1] # Dragging down pulls the thread down.
-                self.msg_scroll_y = max(0, min(self.msg_scroll_y, self.max_msg_scroll))
-                
         # --- Text Input Logic ---
         if self.selected_recipient:
             locked = queries.is_diplomat_busy(self.map_screen.player_country, self.selected_recipient, self.map_screen.nation_data)
             if not locked and not is_tactical:
+                previous_text = self.compose_text
                 self.compose_text, status = process_text_input(event, self.compose_text, max_length=c.MAX_MESSAGE_LENGTH)
                 if status == "SUBMIT":
                     self.send_message()
+                elif self.compose_text != previous_text:
+                    self._prepare_composer()
 
     def refresh_ui(self):
-        self.elements = [Button(20, 20, "small", "red", "Exit", self.exit_screen, sound_kind="back")]
-        self.elements.append(Button(20, 70, "small", "blue", "Mark All Read", self.mark_all_read))
+        self.elements = [Button(MSG_MARGIN, MSG_HEADER_BUTTON_Y, (70, MSG_HEADER_BUTTON_H), "red", "Exit", self.exit_screen,
+                                font_preset="button_small", sound_kind="back")]
+        self.elements.append(Button(94, MSG_HEADER_BUTTON_Y, (170, MSG_HEADER_BUTTON_H), "grey", "Mark All Read", self.mark_all_read,
+                                    font_preset="button_small"))
         # The thread draws these hitboxes after it knows the current scroll
         # position. Never retain geometry from a frame that was rebuilt.
         self.forward_button_rects = []
-        if self.selected_recipient:
-            self.elements.append(Button(130, 20, "small", "orange", "Mark Unread", self.mark_thread_unread))
-
         if not self.map_screen: return
+        self.thread_rect = pygame.Rect(MSG_LEFT_PANE_W, MSG_HEADER_H,
+                                       c.SCREEN_WIDTH - MSG_LEFT_PANE_W,
+                                       c.SCREEN_HEIGHT - MSG_HEADER_H - MSG_INPUT_H - MSG_REQUEST_H)
+        self._prepare_thread()
+        self._prepare_composer()
+        unread_x = c.SCREEN_WIDTH - MSG_MARGIN - MSG_HEADER_UNREAD_W
+        trade_x = unread_x - MSG_CONTROL_GAP - MSG_HEADER_TRADE_W
+        header = queries.get_country_display_name(self.selected_recipient, self.map_screen.nation_data) if self.selected_recipient else "Messages"
+        header_font = fonts.get("heading2")
+        header_width = trade_x - MSG_LEFT_PANE_W - 2 * MSG_MARGIN
+        self.header_surface = header_font.render(text_utils.fit_text(header, header_font, header_width), True, (241, 245, 250))
+        self.sidebar_title_surface = fonts.get("normal").render("Messages", True, (220, 229, 240))
+        self.empty_thread_surface = header_font.render("Select a nation to view communications.", True, c.UI_TEXT_MUTED)
         
         active_nations = set([prov.get("owner") for prov in self.map_screen.map_data.values() if prov.get("owner") not in c.UNPLAYABLE_NATIONS])
         playable = [country for country, d in self.map_screen.nation_data.items() if d.get("is_playable") and country != self.map_screen.player_country and country in active_nations]
@@ -470,73 +547,65 @@ class Messages_Screen(Screen):
         if self.selected_recipient:
             history_contacts.add(self.selected_recipient)
 
-        y_off = MSG_CONTACT_LIST_TOP_Y + self.contact_scroll_y
-        self.scroll_content_rect = pygame.Rect(0, MSG_CONTACT_LIST_TOP_Y, MSG_LEFT_PANE_W, c.SCREEN_HEIGHT - MSG_CONTACT_LIST_TOP_Y)
-
+        self.scroll_content_rect = pygame.Rect(MSG_MARGIN, MSG_CONTACT_LIST_TOP_Y,
+                                               MSG_LEFT_PANE_W - 2 * MSG_MARGIN - 14,
+                                               c.SCREEN_HEIGHT - MSG_CONTACT_LIST_TOP_Y - MSG_MARGIN)
         if self.show_all_contacts:
-            btn = Button(20, y_off, "medium", "red", "Cancel", self.toggle_add_contact)
-            btn.is_scrollable = True
-            self.elements.append(btn)
-            y_off += 60
-
+            self.elements.append(Button(132, MSG_CONTACT_TOOLBAR_Y, (132, MSG_HEADER_BUTTON_H), "grey", "Cancel", self.toggle_add_contact,
+                                        font_preset="button_small"))
             display_list = [n for n in playable if n not in history_contacts]
-            for country in display_list:
-                display_name = self.map_screen.nation_data.get(country, {}).get("name", country)
-                btn = Button(20, y_off, "medium", "grey", display_name, lambda c_name=country: self.select_new_contact(c_name))
-                btn.is_scrollable = True
-                self.elements.append(btn)
-                y_off += 60
         else:
-            btn = Button(20, y_off, "medium", "blue", "+ Add Contact", self.toggle_add_contact)
-            btn.is_scrollable = True
-            self.elements.append(btn)
-            y_off += 60
-
+            self.elements.append(Button(132, MSG_CONTACT_TOOLBAR_Y, (132, MSG_HEADER_BUTTON_H), "blue", "+ Add Contact", self.toggle_add_contact,
+                                        font_preset="button_small"))
             display_list = [n for n in playable if n in history_contacts]
-            for country in display_list:
-                color = "green" if self.selected_recipient == country else "grey"
+        previews = {}
+        unread_counts = {}
+        for message in inbox:
+            sender = message.get("sender", "")
+            outgoing = sender.startswith("To: ")
+            country = sender[4:] if outgoing else sender
+            previews.setdefault(country, ("You: " if outgoing else "") + " ".join(message.get("content", "").split()))
+            if not outgoing and not message.get("read", False):
+                unread_counts[country] = unread_counts.get(country, 0) + 1
 
-                unread = sum(1 for m in p_data.get("inbox", []) if m.get("sender") == country and not m.get("read", False))
+        row_step = MSG_CONTACT_ROW_H + MSG_CONTACT_ROW_GAP
+        self.max_contact_scroll = min(0, self.scroll_content_rect.height - len(display_list) * row_step)
+        self.contact_scroll_y = max(self.max_contact_scroll, min(0, self.contact_scroll_y))
+        for index, country in enumerate(display_list):
+            y = MSG_CONTACT_LIST_TOP_Y + index * row_step + self.contact_scroll_y
+            display_name = queries.get_country_display_name(country, self.map_screen.nation_data)
+            unread = unread_counts.get(country, 0)
+            # Unanswered requests use the same unread rule as the map badge.
+            if queries.has_unanswered_request(self.map_screen.player_country, country, self.map_screen.nation_data):
+                unread += 1
+            callback = self.select_new_contact if self.show_all_contacts else self.select_recipient
+            row = ConversationRow(MSG_MARGIN, y, self.scroll_content_rect.width,
+                                  display_name, previews.get(country, ""), unread,
+                                  self.selected_recipient == country,
+                                  lambda target=country, select=callback: select(target))
+            row.is_scrollable = True
+            row.click_guard = self.content_hover_guard()
+            self.elements.append(row)
 
-                # Treat unanswered requests as an unread notification. Shares its
-                # rule with the map screen's badge so the two always agree.
-                if queries.has_unanswered_request(self.map_screen.player_country, country, self.map_screen.nation_data):
-                    unread += 1
-
-                display_name = self.map_screen.nation_data.get(country, {}).get("name", country)
-                display_text = f"{display_name} ({unread})" if unread > 0 else display_name
-                if unread > 0 and self.selected_recipient != country:
-                    color = "red"
-
-                btn = Button(20, y_off, "medium", color, display_text, lambda c_name=country: self.select_recipient(c_name),
-                             sound_kind="select_category")
-                btn.is_scrollable = True
-                self.elements.append(btn)
-                y_off += 60
-
-        absolute_height = y_off - self.contact_scroll_y
-        self.max_contact_scroll = min(0, c.SCREEN_HEIGHT - absolute_height - 20)
+        is_tactical = self.map_screen.tactical_mode
+        queue_button = Button(c.SCREEN_WIDTH - MSG_MARGIN - MSG_QUEUE_W,
+                              c.SCREEN_HEIGHT - MSG_INPUT_H + MSG_MARGIN,
+                              (MSG_QUEUE_W, MSG_INPUT_H - 2 * MSG_MARGIN), "blue", "Queue",
+                              self.send_message, font_preset="button_small", sound_kind=None)
+        queue_button.apply_state(enabled=bool(self.selected_recipient) and not is_tactical, color="blue")
+        self.elements.append(queue_button)
+        unread_button = Button(unread_x, MSG_HEADER_BUTTON_Y, (MSG_HEADER_UNREAD_W, MSG_HEADER_BUTTON_H), "grey",
+                               "Mark Unread", self.mark_thread_unread, font_preset="button_small")
+        unread_button.disabled = not self.selected_recipient
+        self.elements.append(unread_button)
+        # Integrated puppets used to be barred from trading with anyone but
+        # their master. They trade like anyone else now.
+        trade_button = Button(trade_x, MSG_HEADER_BUTTON_Y, (MSG_HEADER_TRADE_W, MSG_HEADER_BUTTON_H), "grey", "Trade", self.open_trade,
+                              font_preset="button_small")
+        trade_button.disabled = not self.selected_recipient or is_tactical
+        self.elements.append(trade_button)
 
         if self.selected_recipient:
-            is_tactical = self.map_screen.tactical_mode
-            btn_x = c.SCREEN_WIDTH - 150
-            btn_y = c.SCREEN_HEIGHT - MSG_INPUT_H + 15
-            
-            if is_tactical:
-                self.elements.append(Button(btn_x, btn_y, "small", "grey", "Tactical: Read Only", lambda: None))
-            else:
-                self.elements.append(Button(btn_x, btn_y, "small", "blue", "Queue", self.send_message,
-                                            sound_kind=None))
-                
-            # Integrated puppets used to be barred from trading with anyone but
-            # their master. They trade like anyone else now.
-            if is_tactical:
-                btn_trade = Button(btn_x - 130, btn_y, "small", "grey", "Tactical: Read Only", lambda: None)
-                btn_trade.disabled = True
-                self.elements.append(btn_trade)
-            else:
-                self.elements.append(Button(btn_x - 130, btn_y, "small", "green", "Trade", self.open_trade))
-
             # --- Ratifying a treaty our faction leader signed for us ---
             # Its own channel, not pending_diplomacy -- a leader asking four
             # members at once would otherwise clobber four unrelated offers --
@@ -554,7 +623,6 @@ class Messages_Screen(Screen):
 
             if incoming_turns > 0 and incoming_action in c.BILATERAL_ACTIONS:
                 action_name = incoming_action.replace("_", " ").title()
-                btn_y_diplo = c.SCREEN_HEIGHT - MSG_INPUT_H + MSG_DIPLO_BTN_ROW_OFFSET_Y
                 answered = (queued_action == incoming_action)
 
                 is_peace = incoming_action in ["PEACE_TREATY", "CEASEFIRE"]
@@ -564,24 +632,31 @@ class Messages_Screen(Screen):
                 def _view_deal_btn(slot):
                     label = "View Peace Treaty" if is_peace else "View Trade Deal"
                     callback = self.view_peace_treaty if is_peace else self.view_trade_deal
-                    return Button(MSG_DIPLO_BTN_START_X + MSG_DIPLO_BTN_STEP_X * slot, btn_y_diplo,
-                                  "medium", "yellow", label,
-                                  lambda: callback(self.selected_recipient))
+                    return self._reply_button(slot, "yellow", label, lambda: callback(self.selected_recipient))
 
                 if is_tactical:
-                    self.elements.append(Button(MSG_DIPLO_BTN_START_X, btn_y_diplo, "medium", "grey", "Tactical: Read Only", lambda: None))
-                    self.elements.append(Button(MSG_DIPLO_BTN_START_X + MSG_DIPLO_BTN_STEP_X, btn_y_diplo, "medium", "grey", "Tactical: Read Only", lambda: None))
+                    for slot, label in enumerate((f"Accept {action_name}", f"Reject {action_name}")):
+                        self.elements.append(self._reply_button(slot, "grey", label, lambda: None, enabled=False))
                     if is_viewable_deal:
                         self.elements.append(_view_deal_btn(2))
                 elif answered and queued_verdict == diplomacy_messages.RESPONSE_ACCEPT:
-                    self.elements.append(Button(MSG_DIPLO_BTN_START_X, btn_y_diplo, "medium", "green", "Undo Accept", lambda: self.accept_proposal(self.selected_recipient)))
+                    self.elements.append(self._reply_button(0, "green", "Undo Accept", lambda: self.accept_proposal(self.selected_recipient)))
                 elif answered and queued_verdict == diplomacy_messages.RESPONSE_REJECT:
-                    self.elements.append(Button(MSG_DIPLO_BTN_START_X, btn_y_diplo, "medium", "red", "Undo Reject", lambda: self.reject_proposal(self.selected_recipient)))
+                    self.elements.append(self._reply_button(0, "red", "Undo Reject", lambda: self.reject_proposal(self.selected_recipient)))
                 else:
-                    self.elements.append(Button(MSG_DIPLO_BTN_START_X, btn_y_diplo, "medium", "green", f"Accept {action_name}", lambda: self.accept_proposal(self.selected_recipient)))
-                    self.elements.append(Button(MSG_DIPLO_BTN_START_X + MSG_DIPLO_BTN_STEP_X, btn_y_diplo, "medium", "red", f"Reject {action_name}", lambda: self.reject_proposal(self.selected_recipient)))
+                    self.elements.append(self._reply_button(0, "green", f"Accept {action_name}", lambda: self.accept_proposal(self.selected_recipient)))
+                    self.elements.append(self._reply_button(1, "red", f"Reject {action_name}", lambda: self.reject_proposal(self.selected_recipient)))
                     if is_viewable_deal:
                         self.elements.append(_view_deal_btn(2))
+
+    def _reply_button(self, slot, color, label, callback, *, enabled=True):
+        button = Button(MSG_DIPLO_BTN_START_X + MSG_DIPLO_BTN_STEP_X * slot,
+                        c.SCREEN_HEIGHT - MSG_INPUT_H + MSG_DIPLO_BTN_ROW_OFFSET_Y,
+                        (200, 50), color, label, callback, font_preset="button_small")
+        button.fit_text = True
+        button.fit_single_line = True
+        button.apply_state(enabled=enabled, color=color)
+        return button
 
     def _offer_ratification_buttons(self):
         """Ratify / refuse, when the selected contact is the leader who signed.
@@ -596,37 +671,34 @@ class Messages_Screen(Screen):
         if not asked or asked.get("signatory") != self.selected_recipient:
             return False
 
-        btn_y = c.SCREEN_HEIGHT - MSG_INPUT_H + MSG_DIPLO_BTN_ROW_OFFSET_Y
         verdict = asked.get("verdict")
+        editable = not self.map_screen.tactical_mode
 
         if verdict == ratification.RATIFY:
             label, color = "Ratified (undo)", "green"
         elif verdict == ratification.REFUSE:
             label, color = "Refused (undo)", "red"
         else:
-            self.elements.append(Button(
-                MSG_DIPLO_BTN_START_X, btn_y, "medium", "green", "Ratify Treaty",
-                lambda: self.answer_ratification(True)))
-            self.elements.append(Button(
-                MSG_DIPLO_BTN_START_X + MSG_DIPLO_BTN_STEP_X, btn_y, "medium", "red",
-                "Refuse & Leave Faction", lambda: self.answer_ratification(False)))
-            self.elements.append(Button(
-                MSG_DIPLO_BTN_START_X + MSG_DIPLO_BTN_STEP_X * 2, btn_y, "medium", "yellow",
-                "View Treaty", lambda: self.view_peace_treaty(self.selected_recipient)))
+            self.elements.append(self._reply_button(0, "green", "Ratify Treaty",
+                                                    lambda: self.answer_ratification(True), enabled=editable))
+            self.elements.append(self._reply_button(1, "red", "Refuse & Leave Faction",
+                                                    lambda: self.answer_ratification(False), enabled=editable))
+            self.elements.append(self._reply_button(2, "yellow", "View Treaty",
+                                                    lambda: self.view_peace_treaty(self.selected_recipient)))
             return True
 
-        self.elements.append(Button(MSG_DIPLO_BTN_START_X, btn_y, "medium", color, label,
-                                    lambda: self.clear_ratification()))
+        self.elements.append(self._reply_button(0, color, label, self.clear_ratification, enabled=editable))
         return True
 
     def answer_ratification(self, accept):
-
+        if self.map_screen.tactical_mode:
+            return
         player_diplomacy_actions.handle_ratify_treaty(self.map_screen, accept)
         self.refresh_ui()
 
     def clear_ratification(self):
         """Takes back an answer, while the leader is still waiting on it."""
-        if not player_diplomacy_actions.can_edit_diplomacy(self.map_screen):
+        if self.map_screen.tactical_mode or not player_diplomacy_actions.can_edit_diplomacy(self.map_screen):
             return
 
         ratification.pending_for(self.map_screen.nation_data,
@@ -634,28 +706,19 @@ class Messages_Screen(Screen):
         self.refresh_ui()
 
     def open_trade(self):
+        if not self.selected_recipient or self.map_screen.tactical_mode:
+            return
         self.save_current_draft()
         open_trade_menu(self.map_screen, self.selected_recipient)
         self.refresh_ui()
 
-    def additional_draw(self, surface):
-        if not self.map_screen: return
-        font_med = fonts.get("heading2")
-        font_small = fonts.get("normal")
-        font_tiny = fonts.get("tiny")
-
-        left_pane_rect = pygame.Rect(0, 0, MSG_LEFT_PANE_W, c.SCREEN_HEIGHT)
-        style = MESSAGE_PANEL_STYLES["contacts"]
-        ui_elements.draw_pixel_panel(surface, left_pane_rect, style["color"], (100, 100, 100),
-                                     gradient_strength=style["gradient_strength"])
-
-        self.draw_list_scrollbar(surface, MSG_LEFT_PANE_W - 20, MSG_CONTACT_LIST_TOP_Y, c.SCREEN_HEIGHT - MSG_CONTACT_LIST_TOP_Y, width=10,
-                                 attr="contact_scroll_y", limit_attr="max_contact_scroll",
-                                 track_attr="contact_scroll_track_rect", handle_attr="contact_scroll_handle_rect")
-
+    def _prepare_thread(self):
+        """Cache message presentation when the conversation or its state changes."""
+        self.processed_messages = []
+        self.max_msg_scroll = 0
+        self.draft_edit_rects = []
+        self.delete_label = fonts.get("small").render("X", True, (255, 255, 255))
         if not self.selected_recipient:
-            txt = font_med.render("Select a nation to view communications.", True, c.UI_TEXT_MUTED)
-            surface.blit(txt, (MSG_LEFT_PANE_W + 50, c.SCREEN_HEIGHT // 2))
             return
 
         p_data = self.map_screen.nation_data.get(self.map_screen.player_country, {})
@@ -743,10 +806,14 @@ class Messages_Screen(Screen):
         pending = diplomacy_messages.get_pending(self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient)
         act_str = pending.get("action", "")
         is_diplo_action = bool(act_str) and not act_str.startswith("MSG:")
+        forward_queued = diplomacy_messages.has_queued_forward(pending)
 
         # --- INJECT PENDING FORMAL ACTIONS AS VISUAL DRAFTS SO THEY CAN BE CANCELED ---
-        if is_diplo_action and pending.get("turns", 0) == 0:
-            if act_str == "TRADE":
+        if forward_queued or (is_diplo_action and pending.get("turns", 0) == 0):
+            if forward_queued:
+                content_str = f"Pending Forward Message: {pending['forwarded_message']['content']}"
+                d_idx = f"FORMAL_{diplomacy_messages.FORWARD_ACTION}"
+            elif act_str == "TRADE":
                 content_str = pending.get("message", "Proposed Trade")
                 d_idx = "TRADE_OFFER"
             elif act_str == "WAR_DECLARATION":
@@ -782,137 +849,121 @@ class Messages_Screen(Screen):
                 "forward_source": None,
             })
         
-        input_rect = pygame.Rect(MSG_LEFT_PANE_W, c.SCREEN_HEIGHT - MSG_INPUT_H, c.SCREEN_WIDTH - MSG_LEFT_PANE_W, MSG_INPUT_H)
-        ui_elements.draw_text_input_background(surface, input_rect, active=True,
-                                               style_name="message", border_color=(100, 100, 100))
-
-        txt_surf = font_small.render(self.compose_text + "|", True, (255, 255, 255))
-        surface.blit(txt_surf, (input_rect.x + 20, input_rect.y + 30))
-
-        # --- PRE-CALCULATE SIZES TO ESTABLISH MAX SCROLL CEILING ---
-        processed_messages = []
+        font_small = fonts.get("normal")
+        font_tiny = fonts.get("tiny")
+        max_width = int(self.thread_rect.width * MSG_BUBBLE_MAX_WIDTH_RATIO)
+        line_height = max(20, font_small.get_height())
         total_h = 20
-        max_width = int((c.SCREEN_WIDTH - MSG_LEFT_PANE_W) * MSG_BUBBLE_MAX_WIDTH_RATIO)
-
         for msg in reversed(display_thread):
-            lines = text_utils.wrap_text(msg['content'], font_small, max_width)
-
-            box_height = 20 + (len(lines) * 20)
-            if msg.get("date"):
-                box_height += 25 # Reserve space above the bubble for the date
-            if msg.get("forwarded_header"):
-                box_height += len(msg["forwarded_header"]) * 20 + 5
-                
-            header_widths = [font_tiny.size(line)[0] for line in msg.get("forwarded_header", [])]
-            box_width = max([font_small.size(l)[0] for l in lines] + header_widths + [100]) + 30
-            total_h += box_height + 15
-
-            processed_messages.append({
-                "msg_data": msg,
-                "lines": lines,
-                "box_height": box_height,
-                "box_width": box_width
-            })
-
-        # --- DYNAMIC PADDING ---
-        # Push the chat thread higher up if we need room for the Accept/Reject buttons
-        incoming_action, incoming_turns = queries.get_diplomatic_status(self.selected_recipient, self.map_screen.player_country, self.map_screen.nation_data)
-        has_bilateral = (incoming_turns > 0 and incoming_action in c.BILATERAL_ACTIONS)
-        bottom_padding = 80 if has_bilateral else 20
-
-        self.max_msg_scroll = max(0, total_h - input_rect.y + bottom_padding)
+            lines = text_utils.wrap_text(msg["content"], font_small, max_width)
+            headers = []
+            for index, header in enumerate(msg["forwarded_header"]):
+                color = c.COLOR_GOLD_HIGHLIGHT if index == 0 else (170, 180, 195)
+                headers.extend((line, color) for line in text_utils.wrap_text(header, font_tiny, max_width))
+            if not headers and msg["date"]:
+                headers = [(msg["date"], (151, 163, 181))]
+            width = max([font_small.size(line)[0] for line in lines]
+                        + [font_tiny.size(line)[0] for line, _color in headers] + [100]) + 30
+            header_h = len(headers) * 20 + (5 if headers else 0)
+            bubble_h = 20 + len(lines) * line_height
+            height = header_h + bubble_h
+            cached = pygame.Surface((width, height), pygame.SRCALPHA)
+            for index, (line, color) in enumerate(headers):
+                rendered = font_tiny.render(line, True, color)
+                x = width - rendered.get_width() if msg["is_player"] else 0
+                cached.blit(rendered, (x, index * 20))
+            color = MSG_BUBBLE_PLAYER if msg["is_player"] else MSG_BUBBLE_AI
+            if msg["forwarded_header"]:
+                color = MSG_BUBBLE_FORWARDED
+            border = c.COLOR_GOLD_HIGHLIGHT if msg["is_draft"] or msg["forwarded_header"] else MSG_PANEL_BORDER
+            bubble = pygame.Rect(0, header_h, width, bubble_h)
+            ui_elements.draw_pixel_panel(cached, bubble, color, border, gradient_strength=0.25)
+            if msg["is_diplo"]:
+                pygame.draw.rect(cached, MSG_DIPLO_ACCENT, (2, header_h + 2, 3, bubble_h - 4))
+            for index, line in enumerate(lines):
+                cached.blit(font_small.render(line, True, (242, 245, 250)), (15, header_h + 10 + index * line_height))
+            forward = None
+            if msg["forward_source"] and not self.map_screen.tactical_mode:
+                forward = Button(0, 0, MSG_FORWARD_BUTTON_SIZE, "grey", "Forward", lambda: None, font_preset="tiny")
+            self.processed_messages.append({"msg_data": msg, "surface": cached,
+                                            "box_height": height, "box_width": width,
+                                            "header_h": header_h, "bubble_h": bubble_h,
+                                            "forward_button": forward})
+            total_h += height + 15
+        self.max_msg_scroll = max(0, total_h - self.thread_rect.height + 20)
         self.msg_scroll_y = max(0, min(self.msg_scroll_y, self.max_msg_scroll))
 
-        current_y = input_rect.y - bottom_padding + self.msg_scroll_y
+    def _prepare_composer(self):
+        """Cache the input text after edits and conversation changes."""
+        self.input_rect = pygame.Rect(MSG_LEFT_PANE_W + MSG_MARGIN,
+                                      c.SCREEN_HEIGHT - MSG_INPUT_H + MSG_MARGIN,
+                                      c.SCREEN_WIDTH - MSG_LEFT_PANE_W - 2 * MSG_MARGIN - MSG_QUEUE_W - MSG_CONTROL_GAP,
+                                      MSG_INPUT_H - 2 * MSG_MARGIN)
+        self.compose_enabled = bool(self.selected_recipient) and not self.map_screen.tactical_mode
+        if self.compose_enabled:
+            self.compose_enabled = not queries.is_diplomat_busy(
+                self.map_screen.player_country, self.selected_recipient, self.map_screen.nation_data)
+        text = self.compose_text + ("|" if self.compose_enabled else "")
+        self.compose_surface = fonts.get("normal").render(text, True, (242, 245, 250))
+
+    def _draw_panel(self, surface, rect, name):
+        style = MESSAGE_PANEL_STYLES[name]
+        ui_elements.draw_pixel_panel(surface, rect, style["color"], MSG_PANEL_BORDER,
+                                     gradient_strength=style["gradient_strength"])
+
+    def additional_draw(self, surface):
+        if not self.map_screen:
+            return
+        self._draw_panel(surface, pygame.Rect(0, 0, MSG_LEFT_PANE_W, c.SCREEN_HEIGHT), "contacts")
+        self._draw_panel(surface, pygame.Rect(0, 0, MSG_LEFT_PANE_W, MSG_HEADER_H), "header")
+        self._draw_panel(surface, pygame.Rect(MSG_LEFT_PANE_W, 0, c.SCREEN_WIDTH - MSG_LEFT_PANE_W, MSG_HEADER_H), "header")
+        sidebar_title_y = MSG_CONTACT_TOOLBAR_Y + (MSG_HEADER_BUTTON_H - self.sidebar_title_surface.get_height()) // 2
+        surface.blit(self.sidebar_title_surface, (MSG_MARGIN, sidebar_title_y))
+        surface.blit(self.header_surface, (MSG_LEFT_PANE_W + MSG_MARGIN, (MSG_HEADER_H - self.header_surface.get_height()) // 2))
+        self.draw_list_scrollbar(surface, MSG_LEFT_PANE_W - 20, MSG_CONTACT_LIST_TOP_Y,
+                                 self.scroll_content_rect.height, width=10,
+                                 attr="contact_scroll_y", limit_attr="max_contact_scroll",
+                                 track_attr="contact_scroll_track_rect", handle_attr="contact_scroll_handle_rect")
+        request_rect = pygame.Rect(MSG_LEFT_PANE_W, self.thread_rect.bottom,
+                                    self.thread_rect.width, MSG_REQUEST_H)
+        self._draw_panel(surface, request_rect, "requests")
+        composer_rect = pygame.Rect(MSG_LEFT_PANE_W, request_rect.bottom,
+                                     self.thread_rect.width, MSG_INPUT_H)
+        self._draw_panel(surface, composer_rect, "composer")
+        ui_elements.draw_text_input_background(surface, self.input_rect, active=self.compose_enabled,
+                                               style_name="message",
+                                               border_color=MSG_SELECTED_ACCENT if self.compose_enabled else (80, 90, 106))
+        text_rect = self.input_rect.inflate(-24, -12)
+        with ui_bars.clip_scroll_region(surface, text_rect, draw_top=False, draw_bottom=False):
+            x = text_rect.x - max(0, self.compose_surface.get_width() - text_rect.width)
+            surface.blit(self.compose_surface, (x, text_rect.centery - self.compose_surface.get_height() // 2))
+        if not self.selected_recipient:
+            surface.blit(self.empty_thread_surface, self.empty_thread_surface.get_rect(center=self.thread_rect.center))
+        current_y = self.thread_rect.bottom - 20 + self.msg_scroll_y
         self.draft_edit_rects = []
         self.forward_button_rects = []
-        
-        msg_pane_rect = pygame.Rect(MSG_LEFT_PANE_W, 0, c.SCREEN_WIDTH - MSG_LEFT_PANE_W, input_rect.y)
-        with ui_bars.clip_scroll_region(surface, msg_pane_rect,
+        with ui_bars.clip_scroll_region(surface, self.thread_rect,
                                         draw_top=self.msg_scroll_y < self.max_msg_scroll, draw_bottom=self.msg_scroll_y != 0):
-            # Render iterating backwards (Newest -> Oldest), drawing bottom -> up
-            for p_msg in processed_messages:
-                msg = p_msg["msg_data"]
-                lines = p_msg["lines"]
-                box_height = p_msg["box_height"]
-                box_width = p_msg["box_width"]
-
-                current_y -= box_height
-            
-                # Culling check - don't draw boxes rendering completely off the top or bottom of the screen
-                if current_y + box_height < 0 or current_y > c.SCREEN_HEIGHT:
-                    current_y -= 15
-                    continue 
-
-                is_player = msg['is_player']
-                is_draft = msg.get('is_draft', False)
-                is_diplo = msg.get('is_diplo', False)
-                date_str = msg.get("date", "")
-                forwarded_header = msg.get("forwarded_header", [])
-                forward_source = msg.get("forward_source")
-
-                draw_y = current_y
-            
-                # --- Render Date / Forwarding Provenance Header ---
-                if forwarded_header:
-                    for header_idx, header in enumerate(forwarded_header):
-                        header_color = c.COLOR_GOLD_HIGHLIGHT if header_idx == 0 else (170, 170, 185)
-                        header_surf = font_tiny.render(header, True, header_color)
-                        if is_player:
-                            surface.blit(header_surf, (c.SCREEN_WIDTH - header_surf.get_width() - 30,
-                                                       draw_y))
-                        else:
-                            surface.blit(header_surf, (MSG_LEFT_PANE_W + 30, draw_y))
-                        draw_y += 20
-                    draw_y += 5
-                elif date_str:
-                    date_surf = font_tiny.render(date_str, True, (130, 130, 150))
-                    if is_player:
-                        surface.blit(date_surf, (c.SCREEN_WIDTH - date_surf.get_width() - 30, draw_y))
-                    else:
-                        surface.blit(date_surf, (MSG_LEFT_PANE_W + 30, draw_y))
-                    draw_y += 20 # Push the physical bubble down 20px so it sits under the text
-
-                # Only color the physical bubble, excluding the space we reserved for the date
-                bubble_h = box_height - (25 if date_str else 0)
-                if forwarded_header:
-                    bubble_h -= len(forwarded_header) * 20 + 5
-
-                if is_player:
-                    box_x = c.SCREEN_WIDTH - box_width - 30
-                    color = MSG_BUBBLE_FORWARDED if forwarded_header else (MSG_BUBBLE_PLAYER_DIPLO if is_diplo else MSG_BUBBLE_PLAYER)
-                
-                    if is_draft:
-                        del_rect = pygame.Rect(box_x - 35, draw_y + bubble_h//2 - 12, 25, 25)
-                        self.draft_edit_rects.append((del_rect, msg['draft_idx']))
-                    
-                        if not self.map_screen.tactical_mode:
-                            ui_elements.draw_pixel_button(surface, del_rect, (150, 0, 0))
-                            surface.blit(font_small.render("X", True, (255, 255, 255)), (del_rect.x + 7, del_rect.y + 2))
-                else:
-                    box_x = MSG_LEFT_PANE_W + 30
-                    color = MSG_BUBBLE_FORWARDED if forwarded_header else (MSG_BUBBLE_AI_DIPLO if is_diplo else MSG_BUBBLE_AI)
-
-                bubble_rect = pygame.Rect(box_x, draw_y, box_width, bubble_h)
-                border = c.COLOR_GOLD_HIGHLIGHT if is_draft or forwarded_header else (20, 20, 20)
-                ui_elements.draw_pixel_panel(surface, bubble_rect, color, border,
-                                             border_width=3 if forwarded_header and not is_draft else 2)
-            
-                ly = draw_y + 10
-                for l in lines:
-                    surface.blit(font_small.render(l, True, (255, 255, 255)), (box_x + 15, ly))
-                    ly += 20
-
-                if forward_source and not self.map_screen.tactical_mode:
-                    button_x = bubble_rect.right + 8
-                    button_y = bubble_rect.y + max(0, (bubble_rect.height - MSG_FORWARD_BUTTON_SIZE[1]) // 2)
-                    forward_button = Button(
-                        button_x, button_y, MSG_FORWARD_BUTTON_SIZE, "light_blue", "Forward",
-                        lambda: None, font_preset="tiny")
-                    forward_button.draw(surface)
-                    self.forward_button_rects.append((forward_button.rect.copy(), forward_source))
-                
-                current_y -= 15 
+            for prepared in self.processed_messages:
+                current_y -= prepared["box_height"]
+                msg = prepared["msg_data"]
+                if current_y + prepared["box_height"] >= self.thread_rect.top and current_y < self.thread_rect.bottom:
+                    x = (self.thread_rect.right - prepared["box_width"] - 30 if msg["is_player"]
+                         else self.thread_rect.left + 30)
+                    surface.blit(prepared["surface"], (x, current_y))
+                    button_y = current_y + prepared["header_h"] + prepared["bubble_h"] // 2
+                    if msg["is_draft"] and not self.map_screen.tactical_mode:
+                        delete_rect = pygame.Rect(x - 35, button_y - 12, 25, 25)
+                        self.draft_edit_rects.append((delete_rect.clip(self.thread_rect), msg["draft_idx"]))
+                        ui_elements.draw_pixel_button(surface, delete_rect, (130, 48, 48))
+                        surface.blit(self.delete_label, self.delete_label.get_rect(center=delete_rect.center))
+                    forward = prepared["forward_button"]
+                    if forward:
+                        forward.rect.topleft = (x + prepared["box_width"] + 8,
+                                                 button_y - MSG_FORWARD_BUTTON_SIZE[1] // 2)
+                        forward.draw(surface)
+                        self.forward_button_rects.append((forward.rect.clip(self.thread_rect), msg["forward_source"]))
+                current_y -= 15
 
     def exit_screen(self):
         self.save_current_draft()

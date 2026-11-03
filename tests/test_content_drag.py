@@ -96,20 +96,18 @@ class ContentDragTests(unittest.TestCase):
                 self.assertEqual(getattr(screen, f"{panel}_scroll_y"), 120)
 
     def test_message_thread_drag_pulls_the_thread_down(self):
-        screen = object.__new__(Messages_Screen)
-        screen.map_screen = SimpleNamespace(tactical_mode=False)
-        screen.selected_recipient = None
-        screen.draft_edit_rects = []
-        screen.forward_button_rects = []
-        screen.is_dragging_messages = True
+        screen = Messages_Screen()
+        screen.map_screen = SimpleNamespace(tactical_mode=False, player_country="A", nation_data={})
+        screen.selected_recipient = "B"
+        screen.thread_rect = pygame.Rect(280, 64, 1000, 512)
         screen.msg_scroll_y = 150
         screen.max_msg_scroll = 500
         screen.scroll_content_rect = pygame.Rect(0, 0, 200, 200)
-        event = drag_events(start=(700, 100))[1]
-        screen.additional_events(event)
+        with mock.patch("screens.game.messages.queries.is_diplomat_busy", return_value=True):
+            for event in drag_events(start=(700, 100)):
+                screen.additional_events(event)
         self.assertEqual(screen.msg_scroll_y, 180)
-        screen.additional_events(drag_events(start=(700, 100))[2])
-        self.assertFalse(screen.is_dragging_messages)
+        self.assertIsNone(screen.message_drag_state)
 
 
 if __name__ == "__main__":

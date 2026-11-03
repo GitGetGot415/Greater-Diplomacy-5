@@ -104,13 +104,27 @@ def canonical_response_reference(nation_data, recipient, sender, response):
 
 def apply_draft(nation_data, sender, pending, responses, draft_lists):
     """Install validated intent while retaining server-owned travelling requests."""
+    # Message helpers import the lifecycle module during startup.
+    from map_logic.diplomacy.diplomacy_messages import FORWARD_ACTION
+
     normalize_diplomatic_records(nation_data)
     country = nation_data[sender]
     current = country.setdefault("pending_diplomacy", {})
-    in_flight = {target: record for target, record in current.items()
+    in_flight = {target: copy.deepcopy(record) for target, record in current.items()
                  if isinstance(record, dict) and record.get("turns", 0) > 0}
+    for record in in_flight.values():
+        if record.get("action", "").startswith("MSG:"):
+            record.pop("forwarded_message", None)
+            record.pop("forwarded_source", None)
     for target, intent in pending.items():
         if target in in_flight:
+            original = in_flight[target]
+            if original.get("action", "").startswith("MSG:") and intent.get("action") == FORWARD_ACTION:
+                if intent.get("request_id") != original.get("request_id"):
+                    raise ValueError("That forward refers to an expired message. Reload the current turn.")
+                original["forwarded_message"] = copy.deepcopy(intent["forwarded_message"])
+                original["forwarded_source"] = intent["forwarded_source"]
+                continue
             # Executed unilateral actions can be replaced, as in local play.
             if (in_flight[target].get("action") not in c.UNILATERAL_ACTIONS
                     or intent.get("turns", 0) > 0):

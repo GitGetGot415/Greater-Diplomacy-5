@@ -173,6 +173,86 @@ class ForwardedMessageTests(unittest.TestCase):
         self.assertEqual(received["original_sender"], "B")
         self.assertEqual(received["forwarded_by"], "A")
 
+    def test_forward_preserves_queued_text_and_delivers_both_once(self):
+        import json
+        from map_logic.diplomacy import diplomacy_processor
+
+        for use_draft_list in (False, True):
+            with self.subTest(use_draft_list=use_draft_list):
+                game = StubMapScreen(["A", "B", "C"], human_players=["A"])
+                dm.send_message(game, "B", "A", "Forward this.")
+                original = game.nation_data["A"]["inbox"][0]
+                if use_draft_list:
+                    dm.queue_text_message(game.nation_data, "A", "C", "First text")
+                    dm.queue_text_message(game.nation_data, "A", "C", "Second text")
+                else:
+                    dm.set_pending(game.nation_data, "A", "C", "MSG:First text\nSecond text")
+                result = dm.queue_forwarded_message(game.nation_data, "A", "C", "A", original)
+                self.assertTrue(result.startswith("Forward queued"))
+                # Both existing channels must survive their saved JSON representation.
+                game.nation_data = json.loads(json.dumps(game.nation_data))
+                self.assertEqual(game.nation_data["A"]["draft_lists"]["C"], ["First text", "Second text"])
+                diplomacy_processor._process_pass1_immediate_actions(game)
+                received = game.nation_data["C"]["inbox"]
+                self.assertCountEqual([message["content"] for message in received],
+                                      ["First text\nSecond text", "Forward this."])
+                forwarded = next(message for message in received if dm.is_forwarded(message))
+                self.assertEqual(forwarded["forwarded_from_message_id"], original["message_id"])
+                self.assertEqual(game.nation_data["A"]["draft_lists"], {})
+                self.assertEqual(dm.get_pending(game.nation_data, "A", "C"), {})
+
+    def test_forward_does_not_replace_formal_or_scheduled_requests(self):
+        import copy
+
+        dm.send_message(self.game, "B", "A", "Forward this.")
+        original = self.game.nation_data["A"]["inbox"][0]
+        for action, turns, timer in (("TRADE", 0, 0), ("TRADE", 1, 0),
+                                      (dm.FORWARD_ACTION, 0, 0), ("MSG:Scheduled", 0, 2)):
+            with self.subTest(action=action, turns=turns, timer=timer):
+                dm.set_pending(self.game.nation_data, "A", "C", action, turns=turns, timer=timer)
+                before = copy.deepcopy(self.game.nation_data)
+                result = dm.queue_forwarded_message(self.game.nation_data, "A", "C", "A", original)
+                self.assertFalse(result.startswith("Forward queued"))
+                self.assertEqual(self.game.nation_data, before)
+
+    def test_forward_after_a_previous_turn_keeps_the_original_ai_reply(self):
+        import copy
+        import json
+        from unittest import mock
+        from map_logic.diplomacy import diplomacy_processor
+
+        dm.send_message(self.game, "B", "A", "Forward this.")
+        source = self.game.nation_data["A"]["inbox"][0]
+        dm.queue_text_message(self.game.nation_data, "A", "C", "Previous turn's message")
+        diplomacy_processor._process_pass1_immediate_actions(self.game)
+        diplomacy_processor._process_pass2_delayed_actions(self.game, {}, ["A", "B", "C"], [])
+        previous = copy.deepcopy(dm.get_pending(self.game.nation_data, "A", "C"))
+        result = dm.queue_forwarded_message(self.game.nation_data, "A", "C", "A", source)
+        self.assertTrue(result.startswith("Forward queued"))
+        self.assertFalse(dm.queue_forwarded_message(self.game.nation_data, "A", "C", "A", source).startswith("Forward queued"))
+        self.game.nation_data = json.loads(json.dumps(self.game.nation_data))
+        diplomacy_processor._process_pass1_immediate_actions(self.game)
+        self.assertEqual(dm.get_pending(self.game.nation_data, "A", "C"), previous)
+        diplomacy_processor._process_pass1_immediate_actions(self.game)
+        received = self.game.nation_data["C"]["inbox"]
+        self.assertCountEqual([message["content"] for message in received], ["Previous turn's message", "Forward this."])
+        self.assertTrue(next(message for message in received if message["content"] == "Forward this.")["forwarded"])
+        with mock.patch.object(diplomacy_processor, "_resolve_ai_message_reply") as reply:
+            diplomacy_processor._process_pass2_delayed_actions(self.game, {}, ["A", "B", "C"], [])
+            reply.assert_called_once()
+            self.assertEqual(reply.call_args.args[-2:], ("A", "C"))
+        self.assertEqual(dm.get_pending(self.game.nation_data, "A", "C"), {})
+
+    def test_canceling_a_forward_keeps_the_previous_message(self):
+        import copy
+
+        dm.send_message(self.game, "B", "A", "Forward this.")
+        source = self.game.nation_data["A"]["inbox"][0]
+        previous = copy.deepcopy(dm.set_pending(self.game.nation_data, "A", "C", "MSG:Already sent", turns=1))
+        dm.queue_forwarded_message(self.game.nation_data, "A", "C", "A", source)
+        dm.cancel_queued_forward(self.game.nation_data, "A", "C")
+        self.assertEqual(dm.get_pending(self.game.nation_data, "A", "C"), previous)
+
     def test_a_puppet_forwards_a_war_declaration_to_its_master_immediately(self):
         from map_logic.diplomacy import diplomacy_processor
 

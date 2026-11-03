@@ -201,6 +201,31 @@ def cancel_text_message(nation_data, player_name, target_name):
 FORWARD_ACTION = "FORWARD_MESSAGE"
 
 
+def has_queued_forward(request):
+    """Return whether a request holds an unsent forwarded message."""
+    action = request.get("action", "")
+    return action == FORWARD_ACTION or (action.startswith("MSG:") and "forwarded_message" in request)
+
+
+def forward_intent(request):
+    """Export an attached forward without replacing the request awaiting a reply."""
+    return {"action": FORWARD_ACTION, "turns": 0, "timer": 0,
+            "request_id": request["request_id"],
+            "message": request["forwarded_message"]["content"],
+            "forwarded_message": copy.deepcopy(request["forwarded_message"]),
+            "forwarded_source": request["forwarded_source"]}
+
+
+def cancel_queued_forward(nation_data, player_name, target_name):
+    """Remove an unsent forward while retaining any message awaiting a reply."""
+    request = get_pending(nation_data, player_name, target_name)
+    if request.get("action") == FORWARD_ACTION and request.get("turns", 0) == 0:
+        clear_pending(nation_data, player_name, target_name)
+    elif request.get("action", "").startswith("MSG:"):
+        request.pop("forwarded_message", None)
+        request.pop("forwarded_source", None)
+
+
 def is_forwarded(msg):
     """Whether a message carries the engine's forwarding provenance stamp."""
     return isinstance(msg, dict) and msg.get("forwarded") is True
@@ -243,14 +268,42 @@ def queue_forwarded_message(nation_data, player_name, target_name, source_owner,
     existing = pending.get(target_name)
     if existing is not None:
         existing_turns = existing.get("turns", 0) if isinstance(existing, dict) else 0
+        is_text = isinstance(existing, dict) and existing.get("action", "").startswith("MSG:")
+        if is_text and has_queued_forward(existing):
+            return "A forwarded message is already queued for this country."
+        if is_text and existing_turns > 0:
+            existing["forwarded_message"] = copy.deepcopy(original_message)
+            existing["forwarded_source"] = source_owner
+            return "Forward queued. It will be sent at the end of the turn."
         if existing_turns > 0:
             return "A diplomatic action is already in transit to this country."
-        return "A diplomatic action is already pending with this country."
+        if not is_text or existing.get("timer", 0) > 0:
+            return "A diplomatic action is already pending with this country."
+        # Text can travel beside the forward through the existing draft channel.
+        # Copy a text-only pending entry there before replacing its action.
+        draft = queries.get_message_draft(player_name, target_name, nation_data)
+        drafts = nation_data[player_name].setdefault("draft_lists", {})
+        if draft and not drafts.get(target_name):
+            drafts[target_name] = draft.split("\n")
 
     set_pending(nation_data, player_name, target_name, FORWARD_ACTION,
                 message=original_message.get("content", ""),
                 forwarded_message=copy.deepcopy(original_message), forwarded_source=source_owner)
     return "Forward queued. It will be sent at the end of the turn."
+
+
+def canonical_forward_fields(nation_data, player_name, request):
+    """Resolve imported forward references against the sender's host-owned inbox."""
+    submitted = request.get("forwarded_message")
+    message_id = submitted.get("message_id") if isinstance(submitted, dict) else None
+    if not isinstance(message_id, str) or not message_id:
+        raise ValueError("A forwarded message must reference a received message.")
+    for message in nation_data[player_name].get("inbox", []):
+        if (message.get("message_id") == message_id
+                and not message.get("sender", "").startswith("To: ")):
+            return {"forwarded_message": copy.deepcopy(message), "forwarded_source": player_name}
+    raise ValueError("That message is not in the sender's inbox. Reload the current turn.")
+
 
 def _deliver(nation_data, owner, entry):
     """Puts one message at the top of a nation's inbox, oldest trimmed off.

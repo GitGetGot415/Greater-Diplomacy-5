@@ -13,6 +13,7 @@ no way to see afterwards what they had agreed to.
 """
 
 import unittest
+from unittest import mock
 
 
 import pygame
@@ -20,7 +21,7 @@ pygame.init()
 pygame.display.set_mode((800, 600))
 
 import data.constants as c
-from tests.stub_map_screen import fill_state_defaults
+from tests.stub_map_screen import fill_state_defaults, map_double
 from map_logic.diplomacy import diplomacy_messages as dm
 from ui.panels import diplomatic_popups
 
@@ -307,6 +308,163 @@ class TableRowClickTests(unittest.TestCase):
         detail = TextDetailScreen(Screen({}), "Avaria to Borland", "Short.")
         detail.draw(pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT)))
         self.assertEqual(detail.max_scroll, 0)
+
+
+class ConversationInteractionTests(unittest.TestCase):
+    def make_screen(self, *, tactical=False):
+        from screens.game.messages import Messages_Screen
+
+        screen = Messages_Screen()
+        screen.start_messages(map_double(
+            player_country="P", tactical_mode=tactical, show_feedback=mock.Mock(), feedback_text="",
+            map_data={1: {"owner": "P"}, 2: {"owner": "A"}, 3: {"owner": "B"}},
+            nation_data={
+                "P": nation(name="Player", is_playable=True, inbox=[
+                    {"sender": "A", "content": "Latest message", "read": False, "type": "TEXT", "date": "Today"},
+                    {"sender": "B", "content": "Other conversation", "read": False, "type": "TEXT", "date": "Yesterday"}]),
+                "A": nation(name="First country", is_playable=True),
+                "B": nation(name="Second country", is_playable=True)}))
+        return screen
+
+    def test_conversation_row_selects_its_country_and_marks_only_that_thread_read(self):
+        from screens.game.messages import ConversationRow
+
+        screen = self.make_screen()
+        row = next(element for element in screen.elements if isinstance(element, ConversationRow) and element.text == "Second country")
+        with mock.patch.object(pygame.mouse, "get_pos", return_value=row.rect.center):
+            screen.handle_events([
+                pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=row.rect.center),
+                pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=row.rect.center)])
+        self.assertEqual(screen.selected_recipient, "B")
+        messages = screen.map_screen.nation_data["P"]["inbox"]
+        self.assertFalse(messages[0]["read"])
+        self.assertTrue(messages[1]["read"])
+
+    def test_clipped_conversation_row_does_not_select_a_country(self):
+        from screens.game.messages import ConversationRow
+
+        screen = self.make_screen()
+        row = next(element for element in screen.elements if isinstance(element, ConversationRow))
+        row.rect.y = screen.scroll_content_rect.top - row.rect.height + 4
+        point = (row.rect.centerx, row.rect.top + 10)
+        with mock.patch.object(pygame.mouse, "get_pos", return_value=point):
+            row.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=point))
+            row.handle_event(pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=point))
+        self.assertIsNone(screen.selected_recipient)
+
+    def test_fixed_controls_cannot_scroll_or_activate_hidden_thread_actions(self):
+        screen = self.make_screen()
+        screen.select_recipient("A")
+        screen.drafts = ["Keep this draft"]
+        screen.msg_scroll_y = 100
+        screen.max_msg_scroll = 500
+        with mock.patch.object(screen, "open_forward_picker") as forward:
+            for point in ((700, 20), (700, screen.thread_rect.bottom + 15), (700, screen.input_rect.centery)):
+                with self.subTest(point=point):
+                    rect = pygame.Rect(point[0] - 10, point[1] - 10, 20, 20)
+                    screen.draft_edit_rects = [(rect, 0)]
+                    screen.forward_button_rects = [(rect, {})]
+                    for event in (
+                        pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=point),
+                        pygame.event.Event(pygame.MOUSEMOTION, pos=(point[0], point[1] + 30), rel=(0, 30), buttons=(1, 0, 0)),
+                        pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=point),
+                        pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=1, pos=point)):
+                        screen.additional_events(event)
+                    self.assertEqual(screen.msg_scroll_y, 100)
+                    self.assertEqual(screen.drafts, ["Keep this draft"])
+            forward.assert_not_called()
+
+    def test_draw_uses_cached_conversation_and_refresh_reads_new_messages(self):
+        from screens.game import messages as messages_module
+
+        screen = self.make_screen()
+        screen.select_recipient("A")
+        prepared = screen.processed_messages
+        with mock.patch.object(dm, "get_pending", side_effect=AssertionError("Draw read diplomacy")), \
+                mock.patch.object(dm, "describe_trade", side_effect=AssertionError("Draw described terms")), \
+                mock.patch.object(messages_module.text_utils, "wrap_text", side_effect=AssertionError("Draw wrapped messages")):
+            screen.draw(pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT)))
+            screen.draw(pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT)))
+        self.assertIs(screen.processed_messages, prepared)
+        screen.map_screen.nation_data["P"]["inbox"].insert(0, {
+            "sender": "A", "content": "New message", "read": False, "type": "TEXT", "date": "Today"})
+        screen.refresh_ui()
+        self.assertEqual(screen.processed_messages[0]["msg_data"]["content"], "New message")
+
+    def test_composer_edit_refreshes_its_cache_without_rebuilding_history(self):
+        screen = self.make_screen()
+        screen.select_recipient("A")
+        prepared = screen.processed_messages
+        old_text = screen.compose_surface
+        screen.additional_events(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_h, unicode="h", mod=0))
+        self.assertEqual(screen.compose_text, "h")
+        self.assertIsNot(screen.compose_surface, old_text)
+        self.assertIs(screen.processed_messages, prepared)
+
+    def test_visible_forward_and_delete_controls_keep_their_callbacks(self):
+        screen = self.make_screen()
+        screen.select_recipient("A")
+        screen.drafts = ["Queued text"]
+        screen.save_current_draft()
+        screen.refresh_ui()
+        screen.draw(pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT)))
+        forward_rect, original = next((rect, message) for rect, message in screen.forward_button_rects if rect.width and rect.height)
+        with mock.patch.object(screen, "open_forward_picker") as forward:
+            screen.additional_events(pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=forward_rect.center))
+            forward.assert_called_once_with(original)
+        delete_rect, _index = next((rect, index) for rect, index in screen.draft_edit_rects if rect.width and rect.height)
+        screen.additional_events(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=delete_rect.center))
+        self.assertEqual(screen.drafts, [])
+        self.assertEqual(dm.get_pending(screen.map_screen.nation_data, "P", "A"), {})
+
+    def test_forward_to_an_existing_text_conversation_keeps_both_drafts_visible(self):
+        screen = self.make_screen()
+        dm.queue_text_message(screen.map_screen.nation_data, "P", "B", "Already queued")
+        screen.select_recipient("A")
+        original = screen.map_screen.nation_data["P"]["inbox"][0]
+        screen.queue_forward(original, "B")
+        screen.select_recipient("B")
+        contents = [prepared["msg_data"]["content"] for prepared in screen.processed_messages]
+        self.assertIn("Already queued", contents)
+        self.assertTrue(any(original["content"] in text for text in contents))
+        screen.save_current_draft()
+        pending = dm.get_pending(screen.map_screen.nation_data, "P", "B")
+        self.assertEqual(pending["action"], dm.FORWARD_ACTION)
+        self.assertEqual(pending["forwarded_message"], original)
+        self.assertEqual(screen.map_screen.nation_data["P"]["draft_lists"]["B"], ["Already queued"])
+
+    def test_tactical_mode_blocks_writes_and_keeps_treaty_view_available(self):
+        screen = self.make_screen(tactical=True)
+        screen.map_screen.nation_data["P"]["pending_ratification"] = {"signatory": "A"}
+        screen.select_recipient("A")
+        buttons = {element.text: element for element in screen.elements}
+        for label in ("Queue", "Trade", "Ratify Treaty", "Refuse & Leave Faction"):
+            self.assertTrue(buttons[label].disabled)
+        self.assertFalse(buttons["View Treaty"].disabled)
+        screen.compose_text = "Do not queue"
+        with mock.patch("screens.game.messages.player_diplomacy_actions.handle_ratify_treaty") as answer:
+            screen.answer_ratification(True)
+            answer.assert_not_called()
+        screen.send_message()
+        self.assertEqual(dm.get_pending(screen.map_screen.nation_data, "P", "A"), {})
+
+    def test_forward_after_a_previous_turn_is_visible_and_cancelable_without_losing_the_reply(self):
+        import copy
+
+        screen = self.make_screen()
+        previous = copy.deepcopy(dm.set_pending(screen.map_screen.nation_data, "P", "B", "MSG:Already sent", turns=1))
+        screen.select_recipient("A")
+        source = screen.map_screen.nation_data["P"]["inbox"][0]
+        screen.queue_forward(source, "B")
+        screen.select_recipient("B")
+        screen.save_current_draft()
+        self.assertEqual(dm.get_pending(screen.map_screen.nation_data, "P", "B")["request_id"], previous["request_id"])
+        self.assertTrue(any(source["content"] in prepared["msg_data"]["content"] for prepared in screen.processed_messages))
+        screen.draw(pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT)))
+        rectangle, _index = next((rect, index) for rect, index in screen.draft_edit_rects
+                                 if index == f"FORMAL_{dm.FORWARD_ACTION}")
+        screen.additional_events(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=rectangle.center))
+        self.assertEqual(dm.get_pending(screen.map_screen.nation_data, "P", "B"), previous)
 
 
 if __name__ == "__main__":

@@ -84,6 +84,23 @@ See documentation/general_info.txt for disk history and tournament archive stora
 Message timing
 --------------
 
+Messages keeps conversations on the left and the selected conversation on the right.
+Each conversation row shows its latest message preview and unread count.
+Trade and Mark Unread are in the conversation header.
+Treaty reply controls use a fixed area above the text field and Queue button.
+
+Queue stores a message for the send phase. It does not send the message immediately.
+An unsent text message can share that send phase with a forwarded message to the same country.
+Forwarding preserves the text draft. Both messages are sent once.
+
+A text message awaiting a reply does not block forwarding to the same country.
+The forward keeps that message and its reply reference. Canceling the forward does not cancel the previous message.
+An existing formal action or another queued forward still blocks a new forward.
+
+Multiplayer hosts resolve forwarded message references against the submitting country's received messages.
+
+Message presentation is cached when the screen opens or refreshes. Text input changes refresh the text field cache.
+
 The spectator message table shows three-letter month names with the first letter capitalized in the Date column.
 This display format does not change stored dates or chronological sorting.
 

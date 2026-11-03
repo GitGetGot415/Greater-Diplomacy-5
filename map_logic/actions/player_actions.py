@@ -13,7 +13,7 @@ from map_logic import politics
 from data.game_state import WorldState
 from data.state_access import BackendState
 from data import queries
-from map_logic.diplomacy import volunteers, faction_actions, diplomacy_lifecycle as lifecycle
+from map_logic.diplomacy import volunteers, faction_actions, diplomacy_messages, diplomacy_lifecycle as lifecycle
 from map_logic.diplomacy.puppet_actions import canonical_puppet_release_queue
 from map_logic.diplomacy.action_definitions import availability
 from map_logic.actions import unit_actions, production_actions
@@ -558,6 +558,16 @@ class PlayerActions:
                 if len(encoded) > 50_000:
                     raise PlayerActionError("Diplomacy terms are too large.")
                 entry["parameters"] = copy.deepcopy(info["parameters"])
+            if action == diplomacy_messages.FORWARD_ACTION:
+                try:
+                    entry.update(diplomacy_messages.canonical_forward_fields(self.world.nation_data, country_id, info))
+                except ValueError as error:
+                    raise PlayerActionError(str(error)) from error
+                original = diplomacy_messages.get_pending(self.world.nation_data, country_id, target)
+                if original.get("turns", 0) > 0 and original.get("action", "").startswith("MSG:"):
+                    if info.get("request_id") != original["request_id"]:
+                        raise PlayerActionError("That forward refers to an expired message. Reload the current turn.")
+                    entry["request_id"] = original["request_id"]
             canonical_pending[target] = entry
 
         canonical_responses = {}
@@ -897,9 +907,10 @@ def collect_map_commands(context, country_id: str) -> list[dict[str, Any]]:
     if not isinstance(draft_lists, dict):
         draft_lists = {}
     commands.append({"type": "country_diplomacy",
-                     "pending": {target: copy.deepcopy(info) for target, info in pending.items()
+                     "pending": {target: (copy.deepcopy(info) if info.get("turns", 0) <= 0
+                                           else diplomacy_messages.forward_intent(info)) for target, info in pending.items()
                                  if isinstance(target, str) and isinstance(info, dict)
-                                 and info.get("turns", 0) <= 0},
+                                 and (info.get("turns", 0) <= 0 or diplomacy_messages.has_queued_forward(info))},
                      "responses": copy.deepcopy(responses),
                      "draft_lists": copy.deepcopy(draft_lists)})
     controlled = country_data.get("puppets", []) if isinstance(country_data, dict) else []

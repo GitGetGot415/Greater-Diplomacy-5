@@ -897,6 +897,59 @@ class RealtimeSessionTests(unittest.TestCase):
                 "B": {"action": "NOT_A_REAL_ACTION", "timer": 0, "message": ""}},
                 "responses": {}, "draft_lists": {}}])
 
+    def test_forward_and_text_draft_keep_host_owned_message_in_realtime(self):
+        import copy
+        from map_logic.diplomacy import diplomacy_messages as dm
+
+        source = {"message_id": "received-id", "sender": "B", "content": "Original text", "read": False}
+        game = map_double(map_data={}, id_to_province={}, nation_colors={}, nation_data={
+            "A": {"inbox": [source], "pending_diplomacy": {}}, "B": {}, "C": {}})
+        dm.queue_text_message(game.nation_data, "A", "C", "Ordinary text")
+        dm.queue_forwarded_message(game.nation_data, "A", "C", "A", source)
+        command = next(item for item in collect_map_commands(game, "A") if item["type"] == "country_diplomacy")
+        driver = MapRealtimeDriver(game)
+        submitted = command["pending"]["C"]
+        submitted["forwarded_message"]["content"] = "Forged text"
+        submitted["forwarded_source"] = "B"
+        canonical = driver.validate_draft("A", [command])[0]
+        self.assertEqual(canonical["pending"]["C"]["forwarded_message"], source)
+        self.assertEqual(canonical["pending"]["C"]["forwarded_source"], "A")
+        self.assertEqual(canonical["draft_lists"], {"C": ["Ordinary text"]})
+        driver.apply_validated_drafts({"A": [canonical]})
+        self.assertEqual(dm.get_pending(game.nation_data, "A", "C")["forwarded_message"], source)
+        for invalid in (None, {}, {"message_id": "not-received"}):
+            with self.subTest(invalid=invalid):
+                bad = copy.deepcopy(command)
+                bad["pending"]["C"]["forwarded_message"] = invalid
+                with self.assertRaises(RealtimeError):
+                    driver.validate_draft("A", [bad])
+
+    def test_forward_after_previous_turn_preserves_and_cancels_only_the_forward_in_realtime(self):
+        import copy
+        from map_logic.diplomacy import diplomacy_messages as dm
+
+        source = {"message_id": "received-id", "sender": "B", "content": "Original text", "read": False}
+        game = map_double(map_data={}, id_to_province={}, nation_colors={}, nation_data={
+            "A": {"inbox": [source], "pending_diplomacy": {}}, "B": {}, "C": {}})
+        previous = copy.deepcopy(dm.set_pending(game.nation_data, "A", "C", "MSG:Previous turn", turns=1))
+        local = map_double(map_data={}, id_to_province={}, nation_colors={}, nation_data=copy.deepcopy(game.nation_data))
+        dm.queue_forwarded_message(local.nation_data, "A", "C", "A", source)
+        command = next(item for item in collect_map_commands(local, "A") if item["type"] == "country_diplomacy")
+        driver = MapRealtimeDriver(game)
+        bad = copy.deepcopy(command)
+        bad["pending"]["C"]["request_id"] = "expired-request"
+        with self.assertRaises(RealtimeError):
+            driver.validate_draft("A", [bad])
+        self.assertEqual(dm.get_pending(game.nation_data, "A", "C"), previous)
+        canonical = driver.validate_draft("A", [command])[0]
+        driver.apply_validated_drafts({"A": [canonical]})
+        combined = dm.get_pending(game.nation_data, "A", "C")
+        self.assertEqual(combined, dict(previous, forwarded_message=source, forwarded_source="A"))
+        dm.cancel_queued_forward(local.nation_data, "A", "C")
+        command = next(item for item in collect_map_commands(local, "A") if item["type"] == "country_diplomacy")
+        driver.apply_validated_drafts({"A": driver.validate_draft("A", [command])})
+        self.assertEqual(dm.get_pending(game.nation_data, "A", "C"), previous)
+
     def test_tls_server_client_join_and_malformed_frame_rejection(self):
         with tempfile.TemporaryDirectory() as directory:
             certificate, key, fingerprint = create_match_certificate(directory)

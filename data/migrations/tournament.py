@@ -9,7 +9,7 @@ import json
 
 from data.state_access import world_for
 from map_logic import politics
-from map_logic.diplomacy import diplomacy_lifecycle as lifecycle
+from map_logic.diplomacy import diplomacy_messages, diplomacy_lifecycle as lifecycle
 from map_logic.diplomacy.action_definitions import availability
 
 
@@ -141,11 +141,18 @@ def legacy_player_country(context, country_id, nation_update):
             if (not isinstance(host_record, dict) or record.get("action") != host_record.get("action")
                     or (reference is not None and reference != host_record.get("request_id"))):
                 raise ValueError("A travelling request does not belong to this move.")
+            if diplomacy_messages.has_queued_forward(record):
+                record.update(diplomacy_messages.canonical_forward_fields(world_state.nation_data, country_id, record))
+                intent = diplomacy_messages.forward_intent(record)
+                intent["request_id"] = host_record["request_id"]
+                drafts[target] = intent
         else:
             available = availability(context, country_id, target, record.get("action", ""))
             if not available.allowed:
                 # Older snapshots discard invalid drafts while retaining unrelated choices.
                 continue
+            if record.get("action") == diplomacy_messages.FORWARD_ACTION:
+                record.update(diplomacy_messages.canonical_forward_fields(world_state.nation_data, country_id, record))
             drafts[target] = record
     canonical_responses = {}
     for target, response in submitted[country_id]["diplo_responses"].items():
