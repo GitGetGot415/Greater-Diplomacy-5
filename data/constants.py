@@ -449,7 +449,7 @@ MENU_MAIN_BUTTON_TABLE = [
         "attribute": "map_editor_btn",
         "text": "Map Editor",
         "color": "orange",
-        "state": "SELECT_BASE_MAP",
+        "state": "MAP_EDITOR_MENU",
         "image": "map_editor",
         "text_size": 24,
     },

@@ -135,7 +135,10 @@ The map editor's direct unit converter changes starting forms immediately.
 SAVED GAME AND MAP BROWSERS
 ==========================
 
-Load Game and Map Editor use ui/widgets/content_browser.py.
+Map Editor opens a menu with New Map and Load Map.
+New Map opens map creation. Load Map opens the custom map browser.
+Both screens return to the Map Editor menu with Back.
+Load Game and the map browsers use ui/widgets/content_browser.py.
 Select a row to read its details. Select it again to clear the selection.
 Use the bottom-right button or Enter to open the selected item.
 Use the arrow keys to change the selection. Enter in the search field finishes the search without opening an item.
@@ -158,7 +161,7 @@ New Map lists base maps, historical scenarios, and alternate scenarios.
 Select a scenario or map to view its starting date, author, and description when available.
 Select Start Game or Create Map, or press Enter, to open the selected item.
 Selecting the same item again clears the selection. Search and sorting use the shared browser controls.
-Back from New Map returns to custom maps. Back from New Game returns to the menu.
+Back from New Map returns to the Map Editor menu. Back from New Game returns to the main menu.
 
 Random Scenario is below Custom Scenarios and opens its existing setup screen.
 Scenario Settings is above Data Refresh at the bottom of New Game's left panel.

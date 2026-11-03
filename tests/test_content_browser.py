@@ -57,18 +57,16 @@ class ContentBrowserTests(unittest.TestCase):
         from screens.menus.load_game import Load_Game
         return Load_Game()
 
-    def map_screen(self):
+    def map_screen(self, *, choosing_sources=False):
         from screens.setup.select_base_map import Select_Base_Map
-        return Select_Base_Map()
+        return Select_Base_Map(choosing_sources=choosing_sources)
 
     def new_game_screen(self):
         from screens.setup.new_game import New_Game
         return New_Game()
 
     def library_screens(self):
-        editor = self.map_screen()
-        editor.return_to_sources()
-        return self.new_game_screen(), editor
+        return self.new_game_screen(), self.map_screen(choosing_sources=True)
 
     def click(self, screen, button):
         with mock.patch("pygame.mouse.get_pos", return_value=button.rect.center):
@@ -255,7 +253,7 @@ class ContentBrowserTests(unittest.TestCase):
                 self.assertFalse(screen.done)
                 dispatch_global_keys(screen, key(pygame.K_ESCAPE))
                 self.assertTrue(screen.done)
-                self.assertEqual(screen.next_state, "MENU")
+                self.assertEqual(screen.next_state, "MAP_EDITOR_MENU" if screen.content_label == "maps" else "MENU")
 
     def test_rename_and_confirmed_delete_refresh_entries_and_sync_storage(self):
         from ui import dialogs
@@ -277,13 +275,58 @@ class ContentBrowserTests(unittest.TestCase):
         self.assertEqual(screen.entries, [])
         self.persist.assert_has_calls([mock.call(self.constants.SAVES_DIR), mock.call(self.constants.SAVES_DIR)])
 
-    def test_new_map_sources_select_before_opening_and_back_returns_to_custom_maps(self):
+    def test_map_editor_menu_routes_to_separate_new_and_load_screens(self):
+        from screens.setup.select_base_map import Map_Editor_Menu
+
+        main_menu = self.controller.states["MENU"]
+        with mock.patch.object(main_menu, "go_to") as navigate:
+            main_menu.map_editor_btn.callback()
+        navigate.assert_called_once_with("MAP_EDITOR_MENU")
+        self.assertIsInstance(self.controller.states["MAP_EDITOR_MENU"], Map_Editor_Menu)
+        self.assertTrue(self.controller.states["NEW_MAP"].choosing_sources)
+        self.assertFalse(self.controller.states["SELECT_BASE_MAP"].choosing_sources)
+        self.assertIsNot(self.controller.states["NEW_MAP"], self.controller.states["SELECT_BASE_MAP"])
+        for label, target in (("New Map", "NEW_MAP"), ("Load Map", "SELECT_BASE_MAP")):
+            menu = Map_Editor_Menu()
+            menu.draw(self.surface)
+            self.click(menu, button_named(menu, label))
+            self.assertTrue(menu.done)
+            self.assertEqual(menu.next_state, target)
+        for use_key in (False, True):
+            menu = Map_Editor_Menu()
+            if use_key:
+                menu.handle_back_key()
+            else:
+                self.click(menu, button_named(menu, "Back"))
+            self.assertTrue(menu.done)
+            self.assertEqual(menu.next_state, "MENU")
+
+    def test_map_screens_keep_their_mode_on_reentry_and_back_returns_to_editor_menu(self):
+        for choosing_sources in (False, True):
+            for use_key in (False, True):
+                screen = self.map_screen(choosing_sources=choosing_sources)
+                screen.search_field.text = "Previous search"
+                screen.search_field.active = True
+                screen.on_enter(self.controller, self.controller.states["MAP_EDITOR_MENU"])
+                self.assertEqual(screen.choosing_sources, choosing_sources)
+                self.assertEqual(screen.sub_state, "BASE_MAPS" if choosing_sources else "CUSTOM_MAPS")
+                self.assertEqual(screen.search_field.text, "")
+                self.assertFalse(screen.search_field.active)
+                if use_key:
+                    screen.handle_back_key()
+                else:
+                    self.click(screen, button_named(screen, "Back"))
+                self.assertTrue(screen.done)
+                self.assertEqual(screen.next_state, "MAP_EDITOR_MENU")
+
+    def test_new_map_sources_select_before_opening_and_load_browser_has_no_new_map_button(self):
         self.bundle("Custom", "SCENARIOS_CUSTOM_DIR")
         self.bundle("Base", "BASE_MAPS_DIR")
         screen = self.map_screen()
         self.assertIsNone(screen.selected_entry)
         self.assertFalse(any(getattr(element, "text", None) == "Base Maps" for element in screen.elements))
-        screen.return_to_sources()
+        self.assertFalse(any(getattr(element, "text", None) == "New Map" for element in screen.elements))
+        screen = self.map_screen(choosing_sources=True)
         self.assertFalse(any(getattr(element, "text", None) == "Custom Maps" for element in screen.elements))
         screen.draw(self.surface)
         self.click(screen, button_named(screen, "Base Maps"))
@@ -297,7 +340,8 @@ class ContentBrowserTests(unittest.TestCase):
             self.click(screen, button_named(screen, "Create Map"))
         edit.assert_called_once_with("Base", self.constants.BASE_MAPS_DIR)
         screen.handle_back_key()
-        self.assertEqual(screen.sub_state, "CUSTOM_MAPS")
+        self.assertEqual(screen.next_state, "MAP_EDITOR_MENU")
+        screen = self.map_screen()
         self.click(screen, button_named(screen, "Custom"))
         with mock.patch.object(screen, "start_editor_with_map") as edit:
             self.click(screen, button_named(screen, "Edit Map"))
@@ -456,12 +500,8 @@ class ContentBrowserTests(unittest.TestCase):
             self.assertFalse(screen.search_field.active)
             self.assertFalse(screen.done)
             dispatch_global_keys(screen, key(pygame.K_ESCAPE))
-            if "BASE_MAPS" in screen.library_categories:
-                self.assertFalse(screen.choosing_sources)
-                self.assertFalse(screen.done)
-                dispatch_global_keys(screen, key(pygame.K_ESCAPE))
             self.assertTrue(screen.done)
-            self.assertEqual(screen.next_state, "MENU")
+            self.assertEqual(screen.next_state, "MAP_EDITOR_MENU" if screen.content_label == "maps" else "MENU")
 
     def test_import_uses_existing_exchange_and_refreshes_after_success(self):
         from ui.dialogs import file_exchange
@@ -508,9 +548,11 @@ class ContentBrowserTests(unittest.TestCase):
         from screens.menus.load_game import Load_Game
         from screens.setup.select_base_map import Select_Base_Map
 
-        for state, screen_class in (("LOAD_GAME", Load_Game), ("SELECT_BASE_MAP", Select_Base_Map)):
+        for state, screen_class in (("LOAD_GAME", Load_Game), ("SELECT_BASE_MAP", Select_Base_Map),
+                                    ("NEW_MAP", Select_Base_Map)):
             previous = SimpleNamespace(next_state=state, done=True)
-            target = screen_class.__new__(screen_class)
+            target = (screen_class(choosing_sources=state == "NEW_MAP")
+                      if screen_class is Select_Base_Map else screen_class())
             controller = SimpleNamespace(active_state=previous, states={state: target})
             with mock.patch.object(screen_class, "reload_entries") as reload_entries:
                 main.Controller.flip_state(controller)

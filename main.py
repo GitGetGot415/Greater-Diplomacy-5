@@ -90,7 +90,7 @@ def _import_project_modules():
     global Orders_Screen, keybind_io, settings_schema, symbol_loader, modal_stack
     global Research_Screen, Economy_Screen, Edit_Country_Screen, Production_Screen
     global Faction_Screen, Faction_Territories_Screen
-    global Select_Base_Map, Random_Setup, Scenario_Settings
+    global Map_Editor_Menu, Select_Base_Map, Random_Setup, Scenario_Settings
     global Multiplayer_Menu, Real_Time_Multiplayer
     global Multiplayer_Hub, Multiplayer_Host, Multiplayer_Join, Multiplayer_New
     global Realtime_Host_Setup, Realtime_Scenario_Select, Realtime_Lobby, Realtime_Join, Realtime_Lan_Browser, Realtime_Remote_Lobby
@@ -160,7 +160,7 @@ def _import_project_modules():
     from screens.editors.edit_country import Edit_Country_Screen
     from screens.game.production import Production_Screen
     from screens.game.faction import Faction_Screen, Faction_Territories_Screen
-    from screens.setup.select_base_map import Select_Base_Map
+    from screens.setup.select_base_map import Map_Editor_Menu, Select_Base_Map
     from screens.setup.random_setup import Random_Setup
     from screens.setup.scenario_settings import Scenario_Settings
     from screens.multiplayer.multiplayer_menu import Multiplayer_Menu, Real_Time_Multiplayer
@@ -393,6 +393,8 @@ class Controller:
             "TRANSLATION_MENU": Translation_Menu(),
             "TRANSLATE_GD4": Greater_Diplomacy_4_Translation(),
             "TRANSLATE_GDHEX": Greater_Diplomacy_Hex_Translation(),
+            "MAP_EDITOR_MENU": Map_Editor_Menu(),
+            "NEW_MAP": Select_Base_Map(choosing_sources=True),
             "SELECT_BASE_MAP": Select_Base_Map(),
             "MAP": None,
             "PRODUCTION": Production_Screen(),

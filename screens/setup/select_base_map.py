@@ -4,14 +4,27 @@ import data.constants as c
 from ui import dialogs
 from ui.dialogs import file_exchange
 from screens.game import map_launch
+from ui.navigation.screen import ButtonMenuScreen
 from ui.widgets.content_browser import ScenarioLibraryScreen
 from ui.widgets.ui_elements import Button, make_back_button, play_ui_sound
 from screens.setup import map_refresh
 
 
-class Select_Base_Map(ScenarioLibraryScreen):
+class Map_Editor_Menu(ButtonMenuScreen):
     back_state = "MENU"
     title = "MAP EDITOR"
+    bg_color = (40, 20, 60)
+
+    def menu_buttons(self):
+        return [
+            ("New Map", "green", lambda: self.go_to("NEW_MAP")),
+            ("Load Map", "blue", lambda: self.go_to("SELECT_BASE_MAP")),
+        ]
+
+
+class Select_Base_Map(ScenarioLibraryScreen):
+    back_state = "MAP_EDITOR_MENU"
+    title = "LOAD MAP"
     content_label = "maps"
     ACTION_COUNT = 3
 
@@ -23,20 +36,19 @@ class Select_Base_Map(ScenarioLibraryScreen):
         "OTHER_ALTERNATE": ("Alternate Scenarios", "SCENARIOS_ALTERNATE_DIR"),
     }
 
-    def __init__(self):
+    def __init__(self, *, choosing_sources=False):
         super().__init__()
         self.bg_color = (40, 20, 60)
         self.selected_save_path = None
-        self.sub_state = "CUSTOM_MAPS"
-        self.choosing_sources = False
+        self.choosing_sources = choosing_sources
+        self.sub_state = "BASE_MAPS" if self.choosing_sources else "CUSTOM_MAPS"
+        self.sort_index = 1 if self.choosing_sources else 0
         self.refresh_ui()
 
     def on_enter(self, app, previous):
         # Refresh on entry. Frame updates use cached entries.
-        self.selected_entry = None
-        self.choosing_sources = False
-        self.sub_state = "CUSTOM_MAPS"
-        self.sort_index = 0
+        self.sort_index = 1 if self.choosing_sources else 0
+        self.set_sub_state("BASE_MAPS" if self.choosing_sources else "CUSTOM_MAPS")
         self.reload_entries()
 
     def get_title(self):
@@ -58,17 +70,12 @@ class Select_Base_Map(ScenarioLibraryScreen):
     def managed_dir(self):
         return c.SCENARIOS_CUSTOM_DIR
 
-    @property
-    def leading_row(self):
-        # New Map is the first row of the map list, so it scrolls with the maps.
-        return None if self.choosing_sources else ("New Map", self.return_to_sources)
-
     def refresh_ui(self):
         _label, directory_attr = self.CATEGORIES[self.sub_state]
         directory = getattr(c, directory_attr)
         if self.choosing_sources:
             self.build_browser(directory, "No maps in this category.")
-            self.elements.append(make_back_button(self.return_to_maps))
+            self.elements.append(make_back_button(self.exit_screen))
             self.add_category_footer_action("Data Refresh", self.trigger_base_map_data_refresh, "purple",
                                             enabled=self.sub_state == "BASE_MAPS")
             self.open_button = self.add_primary_action("Create Map")
@@ -87,18 +94,7 @@ class Select_Base_Map(ScenarioLibraryScreen):
             self.add_browser_action("Delete…", lambda: self.manage_selected(self.start_delete), 2, "red")
         self.open_button = self.add_primary_action("Edit Map") if self.selection_can_open else None
 
-    def return_to_sources(self):
-        self.choosing_sources = True
-        self.sort_index = 1
-        self.set_sub_state("BASE_MAPS")
-
-    def return_to_maps(self):
-        self.choosing_sources = False
-        self.sort_index = 0
-        self.set_sub_state("CUSTOM_MAPS")
-
     def import_custom_map(self):
-        self.choosing_sources = False
         self.set_sub_state("CUSTOM_MAPS")
         file_exchange.import_zip_to_dir(self, self.managed_dir, self.reload_entries)
 
@@ -134,20 +130,10 @@ class Select_Base_Map(ScenarioLibraryScreen):
 
     def start_editor_with_map(self, map_name, directory):
         self.selected_save_path = os.path.join(directory, map_name)
-        self.choosing_sources = False
-        self.set_sub_state("CUSTOM_MAPS")
         self.go_to("MAP")
-
-    def exit_screen(self):
-        self.choosing_sources = False
-        self.set_sub_state("CUSTOM_MAPS")
-        super().exit_screen()
 
     def handle_back_key(self):
         if self.search_field.active:
             self.finish_search()
-        elif self.choosing_sources:
-            play_ui_sound("back")
-            self.return_to_maps()
         else:
             self.go_back()

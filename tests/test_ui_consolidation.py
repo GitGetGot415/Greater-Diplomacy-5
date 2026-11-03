@@ -327,8 +327,7 @@ class ButtonMenuPageTests(SharedUiTestCase):
     def test_map_browser_tab_opens_a_category(self):
         from screens.setup.select_base_map import Select_Base_Map
 
-        screen = Select_Base_Map()
-        screen.return_to_sources()
+        screen = Select_Base_Map(choosing_sources=True)
         button_named(screen, "Historical Scenarios").callback()
         self.assertEqual(screen.sub_state, "OTHER_HISTORICAL")
 
@@ -434,13 +433,10 @@ class BackKeySoundTests(SharedUiTestCase):
     def test_leaving_new_map_sources_plays_back_once(self):
         from screens.setup import select_base_map
 
-        screen = select_base_map.Select_Base_Map()
-        screen.return_to_sources()
-        with mock.patch.object(select_base_map, "play_ui_sound") as sound:
-            screen.handle_back_key()
-        sound.assert_called_once_with("back")
-        self.assertEqual(screen.sub_state, "CUSTOM_MAPS")
-        self.assertFalse(screen.done)
+        screen = select_base_map.Select_Base_Map(choosing_sources=True)
+        self.assertEqual(self.back_sounds(screen), ["back"])
+        self.assertEqual(screen.next_state, "MAP_EDITOR_MENU")
+        self.assertTrue(screen.done)
 
     def test_leaving_a_text_box_is_silent(self):
         from screens.game.declare_independence import Declare_Independence_Screen
