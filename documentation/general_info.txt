@@ -423,6 +423,8 @@ It also plays for Identity and Claims in the left UI bar, and Metadata in the ma
 Puppets.wav plays when Puppets opens from the left UI bar.
 Send Message.mp3 plays when text is queued in Messages or a trade offer is sent or updated.
 Empty text and invalid trade offers do not play this sound. Opening the trade editor does not play it.
+Delete Message.mp3 plays when a queued text message or trade offer is deleted in Messages.
+The trade editor's Cancel Offer button also plays it when an offer is removed.
 
 BUILD POLICY
 ============

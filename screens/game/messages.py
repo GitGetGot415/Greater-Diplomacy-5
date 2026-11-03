@@ -325,8 +325,13 @@ class Messages_Screen(Screen):
                         
                         # HANDLE DIPLOMATIC ACTION UNDO CLICKS
                         if idx == "TRADE_OFFER":
+                            pending = diplomacy_messages.get_pending(
+                                self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient)
                             # Passing it to the toggle logic safely refunds the escrow!
                             diplomacy_processor.toggle_diplomacy_action(self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient, "TRADE", "")
+                            if pending.get("action") == "TRADE" and not diplomacy_messages.get_pending(
+                                    self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient):
+                                ui_elements.play_ui_sound("delete_message")
                             self.map_screen.show_feedback("Trade Offer Cancelled.")
                         elif idx == "WAR_DECLARATION":
                             diplomacy_messages.clear_pending(self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient)
@@ -356,6 +361,7 @@ class Messages_Screen(Screen):
                             if isinstance(idx, int) and 0 <= idx < len(self.drafts):
                                 self.drafts.pop(idx)
                                 self.save_current_draft()
+                                ui_elements.play_ui_sound("delete_message")
                             
                         self.refresh_ui()
                         return

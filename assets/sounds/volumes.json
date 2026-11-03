@@ -13,6 +13,7 @@
     "Table.wav":                1.0,
     "Puppets.wav":              1.0,
     "Send Message.mp3":         {"volume": 1.0, "offset": 0.1},
+    "Delete Message.mp3":       2.0,
     "Select Sub-Category.wav":  2.0,
     "Select Category.wav":      2.0,
     "Slider.wav":               1.0,

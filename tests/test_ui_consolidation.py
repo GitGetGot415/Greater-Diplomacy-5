@@ -594,6 +594,80 @@ class OneSoundPerClickTests(SharedUiTestCase):
         pending = diplomacy_messages.get_pending(screen.map_screen.nation_data, "A", "B")
         self.assertEqual(pending["message"], "Fixture message")
 
+    def test_deleting_a_queued_message_plays_delete_once_and_preserves_other_drafts(self):
+        from map_logic.diplomacy import diplomacy_messages
+        from ui.widgets import ui_elements
+
+        screen = self.message_screen("")
+        screen.drafts = ["Keep this", "Remove this"]
+        screen.save_current_draft()
+        rectangle = pygame.Rect(700, 300, 25, 25)
+        screen.draft_edit_rects = [(rectangle, 1)]
+        with mock.patch.object(ui_elements, "play_ui_sound") as sound:
+            screen.additional_events(click(rectangle.center))
+        sound.assert_called_once_with("delete_message")
+        self.assertEqual(screen.drafts, ["Keep this"])
+        pending = diplomacy_messages.get_pending(screen.map_screen.nation_data, "A", "B")
+        self.assertEqual(pending["message"], "Keep this")
+
+    def test_blocked_or_invalid_message_deletion_does_not_play_delete(self):
+        from ui.widgets import ui_elements
+        from data import constants as c
+
+        for tactical, index, y in ((True, 0, 300), (False, 5, 300), (False, 0, c.SCREEN_HEIGHT - 30)):
+            with self.subTest(tactical=tactical, index=index, y=y):
+                screen = self.message_screen("")
+                screen.map_screen.tactical_mode = tactical
+                screen.drafts = ["Keep this"]
+                rectangle = pygame.Rect(700, y, 25, 25)
+                screen.draft_edit_rects = [(rectangle, index)]
+                with mock.patch.object(ui_elements, "play_ui_sound") as sound:
+                    screen.additional_events(click(rectangle.center))
+                sound.assert_not_called()
+                self.assertEqual(screen.drafts, ["Keep this"])
+
+    def test_trade_offer_delete_plays_only_when_the_offer_is_removed(self):
+        from map_logic.diplomacy import diplomacy_messages
+        from ui.widgets import ui_elements
+
+        for turns in (0, 1):
+            with self.subTest(turns=turns):
+                screen = self.message_screen("")
+                screen.map_screen.nation_data["A"]["pending_diplomacy"] = {
+                    "B": {"action": "TRADE", "turns": turns, "parameters": {}}}
+                rectangle = pygame.Rect(700, 300, 25, 25)
+                screen.draft_edit_rects = [(rectangle, "TRADE_OFFER")]
+                with mock.patch.object(ui_elements, "play_ui_sound") as sound:
+                    screen.additional_events(click(rectangle.center))
+                pending = diplomacy_messages.get_pending(screen.map_screen.nation_data, "A", "B")
+                if turns:
+                    sound.assert_not_called()
+                    self.assertEqual(pending["action"], "TRADE")
+                else:
+                    sound.assert_called_once_with("delete_message")
+                    self.assertEqual(pending, {})
+
+    def test_trade_editor_cancellation_plays_only_when_an_offer_is_removed(self):
+        from screens.game import deal_screen
+
+        for has_offer in (False, True):
+            with self.subTest(has_offer=has_offer):
+                pending = {"B": {"action": "TRADE", "turns": 0}} if has_offer else {}
+                screen = object.__new__(deal_screen.Deal_Screen)
+                screen.kind = deal_screen.deal_mod.KIND_TRADE
+                screen.map_screen = SimpleNamespace(
+                    nation_data={"A": {"pending_diplomacy": pending}}, show_feedback=mock.Mock())
+                screen.player, screen.target_nation = "A", "B"
+                screen._clear_draft = mock.Mock()
+                with mock.patch.object(deal_screen.ui_elements, "play_ui_sound") as sound:
+                    screen.revoke_offer()
+                if has_offer:
+                    sound.assert_called_once_with("delete_message")
+                else:
+                    sound.assert_not_called()
+                self.assertEqual(pending, {})
+                self.assertTrue(screen.done)
+
     def test_empty_message_or_missing_recipient_does_not_play_send(self):
         from ui.widgets import ui_elements
 

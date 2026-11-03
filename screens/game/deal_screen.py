@@ -791,7 +791,8 @@ class Deal_Screen(MapOverlayScreen):
                                     sound_kind="click" if self.is_peace else None))
         if self.is_editing:
             self.elements.append(Button(self.panel_rect.right - 440, buttons_y,
-                                        "medium", "red", "Cancel Offer", self.revoke_offer))
+                                        "medium", "red", "Cancel Offer", self.revoke_offer,
+                                        sound_kind="click" if self.is_peace else None))
 
         self._build_recipient_rows()
 
@@ -1000,11 +1001,13 @@ class Deal_Screen(MapOverlayScreen):
         self.done = True
 
     def revoke_offer(self):
-        diplomacy_messages.clear_pending(
+        removed = diplomacy_messages.clear_pending(
             self.map_screen.nation_data, self.player, self.target_nation,
             only_actions=["PEACE_TREATY", "CEASEFIRE", "TRADE"])
         self._clear_draft()
         self.map_screen.show_feedback("Offer Cancelled.")
+        if removed and not self.is_peace:
+            ui_elements.play_ui_sound("delete_message")
         self.done = True
 
     # ------------------------------------------------------------------ #
