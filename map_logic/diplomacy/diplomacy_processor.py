@@ -1277,10 +1277,14 @@ def _leadership_contest_winners(context):
 
 def _process_pass1_immediate_actions(context):
     """PASS 1: executes every action that fires the instant it's queued (turns == 0),
-    and advances everything else to turns == 1 for Pass 2 to pick up."""
+    and advances everything else to turns == 1 for Pass 2 to pick up.
+
+    Return sent follow-ups whose reply must wait until the previous text resolves.
+    """
     world_state = world_for(context)
     session_state = session_for(context)
     leadership_winners = _leadership_contest_winners(context)
+    sent_followups = {}
 
     for country_name, data in list(world_state.nation_data.items()):
         if not isinstance(data, dict):
@@ -1360,15 +1364,21 @@ def _process_pass1_immediate_actions(context):
                 lifecycle.remove_request(pending, t)
 
         # DELIVER and clear text drafts stored in draft_lists for Turn 0.
-        # Only drafts riding alongside a FORMAL action land here -- when the text
-        # is all there is, the MSG: branch above already sent it.
+        # Drafts can accompany a formal action or a message awaiting a reply.
+        # Exclude text that the MSG: branch above already sent.
         draft_lists = data.get("draft_lists", {})
         if draft_lists:
             for d_target, d_messages in list(draft_lists.items()):
                 if d_messages and d_target not in msg_delivered:
                     combined_msg = "\n".join(d_messages)
                     send_message(context, country_name, d_target, combined_msg, "TEXT")
+                    previous = pending.get(d_target, {})
+                    if (country_name in session_state.active_players
+                            and previous.get("action", "").startswith("MSG:")
+                            and previous.get("turns", 0) > 0):
+                        sent_followups[country_name, d_target] = combined_msg
             data["draft_lists"] = {}
+    return sent_followups
 
 
 def _react_to_reply(context, active_nations_list, delayed_responses, replier, sender, reply_dict):
@@ -1487,7 +1497,7 @@ def _resolve_awaited_action(context, ai_results, active_nations_list, delayed_re
     return False
 
 
-def _process_pass2_delayed_actions(context, ai_results, active_nations_list, delayed_responses):
+def _process_pass2_delayed_actions(context, ai_results, active_nations_list, delayed_responses, sent_followups=None):
     """PASS 2: resolves everything that had to wait a turn for an answer
     (turns >= 1) -- LLM-evaluated proposals/messages, and human replies picked
     up via Pass 0.5. Anything that outlives its response window auto-declines."""
@@ -1523,6 +1533,15 @@ def _process_pass2_delayed_actions(context, ai_results, active_nations_list, del
         for t in actions_to_clear:
             if t in pending:
                 lifecycle.remove_request(pending, t)
+
+    # The earlier message receives its reply first. The follow-up was already
+    # delivered in Pass 1 and becomes eligible for its own reply next turn.
+    for (sender, target), content in (sent_followups or {}).items():
+        if sender not in world_state.nation_data or target not in world_state.nation_data:
+            continue
+        if target not in world_state.nation_data[sender].get("pending_diplomacy", {}):
+            lifecycle.put_request(world_state.nation_data, sender, target,
+                                  f"MSG:{content}", turns=1, message=content)
 
 
 def _apply_delayed_responses(context, delayed_responses):
@@ -1701,8 +1720,8 @@ def process_diplomacy_turn(context):
     ratification.process_ratifications(context)
 
     _process_queued_responses(context)
-    _process_pass1_immediate_actions(context)
-    _process_pass2_delayed_actions(context, ai_results, active_nations_list, delayed_responses)
+    sent_followups = _process_pass1_immediate_actions(context)
+    _process_pass2_delayed_actions(context, ai_results, active_nations_list, delayed_responses, sent_followups)
     _apply_delayed_responses(context, delayed_responses)
 
     # --- PROCESS CLAIM QUEUES ---

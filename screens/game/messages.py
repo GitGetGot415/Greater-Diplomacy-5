@@ -52,8 +52,8 @@ MSG_DIPLO_BTN_START_X = MSG_LEFT_PANE_W + 20
 MSG_DIPLO_BTN_STEP_X = 220
 
 MSG_BG_DARK = (25, 25, 30)
-MSG_BUBBLE_PLAYER = (42, 77, 119)
-MSG_BUBBLE_AI = (47, 52, 65)
+MSG_BUBBLE_PLAYER = (40, 100, 200)
+MSG_BUBBLE_AI = (60, 60, 80)
 MSG_DIPLO_ACCENT = (208, 162, 76)
 MSG_SELECTED_ACCENT = (112, 181, 242)
 MSG_PANEL_BORDER = (13, 17, 24)
@@ -194,59 +194,14 @@ class Messages_Screen(Screen):
         self.refresh_ui()
 
     def save_current_draft(self):
-        """Auto-saves whatever is currently typed or queued before switching menus/contacts."""
+        """Save typed and queued text before switching menus or contacts."""
         if self.selected_recipient and self.map_screen:
-            p_data = self.map_screen.nation_data[self.map_screen.player_country]
-            pending_dict = diplomacy_messages.get_pending_map(self.map_screen.nation_data, self.map_screen.player_country, writable=True)
-            draft_lists = p_data.setdefault("draft_lists", {}) # Isolate the array from the engine
-            
             if self.compose_text.strip():
                 self.drafts.append(self.compose_text.strip())
                 self.compose_text = ""
-                
-            existing = pending_dict.get(self.selected_recipient, {})
-
-            if existing.get("turns", 0) > 0 and existing.get("action", "").startswith("MSG:"):
-                # Keep the sent message and its reply reference while saving local text drafts.
-                if self.drafts:
-                    draft_lists[self.selected_recipient] = self.drafts.copy()
-                else:
-                    draft_lists.pop(self.selected_recipient, None)
-                return
-
-            action_str = ""
-            existing_action = existing.get("action") or ""
-
-            # Preserve existing formal diplomatic actions if they exist
-            if existing_action and not existing_action.startswith("MSG:"):
-                action_str = existing_action
-
-            # Rebuild from the original entry so fields this screen doesn't care
-            # about (timer, cached_members) survive a trip through the compose box.
-            def _rebuild(action, message):
-                entry = dict(existing)
-                entry["action"] = action
-                entry["turns"] = existing.get("turns", 0)
-                entry["message"] = message
-                return entry
-
-            if self.drafts:
-                # Use a newline character so the renderer knows to split them back into multiple bubbles later
-                combined_text = "\n".join(self.drafts)
-                if action_str:
-                    pending_dict[self.selected_recipient] = _rebuild(action_str, existing.get("message", ""))
-                else:
-                    pending_dict[self.selected_recipient] = _rebuild(f"MSG:{combined_text}", combined_text)
-                draft_lists[self.selected_recipient] = self.drafts.copy()
-            else:
-                # No drafts. Preserve formal actions.
-                if action_str:
-                    pending_dict[self.selected_recipient] = _rebuild(action_str, existing.get("message", ""))
-                else:
-                    diplomacy_messages.cancel_text_message(self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient)
-
-                if self.selected_recipient in draft_lists:
-                    del draft_lists[self.selected_recipient]
+            diplomacy_messages.save_text_drafts(
+                self.map_screen.nation_data, self.map_screen.player_country,
+                self.selected_recipient, self.drafts)
 
     def select_recipient(self, target):
         self.save_current_draft()

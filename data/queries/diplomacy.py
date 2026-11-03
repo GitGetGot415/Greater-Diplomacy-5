@@ -121,16 +121,10 @@ def is_diplomat_busy(sender, target, nation_data):
     action, turns = get_diplomatic_status(sender, target, nation_data)
     is_unilateral = action in c.UNILATERAL_ACTIONS
 
-    if is_unilateral and turns > 0:
+    if is_unilateral or action.startswith("MSG:"):
         return False
-        
-    # Allow queueing new messages/actions if the current action is just a message in transit
-    #if str(action).startswith("MSG:") and turns > 0:
-    #   return False
-        
-    if turns > 0: 
-        return True
-    return False
+
+    return turns > 0
 
 
 def get_incoming_justifications_count(nation, nation_data, id_to_province):

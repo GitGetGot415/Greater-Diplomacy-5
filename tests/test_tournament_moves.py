@@ -201,6 +201,45 @@ class TournamentMoveTests(unittest.TestCase):
                     expected = dict(previous, forwarded_message=source, forwarded_source="Leader") if mode == "valid" else previous
                     self.assertEqual(pending, expected)
 
+    def test_text_follow_up_preserves_sent_message_and_forward_in_tournament_moves(self):
+        from map_logic.actions.player_actions import collect_map_commands
+        from map_logic.diplomacy import diplomacy_messages as dm
+
+        for explicit_commands in (False, True):
+            for mode in ("valid", "stale", "wrong_key", "duplicate"):
+                with self.subTest(commands=explicit_commands, mode=mode), tempfile.TemporaryDirectory() as directory:
+                    host = Host()
+                    source = {"message_id": "source-id", "sender": "Member", "content": "Forward this", "read": False}
+                    host.nation_data["Leader"]["inbox"] = [source]
+                    previous = copy.deepcopy(dm.set_pending(host.nation_data, "Leader", "Outsider", "MSG:Previous turn", turns=1))
+                    local = map_double(map_data={}, id_to_province={}, nation_colors={}, nation_data=copy.deepcopy(host.nation_data))
+                    dm.queue_forwarded_message(local.nation_data, "Leader", "Outsider", "Leader", source)
+                    dm.queue_text_message(local.nation_data, "Leader", "Outsider", "Follow-up")
+                    move = self.player_data("Leader", host)
+                    move["nation_data"] = local.nation_data["Leader"]
+                    if explicit_commands:
+                        move["player_intents"] = [item for item in collect_map_commands(local, "Leader") if item["type"] == "country_diplomacy"]
+                    if mode == "stale":
+                        move["tournament_turn"] -= 1
+                    path = self.write_move(directory, "follow_up.gd5move", "Leader", move)
+                    if mode == "wrong_key":
+                        with open(path) as stream:
+                            payload = json.load(stream)
+                        payload["hash"] = tournament_files.hash_key("wrong-key")
+                        with open(path, "w") as stream:
+                            json.dump(payload, stream)
+                    summary = self.import_moves(host, [path])
+                    allowed = mode in ("valid", "duplicate")
+                    self.assertEqual(summary["loaded"], int(allowed), summary)
+                    expected = dict(previous, forwarded_message=source, forwarded_source="Leader") if allowed else previous
+                    self.assertEqual(dm.get_pending(host.nation_data, "Leader", "Outsider"), expected)
+                    if allowed:
+                        self.assertEqual(host.nation_data["Leader"]["draft_lists"], {"Outsider": ["Follow-up"]})
+                    if mode == "duplicate":
+                        duplicate = self.import_moves(host, [path], loaded_countries=summary["loaded_countries"])
+                        self.assertEqual(duplicate["loaded"], 0, duplicate)
+                        self.assertEqual(dm.get_pending(host.nation_data, "Leader", "Outsider"), expected)
+
     def test_factory_output_research_intents_require_host_prerequisites_and_current_turn(self):
         tree = queries.get_tech_tree()
         cases = research_lock_cases(tree)

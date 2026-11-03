@@ -137,6 +137,100 @@ class SendTests(unittest.TestCase):
         self.assertEqual(self.inbox("B")[0]["type"], "DIPLOMACY")
 
 
+class TextFollowupTests(unittest.TestCase):
+    def test_successive_turn_messages_each_receive_their_own_reply(self):
+        from unittest import mock
+        from map_logic.diplomacy import diplomacy_processor
+
+        game = StubMapScreen(["A", "B"], human_players=["A"])
+        evaluated = []
+
+        def answers(_context, tasks, _active_nations):
+            replies = {}
+            for task in tasks:
+                self.assertEqual(task["action"], "CUSTOM_MSG")
+                evaluated.append(task["content"])
+                replies[task["sender"], task["target"], task["action"]] = {
+                    "message": f"Reply to {task['content']}", "action": "NONE", "opinion_change": 0}
+            return replies
+
+        with mock.patch.object(diplomacy_processor, "_execute_ai_tasks", side_effect=answers):
+            for content in ("First", "Second", "Third"):
+                dm.queue_text_message(game.nation_data, "A", "B", content)
+                game.run_turn()
+                self.assertEqual(game.pending_action("A", "B"), f"MSG:{content}")
+                self.assertEqual(game.pending("A", "B")["turns"], 1)
+            game.run_turn()
+            game.run_turn()
+        self.assertEqual(evaluated, ["First", "Second", "Third"])
+        received = [message for message in game.nation_data["B"]["inbox"] if message["sender"] == "A"]
+        replies = [message["content"] for message in game.nation_data["A"]["inbox"] if message["sender"] == "B"]
+        self.assertCountEqual([message["content"] for message in received], ["First", "Second", "Third"])
+        self.assertCountEqual(replies, ["Reply to First", "Reply to Second", "Reply to Third"])
+        self.assertEqual(game.pending("A", "B"), {})
+
+    def test_follow_up_and_forward_survive_saving_and_are_delivered_once(self):
+        import copy
+        import json
+
+        game = StubMapScreen(["A", "B", "C"], human_players=["A"])
+        dm.send_message(game, "C", "A", "Forward this")
+        source = game.nation_data["A"]["inbox"][0]
+        dm.queue_text_message(game.nation_data, "A", "B", "First")
+        game.run_turn()
+        dm.queue_forwarded_message(game.nation_data, "A", "B", "A", source)
+        previous = copy.deepcopy(game.pending("A", "B"))
+        dm.queue_text_message(game.nation_data, "A", "B", "Second")
+        self.assertEqual(game.pending("A", "B"), previous)
+        game.nation_data = json.loads(json.dumps(game.nation_data))
+        game.run_turn()
+        self.assertCountEqual([message["content"] for message in game.nation_data["B"]["inbox"] if message["sender"] == "A"],
+                              ["First", "Second", "Forward this"])
+        self.assertEqual(game.pending_action("A", "B"), "MSG:Second")
+        self.assertEqual(len([message for message in game.nation_data["A"]["inbox"] if message["sender"] == "B"]), 1)
+        game.run_turn()
+        self.assertEqual(len([message for message in game.nation_data["A"]["inbox"] if message["sender"] == "B"]), 2)
+        self.assertEqual(game.pending("A", "B"), {})
+
+    def test_canceling_follow_up_keeps_previous_reply_and_queued_forward(self):
+        import copy
+
+        game = StubMapScreen(["A", "B", "C"], human_players=["A"])
+        dm.send_message(game, "C", "A", "Forward this")
+        dm.set_pending(game.nation_data, "A", "B", "MSG:Previous turn", turns=1)
+        dm.queue_forwarded_message(game.nation_data, "A", "B", "A", game.nation_data["A"]["inbox"][0])
+        previous = copy.deepcopy(game.pending("A", "B"))
+        dm.queue_text_message(game.nation_data, "A", "B", "Unsent follow-up")
+        dm.cancel_text_message(game.nation_data, "A", "B")
+        self.assertEqual(game.pending("A", "B"), previous)
+        self.assertNotIn("B", game.nation_data["A"]["draft_lists"])
+        dm.cancel_text_message(game.nation_data, "A", "B")
+        self.assertEqual(game.pending("A", "B"), previous)
+
+    def test_pending_text_without_a_draft_list_keeps_its_first_message(self):
+        game = StubMapScreen(["A", "B"], human_players=["A"])
+        dm.set_pending(game.nation_data, "A", "B", "MSG:First")
+        dm.queue_text_message(game.nation_data, "A", "B", "Second")
+        self.assertEqual(game.pending_action("A", "B"), "MSG:First\nSecond")
+        self.assertEqual(game.nation_data["A"]["draft_lists"]["B"], ["First", "Second"])
+
+    def test_text_edits_keep_formal_request_fields_and_do_not_share_the_list(self):
+        import copy
+
+        game = StubMapScreen(["A", "B"], human_players=["A"])
+        request = dm.set_pending(game.nation_data, "A", "B", "TRADE", timer=3,
+                                 parameters={"give_materials": 1}, cached_members=["B"])
+        previous = copy.deepcopy(request)
+        drafts = ["Unsent text"]
+        dm.save_text_drafts(game.nation_data, "A", "B", drafts)
+        drafts.append("Local edit")
+        self.assertEqual(game.pending("A", "B"), previous)
+        self.assertEqual(game.nation_data["A"]["draft_lists"]["B"], ["Unsent text"])
+        dm.cancel_text_message(game.nation_data, "A", "B")
+        self.assertEqual(game.pending("A", "B"), previous)
+        self.assertNotIn("B", game.nation_data["A"]["draft_lists"])
+
+
 class ForwardedMessageTests(unittest.TestCase):
     def setUp(self):
         self.game = StubMapScreen(["A", "B", "C"], human_players=["A"])

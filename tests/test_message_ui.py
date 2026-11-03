@@ -467,6 +467,43 @@ class ConversationInteractionTests(unittest.TestCase):
         self.assertIsNot(screen.compose_surface, old_text)
         self.assertIs(screen.processed_messages, prepared)
 
+    def test_follow_up_can_be_typed_and_queued_after_sending_a_message(self):
+        import copy
+
+        for submit_with_enter in (False, True):
+            with self.subTest(enter=submit_with_enter):
+                screen = self.make_screen()
+                previous = copy.deepcopy(dm.set_pending(screen.map_screen.nation_data, "P", "A", "MSG:Previous turn", turns=1))
+                screen.select_recipient("A")
+                self.assertTrue(screen.compose_enabled)
+                screen.additional_events(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_h, unicode="h", mod=0))
+                self.assertEqual(screen.compose_text, "h")
+                if submit_with_enter:
+                    screen.additional_events(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN, unicode="\r", mod=0))
+                else:
+                    screen.update()
+                    screen.update()
+                    queue = next(element for element in screen.elements if element.text == "Queue")
+                    screen.handle_events([
+                        pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=queue.rect.center),
+                        pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=queue.rect.center)])
+                self.assertEqual(screen.compose_text, "")
+                self.assertEqual(screen.map_screen.nation_data["P"]["draft_lists"]["A"], ["h"])
+                self.assertEqual(dm.get_pending(screen.map_screen.nation_data, "P", "A"), previous)
+                screen.select_recipient("B")
+                screen.select_recipient("A")
+                self.assertEqual(screen.drafts, ["h"])
+
+    def test_follow_up_input_still_obeys_formal_action_and_tactical_restrictions(self):
+        for tactical, action in ((False, "TRADE"), (True, "MSG:Previous turn")):
+            with self.subTest(tactical=tactical, action=action):
+                screen = self.make_screen(tactical=tactical)
+                dm.set_pending(screen.map_screen.nation_data, "P", "A", action, turns=1)
+                screen.select_recipient("A")
+                self.assertFalse(screen.compose_enabled)
+                screen.additional_events(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_h, unicode="h", mod=0))
+                self.assertEqual(screen.compose_text, "")
+
     def test_visible_forward_and_delete_controls_keep_their_callbacks(self):
         screen = self.make_screen()
         screen.select_recipient("A")

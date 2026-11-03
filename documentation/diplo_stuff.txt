@@ -102,8 +102,12 @@ Queue stores a message for the send phase. It does not send the message immediat
 An unsent text message can share that send phase with a forwarded message to the same country.
 Forwarding preserves the text draft. Both messages are sent once.
 
-A text message awaiting a reply does not block forwarding to the same country.
-The forward keeps that message and its reply reference. Canceling the forward does not cancel the previous message.
+A text message awaiting a reply does not block another text message or a forward to the same country.
+Messages and the province mail box preserve the previous reply and any queued forward when they save new text.
+Canceling an unsent follow-up clears that draft only.
+The previous message receives its normal reply. A sent follow-up becomes eligible for its own reply on the next turn.
+
+A queued forward keeps the previous message and its reply reference. Canceling the forward does not cancel the previous message.
 An existing formal action or another queued forward still blocks a new forward.
 
 Multiplayer hosts resolve forwarded message references against the submitting country's received messages.

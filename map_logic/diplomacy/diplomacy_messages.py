@@ -158,24 +158,48 @@ def clear_response(nation_data, player_name, sender_name):
     return lifecycle.remove_response(responses, sender_name)
 
 
+def save_text_drafts(nation_data, player_name, target_name, drafts):
+    """Save unsent text without replacing a formal action or a message awaiting a reply."""
+    data = nation_data[player_name]
+    draft_lists = data.setdefault("draft_lists", {})
+    existing = get_pending(nation_data, player_name, target_name)
+    action = existing.get("action", "")
+    unsent_text = action.startswith("MSG:") and existing.get("turns", 0) == 0
+    if drafts:
+        # Keep the stored list separate from the screen's editable list.
+        draft_lists[target_name] = list(drafts)
+        if not action or unsent_text:
+            combined = "\n".join(drafts)
+            # Retain request identity, timers, and fields such as cached_members.
+            extra = dict(existing)
+            extra.pop("action", None)
+            extra["message"] = combined
+            set_pending(nation_data, player_name, target_name, f"MSG:{combined}", **extra)
+    else:
+        draft_lists.pop(target_name, None)
+        if unsent_text:
+            clear_pending(nation_data, player_name, target_name)
+
+
 def queue_text_message(nation_data, player_name, target_name, content):
     if player_name not in nation_data:
         return "Cannot send messages as this entity."
         
     p_data = nation_data[player_name]
-    pending = get_pending_map(nation_data, player_name, writable=True)
-    draft_lists = p_data.setdefault("draft_lists", {})
     current_action = get_pending_action(nation_data, player_name, target_name)
-    
-    cur_list = draft_lists.setdefault(target_name, [])
+    cur_list = list(p_data.get("draft_lists", {}).get(target_name, []))
+    if not cur_list:
+        # Text-only pending entries can exist without a separate draft list.
+        draft = queries.get_message_draft(player_name, target_name, nation_data)
+        if draft:
+            cur_list = draft.split("\n")
     if content and content not in cur_list:
         cur_list.append(content)
-        
+    save_text_drafts(nation_data, player_name, target_name, cur_list)
+
     if current_action is not None and not current_action.startswith("MSG:"):
         return "Message draft saved alongside formal action."
         
-    combined = "\n".join(cur_list) if cur_list else content
-    set_pending(nation_data, player_name, target_name, f"MSG:{combined}", message=combined)
     return "Message draft saved. Will send at end of turn."
 
 def cancel_text_message(nation_data, player_name, target_name):
@@ -184,13 +208,13 @@ def cancel_text_message(nation_data, player_name, target_name):
         return "No drafted message to clear."
         
     current_action = get_pending_action(nation_data, player_name, target_name)
-
-    if current_action and current_action.startswith("MSG:"):
-        if get_pending(nation_data, player_name, target_name).get("turns", 0) > 0:
-            return "Cannot undo! Message is already in transit."
-
-        clear_pending(nation_data, player_name, target_name)
+    has_drafts = bool(nation_data[player_name].get("draft_lists", {}).get(target_name))
+    if has_drafts or (current_action and current_action.startswith("MSG:")
+                      and get_pending(nation_data, player_name, target_name).get("turns", 0) == 0):
+        save_text_drafts(nation_data, player_name, target_name, [])
         return "Draft cleared."
+    if current_action and current_action.startswith("MSG:"):
+        return "Cannot undo! Message is already in transit."
     return "No drafted message to clear."
 
 

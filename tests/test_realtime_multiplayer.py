@@ -950,6 +950,36 @@ class RealtimeSessionTests(unittest.TestCase):
         driver.apply_validated_drafts({"A": driver.validate_draft("A", [command])})
         self.assertEqual(dm.get_pending(game.nation_data, "A", "C"), previous)
 
+    def test_text_follow_up_keeps_sent_message_and_forward_in_realtime(self):
+        import copy
+        from map_logic.diplomacy import diplomacy_messages as dm
+
+        source = {"message_id": "source-id", "sender": "B", "content": "Forward this", "read": False}
+        game = map_double(map_data={}, id_to_province={}, nation_colors={}, nation_data={
+            "A": {"inbox": [source], "pending_diplomacy": {}}, "B": {}, "C": {}})
+        previous = copy.deepcopy(dm.set_pending(game.nation_data, "A", "C", "MSG:Previous turn", turns=1))
+        local = map_double(map_data={}, id_to_province={}, nation_colors={}, nation_data=copy.deepcopy(game.nation_data))
+        dm.queue_forwarded_message(local.nation_data, "A", "C", "A", source)
+        dm.queue_text_message(local.nation_data, "A", "C", "Follow-up")
+        command = next(item for item in collect_map_commands(local, "A") if item["type"] == "country_diplomacy")
+        driver = MapRealtimeDriver(game)
+        before = copy.deepcopy(game.nation_data)
+        bad = copy.deepcopy(command)
+        bad["draft_lists"]["C"] = {"message": "Invalid shape"}
+        with self.assertRaises(RealtimeError):
+            driver.validate_draft("A", [bad])
+        self.assertEqual(game.nation_data, before)
+        canonical = driver.validate_draft("A", [command])
+        driver.apply_validated_drafts({"A": canonical})
+        combined = dict(previous, forwarded_message=source, forwarded_source="A")
+        self.assertEqual(dm.get_pending(game.nation_data, "A", "C"), combined)
+        self.assertEqual(game.nation_data["A"]["draft_lists"], {"C": ["Follow-up"]})
+        dm.cancel_text_message(local.nation_data, "A", "C")
+        command = next(item for item in collect_map_commands(local, "A") if item["type"] == "country_diplomacy")
+        driver.apply_validated_drafts({"A": driver.validate_draft("A", [command])})
+        self.assertEqual(game.nation_data["A"]["draft_lists"], {})
+        self.assertEqual(dm.get_pending(game.nation_data, "A", "C"), combined)
+
     def test_tls_server_client_join_and_malformed_frame_rejection(self):
         with tempfile.TemporaryDirectory() as directory:
             certificate, key, fingerprint = create_match_certificate(directory)
