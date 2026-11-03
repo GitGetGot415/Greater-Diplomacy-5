@@ -97,9 +97,11 @@ class ContentBrowserTests(unittest.TestCase):
                 screen.handle_events([key(pygame.K_DOWN)])
                 self.assertEqual(screen.selected_entry.name, name)
 
-    def test_new_game_button_opens_new_game_screen(self):
+    def test_new_game_button_opens_new_game_screen_and_clicks_once(self):
         screen = self.save_screen()
-        self.click(screen, button_named(screen, "New Game"))
+        with mock.patch("ui.widgets.ui_elements.play_ui_sound") as sound:
+            self.click(screen, button_named(screen, "New Game"))
+        sound.assert_called_once_with("click")
         self.assertEqual(screen.next_state, "NEW_GAME")
         self.assertTrue(screen.done)
 
@@ -248,7 +250,9 @@ class ContentBrowserTests(unittest.TestCase):
         screen = self.map_screen()
         self.assertIsNone(screen.selected_entry)
         self.assertFalse(any(getattr(element, "text", None) == "Base Maps" for element in screen.elements))
-        self.click(screen, button_named(screen, "New Map"))
+        with mock.patch("ui.widgets.ui_elements.play_ui_sound") as sound:
+            self.click(screen, button_named(screen, "New Map"))
+        sound.assert_called_once_with("click")
         self.assertFalse(any(getattr(element, "text", None) == "Custom Maps" for element in screen.elements))
         screen.draw(self.surface)
         self.click(screen, button_named(screen, "Base Maps"))

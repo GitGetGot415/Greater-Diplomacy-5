@@ -68,7 +68,6 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
     PRIMARY_ACTION_HEIGHT = 90
     content_label = "items"
     category_caption = ""
-    EMPTY_DETAILS = ("Select an item to see its details.",)
     SORTS = (("recent", "Modified"), ("name", "A-Z"), ("reverse_name", "Z-A"))
 
     def __init__(self):
@@ -253,7 +252,7 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
     def selected_detail_texts(self):
         """Use the same selected details for layout and rendering."""
         self.selection_error = ""
-        texts = list(self.EMPTY_DETAILS)
+        texts = []
         if self.selected_entry:
             entry = self.selected_entry
             summary = self.summary_for(entry)
@@ -274,7 +273,7 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
         self.detail_line_height = font.get_linesize() + 5
         self._max_details = min(0, rect.height - len(self.detail_lines) * self.detail_line_height)
         self._scroll_details = max(self._max_details, min(0, self.pane_scroll("details")))
-        heading = self.selected_entry.name if self.selected_entry else "Details"
+        heading = self.selected_entry.name if self.selected_entry else ""
         self.detail_heading = fonts.get("heading2").render(
             fit_text(heading, fonts.get("heading2"), self.detail_panel.width - self.MARGIN * 2), True, c.UI_TEXT_BRIGHT)
 
@@ -303,7 +302,7 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
         button = Button(self.detail_panel.x + self.MARGIN,
                         self.detail_panel.bottom - self.MARGIN - self.PRIMARY_ACTION_HEIGHT,
                         (width, self.PRIMARY_ACTION_HEIGHT), "orange", label, callback or self.activate_selected,
-                        font_preset="heading1", sound_kind=None)
+                        font_preset="heading1", sound_kind="click" if callback is not None else None)
         button.apply_state(enabled=callback is not None or self.selection_can_open, color="orange")
         self.elements.append(button)
         return button
@@ -420,10 +419,6 @@ class ScenarioLibraryScreen(ContentBrowserScreen):
         return self.LIBRARY_ROW_HEIGHT if self.library_mode else ContentBrowserScreen.ROW_HEIGHT
 
     @property
-    def EMPTY_DETAILS(self):
-        return () if self.library_mode else ContentBrowserScreen.EMPTY_DETAILS
-
-    @property
     def library_categories(self):
         return self.CATEGORIES
 
@@ -538,7 +533,8 @@ class ScenarioLibraryScreen(ContentBrowserScreen):
         rect = self.detail_panel
         button = Button(rect.x + self.MARGIN, self.action_top,
                         (rect.width - self.MARGIN * 2, self.LIBRARY_ACTION_HEIGHT), "orange", label,
-                        callback or self.activate_selected, font_preset="button_small", sound_kind=None)
+                        callback or self.activate_selected, font_preset="button_small",
+                        sound_kind="click" if callback is not None else None)
         button.apply_state(enabled=callback is not None or self.selection_can_open, color="orange")
         self.elements.append(button)
         return button
