@@ -885,7 +885,7 @@ class FolderListState(Screen):
 
 
 class MapOverlayScreen(Screen):
-    """Base for screens drawn on top of the live map (claims, peace, trade, puppets...).
+    """Base for screens drawn on top of the live map (claims, peace, trade, nation release).
 
     Handles the camera pass-through, panel scrolling and the standard
     map-background sandwich; subclasses only supply draw_content().

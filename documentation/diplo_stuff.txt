@@ -326,6 +326,17 @@ The editor rejects any assignment that makes a country its own ancestor.
 Shared puppet-state propagation visits each country at most once.
 Malformed older scenario data must not cause endless recursion.
 
+Puppets opens a separate screen with a subject list on the left.
+Select a subject to show its controls on the right.
+Move Up and Move Down change the selected subject's order.
+Integrated subjects have Manpower, Materials, and Fuel siphon sliders.
+Each slider shows its percentage. The amount taken appears beside it.
+Edit, Release, Annex, and Take Puppets use fixed buttons below the resource controls.
+Unavailable actions remain visible with disabled buttons.
+Pending actions show an Undo button. Actions already sent retain their existing cancellation restrictions.
+Release Nation opens the map release panel. Back restores the subject selection and list position.
+Back from the subject screen returns to the map.
+
 Release countries from cores
 ---------------------------
 

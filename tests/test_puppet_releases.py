@@ -11,6 +11,7 @@ import pygame
 import data.constants as c
 from data import queries
 from ui.dialogs import pickers
+from map_logic.actions.player_actions import collect_map_commands
 from map_logic.diplomacy import diplomacy_processor, puppet_actions
 from screens.game import puppets_screen
 from tests import app_harness
@@ -217,6 +218,180 @@ class PuppetReleaseRuleTests(unittest.TestCase):
             created = loaded.map_data["1"]["owner"]
             self.assertEqual(loaded.nation_data[created]["puppet_type"],
                              "" if release_type == c.PUPPET_RELEASE_INDEPENDENT else release_type)
+
+
+class PuppetManagementControlTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        _, cls.surface = app_harness.boot()
+
+    def setUp(self):
+        self.map = release_map()
+        self.map.change_state = mock.Mock()
+        self.map.feedback_text = ""
+        self.map.nation_data["Master"]["puppets"] = ["Core", "Second"]
+        for subject, kind in (("Core", c.PUPPET_TYPE_INTEGRATED),
+                              ("Second", c.PUPPET_TYPE_AUTONOMOUS)):
+            self.map.nation_data[subject].update(master="Master", puppet_type=kind,
+                siphon_rates={resource: 0 for resource in c.ECON_RESOURCE_KEYS})
+        self.projections = self.enterContext(mock.patch.object(queries, "get_economy_projections",
+            return_value=({}, {}, {resource: {"siphon": -123} for resource in c.ECON_RESOURCE_KEYS})))
+        self.screen = puppets_screen.Puppets_Screen(self.map)
+
+    def button(self, label):
+        return next(element for element in self.screen.elements
+                    if isinstance(element, puppets_screen.Button) and element.text == label)
+
+    def click(self, button, pos=None):
+        pos = button.rect.center if pos is None else pos
+        with mock.patch.object(pygame.mouse, "get_pos", return_value=pos):
+            self.screen.handle_events([
+                pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=pos, button=1),
+                pygame.event.Event(pygame.MOUSEBUTTONUP, pos=pos, button=1)])
+
+    def add_subjects(self):
+        for index in range(12):
+            subject = f"Fixture{index}"
+            self.map.nation_data[subject] = dict(name=subject, master="Master", puppets=[],
+                                                puppet_type=c.PUPPET_TYPE_AUTONOMOUS)
+            self.map.nation_data["Master"]["puppets"].append(subject)
+        self.screen.refresh_ui()
+
+    def test_selection_changes_controls_without_changing_country_identity(self):
+        row = next(element for element in self.screen.elements
+                   if isinstance(element, puppets_screen.Button) and element.text.startswith("Second Display\n"))
+        self.click(row)
+        self.assertEqual(self.screen.selected_subject, "Second")
+        self.assertEqual(self.map.player_country, "Master")
+        self.assertTrue(self.button("Edit").disabled)
+        self.assertTrue(self.button("Annex").disabled)
+        self.assertTrue(self.button("Take Puppets").disabled)
+        self.assertFalse(self.button("Release").disabled)
+        self.click(self.button("Release"))
+        self.assertEqual(queries.get_diplomatic_status("Master", "Second", self.map.nation_data)[0], "RELEASE_PUPPET")
+        self.click(self.button("Undo Release"))
+        self.assertFalse(queries.get_diplomatic_status("Master", "Second", self.map.nation_data)[0])
+
+    def test_reorder_keeps_selected_subject_and_reaches_move_export(self):
+        self.click(self.button("Move Down"))
+        self.assertEqual(self.map.nation_data["Master"]["puppets"], ["Second", "Core"])
+        self.assertEqual(self.screen.selected_subject, "Core")
+        command = next(command for command in collect_map_commands(self.map, "Master")
+                       if command["type"] == "puppet_draft")
+        self.assertEqual(command["puppet_order"], ["Second", "Core"])
+        self.assertTrue(self.button("Move Down").disabled)
+        self.click(self.button("Move Up"))
+        self.assertEqual(self.map.nation_data["Master"]["puppets"], ["Core", "Second"])
+
+    def test_projection_cache_refreshes_on_slider_input_and_not_frames_or_scroll(self):
+        self.add_subjects()
+        before = self.projections.call_count
+        self.screen.draw(self.surface)
+        self.screen.update()
+        self.screen.scroll_by(pygame.event.Event(pygame.MOUSEWHEEL, y=-1))
+        self.assertEqual(self.projections.call_count, before)
+        slider = next(element for element in self.screen.elements if isinstance(element, puppets_screen.Slider))
+        start = slider.handle_rect.center
+        end = (slider.rect.centerx, slider.rect.centery)
+        with mock.patch.object(pygame.mouse, "get_pressed", return_value=(True, False, False)):
+            self.screen.handle_events([
+                pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=start, button=1),
+                pygame.event.Event(pygame.MOUSEMOTION, pos=end, rel=(end[0] - start[0], 0), buttons=(1, 0, 0)),
+                pygame.event.Event(pygame.MOUSEBUTTONUP, pos=end, button=1)])
+        self.assertEqual(self.map.nation_data["Core"]["siphon_rates"]["manpower"], c.MAX_PUPPET_SIPHON / 2)
+        self.assertIn(slider, self.screen.elements)
+        self.assertEqual(self.projections.call_count, before + 1)
+
+    def test_release_screen_return_preserves_selection_and_scroll(self):
+        self.add_subjects()
+        self.screen.select_subject("Fixture4")
+        self.screen.scroll_y = self.screen.max_scroll // 2
+        self.screen.refresh_ui()
+        offset = self.screen.scroll_y
+        with mock.patch.object(puppets_screen, "_run_pygame_sub_screen") as launch:
+            self.click(self.button("Release Nation"))
+            self.assertIsInstance(launch.call_args.args[1], puppets_screen.Create_Puppet_Screen)
+            launch.call_args.kwargs["on_done"]()
+        self.assertEqual(self.screen.selected_subject, "Fixture4")
+        self.assertEqual(self.screen.scroll_y, offset)
+
+    def test_scrolling_is_local_and_clipped_rows_cannot_be_clicked(self):
+        self.add_subjects()
+        self.screen.select_subject("Second")
+        with mock.patch.object(pygame.mouse, "get_pos", return_value=self.screen.detail_rect.center):
+            self.screen.additional_events(pygame.event.Event(pygame.MOUSEWHEEL, y=-1))
+        self.assertEqual(self.screen.scroll_y, 0)
+        with mock.patch.object(pygame.mouse, "get_pos", return_value=self.screen.list_rect.center):
+            self.screen.additional_events(pygame.event.Event(pygame.MOUSEWHEEL, y=-1))
+        self.assertLess(self.screen.scroll_y, 0)
+        row = next(element for element in self.screen.elements
+                   if isinstance(element, puppets_screen.Button) and element.text.startswith("Core Display\n"))
+        self.click(row, (row.rect.centerx, self.screen.list_rect.top - 1))
+        self.assertEqual(self.screen.selected_subject, "Second")
+
+    def test_content_drag_moves_the_list_without_selecting_a_row(self):
+        self.add_subjects()
+        self.screen.scroll_y = -self.screen.ROW_HEIGHT
+        self.screen.refresh_ui()
+        start = self.screen.list_rect.center
+        end = (start[0], start[1] + 20)
+        with mock.patch.object(pygame.mouse, "get_pos", return_value=end):
+            self.screen.handle_events([
+                pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=start, button=1),
+                pygame.event.Event(pygame.MOUSEMOTION, pos=end, rel=(0, 20), buttons=(1, 0, 0)),
+                pygame.event.Event(pygame.MOUSEBUTTONUP, pos=end, button=1)])
+        self.assertEqual(self.screen.scroll_y, -self.screen.ROW_HEIGHT + 20)
+        self.assertEqual(self.screen.selected_subject, "Core")
+
+    def test_callbacks_recheck_subject_control_after_selection(self):
+        annex = self.button("Annex")
+        self.map.nation_data["Core"]["master"] = "Other"
+        annex.callback()
+        self.screen.queue_release("Core")
+        self.screen.edit_puppet("Core")
+        self.screen.set_siphon("Core", "manpower", c.MAX_PUPPET_SIPHON)
+        self.assertFalse(self.map.nation_data["Master"]["pending_diplomacy"])
+        self.assertEqual(self.map.nation_data["Core"]["siphon_rates"]["manpower"], 0)
+        self.map.change_state.assert_not_called()
+
+    def test_submitted_realtime_player_cannot_change_an_open_screen(self):
+        self.map.realtime_multiplayer = True
+        self.map.realtime_player_id = "fixture_player"
+        self.map.realtime_session = SimpleNamespace(phase="TURN", players={
+            "fixture_player": SimpleNamespace(submitted=True, eliminated=False)})
+        self.screen.queue_annex("Core")
+        self.screen.move_selected(1)
+        self.screen.set_siphon("Core", "fuel", c.MAX_PUPPET_SIPHON)
+        self.assertFalse(self.map.nation_data["Master"]["pending_diplomacy"])
+        self.assertEqual(self.map.nation_data["Master"]["puppets"], ["Core", "Second"])
+        self.assertEqual(self.map.nation_data["Core"]["siphon_rates"]["fuel"], 0)
+
+    def test_actions_queue_undo_and_edit_through_existing_paths(self):
+        self.click(self.button("Annex"))
+        self.assertEqual(queries.get_diplomatic_status("Master", "Core", self.map.nation_data)[0], "ANNEX_PUPPET")
+        self.click(self.button("Undo Annex"))
+        self.map.nation_data["Core"]["puppets"] = ["Other"]
+        self.screen.refresh_ui()
+        self.click(self.button("Take Puppets"))
+        self.assertEqual(queries.get_diplomatic_status("Master", "Core", self.map.nation_data)[0], "TAKE_PUPPETS")
+        self.click(self.button("Undo Take"))
+        self.click(self.button("Edit"))
+        self.assertEqual(self.map.editing_country, "Core")
+        self.map.change_state.assert_called_once_with("EDIT_COUNTRY")
+        self.assertTrue(self.screen.done)
+
+    def test_empty_subject_list_can_still_open_release_and_back_returns_to_map(self):
+        self.map.nation_data["Master"]["puppets"] = []
+        self.screen.refresh_ui()
+        self.assertIsNone(self.screen.selected_subject)
+        self.assertTrue(self.button("Move Up").disabled)
+        self.assertTrue(self.button("Move Down").disabled)
+        with mock.patch.object(puppets_screen, "_run_pygame_sub_screen") as launch:
+            self.click(self.button("Release Nation"))
+            launch.assert_called_once()
+        self.click(self.button("Back"))
+        self.assertTrue(self.screen.done)
+        self.assertEqual(self.screen.next_state, "MAP")
 
 
 class PuppetReleaseControlTests(unittest.TestCase):

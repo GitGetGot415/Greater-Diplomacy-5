@@ -2,208 +2,309 @@ import pygame
 import data.constants as c
 from data import queries
 from ui.dialogs import pickers
-from ui.navigation.screen import MapOverlayScreen
+from ui.navigation.screen import MapOverlayScreen, Screen
 from ui.widgets.ui_elements import Button, Slider, make_back_button, make_toggle_button, on_off_color
 from ui.rendering.font_manager import fonts
 from ui.rendering import overlay_renderer
 from ui.bars import ui_bars
 from ui.background_styles import PUPPET_PANEL_STYLES
 from ui.navigation.screen_runner import _run_pygame_sub_screen
-from ui.widgets.text_utils import fit_text
+from ui.widgets.text_utils import fit_text, wrap_text
 
 from data.io import country_io
 from map_logic.diplomacy.player_diplomacy_actions import can_edit_diplomacy
 from map_logic.diplomacy.puppet_actions import canonical_puppet_release_queue
 
 
-class Puppets_Screen(MapOverlayScreen):
-    # The panel covers most of the screen, so the wheel always drives the list.
-    scroll_anywhere = True
-    pans_camera = False
+class Puppets_Screen(Screen):
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_INFO
-    PANEL_TITLE = "Your Subjects"
     PANEL_STYLE = PUPPET_PANEL_STYLES["subjects"]
+    TITLE_PRESET = "heading1"
+    TITLE_Y_OFFSET = 20
+    PANEL_SIZE = (960, 520)
+    PADDING = 24
+    HEADER_HEIGHT = 84
+    LIST_WIDTH = 280
+    COLUMN_GAP = 24
+    CONTROL_GAP = 16
+    CONTROL_HEIGHT = 40
+    RELEASE_BUTTON_WIDTH = 180
+    ROW_HEIGHT = 60
+    ROW_GAP = 6
+    ROW_TEXT_PADDING = 24
+    SCROLLBAR_WIDTH = 12
+    SCROLLBAR_GAP = 8
+    NAME_HEIGHT = 64
+    STATUS_HEIGHT = 26
+    RESOURCE_TOP = 146
+    RESOURCE_ROW_HEIGHT = 56
+    SLIDER_WIDTH = 320
+    RESOURCE_TOTAL_GAP = 24
+    ACTIONS = (
+        ("Edit", None, "blue", "edit_puppet"),
+        ("Release", "RELEASE_PUPPET", "orange", "queue_release"),
+        ("Annex", "ANNEX_PUPPET", "red", "queue_annex"),
+        ("Take Puppets", "TAKE_PUPPETS", "purple", "queue_take_puppets"),
+    )
 
     def __init__(self, map_screen):
-        super().__init__(map_screen, pygame.Rect(c.SCREEN_WIDTH//2 - 400, 100, 800, c.SCREEN_HEIGHT - 200))
+        super().__init__()
+        self.map_screen = map_screen
+        self.player = map_screen.player_country
         self.back_state = "MAP"
-        self.y_space_between_puppets = 120
+        self.bg_color = (25, 30, 40)
+        self.panel_rect = pygame.Rect((0, 0), self.PANEL_SIZE)
+        self.panel_rect.center = (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)
+        inner = self.panel_rect.inflate(-2 * self.PADDING, -2 * self.PADDING)
+        body_top = self.panel_rect.top + self.HEADER_HEIGHT
+        self.list_rect = pygame.Rect(inner.left, body_top, self.LIST_WIDTH,
+                                     inner.bottom - body_top - self.CONTROL_HEIGHT - self.CONTROL_GAP)
+        self.scroll_content_rect = self.list_rect
+        detail_left = self.list_rect.right + self.COLUMN_GAP
+        self.detail_rect = pygame.Rect(detail_left, body_top, inner.right - detail_left,
+                                      inner.bottom - body_top)
+        self.selected_subject = None
+        self.scroll_y = 0
+        self._projection = None
+        self.resource_totals = []
+        self.refresh_ui()
+
+    def subjects(self):
+        return self.map_screen.nation_data.get(self.player, {}).get("puppets", [])
+
+    def owns_subject(self, subject, integrated=False):
+        data = self.map_screen.nation_data.get(subject, {})
+        return (self.player == self.map_screen.player_country
+                and subject in self.subjects() and data.get("master") == self.player
+                and (not integrated or data.get("puppet_type") == c.PUPPET_TYPE_INTEGRATED))
+
+    def can_edit_realtime(self):
+        return (not (self.map_screen.is_editor or self.map_screen.tactical_mode)
+                and self.player == self.map_screen.player_country
+                and queries.require_realtime_turn_open(self.map_screen, "subjects"))
+
+    def can_edit_subject(self, subject, integrated=False):
+        return self.can_edit_realtime() and self.owns_subject(subject, integrated)
+
+    def select_subject(self, subject):
+        if subject not in self.subjects() or subject == self.selected_subject:
+            return
+        self.selected_subject = subject
+        self._projection = None
         self.refresh_ui()
 
     def refresh_ui(self):
-        self.elements = [make_back_button(self.exit_screen, style="map")]
-        self.elements.append(Button(c.SCREEN_WIDTH - 300, c.TOP_BAR_UI_CENTER_Y, "large", "blue", "Release Nation", self.open_create_puppet))
+        p = self.panel_rect
+        header_y = p.top + self.TITLE_Y_OFFSET
+        self.elements = [make_back_button(self.exit_screen, pos=(p.left + self.PADDING, header_y))]
+        release = Button(p.right - self.PADDING - self.RELEASE_BUTTON_WIDTH, header_y,
+                         (self.RELEASE_BUTTON_WIDTH, self.CONTROL_HEIGHT),
+                         "blue", "Release Nation", self.open_create_puppet)
+        editable = (not (self.map_screen.is_editor or self.map_screen.tactical_mode)
+                    and self.player == self.map_screen.player_country
+                    and queries.realtime_turn_open(self.map_screen))
+        release.apply_state(enabled=editable and queries.can_release_nations_for(self.map_screen, self.player), color="blue")
+        self.elements.append(release)
+        self.master_label = None
+        player_data = self.map_screen.nation_data.get(self.player, {})
+        master = player_data.get("master", "")
+        if master:
+            font = fonts.get("normal")
+            name = queries.get_country_display_name(master, self.map_screen.nation_data)
+            text = f"{player_data.get('puppet_type', c.PUPPET_TYPE_AUTONOMOUS)} subject of: {name}"
+            self.master_label = font.render(fit_text(text, font, p.width - 2 * self.PADDING),
+                                            True, c.UI_TEXT_MUTED)
 
+        subjects = self.subjects()
+        if self.selected_subject not in subjects:
+            self.selected_subject = subjects[0] if subjects else None
+            self._projection = None
+        self.max_scroll = min(0, self.list_rect.height - len(subjects) * self.ROW_HEIGHT)
+        self.scroll_y = max(self.max_scroll, min(0, self.scroll_y))
+        row_width = self.list_rect.width - self.SCROLLBAR_WIDTH - self.SCROLLBAR_GAP
+        guard = self.content_hover_guard()
+        font = fonts.get("normal")
+        for index, subject in enumerate(subjects):
+            y = self.list_rect.top + index * self.ROW_HEIGHT + self.scroll_y
+            if y + self.ROW_HEIGHT <= self.list_rect.top or y >= self.list_rect.bottom:
+                continue
+            data = self.map_screen.nation_data.get(subject, {})
+            name = queries.get_country_display_name(subject, self.map_screen.nation_data)
+            label = fit_text(name, font, row_width - self.ROW_TEXT_PADDING)
+            label += "\n" + data.get("puppet_type", c.PUPPET_TYPE_AUTONOMOUS)
+            button = Button(self.list_rect.left, y, (row_width, self.ROW_HEIGHT - self.ROW_GAP),
+                            "blue", label, lambda nation=subject: self.select_subject(nation), font_preset="normal",
+                            sound_kind="select_category")
+            button.text_align = "left"
+            button.is_selected = subject == self.selected_subject
+            button.is_scrollable = True
+            button.click_guard = guard
+            self.elements.append(button)
 
-        puppets = self.map_screen.nation_data.get(self.player, {}).get("puppets", [])
+        width = (self.list_rect.width - self.CONTROL_GAP) // 2
+        for column, (label, direction) in enumerate((("Move Up", -1), ("Move Down", 1))):
+            button = Button(self.list_rect.left + column * (width + self.CONTROL_GAP),
+                            self.detail_rect.bottom - self.CONTROL_HEIGHT, (width, self.CONTROL_HEIGHT),
+                            "blue", label, lambda step=direction: self.move_selected(step), font_preset="normal")
+            index = subjects.index(self.selected_subject) if self.selected_subject else -1
+            button.apply_state(enabled=editable and self.owns_subject(self.selected_subject)
+                               and 0 <= index + direction < len(subjects), color="blue")
+            self.elements.append(button)
+        self.scroll_track_rect, self.scroll_handle_rect = ui_bars.get_standard_scrollbar_rects(
+            self.scroll_y, self.max_scroll, self.list_rect.right - self.SCROLLBAR_WIDTH,
+            self.list_rect.top, self.list_rect.height, self.SCROLLBAR_WIDTH)
+        self._prepare_details(editable)
 
-        self.scroll_content_rect = pygame.Rect(self.panel_rect.x + 5, self.panel_rect.y + 90,
-                                               self.panel_rect.width - 10, self.panel_rect.height - 100)
-        row_guard = self.content_hover_guard()
+    def _prepare_details(self, editable):
+        detail = self.detail_rect
+        self.detail_surface = pygame.Surface(detail.size, pygame.SRCALPHA)
+        self.resource_totals = []
+        subject = self.selected_subject
+        font = fonts.get("normal")
+        if subject is None:
+            text = font.render("You currently control no subjects.", True, c.UI_TEXT_MUTED)
+            self.detail_surface.blit(text, (0, 0))
+            return
 
-        y_pos = self.panel_rect.y + 100 + self.scroll_y
-        for idx, p in enumerate(puppets):
-            p_data = self.map_screen.nation_data.get(p, {})
-            p_type = p_data.get("puppet_type", c.PUPPET_TYPE_AUTONOMOUS)
-            siphon = queries.get_siphon_rates(p_data)
+        data = self.map_screen.nation_data[subject]
+        integrated = data.get("puppet_type") == c.PUPPET_TYPE_INTEGRATED
+        name = queries.get_country_display_name(subject, self.map_screen.nation_data)
+        heading = fonts.get("heading2")
+        lines = wrap_text(name, heading, detail.width, break_long_words=True)
+        line_height = self.NAME_HEIGHT // 2
+        for index, line in enumerate(lines[:2]):
+            if index == 1 and len(lines) > 2:
+                line = fit_text(" ".join(lines[1:]), heading, detail.width)
+            self.detail_surface.blit(heading.render(line, True, c.UI_TEXT_BRIGHT), (0, index * line_height))
 
-            pending_action, _ = queries.get_diplomatic_status(self.player, p, self.map_screen.nation_data)
+        subject_count = len(data.get("puppets", []))
+        info = f"{data.get('puppet_type', c.PUPPET_TYPE_AUTONOMOUS)} | Subjects: {subject_count}"
+        self.detail_surface.blit(font.render(info, True, c.COLOR_GOLD_HIGHLIGHT if integrated else c.UI_TEXT_LIGHT),
+                                 (0, self.NAME_HEIGHT))
+        pending, turns = queries.get_diplomatic_status(self.player, subject, self.map_screen.nation_data)
+        if pending:
+            status = "Pending: " + pending.replace("_", " ").title()
+            if turns:
+                status += f" ({turns} turns)"
+            self.detail_surface.blit(font.render(fit_text(status, font, detail.width), True, c.UI_TEXT_MUTED),
+                                     (0, self.NAME_HEIGHT + self.STATUS_HEIGHT))
 
-            # Reorder Arrows
-            btn_up = Button(self.panel_rect.x + 15, y_pos, "tiny_square", "blue", "^", lambda i=idx: self.move_puppet(i, -1), font_preset="normal")
-            if idx == 0:
-                btn_up.apply_state(enabled=False)
+        if integrated:
+            siphon = queries.get_siphon_rates(data)
+            for index, resource in enumerate(c.ECON_RESOURCE_KEYS):
+                slider = Slider(detail.left, detail.top + self.RESOURCE_TOP + index * self.RESOURCE_ROW_HEIGHT,
+                                self.SLIDER_WIDTH, resource.title(), min(siphon[resource], c.MAX_PUPPET_SIPHON),
+                                lambda value, nation=subject, key=resource: self.set_siphon(nation, key, value),
+                                visual_max=c.MAX_PUPPET_SIPHON, allowed_max=c.MAX_PUPPET_SIPHON)
+                slider.disabled = not (editable and self.owns_subject(subject, integrated=True))
+                self.elements.append(slider)
+            self._prepare_resource_totals()
 
-            btn_down = Button(self.panel_rect.x + 15, y_pos + 35, "tiny_square", "blue", "v", lambda i=idx: self.move_puppet(i, 1), font_preset="normal")
-            if idx == len(puppets) - 1:
-                btn_down.apply_state(enabled=False)
+        action_width = (detail.width - self.CONTROL_GAP) // 2
+        actions_top = detail.bottom - 2 * self.CONTROL_HEIGHT - self.CONTROL_GAP
+        for index, (label, action, color, method) in enumerate(self.ACTIONS):
+            undo = action is not None and pending == action
+            text = ("Undo Take" if action == "TAKE_PUPPETS" else "Undo " + label) if undo else label
+            button = Button(detail.left + (index % 2) * (action_width + self.CONTROL_GAP),
+                            actions_top + (index // 2) * (self.CONTROL_HEIGHT + self.CONTROL_GAP),
+                            (action_width, self.CONTROL_HEIGHT), color, text,
+                            lambda callback=getattr(self, method), nation=subject: callback(nation))
+            allowed = self.owns_subject(subject, integrated=label != "Release")
+            if action == "TAKE_PUPPETS":
+                allowed = allowed and bool(subject_count)
+            button.apply_state(enabled=editable and allowed, color=color)
+            button.fit_text = True
+            button.fit_single_line = True
+            self.elements.append(button)
 
-            rel_txt = "Undo Release" if pending_action == "RELEASE_PUPPET" else "Release"
-            rel_col = "red" if pending_action == "RELEASE_PUPPET" else "orange"
-            btn_release = Button(self.panel_rect.x + 680, y_pos, "puppet_option", rel_col, rel_txt, lambda nation=p: self.queue_release(nation), font_preset="normal")
-
-            # --- Make all buttons visible but greyscaled out if requirements aren't met ---
-
-            # Edit Button
-            btn_edit = Button(self.panel_rect.x + 570, y_pos, "puppet_option", "blue", "Edit", lambda nation=p: self.edit_puppet(nation), font_preset="normal")
-            if p_type != c.PUPPET_TYPE_INTEGRATED:
-                btn_edit.apply_state(enabled=False, text="Can't Edit!")
-
-            # Annex Button
-            anx_txt = "Undo Annex" if pending_action == "ANNEX_PUPPET" else "Annex"
-            anx_col = "orange" if pending_action == "ANNEX_PUPPET" else "red"
-            btn_annex = Button(self.panel_rect.x + 570, y_pos + 45, "puppet_option", anx_col, anx_txt, lambda nation=p: self.queue_annex(nation), font_preset="normal")
-            if p_type != c.PUPPET_TYPE_INTEGRATED:
-                btn_annex.apply_state(enabled=False, text="Can't Annex!")
-
-            # Take Puppets Button
-            take_txt = "Undo Take" if pending_action == "TAKE_PUPPETS" else "Take Puppets"
-            btn_take = Button(self.panel_rect.x + 680, y_pos + 45, "puppet_option", "purple", take_txt, lambda nation=p: self.queue_take_puppets(nation), font_preset="normal")
-            has_puppets = len(p_data.get("puppets", [])) > 0
-            if p_type != c.PUPPET_TYPE_INTEGRATED or not has_puppets:
-                btn_take.apply_state(enabled=False,
-                                     text="Can't Take Puppets!" if p_type != c.PUPPET_TYPE_INTEGRATED
-                                     else "They have 0 Puppets!")
-
-            row_els = [btn_up, btn_down, btn_release, btn_edit, btn_annex, btn_take]
-
-            if p_type == c.PUPPET_TYPE_INTEGRATED:
-                s_man = Slider(self.panel_rect.x + 200, y_pos + 50, 100, "Siphon Man", min(siphon["manpower"], c.MAX_PUPPET_SIPHON), lambda val, n=p: self.set_siphon(n, "manpower", val), visual_max=c.MAX_PUPPET_SIPHON, allowed_max=c.MAX_PUPPET_SIPHON)
-                s_mat = Slider(self.panel_rect.x + 320, y_pos + 50, 100, "Siphon Mat", min(siphon["materials"], c.MAX_PUPPET_SIPHON), lambda val, n=p: self.set_siphon(n, "materials", val), visual_max=c.MAX_PUPPET_SIPHON, allowed_max=c.MAX_PUPPET_SIPHON)
-                s_fuel = Slider(self.panel_rect.x + 440, y_pos + 50, 100, "Siphon Fuel", min(siphon["fuel"], c.MAX_PUPPET_SIPHON), lambda val, n=p: self.set_siphon(n, "fuel", val), visual_max=c.MAX_PUPPET_SIPHON, allowed_max=c.MAX_PUPPET_SIPHON)
-                row_els += [s_man, s_mat, s_fuel]
-
-            for el in row_els:
-                el.is_scrollable = True
-                el.click_guard = row_guard
-            self.elements.extend(row_els)
-
-            y_pos += self.y_space_between_puppets
-
-        self.max_scroll = min(0, self.panel_rect.height - (y_pos - self.scroll_y - self.panel_rect.y) - 20)
-
-    def can_edit_realtime(self):
-        return queries.require_realtime_turn_open(self.map_screen, "subjects")
+    def _prepare_resource_totals(self):
+        # The modal pauses map processing. Selection, slider input, and return from release invalidate this cache.
+        if self._projection is None:
+            self._projection = queries.get_economy_projections(
+                self.selected_subject, self.map_screen.map_data, self.map_screen.nation_data, context=self.map_screen)
+        _, _, breakdown = self._projection
+        font = fonts.get("normal")
+        width = self.detail_rect.width - self.SLIDER_WIDTH - self.RESOURCE_TOTAL_GAP
+        self.resource_totals = [font.render(fit_text(
+            f"Taking: {queries.format_number(abs(breakdown.get(resource, {}).get('siphon', 0)))}", font, width),
+            True, c.UI_TEXT_LIGHT) for resource in c.ECON_RESOURCE_KEYS]
 
     def set_siphon(self, puppet, res, slider_val):
-        if not self.can_edit_realtime():
+        if (not self.can_edit_subject(puppet, integrated=True)
+                or res not in c.ECON_RESOURCE_KEYS or not 0 <= slider_val <= c.MAX_PUPPET_SIPHON):
             return
-        self.map_screen.nation_data[puppet]["siphon_rates"][res] = slider_val
+        queries.get_siphon_rates(self.map_screen.nation_data[puppet])[res] = slider_val
+        self._projection = None
+        self._prepare_resource_totals()
+
+    def move_selected(self, direction):
+        subjects = self.subjects()
+        if self.selected_subject in subjects:
+            self.move_puppet(subjects.index(self.selected_subject), direction)
 
     def move_puppet(self, index, direction):
         if not self.can_edit_realtime():
             return
-        puppets = self.map_screen.nation_data.get(self.player, {}).get("puppets", [])
+        puppets = self.subjects()
         new_index = index + direction
-        if 0 <= new_index < len(puppets):
+        if (0 <= index < len(puppets) and 0 <= new_index < len(puppets)
+                and self.owns_subject(puppets[index])):
             puppets[index], puppets[new_index] = puppets[new_index], puppets[index]
+            row_top = new_index * self.ROW_HEIGHT
+            self.scroll_y = min(-row_top, max(self.scroll_y,
+                self.list_rect.height - row_top - self.ROW_HEIGHT))
         self.refresh_ui()
 
     def edit_puppet(self, puppet):
-        if not self.can_edit_realtime():
+        if not self.can_edit_subject(puppet, integrated=True):
             return
         self.map_screen.editing_country = puppet
         self.map_screen.change_state("EDIT_COUNTRY")
         self.done = True
 
     def queue_annex(self, puppet):
-        if not self.can_edit_realtime():
+        if not self.can_edit_subject(puppet, integrated=True):
             return
         self.queue_diplomacy_action(puppet, "ANNEX_PUPPET")
 
     def queue_take_puppets(self, puppet):
-        if not self.can_edit_realtime():
+        if (not self.can_edit_subject(puppet, integrated=True)
+                or not self.map_screen.nation_data[puppet].get("puppets")):
             return
         self.queue_diplomacy_action(puppet, "TAKE_PUPPETS")
 
     def queue_release(self, puppet):
-        if not self.can_edit_realtime():
+        if not self.can_edit_subject(puppet):
             return
         self.queue_diplomacy_action(puppet, "RELEASE_PUPPET")
 
     def open_create_puppet(self):
-        if not self.can_edit_realtime():
+        if (not self.can_edit_realtime()
+                or not queries.can_release_nations_for(self.map_screen, self.player)):
             return
         screen = Create_Puppet_Screen(self.map_screen)
-        _run_pygame_sub_screen(self.map_screen, screen, on_done=self.refresh_ui)
+        _run_pygame_sub_screen(self.map_screen, screen, on_done=self.return_from_release)
 
-    def draw_content(self, surface):
-        self.draw_panel(surface)
+    def return_from_release(self):
+        self._projection = None
+        self.refresh_ui()
 
-        font_body = fonts.get("heading2")
+    def additional_events(self, event):
+        if event.type == pygame.MOUSEWHEEL and not self.list_rect.collidepoint(pygame.mouse.get_pos()):
+            return
+        self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
 
-        master = self.map_screen.nation_data.get(self.player, {}).get("master", "")
-        if master:
-            master_name = queries.get_country_display_name(
-                master, self.map_screen.nation_data)
-            p_type = self.map_screen.nation_data.get(self.player, {}).get("puppet_type", c.PUPPET_TYPE_AUTONOMOUS)
-            prefix = "an" if p_type.lower().startswith(('a', 'e', 'i', 'o', 'u')) else "a"
-            master_txt = fonts.get("normal").render(f"You are {prefix} {p_type.lower()} puppet of: {master_name}", True, (255, 150, 150))
-            surface.blit(master_txt, (self.panel_rect.centerx - master_txt.get_width()//2, self.panel_rect.y + 60))
-
-        clip_rect = self.scroll_content_rect or pygame.Rect(
-            self.panel_rect.x + 5, self.panel_rect.y + 90, self.panel_rect.width - 10, self.panel_rect.height - 100)
-
-        puppets = self.map_screen.nation_data.get(self.player, {}).get("puppets", [])
-        if not puppets:
-            txt = font_body.render("You currently control no subjects.", True, c.UI_TEXT_MUTED)
-            surface.blit(txt, (self.panel_rect.centerx - txt.get_width()//2, self.panel_rect.y + 130))
-        else:
-            with ui_bars.clip_scroll_region(surface, clip_rect,
-                                            draw_top=self.scroll_y != 0, draw_bottom=self.scroll_y > self.max_scroll):
-                y_pos = self.panel_rect.y + 100 + self.scroll_y
-                for p in puppets:
-                    p_data = self.map_screen.nation_data.get(p, {})
-                    p_name = queries.get_country_display_name(
-                        p, self.map_screen.nation_data)
-                    p_type = p_data.get("puppet_type", c.PUPPET_TYPE_AUTONOMOUS)
-
-                    # Formatted Puppet Sub-text
-                    name_txt = font_body.render(p_name, True, (255, 255, 255))
-                    type_txt = fonts.get("normal").render(f"({p_type})", True, c.COLOR_GOLD_HIGHLIGHT if p_type == c.PUPPET_TYPE_INTEGRATED else c.UI_TEXT_LIGHT)
-
-                    surface.blit(name_txt, (self.panel_rect.x + 60, y_pos))
-                    surface.blit(type_txt, (self.panel_rect.x + 60, y_pos + 30))
-
-                    # Show siphoned amounts below sliders
-                    if p_type == c.PUPPET_TYPE_INTEGRATED:
-                        econ_tuple = queries.get_economy_projections(p, self.map_screen.map_data, self.map_screen.nation_data, context=self.map_screen)
-                        if len(econ_tuple) == 3:
-                            _, _, breakdown = econ_tuple
-                            siphoned_man = abs(breakdown.get('manpower', {}).get('siphon', 0))
-                            siphoned_mats = abs(breakdown.get('materials', {}).get('siphon', 0))
-                            siphoned_fuel = abs(breakdown.get('fuel', {}).get('siphon', 0))
-
-                            tiny_font = fonts.get("tiny")
-                            man_txt = tiny_font.render(f"Taking: {queries.format_number(siphoned_man)}", True, c.UI_TEXT_LIGHT)
-                            mat_txt = tiny_font.render(f"Taking: {queries.format_number(siphoned_mats)}", True, c.UI_TEXT_LIGHT)
-                            fuel_txt = tiny_font.render(f"Taking: {queries.format_number(siphoned_fuel)}", True, c.UI_TEXT_LIGHT)
-
-                            surface.blit(man_txt, (self.panel_rect.x + 200, y_pos + 75))
-                            surface.blit(mat_txt, (self.panel_rect.x + 320, y_pos + 75))
-                            surface.blit(fuel_txt, (self.panel_rect.x + 440, y_pos + 75))
-
-                    y_pos += self.y_space_between_puppets
+    def additional_draw(self, surface):
+        ui_bars.draw_screen_panel(surface, self, "Puppets")
+        if self.master_label:
+            surface.blit(self.master_label, self.master_label.get_rect(
+                midtop=(self.panel_rect.centerx, self.list_rect.top - self.PADDING)))
+        surface.blit(self.detail_surface, self.detail_rect)
+        for index, label in enumerate(self.resource_totals):
+            surface.blit(label, (self.detail_rect.left + self.SLIDER_WIDTH + self.RESOURCE_TOTAL_GAP,
+                                 self.detail_rect.top + self.RESOURCE_TOP + index * self.RESOURCE_ROW_HEIGHT))
+        self.draw_list_scrollbar(surface, self.list_rect.right - self.SCROLLBAR_WIDTH,
+                                 self.list_rect.top, self.list_rect.height, self.SCROLLBAR_WIDTH)
 
 
 class Create_Puppet_Screen(MapOverlayScreen):
