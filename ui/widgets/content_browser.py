@@ -9,6 +9,7 @@ import pygame
 import data.constants as c
 from data import queries
 from ui.navigation.screen import FolderListState, RefreshingMenuListScreen
+from ui.rendering import symbol_loader
 from ui.rendering.font_manager import fonts
 from ui.widgets.scroll_panes import ScrollPanes
 from ui.widgets.text_utils import fit_text, wrap_text
@@ -452,7 +453,8 @@ class ScenarioLibraryScreen(ContentBrowserScreen):
     LIBRARY_CATEGORY_GAP = 8
     LIBRARY_CATEGORY_INSET = 16
     LIBRARY_CATEGORY_TOP = 44
-    LIBRARY_ACTION_HEIGHT = 36
+    LIBRARY_ACTION_HEIGHT = 108
+    LIBRARY_ACTION_ICON_SIZE = (48, 48)
     CATEGORY_COLORS = {
         "SCENARIOS_HISTORICAL_DIR": "blue",
         "SCENARIOS_ALTERNATE_DIR": "purple",
@@ -581,10 +583,13 @@ class ScenarioLibraryScreen(ContentBrowserScreen):
     def add_primary_action(self, label, callback=None):
         if not self.library_mode:
             return super().add_primary_action(label, callback)
+        if callback is None and self.selected_entry is None:
+            return None
         rect = self.detail_panel
         button = Button(rect.x + self.MARGIN, self.action_top,
                         (rect.width - self.MARGIN * 2, self.LIBRARY_ACTION_HEIGHT), "orange", label,
-                        callback or self.activate_selected, font_preset="button_small",
+                        callback or self.activate_selected, font_preset="title",
+                        image=symbol_loader.get_symbol("Star", 1, fit_size=self.LIBRARY_ACTION_ICON_SIZE),
                         sound_kind="click" if callback is not None else None)
         button.apply_state(enabled=callback is not None or self.selection_can_open, color="orange")
         self.elements.append(button)

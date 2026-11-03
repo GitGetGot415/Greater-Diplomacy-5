@@ -364,12 +364,25 @@ class ContentBrowserTests(unittest.TestCase):
                 (game_screen, "Scenario", scenario, "Start Game", False),
                 (editor_screen, "Base", base, "Create Map", True)):
             with self.subTest(editor=editor):
-                self.assertTrue(button_named(screen, action).disabled)
+                screen.update()
+                screen.draw(self.surface)
+                self.assertIsNone(screen.open_button)
+                self.assertFalse(any(getattr(element, "text", None) == action for element in screen.elements))
                 screen.handle_events([key(pygame.K_RETURN)])
                 self.assertFalse(screen.done)
                 self.click(screen, button_named(screen, name))
                 self.assertFalse(screen.done)
+                self.assertTrue(button_named(screen, action).visible)
                 self.assertFalse(button_named(screen, action).disabled)
+                previous_button = screen.open_button
+                self.click(screen, button_named(screen, name))
+                screen.update()
+                screen.draw(self.surface)
+                self.assertIsNone(screen.open_button)
+                self.assertNotIn(previous_button, screen.elements)
+                self.click(screen, previous_button)
+                self.assertFalse(screen.done)
+                self.click(screen, button_named(screen, name))
                 self.click(screen, button_named(screen, action))
                 self.assertEqual(screen.selected_save_path, str(path))
                 self.assertEqual(screen.next_state, "MAP")
