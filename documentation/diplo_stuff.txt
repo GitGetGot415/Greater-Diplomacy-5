@@ -88,6 +88,12 @@ Messages keeps conversations on the left and the selected conversation on the ri
 Each conversation row shows its latest message preview and unread count.
 Trade and Mark Unread are in the conversation header.
 Treaty reply controls use a fixed area above the text field and Queue button.
+The conversation header, reply area, and text field are hidden when no country is selected.
+They roll in when the player selects a country. They roll out when the player clears the selection.
+Each roll takes the time set by MSG_BAR_ANIM_SECONDS and slows toward the end.
+A message bubble slides in once when it first appears in a conversation.
+Bubbles that the player sent come in from the right. Bubbles from the other country come in from the left.
+The left header with Exit and Mark All Read stays visible.
 
 Accept, Decline, and View Offer stay visible. Unavailable controls are disabled.
 Queued replies keep their undo control. Treaty and trade terms remain viewable while a reply is queued.

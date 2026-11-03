@@ -1,3 +1,5 @@
+import time
+
 import pygame
 from ui.navigation.screen import Screen
 import data.constants as c
@@ -34,6 +36,12 @@ MSG_HEADER_BUTTON_Y = (MSG_HEADER_H - MSG_HEADER_BUTTON_H) // 2
 MSG_HEADER_TRADE_W = 116
 MSG_HEADER_UNREAD_W = 146
 MSG_CONTACT_TOOLBAR_Y = MSG_HEADER_H + MSG_HEADER_BUTTON_Y
+
+# The conversation header, reply bar and composer roll in while a country is
+# selected and roll out when none is. The contact header keeps Exit reachable.
+MSG_BAR_ANIM_SECONDS = 0.2
+MSG_BUBBLE_ANIM_SECONDS = 0.2
+MSG_BOTTOM_BARS_H = MSG_REQUEST_H + MSG_INPUT_H
 
 # Fixed controls stay above the scrollable conversation rows.
 MSG_CONTACT_LIST_TOP_Y = 128
@@ -127,6 +135,15 @@ class Messages_Screen(Screen):
         self.compose_surface = None
         self.compose_enabled = False
 
+        # 0 is fully rolled out, 1 fully rolled in. bar_anim holds the start
+        # time and start value of a roll toward bar_target.
+        self.bar_shown = 0.0
+        self.bar_target = 0.0
+        self.bar_anim = None
+        self.bar_elements = []
+        # Start time of each bubble's slide-in, kept so a rebuild does not replay it.
+        self.bubble_starts = {}
+
     def on_enter(self, app, previous):
         self.start_messages(app.states["MAP"])
 
@@ -143,6 +160,10 @@ class Messages_Screen(Screen):
         self.message_drag_state = None
         self.forward_button_rects = []
         self.show_all_contacts = False
+        self.bar_shown = 0.0
+        self.bar_target = 0.0
+        self.bar_anim = None
+        self.bubble_starts = {}
         self.refresh_ui()
 
     @property
@@ -229,7 +250,8 @@ class Messages_Screen(Screen):
 
     def select_recipient(self, target):
         self.save_current_draft()
-        
+        self.bubble_starts = {}
+
         if self.selected_recipient == target:
             self.selected_recipient = None
             self.compose_text = ""
@@ -488,6 +510,47 @@ class Messages_Screen(Screen):
                     self._prepare_composer()
 
     def refresh_ui(self):
+        self._build_ui()
+        self._anchor_bars()
+
+    def update(self):
+        target = 1.0 if self.selected_recipient else 0.0
+        now = time.monotonic()
+        if target != self.bar_target:
+            self.bar_target = target
+            self.bar_anim = (now, self.bar_shown)
+        if self.bar_anim:
+            start, origin = self.bar_anim
+            progress = min(1.0, (now - start) / MSG_BAR_ANIM_SECONDS)
+            self.bar_shown = origin + (target - origin) * (1 - (1 - progress) ** 3)
+            if progress >= 1.0:
+                self.bar_anim = None
+            self._apply_bar_offsets()
+
+    def _bar_offsets(self):
+        """Vertical shift of the top and bottom conversation bars at the current roll."""
+        hidden = 1.0 - self.bar_shown
+        return -round(hidden * MSG_HEADER_H), round(hidden * MSG_BOTTOM_BARS_H)
+
+    def _anchor_bars(self):
+        """Remember each bar button's resting y so rebuilt buttons keep rolling."""
+        self.bar_elements = []
+        if not self.map_screen:
+            return
+        for element in self.elements:
+            rect = element.rect
+            if rect.x >= MSG_LEFT_PANE_W and rect.bottom <= MSG_HEADER_H:
+                self.bar_elements.append((element, rect.y, True))
+            elif rect.top >= self.thread_rect.bottom:
+                self.bar_elements.append((element, rect.y, False))
+        self._apply_bar_offsets()
+
+    def _apply_bar_offsets(self):
+        top_dy, bottom_dy = self._bar_offsets()
+        for element, base_y, is_top in self.bar_elements:
+            element.rect.y = base_y + (top_dy if is_top else bottom_dy)
+
+    def _build_ui(self):
         self.elements = [Button(MSG_MARGIN, MSG_HEADER_BUTTON_Y, (70, MSG_HEADER_BUTTON_H), "red", "Exit", self.exit_screen,
                                 font_preset="button_small", sound_kind="back")]
         self.elements.append(Button(94, MSG_HEADER_BUTTON_Y, (170, MSG_HEADER_BUTTON_H), "blue", "Mark All Read", self.mark_all_read,
@@ -841,6 +904,14 @@ class Messages_Screen(Screen):
         max_width = int(self.thread_rect.width * MSG_BUBBLE_MAX_WIDTH_RATIO)
         line_height = max(20, font_small.get_height())
         total_h = 20
+        # A bubble slides in once, when it first appears in this conversation. Numbering
+        # equal bubbles from the oldest keeps an older bubble's key when a newer one arrives.
+        now = time.monotonic()
+        counts = {}
+        for msg in display_thread:
+            same = (msg["is_player"], msg["is_draft"], msg["content"])
+            counts[same] = counts.get(same, -1) + 1
+            msg["anim_start"] = self.bubble_starts.setdefault(same + (counts[same],), now)
         for msg in reversed(display_thread):
             lines = text_utils.wrap_text(msg["content"], font_small, max_width)
             headers = []
@@ -872,7 +943,7 @@ class Messages_Screen(Screen):
             forward = None
             if msg["forward_source"] and not self.map_screen.tactical_mode:
                 forward = Button(0, 0, MSG_FORWARD_BUTTON_SIZE, "grey", "Forward", lambda: None, font_preset="tiny")
-            self.processed_messages.append({"msg_data": msg, "surface": cached,
+            self.processed_messages.append({"msg_data": msg, "surface": cached, "anim_start": msg["anim_start"],
                                             "box_height": height, "box_width": width,
                                             "header_h": header_h, "bubble_h": bubble_h,
                                             "forward_button": forward})
@@ -903,24 +974,27 @@ class Messages_Screen(Screen):
             return
         self._draw_panel(surface, pygame.Rect(0, 0, MSG_LEFT_PANE_W, c.SCREEN_HEIGHT), "contacts")
         self._draw_panel(surface, pygame.Rect(0, 0, MSG_LEFT_PANE_W, MSG_HEADER_H), "header")
-        self._draw_panel(surface, pygame.Rect(MSG_LEFT_PANE_W, 0, c.SCREEN_WIDTH - MSG_LEFT_PANE_W, MSG_HEADER_H), "header")
+        top_dy, bottom_dy = self._bar_offsets()
+        self._draw_panel(surface, pygame.Rect(MSG_LEFT_PANE_W, top_dy, c.SCREEN_WIDTH - MSG_LEFT_PANE_W, MSG_HEADER_H), "header")
         sidebar_title_y = MSG_CONTACT_TOOLBAR_Y + (MSG_HEADER_BUTTON_H - self.sidebar_title_surface.get_height()) // 2
         surface.blit(self.sidebar_title_surface, (MSG_MARGIN, sidebar_title_y))
-        surface.blit(self.header_surface, (MSG_LEFT_PANE_W + MSG_MARGIN, (MSG_HEADER_H - self.header_surface.get_height()) // 2))
+        surface.blit(self.header_surface, (MSG_LEFT_PANE_W + MSG_MARGIN,
+                                           top_dy + (MSG_HEADER_H - self.header_surface.get_height()) // 2))
         self.draw_list_scrollbar(surface, MSG_LEFT_PANE_W - 20, MSG_CONTACT_LIST_TOP_Y,
                                  self.scroll_content_rect.height, width=10,
                                  attr="contact_scroll_y", limit_attr="max_contact_scroll",
                                  track_attr="contact_scroll_track_rect", handle_attr="contact_scroll_handle_rect")
-        request_rect = pygame.Rect(MSG_LEFT_PANE_W, self.thread_rect.bottom,
+        request_rect = pygame.Rect(MSG_LEFT_PANE_W, self.thread_rect.bottom + bottom_dy,
                                     self.thread_rect.width, MSG_REQUEST_H)
         self._draw_panel(surface, request_rect, "requests")
         composer_rect = pygame.Rect(MSG_LEFT_PANE_W, request_rect.bottom,
                                      self.thread_rect.width, MSG_INPUT_H)
         self._draw_panel(surface, composer_rect, "composer")
-        ui_elements.draw_text_input_background(surface, self.input_rect, active=self.compose_enabled,
+        input_rect = self.input_rect.move(0, bottom_dy)
+        ui_elements.draw_text_input_background(surface, input_rect, active=self.compose_enabled,
                                                style_name="message",
                                                border_color=MSG_SELECTED_ACCENT if self.compose_enabled else (80, 90, 106))
-        text_rect = self.input_rect.inflate(-24, -12)
+        text_rect = input_rect.inflate(-24, -12)
         with ui_bars.clip_scroll_region(surface, text_rect, draw_top=False, draw_bottom=False):
             x = text_rect.x - max(0, self.compose_surface.get_width() - text_rect.width)
             surface.blit(self.compose_surface, (x, text_rect.centery - self.compose_surface.get_height() // 2))
@@ -929,6 +1003,7 @@ class Messages_Screen(Screen):
         current_y = self.thread_rect.bottom - 20 + self.msg_scroll_y
         self.draft_edit_rects = []
         self.forward_button_rects = []
+        now = time.monotonic()
         with ui_bars.clip_scroll_region(surface, self.thread_rect,
                                         draw_top=self.msg_scroll_y < self.max_msg_scroll, draw_bottom=self.msg_scroll_y != 0):
             for prepared in self.processed_messages:
@@ -937,6 +1012,10 @@ class Messages_Screen(Screen):
                 if current_y + prepared["box_height"] >= self.thread_rect.top and current_y < self.thread_rect.bottom:
                     x = (self.thread_rect.right - prepared["box_width"] - 30 if msg["is_player"]
                          else self.thread_rect.left + 30)
+                    # Sent bubbles enter from the right edge, received ones from the left.
+                    start_x = self.thread_rect.right if msg["is_player"] else self.thread_rect.left - prepared["box_width"]
+                    progress = min(1.0, (now - prepared["anim_start"]) / MSG_BUBBLE_ANIM_SECONDS)
+                    x += round((start_x - x) * (1 - progress) ** 3)
                     surface.blit(prepared["surface"], (x, current_y))
                     button_y = current_y + prepared["header_h"] + prepared["bubble_h"] // 2
                     if msg["is_draft"] and not self.map_screen.tactical_mode:

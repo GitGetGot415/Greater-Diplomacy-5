@@ -311,6 +311,16 @@ class TableRowClickTests(unittest.TestCase):
 
 
 class ConversationInteractionTests(unittest.TestCase):
+    def setUp(self):
+        # Every clock read is far later than the last, so slide-ins are finished
+        # before a test reads hitboxes. Tests that time the slide patch it again.
+        from screens.game import messages as messages_module
+
+        readings = iter(range(0, 10 ** 9, 1000))
+        patcher = mock.patch.object(messages_module.time, "monotonic", side_effect=lambda: next(readings))
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     def make_screen(self, *, tactical=False):
         from screens.game.messages import Messages_Screen
 
@@ -390,6 +400,62 @@ class ConversationInteractionTests(unittest.TestCase):
             "sender": "A", "content": "New message", "read": False, "type": "TEXT", "date": "Today"})
         screen.refresh_ui()
         self.assertEqual(screen.processed_messages[0]["msg_data"]["content"], "New message")
+
+    def test_conversation_bars_roll_with_selection_over_the_animation_time(self):
+        from screens.game import messages as messages_module
+
+        screen = self.make_screen()
+        buttons = {element.text: element for element in screen.elements}
+        rest_y = {name: buttons[name].rect.y for name in ("Trade", "Queue")}
+        self.assertEqual(screen.bar_shown, 0.0)
+        self.assertLess(buttons["Trade"].rect.bottom, 0)
+        self.assertGreaterEqual(buttons["Queue"].rect.top, c.SCREEN_HEIGHT)
+
+        seconds = messages_module.MSG_BAR_ANIM_SECONDS
+        with mock.patch.object(messages_module.time, "monotonic", return_value=10.0):
+            screen.select_recipient("A")
+            screen.update()
+            self.assertEqual(screen.bar_shown, 0.0)
+        with mock.patch.object(messages_module.time, "monotonic", return_value=10.0 + seconds / 2):
+            screen.update()
+            midway = screen.bar_shown
+        # Ease out covers more than half the distance in half the time.
+        self.assertGreater(midway, 0.5)
+        self.assertLess(midway, 1.0)
+        with mock.patch.object(messages_module.time, "monotonic", return_value=10.0 + seconds):
+            screen.update()
+        self.assertEqual(screen.bar_shown, 1.0)
+        buttons = {element.text: element for element in screen.elements}
+        self.assertEqual({name: buttons[name].rect.y for name in rest_y}, rest_y)
+
+        with mock.patch.object(messages_module.time, "monotonic", return_value=20.0):
+            screen.select_recipient("A")
+            screen.update()
+        with mock.patch.object(messages_module.time, "monotonic", return_value=20.0 + seconds):
+            screen.update()
+        self.assertEqual(screen.bar_shown, 0.0)
+
+    def test_bubbles_slide_in_from_their_own_side_and_only_once(self):
+        from screens.game import messages as messages_module
+
+        screen = self.make_screen()
+        screen.map_screen.nation_data["P"]["inbox"].insert(0, {
+            "sender": "To: A", "content": "Sent message", "read": True, "type": "TEXT", "date": "Today"})
+        surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
+        with mock.patch.object(messages_module.time, "monotonic", return_value=50.0):
+            screen.select_recipient("A")
+            screen.drafts = ["Draft"]
+            screen.refresh_ui()
+            screen.draw(surface)
+            # No time has passed: a sent bubble waits at the right edge of the thread.
+            waiting_x = screen.draft_edit_rects[0][0].left
+            starts = dict(screen.bubble_starts)
+            screen.refresh_ui()
+            self.assertEqual(screen.bubble_starts, starts)
+        with mock.patch.object(messages_module.time, "monotonic",
+                               return_value=50.0 + messages_module.MSG_BUBBLE_ANIM_SECONDS):
+            screen.draw(surface)
+        self.assertLess(screen.draft_edit_rects[0][0].left, waiting_x)
 
     def test_composer_edit_refreshes_its_cache_without_rebuilding_history(self):
         screen = self.make_screen()
