@@ -106,7 +106,7 @@
     "active_albums.json": [],
     "shuffle_disabled_tracks.json": [],
     "starting_song.json": {
-        "track": null
+        "track": "Devotion.json"
     },
     "hildehrand_choice.json": {}
 }

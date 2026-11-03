@@ -239,7 +239,7 @@ class AlbumTileTests(unittest.TestCase):
         font, _text = short_button.fit_label(short_button.text, width)
         self.assertEqual(font, short_button.font)
 
-    def test_add_song_button_is_last_in_the_song_list_and_needs_a_deletable_album(self):
+    def test_add_song_button_is_last_in_the_song_list_and_stays_enabled(self):
         player = self.make_player(["Mine"])
         player.controller.playlist = [f"{c.MUSIC_DIR}/Mine/a.mp3"]
         for deletable in (True, False):
@@ -248,7 +248,24 @@ class AlbumTileTests(unittest.TestCase):
                 track_buttons = [b for b in player.elements if getattr(b, "pane", None) == "track"
                                  and b.text != "X"]
                 self.assertEqual(track_buttons[-1].text, music_player.ADD_SONG_LABEL)
-                self.assertEqual(track_buttons[-1].disabled, not deletable)
+                self.assertFalse(track_buttons[-1].disabled)
+
+    def test_add_song_without_eligible_albums_explains_that_an_album_is_required(self):
+        for albums in ([], ["Shipped"]):
+            with self.subTest(albums=albums), \
+                    mock.patch.object(queries, "is_deletable_album", return_value=False), \
+                    mock.patch("ui.dialogs.show_info") as show_info, \
+                    mock.patch("ui.dialogs.pickers.open_listbox_selector") as choose_album, \
+                    mock.patch("ui.dialogs.pickers.open_file_browser") as choose_file:
+                player = self.make_player(albums)
+                player.refresh_ui()
+                button = next(item for item in player.elements
+                              if isinstance(item, music_player.Button) and item.text == music_player.ADD_SONG_LABEL)
+                self.assertFalse(button.disabled)
+                button.callback()
+                show_info.assert_called_once()
+                choose_album.assert_not_called()
+                choose_file.assert_not_called()
 
     def test_add_song_asks_for_an_album_then_a_file(self):
         player = self.make_player(["Mine", "Shipped"])

@@ -5,6 +5,9 @@ import data.constants as c
 from ui.rendering.font_manager import fonts
 from ui.dialogs import show_person_info
 
+CREDITS_LEFT_X = 120
+
+
 class Credits(Screen):
     back_state = "MENU"
 
@@ -27,7 +30,7 @@ class Credits(Screen):
             
             # Fetch width of the main text to position link text to its right
             main_w = font.size(main_text)[0] if main_text else 0
-            main_rect = pygame.Rect(200, current_y, main_w, font.get_height())
+            main_rect = pygame.Rect(CREDITS_LEFT_X, current_y, main_w, font.get_height())
             
             credit_entry = {
                 "main_text": main_text,
@@ -35,7 +38,7 @@ class Credits(Screen):
                 "people_links": []
             }
             
-            current_x = 200 + main_w
+            current_x = main_rect.right
             for i, person in enumerate(people):
                 link_text = person.get("link_text", "")
                 info_text = person.get("info", "")
