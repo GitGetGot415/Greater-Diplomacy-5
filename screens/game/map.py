@@ -507,6 +507,8 @@ def _build_left_bar_buttons(map_screen):
                 sound_kind = "table"
             elif map_screen.player_country == "Spectator":
                 sound_kind = None
+            else:
+                sound_kind = "open_mail"
         setattr(map_screen, attr, Button(LEFT_UI_BAR_X, LEFT_UI_BAR_START_Y + LEFT_UI_BAR_STEP_Y * row,
                                    "left_ui_button", "pink", label, action,
                                    image=icons.get(icon_name) if icon_name else None,

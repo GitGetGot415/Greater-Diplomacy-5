@@ -89,6 +89,9 @@ Each conversation row shows its latest message preview and unread count.
 Trade and Mark Unread are in the conversation header.
 Treaty reply controls use a fixed area above the text field and Queue button.
 
+Accept, Decline, and View Offer stay visible. Unavailable controls are disabled.
+Queued replies keep their undo control. Treaty and trade terms remain viewable while a reply is queued.
+
 Queue stores a message for the send phase. It does not send the message immediately.
 An unsent text message can share that send phase with a forwarded message to the same country.
 Forwarding preserves the text draft. Both messages are sent once.

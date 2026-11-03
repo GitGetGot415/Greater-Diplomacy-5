@@ -490,7 +490,7 @@ class Messages_Screen(Screen):
     def refresh_ui(self):
         self.elements = [Button(MSG_MARGIN, MSG_HEADER_BUTTON_Y, (70, MSG_HEADER_BUTTON_H), "red", "Exit", self.exit_screen,
                                 font_preset="button_small", sound_kind="back")]
-        self.elements.append(Button(94, MSG_HEADER_BUTTON_Y, (170, MSG_HEADER_BUTTON_H), "grey", "Mark All Read", self.mark_all_read,
+        self.elements.append(Button(94, MSG_HEADER_BUTTON_Y, (170, MSG_HEADER_BUTTON_H), "blue", "Mark All Read", self.mark_all_read,
                                     font_preset="button_small"))
         # The thread draws these hitboxes after it knows the current scroll
         # position. Never retain geometry from a frame that was rebuilt.
@@ -594,60 +594,51 @@ class Messages_Screen(Screen):
                               self.send_message, font_preset="button_small", sound_kind=None)
         queue_button.apply_state(enabled=bool(self.selected_recipient) and not is_tactical, color="blue")
         self.elements.append(queue_button)
-        unread_button = Button(unread_x, MSG_HEADER_BUTTON_Y, (MSG_HEADER_UNREAD_W, MSG_HEADER_BUTTON_H), "grey",
+        unread_button = Button(unread_x, MSG_HEADER_BUTTON_Y, (MSG_HEADER_UNREAD_W, MSG_HEADER_BUTTON_H), "orange",
                                "Mark Unread", self.mark_thread_unread, font_preset="button_small")
         unread_button.disabled = not self.selected_recipient
         self.elements.append(unread_button)
         # Integrated puppets used to be barred from trading with anyone but
         # their master. They trade like anyone else now.
-        trade_button = Button(trade_x, MSG_HEADER_BUTTON_Y, (MSG_HEADER_TRADE_W, MSG_HEADER_BUTTON_H), "grey", "Trade", self.open_trade,
+        trade_button = Button(trade_x, MSG_HEADER_BUTTON_Y, (MSG_HEADER_TRADE_W, MSG_HEADER_BUTTON_H), "orange", "Trade", self.open_trade,
                               font_preset="button_small")
         trade_button.disabled = not self.selected_recipient or is_tactical
         self.elements.append(trade_button)
 
-        if self.selected_recipient:
-            # --- Ratifying a treaty our faction leader signed for us ---
-            # Its own channel, not pending_diplomacy -- a leader asking four
-            # members at once would otherwise clobber four unrelated offers --
-            # so it needs its own pair of buttons rather than riding the
-            # Accept/Reject ones below.
-            if self._offer_ratification_buttons():
-                return
+        # Ratification has its own channel. A leader can ask several members without replacing unrelated offers.
+        # Its controls take priority over ordinary bilateral replies.
+        if self.selected_recipient and self._offer_ratification_buttons():
+            return
 
-            # --- Bilateral Accept/Reject Buttons ---
-            # An answer never competes with our own outgoing offer any more, so
-            # there is no "busy" state to grey these out for.
+        incoming_action, incoming_turns = "", 0
+        queued_verdict, queued_action = "", ""
+        if self.selected_recipient:
             incoming_action, incoming_turns = queries.get_diplomatic_status(self.selected_recipient, self.map_screen.player_country, self.map_screen.nation_data)
             queued_verdict, queued_action = diplomacy_messages.get_response_status(
                 self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient)
 
-            if incoming_turns > 0 and incoming_action in c.BILATERAL_ACTIONS:
-                action_name = incoming_action.replace("_", " ").title()
-                answered = (queued_action == incoming_action)
-
-                is_peace = incoming_action in ["PEACE_TREATY", "CEASEFIRE"]
-                is_trade = incoming_action == "TRADE"
-                is_viewable_deal = is_peace or is_trade
-
-                def _view_deal_btn(slot):
-                    label = "View Peace Treaty" if is_peace else "View Trade Deal"
-                    callback = self.view_peace_treaty if is_peace else self.view_trade_deal
-                    return self._reply_button(slot, "yellow", label, lambda: callback(self.selected_recipient))
-
-                if is_tactical:
-                    for slot, label in enumerate((f"Accept {action_name}", f"Reject {action_name}")):
-                        self.elements.append(self._reply_button(slot, "grey", label, lambda: None, enabled=False))
-                    if is_viewable_deal:
-                        self.elements.append(_view_deal_btn(2))
-                elif answered and queued_verdict == diplomacy_messages.RESPONSE_ACCEPT:
-                    self.elements.append(self._reply_button(0, "green", "Undo Accept", lambda: self.accept_proposal(self.selected_recipient)))
-                elif answered and queued_verdict == diplomacy_messages.RESPONSE_REJECT:
-                    self.elements.append(self._reply_button(0, "red", "Undo Reject", lambda: self.reject_proposal(self.selected_recipient)))
-                else:
-                    self.elements.append(self._reply_button(0, "green", f"Accept {action_name}", lambda: self.accept_proposal(self.selected_recipient)))
-                    self.elements.append(self._reply_button(1, "red", f"Reject {action_name}", lambda: self.reject_proposal(self.selected_recipient)))
-                    if is_viewable_deal:
-                        self.elements.append(_view_deal_btn(2))
+        has_offer = incoming_turns > 0 and incoming_action in c.BILATERAL_ACTIONS
+        answered = has_offer and queued_action == incoming_action
+        accepted = answered and queued_verdict == diplomacy_messages.RESPONSE_ACCEPT
+        declined = answered and queued_verdict == diplomacy_messages.RESPONSE_REJECT
+        action_name = incoming_action.replace("_", " ").title() if has_offer else ""
+        accept_label = "Undo Accept" if accepted else f"Accept {action_name}".strip()
+        decline_label = "Undo Decline" if declined else f"Decline {action_name}".strip()
+        # Replies remain independent of our outgoing diplomat's travel state.
+        editable = has_offer and not is_tactical
+        self.elements.append(self._reply_button(0, "green", accept_label,
+                                                lambda: self.accept_proposal(self.selected_recipient),
+                                                enabled=editable and not declined))
+        self.elements.append(self._reply_button(1, "red", decline_label,
+                                                lambda: self.reject_proposal(self.selected_recipient),
+                                                enabled=editable and not accepted))
+        is_peace = has_offer and incoming_action in ("PEACE_TREATY", "CEASEFIRE")
+        is_trade = has_offer and incoming_action == "TRADE"
+        view_label = "View Peace Treaty" if is_peace else "View Trade Deal" if is_trade else "View Offer"
+        view_callback = self.view_peace_treaty if is_peace else self.view_trade_deal
+        self.elements.append(self._reply_button(2, "yellow", view_label,
+                                                lambda: view_callback(self.selected_recipient),
+                                                enabled=is_peace or is_trade))
 
     def _reply_button(self, slot, color, label, callback, *, enabled=True):
         button = Button(MSG_DIPLO_BTN_START_X + MSG_DIPLO_BTN_STEP_X * slot,
@@ -674,20 +665,16 @@ class Messages_Screen(Screen):
         verdict = asked.get("verdict")
         editable = not self.map_screen.tactical_mode
 
-        if verdict == ratification.RATIFY:
-            label, color = "Ratified (undo)", "green"
-        elif verdict == ratification.REFUSE:
-            label, color = "Refused (undo)", "red"
-        else:
-            self.elements.append(self._reply_button(0, "green", "Ratify Treaty",
-                                                    lambda: self.answer_ratification(True), enabled=editable))
-            self.elements.append(self._reply_button(1, "red", "Refuse & Leave Faction",
-                                                    lambda: self.answer_ratification(False), enabled=editable))
-            self.elements.append(self._reply_button(2, "yellow", "View Treaty",
-                                                    lambda: self.view_peace_treaty(self.selected_recipient)))
-            return True
-
-        self.elements.append(self._reply_button(0, color, label, self.clear_ratification, enabled=editable))
+        ratified = verdict == ratification.RATIFY
+        refused = verdict == ratification.REFUSE
+        self.elements.append(self._reply_button(0, "green", "Ratified (undo)" if ratified else "Ratify Treaty",
+                                                self.clear_ratification if ratified else lambda: self.answer_ratification(True),
+                                                enabled=editable and not refused))
+        self.elements.append(self._reply_button(1, "red", "Refused (undo)" if refused else "Refuse & Leave Faction",
+                                                self.clear_ratification if refused else lambda: self.answer_ratification(False),
+                                                enabled=editable and not ratified))
+        self.elements.append(self._reply_button(2, "yellow", "View Treaty",
+                                                lambda: self.view_peace_treaty(self.selected_recipient)))
         return True
 
     def answer_ratification(self, accept):

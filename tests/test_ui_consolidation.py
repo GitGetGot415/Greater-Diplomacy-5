@@ -735,7 +735,7 @@ class OneSoundPerClickTests(SharedUiTestCase):
                     self.assertEqual(self.click_sounds(game.btn_gp_msgs), ["table"])
                     open_metadata.assert_called_once_with(game)
                 else:
-                    self.assertEqual(self.click_sounds(game.btn_gp_msgs), ["click"])
+                    self.assertEqual(self.click_sounds(game.btn_gp_msgs), ["open_mail"])
                     game.change_state.assert_called_once_with("MESSAGES")
 
     def test_portrait_selection_plays_subcategory_once_and_returns_the_path(self):

@@ -448,6 +448,78 @@ class ConversationInteractionTests(unittest.TestCase):
         screen.send_message()
         self.assertEqual(dm.get_pending(screen.map_screen.nation_data, "P", "A"), {})
 
+    def test_unavailable_offer_controls_cannot_answer_or_open_a_deal(self):
+        screen = self.make_screen()
+        for selected in (None, "A"):
+            with self.subTest(selected=selected):
+                if selected:
+                    screen.select_recipient(selected)
+                buttons = {element.text: element for element in screen.elements}
+                with mock.patch.object(screen, "accept_proposal") as accept, \
+                        mock.patch.object(screen, "reject_proposal") as decline, \
+                        mock.patch.object(screen, "view_trade_deal") as view:
+                    for label in ("Accept", "Decline", "View Offer"):
+                        button = buttons[label]
+                        self.assertTrue(button.disabled)
+                        button.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=button.rect.center))
+                        button.handle_event(pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=button.rect.center))
+                    accept.assert_not_called()
+                    decline.assert_not_called()
+                    view.assert_not_called()
+
+    def test_offer_controls_keep_undo_and_terms_available_after_either_reply(self):
+        screen = self.make_screen()
+        screen.map_screen.refresh_diplomacy_maps = mock.Mock()
+        screen.select_recipient("A")
+        dm.set_pending(screen.map_screen.nation_data, "A", "P", "TRADE", turns=1)
+        for verdict in (dm.RESPONSE_ACCEPT, dm.RESPONSE_REJECT):
+            with self.subTest(verdict=verdict):
+                screen.refresh_ui()
+                buttons = {element.text: element for element in screen.elements}
+                buttons["Accept Trade" if verdict == dm.RESPONSE_ACCEPT else "Decline Trade"].callback()
+                self.assertEqual(dm.get_response_status(screen.map_screen.nation_data, "P", "A"), (verdict, "TRADE"))
+                buttons = {element.text: element for element in screen.elements}
+                undo = buttons["Undo Accept" if verdict == dm.RESPONSE_ACCEPT else "Undo Decline"]
+                opposite = buttons["Decline Trade" if verdict == dm.RESPONSE_ACCEPT else "Accept Trade"]
+                self.assertFalse(undo.disabled)
+                self.assertTrue(opposite.disabled)
+                self.assertFalse(buttons["View Trade Deal"].disabled)
+                with mock.patch("screens.game.messages.open_view_trade_deal_menu") as view:
+                    buttons["View Trade Deal"].callback()
+                    view.assert_called_once_with(screen.map_screen, "A")
+                undo.callback()
+                self.assertEqual(dm.get_response_status(screen.map_screen.nation_data, "P", "A"), ("", ""))
+        dm.clear_pending(screen.map_screen.nation_data, "A", "P")
+        screen.refresh_ui()
+        buttons = {element.text: element for element in screen.elements}
+        for label in ("Accept", "Decline", "View Offer"):
+            self.assertTrue(buttons[label].disabled)
+
+    def test_ratification_keeps_terms_and_the_matching_undo_after_either_verdict(self):
+        from map_logic.diplomacy import ratification
+
+        screen = self.make_screen()
+        screen.select_recipient("A")
+        for verdict in (ratification.RATIFY, ratification.REFUSE):
+            with self.subTest(verdict=verdict):
+                request = {"signatory": "A", "verdict": verdict}
+                screen.map_screen.nation_data["P"]["pending_ratification"] = request
+                screen.refresh_ui()
+                buttons = {element.text: element for element in screen.elements}
+                undo_label = "Ratified (undo)" if verdict == ratification.RATIFY else "Refused (undo)"
+                opposite_label = "Refuse & Leave Faction" if verdict == ratification.RATIFY else "Ratify Treaty"
+                self.assertFalse(buttons[undo_label].disabled)
+                self.assertTrue(buttons[opposite_label].disabled)
+                self.assertFalse(buttons["View Treaty"].disabled)
+                with mock.patch.object(screen, "view_peace_treaty") as view:
+                    buttons["View Treaty"].callback()
+                    view.assert_called_once_with("A")
+                buttons[undo_label].callback()
+                self.assertNotIn("verdict", request)
+                buttons = {element.text: element for element in screen.elements}
+                self.assertFalse(buttons["Ratify Treaty"].disabled)
+                self.assertFalse(buttons["Refuse & Leave Faction"].disabled)
+
     def test_forward_after_a_previous_turn_is_visible_and_cancelable_without_losing_the_reply(self):
         import copy
 
