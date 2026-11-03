@@ -73,7 +73,7 @@ class Select_Base_Map(ScenarioLibraryScreen):
                                             enabled=self.sub_state == "BASE_MAPS")
             self.open_button = self.add_primary_action("Create Map")
             return
-        self.build_browser(directory, "No maps in this category. Import a custom map or choose another category.")
+        self.build_browser(directory, "")
         self.elements.extend([
             make_back_button(self.exit_screen),
             Button(c.SCREEN_WIDTH - 324, 24, (160, 40), "green", "Import .zip", self.import_custom_map,
