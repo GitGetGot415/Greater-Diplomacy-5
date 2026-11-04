@@ -120,6 +120,7 @@ They also keep support for older save formats that v46 accepted.
 The game version is the save version.
 `GAME_VERSION` in `data/constants.py` holds the version in development.
 Set it to the new version when work on that version starts.
+Then update the list of released names. See [Released Names](#released-names).
 
 `version.txt` holds the last released version. Players download it to check for updates.
 Only the owner changes `version.txt`, at release. Never change it during development.
@@ -128,7 +129,7 @@ Saves, tournament files, and move files record the version that wrote them:
 
 | File | Field | Since |
 | --- | --- | --- |
-| Save (`meta.json`) | `version` | v1 |
+| Save (`meta.json`) | `version` | v15 |
 | Tournament move | `game_version` | After v46 |
 
 The stamp has three uses:
@@ -180,6 +181,10 @@ A load repair fixes data that the current rules do not allow. Load repairs are n
 The clamps in `repairs.py` and `research.py` are load repairs. They share the package but are not conversion rules.
 Example: a building level outside its family's range moves to the nearest level in the active library.
 
+No load repair removes a unit whose type is not in the unit library.
+That unit stays, and it keeps its saved statistics. Only units of disabled families are removed.
+Thus a conversion rule must give each released unit name a current name.
+
 ## Research and Units by Year
 
 The equipment tracks are infantry, cavalry, militia, and artillery.
@@ -214,8 +219,9 @@ Tournament snapshots, older move projections, real-time snapshots, and imports u
 ### Units
 
 A conversion rule changes older unit names to current stage names.
-Example: `Infantry Type 1917` becomes the latest active infantry stage at or before 1917.
-`equipment_stage_aliases` in `units.py` makes this table from the active unit library.
+Example: `Infantry Type 1917` becomes the latest infantry stage at or before 1917.
+`equipment_stage_aliases` in `units.py` makes this table from the default unit library.
+Conversion runs before the scenario selects its libraries, so it cannot use the active library.
 
 The rule converts units, transport cargo, production queues, upgrade targets, custom production lists, and scripted spawns.
 The stat refresh then gives each unit its new statistics. Health keeps its fraction.
@@ -226,6 +232,26 @@ Thus a later rename of stages needs new entries in that table.
 
 Some renames do not use years. Examples are `Piston Fighter` and `WW1 Tank`.
 `LEGACY_UNIT_NAMES` in `units.py` lists them.
+
+### Older Family Names in Unit Metadata
+
+Unit metadata keeps the family names of older releases.
+`data/generators/recipes.py` writes them from the prefix of each equipment line.
+Example: `Trench Infantry I` has `family` `Infantry Type` and `settings_family` `Infantry`.
+
+Two parts of the game read these names:
+
+- `equipment_stage_aliases` finds the stages of an older family through `family`.
+  Example: it finds the current stages for `Infantry Type 1917` in the `Infantry Type` family.
+- Scenario settings use `settings_family` as their key. `get_base_item_name` reads it.
+  The keys are in `unit_disabled`, `unit_turn_overrides`, and `unit_range_overrides`.
+  Buildings use their family as the key in `building_disabled` and `building_turn_overrides`.
+
+No conversion rule changes these settings keys.
+Do not rename `family` or `settings_family` to match a player-facing name.
+If a rename is necessary, add a conversion rule for the settings keys.
+Also keep each older family in `equipment_stage_aliases`.
+`ReleasedContentTests` fails when a released family no longer selects content.
 
 ## Opening an Older Save
 
@@ -240,7 +266,8 @@ Some renames do not use years. Examples are `Piston Fighter` and `WW1 Tank`.
    `clamp_research_levels` then lowers levels above the active maximum.
    `grant_research_prerequisites` then gives countries the prerequisites of technologies they have.
 6. Country templates fill empty catalog records and missing fields.
-7. Province repairs drop buildings and units that the active libraries do not contain.
+7. Province repairs drop units of disabled families and buildings that the active library does not contain.
+   A unit whose type is not in the library stays. See [Load Repairs](#load-repairs).
    A numbered building level outside its family range moves to the nearest level in the active library.
    Example: "Factory Lvl 50" becomes the highest Factory level. `migrations.clamp_building_level` does this.
    Queued building orders follow the same rule (`migrations.clamp_building_queue`). A paid order keeps its progress and refund.
@@ -508,6 +535,42 @@ The move adapters keep session checks, turn checks, duplicate detection, and sub
 Tournament encryption, fog policy, file downloads, and storage synchronization stay with the tournament input and output module.
 The real-time adapter keeps server authority, identity checks, recipient filtering, submission locks, and network limits.
 
+## Released Names
+
+A release is a version that players received. Only released data needs conversion rules.
+`version.txt` names the last release. Its Git history gives each release.
+
+### Find a Release
+
+1. Run `git log --format="%h %s" -- version.txt`.
+   The newest commit with a stamp, such as `v46`, is that release.
+2. Ignore test edits. They have stamps above the current release, such as `v999`, or stamps such as `v15a`.
+3. Read a release file with `git show <commit>:data/json/unit_data.json`.
+4. To get a full copy of a release, use `git archive <commit>` into a separate folder.
+   Do not use `git checkout` or `git stash`. See `AGENTS.md`.
+
+### The List of Released Names
+
+`tests/released_content.py` lists the names that releases wrote into saves.
+It holds unit and building identifiers, and the family keys of scenario settings.
+`scripts/data/write_released_content.py` writes it from every release in the `version.txt` history.
+
+`ReleasedContentTests` in `tests/test_data_migrations.py` checks each name:
+
+- A released unit is in the unit library, or an alias gives it a current unit.
+- A released building loads as a current building.
+- A released settings family still selects units or buildings.
+- The release in `version.txt` is in the list.
+
+A rename, a removed unit, or a lower level count can make this test fail.
+Do not remove the name from the list. Add an alias or a conversion rule.
+
+When `GAME_VERSION` changes to the next version, do these steps:
+
+1. Make sure that the release commit is committed. The script reads only committed history.
+2. Run `python scripts/data/write_released_content.py`.
+3. Run `ReleasedContentTests`. Add aliases for names that fail.
+
 ## Adding a Conversion Rule
 
 ### Which Kind of Change Do I Need?
@@ -518,12 +581,14 @@ Use these rules when a change affects data from a released version:
 - A change to library content needs no rule. Library conversions and the stat refresh adapt to it.
   Examples are statistics, costs, level counts, and stage years.
 - A renamed unit, building, or setting needs an alias in this package.
+  A renamed unit family or settings family also needs this. See [Older Family Names in Unit Metadata](#older-family-names-in-unit-metadata).
 - A field that changes meaning, moves, or changes shape needs a conversion rule in `conversions.py`.
   Give the changed field a new name.
 - Invalid data that the rules now prevent needs a load repair.
 
 Never add a version-numbered step, a per-version file, or a list of steps.
 Include only identifiers and formats that existed in supported released data.
+To find out if a name was released, see [Released Names](#released-names).
 Do not add rules for content introduced and changed only during development of the next release.
 Keep existing rules. Remove a rule only when the user asks to drop support for that older format.
 
@@ -541,12 +606,18 @@ Keep existing rules. Remove a rule only when the user asks to drop support for t
 8. Test older data, current data, and a save/load round trip.
 9. Test affected multiplayer validation and player modes.
 10. Run `tests/test_data_migrations.py`. It loads every built-in map and checks that current saves do not change.
+    It also checks that every released name still converts.
 11. Optional: run `scripts/maps/upgrade_shipped_maps.py` to write the built-in maps in the current format.
 
 ## Tests and Tools
 
 - `tests/test_data_migrations.py` tests the conversion rules.
   It also loads every built-in map and checks that the rules do not change a current save.
+  The map loads use the default scenario settings, not the local `data/json/scenario_settings.json`.
+  `ReleasedContentTests` checks the names in `tests/released_content.py`.
+- `scripts/data/write_released_content.py` writes `tests/released_content.py`. See [Released Names](#released-names).
+- Write test fixtures as Python modules, not JSON files.
+  `.gitignore` ignores `*.json` outside a few folders, so a JSON fixture in `tests/` is not committed.
 - `tests/test_tournament_moves.py` tests move conversion and host review.
 - `tests/test_historical_infantry.py` tests the equipment tracks.
 - Tests that replace `CURRENT_VERSION` replace it in `data.migrations.versions`.

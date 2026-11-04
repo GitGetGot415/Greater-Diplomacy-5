@@ -52,10 +52,13 @@ class StateContainerTests(unittest.TestCase):
     def test_backend_load_and_full_ai_turn_need_no_display_or_map_screen(self):
         script = '''
 import asyncio, sys, pygame
+from data import queries
 from data.map.load_map import load_backend_state
 from map_logic.ai import ai_handler
 from map_logic.system32 import turn_processor
-context = load_backend_state("scenarios/historical/1939", is_scenario=True)
+# Explicit settings keep the local, Git-ignored scenario_settings.json out of the test.
+context = load_backend_state("scenarios/historical/1939", is_scenario=True,
+                             scenario_settings=queries.get_default_scenario_settings())
 assert pygame.display.get_surface() is None
 assert "screens.game.map" not in sys.modules
 assert not hasattr(context, "id_map")

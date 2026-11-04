@@ -390,6 +390,11 @@ def get_base_item_name(name, *, context=None):
     if name in library:
         metadata = queries.get_unit_metadata(name, library, context=context)
         return metadata.get("settings_family", metadata["family"])
+    return base_item_name_from_text(name)
+
+
+def base_item_name_from_text(name):
+    """Read the settings family from the name alone, as games before unit metadata did."""
     if " Type " in name: return name.split(" Type ")[0]
     if " Lvl " in name: return name.split(" Lvl ")[0]
 

@@ -15,7 +15,7 @@ from unittest import mock
 from data import constants as c, migrations, queries
 from data.map import history_io, load_map
 from map_logic.diplomacy import diplomacy_lifecycle
-from tests import add_test_cases
+from tests import add_test_cases, released_content
 
 ROOT = Path(__file__).resolve().parents[1]
 #: A stamp from an older release. Conversion does not depend on it.
@@ -492,7 +492,9 @@ class BuiltInMapTests(unittest.TestCase):
 
     def map_round_trip(self, path):
         from data.map.load_map import load_backend_state
-        context = load_backend_state(path, is_scenario=True)
+        # Without explicit settings, the load reads the local, Git-ignored scenario_settings.json.
+        context = load_backend_state(path, is_scenario=True,
+                                     scenario_settings=queries.get_default_scenario_settings())
         self.assertTrue(context.map_data)
         save = round_trip(queries.build_save_dict(context, include_provinces=False))
         self.assertEqual(save["version"], c.GAME_VERSION)
@@ -505,6 +507,50 @@ class BuiltInMapTests(unittest.TestCase):
 
 add_test_cases(BuiltInMapTests, BuiltInMapTests.map_round_trip,
                ((path, path) for path in BuiltInMapTests.built_in_maps()))
+
+
+class ReleasedContentTests(unittest.TestCase):
+    """Every name that a release wrote into saves still has a current meaning.
+
+    tests/released_content.py lists the names. scripts/data/write_released_content.py writes it.
+    See data/migrations/MIGRATIONS.md, Released Names.
+    """
+
+    def test_the_last_release_is_listed(self):
+        released = (ROOT / "version.txt").read_text(encoding="utf-8").strip()
+        self.assertIn(released, released_content.RELEASES,
+                      f"version.txt names {released}. Commit the release, then run "
+                      "python scripts/data/write_released_content.py.")
+
+    def test_released_units_convert_to_current_units(self):
+        library = queries.get_unit_library()
+        aliases = {**migrations.LEGACY_UNIT_NAMES, **migrations.equipment_stage_aliases()}
+        missing = [name for name in released_content.UNITS
+                   if name not in library and aliases.get(name) not in library]
+        self.assertEqual(missing, [], "Released saves hold these units. Add an alias in "
+                         "data/migrations/units.py that gives each one a current unit.")
+        self.assertEqual([name for name in migrations.LEGACY_UNIT_NAMES.values() if name not in library], [],
+                         "Each alias must name a unit in the current library.")
+
+    def test_released_buildings_load_as_current_buildings(self):
+        library = queries.get_building_library()
+        missing = [name for name in released_content.BUILDINGS
+                   if migrations.clamp_building_level(name, library) is None]
+        self.assertEqual(missing, [], "Released saves hold these buildings, and the load drops them. "
+                         "Keep the building family, or add a conversion rule.")
+
+    def test_released_settings_families_still_select_content(self):
+        # Scenario settings use these family keys. No conversion rule changes them.
+        for families, library, keys in (
+                (released_content.UNIT_FAMILIES, queries.get_unit_library(),
+                 "unit_disabled, unit_turn_overrides, and unit_range_overrides"),
+                (released_content.BUILDING_FAMILIES, queries.get_building_library(),
+                 "building_disabled and building_turn_overrides")):
+            with self.subTest(keys=keys):
+                current = {queries.get_base_item_name(name) for name in library}
+                self.assertEqual(sorted(set(families) - current), [],
+                                 f"Older {keys} use these families. Keep them as settings_family "
+                                 "in the unit metadata, or add a conversion rule for those keys.")
 
 
 class LibraryAndTournamentTests(unittest.TestCase):

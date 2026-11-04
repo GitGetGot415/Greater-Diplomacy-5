@@ -157,6 +157,8 @@ Simply edit the number of levels the unit has and call that done.
   Use a shared display helper. Keep identifiers intact in saved data and action callbacks.
 - Match identifiers, data keys, constants, and documentation to player-facing names for the same thing.
   Keep required formatting differences, such as spaces and capitalization.
+  Exception: unit metadata `family` and `settings_family` keep the names of older releases.
+  Older saves and scenario settings use them. See `data/migrations/MIGRATIONS.md`, Older Family Names in Unit Metadata.
 - Preserve older settings, saves, and protocol values through shared migration rules when names change.
 - Test legacy loading and new-data round trips after a stored name changes.
 - Check existing helpers before you add another function.
@@ -218,6 +220,7 @@ Keep tuning data in its source files:
   Change them only when the user explicitly requests a breaking change.
 - The game version is the save version. `GAME_VERSION` in `data/constants.py` gives it.
   It names the version in development. Set it to the new version when work on that version starts.
+  Then run `python scripts/data/write_released_content.py` to add the release to the list of released names.
   `version.txt` names the last released version. Never edit it (see Required Rules).
   Every save, tournament file, and move file records the version that wrote it.
   Do not add another version number, schema name, or numbered format.
@@ -242,6 +245,7 @@ Keep tuning data in its source files:
   Keep adaptation rules in one clear place and use one consistent representation internally.
 - Base compatibility handling on actual supported formats and callers.
   Do not invent hypothetical legacy cases.
+  To find out if a name or format was released, see `data/migrations/MIGRATIONS.md`, Released Names.
 - Convert older saves with the conversion rules when they load. Gameplay, UI, and AI code read only the current format.
   Do not add read-time adapters for older save shapes.
 - Do not remove existing compatibility mechanisms merely to simplify code.
@@ -271,7 +275,8 @@ Keep tuning data in its source files:
   Moves without `player_intents` are snapshot moves. `data/migrations/snapshot_moves.py` reads them. Do not add a reader for one version.
 - Load repairs fix invalid current data on every load. Library conversions compare saved data with the active libraries on every load.
   Both are separate from the conversion rules for older formats.
-  Examples are unit identities, army rosters, faction leaders, and units or buildings missing from the active library.
+  Examples are unit identities, army rosters, faction leaders, units of disabled families, and buildings missing from the active library.
+  A unit whose type is not in the library stays. Thus each released unit name needs a conversion rule.
 - Reuse caches instead of reading disk in frame or turn loops.
   Pass an explicit world context to active library queries. No-context library access reads shared default content.
   Change faction membership and leadership through faction services. Country faction fields are derived projections.
