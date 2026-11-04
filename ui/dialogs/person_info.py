@@ -8,7 +8,6 @@ from ui.rendering.font_manager import fonts
 from ui.dialogs.base import open_modal
 from ui.widgets import text_utils
 from ui.dialogs.message_box import _MessageModal
-from ui.bars import ui_bars
 
 _LINK_COLOR = (100, 100, 255)
 _LINK_HOVER_COLOR = (255, 255, 0)
@@ -18,10 +17,6 @@ _IMAGE_ROW_GAP = 8
 _IMAGE_COLUMNS = 2
 _IMAGE_COLUMN_GAP = 20
 _CONTENT_GAP = 20
-_CONTENT_MARGIN = 40
-_SCROLL_STEP = 40
-_SCROLLBAR_WIDTH = 15
-_SCROLLBAR_GAP = 12
 
 
 def expand_credit_images(images):
@@ -60,7 +55,9 @@ def expand_credit_images(images):
 
 class _PersonInfoModal(_MessageModal):
     """The blue information popup for a Credits entry: a title, an optional
-    free-text info section, optional labeled images, and clickable links below it."""
+    free-text info section, optional labeled images, and clickable links below it.
+
+    Scrolling comes from _MessageModal, the same as every other message popup."""
 
     def __init__(self, surface, name, info_text, links, on_result, align="center", images=None):
         self.align = align if align in ("left", "center", "right") else "center"
@@ -68,16 +65,14 @@ class _PersonInfoModal(_MessageModal):
         self.links = links or []
         self.link_font = fonts.get("normal")
         self.image_rows = []
-        self.scroll_y = 0
-        self._scroll_drag_offset = None
         images = expand_credit_images(images)
         self.image_columns = min(_IMAGE_COLUMNS, len(images))
 
         # Load and fit images/labels once when opening the popup, keeping draw
         # cache-only. Nearest-neighbor scaling preserves the pixel artwork.
-        box_w = min(self.BOX_MAX_W, surface.get_width() - _CONTENT_MARGIN)
+        box_w = min(self.BOX_MAX_W, surface.get_width() - 40)
         columns = max(1, self.image_columns)
-        cell_w = (box_w - 2 * _CONTENT_MARGIN - _IMAGE_COLUMN_GAP * (columns - 1)) // columns
+        cell_w = (box_w - 2 * self.TEXT_MARGIN - _IMAGE_COLUMN_GAP * (columns - 1)) // columns
         label_w = max(1, cell_w - _IMAGE_SIZE - _IMAGE_TEXT_GAP)
         loaded_images = {}
         for image in images:
@@ -106,15 +101,9 @@ class _PersonInfoModal(_MessageModal):
                          + links_h + (_CONTENT_GAP if self.links else 0))
 
         self.name = name
-        self.text_y_start = self.box_rect.y + self.BODY_DY
-
-        left_x, right_x = self.box_rect.x + _CONTENT_MARGIN, self.box_rect.right - _CONTENT_MARGIN
-        self.content_rect = pygame.Rect(
-            left_x, self.text_y_start - self.link_font.get_height() // 2,
-            right_x - left_x, 0)
-        self.content_rect.height = max(0, self.ok_rect.top - _CONTENT_GAP - self.content_rect.top)
+        left_x, right_x = self.content_rect.left, self.content_rect.right
         self.link_rects = []
-        y = self.text_y_start + self.body_height()
+        y = self.box_rect.y + self.BODY_DY + self.body_height()
         if self.image_rows:
             y += _CONTENT_GAP
             for grid_row in grid_rows:
@@ -142,89 +131,16 @@ class _PersonInfoModal(_MessageModal):
                 x = self.box_rect.centerx - w // 2
             self.link_rects.append(pygame.Rect(x, y, w, self.link_font.get_height()))
             y += self.link_font.get_height() + 8
-        self.max_scroll = max(0, y - self.content_rect.bottom) if self.image_rows else 0
-        self._sync_scrollbar()
+        self.set_content_bottom(y)
 
-    def _clamps_to_viewport(self):
-        return bool(self.image_rows)
+    def handle_content_click(self, pos):
+        for rect, link in zip(self.link_rects, self.links):
+            if link.get("url") and rect.move(0, -self.scroll_y).collidepoint(pos):
+                webbrowser.open(link["url"])
+                return True
+        return False
 
-    def _sync_scrollbar(self):
-        self.scroll_track_rect, self.scroll_handle_rect = ui_bars.get_standard_scrollbar_rects(
-            -self.scroll_y, -self.max_scroll,
-            self.content_rect.right + _SCROLLBAR_GAP, self.content_rect.top,
-            self.content_rect.height, width=_SCROLLBAR_WIDTH)
-
-    def _set_scroll(self, value):
-        self.scroll_y = max(0, min(self.max_scroll, value))
-        self._sync_scrollbar()
-
-    def _drag_scrollbar(self, mouse_y):
-        track = self.scroll_track_rect
-        self._set_scroll(-ui_bars.calculate_scroll_snap(
-            mouse_y - self._scroll_drag_offset, -self.max_scroll, track.top, track.height))
-
-    def draw_body_lines(self, surface):
-        if not self.image_rows:
-            return super().draw_body_lines(surface)
-        clip = surface.get_clip()
-        surface.set_clip(clip.clip(self.content_rect))
-        try:
-            return super().draw_body_lines(surface, offset_y=-self.scroll_y)
-        finally:
-            surface.set_clip(clip)
-
-    def handle_events(self, events):
-        for event in events:
-            if self._resolved:
-                return
-            self.ok_button.handle_event(event)
-            if event.type == pygame.MOUSEWHEEL and self.image_rows:
-                self._set_scroll(self.scroll_y - event.y * _SCROLL_STEP)
-            elif event.type == pygame.MOUSEMOTION and self._scroll_drag_offset is not None:
-                self._drag_scrollbar(event.pos[1])
-            elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-                self._scroll_drag_offset = None
-            elif event.type == pygame.WINDOWFOCUSLOST:
-                self._scroll_drag_offset = None
-            elif event.type == pygame.KEYDOWN:
-                if self.close_on_key(event.key):
-                    continue
-                if event.key in (pygame.K_UP, pygame.K_DOWN):
-                    step = _SCROLL_STEP if event.key == pygame.K_DOWN else -_SCROLL_STEP
-                    self._set_scroll(self.scroll_y + step)
-            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                if self.scroll_track_rect is not None and self.scroll_track_rect.collidepoint(event.pos):
-                    # Preserve where the thumb was grabbed so the first motion
-                    # doesn't jump. Track clicks center the thumb at the pointer.
-                    if self.scroll_handle_rect.collidepoint(event.pos):
-                        self._scroll_drag_offset = event.pos[1] - self.scroll_handle_rect.centery
-                    else:
-                        self._scroll_drag_offset = 0
-                        self._drag_scrollbar(event.pos[1])
-                    continue
-                for rect, link in zip(self.link_rects, self.links):
-                    if self.image_rows and not self.content_rect.collidepoint(event.pos):
-                        continue
-                    if link.get("url") and rect.move(0, -self.scroll_y).collidepoint(event.pos):
-                        webbrowser.open(link["url"])
-                        return
-
-    def draw_content(self, surface):
-        clip = surface.get_clip()
-        if self.image_rows:
-            surface.set_clip(clip.clip(self.content_rect))
-        try:
-            self._draw_extra_content(surface)
-        finally:
-            surface.set_clip(clip)
-
-        self.scroll_track_rect, self.scroll_handle_rect = ui_bars.draw_standard_scrollbar(
-            surface, -self.scroll_y, -self.max_scroll,
-            self.content_rect.right + _SCROLLBAR_GAP, self.content_rect.top,
-            self.content_rect.height, width=_SCROLLBAR_WIDTH)
-        super().draw_content(surface)
-
-    def _draw_extra_content(self, surface):
+    def draw_extra_content(self, surface):
         mx, my = pygame.mouse.get_pos()
         for row in self.image_rows:
             surface.blit(row["image"], row["image_rect"].move(0, -self.scroll_y))
@@ -252,8 +168,7 @@ def show_person_info(name, info_text="", links=None, align="center", tk_parent=N
     columns between the info and links. Entries may instead use "directory",
     optional "recursive": True and "exclude": [filename/relative-path globs].
     Only PNG files are discovered. Labels default to filenames/relative paths. Overflow
-    content scrolls with a draggable scrollbar, mouse wheel or arrow keys while
-    OK stays visible.
+    content scrolls like every message popup (see _MessageModal) while OK stays visible.
     """
     open_modal(lambda surface, callback: _PersonInfoModal(surface, name, info_text, links, callback, align, images),
                on_result, tk_parent)

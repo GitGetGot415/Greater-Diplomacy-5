@@ -88,6 +88,8 @@ class _BaseModal:
     TITLE_DY = 35
     BODY_DY = 75
     BODY_ALIGN = "center"
+    #: Space between the box edge and the wrapped message, on each side.
+    TEXT_MARGIN = 20
     #: Whether on_result takes the answer. The message popups just signal "closed".
     PASSES_RESULT = True
 
@@ -103,7 +105,8 @@ class _BaseModal:
         self.btn_font = fonts.get("button")
 
         box_w = min(self.BOX_MAX_W, surface.get_width() - 40)
-        self.lines = text_utils.wrap_text(message, self.msg_font, box_w - 40) if message else []
+        self.lines = (text_utils.wrap_text(message, self.msg_font, box_w - 2 * self.TEXT_MARGIN)
+                      if message else [])
         box_h = max(self.BOX_MIN_H, self.BOX_CHROME_H + self.body_height() + extra_h)
 
         self.box_rect = pygame.Rect(0, 0, box_w, box_h)

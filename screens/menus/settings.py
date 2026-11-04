@@ -197,8 +197,8 @@ def render_settings_buttons(settings_screen):
         make_toggle_button(*SETTINGS_AI_TOGGLE_POS, "small", "LLM AI", ai_is_on,
                            settings_screen.toggle_ai_enabled, font_preset="normal")
     )
-    # Inline text: the popup then stops at the window edge and scrolls. The
-    # plain message still sizes the box's width.
+    # Inline text is drawn left-aligned, which suits this long help better than
+    # the centred plain message. Both scroll when they are taller than the window.
     settings_screen.elements.append(
         make_info_button(SETTINGS_AI_INFO_X, SETTINGS_AI_TOGGLE_POS[1],
                          lambda: dialogs.show_info(SETTINGS_AI_INFO_TITLE, SETTINGS_AI_INFO_TEXT,

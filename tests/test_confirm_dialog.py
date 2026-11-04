@@ -333,6 +333,49 @@ class DialogTests(unittest.TestCase):
         self.settle()
         self.assertTrue(modal_stack.is_empty())
 
+    def long_message_modal(self, inline):
+        from ui.dialogs.message_box import _MessageModal
+        text = "\n".join(f"Help line {n}." for n in range(60))
+        return _MessageModal(pygame.Surface((520, 320)), "Help", text, None, "info",
+                             inline_parts=[(text, None)] if inline else None)
+
+    def test_long_help_text_stops_at_the_window_and_scrolls_like_credits(self):
+        for inline in (False, True):
+            with self.subTest(inline=inline):
+                modal = self.long_message_modal(inline)
+                self.assertLessEqual(modal.box_rect.bottom, 320)
+                self.assertGreater(modal.max_scroll, 0)
+                self.assertIsNotNone(modal.scroll_track_rect)
+                modal.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, y=-1000)])
+                self.assertEqual(modal.scroll_y, modal.max_scroll)
+                modal.handle_events([key(pygame.K_PAGEUP)])
+                self.assertLess(modal.scroll_y, modal.max_scroll)
+                modal.handle_events([key(pygame.K_UP)] * 100)
+                self.assertEqual(modal.scroll_y, 0)
+                track = modal.scroll_track_rect
+                modal.handle_events([click((track.centerx, track.bottom - 1))])
+                self.assertEqual(modal.scroll_y, modal.max_scroll)
+                surface = pygame.Surface((520, 320))
+                modal.draw(surface)
+                self.assertEqual(surface.get_clip(), surface.get_rect())
+                modal.handle_events([click(modal.ok_rect.center), release(modal.ok_rect.center)])
+                self.assertTrue(modal._resolved)
+
+    def test_help_text_that_fits_has_no_scrollbar(self):
+        dialogs.show_info("T", "Help text.")
+        modal = modal_stack.active()
+        self.assertEqual(modal.max_scroll, 0)
+        self.assertIsNone(modal.scroll_track_rect)
+        modal_stack.pop()
+
+    def test_long_credit_text_without_images_scrolls(self):
+        """Credits used to scroll only when an entry had images."""
+        from ui.dialogs.person_info import _PersonInfoModal
+        modal = _PersonInfoModal(pygame.Surface((520, 320)), "Artist",
+                                 "\n".join(f"Line {n}." for n in range(60)), [], None)
+        self.assertGreater(modal.max_scroll, 0)
+        self.assertIsNotNone(modal.scroll_track_rect)
+
     # -- show_person_info ------------------------------------------------
 
     def test_person_info_renders_links(self):
