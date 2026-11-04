@@ -452,6 +452,9 @@ A data edit must not make a test fail, unless the test checks that JSON matches 
 
 - Read and follow [Writing Style](documentation/writing_style.md) before writing or editing project text or replying about repository work.
   Keep the detailed writing rules in that guide.
+- **Name what you refer to.** Do not use "it", "that", "this", "they", or "the model" when the reader could match it to more than one thing.
+  Repeat the noun instead, such as "the rule-based AI" or "the LLM".
+  This applies to UI text, documentation, comments, and replies.
 
 ### Tutorial and Maintenance
 
