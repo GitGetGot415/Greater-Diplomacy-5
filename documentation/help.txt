@@ -1,0 +1,125 @@
+# TODO
+
+## Check first
+
+- Check why country data refresh can show countries that no longer exist.
+- Check why AI countries refuse vassalization and whether their replies explain the actual reason.
+- Check which historical scenarios use the wrong Germany tag.
+- Show only active countries under "Claims On You," with a decision for governments in exile.
+- Add a way to restore a country's default appearance.
+- Review tests that only check appearance.
+- Find specific examples of poor or predictable AI decisions.
+- Measure slow parts of the game before considering C++ or vectorization.
+
+## Audio
+
+- Make music pitch work for ordinary audio files on macOS and web.
+- Consider another audio backend if the current options cannot support the needed features.
+- Add different selection audio for different unit types, possibly using GD4 recordings.
+
+## Diplomacy and countries
+
+- Add non-aggression pacts for players and rule-based AI.
+- Consider whether countries with conflicting cores should join the same faction.
+- Let countries surrender and give up claims to avoid war.
+- Add instant faction betrayal without requiring a separate leave action.
+- Let countries declare rivals, with worse relations and a free humiliation-war justification limited by country power.
+- Let players release a country and then play as it.
+- Review whether Integrated and Autonomous subjects offer useful choices compared with annexation.
+- Add ultimatums that let much stronger bordering countries demand cores or submission.
+- Let neighboring countries react to ultimatums by supporting opposing factions.
+- Consider a world tension mechanic.
+- Identify which diplomacy rules from the board game would be useful.
+
+## Puppets and factories
+
+- Let AI countries create Integrated subjects when useful.
+- Let masters build factories on subject territory.
+- Let AI masters take resources from Integrated subjects.
+- Let subjects receive captured land where they have cores.
+- Prevent unwanted subject borders.
+- Decide whether a country with only subjects should form a faction.
+- Decide what Integrated subjects can trade to their master, including land with different cores.
+- Decide whether Integrated subjects should accept every trade from their master.
+- Decide whether Integrated-subject trades need a different interface.
+- Prevent overlapping subject creation from producing unwanted countries in the same area.
+
+## Economy and production
+
+- Make fuel shortages affect ordinary movement or combat.
+- Add more production resources if they create useful choices.
+- Decide whether resources need storage limits.
+- Add unit production cost editing.
+- Add save and load options for unit-cost presets.
+- Combine tank production buttons like the infantry and artillery buttons.
+- Add a separate naval production queue.
+- Add ports that reduce naval unit build time.
+- Always show oil cost and defense on production rows, including zero values.
+- Present production information as a table.
+- Add temporary or permanent control of another country's factories.
+- Let countries rent factories through trade.
+- Let countries nationalize foreign-owned factories at a diplomatic cost.
+- Define uses for political power before adding it.
+
+## Combat and units
+
+- Let infantry variants convert back to regular infantry.
+- Add guerrilla units as faster militia.
+- Add armored trains with a distinct role.
+- Add entrenchment.
+- Decide whether artillery should pierce defense, deal percentage damage, or use whichever deals more damage.
+- Show separate buttons for convoying, unconvoying, trucking, and untrucking.
+- Add naval invasion support beyond existing shore bombardment.
+- Add detailed tactical tank battles.
+- Decide whether combat-width research would improve combat.
+- Decide whether connecting tiles should affect combat width.
+- Decide whether allied countries should use the highest combat-width research level on their side.
+- Redistribute unused combat width between lanes during the same turn.
+- Re-measure AI_LINE_SPEND_RATIO under the current lane rules.
+- Identify specific ways to improve the combat zone display.
+
+## Movement and map display
+
+- Let allies see active movement arrows.
+- Queue movement across oceans, including embarkation and disembarkation.
+- Add straits and land bridges.
+- Add railroad infrastructure.
+- Add optional unit grouping when zoomed out.
+- Add country-list filters.
+- Add more unit filters on the world map where needed.
+- Add country filters on the world map.
+- Add settings for how country names appear on the map.
+
+## AI and scripted events
+
+- Add an AI difficulty setting with clearly defined effects.
+- Add an option for AI countries to never accept peace proposals.
+- Add an option to prevent core removal.
+- Add a separate option to prevent revolts caused by core removal.
+- Allow AI prompts to be edited in settings.
+- Add newspaper events that country actions can trigger.
+- Add a separate newspaper event setup screen.
+- Add rebellion causes beyond core removal.
+- Add focus trees if they provide useful choices beyond scripted events.
+- Add devastation and recovery rules.
+
+## Scenarios and maps
+
+- Import an image and turn it into a map.
+- Add the Backrooms as a map.
+- Identify missing controls for historical country names, scenario maps, and resource maps.
+- Add random-scenario sliders for minimum and maximum resource values.
+- Allow scenarios to use custom unit_data.json files.
+- Export a timelapse from saved game history.
+- Add a historical campaign covering 1910 to 1950.
+- Edit physical map geometry while preserving countries and scenario data.
+- Preserve province data when splitting provinces without duplicating units or resources.
+- Preserve needed data and resolve ownership when merging provinces.
+- Consider continuous real-time gameplay.
+
+## UI and tools
+
+- Use the operating system's folder picker where possible.
+- Add missing statistics and history views.
+- Add a developer inspector for country data.
+- Define specific improvements to the organization of Hanskolmer's art.
