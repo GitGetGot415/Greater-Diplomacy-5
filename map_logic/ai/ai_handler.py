@@ -459,7 +459,7 @@ def _time_call(seconds):
                         previous + (seconds - previous) * _CALL_SECONDS_WEIGHT)
 
 
-def _call_provider(mode, system_prompt, user_prompt, turn_id):
+def _call_provider(mode, system_prompt, user_prompt, turn_id, schema=None):
     """One request to whichever provider is configured.
 
     Returns the parsed reply dict, or None when the request was abandoned --
@@ -474,7 +474,7 @@ def _call_provider(mode, system_prompt, user_prompt, turn_id):
     aborts = _ABORT_COUNT[0]
     abandoned = False
     try:
-        result = _dispatch(mode, system_prompt, user_prompt, turn_id)
+        result = _dispatch(mode, system_prompt, user_prompt, turn_id, schema)
         abandoned = result is None
         return result
     finally:
@@ -482,10 +482,17 @@ def _call_provider(mode, system_prompt, user_prompt, turn_id):
             _time_call(time.monotonic() - started)
 
 
-def _dispatch(mode, system_prompt, user_prompt, turn_id):
+def _dispatch(mode, system_prompt, user_prompt, turn_id, schema=None):
+    """Sends one request to the provider that `mode` names.
+
+    `schema` is the JSON schema of the reply. Only Ollama uses it (see
+    call_ollama). A hosted provider's schema support differs by provider and
+    model, and a schema that changes for each country could stop a hosted
+    provider from reusing the shared prompt prefix.
+    """
     mode = normalize_ai_mode(mode)
     if mode == "OLLAMA":
-        return call_ollama(system_prompt, user_prompt, turn_id)
+        return call_ollama(system_prompt, user_prompt, turn_id, schema=schema)
 
     if mode in OPENAI_COMPATIBLE_PROVIDERS:
         get_url, get_key, get_model = OPENAI_COMPATIBLE_PROVIDERS[mode]
@@ -499,11 +506,14 @@ def _dispatch(mode, system_prompt, user_prompt, turn_id):
     return call_gemini(system_prompt, user_prompt, turn_id)
 
 
-def _run_provider(mode, system_prompt, user_prompt, turn_id, canned, accepted=None, raw=False):
+def _run_provider(mode, system_prompt, user_prompt, turn_id, canned, accepted=None, raw=False,
+                  schema=None):
     """Sends one prompt to the configured provider and shapes the answer.
 
     raw=True hands back the parsed provider dict (or None) instead of a reply,
     for callers that want a bare string rather than a verdict-carrying answer.
+    `schema` is the JSON schema of the reply that the prompt asks for (see
+    _dispatch).
 
     A None result means the request was abandoned, so every provider now falls
     back to the canned line. The Ollama branch used to put its own
@@ -511,7 +521,7 @@ def _run_provider(mode, system_prompt, user_prompt, turn_id, canned, accepted=No
     pressing Force Skip produced an error message dressed as a diplomatic cable.
     """
 
-    result = _call_provider(mode, system_prompt, user_prompt, turn_id)
+    result = _call_provider(mode, system_prompt, user_prompt, turn_id, schema)
     if raw:
         return result
     if result is None:
@@ -526,9 +536,50 @@ def _run_provider(mode, system_prompt, user_prompt, turn_id, canned, accepted=No
 #: llama3, the default model, was trained on.
 OLLAMA_CONTEXT_TOKENS = 8192
 
+#: How long Ollama keeps the model loaded after a request. Ollama's own default
+#: is five minutes, and a player can plan a turn for longer than that. The next
+#: AI phase would then load the model again and read the whole world from the
+#: start: about 18 seconds per call instead of 5 on one local llama3.
+OLLAMA_KEEP_ALIVE = "30m"
 
-def call_ollama(system_prompt, user_prompt, turn_id=None):
-    """Helper to hit local Ollama instance with direct socket control for instant termination."""
+#: A reply that has fallen into a loop: its last OLLAMA_REPEAT_MIN_CHARACTERS
+#: characters or more are one block of at most OLLAMA_REPEAT_MAX_BLOCK
+#: characters, repeated at least OLLAMA_REPEAT_COUNT times in a row.
+OLLAMA_REPEAT_MIN_CHARACTERS = 256
+OLLAMA_REPEAT_MAX_BLOCK = 256
+OLLAMA_REPEAT_COUNT = 4
+#: How much new text arrives between checks, so a reply is not rescanned for
+#: every token.
+OLLAMA_REPEAT_CHECK_CHARACTERS = 64
+
+
+def _repeats_itself(text):
+    """Whether the end of a reply is one block of text repeated again and again.
+
+    A small local model can fall into a loop, such as the same sentence or
+    endless whitespace inside its JSON. It then writes until the context window
+    is full, which can take minutes of the turn's budget. No usable letter or
+    reply ends in four copies of the same block.
+    """
+    for size in range(1, OLLAMA_REPEAT_MAX_BLOCK + 1):
+        length = max(OLLAMA_REPEAT_MIN_CHARACTERS, OLLAMA_REPEAT_COUNT * size)
+        if len(text) < length:
+            break
+        if text[-size:] != text[-2 * size:-size]:
+            continue
+        tail = text[-length:]
+        if tail[size:] == tail[:-size]:
+            return True
+    return False
+
+
+def call_ollama(system_prompt, user_prompt, turn_id=None, schema=None):
+    """Helper to hit local Ollama instance with direct socket control for instant termination.
+
+    `schema` is the JSON schema of the reply. Ollama enforces it while it
+    generates, so a reply can name only the actions, countries and options
+    that the schema lists.
+    """
     if _aborted(turn_id): return None
 
     url_str = get_ollama_url()
@@ -544,12 +595,14 @@ def call_ollama(system_prompt, user_prompt, turn_id=None):
             {"role": "user", "content": _combined_prompt(system_prompt, user_prompt)}
         ],
         "options": {"num_ctx": OLLAMA_CONTEXT_TOKENS},
+        "keep_alive": OLLAMA_KEEP_ALIVE,
         "stream": True # Stream token-by-token
     }
 
-    # Conditionally apply strict JSON formatting if the model supports it natively
+    # Conditionally apply strict JSON formatting if the model supports it natively.
+    # The schema does not change the prompt, so the shared prefix is unaffected.
     if hasattr(c, 'OLLAMA_JSON_SUPPORTED_MODELS') and any(supported in model_name.lower() for supported in c.OLLAMA_JSON_SUPPORTED_MODELS):
-        payload["format"] = "json"
+        payload["format"] = schema or "json"
 
     payload_bytes = json.dumps(payload).encode('utf-8')
 
@@ -583,6 +636,7 @@ def call_ollama(system_prompt, user_prompt, turn_id=None):
             return _provider_error(f"OLLAMA HTTP ERROR {response.status}: {err_msg}")
 
         full_text = ""
+        checked = 0
         # Iterate over the stream as it generates
         while True:
             if _aborted(turn_id):
@@ -597,6 +651,12 @@ def call_ollama(system_prompt, user_prompt, turn_id=None):
             if line_str:
                 chunk = json.loads(line_str)
                 full_text += chunk.get("message", {}).get("content", "")
+                if len(full_text) - checked >= OLLAMA_REPEAT_CHECK_CHARACTERS:
+                    checked = len(full_text)
+                    if _repeats_itself(full_text):
+                        # Closing the connection (below) stops the generation in Ollama.
+                        return _provider_error("OLLAMA ERROR: the reply kept repeating itself, "
+                                               "so the game stopped it.")
 
         # Parse the final reconstructed string. Its fallback is prefixed so a
         # local model's mangled output reads as such, not as a diplomatic cable.

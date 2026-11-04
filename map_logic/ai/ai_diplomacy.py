@@ -106,8 +106,9 @@ def process_proactive_llm_tasks(context):
             world, nation, choice["candidates"], c.AI_MAX_ACTIONS_PER_TURN, note)
         world_context = ai_evaluation.get_world_context(
             world_state.nation_data, active_nations, nation, current_date=current_date)
-        return ai_handler._run_provider(mode, system, f"{world_context}\n{user}",
-                                        my_turn_id, None, raw=True)
+        return ai_handler._run_provider(
+            mode, system, f"{world_context}\n{user}", my_turn_id, None, raw=True,
+            schema=ai_director.reply_schema(choice["candidates"], c.AI_MAX_ACTIONS_PER_TURN))
 
     def record(choice, reply):
         # Stamped whether or not the reply was usable: the nation cost a call

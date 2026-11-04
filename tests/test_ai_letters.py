@@ -47,7 +47,7 @@ class LetterTestCase(unittest.TestCase):
 
     def stub(self, answers):
         """`answers` maps a writer to a function of its user prompt, or to a reply."""
-        def fake(mode, system, user, turn_id, canned, accepted=None, raw=False):
+        def fake(mode, system, user, turn_id, canned, accepted=None, raw=False, schema=None):
             writer = next(n for n in self.game.nation_data
                           if f"You are the leader of {n}." in user)
             self.prompts.append((writer, user))
@@ -88,6 +88,28 @@ class DeliveryTests(LetterTestCase):
         })
         self.run_letters()
         self.assertEqual([m["content"] for m in self.letters_to("A")], ["We are listening."])
+
+    def test_the_schema_names_the_readers_and_the_authors(self):
+        """Ollama enforces this schema: a letter goes only to a listed reader,
+        and an opinion is given about each author whose letter was read."""
+        self.write("A", "B", "First words.")
+        schemas = {}
+
+        def fake(mode, system, user, turn_id, canned, accepted=None, raw=False, schema=None):
+            writer = next(n for n in self.game.nation_data if f"You are the leader of {n}." in user)
+            schemas.setdefault(writer, schema)
+            return {"letters": [], "opinions": {}}
+
+        self.patch(ai_handler, "_run_provider", fake)
+        self.run_letters()
+        letters = schemas["B"]["properties"]["letters"]
+        self.assertEqual(letters["items"]["properties"]["to"]["enum"], ["A", "C"])
+        self.assertEqual(letters["maxItems"], c.AI_LETTERS_PER_CALL)
+        self.assertEqual(schemas["B"]["properties"]["opinions"]["required"], ["A"])
+
+    def test_the_schema_allows_no_letter_when_nobody_reads(self):
+        schema = ai_letters.reply_schema([], [])
+        self.assertEqual(schema["properties"]["letters"], {"type": "array", "maxItems": 0})
 
     def test_a_read_letter_is_not_read_again(self):
         self.write("A", "B", "First words.")
@@ -204,7 +226,7 @@ class NotebookTests(LetterTestCase):
         self.game.nation_data["A"][ai_letters.NOTEBOOK] = "Ally with B."
         seen = []
 
-        def fake(mode, system, user, turn_id, canned, accepted=None, raw=False):
+        def fake(mode, system, user, turn_id, canned, accepted=None, raw=False, schema=None):
             seen.append(user)
             return {"picks": ["none"]}
         self.patch(ai_handler, "_run_provider", fake)
@@ -327,7 +349,7 @@ class InitiativeTests(LetterTestCase):
     def test_the_leader_can_take_one(self):
         self.write("B", "A", "Shall we stand together?")
 
-        def fake(mode, system, user, turn_id, canned, accepted=None, raw=False):
+        def fake(mode, system, user, turn_id, canned, accepted=None, raw=False, schema=None):
             if "You are the leader of A." not in user:
                 return {"picks": ["none"]}
             cid = next(line.split("]")[0].strip(" [") for line in user.splitlines()

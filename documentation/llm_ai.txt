@@ -104,6 +104,16 @@ MODEL DECISIONS
 The game discards illegal model requests.
 A rumor in the global log can still show the attempted action.
 
+Each request also sends the JSON schema of its reply.
+ai_director.reply_schema, ai_letters.reply_schema, ai_prompts.reply_schema, and ai_prompts.MESSAGE_SCHEMA build them.
+A schema lists the allowed option IDs, letter recipients, actions, targets, and opinion limits.
+Only Ollama receives the schema. Ollama enforces it during generation for models that match OLLAMA_JSON_SUPPORTED_MODELS.
+Other Ollama models get no format.
+Hosted providers keep their plain JSON mode. Their schema support differs by provider and model.
+Also, a schema that differs for each country could stop a hosted provider from reusing the shared prefix.
+The game still checks every reply, whether or not a schema constrained it.
+ai_prompts.REPLY_ACTIONS supplies both the prompt's action list and the schema's action list.
+
 MODEL TEXT AND MESSAGE METADATA
 -------------------------------
 
@@ -179,6 +189,9 @@ tests/test_prompt_sharing.py protects this order.
 call_ollama sets num_ctx to OLLAMA_CONTEXT_TOKENS for every request.
 The Ollama default can be smaller than a world-map prompt. Ollama then cuts the prompt without an error.
 A num_ctx change between requests makes Ollama load the model again.
+call_ollama also sets keep_alive to OLLAMA_KEEP_ALIVE.
+By default, Ollama unloads the model after five minutes, and a planning phase can take longer.
+The next phase would then load the model again and read the whole world again.
 Leave neutral relation scores out of the country-specific section.
 State that an unlisted country is neutral.
 
@@ -218,6 +231,11 @@ A phase must do the following:
 3. Run rule-based proposal decisions outside the model batch.
    A slow model must not delay proposals that do not need it.
    Put the player's correspondence first in the remaining response queue.
+
+call_ollama stops a reply that keeps repeating itself.
+That check applies when the end of the reply is one block of text, such as a sentence or whitespace, repeated at least OLLAMA_REPEAT_COUNT times.
+The reply becomes a provider error, and the caller uses its rule-based fallback.
+Without this check, a looping local model writes until its context window is full.
 
 ai_handler.typical_call_seconds estimates request time from completed calls.
 It smooths measurements and ignores requests that the game interrupted.

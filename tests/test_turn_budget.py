@@ -260,7 +260,7 @@ class LetterClockTests(Patcher):
 
     def stub_provider(self, expire_after=None):
         """A writes to B and everyone else writes to A, so each pass has work."""
-        def fake(mode, system, user, turn_id, canned, accepted=None, raw=False):
+        def fake(mode, system, user, turn_id, canned, accepted=None, raw=False, schema=None):
             self.calls.append(user)
             if expire_after is not None and len(self.calls) >= expire_after:
                 self.clock.now = self.DEADLINE + 1

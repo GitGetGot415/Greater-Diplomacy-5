@@ -518,7 +518,8 @@ def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_natio
 
     reply = ai_handler._run_provider(mode, system_prompt, user_prompt, turn_id,
                                      ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_ACCEPT"], accepted,
-                                     raw=True)
+                                     raw=True,
+                                     schema=ai_prompts.reply_schema(active_nations, allow_override))
     if reply is None:
         return _reply(ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_ACCEPT"], accepted=accepted)
 
@@ -552,7 +553,8 @@ def process_custom_message(nation_data, active_nations, ai_nation, sender_nation
     user_prompt = f"{context}\nMessage from {sender_nation}: '{message_content}'"
 
     return ai_handler._run_provider(mode, system_prompt, user_prompt, turn_id,
-                         ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_MESSAGE"])
+                         ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_MESSAGE"],
+                         schema=ai_prompts.reply_schema(active_nations))
 
 def generate_proactive_text(nation_data, active_nations, ai_nation, target_nation, action_context, human_players=None, turn_id=None, current_date="Unknown"):
     """Generates a quick one-liner for proactive hardcoded AI actions.
@@ -585,7 +587,8 @@ def generate_proactive_text(nation_data, active_nations, ai_nation, target_natio
     # own genai client, and reported provider failures as the message itself --
     # so a bad API key was delivered to the player as the text of a war
     # declaration. None means "no answer", and the caller uses its fallback line.
-    result = ai_handler._run_provider(mode, system_prompt, user_prompt, turn_id, None, raw=True)
+    result = ai_handler._run_provider(mode, system_prompt, user_prompt, turn_id, None, raw=True,
+                                      schema=ai_prompts.MESSAGE_SCHEMA)
     if not result or result.get("error"):
         return None
     return result.get("message")

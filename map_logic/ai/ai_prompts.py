@@ -395,6 +395,44 @@ def reads_as_third_person(message, nation, nation_data=None):
     return False
 
 
+#: The actions a reply may take, in the order action_rules_and_schema lists
+#: them. diplomacy_processor._RETALIATION_HANDLERS performs all but NONE.
+REPLY_ACTIONS = ("WAR_DECLARATION", "JOIN_WARS", "LEAVE_FACTION", "JOIN_FACTION_REQ",
+                 "CEASEFIRE", "CALL_TO_ARMS", "CREATE_FACTION", "KICK_FACTION_MEMBER",
+                 "DISBAND_FACTION", "NONE")
+
+
+def reply_schema(nations, decides=False):
+    """The JSON schema of the reply that action_rules_and_schema describes.
+
+    Ollama enforces it while it generates (see ai_handler.call_ollama), so a
+    reply cannot name an unknown action or country, and its opinion_change
+    stays within AI_OPINION_CHANGE_MAX. `nations` lists every country that a
+    target can name, by ID, as the world context names them. `decides` adds the
+    'accepted' field of a proposal that the leader may overrule.
+    """
+    actions = {"type": "string", "enum": list(REPLY_ACTIONS)}
+    targets = {"type": "string", "enum": ["NONE", *sorted(nations)]}
+    properties = {
+        "message": {"type": "string"},
+        "action": actions,
+        "action_target": targets,
+        "follow_up_action": actions,
+        "follow_up_target": targets,
+        "opinion_change": {"type": "integer", "minimum": -c.AI_OPINION_CHANGE_MAX,
+                           "maximum": c.AI_OPINION_CHANGE_MAX},
+    }
+    if decides:
+        properties["accepted"] = {"type": "boolean"}
+    return {"type": "object", "properties": properties, "required": list(properties),
+            "additionalProperties": False}
+
+
+#: The JSON schema of the reply that get_proactive_system_prompt asks for.
+MESSAGE_SCHEMA = {"type": "object", "properties": {"message": {"type": "string"}},
+                  "required": ["message"], "additionalProperties": False}
+
+
 def action_rules_and_schema(subject, message_hint):
     """The tail every long system prompt ends with: the action list, the rules
     for using them, and the JSON schema to reply in.
@@ -410,7 +448,8 @@ def action_rules_and_schema(subject, message_hint):
     """
     return (
         VOICE_RULE +
-        "Valid actions: 'WAR_DECLARATION', 'JOIN_WARS', 'LEAVE_FACTION', 'JOIN_FACTION_REQ', 'CEASEFIRE', 'CALL_TO_ARMS', 'CREATE_FACTION', 'KICK_FACTION_MEMBER', 'DISBAND_FACTION' or 'NONE'.\n"
+        "Valid actions: " + ", ".join(f"'{action}'" for action in REPLY_ACTIONS[:-1])
+        + f" or '{REPLY_ACTIONS[-1]}'.\n"
         "RULES FOR ACTIONS:\n"
         "- You MUST specify the target country for your action in 'action_target' (e.g., 'Germany', 'Russia', or the sender's name).\n"
         "- Do NOT output 'JOIN_FACTION_REQ' if you are already in a faction. You have to leave your faction before doing that.\n"

@@ -290,6 +290,7 @@ class OllamaTests(NoNetworkTestCase):
                 return body
 
             def readline(self):
+                sent["reads"] = sent.get("reads", 0) + 1
                 return self.lines.pop(0) if self.lines else b""
 
         class Connection:
@@ -348,6 +349,85 @@ class OllamaTests(NoNetworkTestCase):
                          ai_handler.OLLAMA_CONTEXT_TOKENS)
         self.assertEqual(self.sent["payload"]["messages"],
                          [{"role": "user", "content": "world\n\nsystem"}])
+
+    def test_every_request_keeps_the_model_loaded(self):
+        """With Ollama's five-minute default, a long planning phase unloads the
+        model and the next AI phase reads the whole world again."""
+        self.connect(lines=[self.chunk('{"message": "ok"}')])
+        ai_handler.call_ollama("s", "u")
+        self.assertEqual(self.sent["payload"]["keep_alive"], ai_handler.OLLAMA_KEEP_ALIVE)
+
+    def test_a_schema_becomes_the_format_of_a_listed_model(self):
+        schema = {"type": "object", "properties": {"message": {"type": "string"}}}
+        listed = c.OLLAMA_JSON_SUPPORTED_MODELS[0]
+        self._patch(ai_handler, "get_ollama_model", lambda: listed)
+        for sent_schema, expected in ((schema, schema), (None, "json")):
+            with self.subTest(schema=sent_schema):
+                self.connect(lines=[self.chunk('{"message": "ok"}')])
+                ai_handler.call_ollama("s", "u", schema=sent_schema)
+                self.assertEqual(self.sent["payload"]["format"], expected)
+
+    def test_an_unlisted_model_gets_no_format(self):
+        self._patch(ai_handler, "get_ollama_model", lambda: "unlisted-model")
+        self.connect(lines=[self.chunk('{"message": "ok"}')])
+        ai_handler.call_ollama("s", "u", schema={"type": "object"})
+        self.assertNotIn("format", self.sent["payload"])
+
+    def test_a_reply_that_loops_is_stopped_early(self):
+        """A looping small model otherwise writes until the context is full."""
+        for label, opening, loop in (("sentence", '{"message": "', "We will fight on. "),
+                                     ("whitespace", '{"message": "We agree."', "\n")):
+            with self.subTest(label):
+                lines = [self.chunk(opening)] + [self.chunk(loop)] * 2000
+                self.connect(lines=lines)
+                result = ai_handler.call_ollama("s", "u")
+                self.assertTrue(result["error"])
+                self.assertIn("repeating", result["message"])
+                self.assertLess(self.sent["reads"], len(lines) // 2, "the stream was read to the end")
+
+    def test_a_long_ordinary_reply_is_not_stopped(self):
+        letters = [{"to": f"Country{i}", "text": f"Letter {i}: our position on the border "
+                    f"has not changed since the {i}th of the month, and we expect an answer."}
+                   for i in range(12)]
+        reply = json.dumps({"letters": letters, "opinions": {}, "notebook": "Watch the east."},
+                           indent=4)
+        self.connect(lines=[self.chunk(reply[i:i + 7]) for i in range(0, len(reply), 7)])
+        self.assertEqual(ai_handler.call_ollama("s", "u")["letters"], letters)
+
+
+class ReplySchemaTests(NoNetworkTestCase):
+    """The schemas Ollama enforces must agree with what the game can perform."""
+
+    def test_reply_actions_are_the_actions_the_game_performs(self):
+        from map_logic.diplomacy import diplomacy_processor
+        self.assertEqual(set(ai_prompts.REPLY_ACTIONS) - {"NONE"},
+                         set(diplomacy_processor._RETALIATION_HANDLERS))
+        rules = ai_prompts.action_rules_and_schema("proposal", "hint")
+        for action in ai_prompts.REPLY_ACTIONS:
+            self.assertIn(f"'{action}'", rules)
+
+    def test_the_reply_schema_names_only_real_targets(self):
+        schema = ai_prompts.reply_schema(["Borland", "Avaria"])
+        for field in ("action_target", "follow_up_target"):
+            self.assertEqual(schema["properties"][field]["enum"], ["NONE", "Avaria", "Borland"])
+        self.assertEqual(schema["properties"]["opinion_change"]["maximum"], c.AI_OPINION_CHANGE_MAX)
+        self.assertNotIn("accepted", schema["properties"])
+        self.assertIn("accepted", ai_prompts.reply_schema(["Avaria"], decides=True)["required"])
+
+    def test_only_ollama_receives_the_schema(self):
+        seen = {}
+        self._patch(ai_handler, "call_ollama", lambda *a, **k: seen.update(k) or {"message": "hi"})
+        ai_handler._run_provider("OLLAMA", "s", "u", None, "canned", schema={"type": "object"})
+        self.assertEqual(seen["schema"], {"type": "object"})
+
+    def test_a_custom_message_reply_sends_its_schema(self):
+        self._patch(ai_evaluation, "_use_canned_reply", lambda *a, **k: False)
+        seen = {}
+        self._patch(ai_handler, "_run_provider", lambda *a, **k: seen.update(k) or {"message": "hi"})
+        nation_data = {"Avaria": {"manpower": 1, "materials": 1, "inbox": []}, "Borland": {}}
+        ai_evaluation.process_custom_message(nation_data, ["Avaria", "Borland"], "Avaria",
+                                             "Borland", "Hello.", human_players=["Borland"])
+        self.assertEqual(seen["schema"], ai_prompts.reply_schema(["Avaria", "Borland"]))
 
 
 class ClaudeTests(NoNetworkTestCase):

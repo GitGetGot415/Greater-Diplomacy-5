@@ -176,6 +176,29 @@ def build_prompt(world_state, nation, unread, readers, alive, current_date):
     return SYSTEM_PROMPT, "\n".join(lines)
 
 
+def reply_schema(recipients, authors):
+    """The JSON schema of SYSTEM_PROMPT's reply.
+
+    Ollama enforces it while it generates (see ai_handler.call_ollama). A letter
+    can go only to a listed recipient. The opinions name exactly the authors of
+    the letters that were read, each within AI_OPINION_CHANGE_MAX. With no
+    recipients, the letter list must be empty.
+    """
+    letter = {"type": "object", "additionalProperties": False, "required": ["to", "text"],
+              "properties": {"to": {"type": "string", "enum": list(recipients)},
+                             "text": {"type": "string"}}}
+    letters = ({"type": "array", "maxItems": c.AI_LETTERS_PER_CALL, "items": letter}
+               if recipients else {"type": "array", "maxItems": 0})
+    opinion = {"type": "integer", "minimum": -c.AI_OPINION_CHANGE_MAX,
+               "maximum": c.AI_OPINION_CHANGE_MAX}
+    opinions = {"type": "object", "additionalProperties": False, "required": list(authors),
+                "properties": {author: opinion for author in authors}}
+    return {"type": "object", "additionalProperties": False,
+            "required": ["letters", "opinions", "notebook"],
+            "properties": {"letters": letters, "opinions": opinions,
+                           "notebook": {"type": "string"}}}
+
+
 def _resolve(name, candidates, nation_data):
     """The country ID a model meant, from an ID or a display name, or None."""
     if not isinstance(name, str):
@@ -323,7 +346,7 @@ def process_letters(context):
 
     def call(job):
         return ai_handler._run_provider(mode, job["system"], job["user"],
-                                        my_turn_id, None, raw=True)
+                                        my_turn_id, None, raw=True, schema=job["schema"])
 
     def record(job, reply):
         apply_reply(context, job, reply, readers, turn)
@@ -348,9 +371,12 @@ def process_letters(context):
             unread = unread_letters(nation_data, nation)
             system, user = build_prompt(world_state, nation, unread, readers, alive,
                                         current_date)
+            authors = {msg.get("sender") for msg in unread}
             jobs.append({"nation": nation, "system": system, "user": user,
                          "letter_ids": {msg.get("message_id") for msg in unread},
-                         "authors": {msg.get("sender") for msg in unread}})
+                         "authors": authors,
+                         "schema": reply_schema([r for r in readers if r != nation],
+                                                sorted(authors))})
 
         done = {"count": 0}
 

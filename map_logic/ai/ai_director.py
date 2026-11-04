@@ -106,6 +106,30 @@ def build_prompt(world, nation, candidates, limit, personality_note=""):
     return system, user
 
 
+def reply_schema(candidates, limit):
+    """The JSON schema of build_prompt's reply.
+
+    Ollama enforces it while it generates (see ai_handler.call_ollama). A pick
+    can only be one of this nation's option IDs or "do nothing", so a pick
+    always names an option on the menu. At least one pick is required, which
+    makes "do nothing" an explicit choice. Each message is optional and can be
+    keyed only by an option ID.
+    """
+    cids = [cand.cid for cand in candidates]
+    return {
+        "type": "object",
+        "properties": {
+            "picks": {"type": "array", "minItems": 1, "maxItems": limit,
+                      "items": {"type": "string", "enum": cids + [c.AI_DIRECTOR_NONE_CID]}},
+            "reason": {"type": "string"},
+            "messages": {"type": "object", "additionalProperties": False,
+                         "properties": {cid: {"type": "string"} for cid in cids}},
+        },
+        "required": ["picks", "reason", "messages"],
+        "additionalProperties": False,
+    }
+
+
 def validate(reply, candidates, limit):
     """Turns a model reply into actual candidates, dropping anything it made up.
 

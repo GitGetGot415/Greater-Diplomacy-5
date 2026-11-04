@@ -118,6 +118,21 @@ class ValidationTests(NoNetworkTestCase):
             self.assertIn(f"[{cand.cid}]", user)
         self.assertIn(c.AI_DIRECTOR_NONE_CID, user)
 
+    def test_the_schema_allows_only_the_menu(self):
+        """Ollama enforces this schema, so a pick outside the menu cannot be written."""
+        _system, user = ai_director.build_prompt(None, "A", self.cands, 2)
+        schema = ai_director.reply_schema(self.cands, 2)
+        picks = schema["properties"]["picks"]
+        self.assertEqual(picks["items"]["enum"],
+                         [cand.cid for cand in self.cands] + [c.AI_DIRECTOR_NONE_CID])
+        for cid in picks["items"]["enum"]:
+            self.assertIn(f"[{cid}]", user)
+        self.assertEqual(picks["maxItems"], 2)
+        self.assertEqual(set(schema["properties"]["messages"]["properties"]),
+                         {cand.cid for cand in self.cands})
+        every_pick = {"picks": [cand.cid for cand in self.cands][:2]}
+        self.assertEqual(self.choose(every_pick), self.cands[:2])
+
 
 class EndToEndTests(NoNetworkTestCase):
     """The director driving a real proactive pass, with a stubbed provider."""
@@ -162,7 +177,7 @@ class EndToEndTests(NoNetworkTestCase):
 
         seen = {}
 
-        def fake(mode, system, user, turn_id, canned, accepted=None, raw=False):
+        def fake(mode, system, user, turn_id, canned, accepted=None, raw=False, schema=None):
             seen["asked"] = True
             return {"picks": ["1"], "messages": {"1": "We have our reasons."}}
 
@@ -177,7 +192,7 @@ class EndToEndTests(NoNetworkTestCase):
         self.set_mode("CLAUDE", "ABSOLUTE")
         prompts = []
 
-        def fake(mode, system, user, turn_id, canned, accepted=None, raw=False):
+        def fake(mode, system, user, turn_id, canned, accepted=None, raw=False, schema=None):
             prompts.append(user)
             return {"picks": [c.AI_DIRECTOR_NONE_CID]}
 
@@ -188,6 +203,25 @@ class EndToEndTests(NoNetworkTestCase):
         self.assertTrue(prompts, "the director never consulted the model")
         for prompt in prompts:
             self.assertIn(f"Current Date: {game.time_manager.get_date_string()}\n", prompt)
+
+    def test_the_director_sends_its_menu_as_the_schema(self):
+        self.set_mode("OLLAMA", "ABSOLUTE")
+        asked = []
+
+        def fake(mode, system, user, turn_id, canned, accepted=None, raw=False, schema=None):
+            asked.append((user, schema))
+            return {"picks": [c.AI_DIRECTOR_NONE_CID]}
+
+        self.patch(ai_handler, "_run_provider", fake)
+        game = self.make_game()
+        game.force_skip_llm = False
+        self.run_pass(game)
+        self.assertTrue(asked, "the director never consulted the model")
+        for user, schema in asked:
+            enum = schema["properties"]["picks"]["items"]["enum"]
+            self.assertEqual(enum[-1], c.AI_DIRECTOR_NONE_CID)
+            for cid in enum:
+                self.assertIn(f"[{cid}]", user)
 
     def test_a_provider_error_leaves_the_staff_choice_intact(self):
         self.set_mode("OFF")
