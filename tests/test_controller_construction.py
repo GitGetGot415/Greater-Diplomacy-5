@@ -311,18 +311,28 @@ class ControllerConstructionTests(unittest.TestCase):
 
 
 class GlobalKeyDispatchTests(unittest.TestCase):
-    class State:
-        listening_for = None
+    @staticmethod
+    def State():
+        from ui.navigation.screen import Screen
 
-        def __init__(self):
-            self.cleared = 0
-            self.back = 0
+        class State(Screen):
+            text_bar_focused = False
 
-        def handle_back_key(self):
-            self.back += 1
+            def __init__(self):
+                self.cleared = 0
+                self.back = 0
 
-        def handle_clear_orders_key(self):
-            self.cleared += 1
+            @property
+            def text_input_active(self):
+                return self.text_bar_focused or super().text_input_active
+
+            def handle_back_key(self):
+                self.back += 1
+
+            def handle_clear_orders_key(self):
+                self.cleared += 1
+
+        return State()
 
     def test_clear_orders_key_routes_to_optional_screen_handler(self):
         from ui.navigation.screen import dispatch_global_keys
@@ -353,7 +363,7 @@ class GlobalKeyDispatchTests(unittest.TestCase):
         from ui.navigation.screen import dispatch_global_keys
 
         state = self.State()
-        state.active_input = "MODEL"
+        state.text_bar_focused = True
         event = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_DELETE)
         with mock.patch("ui.navigation.screen.queries.get_keybind",
                         side_effect=lambda _action, default: default):
@@ -365,7 +375,7 @@ class GlobalKeyDispatchTests(unittest.TestCase):
         from ui.navigation.screen import dispatch_global_keys
 
         state = self.State()
-        state.active_input = "MODEL"
+        state.text_bar_focused = True
         event = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_ESCAPE)
         with mock.patch("ui.navigation.screen.queries.get_keybind",
                         side_effect=lambda _action, default: default):

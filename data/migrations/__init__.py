@@ -16,7 +16,7 @@ Loaders own saved-file access. Shared gameplay modules own current rules and val
 Queries import this package. Keep query imports local to avoid that cycle.
 Preserve unknown valid fields.
 
-Never add version-numbered steps or a chain of steps. See MIGRATIONS.md.
+Never add version-numbered steps or a chain of steps. See documentation/data_migrations.txt.
 
 Callers import names from this package. Tests that replace CURRENT_VERSION
 must replace it in data.migrations.versions, which reads it.

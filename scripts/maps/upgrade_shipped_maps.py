@@ -10,7 +10,7 @@ tournament files and scenarios/map_editor are never included implicitly.
 The tool runs the conversion rules on the files. It does not load the map, so no
 load-time choice (such as time-appropriate research) is written into a file.
 Built-in maps convert on every load. This tool only writes them in the current format.
-See data/migrations/MIGRATIONS.md.
+See documentation/data_migrations.txt.
 This developer tool is not required or shipped by any platform build.
 """
 

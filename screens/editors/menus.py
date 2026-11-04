@@ -18,6 +18,14 @@ from map_logic.diplomacy import diplomacy_messages
 from ui.widgets.text_detail_screen import TextDetailScreen
 from ui.navigation import screen_runner
 
+# Row background for a message a model wrote, in the spectator's overview.
+# Deliberately close to the table's own dark ground -- it has to be legible
+# behind bright text and readable at a glance down a column, not shout.
+MESSAGE_LLM_ROW_COLOR = (74, 50, 24)
+# A separate cool-green tint makes forwarding visible even before the detail
+# view is opened. LLM-written forwarded messages keep the LLM tint priority.
+MESSAGE_FORWARDED_ROW_COLOR = (36, 74, 48)
+
 
 # ==========================================
 # EDITOR MENUS
@@ -329,9 +337,9 @@ def open_spectator_messages(map_screen):
 
     def tint(row):
         if row.get("llm"):
-            return c.MESSAGE_LLM_ROW_COLOR
+            return MESSAGE_LLM_ROW_COLOR
         if row.get("forwarded"):
-            return c.MESSAGE_FORWARDED_ROW_COLOR
+            return MESSAGE_FORWARDED_ROW_COLOR
         return None
 
     _launch_table(map_screen, f"Global Messages Overview  ({hint})", columns, all_msgs,

@@ -216,7 +216,7 @@ class Messages_Screen(Screen):
     @property
     def text_input_active(self):
         """The compose bar accepts keystrokes whenever a conversation is open."""
-        return self.selected_recipient is not None
+        return self.selected_recipient is not None or super().text_input_active
 
     def accept_proposal(self, target):
         custom_msg = self.compose_text.strip()

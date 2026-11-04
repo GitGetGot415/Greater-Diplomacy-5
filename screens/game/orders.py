@@ -1708,6 +1708,10 @@ class Orders_Screen(Screen):
             self.refresh_ui()
         return played_sound
 
+    @property
+    def text_input_active(self):
+        return self.renaming_unit_index is not None or super().text_input_active
+
     def handle_back_key(self):
         # Inline editing and bombardment targeting each consume Escape before
         # it is allowed to close the whole panel.

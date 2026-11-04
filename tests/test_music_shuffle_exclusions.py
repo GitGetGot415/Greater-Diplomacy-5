@@ -34,7 +34,7 @@ class ShuffleExclusionTests(unittest.TestCase):
             music_pitch=0.5,
             music_pitch_timeline=c.MUSIC_PITCH_TIMELINE_STATIC,
             starting_song=None,
-            is_paused=False,
+            music=None,
         )
         player = object.__new__(Music_Player)
         player.controller = controller
@@ -95,7 +95,7 @@ class ShuffleExclusionTests(unittest.TestCase):
             music_pitch=0.5,
             music_pitch_timeline=c.MUSIC_PITCH_TIMELINE_STATIC,
             starting_song=None,
-            is_paused=False,
+            music=None,
         )
         player = object.__new__(Music_Player)
         player.controller = controller
@@ -146,7 +146,7 @@ class ShuffleExclusionTests(unittest.TestCase):
             music_pitch=0.5,
             music_pitch_timeline=c.MUSIC_PITCH_TIMELINE_STATIC,
             starting_song=None,
-            is_paused=False,
+            music=None,
         )
         player = object.__new__(Music_Player)
         player.controller = controller

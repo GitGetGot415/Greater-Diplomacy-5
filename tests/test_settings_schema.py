@@ -341,6 +341,7 @@ class SettingsScreenTests(unittest.TestCase):
         import pygame
         from types import SimpleNamespace
         from screens.menus.settings import Settings
+        from screens.menus import settings as settings_screen
         pygame.font.init()
         controller = SimpleNamespace(**settings_schema.defaults(), keybinds={})
         controller.ai_mode = "GEMINI"
@@ -353,13 +354,13 @@ class SettingsScreenTests(unittest.TestCase):
             self.assertEqual(screen.get_field("MOD"), c.DEFAULT_OPENROUTER_MODEL)
             key_y = next(y for box, y, _ in screen.ai_field_rows() if box == "KEY")
             screen.handle_events([pygame.event.Event(pygame.MOUSEBUTTONDOWN,
-                button=1, pos=(c.SETTINGS_BOX_X + 5, key_y + 5))])
+                button=1, pos=(settings_screen.SETTINGS_BOX_X + 5, key_y + 5))])
             self.assertEqual(screen.active_input, "OPENROUTER_KEY")
             self.assertEqual([box for box, _y, _label in screen.ai_field_rows()], ["KEY", "MOD"])
             screen.set_field("KEY", " test-key ")
             mod_y = next(y for box, y, _ in screen.ai_field_rows() if box == "MOD")
             screen.handle_events([pygame.event.Event(pygame.MOUSEBUTTONDOWN,
-                button=1, pos=(c.SETTINGS_BOX_X + 5, mod_y + 5))])
+                button=1, pos=(settings_screen.SETTINGS_BOX_X + 5, mod_y + 5))])
             self.assertEqual(screen.active_input, "OPENROUTER_MOD")
             screen.set_field("MOD", "")
             screen.handle_events([pygame.event.Event(

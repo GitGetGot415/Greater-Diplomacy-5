@@ -33,6 +33,8 @@ Patch seams: tests and a few callers rebind a name on this package, for example
 `mock.patch.object(queries, "get_unit_library", ...)`. A submodule must see that rebind,
 so it reads those names as `queries.NAME` instead of importing them.
 Add a name to that rule when a new test patches it on `queries` and another query calls it.
+A submodule also reads `queries.NAME` to call a module later in the list, which it cannot import.
+Import every other name from its submodule.
 
 UI, AI, and rule modules import queries. Load those callers inside helpers to avoid cycles and screen
 initialization. NumPy stays local to pixel-geometry helpers, which backend state can omit.

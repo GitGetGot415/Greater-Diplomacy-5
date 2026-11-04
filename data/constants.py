@@ -10,14 +10,6 @@ WATER_MAPPING = {
     "lakes": "Lakes"
 }
 
-# Used in refresh_map.py so lakes render the same color as oceans on political maps
-VISUAL_WATER_MAPPING = {
-    "ocean": "Ocean", 
-    "coastal_sea": "Ocean", 
-    "inland_sea": "Ocean", 
-    "lakes": "Ocean"
-}
-
 # Used to check if terrain is water in several movement/combat files
 WATER_TERRAINS = ["ocean", "coastal_sea", "inland_sea", "lakes"]
 OCEAN_TERRAINS = ["ocean", "coastal_sea", "inland_sea"]
@@ -418,94 +410,6 @@ DEFAULT_FREE_REPAIRS = False
 # DEFAULTS & ASSETS
 # ==========================================
 
-# --- Dynamic Menu Text & Links ---
-# The first item will be placed at the bottom, and subsequent items will stack upwards.
-MENU_BOTTOM_TEXTS = [
-    {"main_text": "Discord - ", "link_text": "https://discord.gg/f5Jugz9SKa", "url": "https://discord.gg/f5Jugz9SKa/"},
-    {"main_text": "Github - ", "link_text": "https://github.com/GitGetGot415/Greater-Diplomacy-5", "url": "https://github.com/GitGetGot415/Greater-Diplomacy-5/"}
-]
-MENU_BOTTOM_TEXT_START_X = 20
-MENU_BOTTOM_TEXT_START_Y = SCREEN_HEIGHT - 40
-MENU_BOTTOM_TEXT_STEP_Y = -30
-
-MENU_MAIN_BUTTON_TABLE = [
-    {
-        "attribute": "load_game_btn",
-        "text": "Load Game",
-        "color": "yellow",
-        "state": "LOAD_GAME",
-        "image": "load_game",
-        "text_size": 24,
-    },
-    {
-        "attribute": "multiplayer_btn",
-        "text": "Multiplayer",
-        "color": "red",
-        "state": "MULTIPLAYER_MENU",
-        "image": "mail",
-        "text_size": 24,
-    },
-    {
-        "attribute": "map_editor_btn",
-        "text": "Map Editor",
-        "color": "orange",
-        "state": "MAP_EDITOR_MENU",
-        "image": "map_editor",
-        "text_size": 24,
-    },
-]
-
-MENU_BUTTON_TABLE = [
-    {
-        "attribute": "settings_btn",
-        "text": "Settings",
-        "color": "grey",
-        "state": "SETTINGS",
-        "image": "settings",
-        "text_size": 24,
-    },
-    {
-        "attribute": "music_btn",
-        "text": "Music",
-        "color": "blue",
-        "state": "MUSIC_PLAYER",
-        "image": "music",
-        "text_size": 24,
-    },
-    {
-        "attribute": "credits_btn",
-        "text": "Credits",
-        "color": "purple",
-        "state": "CREDITS",
-        "image": "credits",
-        "text_size": 24,
-    },
-    {
-        "attribute": "assets_btn",
-        "text": "Assets",
-        "color": "pink",
-        "state": "VIEW_ASSETS",
-        "image": "brush",
-        "text_size": 24,
-    },
-    {
-        "attribute": "mods_btn",
-        "text": "Mods",
-        "color": "light_blue",
-        "state": "MODS",
-        "image": "mods",
-        "text_size": 24,
-    },
-    {
-        "attribute": "translate_btn",
-        "text": "Translate",
-        "color": "white",
-        "state": "TRANSLATION_MENU",
-        "image": "export",
-        "text_size": 24,
-    }
-]
-
 MENU_BOTTOM_TEXT_COLOR = (255, 255, 255)
 MENU_BOTTOM_TEXT_LINK_COLOR = (150, 200, 255)
 MENU_BOTTOM_TEXT_HOVER_COLOR = (100, 255, 100)
@@ -587,10 +491,6 @@ DEFAULT_MUSIC_PITCH_TIMELINE = MUSIC_PITCH_TIMELINE_STATIC
 
 UI_LEFT_OFFSET = 160
 
-# How far (in screen pixels) to shift the camera left when a province is selected,
-# so the orders panel doesn't cover the unit the camera just centered on.
-ORDERS_PANEL_CAMERA_X_OFFSET = 0
-
 # --- UI Component Heights ---
 TOP_UI_HEIGHT = 60
 BOT_UI_HEIGHT = 60
@@ -606,11 +506,6 @@ BOTTOM_BAR_UI_CENTER_Y = SCREEN_HEIGHT - 50
 # ==========================================
 
 MAX_EDITOR_HISTORY = 30
-
-# --- Editor UI Placement ---
-EDIT_COUNTRY_UI_X1 = 50
-EDIT_COUNTRY_UI_X2 = 450
-EDIT_COUNTRY_UI_X3 = 850
 
 # ==========================================
 # PROVINCE MENU
@@ -672,13 +567,6 @@ AI_BUDGET_SHARE_SUMMITS = 0.2
 AI_BUDGET_SHARE_DIRECTOR = 0.5
 AI_BUDGET_SHARE_RESPONSES = 1.0     # whatever the first two left
 
-# --- Unified Settings UI Layout ---
-SETTINGS_BOX_X = 140
-SETTINGS_KEY_BOX_Y = SCREEN_HEIGHT - 130
-SETTINGS_MOD_BOX_Y = SCREEN_HEIGHT - 60
-SETTINGS_BOX_W = 320
-SETTINGS_BOX_H = 40
-
 TARGET_FPS = 60
 
 # ==========================================
@@ -687,8 +575,6 @@ TARGET_FPS = 60
 
 START_YEAR = 1800
 END_YEAR = 2150
-# Compatibility name. Research layout values belong to the presentation file.
-RESEARCH_TIMELINE_SPACING = research_display.get_config()["layout"]["pixels_per_year"]
 
 BASE_RESEARCH_POINTS_PER_DAY = 10
 RESEARCH_SLOTS = 3 # Number of techs a nation can research simultaneously
@@ -1059,10 +945,6 @@ PANEL_THEME_INFO_OVER_MAP    = ((*HUD_PANEL_BG, 230), UI_ACCENT_BLUE, 2)
 # their own wheel handling should read it from here rather than redeclaring it.
 SCROLL_STEP = 30
 
-# Yes/No confirmation buttons: size, and horizontal offset from the box centre.
-CONFIRM_BTN_SIZE = (100, 40)
-CONFIRM_BTN_DX = 130
-
 ELLIPSIS = "..."
 
 # Single-line text entry boxes. Nine screens each had their own fill/border
@@ -1081,59 +963,6 @@ BACK_BTN_MAP_CENTER = (50, TOP_BAR_UI_CENTER_Y)
 # and omits "", so substituting it would change which provinces count as empty.
 OWNERLESS_OWNERS = ("Unclaimed", "None", "Ocean", "Lakes")
 UNOWNED_LAND_OWNERS = ("Unclaimed", "None", "")
-
-# https://smilebasic.com/en/e-manual/manual28/
-EDITOR_COLOR_PALETTE = [
-    (0,0,0),            # Black
-    (32,32,32),         # Very Dark Grey
-    (64,64,64),         # Dark Grey
-    (96,96,96),         # Darkish Grey
-    (128,128,128),      # Grey
-    (196,196,196),      # Light Grey
-    (220,220,220),      # Very Light Grey
-    (255,255,255),      # White
-    
-    (255,96,96),        # Light Red
-    (255,200,20),       # Light Orange
-    (255,255,128),      # Light Yellow
-    (96,255,128),       # Lime
-    (128,255,255),      # Light Indigo
-    (64,64,255),        # Light Blue
-    (200,64,255),       # Light Purple
-    (255,128,255),      # Light Pink
-
-    (255,0,0),          # Red
-    (255,160,16),       # Orange
-    (255,255,32),       # Yellow
-    (0,192,0),          # Green
-    (80,200,255),       # Indigo
-    (0,0,255),          # Blue
-    (160,32,255),       # Purple
-    (255,96,208),       # Pink
-    
-    (196,0,0),          # Dark Red
-    (200,120,12),       # Dark Orange
-    (200,200,0),        # Dark Yellow
-    (0,128,0),          # Dark Green
-    (60,160,200),       # Dark Indigo
-    (0,0,196),          # Dark Blue
-    (120,16,200),       # Dark Purple
-    (200,80,160),       # Dark Pink
-
-    # (160,128,96),       # Oak Tree
-    # (255,208,160),      # White Skin
-
-    (128,0,0),          # Very Dark Red
-    (160,80,10),        # Brown
-    (128,128,0),        # Very Dark Yellow
-    (0,64,0),           # Very Dark Green
-    (32,128,160),       # Very Dark Indigo
-    (0,0,128),          # Very Dark Blue
-    (80,12,160),        # Very Dark Purple
-    (160,60,120),       # Very Dark Pink
-
-    # (128,0,128),        # Austria-Hungary
-]
 
 # ==========================================
 # MESSAGING APP UI
@@ -1159,11 +988,6 @@ AIR_MISSION_CHOICES = (
     ("RANDOM", "Defend area (random enemy mission targeted first)", "Random First"),
 )
 AIR_MISSION_ICONS = {mission: icon for mission, _label, icon in AIR_MISSION_CHOICES}
-# Screen pixels traversed by the initial arrow-key press.  Held keys use the
-# rate below instead of pygame's delayed key-repeat events, so camera movement
-# starts immediately and stays continuous without changing text-entry repeat.
-CAMERA_KEYBOARD_PAN_PIXELS = 80
-CAMERA_KEYBOARD_PAN_PIXELS_PER_SECOND = 1200
 MAX_Y_TILT_FACTOR = 0.0 # The maximum compression of the Y axis (0.6 = 60% of original height)
 APPLY_TILT_TO_OVERLAYS = False # Whether the tilt compresses icons and text overlays
 APPLY_TILT_TO_ARROWS = True # Whether the tilt compresses movement arrows
@@ -1178,12 +1002,6 @@ OCEAN_LIGHT_BLUE = (40, 100, 180)
 
 DEFAULT_OCEAN_DARK_BLUE = (10, 20, 40)
 DEFAULT_OCEAN_LIGHT_BLUE = (40, 100, 180)
-
-# Toggle this to False if you want to strictly hide names on areas <= 3 provinces
-SHOW_SMALL_TERRITORY_NAMES = False
-
-NAME_MIN_TILES_TO_SHOW = 3      # when to ignore showing islands
-NAME_ABS_MIN_TILES_TO_SHOW = 1  # if a country only has this many tiles
 
 # ==========================================
 # DEFAULT UNIT STATS (Fallbacks)
@@ -1419,7 +1237,6 @@ VEHICLE_INFANTRY_GATES = {
     "infantry_fighting_vehicle": "infantry_fighting_vehicle",
 }
 
-LARGE_ICON_BUILDING_GROUPS = ["industry", "recruitment"]
 BUILDING_ICON_SCALE = 1.0
 
 # ==========================================
@@ -2132,14 +1949,6 @@ MESSAGE_CATEGORIES = {
 
     "BREAK_ALLIANCE": "ALLIANCE",
 }
-
-# Row background for a message a model wrote, in the spectator's overview.
-# Deliberately close to the table's own dark ground -- it has to be legible
-# behind bright text and readable at a glance down a column, not shout.
-MESSAGE_LLM_ROW_COLOR = (74, 50, 24)
-# A separate cool-green tint makes forwarding visible even before the detail
-# view is opened. LLM-written forwarded messages keep the LLM tint priority.
-MESSAGE_FORWARDED_ROW_COLOR = (36, 74, 48)
 
 # Proposals that require the target to explicitly Accept or Reject
 # Moves a nation makes about itself rather than at somebody. The distinction

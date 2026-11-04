@@ -3,7 +3,7 @@
 The version stamp records which game wrote a file. It refuses files from a newer game,
 matches real-time players, and tells a tournament host that a move needs approval.
 Conversion never depends on it. Every rule in conversions.py runs on every load.
-See data/migrations/MIGRATIONS.md.
+See documentation/data_migrations.txt.
 """
 
 import re

@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 import data.constants as c
 from screens.menus.music_player import Music_Player
+from ui.music_playback import BeepBoxPlayback, SoLoudPlayback
 
 
 class FakeBeepBoxStream:
@@ -53,18 +54,24 @@ class FakeSoloud:
 def make_player(controller):
     player = object.__new__(Music_Player)
     player.controller = controller
-    player._track_lengths = {}
-    player._last_ticks = 0
     player.save_audio_settings = lambda: None
     return player
+
+
+def soloud_playback(soloud, speed, length=480):
+    """A SoLoud playback of a fake 'song.mp3', with the start-up speed call cleared."""
+    with patch.object(SoLoudPlayback, "_load"):
+        playback = SoLoudPlayback(soloud, SimpleNamespace(get_length=lambda: length),
+                                  "song.mp3", 0.0, 1.0, speed)
+    soloud.speed_changes.clear()
+    return playback
 
 
 class MusicPitchTimelineTests(unittest.TestCase):
     def test_beepbox_speed_change_preserves_musical_progress(self):
         stream = FakeBeepBoxStream(position=240, speed=1.0)
         controller = SimpleNamespace(
-            beepbox_stream=stream,
-            music_handle=None,
+            music=BeepBoxPlayback(stream),
             music_pitch=0.5,
             music_pitch_timeline=c.MUSIC_PITCH_TIMELINE_DYNAMIC,
             _frozen_time=240,
@@ -81,50 +88,36 @@ class MusicPitchTimelineTests(unittest.TestCase):
     def test_soloud_duration_and_position_use_scaled_playback_time(self):
         soloud = FakeSoloud(source_position=240)
         controller = SimpleNamespace(
-            beepbox_stream=None,
-            music_handle=1,
+            music=soloud_playback(soloud, speed=0.8),
             music_pitch=0.3,
             music_pitch_timeline=c.MUSIC_PITCH_TIMELINE_DYNAMIC,
-            music_stream=SimpleNamespace(get_length=lambda: 480),
-            soloud=soloud,
             now_playing="song.mp3",
-            is_paused=False,
             _frozen_time=0,
         )
         player = make_player(controller)
-        player._track_lengths["song.mp3"] = 480
 
-        with patch("screens.menus.music_player.c.USE_SOLOUD", True):
-            self.assertEqual(player.get_current_track_length(), 600)
-            self.assertAlmostEqual(player.get_current_track_pos(), 300)
+        self.assertEqual(player.get_current_track_length(), 600)
+        self.assertAlmostEqual(player.get_current_track_pos(), 300)
 
-            player.set_music_pitch(0.5)
+        player.set_music_pitch(0.5)
 
         self.assertEqual(soloud.speed_changes, [1.0])
         self.assertEqual(controller._frozen_time, 240)
-        with patch("screens.menus.music_player.c.USE_SOLOUD", True):
-            self.assertEqual(player.get_current_track_length(), 480)
-            self.assertAlmostEqual(player.get_current_track_pos(), 240)
+        self.assertEqual(player.get_current_track_length(), 480)
+        self.assertAlmostEqual(player.get_current_track_pos(), 240)
 
     def test_soloud_scrubbing_converts_playback_time_to_source_time(self):
         soloud = FakeSoloud(source_position=0)
         controller = SimpleNamespace(
-            beepbox_stream=None,
-            music_handle=1,
+            music=soloud_playback(soloud, speed=0.8),
             music_pitch=0.3,
             music_pitch_timeline=c.MUSIC_PITCH_TIMELINE_DYNAMIC,
-            music_volume=1.0,
-            music_stream=object(),
-            soloud=soloud,
             now_playing="song.mp3",
-            is_paused=False,
             _frozen_time=0,
-            _load_soloud_stream_unicode_safe=lambda _track: None,
         )
         player = make_player(controller)
-        player._track_lengths["song.mp3"] = 480
 
-        with patch("screens.menus.music_player.c.USE_SOLOUD", True):
+        with patch.object(SoLoudPlayback, "_load"):
             player.scrub_music(0.5)
 
         self.assertAlmostEqual(soloud.seeks[0], 239.8)
@@ -134,8 +127,7 @@ class MusicPitchTimelineTests(unittest.TestCase):
     def test_static_beepbox_timeline_keeps_the_source_position_and_length(self):
         stream = FakeBeepBoxStream(position=300, speed=0.8, length=600)
         controller = SimpleNamespace(
-            beepbox_stream=stream,
-            music_handle=None,
+            music=BeepBoxPlayback(stream),
             music_pitch=0.3,
             music_pitch_timeline=c.MUSIC_PITCH_TIMELINE_STATIC,
             now_playing="song.json",
@@ -153,22 +145,15 @@ class MusicPitchTimelineTests(unittest.TestCase):
     def test_static_soloud_scrubbing_uses_source_track_seconds(self):
         soloud = FakeSoloud(source_position=0)
         controller = SimpleNamespace(
-            beepbox_stream=None,
-            music_handle=1,
+            music=soloud_playback(soloud, speed=0.8),
             music_pitch=0.3,
             music_pitch_timeline=c.MUSIC_PITCH_TIMELINE_STATIC,
-            music_volume=1.0,
-            music_stream=object(),
-            soloud=soloud,
             now_playing="song.mp3",
-            is_paused=False,
             _frozen_time=0,
-            _load_soloud_stream_unicode_safe=lambda _track: None,
         )
         player = make_player(controller)
-        player._track_lengths["song.mp3"] = 480
 
-        with patch("screens.menus.music_player.c.USE_SOLOUD", True):
+        with patch.object(SoLoudPlayback, "_load"):
             player.scrub_music(0.5)
 
         self.assertAlmostEqual(soloud.seeks[0], 239.75)

@@ -285,7 +285,7 @@ class MapSurfaceCacheTests(unittest.TestCase):
         province = self.screen.id_to_province[1]
         for mutate in (lambda: province.update(owner="B"),
                        lambda: self.screen.nation_colors.update(B=(10, 20, 200)),
-                       lambda: province.update(terrain=next(iter(c.VISUAL_WATER_MAPPING))),
+                       lambda: province.update(terrain=next(iter(refresh_map.VISUAL_WATER_MAPPING))),
                        lambda: setattr(self.screen, "id_map", self.screen.id_map.copy())):
             previous = self.screen.political_map
             mutate()

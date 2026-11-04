@@ -2,6 +2,12 @@ import pygame
 import data.constants as c
 from data import queries
 
+# Screen pixels traversed by the initial arrow-key press.  Held keys use the
+# rate below instead of pygame's delayed key-repeat events, so camera movement
+# starts immediately and stays continuous without changing text-entry repeat.
+CAMERA_KEYBOARD_PAN_PIXELS = 80
+CAMERA_KEYBOARD_PAN_PIXELS_PER_SECOND = 1200
+
 
 PAN_KEYBIND_DEFAULTS = {
     "left": ("PAN_LEFT", pygame.K_LEFT),
@@ -123,7 +129,7 @@ class MapCamera:
         self._last_keyboard_pan_tick = now
         self._pan_with_arrow_keys(
             left, right, up, down,
-            c.CAMERA_KEYBOARD_PAN_PIXELS_PER_SECOND * elapsed_seconds)
+            CAMERA_KEYBOARD_PAN_PIXELS_PER_SECOND * elapsed_seconds)
 
     def handle_input(self, event, self_map, on_ui, allow_right_drag=False,
                      pan_buttons=None):
@@ -134,7 +140,7 @@ class MapCamera:
             self._pan_with_arrow_keys(
                 event.key == pan_keys["left"], event.key == pan_keys["right"],
                 event.key == pan_keys["up"], event.key == pan_keys["down"],
-                c.CAMERA_KEYBOARD_PAN_PIXELS)
+                CAMERA_KEYBOARD_PAN_PIXELS)
             self._last_keyboard_pan_tick = pygame.time.get_ticks()
             return
 

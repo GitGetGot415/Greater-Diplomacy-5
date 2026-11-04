@@ -229,7 +229,7 @@ Keep tuning data in its source files:
 - Put every conversion rule for older saves and moves in `data/migrations/conversions.py`.
   Every rule runs on every load, whatever version wrote the file.
   A rule finds an older shape in the data and converts it. It must do nothing to current data.
-  See `data/migrations/MIGRATIONS.md` and `documentation/data_migrations.txt`.
+  See `documentation/data_migrations.txt`.
 - **Never reuse a saved field or identifier with a new meaning.** Give the new meaning a new name.
   Or save the data that is necessary to read the older meaning, as `research_years` does.
   Otherwise no rule can tell older data from current data.

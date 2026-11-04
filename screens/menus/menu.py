@@ -22,6 +22,94 @@ from ui.rendering.font_manager import fonts
 from ui.dialogs.character_select_screen import CHARACTERS_DIR
 from ui import dialogs
 
+# --- Dynamic Menu Text & Links ---
+# The first item will be placed at the bottom, and subsequent items will stack upwards.
+MENU_BOTTOM_TEXTS = [
+    {"main_text": "Discord - ", "link_text": "https://discord.gg/f5Jugz9SKa", "url": "https://discord.gg/f5Jugz9SKa/"},
+    {"main_text": "Github - ", "link_text": "https://github.com/GitGetGot415/Greater-Diplomacy-5", "url": "https://github.com/GitGetGot415/Greater-Diplomacy-5/"}
+]
+MENU_BOTTOM_TEXT_START_X = 20
+MENU_BOTTOM_TEXT_START_Y = c.SCREEN_HEIGHT - 40
+MENU_BOTTOM_TEXT_STEP_Y = -30
+
+MENU_MAIN_BUTTON_TABLE = [
+    {
+        "attribute": "load_game_btn",
+        "text": "Load Game",
+        "color": "yellow",
+        "state": "LOAD_GAME",
+        "image": "load_game",
+        "text_size": 24,
+    },
+    {
+        "attribute": "multiplayer_btn",
+        "text": "Multiplayer",
+        "color": "red",
+        "state": "MULTIPLAYER_MENU",
+        "image": "mail",
+        "text_size": 24,
+    },
+    {
+        "attribute": "map_editor_btn",
+        "text": "Map Editor",
+        "color": "orange",
+        "state": "MAP_EDITOR_MENU",
+        "image": "map_editor",
+        "text_size": 24,
+    },
+]
+
+MENU_BUTTON_TABLE = [
+    {
+        "attribute": "settings_btn",
+        "text": "Settings",
+        "color": "grey",
+        "state": "SETTINGS",
+        "image": "settings",
+        "text_size": 24,
+    },
+    {
+        "attribute": "music_btn",
+        "text": "Music",
+        "color": "blue",
+        "state": "MUSIC_PLAYER",
+        "image": "music",
+        "text_size": 24,
+    },
+    {
+        "attribute": "credits_btn",
+        "text": "Credits",
+        "color": "purple",
+        "state": "CREDITS",
+        "image": "credits",
+        "text_size": 24,
+    },
+    {
+        "attribute": "assets_btn",
+        "text": "Assets",
+        "color": "pink",
+        "state": "VIEW_ASSETS",
+        "image": "brush",
+        "text_size": 24,
+    },
+    {
+        "attribute": "mods_btn",
+        "text": "Mods",
+        "color": "light_blue",
+        "state": "MODS",
+        "image": "mods",
+        "text_size": 24,
+    },
+    {
+        "attribute": "translate_btn",
+        "text": "Translate",
+        "color": "white",
+        "state": "TRANSLATION_MENU",
+        "image": "export",
+        "text_size": 24,
+    }
+]
+
 MENU_WATERLINE_RATIO = 0.6
 MENU_SKY_STEPPED = False  # False gives a smooth gradient
 MENU_SKY_DITHERING = False
@@ -346,7 +434,7 @@ class Menu(Screen):
         main_table_x, main_table_y = (MENU_BUTTON_GROUP_POSITION[0], MENU_BUTTON_GROUP_POSITION[1] + 110)
         main_button_w, main_button_h = main_button_size
         main_columns = 1
-        for index, button_data in enumerate(c.MENU_MAIN_BUTTON_TABLE):
+        for index, button_data in enumerate(MENU_MAIN_BUTTON_TABLE):
             row, column = divmod(index, main_columns)
             button = Button(
                 main_table_x + column * (main_button_w + 10),
@@ -365,7 +453,7 @@ class Menu(Screen):
         table_x, table_y = MENU_BUTTON_GROUP_POSITION[0] + 210, MENU_BUTTON_GROUP_POSITION[1]
         button_w, button_h = button_size
         columns = 1
-        for index, button_data in enumerate(c.MENU_BUTTON_TABLE):
+        for index, button_data in enumerate(MENU_BUTTON_TABLE):
             row, column = divmod(index, columns)
             button = Button(
                 table_x + column * (button_w + 10),
@@ -392,8 +480,8 @@ class Menu(Screen):
         self.bottom_texts = []
         font = fonts.get("heading2")
         
-        current_y = c.MENU_BOTTOM_TEXT_START_Y
-        for item in c.MENU_BOTTOM_TEXTS:
+        current_y = MENU_BOTTOM_TEXT_START_Y
+        for item in MENU_BOTTOM_TEXTS:
             link_text = item.get("link_text", "")
             main_text = item.get("main_text", "")
             url = item.get("url")
@@ -402,8 +490,8 @@ class Menu(Screen):
             main_w = font.size(main_text)[0] if main_text else 0
             
             # Setup dedicated rectangles for click masking and isolated drawing
-            main_rect = pygame.Rect(c.MENU_BOTTOM_TEXT_START_X, current_y, main_w, font.get_height())
-            link_rect = pygame.Rect(c.MENU_BOTTOM_TEXT_START_X + main_w, current_y, font.size(link_text)[0] if link_text else 0, font.get_height())
+            main_rect = pygame.Rect(MENU_BOTTOM_TEXT_START_X, current_y, main_w, font.get_height())
+            link_rect = pygame.Rect(MENU_BOTTOM_TEXT_START_X + main_w, current_y, font.size(link_text)[0] if link_text else 0, font.get_height())
             
             self.bottom_texts.append({
                 "link_text": link_text,
@@ -414,7 +502,7 @@ class Menu(Screen):
                 "_intro_target_main_y": main_rect.y,
                 "_intro_target_link_y": link_rect.y,
             })
-            current_y += c.MENU_BOTTOM_TEXT_STEP_Y
+            current_y += MENU_BOTTOM_TEXT_STEP_Y
 
         self.version_status = "Checking version..." if not IS_WEB else "Version check unavailable"
         self.version_color = (150, 150, 150) # Grey

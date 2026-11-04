@@ -24,7 +24,7 @@ class StartupMusicTests(unittest.TestCase):
             listening_for=None, done=False, handle_events=Mock(), update=Mock(),
             draw=Mock(side_effect=lambda _surface: trace.append("draw")))
         controller = SimpleNamespace(
-            clock=Mock(), target_fps=60, beepbox_stream=None, music_handle=None,
+            clock=Mock(), target_fps=60, music=None,
             now_playing=now_playing, _web_audio_unlocked=False, keybinds={},
             init_web_audio=Mock(), _shutdown_audio=Mock(), active_state=state,
             screen=object(), show_fps=False,
@@ -37,8 +37,7 @@ class StartupMusicTests(unittest.TestCase):
               patch.object(main, "synthesize_keybind_mouse_events",
                            side_effect=lambda events, *_args, **_kwargs: events),
               patch.object(pygame.event, "get", side_effect=events),
-              patch.object(pygame.display, "flip", side_effect=lambda: trace.append("flip")),
-              patch.object(pygame.mixer.music, "get_busy", return_value=True)):
+              patch.object(pygame.display, "flip", side_effect=lambda: trace.append("flip"))):
             asyncio.run(main.Controller.run(controller))
         return controller, trace
 

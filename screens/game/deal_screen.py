@@ -200,6 +200,10 @@ class Deal_Screen(MapOverlayScreen):
     def is_peace(self):
         return self.kind == deal_mod.KIND_PEACE
 
+    @property
+    def text_input_active(self):
+        return self.active_input is not None or super().text_input_active
+
     def baseline_owners(self):
         """Who holds each province if this deal names no land at all.
 

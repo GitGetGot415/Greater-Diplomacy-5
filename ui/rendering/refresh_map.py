@@ -3,6 +3,14 @@ import numpy as np
 import data.constants as c
 from data import queries
 
+# Lakes and seas render the same color as oceans on political maps
+VISUAL_WATER_MAPPING = {
+    "ocean": "Ocean", 
+    "coastal_sea": "Ocean", 
+    "inland_sea": "Ocean", 
+    "lakes": "Ocean"
+}
+
 # Brightness applied to each shading band, indexed by the level ids assigned in
 # apply_border_shading: 0 unshaded, then edge_1, edge_3, edge_4, interior.
 _SHADE_FACTORS = (1.0, 0.7, 0.8, 0.6, 0.4)
@@ -149,8 +157,8 @@ def _map_surface_inputs(map_screen, get_owner_and_color):
     for color_key, data in map_screen.map_data.items():
         terrain_type = data.get("terrain", "plains")
 
-        if terrain_type in c.VISUAL_WATER_MAPPING:
-            owner = c.VISUAL_WATER_MAPPING[terrain_type]
+        if terrain_type in VISUAL_WATER_MAPPING:
+            owner = VISUAL_WATER_MAPPING[terrain_type]
             color = c.COLOR_CHROMA_PINK
         else:
             owner, color = get_owner_and_color(data)

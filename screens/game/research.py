@@ -24,6 +24,7 @@ from map_logic.system32.research_processor import select_research
 # LAYOUT
 # ==========================================
 
+LARGE_ICON_BUILDING_GROUPS = ["industry", "recruitment"]
 EXIT_BTN_POS = (20, 10)
 CATEGORY_BTN_START_X = 180
 CATEGORY_BTN_GAP = 5
@@ -478,7 +479,7 @@ class Research_Screen(Screen):
         self.scroll_x = 0
         self.target_scroll_x = 0
         self.min_scroll_x = self.max_scroll_x = 0
-        self.pixels_per_year = c.RESEARCH_TIMELINE_SPACING
+        self.pixels_per_year = RESEARCH_LAYOUT["pixels_per_year"]
         self.scroll_content_rect = pygame.Rect(0, HEADER_HEIGHT, c.SCREEN_WIDTH, c.SCREEN_HEIGHT - HEADER_HEIGHT)
 
         # --- Timeline scrollbar drag state ---
@@ -842,8 +843,8 @@ class Research_Screen(Screen):
             display_name = self.get_display_name(tech_key, lvl)
             entity_name = self.get_entity_name(tech_key, lvl)
             unlocks = queries.get_tech_unlocks(tech_key, lvl, context=self.map_screen, unit_unlocks=unit_unlocks)
-            is_large = (self.building_library.get(tech_key, {}).get("group") in c.LARGE_ICON_BUILDING_GROUPS or
-                        any(self.building_library.get(u, {}).get("group") in c.LARGE_ICON_BUILDING_GROUPS for u in unlocks))
+            is_large = (self.building_library.get(tech_key, {}).get("group") in LARGE_ICON_BUILDING_GROUPS or
+                        any(self.building_library.get(u, {}).get("group") in LARGE_ICON_BUILDING_GROUPS for u in unlocks))
             presentation = research_display.node_settings(
                 tech_key, self.current_category, lvl, large_icon=is_large)
             raw_btn_w, raw_btn_h = research_display.button_dimensions(presentation["button_size"])

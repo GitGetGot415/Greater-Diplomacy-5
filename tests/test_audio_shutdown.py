@@ -23,7 +23,7 @@ class HeadlessAudioTests(unittest.TestCase):
         self.assertEqual(os.environ["SDL_AUDIODRIVER"], "dummy")
         self.assertFalse(c.USE_SOLOUD)
         self.assertIsNone(ui_elements.soloud_engine)
-        self.assertIsNone(controller.beepbox_stream)
+        self.assertIsNone(controller.music)
         self.assertEqual(controller.now_playing, "None")
 
 
@@ -32,7 +32,7 @@ class AudioShutdownTests(unittest.TestCase):
         stream = SimpleNamespace(stop=Mock())
         soloud = SimpleNamespace(deinit=Mock())
         controller = object.__new__(game_main.Controller)
-        controller.beepbox_stream = stream
+        controller.music = stream
         controller.soloud = soloud
 
         with patch.object(game_main, "IS_WEB", False, create=True), \
@@ -48,7 +48,7 @@ class AudioShutdownTests(unittest.TestCase):
         stream = SimpleNamespace(stop=Mock())
         mixer = SimpleNamespace(quit=Mock())
         controller = object.__new__(game_main.Controller)
-        controller.beepbox_stream = stream
+        controller.music = stream
 
         with patch.object(game_main, "IS_WEB", True, create=True), \
                 patch.object(game_main, "c", SimpleNamespace(USE_SOLOUD=False), create=True), \

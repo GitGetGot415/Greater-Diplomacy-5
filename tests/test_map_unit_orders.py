@@ -13,6 +13,7 @@ from ui.camera import camera_handler
 from ui.widgets import ui_elements
 from ui.rendering import overlay_renderer
 from screens.game.map import Map
+from screens.game import map as map_module
 from screens.game.orders import _OrdersRowHitbox
 from screens.game import map_input
 from screens.setup import player_setup
@@ -181,7 +182,7 @@ class MapOrderTests(unittest.TestCase):
 
         center.assert_called_once_with(
             game.camera, (200, 150), c.SCREEN_WIDTH, c.SCREEN_HEIGHT,
-            game.total_ui_h, x_offset=c.ORDERS_PANEL_CAMERA_X_OFFSET)
+            game.total_ui_h, x_offset=map_module.ORDERS_PANEL_CAMERA_X_OFFSET)
 
 
 class OrdersSelectionRowsTests(unittest.TestCase):

@@ -36,6 +36,7 @@ HIDDEN_IMPORTS = (
     "data.research_display",
     "data.io.starting_defaults",
     "ui.background_styles",
+    "ui.music_playback",
     "ui.widgets.content_browser",
 )
 RUNTIME_PACKAGES = (

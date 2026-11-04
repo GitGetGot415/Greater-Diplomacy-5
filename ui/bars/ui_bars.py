@@ -10,6 +10,10 @@ from ui.background_styles import MAP_BAR_STYLES, MAP_CONFIRM_STYLES, MAP_FRAME_C
 from ui.rendering.font_manager import fonts
 from ui.widgets import text_utils, ui_elements
 
+# Yes/No confirmation buttons: size, and horizontal offset from the box centre.
+CONFIRM_BTN_SIZE = (100, 40)
+CONFIRM_BTN_DX = 130
+
 
 # Cache the images using a tuple (filename, scale, directory) as the key
 _ui_images_cache = {}
@@ -242,9 +246,9 @@ def draw_confirm_prompt(surface, box_rect, question, subtitle=None,
         sub = fonts.get("normal").render(subtitle, True, c.UI_TEXT_LIGHT)
         surface.blit(sub, sub.get_rect(center=(box_rect.centerx, box_rect.y + 85)))
 
-    btn_w, btn_h = c.CONFIRM_BTN_SIZE
+    btn_w, btn_h = CONFIRM_BTN_SIZE
     btn_y = box_rect.bottom - 70
-    yes_rect = pygame.Rect(box_rect.centerx - c.CONFIRM_BTN_DX, btn_y, btn_w, btn_h)
+    yes_rect = pygame.Rect(box_rect.centerx - CONFIRM_BTN_DX, btn_y, btn_w, btn_h)
     no_rect = pygame.Rect(box_rect.centerx + 30, btn_y, btn_w, btn_h)
 
     mouse_pos = pygame.mouse.get_pos()

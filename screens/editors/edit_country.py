@@ -20,6 +20,64 @@ from ui.rendering import country_names
 # LAYOUT
 # ==========================================
 
+# --- Editor UI Placement ---
+EDIT_COUNTRY_UI_X1 = 50
+EDIT_COUNTRY_UI_X2 = 450
+EDIT_COUNTRY_UI_X3 = 850
+
+# https://smilebasic.com/en/e-manual/manual28/
+EDITOR_COLOR_PALETTE = [
+    (0,0,0),            # Black
+    (32,32,32),         # Very Dark Grey
+    (64,64,64),         # Dark Grey
+    (96,96,96),         # Darkish Grey
+    (128,128,128),      # Grey
+    (196,196,196),      # Light Grey
+    (220,220,220),      # Very Light Grey
+    (255,255,255),      # White
+    
+    (255,96,96),        # Light Red
+    (255,200,20),       # Light Orange
+    (255,255,128),      # Light Yellow
+    (96,255,128),       # Lime
+    (128,255,255),      # Light Indigo
+    (64,64,255),        # Light Blue
+    (200,64,255),       # Light Purple
+    (255,128,255),      # Light Pink
+
+    (255,0,0),          # Red
+    (255,160,16),       # Orange
+    (255,255,32),       # Yellow
+    (0,192,0),          # Green
+    (80,200,255),       # Indigo
+    (0,0,255),          # Blue
+    (160,32,255),       # Purple
+    (255,96,208),       # Pink
+    
+    (196,0,0),          # Dark Red
+    (200,120,12),       # Dark Orange
+    (200,200,0),        # Dark Yellow
+    (0,128,0),          # Dark Green
+    (60,160,200),       # Dark Indigo
+    (0,0,196),          # Dark Blue
+    (120,16,200),       # Dark Purple
+    (200,80,160),       # Dark Pink
+
+    # (160,128,96),       # Oak Tree
+    # (255,208,160),      # White Skin
+
+    (128,0,0),          # Very Dark Red
+    (160,80,10),        # Brown
+    (128,128,0),        # Very Dark Yellow
+    (0,64,0),           # Very Dark Green
+    (32,128,160),       # Very Dark Indigo
+    (0,0,128),          # Very Dark Blue
+    (80,12,160),        # Very Dark Purple
+    (160,60,120),       # Very Dark Pink
+
+    # (128,0,128),        # Austria-Hungary
+]
+
 EDIT_COUNTRY_TITLE_X = 600
 EDIT_COUNTRY_TITLE_Y = 20
 EDIT_COUNTRY_ID_DISPLAY_X = c.SCREEN_WIDTH - 250
@@ -44,9 +102,9 @@ EDIT_COUNTRY_SIDE_TOOL_OFFSET_X = 225
 EDIT_COUNTRY_BRUSH_COLOR_Y = 60
 EDIT_COUNTRY_NULL_COLOR_Y = 105
 
-input_box_x = c.EDIT_COUNTRY_UI_X1
-second_right_ui_x = c.EDIT_COUNTRY_UI_X2
-right_ui_x = c.EDIT_COUNTRY_UI_X3
+input_box_x = EDIT_COUNTRY_UI_X1
+second_right_ui_x = EDIT_COUNTRY_UI_X2
+right_ui_x = EDIT_COUNTRY_UI_X3
 
 # (key, label, y) of each identity text field.
 EDIT_COUNTRY_FIELDS = (
@@ -90,8 +148,8 @@ def render_edit_country_buttons(edit_screen):
 
     # Flag and portrait rows are the same Export / Import / Reset triplet, so
     # they come off one spec rather than six near-identical lines.
-    for column_x, row_y, kind, attr in ((c.EDIT_COUNTRY_UI_X1, EDIT_COUNTRY_FLAG_ROW_Y, "flag", "flag"),
-                                        (c.EDIT_COUNTRY_UI_X2, EDIT_COUNTRY_PORTRAIT_ROW_Y, "portrait", "port")):
+    for column_x, row_y, kind, attr in ((EDIT_COUNTRY_UI_X1, EDIT_COUNTRY_FLAG_ROW_Y, "flag", "flag"),
+                                        (EDIT_COUNTRY_UI_X2, EDIT_COUNTRY_PORTRAIT_ROW_Y, "portrait", "port")):
         label = kind.capitalize()
         setattr(edit_screen, "btn_exp_" + attr, Button(
             column_x, row_y, "small_square", "blue", "Export " + label,
@@ -113,7 +171,7 @@ def render_edit_country_buttons(edit_screen):
     ])
 
     for i, color in enumerate(edit_screen.palette):
-        x = c.EDIT_COUNTRY_UI_X3 + (i % EDIT_COUNTRY_SWATCH_COLUMNS) * EDIT_COUNTRY_SWATCH_STEP
+        x = EDIT_COUNTRY_UI_X3 + (i % EDIT_COUNTRY_SWATCH_COLUMNS) * EDIT_COUNTRY_SWATCH_STEP
         y = EDIT_COUNTRY_SWATCH_START_Y + (i // EDIT_COUNTRY_SWATCH_COLUMNS) * EDIT_COUNTRY_SWATCH_STEP
         btn = Button(x, y, "small_square", "grey", "", lambda c_val=color: edit_screen.set_color(c_val), show_text=False)
         btn.set_colors(color)
@@ -125,16 +183,16 @@ def render_edit_country_buttons(edit_screen):
                                                     ("BRUSH", "Brush", "brush"),
                                                     ("FILL", "Fill", "paint"))):
         edit_screen.elements.append(
-            Button(c.EDIT_COUNTRY_UI_X3 + slot * EDIT_COUNTRY_ICON_STEP_X, EDIT_COUNTRY_TOOLS_ROW_Y, "small_square",
+            Button(EDIT_COUNTRY_UI_X3 + slot * EDIT_COUNTRY_ICON_STEP_X, EDIT_COUNTRY_TOOLS_ROW_Y, "small_square",
                    "blue" if edit_screen.draw_mode == tool else "grey", label,
                    lambda t=tool: edit_screen.set_tool(t), image=icons.get(icon_name), show_text=False)
         )
 
-    side_tool_x = c.EDIT_COUNTRY_UI_X3 + EDIT_COUNTRY_SIDE_TOOL_OFFSET_X
+    side_tool_x = EDIT_COUNTRY_UI_X3 + EDIT_COUNTRY_SIDE_TOOL_OFFSET_X
     edit_screen.elements.extend([
-        Button(c.EDIT_COUNTRY_UI_X3, EDIT_COUNTRY_UNDO_ROW_Y, "small_square", "grey", "Undo", edit_screen.undo),
-        Button(c.EDIT_COUNTRY_UI_X3 + EDIT_COUNTRY_ICON_STEP_X, EDIT_COUNTRY_UNDO_ROW_Y, "small_square", "grey", "Redo", edit_screen.redo),
-        Button(c.EDIT_COUNTRY_UI_X3 + EDIT_COUNTRY_RESET_OFFSET_X, EDIT_COUNTRY_MAP_COLOR_Y, "small", "orange", "Map Color", edit_screen.pick_map_color),
+        Button(EDIT_COUNTRY_UI_X3, EDIT_COUNTRY_UNDO_ROW_Y, "small_square", "grey", "Undo", edit_screen.undo),
+        Button(EDIT_COUNTRY_UI_X3 + EDIT_COUNTRY_ICON_STEP_X, EDIT_COUNTRY_UNDO_ROW_Y, "small_square", "grey", "Redo", edit_screen.redo),
+        Button(EDIT_COUNTRY_UI_X3 + EDIT_COUNTRY_RESET_OFFSET_X, EDIT_COUNTRY_MAP_COLOR_Y, "small", "orange", "Map Color", edit_screen.pick_map_color),
         Button(side_tool_x, EDIT_COUNTRY_BRUSH_COLOR_Y, "small_square", "light_grey", "Brush Color", edit_screen.pick_custom_brush_color, image=icons.get("colors"), show_text=False),
         Button(side_tool_x, EDIT_COUNTRY_NULL_COLOR_Y, "small_square", "light_grey", "Null Color", lambda: edit_screen.set_color((0, 0, 0, 0)), image=icons.get("red_line"), show_text=False)
     ])
@@ -191,7 +249,7 @@ class Edit_Country_Screen(Screen):
         self.orig_leader_title = ""
         self.orig_map_color = list(DEFAULT_NATION_COLOR)
         
-        self.palette = c.EDITOR_COLOR_PALETTE
+        self.palette = EDITOR_COLOR_PALETTE
 
     def on_enter(self, app, previous):
         self.start_editor(app.states["MAP"])

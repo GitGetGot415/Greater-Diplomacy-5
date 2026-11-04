@@ -13,6 +13,13 @@ from map_logic.ai import ai_handler
 from screens.menus.keybinds import default_keybinds
 
 
+# --- Unified Settings UI Layout ---
+SETTINGS_BOX_X = 140
+SETTINGS_KEY_BOX_Y = c.SCREEN_HEIGHT - 130
+SETTINGS_MOD_BOX_Y = c.SCREEN_HEIGHT - 60
+SETTINGS_BOX_W = 320
+SETTINGS_BOX_H = 40
+
 # --- Settings screen button layout ---
 SETTINGS_RIGHT_COL_X = c.SCREEN_WIDTH - 260
 SETTINGS_CHECKERBOARD_COLOR = (60, 60, 60)
@@ -170,10 +177,10 @@ def render_settings_buttons(settings_screen):
 
         # Clear buttons use the same rows as the editable fields. The model row
         # also has a Default button to the right of its clear button.
-        clear_x = c.SETTINGS_BOX_X + c.SETTINGS_BOX_W + SETTINGS_CLEAR_BTN_GAP_X
+        clear_x = SETTINGS_BOX_X + SETTINGS_BOX_W + SETTINGS_CLEAR_BTN_GAP_X
         default_x = clear_x + c.SIZES["small_square"][0] + SETTINGS_CLEAR_BTN_GAP_X
         for box_type, box_y, _label in settings_screen.ai_field_rows():
-            field = TextField(c.SETTINGS_BOX_X, box_y, c.SETTINGS_BOX_W, c.SETTINGS_BOX_H,
+            field = TextField(SETTINGS_BOX_X, box_y, SETTINGS_BOX_W, SETTINGS_BOX_H,
                               settings_screen.get_field(box_type),
                               max_length=c.MAX_MODEL_NAME_LENGTH if box_type == "MOD" else c.MAX_API_KEY_LENGTH,
                               on_change=lambda text, b=box_type: settings_screen.set_field(b, text), pad_x=5)
@@ -356,10 +363,10 @@ class Settings(Screen):
         """Share field positions and labels across rendering and input handling."""
         provider_name = self.AI_PROVIDER_LABELS.get(self.ai_mode, self.ai_mode.capitalize())
         return [
-            ("KEY", c.SETTINGS_KEY_BOX_Y,
+            ("KEY", SETTINGS_KEY_BOX_Y,
              "Ollama Base URL (blank = localhost):" if self.ai_mode == "OLLAMA"
              else f"Paste {provider_name} API Key:"),
-            ("MOD", c.SETTINGS_MOD_BOX_Y, f"{provider_name} Model Name:"),
+            ("MOD", SETTINGS_MOD_BOX_Y, f"{provider_name} Model Name:"),
         ]
 
     def field_attr(self, box_type):
@@ -373,6 +380,10 @@ class Settings(Screen):
             if field.active:
                 return f"{self.ai_mode}_{box_type}"
         return None
+
+    @property
+    def text_input_active(self):
+        return self.active_input is not None or super().text_input_active
 
     def get_field(self, box_type):
         return getattr(self, f"{self.field_attr(box_type)}_text", "")
@@ -650,7 +661,7 @@ class Settings(Screen):
             return
 
         for _box_type, box_y, label in self.ai_field_rows():
-            surface.blit(font.render(label, True, c.UI_TEXT_LIGHT), (c.SETTINGS_BOX_X, box_y - 25))
+            surface.blit(font.render(label, True, c.UI_TEXT_LIGHT), (SETTINGS_BOX_X, box_y - 25))
 
     def set_players(self, val):
         self.num_players = 1 + int(val * 7)

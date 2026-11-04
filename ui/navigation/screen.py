@@ -81,17 +81,12 @@ def synthesize_keybind_mouse_events(events, keybinds=None, allow_keydown=True):
     return translated
 
 def keyboard_input_is_captured(state):
-    """Whether keyboard input belongs to an active text or key-capture field."""
-    return (
-        bool(getattr(state, "listening_for", None))
-        or bool(getattr(state, "active_input", None))
-        or bool(getattr(state, "mail_input_active", False))
-        or getattr(state, "renaming_unit_index", None) is not None
-        or bool(getattr(state, "text_input_active", False))
-        or bool(getattr(state, "army_editor_state", None))
-        or bool(getattr(getattr(state, "map_screen", None),
-                        "army_editor_state", None))
-    )
+    """Whether keyboard input belongs to an active text or key-capture field.
+
+    Screens answer through Screen.text_input_active. The getattr is for the
+    dialogs on the modal stack, which are not Screens and never capture keys.
+    """
+    return bool(getattr(state, "text_input_active", False))
 
 
 def dispatch_global_keys(state, event):
@@ -152,6 +147,9 @@ class Screen:
     map_screen = None
     # Where exit_screen() sends the state machine. None just closes the screen.
     back_state = None
+    # Truthy while a field must receive every key, BACK and FULLSCREEN included.
+    # A screen sets it or overrides it with a property.
+    listening_for = None
     # Pixels per wheel notch: panels layered on the map, and full-screen menu lists.
     scroll_speed = 30
     list_scroll_speed = 40
@@ -189,6 +187,18 @@ class Screen:
         self.next_state = None
         self.elements = []
         self.bg_image_path = None # Added support for generic background images
+
+    @property
+    def text_input_active(self):
+        """Whether a text or key-capture field owns the keyboard.
+
+        While it is true, rebindable keys other than BACK do not fire and do not
+        synthesize mouse clicks. A screen with its own text state overrides this
+        and includes super().text_input_active. The army-name editor on the host
+        map counts for every screen layered over that map. A modal opened from a
+        menu hosts on that menu, which has no army editor; hence the getattr.
+        """
+        return bool(self.listening_for or getattr(self.map_screen, "army_editor_state", None))
 
     def on_enter(self, app, previous):
         """Prepare this screen when the controller makes it the active screen."""

@@ -89,6 +89,10 @@ def _delete_relay_safely(token, droplet_id, firewall_id=None):
 
 # --- Map view toggles (bottom-left grid) ---
 
+# How far (in screen pixels) to shift the camera left when a province is selected,
+# so the orders panel doesn't cover the unit the camera just centered on.
+ORDERS_PANEL_CAMERA_X_OFFSET = 0
+
 UP_RIGHT_OFFSET = 3
 VIEW_BTN_START_X = 10 + UP_RIGHT_OFFSET
 VIEW_BTN_STEP_X = 50
@@ -1812,6 +1816,10 @@ class Map(StateAccess, Screen):
 
     # --- Properties ---
     @property
+    def text_input_active(self):
+        return bool(self.mail_input_active or self.army_editor_state) or super().text_input_active
+
+    @property
     def player_manpower(self):
         if self.tactical_mode: return self.unit_economy.get("manpower", 0)
         return self.nation_data.get(self.player_country, {}).get("manpower", 0)
@@ -1988,7 +1996,7 @@ class Map(StateAccess, Screen):
             return False
         camera_handler.center_camera_on_province(
             self.camera, center, c.SCREEN_WIDTH, c.SCREEN_HEIGHT,
-            self.total_ui_h, x_offset=c.ORDERS_PANEL_CAMERA_X_OFFSET)
+            self.total_ui_h, x_offset=ORDERS_PANEL_CAMERA_X_OFFSET)
         return True
 
     def trigger_multi_turn(self):

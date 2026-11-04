@@ -85,6 +85,7 @@ def _import_project_modules():
     """
     global IS_WEB, restore_persisted_dir, platform, pygame
     global Messages_Screen, dispatch_global_keys, synthesize_keybind_mouse_events, keyboard_input_is_captured, fonts, ui_elements, ui_bars, c, queries
+    global music_playback
     global Load_Game, Map, Menu, New_Game, Settings, Credits, Music_Player, View_Assets, Mods, Unit_Art, Keybinds, Mouse_Settings, Edit_Portrait, default_keybinds
     global Translate, Translation_Menu, Greater_Diplomacy_4_Translation, Greater_Diplomacy_Hex_Translation
     global Orders_Screen, keybind_io, settings_schema, symbol_loader, modal_stack
@@ -129,6 +130,7 @@ def _import_project_modules():
                            keyboard_input_is_captured)
     from ui.rendering.font_manager import fonts
     from ui.widgets import ui_elements
+    from ui import music_playback
     from ui.bars import ui_bars
     import data.constants as c
     from data import queries
@@ -184,7 +186,8 @@ def _import_project_modules():
 
 class Controller:
     soloud = None
-    music_handle = None
+    # The playback object for the current track: see ui/music_playback.py.
+    music = None
     last_toggle_time = None
     is_fullscreen = False
 
@@ -227,7 +230,6 @@ class Controller:
                 from soloud import Soloud, Wav, WavStream
                 self.soloud = Soloud()
                 self.soloud.init()
-                self.music_handle = None
                 self.music_stream = WavStream()
                 ui_elements.soloud_engine = self.soloud
 
@@ -354,7 +356,6 @@ class Controller:
         self.playlist = []
         self.shuffle_disabled_tracks = set()
         self.now_playing = "None"
-        self.beepbox_stream = None
         self._failed_beepbox_tracks = set()
         self.starting_song = None
         self.track_start_times = {} # Keeps track of offsets specified in start_times.json
@@ -584,13 +585,9 @@ class Controller:
         ]
         if not available_tracks:
             self.now_playing = "None"
-            if self.beepbox_stream is not None:
-                self.beepbox_stream.stop()
-                self.beepbox_stream = None
-            if c.USE_SOLOUD and self.music_handle is not None:
-                self.soloud.stop(self.music_handle)
-            elif not c.USE_SOLOUD:
-                pygame.mixer.music.stop()
+            if self.music is not None:
+                self.music.stop()
+                self.music = None
             return
 
 
@@ -605,18 +602,6 @@ class Controller:
 
         self.play_specific_song(track)
 
-    def _load_soloud_stream_unicode_safe(self, track_path):
-        # WavStream.load() passes the path through fopen() via the C runtime,
-        # which reads it in the OS ANSI codepage instead of UTF-8 on Windows --
-        # non-ASCII filenames/titles (e.g. Japanese) silently fail to open.
-        # Reading the bytes with Python (Unicode-path-safe) and streaming them
-        # in via load_mem() avoids that codepage round-trip.
-        import ctypes
-        with open(track_path, 'rb') as f:
-            data = f.read()
-        buf = (ctypes.c_ubyte * len(data)).from_buffer_copy(data)
-        self.music_stream.load_mem(buf, len(data), aCopy=True, aTakeOwnership=False)
-
     @staticmethod
     def _beepbox_audio_fallback(song_path):
         """Find a packaged audio counterpart when a BeepBox synth cannot start."""
@@ -630,15 +615,12 @@ class Controller:
             start_time = self.track_start_times.get(track_path, 0.0)
 
             import beepbox_audio
+            speed = 0.5 + self.music_pitch
+            # A track that fails to start leaves the stopped playback here. It
+            # reports that it finished, so run() moves on to another song.
+            if self.music is not None:
+                self.music.stop()
             if track_path.lower().endswith(".json") and beepbox_audio.is_beepbox_song(track_path):
-                if self.beepbox_stream is not None:
-                    self.beepbox_stream.stop()
-                    self.beepbox_stream = None
-                if c.USE_SOLOUD and self.music_handle is not None:
-                    self.soloud.stop(self.music_handle)
-                    self.music_handle = None
-                elif not c.USE_SOLOUD:
-                    pygame.mixer.music.stop()
                 stream_type = (
                     beepbox_audio.WebBeepBoxStream if IS_WEB
                     else beepbox_audio.BeepBoxStream
@@ -648,40 +630,20 @@ class Controller:
                 # differs when the user elected the static source-time timeline.
                 beepbox_start_time = start_time
                 if self.music_pitch_timeline == c.MUSIC_PITCH_TIMELINE_STATIC:
-                    beepbox_start_time /= 0.5 + self.music_pitch
-                self.beepbox_stream = stream_type(
+                    beepbox_start_time /= speed
+                self.music = music_playback.BeepBoxPlayback(stream_type(
                     track_path,
                     volume=self.music_volume,
-                    speed=0.5 + self.music_pitch,
+                    speed=speed,
                     start_time=beepbox_start_time,
-                )
-                self.now_playing = track_path
-                return
-
-            if self.beepbox_stream is not None:
-                self.beepbox_stream.stop()
-                self.beepbox_stream = None
-
-            if c.USE_SOLOUD:
-                if self.music_handle is not None:
-                    self.soloud.stop(self.music_handle)
-
-                self._load_soloud_stream_unicode_safe(track_path)
-                self.music_handle = self.soloud.play(self.music_stream)
-
-                # Apply SoLoud Seek
-                if start_time > 0:
-                    self.soloud.seek(self.music_handle, start_time)
-
-                self.soloud.set_volume(self.music_handle, self.music_volume)
-                # Mathematical tweak to center speed variance directly on 0.5 input
-                speed_mult = 0.5 + self.music_pitch
-                self.soloud.set_relative_play_speed(self.music_handle, speed_mult)
+                ))
+            elif c.USE_SOLOUD:
+                self.music = music_playback.SoLoudPlayback(
+                    self.soloud, self.music_stream, track_path,
+                    start_time, self.music_volume, speed)
             else:
-                pygame.mixer.music.load(track_path)
-                # Apply Pygame Mixer Seek
-                pygame.mixer.music.play(start=start_time)
-                pygame.mixer.music.set_volume(self.music_volume)
+                self.music = music_playback.PygamePlayback(
+                    track_path, start_time, self.music_volume)
 
             self.now_playing = track_path
         except Exception as e:
@@ -703,8 +665,8 @@ class Controller:
             # skip teardown that can deadlock and terminate directly instead.
             os._exit(0)
 
-        if self.beepbox_stream is not None:
-            self.beepbox_stream.stop()
+        if self.music is not None:
+            self.music.stop()
         if c.USE_SOLOUD and self.soloud is not None:
             self.soloud.deinit()
         elif not c.USE_SOLOUD:
@@ -737,40 +699,27 @@ class Controller:
             # --- THE MAGIC CPU FIX ---
             self.clock.tick(self.target_fps)
 
-            # --- HYBRID SONG END CHECK ---
-            if self.beepbox_stream is not None:
-                stream = self.beepbox_stream
-                stream.update()
-                if stream.error is not None:
+            # --- SONG END CHECK ---
+            music = self.music
+            if music is not None:
+                music.update()
+                if music.error is not None:
+                    # Only a BeepBox synthesizer reports an error.
                     failed_track = self.now_playing
-                    stream.stop()
-                    self.beepbox_stream = None
+                    music.stop()
+                    self.music = None
                     self._failed_beepbox_tracks.add(failed_track)
                     fallback = self._beepbox_audio_fallback(failed_track)
                     if fallback:
                         extension = os.path.splitext(fallback)[1][1:].upper()
-                        print(f"BeepBox playback failed ({stream.error}); using the {extension} fallback.")
+                        print(f"BeepBox playback failed ({music.error}); using the {extension} fallback.")
                         self.play_specific_song(fallback)
                     else:
-                        print(f"BeepBox playback failed: {stream.error}")
+                        print(f"BeepBox playback failed: {music.error}")
                         self.play_random_song()
                     if self.active_state == self.states.get("MUSIC_PLAYER"):
                         self.states["MUSIC_PLAYER"].refresh_ui()
-                elif stream.finished:
-                    stream.stop()
-                    self.beepbox_stream = None
-                    self.play_random_song()
-                    if self.active_state == self.states.get("MUSIC_PLAYER"):
-                        self.states["MUSIC_PLAYER"].refresh_ui()
-            elif c.USE_SOLOUD:
-                # FIX: Check self.now_playing != "None" to prevent infinite loops when playlist is empty
-                if self.music_handle is not None and self.now_playing != "None":
-                    if not self.soloud.is_valid_voice_handle(self.music_handle):
-                        self.play_random_song()
-                        if self.active_state == self.states.get("MUSIC_PLAYER"):
-                            self.states["MUSIC_PLAYER"].refresh_ui()
-            else:
-                if self.now_playing != "None" and not pygame.mixer.music.get_busy():
+                elif music.finished:
                     self.play_random_song()
                     if self.active_state == self.states.get("MUSIC_PLAYER"):
                         self.states["MUSIC_PLAYER"].refresh_ui()

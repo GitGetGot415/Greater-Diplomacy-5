@@ -6,6 +6,12 @@ from ui.rendering.font_manager import fonts
 
 from ui.rendering import map_utils
 
+# Toggle this to False if you want to strictly hide names on areas <= 3 provinces
+SHOW_SMALL_TERRITORY_NAMES = False
+
+NAME_MIN_TILES_TO_SHOW = 3      # when to ignore showing islands
+NAME_ABS_MIN_TILES_TO_SHOW = 1  # if a country only has this many tiles
+
 
 # A name's source surface, landmass geometry, zoom and tilt completely define
 # its transformed pixels.  Retain the modest set visible at nearby zoom levels
@@ -130,19 +136,19 @@ def draw_country_names(map_screen, surface):
                     # This allows the faction name to appear on EVERY country in the faction, 
                     # rather than just once for the whole faction!
 
-                    if blob["count"] <= c.NAME_MIN_TILES_TO_SHOW:
+                    if blob["count"] <= NAME_MIN_TILES_TO_SHOW:
                         if country in drawn_countries:
                             continue
-                        if blob["count"] < c.NAME_ABS_MIN_TILES_TO_SHOW and not c.SHOW_SMALL_TERRITORY_NAMES:
+                        if blob["count"] < NAME_ABS_MIN_TILES_TO_SHOW and not SHOW_SMALL_TERRITORY_NAMES:
                             continue
                         
                     surf, shadow = map_screen.faction_name_surfs.get(country, (None, None))
                 else:
                     # Skip small island groups based on the toggle and if the country already has a name
-                    if blob["count"] <= c.NAME_MIN_TILES_TO_SHOW:
+                    if blob["count"] <= NAME_MIN_TILES_TO_SHOW:
                         if country in drawn_countries:
                             continue
-                        if blob["count"] < c.NAME_ABS_MIN_TILES_TO_SHOW and not c.SHOW_SMALL_TERRITORY_NAMES:
+                        if blob["count"] < NAME_ABS_MIN_TILES_TO_SHOW and not SHOW_SMALL_TERRITORY_NAMES:
                             continue
                     
                     surf, shadow = map_screen.country_name_surfs.get(country, (None, None))

@@ -138,7 +138,7 @@ class AlbumTileTests(unittest.TestCase):
             is_shuffle_disabled=lambda path: False,
             sfx_volume=0.5, sfx_pitch=0.5, music_volume=0.5, music_pitch=0.5,
             music_pitch_timeline=c.MUSIC_PITCH_TIMELINE_STATIC,
-            starting_song=None, is_paused=False,
+            starting_song=None, music=None,
             load_music_data=mock.Mock(),
         )
         player = object.__new__(Music_Player)

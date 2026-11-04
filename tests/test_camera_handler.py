@@ -7,6 +7,7 @@ from unittest.mock import patch
 import pygame
 
 from data import constants as c
+from ui.camera import camera_handler
 from ui.camera.camera_handler import MapCamera
 
 
@@ -117,9 +118,9 @@ class MapCameraBoundsTests(unittest.TestCase):
         camera.handle_input(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_DOWN),
                             self_map, False)
 
-        self.assertEqual(camera.target_pos.x, c.CAMERA_KEYBOARD_PAN_PIXELS / camera.zoom)
+        self.assertEqual(camera.target_pos.x, camera_handler.CAMERA_KEYBOARD_PAN_PIXELS / camera.zoom)
         self.assertEqual(camera.target_pos.y,
-                         c.CAMERA_KEYBOARD_PAN_PIXELS / (camera.zoom * camera.tilt_factor))
+                         camera_handler.CAMERA_KEYBOARD_PAN_PIXELS / (camera.zoom * camera.tilt_factor))
 
     def test_rebound_pan_key_moves_in_its_configured_direction(self):
         camera = MapCamera(min_zoom=2)
@@ -135,7 +136,7 @@ class MapCameraBoundsTests(unittest.TestCase):
                                 self_map, False)
 
         self.assertEqual(camera.target_pos.x,
-                         -c.CAMERA_KEYBOARD_PAN_PIXELS / camera.zoom)
+                         -camera_handler.CAMERA_KEYBOARD_PAN_PIXELS / camera.zoom)
 
     def test_held_arrow_key_pans_continuously_without_key_repeat_delay(self):
         camera = MapCamera(min_zoom=2)
@@ -158,8 +159,8 @@ class MapCameraBoundsTests(unittest.TestCase):
             camera.update(self_map, 720)
 
         expected_screen_distance = (
-            c.CAMERA_KEYBOARD_PAN_PIXELS
-            + c.CAMERA_KEYBOARD_PAN_PIXELS_PER_SECOND * 0.05)
+            camera_handler.CAMERA_KEYBOARD_PAN_PIXELS
+            + camera_handler.CAMERA_KEYBOARD_PAN_PIXELS_PER_SECOND * 0.05)
         self.assertEqual(camera.target_pos.x,
                          expected_screen_distance / camera.zoom)
 

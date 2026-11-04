@@ -4,6 +4,10 @@ import copy
 import data.constants as c
 from data.state_access import world_for, session_for
 from data import queries
+from data.queries.unit_info import get_base_unit_name, units_with_air_cargo
+from data.queries.units import apply_library_stats
+from data.queries.saves import normalized_scenario_metadata
+from data.queries.files import validated_scenario_name
 
 
 def get_editor_paint_region(province, id_to_province, mode):
@@ -113,8 +117,8 @@ def set_editor_metadata(context, name, author, description):
     """Apply scenario information only in an idle local editor."""
     if not can_bulk_edit_map(context):
         raise ValueError("Metadata changes require an idle local map editor.")
-    name = queries.validated_scenario_name(name)
-    metadata = queries.normalized_scenario_metadata({"author": author, "description": description})
+    name = validated_scenario_name(name)
+    metadata = normalized_scenario_metadata({"author": author, "description": description})
     world_for(context).scenario_metadata.update(metadata)
     session_for(context).editor_scenario_name = name
 
@@ -196,12 +200,12 @@ def set_editor_units(context, mode, value):
     changes = []
     skipped = 0
     for province in world_for(context).map_data.values():
-        for unit in queries.units_with_air_cargo(province.get("units", [])):
+        for unit in units_with_air_cargo(province.get("units", [])):
             current = unit.get("original_type", unit.get("type"))
             if current not in library:
                 skipped += 1
                 continue
-            family = queries.get_base_unit_name(current, library, context=context)
+            family = get_base_unit_name(current, library, context=context)
             target = targets.get(family)
             if target is None:
                 skipped += 1
@@ -216,7 +220,7 @@ def set_editor_units(context, mode, value):
                 unit["type"] = f"{transport} ({target})"
             else:
                 unit["type"] = target
-            queries.apply_library_stats(unit, library)
+            apply_library_stats(unit, library)
             unit["order"] = {}
         context.queue_editor_visual_refresh()
     return len(changes), skipped

@@ -100,7 +100,7 @@ class ContentBrowserScreen(ScrollPanes, RefreshingMenuListScreen, FolderListStat
 
     @property
     def text_input_active(self):
-        return self.search_field.active
+        return self.search_field.active or super().text_input_active
 
     def finish_search(self):
         self.search_field.active = False

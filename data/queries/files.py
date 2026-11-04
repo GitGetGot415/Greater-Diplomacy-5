@@ -9,6 +9,8 @@ import shutil
 import zipfile
 import beepbox_audio
 from data.queries.tech import get_tech_requirements
+from data.queries.countries import get_country_display_name
+from data.queries.saves import normalized_scenario_metadata
 from data import queries
 from data import migrations
 
@@ -39,7 +41,7 @@ def read_saved_content_summary(directory):
         if not isinstance(meta, dict):
             raise ValueError("meta.json must contain an object.")
         migrations.check_version(meta.get("version"))
-        metadata = queries.normalized_scenario_metadata(meta.get("scenario_metadata", {}))
+        metadata = normalized_scenario_metadata(meta.get("scenario_metadata", {}))
     except (OSError, ValueError) as error:
         result["error"] = f"Cannot open this item: {error}"
         return result
@@ -64,7 +66,7 @@ def read_saved_content_summary(directory):
             saved_nations = meta.get("nation_data", {})
             if isinstance(saved_nations, dict):
                 nations.update({key: value for key, value in saved_nations.items() if value})
-            details.append(f"Player: {queries.get_country_display_name(country, nations)}")
+            details.append(f"Player: {get_country_display_name(country, nations)}")
     if meta.get("version"):
         details.append(f"Game version: {meta['version']}")
     if metadata["author"]:
