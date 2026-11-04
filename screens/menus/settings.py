@@ -4,6 +4,7 @@ from ui.widgets.ui_elements import Button, Slider, TextField, make_info_button, 
 from ui.navigation.screen import Screen
 import data.constants as c
 from data import queries
+from data.io import settings_schema
 from ui.dialogs import pickers
 from ui.rendering.font_manager import fonts
 from ui.bars import ui_bars
@@ -167,8 +168,10 @@ def render_settings_buttons(settings_screen):
             for y, level in zip(SETTINGS_AI_IMMERSION_ROWS_Y, c.AI_IMMERSION_LEVELS)
         ], settings_screen.set_ai_immersion_level, settings_screen.ai_immersion_level, color="red"))
 
-        # Clear buttons use the same rows as the editable fields.
+        # Clear buttons use the same rows as the editable fields. The model row
+        # also has a Default button to the right of its clear button.
         clear_x = c.SETTINGS_BOX_X + c.SETTINGS_BOX_W + SETTINGS_CLEAR_BTN_GAP_X
+        default_x = clear_x + c.SIZES["small_square"][0] + SETTINGS_CLEAR_BTN_GAP_X
         for box_type, box_y, _label in settings_screen.ai_field_rows():
             field = TextField(c.SETTINGS_BOX_X, box_y, c.SETTINGS_BOX_W, c.SETTINGS_BOX_H,
                               settings_screen.get_field(box_type),
@@ -180,6 +183,10 @@ def render_settings_buttons(settings_screen):
                 Button(clear_x, box_y, "small_square", "red", "X",
                        lambda b=box_type: settings_screen.clear_input(b)),
             ])
+            if box_type == "MOD":
+                settings_screen.elements.append(
+                    Button(default_x, box_y, "small", "blue", "Default",
+                           settings_screen.reset_model_default))
 
     # Sliders
     settings_screen.checkerboard_gradient_slider = Slider(
@@ -474,6 +481,11 @@ class Settings(Screen):
     def clear_input(self, box_type):
         """Generic method to clear the currently visible input box."""
         self.set_field(box_type, "")
+        self.refresh_ui()
+
+    def reset_model_default(self):
+        """Sets the active provider's model to the default a new settings file gets."""
+        self.set_field("MOD", settings_schema.defaults()[self.field_attr("MOD")])
         self.refresh_ui()
 
     def refresh_ui(self):

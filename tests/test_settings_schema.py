@@ -416,6 +416,28 @@ class SettingsScreenTests(unittest.TestCase):
             screen.clear_input("KEY")
         self.assertEqual(controller.ollama_base_url, "")
 
+    def test_default_button_restores_each_providers_model(self):
+        """A saved model is never replaced on load, so this is how a player
+        moves off an old one, such as the retired claude-3-haiku-20240307."""
+        import pygame
+        from types import SimpleNamespace
+        from screens.menus.settings import Settings
+        pygame.font.init()
+        defaults = settings_schema.defaults()
+        for mode in Settings.AI_MODES[1:]:
+            with self.subTest(mode=mode):
+                controller = SimpleNamespace(**defaults, keybinds={})
+                controller.ai_mode = mode
+                with mock.patch("screens.menus.settings.queries.get_settings", return_value={}):
+                    screen = Settings(controller)
+                    screen.set_field("KEY", "kept-key")
+                    screen.set_field("MOD", "player-chosen-model")
+                    next(item for item in screen.elements if item.text == "Default").callback()
+                model_attr = screen.field_attr("MOD")
+                self.assertEqual(getattr(controller, model_attr), defaults[model_attr])
+                self.assertEqual(screen.get_field("MOD"), defaults[model_attr])
+                self.assertEqual(getattr(controller, screen.field_attr("KEY")), "kept-key")
+
     def test_show_unclaimed_defaults_on_for_older_settings(self):
         self.assertTrue(settings_schema.defaults()["show_unclaimed"])
         self.assertTrue(settings_schema.from_json_dict({"show_fps": False})["show_unclaimed"])

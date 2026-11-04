@@ -40,6 +40,9 @@ OPENROUTER SETTINGS
 
 Select OpenRouter in Settings to enter an OpenRouter API key and model ID.
 The model field accepts other OpenRouter models.
+Each provider's model field has a Default button to the right of its X button.
+Default sets that provider's model to its default in data/io/settings_schema.py.
+The game never replaces a saved model. A saved model that the provider retired stays until the player changes it.
 Ling remains the default model.
 The provider ID is OPENROUTER. Its settings keys are openrouter_api_key and openrouter_model.
 Use OLLAMA for installed local models.
