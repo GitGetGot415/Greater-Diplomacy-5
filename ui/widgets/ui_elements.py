@@ -35,7 +35,7 @@ MUSIC_UI_SOUND_PATHS = {
     "send_message": "assets/sounds/Send Message.mp3",
     "delete_message": "assets/sounds/Delete Message.mp3",
     "open_settings": "assets/sounds/Open Settings.mp3",
-    "open_mail": "assets/sounds/Open Mail.mp3",
+    "new_contact": "assets/sounds/New Contact.mp3",
     "info": "assets/sounds/Info.mp3",
     "create_army": "assets/sounds/Create Army.mp3",
     "research": "assets/sounds/Research.mp3",
