@@ -1,6 +1,6 @@
 """Convert older Greater Diplomacy 5 (GD5) data to the current formats.
 
-Every conversion of older GD5 data lives in this package. See documentation/data_migrations.txt.
+Every conversion of older GD5 data lives in this package. See data/migrations/MIGRATIONS.md.
 
 versions.py       Version stamps and the conversion entry points, upgrade_save and upgrade_move.
 conversions.py    Every conversion rule for older saves and moves. Every rule runs on every load.
