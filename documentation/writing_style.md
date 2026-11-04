@@ -14,6 +14,12 @@ The user's requested format and wording take priority.
 - Do not expand a simple idea into extra requirements, advice, or related projects unless requested.
 - Remove filler, repeated explanations, and background that the reader does not need.
 - Use the same term for the same thing. Explain unfamiliar abbreviations when the reader needs them.
+- Say which kind of schema you mean. Never write "schema" alone. This repository has several kinds:
+  - LLM reply schemas: the allowed fields and values of a model reply, which Ollama enforces. See `documentation/llm_ai.txt`.
+  - The settings schema: the settings keys, aliases, and coercion in `data/io/settings_schema.py`.
+  - Save and move formats: the shapes of saved data that the migrations convert. See `data/migrations/MIGRATIONS.md`.
+
+  For example, write "the LLM reply schema for letters" or "the settings schema", not "the schema".
 - Preserve exact paths, identifiers, commands, formulas, protocol values, and UI labels.
 - Use normal punctuation in prose. Keep labels and list fragments consistent with their surrounding text.
 - Preserve third-party licenses, quotations, and archived source data.

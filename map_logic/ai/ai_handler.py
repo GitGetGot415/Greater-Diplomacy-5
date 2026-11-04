@@ -222,12 +222,40 @@ def abort_ai_generation():
 
     # 2. Tell Ollama to abort and unload to free up the GPU immediately
     if get_ai_mode() == "OLLAMA":
-        try:
-            url = get_ollama_url().replace("/api/chat", "/api/generate")
-            # A tiny 0.1s timeout so the Pygame UI doesn't hang if Ollama's HTTP queue is saturated
-            requests.post(url, json={"model": get_ollama_model(), "prompt": "", "keep_alive": 0}, timeout=(0.1, 0.1))
-        except Exception:
-            pass
+        # A tiny 0.1s timeout so the Pygame UI doesn't hang if Ollama's HTTP queue is saturated
+        _unload_ollama_model(get_ollama_url(), get_ollama_model(), (0.1, 0.1))
+
+
+#: (chat URL, model) for every Ollama model this session has sent a request to.
+#: Quitting the game unloads each of them (see unload_ollama_models).
+_OLLAMA_MODELS_USED = set()
+
+#: How long quitting waits for Ollama to connect and to answer one unload
+#: request, in seconds. Ollama answers once the model is out of memory.
+OLLAMA_UNLOAD_TIMEOUT = (0.5, 3)
+
+
+def _unload_ollama_model(chat_url, model, timeout):
+    """Asks Ollama to unload `model` now. A request with keep_alive 0 does that."""
+    if requests is None:
+        return    # The web build has no Ollama connection.
+    try:
+        requests.post(chat_url.replace("/api/chat", "/api/generate"),
+                      json={"model": model, "prompt": "", "keep_alive": 0}, timeout=timeout)
+    except requests.RequestException:
+        pass    # Ollama is not running or did not answer in time.
+
+
+def unload_ollama_models():
+    """Unloads every Ollama model this session used. The game calls this when it quits.
+
+    Ollama runs as its own program, so closing the game does not unload a
+    model. Without this, the model would hold its memory until
+    OLLAMA_KEEP_ALIVE ran out.
+    """
+    for chat_url, model in list(_OLLAMA_MODELS_USED):
+        _unload_ollama_model(chat_url, model, OLLAMA_UNLOAD_TIMEOUT)
+    _OLLAMA_MODELS_USED.clear()
 
 def _provider_error(message):
     """A provider failure, flagged so callers can tell it from a real answer.
@@ -540,7 +568,7 @@ OLLAMA_CONTEXT_TOKENS = 8192
 #: is five minutes, and a player can plan a turn for longer than that. The next
 #: AI phase would then load the model again and read the whole world from the
 #: start: about 18 seconds per call instead of 5 on one local llama3.
-OLLAMA_KEEP_ALIVE = "30m"
+OLLAMA_KEEP_ALIVE = "60m"
 
 #: A reply that has fallen into a loop: its last OLLAMA_REPEAT_MIN_CHARACTERS
 #: characters or more are one block of at most OLLAMA_REPEAT_MAX_BLOCK
@@ -586,6 +614,7 @@ def call_ollama(system_prompt, user_prompt, turn_id=None, schema=None):
     parsed_url = urllib.parse.urlparse(url_str)
 
     model_name = get_ollama_model()
+    _OLLAMA_MODELS_USED.add((url_str, model_name))
 
     # The world goes first and the instructions last, which is the whole reason
     # a turn is affordable here -- see _combined_prompt.

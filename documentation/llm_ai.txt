@@ -104,15 +104,15 @@ MODEL DECISIONS
 The game discards illegal model requests.
 A rumor in the global log can still show the attempted action.
 
-Each request also sends the JSON schema of its reply.
+Each request also sends a reply schema: a JSON Schema description of the reply's fields and their allowed values.
 ai_director.reply_schema, ai_letters.reply_schema, ai_prompts.reply_schema, and ai_prompts.MESSAGE_SCHEMA build them.
-A schema lists the allowed option IDs, letter recipients, actions, targets, and opinion limits.
-Only Ollama receives the schema. Ollama enforces it during generation for models that match OLLAMA_JSON_SUPPORTED_MODELS.
+A reply schema lists the allowed option IDs, letter recipients, actions, targets, and opinion limits.
+Only Ollama receives the reply schema. Ollama enforces it during generation for models that match OLLAMA_JSON_SUPPORTED_MODELS.
 Other Ollama models get no format.
-Hosted providers keep their plain JSON mode. Their schema support differs by provider and model.
-Also, a schema that differs for each country could stop a hosted provider from reusing the shared prefix.
-The game still checks every reply, whether or not a schema constrained it.
-ai_prompts.REPLY_ACTIONS supplies both the prompt's action list and the schema's action list.
+Hosted providers keep their plain JSON mode. Their support for reply schemas differs by provider and model.
+Also, a reply schema that differs for each country could stop a hosted provider from reusing the shared prefix.
+The game still checks every reply, whether or not a reply schema constrained it.
+ai_prompts.REPLY_ACTIONS supplies both the prompt's action list and the reply schema's action list.
 
 MODEL TEXT AND MESSAGE METADATA
 -------------------------------
@@ -192,6 +192,9 @@ A num_ctx change between requests makes Ollama load the model again.
 call_ollama also sets keep_alive to OLLAMA_KEEP_ALIVE.
 By default, Ollama unloads the model after five minutes, and a planning phase can take longer.
 The next phase would then load the model again and read the whole world again.
+Ollama is a separate program, so closing the game does not unload its model.
+When the game quits, ai_handler.unload_ollama_models unloads every Ollama model that the session sent a request to.
+FORCE SKIP AI also unloads the current model. A phase timeout does not.
 Leave neutral relation scores out of the country-specific section.
 State that an unlisted country is neutral.
 

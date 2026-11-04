@@ -273,6 +273,9 @@ class OllamaTests(NoNetworkTestCase):
     def setUp(self):
         super().setUp()
         self._patch(ai_handler, "FORCE_SKIP", False)
+        # call_ollama records each model it uses. A record left behind would make
+        # a later test that quits the game send a real unload request.
+        self._patch(ai_handler, "_OLLAMA_MODELS_USED", set())
         settings = mock.patch.object(queries, "get_settings", return_value={})
         settings.start()
         self.addCleanup(settings.stop)
@@ -356,6 +359,35 @@ class OllamaTests(NoNetworkTestCase):
         self.connect(lines=[self.chunk('{"message": "ok"}')])
         ai_handler.call_ollama("s", "u")
         self.assertEqual(self.sent["payload"]["keep_alive"], ai_handler.OLLAMA_KEEP_ALIVE)
+
+    @unittest.skipIf(ai_handler.requests is None, "the web build has no Ollama connection")
+    def test_quitting_unloads_each_model_the_game_used(self):
+        """Ollama is its own program: closing the game alone leaves the model
+        holding its memory until keep_alive runs out."""
+        for model in ("model-one", "model-two"):
+            self._patch(ai_handler, "get_ollama_model", lambda m=model: m)
+            self.connect(lines=[self.chunk('{"message": "ok"}')])
+            ai_handler.call_ollama("s", "u")
+        with mock.patch.object(ai_handler.requests, "post") as post:
+            ai_handler.unload_ollama_models()
+        unloaded = sorted(call.kwargs["json"]["model"] for call in post.call_args_list)
+        self.assertEqual(unloaded, ["model-one", "model-two"])
+        for call in post.call_args_list:
+            self.assertTrue(call.args[0].endswith("/api/generate"))
+            self.assertEqual(call.kwargs["json"]["keep_alive"], 0)
+        self.assertEqual(ai_handler._OLLAMA_MODELS_USED, set())
+
+    @unittest.skipIf(ai_handler.requests is None, "the web build has no Ollama connection")
+    def test_quitting_without_ollama_running_does_not_fail(self):
+        self._patch(ai_handler, "_OLLAMA_MODELS_USED", {("http://localhost:11434/api/chat", "llama3")})
+        with mock.patch.object(ai_handler.requests, "post",
+                               side_effect=ai_handler.requests.ConnectionError("refused")):
+            ai_handler.unload_ollama_models()
+
+    def test_quitting_without_using_ollama_sends_nothing(self):
+        self._patch(ai_handler, "_unload_ollama_model",
+                    lambda *a: self.fail("unloaded a model the game never used"))
+        ai_handler.unload_ollama_models()
 
     def test_a_schema_becomes_the_format_of_a_listed_model(self):
         schema = {"type": "object", "properties": {"message": {"type": "string"}}}

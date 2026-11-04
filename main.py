@@ -96,6 +96,7 @@ def _import_project_modules():
     global Multiplayer_Hub, Multiplayer_Host, Multiplayer_Join, Multiplayer_New
     global Realtime_Host_Setup, Realtime_Scenario_Select, Realtime_Lobby, Realtime_Join, Realtime_Lan_Browser, Realtime_Remote_Lobby
     global Realtime_Relay_Setup, Realtime_Relay_Provision
+    global ai_handler
 
     # Must run before any other project module is imported below -- see
     # mod_loader's own docstring for why. Applies enabled .py mods in memory
@@ -180,6 +181,7 @@ def _import_project_modules():
         Realtime_Relay_Setup,
         Realtime_Relay_Provision,
     )
+    from map_logic.ai import ai_handler
 
     pygame.display.set_caption("Greater Diplomacy 5")
 
@@ -749,6 +751,10 @@ class Controller:
 
             for event in events:
                 if event.type == pygame.QUIT:
+                    # Ollama runs as its own program, so its model would stay
+                    # loaded after the game closes. This runs before
+                    # _shutdown_audio, which ends a desktop process at once.
+                    ai_handler.unload_ollama_models()
                     self._shutdown_audio()
                     # In a browser, os._exit() isn't meaningful; cleanup above
                     # and stop the game loop instead.
