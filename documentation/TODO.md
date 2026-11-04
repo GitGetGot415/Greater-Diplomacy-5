@@ -4,7 +4,7 @@
 
 - check why refreshing country data can show countries that don't exist anymore
 - check why AI countries refuse to become vassals and whether their replies explain the real reason
-- check which historical scenarios use the wrong Germany tag (oh right german reich vs regular ol germany, historical leaders use the germany tag not the german reich tag)
+- check which historical scenarios use the wrong Germany tag `(oh right german reich vs regular ol germany, historical leaders use the germany tag not the german reich tag)`
 - only show active countries under "Claims On You," and decide what to do with governments in exile
 - add a way to reset a country's appearance to its defaults
 - find specific examples of bad or predictable AI decisions
@@ -14,7 +14,7 @@
 
 - make music pitch work with regular audio files on macOS and web
 - look into another audio backend if the current options can't do what's needed
-- use different selection sounds for different unit types (like HOI4)
+- use different selection sounds for different unit types `(like HOI4)`
 
 ## Diplomacy and Countries
 
@@ -27,8 +27,8 @@
 - check whether Integrated and Autonomous subjects give useful choices compared with annexing them
 - let much stronger neighboring countries demand cores or submission through ultimatums
 - let nearby countries react to ultimatums by backing opposing factions
-- think about adding world tension (what would that even do though)
-- figure out which diplomacy rules from the board game would be useful (as a seperate game mode)
+- think about adding world tension `(what would that even do though)`
+- figure out which diplomacy rules from the board game would be useful `(as a seperate game mode)`
 
 ## Puppets and Factories
 
@@ -61,25 +61,25 @@
 ## Combat and Units
 
 - let infantry variants turn back into regular infantry
-- add guerrilla units as faster militia (it's like cavalry but worse!)
-- add armored trains with their own role (wouldn't this need railways first)
+- add guerrilla units as faster militia `(it's like cavalry but worse!)`
+- add armored trains with their own role `(wouldn't this need railways first)`
 - add entrenchment
-- decide whether artillery should pierce defense, do percentage damage, or use whichever does more damage (guohhhhhhhhh)
-- show separate buttons for convoying, unconvoying, trucking, and untrucking (idk is this really worth it)
-- add more ways to support naval invasions besides the existing shore bombardment (are you not satisfied)
+- decide whether artillery should pierce defense, do percentage damage, or use whichever does more damage `(guohhhhhhhhh)`
+- show separate buttons for convoying, unconvoying, trucking, and untrucking `(idk is this really worth it)`
+- add more ways to support naval invasions besides the existing shore bombardment `(are you not satisfied)`
 - decide whether combat-width research would make combat better
 - decide whether connecting tiles should affect combat width
-- decide whether allies should use the highest combat-width research level on their side (COMBAT WIDTH RESEARCH ISNT EVEN A THING YET)
+- decide whether allies should use the highest combat-width research level on their side `(COMBAT WIDTH RESEARCH ISNT EVEN A THING YET)`
 - move unused combat width between lanes during the same turn
 - measure AI_LINE_SPEND_RATIO again with the current lane rules
-- figure out specific ways to improve the combat zone display (VAAAAAAAAGUE)
+- figure out specific ways to improve the combat zone display `(VAAAAAAAAGUE)`
 
 ## Movement and Map Display
 
 - let allies see active movement arrows
 - let players queue movement across oceans, including getting units on and off ships
 - add straits and land bridges
-- add railroads (choo choo)
+- add railroads `(choo choo)`
 - add an option to group units when zoomed out
 - add filters to the country list
 - add country filters on the world map
@@ -88,40 +88,39 @@
 ## AI and scripted events
 
 - add an AI difficulty setting and make it clear what it changes
-- add an option to make AI countries never accept peace proposals (oh my god why)
-- add an option to stop cores from being removed (in game you can do this, not scripted events tho)
+- add an option to make AI countries never accept peace proposals `(oh my god why)`
+- add an option to stop cores from being removed `(in game you can do this, not scripted events tho)`
 - add a separate option to stop core removal from causing revolts
-- let players edit AI prompts in settings (if someone wants to have an ai larp as monika from doki doki literature club for some reason yeah sure let them do that)
+- let players edit AI prompts in settings `(if someone wants to have an ai larp as monika from doki doki literature club for some reason yeah sure let them do that)`
 - add newspaper events that country actions can trigger
 - add a separate screen for setting up newspaper events
 - add more causes for rebellions besides core removal
-- add focus trees (im sure scenario creators would love this)
-- add rules for devastation and recovery (see greater diplomacy 4 for more context on this)
+- add focus trees `(im sure scenario creators would love this)`
+- add rules for devastation and recovery `(see greater diplomacy 4 for more context on this)`
 
 ## Scenarios and Maps
 
-- add the Backrooms as a map (haha no)
-- figure out which controls are missing for historical country names, scenario maps, and resource maps (huh?????)
+- add the Backrooms as a map `(haha no)`
+- figure out which controls are missing for historical country names, scenario maps, and resource maps `(huh?????)`
 - add sliders for minimum and maximum resource values in random scenarios
-- let scenarios use custom unit_data.json files (AAAAAAAAAAAAAAA)
-- let players export a timelapse from saved game history (oh this might be fun)
-- think about continuous real-time gameplay
+- let scenarios use custom unit_data.json files `(AAAAAAAAAAAAAAA)`
+- let players export a timelapse from saved game history `(oh this might be fun)`
 
 ## UI and tools
 
-- use the operating system's folder picker where possible
-- add missing statistics and history views
-- add a developer tool for inspecting country data
-- figure out specific ways to better organize Hanskolmer's art
+- use the operating system's folder picker where possible `(actually the current built in folder picker seems alright enough, is this thing really nessecary?)`
+- add missing statistics and history views `(more statistics besides just global economy, like CHARTS and stuff)`
+- figure out specific ways to better organize Hanskolmer's art `(vague, seriously what do you mean "organize better")`
 
 ## Insane dedication required for these ones
 
-- add detailed tactical tank / naval battles (HIGHFLEET?????)
-- add a historical campaign from 1910 to 1940 (this is INSANELY ambitious how the HELL are you going to railroad that) (maybe increasing the days per turn could help)
+- add detailed tactical tank / naval battles `(HIGHFLEET?????)`
+- add a historical campaign from 1910 to 1940 `(this is INSANELY ambitious how the HELL are you going to railroad that) (maybe increasing the days per turn could help)`
+- think about continuous real-time gameplay `(ohhhhhhhh my god real time HOI4 multiplayer)`
 
 ## Custom Map Terrain Painter not just Maker
 
-- let players import an image and turn it into a map (and not like a custom terrain map i mean they should be able to import something like)
+- let players import an image and turn it into a map `(and not like a custom terrain map i mean they should be able to import something like trollface.png and have that turned into a terrain map)`
 - let players change the map's shape without losing countries or scenario data
 - keep province data when splitting provinces without copying units or resources into both
 - keep needed data and sort out ownership when merging provinces
