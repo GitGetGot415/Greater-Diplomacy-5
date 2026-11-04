@@ -3,9 +3,6 @@
 Current settings fields and defaults stay in data/io/settings_schema.py.
 """
 
-import data.constants as c
-
-
 
 SETTING_ALIASES = {
     "gemini_api_key": ("api_key",),
@@ -44,16 +41,6 @@ def normalize_ai_mode(value):
     return "OPENROUTER" if value == "LING" else value
 
 
-#: Claude model IDs that older versions shipped as the default and that the
-#: Claude API has since retired. Every request to one fails.
-RETIRED_CLAUDE_MODELS = frozenset({"claude-3-haiku-20240307"})
-
-
-def normalize_claude_model(value):
-    """Read a retired default Claude model as the current default."""
-    return c.DEFAULT_CLAUDE_MODEL if value in RETIRED_CLAUDE_MODELS else value
-
-
 def migrate_setting_names(saved):
     """Update cached names in place. Keep unrelated and unknown settings."""
     for name, aliases in SETTING_ALIASES.items():
@@ -62,8 +49,6 @@ def migrate_setting_names(saved):
                 saved.setdefault(name, saved.pop(old_key))
     if "ai_mode" in saved:
         saved["ai_mode"] = normalize_ai_mode(saved["ai_mode"])
-    if "claude_model" in saved:
-        saved["claude_model"] = normalize_claude_model(saved["claude_model"])
     return saved
 
 

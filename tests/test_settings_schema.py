@@ -188,22 +188,18 @@ class LegacyNamingTests(unittest.TestCase):
         settings_schema.migrate_setting_names(mixed)
         self.assertEqual(settings_schema.from_json_dict(mixed), values)
 
-    def test_the_retired_claude_default_becomes_the_current_one(self):
-        """Older versions wrote this default into every settings file, and the
-        Claude API has retired it, so every Claude request would fail."""
-        old = {"claude_model": "claude-3-haiku-20240307"}
-        self.assertEqual(settings_schema.from_json_dict(old)["claude_model"],
-                         c.DEFAULT_CLAUDE_MODEL)
-        self.assertEqual(settings_schema.to_json_dict(old)["claude_model"],
-                         c.DEFAULT_CLAUDE_MODEL)
-        self.assertNotIn(c.DEFAULT_CLAUDE_MODEL, migrations.settings.RETIRED_CLAUDE_MODELS)
+    def test_a_saved_claude_model_is_kept(self):
+        """The player's choice stands, including the older default, which a
+        settings file cannot tell apart from a model the player picked."""
+        for model in ("claude-3-haiku-20240307", "vendor-chosen-model"):
+            with self.subTest(model=model):
+                saved = {"claude_model": model}
+                self.assertEqual(settings_schema.from_json_dict(saved)["claude_model"], model)
+                self.assertEqual(settings_schema.to_json_dict(saved)["claude_model"], model)
 
-    def test_a_chosen_claude_model_is_kept(self):
-        chosen = {"claude_model": "vendor-chosen-model"}
-        self.assertEqual(settings_schema.from_json_dict(chosen)["claude_model"],
-                         "vendor-chosen-model")
-        self.assertEqual(settings_schema.to_json_dict(chosen)["claude_model"],
-                         "vendor-chosen-model")
+    def test_new_settings_use_the_current_claude_default(self):
+        self.assertEqual(settings_schema.from_json_dict({})["claude_model"],
+                         c.DEFAULT_CLAUDE_MODEL)
 
     def test_old_tuple_keeps_the_original_slots(self):
         sequence = list(settings_schema.to_tuple(settings_schema.defaults(), {}))

@@ -39,7 +39,6 @@ from data.migrations.settings import (
     read_setting_value,
     controller_setting_values,
     normalize_ai_mode,
-    normalize_claude_model,
     migrate_setting_names,
     migrate_mouse_button_actions,
 )

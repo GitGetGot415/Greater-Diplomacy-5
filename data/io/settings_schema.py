@@ -16,7 +16,7 @@ import math
 import data.constants as c
 from data import migrations
 # Preserve older imports. The rules have one owner in data.migrations.
-from data.migrations import migrate_setting_names, normalize_ai_mode, normalize_claude_model
+from data.migrations import migrate_setting_names, normalize_ai_mode
 
 #: name    -- the attribute name on Controller, and the key in the values dict
 #: json_key-- what it is called on disk
@@ -65,8 +65,7 @@ SETTINGS_FIELDS = (
     _field("ollama_base_url", "ollama_base_url", lambda: ""),
     _field("gemini_model", "gemini_model", lambda: c.DEFAULT_GEMINI_MODEL),
     _field("chatgpt_model", "chatgpt_model", lambda: c.DEFAULT_CHATGPT_MODEL),
-    _field("claude_model", "claude_model", lambda: c.DEFAULT_CLAUDE_MODEL,
-           coerce=normalize_claude_model),
+    _field("claude_model", "claude_model", lambda: c.DEFAULT_CLAUDE_MODEL),
     _field("ollama_model", "ollama_model", lambda: c.DEFAULT_OLLAMA_MODEL),
     _field("ai_immersion_level", "ai_immersion_level", lambda: "LITE"),
     _field("music_pitch", "music_pitch", lambda: c.DEFAULT_AUDIO_PITCH),
