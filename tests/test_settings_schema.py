@@ -337,6 +337,33 @@ class SettingsScreenTests(unittest.TestCase):
         old_tuple = settings_schema.to_tuple(restored, {})[:-2]
         self.assertEqual(settings_schema.from_tuple(old_tuple), restored)
 
+    def test_llm_ai_info_button_explains_every_level(self):
+        import pygame
+        from types import SimpleNamespace
+        from screens.menus.settings import Settings
+        from screens.menus import settings as settings_screen
+        from tests import app_harness
+        app_harness.boot()          # a display, which the screen's images need
+        for mode in ("OFF", "GEMINI"):
+            with self.subTest(mode=mode):
+                controller = SimpleNamespace(**settings_schema.defaults(), keybinds={})
+                controller.ai_mode = mode
+                with mock.patch("screens.menus.settings.queries.get_settings", return_value={}), \
+                        mock.patch("screens.menus.settings.dialogs.show_info") as show_info:
+                    screen = Settings(controller)
+                    toggle = next(item for item in screen.elements if item.text.startswith("LLM AI"))
+                    info = next(item for item in screen.elements
+                                if item.text == "?" and item.rect.left > toggle.rect.right
+                                and item.rect.top < toggle.rect.bottom
+                                and item.rect.bottom > toggle.rect.top)
+                    # The provider fields begin to its right, so it never covers them.
+                    self.assertLess(info.rect.right, settings_screen.SETTINGS_BOX_X)
+                    info.callback()
+                title, text = show_info.call_args.args
+                self.assertEqual(title, "LLM AI")
+                for level in c.AI_IMMERSION_LEVELS:
+                    self.assertIn(f"{level} AI", text)
+
     def test_openrouter_button_editing_switching_and_save(self):
         import pygame
         from types import SimpleNamespace

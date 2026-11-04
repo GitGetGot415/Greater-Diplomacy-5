@@ -51,6 +51,8 @@ IMMERSION LEVELS
 ----------------
 
 Select an immersion level with the red buttons in Settings.
+The ? button to the right of the LLM AI toggle explains the model's role and these levels.
+Its text is SETTINGS_AI_INFO_TEXT in screens/menus/settings.py. Update it when a level changes.
 
 OFF
     No model calls. Replies use the response library.

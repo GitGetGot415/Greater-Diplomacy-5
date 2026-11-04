@@ -14,7 +14,8 @@ from screens.menus.keybinds import default_keybinds
 
 
 # --- Unified Settings UI Layout ---
-SETTINGS_BOX_X = 140
+# SETTINGS_BOX_X, the provider field column, is set below beside the LLM AI
+# toggle and its info button, which sit to its left.
 SETTINGS_KEY_BOX_Y = c.SCREEN_HEIGHT - 130
 SETTINGS_MOD_BOX_Y = c.SCREEN_HEIGHT - 60
 SETTINGS_BOX_W = 320
@@ -65,6 +66,40 @@ SETTINGS_INFO_GAP_X = 10
 SETTINGS_INFO_X = SETTINGS_RIGHT_COL_X - c.SIZES["scenario_setting_info"][0] - SETTINGS_INFO_GAP_X
 # Align the info buttons with the settings buttons.
 SETTINGS_INFO_Y_NUDGE = (SETTINGS_OPTION_SIZE[1] - c.SIZES["scenario_setting_info"][1]) // 2
+
+# The LLM AI toggle's info button sits to its right, and the provider fields
+# start to the right of that.
+SETTINGS_AI_INFO_X = SETTINGS_AI_TOGGLE_POS[0] + c.SIZES["small"][0] + SETTINGS_INFO_GAP_X
+SETTINGS_AI_INFO_Y_NUDGE = (c.SIZES["small"][1] - c.SIZES["scenario_setting_info"][1]) // 2
+SETTINGS_BOX_X = SETTINGS_AI_INFO_X + c.SIZES["scenario_setting_info"][0] + SETTINGS_INFO_GAP_X
+
+SETTINGS_AI_INFO_TITLE = "LLM AI"
+SETTINGS_AI_INFO_TEXT = (
+    "LLM AI lets a language model from the provider you choose run diplomacy for AI "
+    "countries. The normal AI still runs underneath. It moves armies, builds, researches, "
+    "and decides which actions are legal. The model chooses from those legal options and "
+    "writes the messages, so it cannot break the game's rules.\n"
+    "With LLM AI off, AI countries answer with prewritten lines.\n"
+    "\n"
+    "LITE AI: The model only answers messages and notes that you write yourself.\n"
+    "\n"
+    "FULL AI: The model answers all of your proposals and messages. AI countries still "
+    "choose their own proposals by rule and use prewritten lines with each other.\n"
+    "\n"
+    "MAJOR AI: As FULL, and the model also runs the major countries: leading powers, "
+    "faction leaders, and countries that border you or fight you. They choose their own "
+    "proposals, write letters to each other and to you, and keep private notes of their "
+    "plans.\n"
+    "\n"
+    "ABSOLUTE AI: The model runs every AI country. This is the most lifelike level and the "
+    "slowest, because it makes the most requests each turn.\n"
+    "\n"
+    "When the model reads a letter, the letter can change that country's opinion of its "
+    "writer, whether a player or another AI wrote it.\n"
+    "\n"
+    "Maximum AI Threads sets how many requests run at once. More threads speed up hosted "
+    "providers, but can slow a local Ollama model."
+)
 
 # (row Y, tooltip title, tooltip text) for each info button in that column, in
 # the same top-to-bottom order as the buttons themselves.
@@ -154,6 +189,14 @@ def render_settings_buttons(settings_screen):
     settings_screen.elements.append(
         make_toggle_button(*SETTINGS_AI_TOGGLE_POS, "small", "LLM AI", ai_is_on,
                            settings_screen.toggle_ai_enabled, font_preset="normal")
+    )
+    # Inline text: the popup then stops at the window edge and scrolls. The
+    # plain message still sizes the box's width.
+    settings_screen.elements.append(
+        make_info_button(SETTINGS_AI_INFO_X, SETTINGS_AI_TOGGLE_POS[1],
+                         lambda: dialogs.show_info(SETTINGS_AI_INFO_TITLE, SETTINGS_AI_INFO_TEXT,
+                                                   inline_parts=[(SETTINGS_AI_INFO_TEXT, None)]),
+                         y_offset=SETTINGS_AI_INFO_Y_NUDGE)
     )
     settings_screen.ai_fields = {}
 
