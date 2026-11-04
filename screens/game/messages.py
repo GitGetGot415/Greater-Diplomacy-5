@@ -75,6 +75,10 @@ MSG_DIPLO_BTN_START_X = MSG_LEFT_PANE_W + 20
 MSG_DIPLO_BTN_STEP_X = 220
 
 MSG_BG_DARK = (25, 25, 30)
+# With no country selected the background is solid black with white text. Selecting a country
+# fades the checkerboard in with the bar roll; deselecting fades it back out.
+MSG_EMPTY_BG_COLOR = (0, 0, 0)
+MSG_EMPTY_TEXT_COLOR = (255, 255, 255)
 MSG_BUBBLE_PLAYER = (40, 100, 200)
 MSG_BUBBLE_AI = (60, 60, 80)
 MSG_DIPLO_ACCENT = (208, 162, 76)
@@ -182,6 +186,7 @@ class Messages_Screen(Screen):
         # Start time of each bubble's slide-in, kept so a rebuild does not replay it.
         self.bubble_starts = {}
         self.exiting_thread = None
+        self.black_cover = None
         # True only while select_recipient rebuilds for a contact switch: bubbles start fully slid in.
         self.settle_new_bubbles = False
 
@@ -598,7 +603,9 @@ class Messages_Screen(Screen):
 
     def _build_ui(self):
         colors = session_for(self.map_screen).conversation_colors if self.map_screen else {}
-        self.bg_color = tuple(colors.get(self.selected_recipient, MSG_BG_DARK))
+        # With no country selected, keep the last color so the fade to black does not jump to the default.
+        if self.selected_recipient:
+            self.bg_color = tuple(colors.get(self.selected_recipient, MSG_BG_DARK))
         self.elements = [Button(MSG_MARGIN, MSG_HEADER_BUTTON_Y, (70, MSG_HEADER_BUTTON_H), "red", "Exit", self.exit_screen,
                                 font_preset="button_small", sound_kind="back")]
         self.elements.append(Button(94, MSG_HEADER_BUTTON_Y, (170, MSG_HEADER_BUTTON_H), "blue", "Mark All Read", self.mark_all_read,
@@ -623,7 +630,7 @@ class Messages_Screen(Screen):
         header_width = theme_x - MSG_LEFT_PANE_W - 2 * MSG_MARGIN - flag_space
         self.header_surface = header_font.render(text_utils.fit_text(header, header_font, header_width), True, (241, 245, 250))
         self.sidebar_title_surface = fonts.get("normal").render("Messages", True, (220, 229, 240))
-        self.empty_thread_surface = header_font.render("Select a nation to view communications.", True, c.UI_TEXT_MUTED)
+        self.empty_thread_surface = header_font.render("Select a nation to view communications.", True, MSG_EMPTY_TEXT_COLOR)
         
         active_nations = set([prov.get("owner") for prov in self.map_screen.map_data.values() if prov.get("owner") not in c.UNPLAYABLE_NATIONS])
         playable = [country for country, d in self.map_screen.nation_data.items() if d.get("is_playable") and country != self.map_screen.player_country and country in active_nations]
@@ -1041,6 +1048,19 @@ class Messages_Screen(Screen):
         text = self.compose_text + ("|" if self.compose_enabled else "")
         self.compose_surface = fonts.get("normal").render(text, True, (242, 245, 250))
 
+    def draw_background(self, surface):
+        """Black until a country is selected. bar_shown carries the eased fade in both directions."""
+        if self.bar_shown <= 0.0:
+            surface.fill(MSG_EMPTY_BG_COLOR)
+            return
+        super().draw_background(surface)
+        if self.bar_shown < 1.0:
+            if self.black_cover is None or self.black_cover.get_size() != surface.get_size():
+                self.black_cover = pygame.Surface(surface.get_size())
+                self.black_cover.fill(MSG_EMPTY_BG_COLOR)
+            self.black_cover.set_alpha(round(255 * (1.0 - self.bar_shown)))
+            surface.blit(self.black_cover, (0, 0))
+
     def _draw_panel(self, surface, rect, name):
         style = MESSAGE_PANEL_STYLES[name]
         ui_elements.draw_pixel_panel(surface, rect, style["color"], MSG_PANEL_BORDER,
@@ -1078,8 +1098,11 @@ class Messages_Screen(Screen):
         with ui_bars.clip_scroll_region(surface, text_rect, draw_top=False, draw_bottom=False):
             x = text_rect.x - max(0, self.compose_surface.get_width() - text_rect.width)
             surface.blit(self.compose_surface, (x, text_rect.centery - self.compose_surface.get_height() // 2))
-        if not self.selected_recipient and not self.exiting_thread:
-            surface.blit(self.empty_thread_surface, self.empty_thread_surface.get_rect(center=self.thread_rect.center))
+        if self.bar_shown < 1.0:
+            # Centered on the screen height and on the conversation area, fading with the background.
+            self.empty_thread_surface.set_alpha(round(255 * (1.0 - self.bar_shown)))
+            surface.blit(self.empty_thread_surface, self.empty_thread_surface.get_rect(
+                center=(self.thread_rect.centerx, c.SCREEN_HEIGHT // 2)))
         self.draft_edit_rects = []
         self.forward_button_rects = []
         if self.exiting_thread:
