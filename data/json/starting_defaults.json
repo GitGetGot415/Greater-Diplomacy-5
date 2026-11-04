@@ -122,7 +122,7 @@
         "track": ""
     },
     "hildehrand_choice.json": {
-        "variant": "Hildehrand/F/4.png",
+        "variant": "Hildehrand/F/2.png",
         "gradient": true,
         "gradient_strength": 1.0,
         "gradient_stepped": false,
