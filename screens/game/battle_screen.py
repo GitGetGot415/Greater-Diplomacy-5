@@ -61,6 +61,8 @@ LANE_ROW_H = 42
 #: Orders panel shows the same stats on the same icons.
 ROW_H = 78
 HEADER_H = 26
+SCROLLBAR_W = 15
+SCROLLBAR_GAP = 4
 #: Flags a lane row shows per side before it gives up and counts the rest. Two
 #: keeps the compact lane button's flags and combat tally inside its width.
 LANE_FLAGS_SHOWN = 2
@@ -461,7 +463,7 @@ class Battle_Screen(ModalScreen):
                                    rect.height, row_h=LANE_ROW_H):
             lane = self.battle.lanes[i]
             color = "blue" if id(lane) in mine else "grey"
-            btn = self.button(rect.x, y, LANE_COL_W, color, "",
+            btn = self.button(rect.x, y, rect.width - SCROLLBAR_W - SCROLLBAR_GAP, color, "",
                               lambda idx=i: self._select(idx))
             btn.rect.height = LANE_ROW_H
             btn.height = LANE_ROW_H
@@ -471,6 +473,7 @@ class Battle_Screen(ModalScreen):
 
     def _unit_rows(self, pane, unit_list, lane, editable, is_bench=False):
         rect = self.regions[pane]
+        row_w = rect.width - SCROLLBAR_W - SCROLLBAR_GAP
         self.row_paint[pane] = []
         for i, y in self.pane_rows(pane, len(unit_list), rect.y, rect.height):
             unit = unit_list[i]
@@ -478,15 +481,15 @@ class Battle_Screen(ModalScreen):
             can_edit = editable and self.can_command(unit)
 
             if not can_edit:
-                btn = self.button(rect.x, y, rect.width, "grey", "", lambda: None)
+                btn = self.button(rect.x, y, row_w, "grey", "", lambda: None)
                 btn.disabled = True
                 note = ""
             elif is_bench:
-                btn = self.button(rect.x, y, rect.width, "orange" if held else "green", "",
+                btn = self.button(rect.x, y, row_w, "orange" if held else "green", "",
                                   lambda u=unit, l=lane: self.send_to_lane(u, l))
                 note = f"{'HELD  ' if held else ''}->  lane {lane.index + 1}"
             else:
-                btn = self.button(rect.x, y, rect.width, "blue", "",
+                btn = self.button(rect.x, y, row_w, "blue", "",
                                   lambda u=unit: self.toggle_stance(u))
                 # A held unit reaches the front rank whenever nobody else can
                 # take the slot, so this pane has to be able to say so -- an
@@ -783,8 +786,12 @@ class Battle_Screen(ModalScreen):
     def draw_foreground(self, surface):
         for pane in (PANE_LANES, PANE_FRONT, PANE_ENEMY, PANE_RESERVE):
             rect = self.regions.get(pane)
-            if rect and self.pane_scroll_limit(pane) > 0:
-                self.draw_pane_scrollbar(surface, pane, rect.right - 15, rect.y, rect.height)
+            if rect:
+                # The shared helper shows negative scroll ranges and clears
+                # stale hitboxes when a pane no longer needs a scrollbar.
+                self.draw_pane_scrollbar(
+                    surface, pane, rect.right - SCROLLBAR_W, rect.y, rect.height,
+                    width=SCROLLBAR_W)
 
     def additional_events(self, event):
         self.route_pane_scroll(event)

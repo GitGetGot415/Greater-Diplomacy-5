@@ -1738,7 +1738,14 @@ class Orders_Screen(Screen):
                     pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP,
                     pygame.MOUSEMOTION, pygame.MOUSEWHEEL):
                 event_pos = getattr(event, "pos", pygame.mouse.get_pos())
-                if self.battle_screen.panel_rect.collidepoint(event_pos):
+                dragging_battle_scrollbar = any(
+                    getattr(self.battle_screen,
+                            self.battle_screen.scroll_attrs(pane)["drag_attr"], False)
+                    for pane in self.battle_screen.pane_rects())
+                # Keep a grabbed battle scrollbar in control until release,
+                # including when the cursor leaves the child panel.
+                if (self.battle_screen.panel_rect.collidepoint(event_pos)
+                        or dragging_battle_scrollbar):
                     self.battle_screen.handle_events([event])
                     continue
 
