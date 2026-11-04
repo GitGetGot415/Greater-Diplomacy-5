@@ -1,7 +1,9 @@
-"""Read released v46 move files, which have partial snapshots and no player intents.
+"""Read snapshot moves: moves without player intents, from v46 and every earlier release.
 
-Keep this module while v46 moves convert. Every later release converts them.
-See data/migrations/MIGRATIONS.md, Current and Older Tournament Choices.
+A snapshot move holds the player's country record, province queues, and ground units.
+The conversion rules in conversions.py bring every older shape to one snapshot shape first.
+This reader is for that file format, not for one version. Later releases add only conversion rules.
+See data/migrations/MIGRATIONS.md, Snapshot Moves.
 Current moves use the shared commands in map_logic/actions/player_actions.py.
 """
 
@@ -110,17 +112,17 @@ def apply(context, cid, player_data, move, summary):
 
     _apply_unit_projection(
         context, cid, move.provinces, move.live_aircraft, move.aircraft_orders,
-        replace_units=player_data.get("unit_snapshot") is True or bool(move.provinces))
+        replace_units=player_data["unit_snapshot"] is True)
 
 
 def _apply_unit_projection(context, country_id, provs, live_aircraft, aircraft_orders, *, replace_units):
-    """Apply a validated snapshot's units. This preserves approved stats and queue overrides."""
+    """Apply a validated snapshot's units. This preserves approved stats and queue overrides.
+
+    replace_units replaces even an empty army, so disbands and volunteer offers survive.
+    convert_move gives older moves without unit_snapshot their earlier behavior.
+    """
     world_state = world_for(context)
-    # ``unit_snapshot`` was added after the original .gd5move format.
-    # Preserve old files' behavior, but make every newly-created move
-    # replace even an empty army so disbands and volunteer offers survive.
-    apply_unit_snapshot = replace_units
-    if apply_unit_snapshot:
+    if replace_units:
         for target_prov in world_state.map_data.values():
             target_prov["units"] = [u for u in target_prov.get("units", [])
                                     if u.get("owner") != country_id or u.get("unit_id") in live_aircraft]

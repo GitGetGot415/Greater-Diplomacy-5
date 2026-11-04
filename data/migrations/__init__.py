@@ -9,7 +9,7 @@ units.py          Older unit identifiers, categories, and unit metadata.
 research.py       Saved research levels, prerequisites, and the active technology tree.
 repairs.py        Load repairs against the active libraries, and faction roster repair.
 tournament.py     Tournament move projections and encrypted-file payloads.
-v46_moves.py      The input adapter for released v46 move files. Import it by module name.
+snapshot_moves.py The reader for snapshot moves, which have no player intents. Import it by module name.
 
 Keep imports from other games in their separate translation modules.
 Loaders own saved-file access. Shared gameplay modules own current rules and validation.

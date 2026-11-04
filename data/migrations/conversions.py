@@ -8,6 +8,7 @@ Rules that compare saved data with the active libraries run later in the load,
 when the scenario has selected its libraries. research.py and queries.refresh_unit_stats own them.
 """
 
+import copy
 import uuid
 
 import data.constants as c
@@ -20,8 +21,11 @@ LEGACY_RESEARCH_DEFAULT_DAYS = 30
 LEGACY_RESEARCH_POINTS_PER_DAY = 10
 
 
-#: Every v46 move file contains these sections. An older move file can omit them.
-V46_MOVE_SECTIONS = ("nation_data", "provinces", "aircraft_orders", "release_subjects")
+#: Fields that a move holds beside the country record. The oldest moves held only a country record.
+MOVE_FIELDS = ("game_version", "tournament_session", "tournament_turn", "research_years",
+               "unit_snapshot", "aircraft_orders", "air_transport", "release_subjects",
+               "faction_renames", "appearance_updates", "puppet_siphon_updates",
+               "player_intents", "factions")
 
 
 def convert_save(save_meta, map_data):
@@ -60,25 +64,54 @@ def convert_history_turn(snapshot, map_data):
 
 
 def convert_move(player_data):
-    """Convert the country record and province updates in a tournament move in place."""
-    # Moves gained game_version after v46. Only an unstamped move can be older than v46.
-    if ("game_version" not in player_data
-            and any(section not in player_data for section in V46_MOVE_SECTIONS)):
-        raise ValueError(
-            "This move was made with a game version older than v46. "
-            f"The player must update to {c.GAME_VERSION} and export the move again.")
+    """Convert a tournament move in place, whatever version wrote it.
+
+    A move without player_intents holds a snapshot of the country.
+    data/migrations/snapshot_moves.py reads it after conversion.
+    """
+    if not any(key in player_data for key in ("nation_data", "provinces", "player_intents")):
+        # The oldest moves held only the country record.
+        country = {key: player_data.pop(key) for key in list(player_data) if key not in MOVE_FIELDS}
+        player_data["nation_data"] = country
+        player_data["provinces"] = {}
     country = player_data.get("nation_data")
     if isinstance(country, dict):
         _country(country)
+        if "release_subjects" not in player_data and isinstance(country.get("release_puppet_queue"), list):
+            # Older moves held release requests only in the country's queue.
+            player_data["release_subjects"] = copy.deepcopy(country["release_puppet_queue"])
     for entry in player_data.get("release_subjects", []):
         if isinstance(entry, dict):
             entry.setdefault("release_type", c.PUPPET_TYPE_INTEGRATED)
-    for province in (player_data.get("provinces") or {}).values():
+    provinces = player_data.get("provinces")
+    for province in (provinces or {}).values():
         if isinstance(province, dict):
             # A move has no terrain, so a Truck aircraft unpacks as on land.
             # Host validation then checks every unit against host state.
             _province(province, None)
+    if isinstance(provinces, dict):
+        if "aircraft_orders" not in player_data:
+            player_data["aircraft_orders"] = _aircraft_orders(provinces)
+        # Older moves replaced the country's units only when they listed provinces.
+        player_data.setdefault("unit_snapshot", bool(provinces))
     _unit_records(player_data, {**LEGACY_UNIT_NAMES, **equipment_stage_aliases()})
+
+
+def _aircraft_orders(provinces):
+    """Read orders from the whole aircraft records that older moves held.
+
+    The host keeps its own aircraft statistics and positions, so only orders and names convert.
+    """
+    from data import queries
+    commands = []
+    for province in provinces.values():
+        units = province.get("units") if isinstance(province, dict) else None
+        for unit in units if isinstance(units, list) else ():
+            if (isinstance(unit, dict) and isinstance(unit.get("type"), str)
+                    and (queries.is_air_unit(unit) or queries.is_air_transport(unit))):
+                commands.append({"unit_id": unit.get("unit_id"), "order": copy.deepcopy(unit.get("order")),
+                                 "custom_name": unit.get("custom_name")})
+    return commands
 
 
 # --- Countries ---

@@ -85,9 +85,47 @@ class GameVersionTests(unittest.TestCase):
                 self.assertEqual(move["game_version"], c.GAME_VERSION)
         with self.assertRaisesRegex(migrations.NewerVersionError, "Update the game"):
             migrations.upgrade_move({"game_version": f"v{migrations.CURRENT_VERSION + 1}"})
-        # Every v46 export wrote these sections. An unstamped move without them is older.
-        with self.assertRaisesRegex(ValueError, "older than v46"):
-            migrations.upgrade_move({"nation_data": {}, "provinces": {}})
+        # A move without the later sections converts. It is not refused.
+        move = {"nation_data": {}, "provinces": {}}
+        migrations.upgrade_move(move)
+        self.assertEqual(move["aircraft_orders"], [])
+
+    def test_country_only_moves_convert_to_the_snapshot_shape(self):
+        """The oldest moves held only the country record."""
+        move = {"allied_with": ["B"], "materials": 5, "tournament_turn": 3,
+                "release_puppet_queue": [{"core_nation": "B"}]}
+        migrations.upgrade_move(move)
+        release = {"core_nation": "B", "release_type": c.PUPPET_TYPE_INTEGRATED}
+        self.assertEqual(move["nation_data"], {"materials": 5, "release_puppet_queue": [release]})
+        self.assertEqual(move["provinces"], {})
+        self.assertEqual(move["tournament_turn"], 3)
+        self.assertEqual(move["release_subjects"], [release])
+        self.assertEqual(move["aircraft_orders"], [])
+        self.assertIs(move["unit_snapshot"], False)
+        once = copy.deepcopy(move)
+        migrations.upgrade_move(move)
+        self.assertEqual(move, once)
+
+    def test_older_moves_read_aircraft_orders_from_whole_aircraft_records(self):
+        library = queries.get_unit_library()
+        aircraft = next(name for name in library if queries.is_air_unit({"type": name}))
+        ground = next(name for name in library if not queries.is_air_unit({"type": name}))
+        order = {"type": "MOVE", "path": [2]}
+        move = {"nation_data": {}, "provinces": {"P": {"units": [
+            {"unit_id": "air", "type": aircraft, "order": order, "custom_name": "Ace", "health": 1},
+            {"unit_id": "foot", "type": ground, "order": None}]}}}
+        migrations.upgrade_move(move)
+        self.assertEqual(move["aircraft_orders"], [{"unit_id": "air", "order": order, "custom_name": "Ace"}])
+        self.assertIs(move["unit_snapshot"], True)
+
+    def test_current_move_sections_do_not_change(self):
+        move = {"nation_data": {"release_puppet_queue": []}, "provinces": {"P": {"units": []}},
+                "aircraft_orders": [{"unit_id": "air", "order": None, "custom_name": None}],
+                "release_subjects": [], "unit_snapshot": True, "player_intents": [],
+                "game_version": c.GAME_VERSION}
+        once = copy.deepcopy(move)
+        migrations.upgrade_move(move)
+        self.assertEqual(move, once)
 
     def test_saves_leave_history_until_a_player_selects_a_turn(self):
         snapshot = {"nation_data": {"A": {"allied_with": ["B"]}}}
@@ -495,7 +533,7 @@ class LibraryAndTournamentTests(unittest.TestCase):
         with self.assertRaises(json.JSONDecodeError):
             migrations.decode_saved_json(b"invalid json")
 
-    def test_v46_moves_convert_their_country_and_province_records(self):
+    def test_snapshot_moves_convert_their_country_and_province_records(self):
         move = {"nation_data": {"allied_with": ["B"], "research_queue": [{"tech_name": "a"}]},
                 "provinces": {"P": {"unit_queue": [{"unit_type": "Biplane", "days_remaining": 0}]}},
                 "aircraft_orders": [], "release_subjects": [{"core_nation": "B"}]}

@@ -783,25 +783,39 @@ class TournamentMoveTests(unittest.TestCase):
         self.assertIn("turn", summary["rejections"][0]["reason"])
         self.assertEqual(host.nation_data, before)
 
-    def test_moves_that_cannot_convert_are_refused_with_an_update_message(self):
+    def test_newer_moves_are_refused_with_an_update_message(self):
         from data import migrations
-        newer = {"game_version": f"v{migrations.CURRENT_VERSION + 1}"}
-        for name, version in (("newer", newer), ("before v46", None)):
-            with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
+        with tempfile.TemporaryDirectory() as directory:
+            host = Host()
+            move = self.player_data("Leader", host, game_version=f"v{migrations.CURRENT_VERSION + 1}")
+            path = self.write_move(directory, "move.gd5move", "Leader", move)
+            before = copy.deepcopy(host.nation_data)
+            summary = self.import_moves(host, [path], accept_older_versions=True)
+        self.assertEqual(summary["loaded"], 0)
+        self.assertFalse(summary["rejections"][0]["overridable"])
+        self.assertIn("update", summary["rejections"][0]["reason"].lower())
+        self.assertEqual(host.nation_data, before)
+
+    def test_moves_from_before_v46_convert_after_host_approval(self):
+        """Moves older than v46 lack later sections, or hold only the country record."""
+        for shape in ("missing_sections", "country_only"):
+            with self.subTest(shape=shape), tempfile.TemporaryDirectory() as directory:
                 host = Host()
-                if version is None:
-                    # Every v46 export wrote aircraft_orders. An older move is refused at conversion.
-                    move = self.v46_move("Leader", host)
-                    move.pop("aircraft_orders")
-                else:
-                    move = self.player_data("Leader", host, **version)
-                path = self.write_move(directory, "move.gd5move", "Leader", move)
-                before = copy.deepcopy(host.nation_data)
+                move = self.v46_move("Leader", host)
+                move["nation_data"]["conscription_slider"] = 0.25
+                for section in ("aircraft_orders", "release_subjects"):
+                    move.pop(section)
+                if shape == "country_only":
+                    move = {**move.pop("nation_data"),
+                            **{key: move[key] for key in ("tournament_session", "tournament_turn")}}
+                path = self.write_move(directory, "older.gd5move", "Leader", move)
+                held = self.import_moves(host, [path])
+                self.assertEqual(held["rejections"][0]["override"], "version")
                 summary = self.import_moves(host, [path], accept_older_versions=True)
-                self.assertEqual(summary["loaded"], 0)
-                self.assertFalse(summary["rejections"][0]["overridable"])
-                self.assertIn("update", summary["rejections"][0]["reason"].lower())
-                self.assertEqual(host.nation_data, before)
+                self.assertEqual(summary["loaded"], 1, summary["rejections"])
+                self.assertEqual(summary["converted"], 1)
+                self.assertEqual(host.nation_data["Leader"]["conscription_slider"], 0.25)
+                self.assertNotIn("tournament_turn", host.nation_data["Leader"])
 
     def test_host_ui_converts_an_older_move_only_after_approval(self):
         from ui import dialogs 

@@ -11,7 +11,7 @@ from unittest.mock import Mock
 import pygame
 
 from data import constants as c, migrations, queries
-from data.migrations.v46_moves import _validate_production_projection
+from data.migrations.snapshot_moves import _validate_production_projection
 from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError, apply_authoritative_snapshot
 from data.state_access import BackendState
 from data.map import history_io, load_map

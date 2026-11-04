@@ -62,7 +62,7 @@ AI means artificial intelligence. UI means user interface.
 | --- | --- |
 | `data/constants.py` | Constants and tuning values shared across modules. |
 | `data/queries/` | Shared state queries, rule helpers, caches, and the save-dictionary builder. One module per topic. |
-| `data/migrations/` | All conversion of older GD5 data: identifiers, conversion rules, load repairs, and the v46 move adapter. One file per concern. |
+| `data/migrations/` | All conversion of older GD5 data: identifiers, conversion rules, load repairs, and the snapshot move reader. One file per concern. |
 | `data/game_state.py`, `data/session_state.py` | World data, participants, control permissions, and processing progress. |
 | `data/runtime_rules.py`, `data/world_nations.py` | World-specific active libraries, derived indexes, and explicit country-mapping context. |
 | `data/state_access.py` | Explicit state access, map compatibility properties, and backend execution context. |
@@ -265,8 +265,9 @@ Keep tuning data in its source files:
   Migration must produce predictable results and be safe to run once on load.
 - History snapshots convert only when a player selects that turn. A selected history turn becomes live game state.
   Do not convert every snapshot on load. migrate_infantry_research is the exception, because snapshots share research_years.
-- The conversion rules convert tournament moves from v46 and every later release.
+- The conversion rules convert tournament moves from every older release, as they convert saves.
   The host must approve a move whose stamp differs from the host's version. The converted move then passes all normal validation.
+  Moves without `player_intents` are snapshot moves. `data/migrations/snapshot_moves.py` reads them. Do not add a reader for one version.
 - Load repairs fix invalid current data on every load. Library conversions compare saved data with the active libraries on every load.
   Both are separate from the conversion rules for older formats.
   Examples are unit identities, army rosters, faction leaders, and units or buildings missing from the active library.

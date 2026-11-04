@@ -1,6 +1,6 @@
 """Tournament move projections and encrypted-file payloads from older versions.
 
-data/migrations/v46_moves.py reads whole v46 moves. These helpers serve it and the current loader.
+data/migrations/snapshot_moves.py reads snapshot moves. These helpers serve it and the current loader.
 """
 
 import copy

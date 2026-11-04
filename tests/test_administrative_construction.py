@@ -6,7 +6,7 @@ from unittest import mock
 
 from data import queries
 import data.constants as c
-from data.migrations.v46_moves import _validate_administrative_orders
+from data.migrations.snapshot_moves import _validate_administrative_orders
 from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError
 from map_logic.ai.ai_construction import _apply_coring_priority
 from tests.stub_map_screen import map_double, sample_map_screen

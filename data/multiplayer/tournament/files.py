@@ -22,7 +22,7 @@ from data.map import history_io
 from data.map.map_cache import remove_optional_layer_files
 from data.platform import sync_persisted_dir
 
-from data.migrations import v46_moves
+from data.migrations import snapshot_moves
 from map_logic.actions.player_actions import collect_map_commands, PlayerActions
 
 
@@ -696,7 +696,7 @@ def load_move_files(context, move_file_paths, keys_dict, *, accept_stat_mismatch
 
     Return counts and per-file rejection details. keys_dict maps country IDs to keys.
     accept_stat_mismatches permits numeric differences only. All other checks still apply.
-    accept_older_versions converts moves from older releases, back to v46. They are then validated normally.
+    accept_older_versions converts moves from older releases. They are then validated normally.
     A move whose stamp differs from the host's version, or has no stamp, needs this approval.
     A rejection the host can override names its override: "stats" or "version".
     loaded_countries preserves batch duplicate checks during a host's review callbacks.
@@ -782,7 +782,7 @@ def load_move_files(context, move_file_paths, keys_dict, *, accept_stat_mismatch
             reject(file_path, cid, "Players cannot replace faction records.")
             continue
         has_intents = "player_intents" in player_data
-        structure_error = None if has_intents else v46_moves.structure_error(player_data)
+        structure_error = None if has_intents else snapshot_moves.structure_error(player_data)
         if structure_error:
             reject(file_path, cid, structure_error)
             continue
@@ -802,14 +802,14 @@ def load_move_files(context, move_file_paths, keys_dict, *, accept_stat_mismatch
             service.apply_validated_drafts({cid: validated})
         else:
             try:
-                snapshot = v46_moves.prepare(context, cid, player_data)
+                snapshot = snapshot_moves.prepare(context, cid, player_data)
             except ValueError as error:
                 reject(file_path, cid, str(error))
                 continue
             if snapshot.warnings and not accept_stat_mismatches:
                 reject(file_path, cid, "\n".join(snapshot.warnings), override="stats")
                 continue
-            v46_moves.apply(context, cid, player_data, snapshot, summary)
+            snapshot_moves.apply(context, cid, player_data, snapshot, summary)
         processed_move_cids.add(cid)
 
         # Also mark this country as having submitted a move
