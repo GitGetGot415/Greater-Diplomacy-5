@@ -39,7 +39,7 @@ SONG_FILE_EXTENSIONS = list(c.MUSIC_AUDIO_EXTENSIONS) + [".json"]
 ALBUM_GAP = 10
 ALBUM_TILE_SIZE = (140, 170)
 ALBUM_TEXT_TILE_SIZE = (140, 50)
-# Tiles without a cover stack under each other in one slot, up to this many.
+# Tiles without a cover stack up to this many per slot.
 ALBUM_MAX_TEXT_STACK = 3
 # Every cover is stretched to this size so all tiles look alike.
 ALBUM_COVER_SIZE = (120, 120)
@@ -203,6 +203,7 @@ class Music_Player(ScrollPanes, Screen):
         slot_heights = [0] * ALBUM_COLUMNS
         column = -1
         text_stack = 0
+        slot_buttons = [[] for _ in range(ALBUM_COLUMNS)]
         # None stands for the new-album tile, which always comes last.
         tiles = albums + [None]
         for album in tiles:
@@ -238,6 +239,7 @@ class Music_Player(ScrollPanes, Screen):
                     y_offset += max(slot_heights)
                     album_content_h += max(slot_heights)
                     slot_heights = [0] * ALBUM_COLUMNS
+                    slot_buttons = [[] for _ in range(ALBUM_COLUMNS)]
                     column = 0
                 text_stack = 0 if icon_img else 1
             tile_x = ALBUM_MARGIN + column * (ALBUM_TILE_SIZE[0] + ALBUM_GAP)
@@ -256,6 +258,7 @@ class Music_Player(ScrollPanes, Screen):
             btn.sound_kind = "select_category"
             btn.pane = "album"
             self.elements.append(btn)
+            slot_buttons[column].append(btn)
 
             if album is not None and queries.is_deletable_album(album):
                 # Sticks out of the tile's top-right corner, on top of it in z-order
@@ -271,6 +274,26 @@ class Music_Player(ScrollPanes, Screen):
                 btn.hover_blocker = delete_btn
                 btn.click_guard = lambda dbtn=delete_btn: (
                     not dbtn.rect.collidepoint(pygame.mouse.get_pos()) and album_guard())
+
+        # Fill the last row's trailing text slots left to right before stacking.
+        # New Album follows every album in that same visual order.
+        first_text_column = 0
+        for index, buttons in enumerate(slot_buttons):
+            if buttons and buttons[0].image is not None:
+                first_text_column = index + 1
+        text_buttons = [btn for buttons in slot_buttons[first_text_column:] for btn in buttons]
+        stack_columns = min(ALBUM_COLUMNS - first_text_column, len(text_buttons))
+        if stack_columns > 1:
+            for target_column in range(first_text_column, first_text_column + stack_columns):
+                slot_heights[target_column] = 0
+            for index, btn in enumerate(text_buttons):
+                target_column = first_text_column + index % stack_columns
+                tile_x = ALBUM_MARGIN + target_column * (ALBUM_TILE_SIZE[0] + ALBUM_GAP)
+                tile_y = y_offset + slot_heights[target_column]
+                if btn.hover_blocker is not None:
+                    btn.hover_blocker.rect.move_ip(tile_x - btn.rect.x, tile_y - btn.rect.y)
+                btn.rect.topleft = (tile_x, tile_y)
+                slot_heights[target_column] += btn.height + ALBUM_GAP
 
         album_content_h += max(slot_heights)
         # Calculate max boundary for Album scrolling

@@ -482,6 +482,7 @@ The file must be MP3, WAV, OGG, or a BeepBox or UltraBox JSON song.
 A song in an album that is not in UNDELETABLE_ALBUMS has a small delete button in its top-right corner.
 The game asks for confirmation first, and it does not delete the song that is playing.
 ALBUM_ORDER in screens/menus/music_player.py sets which albums show first. The "+ New Album" tile is always last.
+The last row fills text-only album tiles left to right across neighboring columns before stacking. The "+ New Album" tile follows the albums in that visual order.
 The format field selects the original BeepBox synth or the separate UltraBox synth.
 The existing music controls apply to both formats.
 UltraBox duration and seeking use its tempo changes and next-bar commands.
