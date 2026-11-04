@@ -36,7 +36,7 @@ MSG_CONTROL_GAP = 12
 MSG_HEADER_BUTTON_H = 36
 MSG_HEADER_BUTTON_Y = (MSG_HEADER_H - MSG_HEADER_BUTTON_H) // 2
 MSG_HEADER_TRADE_W = 116
-MSG_HEADER_THEME_W = 100
+MSG_HEADER_THEME_W = MSG_HEADER_BUTTON_H  # Square: the Theme button shows the brush icon only.
 MSG_HEADER_UNREAD_W = 146
 MSG_CONTACT_TOOLBAR_Y = MSG_HEADER_H + MSG_HEADER_BUTTON_Y
 # Contact toolbar: the sort button sits left of the small add button. Both end at the pane edge.
@@ -743,7 +743,8 @@ class Messages_Screen(Screen):
         trade_button.disabled = not self.selected_recipient or is_tactical
         self.elements.append(trade_button)
         theme_button = Button(theme_x, MSG_HEADER_BUTTON_Y, (MSG_HEADER_THEME_W, MSG_HEADER_BUTTON_H), "blue", "Theme",
-                              self.edit_conversation_theme, font_preset="button_small")
+                              self.edit_conversation_theme, image=ui_elements.UI_ICONS.get("brush"),
+                              show_text=False, font_preset="button_small")
         theme_button.disabled = not self.selected_recipient
         self.elements.append(theme_button)
 
