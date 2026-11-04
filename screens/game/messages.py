@@ -39,6 +39,13 @@ MSG_HEADER_TRADE_W = 116
 MSG_HEADER_THEME_W = 100
 MSG_HEADER_UNREAD_W = 146
 MSG_CONTACT_TOOLBAR_Y = MSG_HEADER_H + MSG_HEADER_BUTTON_Y
+# Contact toolbar: the sort button sits left of the small add button. Both end at the pane edge.
+MSG_ADD_BUTTON_W = 36
+MSG_ADD_BUTTON_X = MSG_LEFT_PANE_W - MSG_MARGIN - MSG_ADD_BUTTON_W
+MSG_SORT_BUTTON_W = 84
+MSG_SORT_BUTTON_X = MSG_ADD_BUTTON_X - 6 - MSG_SORT_BUTTON_W
+# Contact sort orders in button cycle order. Recent puts the newest conversation first.
+MSG_SORT_ORDERS = ("A-Z", "Z-A", "Recent")
 MSG_CONTACT_FLAG_SIZE = (24, 16)
 MSG_HEADER_FLAG_SIZE = (36, 24)
 MSG_FLAG_GAP = 8
@@ -161,6 +168,7 @@ class Messages_Screen(Screen):
         self.forward_button_rects = []
         
         self.show_all_contacts = False
+        self.contact_sort = MSG_SORT_ORDERS[0]
         self.processed_messages = []
         self.compose_surface = None
         self.compose_enabled = False
@@ -278,6 +286,11 @@ class Messages_Screen(Screen):
         self.settle_new_bubbles = switching
         self.refresh_ui()
         self.settle_new_bubbles = False
+
+    def cycle_contact_sort(self):
+        self.contact_sort = MSG_SORT_ORDERS[(MSG_SORT_ORDERS.index(self.contact_sort) + 1) % len(MSG_SORT_ORDERS)]
+        self.contact_scroll_y = 0
+        self.refresh_ui()
 
     def toggle_add_contact(self):
         self.show_all_contacts = not self.show_all_contacts
@@ -657,18 +670,31 @@ class Messages_Screen(Screen):
                                         font_preset="button_small"))
             display_list = [n for n in playable if n not in history_contacts]
         else:
-            self.elements.append(Button(132, MSG_CONTACT_TOOLBAR_Y, (132, MSG_HEADER_BUTTON_H), "blue", "+ Add Contact", self.toggle_add_contact,
-                                        font_preset="button_small", sound_kind="paper"))
+            self.elements.append(Button(MSG_SORT_BUTTON_X, MSG_CONTACT_TOOLBAR_Y, (MSG_SORT_BUTTON_W, MSG_HEADER_BUTTON_H), "grey",
+                                        self.contact_sort, self.cycle_contact_sort, font_preset="button_small"))
+            self.elements.append(Button(MSG_ADD_BUTTON_X, MSG_CONTACT_TOOLBAR_Y, (MSG_ADD_BUTTON_W, MSG_HEADER_BUTTON_H), "blue", "+",
+                                        self.toggle_add_contact, font_preset="button_small", sound_kind="paper"))
             display_list = [n for n in playable if n in history_contacts]
         previews = {}
         unread_counts = {}
+        # The inbox is newest first, so a contact's first entry gives its recency rank.
+        recency = {}
         for message in inbox:
             sender = message.get("sender", "")
             outgoing = sender.startswith("To: ")
             country = sender[4:] if outgoing else sender
+            recency.setdefault(country, len(recency))
             previews.setdefault(country, ("You: " if outgoing else "") + " ".join(message.get("content", "").split()))
             if not outgoing and not message.get("read", False):
                 unread_counts[country] = unread_counts.get(country, 0) + 1
+
+        # display_list starts in A-Z order. The Add list has no messages, so it stays A-Z.
+        if not self.show_all_contacts:
+            if self.contact_sort == "Z-A":
+                display_list.reverse()
+            elif self.contact_sort == "Recent":
+                # Stable sort: contacts without messages keep A-Z order after the rest.
+                display_list.sort(key=lambda country: recency.get(country, len(recency)))
 
         row_height = MSG_NEW_CONTACT_ROW_H if self.show_all_contacts else MSG_CONTACT_ROW_H
         row_step = row_height + MSG_CONTACT_ROW_GAP
