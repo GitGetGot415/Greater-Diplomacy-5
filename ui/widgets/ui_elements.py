@@ -22,6 +22,9 @@ from ui.rendering.font_manager import fonts
 from ui.rendering import symbol_loader
 from ui.widgets.text_utils import wrap_text
 
+PROGRESS_FILL_COLOR = (80, 160, 80)
+PROGRESS_DISABLED_FILL_COLOR = (100, 100, 100)
+
 soloud_engine = None
 click_sound = None
 slider_sound = None
@@ -308,7 +311,7 @@ def draw_pixel_button(surface, rect, color, *, hover_color=None, pressed_color=N
                      border_width=width, recessed=depressed, gradient_strength=gradient_strength)
 
 
-def draw_progress_bar(surface, rect, ratio, color=(100, 200, 100), *,
+def draw_progress_bar(surface, rect, ratio, color=PROGRESS_FILL_COLOR, *,
                       track_color=(40, 40, 60), border_color=(200, 200, 200), disabled=False):
     """Clip a cached full-width fill so progress changes reuse the same shading."""
     draw_pixel_panel(surface, rect, track_color, border_color, recessed=True)
@@ -317,7 +320,7 @@ def draw_progress_bar(surface, rect, ratio, color=(100, 200, 100), *,
         return
     fill_width = int(inner.width * max(0.0, min(1.0, ratio)))
     if fill_width:
-        fill_color = c.UI_TEXT_MUTED if disabled else color
+        fill_color = PROGRESS_DISABLED_FILL_COLOR if disabled else color
         background = _button_background(inner.size, tuple(fill_color[:3]), False, 0)
         surface.blit(background, inner, (0, 0, fill_width, inner.height))
 
