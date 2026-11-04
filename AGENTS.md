@@ -357,6 +357,8 @@ Keep tuning data in its source files:
 
 ### AI and Diplomacy
 
+- Every action available to the rule-based AI must also be available to human players under the same game rules and conditions.
+  Do not give AI exclusive actions or bypass human gameplay restrictions.
 - Keep rule-based AI authoritative when the LLM is enabled or disabled.
   Follow the legal-candidate restriction in the systems checklist.
 - Preserve shared prompt prefixes, turn-budget cancellation, and fairness rules from `documentation/llm_ai.txt`.
