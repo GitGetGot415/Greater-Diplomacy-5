@@ -2,7 +2,7 @@
 
 Each rule finds an older shape in the data and converts it to the current format.
 A rule does nothing to current data. Do not make a rule depend on a version number.
-See documentation/data_migrations.txt.
+See data/migrations/MIGRATIONS.md.
 
 Rules that compare saved data with the active libraries run later in the load,
 when the scenario has selected its libraries. research.py and queries.refresh_unit_stats own them.
