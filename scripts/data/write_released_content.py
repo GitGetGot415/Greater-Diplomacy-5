@@ -9,6 +9,7 @@ See data/migrations/MIGRATIONS.md, Released Names.
 This developer tool is not required or shipped by any platform build.
 """
 
+import ast
 import json
 from pathlib import Path
 import re
@@ -36,13 +37,48 @@ def release_commits():
     A release is the newest commit whose version.txt holds that stamp.
     Test edits, such as v999, are above the current release and are skipped.
     """
-    latest = migrations.version_number((ROOT / "version.txt").read_text(encoding="utf-8"))
+    if git("rev-parse", "--is-shallow-repository").strip() != "false":
+        raise ValueError("Released content needs the full Git history. "
+                         "Run git fetch --unshallow before generating the inventory.")
+    latest_stamp = (ROOT / "version.txt").read_text(encoding="utf-8").strip()
+    latest = migrations.version_number(latest_stamp)
     releases = {}
     for commit in git("log", "--format=%H", "--", "version.txt").split():
         stamp = git("show", f"{commit}:version.txt").strip()
         if re.fullmatch(r"v\d+", stamp) and migrations.version_number(stamp) <= latest:
             releases.setdefault(stamp, commit[:12])
+    if latest_stamp not in releases:
+        raise ValueError(f"Cannot find release {latest_stamp} in the Git history. "
+                         "Commit the release and fetch the full Git history before generating the inventory.")
     return dict(sorted(releases.items(), key=lambda item: migrations.version_number(item[0])))
+
+
+def validate_inventory(inventory):
+    """Refuse to replace an inventory with fewer releases or released names."""
+    if not inventory["RELEASES"]:
+        raise ValueError("No releases found. Fetch the full Git history before generating the inventory.")
+    if not OUTPUT.exists():
+        return
+    previous = {}
+    try:
+        for node in ast.parse(OUTPUT.read_text(encoding="utf-8")).body:
+            if (isinstance(node, ast.Assign) and len(node.targets) == 1
+                    and isinstance(node.targets[0], ast.Name) and node.targets[0].id in inventory):
+                previous[node.targets[0].id] = ast.literal_eval(node.value)
+    except (SyntaxError, ValueError, TypeError) as error:
+        raise ValueError(f"Cannot read the existing inventory {OUTPUT}. Correct it before regenerating.") from error
+    for name, values in inventory.items():
+        expected = dict if name == "RELEASES" else tuple
+        old = previous.get(name)
+        if not isinstance(old, expected):
+            raise ValueError(f"The existing inventory must define {name} as a {expected.__name__}.")
+        missing = sorted(set(old) - set(values))
+        if missing:
+            raise ValueError(f"Regeneration would remove {name}: {', '.join(missing)}. "
+                             "Check the release history and libraries; the existing inventory was kept.")
+        if name == "RELEASES" and any(values[stamp] != commit for stamp, commit in old.items()):
+            raise ValueError("Regeneration would change recorded release commits. "
+                             "Check the full Git history; the existing inventory was kept.")
 
 
 def read_json(commit, path):
@@ -87,6 +123,8 @@ def main():
         for name in read_json(commit, BUILDING_DATA):
             buildings.add(name)
             building_families.add(queries.base_item_name_from_text(name))
+    validate_inventory({"RELEASES": releases, "UNITS": units, "BUILDINGS": buildings,
+                        "UNIT_FAMILIES": unit_families, "BUILDING_FAMILIES": building_families})
     text = ('"""Names that released games wrote into saves. Generated. Do not edit by hand.\n\n'
             "scripts/data/write_released_content.py writes this file from the version.txt history.\n"
             "ReleasedContentTests in tests/test_data_migrations.py reads it.\n"

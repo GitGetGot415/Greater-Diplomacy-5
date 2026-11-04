@@ -43,19 +43,17 @@ def convert_save(save_meta, map_data):
     History snapshots stay in their saved format. Only a selected history turn becomes
     live state, and convert_history_turn converts it then.
     """
-    _nations(save_meta.get("nation_data"))
+    aliases = {**LEGACY_UNIT_NAMES, **equipment_stage_aliases()}
+    _nations(save_meta.get("nation_data"), aliases)
     for province in map_data.values():
-        _province(province, province.get("terrain"))
+        _province(province, province.get("terrain"), aliases)
     for key, province in (save_meta.get("provinces") or {}).items():
         if isinstance(province, dict):
-            _province(province, map_data.get(key, {}).get("terrain"))
+            _province(province, map_data.get(key, {}).get("terrain"), aliases)
     # Completed real-time saves made before offline_view open as spectator replays.
     realtime_match = save_meta.get("realtime_match")
     if isinstance(realtime_match, dict) and realtime_match.get("format") == "gd5-realtime-v1":
         realtime_match.setdefault("offline_view", "spectator")
-    aliases = {**LEGACY_UNIT_NAMES, **equipment_stage_aliases()}
-    for records in (save_meta, map_data):
-        _unit_records(records, aliases)
 
 
 def convert_history_turn(snapshot, map_data):
@@ -65,11 +63,11 @@ def convert_history_turn(snapshot, map_data):
     """
     if not isinstance(snapshot, dict):
         return
-    _nations(snapshot.get("nation_data"))
+    aliases = {**LEGACY_UNIT_NAMES, **equipment_stage_aliases()}
+    _nations(snapshot.get("nation_data"), aliases)
     for key, province in (snapshot.get("provinces") or {}).items():
         if isinstance(province, dict):
-            _province(province, map_data.get(key, {}).get("terrain"))
-    _unit_records(snapshot, {**LEGACY_UNIT_NAMES, **equipment_stage_aliases()})
+            _province(province, map_data.get(key, {}).get("terrain"), aliases)
 
 
 def convert_move(player_data):
@@ -83,9 +81,10 @@ def convert_move(player_data):
         country = {key: player_data.pop(key) for key in list(player_data) if key not in MOVE_FIELDS}
         player_data["nation_data"] = country
         player_data["provinces"] = {}
+    aliases = {**LEGACY_UNIT_NAMES, **equipment_stage_aliases()}
     country = _container(player_data, "nation_data", dict)
     if "nation_data" in player_data:
-        _country(country)
+        _country(country, aliases)
         if "release_subjects" not in player_data and isinstance(country.get("release_puppet_queue"), list):
             # Older moves held release requests only in the country's queue.
             player_data["release_subjects"] = copy.deepcopy(country["release_puppet_queue"])
@@ -97,13 +96,26 @@ def convert_move(player_data):
         if isinstance(province, dict):
             # A move has no terrain, so a Truck aircraft unpacks as on land.
             # Host validation then checks every unit against host state.
-            _province(province, None)
+            _province(province, None, aliases)
     if "provinces" in player_data:
         if "aircraft_orders" not in player_data:
             player_data["aircraft_orders"] = _aircraft_orders(provinces)
         # Older moves replaced the country's units only when they listed provinces.
         player_data.setdefault("unit_snapshot", bool(provinces))
-    _unit_records(player_data, {**LEGACY_UNIT_NAMES, **equipment_stage_aliases()})
+    for aircraft in _container(player_data, "aircraft_orders", list):
+        if isinstance(aircraft, dict):
+            _unit_order(aircraft.get("order"), aliases)
+    for command in _container(player_data, "player_intents", list):
+        if not isinstance(command, dict):
+            continue
+        kind = command.get("type")
+        if kind == "unit_order":
+            _unit_order(command.get("order"), aliases)
+        elif kind == "province_queue" and command.get("queue") == "unit_queue":
+            for entry in _container(command, "items", list):
+                _unit_queue_entry(entry, aliases)
+        elif kind == "country_preferences":
+            _custom_production_units(command, aliases)
 
 
 def _aircraft_orders(provinces):
@@ -125,14 +137,15 @@ def _aircraft_orders(provinces):
 
 # --- Countries ---
 
-def _nations(nation_data):
+def _nations(nation_data, aliases):
     if isinstance(nation_data, dict):
-        for country in nation_data.values():
-            if isinstance(country, dict):
-                _country(country)
+        for name, country in nation_data.items():
+            # Pre-war border maps are keyed by faction name, not country fields.
+            if name != "FACTION_WAR_MAPS" and isinstance(country, dict):
+                _country(country, aliases)
 
 
-def _country(country):
+def _country(country, aliases):
     """Convert one country record."""
     country.pop("allied_with", None)
     for project in _container(country, "research_queue", list):
@@ -141,15 +154,18 @@ def _country(country):
         days = project.get("days_remaining", LEGACY_RESEARCH_DEFAULT_DAYS)
         if _is_count(days) and "points_remaining" not in project:
             project["points_remaining"] = days * LEGACY_RESEARCH_POINTS_PER_DAY
-    if isinstance(country.get("custom_production_units"), list):
-        country["custom_production_units"] = [
-            _unit_name(name) for name in country["custom_production_units"]]
+    _custom_production_units(country, aliases)
+    for mission in _container(country, "volunteer_missions", dict).values():
+        if isinstance(mission, dict):
+            for entry in _container(mission, "held_units", list):
+                if isinstance(entry, dict):
+                    _unit(entry.get("unit"), aliases)
     for entry in _container(country, "release_puppet_queue", list):
         if isinstance(entry, dict):
             entry.setdefault("release_type", c.PUPPET_TYPE_INTEGRATED)
     for event in _container(country, "scripted_events", list):
         if isinstance(event, dict):
-            _scripted_event(event)
+            _scripted_event(event, aliases)
     for message in _container(country, "inbox", list):
         if isinstance(message, dict) and not message.get("message_id"):
             message["message_id"] = uuid.uuid4().hex
@@ -172,7 +188,7 @@ def _country(country):
                 break
 
 
-def _scripted_event(event):
+def _scripted_event(event, aliases):
     """Give an event the condition and action lists that replaced single fields."""
     if "conditions" not in event:
         event["conditions"] = [{
@@ -185,12 +201,12 @@ def _scripted_event(event):
                              "target": event.get("action_target", "None")}]
     for action in _container(event, "actions", list):
         if isinstance(action, dict) and action.get("type") == "Spawn Unit":
-            action["unit_type"] = _unit_name(action.get("unit_type"))
+            action["unit_type"] = _unit_name(action.get("unit_type"), aliases)
 
 
 # --- Provinces ---
 
-def _province(province, terrain):
+def _province(province, terrain, aliases):
     """Convert one province record. terrain is the province's map terrain."""
     from data import queries
     if "deployment_queue" in province:
@@ -208,17 +224,12 @@ def _province(province, terrain):
         for entry in _container(province, queue, list):
             if isinstance(entry, dict):
                 _production_turns(entry)
-                if "unit_type" in entry:
-                    entry["unit_type"] = _unit_name(entry["unit_type"])
+                if queue == "unit_queue":
+                    _unit_queue_entry(entry, aliases)
     for unit in _container(province, "units", list):
         if not isinstance(unit, dict):
             continue
-        for field in ("type", "original_type"):
-            if field in unit:
-                unit[field] = _unit_name(unit[field])
-        order = unit.get("order")
-        if isinstance(order, dict) and "target_type" in order:
-            order["target_type"] = _unit_name(order["target_type"])
+        _unit(unit, aliases)
         # Move files are player input. Validation reports malformed units after conversion.
         if not isinstance(unit.get("type"), str) or not queries.is_air_transport(unit):
             continue
@@ -243,49 +254,49 @@ def _production_turns(entry):
 
 # --- Unit names ---
 
-def _unit_name(name):
-    """Number older unit identifiers, including inside a transport name."""
+def _unit_name(name, aliases):
+    """Convert an older unit identifier, including inside a transport name."""
     if not isinstance(name, str):
         return name
-    if name in LEGACY_UNIT_NAMES:
-        return LEGACY_UNIT_NAMES[name]
     for carrier in ("Truck", "Convoy"):
         prefix = carrier + " ("
         if name.startswith(prefix) and name.endswith(")"):
             inner = name[len(prefix):-1]
-            return prefix + _unit_name(inner) + ")"
-    return name
+            return prefix + _unit_name(inner, aliases) + ")"
+    return aliases.get(name, name)
 
 
-def _unit_records(records, aliases):
-    """Convert typed references, including cargo, orders, scripts, and saved history."""
-    def converted(name):
-        if not isinstance(name, str):
-            return name
-        for carrier in ("Truck", "Convoy"):
-            prefix = carrier + " ("
-            if name.startswith(prefix) and name.endswith(")"):
-                return prefix + converted(name[len(prefix):-1]) + ")"
-        return aliases.get(name, name)
+def _unit(unit, aliases):
+    """Visit only unit fields and cargo; unknown extension data keeps its meaning."""
+    if not isinstance(unit, dict):
+        return
+    for field in ("type", "original_type"):
+        if field in unit:
+            unit[field] = _unit_name(unit[field], aliases)
+    _unit_order(unit.get("order"), aliases)
+    for cargo in _container(unit, "air_cargo", list):
+        _unit(cargo, aliases)
 
-    # Recurse only into containers. A large save holds many plain values.
-    if isinstance(records, list):
-        for item in records:
-            if isinstance(item, (dict, list)):
-                _unit_records(item, aliases)
-    elif isinstance(records, dict):
-        for field, value in records.items():
-            if field in ("type", "unit_type", "original_type", "target_type"):
-                records[field] = converted(value)
-            elif field == "custom_production_units" and isinstance(value, list):
-                choices = []
-                for name in value:
-                    name = converted(name)
-                    if name not in choices:
-                        choices.append(name)
-                records[field] = choices
-            elif isinstance(value, (dict, list)):
-                _unit_records(value, aliases)
+
+def _unit_order(order, aliases):
+    if isinstance(order, dict) and order.get("type") == "UPGRADE" and "target_type" in order:
+        order["target_type"] = _unit_name(order["target_type"], aliases)
+
+
+def _unit_queue_entry(entry, aliases):
+    if isinstance(entry, dict) and "unit_type" in entry:
+        entry["unit_type"] = _unit_name(entry["unit_type"], aliases)
+
+
+def _custom_production_units(record, aliases):
+    values = record.get("custom_production_units")
+    if isinstance(values, list):
+        choices = []
+        for name in values:
+            name = _unit_name(name, aliases)
+            if name not in choices:
+                choices.append(name)
+        values[:] = choices
 
 
 def _is_count(value):

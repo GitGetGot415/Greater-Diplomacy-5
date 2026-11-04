@@ -384,6 +384,124 @@ class ResearchChangeTests(unittest.TestCase):
         self.assertIsNone(country["current_research"])
         self.assertEqual(saved["default_research"], {"capped": 4})
 
+    def test_projects_at_the_active_cap_are_removed_without_changing_other_work(self):
+        country = {"research": {"capped": self.TREE["capped"]["max_lvl"], "base": 1},
+                   "research_queue": [{"tech_name": "capped", "points_remaining": 13},
+                                      {"tech_name": "base", "points_remaining": 17}],
+                   "research_progress": {"capped": 13, "base": 17}, "current_research": "capped"}
+        saved = {"nation_data": {"A": country}, "default_research": copy.deepcopy(country["research"])}
+        queue = country["research_queue"]
+        migrations.clamp_research_levels(saved, self.TREE)
+        self.assertEqual(country["research"], saved["default_research"])
+        self.assertIs(country["research_queue"], queue)
+        self.assertEqual(queue, [{"tech_name": "base", "points_remaining": 17}])
+        self.assertEqual(country["research_progress"], {"base": 17})
+        self.assertIsNone(country["current_research"])
+        restored = round_trip(saved)
+        migrations.clamp_research_levels(restored, self.TREE)
+        self.assertEqual(restored, saved)
+
+
+class MigrationBoundaryTests(unittest.TestCase):
+    """Conversion visits known records and preserves unrelated saved data."""
+
+    OLDER = "Older Fixture Unit"
+    CURRENT = "Fixture Unit I"
+
+    def setUp(self):
+        aliases = mock.patch("data.migrations.conversions.equipment_stage_aliases",
+                             return_value={self.OLDER: self.CURRENT})
+        aliases.start()
+        self.addCleanup(aliases.stop)
+
+    def test_faction_border_maps_survive_country_conversion_and_research_repairs(self):
+        borders = {name: {"(1, 2, 3)": self.OLDER} for name in (
+            "allied_with", "research_queue", "research", "research_progress", "inbox",
+            "scripted_events", "custom_production_units", "pending_diplomacy", "volunteer_missions")}
+        countries = {"FACTION_WAR_MAPS": copy.deepcopy(borders), "A": {"allied_with": ["B"]},
+                     "GLOBAL_EVENTS": {"scripted_events": [{"conditions": [], "actions": [
+                         {"type": "Spawn Unit", "unit_type": self.OLDER}]}]}}
+        saved = {"nation_data": copy.deepcopy(countries)}
+        history = {"1": {"nation_data": copy.deepcopy(countries)}}
+        upgraded(saved, history=history)
+        migrations.migrate_infantry_research(saved, {}, history)
+        for record in (saved, history["1"]):
+            migrations.clamp_research_levels(record, {})
+            migrations.grant_research_prerequisites(record, {})
+            self.assertEqual(record["nation_data"]["FACTION_WAR_MAPS"], borders)
+            self.assertEqual(record["nation_data"]["A"], {})
+            action = record["nation_data"]["GLOBAL_EVENTS"]["scripted_events"][0]["actions"][0]
+            self.assertEqual(action["unit_type"], self.CURRENT)
+        restored = round_trip(saved)
+        migrations.upgrade_save(restored, {})
+        self.assertEqual(restored, saved)
+
+    def test_unknown_fields_survive_save_history_and_both_move_formats(self):
+        unknown = {key: self.OLDER for key in ("type", "unit_type", "original_type", "target_type")}
+        unknown["custom_production_units"] = [self.OLDER, self.OLDER]
+        unknown["units"] = [{"type": self.OLDER}]
+        order = {"type": "UPGRADE", "target_type": self.OLDER, "future_field": copy.deepcopy(unknown)}
+        unit = {"type": self.OLDER, "order": copy.deepcopy(order), "future_field": copy.deepcopy(unknown)}
+        carrier = {"type": "Fixture Carrier I", "air_cargo": [copy.deepcopy(unit)],
+                   "future_field": copy.deepcopy(unknown)}
+        country = {"custom_production_units": [self.OLDER, self.CURRENT],
+                   "future_field": copy.deepcopy(unknown), "volunteer_missions": {
+                       "B": {"held_units": [{"unit": copy.deepcopy(unit), "future_field": copy.deepcopy(unknown)}],
+                             "future_field": copy.deepcopy(unknown)}},
+                   "scripted_events": [{"conditions": [], "future_field": copy.deepcopy(unknown), "actions": [
+                       {"type": "Spawn Unit", "unit_type": self.OLDER, "future_field": copy.deepcopy(unknown)},
+                       {"type": "Fixture Action", "unit_type": self.OLDER}]}]}
+        province = {"units": [copy.deepcopy(unit), carrier], "future_field": copy.deepcopy(unknown),
+                    "unit_queue": [{"unit_type": self.OLDER, "future_field": copy.deepcopy(unknown)}]}
+        saved = {"nation_data": {"A": copy.deepcopy(country)}, "future_field": copy.deepcopy(unknown)}
+        raw = {"P": copy.deepcopy(province)}
+        snapshot = {"nation_data": {"A": copy.deepcopy(country)}, "provinces": {"P": copy.deepcopy(province)},
+                    "future_field": copy.deepcopy(unknown)}
+        upgraded(saved, raw, {"1": snapshot})
+        records = [saved, raw, snapshot]
+        for intents in (False, True):
+            move = {"nation_data": copy.deepcopy(country), "provinces": {"P": copy.deepcopy(province)},
+                    "aircraft_orders": [{"order": copy.deepcopy(order), "future_field": copy.deepcopy(unknown)}],
+                    "future_field": copy.deepcopy(unknown)}
+            if intents:
+                move["player_intents"] = [
+                    {"type": "unit_order", "order": copy.deepcopy(order), "future_field": copy.deepcopy(unknown)},
+                    {"type": "province_queue", "queue": "unit_queue", "items": [
+                        {"unit_type": self.OLDER, "future_field": copy.deepcopy(unknown)}]},
+                    {"type": "country_preferences", "custom_production_units": [self.OLDER, self.CURRENT]}]
+            migrations.upgrade_move(move)
+            self.assertEqual(move["nation_data"]["volunteer_missions"]["B"]["held_units"][0]["unit"]["type"],
+                             self.CURRENT)
+            self.assertEqual(move["aircraft_orders"][0]["order"]["target_type"], self.CURRENT)
+            if intents:
+                self.assertEqual(move["player_intents"][0]["order"]["target_type"], self.CURRENT)
+                self.assertEqual(move["player_intents"][1]["items"][0]["unit_type"], self.CURRENT)
+                self.assertEqual(move["player_intents"][2]["custom_production_units"], [self.CURRENT])
+            once = round_trip(move)
+            migrations.upgrade_move(move)
+            self.assertEqual(move, once)
+            records.append(move)
+        self.assertEqual(raw["P"]["units"][1]["air_cargo"][0]["type"], self.CURRENT)
+        for record in (saved, snapshot):
+            converted = record["nation_data"]["A"]
+            self.assertEqual(converted["custom_production_units"], [self.CURRENT])
+            self.assertEqual(converted["scripted_events"][0]["actions"][1]["unit_type"], self.OLDER)
+            self.assertEqual(converted["volunteer_missions"]["B"]["held_units"][0]["unit"]["order"]["target_type"],
+                             self.CURRENT)
+
+        def check_unknown_fields(record):
+            if isinstance(record, dict):
+                for key, value in record.items():
+                    if key == "future_field":
+                        self.assertEqual(value, unknown)
+                    else:
+                        check_unknown_fields(value)
+            elif isinstance(record, list):
+                for value in record:
+                    check_unknown_fields(value)
+
+        check_unknown_fields(round_trip(records))
+
 
 class LoadRepairTests(unittest.TestCase):
     LIBRARY = {"Fixture Ground": {"health": 40, "attack": 6, "defense": 3, "speed": 5},
@@ -458,6 +576,24 @@ class LoadRepairTests(unittest.TestCase):
         load_map._repair_province(province, library)
         self.assertEqual(province["buildings"],
                          ["Fixture Lvl 4", "Fixture Lvl 2", "Fixture Lvl 3", "Fixture Lvl 2"])
+
+    def test_sparse_building_levels_choose_existing_levels_and_keep_paid_orders(self):
+        library = {f"Fixture Lvl {level}": {} for level in (1, 4, 8)}
+        for old, current in ((0, 1), (2, 1), (3, 4), (4, 4), (6, 4), (7, 8), (9, 8)):
+            with self.subTest(level=old):
+                name, expected = f"Fixture Lvl {old}", f"Fixture Lvl {current}"
+                paid = {"item_name": name, "order_type": "BUILDING", "turns_remaining": 13,
+                        "refund": {"cost_materials": 17}, "future_field": {"keep": True}}
+                province = {"buildings": [name], "building_queue": [paid]}
+                load_map._repair_province(province, library)
+                self.assertEqual(province["buildings"], [expected])
+                self.assertIn(expected, library)
+                self.assertIs(province["building_queue"][0], paid)
+                self.assertEqual(paid, dict(item_name=expected, order_type="BUILDING", turns_remaining=13,
+                                           refund={"cost_materials": 17}, future_field={"keep": True}))
+                restored = round_trip(province)
+                load_map._repair_province(restored, library)
+                self.assertEqual(restored, province)
 
     def test_missing_and_duplicate_unit_ids_stay_stable_after_round_trip(self):
         units = [{"unit_id": "existing"}, {"unit_id": "existing"},
@@ -569,6 +705,75 @@ class ReleasedContentTests(unittest.TestCase):
 
 
 class ReleasedContentWriterTests(unittest.TestCase):
+    @staticmethod
+    def inventory_text(**overrides):
+        values = {"RELEASES": {"v1": "fixture"}, "UNITS": ("Fixture Unit I",),
+                  "BUILDINGS": ("Fixture Building Lvl 1",), "UNIT_FAMILIES": ("Fixture Settings",),
+                  "BUILDING_FAMILIES": ("Fixture Building",)}
+        values.update(overrides)
+        return "\n".join(f"{name} = {value!r}" for name, value in values.items())
+
+    def test_shallow_history_cannot_replace_the_inventory(self):
+        with mock.patch.object(write_released_content, "git", return_value="true\n") as git, \
+                mock.patch.object(Path, "write_text") as write:
+            with self.assertRaisesRegex(ValueError, "git fetch --unshallow"):
+                write_released_content.main()
+            git.assert_called_once_with("rev-parse", "--is-shallow-repository")
+            write.assert_not_called()
+
+    def test_empty_history_or_missing_latest_release_cannot_replace_the_inventory(self):
+        for history in ([], ["older"]):
+            with self.subTest(history=history), \
+                    mock.patch.object(Path, "read_text", return_value="v3\n"), \
+                    mock.patch.object(write_released_content, "git",
+                                      side_effect=["false\n", "\n".join(history), *["v1"] * len(history)]), \
+                    mock.patch.object(Path, "write_text") as write:
+                with self.assertRaisesRegex(ValueError, "Cannot find release v3"):
+                    write_released_content.main()
+                write.assert_not_called()
+
+    def test_full_history_keeps_release_order_and_ignores_test_stamps(self):
+        commits = [letter * 40 for letter in "abcd"]
+        with mock.patch.object(Path, "read_text", return_value="v3\n"), \
+                mock.patch.object(write_released_content, "git", side_effect=[
+                    "false\n", "\n".join(commits), "v3", "v999", "v1", "v15a"]):
+            self.assertEqual(write_released_content.release_commits(),
+                             {"v1": "c" * 12, "v3": "a" * 12})
+
+    def test_regeneration_cannot_drop_recorded_releases_names_or_families(self):
+        unit = {"Fixture Unit I": {"metadata": {"family": "Fixture Unit", "settings_family": "Fixture Settings"}}}
+        building = {"Fixture Building Lvl 1": {}}
+        cases = {"RELEASES": {"v0": "older", "v1": "fixture"}, "UNITS": ("Removed Fixture I",),
+                 "BUILDINGS": ("Removed Fixture Lvl 1",), "UNIT_FAMILIES": ("Removed Fixture",),
+                 "BUILDING_FAMILIES": ("Removed Fixture",)}
+        for name, previous in cases.items():
+            with self.subTest(field=name), \
+                    mock.patch.object(write_released_content, "release_commits", return_value={"v1": "fixture"}), \
+                    mock.patch.object(write_released_content, "git", side_effect=[json.dumps(unit), json.dumps(building)]), \
+                    mock.patch.object(Path, "exists", return_value=True), \
+                    mock.patch.object(Path, "read_text", return_value=self.inventory_text(**{name: previous})), \
+                    mock.patch.object(Path, "write_text") as write:
+                with self.assertRaisesRegex(ValueError, f"would remove {name}"):
+                    write_released_content.main()
+                write.assert_not_called()
+
+    def test_empty_discovery_changed_commits_and_broken_inventory_cannot_overwrite_it(self):
+        unit = {"Fixture Unit I": {"metadata": {"family": "Fixture Unit", "settings_family": "Fixture Settings"}}}
+        building = {"Fixture Building Lvl 1": {}}
+        for releases, previous, message in (
+                ({}, self.inventory_text(), "No releases found"),
+                ({"v1": "changed"}, self.inventory_text(), "change recorded release commits"),
+                ({"v1": "fixture"}, "invalid python!", "Cannot read the existing inventory")):
+            with self.subTest(message=message), \
+                    mock.patch.object(write_released_content, "release_commits", return_value=releases), \
+                    mock.patch.object(write_released_content, "git", side_effect=[json.dumps(unit), json.dumps(building)]), \
+                    mock.patch.object(Path, "exists", return_value=True), \
+                    mock.patch.object(Path, "read_text", return_value=previous), \
+                    mock.patch.object(Path, "write_text") as write:
+                with self.assertRaisesRegex(ValueError, message):
+                    write_released_content.main()
+                write.assert_not_called()
+
     def test_unreadable_release_library_stops_generation_without_replacing_inventory(self):
         for path in (write_released_content.UNIT_DATA, write_released_content.BUILDING_DATA):
             for result in (subprocess.CalledProcessError(128, ["git", "show"]), "invalid json",
@@ -588,6 +793,8 @@ class ReleasedContentWriterTests(unittest.TestCase):
         building = {"Fixture Building Lvl 1": {}}
         with mock.patch.object(write_released_content, "release_commits", return_value={"v1": "fixture"}), \
                 mock.patch.object(write_released_content, "git", side_effect=[json.dumps(unit), json.dumps(building)]), \
+                mock.patch.object(Path, "exists", return_value=True), \
+                mock.patch.object(Path, "read_text", return_value=self.inventory_text()), \
                 mock.patch.object(Path, "write_text") as write, mock.patch("builtins.print"):
             write_released_content.main()
         generated = {}
@@ -597,6 +804,26 @@ class ReleasedContentWriterTests(unittest.TestCase):
         self.assertEqual(generated["BUILDINGS"], tuple(building))
         self.assertEqual(generated["UNIT_FAMILIES"], ("Fixture Settings",))
         self.assertEqual(generated["BUILDING_FAMILIES"], ("Fixture Building",))
+
+    def test_regeneration_can_add_a_release_and_new_names(self):
+        releases = {"v1": "fixture", "v2": "newer"}
+        unit = {"Fixture Unit I": {"metadata": {"family": "Fixture Settings"}},
+                "New Fixture I": {"metadata": {"family": "New Fixture"}}}
+        building = {"Fixture Building Lvl 1": {}, "New Fixture Lvl 1": {}}
+        with mock.patch.object(write_released_content, "release_commits", return_value=releases), \
+                mock.patch.object(write_released_content, "git",
+                                  side_effect=[json.dumps(unit), json.dumps(building)] * 2), \
+                mock.patch.object(Path, "exists", return_value=True), \
+                mock.patch.object(Path, "read_text", return_value=self.inventory_text()), \
+                mock.patch.object(Path, "write_text") as write, mock.patch("builtins.print"):
+            write_released_content.main()
+        generated = {}
+        exec(compile(write.call_args.args[0], "released_content.py", "exec"), generated)
+        self.assertEqual(generated["RELEASES"], releases)
+        self.assertEqual(set(generated["UNITS"]), set(unit))
+        self.assertEqual(set(generated["BUILDINGS"]), set(building))
+        self.assertEqual(set(generated["UNIT_FAMILIES"]), {"Fixture Settings", "New Fixture"})
+        self.assertEqual(set(generated["BUILDING_FAMILIES"]), {"Fixture Building", "New Fixture"})
 
 
 class LibraryAndTournamentTests(unittest.TestCase):

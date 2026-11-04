@@ -28,7 +28,8 @@ def clamp_building_level(name, building_library):
               if other and other.group(1) == family]
     if not levels:
         return None
-    return f"{family} Lvl {min(max(level, min(levels)), max(levels))}"
+    nearest = min(levels, key=lambda candidate: (abs(candidate - level), candidate))
+    return f"{family} Lvl {nearest}"
 
 
 def clamp_building_queue(queue, building_library):

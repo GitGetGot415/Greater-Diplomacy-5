@@ -63,8 +63,8 @@ def migrate_infantry_research(saved, tech_tree, history=None):
     def convert_countries(countries):
         if not isinstance(countries, dict):
             return
-        for country in countries.values():
-            if not isinstance(country, dict):
+        for name, country in countries.items():
+            if name == "FACTION_WAR_MAPS" or not isinstance(country, dict):
                 continue
             pending = set(country.get("research_progress", {}))
             pending.update(project.get("tech_name") for project in country.get("research_queue", []))
@@ -106,7 +106,7 @@ def clamp_research_levels(saved, tech_tree):
         done = set()
         for key, level in research.items():
             if (key in tech_tree and key not in c.DATED_UNIT_RESEARCH_TRACKS
-                    and type(level) is int and level > tech_tree[key]["max_lvl"]):
+                    and type(level) is int and level >= tech_tree[key]["max_lvl"]):
                 research[key] = tech_tree[key]["max_lvl"]
                 done.add(key)
         if "research_queue" in country:
@@ -119,8 +119,8 @@ def clamp_research_levels(saved, tech_tree):
 
     def clamp_countries(countries):
         if isinstance(countries, dict):
-            for country in countries.values():
-                if isinstance(country, dict):
+            for name, country in countries.items():
+                if name != "FACTION_WAR_MAPS" and isinstance(country, dict):
                     clamp(country)
 
     if isinstance(saved.get("default_research"), dict):
@@ -158,8 +158,8 @@ def grant_research_prerequisites(saved, tech_tree):
 
     def grant_countries(countries):
         if isinstance(countries, dict):
-            for country in countries.values():
-                if isinstance(country, dict):
+            for name, country in countries.items():
+                if name != "FACTION_WAR_MAPS" and isinstance(country, dict):
                     grant(country.get("research"))
 
     grant(saved.get("default_research"))

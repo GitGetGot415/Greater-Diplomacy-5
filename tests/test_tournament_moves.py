@@ -824,6 +824,27 @@ class TournamentMoveTests(unittest.TestCase):
         from data import migrations
         return self.v46_move(country_id, host, game_version=f"v{migrations.CURRENT_VERSION - 1}")
 
+    def test_converted_snapshot_drops_a_project_at_the_active_research_cap(self):
+        host = Host()
+        host.runtime_rules = RuntimeRules(libraries={
+            "tech_tree": {"fixture_tech": {"max_lvl": 2, "req": {}, "years": [1800, 1850]}},
+            "unit_library": {}, "building_library": {}})
+        host.nation_data["Leader"]["research"] = {"fixture_tech": 2}
+        move = self.previous_release_move("Leader", host)
+        move["nation_data"].update(
+            research_queue=[{"tech_name": "fixture_tech", "points_remaining": 13}],
+            research_progress={"fixture_tech": 13}, current_research="fixture_tech")
+        with tempfile.TemporaryDirectory() as directory, \
+                mock.patch("data.migrations.conversions.equipment_stage_aliases", return_value={}):
+            path = self.write_move(directory, "at-cap.gd5move", "Leader", move)
+            summary = self.import_moves(host, [path], accept_older_versions=True)
+        self.assertEqual(summary["loaded"], 1, summary["rejections"])
+        country = host.nation_data["Leader"]
+        self.assertEqual(country["research"], {"fixture_tech": 2})
+        self.assertEqual(country["research_queue"], [])
+        self.assertEqual(country["research_progress"], {})
+        self.assertIsNone(country["current_research"])
+
     def test_move_from_this_release_needs_no_conversion_or_host_review(self):
         host = Host()
         move = self.v46_move("Leader", host, game_version=c.GAME_VERSION, release_subjects=[

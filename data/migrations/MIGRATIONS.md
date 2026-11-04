@@ -97,6 +97,7 @@ These rules convert formats from released versions up to v46.
 They also keep support for older save formats that v46 accepted.
 
 - Country records lose the obsolete `allied_with` field. Factions and subjects do not change.
+  Country conversion and research repairs skip the `FACTION_WAR_MAPS` bookkeeping record.
 - `deployment_queue` entries move into `unit_queue` and `building_queue`.
 - Research projects without `points_remaining` receive points from their day countdown.
 - Production entries with `days_remaining` receive `turns_remaining`. The day field has priority.
@@ -160,6 +161,7 @@ A scenario can select different libraries. This conversion uses the libraries th
   It converts every history snapshot too. See [History Snapshots](#history-snapshots).
 - `clamp_research_levels` lowers a research level above the active maximum. The equipment tracks keep their levels.
   It removes queued projects, progress, and current research for a technology that the new maximum completes.
+  This includes a saved level already equal to the active maximum.
 - `grant_research_prerequisites` gives countries the prerequisite levels of technologies they already have.
   Older saves have technologies whose prerequisites were added later.
   Without them a country cannot research further levels of what it owns.
@@ -224,6 +226,9 @@ Example: `Infantry Type 1917` becomes the latest infantry stage at or before 191
 Conversion runs before the scenario selects its libraries, so it cannot use the active library.
 
 The rule converts units, transport cargo, production queues, upgrade targets, custom production lists, and scripted spawns.
+Held volunteer units use the same conversion.
+Conversion follows these known fields in saves, selected history, and moves. It leaves unknown fields and their contents intact.
+When a new saved location holds a unit reference, include that location in the conversion.
 The stat refresh then gives each unit its new statistics. Health keeps its fraction.
 
 The list of older names in `equipment_stage_aliases` describes v46 names.
@@ -271,6 +276,7 @@ Also keep each older family in `equipment_stage_aliases`.
    A numbered building level outside its family range moves to the nearest level in the active library.
    Example: "Factory Lvl 50" becomes the highest Factory level. `migrations.clamp_building_level` does this.
    Queued building orders follow the same rule (`migrations.clamp_building_queue`). A paid order keeps its progress and refund.
+   Gaps in the library's levels select the nearest existing level. Equal distances select the lower level.
    A snapshot move receives the same clamp, so its queue matches the host's queue.
    A building with no family in the library is still dropped.
 8. `refresh_unit_stats` copies unit statistics from the active unit library. Health keeps its fraction of maximum health.
@@ -556,6 +562,9 @@ A release is a version that players received. Only released data needs conversio
 It holds unit and building identifiers, and the family keys of scenario settings.
 `scripts/data/write_released_content.py` writes it from every release in the `version.txt` history.
 An unreadable, empty, or malformed release library stops generation before the existing list is overwritten.
+Generation requires full Git history. On a shallow clone, run `git fetch --unshallow` first.
+The generator also refuses missing releases, changed recorded release commits, and removal of any previously listed name or family.
+It keeps the existing inventory when a check fails.
 
 `ReleasedContentTests` in `tests/test_data_migrations.py` checks each name:
 
