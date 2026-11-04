@@ -6,13 +6,9 @@ own copy of the same four pieces: a table of per-pane scroll attribute names, a
 row-layout wrapper, a wheel router, and a draw_elements that clips each pane to
 its own rect. Three of the copies were byte-identical.
 
-They had also drifted in two ways worth naming, since this mixin settles both:
-
-- Whether row layout forwards view_h to layout_list_rows. It must not; see
-  pane_rows() below.
-- How the wheel picks a pane. The editors hit-test the pane rects; the asset
-  viewer and music player compared the mouse x against a hardcoded column
-  boundary, which sends a notch over a pane's gutter to the wrong list.
+Row layout, clipping and click guards share the full pane height, so partially
+visible rows slide behind its edges. Wheel routing hit-tests pane rects rather
+than a column boundary, so a notch over a gutter cannot scroll the wrong list.
 
 Kept dependency-free apart from pygame and data.constants so it stays a leaf in
 the import graph -- it is a mixin rather than a Screen subclass precisely so
@@ -66,18 +62,14 @@ class ScrollPanes:
     def pane_rows(self, name, count, top, view_h, row_h=None):
         """Yields (index, y) for the rows of `name` that are worth drawing.
 
-        view_h is deliberately NOT forwarded to layout_list_rows. Passing it
-        would let layout_list_rows compute max_scroll against the full (taller)
-        view_h while cull_bottom -- which is what actually gates clicks -- is
-        shorter by row_h-2, leaving the last row a permanent sliver short of
-        being clickable once fully scrolled into view. Omitting it makes the
-        function derive its own view_h from cull_bottom instead, so the scroll
-        limit and the clickable boundary always agree.
+        Use the full clipping region for row inclusion, clicks and the scroll
+        limit. Subtracting a row height here makes rows pop out before they
+        have finished sliding behind the bottom edge.
         """
         row_h = row_h or self.ROW_HEIGHT
         attrs = self.scroll_attrs(name)
-        return self.layout_list_rows(count, row_h, top,
-                                     cull_top=top - 1, cull_bottom=top + view_h - row_h + 2,
+        return self.layout_list_rows(count, row_h, top, view_h=view_h,
+                                     cull_top=top, cull_bottom=top + view_h,
                                      attr=attrs["attr"], limit_attr=attrs["limit_attr"],
                                      guard_attr=f"_guard_{name}")
 

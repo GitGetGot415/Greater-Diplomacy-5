@@ -173,9 +173,12 @@ class BuildAndPaintTests(BattleScreenTestCase):
         from screens.game.orders import Orders_Screen
 
         self.map._orders_entered_from_combat_bubble = True
+        self.map.clear_map_unit_selection()
         orders = Orders_Screen()
-        orders.start_with_province(self.province, self.map)
+        with mock.patch.object(self.map, "select_map_units") as select_units:
+            orders.start_with_province(self.province, self.map)
 
+        select_units.assert_not_called()
         self.assertIsNotNone(orders.battle_screen)
         self.assertTrue(orders.battle_screen.embedded)
         self.assertFalse(hasattr(self.map, "_orders_entered_from_combat_bubble"))

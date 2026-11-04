@@ -1,12 +1,12 @@
 """Unit tests for ui/widgets/scroll_panes.py.
 
 Exercises the pane bookkeeping directly rather than through a screen: name
-generation, row culling, the scroll limit, and wheel routing. The two settled
-divergences (pane_rows not forwarding view_h, and the wheel routing by rect
-rather than by an x threshold) each get a test that would fail if reverted.
+generation, row culling, the scroll limit, and wheel routing. Partially visible
+rows stay interactive inside the pane; cropped parts cannot receive clicks.
 """
 
 import unittest
+from unittest import mock
 
 
 import pygame
@@ -75,24 +75,32 @@ class PaneRowTests(unittest.TestCase):
         self.assertTrue(all(y < 100 + 200 for _i, y in rows))
 
     def test_scroll_limit_matches_the_clickable_boundary(self):
-        """The whole reason pane_rows withholds view_h from layout_list_rows.
-
-        Scrolled fully to the bottom, the final row must be inside the same
-        band that gates clicks -- if the limit were computed against the taller
-        view_h, the last row would stop a sliver short of being reachable.
-        """
+        """The final row remains reachable at the bottom of the scroll range."""
         top, view_h, row_h, count = 100, 200, 20, 40
         list(self.screen.pane_rows("left", count, top, view_h, row_h))
 
         self.screen._scroll_left = self.screen.pane_scroll_limit("left")
         rows = list(self.screen.pane_rows("left", count, top, view_h, row_h))
 
-        cull_bottom = top + view_h - row_h + 2
-        last_index, last_y = rows[-1]
+        last_index, _last_y = rows[-1]
         self.assertEqual(last_index, count - 1, "the final row never becomes reachable")
-        self.assertLessEqual(last_y + row_h, cull_bottom + row_h)
-        self.assertGreaterEqual(last_y + row_h, cull_bottom - 1,
-                                "the final row stops short of the clickable boundary")
+        with mock.patch.object(pygame.mouse, "get_pos", return_value=(50, top + view_h - 1)):
+            self.assertTrue(self.screen._guard_left())
+
+    def test_partially_visible_row_accepts_only_clicks_inside_the_pane(self):
+        from ui.widgets.ui_elements import Button
+
+        self.screen._scroll_left = -5
+        rows = dict(self.screen.pane_rows("left", 40, top=100, view_h=200))
+        self.assertIn(10, rows)
+        clicked = mock.Mock()
+        row = self.screen.add_pane_row(
+            "left", Button(0, rows[10], "list_row", "blue", "", clicked, sound_kind=None))
+        for pos, expected_calls in (((50, 298), 1), ((50, 300), 1), ((50, 305), 1)):
+            with mock.patch.object(pygame.mouse, "get_pos", return_value=pos):
+                row.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=pos, button=1))
+                row.handle_event(pygame.event.Event(pygame.MOUSEBUTTONUP, pos=pos, button=1))
+            self.assertEqual(clicked.call_count, expected_calls)
 
 
 class WheelRoutingTests(unittest.TestCase):

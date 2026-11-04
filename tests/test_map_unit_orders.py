@@ -185,6 +185,70 @@ class MapOrderTests(unittest.TestCase):
             game.total_ui_h, x_offset=map_module.ORDERS_PANEL_CAMERA_X_OFFSET)
 
 
+class CombatBubbleClickTests(unittest.TestCase):
+    def setUp(self):
+        self.tile = province(1, [])
+        self.unit = {"owner": "A"}
+        self.tile["units"] = [self.unit]
+        self.position = (200, 200)
+        self.game = fill_state_defaults(SimpleNamespace(
+            id_to_province={1: self.tile}, viewing_ai_moves=False,
+            unit_selection_drag=None, secondary_mode="UNITS",
+            can_select_map_units=Mock(return_value=True), change_state=Mock(),
+            click_select_map_units=Mock(),
+            unit_stack_hitboxes=[{"rect": pygame.Rect(180, 180, 40, 40),
+                                 "province": self.tile, "units": [self.unit]}]))
+        self.enterContext(patch.object(overlay_renderer, "combat_bubble_at_screen_pos",
+                                      return_value={"orders_province_id": 1}))
+        self.enterContext(patch.object(ui_elements, "play_ui_sound"))
+        self.enterContext(patch.object(pygame.mouse, "get_pos", return_value=self.position))
+
+    def test_map_bubble_takes_priority_over_an_overlapping_unit_stack(self):
+        for name in ("_handle_blocking_state", "_handle_flag_button",
+                     "_map_position_is_on_ui", "_handle_panel_scrolling",
+                     "_handle_camera", "_handle_editor_undo"):
+            self.enterContext(patch.object(map_input, name, return_value=False))
+        self.enterContext(patch.object(map_input.diplomatic_popups, "handle_events", return_value=False))
+        self.enterContext(patch.object(map_input, "_update_map_hover"))
+        self.game.is_editor = self.game.selection_mode = False
+        for kind in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
+            map_input.handle_map_events(self.game, pygame.event.Event(
+                kind, pos=self.position, button=1))
+
+        self.game.change_state.assert_called_once_with("ORDERS")
+        self.game.click_select_map_units.assert_not_called()
+        self.assertIsNone(self.game.unit_selection_drag)
+        self.assertFalse(self.game._ignore_left_until_release)
+
+    def test_orders_bubble_preserves_unit_selection_and_consumes_release(self):
+        screen = bare_orders_screen()
+        screen.map_screen = self.game
+        screen.panel_rect = pygame.Rect(500, 0, 100, 300)
+        screen.is_dragging_scrollbar = False
+        screen.inspect_province = Mock()
+        screen.open_battle_panel = Mock()
+        self.enterContext(patch.object(map_input, "map_ui_bar_at_position", return_value=False))
+        for kind in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
+            screen.additional_events(pygame.event.Event(kind, pos=self.position, button=1))
+
+        screen.inspect_province.assert_called_once_with(self.tile)
+        screen.open_battle_panel.assert_called_once_with()
+        self.game.click_select_map_units.assert_not_called()
+        self.assertIsNone(self.game.unit_selection_drag)
+        self.assertFalse(self.game._ignore_left_until_release)
+
+    def test_opened_battle_panel_does_not_receive_the_bubble_release(self):
+        screen = bare_orders_screen()
+        screen.map_screen = self.game
+        screen.battle_screen = Mock(panel_rect=pygame.Rect(100, 100, 300, 300))
+        self.game._ignore_left_until_release = True
+        screen.handle_events([pygame.event.Event(
+            pygame.MOUSEBUTTONUP, pos=self.position, button=1)])
+
+        screen.battle_screen.handle_events.assert_not_called()
+        self.assertFalse(self.game._ignore_left_until_release)
+
+
 class OrdersSelectionRowsTests(unittest.TestCase):
     def test_right_clicking_an_orders_row_toggles_only_that_unit(self):
         selected_unit = {"owner": "A", "type": "Infantry"}

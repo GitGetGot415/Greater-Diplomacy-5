@@ -177,12 +177,8 @@ def _handle_map_unit_selection(map_screen, event, on_ui):
         clicked_stack = next((stack for stack in reversed(
             map_screen.unit_stack_hitboxes)
             if stack["rect"].collidepoint(event.pos)), None)
-        # Keep combat bubbles as their own interaction. Everywhere else, defer
-        # the primary click until release so a box can begin on either a unit
-        # or open map space without accidentally selecting a province first.
-        if (clicked_stack is None and map_screen.map_data is not None
-                and overlay_renderer.combat_bubble_at_screen_pos(map_screen, event.pos) is not None):
-            return False
+        # Defer the primary click until release so a box can begin on either
+        # a unit or open map space without selecting a province first.
         map_screen.unit_selection_drag = {
             "start": event.pos, "current": event.pos,
             "additive": bool(pygame.key.get_mods() & pygame.KMOD_SHIFT),
@@ -692,11 +688,12 @@ def _handle_country_selection(map_screen, event, mx, my, on_ui):
             player_setup.select_player_country(map_screen, map_screen.hovered_province)
 
 
-def _handle_combat_bubble_click(map_screen, event, on_ui):
+def _handle_combat_bubble_click(map_screen, event, on_ui, origin=None):
     """A province combat bubble opens that tile's Orders view with its battle
     inspector already visible. Midpoint records are not produced anymore."""
     if (event.type != pygame.MOUSEBUTTONDOWN or event.button != 1
-            or map_screen.viewing_ai_moves or on_ui):
+            or map_screen.viewing_ai_moves or on_ui
+            or map_screen._ignore_left_until_release):
         return False
     bubble = overlay_renderer.combat_bubble_at_screen_pos(map_screen, event.pos)
     if bubble is None:
@@ -704,9 +701,18 @@ def _handle_combat_bubble_click(map_screen, event, on_ui):
     province = map_screen.id_to_province.get(bubble.get("orders_province_id"))
     if province is None:
         return False
-    map_screen._orders_entered_from_combat_bubble = True
-    map_screen.selected_province = province
-    map_screen.change_state("ORDERS")
+    # Consume the whole click, including a release delivered after Orders
+    # opens, so units underneath the bubble never receive this gesture.
+    map_screen.unit_selection_drag = None
+    map_screen._ignore_left_until_release = True
+    if origin is None:
+        map_screen._orders_entered_from_combat_bubble = True
+        map_screen.selected_province = province
+        map_screen.change_state("ORDERS")
+    else:
+        origin.inspect_province(province)
+        origin.entered_from_combat_bubble = True
+        origin.open_battle_panel()
     ui_elements.play_ui_sound("click_province")
     return True
 
@@ -786,12 +792,11 @@ def handle_map_events(map_screen, event):
         _handle_country_selection(map_screen, event, mx, my, on_ui)
         return
 
-    # Unit stacks are a map-level interaction rather than an Orders-panel
-    # special case.  Run this before combat bubbles and ordinary province
-    # selection so a selected group can target any open map province.
-    if _handle_map_unit_selection(map_screen, event, on_ui):
-        return
+    # Bubbles are drawn above unit stacks and take the click even where their
+    # hitboxes overlap. Ordinary selection handles the remaining map space.
     if _handle_combat_bubble_click(map_screen, event, on_ui):
+        return
+    if _handle_map_unit_selection(map_screen, event, on_ui):
         return
 
     # Mail editing stays above standard selection, so a click can do both.

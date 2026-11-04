@@ -787,6 +787,10 @@ class Battle_Screen(ModalScreen):
         for pane in (PANE_LANES, PANE_FRONT, PANE_ENEMY, PANE_RESERVE):
             rect = self.regions.get(pane)
             if rect:
+                # Rows are clipped above this fixed edge as they scroll into
+                # the footer, instead of disappearing a whole row early.
+                pygame.draw.line(surface, c.UI_TEXT_MUTED,
+                                 (rect.left, rect.bottom), (rect.right - 1, rect.bottom))
                 # The shared helper shows negative scroll ranges and clears
                 # stale hitboxes when a pane no longer needs a scrollbar.
                 self.draw_pane_scrollbar(

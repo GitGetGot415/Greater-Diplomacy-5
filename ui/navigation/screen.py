@@ -488,7 +488,7 @@ class Screen:
         Every folder/scenario list in the menus is built this way: derive the
         scroll floor from the total content height, then walk the rows applying
         the offset. A row is included as soon as any part of it overlaps
-        [cull_top, cull_bottom], not just its top corner, so pair this with
+        [cull_top, cull_bottom), not just its top corner, so pair this with
         `ui_bars.clip_scroll_region` (or a manual set_clip at the same bounds)
         around wherever the row actually gets drawn -- otherwise a row that's
         only partially in view will render uncropped past the boundary.
@@ -509,7 +509,7 @@ class Screen:
 
         setattr(self, limit_attr, min(0, view_h - (count * row_h) - pad))
         scroll = getattr(self, attr, 0)
-        setattr(self, guard_attr, lambda: cull_top <= pygame.mouse.get_pos()[1] <= cull_bottom)
+        setattr(self, guard_attr, lambda: cull_top <= pygame.mouse.get_pos()[1] < cull_bottom)
 
         for i in range(count):
             y = top + (i * row_h) + scroll

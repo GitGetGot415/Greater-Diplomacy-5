@@ -287,9 +287,10 @@ class Orders_Screen(Screen):
 
         if self.read_only:
             self.selected_unit_index = None
-        elif self.map_screen.selected_unit_records():
+        elif self.map_screen.selected_unit_records() or open_battle_on_entry:
             # A map click or box drag may already have selected a group across
-            # several provinces.  Orders must retain that group verbatim.
+            # several provinces. Retain that group verbatim; opening a battle
+            # bubble also leaves unit selection alone.
             self.selected_unit_index = None
         elif self.selected_unit_index == "ALL":
             self.map_screen.select_map_units(
@@ -1731,6 +1732,14 @@ class Orders_Screen(Screen):
 
     def handle_events(self, events):
         for event in events:
+            # Opening a combat bubble consumes its release even if the new
+            # battle panel now covers the pointer.
+            if (self.map_screen and self.map_screen._ignore_left_until_release
+                    and event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP)
+                    and event.button == 1):
+                if event.type == pygame.MOUSEBUTTONUP:
+                    self.map_screen._ignore_left_until_release = False
+                continue
             # Battle is a child pane, not a modal stacked over Orders. Route
             # events in its rectangle first so its lane rows and scrollbars
             # remain interactive while the left Orders panel stays live.
@@ -1893,6 +1902,10 @@ class Orders_Screen(Screen):
                 if destination:
                     self.set_bombard_target(self.bombarding_unit_actual_index, destination,
                                             self.bombarding_unit_province)
+            return
+
+        if map_input._handle_combat_bubble_click(
+                self.map_screen, event, on_ui, origin=self):
             return
 
         # The Orders panel is a live map workspace. A short left-click on a
