@@ -4,6 +4,8 @@
 
 - in the future see if you can delete snapshot_moves.py
 
+pysoloud seems limited, is there another thing that could be used to maybe make it work for things like idk web and actual macos (the macos.dylib is so outdated as well as the linux thingy)
+
 make it so that you can IMPORT AN IMAGE and have it turned into a map maybe
 
 maybe if a country has cores on another country, they're not going to join their faction...
@@ -58,15 +60,15 @@ Ultimatums: Kind of like how diplomatic plays work, ultimatums essentially allow
 
 ### Kaiserin
 
-- Add guerrilla units
+- Add guerrilla units (militia but fast)
 - Let countries control another country's factories for a set time or forever
 - Let countries nationalize factories. This should hurt diplomacy
 - Let countries rent factories through trade
-- Add real country flags
+- Add real country flags (what does this mean we already have those)
 - Add non-aggression pacts
-- Add rebellions
-- Add faction betrayal
-- Add focus trees, possibly through scripted events
+- Add rebellions (core removal isn't enough we need more)
+- Add faction betrayal (INSTANT not you have to leave first)
+- Add focus trees, possibly through scripted events (hoi4 hoi4 hoi4 hoi4 hoi4)
 - Let countries declare rivals (Rivals should have worse relations and allow a free humiliation-war claim. Limit this by country power)
 
 ### Exodus

@@ -228,21 +228,35 @@ def apply_queue_change(context, country_id, command, *, payment_settled=False):
     province[command["queue"]] = copy.deepcopy(command["items"])
 
 
-def reconstruct_queue(context, country_id, province, queue, items, *, policy=PLAYER_POLICY):
-    """Match paid orders once and rebuild only new intent from active libraries."""
+def reconstruct_queue(context, country_id, province, queue, items, *, policy=PLAYER_POLICY,
+                      drop_refused=False):
+    """Match paid orders once and rebuild only new intent from active libraries.
+
+    A new order that the current rules refuse raises ValueError.
+    With drop_refused, the result leaves it out and lists it in "dropped" with its position and reason.
+    """
     if queue not in ("building_queue", "unit_queue") or not isinstance(items, list):
         raise ValueError("Invalid province queue.")
     if any(not isinstance(item, dict) for item in items):
         raise ValueError("Invalid province queue contents.")
     remaining = [copy.deepcopy(item) for item in province.get(queue, []) if isinstance(item, dict)]
-    canonical, new_costs = [], []
-    for item in items:
+    canonical, new_costs, dropped = [], [], []
+    for position, item in enumerate(items):
         index = next((i for i, existing in enumerate(remaining) if existing == item), None)
         if index is not None:
             canonical.append(remaining.pop(index))
-        else:
+            continue
+        try:
             result = prepare_production(context, country_id, province, queue, item, policy=policy)
-            canonical.append(result.order)
-            new_costs.append(result.cost)
-    return {"type": "province_queue", "province_id": province["id"], "queue": queue,
-            "items": canonical, "cancelled": remaining, "new_costs": new_costs}
+        except ValueError as error:
+            if not drop_refused:
+                raise
+            dropped.append({"position": position, "item": item, "reason": str(error)})
+            continue
+        canonical.append(result.order)
+        new_costs.append(result.cost)
+    command = {"type": "province_queue", "province_id": province["id"], "queue": queue,
+               "items": canonical, "cancelled": remaining, "new_costs": new_costs}
+    if drop_refused:
+        command["dropped"] = dropped
+    return command

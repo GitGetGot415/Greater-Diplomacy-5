@@ -474,16 +474,23 @@ The reader does these steps:
 1. It converts the move's research levels to the active research tree by year.
    It then applies `clamp_research_levels` and `grant_research_prerequisites`.
 2. It clamps building queues as the host's own load did, so the queues match.
-3. It validates releases, administrative orders, production, aircraft orders, cargo, and units against host state.
+3. It gives the move's ground units the statistics of the active unit library, as the host's load did.
+   Health keeps its fraction. Thus a library change gives no warning, and accepted units do not bring older statistics into the game.
+4. It validates releases, administrative orders, production, aircraft orders, cargo, and units against host state.
    Differences in statistics, timing, or refunds become warnings for the "stats" override.
-4. `legacy_player_country` in `tournament.py` prepares the country record.
+5. It drops a new production order that the current rules refuse. The drop is a warning for the same override.
+   An older release can allow an order that the current rules refuse.
+   The country record gets back the payment of each dropped order, as a cancellation does.
+   A foreign order, or a move over its budget, is still rejected.
+6. `legacy_player_country` in `tournament.py` prepares the country record.
    The host keeps its faction fields, policy timers, travelling requests, and treaty rounds.
    Invalid diplomatic drafts are discarded. Other choices in the move are kept.
-5. It applies the move. It replaces the country record, applies faction renames, appearance, siphon, and cargo changes, and applies aircraft orders.
+7. It applies the move. It replaces the country record, applies faction renames, appearance, siphon, and cargo changes, and applies aircraft orders.
    When `unit_snapshot` is true, it replaces the country's ground units with the move's units.
 
 Review acceptance re-reads and revalidates the file. Real-time clients cannot request these overrides.
 Units without IDs are kept. They cannot be compared with host units, so they give no warnings.
+Held volunteer units in the country record keep their statistics until the next load refreshes them.
 
 ### Removing Snapshot Support
 

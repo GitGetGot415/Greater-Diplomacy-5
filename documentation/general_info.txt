@@ -56,6 +56,8 @@ See data/migrations/MIGRATIONS.md, Tournament Moves.
 
 Numeric differences in matched ground-unit statistics or new production timing and refunds require host review.
 The comparison uses the host's current units and scenario settings.
+A snapshot move's units first receive the active library statistics, so a library change needs no review.
+A new order in a snapshot move that the current rules refuse is dropped and refunded. The host reviews the drop.
 Aircraft statistics remain under host control.
 Aircraft cargo statistics also remain under host control.
 

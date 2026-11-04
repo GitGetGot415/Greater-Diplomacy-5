@@ -354,9 +354,17 @@ class TournamentMoveTests(unittest.TestCase):
                     if legal:
                         self.assertEqual([item["order_type"] for item in queue], ["CORE"])
                     else:
-                        self.assertIn("coast", result["rejections"][0]["reason"])
-                        self.assertFalse(result["rejections"][0]["overridable"])
+                        rejection = result["rejections"][0]
+                        self.assertIn("coast", rejection["reason"])
                         self.assertEqual(host.map_data, before)
+                        if move_format is intents:
+                            self.assertFalse(rejection["overridable"])
+                        else:
+                            # A snapshot move drops the refused order after host review.
+                            self.assertEqual(rejection["override"], "stats")
+                            accepted = self.import_moves(host, [path], accept_stat_mismatches=True)
+                            self.assertEqual(accepted["loaded"], 1, accepted["rejections"])
+                            self.assertEqual(host.id_to_province[province_id]["building_queue"], [])
 
     def test_response_references_are_checked_before_country_merge(self):
         from map_logic.diplomacy import diplomacy_messages
@@ -395,6 +403,46 @@ class TournamentMoveTests(unittest.TestCase):
         self.assertEqual(host.map_data["home"]["unit_queue"], [converted])
         for resource in c.ECON_RESOURCE_KEYS:
             self.assertEqual(host.nation_data["Leader"][resource], before[resource])
+
+    def test_snapshot_units_take_the_host_library_stats_before_review(self):
+        """A snapshot from an older release holds that release's unit statistics."""
+        from tests.research_fixtures import fixture_metadata
+        library = {"Fixture soldier": {"metadata": fixture_metadata(level=0), "health": 30,
+                                       "attack": 5, "defense": 4, "speed": 2}}
+        host = Host()
+        # The host's load already applied the library. Health keeps its fraction.
+        current = {"unit_id": "soldier", "owner": "Leader", "type": "Fixture soldier",
+                   "health": 15, "max_health": 30, "attack": 5, "defense": 4, "speed": 2,
+                   "naval_unit": False, "morale": 1, "level": 0}
+        host.map_data = {"home": {"id": 1, "json_key": "P1", "owner": "Leader", "units": [current]}}
+        older = dict(current, health=10, max_health=20, attack=9, defense=8, speed=1)
+        move = self.v46_move("Leader", host, unit_snapshot=True, provinces={"P1": {"units": [older]}})
+        with mock.patch.object(queries, "get_unit_library", return_value=library), \
+                tempfile.TemporaryDirectory() as directory:
+            path = self.write_move(directory, "older.gd5move", "Leader", move)
+            summary = self.import_moves(host, [path], accept_older_versions=True)
+        self.assertEqual(summary["loaded"], 1, summary["rejections"])
+        self.assertEqual(summary["overridden"], 0)
+        self.assertEqual(host.map_data["home"]["units"], [current])
+
+    def test_snapshot_drops_and_refunds_a_new_order_that_current_rules_refuse(self):
+        host = Host()
+        host.map_data = {"home": {"id": 1, "json_key": "P1", "owner": "Leader", "cores": ["Leader"],
+                                  "units": [], "unit_queue": []}}
+        refused = {"unit_type": "Retired fixture unit", "turns_remaining": 1,
+                   "refund": {"cost_materials": 7}}
+        move = self.v46_move("Leader", host, provinces={"P1": {"unit_queue": [refused]}})
+        paid_balance = move["nation_data"]["materials"]
+        with tempfile.TemporaryDirectory() as directory:
+            path = self.write_move(directory, "refused.gd5move", "Leader", move)
+            held = self.import_moves(host, [path], accept_older_versions=True)
+            self.assertEqual(held["rejections"][0]["override"], "stats")
+            self.assertIn("Retired fixture unit", held["rejections"][0]["reason"])
+            summary = self.import_moves(host, [path], accept_older_versions=True,
+                                        accept_stat_mismatches=True)
+        self.assertEqual(summary["loaded"], 1, summary["rejections"])
+        self.assertEqual(host.map_data["home"]["unit_queue"], [])
+        self.assertEqual(host.nation_data["Leader"]["materials"], paid_balance + 7)
 
     def test_older_reply_actions_bind_to_the_host_request_and_keep_travelling_requests(self):
         from map_logic.diplomacy import diplomacy_messages

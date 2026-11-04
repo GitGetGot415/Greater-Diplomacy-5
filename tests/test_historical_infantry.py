@@ -133,7 +133,7 @@ class HistoricalInfantryTests(unittest.TestCase):
                        "queue": "unit_queue", "items": [intent]}
             expected = driver.validate_draft("A", [command])[0]["items"]
             projection = {"home": {"unit_queue": [intent.copy()]}}
-            self.assertEqual(_validate_production_projection(self.context, "A", projection), [])
+            self.assertEqual(_validate_production_projection(self.context, "A", projection), ([], []))
             self.assertEqual(projection["home"]["unit_queue"], expected)
             for failure in ("unresearched", "foreign", "malformed"):
                 with self.subTest(unit=name, failure=failure):
@@ -146,8 +146,15 @@ class HistoricalInfantryTests(unittest.TestCase):
                     before = copy.deepcopy((self.country, self.province))
                     with self.assertRaises(RealtimeError):
                         driver.validate_draft("A", [command])
-                    with self.assertRaises(ValueError):
-                        _validate_production_projection(self.context, "A", {"home": {"unit_queue": [intent.copy()]}})
+                    projection = {"home": {"unit_queue": [intent.copy()]}}
+                    if failure == "foreign":
+                        with self.assertRaises(ValueError):
+                            _validate_production_projection(self.context, "A", projection)
+                    else:
+                        # A snapshot move drops a refused order. The host reviews the warning.
+                        warnings, dropped = _validate_production_projection(self.context, "A", projection)
+                        self.assertEqual((len(warnings), dropped), (1, [intent]))
+                        self.assertEqual(projection["home"]["unit_queue"], [])
                     self.assertEqual((self.country, self.province), before)
                     self.country["research"] = research.copy()
                     self.province["owner"] = "A"

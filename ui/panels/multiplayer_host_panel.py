@@ -113,8 +113,9 @@ def load_multiplayer_moves(map_ref, on_result):
                     yes_label = "Convert"
                 else:
                     title = "Accept move anyway?"
-                    question = ("This move has stat mismatches. Accepting it can import incorrect values "
-                                "or unfair advantages. Accept it despite these risks?")
+                    question = ("This move has stat mismatches, or orders that the current rules refuse. "
+                                "Accepting it can import incorrect values or unfair advantages. "
+                                "Refused orders are dropped and refunded. Accept it despite these risks?")
                     yes_label = "Accept"
                 dialogs.ask_yes_no(
                     title, f"{file_name}\nCountry: {country}\n\n{question}",

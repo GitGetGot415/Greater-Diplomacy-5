@@ -73,7 +73,8 @@ def prepare(context, cid, player_data):
     canonical_releases = canonical_puppet_release_queue(
         world_state.map_data, world_state.nation_data, cid, releases, existing_releases)
     warnings = _validate_administrative_orders(context, cid, provs)
-    warnings.extend(_validate_production_projection(context, cid, provs))
+    production_warnings, dropped_orders = _validate_production_projection(context, cid, provs)
+    warnings.extend(production_warnings)
     transport_view, transport_commands = queries.air_transport_draft(
         context, cid, player_data.get("air_transport", []))
     cargo_ids = {u["unit_id"] for p in world_state.map_data.values()
@@ -85,6 +86,10 @@ def prepare(context, cid, player_data):
     nd = dict(nd)
     nd["release_puppet_queue"] = canonical_releases
     merged = migrations.legacy_player_country(context, cid, nd)
+    # A snapshot holds the player's resources after they paid for each order.
+    # Give back what a dropped order paid, as a cancellation does.
+    for item in dropped_orders:
+        queries.refund_queue_item(merged, item, cid, world_state.map_data, context=context)
     return SnapshotMove(nd, merged, provs, warnings, live_aircraft, aircraft_orders, transport_commands)
 
 
@@ -417,6 +422,7 @@ def _validate_administrative_orders(context, country_id, provinces):
 def _validate_move_snapshot(context, country_id, nation_update, provinces, protected_unit_ids=()):
     """Reject malformed snapshots. Report numeric unit differences separately."""
     world_state = world_for(context)
+    unit_library = queries.get_unit_library(context)
     for resource in c.ECON_RESOURCE_KEYS:
         if resource in nation_update:
             value = nation_update[resource]
@@ -478,6 +484,11 @@ def _validate_move_snapshot(context, country_id, nation_update, provinces, prote
                     value = unit[stat]
                     if type(value) not in (int, float) or not math.isfinite(value) or value < 0:
                         raise ValueError(f"Province {key}: invalid unit {stat}; expected a finite, nonnegative number.")
+            # The host's load refreshed its own units from the active library. Refresh the
+            # move's copy the same way. Then only real differences need host review, and
+            # accepted units do not bring older statistics into the game.
+            queries.apply_library_stats(unit, unit_library)
+            for stat in TOURNAMENT_UNIT_STATS:
                 # Legacy units without IDs cannot be matched reliably.
                 # Form changes have their own stats and are not comparable.
                 if (original is not None and original.get("type") == unit.get("type")
@@ -491,10 +502,14 @@ def _validate_move_snapshot(context, country_id, nation_update, provinces, prote
 
 
 def _validate_production_projection(context, country_id, provinces):
-    """Use shared production rules while retaining numeric host-review overrides."""
+    """Use shared production rules while retaining numeric host-review overrides.
+
+    A new order that the current rules refuse is dropped from the move, with a warning for host review.
+    An older release could allow an order that the current rules refuse. Return the warnings and the dropped orders.
+    """
     world = world_for(context)
     by_key = {province.get("json_key"): province for province in world.map_data.values()}
-    commands, warnings = [], []
+    commands, warnings, dropped = [], [], []
     for key, update in provinces.items():
         province = by_key.get(key)
         if province is None or not isinstance(update, dict):
@@ -504,7 +519,14 @@ def _validate_production_projection(context, country_id, provinces):
                 continue
             if province.get("owner") != country_id:
                 raise ValueError("Foreign production order.")
-            command = production_actions.reconstruct_queue(context, country_id, province, queue, update[queue])
+            command = production_actions.reconstruct_queue(context, country_id, province, queue, update[queue],
+                                                           drop_refused=True)
+            refused = {entry["position"]: entry for entry in command.pop("dropped")}
+            for entry in refused.values():
+                warnings.append(f"Province {key}: the {_order_label(entry['item'])} order is dropped. "
+                                f"{entry['reason']}")
+                dropped.append(entry["item"])
+            update[queue] = [item for position, item in enumerate(update[queue]) if position not in refused]
             normalized = []
             for supplied, expected in zip(update[queue], command["items"]):
                 supplied = migrations.normalize_production_order(supplied, expected)
@@ -514,4 +536,12 @@ def _validate_production_projection(context, country_id, provinces):
             update[queue] = normalized
             commands.append(command)
     production_actions.validate_queue_budget(world.nation_data[country_id], commands)
-    return warnings
+    return warnings, dropped
+
+
+def _order_label(item):
+    """Name a queue entry in a host-review warning."""
+    for field in ("unit_type", "item_name", "order_type"):
+        if isinstance(item.get(field), str):
+            return item[field]
+    return "production"
