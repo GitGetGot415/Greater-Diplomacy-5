@@ -133,22 +133,6 @@ CREDITS_DATA = [
                 ],
                 "align": "left",
                 "links": [{"text": "GitHub", "url": "https://github.com/GitGetGot415"}]
-            },
-            {
-                "link_text": "PenguinMod Object Libraries",
-                "info": (
-                    "Selected music sourced from PenguinMod Object Libraries"
-                ),
-                "images": [
-                    {"path": "assets/music/PenguinMod-ObjectLibraries/icon.png",
-                     "text": "PenguinMod-ObjectLibraries"},
-                ],
-                "align": "left",
-                "links": [
-                    {"text": "Asset Library", "url": "https://library.penguinmod.com/"},
-                    {"text": "GitHub", "url": "https://github.com/PenguinMod/PenguinMod-ObjectLibraries"},
-                    {"text": "Contributor Credits", "url": "https://studio.penguinmod.com/credits.html"},
-                ],
             }
         ]
     },
@@ -2080,7 +2064,7 @@ MUSIC_AUDIO_EXTENSIONS = (".mp3", ".wav", ".ogg")
 # gets a delete button. Add the name of each album that ships with the game.
 UNDELETABLE_ALBUMS = (
     "Experimental", "Greater Diplomacy 1", "Greater Diplomacy 2", "Greater Diplomacy 3",
-    "Greater Diplomacy 4", "Greater Diplomacy 5", "PenguinMod-ObjectLibraries",
+    "Greater Diplomacy 4", "Greater Diplomacy 5",
 )
 # These three are rebindable in Settings, so main.py overwrites them at startup
 # with whatever was persisted. The DEFAULT_ forms are the shipped values, and

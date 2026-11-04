@@ -1,5 +1,0 @@
-Gemstone Cave.mp3 - https://github.com/PenguinMod/PenguinMod-ObjectLibraries/blob/main/files/sounds/user/themes/Gemstone%20Cave.mp3
-
-Red Operation.mp3 - https://github.com/PenguinMod/PenguinMod-ObjectLibraries/blob/main/files/sounds/user/themes/Gemstone%20Cave.mp3
-
-Synth Thing.mp3 - https://github.com/PenguinMod/PenguinMod-ObjectLibraries/blob/main/files/sounds/user/themes/Synth%20Thing.mp3
