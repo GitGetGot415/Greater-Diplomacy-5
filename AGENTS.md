@@ -15,6 +15,7 @@ AI means artificial intelligence. UI means user interface.
    - `documentation/ai_movement.txt`: AI unit orders, movement caches, aircraft missions, and movement tuning.
    - `documentation/llm_ai.txt`: large language models (LLMs), prompts, budgets, cancellation, and fairness.
    - `documentation/diplo_stuff.txt`: diplomacy, messages, guarantees, volunteers, attach?s, factions, war, and peace.
+   - `data/migrations/MIGRATIONS.md`: required before changing saved fields, stored identifiers, settings keys, or library content that older saves and moves can contain.
 4. Find the shared rule or data owner.
    Extend that implementation and make callers use it.
 
@@ -446,6 +447,8 @@ Update every description or preview of changed player behavior.
 ### Handoff
 
 State the behavior change and verification results.
+For changes to persisted data or library content, state whether a migration is needed and why.
+Name the conversion or old-data default and the affected save, selected-history, and tournament-move paths.
 Name the tests and builds that ran and those that did not.
 Link relevant files and name remaining risks or unverified platforms.
 Give a small example when it helps explain a change.

@@ -429,6 +429,7 @@ The host only compares these sections with the intents. Only the intents change 
    The rejection does not change host state.
 3. The host selects Convert or Reject.
 4. `upgrade_move` runs every conversion rule on the move, whatever version wrote it.
+   Malformed containers encountered during conversion produce a normal rejection before host state changes.
 5. The converted move passes every normal check, including session, turn, faction, permission, and duplicate checks.
 6. An intent move goes through the shared validation in `PlayerActions`.
 7. A snapshot move goes to `snapshot_moves.py`.
@@ -554,12 +555,14 @@ A release is a version that players received. Only released data needs conversio
 `tests/released_content.py` lists the names that releases wrote into saves.
 It holds unit and building identifiers, and the family keys of scenario settings.
 `scripts/data/write_released_content.py` writes it from every release in the `version.txt` history.
+An unreadable, empty, or malformed release library stops generation before the existing list is overwritten.
 
 `ReleasedContentTests` in `tests/test_data_migrations.py` checks each name:
 
-- A released unit is in the unit library, or an alias gives it a current unit.
-- A released building loads as a current building.
-- A released settings family still selects units or buildings.
+- Released units and buildings pass through save conversion and resolve to current library entries.
+  Buildings also pass through the normal province repair.
+- Released settings families pass through save conversion and still select units or buildings.
+  Disabled families and their production and range overrides keep the same family key and values.
 - The release in `version.txt` is in the list.
 
 A rename, a removed unit, or a lower level count can make this test fail.
@@ -578,8 +581,11 @@ When `GAME_VERSION` changes to the next version, do these steps:
 Use these rules when a change affects data from a released version:
 
 - An additive field with a default that keeps old behavior needs no rule.
-- A change to library content needs no rule. Library conversions and the stat refresh adapt to it.
-  Examples are statistics, costs, level counts, and stage years.
+- Statistics and costs need no rule. Library conversions and the stat refresh adapt to them.
+  Research levels and stage years adapt through the saved research years and library clamps.
+  Reducing unit levels or changing stage names can remove released unit identifiers.
+  Add conversions for every removed released identifier; unknown unit types retain their saved statistics.
+  Building level reductions use the existing clamp only while their family still exists.
 - A renamed unit, building, or setting needs an alias in this package.
   A renamed unit family or settings family also needs this. See [Older Family Names in Unit Metadata](#older-family-names-in-unit-metadata).
 - A field that changes meaning, moves, or changes shape needs a conversion rule in `conversions.py`.
@@ -615,6 +621,7 @@ Keep existing rules. Remove a rule only when the user asks to drop support for t
   It also loads every built-in map and checks that the rules do not change a current save.
   The map loads use the default scenario settings, not the local `data/json/scenario_settings.json`.
   `ReleasedContentTests` checks the names in `tests/released_content.py`.
+  The pull request workflow runs this module together with the equipment and tournament migration tests.
 - `scripts/data/write_released_content.py` writes `tests/released_content.py`. See [Released Names](#released-names).
 - Write test fixtures as Python modules, not JSON files.
   `.gitignore` ignores `*.json` outside a few folders, so a JSON fixture in `tests/` is not committed.

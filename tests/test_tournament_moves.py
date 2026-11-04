@@ -567,6 +567,22 @@ class TournamentMoveTests(unittest.TestCase):
             "empty country": lambda move: move.update(nation_data={}),
             "missing section": lambda move: move.pop("provinces"),
             "malformed province": lambda move: move["provinces"].update(P1=[]),
+            "province list": lambda move: move.update(provinces=[{}]),
+            "null provinces": lambda move: move.update(provinces=None),
+            "null releases": lambda move: move.update(release_subjects=None),
+            "country list": lambda move: move.update(nation_data=[]),
+            "null research queue": lambda move: move["nation_data"].update(research_queue=None),
+            "broken research entry": lambda move: move["nation_data"].update(research_queue=[None]),
+            "null pending diplomacy": lambda move: move["nation_data"].update(pending_diplomacy=None),
+            "null responses": lambda move: move["nation_data"].update(diplo_responses=None),
+            "null inbox": lambda move: move["nation_data"].update(inbox=None),
+            "null scripted events": lambda move: move["nation_data"].update(scripted_events=None),
+            "broken scripted actions": lambda move: move["nation_data"].update(scripted_events=[{"actions": 7}]),
+            "null release queue": lambda move: move["nation_data"].update(release_puppet_queue=None),
+            "null units": lambda move: move["provinces"]["P1"].update(units=None),
+            "null production queue": lambda move: move["provinces"]["P1"].update(unit_queue=None),
+            "null deployment queue": lambda move: move["provinces"]["P1"].update(deployment_queue=None),
+            "broken deployment entry": lambda move: move["provinces"]["P1"].update(deployment_queue=[None]),
             "unknown province": lambda move: move["provinces"].update(missing={}),
             "foreign unit": lambda move: move["provinces"]["P1"]["units"][0].update(owner="Member"),
             "broken stat": lambda move: move["provinces"]["P1"]["units"][0].update(attack="bad"),
@@ -589,6 +605,24 @@ class TournamentMoveTests(unittest.TestCase):
                 self.assertTrue(summary["rejections"][0]["reason"])
                 self.assertEqual((host.nation_data, host.map_data), before)
                 self.assertEqual(host.submitted_moves, set())
+
+    def test_malformed_move_does_not_stop_a_valid_move_in_the_same_batch(self):
+        for intents in (False, True):
+            with self.subTest(intents=intents), tempfile.TemporaryDirectory() as directory:
+                host = Host()
+                before = copy.deepcopy(host.nation_data["Leader"])
+                bad = self.player_data("Leader", host, provinces=[{}])
+                good = self.player_data("Member", host)
+                if intents:
+                    bad["player_intents"] = []
+                    good["player_intents"] = []
+                paths = [self.write_move(directory, "bad.gd5move", "Leader", bad),
+                         self.write_move(directory, "good.gd5move", "Member", good)]
+                summary = self.import_moves(host, paths)
+                self.assertEqual(summary["rejected"], 1, summary)
+                self.assertEqual(summary["loaded_countries"], ["Member"], summary)
+                self.assertEqual(host.nation_data["Leader"], before)
+                self.assertEqual(host.submitted_moves, {"Member"})
 
     def test_duplicate_during_host_review_cannot_be_overridden(self):
         host = Host()

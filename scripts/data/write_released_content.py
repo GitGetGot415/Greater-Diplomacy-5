@@ -47,9 +47,13 @@ def release_commits():
 
 def read_json(commit, path):
     try:
-        return json.loads(git("show", f"{commit}:{path}"))
-    except subprocess.CalledProcessError:
-        return {}
+        library = json.loads(git("show", f"{commit}:{path}"))
+    except (subprocess.CalledProcessError, json.JSONDecodeError) as error:
+        raise ValueError(f"Cannot read release library {commit}:{path}. "
+                         "Check the committed path and fetch the full Git history.") from error
+    if not isinstance(library, dict) or not library:
+        raise ValueError(f"Release library {commit}:{path} must be a nonempty JSON object.")
+    return library
 
 
 def unit_family(name, stats):

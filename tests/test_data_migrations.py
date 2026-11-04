@@ -15,6 +15,7 @@ from unittest import mock
 from data import constants as c, migrations, queries
 from data.map import history_io, load_map
 from map_logic.diplomacy import diplomacy_lifecycle
+from scripts.data import write_released_content
 from tests import add_test_cases, released_content
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -524,9 +525,9 @@ class ReleasedContentTests(unittest.TestCase):
 
     def test_released_units_convert_to_current_units(self):
         library = queries.get_unit_library()
-        aliases = {**migrations.LEGACY_UNIT_NAMES, **migrations.equipment_stage_aliases()}
-        missing = [name for name in released_content.UNITS
-                   if name not in library and aliases.get(name) not in library]
+        raw = {name: {"units": [{"type": name}]} for name in released_content.UNITS}
+        migrations.upgrade_save({}, raw)
+        missing = [name for name, province in raw.items() if province["units"][0]["type"] not in library]
         self.assertEqual(missing, [], "Released saves hold these units. Add an alias in "
                          "data/migrations/units.py that gives each one a current unit.")
         self.assertEqual([name for name in migrations.LEGACY_UNIT_NAMES.values() if name not in library], [],
@@ -534,23 +535,68 @@ class ReleasedContentTests(unittest.TestCase):
 
     def test_released_buildings_load_as_current_buildings(self):
         library = queries.get_building_library()
-        missing = [name for name in released_content.BUILDINGS
-                   if migrations.clamp_building_level(name, library) is None]
+        raw = {name: {"buildings": [name]} for name in released_content.BUILDINGS}
+        migrations.upgrade_save({}, raw)
+        for province in raw.values():
+            load_map._repair_province(province, library)
+        missing = [name for name, province in raw.items()
+                   if len(province["buildings"]) != 1 or province["buildings"][0] not in library]
         self.assertEqual(missing, [], "Released saves hold these buildings, and the load drops them. "
                          "Keep the building family, or add a conversion rule.")
 
     def test_released_settings_families_still_select_content(self):
-        # Scenario settings use these family keys. No conversion rule changes them.
         for families, library, keys in (
                 (released_content.UNIT_FAMILIES, queries.get_unit_library(),
-                 "unit_disabled, unit_turn_overrides, and unit_range_overrides"),
+                 ("unit_disabled", "unit_turn_overrides", "unit_range_overrides")),
                 (released_content.BUILDING_FAMILIES, queries.get_building_library(),
-                 "building_disabled and building_turn_overrides")):
-            with self.subTest(keys=keys):
-                current = {queries.get_base_item_name(name) for name in library}
-                self.assertEqual(sorted(set(families) - current), [],
-                                 f"Older {keys} use these families. Keep them as settings_family "
-                                 "in the unit metadata, or add a conversion rule for those keys.")
+                 ("building_disabled", "building_turn_overrides"))):
+            current = {queries.get_base_item_name(name) for name in library}
+            for family in families:
+                with self.subTest(keys=keys, family=family):
+                    values = {key: {"bombard_range": 7} if key == "unit_range_overrides" else 7
+                              for key in keys[1:]}
+                    saved = {"scenario_settings": {keys[0]: [family],
+                             **{key: {family: value} for key, value in values.items()}}}
+                    migrations.upgrade_save(saved, {})
+                    settings = saved["scenario_settings"]
+                    self.assertEqual(len(settings[keys[0]]), 1)
+                    converted = settings[keys[0]][0]
+                    self.assertIn(converted, current,
+                                  "Keep the released settings family in unit metadata, "
+                                  "or convert it in data/migrations/conversions.py.")
+                    for key in keys[1:]:
+                        self.assertEqual(settings[key], {converted: values[key]})
+
+
+class ReleasedContentWriterTests(unittest.TestCase):
+    def test_unreadable_release_library_stops_generation_without_replacing_inventory(self):
+        for path in (write_released_content.UNIT_DATA, write_released_content.BUILDING_DATA):
+            for result in (subprocess.CalledProcessError(128, ["git", "show"]), "invalid json",
+                           "{}", "[]", "null"):
+                with self.subTest(path=path, result=result):
+                    reads = [] if path == write_released_content.UNIT_DATA else ['{"Fixture Unit I": {}}']
+                    reads.append(result)
+                    with mock.patch.object(write_released_content, "release_commits", return_value={"v1": "fixture"}), \
+                            mock.patch.object(write_released_content, "git", side_effect=reads), \
+                            mock.patch.object(Path, "write_text") as write:
+                        with self.assertRaisesRegex(ValueError, f"fixture:{path}"):
+                            write_released_content.main()
+                        write.assert_not_called()
+
+    def test_valid_release_libraries_preserve_all_identifiers_and_families(self):
+        unit = {"Fixture Unit I": {"metadata": {"family": "Fixture Unit", "settings_family": "Fixture Settings"}}}
+        building = {"Fixture Building Lvl 1": {}}
+        with mock.patch.object(write_released_content, "release_commits", return_value={"v1": "fixture"}), \
+                mock.patch.object(write_released_content, "git", side_effect=[json.dumps(unit), json.dumps(building)]), \
+                mock.patch.object(Path, "write_text") as write, mock.patch("builtins.print"):
+            write_released_content.main()
+        generated = {}
+        exec(compile(write.call_args.args[0], "released_content.py", "exec"), generated)
+        self.assertEqual(generated["RELEASES"], {"v1": "fixture"})
+        self.assertEqual(generated["UNITS"], tuple(unit))
+        self.assertEqual(generated["BUILDINGS"], tuple(building))
+        self.assertEqual(generated["UNIT_FAMILIES"], ("Fixture Settings",))
+        self.assertEqual(generated["BUILDING_FAMILIES"], ("Fixture Building",))
 
 
 class LibraryAndTournamentTests(unittest.TestCase):

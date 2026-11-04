@@ -319,7 +319,8 @@ class HistoricalInfantryTests(unittest.TestCase):
             pygame.image.save(pygame.Surface((1, 1)), root / "id_map.png")
             (root / "map_data.json").write_text(json.dumps(queries.build_map_data_save(game)))
             (root / "meta.json").write_text(json.dumps(saved))
-            loaded = load_map.load_backend_state(directory, skip_initial_income=True)
+            loaded = load_map.load_backend_state(directory, skip_initial_income=True,
+                                                scenario_settings=queries.get_default_scenario_settings())
             loaded_province = next(iter(loaded.map_data.values()))
             self.assertEqual(loaded_province["unit_queue"], paid_queue)
             for unit in loaded_province["units"]:
@@ -330,7 +331,8 @@ class HistoricalInfantryTests(unittest.TestCase):
                                  (stats["health"], stats["attack"], stats["defense"], stats["speed"]))
             current = queries.build_save_dict(loaded)
             (root / "meta.json").write_text(json.dumps(current))
-            restored = load_map.load_backend_state(directory, skip_initial_income=True)
+            restored = load_map.load_backend_state(directory, skip_initial_income=True,
+                                                  scenario_settings=queries.get_default_scenario_settings())
             self.assertEqual(next(iter(restored.map_data.values()))["units"], loaded_province["units"])
             self.assertEqual(next(iter(restored.map_data.values()))["unit_queue"], paid_queue)
 
@@ -358,7 +360,8 @@ class HistoricalInfantryTests(unittest.TestCase):
             (root / "map_data.json").write_text(json.dumps(queries.build_map_data_save(game)))
             (root / "meta.json").write_text(json.dumps(saved))
             history_io.write(directory, history)
-            loaded = load_map.load_backend_state(directory, history_turn=1, skip_initial_income=True)
+            loaded = load_map.load_backend_state(directory, history_turn=1, skip_initial_income=True,
+                                                scenario_settings=queries.get_default_scenario_settings())
             expected = sum(year <= 1910 for year in self.tree["infantry_type"]["years"])
             self.assertEqual(loaded.nation_data[game.player_country]["research"]["infantry_type"], expected)
             self.assertEqual(loaded.default_research["infantry_type"], expected)
@@ -371,7 +374,8 @@ class HistoricalInfantryTests(unittest.TestCase):
             current = queries.build_save_dict(loaded)
             (root / "meta.json").write_text(json.dumps(current))
             history_io.write(directory, loaded.history)
-            restored = load_map.load_backend_state(directory, skip_initial_income=True)
+            restored = load_map.load_backend_state(directory, skip_initial_income=True,
+                                                  scenario_settings=queries.get_default_scenario_settings())
             self.assertEqual(restored.nation_data[game.player_country]["research"],
                              loaded.nation_data[game.player_country]["research"])
             self.assertEqual(next(iter(restored.map_data.values()))["units"], [loaded_unit])

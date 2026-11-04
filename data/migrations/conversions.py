@@ -28,6 +28,15 @@ MOVE_FIELDS = ("game_version", "tournament_session", "tournament_turn", "researc
                "player_intents", "factions")
 
 
+def _container(record, field, kind):
+    """Read an optional container, rejecting malformed input before traversing it."""
+    value = record.get(field, kind())
+    if not isinstance(value, kind):
+        shape = "object" if kind is dict else "list"
+        raise ValueError(f"{field} must be a JSON {shape}.")
+    return value
+
+
 def convert_save(save_meta, map_data):
     """Convert meta.json and map_data.json in place.
 
@@ -74,22 +83,22 @@ def convert_move(player_data):
         country = {key: player_data.pop(key) for key in list(player_data) if key not in MOVE_FIELDS}
         player_data["nation_data"] = country
         player_data["provinces"] = {}
-    country = player_data.get("nation_data")
-    if isinstance(country, dict):
+    country = _container(player_data, "nation_data", dict)
+    if "nation_data" in player_data:
         _country(country)
         if "release_subjects" not in player_data and isinstance(country.get("release_puppet_queue"), list):
             # Older moves held release requests only in the country's queue.
             player_data["release_subjects"] = copy.deepcopy(country["release_puppet_queue"])
-    for entry in player_data.get("release_subjects", []):
+    for entry in _container(player_data, "release_subjects", list):
         if isinstance(entry, dict):
             entry.setdefault("release_type", c.PUPPET_TYPE_INTEGRATED)
-    provinces = player_data.get("provinces")
-    for province in (provinces or {}).values():
+    provinces = _container(player_data, "provinces", dict)
+    for province in provinces.values():
         if isinstance(province, dict):
             # A move has no terrain, so a Truck aircraft unpacks as on land.
             # Host validation then checks every unit against host state.
             _province(province, None)
-    if isinstance(provinces, dict):
+    if "provinces" in player_data:
         if "aircraft_orders" not in player_data:
             player_data["aircraft_orders"] = _aircraft_orders(provinces)
         # Older moves replaced the country's units only when they listed provinces.
@@ -126,24 +135,27 @@ def _nations(nation_data):
 def _country(country):
     """Convert one country record."""
     country.pop("allied_with", None)
-    for project in country.get("research_queue", []):
-        days = project.get("days_remaining", LEGACY_RESEARCH_DEFAULT_DAYS) if isinstance(project, dict) else None
+    for project in _container(country, "research_queue", list):
+        if not isinstance(project, dict):
+            raise ValueError("Research queue entries must be JSON objects.")
+        days = project.get("days_remaining", LEGACY_RESEARCH_DEFAULT_DAYS)
         if _is_count(days) and "points_remaining" not in project:
             project["points_remaining"] = days * LEGACY_RESEARCH_POINTS_PER_DAY
     if isinstance(country.get("custom_production_units"), list):
         country["custom_production_units"] = [
             _unit_name(name) for name in country["custom_production_units"]]
-    for entry in country.get("release_puppet_queue", []):
+    for entry in _container(country, "release_puppet_queue", list):
         if isinstance(entry, dict):
             entry.setdefault("release_type", c.PUPPET_TYPE_INTEGRATED)
-    for event in country.get("scripted_events", []):
+    for event in _container(country, "scripted_events", list):
         if isinstance(event, dict):
             _scripted_event(event)
-    for message in country.get("inbox", []):
+    for message in _container(country, "inbox", list):
         if isinstance(message, dict) and not message.get("message_id"):
             message["message_id"] = uuid.uuid4().hex
     # Older replies occupied the proposal slot and could overwrite a travelling offer.
-    pending = country.get("pending_diplomacy", {})
+    pending = _container(country, "pending_diplomacy", dict)
+    _container(country, "diplo_responses", dict)
     responses = country.setdefault("diplo_responses", {}) if pending else {}
     for other, entry in list(pending.items()):
         action = entry.get("action") if isinstance(entry, dict) else entry
@@ -171,7 +183,7 @@ def _scripted_event(event):
     if not event.get("actions") and "action_type" in event:
         event["actions"] = [{"type": event["action_type"],
                              "target": event.get("action_target", "None")}]
-    for action in event.get("actions", []):
+    for action in _container(event, "actions", list):
         if isinstance(action, dict) and action.get("type") == "Spawn Unit":
             action["unit_type"] = _unit_name(action.get("unit_type"))
 
@@ -182,18 +194,23 @@ def _province(province, terrain):
     """Convert one province record. terrain is the province's map terrain."""
     from data import queries
     if "deployment_queue" in province:
+        deployment = _container(province, "deployment_queue", list)
+        if any(not isinstance(entry, dict) for entry in deployment):
+            raise ValueError("Deployment queue entries must be JSON objects.")
+        _container(province, "unit_queue", list)
+        _container(province, "building_queue", list)
         province.setdefault("unit_queue", [])
         province.setdefault("building_queue", [])
         for entry in province.pop("deployment_queue"):
             queue = "building_queue" if entry.get("order_type") == "BUILDING" else "unit_queue"
             province[queue].append(entry)
     for queue in ("unit_queue", "building_queue"):
-        for entry in province.get(queue, []):
+        for entry in _container(province, queue, list):
             if isinstance(entry, dict):
                 _production_turns(entry)
                 if "unit_type" in entry:
                     entry["unit_type"] = _unit_name(entry["unit_type"])
-    for unit in province.get("units", []):
+    for unit in _container(province, "units", list):
         if not isinstance(unit, dict):
             continue
         for field in ("type", "original_type"):

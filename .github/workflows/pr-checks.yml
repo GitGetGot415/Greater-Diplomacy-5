@@ -53,3 +53,9 @@ jobs:
           SDL_AUDIODRIVER: "dummy"
         run: |
           python -c "import pygame; pygame.init(); print('Pygame initialized successfully in CI!')"
+
+      - name: Check save and tournament migrations
+        env:
+          SDL_VIDEODRIVER: "dummy"
+          SDL_AUDIODRIVER: "dummy"
+        run: python -m unittest tests.test_data_migrations tests.test_historical_infantry tests.test_tournament_moves
