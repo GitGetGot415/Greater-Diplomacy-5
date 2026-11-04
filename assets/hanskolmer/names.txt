@@ -6,9 +6,8 @@
 # loaded by the game; the filename is the gameplay-facing family/tier key.
 
 [Generic fallback art]
-generic/artillery.png | 120 mm De Bange modèle 1878
+generic/artillery_1.png | 120 mm De Bange modèle 1878
 generic/artillery_2.png | Canon de 75 modèle 1897
-generic/artillery_3.png | Canon de 155 C modèle 1917
 generic/heavy_artillery.png | Canon de 155 C modèle 1917
 generic/light_tank_1.png | Renault FT (FT-17)
 
@@ -29,7 +28,7 @@ british/artillery_1.png | QF 18-pounder
 british/ww1_tank.png | Mark V tank
 
 [French]
-french/artillery.png | 120 mm De Bange modèle 1878
+french/artillery_1.png | 120 mm De Bange modèle 1878
 french/artillery_2.png | Canon de 75 modèle 1897
 french/heavy_artillery_3.png | Canon de 155 C modèle 1917
 french/heavy_tank_2.png | Char B1 bis
