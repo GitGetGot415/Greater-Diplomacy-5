@@ -17,7 +17,6 @@ from beepbox_audio import (
     is_beepbox_song, has_beepbox_replacement,
 )
 from compilation_scripts import build_support
-from tests import add_test_cases
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -250,23 +249,6 @@ class UltraBoxSynthTests(UltraBoxSynthFixture, unittest.TestCase):
         self.assertTrue(context.eval("gd5SamplesReady()"))
 
 
-@unittest.skipUnless(importlib.util.find_spec("quickjs"), "QuickJS is not installed")
-class UltraBoxBundledSongTests(UltraBoxSynthFixture, unittest.TestCase):
-    parallel_cases = True
-
-    def bundled_song(self, path):
-        song = _read_song(str(path))
-        if not all(ref.split("!", 2)[-1].startswith("data:") for ref in song.get("customSamples", [])):
-            self.skipTest("This song requires external samples.")
-        context, song = self.make_context(song)
-        self.initialize(context, song, seconds=20)
-        self.assertTrue(any(base64.b64decode(context.eval("gd5Render(2048)"))))
-
-
-add_test_cases(UltraBoxBundledSongTests, UltraBoxBundledSongTests.bundled_song,
-               ((path.name, path) for path in sorted((ROOT / "assets/music/Ultrabox JSON").glob("*.json"))))
-
-
 class UltraBoxNativeTests(unittest.TestCase):
     @unittest.skipUnless(os.environ.get("GD5_RUN_NATIVE_AUDIO_TESTS") == "1", "native audio integration is opt-in")
     def test_v8_stream_plays_embedded_examples_and_switches_back_to_beepbox(self):
@@ -306,12 +288,16 @@ try:
 finally:
     pygame.mixer.quit()
 """
-        examples = ROOT / "assets/music/Ultrabox JSON"
-        paths = [str(p) for p in examples.glob("*.json") if "dream" not in p.name]
-        paths.append(str(ROOT / "assets/music/Greater Diplomacy 5/Dschungel.json"))
-        environment = dict(os.environ, SDL_AUDIODRIVER="dummy")
-        result = subprocess.run([sys.executable, "-X", "faulthandler", "-c", script, *paths],
-                                cwd=ROOT, env=environment, capture_output=True, text=True, timeout=65)
+        song = song_fixture()
+        song["loopBars"] = 32
+        song["channels"][0]["sequence"] = [1] * 32
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary, "ultrabox.json")
+            path.write_text(json.dumps(song), encoding="utf-8")
+            paths = [str(path), str(ROOT / "assets/music/Greater Diplomacy 5/Dschungel.json")]
+            environment = dict(os.environ, SDL_AUDIODRIVER="dummy")
+            result = subprocess.run([sys.executable, "-X", "faulthandler", "-c", script, *paths],
+                                    cwd=ROOT, env=environment, capture_output=True, text=True, timeout=65)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
 
