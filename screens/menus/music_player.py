@@ -363,7 +363,7 @@ class Music_Player(ScrollPanes, Screen):
 
         # Always the last row of the song list.
         add_song_btn = Button(MUSIC_LEFT_PANE_W + 20, track_y, "song", "blue", ADD_SONG_LABEL,
-                              self.start_add_song)
+                              self.start_add_song, sound_kind=None)
         add_song_btn.click_guard = lambda: pygame.mouse.get_pos()[1] >= 200
         add_song_btn.pane = "track"
         self.elements.append(add_song_btn)
@@ -617,6 +617,7 @@ class Music_Player(ScrollPanes, Screen):
         if not albums:
             dialogs.show_info("Add Song", "Create an album before adding a song.")
             return
+        ui_elements.play_ui_sound("click")
         pickers.open_listbox_selector(self, "Add Song", "Which album should the song go in?",
                                       albums, self.pick_song_file)
 

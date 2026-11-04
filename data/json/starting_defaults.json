@@ -106,7 +106,7 @@
     "active_albums.json": [],
     "shuffle_disabled_tracks.json": [],
     "starting_song.json": {
-        "track": "assets/music/Greater Diplomacy 5/Devotion.json"
+        "track": ""
     },
     "hildehrand_choice.json": {}
 }
