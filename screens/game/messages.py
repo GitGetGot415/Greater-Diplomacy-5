@@ -679,7 +679,7 @@ class Messages_Screen(Screen):
         else:
             self.elements.append(Button(MSG_SORT_BUTTON_X, MSG_CONTACT_TOOLBAR_Y, (MSG_SORT_BUTTON_W, MSG_HEADER_BUTTON_H), "grey",
                                         self.contact_sort, self.cycle_contact_sort, font_preset="button_small"))
-            self.elements.append(Button(MSG_ADD_BUTTON_X, MSG_CONTACT_TOOLBAR_Y, (MSG_ADD_BUTTON_W, MSG_HEADER_BUTTON_H), "blue", "+",
+            self.elements.append(Button(MSG_ADD_BUTTON_X, MSG_CONTACT_TOOLBAR_Y, (MSG_ADD_BUTTON_W, MSG_HEADER_BUTTON_H), "green", "+",
                                         self.toggle_add_contact, font_preset="button_small", sound_kind="paper"))
             display_list = [n for n in playable if n in history_contacts]
         previews = {}
