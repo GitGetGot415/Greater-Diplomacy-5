@@ -136,6 +136,24 @@ def add_temporary_modifier(nation_a, nation_b, mod_name, value, nation_data,
         mods[mod_name] = {"value": value, "decay": decay, "turns": turns, "reason": reason}
 
 
+def add_opinion_change(reader, author, amount, nation_data):
+    """Moves `reader`'s opinion of `author` after reading a letter or a reply.
+
+    The model chooses the amount. Anything that is not a number counts as no
+    change, and AI_OPINION_CHANGE_MAX bounds it, so one message cannot swing a
+    relation further than the prompts allow. It adds to the decaying general
+    modifier, like other opinion events. Returns the amount applied.
+    """
+    try:
+        amount = int(amount)
+    except (TypeError, ValueError):
+        return 0
+    amount = max(-c.AI_OPINION_CHANGE_MAX, min(c.AI_OPINION_CHANGE_MAX, amount))
+    if amount and reader != author:
+        add_temporary_modifier(reader, author, "general", amount, nation_data)
+    return amount
+
+
 def lerp_color(c1, c2, t):
     """Linearly interpolates between two RGB color tuples by factor t (0.0-1.0)."""
     return (int(c1[0] + (c2[0] - c1[0]) * t),

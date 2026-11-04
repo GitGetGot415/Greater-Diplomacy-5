@@ -11,6 +11,7 @@
 from map_logic.diplomacy.action_definitions import ACTION_DEFINITIONS
 import random
 
+import data.constants as c
 from data import queries
 
 
@@ -419,7 +420,7 @@ def action_rules_and_schema(subject, message_hint):
         "- If your plan requires two steps (like proposing a ceasefire this turn and a full peace next turn), "
         "put your immediate move in 'action'/'action_target' and your next move in 'follow_up_action'/'follow_up_target'.\n"
         "- If you declare war on your master, put 'Independence' in the 'message' field. If you declare war on your puppet, put 'Preemptive'. Puppets and masters automatically leave shared factions upon war. A puppet cannot make peace or sign a ceasefire on its own authority, only with its own master.\n"
-        f"- You MUST specify an 'opinion_change' integer between -20 and 20 indicating how much this {subject} improved or worsened your general opinion of the sender.\n"
+        f"- You MUST specify an 'opinion_change' integer between -{c.AI_OPINION_CHANGE_MAX} and {c.AI_OPINION_CHANGE_MAX} indicating how much this {subject} improved or worsened your general opinion of the sender.\n"
         "Reply ONLY with a valid JSON object matching this schema: "
         '{"message": "' + message_hint + '", "action": "NONE", "action_target": "NONE", "follow_up_action": "NONE", "follow_up_target": "NONE", "opinion_change": 0}'
     )

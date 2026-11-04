@@ -22,7 +22,7 @@ import math
 import data.constants as c
 from data.number_utils import clamp01
 from data import queries
-from map_logic.ai import ai_commitments, ai_personality
+from map_logic.ai import ai_personality
 from map_logic.diplomacy import guarantees
 
 from map_logic.diplomacy import deal as deal_mod, war_score
@@ -70,8 +70,8 @@ def war_desire(world, nation, target, scenario_settings=None):
     terms are read as degrees rather than as a pass/fail, with the crossover moved
     by how cautious this nation is, so a bold country gambles on odds a careful
     one turns down. The remaining terms are what the old logic had no way to
-    say at all: that we like them, that we promised not to, that we are already
-    fighting two wars.
+    say at all: that we like them, that their guarantors would join, that we
+    are already fighting two wars.
     """
     person = traits(world, nation, scenario_settings)
     caution = person.get("caution", 0.5)
@@ -104,12 +104,6 @@ def war_desire(world, nation, target, scenario_settings=None):
     restraint = (c.AI_W_RELATION * goodwill
                  + c.AI_W_OVEREXTENSION * war_load(world, nation))
 
-    # A promise not to attack, weighted by how much this nation's word is worth
-    # to it. A faithless country will still break a pact when the prize is big
-    # enough -- which is the interesting outcome, not a bug -- and pay for it.
-    restraint += ai_commitments.war_restraint(world.nation_data, nation, target,
-                                              scenario_settings)
-
     # Declaring on a guaranteed country also declares on every guarantor. The
     # strongest promised response is enough to deter a weak attacker, while a
     # clear great-power advantage can still carry a war through this restraint.
@@ -121,11 +115,6 @@ def war_desire(world, nation, target, scenario_settings=None):
         guarantee_risk = 1.0 - _sigmoid(strongest_response, 1.0,
                                          c.AI_ODDS_STEEPNESS)
         restraint += c.AI_GUARANTEE_RESTRAINT * (0.45 + 0.55 * guarantee_risk)
-
-    # Nobody wants to be the third front for a nation that already spheres this
-    # target away from us by agreement.
-    if target in ai_commitments.is_sphered(world.nation_data, nation, target):
-        restraint += c.AI_COMMITMENT_WEIGHT
 
     return clamp01(core - restraint)
 

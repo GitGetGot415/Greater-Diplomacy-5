@@ -6,9 +6,9 @@ Three separate faults, each invisible on its own:
 
   * `ai_turn_budget_seconds` was read once per phase, from that phase's own
     start, so a setting reading 45 bought 45 three times over.
-  * A summit is five sequential requests inside one batch job, and a batch can
-    only give up between jobs -- so a summit that could not finish spent the
-    entire first 45 seconds and was then discarded whole, unserved. Every turn.
+  * A phase of several sequential requests inside one batch job could not
+    give up between them, so a job that could not finish spent the entire
+    first 45 seconds and was then discarded whole, unserved. Every turn.
   * Giving up did not stop the request already in flight. future.cancel()
     refuses to start a job; it does nothing to a worker blocked reading a reply.
     Each phase's abandoned request went on streaming into the *next* phase's
@@ -24,7 +24,7 @@ import unittest
 
 
 import data.constants as c
-from map_logic.ai import ai_diplomacy, ai_handler, ai_llm_runner, ai_settings
+from map_logic.ai import ai_handler, ai_letters, ai_llm_runner, ai_settings
 from tests.stub_map_screen import StubMapScreen
 
 
@@ -49,7 +49,7 @@ class SharedBudgetTests(Patcher):
     def phases(self, screen):
         """The three shares in the order prepare_turn spends them."""
         return [
-            ai_llm_runner.turn_deadline(screen, c.AI_BUDGET_SHARE_SUMMITS),
+            ai_llm_runner.turn_deadline(screen, c.AI_BUDGET_SHARE_LETTERS),
             ai_llm_runner.turn_deadline(screen, c.AI_BUDGET_SHARE_DIRECTOR),
             ai_llm_runner.turn_deadline(screen, c.AI_BUDGET_SHARE_RESPONSES),
         ]
@@ -69,11 +69,11 @@ class SharedBudgetTests(Patcher):
         self.assertLessEqual(max(self.phases(self.screen)) - start, 30 + 0.01)
 
     def test_the_first_phase_cannot_take_the_whole_turn(self):
-        """Summits ran first and spent all 45 seconds serving nobody, before
+        """The first phase once spent all 45 seconds serving nobody, before
         the nations a player actually reads had been asked anything."""
         ai_llm_runner.begin_turn(self.screen)
-        summits = ai_llm_runner.turn_deadline(self.screen, c.AI_BUDGET_SHARE_SUMMITS)
-        self.assertLess(summits - time.monotonic(), 30 * 0.9)
+        letters = ai_llm_runner.turn_deadline(self.screen, c.AI_BUDGET_SHARE_LETTERS)
+        self.assertLess(letters - time.monotonic(), 30 * 0.9)
 
     def test_a_phase_that_finishes_early_hands_the_rest_forward(self):
         ai_llm_runner.begin_turn(self.screen)
@@ -147,7 +147,7 @@ class NoLimitTests(Patcher):
         ai_llm_runner.begin_turn(self.screen)
 
     def test_no_phase_gets_a_deadline(self):
-        for share in (c.AI_BUDGET_SHARE_SUMMITS, c.AI_BUDGET_SHARE_DIRECTOR,
+        for share in (c.AI_BUDGET_SHARE_LETTERS, c.AI_BUDGET_SHARE_DIRECTOR,
                       c.AI_BUDGET_SHARE_RESPONSES):
             self.assertIsNone(ai_llm_runner.turn_deadline(self.screen, share))
 
@@ -204,7 +204,7 @@ class SkipButtonReachableTests(Patcher):
                     "proactive_llm_tasks_total": 0, "proactive_llm_tasks_completed": 0,
                     "responsive_tasks_total": 0, "responsive_tasks_completed": 0,
                     "refresh_tasks_total": 7, "refresh_tasks_completed": 0,
-                    "summits_total": 0, "summits_completed": 0,
+                    "letters_total": 0, "letters_completed": 0,
                     "multi_turns_total": 0, "multi_turn_abort_requested": False}
         counters.update(overrides)
         for name, value in counters.items():
@@ -220,11 +220,10 @@ class SkipButtonReachableTests(Patcher):
         turn_progress.draw_turn_loading_screen(screen, surface)
         return getattr(screen, "force_skip_btn_rect", None) is not None
 
-    def test_a_summit_can_be_skipped(self):
-        """Summits are the first model work of a turn and used to set none of
-        the counters the button keys off, so the one phase with nothing else
-        started yet was the one phase with no way out of it."""
-        self.assertTrue(self.drawn(self.counters(summits_total=2)))
+    def test_letters_can_be_skipped(self):
+        """Letters are the first model work of a turn, before any other model
+        counter is set, so the button has to key off their counter too."""
+        self.assertTrue(self.drawn(self.counters(letters_total=c.AI_LETTER_PASSES)))
 
     def test_directing_can_be_skipped(self):
         self.assertTrue(self.drawn(self.counters(proactive_llm_tasks_total=10)))
@@ -236,13 +235,12 @@ class SkipButtonReachableTests(Patcher):
         self.assertFalse(self.drawn(self.counters()))
 
 
-class SummitClockTests(Patcher):
-    """A summit is five requests. It has to watch the clock between them."""
+class LetterClockTests(Patcher):
+    """All letter passes share one phase share, and stop when it ends."""
 
     def setUp(self):
         # Started from the real clock: run_llm_batch keeps its own, and a
-        # deadline in what it considers the past would abandon the batch before
-        # a single line was spoken -- proving nothing about the summit.
+        # deadline in what it considers the past would abandon the first pass.
         self.DEADLINE = time.monotonic() + 10.0
 
         for module in (ai_settings, ai_handler):
@@ -251,161 +249,45 @@ class SummitClockTests(Patcher):
 
         self.game = StubMapScreen(["A", "B", "C"], human_players=[])
         self.game.force_skip_llm = False
-        self.game.set_war("A", "C")
-        self.game.set_war("B", "C")
         self.calls = []
+        # No measured call time, so no pass is declined as unaffordable.
+        self.patch(ai_handler, "_CALL_SECONDS", [0.0])
 
         self.clock = FakeClock(self.DEADLINE - 10.0)
-        self.patch(ai_diplomacy, "time", self.clock)
+        self.patch(ai_letters, "time", self.clock)
         self.patch(ai_llm_runner, "turn_deadline",
                    lambda screen=None, share=1.0: self.DEADLINE)
 
-    def stub_provider(self, expire_after=None, reply=None):
-        """A provider that answers, and optionally runs the clock out.
-
-        `expire_after` is how many lines get spoken before the budget is gone.
-        """
+    def stub_provider(self, expire_after=None):
+        """A writes to B and everyone else writes to A, so each pass has work."""
         def fake(mode, system, user, turn_id, canned, accepted=None, raw=False):
-            self.calls.append(system)
+            self.calls.append(user)
             if expire_after is not None and len(self.calls) >= expire_after:
                 self.clock.now = self.DEADLINE + 1
-            if reply is not None:
-                return dict(reply, message=f"line {len(self.calls)}")
-            if "closing" in system:
-                return {"agreed": False, "message": "We are done here.", "terms": []}
-            return {"message": f"line {len(self.calls)}"}
+            to = "B" if "You are the leader of A." in user else "A"
+            return {"letters": [{"to": to, "text": f"letter {len(self.calls)}"}],
+                    "opinions": {}, "notebook": "notes"}
         self.patch(ai_handler, "_run_provider", fake)
 
-    def transcripts(self):
-        return [msg for data in self.game.nation_data.values()
-                for msg in (data.get("inbox") or [])]
-
-    def test_a_summit_with_time_still_runs_to_the_end(self):
-        self.stub_provider()
-        ai_diplomacy.process_summits(self.game)
-        self.assertEqual(len(self.calls), c.AI_NEGOTIATION_ROUNDS * 2 + 1)
-
-    def test_a_summit_out_of_time_stops_asking(self):
-        """The whole point: it must not keep spending after the deadline just
-        because the batch runner can only look between jobs."""
+    def test_letters_out_of_time_ask_nothing(self):
         self.stub_provider()
         self.clock.now = self.DEADLINE + 1
-        ai_diplomacy.process_summits(self.game)
-        self.assertEqual(self.calls, [], f"asked anyway: {len(self.calls)} calls")
+        ai_letters.process_letters(self.game)
+        self.assertEqual(self.calls, [])
 
-    def test_it_stops_at_the_line_the_budget_ran_out_on(self):
-        """It used to spend the whole 45 seconds regardless, because nothing
-        between the first request and the fifth ever looked at the clock."""
-        self.stub_provider(expire_after=2)
-        ai_diplomacy.process_summits(self.game)
-        self.assertEqual(len(self.calls), 2)
-
-    def test_what_was_said_before_the_clock_ran_out_is_kept(self):
-        """It used to be discarded entire -- forty-five seconds of model time
-        producing nothing at all, which is exactly what it looked like."""
-        self.stub_provider(expire_after=2)
-        ai_diplomacy.process_summits(self.game)
-        self.assertTrue(self.transcripts(), "the meeting that happened was thrown away")
-
-    def test_a_meeting_only_one_side_attended_is_not_published(self):
-        """One leader speaking and the other never answering is a nation
-        talking to itself; publishing it would start the pair's cooldown for
-        nothing."""
+    def test_a_later_pass_does_not_start_after_the_share_ends(self):
         self.stub_provider(expire_after=1)
-        ai_diplomacy.process_summits(self.game)
-        self.assertEqual(len(self.calls), 1)
-        self.assertEqual(self.transcripts(), [])
+        ai_letters.process_letters(self.game)
+        self.assertEqual(len(self.calls), 3, "only the first pass had time")
+        self.assertEqual(self.game.letters_completed, 1)
 
-    def test_a_summit_cut_short_agrees_nothing(self):
-        """No closing call means no terms, which is the honest outcome -- not
-        an excuse to keep whatever the last line happened to mention."""
-        from map_logic.ai import ai_commitments as cm
-
-        self.stub_provider(expire_after=2, reply={
-            "agreed": True, "terms": [{"type": "NON_AGGRESSION", "turns": 25}]})
-        ai_diplomacy.process_summits(self.game)
-        self.assertEqual(cm.active_with(self.game.nation_data, "A", "B"), [])
-
-    def test_the_closing_is_not_sent_on_a_budget_that_is_already_gone(self):
-        """The last of the five is a request like any other. Talks that ran to
-        the end of their rounds with nothing left still have to stop, and what
-        they said stands as a meeting that reached no terms."""
-        self.stub_provider(expire_after=c.AI_NEGOTIATION_ROUNDS * 2)
-        ai_diplomacy.process_summits(self.game)
-        self.assertEqual(len(self.calls), c.AI_NEGOTIATION_ROUNDS * 2)
-        self.assertTrue(self.transcripts())
-
-    def test_a_meeting_cut_off_mid_request_still_leaves_what_was_spoken(self):
-        """The clock can only be checked between requests, so the one that
-        overruns is abandoned by the batch and its return value never arrives.
-        Everything said before it has to already be somewhere readable, or the
-        share bought nothing -- which is the whole fault, one scale down.
-        """
-        self.patch(ai_llm_runner, "turn_deadline",
-                   lambda screen=None, share=1.0: time.monotonic() + 0.25)
-        self.patch(ai_diplomacy, "time", time)
-
-        def fake(mode, system, user, turn_id, canned, accepted=None, raw=False):
-            self.calls.append(system)
-            if len(self.calls) > 2:         # the third line outlasts the share
-                time.sleep(0.6)
-            return {"message": f"line {len(self.calls)}"}
-        self.patch(ai_handler, "_run_provider", fake)
-
-        ai_diplomacy.process_summits(self.game)
-        self.assertGreater(len(self.calls), 2, "the deadline never bit")
-        self.assertTrue(self.transcripts(),
-                        "the exchange that did happen was thrown away")
-
-    def test_a_meeting_cut_off_before_anyone_answered_leaves_nothing(self):
-        """One leader having spoken when the budget ran out is not a meeting.
-        The salvage has to drop it, or an abandoned summit puts half a sentence
-        in two inboxes and starts the pair's cooldown for it.
-        """
-        self.patch(ai_llm_runner, "turn_deadline",
-                   lambda screen=None, share=1.0: time.monotonic() + 0.25)
-        self.patch(ai_diplomacy, "time", time)
-
-        def fake(mode, system, user, turn_id, canned, accepted=None, raw=False):
-            self.calls.append(system)
-            if len(self.calls) > 1:         # the answer never arrives in time
-                time.sleep(0.6)
-            return {"message": f"line {len(self.calls)}"}
-        self.patch(ai_handler, "_run_provider", fake)
-
-        ai_diplomacy.process_summits(self.game)
-        self.assertEqual(len(self.calls), 2, "the deadline bit in the wrong place")
-        self.assertEqual(self.transcripts(), [])
-
-    def test_a_share_with_room_for_one_line_is_not_spent_on_half_a_summit(self):
-        """Ten seconds and a six-second call: enough to make one request, not
-        enough for anyone to answer it. The old failure in miniature -- spend
-        the slice, publish nothing -- so the slice goes to the next phase."""
-        self.patch(ai_handler, "_CALL_SECONDS", [6.0])
-        self.stub_provider()
-        ai_diplomacy.process_summits(self.game)
-        self.assertEqual(self.calls, [], f"spent the share anyway: {self.calls}")
-
-    def test_a_share_with_room_for_a_whole_meeting_is_used(self):
-        self.patch(ai_handler, "_CALL_SECONDS", [1.0])
-        self.stub_provider()
-        ai_diplomacy.process_summits(self.game)
-        self.assertTrue(self.calls)
-
-    def test_summits_ask_for_their_own_share_and_not_the_turn(self):
+    def test_letters_ask_for_their_own_share_and_not_the_turn(self):
         asked = []
         self.patch(ai_llm_runner, "turn_deadline",
                    lambda screen=None, share=1.0: asked.append(share) or self.DEADLINE)
         self.stub_provider()
-        ai_diplomacy.process_summits(self.game)
-        self.assertEqual(asked, [c.AI_BUDGET_SHARE_SUMMITS])
-
-    def test_an_odd_trailing_line_is_dropped(self):
-        self.assertEqual(ai_diplomacy._complete_exchanges(["a: 1"]), [])
-        self.assertEqual(ai_diplomacy._complete_exchanges(["a: 1", "b: 2"]),
-                         ["a: 1", "b: 2"])
-        self.assertEqual(ai_diplomacy._complete_exchanges(["a: 1", "b: 2", "a: 3"]),
-                         ["a: 1", "b: 2"])
+        ai_letters.process_letters(self.game)
+        self.assertEqual(asked, [c.AI_BUDGET_SHARE_LETTERS])
 
 
 class HangUpTests(Patcher):
@@ -515,9 +397,8 @@ class AffordabilityTests(Patcher):
     def test_a_share_that_can_is_taken(self):
         self.assertTrue(ai_llm_runner.affordable(time.monotonic() + 8, 1))
 
-    def test_a_summit_needs_room_for_both_sides_to_speak(self):
-        """Half an exchange is not published, so nine seconds against a
-        five-second call buys a summit precisely nothing."""
+    def test_a_job_of_several_calls_needs_room_for_all_of_them(self):
+        """Nine seconds against a five-second call covers one call, not two."""
         deadline = time.monotonic() + 9
         self.assertTrue(ai_llm_runner.affordable(deadline, 1))
         self.assertFalse(ai_llm_runner.affordable(deadline, 2))
@@ -560,7 +441,7 @@ class AffordabilityTests(Patcher):
         screen.notes = []
         screen.show_feedback = screen.notes.append
         ai_llm_runner.report_unserved(
-            screen, ai_llm_runner.BatchOutcome(2, 0, 2, "unaffordable"), "Holding summits")
+            screen, ai_llm_runner.BatchOutcome(2, 0, 2, "unaffordable"), "Writing letters")
         self.assertEqual(screen.notes, [],
                          "nagged every turn about time that was never spent")
 

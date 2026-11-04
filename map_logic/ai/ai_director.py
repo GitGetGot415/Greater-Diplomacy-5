@@ -27,8 +27,27 @@ from map_logic.ai import ai_candidates, ai_prompts
 
 
 def top_scored(candidates, limit):
-    """What the heuristic layer would do on its own. Every fallback lands here."""
-    return list(candidates[:limit])
+    """What the heuristic layer would do on its own. Every fallback lands here.
+
+    A leader's own initiatives are left out: no staff rule asked for them, so
+    the staff never take one on the leader's behalf.
+    """
+    return [cand for cand in candidates if not ai_candidates.is_initiative(cand)][:limit]
+
+
+def _clashes(candidate, chosen):
+    """Whether this pick cannot go out beside the ones already chosen.
+
+    pending_diplomacy holds one proposal per country, and a country may have
+    only one faction request pending, as for a player.
+    """
+    for other in chosen:
+        if other.target == candidate.target:
+            return True
+        if (candidate.action in c.FACTION_REQUEST_ACTIONS
+                and other.action in c.FACTION_REQUEST_ACTIONS):
+            return True
+    return False
 
 
 def should_consult(candidates, wants_prose=False):
@@ -70,9 +89,12 @@ def build_prompt(world, nation, candidates, limit, personality_note=""):
         f"You are the leader of a nation in a grand strategy game, named below. "
         f"Your staff has prepared the options at the end. All of them are legal and "
         f"ready to execute this turn, and the staff rating is their own estimate "
-        f"of how well each serves the nation.\n"
-        f"Choose at most {limit}. You may follow the ratings or overrule them, "
-        f"but you may only choose from this list.\n\n"
+        f"of how well each serves the nation. Options marked as your own initiative "
+        f"are proposals to countries you have been writing to that your staff did "
+        f"not recommend; take one when your letters or your notebook give you a "
+        f"reason to.\n"
+        f"Choose at most {limit}, at most one per country. You may follow the "
+        f"ratings or overrule them, but you may only choose from this list.\n\n"
         + ai_prompts.VOICE_RULE +
         "\nReply ONLY with a valid JSON object of this shape:\n"
         '{"picks": [0], "reason": "one sentence of why", '
@@ -105,7 +127,7 @@ def validate(reply, candidates, limit):
     chosen = []
     for raw in picks:
         cand = by_cid.get(str(raw).strip())
-        if cand is not None and cand not in chosen:
+        if cand is not None and cand not in chosen and not _clashes(cand, chosen):
             chosen.append(cand)
         if len(chosen) >= limit:
             break

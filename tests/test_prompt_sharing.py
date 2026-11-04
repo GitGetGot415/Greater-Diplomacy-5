@@ -157,7 +157,7 @@ class RelationTrimTests(unittest.TestCase):
 class AcrossPhasesTests(unittest.TestCase):
     """The same saving, one level up: a turn is three phases, not one batch.
 
-    Directing nations, holding summits and answering proposals each build their
+    Directing nations, writing letters and answering proposals each build their
     own system half, and Ollama used to put that half in front of the world --
     so the three phases shared their first eight characters and each one paid to
     read the whole world again. That is nine seconds of a fifteen-second share,

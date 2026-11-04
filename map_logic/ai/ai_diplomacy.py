@@ -1,10 +1,9 @@
 from data.state_access import world_for, session_for
 from map_logic.diplomacy import diplomacy_lifecycle as lifecycle
 import random
-import time
 from collections import namedtuple
-from map_logic.ai import (ai_candidates, ai_commitments, ai_director, ai_evaluation,
-                          ai_handler, ai_llm_runner, ai_negotiation, ai_opinion,
+from map_logic.ai import (ai_candidates, ai_director, ai_evaluation,
+                          ai_handler, ai_letters, ai_llm_runner, ai_opinion,
                           ai_personality, ai_politics, ai_prompts, ai_world)
 from map_logic.diplomacy import (diplomacy_messages, diplomacy_events,
                                  faction_leadership, war_calls)
@@ -97,6 +96,12 @@ def process_proactive_llm_tasks(context):
         nation = choice["nation"]
         note = (f"Your temperament: "
                 f"{ai_personality.describe(world_state.nation_data, nation, world_state.scenario_settings)}.\n")
+        # What the leader wrote down at its desk this turn or before: its view
+        # of the others and what it means to do. Proposals are where those
+        # plans become real, so they are decided with it in view.
+        plans = ai_letters.notebook(world_state.nation_data, nation)
+        if plans:
+            note += f"Your private notebook, which only you read:\n{plans}\n"
         system, user = ai_director.build_prompt(
             world, nation, choice["candidates"], c.AI_MAX_ACTIONS_PER_TURN, note)
         world_context = ai_evaluation.get_world_context(
@@ -139,191 +144,6 @@ def process_proactive_llm_tasks(context):
                             choice["chosen"], choice.get("messages"))
 
     session_state.proactive_choices = []
-
-def _complete_exchanges(history):
-    """The part of a cut-short summit that reads as a meeting.
-
-    One side speaking and the other never answering is not a summit, it is a
-    nation talking to itself, and publishing it would put a half-line in two
-    inboxes and start the pair's cooldown for nothing. An odd trailing line is
-    dropped; an even transcript is kept whole.
-    """
-    return history[:len(history) - len(history) % 2]
-
-
-def process_summits(context):
-    """Convenes the AI-to-AI summits worth holding this turn.
-
-    Each pair is one job in the batch and its exchanges run sequentially inside
-    it, so the wall clock is rounds x latency rather than pairs x rounds x
-    latency. Costs nothing at all unless both sides of a pair are model-driven,
-    which in practice means MAJOR or ABSOLUTE.
-    """
-    world_state = world_for(context)
-    session_state = session_for(context)
-    session_state.summits_total = 0
-    session_state.summits_completed = 0
-    if not ai_negotiation.enabled() or ai_handler.get_ai_mode() == "OFF":
-        return
-
-    world = ai_world.for_screen(context)
-    total_turns = queries.get_total_turns(world_state.time_manager)
-    active_nations = set(queries.get_living_nations(world_state.map_data))
-
-    def model_driven(nation):
-        return ai_evaluation.llm_enabled_for(nation, world) is True
-
-    ai_nations = [n for n in queries.get_active_ai_nations(context) if n in active_nations]
-    pairs = ai_negotiation.select_pairs(world, ai_nations, model_driven, total_turns)
-    session_state.summits_total = len(pairs)
-    if not pairs:
-        return
-
-    # Published before the first request goes out, because the loading screen
-    # keys the Force Skip button off these counters and this phase used to set
-    # none of them -- leaving the first model work of the turn with nothing on
-    # screen to stop it.
-    session_state.loading_status_text = f"Holding Summits (0/{len(pairs)})..."
-    my_turn_id = ai_handler.CURRENT_TURN_ID
-    mode = ai_handler.get_ai_mode()
-    settings = world_state.scenario_settings
-    current_date = world_state.time_manager.get_date_string()
-
-    def say(speaker, listener, system, history):
-        world_context = ai_evaluation.get_world_context(
-            world_state.nation_data, active_nations, speaker, listener, current_date)
-        transcript = "\n".join(history) if history else "(nothing said yet)"
-        reply = ai_handler._run_provider(
-            mode, system, f"{world_context}\nSo far:\n{transcript}\n\nSpeak.",
-            my_turn_id, None, raw=True)
-        if not reply or reply.get("error"):
-            return None, None
-        line = str(reply.get("message", "")).strip()[:c.AI_TRANSCRIPT_LINE_LENGTH]
-        return (line or None), reply
-
-    deadline = ai_llm_runner.turn_deadline(context, c.AI_BUDGET_SHARE_SUMMITS)
-
-    def out_of_time():
-        return deadline is not None and time.monotonic() >= deadline
-
-    def call(pair):
-        """One whole meeting, checking the clock between its own lines.
-
-        A summit is five sequential requests, and the batch runner can only
-        give up between jobs -- so a summit that could not finish inside the
-        budget used to spend all of it and then be thrown away entire, unserved
-        and unrecorded. Measured on the 1941 map that was the first 45 seconds
-        of every turn, buying nothing at all, before the nations that the player
-        actually reads had been asked anything.
-
-        Now it stops where it stands and keeps what was said. Two leaders who
-        got one exchange in did meet; they simply did not get as far as terms,
-        which is what `terms: []` says.
-
-        Each line lands on `pair["said"]` as it is spoken rather than only in
-        the return value, because the return value is exactly what a summit cut
-        off mid-request does not get to produce: the clock can only be checked
-        between requests, so the one that overruns takes the whole meeting with
-        it unless the earlier lines are already somewhere the caller can read.
-        """
-        a, b = pair["a"], pair["b"]
-        history = pair["said"]
-        for round_index in range(c.AI_NEGOTIATION_ROUNDS):
-            for speaker, listener in ((a, b), (b, a)):
-                if out_of_time():
-                    return {"transcript": _complete_exchanges(history),
-                            "terms": [], "closing": None}
-                prompt = (ai_negotiation.opening_prompt if not history
-                          else ai_negotiation.reply_prompt)(world, speaker, listener, settings)
-                line, _reply = say(speaker, listener, prompt, history)
-                if line is None:
-                    return {"transcript": _complete_exchanges(history),
-                            "terms": [], "closing": None}
-                history.append(f"{speaker}: {line}")
-
-        if out_of_time():
-            return {"transcript": list(history), "terms": [], "closing": None}
-
-        closing, reply = say(a, b, ai_negotiation.closing_prompt(world, a, b, settings), history)
-        terms = []
-        if reply and reply.get("agreed"):
-            terms = ai_negotiation.validate_terms(world, a, b, reply.get("terms"))
-        if closing:
-            history.append(f"{a}: {closing}")
-        return {"transcript": list(history), "terms": terms, "closing": closing}
-
-    def record(pair, outcome):
-        pair["transcript"] = outcome.get("transcript") or []
-        pair["terms"] = outcome.get("terms") or []
-
-    def record_fallback(pair):
-        # Talks that never started produce nothing, which is correct. Talks cut
-        # off in the middle of a request produce what they managed before it --
-        # a meeting that reached no terms, rather than nine seconds of the
-        # turn's budget spent and nothing to show for it. Terms are left as
-        # select_pairs made them: only the closing reply ever sets them, and a
-        # summit that was abandoned never got that far.
-        pair["transcript"] = _complete_exchanges(pair["said"])
-
-    count = ai_llm_runner.make_progress_counter(
-        context, "Holding Summits", "summits_completed", len(pairs))
-
-    outcome = ai_llm_runner.run_llm_batch(
-        pairs, call, record, record_fallback,
-        on_progress=count,
-        should_abort=lambda: session_state.force_skip_llm,
-        max_workers=queries.get_ai_threads(),
-        deadline=deadline, min_calls=2)
-    ai_llm_runner.report_unserved(context, outcome, "Holding summits")
-
-    for pair in pairs:
-        if not pair["transcript"]:
-            continue
-        ai_negotiation.record_summit(world_state.nation_data, pair["a"], pair["b"], total_turns)
-        agreed = ai_negotiation.apply_terms(
-            context, pair["a"], pair["b"], pair["terms"], total_turns)
-        _publish_summit(context, pair, agreed)
-
-
-def _publish_summit(context, pair, agreed):
-    """Puts the summit where a player can find it.
-
-    The transcript goes into both participants' inboxes, which already keep a
-    sent copy, so a spectator sees the whole meeting. The headline goes into the
-    global log, which feeds get_world_context -- so nations that were not in the
-    room hear about it and react. And anyone bordering either party gets told
-    directly, because a summit a player never learns about may as well not have
-    happened.
-    """
-    world_state = world_for(context)
-    a, b = pair["a"], pair["b"]
-    for line in pair["transcript"]:
-        speaker, _, said = line.partition(": ")
-        listener = b if speaker == a else a
-        # A summit only happens because a model held it, so every line of the
-        # transcript is the leader's own words by construction.
-        diplomacy_messages.send_message(context, speaker, listener, said, "TEXT", llm=True)
-
-    if agreed:
-        summary = ai_negotiation.describe_terms(agreed)
-        diplomacy_events.log_global_event(
-            world_state.nation_data, f"SUMMIT: {a} and {b} agreed {summary}.")
-        headline = f"Our attaches report that {a} and {b} met in private and agreed {summary}."
-    else:
-        diplomacy_events.log_global_event(
-            world_state.nation_data, f"SUMMIT: {a} and {b} met, and agreed nothing.")
-        headline = f"Our attaches report that {a} and {b} met in private, but parted without agreement."
-
-    world = ai_world.for_screen(context)
-    for human in session_for(context).active_players:
-        if human in (a, b):
-            continue
-        neighbours = world.neighbors.get(human, ())
-        shares_bloc = any(queries.are_in_same_faction(human, side, world_state.nation_data)
-                          for side in (a, b))
-        if a in neighbours or b in neighbours or shares_bloc:
-            diplomacy_messages.send_message(context, "Foreign Ministry", human, headline, "TEXT")
-
 
 def process_basic_proactive_ai(context):
     """Hardcoded basic logic for AI to declare war for cores and join faction wars."""
@@ -1098,6 +918,66 @@ def _claim_faction_leadership(bag, context, ai_name, world, scenario_settings=No
         "we have outweighed the leader of this faction for six turns running"))
 
 
+def _plans_for_itself(ai_name, world):
+    """Whether a leader, not only its staff, chooses this nation's proposals."""
+    return (ai_handler.get_ai_mode() != "OFF"
+            and ai_evaluation.llm_enabled_for(ai_name, world) is True)
+
+
+def _offer_own_initiatives(bag, context, ai_name, pending, active_nations, world):
+    """Section 9: proposals no staff rule asked for, to the countries we write to.
+
+    Every section above offers a move only when its own trigger fires, so a
+    leader whose letters had agreed an alliance had no way to propose one
+    unless a rule happened to want it as well. These are the ordinary actions
+    any player could send to the same country, legal under the same checks
+    (Collector.add_initiative). Only the leader picks them: the staff fallback
+    never does (ai_director.top_scored).
+    """
+    world_state = world_for(context)
+    nation_data = world_state.nation_data
+    settings = world_state.scenario_settings
+    # One faction request at a time, as toggle_diplomacy_action requires of a player.
+    asking_already = any(isinstance(info, dict) and info.get("action") in c.FACTION_REQUEST_ACTIONS
+                         for info in pending.values())
+
+    for other in ai_letters.correspondents(nation_data, ai_name, active_nations):
+        alliance = ai_opinion.alliance_appetite(world, ai_name, other, settings)
+        worth = f"our staff rate a bloc with them at {alliance:.2f}"
+        offers = [("FACTION_INVITE", alliance, worth, {}),
+                  ("REQ_MILITARY_ACCESS", 0.0, "passage through their territory", {})]
+        if not asking_already:
+            offers += [("JOIN_FACTION_REQ", alliance, worth, {}),
+                       ("CREATE_FACTION", alliance, worth, {})]
+
+        trade = ai_candidates.resource_offer(world, ai_name, other, settings)
+        if trade:
+            offers.append(("TRADE", 0.0, "an exchange of what each of us lacks",
+                           {"parameters": trade}))
+
+        ours = [e for e in war_calls.unshared_wars(ai_name, other, nation_data) if e in active_nations]
+        if ours:
+            offers.append(("CALL_TO_ARMS", 0.0, f"their help against {ours[0]}",
+                           {"context_target": ours[0]}))
+        theirs = [e for e in war_calls.unshared_wars(other, ai_name, nation_data) if e in active_nations]
+        if theirs:
+            offers.append(("JOIN_WARS", 0.0, f"our help against {theirs[0]}",
+                           {"context_target": theirs[0]}))
+
+        duration = nation_data.get(ai_name, {}).get("war_durations", {}).get(other, 0)
+        if (queries.are_at_war(ai_name, other, nation_data) and _may_settle(nation_data, ai_name, other)
+                and duration >= c.MIN_TURNS_FOR_CEASEFIRE):
+            leverage = war_score.between(context, ai_name, other, world)["mine"]
+            appetite = ai_opinion.peace_appetite(world, ai_name, other, settings)
+            offers.append(("PEACE_TREATY", appetite,
+                           f"our staff rate our wish for peace at {appetite:.2f}",
+                           {"parameters": _victors_terms(context, ai_name, other, leverage)}))
+
+        for action, score, rationale, payload in offers:
+            if ai_candidates.not_on_cooldown(nation_data, ai_name, other, action):
+                bag.add_initiative(ai_candidates.make(action, other, score, rationale, **payload))
+
+
 def _fabricate_claims_during_war(context, ai_name, data, my_enemies, active_nations):
     """Section 4.5: while at war and with no claim queued, picks one enemy
     province (preferring one bordering territory we already hold or claim) to fabricate a claim on."""
@@ -1280,6 +1160,9 @@ def _run_basic_proactive_ai(context):
             _claim_faction_leadership(bag, context, ai_name, world,
                                       world_state.scenario_settings)
 
+        if _plans_for_itself(ai_name, world):
+            _offer_own_initiatives(bag, context, ai_name, pending, active_nations, world)
+
         # Held rather than executed. The director pass runs next and gives each
         # nation's leader the chance to pick differently from its staff; without
         # a model, or after a Force Skip, `chosen` is what actually happens.
@@ -1289,7 +1172,7 @@ def _run_basic_proactive_ai(context):
                 "nation": ai_name,
                 "pending": pending,
                 "candidates": ranked,
-                "chosen": ranked[:c.AI_MAX_ACTIONS_PER_TURN],
+                "chosen": ai_director.top_scored(ranked, c.AI_MAX_ACTIONS_PER_TURN),
                 "messages": {},
             })
 

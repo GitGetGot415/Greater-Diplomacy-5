@@ -94,7 +94,7 @@ def draw_turn_loading_screen(map_screen, surface):
 
     # Keep every phase visible and in a fixed position, including phases with no work.
     phases = (
-        ("Holding Summits", session_state.summits_completed, session_state.summits_total),
+        ("Writing Letters", session_state.letters_completed, session_state.letters_total),
         ("Analyzing Global Strategy", session_state.proactive_tasks_completed, session_state.proactive_tasks_total),
         ("Generating AI Movement Orders", session_state.movement_tasks_completed, session_state.movement_tasks_total),
         ("Drafting Proactive Diplomatics", session_state.proactive_llm_tasks_completed, session_state.proactive_llm_tasks_total),
@@ -108,14 +108,14 @@ def draw_turn_loading_screen(map_screen, surface):
     # --- Draw the Force Skip Button ---
     # Only show it if there are LLM tasks that might get stuck.
     #
-    # Summits belong in that list. They are the first model work of a turn and
-    # run before either of the other two counters has been set, so the one
-    # phase where nothing else has started yet was the one phase with no way
-    # out of it -- which matters a great deal now that ai_turn_budget_seconds
-    # can be 0 and this button is the only thing that ends a turn early.
+    # Letters belong in that list. They are the first model work of a turn and
+    # run before either of the other two counters has been set, so without them
+    # the one phase where nothing else has started yet would have no way out of
+    # it -- which matters a great deal now that ai_turn_budget_seconds can be 0
+    # and this button is the only thing that ends a turn early.
     if (session_state.proactive_llm_tasks_total > 0
             or session_state.responsive_tasks_total > 0
-            or session_state.summits_total > 0):
+            or session_state.letters_total > 0):
         skip_btn_rect = pygame.Rect(center_x - 100, center_y + TURN_PROGRESS_SKIP_OFFSET, 200, 40)
         ui_elements.draw_pixel_button(surface, skip_btn_rect, (150, 40, 40), hover_color=(200, 60, 60))
         

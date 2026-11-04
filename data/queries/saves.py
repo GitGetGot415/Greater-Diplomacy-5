@@ -300,8 +300,8 @@ def player_snapshot_projection(context, snapshot, country_id):
         country_id, world_state.map_data, world_state.nation_data, context=context)
     private_fields = ("production_queue", "current_research", "research_queue", "research_progress",
         "research", "inbox", "pending_diplomacy", "diplo_responses", "diplo_draft_lists",
-        "queued_ai_actions", "orders", "armies", "automation", "materials", "manpower", "fuel",
-        "manpower_pool", "materials_pool", "fuel_pool")
+        "queued_ai_actions", "ai_notebook", "orders", "armies", "automation", "materials",
+        "manpower", "fuel", "manpower_pool", "materials_pool", "fuel_pool")
     # New record fields must not bypass the established country visibility policy.
     result["factions"] = {
         identity: {key: copy.deepcopy(record[key])

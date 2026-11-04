@@ -1,8 +1,8 @@
 from data.state_access import world_for, session_for
 import asyncio
 from map_logic.diplomacy import diplomacy_processor
-from map_logic.ai import (ai_movement, ai_research, ai_construction, ai_diplomacy, scripted_events,
-                          ai_llm_runner, ai_world, automation_logic)
+from map_logic.ai import (ai_movement, ai_research, ai_construction, ai_diplomacy, ai_letters,
+                          scripted_events, ai_llm_runner, ai_world, automation_logic)
 from map_logic.system32 import (
     combat_processor,
     movement_processor,
@@ -55,11 +55,11 @@ async def prepare_turn(context):
         context.ai_world = ai_world.build(context)
 
         try:
-            # --- AI-to-AI summits ---
-            # Before the proactive pass, so an agreement reached here is already
-            # binding when each nation works out what it wants to do.
-            session_state.loading_status_text = "Holding Summits..."
-            ai_diplomacy.process_summits(context)
+            # --- Letters ---
+            # Before the proactive pass, so each nation decides what to propose
+            # with this turn's letters read and its notebook up to date.
+            session_state.loading_status_text = "Writing Letters..."
+            ai_letters.process_letters(context)
             await asyncio.sleep(0)
 
             # --- Basic Proactive AI & Grand Strategy ---
@@ -109,8 +109,8 @@ async def prepare_turn(context):
         session_state.proactive_llm_tasks_completed = 0
         session_state.movement_tasks_total = 0
         session_state.movement_tasks_completed = 0
-        session_state.summits_total = 0
-        session_state.summits_completed = 0
+        session_state.letters_total = 0
+        session_state.letters_completed = 0
         session_state.responsive_tasks_total = 0
         session_state.responsive_tasks_completed = 0
 

@@ -1,8 +1,8 @@
 """One driver for the game's batches of LLM calls.
 
 Three turn phases fan a list of prompts out to the model and collect the
-answers: the summit pass and the proactive-message pass, both in
-map_logic/ai/ai_diplomacy.py, and the proposal-response pass in
+answers: the letter passes in map_logic/ai/ai_letters.py, the proactive-message
+pass in map_logic/ai/ai_diplomacy.py, and the proposal-response pass in
 map_logic/diplomacy/diplomacy_processor.py. The original two had their own
 copy of the same ~60 lines -- the ThreadPoolExecutor, the
 `wait(timeout=0.1, FIRST_COMPLETED)` drain loop, the Force Skip cancel path,
@@ -42,8 +42,8 @@ def make_progress_counter(context, label, done_attr, total):
 
     All three phases wrote the same closure: bump `context.<done_attr>`, then
     format "Label (done/total)...". `total` is either an attribute name on
-    context or a plain number, since the summit phase counts a local list
-    rather than publishing a total.
+    context or a plain number, for a phase that counts a local list rather
+    than publishing a total.
 
     The returned callable takes (and ignores) the job, which is the shape
     run_llm_batch hands its on_progress.
@@ -63,8 +63,8 @@ def begin_turn(context):
 
     Without this every phase measured `ai_turn_budget_seconds` from its own
     start, so the three of them spent it three times over: a setting reading 45
-    bought 135 seconds of model time, and the first phase in the turn -- summits
-    -- could take a full third of it and still be told it was inside budget.
+    bought 135 seconds of model time, and the first phase in the turn could take
+    a full third of it and still be told it was inside budget.
     """
 
     budget = queries.get_ai_turn_budget_seconds()
@@ -97,8 +97,10 @@ def turn_deadline(context=None, share=1.0):
     return time.monotonic() + remaining * max(0.0, min(1.0, share))
 
 
-def report_unserved(context, outcome, what):
+def report_unserved(context, outcome, what, fallback="used their staff's plan"):
     """Tells the player when the model did not get to everyone.
+
+    `fallback` says what happens to the jobs the model did not reach.
 
     A batch that ran out of budget looked identical to a batch with nothing to
     say: the loading bar counted up to whatever it reached, and then the turn
@@ -124,7 +126,7 @@ def report_unserved(context, outcome, what):
         return
     if outcome.reason == "skipped":
         note = (f"{what}: skipped {outcome.abandoned} of {outcome.total}; "
-                f"they used their staff's plan.")
+                f"they {fallback}.")
     else:
 
         budget = queries.get_ai_turn_budget_seconds()
@@ -133,7 +135,7 @@ def report_unserved(context, outcome, what):
             levers += " or ai_threads"
         note = (f"{what}: {outcome.served} of {outcome.total} answered inside this "
                 f"phase's share of the {budget}s turn budget; the other "
-                f"{outcome.abandoned} used their staff's plan. Raise "
+                f"{outcome.abandoned} {fallback}. Raise "
                 f"{levers} to reach more.")
     print(f"[AI] {note}")
     show = getattr(context, "show_feedback", None)
@@ -228,9 +230,8 @@ def run_llm_batch(jobs, call, on_result, on_fallback, on_progress=None,
     # enough of it to finish the smallest piece of work this batch can show
     # for itself, so the slice goes to the next phase instead of being spent
     # on a request that will be cut off. `min_calls` is that smallest piece:
-    # one, where a job is a single request; two for a summit, because one
-    # leader speaking with nobody answering is not a meeting and is not
-    # published.
+    # one, where a job is a single request; more where a job only produces
+    # something after several requests.
     if not affordable(deadline, min_calls):
         tally["reason"] = "unaffordable"
         for job in jobs:

@@ -262,7 +262,7 @@ def _parse_reply_json(text, fallback=None):
     `fallback` formats the unparseable text (Ollama's says "JSON ERROR:" so a
     local model's mangled output is distinguishable from a real cable). That
     text is flagged as a provider error, like any other failure: a proposal
-    still shows it, but summits, the director and proactive lines drop it
+    still shows it, but letters, the director and proactive lines drop it
     rather than sending "JSON ERROR: ..." as a leader's words.
     """
     json_text = text.strip()
@@ -329,7 +329,7 @@ def _combined_prompt(system_prompt, user_prompt):
     Every caller in the game builds its user half as "<the world> <this
     nation's situation> <the task>", and the world is around ninety percent of
     it and identical for every request in a turn -- but the system half differs
-    by phase, and often by request, so putting it in front made a summit
+    by phase, and often by request, so putting it in front made a letter
     prompt, a director prompt and a proposal reply share their first eight
     characters. Measured on the 1941 map: 0% shared across phases against 84%
     this way round.

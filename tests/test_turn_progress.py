@@ -7,7 +7,7 @@ import unittest
 from unittest import mock
 
 from data.state_access import BackendState
-from map_logic.ai import ai_diplomacy, ai_movement
+from map_logic.ai import ai_letters, ai_movement
 from map_logic.system32 import turn_manager, turn_processor
 from ui.panels import turn_progress
 
@@ -28,7 +28,7 @@ class TurnCounterTests(unittest.TestCase):
         context = BackendState()
         context.scenario_settings = {"ai_disabled": disabled}
         context.draw = mock.Mock()
-        for phase in ("summits", "proactive_tasks", "proactive_llm_tasks", "responsive_tasks", "movement_tasks"):
+        for phase in ("letters", "proactive_tasks", "proactive_llm_tasks", "responsive_tasks", "movement_tasks"):
             setattr(context.session, phase + "_total", 9)
             setattr(context.session, phase + "_completed", 8)
         with mock.patch.object(turn_manager.queries, "get_active_ai_nations", return_value=list(countries)), \
@@ -46,13 +46,13 @@ class TurnCounterTests(unittest.TestCase):
         context = self.trigger()
         self.assertEqual(context.proactive_tasks_total, 2)
         self.assertEqual(context.movement_tasks_total, 2)
-        for phase in ("summits", "proactive_llm_tasks", "responsive_tasks"):
+        for phase in ("letters", "proactive_llm_tasks", "responsive_tasks"):
             self.assertEqual(getattr(context, phase + "_total"), 0)
             self.assertEqual(getattr(context, phase + "_completed"), 0)
 
     def test_enabled_model_workloads_remain_pending_until_prepared(self):
         context = self.trigger(mode="FIXTURE_PROVIDER")
-        for phase in ("summits", "proactive_llm_tasks", "responsive_tasks"):
+        for phase in ("letters", "proactive_llm_tasks", "responsive_tasks"):
             self.assertEqual(getattr(context, phase + "_total"), -1)
             self.assertEqual(getattr(context, phase + "_completed"), 0)
 
@@ -60,14 +60,14 @@ class TurnCounterTests(unittest.TestCase):
         for settings in ({"disabled": True}, {"countries": ()}):
             with self.subTest(settings=settings):
                 context = self.trigger(mode="FIXTURE_PROVIDER", **settings)
-                for phase in ("summits", "proactive_tasks", "proactive_llm_tasks", "responsive_tasks", "movement_tasks"):
+                for phase in ("letters", "proactive_tasks", "proactive_llm_tasks", "responsive_tasks", "movement_tasks"):
                     self.assertEqual(getattr(context, phase + "_total"), 0)
                     self.assertEqual(getattr(context, phase + "_completed"), 0)
 
     def test_direct_disabled_ai_turn_clears_previous_movement_and_model_work(self):
         context = BackendState()
         context.scenario_settings = {"ai_disabled": True}
-        for phase in ("summits", "movement_tasks", "responsive_tasks"):
+        for phase in ("letters", "movement_tasks", "responsive_tasks"):
             setattr(context, phase + "_total", -1)
             setattr(context, phase + "_completed", 4)
         with mock.patch.object(turn_processor.ai_llm_runner, "begin_turn"), \
@@ -76,29 +76,27 @@ class TurnCounterTests(unittest.TestCase):
                 mock.patch.object(turn_processor.ai_movement, "process_ai_unit_orders") as movement:
             asyncio.run(turn_processor.prepare_turn(context))
         movement.assert_not_called()
-        for phase in ("summits", "movement_tasks", "responsive_tasks"):
+        for phase in ("letters", "movement_tasks", "responsive_tasks"):
             self.assertEqual(getattr(context, phase + "_total"), 0)
             self.assertEqual(getattr(context, phase + "_completed"), 0)
 
-    def test_unused_summits_clear_previous_counts(self):
+    def test_model_off_letters_clear_previous_counts(self):
         context = BackendState()
-        context.summits_total, context.summits_completed = 3, 2
-        with mock.patch.object(ai_diplomacy.ai_negotiation, "enabled", return_value=False):
-            ai_diplomacy.process_summits(context)
-        self.assertEqual((context.summits_completed, context.summits_total), (0, 0))
+        context.letters_total, context.letters_completed = 3, 2
+        with mock.patch.object(ai_letters.ai_handler, "get_ai_mode", return_value="OFF"):
+            ai_letters.process_letters(context)
+        self.assertEqual((context.letters_completed, context.letters_total), (0, 0))
 
-    def test_no_selected_summit_pairs_clear_the_pending_total(self):
+    def test_no_letter_writers_clear_the_pending_total(self):
         context = BackendState()
-        context.summits_total = -1
-        with mock.patch.object(ai_diplomacy.ai_negotiation, "enabled", return_value=True), \
-                mock.patch.object(ai_diplomacy.ai_handler, "get_ai_mode", return_value="FIXTURE_PROVIDER"), \
-                mock.patch.object(ai_diplomacy.ai_world, "for_screen"), \
-                mock.patch.object(ai_diplomacy.queries, "get_total_turns", return_value=1), \
-                mock.patch.object(ai_diplomacy.queries, "get_living_nations", return_value={"A", "B"}), \
-                mock.patch.object(ai_diplomacy.queries, "get_active_ai_nations", return_value=["A", "B"]), \
-                mock.patch.object(ai_diplomacy.ai_negotiation, "select_pairs", return_value=[]):
-            ai_diplomacy.process_summits(context)
-        self.assertEqual((context.summits_completed, context.summits_total), (0, 0))
+        context.letters_total = -1
+        with mock.patch.object(ai_letters.ai_handler, "get_ai_mode", return_value="FIXTURE_PROVIDER"), \
+                mock.patch.object(ai_letters.ai_world, "for_screen"), \
+                mock.patch.object(ai_letters.queries, "get_living_nations", return_value={"A", "B"}), \
+                mock.patch.object(ai_letters.queries, "get_active_ai_nations", return_value=["A", "B"]), \
+                mock.patch.object(ai_letters.ai_evaluation, "llm_enabled_for", return_value=None):
+            ai_letters.process_letters(context)
+        self.assertEqual((context.letters_completed, context.letters_total), (0, 0))
 
 
 class MovementCounterTests(unittest.TestCase):

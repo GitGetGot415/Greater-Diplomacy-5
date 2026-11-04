@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from data.state_access import world_for, session_for
-from map_logic.ai import ai_commitments, ai_evaluation, ai_llm_runner, ai_prompts
+from map_logic.ai import ai_evaluation, ai_llm_runner, ai_prompts
 import data.constants as c
 from data import queries
 from map_logic.diplomacy import diplomacy_lifecycle as lifecycle
@@ -79,14 +79,13 @@ def toggle_diplomacy_action(nation_data, player_name, target_name, action_type, 
         return leadership_error
 
     # --- THE FIX: Prevent multiple faction requests ---
-    faction_actions = ["CREATE_FACTION", "JOIN_FACTION_REQ"]
-    if action_type in faction_actions:
+    if action_type in c.FACTION_REQUEST_ACTIONS:
         if nation_data[player_name].get("faction", ""):
             return "Cannot do this while already in a faction!"
 
         for other_target, info in pending.items():
             act = info.get("action", "") if isinstance(info, dict) else info
-            if act in faction_actions and other_target != target_name:
+            if act in c.FACTION_REQUEST_ACTIONS and other_target != target_name:
                 return "You already have a pending faction request!"
     # ------------------------------------------------
 
@@ -1385,9 +1384,8 @@ def _process_pass1_immediate_actions(context):
 
 def _react_to_reply(context, active_nations_list, delayed_responses, replier, sender, reply_dict):
     """Apply the opinion change and reactive move in one AI reply."""
-    op_val = reply_dict.get("opinion_change", 0)
-    if op_val != 0:
-        queries.add_temporary_modifier(replier, sender, "general", op_val, world_for(context).nation_data)
+    queries.add_opinion_change(replier, sender, reply_dict.get("opinion_change", 0),
+                               world_for(context).nation_data)
     _process_ai_retaliation(context, active_nations_list, delayed_responses, replier, reply_dict, default_target=sender)
 
 
@@ -1694,9 +1692,6 @@ def process_diplomacy_turn(context):
     # so the button a player sees, the number an AI decides on and the state a
     # claim executes against are one measurement rather than three.
     faction_leadership.tick(context, context.ai_world)
-    # Settles promises that ran their course or were broken this turn. After the
-    # modifier decay so a fresh betrayal grudge is not aged on the turn it lands.
-    ai_commitments.tick(context)
     _flush_queued_ai_actions(context)
 
     # --- 0. FIND ALIVE NATIONS ---

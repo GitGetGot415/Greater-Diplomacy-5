@@ -5,7 +5,7 @@ AI means artificial intelligence. UI means user interface.
 LLM means large language model.
 The rule-based layer always runs, including when no LLM is enabled.
 It generates legal actions and scores them.
-Without the model, the AI uses library response text and does not hold model-based summits.
+Without the model, the AI uses library response text and does not write letters.
 
 The model selects from legal actions and writes messages.
 It cannot create an action that the rules forbid.
@@ -35,8 +35,6 @@ ai_opinion.py
     War, peace, trade, and alliance preference scores.
 ai_candidates.py
     Legal action generation and ranking.
-ai_commitments.py
-    Promises and the cost of breaking them.
 ai_construction.py, ai_research.py, ai_diplomacy.py
     Production, research, and proactive diplomacy.
 ai_evaluation.py
@@ -215,8 +213,6 @@ AI_BUILDING_PAYBACK_TURNS
     Keep this separate from AI_TECH_ECONOMY_HORIZON, which compares income with military value.
 AI_MAX_BUILDING_RESEARCH_LEAD
     Building research levels permitted ahead of existing construction.
-AI_COMMITMENT_WEIGHT
-    Restraint from commitments before loyalty modifies it.
 AI_MAX_ACTIONS_PER_TURN
     Limit on a country's proactive actions.
 AI_UPKEEP_TARGETS

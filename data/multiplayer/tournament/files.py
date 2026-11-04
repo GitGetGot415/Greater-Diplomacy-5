@@ -145,6 +145,9 @@ def strip_sensitive_data_for_player(context, country_id):
             country["current_research"] = None
             country["research_queue"] = []
 
+            # Hide an AI government's private notebook
+            country.pop("ai_notebook", None)
+
 
 def strip_sensitive_data_for_tournament_spectator(context):
     """Project a tournament archive into the fog-limited spectator view.
@@ -177,6 +180,7 @@ def strip_sensitive_data_for_tournament_spectator(context):
         country["inbox"] = []
         country["pending_diplomacy"] = {}
         country["diplo_responses"] = {}
+        country.pop("ai_notebook", None)
 
     for province in world_state.map_data.values():
         for unit in province.get("units", []):
@@ -219,6 +223,7 @@ def build_tournament_spectator_save(save_dict):
             country["inbox"] = []
             country["pending_diplomacy"] = {}
             country["diplo_responses"] = {}
+            country.pop("ai_notebook", None)
 
     for province in spectator_save.get("provinces", {}).values():
         if not isinstance(province, dict):

@@ -265,7 +265,7 @@ CREDITS_DATA = [
             },
             {
                 "link_text": "BeepBox",
-                "info": "Music editor and synthesizer used to create GD5's BeepBox-format tracks",
+                "info": "Music editor and synthesizer used for BeepBox JSON playback",
                 "align": "left",
                 "links": [{"text": "GitHub", "url": "https://github.com/johnnesky/beepbox"}]
             },
@@ -546,10 +546,10 @@ DEFAULT_AI_TURN_BUDGET_SECONDS = get_starting_value("settings_config.json", "ai_
 # Three phases used to ask for the budget separately, each measuring it from its
 # own start, so a setting that says 45 seconds bought 135 and the first phase in
 # the turn could spend a third of the model's time without the other two ever
-# knowing. Summits get the smallest share because they are the most expendable:
-# two pairs talking, against ten nations deciding and every proposal on the map
-# waiting for an answer.
-AI_BUDGET_SHARE_SUMMITS = 0.2
+# knowing. Letters get the smallest share because they are the most expendable:
+# a letter that misses this turn waits unread for the next, while every nation
+# deciding and every proposal on the map waiting for an answer cannot.
+AI_BUDGET_SHARE_LETTERS = 0.2
 AI_BUDGET_SHARE_DIRECTOR = 0.5
 AI_BUDGET_SHARE_RESPONSES = 1.0     # whatever the first two left
 
@@ -1492,38 +1492,32 @@ AI_REQUEST_REASON_LENGTH = 120
 AI_LLM_REQUEST_BONUS = 0.25
 
 # ==========================================
-# COMMITMENTS AND SUMMITS
-# (map_logic/ai/ai_commitments.py, ai_negotiation.py)
+# LETTERS AND NOTEBOOKS
+# (map_logic/ai/ai_letters.py)
 # ==========================================
 
-# How much a non-aggression pact restrains a nation, before temperament. Scaled
-# by loyalty, so a faithless country breaks one when the prize is big enough and
-# a loyal one very nearly will not -- a pact that bound everyone identically
-# would be a rule rather than a promise.
-AI_COMMITMENT_WEIGHT = 0.55
-AI_COMMITMENT_MIN_HOLD = 0.25    # even the faithless honour a pact a little
-AI_COMMITMENT_HISTORY_MAX = 40   # settled promises kept per nation; this is saved
-AI_DEFAULT_REPUTATION = 0.7      # benefit of the doubt before any record exists
+# Passes of the letter phase in one turn. A letter written in one pass is read
+# and can be answered in the next, so three passes let A write, B answer, and A
+# answer back before anyone acts on the turn.
+AI_LETTER_PASSES = 3
+# Countries with no unread letters that still sit down to write in the first
+# pass, longest-waiting first. Countries with unread letters always do.
+AI_LETTER_WRITERS_PER_TURN = 6
+AI_LETTERS_PER_CALL = 2          # letters one country may send from one sitting
+AI_LETTER_LENGTH = 1200          # characters kept of one letter
+AI_LETTER_THREAD_SHOWN = 6       # earlier letters shown per correspondent
+AI_NOTEBOOK_LENGTH = 1500        # characters kept of a country's private notebook
+# Countries whose recent letters give the director proposals of the country's
+# own initiative, newest correspondence first.
+AI_CORRESPONDENTS_MAX = 4
 
-# Summits. Each pair is one job, and the exchanges inside it are sequential, so
-# wall clock is rounds x latency rather than pairs x rounds x latency.
-AI_NEGOTIATION_MAX_PAIRS = 4
-AI_NEGOTIATION_ROUNDS = 2
-AI_NEGOTIATION_COOLDOWN = 6      # turns before the same pair meets again
-AI_NEGOTIATION_MIN_PRESSURE = 0.35
-AI_NEGOTIATION_DEFAULT_TURNS = 20
-AI_NEGOTIATION_MAX_TERM_TURNS = 60
-AI_TRANSCRIPT_LINE_LENGTH = 400
-AI_NEGOTIATION_MAX_TERMS = 4
+# The largest opinion change one letter or one reply can cause, in either
+# direction, on the -200 to 200 relation scale.
+AI_OPINION_CHANGE_MAX = 20
 
-# What makes a pair worth convening, roughly in the order a historian would
-# expect. These are added, then scaled by how well the other side keeps its word.
-AI_PRESSURE_COMMON_ENEMY = 0.55      # co-belligerents who have formalised nothing
-AI_PRESSURE_STALLED_WAR = 0.60       # a war neither side is winning; this is how wars end
-AI_PRESSURE_FRIENDLY = 0.40          # friends without a bloc
-AI_PRESSURE_CONTESTED = 0.25         # a grievance not yet worth a war
-AI_PRESSURE_NEIGHBOUR = 0.15
-AI_PRESSURE_SALVAGEABLE_RELATION = -60   # below this there is nothing to discuss
+# The director's own-initiative proposals, which no staff rule asked for. Low
+# enough that a staff recommendation still reads as the stronger case.
+AI_SCORE_INITIATIVE = 0.30
 
 AI_ACTION_PHRASES = {
     "WAR_DECLARATION": "declare war on",
@@ -1944,6 +1938,9 @@ MESSAGE_CATEGORIES = {
 # cooldown at all. See _process_ai_retaliation.
 SELF_TARGETED_ACTIONS = ("LEAVE_FACTION", "DISBAND_FACTION")
 
+# A country may have only one of these pending at a time, whoever it is aimed at.
+FACTION_REQUEST_ACTIONS = ("CREATE_FACTION", "JOIN_FACTION_REQ")
+
 
 # ==========================================
 # RELATION MODIFIERS & COLORS
@@ -1970,13 +1967,6 @@ REL_MOD_MAX_CLAIM_PENALTY = -50
 
 REL_MOD_REMOVE_CORE = -30
 REL_MOD_MAX_REMOVE_CORE_PENALTY = -150
-
-# Consequences of keeping or breaking your word. The broken-promise grudge is
-# deliberately durable -- decay 0, and long -- because a betrayal nobody
-# remembers next decade is not a betrayal, it is a free move.
-REL_MOD_BROKEN_COMMITMENT = -40
-REL_MOD_BROKEN_COMMITMENT_TURNS = 60
-REL_MOD_HONORED_COMMITMENT = 15
 
 COLOR_REL_MAX_POS = (100, 100, 200) # Light blue at 200
 COLOR_REL_POS = (0, 255, 0)         # Green at 100

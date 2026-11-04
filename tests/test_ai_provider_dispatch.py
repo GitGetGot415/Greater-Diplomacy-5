@@ -214,7 +214,7 @@ class ReplyParsingTests(unittest.TestCase):
                 self.assertEqual(ai_handler._parse_reply_json(wrapper.format(payload)), expected)
 
     def test_invalid_json_keeps_the_original_fallback_text(self):
-        """Flagged as an error, so a summit or proactive line drops it rather
+        """Flagged as an error, so a letter or proactive line drops it rather
         than sending "JSON ERROR: ..." as a leader's words."""
         for reply in (" ```json\nnot json\n``` ", "```python\nprint('hello')\n```", "ordinary text"):
             with self.subTest(reply=reply):
@@ -318,7 +318,7 @@ class OllamaTests(NoNetworkTestCase):
         return (json.dumps({"message": {"content": text}}) + "\n").encode("utf-8")
 
     def test_an_unreachable_server_is_a_provider_error(self):
-        """Unflagged, this text became a summit line and a proactive cable."""
+        """Unflagged, this text became a leader's words and a proactive cable."""
         self.connect(fail=ConnectionRefusedError("refused"))
         result = ai_handler.call_ollama("s", "u")
         self.assertTrue(result["error"])

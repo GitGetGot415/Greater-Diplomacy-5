@@ -144,6 +144,9 @@ An existing formal action or another queued forward still blocks a new forward.
 
 Multiplayer hosts resolve forwarded message references against the submitting country's received messages.
 
+AI countries send letters during AI turn preparation, so they arrive before the next planning phase.
+They use the same inbox and sent copies as other messages. See documentation/llm_ai.txt, LETTERS.
+
 Message presentation is cached when the screen opens or refreshes. Text input changes refresh the text field cache.
 
 The spectator message table shows three-letter month names with the first letter capitalized in the Date column.

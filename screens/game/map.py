@@ -1695,8 +1695,8 @@ class Map(StateAccess, Screen):
         self.proactive_choices = []
         self.responsive_tasks_total = 0
         self.responsive_tasks_completed = 0
-        self.summits_total = 0
-        self.summits_completed = 0
+        self.letters_total = 0
+        self.letters_completed = 0
         self.diplomatic_popups = []
 
         # Per-turn AI map snapshot (map_logic/ai/ai_world.py). Only ever set
@@ -2072,8 +2072,8 @@ class Map(StateAccess, Screen):
                 self.proactive_llm_tasks = []
                 self.responsive_tasks_total = 0
                 self.responsive_tasks_completed = 0
-                self.summits_total = 0
-                self.summits_completed = 0
+                self.letters_total = 0
+                self.letters_completed = 0
 
                 await turn_processor.prepare_turn(self)
                 await turn_processor.resolve_turn_logic(self)

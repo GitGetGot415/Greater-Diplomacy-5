@@ -148,6 +148,9 @@ def _nations(nation_data, aliases):
 def _country(country, aliases):
     """Convert one country record."""
     country.pop("allied_with", None)
+    # Summits and the commitments they produced were removed. Nothing reads them.
+    country.pop("ai_commitments", None)
+    country.pop("summit_log", None)
     for project in _container(country, "research_queue", list):
         if not isinstance(project, dict):
             raise ValueError("Research queue entries must be JSON objects.")

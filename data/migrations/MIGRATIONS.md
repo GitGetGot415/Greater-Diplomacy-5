@@ -97,6 +97,8 @@ These rules convert formats from released versions up to v46.
 They also keep support for older save formats that v46 accepted.
 
 - Country records lose the obsolete `allied_with` field. Factions and subjects do not change.
+- Country records lose `ai_commitments` and `summit_log`, which AI summits wrote until summits were removed.
+  Relation modifiers that those commitments added stay until they expire.
   Country conversion and research repairs skip the `FACTION_WAR_MAPS` bookkeeping record.
 - `deployment_queue` entries move into `unit_queue` and `building_queue`.
 - Research projects without `points_remaining` receive points from their day countdown.

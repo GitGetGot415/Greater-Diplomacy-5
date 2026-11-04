@@ -48,6 +48,11 @@ def make(action, target, score, rationale, **payload):
                      rationale=rationale, payload=payload)
 
 
+def is_initiative(candidate):
+    """Whether only the leader may choose this candidate. See Collector.add_initiative."""
+    return bool(candidate.payload.get("initiative"))
+
+
 class Collector:
     """Gathers one nation's options for the turn.
 
@@ -61,15 +66,19 @@ class Collector:
         self.context = context
         self.pending = pending
         self._by_target = {}
+        self._initiatives = {}
 
-    def add(self, candidate):
-        """Offers a candidate. The better of two aimed at the same target wins."""
+    def _can_send(self, candidate):
         if candidate is None:
             return False
         if self.context is not None:
             if not availability(self.context, self.nation, candidate.target, candidate.action).allowed:
                 return False
-        if not self._target_is_free(candidate.target):
+        return self._target_is_free(candidate.target)
+
+    def add(self, candidate):
+        """Offers a candidate. The better of two aimed at the same target wins."""
+        if not self._can_send(candidate):
             return False
 
         existing = self._by_target.get(candidate.target)
@@ -77,6 +86,23 @@ class Collector:
             return False
 
         self._by_target[candidate.target] = candidate
+        return True
+
+    def add_initiative(self, candidate):
+        """Offers a move that no staff rule asked for, for the leader alone.
+
+        Several can share a target, so the leader can choose which proposal to
+        make to a country; ai_director.validate keeps one per target. The same
+        legality checks apply as for any other candidate.
+        """
+        if not self._can_send(candidate):
+            return False
+        key = (candidate.target, candidate.action)
+        staff = self._by_target.get(candidate.target)
+        if key in self._initiatives or (staff is not None and staff.action == candidate.action):
+            return False
+        self._initiatives[key] = candidate._replace(
+            payload={**candidate.payload, "initiative": True})
         return True
 
     def _target_is_free(self, target):
@@ -89,20 +115,30 @@ class Collector:
         return turns == 0
 
     def ranked(self, limit=None):
-        """Best first, indexed. Ties break on target name so runs agree."""
-        ordered = sorted(self._by_target.values(),
-                         key=lambda cand: (-cand.score, cand.action, cand.target))
+        """Best first, indexed. Ties break on target name so runs agree.
+
+        The staff's candidates come first and `limit` applies to them only.
+        Initiatives follow, ordered by target, so a menu reads country by country.
+        """
+        def order(cand):
+            return (-cand.score, cand.action, cand.target)
+
+        ordered = sorted(self._by_target.values(), key=order)
         if limit is not None:
             ordered = ordered[:limit]
+        ordered += sorted(self._initiatives.values(),
+                          key=lambda cand: (cand.target,) + order(cand))
         return [cand._replace(cid=str(i)) for i, cand in enumerate(ordered)]
 
     def __len__(self):
-        return len(self._by_target)
+        return len(self._by_target) + len(self._initiatives)
 
 
 def describe(candidate):
     """One line for a prompt or a log entry."""
     verb = c.AI_ACTION_PHRASES.get(candidate.action, candidate.action.replace("_", " ").lower())
+    if is_initiative(candidate):
+        return f"{verb} {candidate.target} -- your own initiative, not a staff proposal -- {candidate.rationale}"
     return f"{verb} {candidate.target} -- staff rating {candidate.score:.2f} -- {candidate.rationale}"
 
 

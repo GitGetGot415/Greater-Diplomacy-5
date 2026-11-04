@@ -74,6 +74,18 @@ class GameVersionTests(unittest.TestCase):
                 self.assertNotIn("allied_with", saved["nation_data"]["A"])
                 self.assertEqual(saved["version"], c.GAME_VERSION)
 
+    def test_summit_records_are_dropped_and_other_country_data_stays(self):
+        saved = {"nation_data": {"A": {
+            "ai_commitments": [{"id": "A|B|NON_AGGRESSION|3", "with": "B"}],
+            "summit_log": {"B": 3}, "ai_notebook": "Watch B.",
+            "temp_modifiers": {"B": {"kept_word": 15}}}}}
+        migrations.upgrade_save(saved, {})
+        country = saved["nation_data"]["A"]
+        self.assertNotIn("ai_commitments", country)
+        self.assertNotIn("summit_log", country)
+        self.assertEqual(country["ai_notebook"], "Watch B.")
+        self.assertEqual(country["temp_modifiers"], {"B": {"kept_word": 15}})
+
     def test_every_move_converts_whatever_version_wrote_it(self):
         for stamp in (None, PREVIOUS_VERSION, c.GAME_VERSION):
             with self.subTest(stamp=stamp):

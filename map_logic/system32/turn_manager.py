@@ -79,8 +79,8 @@ def trigger_ai_thread(context):
     session_state.responsive_tasks_completed = 0
 
     # Clear last turn's work. Model phases with no work remain visible as N/A.
-    session_state.summits_total = model_pending
-    session_state.summits_completed = 0
+    session_state.letters_total = model_pending
+    session_state.letters_completed = 0
     
     # Map Refresh always executes exactly 7 background render passes now
     session_state.refresh_tasks_total = 7

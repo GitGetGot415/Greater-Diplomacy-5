@@ -47,8 +47,8 @@ class SessionState:
     proactive_choices: list = field(default_factory=list)
     responsive_tasks_total: int = 0
     responsive_tasks_completed: int = 0
-    summits_total: int = 0
-    summits_completed: int = 0
+    letters_total: int = 0
+    letters_completed: int = 0
     refresh_tasks_total: int = 0
     refresh_tasks_completed: int = 0
     turn_start_time: int = 0

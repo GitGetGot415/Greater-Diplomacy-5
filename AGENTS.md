@@ -308,7 +308,7 @@ Keep tuning data in its source files:
   Determine the total from the operation's stages or work items before that work starts.
   Exception: when a workload depends on an earlier phase, show `Calculating...` with an empty, stationary bar until its actual queue is known.
   Exception: when a phase is disabled or has no work, show a full gray bar labeled `N/A`, rather than `0/0`.
-  Keep phase bars visible in fixed positions, including unused summits. Keep their numbered labels consecutive.
+  Keep phase bars visible in fixed positions, including an unused letter phase. Keep their numbered labels consecutive.
   Turning off the LLM makes model phases `N/A`; rule-based AI phases still show their actual progress unless those phases are also disabled or have no work.
   Advance the count and green fill only after a stage or item finishes successfully.
   Keep the fill still while work is running. Never animate, cycle, reset, or advance it with elapsed time.

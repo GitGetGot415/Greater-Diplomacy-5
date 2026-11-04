@@ -17,8 +17,8 @@ LLM MODULES
 
 map_logic/ai/ contains these model components:
 
-ai_negotiation.py
-    Summits.
+ai_letters.py
+    Letters between countries and each country's private notebook.
 ai_director.py
     Model selection from legal candidates.
 ai_settings.py
@@ -67,7 +67,9 @@ MAJOR
     These include leading powers, faction leaders, and countries bordering or fighting a human.
 
 ABSOLUTE
-    Every AI country can use the model. AI countries can hold summits with each other.
+    Every AI country can use the model.
+
+At MAJOR and ABSOLUTE, model-driven countries also write letters. See LETTERS.
 
 The per-country nation_data["llm_tier"] setting can override the immersion level.
 Its values are ALWAYS, NEVER, and AUTO.
@@ -78,16 +80,24 @@ MODEL DECISIONS
 1. Select actions from a country's scored legal candidates.
    A country receives its candidate list once per turn.
    AI_MAX_ACTIONS_PER_TURN limits the selected actions.
+   The model selects at most one action per country and at most one faction request.
    The same reply supplies their message text.
+   The prompt includes the country's notebook.
    Countries with no candidates do not need a call.
    At ABSOLUTE, a country with one candidate still gets a call for its wording.
+
+   A model-driven country also receives its own-initiative candidates.
+   These are proposals to its recent correspondents that no rule-based section offered:
+   faction invitations and requests, new factions, trades, military access, calls to arms, joined wars, and peace terms.
+   AI_CORRESPONDENTS_MAX limits the countries. A country can have several of these candidates.
+   They pass the same availability, cooldown, and pending-request checks as other candidates.
+   The rule-based fallback never selects them, so a skipped or failed call takes the staff's choice.
 
 2. Decide whether to accept a proposal where the rules permit a choice.
    Fixed restrictions, such as an integrated puppet's trade restriction, remain binding.
    The model can override a rule-based recommendation, but cannot override legality.
 
-3. Agree on summit outcomes.
-   Summits run at ABSOLUTE, or between major powers at MAJOR.
+3. Write letters and keep a notebook. See LETTERS.
 
 The game discards illegal model requests.
 A rumor in the global log can still show the attempted action.
@@ -108,14 +118,39 @@ Older messages without this field remain ordinary messages.
 
 See documentation/non_llm_ai.txt for response-library lookup and shared message fields.
 
-SUMMIT TUNING
--------------
+LETTERS
+-------
+
+AI countries talk to each other only through inbox letters, the same mail that players use.
+Every model-driven AI country can write. The letter phase runs before the proactive pass.
+
+1. The first pass seats every writer with unread letters.
+   It also seats up to AI_LETTER_WRITERS_PER_TURN other writers.
+   Countries that waited longest go first. letters_last_turn records the turn a country was served.
+2. Each country reads its unread letters, earlier letters, and its notebook.
+   It writes up to AI_LETTERS_PER_CALL letters, one per country.
+   Only players and model-driven AI countries can receive letters.
+3. It gives each letter it read an opinion change.
+   queries.add_opinion_change limits the change to AI_OPINION_CHANGE_MAX and adds it to the general relation modifier.
+4. It rewrites its notebook, which is limited to AI_NOTEBOOK_LENGTH.
+5. Letters arrive in the recipient's inbox at once.
+   The next pass seats every writer that received one. AI_LETTER_PASSES limits the passes.
+
+A letter has letter: true on both copies. The reader's copy gets letter_read: true when its reader is served.
+An unserved or failed sitting leaves letters unread for the next turn.
+A letter that the model refers to in the third person is dropped.
+
+A player's plain message to an AI has no letter field.
+The response phase answers it with process_custom_message, and the reply's opinion_change uses the same limit.
+So a letter from a player and a letter from an AI can move an AI reader's opinion by the same amount.
+
+A letter does not change the game in any other way.
+Agreements need proposals. The director reads the notebook and can make own-initiative proposals to correspondents.
+
+nation_data["ai_notebook"] holds the notebook text. Real-time snapshots and tournament views remove it from other countries' records.
+Older saves without these fields have no notebook and no read letters.
 
 Read current tuning values in data/constants.py.
-
-AI_NEGOTIATION_MAX_PAIRS
-    Summit pairs per turn.
-
 See documentation/non_llm_ai.txt, TUNING, for shared action limits.
 
 SHARED PROMPT PREFIX
@@ -129,7 +164,8 @@ The ai_director system prompt must not name a specific country.
 
 ai_handler._combined_prompt puts user content before system content in one user message.
 Every provider sends this combined prompt. It does not use a separate system field.
-This order preserves shared text across summit, director, and response phases.
+This order preserves shared text across letter, director, and response phases.
+The letter prompt's system half must not name a specific country either.
 
 Local models can reuse an unchanged prefix instead of processing the whole world again.
 Hosted providers cache an unchanged prefix, which decreases its cost and delay.
@@ -155,20 +191,18 @@ FORCE SKIP AI lets the player end model work early.
 Unfinished model work uses rule-based fallbacks.
 
 With a positive limit, prepare_turn starts one shared clock.
-The phases run in this order: summits, director, responses.
+The phases run in this order: letters, director, responses.
 Each phase takes a share of the time left when it starts.
 Unused time passes to the next phase. The final phase takes the remainder.
 
-AI_BUDGET_SHARE_SUMMITS, AI_BUDGET_SHARE_DIRECTOR, and AI_BUDGET_SHARE_RESPONSES define those shares.
+AI_BUDGET_SHARE_LETTERS, AI_BUDGET_SHARE_DIRECTOR, and AI_BUDGET_SHARE_RESPONSES define those shares.
 Do not restart the full budget for each phase.
+All letter passes share the letter phase's share. A pass does not start after that share ends.
 
 A phase must do the following:
 
-1. Check time between requests within a summit.
-   Keep completed exchanges.
-   _complete_exchanges removes an unmatched final line.
-   run_llm_batch uses min_calls to reject time shares too small for useful work.
-   A summit needs at least a pair of calls.
+1. Reject time shares too small for useful work.
+   run_llm_batch uses min_calls for this.
 
 2. Stop abandoned network requests.
    future.cancel() cannot stop a running worker.
@@ -209,8 +243,11 @@ Changing its value in starting_defaults.json does not replace an existing saved 
 
 FORCE SKIP AI must be reachable in every phase that can block.
 Show it when any model-work counter is nonzero.
-Summits use summits_total.
+Letters use letters_total.
 trigger_ai_thread resets that counter with the other turn counters.
+
+The letter bar counts passes, because a later pass's work depends on the letters of the pass before it.
+A pass with no writers completes the remaining passes.
 
 Size the response progress bar from the actual queue.
 Do not duplicate immersion rules to estimate its size.
