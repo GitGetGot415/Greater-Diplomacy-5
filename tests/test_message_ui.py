@@ -431,10 +431,12 @@ class ConversationInteractionTests(unittest.TestCase):
 
         screen = self.make_screen()
         buttons = {element.text: element for element in screen.elements}
-        rest_y = {name: buttons[name].rect.y for name in ("Trade", "Queue")}
         self.assertEqual(screen.bar_shown, 0.0)
         self.assertLess(buttons["Trade"].rect.bottom, 0)
         self.assertGreaterEqual(buttons["Queue"].rect.top, c.SCREEN_HEIGHT)
+        # Hidden bars sit one roll offset away from their resting positions.
+        top_dy, bottom_dy = screen._bar_offsets()
+        rest_y = {"Trade": buttons["Trade"].rect.y - top_dy, "Queue": buttons["Queue"].rect.y - bottom_dy}
 
         seconds = messages_module.MSG_BAR_ANIM_SECONDS
         with mock.patch.object(messages_module.time, "monotonic", return_value=10.0):
@@ -447,16 +449,21 @@ class ConversationInteractionTests(unittest.TestCase):
         # Ease out covers more than half the distance in half the time.
         self.assertGreater(midway, 0.5)
         self.assertLess(midway, 1.0)
-        with mock.patch.object(messages_module.time, "monotonic", return_value=10.0 + seconds):
+        # Check after each roll ends. Float time at the exact end can fall just short of it.
+        settle = seconds / 10
+        with mock.patch.object(messages_module.time, "monotonic", return_value=10.0 + seconds + settle):
             screen.update()
         self.assertEqual(screen.bar_shown, 1.0)
         buttons = {element.text: element for element in screen.elements}
         self.assertEqual({name: buttons[name].rect.y for name in rest_y}, rest_y)
+        self.assertGreaterEqual(buttons["Trade"].rect.top, 0)
+        self.assertLessEqual(buttons["Queue"].rect.bottom, c.SCREEN_HEIGHT)
 
         with mock.patch.object(messages_module.time, "monotonic", return_value=20.0):
             screen.select_recipient("A")
             screen.update()
-        with mock.patch.object(messages_module.time, "monotonic", return_value=20.0 + seconds):
+        exit_seconds = messages_module.MSG_BAR_EXIT_ANIM_SECONDS
+        with mock.patch.object(messages_module.time, "monotonic", return_value=20.0 + exit_seconds + settle):
             screen.update()
         self.assertEqual(screen.bar_shown, 0.0)
 

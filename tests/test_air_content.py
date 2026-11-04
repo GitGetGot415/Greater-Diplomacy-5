@@ -202,15 +202,20 @@ class AirRulesTests(unittest.TestCase):
         country = {"research": {"test_aircraft": 1}, "research_progress": {"test_aircraft": 123},
                    "custom_production_units": ["Biplane Fighter", "Zeppelin"]}
         saved = {"nation_data": {"A": country}}
-        with mock.patch.object(queries, "get_tech_tree", return_value=tree):
+        def load():
+            # The loader grants prerequisites after conversion, when the scenario selects its tree.
             migrations.upgrade_save(saved, {"P": province})
+            migrations.grant_research_prerequisites(saved, tree)
+
+        with mock.patch.object(queries, "get_tech_tree", return_value=tree):
+            load()
             self.assertEqual(province["units"][0]["type"], "Biplane Fighter I")
             self.assertEqual(province["units"][0]["order"]["target_type"], "Biplane Fighter I")
             self.assertEqual(country["custom_production_units"], ["Biplane Fighter I", "Zeppelin I"])
             self.assertEqual(country["research"], {"test_aircraft": 1, "flight_basics": 2})
             self.assertEqual(country["research_progress"], {"test_aircraft": 123})
             expected = copy.deepcopy((province, country))
-            migrations.upgrade_save(saved, {"P": province})
+            load()
             self.assertEqual((province, country), expected)
         for new in migrations.LEGACY_AIRCRAFT_NAMES.values():
             self.assertIn(new, queries.get_unit_library())

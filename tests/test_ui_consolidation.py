@@ -580,9 +580,11 @@ class OneSoundPerClickTests(SharedUiTestCase):
         screen.refresh_ui()
         return screen
 
-    def test_add_contact_plays_paper_once_and_opens_the_contact_picker(self):
+    def test_add_contact_plays_new_contact_once_and_opens_the_contact_picker(self):
         screen = self.message_screen("")
-        self.assertEqual(self.click_sounds(button_named(screen, "+ Add Contact")), ["paper"])
+        # Find the button by its action. Its label is editable UI text.
+        add = next(el for el in screen.elements if getattr(el, "callback", None) == screen.toggle_add_contact)
+        self.assertEqual(self.click_sounds(add), ["new_contact"])
         self.assertTrue(screen.show_all_contacts)
 
     def test_color_picker_reset_and_cancel_keep_separate_callbacks(self):

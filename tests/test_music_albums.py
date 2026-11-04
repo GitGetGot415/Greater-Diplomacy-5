@@ -176,16 +176,20 @@ class AlbumTileTests(unittest.TestCase):
         player.controller.starting_song = "assets/music/Fixture/start.ogg"
         player.controller.save_starting_song = mock.Mock()
         player.refresh_ui()
-        button = next(b for b in player.elements
-                      if isinstance(b, music_player.Button) and b.text == "Clear Starting")
+
+        def clear_button():
+            # Find the button by its action. Its label is editable UI text.
+            return next(b for b in player.elements
+                        if isinstance(b, music_player.Button) and b.callback == player.reset_starting_song)
+
+        button = clear_button()
         self.assertFalse(button.disabled)
 
         button.callback()
 
         self.assertIsNone(player.controller.starting_song)
         player.controller.save_starting_song.assert_called_once_with()
-        self.assertTrue(next(b for b in player.elements
-                             if isinstance(b, music_player.Button) and b.text == "Clear Starting").disabled)
+        self.assertTrue(clear_button().disabled)
 
     def test_new_album_tile_is_last_even_when_pinned_by_order(self):
         player = self.make_player(["Alpha", "Zulu"])
