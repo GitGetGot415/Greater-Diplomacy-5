@@ -172,6 +172,23 @@ class EndToEndTests(NoNetworkTestCase):
         self.run_pass(game)
         self.assertTrue(seen.get("asked"), "the director never consulted the model")
 
+    def test_the_model_is_told_the_date(self):
+        """The world context used to say "Current Date: Unknown" on every call."""
+        self.set_mode("CLAUDE", "ABSOLUTE")
+        prompts = []
+
+        def fake(mode, system, user, turn_id, canned, accepted=None, raw=False):
+            prompts.append(user)
+            return {"picks": [c.AI_DIRECTOR_NONE_CID]}
+
+        self.patch(ai_handler, "_run_provider", fake)
+        game = self.make_game()
+        game.force_skip_llm = False
+        self.run_pass(game)
+        self.assertTrue(prompts, "the director never consulted the model")
+        for prompt in prompts:
+            self.assertIn(f"Current Date: {game.time_manager.get_date_string()}\n", prompt)
+
     def test_a_provider_error_leaves_the_staff_choice_intact(self):
         self.set_mode("OFF")
         baseline = self.make_game()

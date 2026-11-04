@@ -99,6 +99,7 @@ A reply that starts by naming its sender falls back to library text.
 
 The llm field marks model-authored text.
 _reply and the director's per-candidate messages set it where they create the text.
+Provider error text does not set it.
 It follows the message through pending_diplomacy into both inbox copies.
 The spectator overview marks those rows orange.
 Older messages without this field remain ordinary messages.
@@ -124,12 +125,20 @@ date, country list, politics, and world events.
 It then adds the selected country, its territory, relations, and task.
 The ai_director system prompt must not name a specific country.
 
-call_ollama sends user content before system content.
-Ollama combines those parts, so this order preserves shared text across summit, director, and response phases.
-Other providers have a separate system field.
+ai_handler._combined_prompt puts user content before system content in one user message.
+Every provider sends this combined prompt. It does not use a separate system field.
+This order preserves shared text across summit, director, and response phases.
 
 Local models can reuse an unchanged prefix instead of processing the whole world again.
+Hosted providers cache an unchanged prefix, which decreases its cost and delay.
+Claude caches only to a marked block.
+call_claude marks the end of the shared part, at ai_prompts.SHARED_CONTEXT_END.
+A shared part below the model's minimum cache size is not cached.
 tests/test_prompt_sharing.py protects this order.
+
+call_ollama sets num_ctx to OLLAMA_CONTEXT_TOKENS for every request.
+The Ollama default can be smaller than a world-map prompt. Ollama then cuts the prompt without an error.
+A num_ctx change between requests makes Ollama load the model again.
 Leave neutral relation scores out of the country-specific section.
 State that an unlisted country is neutral.
 
@@ -163,6 +172,8 @@ A phase must do the following:
    future.cancel() cannot stop a running worker.
    shutdown(wait=False) does not interrupt a blocked read.
    ai_handler.abort_active_requests closes active sockets.
+   It closes Ollama requests and every connection that the shared requests session opened.
+   Gemini requests and requests through a proxy continue until they end.
    Do not unload the model for a phase timeout.
    Model unloading would discard the shared prefix cache.
 
@@ -172,6 +183,8 @@ A phase must do the following:
 
 ai_handler.typical_call_seconds estimates request time from completed calls.
 It smooths measurements and ignores requests that the game interrupted.
+An interrupted request returned None, or was in progress when abort_active_requests ran.
+A request that failed for another reason is measured, because a slow provider can fail.
 Do not replace it with an assumed fixed request duration.
 
 FAIRNESS AND PROGRESS

@@ -465,7 +465,7 @@ def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_typ
     return Verdict(accepted, 1.0, "")
 
 
-def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_nation, sender_nation, action_type, custom_msg="", human_players=None, turn_id=None, world=None, scenario_settings=None, note=""):
+def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_nation, sender_nation, action_type, custom_msg="", human_players=None, turn_id=None, world=None, scenario_settings=None, note="", current_date="Unknown"):
     from map_logic.ai import ai_handler
 
     if ai_handler._aborted(turn_id):
@@ -501,7 +501,8 @@ def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_natio
 
     print(f"[LLM CALL] {ai_nation} answering {action_type} from {sender_nation}... (Mode: {mode})")
 
-    context = get_world_context(nation_data, active_nations, ai_nation, sender_nation)
+    context = get_world_context(nation_data, active_nations, ai_nation, sender_nation,
+                                current_date)
 
     # A marginal judgement is exactly where a leader's own view should be allowed
     # to differ from the staff's. A hard rule -- an integrated puppet cannot
@@ -531,9 +532,9 @@ def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_natio
         accepted = reply["accepted"]
 
     return _reply(reply.get("message", f"{mode} ERROR: reply had no 'message' field"),
-                  reply, accepted, llm=bool(reply.get("message")))
+                  reply, accepted, llm=bool(reply.get("message")) and not reply.get("error"))
 
-def process_custom_message(nation_data, active_nations, ai_nation, sender_nation, message_content, human_players=None, turn_id=None):
+def process_custom_message(nation_data, active_nations, ai_nation, sender_nation, message_content, human_players=None, turn_id=None, current_date="Unknown"):
     from map_logic.ai import ai_handler
 
     if ai_handler._aborted(turn_id):
@@ -551,14 +552,15 @@ def process_custom_message(nation_data, active_nations, ai_nation, sender_nation
 
     print(f"[LLM CALL] {ai_nation} is drafting a reply to {sender_nation}... (Mode: {mode})")
 
-    context = get_world_context(nation_data, active_nations, ai_nation, sender_nation)
+    context = get_world_context(nation_data, active_nations, ai_nation, sender_nation,
+                                current_date)
     system_prompt = ai_prompts.get_custom_message_system_prompt()
     user_prompt = f"{context}\nMessage from {sender_nation}: '{message_content}'"
 
     return ai_handler._run_provider(mode, system_prompt, user_prompt, turn_id,
                          ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_MESSAGE"])
 
-def generate_proactive_text(nation_data, active_nations, ai_nation, target_nation, action_context, human_players=None, turn_id=None):
+def generate_proactive_text(nation_data, active_nations, ai_nation, target_nation, action_context, human_players=None, turn_id=None, current_date="Unknown"):
     """Generates a quick one-liner for proactive hardcoded AI actions.
 
     Unlike the two above, this returns a bare string (or None to mean "use the
@@ -580,7 +582,8 @@ def generate_proactive_text(nation_data, active_nations, ai_nation, target_natio
     if _use_canned_reply(mode, immersion, is_ai_to_ai, has_custom_msg=False):
         return None
 
-    context = get_world_context(nation_data, active_nations, ai_nation, target_nation)
+    context = get_world_context(nation_data, active_nations, ai_nation, target_nation,
+                                current_date)
     system_prompt = ai_prompts.get_proactive_system_prompt(ai_nation, target_nation, action_context)
     user_prompt = f"{context}\nWrite the message."
 

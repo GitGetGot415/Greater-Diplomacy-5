@@ -91,6 +91,7 @@ def process_proactive_llm_tasks(context):
 
     my_turn_id = ai_handler.CURRENT_TURN_ID
     active_nations = set(queries.get_living_nations(world_state.map_data))
+    current_date = world_state.time_manager.get_date_string()
 
     def call(choice):
         nation = choice["nation"]
@@ -99,7 +100,7 @@ def process_proactive_llm_tasks(context):
         system, user = ai_director.build_prompt(
             world, nation, choice["candidates"], c.AI_MAX_ACTIONS_PER_TURN, note)
         world_context = ai_evaluation.get_world_context(
-            world_state.nation_data, active_nations, nation)
+            world_state.nation_data, active_nations, nation, current_date=current_date)
         return ai_handler._run_provider(mode, system, f"{world_context}\n{user}",
                                         my_turn_id, None, raw=True)
 
@@ -185,10 +186,11 @@ def process_summits(context):
     my_turn_id = ai_handler.CURRENT_TURN_ID
     mode = ai_handler.get_ai_mode()
     settings = world_state.scenario_settings
+    current_date = world_state.time_manager.get_date_string()
 
     def say(speaker, listener, system, history):
         world_context = ai_evaluation.get_world_context(
-            world_state.nation_data, active_nations, speaker, listener)
+            world_state.nation_data, active_nations, speaker, listener, current_date)
         transcript = "\n".join(history) if history else "(nothing said yet)"
         reply = ai_handler._run_provider(
             mode, system, f"{world_context}\nSo far:\n{transcript}\n\nSpeak.",

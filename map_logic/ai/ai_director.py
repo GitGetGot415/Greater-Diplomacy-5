@@ -52,12 +52,13 @@ def should_consult(candidates, wants_prose=False):
 def build_prompt(world, nation, candidates, limit, personality_note=""):
     """The menu, as the leader's staff would put it.
 
-    The system half deliberately names nobody. It is sent ahead of the world
-    context, so a single "You are the leader of X" at the top would make every
-    nation's prompt differ from its first line and cost a local model a full
-    re-read of the whole world -- around 13 of the 15 seconds a call takes. Who
-    is being addressed is established in the context's own per-nation tail
-    instead, which sits after everything the nations share.
+    The system half deliberately names nobody. ai_handler._combined_prompt now
+    sends it after the world context, but when it went first, a single "You
+    are the leader of X" at the top made every nation's prompt differ from its
+    first line and cost a local model a full re-read of the whole world --
+    around 13 of the 15 seconds a call takes. Who is being addressed is
+    established in the context's own per-nation tail instead, which sits after
+    everything the nations share.
     """
 
     lines = []

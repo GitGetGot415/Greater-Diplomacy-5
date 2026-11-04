@@ -594,6 +594,36 @@ class CallMeterTests(Patcher):
             ai_handler._call_provider("CLAUDE", "s", "u", None)
         self.assertEqual(ai_handler.typical_call_seconds(), 3)
 
+    def test_an_abandoned_request_is_not_timed(self):
+        """Force Skip or a finished turn returns None at once; that says
+        nothing about what a request costs."""
+        clock = FakeClock(100)
+        self.patch(ai_handler, "time", clock)
+
+        def abandoned(*args):
+            clock.now += 0.01
+            return None
+
+        self.patch(ai_handler, "_dispatch", abandoned)
+        ai_handler._call_provider("CLAUDE", "s", "u", None)
+        self.assertEqual(ai_handler.typical_call_seconds(), 0)
+
+    def test_a_request_cut_off_by_the_game_is_not_timed(self):
+        """A deadline closes the socket mid-reply. The error that follows is
+        the game's doing, and its time is only how long the share lasted."""
+        clock = FakeClock(100)
+        self.patch(ai_handler, "time", clock)
+        self.patch(ai_handler, "ACTIVE_OLLAMA_CONNECTIONS", [])
+
+        def severed(*args):
+            clock.now += 1
+            ai_handler.abort_active_requests()
+            return ai_handler._provider_error("OLLAMA ERROR: connection aborted")
+
+        self.patch(ai_handler, "_dispatch", severed)
+        ai_handler._call_provider("OLLAMA", "s", "u", None)
+        self.assertEqual(ai_handler.typical_call_seconds(), 0)
+
     def test_one_slow_call_does_not_rewrite_the_estimate(self):
         """A cold start costs three times a warm call on the same machine;
         letting it set the number would have the game refuse to start work it

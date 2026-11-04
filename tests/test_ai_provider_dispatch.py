@@ -11,13 +11,14 @@ Nothing here touches the network. The guard in setUp makes that a hard failure
 rather than a slow test.
 """
 
+import json
 import unittest
 from unittest import mock
 
 
 import data.constants as c
 from data import queries
-from map_logic.ai import ai_evaluation, ai_handler
+from map_logic.ai import ai_evaluation, ai_handler, ai_prompts
 
 
 class NoNetworkTestCase(unittest.TestCase):
@@ -142,8 +143,7 @@ class OpenRouterProviderTests(NoNetworkTestCase):
                 self.assertEqual(kwargs["headers"]["Authorization"], "Bearer test-key")
                 self.assertEqual(kwargs["json"]["model"], model)
                 self.assertEqual(kwargs["json"]["messages"], [
-                    {"role": "system", "content": "system"},
-                    {"role": "user", "content": "world"}])
+                    {"role": "user", "content": "world\n\nsystem"}])
 
     def test_legacy_provider_and_settings_dispatch_to_openrouter(self):
         from map_logic.ai import ai_settings
@@ -214,10 +214,17 @@ class ReplyParsingTests(unittest.TestCase):
                 self.assertEqual(ai_handler._parse_reply_json(wrapper.format(payload)), expected)
 
     def test_invalid_json_keeps_the_original_fallback_text(self):
+        """Flagged as an error, so a summit or proactive line drops it rather
+        than sending "JSON ERROR: ..." as a leader's words."""
         for reply in (" ```json\nnot json\n``` ", "```python\nprint('hello')\n```", "ordinary text"):
             with self.subTest(reply=reply):
                 self.assertEqual(ai_handler._parse_reply_json(reply, lambda text: "JSON ERROR: " + text),
-                                 {"message": "JSON ERROR: " + reply})
+                                 {"message": "JSON ERROR: " + reply, "error": True})
+
+    def test_invalid_json_without_a_fallback_is_plain_text(self):
+        """A hosted model that answers in prose still said something usable."""
+        self.assertEqual(ai_handler._parse_reply_json("ordinary text"),
+                         {"message": "ordinary text"})
 
 
 class ProviderErrorTests(NoNetworkTestCase):
@@ -258,6 +265,174 @@ class ProviderErrorTests(NoNetworkTestCase):
         return ai_evaluation.generate_proactive_text(
             nation_data, ["Avaria", "Borland"], "Avaria", "Borland",
             "declaring war", human_players=[], turn_id=None)
+
+
+class OllamaTests(NoNetworkTestCase):
+    """call_ollama against a fake connection, so nothing opens a socket."""
+
+    def setUp(self):
+        super().setUp()
+        self._patch(ai_handler, "FORCE_SKIP", False)
+        settings = mock.patch.object(queries, "get_settings", return_value={})
+        settings.start()
+        self.addCleanup(settings.stop)
+        self.sent = {}
+
+    def connect(self, fail=None, status=200, body=b"", lines=()):
+        sent = self.sent
+
+        class Response:
+            def __init__(self):
+                self.status = status
+                self.lines = list(lines)
+
+            def read(self):
+                return body
+
+            def readline(self):
+                return self.lines.pop(0) if self.lines else b""
+
+        class Connection:
+            sock = None
+
+            def __init__(self, *args, **kwargs):
+                pass
+
+            def request(self, method, path, body=None, headers=None):
+                sent["payload"] = json.loads(body)
+                if fail:
+                    raise fail
+
+            def getresponse(self):
+                return Response()
+
+            def close(self):
+                pass
+
+        patcher = mock.patch.object(ai_handler.http.client, "HTTPConnection", Connection)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    @staticmethod
+    def chunk(text):
+        return (json.dumps({"message": {"content": text}}) + "\n").encode("utf-8")
+
+    def test_an_unreachable_server_is_a_provider_error(self):
+        """Unflagged, this text became a summit line and a proactive cable."""
+        self.connect(fail=ConnectionRefusedError("refused"))
+        result = ai_handler.call_ollama("s", "u")
+        self.assertTrue(result["error"])
+        self.assertTrue(result["message"].startswith("OLLAMA ERROR"))
+
+    def test_an_http_failure_is_a_provider_error(self):
+        self.connect(status=500, body=b'{"error": "model not found"}')
+        result = ai_handler.call_ollama("s", "u")
+        self.assertTrue(result["error"])
+        self.assertIn("model not found", result["message"])
+
+    def test_mangled_output_is_a_provider_error(self):
+        self.connect(lines=[self.chunk("not json")])
+        result = ai_handler.call_ollama("s", "u")
+        self.assertEqual(result, {"message": "JSON ERROR: not json", "error": True})
+
+    def test_a_good_reply_is_parsed(self):
+        self.connect(lines=[self.chunk('{"message": '), self.chunk('"We agree."}')])
+        self.assertEqual(ai_handler.call_ollama("s", "u"), {"message": "We agree."})
+
+    def test_every_request_sets_the_same_context_window(self):
+        """Ollama's own default can be smaller than one world-map prompt, and
+        a value that changed between requests would reload the model."""
+        self.connect(lines=[self.chunk('{"message": "ok"}')])
+        ai_handler.call_ollama("system", "world")
+        self.assertEqual(self.sent["payload"]["options"]["num_ctx"],
+                         ai_handler.OLLAMA_CONTEXT_TOKENS)
+        self.assertEqual(self.sent["payload"]["messages"],
+                         [{"role": "user", "content": "world\n\nsystem"}])
+
+
+class ClaudeTests(NoNetworkTestCase):
+    def setUp(self):
+        super().setUp()
+        self._patch(ai_handler, "FORCE_SKIP", False)
+
+    def world_prompt(self):
+        nation_data = {"Avaria": {"manpower": 1, "materials": 1}, "Borland": {}}
+        context = ai_evaluation.get_world_context(
+            nation_data, {"Avaria", "Borland"}, "Avaria", current_date="1 May, 1939 AD")
+        return ai_handler._combined_prompt("instructions", f"{context}\nChoose.")
+
+    def send(self, body):
+        session = mock.Mock()
+        session.post.return_value.status_code = 200
+        session.post.return_value.json.return_value = body
+        self._patch(ai_handler, "_session", lambda: session)
+        result = ai_handler.call_claude("key", "model", "instructions", "world")
+        return result, session.post.call_args.kwargs["json"]
+
+    def test_the_shared_world_is_cached_separately(self):
+        """Claude caches only up to a marked block, so the part every nation
+        shares has to end exactly where the per-nation part begins."""
+        prompt = self.world_prompt()
+        blocks = ai_handler._claude_content(prompt)
+        self.assertEqual(blocks[0]["cache_control"], {"type": "ephemeral"})
+        self.assertNotIn("cache_control", blocks[1])
+        self.assertNotIn("You are the leader of Avaria", blocks[0]["text"])
+        self.assertIn("Current Date: 1 May, 1939 AD", blocks[0]["text"])
+        self.assertTrue(blocks[1]["text"].startswith(ai_prompts.SHARED_CONTEXT_END))
+        self.assertEqual("".join(block["text"] for block in blocks), prompt)
+
+    def test_a_prompt_without_the_world_is_plain_text(self):
+        self.assertEqual(ai_handler._claude_content("just a task"), "just a task")
+
+    def test_the_text_block_is_read_after_a_thinking_block(self):
+        result, payload = self.send({"content": [
+            {"type": "thinking", "thinking": ""},
+            {"type": "text", "text": '{"message": "We agree."}'}]})
+        self.assertEqual(result, {"message": "We agree."})
+        self.assertEqual(payload["max_tokens"], ai_handler.CLAUDE_MAX_TOKENS)
+        self.assertNotIn("system", payload, "the instructions belong after the world")
+
+    def test_a_reply_without_text_is_a_provider_error(self):
+        result, _payload = self.send({"content": [], "stop_reason": "refusal"})
+        self.assertTrue(result["error"])
+        self.assertIn("refusal", result["message"])
+
+
+class HostedAbortTests(unittest.TestCase):
+    """Abandoned hosted requests used to run, billed, for up to two minutes."""
+
+    def setUp(self):
+        for name, value in (("_HOSTED_CONNECTIONS", ai_handler.weakref.WeakSet()),
+                            ("ACTIVE_OLLAMA_CONNECTIONS", [])):
+            original = getattr(ai_handler, name)
+            setattr(ai_handler, name, value)
+            self.addCleanup(setattr, ai_handler, name, original)
+
+    @unittest.skipIf(ai_handler.requests is None, "hosted providers are desktop-only")
+    def test_the_session_records_each_connection_it_opens(self):
+        adapter = ai_handler._TrackedAdapter()
+        pool = adapter.poolmanager.connection_from_url("https://example.invalid")
+        self.assertIs(pool.ConnectionCls, ai_handler._TrackedHTTPSConnection)
+
+        conn = ai_handler._TrackedHTTPSConnection("example.invalid")
+        with mock.patch.object(ai_handler.HTTPSConnection, "connect"):
+            conn.connect()
+        self.assertIn(conn, ai_handler._HOSTED_CONNECTIONS)
+
+    def test_an_abort_closes_hosted_connections(self):
+        closed = []
+
+        class Conn:
+            sock = type("S", (), {"shutdown": staticmethod(lambda how: closed.append(how))})()
+
+            def close(self):
+                closed.append("close")
+
+        conn = Conn()
+        ai_handler._HOSTED_CONNECTIONS.add(conn)
+        ai_handler.abort_active_requests()
+        self.assertIn("close", closed)
+        self.assertEqual(len(ai_handler._HOSTED_CONNECTIONS), 0)
 
 
 if __name__ == "__main__":

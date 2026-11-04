@@ -466,7 +466,8 @@ def _send_request(run, nation, pending, target, act, action):
         generated = ai_handler.generate_proactive_text(
             run.world.nation_data, run.active_nations, nation, target,
             ai_prompts.get_proactive_action_context(action, target),
-            run.human_players, ai_handler.CURRENT_TURN_ID)
+            run.human_players, ai_handler.CURRENT_TURN_ID,
+            current_date=run.world.time_manager.get_date_string())
         pending[target]["message"] = generated or custom_message or "We have sent a diplomatic missive."
 
 

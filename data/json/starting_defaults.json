@@ -39,7 +39,7 @@
         "ollama_base_url": "",
         "gemini_model": "gemini-2.5-flash",
         "chatgpt_model": "gpt-4o-mini",
-        "claude_model": "claude-3-haiku-20240307",
+        "claude_model": "claude-haiku-5-5",
         "ollama_model": "llama3",
         "ai_immersion_level": "LITE",
         "music_pitch": 0.5,

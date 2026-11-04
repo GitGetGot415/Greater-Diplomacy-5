@@ -20,6 +20,7 @@ import time
 import urllib.parse
 import http.client
 import socket
+import weakref
 from data.platform import IS_WEB
 
 if not IS_WEB:
@@ -28,6 +29,9 @@ if not IS_WEB:
     # pulling them in on web would otherwise cascade into live, fragile
     # PyPI installs of requests' whole dependency tree at every fresh page load.
     import requests
+    from requests.adapters import HTTPAdapter
+    from urllib3.connection import HTTPConnection, HTTPSConnection
+    from urllib3.connectionpool import HTTPConnectionPool, HTTPSConnectionPool
 else:
     requests = None
 import data.constants as c
@@ -51,6 +55,7 @@ from map_logic.ai.ai_settings import (
 )
 
 from data.migrations import normalize_ai_mode
+from map_logic.ai import ai_prompts
 # Re-exported so `ai_handler.evaluate_diplomatic_proposal(...)` etc. keep
 # working -- see this module's docstring for why these moved but FORCE_SKIP /
 # CURRENT_TURN_ID / ACTIVE_OLLAMA_CONNECTIONS did not.
@@ -78,6 +83,52 @@ _CLIENT_LOCK = threading.Lock()
 _SESSION = None
 _GEMINI_CLIENT = {"key": None, "client": None}
 
+#: Every connection the shared Session has opened. urllib3 owns them and keeps
+#: idle ones for reuse, so this set only refers to them (weakly) to let
+#: abort_active_requests close a request that is still waiting for its reply.
+_HOSTED_CONNECTIONS = weakref.WeakSet()
+_HOSTED_LOCK = threading.Lock()
+
+#: How many times abort_active_requests has run. A request that was in flight
+#: when this changed was cut short, so _call_provider does not time it.
+_ABORT_COUNT = [0]
+
+
+def _track_connection(conn):
+    with _HOSTED_LOCK:
+        _HOSTED_CONNECTIONS.add(conn)
+
+
+if not IS_WEB:
+    # requests gives no access to the socket of a request in progress, which is
+    # the only thing that stops a blocked read. These subclasses record each
+    # connection when it opens. Requests sent through a proxy use another pool
+    # and are not recorded; they run to the end, as all hosted requests did
+    # before.
+    class _TrackedHTTPConnection(HTTPConnection):
+        def connect(self):
+            super().connect()
+            _track_connection(self)
+
+    class _TrackedHTTPSConnection(HTTPSConnection):
+        def connect(self):
+            super().connect()
+            _track_connection(self)
+
+    class _TrackedHTTPConnectionPool(HTTPConnectionPool):
+        ConnectionCls = _TrackedHTTPConnection
+
+    class _TrackedHTTPSConnectionPool(HTTPSConnectionPool):
+        ConnectionCls = _TrackedHTTPSConnection
+
+    class _TrackedAdapter(HTTPAdapter):
+        def init_poolmanager(self, *args, **kwargs):
+            super().init_poolmanager(*args, **kwargs)
+            self.poolmanager.pool_classes_by_scheme = {
+                "http": _TrackedHTTPConnectionPool,
+                "https": _TrackedHTTPSConnectionPool,
+            }
+
 
 def _session():
     """The shared requests.Session for Claude and the OpenAI-compatible providers.
@@ -90,7 +141,11 @@ def _session():
     if _SESSION is None:
         with _CLIENT_LOCK:
             if _SESSION is None:
-                _SESSION = requests.Session()
+                session = requests.Session()
+                adapter = _TrackedAdapter()
+                session.mount("https://", adapter)
+                session.mount("http://", adapter)
+                _SESSION = session
     return _SESSION
 
 
@@ -137,10 +192,20 @@ def abort_active_requests():
     model affordable here is that it keeps the world context it has already
     read (see ai_prompts.build_world_context), and flushing VRAM to save a few
     seconds would make every following call pay to read it again.
+
+    Hosted providers are closed too: an abandoned request to one used to run
+    for up to two minutes, and was billed, after its answer had been discarded.
+    That also closes their idle connections, so the next request opens a new one.
+    Gemini goes through its own SDK and cannot be stopped here.
     """
+    _ABORT_COUNT[0] += 1
+    with _HOSTED_LOCK:
+        hosted = list(_HOSTED_CONNECTIONS)
+        _HOSTED_CONNECTIONS.clear()
+
     # --- THE TRUE OS-LEVEL SOCKET KILL ---
     # This forces the blocking recv() in the background threads to instantly throw an exception
-    for conn in list(ACTIVE_OLLAMA_CONNECTIONS):
+    for conn in list(ACTIVE_OLLAMA_CONNECTIONS) + hosted:
         try:
             if getattr(conn, 'sock', None):
                 conn.sock.shutdown(socket.SHUT_RDWR)
@@ -195,7 +260,10 @@ def _parse_reply_json(text, fallback=None):
     reporting a decode error as a failed call, which it isn't.
 
     `fallback` formats the unparseable text (Ollama's says "JSON ERROR:" so a
-    local model's mangled output is distinguishable from a real cable).
+    local model's mangled output is distinguishable from a real cable). That
+    text is flagged as a provider error, like any other failure: a proposal
+    still shows it, but summits, the director and proactive lines drop it
+    rather than sending "JSON ERROR: ..." as a leader's words.
     """
     json_text = text.strip()
     # Some local models wrap valid JSON in a Markdown code block.
@@ -206,7 +274,9 @@ def _parse_reply_json(text, fallback=None):
     try:
         return json.loads(json_text)
     except json.JSONDecodeError:
-        return {"message": text if fallback is None else fallback(text)}
+        if fallback is None:
+            return {"message": text}
+        return _provider_error(fallback(text))
 
 
 def _request_json(url, payload, headers, extract, turn_id=None):
@@ -247,14 +317,39 @@ OPENAI_COMPATIBLE_PROVIDERS = {
     "OPENROUTER": (lambda: c.OPENROUTER_API_URL, get_openrouter_api_key, get_openrouter_model),
 }
 
+#: Room for a Claude reply. Newer models think before they answer, and that
+#: thinking counts against this limit; at 1024 it could use all of it and
+#: leave no text.
+CLAUDE_MAX_TOKENS = 16000
+
+
+def _combined_prompt(system_prompt, user_prompt):
+    """The one prompt every provider receives: the world first, instructions last.
+
+    Every caller in the game builds its user half as "<the world> <this
+    nation's situation> <the task>", and the world is around ninety percent of
+    it and identical for every request in a turn -- but the system half differs
+    by phase, and often by request, so putting it in front made a summit
+    prompt, a director prompt and a proposal reply share their first eight
+    characters. Measured on the 1941 map: 0% shared across phases against 84%
+    this way round.
+
+    A local model re-reads from the first token that differs -- nine seconds of
+    every phase's budget, spent re-reading a world that had not changed since
+    the phase before. Hosted providers cache matching prefixes too, which makes
+    the repeated part cheaper and faster, so all of them get the same order.
+    One user message also avoids 400 errors on lightweight models whose
+    templates have no system role (like many 0.5b models).
+    """
+    return f"{user_prompt}\n\n{system_prompt}"
+
 
 def call_openai_compatible(url, api_key, model, system_prompt, user_prompt, turn_id=None):
     """Send a request to an OpenAI-compatible chat completions endpoint."""
     payload = {
         "model": model,
         "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
+            {"role": "user", "content": _combined_prompt(system_prompt, user_prompt)},
         ],
         "response_format": {"type": "json_object"},
     }
@@ -265,14 +360,39 @@ def call_openai_compatible(url, api_key, model, system_prompt, user_prompt, turn
                          turn_id)
 
 
+def _claude_content(prompt):
+    """The prompt as content blocks, with a cache breakpoint after the shared world.
+
+    Claude caches only up to a marked block, so the part that every nation
+    shares this turn is its own block. A prompt without the world context is
+    sent as plain text. A shared part below the model's minimum cache size is
+    simply not cached.
+    """
+    shared, marker, rest = prompt.partition(ai_prompts.SHARED_CONTEXT_END)
+    if not marker or not shared:
+        return prompt
+    return [
+        {"type": "text", "text": shared, "cache_control": {"type": "ephemeral"}},
+        {"type": "text", "text": marker + rest},
+    ]
+
+
+def _claude_text(body):
+    """The text block of a Claude reply. A thinking block can come first."""
+    for block in body.get("content", []):
+        if block.get("type") == "text":
+            return block["text"]
+    raise ValueError(f"reply had no text (stop_reason: {body.get('stop_reason')})")
+
+
 def call_claude(api_key, model, system_prompt, user_prompt, turn_id=None):
     """Hits Anthropic's Messages API, which uses its own auth headers and
     request/response shape rather than the OpenAI-style ones above."""
     payload = {
         "model": model,
-        "max_tokens": 1024,
-        "system": system_prompt,
-        "messages": [{"role": "user", "content": user_prompt}],
+        "max_tokens": CLAUDE_MAX_TOKENS,
+        "messages": [{"role": "user",
+                      "content": _claude_content(_combined_prompt(system_prompt, user_prompt))}],
     }
     headers = {
         "Content-Type": "application/json",
@@ -280,9 +400,7 @@ def call_claude(api_key, model, system_prompt, user_prompt, turn_id=None):
         "anthropic-version": c.CLAUDE_API_VERSION,
     }
 
-    return _request_json(c.CLAUDE_API_URL, payload, headers,
-                         lambda body: body["content"][0]["text"],
-                         turn_id)
+    return _request_json(c.CLAUDE_API_URL, payload, headers, _claude_text, turn_id)
 
 
 def call_gemini(system_prompt, user_prompt, turn_id=None):
@@ -300,7 +418,7 @@ def call_gemini(system_prompt, user_prompt, turn_id=None):
     try:
         response = _gemini_client().models.generate_content(
             model=get_gemini_model(),
-            contents=f"{system_prompt}\n\n{user_prompt}",
+            contents=_combined_prompt(system_prompt, user_prompt),
             config=types.GenerateContentConfig(response_mime_type="application/json")
         )
         if _aborted(turn_id):
@@ -347,12 +465,21 @@ def _call_provider(mode, system_prompt, user_prompt, turn_id):
     Returns the parsed reply dict, or None when the request was abandoned --
     Force Skip, or the turn moving on while it was out. Gemini is the
     else-branch, so an unrecognised mode still answers.
+
+    A request that failed on its own is timed: a provider that is slow and
+    then errors is what the estimate is for. A request the game abandoned or
+    cut off is not, because its time says nothing about what a request costs.
     """
     started = time.monotonic()
+    aborts = _ABORT_COUNT[0]
+    abandoned = False
     try:
-        return _dispatch(mode, system_prompt, user_prompt, turn_id)
+        result = _dispatch(mode, system_prompt, user_prompt, turn_id)
+        abandoned = result is None
+        return result
     finally:
-        _time_call(time.monotonic() - started)
+        if not abandoned and _ABORT_COUNT[0] == aborts:
+            _time_call(time.monotonic() - started)
 
 
 def _dispatch(mode, system_prompt, user_prompt, turn_id):
@@ -390,7 +517,15 @@ def _run_provider(mode, system_prompt, user_prompt, turn_id, canned, accepted=No
     if result is None:
         return _reply(canned, accepted=accepted)
     return _reply(result.get("message", f"{mode} ERROR: reply had no 'message' field"),
-                  result, accepted, llm=bool(result.get("message")))
+                  result, accepted, llm=bool(result.get("message")) and not result.get("error"))
+
+#: Ollama's context window for every request, in tokens. Without it Ollama
+#: uses its own default, which on many installs is smaller than one prompt on a
+#: world map, and the excess is cut without an error. Every request uses the
+#: same value, because a change makes Ollama reload the model. 8192 is the most
+#: llama3, the default model, was trained on.
+OLLAMA_CONTEXT_TOKENS = 8192
+
 
 def call_ollama(system_prompt, user_prompt, turn_id=None):
     """Helper to hit local Ollama instance with direct socket control for instant termination."""
@@ -401,29 +536,14 @@ def call_ollama(system_prompt, user_prompt, turn_id=None):
 
     model_name = get_ollama_model()
 
-    # 1. Combine system and user prompts to prevent 400 errors on lightweight models
-    # that lack a system prompt block in their instruction template (like many 0.5b models).
-    #
     # The world goes first and the instructions last, which is the whole reason
-    # a turn is affordable here. Every caller in the game builds its user half
-    # as "<the world> <this nation's situation> <the task>", and the world is
-    # around ninety percent of it and identical for every request in a turn --
-    # but the system half differs by phase, so putting it in front made a
-    # summit prompt, a director prompt and a proposal reply share their first
-    # eight characters. Measured on the 1941 map: 0% shared across phases
-    # against 84% this way round, and a local model re-reads from the first
-    # token that differs -- nine seconds of every phase's budget, spent
-    # re-reading a world that had not changed since the phase before.
-    #
-    # Ollama is the only provider that concatenates the two halves; the rest
-    # have a system field of their own and are unaffected.
-    combined_prompt = f"{user_prompt}\n\n{system_prompt}"
-
+    # a turn is affordable here -- see _combined_prompt.
     payload = {
         "model": model_name,
         "messages": [
-            {"role": "user", "content": combined_prompt}
+            {"role": "user", "content": _combined_prompt(system_prompt, user_prompt)}
         ],
+        "options": {"num_ctx": OLLAMA_CONTEXT_TOKENS},
         "stream": True # Stream token-by-token
     }
 
@@ -460,7 +580,7 @@ def call_ollama(system_prompt, user_prompt, turn_id=None):
             except (ValueError, AttributeError):
                 err_msg = error_body
 
-            return {"message": f"OLLAMA HTTP ERROR {response.status}: {err_msg}"}
+            return _provider_error(f"OLLAMA HTTP ERROR {response.status}: {err_msg}")
 
         full_text = ""
         # Iterate over the stream as it generates
@@ -487,7 +607,7 @@ def call_ollama(system_prompt, user_prompt, turn_id=None):
         if _aborted(turn_id):
             return None
         print(f"Ollama Connection Error: {e}")
-        return {"message": f"OLLAMA ERROR: {str(e)}"}
+        return _provider_error(f"OLLAMA ERROR: {str(e)}")
     finally:
         if conn in ACTIVE_OLLAMA_CONNECTIONS:
             ACTIVE_OLLAMA_CONNECTIONS.remove(conn)

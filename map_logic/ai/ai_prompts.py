@@ -241,6 +241,11 @@ AI_FALLBACK_RESPONSES = _FallbackTable()
 # SYSTEM PROMPTS & CONTEXT GENERATORS
 # ==========================================
 
+#: Where the part of the world context that every nation shares ends. Claude
+#: puts its cache breakpoint here (see ai_handler._claude_content).
+SHARED_CONTEXT_END = "\n--- YOU ---\n"
+
+
 def build_world_context(current_date, ai_nation, active_nations_str, manpower, materials,
                         politics_str, events_str, target_context_str, target_nation,
                         relations_str=""):
@@ -284,7 +289,7 @@ def build_world_context(current_date, ai_nation, active_nations_str, manpower, m
         context += events_str
 
     # --- per-nation tail ---------------------------------------------------
-    context += f"\n--- YOU ---\nYou are the leader of {ai_nation}.\n"
+    context += f"{SHARED_CONTEXT_END}You are the leader of {ai_nation}.\n"
     context += f"Your economy: {manpower} Manpower, {materials} Materials.\n"
     if relations_str:
         context += ("How you regard the others (scale -200 to 200; anyone not "

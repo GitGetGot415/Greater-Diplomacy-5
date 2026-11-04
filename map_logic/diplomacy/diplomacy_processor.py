@@ -483,17 +483,19 @@ def _execute_ai_tasks(context, ai_tasks, active_nations_list):
     # it; without one they fall back to the old threshold rules.
     verdict_world = ai_world.for_screen(context)
     scenario_settings = world_state.scenario_settings
+    current_date = world_state.time_manager.get_date_string()
 
     def call(task):
         if task["action"] == "CUSTOM_MSG":
             return ai_handler.process_custom_message(
                 world_state.nation_data, active_nations_list, task["target"], task["sender"],
-                task["content"], human_players, my_turn_id)
+                task["content"], human_players, my_turn_id, current_date=current_date)
         return ai_handler.evaluate_diplomatic_proposal(
             world_state.nation_data, world_state.map_data, active_nations_list, task["target"],
             task["sender"], task["action"], task.get("content", ""),
             human_players, my_turn_id, world=verdict_world,
-            scenario_settings=scenario_settings, note=task.get("note", ""))
+            scenario_settings=scenario_settings, note=task.get("note", ""),
+            current_date=current_date)
 
     def key_of(task):
         return (task["sender"], task["target"], task["action"])

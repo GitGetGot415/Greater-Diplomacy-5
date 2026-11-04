@@ -1,16 +1,22 @@
 
+#: How many events each list keeps. The log feeds every LLM prompt, so a longer
+#: one costs tokens on every request.
+GLOBAL_EVENT_LIMIT = 15
+
+
 def log_global_event(nation_data, event_message):
     """Stores world events so the AI can react to them on the next turn."""
     if "GLOBAL_EVENTS" not in nation_data:
         nation_data["GLOBAL_EVENTS"] = {"is_playable": False, "log": [], "news_flash": []}
-        
+
+    # Newest first.
     log = nation_data["GLOBAL_EVENTS"].setdefault("log", [])
     log.insert(0, event_message)
-    
-    # NEW: Add to news flash for instant AI reactions
+    del log[GLOBAL_EVENT_LIMIT:]
+
+    # Oldest first. Nothing reads this list yet, but it is saved with the game,
+    # so it has the same limit as the log. A longer list from an older save
+    # becomes short again at the next event.
     news = nation_data["GLOBAL_EVENTS"].setdefault("news_flash", [])
     news.append(event_message)
-    
-    # Keep only the last 15 events to prevent the context window from exploding
-    if len(log) > 15:
-        log.pop()
+    del news[:-GLOBAL_EVENT_LIMIT]

@@ -165,20 +165,19 @@ class AcrossPhasesTests(unittest.TestCase):
     """
 
     def combined(self, system, user):
-        """What call_ollama actually puts on the wire."""
+        """What every provider actually puts on the wire."""
         from map_logic.ai import ai_handler
 
-        sent = {}
+        return ai_handler._combined_prompt(system, user)
 
-        def capture(payload_url, *a, **k):
-            raise AssertionError("this test must not reach the network")
+    def test_every_provider_sends_the_combined_prompt(self):
+        """The order only helps if no provider puts its system half first."""
+        from map_logic.ai import ai_handler
 
-        # Built by hand rather than by calling call_ollama, which would need a
-        # socket; the assembly under test is one line and this mirrors it.
-        source = inspect.getsource(ai_handler.call_ollama)
-        self.assertIn('combined_prompt = f"{user_prompt}\\n\\n{system_prompt}"', source,
-                      "the world is no longer first in the prompt Ollama receives")
-        return f"{user}\n\n{system}"
+        for provider in (ai_handler.call_ollama, ai_handler.call_openai_compatible,
+                         ai_handler.call_claude, ai_handler.call_gemini):
+            self.assertIn("_combined_prompt(system_prompt, user_prompt)",
+                          inspect.getsource(provider), provider.__name__)
 
     def phase_prompts(self):
         from map_logic.ai import ai_prompts

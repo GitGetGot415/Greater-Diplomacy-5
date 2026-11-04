@@ -165,6 +165,7 @@ OLDER IDENTIFIERS AND FIELDS
 Settings accept api_key as gemini_api_key and ollama_api_key as ollama_base_url.
 They accept music_speed and sfx_speed as music_pitch and sfx_pitch.
 LING becomes OPENROUTER. ling_api_key and ling_model become openrouter_api_key and openrouter_model.
+A claude_model in RETIRED_CLAUDE_MODELS becomes DEFAULT_CLAUDE_MODEL. Older versions saved a retired model as the default.
 Writers use current names. Positional settings slots do not change.
 
 Library loading converts AEROSPACE to AIR and Aerospace to Air.

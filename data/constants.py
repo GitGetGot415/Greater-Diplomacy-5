@@ -516,7 +516,7 @@ DEFAULT_BG_COLOR = (30, 30, 30)
 # AI Default Models
 DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
 DEFAULT_CHATGPT_MODEL = "gpt-4o-mini"
-DEFAULT_CLAUDE_MODEL = "claude-3-haiku-20240307"
+DEFAULT_CLAUDE_MODEL = "claude-haiku-5-5"
 DEFAULT_OLLAMA_MODEL = "llama3"
 DEFAULT_DEEPSEEK_MODEL = "deepseek-chat"
 DEFAULT_KIMI_MODEL = "kimi-k2-0711-preview"
