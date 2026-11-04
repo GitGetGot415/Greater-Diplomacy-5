@@ -43,6 +43,10 @@ class Random_Setup(Screen):
         map_launch.open_new_map(app, is_scenario=True, is_random=True, random_settings=self.random_settings)
         return True
 
+    def prepare_map_steps(self, app):
+        return map_launch.open_new_map_steps(
+            app, is_scenario=True, is_random=True, random_settings=self.random_settings)
+
     def calculate_max_countries(self):
         data = queries.get_country_data()
         playable = sum(1 for n, d in data.items() if queries.is_playable(n, data))

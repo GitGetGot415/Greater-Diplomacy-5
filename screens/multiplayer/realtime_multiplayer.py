@@ -602,6 +602,9 @@ class Realtime_Lobby(_RealtimeLobby):
         map_launch.open_hosted_realtime_map(app, self)
         return True
 
+    def prepare_map_steps(self, app):
+        return map_launch.open_hosted_realtime_map_steps(app, self)
+
     def bind_host(self, host_setup):
         self.session = host_setup.realtime_session
         self.server = host_setup.realtime_server
@@ -1208,6 +1211,9 @@ class Realtime_Remote_Lobby(_RealtimeLobby):
     def prepare_map(self, app):
         map_launch.open_joined_realtime_map(app, self)
         return True
+
+    def prepare_map_steps(self, app):
+        return map_launch.open_joined_realtime_map_steps(app, self)
 
     def bind_join(self, join_screen):
         self.client, self.view = join_screen.realtime_client, join_screen.realtime_view

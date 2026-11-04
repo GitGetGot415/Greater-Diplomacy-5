@@ -511,6 +511,13 @@ No music setting or game-save format changes are required.
 DISPLAY SUPPORT
 ===============
 
+Game and map creation, saved games, selected history turns, the history list,
+and loading a folder in the map editor use the shared loading overlay.
+Desktop loading runs in a worker while the main loop handles the display.
+Browser loading returns to the main loop between stages, including map layers.
+A single large file read, procedural generation, or layer can still pause a browser stage.
+Loading blocks other actions until it finishes or reports an error.
+
 ui/bars/ui_bars.py creates display surfaces through set_display_mode.
 Game startup, fullscreen changes, and standalone tools use this helper.
 On macOS, the helper sets SDL_FRAMEBUFFER_ACCELERATION to "opengl" before it creates the window.

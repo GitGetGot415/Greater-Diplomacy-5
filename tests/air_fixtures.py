@@ -118,6 +118,7 @@ def runtime_map(*, force_editor=False):
     game, _fighter, _rocket = patrol_world()
 
     def load_fixture(target, load_path, scenario_settings=None):
+        yield "Loading Fixture..."
         for name in ("map_data", "id_to_province", "nation_data", "raw_json_data", "history",
                      "scenario_settings", "script_variables", "default_research", "loop_map",
                      "active_players", "current_player_index", "id_map", "terrain_map",
@@ -132,7 +133,7 @@ def runtime_map(*, force_editor=False):
         runtime_rules.rebuild(target)
         queries.build_air_geometry(target)
 
-    with patch("screens.game.map.load_map.load_map_assets", side_effect=load_fixture):
+    with patch("screens.game.map.load_map.load_map_asset_steps", side_effect=load_fixture):
         return Map(load_path="air-fixture", force_editor=force_editor, skip_initial_income=True)
 
 

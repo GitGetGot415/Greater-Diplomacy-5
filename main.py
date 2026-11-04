@@ -88,7 +88,7 @@ def _import_project_modules():
     global music_playback
     global Load_Game, Map, Menu, New_Game, Settings, Credits, Music_Player, View_Assets, Mods, Unit_Art, Keybinds, Mouse_Settings, Edit_Portrait, default_keybinds
     global Translate, Translation_Menu, Greater_Diplomacy_4_Translation, Greater_Diplomacy_Hex_Translation
-    global Orders_Screen, keybind_io, settings_schema, symbol_loader, modal_stack
+    global Orders_Screen, keybind_io, settings_schema, symbol_loader, modal_stack, screen_runner
     global Research_Screen, Economy_Screen, Edit_Country_Screen, Production_Screen
     global Faction_Screen, Faction_Territories_Screen
     global Map_Editor_Menu, Select_Base_Map, Random_Setup, Scenario_Settings
@@ -156,7 +156,7 @@ def _import_project_modules():
     from screens.game.orders import Orders_Screen
     from data.io import keybind_io, settings_schema
     from ui.rendering import symbol_loader
-    from ui.navigation import modal_stack
+    from ui.navigation import modal_stack, screen_runner
     from screens.game.research import Research_Screen
     from screens.game.economy import Economy_Screen
     from screens.editors.edit_country import Edit_Country_Screen
@@ -428,6 +428,19 @@ class Controller:
         """Switch to the screen that the active screen asked for."""
         previous_state = self.active_state
         next_state_name = previous_state.next_state
+        if next_state_name == "MAP":
+            steps = previous_state.prepare_map_steps(self)
+            if steps is not None:
+                previous_state.done = False
+
+                def loaded(success):
+                    if success:
+                        next_state = self.states["MAP"]
+                        next_state.on_enter(self, previous_state)
+                        self.active_state = next_state
+
+                screen_runner.run_loading(steps, "Loading Map...", on_done=loaded)
+                return
         if next_state_name == "MAP" and not previous_state.prepare_map(self):
             return
         next_state = self.states[next_state_name]

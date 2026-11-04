@@ -32,3 +32,6 @@ class TournamentPickerScreen(ButtonMenuScreen):
 
     def prepare_map(self, app):
         return map_launch.open_tournament_map(app, self)
+
+    def prepare_map_steps(self, app):
+        return map_launch.open_tournament_map_steps(app, self)

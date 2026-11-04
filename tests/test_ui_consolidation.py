@@ -299,9 +299,15 @@ class FolderRowTests(SharedUiTestCase):
                 mock.patch.object(load_game.pickers, "open_listbox_selector"), \
                 mock.patch.object(ui_elements, "play_ui_sound") as sound, \
                 mock.patch.object(load_game, "play_ui_sound", sound), \
+                mock.patch.object(load_game.screen_runner, "run_loading") as loading, \
                 mock.patch("pygame.mouse.get_pos", return_value=button.rect.center):
             button.handle_event(click(button.rect.center))
             button.handle_event(pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=button.rect.center))
+            steps = loading.call_args.args[0]
+            next(steps)
+            with self.assertRaises(StopIteration) as completed:
+                next(steps)
+            loading.call_args.kwargs["on_done"](completed.exception.value)
         from ui.navigation import modal_stack
         if turn_dates == {}:
             modal_stack.pop()

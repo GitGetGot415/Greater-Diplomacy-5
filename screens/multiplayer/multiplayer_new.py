@@ -11,6 +11,7 @@ from data.multiplayer.tournament import files as tournament_files
 from screens.setup.scenario_settings import Scenario_Settings
 from screens.game.map import Map
 from ui import dialogs
+from ui.navigation import screen_runner
 class Multiplayer_New(MenuListScreen):
     back_state = "MULTIPLAYER_HOST"
 
@@ -79,24 +80,31 @@ class Multiplayer_New(MenuListScreen):
 
                 map_settings = queries.get_scenario_settings()
 
-                temp_map = Map(load_path=os.path.join(directory, scenario_name), is_scenario=True, map_settings=map_settings)
-                temp_map.multiplayer_host_mode = True
-                temp_map.multiplayer_master_key = master_key
-                temp_map.multiplayer_tournament_name = safe_tour_name
-                temp_map.multiplayer_tournament_dir = tournament_dir
+                def create_tournament():
+                    temp_map = yield from Map.loading_steps(
+                        load_path=os.path.join(directory, scenario_name),
+                        is_scenario=True, map_settings=map_settings)
+                    temp_map.multiplayer_host_mode = True
+                    temp_map.multiplayer_master_key = master_key
+                    temp_map.multiplayer_tournament_name = safe_tour_name
+                    temp_map.multiplayer_tournament_dir = tournament_dir
 
-                keys_dict = {}
-                for cid, data in temp_map.nation_data.items():
-                    if data.get("is_playable"):
-                        keys_dict[cid] = secrets.token_hex(4)
+                    keys_dict = {}
+                    for cid, data in temp_map.nation_data.items():
+                        if data.get("is_playable"):
+                            keys_dict[cid] = secrets.token_hex(4)
 
-                turn = temp_map.time_manager.total_turns if hasattr(temp_map, 'time_manager') else 0
-                export_path = os.path.join(tournament_dir, f"Turn_{turn}_Host.gd5tour")
-                keys_path, all_keys_path = tournament_files.export_tournament(temp_map, export_path, master_key, keys_dict)
+                    turn = temp_map.time_manager.total_turns if hasattr(temp_map, 'time_manager') else 0
+                    export_path = os.path.join(tournament_dir, f"Turn_{turn}_Host.gd5tour")
+                    yield "Saving Tournament..."
+                    keys_path, all_keys_path = tournament_files.export_tournament(temp_map, export_path, master_key, keys_dict)
+                    return turn
 
-                dialogs.show_success("Success", f"Tournament '{safe_tour_name}' created!\n\nFolder created:\n{tournament_dir}\n\nFiles saved in folder:\n- Turn_{turn}_Host.gd5tour\n- Host_Keys.txt\n- ALL_Host_Keys.txt\n\nSend the .gd5tour file and keys to your players.")
+                def created(turn):
+                    dialogs.show_success("Success", f"Tournament '{safe_tour_name}' created!\n\nFolder created:\n{tournament_dir}\n\nFiles saved in folder:\n- Turn_{turn}_Host.gd5tour\n- Host_Keys.txt\n- ALL_Host_Keys.txt\n\nSend the .gd5tour file and keys to your players.")
+                    self.go_to("MULTIPLAYER_HOST")
 
-                self.go_to("MULTIPLAYER_HOST")
+                screen_runner.run_loading(create_tournament(), "Creating Tournament...", on_done=created)
 
             dialogs.ask_string("Host Key", "Enter a Master Key for this tournament:", on_key)
 

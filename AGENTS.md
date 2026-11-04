@@ -299,6 +299,9 @@ Keep tuning data in its source files:
 
 ### UI Appearance
 
+- **Always reuse existing UI features and shared components instead of creating duplicate implementations.**
+  Search for the existing implementation before adding UI. Extend it when the requested behavior needs more support.
+  For example, reuse the existing loading-screen UI instead of making a new loading screen.
 - **NEVER take up space just to fill the screen.**
   If a UI can work in a small area, keep it small.
   Do not enlarge controls, panels, or spacing to use empty screen space.

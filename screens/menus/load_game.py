@@ -6,6 +6,7 @@ from data.map import history_io
 from ui.widgets.content_browser import ContentBrowserScreen
 from screens.game import map_launch
 from ui.widgets.ui_elements import Button, make_back_button, play_ui_sound
+from ui.navigation import screen_runner
 import data.constants as c
 
 from data.map.load_map import newer_version_message
@@ -30,6 +31,10 @@ class Load_Game(ContentBrowserScreen):
         map_launch.open_saved_map(app, self.selected_save_path,
                                   history_turn=self.selected_history_turn)
         return True
+
+    def prepare_map_steps(self, app):
+        return map_launch.open_saved_map_steps(
+            app, self.selected_save_path, history_turn=self.selected_history_turn)
 
     @property
     def managed_dir(self):
@@ -67,30 +72,35 @@ class Load_Game(ContentBrowserScreen):
         if message:
             dialogs.show_info("Update Required", message)
             return
-        turn_dates = history_io.read_turn_dates(save_dir)
+        def read_dates():
+            yield "Loading History..."
+            return history_io.read_turn_dates(save_dir)
 
-        if not turn_dates:
-            has_file = any(os.path.exists(os.path.join(save_dir, name))
-                           for name in (history_io.GZ_NAME, history_io.PLAIN_NAME))
-            dialogs.show_info("No History", "History file is empty." if has_file
-                                     else "No history available for this save.")
-            return
+        def show_turns(turn_dates):
+            if not turn_dates:
+                has_file = any(os.path.exists(os.path.join(save_dir, name))
+                               for name in (history_io.GZ_NAME, history_io.PLAIN_NAME))
+                dialogs.show_info("No History", "History file is empty." if has_file
+                                         else "No history available for this save.")
+                return
 
-        play_ui_sound("time_select")
-        turns = sorted([int(k) for k in turn_dates])
-        turn_by_label = {}
-        items = []
-        for t in turns:
-            date_str = turn_dates[str(t)]
-            label = f"Turn {t}: {date_str}"
-            items.append(label)
-            turn_by_label[label] = t
+            play_ui_sound("time_select")
+            turns = sorted([int(k) for k in turn_dates])
+            turn_by_label = {}
+            items = []
+            for t in turns:
+                date_str = turn_dates[str(t)]
+                label = f"Turn {t}: {date_str}"
+                items.append(label)
+                turn_by_label[label] = t
 
-        def on_select(label):
-            self.load_specific_save(folder_name, history_turn=turn_by_label[label])
+            def on_select(label):
+                self.load_specific_save(folder_name, history_turn=turn_by_label[label])
 
-        pickers.open_listbox_selector(self, f"History: {folder_name}", "Select a past turn to load:",
-                                      items, on_select)
+            pickers.open_listbox_selector(self, f"History: {folder_name}", "Select a past turn to load:",
+                                          items, on_select)
+
+        screen_runner.run_loading(read_dates(), "Loading History...", on_done=show_turns)
 
     def load_specific_save(self, folder_name, history_turn=None):
         message = newer_version_message(os.path.join(self.managed_dir, folder_name))

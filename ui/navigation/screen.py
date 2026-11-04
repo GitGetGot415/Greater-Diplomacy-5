@@ -208,6 +208,10 @@ class Screen:
         """Build the map before this screen opens MAP. Return False to stay on this screen."""
         return True
 
+    def prepare_map_steps(self, app):
+        """Return loading stages for a new map, or None when returning to a screen."""
+        return None
+
     def return_to_previous_context(self, app, previous):
         """Set back_state for a screen that can open over a live game or lobby."""
         if previous == app.states["MAP"]:

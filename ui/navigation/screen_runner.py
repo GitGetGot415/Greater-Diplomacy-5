@@ -14,6 +14,7 @@ returning. See ui/navigation/modal_stack.py's docstring for why the non-blocking
 """
 
 import sys
+from threading import Event
 
 import pygame
 import data.constants as c
@@ -21,8 +22,83 @@ from ui.navigation.screen import (dispatch_global_keys, synthesize_keybind_mouse
                        keyboard_input_is_captured)
 from ui.navigation import modal_stack
 from ui.bars import ui_bars
+from ui.panels import turn_progress
+from data.platform import IS_WEB, run_background
 
 from ui.dialogs.base import tk_hidden
+
+
+class _LoadingModal:
+    """Run staged loading with the normal event loop owning the display.
+
+    Desktop work runs on one worker while the UI draws only a frozen background.
+    Web advances one stage per frame because its runtime has no worker threads.
+    Completion and error callbacks always run on the UI thread.
+    """
+
+    # Fullscreen changes must not replace the display during surface construction.
+    listening_for = True
+    text_input_active = True
+
+    def __init__(self, steps, status, on_done, on_error):
+        self.steps = iter(steps)
+        self.status = status
+        self.on_done = on_done
+        self.on_error = on_error
+        self.background = pygame.display.get_surface().copy()
+        self.drawn = False
+        self.started = False
+        self.finished = Event()
+        self.result = None
+        self.error = None
+
+    def handle_events(self, events):
+        pass
+
+    def _advance(self):
+        try:
+            self.status = next(self.steps)
+        except StopIteration as done:
+            self.result = done.value
+            self.finished.set()
+        except Exception as error:
+            # This job boundary reports failed loads instead of stranding the modal.
+            self.error = error
+            self.finished.set()
+
+    def _run(self):
+        while not self.finished.is_set():
+            self._advance()
+
+    def update(self):
+        if not self.drawn:
+            return
+        if self.finished.is_set():
+            modal_stack.pop()
+            if self.error is not None:
+                self.on_error(self.error)
+            elif self.on_done:
+                self.on_done(self.result)
+            return
+        if IS_WEB:
+            self._advance()
+        elif not self.started:
+            self.started = True
+            run_background(self._run)
+
+    def draw(self, surface):
+        surface.blit(self.background, (0, 0))
+        turn_progress.draw_simple_refresh_bar(surface, self.status, 0, None)
+        self.drawn = True
+
+
+def run_loading(steps, status="Loading...", on_done=None, on_error=None):
+    """Show the shared loading overlay before executing an iterator of stages."""
+    if on_error is None:
+        # dialogs imports screen_runner through its shared screen components.
+        from ui import dialogs
+        on_error = lambda error: dialogs.show_error("Load Failed", str(error))
+    modal_stack.push(_LoadingModal(steps, status, on_done, on_error))
 
 
 class _ScreenModal:

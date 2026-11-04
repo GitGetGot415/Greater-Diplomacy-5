@@ -76,9 +76,14 @@ def editor_load_map(map_screen):
     """Opens the native folder picker to load a map folder directly into the editor."""
     def on_picked(path):
         if path:
-            load_map.load_map_assets(map_screen, path)
-            map_screen.refresh_map_layers("political")
-            map_screen.show_feedback("Map Loaded into Editor")
+            def load_steps():
+                yield from load_map.load_map_asset_steps(map_screen, path)
+                yield "Rendering Political Map..."
+                map_screen.refresh_map_layers("political")
+
+            screen_runner.run_loading(
+                load_steps(), "Loading Map...",
+                on_done=lambda _: map_screen.show_feedback("Map Loaded into Editor"))
 
     pickers.open_file_browser(map_screen, "Select Map Folder to Edit", c.SCENARIOS_CUSTOM_DIR,
                               mode="select_folder", on_result=on_picked)

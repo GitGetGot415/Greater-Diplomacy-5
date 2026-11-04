@@ -43,6 +43,9 @@ class New_Game(ScenarioLibraryScreen):
         map_launch.open_saved_map(app, self.selected_save_path)
         return True
 
+    def prepare_map_steps(self, app):
+        return map_launch.open_saved_map_steps(app, self.selected_save_path)
+
     @property
     def scenario_dir(self):
         """Use the current directory override for the selected category."""

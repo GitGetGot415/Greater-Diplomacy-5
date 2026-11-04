@@ -1529,6 +1529,22 @@ class Map(StateAccess, Screen):
             sidebar_info.prepare_unit_roster(self, province)
 
     def __init__(self, load_path=None, is_scenario=False, is_random=False, force_editor=False, random_settings=None, map_settings=None, num_players=1, history_turn=None, skip_initial_income=False):
+        for _ in self._initialize_steps(
+                load_path, is_scenario, is_random, force_editor, random_settings,
+                map_settings, num_players, history_turn, skip_initial_income):
+            pass
+
+    @classmethod
+    def loading_steps(cls, **settings):
+        """Return the completed map after yielding its loading stages."""
+        game_map = cls.__new__(cls)
+        yield from game_map._initialize_steps(**settings)
+        return game_map
+
+    def _initialize_steps(self, load_path=None, is_scenario=False, is_random=False,
+                          force_editor=False, random_settings=None, map_settings=None,
+                          num_players=1, history_turn=None, skip_initial_income=False):
+        yield "Preparing Map..."
         super().__init__()
         self.presentation_enabled = True
 
@@ -1540,11 +1556,12 @@ class Map(StateAccess, Screen):
         # --- 2. Data Loading ---
         if is_random and random_settings:
             self.random_settings = random_settings
-            load_map.load_map_assets(self, random_settings["map_path"], scenario_settings=map_settings)
+            yield from load_map.load_map_asset_steps(self, random_settings["map_path"], scenario_settings=map_settings)
             self.time_manager.year = random_settings["year"]
         else:
-            load_map.load_map_assets(self, load_path, scenario_settings=map_settings)
+            yield from load_map.load_map_asset_steps(self, load_path, scenario_settings=map_settings)
 
+        yield "Preparing Map Controls..."
         self._init_ui_layout()
         self._init_selection_state()
 
@@ -1554,11 +1571,15 @@ class Map(StateAccess, Screen):
 
         # --- 3. RUN THE RANDOMIZER ---
         if is_random and random_settings:
+            yield "Randomizing Countries..."
             random_map_generator.randomize_all_provinces(self, random_settings)
 
         # --- 4. REFRESH MAPS ---
-        self.refresh_map_layers(*self.ALL_MAP_LAYERS)
+        for layer in self.ALL_MAP_LAYERS:
+            yield f"Rendering {layer.replace('_', ' ').title()} Map..."
+            self.refresh_map_layers(layer)
 
+        yield "Preparing Game Controls..."
         render_buttons(self)
 
         diplomacy_lifecycle.normalize_diplomacy_channels(self.nation_data)
@@ -1569,10 +1590,12 @@ class Map(StateAccess, Screen):
         guarantees.reconcile(self.nation_data)
         war_actions.reconcile_military_access(self.nation_data)
 
+        yield "Preparing Country Labels..."
         self.update_country_centers()
 
         # --- 5. INITIALIZE INCOME ---
         # Provide 1 turn of simulated income so nations don't spawn with 0 resources
+        yield "Preparing Economy..."
         economy_processor.initialize_income(self, skip=skip_initial_income)
         # Build unit membership after loading, before any planning-frame draw.
         overlay_renderer._unit_render_index(self)

@@ -471,6 +471,15 @@ def _repair_factions(context, save_meta):
 
 
 def load_map_assets(context, load_path, scenario_settings=None, *, load_presentation=True):
+    """Load synchronously for backend tools and callers with their own worker."""
+    for _ in load_map_asset_steps(context, load_path, scenario_settings,
+                                  load_presentation=load_presentation):
+        pass
+
+
+def load_map_asset_steps(context, load_path, scenario_settings=None, *, load_presentation=True):
+    """Load the same world in stages that the browser can run between frames."""
+    yield "Preparing Map..."
     world_state = world_for(context)
     session_state = session_for(context)
     _clear_loaded_world(context)
@@ -480,15 +489,19 @@ def load_map_assets(context, load_path, scenario_settings=None, *, load_presenta
 
     # --- PROCEDURAL INTERCEPT ---
     if load_path == "PROCEDURAL":
+        yield "Generating Map..."
         _load_procedural_world(context, load_presentation)
         return
 
     load_path = _resolve_load_path(load_path)
 
+    yield "Loading Map Images..."
     _load_map_images(context, load_path, load_presentation)
 
     # 2. Read the save and convert it to the current version before any of it is used.
+    yield "Reading Game Data..."
     save_meta, raw_map_data, history = read_save_files(load_path)
+    yield "Preparing Game Data..."
     migrations.upgrade_save(save_meta if save_meta is not None else {}, raw_map_data)
     # Other snapshots stay in their saved format. Only the selected turn becomes live state.
     if context.history_turn is not None:
@@ -498,6 +511,7 @@ def load_map_assets(context, load_path, scenario_settings=None, *, load_presenta
     _apply_saved_scenario_settings(context, save_meta)
 
     # Active libraries and indexes belong to this world.
+    yield "Preparing Libraries..."
     runtime = rebuild(context)
     unit_lib = runtime.libraries["unit_library"]
     tech_tree = runtime.libraries["tech_tree"]
@@ -519,6 +533,7 @@ def load_map_assets(context, load_path, scenario_settings=None, *, load_presenta
         migrations.clamp_research_levels(save_meta, tech_tree)
         migrations.grant_research_prerequisites(save_meta, tech_tree)
 
+    yield "Loading Countries..."
     _load_nation_records(context, save_meta, disabled_tech_keys)
 
     _load_default_images(context, scrub_images=load_presentation)
@@ -535,17 +550,21 @@ def load_map_assets(context, load_path, scenario_settings=None, *, load_presenta
         tm = world_state.time_manager
         queries.apply_historical_leader_timeline(world_state.nation_data, tm.year, tm.month_index, tm.day)
 
+    yield "Loading Provinces..."
     _load_provinces(context, raw_map_data, save_meta, disabled_units)
 
     # Units always take their stats from the active library.
+    yield "Preparing Units..."
     queries.refresh_unit_stats(world_state.map_data, world_state.nation_data, unit_lib)
     queries.normalize_air_orders(world_state.map_data)
+    yield "Preparing Map Geometry..."
     if load_presentation:
         queries.build_air_geometry(context)
     else:
         # Geometry needs pixels, but a backend retains no display surface.
         queries.build_air_geometry(context, pygame.image.load(os.path.join(load_path, "id_map.png")))
 
+    yield "Preparing Diplomacy..."
     _repair_factions(context, save_meta)
 
     queries.repair_spawned_territories(world_state.nation_data, world_state.map_data)

@@ -66,6 +66,9 @@ class Select_Base_Map(ScenarioLibraryScreen):
         map_launch.open_saved_map(app, self.selected_save_path, force_editor=True)
         return True
 
+    def prepare_map_steps(self, app):
+        return map_launch.open_saved_map_steps(app, self.selected_save_path, force_editor=True)
+
     @property
     def managed_dir(self):
         return c.SCENARIOS_CUSTOM_DIR

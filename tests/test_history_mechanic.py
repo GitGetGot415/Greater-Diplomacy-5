@@ -110,8 +110,15 @@ class HistoryMechanicTests(unittest.TestCase):
                 "10": "Later date", "2": "Earlier date"}) as read_dates, \
                 mock.patch.object(history_io, "read", side_effect=AssertionError(
                     "The menu must not load the full timeline")), \
-                mock.patch.object(load_game.pickers, "open_listbox_selector") as picker:
+                mock.patch.object(load_game.pickers, "open_listbox_selector") as picker, \
+                mock.patch.object(load_game.screen_runner, "run_loading") as loading:
             load_game.Load_Game.open_history_menu(menu, "fixture")
+            read_dates.assert_not_called()
+            steps = loading.call_args.args[0]
+            next(steps)
+            with self.assertRaises(StopIteration) as completed:
+                next(steps)
+            loading.call_args.kwargs["on_done"](completed.exception.value)
         read_dates.assert_called_once_with(load_game.os.path.join("fixture-saves", "fixture"))
         args = picker.call_args.args
         self.assertEqual(args[3], ["Turn 2: Earlier date", "Turn 10: Later date"])
