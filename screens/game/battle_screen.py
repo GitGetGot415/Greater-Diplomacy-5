@@ -472,6 +472,10 @@ class Battle_Screen(ModalScreen):
             self.row_paint[PANE_LANES].append((btn.rect, lane))
 
     def _unit_rows(self, pane, unit_list, lane, editable, is_bench=False):
+        if pane == PANE_RESERVE:
+            # Stable display-only sorting keeps held reserves above the rest
+            # without changing combat priority or the order within each group.
+            unit_list = sorted(unit_list, key=lambda unit: unit.get("combat_stance") != "RESERVE")
         rect = self.regions[pane]
         row_w = rect.width - SCROLLBAR_W - SCROLLBAR_GAP
         self.row_paint[pane] = []
