@@ -428,32 +428,8 @@ A data edit must not make a test fail, unless the test checks that JSON matches 
 
 ### Language
 
-- Make all project documentation as simple as possible.
-  Keep it accurate and complete.
-  Do not remove conditions, exceptions, or permissions to shorten the text.
-- Use ASD-STE100 Simplified Technical English (STE).
-  Use its writing rules and approved dictionary.
-  See the [official standard](https://www.asd-ste100.org/).
-- Use short sentences and one subject per paragraph.
-  Give one instruction per sentence.
-  Use active voice for instructions and simple verb forms.
-- Limit instruction sentences to 20 words and descriptive sentences to 25 words.
-  Limit paragraphs to six sentences.
-- Use the same term for the same thing.
-  Define abbreviations and necessary technical terms on first use.
-  Avoid idioms, jokes, vague words, and unnecessary background.
-- Keep software and game terms as necessary technical names.
-  Preserve paths, identifiers, commands, protocol values, formulas, and exact UI labels.
-  Do not rename these to satisfy a vocabulary rule.
-- Use numbered steps for procedures.
-  Give required conditions before the steps.
-  Separate rules, examples, and proposed features.
-- Apply these rules to design notes, agent guides, explanatory comments and docstrings.
-- These language rules do not apply to `context/TODO.txt`, tutorial help text, the root `README.md`, or `documentation/other/SANDBOX_SECURITY.md`.
-- Preserve third-party licenses, source quotations, and archived source data.
-  Simplify the project's explanation of that material, not the original text.
-- Check meaning against the code before handoff.
-  Do not claim full STE compliance without reviewing both the writing rules and dictionary.
+- Read and follow [Writing Style](documentation/writing_style.md) before writing or editing project text or replying about repository work.
+  Keep the detailed writing rules in that guide.
 
 ### Tutorial and Maintenance
 

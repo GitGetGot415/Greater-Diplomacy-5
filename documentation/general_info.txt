@@ -3,6 +3,7 @@ GUIDE INDEX
 
 documentation/general_info.txt: file browsers, storage, scenario settings, state ownership, build policy, and project files.
 documentation/code_layout.md: directory responsibilities and task-to-code references.
+documentation/writing_style.md: language and format for project text and agent replies.
 documentation/non_llm_ai.txt: rule-based AI and shared combat rules.
 documentation/ai_movement.txt: AI unit orders, movement caches, aircraft missions, attack checks, rotation, and movement tuning.
 documentation/llm_ai.txt: model settings, legal choices, prompts, summits, budgets, cancellation, and fairness.
