@@ -7,6 +7,13 @@ A helper stores the new map in the controller's MAP state.
 import copy
 import os
 import shutil
+from data.platform import LoadingSteps
+
+
+def _map_loading_total(**settings):
+    # Map imports the screens that import this module.
+    from screens.game.map import Map
+    return Map.loading_step_count(**settings)
 
 
 def _new_map(**settings):
@@ -37,15 +44,19 @@ def open_new_map(app, **settings):
 
 
 def open_new_map_steps(app, **settings):
+    return LoadingSteps(_open_new_map_steps(app, **settings), _map_loading_total(**settings))
+
+
+def _open_new_map_steps(app, **settings):
     game_map = yield from _new_map_steps(num_players=app.num_players, **settings)
     app.states["MAP"] = game_map
     return True
 
 
 def open_saved_map_steps(app, path, *, force_editor=False, history_turn=None):
-    return (yield from open_new_map_steps(
+    return open_new_map_steps(
         app, load_path=path, is_scenario="scenarios" in path,
-        force_editor=force_editor, history_turn=history_turn))
+        force_editor=force_editor, history_turn=history_turn)
 
 
 def open_saved_map(app, path, *, force_editor=False, history_turn=None):
@@ -69,6 +80,11 @@ def open_tournament_map(app, screen):
 
 
 def open_tournament_map_steps(app, screen, *, incremental=True):
+    total = _map_loading_total() + 2 if incremental else 2
+    return LoadingSteps(_open_tournament_map_steps(app, screen, incremental=incremental), total)
+
+
+def _open_tournament_map_steps(app, screen, *, incremental=True):
     """Build and filter the tournament view before publishing it."""
     # Tournament files load cryptography dependencies only when a player opens one.
     from data.multiplayer.tournament import files as tournament_files
@@ -156,6 +172,11 @@ def open_hosted_realtime_map(app, lobby):
 
 
 def open_hosted_realtime_map_steps(app, lobby, *, incremental=True):
+    total = _map_loading_total(load_path=lobby.session.config.scenario_id) + 1 if incremental else 1
+    return LoadingSteps(_open_hosted_realtime_map_steps(app, lobby, incremental=incremental), total)
+
+
+def _open_hosted_realtime_map_steps(app, lobby, *, incremental=True):
     # The host's visible board is a second map instance. The
     # server-owned map stays inside MapRealtimeDriver, preventing
     # host UI edits from bypassing authoritative validation.
@@ -182,6 +203,11 @@ def open_joined_realtime_map(app, lobby):
 
 
 def open_joined_realtime_map_steps(app, lobby, *, incremental=True):
+    total = _map_loading_total() + 2 if incremental else 2
+    return LoadingSteps(_open_joined_realtime_map_steps(app, lobby, incremental=incremental), total)
+
+
+def _open_joined_realtime_map_steps(app, lobby, *, incremental=True):
     # Real-time networking stays off web import paths until a real-time match opens.
     from data.multiplayer.realtime.session import materialize_map_bundle
 

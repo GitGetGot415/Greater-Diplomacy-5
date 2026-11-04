@@ -42,6 +42,9 @@ class _LoadingModal:
 
     def __init__(self, steps, status, on_done, on_error):
         self.steps = iter(steps)
+        self.total = steps.total
+        self.completed = 0
+        self.stage_started = False
         self.status = status
         self.on_done = on_done
         self.on_error = on_error
@@ -58,7 +61,12 @@ class _LoadingModal:
     def _advance(self):
         try:
             self.status = next(self.steps)
+            if self.stage_started:
+                self.completed += 1
+            self.stage_started = True
         except StopIteration as done:
+            if self.stage_started:
+                self.completed += 1
             self.result = done.value
             self.finished.set()
         except Exception as error:
@@ -88,12 +96,12 @@ class _LoadingModal:
 
     def draw(self, surface):
         surface.blit(self.background, (0, 0))
-        turn_progress.draw_simple_refresh_bar(surface, self.status, 0, None)
+        turn_progress.draw_simple_refresh_bar(surface, self.status, self.completed, self.total)
         self.drawn = True
 
 
 def run_loading(steps, status="Loading...", on_done=None, on_error=None):
-    """Show the shared loading overlay before executing an iterator of stages."""
+    """Show completed/total progress for a LoadingSteps iterator."""
     if on_error is None:
         # dialogs imports screen_runner through its shared screen components.
         from ui import dialogs

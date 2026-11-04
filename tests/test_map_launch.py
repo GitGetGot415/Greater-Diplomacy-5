@@ -2,12 +2,14 @@
 
 import unittest
 import threading
+from contextlib import ExitStack
 from types import SimpleNamespace
 from unittest import mock
 
 from screens.game import map_launch
 from tests import app_harness
 from ui.navigation import screen_runner, modal_stack
+from data.platform import LoadingSteps
 
 
 class PrepareMapTests(unittest.TestCase):
@@ -273,8 +275,8 @@ class LoadingRunnerTests(unittest.TestCase):
         modal_stack._stack.clear()
         self.addCleanup(lambda: modal_stack._stack.__setitem__(slice(None), self.original_stack))
 
-    def loader(self, steps):
-        screen_runner.run_loading(steps, on_done=self.done, on_error=self.error)
+    def loader(self, steps, total=1):
+        screen_runner.run_loading(LoadingSteps(steps, total), on_done=self.done, on_error=self.error)
         return modal_stack.active()
 
     def draw(self, loader):
@@ -291,19 +293,23 @@ class LoadingRunnerTests(unittest.TestCase):
             calls.append("second")
             return "map"
 
-        loader = self.loader(work())
+        loader = self.loader(work(), total=2)
         with mock.patch.object(screen_runner, "IS_WEB", True), \
                 mock.patch.object(screen_runner, "run_background") as background:
             loader.update()
             self.assertEqual(calls, [])
+            self.assertEqual((loader.completed, loader.total), (0, 2))
             self.draw(loader)
             loader.update()
             self.assertEqual(calls, [])
+            self.assertEqual(loader.completed, 0)
             loader.update()
             self.assertEqual(calls, ["first"])
+            self.assertEqual((loader.completed, loader.total), (1, 2))
             loader.handle_events([mock.Mock()])
             loader.update()
             self.assertEqual(calls, ["first", "second"])
+            self.assertEqual((loader.completed, loader.total), (2, 2))
             self.done.assert_not_called()
             loader.update()
         background.assert_not_called()
@@ -321,6 +327,7 @@ class LoadingRunnerTests(unittest.TestCase):
 
         loader = self.loader(work())
         self.draw(loader)
+        self.assertEqual((loader.completed, loader.total), (0, 1))
         with mock.patch.object(screen_runner, "IS_WEB", False), \
                 mock.patch.object(screen_runner, "run_background") as start:
             loader.update()
@@ -330,6 +337,7 @@ class LoadingRunnerTests(unittest.TestCase):
             worker.start()
             worker.join(timeout=5)
             self.assertFalse(worker.is_alive())
+            self.assertEqual((loader.completed, loader.total), (1, 1))
             self.done.assert_not_called()
             self.done.side_effect = lambda result: self.assertEqual(threading.get_ident(), ui_thread)
             ui_thread = threading.get_ident()
@@ -353,6 +361,63 @@ class LoadingRunnerTests(unittest.TestCase):
             loader.update()
         self.error.assert_called_once_with(failure)
         self.done.assert_not_called()
+        self.assertEqual((loader.completed, loader.total), (0, 1))
+
+    def test_progress_stays_still_until_the_running_stage_finishes(self):
+        entered = threading.Event()
+        release = threading.Event()
+
+        def work():
+            yield "stage"
+            entered.set()
+            if not release.wait(timeout=5):
+                raise TimeoutError("Test did not release loading stage")
+
+        loader = self.loader(work())
+        worker = threading.Thread(target=loader._run)
+        worker.start()
+        try:
+            self.assertTrue(entered.wait(timeout=5))
+            for _ in range(3):
+                self.draw(loader)
+                self.assertEqual((loader.completed, loader.total), (0, 1))
+        finally:
+            release.set()
+            worker.join(timeout=5)
+        self.assertFalse(worker.is_alive())
+        self.assertEqual((loader.completed, loader.total), (1, 1))
+        self.assertIsNone(loader.error)
+
+
+class LoadingCountTests(unittest.TestCase):
+    def test_asset_totals_match_the_regular_and_procedural_pipelines(self):
+        from data.map import load_map
+        from data.state_access import BackendState
+
+        runtime = SimpleNamespace(libraries={"unit_library": {}, "tech_tree": {}}, disabled_tech_keys=set())
+        with ExitStack() as patches:
+            for name in ("_load_map_images", "_load_nation_records", "_load_default_images",
+                         "_load_provinces", "_repair_factions", "_load_procedural_world"):
+                patches.enter_context(mock.patch.object(load_map, name))
+            patches.enter_context(mock.patch.object(load_map, "_resolve_load_path", return_value="fixture-map"))
+            patches.enter_context(mock.patch.object(load_map, "read_save_files", return_value=(None, {}, {})))
+            patches.enter_context(mock.patch.object(load_map, "rebuild", return_value=runtime))
+            patches.enter_context(mock.patch.object(load_map.queries, "build_air_geometry"))
+            for path in ("fixture-map", "PROCEDURAL"):
+                with self.subTest(path=path):
+                    context = BackendState()
+                    context.history_turn = None
+                    steps = load_map.load_map_asset_steps(context, path, {})
+                    self.assertEqual(len(list(steps)), steps.total)
+
+    def test_launch_totals_include_nested_map_stages(self):
+        app = SimpleNamespace(num_players=1, states={"MAP": None})
+        lobby = SimpleNamespace(session=SimpleNamespace(config=SimpleNamespace(scenario_id="fixture-map")))
+        with mock.patch.object(map_launch, "_map_loading_total", return_value=7):
+            self.assertEqual(map_launch.open_saved_map_steps(app, "fixture-map").total, 7)
+            self.assertEqual(map_launch.open_tournament_map_steps(app, mock.Mock()).total, 9)
+            self.assertEqual(map_launch.open_hosted_realtime_map_steps(app, lobby).total, 8)
+            self.assertEqual(map_launch.open_joined_realtime_map_steps(app, mock.Mock()).total, 9)
 
 
 if __name__ == "__main__":

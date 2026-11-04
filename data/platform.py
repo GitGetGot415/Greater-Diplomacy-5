@@ -21,6 +21,20 @@ import threading
 IS_WEB = sys.platform == "emscripten"
 
 
+class LoadingSteps:
+    """Keep a loading iterator's work total with the iterator, including nested loads."""
+
+    def __init__(self, steps, total):
+        self.steps = iter(steps)
+        self.total = total
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return next(self.steps)
+
+
 def downloads_dir():
     """Where an exported file goes, and where an import dialog opens.
 

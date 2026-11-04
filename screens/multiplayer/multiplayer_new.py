@@ -12,6 +12,7 @@ from screens.setup.scenario_settings import Scenario_Settings
 from screens.game.map import Map
 from ui import dialogs
 from ui.navigation import screen_runner
+from data.platform import LoadingSteps
 class Multiplayer_New(MenuListScreen):
     back_state = "MULTIPLAYER_HOST"
 
@@ -104,7 +105,9 @@ class Multiplayer_New(MenuListScreen):
                     dialogs.show_success("Success", f"Tournament '{safe_tour_name}' created!\n\nFolder created:\n{tournament_dir}\n\nFiles saved in folder:\n- Turn_{turn}_Host.gd5tour\n- Host_Keys.txt\n- ALL_Host_Keys.txt\n\nSend the .gd5tour file and keys to your players.")
                     self.go_to("MULTIPLAYER_HOST")
 
-                screen_runner.run_loading(create_tournament(), "Creating Tournament...", on_done=created)
+                total = Map.loading_step_count(load_path=os.path.join(directory, scenario_name)) + 1
+                screen_runner.run_loading(
+                    LoadingSteps(create_tournament(), total), "Creating Tournament...", on_done=created)
 
             dialogs.ask_string("Host Key", "Enter a Master Key for this tournament:", on_key)
 

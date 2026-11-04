@@ -25,7 +25,7 @@ from ui.dialogs import pickers
 from ui.dialogs import file_exchange
 from data.state_access import StateAccess
 from data.map import load_map, save_map
-from data.platform import run_background
+from data.platform import LoadingSteps, run_background
 
 # Core Game State & Global UI Elements
 from ui.navigation.screen import Screen
@@ -1538,8 +1538,20 @@ class Map(StateAccess, Screen):
     def loading_steps(cls, **settings):
         """Return the completed map after yielding its loading stages."""
         game_map = cls.__new__(cls)
-        yield from game_map._initialize_steps(**settings)
-        return game_map
+        return LoadingSteps(game_map._load_steps(**settings), cls.loading_step_count(**settings))
+
+    @classmethod
+    def loading_step_count(cls, *, load_path=None, is_random=False, random_settings=None, **settings):
+        # Initialization, map controls, game controls, country labels, and economy.
+        setup_stages = 5
+        randomizing = bool(is_random and random_settings)
+        asset_path = random_settings["map_path"] if randomizing else load_path
+        return (setup_stages + len(cls.ALL_MAP_LAYERS) + int(randomizing)
+                + load_map.map_asset_loading_step_count(asset_path))
+
+    def _load_steps(self, **settings):
+        yield from self._initialize_steps(**settings)
+        return self
 
     def _initialize_steps(self, load_path=None, is_scenario=False, is_random=False,
                           force_editor=False, random_settings=None, map_settings=None,

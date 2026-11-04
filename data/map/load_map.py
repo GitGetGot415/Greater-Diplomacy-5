@@ -14,6 +14,7 @@ from data import migrations, queries
 from data.migrations import repair_faction_rosters
 from data.map import history_io
 from data.map.map_cache import OPTIONAL_LAYER_FILES
+from data.platform import LoadingSteps
 
 from data.runtime_rules import rebuild
 from data.state_access import BackendState
@@ -21,6 +22,16 @@ from map_logic.random_map import procedural_map_generator
 from map_logic.system32 import unit_events, movement_processor, economy_processor
 from map_logic.diplomacy import diplomacy_lifecycle, faction_records, faction_leadership
 from map_logic.territory import ownership
+
+# Each yield in _load_map_asset_steps starts one stage. Keep these totals with that pipeline.
+MAP_ASSET_LOADING_STAGES = 10
+PROCEDURAL_MAP_LOADING_STAGES = 2
+
+
+def map_asset_loading_step_count(load_path):
+    return PROCEDURAL_MAP_LOADING_STAGES if load_path == "PROCEDURAL" else MAP_ASSET_LOADING_STAGES
+
+
 def read_save_files(load_path):
     """Read meta.json, map_data.json, and the history of one save folder.
 
@@ -478,6 +489,12 @@ def load_map_assets(context, load_path, scenario_settings=None, *, load_presenta
 
 
 def load_map_asset_steps(context, load_path, scenario_settings=None, *, load_presentation=True):
+    return LoadingSteps(
+        _load_map_asset_steps(context, load_path, scenario_settings, load_presentation=load_presentation),
+        map_asset_loading_step_count(load_path))
+
+
+def _load_map_asset_steps(context, load_path, scenario_settings=None, *, load_presentation=True):
     """Load the same world in stages that the browser can run between frames."""
     yield "Preparing Map..."
     world_state = world_for(context)

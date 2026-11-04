@@ -513,6 +513,8 @@ DISPLAY SUPPORT
 
 Game and map creation, saved games, selected history turns, the history list,
 and loading a folder in the map editor use the shared loading overlay.
+The bar shows completed loading stages / total stages and advances after each stage finishes.
+Its fill stays still while a stage runs. Nested loads contribute to the same total.
 Desktop loading runs in a worker while the main loop handles the display.
 Browser loading returns to the main loop between stages, including map layers.
 A single large file read, procedural generation, or layer can still pause a browser stage.

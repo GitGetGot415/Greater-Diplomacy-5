@@ -7,6 +7,7 @@ from ui.widgets.content_browser import ContentBrowserScreen
 from screens.game import map_launch
 from ui.widgets.ui_elements import Button, make_back_button, play_ui_sound
 from ui.navigation import screen_runner
+from data.platform import LoadingSteps
 import data.constants as c
 
 from data.map.load_map import newer_version_message
@@ -100,7 +101,7 @@ class Load_Game(ContentBrowserScreen):
             pickers.open_listbox_selector(self, f"History: {folder_name}", "Select a past turn to load:",
                                           items, on_select)
 
-        screen_runner.run_loading(read_dates(), "Loading History...", on_done=show_turns)
+        screen_runner.run_loading(LoadingSteps(read_dates(), 1), "Loading History...", on_done=show_turns)
 
     def load_specific_save(self, folder_name, history_turn=None):
         message = newer_version_message(os.path.join(self.managed_dir, folder_name))

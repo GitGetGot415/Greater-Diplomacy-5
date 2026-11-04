@@ -5,8 +5,6 @@ from ui.rendering.font_manager import fonts
 from ui.bars import ui_bars
 from ui.widgets import ui_elements
 
-LOADING_BAR_CYCLE_MS = 1600
-
 def draw_simple_refresh_bar(surface, status_text, completed, total):
     """Unified data refresh overlay to prevent duplication on base menu screens."""
     ui_bars.draw_fullscreen_overlay(surface, 200)
@@ -20,15 +18,8 @@ def draw_simple_refresh_bar(surface, status_text, completed, total):
     bar_w, bar_h = 400, 30
     bar_x = center_x - (bar_w // 2)
     
-    if total is None:
-        # Loading stages have no meaningful percentage. Keep the shared bar moving.
-        progress_ratio = (pygame.time.get_ticks() % LOADING_BAR_CYCLE_MS) / LOADING_BAR_CYCLE_MS
-    else:
-        progress_ratio = (completed / float(total)) if total > 0 else 0.0
+    progress_ratio = (completed / float(total)) if total > 0 else 0.0
     ui_elements.draw_progress_bar(surface, pygame.Rect(bar_x, center_y, bar_w, bar_h), progress_ratio)
-
-    if total is None:
-        return
 
     pct_txt = fonts.get("tiny").render(f"{completed} / {total}", True, (255, 255, 255))
     surface.blit(pct_txt, pct_txt.get_rect(center=(center_x, center_y + bar_h // 2)))

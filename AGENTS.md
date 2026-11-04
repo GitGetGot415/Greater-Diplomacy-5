@@ -302,6 +302,13 @@ Keep tuning data in its source files:
 - **Always reuse existing UI features and shared components instead of creating duplicate implementations.**
   Search for the existing implementation before adding UI. Extend it when the requested behavior needs more support.
   For example, reuse the existing loading-screen UI instead of making a new loading screen.
+  Reuse its behavior as well as its appearance. Extend the shared implementation when needed.
+- **Loading bars must show actual completed/total work as `#/#` through the shared progress UI.**
+  Determine the total from the operation's stages or work items before processing starts.
+  Advance the count and green fill only after a stage or item finishes successfully.
+  Keep the fill still while work is running. Never animate, cycle, reset, or advance it with elapsed time.
+  Count nested loading stages in the same total. Keep progress counting with the code that owns the work.
+  Do not add a spinner, indeterminate bar, fake percentage, or alternate loading behavior unless the user explicitly requests it.
 - **NEVER take up space just to fill the screen.**
   If a UI can work in a small area, keep it small.
   Do not enlarge controls, panels, or spacing to use empty screen space.

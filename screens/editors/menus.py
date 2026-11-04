@@ -17,6 +17,7 @@ from screens.game.research import ResearchCountrySelectScreen
 from map_logic.diplomacy import diplomacy_messages
 from ui.widgets.text_detail_screen import TextDetailScreen
 from ui.navigation import screen_runner
+from data.platform import LoadingSteps
 
 # Row background for a message a model wrote, in the spectator's overview.
 # Deliberately close to the table's own dark ground -- it has to be legible
@@ -82,7 +83,7 @@ def editor_load_map(map_screen):
                 map_screen.refresh_map_layers("political")
 
             screen_runner.run_loading(
-                load_steps(), "Loading Map...",
+                LoadingSteps(load_steps(), load_map.map_asset_loading_step_count(path) + 1), "Loading Map...",
                 on_done=lambda _: map_screen.show_feedback("Map Loaded into Editor"))
 
     pickers.open_file_browser(map_screen, "Select Map Folder to Edit", c.SCENARIOS_CUSTOM_DIR,
