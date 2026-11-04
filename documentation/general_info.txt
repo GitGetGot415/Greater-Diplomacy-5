@@ -520,6 +520,13 @@ Browser loading returns to the main loop between stages, including map layers.
 A single large file read, procedural generation, or layer can still pause a browser stage.
 Loading blocks other actions until it finishes or reports an error.
 
+Turn loading keeps summit, strategy, movement-order, proactive diplomacy,
+response, and map-refresh bars in fixed positions.
+Movement progress counts AI countries after their planning passes finish.
+An unknown model workload shows Calculating... until its queue is built.
+A phase with no work shows a completed bar labeled N/A, including unused summits.
+Turning the LLM off leaves rule-based strategy and movement progress active.
+
 ui/bars/ui_bars.py creates display surfaces through set_display_mode.
 Game startup, fullscreen changes, and standalone tools use this helper.
 On macOS, the helper sets SDL_FRAMEBUFFER_ACCELERATION to "opengl" before it creates the window.

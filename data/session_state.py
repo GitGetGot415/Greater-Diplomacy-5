@@ -39,6 +39,8 @@ class SessionState:
     loading_status_text: str = "Waiting..."
     proactive_tasks_total: int = 0
     proactive_tasks_completed: int = 0
+    movement_tasks_total: int = 0
+    movement_tasks_completed: int = 0
     proactive_llm_tasks_total: int = 0
     proactive_llm_tasks_completed: int = 0
     proactive_llm_tasks: list = field(default_factory=list)

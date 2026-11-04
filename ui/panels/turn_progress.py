@@ -5,6 +5,22 @@ from ui.rendering.font_manager import fonts
 from ui.bars import ui_bars
 from ui.widgets import ui_elements
 
+TURN_PROGRESS_BAR_SIZE = (400, 25)
+TURN_PROGRESS_ROW_GAP = 55
+TURN_PROGRESS_FIRST_ROW_OFFSET = -140
+TURN_PROGRESS_TITLE_OFFSET = -205
+TURN_PROGRESS_SKIP_OFFSET = 190
+
+
+def turn_progress_values(completed, total):
+    """Distinguish pending work, no work, and a measured turn-phase workload."""
+    if total == -1:
+        return 0.0, "Calculating..."
+    if total == 0:
+        return 1.0, "N/A"
+    return completed / float(total), f"{completed}/{total}"
+
+
 def draw_simple_refresh_bar(surface, status_text, completed, total):
     """Unified data refresh overlay to prevent duplication on base menu screens."""
     ui_bars.draw_fullscreen_overlay(surface, 200)
@@ -34,27 +50,21 @@ def draw_turn_loading_screen(map_screen, surface):
 
     font_title = fonts.get("title")
     txt = font_title.render(session_state.loading_status_text, True, (255, 255, 255))
-    surface.blit(txt, txt.get_rect(center=(center_x, center_y - 180)))
+    surface.blit(txt, txt.get_rect(center=(center_x, center_y + TURN_PROGRESS_TITLE_OFFSET)))
 
     # Configuration for bars
-    bar_w, bar_h = 400, 25
+    bar_w, bar_h = TURN_PROGRESS_BAR_SIZE
     bar_x = center_x - (bar_w // 2)
-    spacing = 65 # Tighter vertical spacing for 4 bars
+    spacing = TURN_PROGRESS_ROW_GAP
 
     def draw_bar(y_pos, label, completed, total):
-        lbl_txt = fonts.get("normal").render(label, True, c.UI_TEXT_LIGHT)
+        label_color = c.UI_TEXT_MUTED if total == 0 else c.UI_TEXT_LIGHT
+        lbl_txt = fonts.get("normal").render(label, True, label_color)
         surface.blit(lbl_txt, (bar_x, y_pos - 22))
 
-        # Progress Fill (Hold at 0% if total is currently unknown)
-        progress_ratio = 0.0 if total == -1 else ((completed / float(total)) if total > 0 else 1.0)
+        progress_ratio, display_text = turn_progress_values(completed, total)
         ui_elements.draw_progress_bar(surface, pygame.Rect(bar_x, y_pos, bar_w, bar_h), progress_ratio)
 
-        # Counter text
-        if total == -1:
-            display_text = "Calculating..."
-        else:
-            display_text = f"{completed}/{total}"
-            
         pct_txt = fonts.get("tiny").render(display_text, True, (255, 255, 255))
         surface.blit(pct_txt, pct_txt.get_rect(center=(center_x, y_pos + bar_h // 2)))
 
@@ -81,20 +91,18 @@ def draw_turn_loading_screen(map_screen, surface):
         map_screen.multi_turn_abort_btn_rect = abort_btn_rect
         return
 
-    # Render the distinct phases, in the order prepare_turn runs them. Summits
-    # go first and are drawn only when there are any, since they need ABSOLUTE
-    # or two model-driven majors and most turns have none -- an empty bar every
-    # turn would be worse than no bar.
-    top = center_y - 100
-    summits = session_state.summits_total
-    if summits:
-        draw_bar(top, "1. Holding Summits", session_state.summits_completed, summits)
-        top += spacing
-
-    draw_bar(top, "2. Analyzing Global Strategy", session_state.proactive_tasks_completed, session_state.proactive_tasks_total)
-    draw_bar(top + spacing, "3. Drafting Proactive Diplomatics", session_state.proactive_llm_tasks_completed, session_state.proactive_llm_tasks_total)
-    draw_bar(top + spacing*2, "4. Processing Global Responses", session_state.responsive_tasks_completed, session_state.responsive_tasks_total)
-    draw_bar(top + spacing*3, "5. Re-Rendering World Maps", session_state.refresh_tasks_completed, session_state.refresh_tasks_total)
+    # Keep every phase visible and in a fixed position, including phases with no work.
+    phases = (
+        ("Holding Summits", session_state.summits_completed, session_state.summits_total),
+        ("Analyzing Global Strategy", session_state.proactive_tasks_completed, session_state.proactive_tasks_total),
+        ("Generating AI Movement Orders", session_state.movement_tasks_completed, session_state.movement_tasks_total),
+        ("Drafting Proactive Diplomatics", session_state.proactive_llm_tasks_completed, session_state.proactive_llm_tasks_total),
+        ("Processing Global Responses", session_state.responsive_tasks_completed, session_state.responsive_tasks_total),
+        ("Re-Rendering World Maps", session_state.refresh_tasks_completed, session_state.refresh_tasks_total),
+    )
+    top = center_y + TURN_PROGRESS_FIRST_ROW_OFFSET
+    for index, (label, completed, total) in enumerate(phases):
+        draw_bar(top + spacing * index, f"{index + 1}. {label}", completed, total)
 
     # --- Draw the Force Skip Button ---
     # Only show it if there are LLM tasks that might get stuck.
@@ -107,7 +115,7 @@ def draw_turn_loading_screen(map_screen, surface):
     if (session_state.proactive_llm_tasks_total > 0
             or session_state.responsive_tasks_total > 0
             or session_state.summits_total > 0):
-        skip_btn_rect = pygame.Rect(center_x - 100, center_y + 180, 200, 40)
+        skip_btn_rect = pygame.Rect(center_x - 100, center_y + TURN_PROGRESS_SKIP_OFFSET, 200, 40)
         ui_elements.draw_pixel_button(surface, skip_btn_rect, (150, 40, 40), hover_color=(200, 60, 60))
         
         skip_txt = fonts.get("button").render("FORCE SKIP AI", True, (255, 255, 255))

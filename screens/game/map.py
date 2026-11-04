@@ -1685,6 +1685,8 @@ class Map(StateAccess, Screen):
         self.loading_status_text = "Waiting..."
         self.proactive_tasks_total = 0
         self.proactive_tasks_completed = 0
+        self.movement_tasks_total = 0
+        self.movement_tasks_completed = 0
         self.proactive_llm_tasks_total = 0
         self.proactive_llm_tasks_completed = 0
         self.proactive_llm_tasks = []
@@ -2063,6 +2065,8 @@ class Map(StateAccess, Screen):
                 # Mock the UI prep variables to prevent crashes
                 self.proactive_tasks_total = 1
                 self.proactive_tasks_completed = 1
+                self.movement_tasks_total = 0
+                self.movement_tasks_completed = 0
                 self.proactive_llm_tasks_total = 0
                 self.proactive_llm_tasks_completed = 0
                 self.proactive_llm_tasks = []

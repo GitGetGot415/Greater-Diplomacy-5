@@ -1769,7 +1769,10 @@ def _cancel_opposing_transitions(ai_nations, nation_units, contested=None):
 
 def _generate_unit_orders(context):
     world_state = world_for(context)
+    session_state = session_for(context)
     ai_nations = queries.get_active_ai_nations(context)
+    session_state.movement_tasks_total = len(ai_nations)
+    session_state.movement_tasks_completed = 0
     world = ai_world.for_screen(context)
 
     # --- NEW: Pre-calculate allowed pathing IDs to include water for convoys ---
@@ -1782,7 +1785,9 @@ def _generate_unit_orders(context):
     # the anti-swap pass at the end can leave relief traffic alone.
     contested = set()
 
-    for ai_name in ai_nations:
+    for completed, ai_name in enumerate(ai_nations):
+        # The previous country's pass finished, including any no-order early exit.
+        session_state.movement_tasks_completed = completed
         units_info = nation_units[ai_name]
         if not units_info:
             continue
@@ -1858,3 +1863,5 @@ def _generate_unit_orders(context):
 
     # --- Anti-Swap Cleanup ---
     _cancel_opposing_transitions(ai_nations, nation_units, contested)
+    # Keep the final country pending until shared order cleanup also finishes.
+    session_state.movement_tasks_completed = session_state.movement_tasks_total

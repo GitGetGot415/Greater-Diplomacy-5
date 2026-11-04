@@ -107,6 +107,12 @@ async def prepare_turn(context):
         session_state.proactive_tasks_completed = 0
         session_state.proactive_llm_tasks_total = 0
         session_state.proactive_llm_tasks_completed = 0
+        session_state.movement_tasks_total = 0
+        session_state.movement_tasks_completed = 0
+        session_state.summits_total = 0
+        session_state.summits_completed = 0
+        session_state.responsive_tasks_total = 0
+        session_state.responsive_tasks_completed = 0
 
     # --- Process Scripted Events ---
     # Moved here so AI can't immediately issue orders to units spawned by events this turn

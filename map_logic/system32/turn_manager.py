@@ -6,6 +6,7 @@ from map_logic.system32 import turn_processor
 from ui.panels import diplomatic_popups
 from map_logic.ai import ai_handler
 from data import queries
+import data.constants as c
 
 import traceback
 
@@ -58,21 +59,27 @@ def trigger_ai_thread(context):
     ai_handler.CURRENT_TURN_ID += 1
         
     # Pre-calculate determinable totals so the UI instantly knows the workload
-    session_state.proactive_tasks_total = len(queries.get_active_ai_nations(context))
+    ai_disabled = queries.get_scenario_flag(
+        "ai_disabled", c.DEFAULT_AI_DISABLED, world_for(context).scenario_settings)
+    ai_count = len(queries.get_active_ai_nations(context))
+    if ai_disabled:
+        ai_count = 0
+    session_state.proactive_tasks_total = ai_count
     session_state.proactive_tasks_completed = 0
+    session_state.movement_tasks_total = ai_count
+    session_state.movement_tasks_completed = 0
     
-    # Dynamic LLM tasks cannot be known until previous phases finish. Mark as -1 (Pending)
-    session_state.proactive_llm_tasks_total = -1
+    # Unknown model workloads stay pending; no AI or no model means N/A.
+    model_pending = -1 if ai_count and ai_handler.get_ai_mode() != "OFF" else 0
+    session_state.proactive_llm_tasks_total = model_pending
     session_state.proactive_llm_tasks_completed = 0
     session_state.proactive_llm_tasks = []
     
-    session_state.responsive_tasks_total = -1
+    session_state.responsive_tasks_total = model_pending
     session_state.responsive_tasks_completed = 0
 
-    # Summits are drawn only when there are any, so this has to go back to zero
-    # or last turn's count would keep a bar and a Force Skip button on screen
-    # for a phase that is not running.
-    session_state.summits_total = 0
+    # Clear last turn's work. Model phases with no work remain visible as N/A.
+    session_state.summits_total = model_pending
     session_state.summits_completed = 0
     
     # Map Refresh always executes exactly 7 background render passes now

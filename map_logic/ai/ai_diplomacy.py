@@ -161,6 +161,8 @@ def process_summits(context):
     """
     world_state = world_for(context)
     session_state = session_for(context)
+    session_state.summits_total = 0
+    session_state.summits_completed = 0
     if not ai_negotiation.enabled() or ai_handler.get_ai_mode() == "OFF":
         return
 
@@ -173,6 +175,7 @@ def process_summits(context):
 
     ai_nations = [n for n in queries.get_active_ai_nations(context) if n in active_nations]
     pairs = ai_negotiation.select_pairs(world, ai_nations, model_driven, total_turns)
+    session_state.summits_total = len(pairs)
     if not pairs:
         return
 
@@ -180,8 +183,6 @@ def process_summits(context):
     # keys the Force Skip button off these counters and this phase used to set
     # none of them -- leaving the first model work of the turn with nothing on
     # screen to stop it.
-    session_state.summits_total = len(pairs)
-    session_state.summits_completed = 0
     session_state.loading_status_text = f"Holding Summits (0/{len(pairs)})..."
     my_turn_id = ai_handler.CURRENT_TURN_ID
     mode = ai_handler.get_ai_mode()
