@@ -309,7 +309,7 @@ def draw_pixel_button(surface, rect, color, *, hover_color=None, pressed_color=N
 
 
 def draw_progress_bar(surface, rect, ratio, color=(100, 200, 100), *,
-                      track_color=(40, 40, 60), border_color=(200, 200, 200)):
+                      track_color=(40, 40, 60), border_color=(200, 200, 200), disabled=False):
     """Clip a cached full-width fill so progress changes reuse the same shading."""
     draw_pixel_panel(surface, rect, track_color, border_color, recessed=True)
     inner = rect.inflate(-4, -4)
@@ -317,7 +317,8 @@ def draw_progress_bar(surface, rect, ratio, color=(100, 200, 100), *,
         return
     fill_width = int(inner.width * max(0.0, min(1.0, ratio)))
     if fill_width:
-        background = _button_background(inner.size, tuple(color[:3]), False, 0)
+        fill_color = c.UI_TEXT_MUTED if disabled else color
+        background = _button_background(inner.size, tuple(fill_color[:3]), False, 0)
         surface.blit(background, inner, (0, 0, fill_width, inner.height))
 
 

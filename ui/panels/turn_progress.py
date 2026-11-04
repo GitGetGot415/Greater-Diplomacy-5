@@ -63,7 +63,8 @@ def draw_turn_loading_screen(map_screen, surface):
         surface.blit(lbl_txt, (bar_x, y_pos - 22))
 
         progress_ratio, display_text = turn_progress_values(completed, total)
-        ui_elements.draw_progress_bar(surface, pygame.Rect(bar_x, y_pos, bar_w, bar_h), progress_ratio)
+        ui_elements.draw_progress_bar(surface, pygame.Rect(bar_x, y_pos, bar_w, bar_h),
+                                      progress_ratio, disabled=(total == 0))
 
         pct_txt = fonts.get("tiny").render(display_text, True, (255, 255, 255))
         surface.blit(pct_txt, pct_txt.get_rect(center=(center_x, y_pos + bar_h // 2)))

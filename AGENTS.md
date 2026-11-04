@@ -303,8 +303,13 @@ Keep tuning data in its source files:
   Search for the existing implementation before adding UI. Extend it when the requested behavior needs more support.
   For example, reuse the existing loading-screen UI instead of making a new loading screen.
   Reuse its behavior as well as its appearance. Extend the shared implementation when needed.
-- **Loading bars must show actual completed/total work as `#/#` through the shared progress UI.**
-  Determine the total from the operation's stages or work items before processing starts.
+- **Loading bars must report actual work through the shared progress UI.**
+  Show known workloads as completed/total work (`#/#`) with a green fill.
+  Determine the total from the operation's stages or work items before that work starts.
+  Exception: when a workload depends on an earlier phase, show `Calculating...` with an empty, stationary bar until its actual queue is known.
+  Exception: when a phase is disabled or has no work, show a full gray bar labeled `N/A`, rather than `0/0`.
+  Keep phase bars visible in fixed positions, including unused summits. Keep their numbered labels consecutive.
+  Turning off the LLM makes model phases `N/A`; rule-based AI phases still show their actual progress unless those phases are also disabled or have no work.
   Advance the count and green fill only after a stage or item finishes successfully.
   Keep the fill still while work is running. Never animate, cycle, reset, or advance it with elapsed time.
   Count nested loading stages in the same total. Keep progress counting with the code that owns the work.

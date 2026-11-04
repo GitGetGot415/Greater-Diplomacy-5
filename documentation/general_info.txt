@@ -524,7 +524,7 @@ Turn loading keeps summit, strategy, movement-order, proactive diplomacy,
 response, and map-refresh bars in fixed positions.
 Movement progress counts AI countries after their planning passes finish.
 An unknown model workload shows Calculating... until its queue is built.
-A phase with no work shows a completed bar labeled N/A, including unused summits.
+A phase with no work shows a completed gray bar labeled N/A, including unused summits.
 Turning the LLM off leaves rule-based strategy and movement progress active.
 
 ui/bars/ui_bars.py creates display surfaces through set_display_mode.
