@@ -2,6 +2,8 @@
 
 !!! release nations or puppets from spectator mode
 
+- in the future see if you can delete snapshot_moves.py
+
 make it so that you can IMPORT AN IMAGE and have it turned into a map maybe
 
 maybe if a country has cores on another country, they're not going to join their faction...
