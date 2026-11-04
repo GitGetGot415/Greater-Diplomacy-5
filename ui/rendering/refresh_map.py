@@ -436,7 +436,7 @@ def refresh_fog_map(map_screen):
             
         map_screen.visible_provinces, map_screen.partial_visible_provinces = vis_result
 
-    fog_strength = map_screen.scenario_settings.get("fog_of_war_strength", "normal")
+    fog_strength = map_screen.scenario_settings.get("fog_of_war_strength", c.DEFAULT_FOG_OF_WAR_STRENGTH)
     extreme_hidden = set()
     
     if fog_strength == "extreme":

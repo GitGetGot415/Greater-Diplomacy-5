@@ -3,6 +3,7 @@ from ui.navigation.screen import Screen
 from ui.widgets.ui_elements import Button, Slider, parse_pos, make_back_button, make_info_button, make_toggle_button
 import data.constants as c
 from data import queries
+from data.io import starting_defaults
 from ui import dialogs
 from ui.rendering.font_manager import fonts
 from screens.editors import turn_editor
@@ -196,7 +197,7 @@ class Scenario_Settings(Screen):
 
         self.elements.append(self.build_fog_slider())
 
-        dpt_val = self.settings.get("days_per_turn", "Default")
+        dpt_val = self.settings.get("days_per_turn", starting_defaults.get_starting_value("scenario_settings.json", "days_per_turn"))
         self.elements.append(self.make_info_button(LEFT_INFO_X, DAYS_PER_TURN_ROW_Y, "Days Per Turn", DAYS_PER_TURN_TOOLTIP))
         self.elements.append(
             Button(LEFT_BTN_X, DAYS_PER_TURN_ROW_Y, "scenario_setting_button", "blue",
@@ -346,7 +347,7 @@ class Scenario_Settings(Screen):
 
     def cycle_days_per_turn(self):
         options = c.DAYS_PER_TURN_OPTIONS
-        current = self.settings.get("days_per_turn", "Default")
+        current = self.settings.get("days_per_turn", starting_defaults.get_starting_value("scenario_settings.json", "days_per_turn"))
         next_idx = (options.index(current) + 1) % len(options) if current in options else 0
         self.settings["days_per_turn"] = options[next_idx]
         self._save_settings()

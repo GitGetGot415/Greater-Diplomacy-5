@@ -1,5 +1,6 @@
 from data.platform import IS_WEB
 from data import research_display
+from data.io.starting_defaults import get_starting_value
 from map_logic.diplomacy.action_definitions import BILATERAL_ACTIONS, UNILATERAL_ACTIONS
 
 # Used for logical ownership assignment
@@ -78,7 +79,7 @@ UPKEEP_MODIFIERS = {
 # reminder that base days per turn is the scenario default
 # days per turn is what the game actually does
 # if the days per turn is set to default then it uses the scenario default
-DEFAULT_DAYS_PER_TURN = 15
+DEFAULT_DAYS_PER_TURN = get_starting_value("random_setup", "base_days_per_turn")
 DAYS_PER_TURN_OPTIONS = ["Default", 5, 10, 15, 30]
 
 # Non-core penalties
@@ -284,11 +285,11 @@ CREDITS_DATA = [
     }
 ]
 
-SHOW_FPS = False
+SHOW_FPS = get_starting_value("settings_config.json", "show_fps")
 
 # Show the sky checkerboard's reflection on the ocean. The pattern follows
 # the map camera's position, zoom, and tilt. Disabled by default.
-CHECKERBOARD_WATER = False
+CHECKERBOARD_WATER = get_starting_value("settings_config.json", "checkerboard_water")
 
 # How clicking a tile and switching the bottom-left view mode (Resources/
 # Blank/Units/Economy) behave on the map screen. "CLASSIC" is how the game
@@ -303,22 +304,22 @@ CHECKERBOARD_WATER = False
 # its default so Settings' "Reset
 # Defaults" has a fixed value to reset back to rather than whatever this is
 # currently set to.
-DEFAULT_MAP_NAVIGATION_MODE = "CLASSIC"
+DEFAULT_MAP_NAVIGATION_MODE = get_starting_value("settings_config.json", "map_navigation_mode")
 MAP_NAVIGATION_MODE = DEFAULT_MAP_NAVIGATION_MODE
 
 # How active battles are presented in the map's Units view.  COMPACT preserves
 # the original presentation, hiding units beneath an opaque combat bubble;
 # FULL leaves the units visible beneath a translucent bubble.
-DEFAULT_BATTLE_DISPLAY_MODE = "FULL"
+DEFAULT_BATTLE_DISPLAY_MODE = get_starting_value("settings_config.json", "battle_display_mode")
 BATTLE_DISPLAY_MODE = DEFAULT_BATTLE_DISPLAY_MODE
 
 # Whether army markers animate while compacting or expanding on the strategic
 # map.  This is a presentation preference only; it never changes unit state.
-DEFAULT_ARMY_GROUP_ANIMATIONS = True
+DEFAULT_ARMY_GROUP_ANIMATIONS = get_starting_value("settings_config.json", "army_group_animations")
 ARMY_GROUP_ANIMATIONS = DEFAULT_ARMY_GROUP_ANIMATIONS
 
 # Show the fixed army card for owned units outside saved army groups.
-DEFAULT_SHOW_UNCLAIMED = True
+DEFAULT_SHOW_UNCLAIMED = get_starting_value("settings_config.json", "show_unclaimed")
 SHOW_UNCLAIMED = DEFAULT_SHOW_UNCLAIMED
 
 # Which unit art set ui.rendering.symbol_loader draws unit icons from.
@@ -326,7 +327,7 @@ SHOW_UNCLAIMED = DEFAULT_SHOW_UNCLAIMED
 # any other style (e.g. "hanskolmer") discovers unit art from filenames under
 # its own assets/<style> folder. Both fall back to "classic" when they do not
 # cover a request. See screens/menus/unit_art.py for the picker.
-DEFAULT_UNIT_ART_STYLE = "classic"
+DEFAULT_UNIT_ART_STYLE = get_starting_value("settings_config.json", "unit_art_style")
 UNIT_ART_STYLE = DEFAULT_UNIT_ART_STYLE
 UNIT_ART_STYLES = ("classic", "hanskolmer")
 
@@ -345,9 +346,9 @@ TACTICAL_DEFAULT_YEAR = 1910
 # ==========================================
 
 # --- FOG OF WAR ---
-USE_FOG_OF_WAR = True # Toggle Fog of War mechanics on or off
-DEFAULT_FOG_OF_WAR = True
-DEFAULT_FOG_OF_WAR_STRENGTH = "normal"
+USE_FOG_OF_WAR = get_starting_value("scenario_settings.json", "fog_of_war") # Toggle Fog of War mechanics on or off
+DEFAULT_FOG_OF_WAR = get_starting_value("scenario_settings.json", "fog_of_war")
+DEFAULT_FOG_OF_WAR_STRENGTH = get_starting_value("scenario_settings.json", "fog_of_war_strength")
 FOG_OF_WAR_ALPHA = 160 # How dark unseen provinces get (0-255)
 
 # Tournament spectators authenticate with this deliberately public key, but
@@ -358,37 +359,37 @@ TOURNAMENT_SPECTATOR_KEY = "Spectator"
 TOURNAMENT_SPECTATOR_ROLE = "TOURNAMENT_SPECTATOR"
 
 # --- CASUS BELLI ---
-CASUS_BELLI_REQUIRED = True
-DEFAULT_CASUS_BELLI = True
+CASUS_BELLI_REQUIRED = get_starting_value("scenario_settings.json", "casus_belli_required")
+DEFAULT_CASUS_BELLI = get_starting_value("scenario_settings.json", "casus_belli_required")
 
 # --- SURPRISE ATTACK ---
-DEFAULT_SURPRISE_ATTACK = False
+DEFAULT_SURPRISE_ATTACK = get_starting_value("scenario_settings.json", "surprise_attack")
 
 # --- SCRIPTED EVENTS & AI ---
-DEFAULT_USE_SCRIPTED_EVENTS = True
-DEFAULT_AI_DISABLED = False
+DEFAULT_USE_SCRIPTED_EVENTS = get_starting_value("scenario_settings.json", "use_scripted_events")
+DEFAULT_AI_DISABLED = get_starting_value("scenario_settings.json", "ai_disabled")
 
 # --- RESEARCH ---
-DEFAULT_FORCE_TIME_APPROPRIATE_RESEARCH = False
+DEFAULT_FORCE_TIME_APPROPRIATE_RESEARCH = get_starting_value("scenario_settings.json", "force_time_appropriate_research")
 
 # --- BATTLE ROYALE ---
-BATTLE_ROYALE_MODE = False
-DEFAULT_BATTLE_ROYALE = False
-DEFAULT_BOUNCE_TIEBREAKER = False
+BATTLE_ROYALE_MODE = get_starting_value("scenario_settings.json", "battle_royale")
+DEFAULT_BATTLE_ROYALE = get_starting_value("scenario_settings.json", "battle_royale")
+DEFAULT_BOUNCE_TIEBREAKER = get_starting_value("scenario_settings.json", "bounce_tiebreaker")
 
 # --- FACTIONS ---
-DISABLE_FACTIONS = False
-DEFAULT_DISABLE_FACTIONS = False
+DISABLE_FACTIONS = get_starting_value("scenario_settings.json", "disable_factions")
+DEFAULT_DISABLE_FACTIONS = get_starting_value("scenario_settings.json", "disable_factions")
 
 # --- CORES ---
-DISABLE_CORES = False
-DEFAULT_DISABLE_CORES = False
+DISABLE_CORES = get_starting_value("scenario_settings.json", "disable_cores")
+DEFAULT_DISABLE_CORES = get_starting_value("scenario_settings.json", "disable_cores")
 
 # --- REPAIRS ---
 # Whether repairing a damaged unit costs nothing at all. Off makes repair cost
 # materials/manpower/fuel proportional to missing health -- see
 # screens.game.orders.Orders_Screen.repair_unit.
-DEFAULT_FREE_REPAIRS = False
+DEFAULT_FREE_REPAIRS = get_starting_value("scenario_settings.json", "free_repairs")
 
 # ==========================================
 # DEFAULTS & ASSETS
@@ -402,13 +403,13 @@ MENU_BOTTOM_TEXT_HOVER_COLOR = (100, 255, 100)
 DEFAULT_BG_COLOR = (30, 30, 30)
 
 # AI Default Models
-DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
-DEFAULT_CHATGPT_MODEL = "gpt-4o-mini"
-DEFAULT_CLAUDE_MODEL = "claude-haiku-5-5"
-DEFAULT_OLLAMA_MODEL = "llama3"
-DEFAULT_DEEPSEEK_MODEL = "deepseek-chat"
-DEFAULT_KIMI_MODEL = "kimi-k2-0711-preview"
-DEFAULT_OPENROUTER_MODEL = "inclusionai/ling-3.0-tiny:free"
+DEFAULT_GEMINI_MODEL = get_starting_value("settings_config.json", "gemini_model")
+DEFAULT_CHATGPT_MODEL = get_starting_value("settings_config.json", "chatgpt_model")
+DEFAULT_CLAUDE_MODEL = get_starting_value("settings_config.json", "claude_model")
+DEFAULT_OLLAMA_MODEL = get_starting_value("settings_config.json", "ollama_model")
+DEFAULT_DEEPSEEK_MODEL = get_starting_value("settings_config.json", "deepseek_model")
+DEFAULT_KIMI_MODEL = get_starting_value("settings_config.json", "kimi_model")
+DEFAULT_OPENROUTER_MODEL = get_starting_value("settings_config.json", "openrouter_model")
 
 # OpenAI-compatible chat completion endpoints for the hosted providers that
 # don't need a user-editable URL (unlike Ollama, which stores its URL in the
@@ -462,12 +463,13 @@ FUEL_CONVERSION_RATIO = 0.1 # 10 materials -> 1 fuel
 
 USE_SOLOUD = not IS_WEB # SoLoud has no browser build; Pygame Mixer is forced on web
 
-DEFAULT_SFX_VOLUME = 1.0
-DEFAULT_MUSIC_VOLUME = 1.0
-DEFAULT_AUDIO_PITCH = 0.5 # Updated from 0.3 to make 50% the new true default playback speed
+DEFAULT_SFX_VOLUME = get_starting_value("settings_config.json", "sfx_volume")
+DEFAULT_MUSIC_VOLUME = get_starting_value("settings_config.json", "music_volume")
+# Retain this public alias; music and SFX defaults are read separately by settings_schema.
+DEFAULT_AUDIO_PITCH = get_starting_value("settings_config.json", "music_pitch")
 MUSIC_PITCH_TIMELINE_STATIC = "STATIC"
 MUSIC_PITCH_TIMELINE_DYNAMIC = "DYNAMIC"
-DEFAULT_MUSIC_PITCH_TIMELINE = MUSIC_PITCH_TIMELINE_STATIC
+DEFAULT_MUSIC_PITCH_TIMELINE = get_starting_value("settings_config.json", "music_pitch_timeline")
 
 # ==========================================
 # UI BARS
@@ -508,14 +510,14 @@ PROVINCE_UI = {
 # SETTINGS
 # ==========================================
 
-DEFAULT_AI_MODE = "OFF" # LLM AI is opt-in; off until the player picks a provider
-AI_MODE_REENABLE_FALLBACK = "OLLAMA" # Provider selected when re-enabling AI from OFF with no prior mode
+DEFAULT_AI_MODE = get_starting_value("settings_config.json", "ai_mode") # LLM AI is opt-in; off until the player picks a provider
+AI_MODE_REENABLE_FALLBACK = get_starting_value("ai_defaults", "reenable_mode") # Provider selected when re-enabling AI from OFF with no prior mode
 # How many LLM requests a turn's batch has in flight at once, when the player
 # hasn't moved the slider. A hosted provider answers concurrent requests
 # independently, so fanning out is close to free throughput; a local Ollama is
 # one model on one GPU, and four concurrent generations there just thrash it.
-DEFAULT_AI_THREADS = 4
-DEFAULT_AI_THREADS_LOCAL = 1
+DEFAULT_AI_THREADS = get_starting_value("settings_config.json", "ai_threads")
+DEFAULT_AI_THREADS_LOCAL = get_starting_value("ai_defaults", "local_threads")
 
 # Wall-clock ceiling for one turn's LLM work, in seconds. Whatever hasn't come
 # back by then falls back. 0, the default, means no ceiling: every nation that
@@ -534,7 +536,7 @@ DEFAULT_AI_THREADS_LOCAL = 1
 # major powers plus their proposals is a two to three minute turn. Set this to
 # a number of seconds if you would rather have a short turn than a complete
 # one; nothing else in the game reads it.
-DEFAULT_AI_TURN_BUDGET_SECONDS = 0
+DEFAULT_AI_TURN_BUDGET_SECONDS = get_starting_value("settings_config.json", "ai_turn_budget_seconds")
 
 # How that budget is divided between the three phases that spend it, in the
 # order the turn runs them. Each takes this fraction of whatever is *left* when
@@ -551,7 +553,7 @@ AI_BUDGET_SHARE_SUMMITS = 0.2
 AI_BUDGET_SHARE_DIRECTOR = 0.5
 AI_BUDGET_SHARE_RESPONSES = 1.0     # whatever the first two left
 
-TARGET_FPS = 60
+TARGET_FPS = get_starting_value("settings_config.json", "target_fps")
 
 # ==========================================
 # STARTING GAME RULES & TIMING
@@ -574,10 +576,10 @@ FACTION_RESEARCH_BONUS_CAP = 0.50
 RANDOM_SCENARIO_SPAWN_UNITS = True
 RANDOM_SCENARIO_MIN_INFANTRY = 3 # Minimum ground army before buying ships/tanks
 RANDOM_SCENARIO_MIN_FACTORIES = 2 # Minimum factories a country should spawn with
-RANDOM_SCENARIO_DEFAULT_ISLAND_FILTER = 5
+RANDOM_SCENARIO_DEFAULT_ISLAND_FILTER = get_starting_value("random_setup", "island_filter")
 RANDOM_SCENARIO_MAX_ISLAND_FILTER = 50
-RANDOM_SCENARIO_SINGLE_TILE_START = False
-RANDOM_SCENARIO_DEFAULT_RESOURCE_CHANCE = 0.15
+RANDOM_SCENARIO_SINGLE_TILE_START = get_starting_value("random_setup", "single_tile_start")
+RANDOM_SCENARIO_DEFAULT_RESOURCE_CHANCE = get_starting_value("random_setup", "resource_chance")
 
 # Equipment year used by the starting package and older default unit choices.
 DEFAULT_EQUIPMENT_YEAR = 1910
@@ -611,7 +613,7 @@ WARGOAL_PREEMPTIVE = "Preemptive"
 PEACE_SURRENDER = "Surrender"
 PEACE_WHITE_PEACE = "Ceasefire"
 PEACE_DEMAND_CLAIMS = "Demand Claims"
-DEFAULT_TRUCE_TURNS = 12
+DEFAULT_TRUCE_TURNS = get_starting_value("scenario_settings.json", "truce_turns")
 MIN_TRUCE_TURNS = 0
 MAX_TRUCE_TURNS = 12
 TRUCE_TURNS = DEFAULT_TRUCE_TURNS
@@ -979,13 +981,13 @@ APPLY_TILT_TO_STATUS_ICONS = True # Whether the tilt compresses training, disban
 APPLY_TILT_TO_TEXT = True
 
 # Water brightness stuff
-OCEAN_DARK_BLUE = (10, 20, 40)
+OCEAN_DARK_BLUE = tuple(get_starting_value("settings_config.json", "ocean_dark_color"))
 # OCEAN_DARK_BLUE = (5, 10, 20)
-OCEAN_LIGHT_BLUE = (40, 100, 180)
+OCEAN_LIGHT_BLUE = tuple(get_starting_value("settings_config.json", "ocean_light_color"))
 # OCEAN_LIGHT_BLUE = (20, 40, 80)
 
-DEFAULT_OCEAN_DARK_BLUE = (10, 20, 40)
-DEFAULT_OCEAN_LIGHT_BLUE = (40, 100, 180)
+DEFAULT_OCEAN_DARK_BLUE = tuple(get_starting_value("settings_config.json", "ocean_dark_color"))
+DEFAULT_OCEAN_LIGHT_BLUE = tuple(get_starting_value("settings_config.json", "ocean_light_color"))
 
 # ==========================================
 # DEFAULT UNIT STATS (Fallbacks)
@@ -1067,7 +1069,7 @@ AIR_STACK_MIN_ATTACK_EFFICIENCY = 0.25
 # Player-editable in scenario settings (see screens/setup/
 # scenario_settings.py) as "damage_at_zero_health"; this is only the value a
 # reset scenario uses. Active overrides belong to each world's runtime rules.
-DAMAGE_AT_ZERO_HEALTH = 0.0
+DAMAGE_AT_ZERO_HEALTH = get_starting_value("scenario_settings.json", "damage_at_zero_health")
 DEFAULT_DAMAGE_AT_ZERO_HEALTH = DAMAGE_AT_ZERO_HEALTH
 
 # Same idea as DAMAGE_AT_ZERO_HEALTH, but for the defense a wounded unit still
@@ -1076,7 +1078,7 @@ DEFAULT_DAMAGE_AT_ZERO_HEALTH = DAMAGE_AT_ZERO_HEALTH
 #
 # Player-editable in scenario settings as "defense_at_zero_health"; this is
 # the default for a reset scenario. Active overrides belong to each world.
-DEFENSE_AT_ZERO_HEALTH = 0.0
+DEFENSE_AT_ZERO_HEALTH = get_starting_value("scenario_settings.json", "defense_at_zero_health")
 DEFAULT_DEFENSE_AT_ZERO_HEALTH = DEFENSE_AT_ZERO_HEALTH
 
 # Floor on a lane's per-side allowance, so a two-unit ally is never squeezed out
@@ -1557,8 +1559,8 @@ AI_SCORE_CLAIM_LEADERSHIP = 0.70        # six turns in the making; do not sit on
 # which it would accept a ceasefire offered to it: asking costs standing, so it
 # waits a little longer than it would to say yes.
 AI_PEACE_OFFER_THRESHOLD = 0.62
-TURNS_TO_WAIT_BEFORE_WAR = 12 # How many turns from the start of the game the AI waits before declaring wars
-AI_WAR_DECLARATION_CHANCE = 0.50 # 50% chance the AI actually declares war when conditions are met
+TURNS_TO_WAIT_BEFORE_WAR = get_starting_value("scenario_settings.json", "turns_to_wait_before_war") # Turns the AI waits before declaring wars
+AI_WAR_DECLARATION_CHANCE = get_starting_value("scenario_settings.json", "ai_war_declaration_chance") # Chance to declare war when conditions are met
 MIN_TURNS_FOR_CEASEFIRE = 6 # Turns that must occur before the ai allows ceasefires
 
 # ==========================================
@@ -2070,9 +2072,9 @@ UNDELETABLE_ALBUMS = (
 # with whatever was persisted. The DEFAULT_ forms are the shipped values, and
 # are what settings loading falls back to -- reading the mutable name there
 # would hand back the last value loaded instead of the actual default.
-DEFAULT_SAVES_DIR = "saves"
-DEFAULT_TOURNAMENT_SAVES_DIR = "tournament_saves"
-DEFAULT_SCENARIOS_CUSTOM_DIR = "scenarios/map_editor"
+DEFAULT_SAVES_DIR = get_starting_value("settings_config.json", "saves_dir")
+DEFAULT_TOURNAMENT_SAVES_DIR = get_starting_value("settings_config.json", "tournament_saves_dir")
+DEFAULT_SCENARIOS_CUSTOM_DIR = get_starting_value("settings_config.json", "custom_scenarios_dir")
 
 SAVES_DIR = DEFAULT_SAVES_DIR
 TOURNAMENT_SAVES_DIR = DEFAULT_TOURNAMENT_SAVES_DIR
@@ -2094,10 +2096,10 @@ SETTINGS_BG_FILE = "Settings.png"
 # between squares; at runtime it's recolored to match each screen's own
 # bg_color instead of being drawn red.
 CHECKERBOARD_TEMPLATE_FILE = "Checkerboard.png"
-DEFAULT_CHECKERBOARD_SCROLL_SPEED = 16  # pixels/sec
+DEFAULT_CHECKERBOARD_SCROLL_SPEED = get_starting_value("settings_config.json", "checkerboard_scroll_speed")  # pixels/sec
 CHECKERBOARD_SCROLL_SPEED = DEFAULT_CHECKERBOARD_SCROLL_SPEED
 MAX_CHECKERBOARD_SCROLL_SPEED = 100
-DEFAULT_CHECKERBOARD_GRADIENT_STRENGTH = 0.0
+DEFAULT_CHECKERBOARD_GRADIENT_STRENGTH = get_starting_value("settings_config.json", "checkerboard_gradient_strength")
 CHECKERBOARD_GRADIENT_STRENGTH = DEFAULT_CHECKERBOARD_GRADIENT_STRENGTH
 MAX_CHECKERBOARD_GRADIENT_STRENGTH = 2.0
 
@@ -2131,13 +2133,13 @@ SHUFFLE_DISABLED_TRACKS_PATH = "data/json/shuffle_disabled_tracks.json"
 STARTING_SONG_PATH = "data/json/starting_song.json"
 HILDEHRAND_CHOICE_PATH = "data/json/hildehrand_choice.json"
 # Menu portrait gradient: strength 1 matches a standard button; the slider runs 0 to the maximum.
-HILDEHRAND_GRADIENT_DEFAULT_ENABLED = True
-HILDEHRAND_GRADIENT_DEFAULT_STRENGTH = 1.0
+HILDEHRAND_GRADIENT_DEFAULT_ENABLED = get_starting_value("hildehrand_choice.json", "gradient")
+HILDEHRAND_GRADIENT_DEFAULT_STRENGTH = get_starting_value("hildehrand_choice.json", "gradient_strength")
 HILDEHRAND_GRADIENT_MAX_STRENGTH = 3.0
 # Stepped bands instead of fine smooth bands.
-HILDEHRAND_GRADIENT_DEFAULT_STEPPED = False
+HILDEHRAND_GRADIENT_DEFAULT_STEPPED = get_starting_value("hildehrand_choice.json", "gradient_stepped")
 # Stepped style: how many color bands the portrait gradient has.
-HILDEHRAND_GRADIENT_DEFAULT_BANDS = 10
+HILDEHRAND_GRADIENT_DEFAULT_BANDS = get_starting_value("hildehrand_choice.json", "gradient_bands")
 HILDEHRAND_GRADIENT_MIN_BANDS = 2
 HILDEHRAND_GRADIENT_MAX_BANDS = 64
 HISTORICAL_LEADERS_PATH = "data/json/historical_leaders.json"
@@ -2157,10 +2159,8 @@ HISTORY_GZIP_LEVEL = 1
 # does not redo identical work for every turn it has ever recorded.
 HISTORY_SCRUBBED_KEY = "_scrubbed"
 
-# Mouse controls are a per-button action map rather than three hard-coded
-# gestures.  The defaults are the tutorial's original HOI-style layout.  Keep
-# the names/data here so the settings screen, camera and map interactions all
-# share one definition.
+# Mouse controls are a per-button action map. The defaults come from
+# starting_defaults.json; names and labels here describe the available actions.
 MOUSE_BUTTONS = ((1, "left", "Left"), (2, "middle", "Middle"),
                  (3, "right", "Right"))
 MOUSE_CONTROL_ACTIONS = (
@@ -2169,26 +2169,12 @@ MOUSE_CONTROL_ACTIONS = (
     ("pan_map", "Pan the map", "Hold and drag to pan in every map workspace."),
     ("issue_orders", "Give move orders", "Click a destination for selected units."),
 )
-DEFAULT_MOUSE_BUTTON_ACTIONS = {
-    "left": {
-        "select_units": True, "box_select_units": True,
-        "pan_map": False, "exclude_orders": False, "issue_orders": False,
-    },
-    "middle": {
-        "select_units": False, "box_select_units": False,
-        "pan_map": True, "exclude_orders": False, "issue_orders": False,
-    },
-    "right": {
-        "select_units": False, "box_select_units": False,
-        "pan_map": True, "exclude_orders": True, "issue_orders": True,
-    },
-}
+DEFAULT_MOUSE_BUTTON_ACTIONS = get_starting_value("settings_config.json", "mouse_button_actions")
 
 
 def default_mouse_button_actions():
     """Return an independent copy suitable for a controller or save default."""
-    return {button: dict(actions)
-            for button, actions in DEFAULT_MOUSE_BUTTON_ACTIONS.items()}
+    return get_starting_value("settings_config.json", "mouse_button_actions")
 
 
 def normalize_mouse_button_actions(value):

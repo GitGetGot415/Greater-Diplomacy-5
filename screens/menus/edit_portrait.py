@@ -4,6 +4,7 @@ import pygame
 
 import data.constants as c
 from data import queries
+from data.io import starting_defaults
 from ui.background_styles import PORTRAIT_EDITOR_STYLES
 from ui.dialogs import pickers
 from ui.navigation.screen import Screen
@@ -64,12 +65,13 @@ class Edit_Portrait(Screen):
 
     def reset_settings(self):
         menu = self.menu
-        menu.hildehrand_gradient = c.HILDEHRAND_GRADIENT_DEFAULT_ENABLED
-        menu.hildehrand_gradient_strength = c.HILDEHRAND_GRADIENT_DEFAULT_STRENGTH
-        menu.hildehrand_gradient_stepped = c.HILDEHRAND_GRADIENT_DEFAULT_STEPPED
-        menu.hildehrand_gradient_bands = c.HILDEHRAND_GRADIENT_DEFAULT_BANDS
-        menu.hildehrand_gradient_dithering = queries.DEFAULT_PORTRAIT_DITHERING
-        menu.set_hildehrand_choice(queries.DEFAULT_PORTRAIT)
+        defaults = starting_defaults.get_starting_default("hildehrand_choice.json")
+        menu.hildehrand_gradient = defaults["gradient"]
+        menu.hildehrand_gradient_strength = defaults["gradient_strength"]
+        menu.hildehrand_gradient_stepped = defaults["gradient_stepped"]
+        menu.hildehrand_gradient_bands = defaults["gradient_bands"]
+        menu.hildehrand_gradient_dithering = defaults["gradient_dithering"]
+        menu.set_hildehrand_choice(defaults["variant"])
         self._slider_changed = False
         self.refresh_ui()
 

@@ -7,10 +7,10 @@ there instead of moving here too.
 """
 import data.constants as c
 from data import queries
-from data.io import settings_schema
+from data.io import settings_schema, starting_defaults
 
 
-def _setting(key, default=""):
+def _setting(key, default=None):
     """Reads one live setting. All the getters below share this body."""
     return settings_schema.read_setting(queries.get_settings(), key, default)
 
@@ -40,7 +40,7 @@ def get_ai_mode():
 
 def get_ai_immersion_level():
     """Reads the settings config to see which immersion level is active."""
-    return _setting("ai_immersion_level", "LITE")
+    return _setting("ai_immersion_level")
 
 # --- MODEL / URL GETTERS ---
 
@@ -69,4 +69,4 @@ def get_ollama_model():
 def get_ollama_url():
     """Reads the URL from the settings. Defaults to localhost if empty."""
     url = _setting("ollama_base_url").strip()
-    return url if url else "http://localhost:11434/api/chat"
+    return url if url else starting_defaults.get_starting_value("ai_defaults", "ollama_url")

@@ -3,7 +3,7 @@
 This module must remain safe to import without game or packaging engines.
 """
 
-from data.io.starting_defaults import STARTING_DEFAULTS_PATH, read_starting_defaults
+from data.io.starting_defaults import PREFERENCE_FILES, STARTING_DEFAULTS_PATH, read_starting_defaults
 
 SOURCE_PACKAGES = ("data", "ui", "screens", "map_logic")
 SOURCE_FILES = ("main.py", "mod_loader.py", "beepbox_audio.py")
@@ -53,7 +53,8 @@ RUNTIME_PACKAGES = (
 NATIVE_PACKAGES = ("dragoman", "cryptography", "quickjs", "py_mini_racer")
 MAC_INCLUDES = tuple(dict.fromkeys(("soloud", "pygame", "tkinter") + HIDDEN_IMPORTS))
 NATIVE_BINARIES = ("win64-libsoloud.dll", "mac64-libsoloud.dylib", "lin64-libsoloud.so")
-RUNTIME_JSON_DEFAULTS = read_starting_defaults()
+RUNTIME_JSON_DEFAULTS = {name: value for name, value in read_starting_defaults().items()
+                        if name in PREFERENCE_FILES}
 
 
 def windows_arguments():

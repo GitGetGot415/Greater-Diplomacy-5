@@ -1,6 +1,7 @@
 import pygame
 from math import sqrt
 import data.constants as c
+from data.io import keybind_io
 from ui.navigation.screen import Screen, resolve_keybind
 from ui.widgets.ui_elements import Button, process_text_input, draw_text_box
 from ui.rendering.font_manager import fonts
@@ -1763,7 +1764,7 @@ class Orders_Screen(Screen):
                 if event.key == pygame.K_RETURN:
                     self.save_unit_name(self.renaming_unit_actual_index,
                                         self.renaming_unit_province)
-                elif event.key == resolve_keybind(self, "BACK", pygame.K_ESCAPE):
+                elif event.key == resolve_keybind(self, "BACK", keybind_io.default_keybind("BACK")):
                     self.renaming_unit_index = None
                     self.renaming_unit_province = None
                     self.renaming_unit_actual_index = None

@@ -6,6 +6,7 @@ from contextlib import contextmanager
 import pygame
 import data.constants as c
 from data import queries
+from data.io import keybind_io
 from ui.navigation.screen import synthesize_keybind_mouse_events
 from ui.rendering.font_manager import fonts
 from ui.navigation import modal_stack
@@ -29,7 +30,7 @@ def _lighten(color, amount=40):
 
 def _back_key():
     """The rebound BACK key, so these dialogs dismiss on it same as everything else."""
-    return queries.get_keybind("BACK", pygame.K_ESCAPE)
+    return queries.get_keybind("BACK", keybind_io.default_keybind("BACK"))
 
 
 def _hide_tk_chain(tk_widget):

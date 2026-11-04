@@ -1,4 +1,4 @@
-"""Define setting names, defaults, and current-value conversions in one table.
+"""Define setting names and current-value conversions in one table.
 
 Writers use current names. Readers accept older names.
 Current keys take priority when both names exist.
@@ -14,21 +14,24 @@ from dataclasses import dataclass
 import math
 
 import data.constants as c
+from data.io import starting_defaults
 from data import migrations
 # Preserve older imports. The rules have one owner in data.migrations.
 from data.migrations import migrate_setting_names, normalize_ai_mode
 
 #: name    -- the attribute name on Controller, and the key in the values dict
 #: json_key-- what it is called on disk
-#: default -- a zero-argument callable; several defaults live on data.constants
-#:            and are overwritten at runtime, so they must be read when asked
-#:            for rather than captured at import
+#: default -- a zero-argument callable reading starting_defaults.json;
+#:            live runtime settings never replace the reset or load defaults
 #: coerce  -- applied to whatever comes off disk (JSON has no tuples)
 #: legacy  -- older key names still found in players' settings files
 SettingField = namedtuple("SettingField", "name json_key default coerce legacy")
 
 
-def _field(name, json_key, default, coerce=None):
+def _field(name, json_key, coerce=None):
+    def default():
+        value = starting_defaults.get_starting_value("settings_config.json", json_key)
+        return coerce(value) if coerce else value
     return SettingField(name, json_key, default, coerce, migrations.setting_keys(json_key)[1:])
 
 
@@ -55,64 +58,54 @@ def _coerce_checkerboard_speed(value):
 
 # Keep positional compatibility for older callers. JSON settings use named keys.
 SETTINGS_FIELDS = (
-    _field("sfx_volume", "sfx_volume", lambda: c.DEFAULT_SFX_VOLUME),
-    _field("music_volume", "music_volume", lambda: c.DEFAULT_MUSIC_VOLUME),
-    _field("num_players", "num_players", lambda: 1),
-    _field("ai_mode", "ai_mode", lambda: c.DEFAULT_AI_MODE, coerce=normalize_ai_mode),
-    _field("gemini_api_key", "gemini_api_key", lambda: ""),
-    _field("chatgpt_api_key", "chatgpt_api_key", lambda: ""),
-    _field("claude_api_key", "claude_api_key", lambda: ""),
-    _field("ollama_base_url", "ollama_base_url", lambda: ""),
-    _field("gemini_model", "gemini_model", lambda: c.DEFAULT_GEMINI_MODEL),
-    _field("chatgpt_model", "chatgpt_model", lambda: c.DEFAULT_CHATGPT_MODEL),
-    _field("claude_model", "claude_model", lambda: c.DEFAULT_CLAUDE_MODEL),
-    _field("ollama_model", "ollama_model", lambda: c.DEFAULT_OLLAMA_MODEL),
-    _field("ai_immersion_level", "ai_immersion_level", lambda: "LITE"),
-    _field("music_pitch", "music_pitch", lambda: c.DEFAULT_AUDIO_PITCH),
-    _field("sfx_pitch", "sfx_pitch", lambda: c.DEFAULT_AUDIO_PITCH),
-    _field("target_fps", "target_fps", lambda: c.TARGET_FPS),
-    _field("ai_threads", "ai_threads", lambda: c.DEFAULT_AI_THREADS),
-    _field("show_fps", "show_fps", lambda: c.SHOW_FPS),
-    _field("show_intro_popup", "show_intro_popup", lambda: True),
-    _field("saves_dir", "saves_dir", lambda: c.DEFAULT_SAVES_DIR),
-    _field("custom_scenarios_dir", "custom_scenarios_dir",
-           lambda: c.DEFAULT_SCENARIOS_CUSTOM_DIR),
-    _field("ocean_light_color", "ocean_light_color",
-           lambda: c.DEFAULT_OCEAN_LIGHT_BLUE, coerce=tuple),
-    _field("ocean_dark_color", "ocean_dark_color",
-           lambda: c.DEFAULT_OCEAN_DARK_BLUE, coerce=tuple),
-    _field("tournament_saves_dir", "tournament_saves_dir",
-           lambda: c.DEFAULT_TOURNAMENT_SAVES_DIR),
-    _field("checkerboard_water", "checkerboard_water", lambda: c.CHECKERBOARD_WATER),
-    _field("deepseek_api_key", "deepseek_api_key", lambda: ""),
-    _field("kimi_api_key", "kimi_api_key", lambda: ""),
-    _field("deepseek_model", "deepseek_model", lambda: c.DEFAULT_DEEPSEEK_MODEL),
-    _field("kimi_model", "kimi_model", lambda: c.DEFAULT_KIMI_MODEL),
-    _field("ai_turn_budget_seconds", "ai_turn_budget_seconds",
-           lambda: c.DEFAULT_AI_TURN_BUDGET_SECONDS),
-    _field("unit_art_style", "unit_art_style", lambda: c.DEFAULT_UNIT_ART_STYLE),
-    _field("map_navigation_mode", "map_navigation_mode", lambda: c.DEFAULT_MAP_NAVIGATION_MODE),
+    _field("sfx_volume", "sfx_volume"),
+    _field("music_volume", "music_volume"),
+    _field("num_players", "num_players"),
+    _field("ai_mode", "ai_mode", coerce=normalize_ai_mode),
+    _field("gemini_api_key", "gemini_api_key"),
+    _field("chatgpt_api_key", "chatgpt_api_key"),
+    _field("claude_api_key", "claude_api_key"),
+    _field("ollama_base_url", "ollama_base_url"),
+    _field("gemini_model", "gemini_model"),
+    _field("chatgpt_model", "chatgpt_model"),
+    _field("claude_model", "claude_model"),
+    _field("ollama_model", "ollama_model"),
+    _field("ai_immersion_level", "ai_immersion_level"),
+    _field("music_pitch", "music_pitch"),
+    _field("sfx_pitch", "sfx_pitch"),
+    _field("target_fps", "target_fps"),
+    _field("ai_threads", "ai_threads"),
+    _field("show_fps", "show_fps"),
+    _field("show_intro_popup", "show_intro_popup"),
+    _field("saves_dir", "saves_dir"),
+    _field("custom_scenarios_dir", "custom_scenarios_dir"),
+    _field("ocean_light_color", "ocean_light_color", coerce=tuple),
+    _field("ocean_dark_color", "ocean_dark_color", coerce=tuple),
+    _field("tournament_saves_dir", "tournament_saves_dir"),
+    _field("checkerboard_water", "checkerboard_water"),
+    _field("deepseek_api_key", "deepseek_api_key"),
+    _field("kimi_api_key", "kimi_api_key"),
+    _field("deepseek_model", "deepseek_model"),
+    _field("kimi_model", "kimi_model"),
+    _field("ai_turn_budget_seconds", "ai_turn_budget_seconds"),
+    _field("unit_art_style", "unit_art_style"),
+    _field("map_navigation_mode", "map_navigation_mode"),
     # Per-keybind "change screen with this keybind" toggle next to the Orders/
     # Production rows on the Keybinds screen -- independent of
     # map_navigation_mode, see screens.game.map_input.handle_view_mode_keybind.
-    # On by default, and Keybinds' "Reset Keybinds" restores that.
-    _field("orders_key_changes_screen", "orders_key_changes_screen", lambda: True),
-    _field("economy_key_changes_screen", "economy_key_changes_screen", lambda: True),
-    _field("battle_display_mode", "battle_display_mode", lambda: c.DEFAULT_BATTLE_DISPLAY_MODE),
-    _field("mouse_button_actions", "mouse_button_actions",
-           c.default_mouse_button_actions, coerce=c.normalize_mouse_button_actions),
-    _field("army_group_animations", "army_group_animations",
-           lambda: c.DEFAULT_ARMY_GROUP_ANIMATIONS),
+    # Keybinds' "Reset Keybinds" restores their configured starting values.
+    _field("orders_key_changes_screen", "orders_key_changes_screen"),
+    _field("economy_key_changes_screen", "economy_key_changes_screen"),
+    _field("battle_display_mode", "battle_display_mode"),
+    _field("mouse_button_actions", "mouse_button_actions", coerce=c.normalize_mouse_button_actions),
+    _field("army_group_animations", "army_group_animations"),
     _field("music_pitch_timeline", "music_pitch_timeline",
-           lambda: c.DEFAULT_MUSIC_PITCH_TIMELINE,
            coerce=_coerce_music_pitch_timeline),
-    _field("show_unclaimed", "show_unclaimed", lambda: c.DEFAULT_SHOW_UNCLAIMED),
-    _field("openrouter_api_key", "openrouter_api_key", lambda: ""),
-    _field("openrouter_model", "openrouter_model", lambda: c.DEFAULT_OPENROUTER_MODEL),
-    _field("checkerboard_gradient_strength", "checkerboard_gradient_strength",
-           lambda: c.DEFAULT_CHECKERBOARD_GRADIENT_STRENGTH, coerce=_coerce_checkerboard_gradient),
-    _field("checkerboard_scroll_speed", "checkerboard_scroll_speed",
-           lambda: c.DEFAULT_CHECKERBOARD_SCROLL_SPEED, coerce=_coerce_checkerboard_speed),
+    _field("show_unclaimed", "show_unclaimed"),
+    _field("openrouter_api_key", "openrouter_api_key"),
+    _field("openrouter_model", "openrouter_model"),
+    _field("checkerboard_gradient_strength", "checkerboard_gradient_strength", coerce=_coerce_checkerboard_gradient),
+    _field("checkerboard_scroll_speed", "checkerboard_scroll_speed", coerce=_coerce_checkerboard_speed),
 )
 
 SETTINGS_ORDER = tuple(field.name for field in SETTINGS_FIELDS)

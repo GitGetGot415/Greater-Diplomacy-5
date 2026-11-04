@@ -85,8 +85,8 @@ def get_truce_turns(scenario_settings=None):
 
     Calls that do not have a map's scenario settings yet retain the live
     constant for compatibility with older diplomacy helpers and tests. Once a
-    scenario settings dictionary is available, a missing field means the
-    historical 12-turn default.
+    scenario settings dictionary is available, a missing field uses the
+    configured starting default.
     """
     default = c.TRUCE_TURNS if scenario_settings is None else c.DEFAULT_TRUCE_TURNS
     raw = (scenario_settings or {}).get("truce_turns", default)
@@ -148,7 +148,7 @@ def get_days_per_turn(scenario_settings):
     if not scenario_settings:
         return c.DEFAULT_DAYS_PER_TURN
         
-    val = scenario_settings.get("days_per_turn", "Default")
+    val = scenario_settings.get("days_per_turn", starting_defaults.get_starting_value("scenario_settings.json", "days_per_turn"))
     if val == "Default":
         return scenario_settings.get("base_days_per_turn", c.DEFAULT_DAYS_PER_TURN)
     try:
@@ -295,6 +295,11 @@ def get_keybind(action, default):
     Reads the persisted keybind rather than any particular screen's in-memory
     controller, since most screens never get a controller reference wired up.
     """
+    # Older preference files may omit an action. Use the distribution binding.
+    names = starting_defaults.get_starting_value("settings_config.json", "keybinds")
+    if action in names:
+        name = names[action]
+        default = pygame.key.key_code(name) if name is not None else None
     keybinds = queries.get_settings().get("keybinds", {})
     if action not in keybinds:
         return default
@@ -318,13 +323,13 @@ def get_keybind_changes_screen(action):
     its view mode implies -- the small toggle beside that row on the Keybinds
     screen. Independent of Settings' Classic/Preemptive map-navigation toggle
     (see screens.game.map_input.navigate_view_mode / handle_view_mode_keybind).
-    Reads straight from saved settings, same as get_keybind, since most
-    screens never get a controller reference wired up. Defaults on.
+    Reads saved settings, same as get_keybind, since most screens have no
+    controller reference. Missing values use the configured starting default.
     """
     key = _KEYBIND_CHANGES_SCREEN_KEYS.get(action)
     if key is None:
         return False
-    return bool(queries.get_settings().get(key, True))
+    return bool(settings_schema.read_setting(queries.get_settings(), key))
 
 
 def _game_library(name, context):
@@ -439,8 +444,8 @@ def get_starting_song():
 
 
 #: Fallback portrait -- the game's original default look.
-DEFAULT_PORTRAIT = "Hildehrand/F/4.png"
-DEFAULT_PORTRAIT_DITHERING = False
+DEFAULT_PORTRAIT = starting_defaults.get_starting_value("hildehrand_choice.json", "variant")
+DEFAULT_PORTRAIT_DITHERING = starting_defaults.get_starting_value("hildehrand_choice.json", "gradient_dithering")
 
 #: Extensions accepted both when scanning assets/characters/ and when
 #: importing a new custom portrait. Broader than the curated set's plain
@@ -492,37 +497,40 @@ def discover_character_images():
 
 def get_hildehrand_choice():
     """Returns the remembered menu portrait, as a path relative to
-    assets/characters/ (e.g. "Hildehrand/F/2.png"), defaulting to Hildehrand F/2
-    if unset or if the remembered file no longer exists."""
+    assets/characters/. Use the distribution default if unset or if the
+    remembered file no longer exists."""
     data = _load_cached_json("hildehrand_choice")
     variant = data.get("variant") if isinstance(data, dict) else None
-    return variant if variant in discover_character_images() else DEFAULT_PORTRAIT
+    return variant if variant in discover_character_images() else starting_defaults.get_starting_value("hildehrand_choice.json", "variant")
 
 
 def get_hildehrand_gradient():
     """Returns (enabled, strength, stepped, bands) for the menu portrait's button gradient.
-    Use the constants for values that are not saved."""
+    Missing saved values use starting_defaults.json."""
     data = _load_cached_json("hildehrand_choice")
     if not isinstance(data, dict):
         data = {}
-    strength = data.get("gradient_strength", c.HILDEHRAND_GRADIENT_DEFAULT_STRENGTH)
+    defaults = starting_defaults.get_starting_default("hildehrand_choice.json")
+    strength = data.get("gradient_strength", defaults["gradient_strength"])
     strength = max(0.0, min(float(strength), c.HILDEHRAND_GRADIENT_MAX_STRENGTH))
-    stepped = bool(data.get("gradient_stepped", c.HILDEHRAND_GRADIENT_DEFAULT_STEPPED))
-    bands = int(data.get("gradient_bands", c.HILDEHRAND_GRADIENT_DEFAULT_BANDS))
+    stepped = bool(data.get("gradient_stepped", defaults["gradient_stepped"]))
+    bands = int(data.get("gradient_bands", defaults["gradient_bands"]))
     bands = max(c.HILDEHRAND_GRADIENT_MIN_BANDS, min(bands, c.HILDEHRAND_GRADIENT_MAX_BANDS))
-    return bool(data.get("gradient", c.HILDEHRAND_GRADIENT_DEFAULT_ENABLED)), strength, stepped, bands
+    return bool(data.get("gradient", defaults["gradient"])), strength, stepped, bands
 
 
 def get_hildehrand_dithering():
     """Read portrait dithering, or use the default when it is not saved."""
     data = _load_cached_json("hildehrand_choice")
-    return (bool(data.get("gradient_dithering", DEFAULT_PORTRAIT_DITHERING))
-            if isinstance(data, dict) else DEFAULT_PORTRAIT_DITHERING)
+    default = starting_defaults.get_starting_value("hildehrand_choice.json", "gradient_dithering")
+    return bool(data.get("gradient_dithering", default)) if isinstance(data, dict) else default
 
 
 def save_hildehrand_portrait(variant, gradient, gradient_strength, gradient_stepped,
-                             gradient_bands, *, gradient_dithering=DEFAULT_PORTRAIT_DITHERING):
+                             gradient_bands, *, gradient_dithering=None):
     """Remembers the menu portrait and its gradient: on or off, strength, and stepped or smooth, and band count."""
+    if gradient_dithering is None:
+        gradient_dithering = starting_defaults.get_starting_value("hildehrand_choice.json", "gradient_dithering")
     save_cached_json("hildehrand_choice", {"variant": variant, "gradient": gradient,
                                            "gradient_strength": gradient_strength,
                                            "gradient_stepped": gradient_stepped,

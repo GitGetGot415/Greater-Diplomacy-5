@@ -117,14 +117,13 @@ class ControllerConstructionTests(unittest.TestCase):
 
     def test_clear_orders_keybind_is_available_by_default(self):
         from screens.menus.keybinds import (
-            KEYBIND_ACTIONS,
             MAP_PANNING_KEYBIND_ACTIONS,
             MOUSE_CLICK_KEYBIND_ACTIONS,
             default_keybinds,
             keybind_conflicts,
         )
 
-        defaults = {action: default for action, _label, default in KEYBIND_ACTIONS}
+        defaults = default_keybinds()
         self.assertEqual(defaults["CLEAR_ORDERS"], pygame.K_DELETE)
         self.assertIn("CLEAR_ORDERS", self.controller.keybinds)
         self.assertEqual(default_keybinds()["PAN_LEFT"], pygame.K_LEFT)
@@ -134,9 +133,9 @@ class ControllerConstructionTests(unittest.TestCase):
         self.assertEqual(len(MAP_PANNING_KEYBIND_ACTIONS), 4)
         self.assertEqual(len(MOUSE_CLICK_KEYBIND_ACTIONS), 3)
         self.assertTrue(all(default_keybinds()[action] is None
-                            for action, _label, _default in MOUSE_CLICK_KEYBIND_ACTIONS))
+                            for action, _label in MOUSE_CLICK_KEYBIND_ACTIONS))
         self.assertTrue(all(action in self.controller.keybinds
-                            for action, _label, _default in MAP_PANNING_KEYBIND_ACTIONS))
+                            for action, _label in MAP_PANNING_KEYBIND_ACTIONS))
 
         duplicate = default_keybinds()
         duplicate["PAN_LEFT"] = duplicate["ORDERS"]

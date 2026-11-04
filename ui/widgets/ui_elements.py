@@ -16,6 +16,7 @@ except Exception:
     pass
 import data.constants as c
 from data import queries
+from data.io import starting_defaults
 from ui.background_styles import SLIDER_STYLES, TEXT_INPUT_STYLES
 from ui.rendering.font_manager import fonts
 from ui.rendering import symbol_loader
@@ -56,8 +57,8 @@ MUSIC_UI_SOUND_PATHS = {
 SOUND_VOLUMES_PATH = "assets/sounds/volumes.json"
 sound_volume_multipliers = {}
 sound_start_offsets = {}
-global_sfx_volume = 0.5
-global_sfx_pitch = 0.5
+global_sfx_volume = starting_defaults.get_starting_value("settings_config.json", "sfx_volume")
+global_sfx_pitch = starting_defaults.get_starting_value("settings_config.json", "sfx_pitch")
 
 # pygame.mixer has no playback-rate control.  UI sounds are short, so keeping a
 # few resampled PCM copies gives the web build the same pitch response as the

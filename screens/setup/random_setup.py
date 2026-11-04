@@ -5,6 +5,7 @@ import data.constants as c
 from ui.bars import ui_bars
 from ui.widgets.ui_elements import Button, Slider, make_back_button, make_toggle_button
 from data import queries
+from data.io import starting_defaults
 
 from screens.setup.scenario_settings import Scenario_Settings
 
@@ -19,18 +20,19 @@ class Random_Setup(Screen):
 
     def __init__(self):
         # Track if we are doing a procedural world
-        self.procedural_world = False
+        self.procedural_world = starting_defaults.get_starting_value("random_setup", "procedural_world")
         
         # Track the active procedural algorithm
         self.procedural_types = ["Grid", "Voronoi", "Cellular Automata"]
-        self.proc_type_index = 0
+        self.proc_type_index = self.procedural_types.index(
+            starting_defaults.get_starting_value("random_setup", "procedural_type"))
 
         super().__init__()
         self.bg_color = (20, 50, 20)
         
         # Load maps and calculate max countries
         self.available_maps = os.listdir(c.BASE_MAPS_DIR) if os.path.exists(c.BASE_MAPS_DIR) else []
-        self.map_index = 0
+        self.map_index = starting_defaults.get_starting_value("random_setup", "map_index")
         
         self.max_countries = self.calculate_max_countries()
         
@@ -47,24 +49,25 @@ class Random_Setup(Screen):
         return max(1, playable) # Fallback to 1
 
     def reset_to_defaults(self):
-        """Sets default year to START_YEAR and countries to ~10% of the map."""
-        self.current_year = c.START_YEAR
+        """Restore configured starting values within the map and timeline limits."""
+        defaults = starting_defaults.get_starting_default("random_setup")
+        self.current_year = max(c.START_YEAR, min(c.END_YEAR, defaults["start_year"]))
         # Dynamically calculate the slider range
         self.year_slider_val = (self.current_year - c.START_YEAR) / (c.END_YEAR - c.START_YEAR)
         
-        self.current_countries = min(20, self.max_countries)
+        self.current_countries = max(1, min(defaults["num_countries"], self.max_countries))
         self.country_slider_val = self.current_countries / self.max_countries
         
-        self.current_island_size = c.RANDOM_SCENARIO_DEFAULT_ISLAND_FILTER
+        self.current_island_size = max(1, min(defaults["island_filter"], c.RANDOM_SCENARIO_MAX_ISLAND_FILTER))
         max_island = c.RANDOM_SCENARIO_MAX_ISLAND_FILTER
         self.island_size_slider_val = (self.current_island_size - 1) / (max_island - 1)
         
-        self.single_tile_start = c.RANDOM_SCENARIO_SINGLE_TILE_START
-        self.resource_chance = c.RANDOM_SCENARIO_DEFAULT_RESOURCE_CHANCE
+        self.single_tile_start = defaults["single_tile_start"]
+        self.resource_chance = max(0.0, min(defaults["resource_chance"], 1.0))
         self.resource_slider_val = self.resource_chance
         
-        self.base_days_per_turn = c.DEFAULT_DAYS_PER_TURN
-        self.map_index = 0
+        self.base_days_per_turn = defaults["base_days_per_turn"]
+        self.map_index = max(0, min(defaults["map_index"], len(self.available_maps) - 1))
 
     def toggle_procedural_type(self):
         self.proc_type_index = (self.proc_type_index + 1) % len(self.procedural_types)

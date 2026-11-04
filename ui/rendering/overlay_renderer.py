@@ -1125,7 +1125,7 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
                 is_vis = False
                 is_partial = True
             else:
-                fog_strength = map_screen.scenario_settings.get("fog_of_war_strength", "normal")
+                fog_strength = map_screen.scenario_settings.get("fog_of_war_strength", c.DEFAULT_FOG_OF_WAR_STRENGTH)
                 if fog_strength == "lite":
                     is_vis = False
                     is_partial = True

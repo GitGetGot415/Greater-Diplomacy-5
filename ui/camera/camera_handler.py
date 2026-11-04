@@ -1,6 +1,7 @@
 import pygame
 import data.constants as c
 from data import queries
+from data.io import keybind_io
 
 # Screen pixels traversed by the initial arrow-key press.  Held keys use the
 # rate below instead of pygame's delayed key-repeat events, so camera movement
@@ -9,11 +10,11 @@ CAMERA_KEYBOARD_PAN_PIXELS = 80
 CAMERA_KEYBOARD_PAN_PIXELS_PER_SECOND = 1200
 
 
-PAN_KEYBIND_DEFAULTS = {
-    "left": ("PAN_LEFT", pygame.K_LEFT),
-    "right": ("PAN_RIGHT", pygame.K_RIGHT),
-    "up": ("PAN_UP", pygame.K_UP),
-    "down": ("PAN_DOWN", pygame.K_DOWN),
+PAN_KEYBIND_ACTIONS = {
+    "left": "PAN_LEFT",
+    "right": "PAN_RIGHT",
+    "up": "PAN_UP",
+    "down": "PAN_DOWN",
 }
 
 class MapCamera:
@@ -94,8 +95,8 @@ class MapCamera:
     @staticmethod
     def _configured_pan_keys():
         """Resolve all four persisted map-pan bindings at one input boundary."""
-        return {direction: queries.get_keybind(action, default)
-                for direction, (action, default) in PAN_KEYBIND_DEFAULTS.items()}
+        return {direction: queries.get_keybind(action, keybind_io.default_keybind(action))
+                for direction, action in PAN_KEYBIND_ACTIONS.items()}
 
     def _pan_held_navigation_keys(self):
         """Continue navigation while a configured map-pan key is held.

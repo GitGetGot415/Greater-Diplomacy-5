@@ -4,6 +4,7 @@ import math
 import pygame
 import data.constants as c
 from data import queries
+from data.io import keybind_io
 from data.platform import sync_persisted_dir
 from ui.bars import ui_bars
 
@@ -102,7 +103,7 @@ def dispatch_global_keys(state, event):
     typing_in_ui_bar = keyboard_input_is_captured(state)
     if event.type != pygame.KEYDOWN:
         return
-    back_key = resolve_keybind(state, "BACK", pygame.K_ESCAPE)
+    back_key = resolve_keybind(state, "BACK", keybind_io.default_keybind("BACK"))
     # Back remains available while editing so a field or screen can offer its
     # normal cancel behavior; the remaining rebindable actions stay reserved
     # for the text bar.
@@ -110,13 +111,13 @@ def dispatch_global_keys(state, event):
         return
     if event.key == back_key:
         state.handle_back_key()
-    elif event.key == resolve_keybind(state, "ORDERS", pygame.K_q):
+    elif event.key == resolve_keybind(state, "ORDERS", keybind_io.default_keybind("ORDERS")):
         if hasattr(state, "handle_orders_key"):
             state.handle_orders_key()
-    elif event.key == resolve_keybind(state, "ECONOMY", pygame.K_w):
+    elif event.key == resolve_keybind(state, "ECONOMY", keybind_io.default_keybind("ECONOMY")):
         if hasattr(state, "handle_economy_key"):
             state.handle_economy_key()
-    elif event.key == resolve_keybind(state, "CLEAR_ORDERS", pygame.K_DELETE):
+    elif event.key == resolve_keybind(state, "CLEAR_ORDERS", keybind_io.default_keybind("CLEAR_ORDERS")):
         if hasattr(state, "handle_clear_orders_key"):
             state.handle_clear_orders_key()
 

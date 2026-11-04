@@ -388,28 +388,35 @@ See data/migrations/MIGRATIONS.md for libraries without metadata and invalid exp
 SETTINGS LOADING
 ================
 
-data/json/starting_defaults.json contains the preferences used for game distribution and first use.
-Its sections use preference filenames. They cover scenario settings, general settings, albums, shuffle exclusions, the starting song, and portrait selection.
+data/json/starting_defaults.json is the one source of truth for preference and setup defaults.
+Its six preference sections use filenames. They cover scenario settings, general settings, albums, shuffle exclusions, the starting song, and portrait selection.
+random_setup holds random scenario setup defaults. ai_defaults holds provider fallback settings.
+Startup, missing-setting fallbacks, reset controls, and builds read this file.
+Python constants expose configured values for existing callers; they do not define separate defaults.
 data/io/starting_defaults.py reads this file. Each caller receives a separate copy.
-data/io/settings_schema.py owns current JSON keys, compatibility defaults, aliases, coercion, and serialization.
+data/io/settings_schema.py owns current JSON keys, aliases, coercion, and serialization. It reads missing-setting defaults from starting_defaults.json.
 keybind_io.load_settings_result returns named keybinds and normalized values.
 The controller reads that result directly.
 load_settings retains its positional result for older callers.
 The positional order is an interface contract. Settings files use JSON keys.
 
 To change distribution defaults:
-1. Edit data/json/starting_defaults.json with a text editor. Keep all six sections.
+1. Edit data/json/starting_defaults.json with a text editor. Keep all sections and setting keys.
 2. Set scenario rules in scenario_settings.json and general preferences in settings_config.json within that file.
 3. Set active_albums.json to a list of album folder names. An empty list selects no albums.
 4. Set starting_song.json to {"track": "assets/music/Album/Song.ogg"}, using an existing song path.
-5. Use {"track": null} for no fixed starting song. Restart the game after changes.
+5. Use {"track": null} for no fixed starting song.
+6. Set the portrait's variant, gradient, gradient_strength, gradient_stepped, gradient_bands, and gradient_dithering in hildehrand_choice.json.
+7. Set random setup choices in random_setup and provider fallback settings in ai_defaults. Restart the game after changes.
 
 Builds copy these values into their preference files. They exclude the developer's local preferences.
 The game uses these defaults when a preference file is missing.
-Existing preference files and saved games keep their own values.
+Existing preference files and saved games keep their saved values. Missing preference fields use the configured defaults.
 For an installed copy, use game controls or edit the matching preference file to change existing choices.
-Scenario Settings uses this file for Reset to Defaults. This reset preserves the separate editors' settings.
-Keep keybinds in settings_config.json. An empty object retains the standard key assignments.
+Reset controls use this file for the settings each control already covers. The general Settings reset does not clear credentials or reset audio.
+The Scenario Settings reset preserves the separate editors' settings.
+Keep every keyboard action in settings_config.json's keybinds object, using pygame key names or null for an unassigned action.
+Random setup clamps configured values to the available countries, maps, and slider limits.
 Do not put private API keys in distribution defaults.
 Browser builds include the file in their virtual filesystem. Change distributed defaults before building the browser package.
 

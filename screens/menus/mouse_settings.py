@@ -82,7 +82,7 @@ class Mouse_Settings(Screen):
         self.refresh_ui()
 
     def reset_defaults(self):
-        """Restore the tutorial's original left/middle/right mouse layout."""
+        """Restore the configured starting mouse layout."""
         self.controller.mouse_button_actions = c.default_mouse_button_actions()
         c.apply_runtime_settings({"mouse_button_actions": self.controller.mouse_button_actions})
         queries.save_global_settings(self.controller)

@@ -758,15 +758,12 @@ class KeybindIoTests(unittest.TestCase):
 
         self.assertIsNone(loaded["BACK"])
 
-    def test_defaults_track_the_runtime_constants(self):
-        """Several defaults live on data.constants and are overwritten at
-        startup, so they have to be read when asked for, not at import."""
-        original = c.TARGET_FPS
-        try:
-            c.TARGET_FPS = 999
-            self.assertEqual(settings_schema.defaults()["target_fps"], 999)
-        finally:
-            c.TARGET_FPS = original
+    def test_runtime_settings_do_not_replace_distribution_defaults(self):
+        """A mutable runtime value cannot change the missing-setting default."""
+        from data.io import starting_defaults
+        expected = starting_defaults.get_starting_value("settings_config.json", "target_fps")
+        with mock.patch.object(c, "TARGET_FPS", expected + 100):
+            self.assertEqual(settings_schema.defaults()["target_fps"], expected)
 
     def test_battle_display_defaults_to_full(self):
         self.assertEqual(settings_schema.defaults()["battle_display_mode"], "FULL")

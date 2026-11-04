@@ -3,6 +3,9 @@ from ui.navigation.screen import Screen
 from ui.widgets.ui_elements import Button, make_back_button, make_info_button
 import data.constants as c
 from data import queries
+from data.io import keybind_io, settings_schema
+# Preserve the screen import used by startup and older callers.
+from data.io.keybind_io import default_keybinds
 from ui import dialogs
 from ui.widgets import text_utils
 from ui.rendering.font_manager import fonts
@@ -43,47 +46,41 @@ TOGGLE_INFO_TEXT = (
     "this is on, in either mode, and never jumps when it's off."
 )
 
-# (action, label, default key) -- every rebindable keyboard action, in the
-# order they're listed on this screen.
+# (action, label) in screen order. Bindings belong to starting_defaults.json.
 KEYBIND_ACTIONS = (
-    ("FULLSCREEN", "Fullscreen", pygame.K_F11),
-    ("BACK", "Back", pygame.K_ESCAPE),
-    ("ORDERS", "Orders", pygame.K_q),
-    ("ECONOMY", "Production", pygame.K_w),
-    ("CLEAR_ORDERS", "Clear Orders", pygame.K_DELETE),
+    ("FULLSCREEN", "Fullscreen"),
+    ("BACK", "Back"),
+    ("ORDERS", "Orders"),
+    ("ECONOMY", "Production"),
+    ("CLEAR_ORDERS", "Clear Orders"),
 )
 
 # Map-camera bindings get their own left column: they are all related and
 # keeping them beside each other makes a remapped directional layout legible.
 MAP_PANNING_KEYBIND_ACTIONS = (
-    ("PAN_LEFT", "Pan Left", pygame.K_LEFT),
-    ("PAN_RIGHT", "Pan Right", pygame.K_RIGHT),
-    ("PAN_UP", "Pan Up", pygame.K_UP),
-    ("PAN_DOWN", "Pan Down", pygame.K_DOWN),
+    ("PAN_LEFT", "Pan Left"),
+    ("PAN_RIGHT", "Pan Right"),
+    ("PAN_UP", "Pan Up"),
+    ("PAN_DOWN", "Pan Down"),
 )
 
-# Keyboard mouse clicks sit to the left of map panning. None is meaningful:
-# unlike the other actions, they intentionally start with no assigned key.
+# Keyboard mouse clicks sit to the left of map panning.
 MOUSE_CLICK_KEYBIND_ACTIONS = (
-    ("MOUSE_LEFT_CLICK", "Left Click", None),
-    ("MOUSE_MIDDLE_CLICK", "Middle Click", None),
-    ("MOUSE_RIGHT_CLICK", "Right Click", None),
+    ("MOUSE_LEFT_CLICK", "Left Click"),
+    ("MOUSE_MIDDLE_CLICK", "Middle Click"),
+    ("MOUSE_RIGHT_CLICK", "Right Click"),
 )
 
 ALL_KEYBIND_ACTIONS = (MOUSE_CLICK_KEYBIND_ACTIONS
                        + MAP_PANNING_KEYBIND_ACTIONS + KEYBIND_ACTIONS)
 
 
-def default_keybinds():
-    """The one default map used by startup and either reset control."""
-    return {action: default for action, _label, default in ALL_KEYBIND_ACTIONS}
-
-
 def keybind_conflicts(keybinds):
     """Return every shared key and its user-facing actions, without rejecting it."""
     by_key = {}
-    for action, label, default in ALL_KEYBIND_ACTIONS:
-        key = keybinds.get(action, default)
+    defaults = default_keybinds()
+    for action, label in ALL_KEYBIND_ACTIONS:
+        key = keybinds.get(action, defaults[action])
         if key is not None:
             by_key.setdefault(key, []).append(label)
     return [(key, labels) for key, labels in by_key.items() if len(labels) > 1]
@@ -121,8 +118,8 @@ class Keybinds(Screen):
                                  KEYBINDS_NAVIGATION_COLUMN_X)
 
         y = KEYBINDS_ROW_START_Y
-        for action, label, default_key in KEYBIND_ACTIONS:
-            self._add_binding_button(action, label, default_key, KEYBINDS_ROW_X, y)
+        for action, label in KEYBIND_ACTIONS:
+            self._add_binding_button(action, label, KEYBINDS_ROW_X, y)
 
             if action in SCREEN_TOGGLE_ACTIONS:
                 on = getattr(self.controller, self.screen_toggle_attr(action))
@@ -148,16 +145,16 @@ class Keybinds(Screen):
     def _add_binding_column(self, actions, x):
         """Build one vertical keybind column from the canonical action list."""
         y = KEYBINDS_ROW_START_Y
-        for action, label, default_key in actions:
-            self._add_binding_button(action, label, default_key, x, y)
+        for action, label in actions:
+            self._add_binding_button(action, label, x, y)
             y += KEYBINDS_ROW_GAP_Y
 
-    def _add_binding_button(self, action, label, default_key, x, y):
+    def _add_binding_button(self, action, label, x, y):
         """Build a button that either shows or captures one binding."""
         if self.listening_for == action:
             text = "Press any key..."
         else:
-            key = self.controller.keybinds.get(action, default_key)
+            key = self.controller.keybinds.get(action, keybind_io.default_keybind(action))
             key_name = pygame.key.name(key).upper() if key is not None else "UNASSIGNED"
             text = f"{label} Key: {key_name}"
         self.elements.append(
@@ -190,8 +187,10 @@ class Keybinds(Screen):
 
     def reset_defaults(self):
         self.controller.keybinds = default_keybinds()
+        defaults = settings_schema.defaults()
         for action in SCREEN_TOGGLE_ACTIONS:
-            setattr(self.controller, self.screen_toggle_attr(action), True)
+            attr = self.screen_toggle_attr(action)
+            setattr(self.controller, attr, defaults[attr])
         queries.save_global_settings(self.controller)
         self.refresh_ui()
 

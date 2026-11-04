@@ -41,9 +41,8 @@ OPENROUTER SETTINGS
 Select OpenRouter in Settings to enter an OpenRouter API key and model ID.
 The model field accepts other OpenRouter models.
 Each provider's model field has a Default button to the right of its X button.
-Default sets that provider's model to its default in data/io/settings_schema.py.
+Default sets that provider's model to its value in data/json/starting_defaults.json.
 The game never replaces a saved model. A saved model that the provider retired stays until the player changes it.
-Ling remains the default model.
 The provider ID is OPENROUTER. Its settings keys are openrouter_api_key and openrouter_model.
 Use OLLAMA for installed local models.
 Its URL setting is ollama_base_url.
@@ -203,10 +202,10 @@ Suggest ai_threads only for providers other than Ollama.
 Several simultaneous generations on one local model can reduce speed.
 A phase that declines an insufficient time share reports this in the console.
 
-ai_threads limits simultaneous model calls and defaults to 1.
+ai_threads limits simultaneous model calls. Its default and the local-provider fallback come from data/json/starting_defaults.json.
 ai_turn_budget_seconds has no settings UI.
 It is stored in the ignored data/json/settings_config.json.
-Changing its default in constants.py does not replace an existing saved setting.
+Changing its value in starting_defaults.json does not replace an existing saved setting.
 
 FORCE SKIP AI must be reachable in every phase that can block.
 Show it when any model-work counter is nonzero.

@@ -11,6 +11,7 @@ import unittest
 from unittest.mock import patch
 
 from compilation_scripts import build_manifest as manifest, build_support as support
+from data.io import starting_defaults
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCRIPTS = os.path.join(ROOT, "compilation_scripts")
@@ -176,7 +177,7 @@ class BuildManifestTests(unittest.TestCase):
                 "scenarios/map_editor/scratch.json": "private",
                 "scenarios/historical/map.json": "{}", "base_maps/map.json": "{}",
             }
-            defaults = json.loads(json.dumps(manifest.RUNTIME_JSON_DEFAULTS))
+            defaults = starting_defaults.read_starting_defaults()
             defaults["active_albums.json"] = ["Fixture Album"]
             defaults["starting_song.json"] = {"track": "assets/music/Fixture Album/start.ogg"}
             defaults["scenario_settings.json"] = {"fog_of_war": False}
@@ -198,8 +199,10 @@ class BuildManifestTests(unittest.TestCase):
                 self.assertTrue((destination / "scenarios/historical/map.json").exists())
                 self.assertFalse((destination / "data/__pycache__/runtime.pyc").exists())
                 self.assertFalse((destination / "scripts/editors/tool.py").exists())
-                for name, value in defaults.items():
-                    self.assertEqual(json.loads((destination / "data/json" / name).read_text()), value)
+                for name in starting_defaults.PREFERENCE_FILES:
+                    self.assertEqual(json.loads((destination / "data/json" / name).read_text()), defaults[name])
+                for name in ("random_setup", "ai_defaults"):
+                    self.assertFalse((destination / "data/json" / name).exists())
                 self.assertEqual(json.loads((destination / manifest.STARTING_DEFAULTS_PATH).read_text()), defaults)
                 self.assertEqual(json.loads((destination / "data/json/research_display.json").read_text()),
                                  {"defaults": {"icon_scale": 3}})

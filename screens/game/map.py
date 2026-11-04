@@ -19,6 +19,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Data & Constants
 import data.constants as c
+from data.io import settings_schema
 from data import queries
 from ui.dialogs import pickers
 from ui.dialogs import file_exchange
@@ -3045,7 +3046,7 @@ class Map(StateAccess, Screen):
 
         if self.show_navigation_intro_when_ready and is_playing:
             self.show_navigation_intro_when_ready = False
-            if queries.get_settings().get("show_intro_popup", True):
+            if settings_schema.read_setting(queries.get_settings(), "show_intro_popup"):
                 self.show_navigation_tutorial()
 
         if self.show_player_ready_screen:

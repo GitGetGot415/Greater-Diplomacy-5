@@ -1,6 +1,7 @@
 import pygame
 import os
 from data import queries
+from data.io import settings_schema
 from ui.widgets import ui_elements
 from ui.navigation.screen import Screen, ScreenLayer
 from ui.bars import ui_bars
@@ -541,12 +542,13 @@ class Music_Player(ScrollPanes, Screen):
 
     # --- AUDIO MODIFICATION HANDLERS ---
     def reset_audio_defaults(self):
-        """Resets sliders to 100% Volume, and 50% Pitch (1.0x multiplier)"""
-        self.set_sfx_volume(1.0)
-        self.set_music_volume(1.0)
-        self.set_sfx_pitch(0.5)
-        self.set_music_pitch(0.5)
-        self.set_music_pitch_timeline(c.DEFAULT_MUSIC_PITCH_TIMELINE)
+        """Restore the configured starting volume, pitch, and timeline settings."""
+        defaults = settings_schema.defaults()
+        self.set_sfx_volume(defaults["sfx_volume"])
+        self.set_music_volume(defaults["music_volume"])
+        self.set_sfx_pitch(defaults["sfx_pitch"])
+        self.set_music_pitch(defaults["music_pitch"])
+        self.set_music_pitch_timeline(defaults["music_pitch_timeline"])
         self.refresh_ui()
 
     def set_sfx_volume(self, val):

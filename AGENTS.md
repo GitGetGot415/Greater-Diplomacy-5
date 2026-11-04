@@ -147,6 +147,10 @@ Simply edit the number of levels the unit has and call that done.
 
 ### One Source of Truth
 
+- **Keep `data/json/starting_defaults.json` as the one source of truth for preference and setup defaults.**
+  Startup, missing-setting fallbacks, reset controls, and builds must read those values through `data/io/starting_defaults.py`.
+  Existing constant names may expose values read from that file. Do not duplicate default values in Python, screen tables, or documentation.
+  Keep saved player choices authoritative. Keep gameplay tuning and library content with their existing owners.
 - Keep names, identifiers, data shapes, and shared workflows as consistent as possible.
   Standardize unit types across generation, gameplay, UI, AI, editors, and multiplayer.
   Unit type standardization takes priority over keeping older identifiers in current code.

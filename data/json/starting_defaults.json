@@ -28,7 +28,20 @@
         "defense_at_zero_health": 0.0
     },
     "settings_config.json": {
-        "keybinds": {},
+        "keybinds": {
+            "MOUSE_LEFT_CLICK": null,
+            "MOUSE_MIDDLE_CLICK": null,
+            "MOUSE_RIGHT_CLICK": null,
+            "PAN_LEFT": "left",
+            "PAN_RIGHT": "right",
+            "PAN_UP": "up",
+            "PAN_DOWN": "down",
+            "FULLSCREEN": "f11",
+            "BACK": "escape",
+            "ORDERS": "q",
+            "ECONOMY": "w",
+            "CLEAR_ORDERS": "delete"
+        },
         "sfx_volume": 1.0,
         "music_volume": 1.0,
         "num_players": 1,
@@ -108,5 +121,28 @@
     "starting_song.json": {
         "track": ""
     },
-    "hildehrand_choice.json": {}
+    "hildehrand_choice.json": {
+        "variant": "Hildehrand/F/4.png",
+        "gradient": true,
+        "gradient_strength": 1.0,
+        "gradient_stepped": false,
+        "gradient_bands": 10,
+        "gradient_dithering": false
+    },
+    "random_setup": {
+        "start_year": 1800,
+        "num_countries": 20,
+        "island_filter": 5,
+        "single_tile_start": false,
+        "resource_chance": 0.15,
+        "base_days_per_turn": 15,
+        "map_index": 0,
+        "procedural_world": false,
+        "procedural_type": "Grid"
+    },
+    "ai_defaults": {
+        "local_threads": 1,
+        "reenable_mode": "OLLAMA",
+        "ollama_url": "http://localhost:11434/api/chat"
+    }
 }

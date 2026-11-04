@@ -268,9 +268,9 @@ class Settings(Screen):
 
     # key -> (constants attribute to keep in sync, default value, picker title)
     DIR_FIELDS = {
-        "saves_dir":            ("SAVES_DIR",            "saves",                "Select Saves Directory"),
-        "custom_scenarios_dir": ("SCENARIOS_CUSTOM_DIR", "scenarios/map_editor", "Select Custom Scenarios Directory"),
-        "tournament_saves_dir": ("TOURNAMENT_SAVES_DIR", "tournament_saves",     "Select Tournament Saves Directory"),
+        "saves_dir":            ("SAVES_DIR",            c.DEFAULT_SAVES_DIR,     "Select Saves Directory"),
+        "custom_scenarios_dir": ("SCENARIOS_CUSTOM_DIR", c.DEFAULT_SCENARIOS_CUSTOM_DIR, "Select Custom Scenarios Directory"),
+        "tournament_saves_dir": ("TOURNAMENT_SAVES_DIR", c.DEFAULT_TOURNAMENT_SAVES_DIR, "Select Tournament Saves Directory"),
     }
     # key -> (constants attribute, constants attribute holding the default, picker title)
     COLOR_FIELDS = {
@@ -516,51 +516,23 @@ class Settings(Screen):
             self.set_ai_mode("OFF")
 
     def reset_defaults(self):
+        defaults = settings_schema.defaults()
         self.controller.keybinds = default_keybinds()
-        self.controller.target_fps = c.TARGET_FPS
-
-        self.controller.ai_threads = c.DEFAULT_AI_THREADS
-        self.ai_threads = self.controller.ai_threads
-
-        self.controller.num_players = 1
-        self.num_players = self.controller.num_players
-
-        self.show_fps = False
-        self.controller.show_fps = False
-
-        self.checkerboard_water = False
-        self.controller.checkerboard_water = False
-        c.apply_runtime_settings({"checkerboard_water": False})
-        self.controller.checkerboard_gradient_strength = c.DEFAULT_CHECKERBOARD_GRADIENT_STRENGTH
-        c.apply_runtime_settings({"checkerboard_gradient_strength": self.controller.checkerboard_gradient_strength})
-        self.controller.checkerboard_scroll_speed = c.DEFAULT_CHECKERBOARD_SCROLL_SPEED
-        c.apply_runtime_settings({"checkerboard_scroll_speed": self.controller.checkerboard_scroll_speed})
-
-        self.show_intro_popup = True
-        self.controller.show_intro_popup = True
-
-        self.show_unclaimed = c.DEFAULT_SHOW_UNCLAIMED
-        self.controller.show_unclaimed = self.show_unclaimed
-        c.apply_runtime_settings({"show_unclaimed": self.show_unclaimed})
-
-        self.map_navigation_mode = c.DEFAULT_MAP_NAVIGATION_MODE
-        c.apply_runtime_settings({"map_navigation_mode": c.DEFAULT_MAP_NAVIGATION_MODE})
-        self.controller.map_navigation_mode = c.DEFAULT_MAP_NAVIGATION_MODE
-
-        self.battle_display_mode = c.DEFAULT_BATTLE_DISPLAY_MODE
-        c.apply_runtime_settings({"battle_display_mode": c.DEFAULT_BATTLE_DISPLAY_MODE})
-        self.controller.battle_display_mode = c.DEFAULT_BATTLE_DISPLAY_MODE
-
-        self.army_group_animations = c.DEFAULT_ARMY_GROUP_ANIMATIONS
-        c.apply_runtime_settings({"army_group_animations": c.DEFAULT_ARMY_GROUP_ANIMATIONS})
-        self.controller.army_group_animations = c.DEFAULT_ARMY_GROUP_ANIMATIONS
-
-        self.controller.mouse_button_actions = c.default_mouse_button_actions()
-        c.apply_runtime_settings({"mouse_button_actions": self.controller.mouse_button_actions})
-
+        # Preserve this control's scope: provider credentials, audio and the
+        # other preferences outside this list are not part of this reset.
+        names = (
+            "target_fps", "ai_threads", "num_players", "show_fps",
+            "checkerboard_water", "checkerboard_gradient_strength", "checkerboard_scroll_speed",
+            "show_intro_popup", "show_unclaimed", "map_navigation_mode",
+            "battle_display_mode", "army_group_animations", "mouse_button_actions",
+        )
+        for name in names:
+            setattr(self.controller, name, defaults[name])
+            if hasattr(self, name):
+                setattr(self, name, defaults[name])
+        c.apply_runtime_settings({name: defaults[name] for name in names})
         for key in self.COLOR_FIELDS:
             self.reset_setting(key, refresh=False)
-
         queries.save_global_settings(self.controller)
         self.refresh_ui()
 
@@ -600,11 +572,7 @@ class Settings(Screen):
 
     def reset_setting(self, key, refresh=True):
         """Restores a path or color setting to its shipped default."""
-        if key in self.DIR_FIELDS:
-            default = self.DIR_FIELDS[key][1]
-        else:
-            default = getattr(c, self.COLOR_FIELDS[key][1])
-        self.apply_setting(key, default, refresh=refresh)
+        self.apply_setting(key, settings_schema.defaults()[key], refresh=refresh)
 
     def set_checkerboard_gradient(self, val):
         strength = round(val, 2)
