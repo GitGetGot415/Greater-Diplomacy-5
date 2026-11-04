@@ -174,6 +174,8 @@ class Messages_Screen(Screen):
         # Start time of each bubble's slide-in, kept so a rebuild does not replay it.
         self.bubble_starts = {}
         self.exiting_thread = None
+        # True only while select_recipient rebuilds for a contact switch: bubbles start fully slid in.
+        self.settle_new_bubbles = False
 
     def on_enter(self, app, previous):
         self.start_messages(app.states["MAP"])
@@ -246,6 +248,8 @@ class Messages_Screen(Screen):
             self.refresh_ui()
             return
 
+        # Switching contacts keeps the bars open, so the bubbles also appear without sliding.
+        switching = self.selected_recipient is not None
         self.exiting_thread = None
         self.bubble_starts = {}
         self.selected_recipient = target
@@ -271,7 +275,9 @@ class Messages_Screen(Screen):
             self.drafts = []
             
         self.compose_text = ""
+        self.settle_new_bubbles = switching
         self.refresh_ui()
+        self.settle_new_bubbles = False
 
     def toggle_add_contact(self):
         self.show_all_contacts = not self.show_all_contacts
@@ -947,6 +953,8 @@ class Messages_Screen(Screen):
         # A bubble slides in once, when it first appears in this conversation. Numbering
         # equal bubbles from the oldest keeps an older bubble's key when a newer one arrives.
         now = time.monotonic()
+        if self.settle_new_bubbles:
+            now -= MSG_BUBBLE_ANIM_SECONDS
         counts = {}
         for msg in display_thread:
             same = (msg["is_player"], msg["is_draft"], msg["content"])
