@@ -102,6 +102,9 @@ class Automation_Screen(Screen):
                     for province in self.map_screen.map_data.values()
                     for unit in province.get("units", []))
                 action(self.map_screen)
+                if action in (clear_player_construction, automate_player_construction):
+                    # Rebuild cached training markers after construction queue changes.
+                    self.map_screen.invalidate_map_presentation_cache()
                 if clearing_orders:
                     ui_elements.play_ui_sound("cancel_orders")
             self.refresh_ui()
