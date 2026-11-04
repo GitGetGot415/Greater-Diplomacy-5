@@ -124,8 +124,9 @@ def _dithers(width, height, shade_count):
 
 
 @lru_cache(maxsize=128)
-def _button_background(size, color, pressed, border_width, gradient_strength=1.0, bevel_enabled=True):
-    """Cache stepped shading and bevels by geometry, color, state, and strength."""
+def _button_background(size, color, pressed, border_width, gradient_strength=1.0,
+                       bevel_enabled=True, *, force_dithering=False):
+    """Cache stepped shading and bevels by geometry, color, state, strength, and dithering."""
     if gradient_strength < 0:
         raise ValueError("Gradient strength must be zero or greater.")
     background = pygame.Surface(size)
@@ -146,8 +147,8 @@ def _button_background(size, color, pressed, border_width, gradient_strength=1.0
         background.fill(shade, (0, boundaries[i], width,
                                 boundaries[i + 1] - boundaries[i]))
 
-    # Keep solid band centers.
-    if gradient_strength and _dithers(width, height, shade_count):
+    # Blend shade boundaries with the shared square pattern.
+    if gradient_strength and (force_dithering or _dithers(width, height, shade_count)):
         for x, y, band, checker in _dither_squares(width, boundaries):
             background.fill(shades[band - 1 + checker],
                             (x, y, min(_BUTTON_PIXEL_SIZE, width - x), _BUTTON_PIXEL_SIZE))
@@ -321,7 +322,9 @@ def draw_progress_bar(surface, rect, ratio, color=PROGRESS_FILL_COLOR, *,
     fill_width = int(inner.width * max(0.0, min(1.0, ratio)))
     if fill_width:
         fill_color = PROGRESS_DISABLED_FILL_COLOR if disabled else color
-        background = _button_background(inner.size, tuple(fill_color[:3]), False, 0)
+        # Thin progress fills still need dithering below the button-height threshold.
+        background = _button_background(inner.size, tuple(fill_color[:3]), False, 0,
+                                        force_dithering=True)
         surface.blit(background, inner, (0, 0, fill_width, inner.height))
 
 
