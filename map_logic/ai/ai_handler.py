@@ -55,7 +55,7 @@ from map_logic.ai.ai_settings import (
 )
 
 from data.migrations import normalize_ai_mode
-from map_logic.ai import ai_prompts
+from map_logic.ai import ai_activity, ai_prompts
 # Re-exported so `ai_handler.evaluate_diplomatic_proposal(...)` etc. keep
 # working -- see this module's docstring for why these moved but FORCE_SKIP /
 # CURRENT_TURN_ID / ACTIVE_OLLAMA_CONNECTIONS did not.
@@ -504,10 +504,16 @@ def _call_provider(mode, system_prompt, user_prompt, turn_id, schema=None):
     try:
         result = _dispatch(mode, system_prompt, user_prompt, turn_id, schema)
         abandoned = result is None
+        ai_activity.record_reply(result, _reply_text)
         return result
     finally:
         if not abandoned and _ABORT_COUNT[0] == aborts:
             _time_call(time.monotonic() - started)
+
+
+def _reply_text(reply):
+    """A parsed reply as the turn loading screen shows it."""
+    return json.dumps(reply, ensure_ascii=False, indent=1)
 
 
 def _dispatch(mode, system_prompt, user_prompt, turn_id, schema=None):
@@ -679,7 +685,9 @@ def call_ollama(system_prompt, user_prompt, turn_id=None, schema=None):
             line_str = line.decode('utf-8').strip()
             if line_str:
                 chunk = json.loads(line_str)
-                full_text += chunk.get("message", {}).get("content", "")
+                piece = chunk.get("message", {}).get("content", "")
+                full_text += piece
+                ai_activity.record_output(piece)
                 if len(full_text) - checked >= OLLAMA_REPEAT_CHECK_CHARACTERS:
                     checked = len(full_text)
                     if _repeats_itself(full_text):

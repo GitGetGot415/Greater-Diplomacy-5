@@ -391,7 +391,9 @@ def process_letters(context):
             on_progress=progress,
             should_abort=lambda: session_state.force_skip_llm,
             max_workers=queries.get_ai_threads(),
-            deadline=deadline)
+            deadline=deadline,
+            phase=f"Writing letters (pass {index + 1}/{c.AI_LETTER_PASSES})",
+            describe=lambda job: queries.get_country_display_name(job["nation"], nation_data))
         ai_llm_runner.report_unserved(context, outcome, "Writing letters",
                                       fallback="read their letters next turn")
         if outcome.abandoned:

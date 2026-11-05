@@ -1507,6 +1507,10 @@ class Map(StateAccess, Screen):
     army_custom_symbol_state = None
     army_panel_scroll_y = 0
     army_panel_visible_in_orders = False
+    # The turn loading screen's model threads panel (ui/panels/llm_threads_panel.py).
+    llm_threads_open = False
+    llm_threads_selected = None
+    llm_threads_scroll = 0
     _army_tray_right_click_active = False
     sidebar_scroll_y = 0
     sidebar_scroll_max = 0

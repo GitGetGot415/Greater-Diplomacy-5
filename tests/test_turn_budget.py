@@ -235,6 +235,55 @@ class SkipButtonReachableTests(Patcher):
         self.assertFalse(self.drawn(self.counters()))
 
 
+class ThreadsPanelTests(Patcher):
+    """SHOW THREADS opens the model threads panel; its rows select a thread."""
+
+    setUpClass = SkipButtonReachableTests.setUpClass
+    counters = SkipButtonReachableTests.counters
+    drawn = SkipButtonReachableTests.drawn
+
+    def setUp(self):
+        from map_logic.ai import ai_activity
+        ai_activity.clear()
+        self.addCleanup(ai_activity.clear)
+
+    def click(self, screen, pos):
+        """A click through the map's own input path for the loading screen."""
+        import pygame
+        from screens.game import map_input
+        screen.show_player_ready_screen = False
+        screen.show_exit_confirmation = False
+        event = pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=pos)
+        return map_input._handle_blocking_state(screen, event, *pos)
+
+    def test_the_toggle_opens_and_closes_the_panel(self):
+        from ui.panels import llm_threads_panel
+        screen = self.counters(letters_total=c.AI_LETTER_PASSES)
+        self.assertTrue(self.click(screen, llm_threads_panel.TOGGLE_RECT.center))
+        self.assertTrue(screen.llm_threads_open)
+        self.drawn(screen)    # an open panel with no batch yet still draws
+        self.click(screen, llm_threads_panel.TOGGLE_RECT.center)
+        self.assertFalse(screen.llm_threads_open)
+
+    def test_a_row_click_selects_that_thread(self):
+        from map_logic.ai import ai_activity
+        from ui.panels import llm_threads_panel
+        batch = ai_activity.start_batch("Testing", 2, 2)
+        for request in [batch.begin(label) for label in ("A", "B")]:
+            self.addCleanup(batch.end, request, ai_activity.DONE)
+        screen = self.counters(letters_total=c.AI_LETTER_PASSES)
+        screen.llm_threads_open = True
+        self.drawn(screen)
+        self.click(screen, llm_threads_panel._row_rect(1).center)
+        self.assertEqual(screen.llm_threads_selected, 2)
+
+    def test_there_is_no_toggle_without_model_work(self):
+        from ui.panels import llm_threads_panel
+        screen = self.counters()
+        self.click(screen, llm_threads_panel.TOGGLE_RECT.center)
+        self.assertFalse(screen.llm_threads_open)
+
+
 class LetterClockTests(Patcher):
     """All letter passes share one phase share, and stop when it ends."""
 

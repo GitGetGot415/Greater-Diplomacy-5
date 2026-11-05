@@ -25,6 +25,8 @@ ai_settings.py
     Provider, model, and API-key settings.
 ai_handler.py
     Model providers, request cancellation, and turn IDs.
+ai_activity.py
+    What each model worker thread is doing, for the turn loading screen.
 ai_llm_runner.py
     Model batches, phase budgets, cancellation, and progress.
     Progress counters use session state. AI computation data remains separate from presentation.
@@ -280,6 +282,15 @@ FORCE SKIP AI must be reachable in every phase that can block.
 Show it when any model-work counter is nonzero.
 Letters use letters_total.
 trigger_ai_thread resets that counter with the other turn counters.
+
+SHOW THREADS appears with FORCE SKIP AI while the AI phases run. It opens the model threads panel (ui/panels/llm_threads_panel.py).
+The panel shows the current batch's phase and its running, waiting, finished, and skipped job counts.
+It has one row per worker thread, with the thread's country, state, and running time.
+The states are Waiting for model, Writing, Done, Failed, and Stopped.
+Below the rows is the selected thread's model output. Ollama output appears as it streams.
+Hosted providers do not stream, so their whole reply appears when it arrives.
+map_logic/ai/ai_activity.py holds this record. ai_llm_runner opens one record per batch and one per job, and ai_handler adds the output.
+begin_turn clears the previous turn's record. The record is display data and never changes a game rule.
 
 The letter bar counts passes, because a later pass's work depends on the letters of the pass before it.
 A pass with no writers completes the remaining passes.

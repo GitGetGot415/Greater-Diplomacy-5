@@ -572,7 +572,11 @@ def _execute_ai_tasks(context, ai_tasks, active_nations_list):
         on_progress=count,
         should_abort=lambda: session_state.force_skip_llm,
         max_workers=queries.get_ai_threads(),
-        deadline=ai_llm_runner.turn_deadline(context, c.AI_BUDGET_SHARE_RESPONSES))
+        deadline=ai_llm_runner.turn_deadline(context, c.AI_BUDGET_SHARE_RESPONSES),
+        phase="Answering proposals",
+        describe=lambda task: (
+            f"{queries.get_country_display_name(task['target'], world_state.nation_data)} "
+            f"answering {queries.get_country_display_name(task['sender'], world_state.nation_data)}"))
     ai_llm_runner.report_unserved(context, outcome, "Answering proposals")
 
     return ai_results

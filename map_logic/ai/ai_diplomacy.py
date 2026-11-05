@@ -156,7 +156,10 @@ def start_proactive_llm_tasks(context):
         on_progress=count,
         should_abort=lambda: session_state.force_skip_llm,
         max_workers=queries.get_ai_threads(),
-        deadline=ai_llm_runner.turn_deadline(context, c.AI_BUDGET_SHARE_DIRECTOR))
+        deadline=ai_llm_runner.turn_deadline(context, c.AI_BUDGET_SHARE_DIRECTOR),
+        phase="Directing AI nations",
+        describe=lambda choice: queries.get_country_display_name(
+            choice["nation"], world_state.nation_data))
 
 
 def finish_proactive_llm_tasks(context, batch):

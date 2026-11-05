@@ -27,7 +27,7 @@ from collections import namedtuple
 from data.platform import IS_WEB
 
 from data import queries
-from map_logic.ai import ai_settings, ai_handler
+from map_logic.ai import ai_activity, ai_settings, ai_handler
 
 
 #: What a batch actually managed. `abandoned` is how many jobs never got an
@@ -69,6 +69,7 @@ def begin_turn(context):
 
     budget = queries.get_ai_turn_budget_seconds()
     context.llm_deadline = time.monotonic() + budget if budget else None
+    ai_activity.clear()
 
 
 def turn_deadline(context=None, share=1.0):
@@ -163,9 +164,7 @@ def affordable(deadline, calls):
     return deadline - time.monotonic() >= typical * calls
 
 
-def run_llm_batch(jobs, call, on_result, on_fallback, on_progress=None,
-                  should_abort=None, max_workers=1, poll=0.1, sequential=None,
-                  deadline=None, min_calls=1):
+def run_llm_batch(jobs, call, on_result, on_fallback, **options):
     """Runs `call(job)` for every job and hands each answer back as it lands.
 
     - `call(job)` produces the answer. It runs on a worker thread, or inline on
@@ -188,6 +187,9 @@ def run_llm_batch(jobs, call, on_result, on_fallback, on_progress=None,
     rather than adding a second give-up path: the two want identical handling,
     and the one thing worse than a turn that hangs is two ways of ending it that
     disagree about which in-flight answers still count.
+    - `phase` and `describe(job)` name the batch and each job on the turn
+      loading screen (see ai_activity). `describe` runs on the calling thread
+      before any request goes out, so it may read game state.
 
     `sequential` defaults to IS_WEB: Pyodide has no real OS threads, and AI
     networking is disabled on web anyway (see ai_handler's IS_WEB guard), so
@@ -197,15 +199,10 @@ def run_llm_batch(jobs, call, on_result, on_fallback, on_progress=None,
     caller is expected to tell the player when that is fewer than it asked for:
     running out of budget used to look exactly like having nothing to say.
     """
-    return start_llm_batch(jobs, call, on_result, on_fallback, on_progress=on_progress,
-                           should_abort=should_abort, max_workers=max_workers, poll=poll,
-                           sequential=sequential, deadline=deadline,
-                           min_calls=min_calls).collect()
+    return start_llm_batch(jobs, call, on_result, on_fallback, **options).collect()
 
 
-def start_llm_batch(jobs, call, on_result, on_fallback, on_progress=None,
-                    should_abort=None, max_workers=1, poll=0.1, sequential=None,
-                    deadline=None, min_calls=1):
+def start_llm_batch(jobs, call, on_result, on_fallback, **options):
     """Sends a batch's requests and returns at once. See run_llm_batch.
 
     The answers are recorded only by LLMBatch.collect, on the thread that
@@ -213,8 +210,7 @@ def start_llm_batch(jobs, call, on_result, on_fallback, on_progress=None,
     `call` must therefore not read game state that the caller changes in the
     meantime: build each job's prompt before starting the batch.
     """
-    return LLMBatch(jobs, call, on_result, on_fallback, on_progress, should_abort,
-                    max_workers, poll, sequential, deadline, min_calls)
+    return LLMBatch(jobs, call, on_result, on_fallback, **options)
 
 
 def _shutdown_now(executor):
@@ -228,8 +224,9 @@ def _shutdown_now(executor):
 class LLMBatch:
     """A started batch. collect() records its answers; close() abandons it."""
 
-    def __init__(self, jobs, call, on_result, on_fallback, on_progress, should_abort,
-                 max_workers, poll, sequential, deadline, min_calls):
+    def __init__(self, jobs, call, on_result, on_fallback, on_progress=None,
+                 should_abort=None, max_workers=1, poll=0.1, sequential=None,
+                 deadline=None, min_calls=1, phase="Model requests", describe=None):
         self.jobs = list(jobs)
         self.call = call
         self.on_result = on_result
@@ -245,6 +242,8 @@ class LLMBatch:
         self.executor = None
         self.futures = {}
         self.outcome = None
+        self.activity = None
+        self.labels = []
 
         if not self.jobs:
             return
@@ -269,14 +268,32 @@ class LLMBatch:
             self.declined = True
             return
 
+        # Labelled here, on the calling thread, because describe may read
+        # game state that the caller changes while the requests are out.
+        self.labels = [describe(job) if describe else phase for job in self.jobs]
+        self.sequential = IS_WEB if sequential is None else sequential
+        self.activity = ai_activity.start_batch(phase, len(self.jobs),
+                                                1 if self.sequential else max_workers)
+
         # The sequential path sends nothing until collect, which runs every job
         # inline on the collecting thread.
-        if IS_WEB if sequential is None else sequential:
-            self.sequential = True
+        if self.sequential:
             return
 
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
-        self.futures = {self.executor.submit(call, job): job for job in self.jobs}
+        self.futures = {self.executor.submit(self._run, job, label): job
+                        for job, label in zip(self.jobs, self.labels)}
+
+    def _run(self, job, label):
+        """`call(job)`, recorded as one request on the turn loading screen."""
+        request = self.activity.begin(label)
+        try:
+            result = self.call(job)
+        except Exception:
+            self.activity.end(request, ai_activity.FAILED)
+            raise
+        self.activity.end(request, request.outcome or ai_activity.DONE)
+        return result
 
     def _give_up(self):
         if self.should_abort and self.should_abort():
@@ -306,11 +323,14 @@ class LLMBatch:
             for job in self.jobs:
                 self.on_fallback(job)
         elif self.sequential:
-            for job in self.jobs:
+            for job, label in zip(self.jobs, self.labels):
+                run = lambda job, label=label: self._run(job, label)
                 self._resolved(job, not self._give_up()
-                               and _settle_inline(job, self.call, self._served))
+                               and _settle_inline(job, run, self._served))
         elif self.executor is not None:
             self._drain()
+        if self.activity is not None:
+            self.activity.close()
 
         total = len(self.jobs)
         self.outcome = BatchOutcome(total, self.served, total - self.served, self.reason)
@@ -355,6 +375,8 @@ class LLMBatch:
             _hang_up()
             self.futures.clear()
             _shutdown_now(self.executor)
+        if self.activity is not None:
+            self.activity.close()
         total = len(self.jobs)
         self.outcome = BatchOutcome(total, self.served, total - self.served,
                                     self.reason or "skipped")

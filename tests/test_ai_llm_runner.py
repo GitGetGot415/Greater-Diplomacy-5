@@ -188,6 +188,105 @@ class StartedBatchTests(unittest.TestCase):
         self.assertEqual(batch.collect().abandoned, 1)
 
 
+class ActivityTests(unittest.TestCase):
+    """What the turn loading screen's model threads panel reads."""
+
+    def setUp(self):
+        from map_logic.ai import ai_activity
+        self.activity = ai_activity
+        ai_activity.clear()
+        self.addCleanup(ai_activity.clear)
+
+    def requests(self):
+        return {request.label: request
+                for _slot, request in self.activity.current_batch().rows() if request}
+
+    def test_each_job_gets_a_labelled_thread_row(self):
+        # Both jobs must run at once, or one thread could take both and its
+        # row would show only the second.
+        together = threading.Barrier(2, timeout=5)
+
+        def call(job):
+            self.activity.record_output(f"streamed {job}")
+            together.wait()
+            return job
+
+        ai_llm_runner.run_llm_batch(["a", "b"], call, lambda j, r: None, lambda j: None,
+                                    max_workers=2, phase="Testing", describe=str.upper)
+        batch = self.activity.current_batch()
+        self.assertEqual(batch.phase, "Testing")
+        self.assertEqual(batch.counts(), (0, 0, 2, 0))
+        finished = self.requests()
+        self.assertEqual(set(finished), {"A", "B"})
+        for job, request in (("a", finished["A"]), ("b", finished["B"])):
+            self.assertEqual(request.state, self.activity.DONE)
+            self.assertEqual(request.output(), f"streamed {job}")
+
+    def test_provider_outcomes_set_the_state(self):
+        jobs = ["ok", "error", "stopped", "boom"]
+        together = threading.Barrier(len(jobs), timeout=5)
+
+        def call(job):
+            together.wait()
+            if job == "boom":
+                raise RuntimeError("provider exploded")
+            self.activity.record_reply(
+                {"message": "HTTP ERROR 500", "error": True} if job == "error"
+                else None if job == "stopped" else {"message": "hello"}, str)
+            return job
+
+        ai_llm_runner.run_llm_batch(jobs, call, lambda j, r: None, lambda j: None,
+                                    max_workers=len(jobs), describe=lambda job: job)
+        requests = self.requests()
+        self.assertEqual(requests["ok"].state, self.activity.DONE)
+        self.assertIn("hello", requests["ok"].output())
+        self.assertEqual(requests["error"].state, self.activity.FAILED)
+        self.assertIn("HTTP ERROR 500", requests["error"].output())
+        self.assertEqual(requests["stopped"].state, self.activity.STOPPED)
+        self.assertEqual(requests["boom"].state, self.activity.FAILED)
+
+    def test_the_sequential_path_records_its_jobs_too(self):
+        """Web runs every job inline on one thread, so one row holds the last job."""
+        ai_llm_runner.run_llm_batch(["a", "b"], lambda j: j, lambda j, r: None,
+                                    lambda j: None, sequential=True, describe=lambda job: job)
+        self.assertEqual(self.activity.current_batch().counts(), (0, 0, 2, 0))
+        self.assertEqual(set(self.requests()), {"b"})
+
+    def test_a_batch_that_gives_up_stops_its_running_requests(self):
+        release = threading.Event()
+        abort = {"now": False}
+
+        def call(job):
+            abort["now"] = True
+            release.wait(5)
+            return job
+
+        try:
+            ai_llm_runner.run_llm_batch(["a", "b"], call, lambda j, r: None, lambda j: None,
+                                        should_abort=lambda: abort["now"], max_workers=1,
+                                        describe=lambda job: job)
+        finally:
+            release.set()
+        running, waiting, finished, skipped = self.activity.current_batch().counts()
+        self.assertEqual((running, waiting), (0, 0))
+        self.assertEqual(finished + skipped, 2)
+        for request in self.requests().values():
+            self.assertEqual(request.state, self.activity.STOPPED)
+
+    def test_labels_are_made_before_any_request_goes_out(self):
+        """describe may read game state, which the turn thread changes while
+        the requests are out, so it must not run on a worker."""
+        threads = []
+
+        def describe(job):
+            threads.append(threading.current_thread())
+            return job
+
+        ai_llm_runner.run_llm_batch(["a", "b"], lambda j: j, lambda j, r: None,
+                                    lambda j: None, max_workers=2, describe=describe)
+        self.assertEqual(set(threads), {threading.current_thread()})
+
+
 class DeadlineTests(unittest.TestCase):
     """The wall-clock budget, which shares its give-up path with Force Skip.
 

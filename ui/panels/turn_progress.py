@@ -3,6 +3,7 @@ import pygame
 import data.constants as c
 from ui.rendering.font_manager import fonts
 from ui.bars import ui_bars
+from ui.panels import llm_threads_panel
 from ui.widgets import ui_elements
 
 TURN_PROGRESS_BAR_SIZE = (400, 25)
@@ -106,21 +107,36 @@ def draw_turn_loading_screen(map_screen, surface):
         draw_bar(top + spacing * index, f"{index + 1}. {label}", completed, total)
 
     # --- Draw the Force Skip Button ---
-    # Only show it if there are LLM tasks that might get stuck.
-    #
-    # Letters belong in that list. They are the first model work of a turn and
-    # run before either of the other two counters has been set, so without them
-    # the one phase where nothing else has started yet would have no way out of
-    # it -- which matters a great deal now that ai_turn_budget_seconds can be 0
-    # and this button is the only thing that ends a turn early.
-    if (session_state.proactive_llm_tasks_total > 0
-            or session_state.responsive_tasks_total > 0
-            or session_state.letters_total > 0):
+    if has_model_work(session_state):
         skip_btn_rect = pygame.Rect(center_x - 100, center_y + TURN_PROGRESS_SKIP_OFFSET, 200, 40)
         ui_elements.draw_pixel_button(surface, skip_btn_rect, (150, 40, 40), hover_color=(200, 60, 60))
-        
+
         skip_txt = fonts.get("button").render("FORCE SKIP AI", True, (255, 255, 255))
         surface.blit(skip_txt, skip_txt.get_rect(center=skip_btn_rect.center))
-        
+
         # Store for the event handler
         map_screen.force_skip_btn_rect = skip_btn_rect
+
+    if threads_panel_available(map_screen):
+        llm_threads_panel.draw(map_screen, surface)
+
+
+def has_model_work(session_state):
+    """Whether this turn has model work that might get stuck.
+
+    Letters belong in that list. They are the first model work of a turn and
+    run before either of the other two counters has been set, so without them
+    the one phase where nothing else has started yet would have no way out of
+    it -- which matters a great deal now that ai_turn_budget_seconds can be 0
+    and Force Skip is the only thing that ends a turn early.
+    """
+    return (session_state.proactive_llm_tasks_total > 0
+            or session_state.responsive_tasks_total > 0
+            or session_state.letters_total > 0)
+
+
+def threads_panel_available(map_screen):
+    """The model threads panel exists while the AI phases with model work run."""
+    session_state = session_for(map_screen)
+    return (session_state.ai_is_thinking and session_state.multi_turns_total == 0
+            and has_model_work(session_state))

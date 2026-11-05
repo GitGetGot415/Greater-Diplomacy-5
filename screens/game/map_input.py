@@ -12,7 +12,7 @@ from map_logic.diplomacy import diplomacy_messages
 from screens.game import battle_screen
 from ui.bars import flag_renderer, ui_bars
 
-from ui.panels import sidebar_info, diplomatic_popups
+from ui.panels import sidebar_info, diplomatic_popups, llm_threads_panel, turn_progress
 from ui.information import tooltip
 from map_logic.ai import ai_handler
 from screens.editors.menus import open_convoy_converter
@@ -278,6 +278,9 @@ def _handle_blocking_state(map_screen, event, mx, my):
 
     # --- AI THINKING HIJACK ---
     if map_screen.ai_is_thinking:
+        if (turn_progress.threads_panel_available(map_screen)
+                and llm_threads_panel.handle_event(map_screen, event)):
+            return True
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if hasattr(map_screen, 'force_skip_btn_rect') and map_screen.force_skip_btn_rect.collidepoint(mx, my):
                 map_screen.force_skip_llm = True

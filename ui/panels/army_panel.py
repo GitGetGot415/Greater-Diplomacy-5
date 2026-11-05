@@ -589,6 +589,9 @@ def _visible(map_screen, orders_screen=None):
     """Return whether the army tray may occupy the current map workspace."""
     if orders_screen is not None and getattr(orders_screen, "battle_screen", None) is not None:
         return False
+    # The turn loading screen covers the map, so the tray has nothing to act on.
+    if map_screen.ai_is_thinking or map_screen.is_refreshing:
+        return False
     return (not map_screen.selection_mode
             and not map_screen.is_editor
             and (map_screen.army_panel_visible_in_orders

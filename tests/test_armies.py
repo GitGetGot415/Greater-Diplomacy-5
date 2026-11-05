@@ -1095,6 +1095,20 @@ class ArmyControlTests(unittest.TestCase):
         map_ref.army_panel_visible_in_orders = True
         self.assertTrue(army_panel._visible(map_ref))
 
+    def test_the_turn_loading_screen_hides_the_army_tray(self):
+        """The loading screen covers the map, so the tray must neither draw
+        nor take clicks while the turn is processed."""
+        map_ref = map_double(realtime_multiplayer=False, selected_province=None,
+                             selection_mode=False, is_editor=False,
+                             player_country="A", tactical_mode=False,
+                             map_w=1000, map_h=500)
+        self.assertTrue(army_panel._visible(map_ref))
+        for flag in ("ai_is_thinking", "is_refreshing"):
+            with self.subTest(flag=flag):
+                setattr(map_ref, flag, True)
+                self.assertFalse(army_panel._visible(map_ref))
+                setattr(map_ref, flag, False)
+
 class UnassignedArmyPanelTests(unittest.TestCase):
     def setUp(self):
         self.show_unclaimed = patch.object(c, "SHOW_UNCLAIMED", True)
