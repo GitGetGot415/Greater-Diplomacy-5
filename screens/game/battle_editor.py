@@ -544,7 +544,8 @@ class BattleEditorScreen(ScrollPanes, Screen):
             "Organize Battle?",
             "This replaces your manual arrangement across every lane of this battle. "
             "It clears lane assignments and Hold preferences for units you control, "
-            "then assigns the frontline and reserves automatically. "
+            "then assigns the frontline and reserves like how the AI would do it. "
+            "The AI is not perfect, and how they organize the units might not be exactly how you want it to be organized. "
             f"Units below {threshold}% health are put in Held when other troops can cover the front. "
             "Your existing card positions will be lost. Organize your units?",
             on_result=answered, yes_label="Organize", no_label="Cancel")
