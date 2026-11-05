@@ -239,8 +239,9 @@ def _declined(picks):
 def messages_from(reply, nation=None, nation_data=None, candidates=()):
     """The in-character text per chosen index, if the model supplied any.
 
-    A line that talks about its own sender in the third person is dropped rather
-    than sent, and the proposal falls back to its canned line. Small models write
+    A line that talks about its own sender in the third person, or names the
+    country it is sent to, is dropped rather than sent, and the proposal falls
+    back to its canned line. Small models write
     "Switzerland accepts your offer" into a message already labelled as being
     from Switzerland; a dropped line costs one piece of flavour, a kept one
     reads as a bug. A line with placeholder or menu text is dropped the same way,
@@ -255,9 +256,11 @@ def messages_from(reply, nation=None, nation_data=None, candidates=()):
     if not isinstance(messages, dict):
         return {}
     wars = {cand.cid for cand in candidates if cand.action == "WAR_DECLARATION"}
+    targets = {cand.cid: cand.target for cand in candidates}
     return {str(k): str(v) for k, v in messages.items()
             if isinstance(v, str) and v.strip()
-            and not ai_prompts.unusable_message(v, nation, nation_data)
+            and not ai_prompts.unusable_message(v, nation, nation_data,
+                                                recipient=targets.get(str(k)))
             and not reads_as_answer(v)
             and not copies_menu(v, candidates)
             and not (str(k) in wars and reads_as_offer(v))}

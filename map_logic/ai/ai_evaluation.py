@@ -60,12 +60,13 @@ def _reply(message, source=None, accepted=None, llm=False):
     return reply
 
 
-def _model_reply(result, mode, canned, nation, nation_data, accepted=None):
+def _model_reply(result, mode, canned, nation, nation_data, accepted=None, recipient=None):
     """A model's parsed reply as an answer dict, with canned words where its own fail.
 
     `canned` is a function returning the library line, called only when it is
     used, since library lookups can draw random numbers. None (an abandoned
-    call) and words that fail ai_prompts.unusable_message take that line. The
+    call) and words that fail ai_prompts.unusable_message take that line;
+    `recipient` is the country being answered. The
     reply's decision fields, such as its opinion change and reactive move,
     still apply when only its words are replaced. A provider error keeps its
     text, because a bad API key showing on a reply is how a player finds out.
@@ -76,7 +77,7 @@ def _model_reply(result, mode, canned, nation, nation_data, accepted=None):
         return _reply(result.get("message", f"{mode} ERROR: reply had no 'message' field"),
                       result, accepted, llm=False)
     message = result["message"]
-    if ai_prompts.unusable_message(message, nation, nation_data):
+    if ai_prompts.unusable_message(message, nation, nation_data, recipient=recipient):
         return _reply(canned(), result, accepted, llm=False)
     return _reply(message, result, accepted, llm=bool(message))
 
@@ -337,8 +338,11 @@ def _standing(nation_data, active_nations, nation, world=None):
     if faction:
         allies = [m for m in sorted(queries.get_faction_members(faction, nation_data))
                   if m != nation and m in active_nations]
+        # "Allies" alone did not stop Italy, in the Axis, from proposing a
+        # mutual defense treaty to the German Reich: say what a faction is.
         lines.append(f"Your faction: '{faction}'. " + (
-            f"Its other members are already your allies: {', '.join(allies)}."
+            f"Its other members are already your allies: {', '.join(allies)}. "
+            f"Members are bound to defend each other, so no treaty between you is needed."
             if allies else "You are its only member."))
     else:
         lines.append("You are in no faction.")
@@ -643,7 +647,8 @@ def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_natio
                                     scenario_settings=scenario_settings,
                                     verdict=verdict._replace(accepted=accepted))["message"]
 
-    return _model_reply(reply, mode, canned, ai_nation, nation_data, accepted)
+    return _model_reply(reply, mode, canned, ai_nation, nation_data, accepted,
+                        recipient=sender_nation)
 
 def process_custom_message(nation_data, active_nations, ai_nation, sender_nation, message_content, human_players=None, turn_id=None, current_date="Unknown", world=None):
     from map_logic.ai import ai_handler
@@ -671,7 +676,7 @@ def process_custom_message(nation_data, active_nations, ai_nation, sender_nation
     result = ai_handler._run_provider(mode, system_prompt, user_prompt, turn_id, None, raw=True,
                                       schema=ai_prompts.reply_schema(active_nations))
     return _model_reply(result, mode, lambda: ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_MESSAGE"],
-                        ai_nation, nation_data)
+                        ai_nation, nation_data, recipient=sender_nation)
 
 def generate_proactive_text(nation_data, active_nations, ai_nation, target_nation, action_context, human_players=None, turn_id=None, current_date="Unknown"):
     """Generates a quick one-liner for proactive hardcoded AI actions.
@@ -709,4 +714,6 @@ def generate_proactive_text(nation_data, active_nations, ai_nation, target_natio
     if not result or result.get("error"):
         return None
     message = result.get("message")
-    return None if ai_prompts.unusable_message(message, ai_nation, nation_data) else message
+    return (None if ai_prompts.unusable_message(message, ai_nation, nation_data,
+                                                recipient=target_nation)
+            else message)

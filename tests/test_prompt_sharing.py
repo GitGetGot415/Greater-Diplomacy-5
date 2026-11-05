@@ -131,6 +131,11 @@ class StandingTests(unittest.TestCase):
         self.assertIn("Your faction: 'Bloc'. Its other members are already your allies: Gamma.",
                       self.tail)
 
+    def test_a_faction_is_said_to_be_a_defense_pact(self):
+        """Italy, in the Axis, proposed a mutual defense treaty to the German Reich."""
+        self.assertIn("Members are bound to defend each other, so no treaty between you "
+                      "is needed.", self.tail)
+
     def test_its_wars_are_named(self):
         self.assertIn("You are at war with: Beta.", self.tail)
 

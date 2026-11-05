@@ -108,6 +108,8 @@ MODEL DECISIONS
    Each option line says what its action does (c.AI_ACTION_EFFECTS, ai_candidates.effect),
    naming the war for a call to arms, an offer to join wars, or a military access request.
    A war declaration's line says the message announces the war and is not an offer.
+   The effect text uses no pronoun for the recipient, because the model copies it into its message.
+   "Cross their territory" became a message to France asking to cross "their territory".
    The instructions say that doing nothing is a normal choice.
 
 2. Decide whether to accept a proposal where the rules permit a choice.
@@ -134,7 +136,14 @@ MODEL TEXT AND MESSAGE METADATA
 
 ai_prompts.VOICE_RULE requires first-person plural speech.
 The sender must not refer to its own country in the third person.
-A reply that starts by naming its sender falls back to library text.
+A reply that starts by naming its sender, or by "We, the" and its sender's name or adjective, falls back to library text.
+
+ai_prompts.names_recipient rejects a message that names the country it is addressed to, which it should call "you".
+An opening address such as "France, we ask..." is allowed. A longer country name that contains the recipient's does not count.
+The check is case-sensitive and ignores adjectives.
+Director messages, letters, proposal replies, message replies, and proactive lines pass their recipient to ai_prompts.unusable_message.
+In one save about one model message in six named its recipient. The Soviet Union asked the German Reich for access
+"to counter the German Reich's aggressive expansion", a plan copied from its notebook.
 
 ai_prompts.CONDUCT_RULE appears in the letters, director, and reply instructions.
 It says to write to a country at war with you as an enemy, and never as if at peace or allied.
@@ -157,7 +166,8 @@ A director message is always the country's own move, so those words mean the mod
 ai_director.reads_as_offer rejects a war declaration's message that says "we propose" or "we offer".
 Letters and replies do not use this check, because those words are normal there.
 ai_prompts.reads_as_template rejects text with a bracketed or braced placeholder, such as "[insert resource]", or with "staff rating".
-ai_prompts.unusable_message combines that check with the third-person check. Every place that sends a model's words uses it:
+ai_prompts.unusable_message combines that check with the third-person check, and with names_recipient when the caller passes a recipient.
+Every place that sends a model's words uses it:
 
 - A rejected director message falls back to the proposal's library text.
 - A rejected letter is not sent.
@@ -208,6 +218,11 @@ The labels are "at war with you", "your overlord", "your puppet state", and "in 
 A recipient written with its label still resolves to its country.
 The instructions forbid a greeting and a signature, because each letter is already labelled with its sender and recipient.
 The prompt ends by saying that an empty list of letters is fine. It used to end "Sit down and write.", which read as an order to write.
+The instructions list the only agreements a government can make: factions, trades, military access, calls to arms, joining wars, ceasefires, and peace treaties.
+They say there are no other treaties, and that a faction's members are already bound to defend each other.
+Without this, faction members wrote to each other about a "mutual defense treaty", which the game does not have.
+The notebook instruction asks for opinions in words, never as the briefing's opinion scores.
+Notebooks otherwise held lines such as "We regard the United Kingdom as 2."
 
 A player's plain message to an AI has no letter field. Its delivered MSG: request marks it as awaiting an answer.
 When the AI's sitting returns a usable reply, the sitting has answered the message, whether or not it wrote back.
@@ -232,6 +247,7 @@ build_world_context puts shared information first:
 date, country list, politics, and world events.
 It then adds the selected country, its territory, relations, and task.
 That country-specific part also states the country's faction and its other members as existing allies, its wars, its master, and its puppets.
+It says that faction members are bound to defend each other, so no treaty between them is needed.
 The politics block holds the same facts, but a small model did not connect two of its lines and offered an alliance to a member of its own faction.
 With the turn's AIWorld, it also states the country's land neighbors and the countries across nearby water, from AIWorld.neighbors and AIWorld.sea_targets.
 Letters, the director, and both reply types pass that world. Scripted-event lines have none, so they omit geography.

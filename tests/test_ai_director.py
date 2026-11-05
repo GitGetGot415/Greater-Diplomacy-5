@@ -184,20 +184,41 @@ class ValidationTests(NoNetworkTestCase):
         bag.add_initiative(ac.make("JOIN_WARS", "E", 0.0, "help", context_target="F"))
         bag.add_initiative(ac.make("REQ_MILITARY_ACCESS", "G", 0.0, "near", context_target="H"))
         _system, user = ai_director.build_prompt(None, "A", bag.ranked(), 2)
-        self.assertIn("call to arms B (asks them to join your war against D)", user)
+        self.assertIn("call to arms B (a request to join your war against D)", user)
         self.assertIn("declare war on C (this message announces the war; "
                       "it is not an offer and cannot be refused)", user)
-        self.assertIn("offer to join the wars of E (you would join their war against F)", user)
-        self.assertIn("request military access through G (asks to let your troops "
-                      "cross their territory to reach H)", user)
+        self.assertIn("offer to join the wars of E (an offer to declare war on F too)", user)
+        self.assertIn("request military access through G (a request for passage "
+                      "for your troops to reach H)", user)
+
+    def test_what_an_option_does_has_no_pronoun_for_its_recipient(self):
+        """The model copied "cross their territory" into a message to France."""
+        for action, text in c.AI_ACTION_EFFECTS.items():
+            for pronoun in ("them", "their", "they"):
+                self.assertNotRegex(text, rf"\b{pronoun}\b", action)
 
     def test_a_message_that_quotes_what_an_option_does_is_dropped(self):
         bag = ac.Collector("A", {})
         bag.add(ac.make("CALL_TO_ARMS", "B", 0.5, "sworn", context_target="D"))
         cands = bag.ranked()
         _chosen, messages = ai_director.parse({"picks": ["0"], "messages": {
-            "0": "This asks them to join your war against D."}}, cands, 1)
+            "0": "This is a request to join your war against D."}}, cands, 1)
         self.assertEqual(messages, {})
+
+    def test_a_message_that_names_its_recipient_is_dropped(self):
+        """The Soviet Union asked the German Reich for access "to counter the
+        German Reich's aggressive expansion"."""
+        bag = ac.Collector("Soviet Union", {})
+        bag.add(ac.make("REQ_MILITARY_ACCESS", "German Reich", 0.5, "same enemy",
+                        context_target="Poland"))
+        bag.add(ac.make("TRADE", "Italy", 0.4, "goods"))
+        cands = bag.ranked()
+        access = next(cand.cid for cand in cands if cand.target == "German Reich")
+        trade = next(cand.cid for cand in cands if cand.target == "Italy")
+        _chosen, messages = ai_director.parse({"picks": [access, trade], "messages": {
+            access: "We request passage to reach Poland and counter the German Reich's expansion.",
+            trade: "We offer you coal for your oil."}}, cands, 2)
+        self.assertEqual(messages, {trade: "We offer you coal for your oil."})
 
     def test_a_message_that_answers_a_proposal_nobody_made_is_dropped(self):
         """Switzerland wrote "We are interested in your proposal" to open its own trade."""

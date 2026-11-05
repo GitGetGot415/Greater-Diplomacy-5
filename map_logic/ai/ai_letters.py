@@ -206,6 +206,10 @@ SYSTEM_PROMPT = (
     "figures from your briefing, do not write form letters, and do not write at all when "
     "you have nothing worth saying. Do not offer or ask for what you already have: a member "
     "of your own faction is already your ally.\n"
+    "The only agreements governments can make are the ones your government can formally "
+    "propose: factions, trades, military access, calls to arms, joining wars, ceasefires, "
+    "and peace treaties. There are no other treaties. A faction is a mutual defense "
+    "alliance: its members are already bound to defend each other.\n"
     "A letter commits nobody to anything. Your government makes formal proposals separately "
     "each turn, guided by your notebook, so plan in your notebook what you want to happen.\n"
     f"Write at most {c.AI_LETTERS_PER_CALL} letters, one per country, and only to countries "
@@ -214,7 +218,8 @@ SYSTEM_PROMPT = (
     f"For each letter waiting for you, give an integer from -{c.AI_OPINION_CHANGE_MAX} to "
     f"{c.AI_OPINION_CHANGE_MAX}: how much it improved or worsened your opinion of its author.\n"
     f"Then rewrite your notebook in full, in under {c.AI_NOTEBOOK_LENGTH} characters: what you "
-    "think of the countries that matter to you, what you want, what you have promised and been "
+    "think of the countries that matter to you, in words and never as the opinion scores from "
+    "your briefing, what you want, what you have promised and been "
     "promised, and what you are waiting to hear. Nobody else ever reads it.\n"
     "VOICE: write each letter as your own government, in the first person plural -- 'we', "
     "'our', 'us'. Never refer to your own country by name or in the third person. Do not "
@@ -323,7 +328,8 @@ def parse_reply(reply, nation, readers, authors, nation_data, shown=()):
     Anything the model made up is dropped one item at a time: a recipient who
     is not listed, a second letter to the same country, an opinion about a
     country whose letter it never saw, a letter that talks about its own
-    sender in the third person (see ai_prompts.reads_as_third_person), a
+    sender in the third person (see ai_prompts.reads_as_third_person) or names
+    its own recipient (ai_prompts.names_recipient), a
     letter with placeholder or menu text (ai_prompts.reads_as_template), and a
     letter that repeats a long sentence of a letter in `shown`, the letters the
     prompt showed (repeats_mail).
@@ -349,7 +355,7 @@ def parse_reply(reply, nation, readers, authors, nation_data, shown=()):
         if not to or any(to == sent for sent, _ in letters) or not isinstance(text, str):
             continue
         text = text.strip()[:c.AI_LETTER_LENGTH]
-        if (not text or ai_prompts.unusable_message(text, nation, nation_data)
+        if (not text or ai_prompts.unusable_message(text, nation, nation_data, recipient=to)
                 or repeats_mail(text, shown)):
             continue
         letters.append((to, text))

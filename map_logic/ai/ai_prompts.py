@@ -407,12 +407,55 @@ def reads_as_third_person(message, nation, nation_data=None):
     opening = message.lstrip().lstrip("\"'*").lower()
     for name in names:
         name = name.strip().lower()
-        if not name or not opening.startswith(name):
+        if not name:
+            continue
+        # "We, the German Reich, have long considered..." and "We, the
+        # government of France, have decided...": a sender naming itself.
+        if re.match(r"we\s*,\s*(the\s+)?((government|people|leaders?|nation)\s+of\s+)?(the\s+)?"
+                    + re.escape(name) + r"\b", opening):
+            return True
+        if not opening.startswith(name):
             continue
         rest = opening[len(name):]
         # "Switzerland accepts" is third person; "Switzerland! We accept" and
         # "Switzerland's terms are these" are somebody's own voice.
         if rest[:1] in ("", " ") and not rest.lstrip().startswith(("we ", "we'", "our ")):
+            return True
+    return False
+
+
+def names_recipient(message, recipient, nation_data=None):
+    """Whether a message talks about the country it is addressed to.
+
+    A message to a country calls it "you". In the "yet again" save about one
+    model message in six named its own recipient instead: the Soviet Union
+    asked the German Reich for access "to counter the German Reich's aggressive
+    expansion", and the Netherlands asked France for passage "through France to
+    let our troops cross their territory". Only an opening address is allowed,
+    as in "France, we ask...". A longer country name that contains the
+    recipient's ("Northern Ireland" in a letter to Ireland) does not count.
+    Adjectives are left alone: "French" is ordinary in a letter to France.
+    Matching is case-sensitive, so "turkey" or "chad" in lower case is a word,
+    not a country.
+    """
+    if not message or not recipient:
+        return False
+    nation_data = nation_data or {}
+    names = {recipient}
+    shown = ((nation_data.get(recipient) or {}).get("name") or "").strip()
+    if shown:
+        names.add(shown)
+
+    text = message.lstrip().lstrip("\"'*")
+    for name in names:
+        masked = text
+        for longer in nation_data:
+            if (isinstance(longer, str) and len(longer) > len(name)
+                    and re.search(r"\b" + re.escape(name) + r"\b", longer)):
+                masked = masked.replace(longer, " " * len(longer))
+        for found in re.finditer(r"\b" + re.escape(name) + r"\b", masked):
+            if found.start() == 0 and masked[found.end():found.end() + 1] in (",", "!", ":"):
+                continue
             return True
     return False
 
@@ -431,14 +474,16 @@ def reads_as_template(message):
     return bool(message) and bool(_TEMPLATE_TEXT.search(message))
 
 
-def unusable_message(message, nation, nation_data=None):
+def unusable_message(message, nation, nation_data=None, recipient=None):
     """Whether model-written text must be replaced before anyone reads it.
 
     Every place that sends a model's words checks them here: the director's
     proposal messages, letters, proposal and message replies, and scripted
-    event lines.
+    event lines. `recipient`, where the caller knows it, is the country the
+    words are addressed to (names_recipient).
     """
-    return reads_as_third_person(message, nation, nation_data) or reads_as_template(message)
+    return (reads_as_third_person(message, nation, nation_data) or reads_as_template(message)
+            or names_recipient(message, recipient, nation_data))
 
 
 #: The actions a reply may take, in the order action_rules_and_schema lists

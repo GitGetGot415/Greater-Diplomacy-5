@@ -92,6 +92,59 @@ class ThirdPersonDetectionTests(unittest.TestCase):
     def test_it_works_without_a_nation_data_block(self):
         self.assertTrue(ai_prompts.reads_as_third_person("Switzerland accepts.", "Switzerland"))
 
+    def test_we_followed_by_its_own_name_is_caught(self):
+        """"We, the German Reich, have long considered Luxembourg ours"."""
+        self.assertTrue(self.reads_wrong("We, Switzerland, will not yield."))
+        self.assertTrue(self.reads_wrong("We, the government of Switzerland, have decided."))
+        self.assertTrue(self.reads_wrong("We, the Swiss Confederation, decline."))
+        self.assertTrue(self.reads_wrong("We, the Swiss people, decline."))
+        self.assertFalse(self.reads_wrong("We, too, decline."))
+
+
+class RecipientNamedTests(unittest.TestCase):
+    """A message to a country calls it "you"."""
+
+    NATIONS = {"France": {"name": "France"}, "Ireland": {"name": "Ireland"},
+               "Northern Ireland": {"name": "Northern Ireland"},
+               "German Reich": {"name": "German Reich"}}
+
+    def names(self, message, recipient):
+        return ai_prompts.names_recipient(message, recipient, self.NATIONS)
+
+    def test_the_reported_failures_are_caught(self):
+        self.assertTrue(self.names("We request access to counter the German Reich's "
+                                   "aggressive expansion.", "German Reich"))
+        self.assertTrue(self.names("We request military access through France to let our "
+                                   "troops cross their territory.", "France"))
+
+    def test_speaking_to_the_recipient_passes(self):
+        self.assertFalse(self.names("We request passage through your territory.", "France"))
+
+    def test_an_opening_address_is_fine(self):
+        self.assertFalse(self.names("France, we ask for passage.", "France"))
+        self.assertFalse(self.names("France! Hear us.", "France"))
+        self.assertTrue(self.names("France will surely agree.", "France"))
+
+    def test_another_country_is_fine(self):
+        self.assertFalse(self.names("Our troops must reach the German Reich.", "France"))
+
+    def test_a_longer_name_containing_it_is_not_it(self):
+        self.assertFalse(self.names("We watch Northern Ireland closely.", "Ireland"))
+        self.assertTrue(self.names("We watch Ireland closely.", "Ireland"))
+
+    def test_its_adjective_and_lower_case_words_are_fine(self):
+        self.assertFalse(self.names("We admire French resolve.", "France"))
+        self.assertFalse(ai_prompts.names_recipient("We will carve the turkey.", "Turkey"))
+
+    def test_no_recipient_checks_nothing(self):
+        self.assertFalse(self.names("France will surely agree.", None))
+
+    def test_unusable_message_applies_it_only_with_a_recipient(self):
+        message = "We hope France agrees."
+        self.assertFalse(ai_prompts.unusable_message(message, "Italy", self.NATIONS))
+        self.assertTrue(ai_prompts.unusable_message(message, "Italy", self.NATIONS,
+                                                    recipient="France"))
+
 
 class DirectorMessageFilterTests(unittest.TestCase):
     """A dropped line costs one piece of flavour; a kept one reads as a bug."""

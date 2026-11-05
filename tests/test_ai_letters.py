@@ -222,9 +222,11 @@ class PlayerMessageTests(LetterTestCase):
         game = StubMapScreen(["A", "B"], human_players=["A"])
         game.force_skip_llm = False
         self.game = game
-        self.stub({"B": {"letters": [{"to": "A", "text": "A word in private."}]}})
+        # Not "A word in private.": the recipient here is named "A", and a
+        # letter that names its recipient is not sent (names_recipient).
+        self.stub({"B": {"letters": [{"to": "A", "text": "One word in private."}]}})
         self.run_letters()
-        self.assertEqual([m["content"] for m in self.letters_to("A")], ["A word in private."])
+        self.assertEqual([m["content"] for m in self.letters_to("A")], ["One word in private."])
 
 
 class ValidationTests(LetterTestCase):
@@ -552,6 +554,23 @@ class InitiativeTests(LetterTestCase):
         ai_diplomacy._queue_proactive_proposal(self.game, pending, "A", "C",
                                                "REQ_MILITARY_ACCESS")
         self.assertNotIn("{", pending["C"]["message"])
+
+    def test_the_sitting_names_the_only_agreements_there_are(self):
+        """Italy and the Reich discussed a mutual defense treaty inside the Axis."""
+        self.assertIn("There are no other treaties.", ai_letters.SYSTEM_PROMPT)
+        self.assertIn("its members are already bound to defend each other",
+                      ai_letters.SYSTEM_PROMPT)
+
+    def test_the_notebook_is_kept_in_words(self):
+        """Notebooks read "We regard the United Kingdom as 2."."""
+        self.assertIn("never as the opinion scores", ai_letters.SYSTEM_PROMPT)
+
+    def test_a_letter_that_names_its_recipient_is_not_sent(self):
+        letters, _opinions, _notebook = ai_letters.parse_reply(
+            {"letters": [{"to": "B", "text": "We fear that B will betray the pact."},
+                         {"to": "C", "text": "We trust you will stand with us."}]},
+            "A", ["A", "B", "C"], [], self.game.nation_data)
+        self.assertEqual(letters, [("C", "We trust you will stand with us.")])
 
     def test_the_sitting_does_not_order_a_letter(self):
         _system, user = ai_letters.build_prompt(self.game, "A", [], ["A", "B"],

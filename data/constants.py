@@ -1533,17 +1533,21 @@ AI_ACTION_PHRASES = {
 #: What each action does, said on the director's menu next to it. "call to
 #: arms Italy" alone told the model nothing, and the Reich wrote its call to
 #: arms as a "joint training exercise". {enemy} is the war the option is about.
+#:
+#: No pronoun stands for the recipient: the model copies these into its
+#: message, and "cross their territory" became "military access through France
+#: to let our troops cross their territory", written to France.
 AI_ACTION_EFFECTS = {
     "WAR_DECLARATION": "this message announces the war; it is not an offer and cannot be refused",
-    "CALL_TO_ARMS": "asks them to join your war against {enemy}",
-    "JOIN_WARS": "you would join their war against {enemy}",
-    "REQ_MILITARY_ACCESS": "asks to let your troops cross their territory to reach {enemy}",
+    "CALL_TO_ARMS": "a request to join your war against {enemy}",
+    "JOIN_WARS": "an offer to declare war on {enemy} too",
+    "REQ_MILITARY_ACCESS": "a request for passage for your troops to reach {enemy}",
 }
 
 #: {enemy} in AI_ACTION_EFFECTS when an option names no particular war.
 AI_ACTION_EFFECT_ENEMY = {
     "CALL_TO_ARMS": "your enemies",
-    "JOIN_WARS": "their enemies",
+    "JOIN_WARS": "the same enemies",
     "REQ_MILITARY_ACCESS": "your enemies",
 }
 
