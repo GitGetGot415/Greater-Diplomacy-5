@@ -22,6 +22,7 @@ to it (answered_by_letter).
 
 from data.state_access import world_for, session_for
 import json
+import re
 
 import data.constants as c
 from data import queries
@@ -142,8 +143,8 @@ def correspondents(nation_data, nation, alive, limit=None):
 
 
 def _thread(nation_data, nation, other, skip_ids):
-    """Earlier letters between the two, oldest first, as prompt lines."""
-    lines = []
+    """Earlier letters between the two, oldest first, as (speaker, message)."""
+    shown = []
     for msg in reversed((nation_data.get(nation) or {}).get("inbox") or []):
         if not _is_correspondence(msg) or msg.get("message_id") in skip_ids:
             continue
@@ -154,8 +155,45 @@ def _thread(nation_data, nation, other, skip_ids):
             speaker = "You"
         else:
             continue
-        lines.append(f"  {speaker} ({msg.get('date', '')}): \"{msg.get('content', '')}\"")
-    return lines[-c.AI_LETTER_THREAD_SHOWN:]
+        shown.append((speaker, msg))
+    return shown[-c.AI_LETTER_THREAD_SHOWN:]
+
+
+def _earlier_letters(nation_data, nation, mail, alive):
+    """[(other, thread)] for the EARLIER LETTERS section: mail senders, then correspondents."""
+    skip_ids = {msg.get("message_id") for msg in mail}
+    others = []
+    for name in [msg.get("sender") for msg in mail] + correspondents(nation_data, nation, alive):
+        if name not in others:
+            others.append(name)
+    return [(other, thread) for other in others
+            if (thread := _thread(nation_data, nation, other, skip_ids))]
+
+
+def shown_letters(nation_data, nation, mail, alive):
+    """The text of every letter the sitting's prompt shows, for repeats_mail."""
+    texts = [str(msg.get("content", "")) for msg in mail]
+    for _other, thread in _earlier_letters(nation_data, nation, mail, alive):
+        texts.extend(str(msg.get("content", "")) for _speaker, msg in thread)
+    return texts
+
+
+#: A sentence at least this long, repeated word for word, was copied rather than written.
+_COPIED_SENTENCE_LENGTH = 40
+
+
+def repeats_mail(text, shown):
+    """Whether a letter repeats a long sentence of a letter its writer was shown.
+
+    34 letters in the LOWBALLED save did. The Soviet Union answered the Reich's
+    "we are concerned about your growing military presence along our border"
+    with that same sentence, so each side sounded worried about the other.
+    """
+    lowered = (text or "").lower()
+    return any(sentence in lowered
+               for other in shown
+               for sentence in (part.strip().lower() for part in re.split(r"[.!?]", other))
+               if len(sentence) >= _COPIED_SENTENCE_LENGTH)
 
 
 SYSTEM_PROMPT = (
@@ -179,7 +217,10 @@ SYSTEM_PROMPT = (
     "think of the countries that matter to you, what you want, what you have promised and been "
     "promised, and what you are waiting to hear. Nobody else ever reads it.\n"
     "VOICE: write each letter as your own government, in the first person plural -- 'we', "
-    "'our', 'us'. Never refer to your own country by name or in the third person.\n"
+    "'our', 'us'. Never refer to your own country by name or in the third person. Do not "
+    "open with a greeting or close with a signature: each letter already names its sender "
+    "and recipient. Write in your own words; never repeat a letter you have read.\n"
+    + ai_prompts.CONDUCT_RULE +
     "Reply ONLY with a valid JSON object of this shape:\n"
     '{"letters": [{"to": "Country", "text": "the letter"}], '
     '"opinions": {"Country": 0}, "notebook": "your notebook"}'
@@ -203,31 +244,28 @@ def build_prompt(world_state, nation, unread, readers, alive, current_date, worl
     lines.append("\n--- YOUR PRIVATE NOTEBOOK ---")
     lines.append(notebook(nation_data, nation) or "(empty: you have written nothing yet)")
 
+    def label(other):
+        return ai_evaluation.labelled(nation_data, nation, other)
+
     lines.append("\n--- LETTERS WAITING FOR YOU ---")
     if unread:
         for msg in unread:
-            lines.append(f"From {msg.get('sender')} ({msg.get('date', '')}): "
+            lines.append(f"From {label(msg.get('sender'))}, {msg.get('date', '')}: "
                          f"\"{msg.get('content', '')}\"")
     else:
         lines.append("None.")
 
-    unread_ids = {msg.get("message_id") for msg in unread}
-    others = []
-    for name in [msg.get("sender") for msg in unread] + correspondents(nation_data, nation, alive):
-        if name not in others:
-            others.append(name)
     earlier = []
-    for other in others:
-        thread = _thread(nation_data, nation, other, unread_ids)
-        if thread:
-            earlier.append(f"With {other}:")
-            earlier.extend(thread)
+    for other, thread in _earlier_letters(nation_data, nation, unread, alive):
+        earlier.append(f"With {label(other)}:")
+        earlier.extend(f"  {speaker} ({msg.get('date', '')}): \"{msg.get('content', '')}\""
+                       for speaker, msg in thread)
     if earlier:
         lines.append("\n--- EARLIER LETTERS ---")
         lines.extend(earlier)
 
     lines.append("\n--- WHO READS LETTERS ---")
-    lines.append(", ".join(r for r in readers if r != nation) or "Nobody.")
+    lines.append(", ".join(label(r) for r in readers if r != nation) or "Nobody.")
     lines.append("\nSit down and write.")
     return SYSTEM_PROMPT, "\n".join(lines)
 
@@ -260,17 +298,21 @@ def _resolve(name, candidates, nation_data):
     if not isinstance(name, str):
         return None
     name = name.strip()
-    if name in candidates:
-        return name
-    wanted = name.lower()
-    for candidate in candidates:
-        display = queries.get_country_display_name(candidate, nation_data)
-        if candidate.lower() == wanted or str(display).lower() == wanted:
-            return candidate
+    # The prompt labels readers, as in "German Reich (at war with you)", and a
+    # model can copy the label into "to". A name with its own parentheses is
+    # tried whole first.
+    for attempt in dict.fromkeys((name, name.split(" (")[0].strip())):
+        if attempt in candidates:
+            return attempt
+        wanted = attempt.lower()
+        for candidate in candidates:
+            display = queries.get_country_display_name(candidate, nation_data)
+            if candidate.lower() == wanted or str(display).lower() == wanted:
+                return candidate
     return None
 
 
-def parse_reply(reply, nation, readers, authors, nation_data):
+def parse_reply(reply, nation, readers, authors, nation_data, shown=()):
     """(letters, opinions, notebook) from one sitting's reply.
 
     letters is [(recipient, text)]. opinions maps authors of letters this
@@ -280,8 +322,10 @@ def parse_reply(reply, nation, readers, authors, nation_data):
     Anything the model made up is dropped one item at a time: a recipient who
     is not listed, a second letter to the same country, an opinion about a
     country whose letter it never saw, a letter that talks about its own
-    sender in the third person (see ai_prompts.reads_as_third_person), and a
-    letter with placeholder or menu text (ai_prompts.reads_as_template).
+    sender in the third person (see ai_prompts.reads_as_third_person), a
+    letter with placeholder or menu text (ai_prompts.reads_as_template), and a
+    letter that repeats a long sentence of a letter in `shown`, the letters the
+    prompt showed (repeats_mail).
     """
     if isinstance(reply, str):
         try:
@@ -304,7 +348,8 @@ def parse_reply(reply, nation, readers, authors, nation_data):
         if not to or any(to == sent for sent, _ in letters) or not isinstance(text, str):
             continue
         text = text.strip()[:c.AI_LETTER_LENGTH]
-        if not text or ai_prompts.unusable_message(text, nation, nation_data):
+        if (not text or ai_prompts.unusable_message(text, nation, nation_data)
+                or repeats_mail(text, shown)):
             continue
         letters.append((to, text))
 
@@ -358,7 +403,7 @@ def apply_reply(context, job, reply, readers, turn):
         return
 
     letters, opinions, written = parse_reply(reply, nation, readers,
-                                             job["authors"], nation_data)
+                                             job["authors"], nation_data, job["shown"])
 
     # Only the mail that was in front of it.
     for msg in record.get("inbox") or []:
@@ -416,6 +461,7 @@ def process_letters(context):
         jobs.append({"nation": nation, "system": system, "user": user,
                      "letter_ids": {msg.get("message_id") for msg in mail} - {None},
                      "answers": [sender for sender, _ in awaiting_messages(nation_data, nation)],
+                     "shown": shown_letters(nation_data, nation, mail, alive),
                      "authors": authors,
                      "schema": reply_schema([r for r in readers if r != nation],
                                             sorted(authors))})

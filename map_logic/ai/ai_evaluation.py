@@ -265,8 +265,34 @@ def get_world_context(nation_data, active_nations, ai_nation, target_nation=None
     return ai_prompts.build_world_context(
         current_date, ai_nation, ', '.join(sorted(active_nations)),
         manpower, materials, politics_str, events_str, target_context_str, target_nation,
-        relations_str, _standing(nation_data, active_nations, ai_nation, world)
+        relations_str, _standing(nation_data, active_nations, ai_nation, world),
+        labelled(nation_data, ai_nation, target_nation) if target_nation else ""
     )
+
+
+def relationship(nation_data, nation, other):
+    """How `other` stands to `nation`, in a few words for a prompt, or "".
+
+    Stated where the model writes to or reads from `other`. A war listed only
+    among a dozen others was outweighed by the model's history: the Reich and
+    the Soviet Union wrote to each other cordially while at war.
+    """
+    if queries.are_at_war(nation, other, nation_data):
+        return "at war with you"
+    data, theirs = nation_data.get(nation, {}), nation_data.get(other, {})
+    if data.get("master") == other:
+        return "your overlord"
+    if theirs.get("master") == nation:
+        return "your puppet state"
+    if queries.are_in_same_faction(nation, other, nation_data):
+        return "in your faction"
+    return ""
+
+
+def labelled(nation_data, nation, other):
+    """`other` with its relationship to `nation`, as in "German Reich (at war with you)"."""
+    standing = relationship(nation_data, nation, other)
+    return f"{other} ({standing})" if standing else other
 
 
 def _standing(nation_data, active_nations, nation, world=None):
@@ -500,6 +526,12 @@ def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_typ
                                     kind=deal_mod.KIND_TRADE)
         # We are the AI: we take what they give, and give what they take.
         receive, give = deal_mod.resource_flows(agreement, ai_nation)
+
+        # Countries at war cannot trade (action_definitions._check_trade). An
+        # offer can still arrive after a war broke out while it waited, and
+        # pricing it let the Soviet Union sell fuel to the Reich invading it.
+        if queries.are_at_war(ai_nation, sender_nation, nation_data):
+            return Verdict(False, 1.0, "we do not trade with an enemy")
 
         # An integrated puppet used to be barred from trading with anyone but
         # its master; that restriction is gone and subjects trade like anyone

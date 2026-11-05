@@ -330,6 +330,22 @@ class TradeTests(VerdictTestCase):
         self.offer(give_materials=500)
         self.assertTrue(self.accepts("TRADE"))
 
+    def test_an_enemy_is_refused_whatever_it_offers(self):
+        """The Soviet Union sold fuel to the Reich invading it."""
+        self.offer(give_materials=5000)
+        for a, b in (("Avaria", "Borland"), ("Borland", "Avaria")):
+            self.nation_data[a]["at_war_with"] = [b]
+        verdict = self.verdict("TRADE")
+        self.assertFalse(verdict.accepted)
+        self.assertEqual(verdict.confidence, 1.0, "a structural refusal is not open to overrule")
+
+    def test_countries_at_war_cannot_send_a_trade(self):
+        from map_logic.diplomacy.action_definitions import availability
+        self.assertTrue(availability(self.nation_data, "Borland", "Avaria", "TRADE").allowed)
+        for a, b in (("Avaria", "Borland"), ("Borland", "Avaria")):
+            self.nation_data[a]["at_war_with"] = [b]
+        self.assertFalse(availability(self.nation_data, "Borland", "Avaria", "TRADE").allowed)
+
     def test_an_even_swap_is_refused(self):
         """The AI accepts a trade only if it gives literally nothing, which is
         why no AI has ever agreed to a deal a player would think fair."""

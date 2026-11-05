@@ -266,6 +266,22 @@ class ValidationTests(LetterTestCase):
         self.assertEqual(self.letters_to("B"), [])
         self.assertEqual([m["content"] for m in self.letters_to("C")], ["We will send you coal."])
 
+    def test_a_letter_that_repeats_a_letter_it_read_is_dropped(self):
+        """The Soviet Union answered the Reich with the Reich's own sentence."""
+        self.write("B", "A", "We are concerned about your growing military presence along our border.")
+        self.stub({"A": {"letters": [
+            {"to": "B", "text": "Indeed, we are concerned about your growing military presence along our border."},
+            {"to": "C", "text": "We will send you coal."}]}})
+        self.run_letters()
+        self.assertEqual(self.letters_to("B"), [])
+        self.assertEqual([m["content"] for m in self.letters_to("C")], ["We will send you coal."])
+
+    def test_a_reader_named_with_its_label_is_still_found(self):
+        self.game.set_war("A", "B")
+        self.stub({"A": {"letters": [{"to": "B (at war with you)", "text": "Surrender."}]}})
+        self.run_letters()
+        self.assertEqual([m["content"] for m in self.letters_to("B")], ["Surrender."])
+
     def test_a_letter_is_cut_to_its_length(self):
         self.stub({"A": {"letters": [{"to": "B", "text": "w" * (c.AI_LETTER_LENGTH + 50)}]}})
         self.run_letters()
@@ -312,6 +328,22 @@ class NotebookTests(LetterTestCase):
         self.stub({"A": {"letters": []}})
         self.run_letters()
         self.assertEqual(ai_letters.notebook(self.game.nation_data, "A"), "Trust nobody.")
+
+    def test_each_reader_and_letter_carries_its_relationship(self):
+        """A war listed among a dozen others was outweighed by the model's history."""
+        self.game.set_war("A", "B")
+        self.write("B", "A", "Hand over the border provinces.")
+        self.stub({})
+        self.run_letters()
+        prompt = next(user for writer, user in self.prompts if writer == "A")
+        readers = prompt.split("--- WHO READS LETTERS ---")[1]
+        self.assertIn("B (at war with you)", readers)
+        self.assertIn("From B (at war with you)", prompt)
+
+    def test_the_instructions_set_conduct_and_forbid_signatures(self):
+        from map_logic.ai import ai_prompts
+        self.assertIn(ai_prompts.CONDUCT_RULE, ai_letters.SYSTEM_PROMPT)
+        self.assertIn("close with a signature", ai_letters.SYSTEM_PROMPT)
 
     def test_the_writer_is_told_its_geography(self):
         self.stub({})

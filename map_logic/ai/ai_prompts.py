@@ -250,7 +250,7 @@ SHARED_CONTEXT_END = "\n--- YOU ---\n"
 
 def build_world_context(current_date, ai_nation, active_nations_str, manpower, materials,
                         politics_str, events_str, target_context_str, target_nation,
-                        relations_str="", standing_str=""):
+                        relations_str="", standing_str="", target_label=""):
     """Assembles the world, economy and politics a nation is reasoning about.
 
     Everything true of the world regardless of who is asking comes first, and
@@ -303,7 +303,8 @@ def build_world_context(current_date, ai_nation, active_nations_str, manpower, m
                     "listed is neutral):\n" + relations_str)
 
     if target_nation:
-        context += f"\n--- CURRENT TARGET ---\nYou are currently communicating with {target_nation}.\n"
+        context += (f"\n--- CURRENT TARGET ---\nYou are currently communicating with "
+                    f"{target_label or target_nation}.\n")
         if target_context_str:
             context += "Recent message history:\n" + target_context_str
 
@@ -366,6 +367,21 @@ VOICE_RULE = (
     "VOICE: write the 'message' as your own government addressing theirs, in the "
     "first person plural -- 'we', 'our', 'us'. Never refer to your own nation in "
     "the third person or by name, and never narrate what it does from outside.\n"
+)
+
+
+#: What every model-written message must respect, stated wherever VOICE_RULE is.
+#:
+#: The briefing has no troop information at all, so a model filled the gap from
+#: history: in June 1941 the Reich and the Soviet Union each wrote of the other's
+#: "growing military presence along our border". And a war buried in a list was
+#: outweighed by history too: the two wrote cordially while fighting each other.
+CONDUCT_RULE = (
+    "CONDUCT: a country marked as at war with you is your enemy. Write to it as one: "
+    "you may threaten, make demands, or discuss ending the war, but never write as if "
+    "you were at peace or allied. Your briefing has no information on troop positions "
+    "or movements, so never claim to have seen troops gathering, moving, or massing "
+    "anywhere.\n"
 )
 
 
@@ -477,7 +493,7 @@ def action_rules_and_schema(subject, message_hint):
       it, so the three stay distinct verbatim rather than being generalised.
     """
     return (
-        VOICE_RULE +
+        VOICE_RULE + CONDUCT_RULE +
         "Valid actions: " + ", ".join(f"'{action}'" for action in REPLY_ACTIONS[:-1])
         + f" or '{REPLY_ACTIONS[-1]}'.\n"
         "RULES FOR ACTIONS:\n"

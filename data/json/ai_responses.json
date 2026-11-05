@@ -153,6 +153,7 @@
   "PUPPET_CANNOT_CHOOSE_FACTION": "A subject state does not choose its own alliances. Address our overlord.",
 
   "NO_WAR_TO_JOIN": "There is no war between us to answer for. Whatever pact you think binds us here, it does not.",
+  "TRADE_AT_WAR": "We are at war. There will be no trade between us.",
 
   "GD4_DENIED_FRIENDSHIP": [
     {

@@ -123,6 +123,12 @@ ai_prompts.VOICE_RULE requires first-person plural speech.
 The sender must not refer to its own country in the third person.
 A reply that starts by naming its sender falls back to library text.
 
+ai_prompts.CONDUCT_RULE appears in the letters, director, and reply instructions.
+It says to write to a country at war with you as an enemy, and never as if at peace or allied.
+It also says the briefing has no troop information, so the model must never claim to have seen troops gathering or moving.
+No prompt contains unit positions. Without this rule, a model invented troop movements from its knowledge of history.
+A reply's "currently communicating with" line labels the target with its relationship, as letters do.
+
 The director's instructions say that each message goes to its option's country and addresses that government as "you".
 They also say that every option is a proposal the country makes first, which nobody has offered to it.
 An option with trade or treaty terms lists them as "your offer", from the proposer's side, using diplomacy_messages.describe_trade.
@@ -176,6 +182,12 @@ Letters follow the players' message timing in documentation/diplo_stuff.txt, Mes
 A letter has letter: true on both copies. The reader's copy gets letter_read: true when its reader is served.
 An unserved or failed sitting leaves letters unread for the next turn.
 A letter that the model refers to in the third person is dropped.
+A letter that repeats, word for word, a sentence of at least 40 characters from a letter its prompt showed is dropped (ai_letters.repeats_mail).
+
+The prompt labels every country under WHO READS LETTERS, every waiting letter, and every earlier-letters thread with its relationship to the writer.
+The labels are "at war with you", "your overlord", "your puppet state", and "in your faction" (ai_evaluation.relationship).
+A recipient written with its label still resolves to its country.
+The instructions forbid a greeting and a signature, because each letter is already labelled with its sender and recipient.
 
 A player's plain message to an AI has no letter field. Its delivered MSG: request marks it as awaiting an answer.
 When the AI's sitting returns a usable reply, the sitting has answered the message, whether or not it wrote back.

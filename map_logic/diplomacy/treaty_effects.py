@@ -171,6 +171,13 @@ def _accept_peace(host, action, proposer, accepter, params, escrow):
 
 
 def _accept_trade(host, action, proposer, accepter, params, escrow):
+    # The backstop for the send rule, where every accepted trade converges: an
+    # offer can be accepted after a war broke out while it waited. The proposer
+    # gets back what it put up, since the caller has already taken the escrow.
+    if queries.are_at_war(proposer, accepter, host.nation_data):
+        if escrow:
+            deal_effects.release_escrow(host.nation_data, escrow, proposer)
+        return _blocked("TRADE_AT_WAR")
     agreement = deal_mod.coerce(params, proposer, accepter, kind=deal_mod.KIND_TRADE)
     deal_effects.execute(host, agreement, escrowed=_escrow_pool(proposer, escrow))
     return _canned("ACCEPT_TRADE")

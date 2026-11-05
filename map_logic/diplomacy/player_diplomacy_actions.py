@@ -8,6 +8,7 @@ from map_logic.diplomacy import diplomacy_messages, diplomacy_processor, peace_s
 from map_logic.diplomacy import volunteers
 from map_logic.diplomacy import guarantees
 from map_logic.diplomacy import military_attaches
+from map_logic.diplomacy.action_definitions import availability
 import data.constants as c
 
 
@@ -319,6 +320,12 @@ def handle_accept_req(context, target=None, custom_msg=None):
             reason = peace_scope.refusal_reason(context.player_country, target, context.nation_data)
             if reason:
                 context.show_feedback(reason)
+                return
+        elif action == "TRADE":
+            # The same rule that stops a trade being sent to an enemy.
+            available = availability(context.nation_data, target, context.player_country, action)
+            if not available.allowed:
+                context.show_feedback(f"Cannot accept: {available.reason}.")
                 return
 
     _answer_incoming_request(context, target, diplomacy_messages.RESPONSE_ACCEPT, custom_msg)

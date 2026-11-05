@@ -204,6 +204,10 @@ Keep those requests separate.
 Faction members and members of the same imperial family already enter each other's land.
 A request for military access between them is unavailable, for players and AI alike (queries.needs_military_access_request).
 
+Countries at war cannot trade. A trade cannot be sent between them (action_definitions._check_trade), and neither a player nor the AI can accept one.
+A trade can still arrive after a war broke out while it waited. Accepting it is then unavailable, and the AI refuses it outright.
+treaty_effects blocks one that reaches execution anyway, returns the proposer's escrow, and sends the TRADE_AT_WAR line.
+
 Guarantees of independence
 -------------------------
 

@@ -149,7 +149,7 @@ def build_prompt(world, nation, candidates, limit, personality_note="", nation_d
         f"government directly, as 'you'. Where an option lists your offer, the message "
         f"must state those terms. The staff ratings and notes are for you alone: "
         f"never quote them.\n\n"
-        + ai_prompts.VOICE_RULE +
+        + ai_prompts.VOICE_RULE + ai_prompts.CONDUCT_RULE +
         "\nReply ONLY with a valid JSON object of this shape:\n"
         '{"picks": [0], "reason": "one sentence of why", '
         '"messages": {"0": "the message you send to that option\'s country"}}\n'

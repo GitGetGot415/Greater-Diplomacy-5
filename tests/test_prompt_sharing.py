@@ -134,6 +134,18 @@ class StandingTests(unittest.TestCase):
     def test_its_wars_are_named(self):
         self.assertIn("You are at war with: Beta.", self.tail)
 
+    def test_a_reply_names_its_target_with_their_relationship(self):
+        context = ai_evaluation.get_world_context(self.data, set(NATIONS), "Alpha", "Beta")
+        self.assertIn("You are currently communicating with Beta (at war with you).", context)
+        context = ai_evaluation.get_world_context(self.data, set(NATIONS), "Alpha", "Gamma")
+        self.assertIn("You are currently communicating with Gamma (in your faction).", context)
+
+    def test_every_model_prompt_states_the_conduct_rule(self):
+        """No claimed troop sightings, and enemies written to as enemies."""
+        system, _user = ai_director.build_prompt(None, "Alpha", [], 1)
+        self.assertIn(ai_prompts.CONDUCT_RULE, system)
+        self.assertIn(ai_prompts.CONDUCT_RULE, ai_prompts.action_rules_and_schema("proposal", "x"))
+
     def test_a_country_outside_any_faction_is_told_so(self):
         context = ai_evaluation.get_world_context(self.data, set(NATIONS), "Beta")
         self.assertIn("You are in no faction.", context)

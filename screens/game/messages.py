@@ -15,6 +15,7 @@ from ui.dialogs import pickers
 from ui.background_styles import MESSAGE_PANEL_STYLES
 
 from map_logic.diplomacy import player_diplomacy_actions, ratification
+from map_logic.diplomacy.action_definitions import availability
 from screens.game.peace_screen import open_view_peace_treaty_menu, open_view_trade_deal_menu
 from screens.game.deal_screen import open_trade_menu
 
@@ -777,7 +778,9 @@ class Messages_Screen(Screen):
         # their master. They trade like anyone else now.
         trade_button = Button(trade_x, MSG_HEADER_BUTTON_Y, (MSG_HEADER_TRADE_W, MSG_HEADER_BUTTON_H), "orange", "Trade", self.open_trade,
                               font_preset="button_small")
-        trade_button.disabled = not self.selected_recipient or is_tactical
+        trade_button.disabled = (not self.selected_recipient or is_tactical
+                                 or not availability(self.map_screen.nation_data, self.map_screen.player_country,
+                                                     self.selected_recipient, "TRADE").allowed)
         self.elements.append(trade_button)
         theme_button = Button(theme_x, MSG_HEADER_BUTTON_Y, (MSG_HEADER_THEME_W, MSG_HEADER_BUTTON_H), "blue", "Theme",
                               self.edit_conversation_theme, image=ui_elements.UI_ICONS.get("brush"),
@@ -837,13 +840,17 @@ class Messages_Screen(Screen):
             view_label = "View Peace Treaty" if is_peace else "View Trade Deal" if is_trade else "View Offer"
             view = self.view_peace_treaty if is_peace else self.view_trade_deal
             request = diplomacy_messages.get_pending(nation_data, target, player)
+            # A trade can arrive after a war broke out while it waited; the
+            # send rule then refuses it, so accepting it is unavailable too.
+            acceptable = not is_trade or availability(nation_data, target, player, action).allowed
             offers.append({
                 "action": action, "request_id": request.get("request_id"),
                 "fallback": diplomacy_messages.announcement_for(action),
                 "buttons": [
                     # Replies remain independent of our outgoing diplomat's travel state.
                     self._offer_button("green", "Undo Accept" if accepted else f"Accept {name}",
-                                       lambda: self.accept_proposal(target), editable and not declined),
+                                       lambda: self.accept_proposal(target),
+                                       editable and not declined and (accepted or acceptable)),
                     self._offer_button("red", "Undo Decline" if declined else f"Decline {name}",
                                        lambda: self.reject_proposal(target), editable and not accepted),
                     self._offer_button("yellow", view_label, lambda: view(target), is_peace or is_trade),
