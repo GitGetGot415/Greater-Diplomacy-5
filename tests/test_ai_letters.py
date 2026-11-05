@@ -259,6 +259,13 @@ class ValidationTests(LetterTestCase):
         self.run_letters()
         self.assertEqual(self.letters_to("B"), [])
 
+    def test_a_letter_with_placeholder_text_is_dropped(self):
+        self.stub({"A": {"letters": [{"to": "B", "text": "We will send you [insert resource]."},
+                                     {"to": "C", "text": "We will send you coal."}]}})
+        self.run_letters()
+        self.assertEqual(self.letters_to("B"), [])
+        self.assertEqual([m["content"] for m in self.letters_to("C")], ["We will send you coal."])
+
     def test_a_letter_is_cut_to_its_length(self):
         self.stub({"A": {"letters": [{"to": "B", "text": "w" * (c.AI_LETTER_LENGTH + 50)}]}})
         self.run_letters()

@@ -123,6 +123,12 @@ ai_prompts.VOICE_RULE requires first-person plural speech.
 The sender must not refer to its own country in the third person.
 A reply that starts by naming its sender falls back to library text.
 
+The director's instructions say that each message goes to its option's country and addresses that government as "you".
+An option with trade or treaty terms lists them from the proposer's side, using diplomacy_messages.describe_trade, and the message must state them.
+Staff ratings and notes are for the leader only.
+ai_prompts.reads_as_template rejects text with a bracketed or braced placeholder, such as "[insert resource]", or with "staff rating".
+A rejected director message falls back to the proposal's library text. A rejected letter is not sent.
+
 The llm field marks model-authored text.
 _reply and the director's per-candidate messages set it where they create the text.
 Provider error text does not set it.
@@ -179,6 +185,8 @@ Model requests in one turn must share the same world-context prefix.
 build_world_context puts shared information first:
 date, country list, politics, and world events.
 It then adds the selected country, its territory, relations, and task.
+That country-specific part also states the country's faction and its other members as existing allies, its wars, its master, and its puppets.
+The politics block holds the same facts, but a small model did not connect two of its lines and offered an alliance to a member of its own faction.
 
 World events are the 8 newest entries of GLOBAL_EVENTS.log. Their heading says the events already happened,
 and that a country they name which is not on the country list no longer exists.

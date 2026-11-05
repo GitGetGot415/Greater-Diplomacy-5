@@ -24,6 +24,7 @@ import json
 import data.constants as c
 
 from map_logic.ai import ai_candidates, ai_prompts
+from map_logic.diplomacy import diplomacy_messages
 
 
 def top_scored(candidates, limit):
@@ -68,7 +69,19 @@ def should_consult(candidates, wants_prose=False):
     return len(candidates) > 1 or (wants_prose and len(candidates) > 0)
 
 
-def build_prompt(world, nation, candidates, limit, personality_note=""):
+def _terms(candidate, nation, nation_data):
+    """A trade's or treaty's terms from the proposer's side, or "".
+
+    Without them the model wrote its message to an offer it could not see:
+    "our surplus of [insert resource] for their surplus of [insert resource]".
+    """
+    params = candidate.payload.get("parameters")
+    lines = diplomacy_messages.describe_trade(params, viewer_is_proposer=True, viewer=nation,
+                                              nation_data=nation_data) if params else []
+    return f" -- terms: {'; '.join(lines)}" if lines else ""
+
+
+def build_prompt(world, nation, candidates, limit, personality_note="", nation_data=None):
     """The menu, as the leader's staff would put it.
 
     The system half deliberately names nobody. ai_handler._combined_prompt now
@@ -82,7 +95,8 @@ def build_prompt(world, nation, candidates, limit, personality_note=""):
 
     lines = []
     for cand in candidates:
-        lines.append(f"  [{cand.cid}] {ai_candidates.describe(cand)}")
+        lines.append(f"  [{cand.cid}] {ai_candidates.describe(cand)}"
+                     f"{_terms(cand, nation, nation_data)}")
     lines.append(f"  [{c.AI_DIRECTOR_NONE_CID}] do nothing this turn")
 
     system = (
@@ -94,11 +108,15 @@ def build_prompt(world, nation, candidates, limit, personality_note=""):
         f"not recommend; take one when your letters or your notebook give you a "
         f"reason to.\n"
         f"Choose at most {limit}, at most one per country. You may follow the "
-        f"ratings or overrule them, but you may only choose from this list.\n\n"
+        f"ratings or overrule them, but you may only choose from this list.\n"
+        f"Each message is sent to the country its option names. Write to that "
+        f"government directly, as 'you'. Where an option lists terms, the message "
+        f"must state those terms. The staff ratings and notes are for you alone: "
+        f"never quote them.\n\n"
         + ai_prompts.VOICE_RULE +
         "\nReply ONLY with a valid JSON object of this shape:\n"
         '{"picks": [0], "reason": "one sentence of why", '
-        '"messages": {"0": "In-character text of the message that action sends"}}\n'
+        '"messages": {"0": "the message you send to that option\'s country"}}\n'
         "Every index in \"picks\" must appear in \"messages\"."
     )
     user = (f"{personality_note}You are the leader of {nation}.\n"
@@ -175,7 +193,7 @@ def messages_from(reply, nation=None, nation_data=None):
     than sent, and the proposal falls back to its canned line. Small models write
     "Switzerland accepts your offer" into a message already labelled as being
     from Switzerland; a dropped line costs one piece of flavour, a kept one
-    reads as a bug.
+    reads as a bug. A line with placeholder or menu text is dropped the same way.
     """
 
     if not isinstance(reply, dict):
@@ -185,7 +203,8 @@ def messages_from(reply, nation=None, nation_data=None):
         return {}
     return {str(k): str(v) for k, v in messages.items()
             if isinstance(v, str) and v.strip()
-            and not ai_prompts.reads_as_third_person(v, nation, nation_data)}
+            and not ai_prompts.reads_as_third_person(v, nation, nation_data)
+            and not ai_prompts.reads_as_template(v)}
 
 
 def parse(raw_reply, candidates, limit, nation=None, nation_data=None):

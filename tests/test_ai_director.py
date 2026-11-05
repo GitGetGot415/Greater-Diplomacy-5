@@ -106,6 +106,29 @@ class ValidationTests(NoNetworkTestCase):
             {"picks": [0], "messages": {"0": "text", "1": 42, "2": "  "}}, self.cands, 2)
         self.assertEqual(messages, {"0": "text"})
 
+    def test_placeholder_and_menu_text_is_dropped(self):
+        """The proposal then carries its canned line instead."""
+        _chosen, messages = ai_director.parse({"picks": [1], "messages": {
+            "0": "We offer our surplus of [insert resource] for yours.",
+            "1": "We offer this trade, with a staff rating of 0.40.",
+            "2": "We offer you 500 materials for 600 fuel."}}, self.cands, 2)
+        self.assertEqual(messages, {"2": "We offer you 500 materials for 600 fuel."})
+
+    def test_an_option_states_its_terms_from_the_proposers_side(self):
+        """Without the terms, the model wrote "[insert resource]" into a trade offer."""
+        bag = ac.Collector("A", {})
+        bag.add(ac.make("TRADE", "B", 0.4, "because",
+                        parameters={"give_materials": 500, "take_fuel": 600}))
+        _system, user = ai_director.build_prompt(None, "A", bag.ranked(), 2)
+        line = next(line for line in user.splitlines() if "with B" in line)
+        self.assertIn("You receive: 600 Fuel", line)
+        self.assertIn("You give: 500 Materials", line)
+
+    def test_the_messages_are_written_to_their_recipients(self):
+        system, _user = ai_director.build_prompt(None, "A", self.cands, 2)
+        self.assertIn("as 'you'", system)
+        self.assertIn("never quote them", system)
+
     def test_nothing_to_choose_between_is_not_worth_asking(self):
         """On a large map this is most nations most turns, and skipping them is
         the cheapest lever there is on what ABSOLUTE mode costs."""

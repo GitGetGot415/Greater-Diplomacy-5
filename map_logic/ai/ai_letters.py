@@ -166,7 +166,8 @@ SYSTEM_PROMPT = (
     "of other countries, share or ask for information, sound out an alliance or a trade, "
     "coordinate a war, warn, flatter, threaten, or turn someone down. Do not restate "
     "figures from your briefing, do not write form letters, and do not write at all when "
-    "you have nothing worth saying.\n"
+    "you have nothing worth saying. Do not offer or ask for what you already have: a member "
+    "of your own faction is already your ally.\n"
     "A letter commits nobody to anything. Your government makes formal proposals separately "
     "each turn, guided by your notebook, so plan in your notebook what you want to happen.\n"
     f"Write at most {c.AI_LETTERS_PER_CALL} letters, one per country, and only to countries "
@@ -277,8 +278,9 @@ def parse_reply(reply, nation, readers, authors, nation_data):
 
     Anything the model made up is dropped one item at a time: a recipient who
     is not listed, a second letter to the same country, an opinion about a
-    country whose letter it never saw, and a letter that talks about its own
-    sender in the third person (see ai_prompts.reads_as_third_person).
+    country whose letter it never saw, a letter that talks about its own
+    sender in the third person (see ai_prompts.reads_as_third_person), and a
+    letter with placeholder or menu text (ai_prompts.reads_as_template).
     """
     if isinstance(reply, str):
         try:
@@ -301,7 +303,8 @@ def parse_reply(reply, nation, readers, authors, nation_data):
         if not to or any(to == sent for sent, _ in letters) or not isinstance(text, str):
             continue
         text = text.strip()[:c.AI_LETTER_LENGTH]
-        if not text or ai_prompts.reads_as_third_person(text, nation, nation_data):
+        if (not text or ai_prompts.reads_as_third_person(text, nation, nation_data)
+                or ai_prompts.reads_as_template(text)):
             continue
         letters.append((to, text))
 

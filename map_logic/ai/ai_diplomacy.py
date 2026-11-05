@@ -116,7 +116,8 @@ def start_proactive_llm_tasks(context):
         if plans:
             note += f"Your private notebook, which only you read:\n{plans}\n"
         system, user = ai_director.build_prompt(
-            world, nation, choice["candidates"], c.AI_MAX_ACTIONS_PER_TURN, note)
+            world, nation, choice["candidates"], c.AI_MAX_ACTIONS_PER_TURN, note,
+            nation_data=world_state.nation_data)
         world_context = ai_evaluation.get_world_context(
             world_state.nation_data, active_nations, nation, current_date=current_date)
         choice["_prompt"] = (system, f"{world_context}\n{user}")
@@ -929,7 +930,7 @@ def _offer_trades(bag, context, ai_name, active_nations, world):
 
         bag.add(ai_candidates.make(
             "TRADE", other, c.AI_SCORE_TRADE,
-            "we have a surplus of what they lack, and they of what we lack",
+            "our spare resources for what we lack",
             parameters=offer))
 
 

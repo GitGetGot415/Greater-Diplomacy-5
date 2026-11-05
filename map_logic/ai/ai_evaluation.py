@@ -242,8 +242,37 @@ def get_world_context(nation_data, active_nations, ai_nation, target_nation=None
     return ai_prompts.build_world_context(
         current_date, ai_nation, ', '.join(sorted(active_nations)),
         manpower, materials, politics_str, events_str, target_context_str, target_nation,
-        relations_str
+        relations_str, _standing(nation_data, active_nations, ai_nation)
     )
+
+
+def _standing(nation_data, active_nations, nation):
+    """The country's own faction, wars, master, and puppets, stated outright.
+
+    The politics block holds the same facts for every country, but a small model
+    has to match two of its lines to see that a faction member is already its
+    ally. In the halla save it did not: Austria-Hungary wrote to the German
+    Empire offering a defense agreement inside the Central Powers.
+    """
+    data = nation_data.get(nation, {})
+    faction = data.get("faction", "")
+    if faction:
+        allies = [m for m in sorted(queries.get_faction_members(faction, nation_data))
+                  if m != nation and m in active_nations]
+        lines = [f"Your faction: '{faction}'. " + (
+            f"Its other members are already your allies: {', '.join(allies)}."
+            if allies else "You are its only member.")]
+    else:
+        lines = ["You are in no faction."]
+    wars = [w for w in sorted(queries.get_enemies(nation, nation_data)) if w in active_nations]
+    lines.append(f"You are at war with: {', '.join(wars)}." if wars else "You are at war with nobody.")
+    master = data.get("master", "")
+    if master:
+        lines.append(f"You are a puppet state of {master}.")
+    puppets = [p for p in sorted(data.get("puppets", [])) if p in active_nations]
+    if puppets:
+        lines.append(f"Your puppet states: {', '.join(puppets)}.")
+    return "\n".join(lines) + "\n"
 
 
 #: What the AI decided about an incoming proposal, and how firmly.

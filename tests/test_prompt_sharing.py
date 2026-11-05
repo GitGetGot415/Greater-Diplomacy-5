@@ -118,6 +118,35 @@ class SharedPrefixTests(unittest.TestCase):
         self.assertEqual(listed, sorted(listed), f"politics listed as {listed}")
 
 
+class StandingTests(unittest.TestCase):
+    """A country is told its own alliances outright, in its own tail."""
+
+    def setUp(self):
+        self.data = nation_data()
+        self.context = ai_evaluation.get_world_context(self.data, set(NATIONS), "Alpha")
+        self.tail = self.context[self.context.index(ai_prompts.SHARED_CONTEXT_END):]
+
+    def test_its_faction_members_are_named_as_allies(self):
+        """Austria-Hungary offered its own faction leader a defense agreement."""
+        self.assertIn("Your faction: 'Bloc'. Its other members are already your allies: Gamma.",
+                      self.tail)
+
+    def test_its_wars_are_named(self):
+        self.assertIn("You are at war with: Beta.", self.tail)
+
+    def test_a_country_outside_any_faction_is_told_so(self):
+        context = ai_evaluation.get_world_context(self.data, set(NATIONS), "Beta")
+        self.assertIn("You are in no faction.", context)
+
+    def test_masters_and_puppets_are_named(self):
+        self.data["Beta"]["master"] = "Alpha"
+        self.data["Alpha"]["puppets"] = ["Beta"]
+        self.assertIn("Your puppet states: Beta.",
+                      ai_evaluation.get_world_context(self.data, set(NATIONS), "Alpha"))
+        self.assertIn("You are a puppet state of Alpha.",
+                      ai_evaluation.get_world_context(self.data, set(NATIONS), "Beta"))
+
+
 class RelationTrimTests(unittest.TestCase):
     def test_neutral_opinions_are_left_out(self):
         """Driven by what get_relation_score actually returns, not by what the

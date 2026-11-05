@@ -10,6 +10,7 @@
 
 from map_logic.diplomacy.action_definitions import ACTION_DEFINITIONS
 import random
+import re
 
 import data.constants as c
 from data import queries
@@ -249,7 +250,7 @@ SHARED_CONTEXT_END = "\n--- YOU ---\n"
 
 def build_world_context(current_date, ai_nation, active_nations_str, manpower, materials,
                         politics_str, events_str, target_context_str, target_nation,
-                        relations_str=""):
+                        relations_str="", standing_str=""):
     """Assembles the world, economy and politics a nation is reasoning about.
 
     Everything true of the world regardless of who is asking comes first, and
@@ -295,6 +296,7 @@ def build_world_context(current_date, ai_nation, active_nations_str, manpower, m
 
     # --- per-nation tail ---------------------------------------------------
     context += f"{SHARED_CONTEXT_END}You are the leader of {ai_nation}.\n"
+    context += standing_str
     context += f"Your economy: {manpower} Manpower, {materials} Materials.\n"
     if relations_str:
         context += ("How you regard the others (scale -200 to 200; anyone not "
@@ -397,6 +399,20 @@ def reads_as_third_person(message, nation, nation_data=None):
         if rest[:1] in ("", " ") and not rest.lstrip().startswith(("we ", "we'", "our ")):
             return True
     return False
+
+
+#: Text no leader writes: a fill-in placeholder, or the staff menu quoted back.
+#: Seen in play as "our surplus of [insert resource]" and "with a staff rating of 0.40".
+_TEMPLATE_TEXT = re.compile(r"\[[^\]]*\]|\{[^}]*\}|staff rating", re.IGNORECASE)
+
+
+def reads_as_template(message):
+    """Whether a message holds placeholder or menu text instead of a leader's words.
+
+    Callers drop such a message, as they drop one in the third person: a
+    proposal falls back to its canned line, and a letter is not sent.
+    """
+    return bool(message) and bool(_TEMPLATE_TEXT.search(message))
 
 
 #: The actions a reply may take, in the order action_rules_and_schema lists
