@@ -324,9 +324,13 @@ your side's reserves at the bottom, the lane list on the left, and Reset and Exi
 on the right. Unit cards fill the opposing front grids in the center; their
 slot counts come from the selected lane's actual combat width. Reserve grids
 and overflowing front grids scroll with their own scrollbars and mouse wheel.
-Drag a reserve onto one of your front-line units to swap them, or onto the front
-column to assign it to the selected lane. Drag a front-line unit into reserves
-to hold it back. Held reserves appear first. Allies and enemies remain read-only.
+Drag a reserve onto one of your front-line units to swap them, or into an empty
+front slot to fill that position. Drag a front-line unit into reserves to hold
+it back. Vacancies stay empty in the editor, including when scrolling or
+switching lanes; other cards keep their positions. Held reserves appear first.
+These positions are temporary editing state. On exit, the normal combat rules
+fill required front slots from the resulting unit orders. Allies and enemies
+remain read-only.
 Reset removes your manual lane assignments and uses the same automatic
 wounded-unit rotation as the rule-based AI. Exit returns to the existing
 Manage Battle and Orders view with its selection and scroll position intact.

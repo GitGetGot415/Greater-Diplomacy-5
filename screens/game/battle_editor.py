@@ -52,6 +52,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
         self.opened_turn = None
         self.back_state = "ORDERS"
         self._observed_state = None
+        self.front_slots = None
         self.refresh_ui()
         if overview is not None:
             self.start(overview)
@@ -70,6 +71,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
         self.opened_turn = self.map_screen.time_manager.total_turns
         self.selected_lane = overview.selected_lane
         self.done = False
+        self.front_slots = None
         self.cancel_drag()
         for pane in self.regions:
             setattr(self, self.scroll_attrs(pane)["attr"], 0)
@@ -77,7 +79,12 @@ class BattleEditorScreen(ScrollPanes, Screen):
         self._observed_state = self._source_stamp()
 
     def current(self):
-        return self.overview.current()
+        lane, near, far = self.overview.current()
+        if lane is not None and self.front_slots is not None:
+            near = near._replace(
+                front=[unit for unit in self.front_slots[lane.index] if unit is not None],
+                reserve=self._reserve_units(near))
+        return lane, near, far
 
     def my_units(self):
         return self.overview.my_units()
@@ -89,7 +96,24 @@ class BattleEditorScreen(ScrollPanes, Screen):
         return self.overview.is_mine(side)
 
     def seated(self):
-        return self.overview.seated()
+        if self.front_slots is None:
+            return self.overview.seated()
+        seated = {id(unit) for slots in self.front_slots.values() for unit in slots if unit is not None}
+        for lane in self.overview.battle.lanes:
+            _near, far = self.overview.near_far(lane)
+            seated.update(id(unit) for unit in far.front)
+        return seated
+
+    def _reserve_units(self, side):
+        """The editor's bench follows its cards, rather than automatic seating."""
+        seated = self.seated()
+        mine = ([unit for unit in self.my_units() if id(unit) not in seated]
+                if self.overview.is_mine(side) else [])
+        commanded = {id(unit) for unit in mine}
+        rest = [unit for unit in self.province.get('units', [])
+                if queries.get_unit_combat_owner(unit) in side.nations
+                and id(unit) not in seated and id(unit) not in commanded]
+        return mine + rest
 
     def _layout(self):
         width = c.SCREEN_WIDTH - 2 * MARGIN
@@ -121,9 +145,18 @@ class BattleEditorScreen(ScrollPanes, Screen):
         self.row_paint = {}
         self.card_surfaces = {}
         self.slot_rects = {}
+        self.empty_slots = {}
         self.lane_labels = []
         self.headings = {}
         if self.overview is not None:
+            stamp = self._source_stamp()
+            if self._observed_state is not None and stamp != self._observed_state:
+                # An authoritative update invalidates temporary positions,
+                # including when input arrives before the next frame update.
+                self.cancel_drag()
+                self.front_slots = None
+                self.province = self.map_screen.id_to_province.get(self.province['id'], self.province)
+                self._observed_state = stamp
             self.overview.province = self.province
         for pane in self.regions:
             setattr(self, self.scroll_attrs(pane)["limit_attr"], 0)
@@ -146,12 +179,20 @@ class BattleEditorScreen(ScrollPanes, Screen):
         self.title = f"Edit Battle - Province {self.province['id']}"
         if not self.overview.visible or not self.battle.lanes:
             return
+        if self.front_slots is None:
+            # Positions are temporary editor state. Rebuilding the execution
+            # preview must not fill vacancies or compact the player's cards.
+            self.front_slots = {}
+            for lane in self.battle.lanes:
+                near, far = self.overview.near_far(lane)
+                count = max(lane.slots, len(near.front), len(far.front))
+                self.front_slots[lane.index] = list(near.front) + [None] * (count - len(near.front))
         self._lane_rows()
         lane, near, far = self.current()
-        slots = max(lane.slots, len(near.front), len(far.front))
+        slots = len(self.front_slots[lane.index])
         self._card_grid(PANE_ENEMY, far.front, slots=slots)
-        self._card_grid(PANE_FRONT, near.front, slots=slots)
-        reserves = self.overview.side_bench(near) if self.is_mine(near) else near.reserve
+        self._card_grid(PANE_FRONT, self.front_slots[lane.index], slots=slots)
+        reserves = near.reserve
         seated = self.seated()
         enemies = [unit for unit in self.province.get('units', [])
                    if queries.get_unit_combat_owner(unit) in far.nations and id(unit) not in seated]
@@ -177,6 +218,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
                                        row_h=LANE_ROW_H):
             lane = self.battle.lanes[index]
             near, far = self.overview.near_far(lane)
+            front_count = sum(unit is not None for unit in self.front_slots[lane.index])
             mine = self.is_mine(near) or self.is_mine(far)
             button = Button(rect.x + GAP, y, (rect.width - SCROLLBAR_W - 2 * GAP, LANE_ROW_H),
                             'blue' if mine else 'grey', '', lambda i=index: self._select(i))
@@ -192,7 +234,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
                 owner = self.overview.side_display_nations(side)[0]
                 x = flag_icons.draw_flag_centered(label, owner, self.map_screen.nation_data,
                                                   x, 0, LANE_ROW_H) + GAP
-            tally = font.render(f"{len(near.front)} v {len(far.front)}", True, c.UI_TEXT_LIGHT)
+            tally = font.render(f"{front_count} v {len(far.front)}", True, c.UI_TEXT_LIGHT)
             label.blit(tally, (label.get_width() - tally.get_width() - 5, 12))
             self.lane_labels.append((button.rect, label))
 
@@ -215,6 +257,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
         setattr(self, attrs['attr'], max(limit, min(0, self.pane_scroll(pane))))
         self.row_paint[pane] = []
         self.slot_rects[pane] = []
+        self.empty_slots[pane] = []
         for grid_row, y in self.layout_list_rows(
                 rows, CARD_H + GAP, rect.y, view_h=rect.height, pad=-GAP,
                 cull_top=rect.top, cull_bottom=rect.bottom,
@@ -224,8 +267,9 @@ class BattleEditorScreen(ScrollPanes, Screen):
                 if index >= count:
                     break
                 card_rect = pygame.Rect(rect.x + column * (card_w + GAP), y, card_w, CARD_H)
-                if index >= len(units):
+                if index >= len(units) or units[index] is None:
                     self.slot_rects[pane].append(card_rect)
+                    self.empty_slots[pane].append((card_rect, index))
                     continue
                 unit = units[index]
                 self.row_paint[pane].append((card_rect, (unit, '')))
@@ -317,8 +361,10 @@ class BattleEditorScreen(ScrollPanes, Screen):
 
     def _changed(self):
         self.map_screen.invalidate_map_presentation_cache()
-        self.refresh_ui()
+        # Our own order edits preserve the in-progress positions. External
+        # state changes instead discard them at the refresh boundary above.
         self._observed_state = self._source_stamp()
+        self.refresh_ui()
 
     def reset_assignments(self):
         self.cancel_drag()
@@ -326,9 +372,10 @@ class BattleEditorScreen(ScrollPanes, Screen):
             return
         unit_actions.reset_battle_orders(
             self.map_screen, self.player, self.province, self.my_units())
+        self.front_slots = None
         self._changed()
 
-    def drop_unit(self, unit, pane, replacement=None):
+    def drop_unit(self, unit, pane, replacement=None, slot_index=None):
         """A front-row drop swaps troops; a reserve drop holds a unit back."""
         if not self.can_edit_now() or not self.can_command(unit):
             return False
@@ -340,8 +387,6 @@ class BattleEditorScreen(ScrollPanes, Screen):
                 return False
             changes = [(unit, None, True)]
         elif pane == PANE_FRONT:
-            if any(current is unit for current in near.front):
-                return False
             nation = queries.get_unit_combat_owner(unit)
             if nation not in near.nations:
                 return False
@@ -349,10 +394,21 @@ class BattleEditorScreen(ScrollPanes, Screen):
                 nation, enemy, self.map_screen.nation_data)), None)
             if target is None:
                 return False
-            if replacement is None and len(near.front) >= lane.slots:
-                replacement = next((current for current in reversed(near.front)
-                                    if self.can_command(current)
-                                    and queries.get_unit_combat_owner(current) == nation), None)
+            slots = self.front_slots[lane.index]
+            if replacement is not None:
+                slot_index = next((index for index, current in enumerate(slots)
+                                   if current is replacement), None)
+            elif slot_index is None:
+                slot_index = next((index for index, current in enumerate(slots) if current is None), None)
+                if slot_index is None:
+                    slot_index = next((index for index in reversed(range(len(slots)))
+                                       if self.can_command(slots[index])
+                                       and queries.get_unit_combat_owner(slots[index]) == nation), None)
+            if type(slot_index) is not int or not 0 <= slot_index < len(slots):
+                return False
+            replacement = slots[slot_index]
+            if replacement is unit:
+                return False
             changes = [(unit, target, False)]
             if replacement is not None:
                 if (not any(current is replacement for current in near.front)
@@ -363,6 +419,13 @@ class BattleEditorScreen(ScrollPanes, Screen):
         else:
             return False
         unit_actions.apply_battle_orders(self.map_screen, self.player, self.province, changes)
+        removed = {id(current) for current, _target, _reserve in changes}
+        for slots in self.front_slots.values():
+            for index, current in enumerate(slots):
+                if current is not None and id(current) in removed:
+                    slots[index] = None
+        if pane == PANE_FRONT:
+            self.front_slots[lane.index][slot_index] = unit
         self._changed()
         return True
 
@@ -391,7 +454,10 @@ class BattleEditorScreen(ScrollPanes, Screen):
                     for pane in (PANE_FRONT, PANE_RESERVE):
                         if self.regions[pane].collidepoint(event.pos):
                             row = self._row_at(pane, event.pos)
-                            self.drop_unit(unit, pane, row[1] if row and pane == PANE_FRONT else None)
+                            slot = next((index for rect, index in self.empty_slots.get(pane, ())
+                                         if rect.collidepoint(event.pos)), None)
+                            self.drop_unit(unit, pane, row[1] if row and pane == PANE_FRONT else None,
+                                           slot_index=slot)
                             break
                     continue
             # Scrollbar drags take priority over grabbing a unit card.
@@ -433,10 +499,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
             return
         stamp = self._source_stamp()
         if stamp != self._observed_state:
-            self.cancel_drag()
-            self.province = self.map_screen.id_to_province.get(self.province['id'], self.province)
             self.refresh_ui()
-            self._observed_state = stamp
 
     def exit_screen(self):
         self.cancel_drag()

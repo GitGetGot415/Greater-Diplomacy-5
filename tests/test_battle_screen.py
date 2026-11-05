@@ -421,6 +421,80 @@ class BattleEditorTests(BattleScreenTestCase):
         self.assertEqual(self.province["units"], before)
         self.assertIsNone(screen.drag_unit)
 
+    def test_removing_a_front_unit_leaves_its_slot_empty(self):
+        screen = self.editor()
+        lane, _near, _far = screen.current()
+        before = list(screen.front_slots[lane.index])
+        front = next(unit for unit in before if unit is not None and screen.can_command(unit))
+        index = next(index for index, unit in enumerate(before) if unit is front)
+        self.assertTrue(screen.drop_unit(front, battle_screen.PANE_RESERVE))
+        expected = list(before)
+        expected[index] = None
+        self.assertEqual([id(unit) if unit is not None else None for unit in screen.front_slots[lane.index]],
+                         [id(unit) if unit is not None else None for unit in expected])
+        self.assertIn(id(front), {id(unit) for unit in screen.current()[1].reserve})
+
+        screen._select(next(index for index in range(len(screen.battle.lanes)) if index != lane.index))
+        screen._select(lane.index)
+        screen.refresh_ui()
+        screen.update()
+        self.assertIsNone(screen.front_slots[lane.index][index])
+
+    def test_dragging_a_reserve_into_the_empty_slot_keeps_other_units_in_place(self):
+        screen = self.editor()
+        lane, _near, _far = screen.current()
+        _rect, front = self.own_row(screen, battle_screen.PANE_FRONT)
+        index = next(index for index, unit in enumerate(screen.front_slots[lane.index]) if unit is front)
+        self.assertTrue(screen.drop_unit(front, battle_screen.PANE_RESERVE))
+        expected = list(screen.front_slots[lane.index])
+        reserve_rect, reserve = next((rect, unit) for rect, (unit, _note)
+                                     in screen.row_paint[battle_screen.PANE_RESERVE]
+                                     if screen.can_command(unit) and unit is not front)
+        end = next(rect.center for rect, slot in screen.empty_slots[battle_screen.PANE_FRONT] if slot == index)
+        screen.handle_events([
+            pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=reserve_rect.center, button=1),
+            pygame.event.Event(pygame.MOUSEBUTTONUP, pos=end, button=1)])
+        expected[index] = reserve
+        self.assertEqual([id(unit) if unit is not None else None for unit in screen.front_slots[lane.index]],
+                         [id(unit) if unit is not None else None for unit in expected])
+
+    def test_all_own_front_units_can_be_removed_without_autofill(self):
+        screen = self.editor()
+        own_front = {id(unit): unit for slots in screen.front_slots.values() for unit in slots
+                     if unit is not None and screen.can_command(unit)}
+        for unit in own_front.values():
+            self.assertTrue(screen.drop_unit(unit, battle_screen.PANE_RESERVE))
+        self.assertTrue(all(unit is None or not screen.can_command(unit)
+                            for slots in screen.front_slots.values() for unit in slots))
+        screen.reset_assignments()
+        self.assertTrue(any(unit is not None and screen.can_command(unit)
+                            for slots in screen.front_slots.values() for unit in slots))
+
+    def test_front_card_can_be_moved_to_a_vacant_position(self):
+        # Give the player enough front slots to rearrange two of their cards.
+        self.enterContext(mock.patch.object(combat_rules, "combat_width_for_terrain", return_value=24))
+        screen = self.editor()
+        lane, near, _far = screen.current()
+        ours = [unit for unit in near.front if screen.can_command(unit)]
+        removed, moved = ours[:2]
+        original = list(screen.front_slots[lane.index])
+        empty_index = next(index for index, unit in enumerate(original) if unit is removed)
+        old_index = next(index for index, unit in enumerate(original) if unit is moved)
+        self.assertTrue(screen.drop_unit(removed, battle_screen.PANE_RESERVE))
+        self.assertTrue(screen.drop_unit(moved, battle_screen.PANE_FRONT, slot_index=empty_index))
+        self.assertIs(screen.front_slots[lane.index][empty_index], moved)
+        self.assertIsNone(screen.front_slots[lane.index][old_index])
+
+    def test_exit_preserves_the_normal_combat_coverage_rule(self):
+        screen = self.editor()
+        _rect, front = self.own_row(screen, battle_screen.PANE_FRONT)
+        self.assertTrue(screen.drop_unit(front, battle_screen.PANE_RESERVE))
+        self.assertTrue(any(unit is None for slots in screen.front_slots.values() for unit in slots))
+        screen.exit_screen()
+        for lane in screen.overview.battle.lanes:
+            self.assertTrue(lane.a.front)
+            self.assertTrue(lane.b.front)
+
     def test_reset_removes_manual_pins_and_rotates_wounded_units(self):
         screen = self.editor()
         ours = screen.my_units()
