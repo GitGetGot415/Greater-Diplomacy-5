@@ -423,9 +423,7 @@ class Battle_Screen(ModalScreen):
 
     def _build_footer(self, btn_y):
         p = self.panel_rect
-        edit = self.button(p.x + self.PAD, btn_y, 130, "grey", "Edit", self.open_editor)
-        icon_side = edit.font.get_height()
-        edit.image = symbol_loader.get_symbol("Gear", zoom=1, fit_size=(icon_side, icon_side))
+        edit = self.button(p.x + self.PAD, btn_y, 130, "blue", "Edit", self.open_editor)
         edit.disabled = not (self.visible and self.my_units()
                              and self.map_screen.can_select_map_units())
         self.elements.append(edit)
