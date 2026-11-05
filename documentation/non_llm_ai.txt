@@ -320,10 +320,12 @@ They recover morale while front units fight.
 Manage Battle shows the lanes and their units without changing orders on unit clicks.
 Its bottom-left Edit button changes to the full-screen battle editor.
 The editor replaces the map and Orders view. Opposing reserves sit at the top,
-your side's reserves at the bottom, the lane list on the left, and Reset, Help,
-and Exit on the right. Help explains dragging, held units, automatic filling,
+your side's reserves at the bottom, the lane list on the left, and Reset on the
+right. Exit sits in the top-left corner and Help in the top-right corner.
+Help explains dragging, held units, automatic filling,
 Reset, and the outlook. The selected lane's expected winner and duration appear
-below the controls, using the same forecast as Manage Battle. The forecast uses
+below the controls, filling the remaining column height and using the same
+forecast as Manage Battle. The forecast uses
 normal combat assignment, including reserves and automatic filling, and refreshes
 when the selected lane or orders change. Unit cards fill the opposing front grids
 in the center; their slot counts come from the selected lane's actual combat width. Reserve grids

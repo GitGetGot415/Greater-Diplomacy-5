@@ -22,14 +22,13 @@ from ui import dialogs
 DRAG_THRESHOLD = 6
 PANE_ENEMY_RESERVE = "enemy_reserve"
 MARGIN = 16
-GAP = 8
+GAP = 6
 HEADER_H = 24
 RESERVE_TOP = 54
 RESERVE_H = 150
 LANES_W = 188
 CONTROLS_W = 156
 CONTROL_BUTTON_H = 36
-OUTLOOK_H = 136
 CARD_H = 58
 CARD_MAX_W = 190
 CARD_MIN_W = 128
@@ -145,9 +144,10 @@ class BattleEditorScreen(ScrollPanes, Screen):
         middle_h = bottom_top - 2 * GAP - middle_top
         self.controls_rect = pygame.Rect(
             c.SCREEN_WIDTH - MARGIN - CONTROLS_W, middle_top,
-            CONTROLS_W, HEADER_H + 3 * CONTROL_BUTTON_H + 4 * GAP)
-        self.outcome_rect = pygame.Rect(self.controls_rect.x, self.controls_rect.bottom + GAP,
-                                        CONTROLS_W, OUTLOOK_H)
+            CONTROLS_W, HEADER_H + CONTROL_BUTTON_H + 2 * GAP)
+        outcome_top = self.controls_rect.bottom + GAP
+        self.outcome_rect = pygame.Rect(self.controls_rect.x, outcome_top,
+                                        CONTROLS_W, middle_top + middle_h - outcome_top)
         self.lanes_rect = pygame.Rect(MARGIN, middle_top, LANES_W, middle_h)
         self.regions = {
             PANE_LANES: pygame.Rect(MARGIN, middle_top + HEADER_H, LANES_W, middle_h - HEADER_H),
@@ -206,11 +206,11 @@ class BattleEditorScreen(ScrollPanes, Screen):
                        (CONTROLS_W - 2 * GAP, CONTROL_BUTTON_H), "red", "Reset",
                        self.reset_assignments, font_preset="button_small")
         reset.disabled = not self.can_edit_now()
-        help_button = Button(controls.x + GAP, reset.rect.bottom + GAP,
+        help_button = Button(c.SCREEN_WIDTH - MARGIN - (CONTROLS_W - 2 * GAP), GAP,
                              (CONTROLS_W - 2 * GAP, CONTROL_BUTTON_H), "blue", "Help",
                              self.show_help, font_preset="button_small", sound_kind=None)
-        done = Button(controls.x + GAP, help_button.rect.bottom + GAP,
-                      (CONTROLS_W - 2 * GAP, CONTROL_BUTTON_H), "green", "Exit",
+        done = Button(MARGIN, GAP,
+                      (CONTROLS_W - 2 * GAP, CONTROL_BUTTON_H), "red", "Exit",
                       self.exit_screen, font_preset="button_small", sound_kind="back")
         self.elements.extend((reset, help_button, done))
         if self.overview is None:
