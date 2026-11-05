@@ -433,7 +433,7 @@ OLLAMA_JSON_SUPPORTED_MODELS = ["llama", "mistral", "phi", "gemma"]
 
 DEFAULT_STARTING_FACTORY = "Basic Factory"
 BASIC_FACTORY_BASE_COST_X = 4000
-BASIC_FACTORY_COST_MULTIPLIER = 2000
+BASIC_FACTORY_COST_MULTIPLIER = 1000
 BASIC_FACTORY_TURNS = 20
 
 # controls how much material income a Basic Factory produces while it is still being built

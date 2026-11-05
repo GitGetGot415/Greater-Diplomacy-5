@@ -1234,7 +1234,8 @@ def draw_icon_row(surface, font, base_text, entries, x, y, color,
     in which icons they pick and how the values are formatted.
 
     `entries` is a sequence of (icon_name, display_text) pairs, already
-    filtered and formatted by the caller. `icon_size` defaults to the font
+    filtered and formatted by the caller. Text can also be a sequence of
+    (text, color) parts. `icon_size` defaults to the font
     height so icons line up with the text; pass a number to pin it.
 
     Returns the x position just past the last thing drawn, so callers can
@@ -1252,9 +1253,12 @@ def draw_icon_row(surface, font, base_text, entries, x, y, color,
             surface.blit(icon_surf, (curr_x, y + 2))
             curr_x += size + icon_gap
 
-        val_surf = font.render(f"{display_text}   ", True, color)
-        surface.blit(val_surf, (curr_x, y))
-        curr_x += val_surf.get_width()
+        parts = ((display_text, color),) if isinstance(display_text, str) else display_text
+        for index, (text, text_color) in enumerate(parts):
+            suffix = "   " if index == len(parts) - 1 else ""
+            val_surf = font.render(text + suffix, True, text_color)
+            surface.blit(val_surf, (curr_x, y))
+            curr_x += val_surf.get_width()
 
     if not entries and empty_text:
         empty_surf = font.render(empty_text, True, color)
@@ -1328,20 +1332,33 @@ def get_bombardment_stat_entries(dmg, rng, labeled=True):
     return [(c.ICON_BOMBARDMENT, queries.format_number(dmg)),
             (c.ICON_BOMBARD_RANGE, queries.format_number(rng))]
 
-def draw_resource_string(surface, font, base_text, mat, man, fuel, x, y, color, is_yield=False):
-    """Material/manpower/fuel row. Zero-valued resources are left out entirely."""
+def draw_resource_string(surface, font, base_text, mat, man, fuel, x, y, color, is_yield=False,
+                         *, previous_values=None, previous_color=None):
+    """Resource row, optionally comparing previous and new values per resource.
+
+    Resources are omitted when both their previous and new values are zero.
+    """
     entries = []
-    for icon_name, val in (("Iron", mat), ("Infantry", man), ("Oil", fuel)):
+    for resource, icon_name, val in (("materials", "Iron", mat),
+                                     ("manpower", "Infantry", man), ("fuel", "Oil", fuel)):
         try:
             numeric = float(val)
         except (ValueError, TypeError):
             continue
-        if numeric == 0:
+        previous = 0 if previous_values is None else previous_values[resource]
+        if numeric == 0 and previous == 0:
             continue
 
-        display_val = queries.format_number(val)
-        if is_yield and numeric > 0 and not display_val.startswith("+"):
-            display_val = f"+{display_val}"
+        values = (val,) if previous_values is None else (previous, val)
+        formatted = []
+        for value in values:
+            text = queries.format_number(value)
+            if is_yield and float(value) > 0 and not text.startswith("+"):
+                text = f"+{text}"
+            formatted.append(text)
+        display_val = formatted[0] if previous_values is None else (
+            (f"{formatted[0]} -> ", color if previous_color is None else previous_color),
+            (formatted[1], color))
         entries.append((icon_name, display_val))
 
     # 16px icons and a 20px step, rather than the font-height sizing the stat

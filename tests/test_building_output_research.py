@@ -466,18 +466,27 @@ class OutputResearchScreenTests(unittest.TestCase):
         library = {"Basic Factory": building(31, 7, 5, "industry"),
                    "Factory Lvl 1": dict(building(47, 11, 13, "industry"), req="Basic Factory")}
         original = copy.deepcopy(library)
-        self.game.nation_data[self.country]["research"].update(factory=1, bessemer_process=1)
+        multipliers = {"materials": 1.5, "manpower": 1.25, "fuel": 2}
+        tree = {"fixture_bonus": {"max_lvl": 1, "building_output_bonuses": [
+            {"building_groups": ["industry"],
+             "outputs": {res: value - 1 for res, value in multipliers.items()}}]}}
+        self.game.nation_data[self.country]["research"] = {"basic_factory": 1, "factory": 1, "fixture_bonus": 1}
         province = copy.deepcopy(next(province for province in self.game.map_data.values()
                                       if province.get("owner") == self.country))
         province.update(buildings=["Basic Factory"], cores=[], building_queue=[], unit_queue=[])
-        with patch.object(queries, "get_building_library", return_value=library):
+        with (patch.object(queries, "get_building_library", return_value=library),
+              patch.object(queries, "get_tech_tree", return_value=tree)):
             screen = Production_Screen()
             screen.start_with_province(province, self.game)
             stats = next(stats for _, stats, _, kind in screen.active_bars
                          if kind == "BUILDING" and stats.get("group") == "industry")
             for res in c.ECON_RESOURCE_KEYS:
+                self.assertEqual(stats["previous_yields"][res],
+                                 int(library["Basic Factory"][f"prod_{res}"] * multipliers[res]
+                                     * c.NON_CORE_BUILDING_MULTIPLIER))
                 self.assertEqual(stats[f"prod_{res}"],
-                                 int(library["Factory Lvl 1"][f"prod_{res}"] * c.NON_CORE_BUILDING_MULTIPLIER))
+                                 int(library["Factory Lvl 1"][f"prod_{res}"] * multipliers[res]
+                                     * c.NON_CORE_BUILDING_MULTIPLIER))
             with patch.object(queries, "get_province_building_output", side_effect=AssertionError("frame output rules")):
                 screen.update()
                 screen.draw(self.surface)

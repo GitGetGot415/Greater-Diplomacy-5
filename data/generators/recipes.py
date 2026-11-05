@@ -501,7 +501,7 @@ BUILDING_RECIPES = [
     [
         #YR    NAME             TIME GROUP       MAT    MAN FUEL  OUTMAT OUTMAN OUTFUEL UPGRADES                                            OPTIONS
         (1800, "Basic Factory", 20,  "industry", 0,     0,  0,    100,   0,     0,      (1, 1, {}),                                         {"numbered": False, "req": "null"}),
-        (1900, "Factory Lvl",   12,  "industry", 20000, 10000, 1000, 600, 0,     10,     (25, 10, {"cost_materials": 2000, "cost_manpower": 1000, "cost_fuel": 100, "prod_materials": 100, "prod_fuel": 10}), {}),
+        (1900, "Factory Lvl",   12,  "industry", 12000, 6000, 1200, 600, 0,     10,     (25, 10, {"cost_materials": 2000, "cost_manpower": 1000, "cost_fuel": 100, "prod_materials": 100, "prod_fuel": 10}), {}),
     ],
     [
         #YR    NAME                        TIME GROUP          MAT   MAN FUEL OUTMAT OUTMAN OUTFUEL UPGRADES                         OPTIONS

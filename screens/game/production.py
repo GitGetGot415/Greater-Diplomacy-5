@@ -378,6 +378,14 @@ class Production_Screen(Screen):
                 {"owner": owner, "cores": province.get("cores", []), "buildings": [target]},
                 research, self.building_library, context=self.map_screen)
             data.update({f"prod_{res}": amount for res, amount in output.items()})
+            # Compare this building chain only; unrelated buildings retain their yields.
+            data["previous_yields"] = queries.get_province_building_output(
+                {"owner": owner, "cores": province.get("cores", []),
+                 "buildings": [name for name in province.get("buildings", [])
+                               if self.building_library.get(name, {}).get("group") == group_id],
+                 "building_queue": [project for project in building_queue
+                                    if self.building_library.get(project.get("item_name"), {}).get("group") == group_id]},
+                research, self.building_library, context=self.map_screen)
             is_building = any(q.get("group") == data["group"] for q in building_queue)
             req_tech, req_lvl = queries.get_building_required_tech(target)
 
@@ -812,7 +820,11 @@ class Production_Screen(Screen):
                     x = draw_stat_separator(surface, bar_font, x, text_y)
                     x = draw_resource_string(surface, bar_font, "", stats.get('cost_materials', 0), stats.get('cost_manpower', 0), stats.get('cost_fuel', 0), x, text_y, c.COLOR_GOLD_HIGHLIGHT)
                     x = draw_stat_separator(surface, bar_font, x, text_y)
-                    draw_resource_string(surface, bar_font, "", stats.get('prod_materials', 0), stats.get('prod_manpower', 0), stats.get('prod_fuel', 0), x, text_y, BAR_YIELD_COLOR, is_yield=True)
+                    draw_resource_string(
+                        surface, bar_font, "", stats.get('prod_materials', 0),
+                        stats.get('prod_manpower', 0), stats.get('prod_fuel', 0),
+                        x, text_y, BAR_YIELD_COLOR, is_yield=True,
+                        previous_values=stats.get("previous_yields"), previous_color=c.COLOR_GOLD_HIGHLIGHT)
                 else:
                     t = max(1, stats.get('production_time', 1))
                     x = draw_time_stat(surface, bar_font, t, x, text_y, c.COLOR_GOLD_HIGHLIGHT)

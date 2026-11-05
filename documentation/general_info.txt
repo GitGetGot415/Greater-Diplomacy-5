@@ -310,6 +310,7 @@ Territory penalties apply after research bonuses. Round down each building's out
 data/queries/economy.py owns output modifiers, building yields, province building yields, and bonus descriptions.
 Turn income, economy reports, production previews, research details, and AI research valuation use these helpers.
 Production previews include the selected province's territory penalty. Research details show output before that penalty.
+Production building rows compare the current yield of that building chain with its completed replacement; current values and arrows are yellow, and new values are green.
 Presentation caches update when their screens refresh. Frame drawing reads the cached yields.
 
 AI values output upgrades from its existing buildings and construction projects, with territory penalties.
