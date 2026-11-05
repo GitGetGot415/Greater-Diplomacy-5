@@ -127,6 +127,7 @@ The director's instructions say that each message goes to its option's country a
 They also say that every option is a proposal the country makes first, which nobody has offered to it.
 An option with trade or treaty terms lists them as "your offer", from the proposer's side, using diplomacy_messages.describe_trade.
 The message must state them. Staff ratings and notes are for the leader only.
+ai_director.copies_menu rejects a director message that quotes its menu: the own-initiative note, or any option's reason of at least 12 characters, word for word.
 ai_director.reads_as_answer rejects a director message that says "your proposal", "your offer", or "your terms".
 A director message always makes a proposal, so those words mean the model thought the other country had offered first.
 Letters and replies do not use this check, because those words are normal there.

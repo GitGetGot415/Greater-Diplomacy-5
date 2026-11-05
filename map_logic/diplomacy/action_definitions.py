@@ -157,6 +157,10 @@ def _check_req_military_access(context, sender, target, action_type, nation_data
         return (False, 'enemies cannot request military access')
     if queries.has_military_access(sender, target, nation_data):
         return (False, 'military access is already granted')
+    # Faction members and imperial families already move through each other's
+    # territory, so a request between them asks for nothing and could only be refused.
+    if not queries.needs_military_access_request(sender, target, nation_data):
+        return (False, 'allies already have military access through each other')
     return True, ""
 
 def _check_join_wars(context, sender, target, action_type, nation_data, sender_data, target_data):

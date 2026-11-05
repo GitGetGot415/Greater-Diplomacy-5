@@ -415,6 +415,19 @@ class InitiativeTests(LetterTestCase):
         self.game.set_war("A", "B")
         self.assertFalse(bag.add_initiative(ac.make("REQ_MILITARY_ACCESS", "B", 0.0, "passage")))
 
+    def test_allies_cannot_ask_each_other_for_military_access(self):
+        """Faction members already move through each other's territory, so the
+        request asks for nothing. The UK and France asked anyway, then refused."""
+        from map_logic.diplomacy.action_definitions import availability
+        for nation in ("A", "B"):
+            self.game.nation_data[nation]["faction"] = "Pact"
+        verdict = availability(self.game, "A", "B", "REQ_MILITARY_ACCESS")
+        self.assertFalse(verdict.allowed)
+        self.assertIn("already have military access", verdict.reason)
+        bag = ac.Collector("A", {}, context=self.game)
+        self.assertFalse(bag.add_initiative(ac.make("REQ_MILITARY_ACCESS", "B", 0.0, "passage")))
+        self.assertTrue(availability(self.game, "A", "C", "REQ_MILITARY_ACCESS").allowed)
+
     def test_an_initiative_does_not_repeat_the_staff_proposal(self):
         bag = ac.Collector("A", {})
         bag.add(ac.make("TRADE", "B", 0.4, "staff"))

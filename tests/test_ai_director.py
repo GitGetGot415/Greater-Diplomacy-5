@@ -114,6 +114,25 @@ class ValidationTests(NoNetworkTestCase):
             "2": "We offer you 500 materials for 600 fuel."}}, self.cands, 2)
         self.assertEqual(messages, {"2": "We offer you 500 materials for 600 fuel."})
 
+    def test_a_message_that_quotes_its_menu_is_dropped(self):
+        """Italy sent its option line word for word, own-initiative note and all."""
+        bag = ac.Collector("A", {})
+        bag.add(ac.make("TRADE", "C", 0.4, "our spare resources for what we lack"))
+        bag.add_initiative(ac.make("REQ_MILITARY_ACCESS", "B", 0.0, "passage through their territory"))
+        cands = bag.ranked()
+        _chosen, messages = ai_director.parse({"picks": [cands[0].cid], "messages": {
+            "0": "We request access -- your own initiative, not a staff proposal.",
+            "1": "We request access, passage through their territory.",
+            "2": "We offer our spare resources for what we lack.",
+            "3": "We offer you coal for your oil."}}, cands, 2)
+        self.assertEqual(messages, {"3": "We offer you coal for your oil."})
+
+    def test_a_short_reason_is_not_counted_as_copied(self):
+        _chosen, messages = ai_director.parse(
+            {"picks": [1], "messages": {"1": "We propose this because it helps us both."}},
+            self.cands, 2)
+        self.assertEqual(messages, {"1": "We propose this because it helps us both."})
+
     def test_an_option_states_its_terms_from_the_proposers_side(self):
         """Without the terms, the model wrote "[insert resource]" into a trade offer."""
         bag = ac.Collector("A", {})

@@ -134,11 +134,16 @@ class Collector:
         return len(self._by_target) + len(self._initiatives)
 
 
+#: How the director's menu marks an own-initiative option. ai_director drops a
+#: message that quotes it back.
+INITIATIVE_NOTE = "your own initiative, not a staff proposal"
+
+
 def describe(candidate):
     """One line for a prompt or a log entry."""
     verb = c.AI_ACTION_PHRASES.get(candidate.action, candidate.action.replace("_", " ").lower())
     if is_initiative(candidate):
-        return f"{verb} {candidate.target} -- your own initiative, not a staff proposal -- {candidate.rationale}"
+        return f"{verb} {candidate.target} -- {INITIATIVE_NOTE} -- {candidate.rationale}"
     return f"{verb} {candidate.target} -- staff rating {candidate.score:.2f} -- {candidate.rationale}"
 
 

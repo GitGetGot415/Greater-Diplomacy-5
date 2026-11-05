@@ -94,6 +94,27 @@ def reads_as_answer(message):
     return bool(message) and bool(_ANSWERING_TEXT.search(message))
 
 
+#: An option's reason shorter than this is too generic to count as copied.
+_MENU_COPY_MIN_LENGTH = 12
+
+
+def copies_menu(message, candidates):
+    """Whether a message quotes the menu it was chosen from.
+
+    Italy sent "We request military access through Germany -- your own
+    initiative, not a staff proposal -- passage through their territory": its
+    option line, word for word. The check compares against the exact text the
+    model was shown: the own-initiative note and every option's reason.
+    """
+    text = (message or "").lower()
+    if not text:
+        return False
+    if any(part in text for part in ("own initiative", "staff proposal")):
+        return True
+    return any(len(cand.rationale) >= _MENU_COPY_MIN_LENGTH and cand.rationale.lower() in text
+               for cand in candidates if cand.rationale)
+
+
 def build_prompt(world, nation, candidates, limit, personality_note="", nation_data=None):
     """The menu, as the leader's staff would put it.
 
@@ -201,7 +222,7 @@ def _declined(picks):
     return any(str(raw).strip() == c.AI_DIRECTOR_NONE_CID for raw in picks)
 
 
-def messages_from(reply, nation=None, nation_data=None):
+def messages_from(reply, nation=None, nation_data=None, candidates=()):
     """The in-character text per chosen index, if the model supplied any.
 
     A line that talks about its own sender in the third person is dropped rather
@@ -209,7 +230,8 @@ def messages_from(reply, nation=None, nation_data=None):
     "Switzerland accepts your offer" into a message already labelled as being
     from Switzerland; a dropped line costs one piece of flavour, a kept one
     reads as a bug. A line with placeholder or menu text is dropped the same way,
-    and so is one that answers a proposal nobody made (reads_as_answer).
+    and so is one that answers a proposal nobody made (reads_as_answer), or one
+    that quotes `candidates`, the menu it was chosen from (copies_menu).
     """
 
     if not isinstance(reply, dict):
@@ -220,7 +242,8 @@ def messages_from(reply, nation=None, nation_data=None):
     return {str(k): str(v) for k, v in messages.items()
             if isinstance(v, str) and v.strip()
             and not ai_prompts.unusable_message(v, nation, nation_data)
-            and not reads_as_answer(v)}
+            and not reads_as_answer(v)
+            and not copies_menu(v, candidates)}
 
 
 def parse(raw_reply, candidates, limit, nation=None, nation_data=None):
@@ -231,4 +254,5 @@ def parse(raw_reply, candidates, limit, nation=None, nation_data=None):
             reply = json.loads(reply)
         except (ValueError, TypeError):
             reply = None
-    return validate(reply, candidates, limit), messages_from(reply, nation, nation_data)
+    return (validate(reply, candidates, limit),
+            messages_from(reply, nation, nation_data, candidates))

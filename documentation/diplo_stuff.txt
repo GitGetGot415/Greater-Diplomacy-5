@@ -201,6 +201,9 @@ Military access is one-way.
 A asking to enter B's land and B asking to enter A's land produce different results.
 Keep those requests separate.
 
+Faction members and members of the same imperial family already enter each other's land.
+A request for military access between them is unavailable, for players and AI alike (queries.needs_military_access_request).
+
 Guarantees of independence
 -------------------------
 
