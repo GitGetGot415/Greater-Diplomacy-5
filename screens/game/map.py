@@ -1714,8 +1714,8 @@ class Map(StateAccess, Screen):
         # reuse unchanged layers; saves and multiplayer state omit these.
         self._map_surface_cache = {}
         self._fog_surface_cache = None
-        # Other countries' views of the relations map, built on hover.
-        self._relations_views = {}
+        # The right-clicked country's view of the relations map, if any.
+        self._relations_view = None
         self.visible_provinces = None
         self.mail_draft_text = ""
         self.mail_input_active = False
@@ -1821,6 +1821,8 @@ class Map(StateAccess, Screen):
         self.unassigned_army_country = None
         self._ignore_left_until_release = False
         self._ignore_right_until_release = False
+        # Where a right-press began, to tell a Relations click from a pan.
+        self._relations_click_start = None
         self._unit_selection_turn = self.time_manager.total_turns
         self._unit_selection_player = self.player_country
         self.feedback_text = ""
@@ -2113,6 +2115,8 @@ class Map(StateAccess, Screen):
         """Unified map layer setter."""
         self.base_layer = layer_name
         self.map_mode = layer_name
+        # Each visit to the Relations view starts from the player's own view.
+        self._relations_view = None
         layer_map = {
             "TERRAIN": self.terrain_map,
             "POLITICAL": self.political_map,

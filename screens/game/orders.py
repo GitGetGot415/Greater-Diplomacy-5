@@ -20,7 +20,7 @@ from ui.widgets import ui_elements
 
 from ui.dialogs.list_select_screen import ListSelectScreen
 from ui.panels import sidebar_info
-from ui.rendering import map_utils, refresh_map
+from ui.rendering import map_utils
 from ui.navigation import screen_runner
 
 
@@ -2022,7 +2022,6 @@ class Orders_Screen(Screen):
             else:
                 self.map_screen.last_hovered_id = None
                 self.map_screen.hover_glow_surf = None
-            refresh_map.prepare_relations_view(self.map_screen)
 
     def _order_summary(self, unit_index, unit):
         """Short status text and color for a compact roster row."""

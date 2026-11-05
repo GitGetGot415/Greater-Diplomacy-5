@@ -26,6 +26,10 @@ from screens.game import country_summary
 # were previously three copy-pasted blocks per behaviour, nine in total.
 MAP_PANELS = ("sidebar", "diplomatic", "queue")
 
+# A right-press that moves this many pixels before release is a pan, not a
+# click choosing a Relations viewpoint. Matches the box-select click size.
+RELATIONS_CLICK_SLOP = 4
+
 
 def _panel_rect(map_screen, name):
     return getattr(map_screen, f"{name}_scroll_rect", None)
@@ -437,18 +441,7 @@ def _update_map_hover(map_screen, on_ui, mx, my):
     # the province glow beneath it so the unit itself gets the feedback.
     map_screen.hovered_province = (
         None if (map_screen.hovered_combat_bubble or map_screen.hovered_unit_stack)
-        else queries.get_clicked_province((mx, my), map_screen))
-
-    # Block interaction with extreme hidden tiles
-    if map_screen.hovered_province:
-        if map_screen.hovered_province["id"] in map_screen.extreme_hidden_provinces:
-            map_screen.hovered_province = None
-
-    if (map_screen.hovered_province
-            and map_screen.player_country == c.TOURNAMENT_SPECTATOR
-            and not queries.is_province_visible(
-                map_screen, map_screen.hovered_province["id"])):
-        map_screen.hovered_province = None
+        else _interactive_province(map_screen, (mx, my)))
 
     if map_screen.hovered_province:
         curr_id = map_screen.hovered_province["id"]
@@ -461,7 +454,43 @@ def _update_map_hover(map_screen, on_ui, mx, my):
         map_screen.last_hovered_id = None
         map_screen.hover_glow_surf = None
     tooltip.prepare_building_yields(map_screen)
-    refresh_map.prepare_relations_view(map_screen)
+
+
+def _interactive_province(map_screen, pos):
+    """The province at pos that the player may hover or click, or None."""
+    province = queries.get_clicked_province(pos, map_screen)
+    # Block interaction with extreme hidden tiles
+    if province and province["id"] in map_screen.extreme_hidden_provinces:
+        return None
+    if (province and map_screen.player_country == c.TOURNAMENT_SPECTATOR
+            and not queries.is_province_visible(map_screen, province["id"])):
+        return None
+    return province
+
+
+def _handle_relations_viewpoint_click(map_screen, event, on_ui):
+    """Right-click a country in the Relations view to see the map as it sees everyone.
+
+    A right-drag pans the map instead, and with units selected a right-click
+    still gives their move orders. Returns True when the click chose a view.
+    """
+    if (event.type not in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP)
+            or event.button != 3 or map_screen.map_mode != "RELATIONS"):
+        return False
+    if event.type == pygame.MOUSEBUTTONDOWN:
+        map_screen._relations_click_start = None if on_ui else event.pos
+        return False
+
+    start = map_screen._relations_click_start
+    map_screen._relations_click_start = None
+    if (start is None or on_ui or map_screen.is_refreshing
+            or map_screen._ignore_right_until_release
+            or map_screen.selected_unit_records()
+            or abs(event.pos[0] - start[0]) >= RELATIONS_CLICK_SLOP
+            or abs(event.pos[1] - start[1]) >= RELATIONS_CLICK_SLOP):
+        return False
+    refresh_map.choose_relations_viewpoint(map_screen, _interactive_province(map_screen, event.pos))
+    return True
 
 
 def _handle_editor_undo(map_screen, event):
@@ -806,6 +835,10 @@ def handle_map_events(map_screen, event):
     # Bubbles are drawn above unit stacks and take the click even where their
     # hitboxes overlap. Ordinary selection handles the remaining map space.
     if _handle_combat_bubble_click(map_screen, event, on_ui):
+        return
+    # Ahead of unit selection: in the Units view it takes every release of the
+    # move-orders button, even with no units selected.
+    if _handle_relations_viewpoint_click(map_screen, event, on_ui):
         return
     if _handle_map_unit_selection(map_screen, event, on_ui):
         return
