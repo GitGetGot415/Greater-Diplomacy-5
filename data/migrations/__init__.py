@@ -4,6 +4,8 @@ Every conversion of older GD5 data lives in this package. See data/migrations/MI
 
 versions.py       Version stamps and the conversion entry points, upgrade_save and upgrade_move.
 conversions.py    Every conversion rule for older saves and moves. Every rule runs on every load.
+validation.py     Shared recovery readers for saves and structural checks for player input.
+released_content.py Generated released names and historical equipment meanings.
 settings.py       Older settings names and mouse-button controls.
 units.py          Older unit identifiers, categories, and unit metadata.
 research.py       Saved research levels, prerequisites, and the active technology tree.

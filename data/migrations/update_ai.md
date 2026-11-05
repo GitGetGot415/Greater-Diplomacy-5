@@ -3,7 +3,7 @@ Updating the Game: AI Guide
 
 Use this checklist when implementing an update. The full migration rules and
 ownership are in data/migrations/MIGRATIONS.md. The release checklist for the
-human maintainer is in data/migrations/how_to_update_human.txt.
+human maintainer is in data/migrations/update_human.md.
 Run commands from the repository root.
 
 Before Editing
@@ -14,7 +14,7 @@ Before Editing
 2. Read the affected code, tests, and the relevant sections of MIGRATIONS.md.
    Find every reader, writer, saved reference, and multiplayer representation
    of the data before changing its name, meaning, or shape.
-3. Check Released Names in MIGRATIONS.md and tests/released_content.py.
+3. Check Released Names in MIGRATIONS.md and data/migrations/released_content.py.
    Compatibility rules cover released data, including formats older releases
    accepted. Do not invent legacy cases for changes made only in development.
 
@@ -28,7 +28,7 @@ Starting a Version
    before a release is available.
 3. After the previous release is committed, run:
    python scripts/data/write_released_content.py
-   This refreshes tests/released_content.py from committed release history,
+   This refreshes data/migrations/released_content.py from committed release history,
    not from the new development content. The generator requires full Git
    history and refuses to discard recorded releases or names.
    Do not commit, stage, or create a branch without explicit user approval.
@@ -75,7 +75,13 @@ Implementing a Conversion
    session, turn, and duplicate checks. Keep snapshot_moves.py for moves
    without player_intents. Real-time players must match the host's version;
    the server owns state and filters snapshots for each recipient.
-5. Document the rule in MIGRATIONS.md and update affected readers and guides.
+5. Use the shared readers in validation.py before traversing known saved fields.
+   Prioritize a playable local save: recover readable values, default unreadable
+   optional containers, and drop only broken entries. Preserve valid paid orders
+   and progress. Player commands still require permission and legality checks;
+   malformed submissions produce ValueError with their field path. Do not catch
+   programming exceptions as malformed input. Preserve lazy history conversion.
+6. Document the rule in MIGRATIONS.md and update affected readers and guides.
    Do not duplicate the full migration reference in this checklist.
 
 Verification and Handoff

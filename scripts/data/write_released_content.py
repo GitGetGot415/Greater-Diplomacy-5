@@ -1,4 +1,4 @@
-"""Write tests/released_content.py from every release in the version.txt history.
+"""Write data/migrations/released_content.py from every release in the version.txt history.
 
 Usage: python scripts/data/write_released_content.py
 
@@ -21,7 +21,7 @@ sys.path.insert(0, str(ROOT))
 
 from data import migrations, queries
 
-OUTPUT = ROOT / "tests" / "released_content.py"
+OUTPUT = ROOT / "data" / "migrations" / "released_content.py"
 UNIT_DATA = "data/json/unit_data.json"
 BUILDING_DATA = "data/json/building_data.json"
 LINE_WIDTH = 100
@@ -68,7 +68,7 @@ def validate_inventory(inventory):
     except (SyntaxError, ValueError, TypeError) as error:
         raise ValueError(f"Cannot read the existing inventory {OUTPUT}. Correct it before regenerating.") from error
     for name, values in inventory.items():
-        expected = dict if name == "RELEASES" else tuple
+        expected = dict if name in ("RELEASES", "EQUIPMENT") else tuple
         old = previous.get(name)
         if not isinstance(old, expected):
             raise ValueError(f"The existing inventory must define {name} as a {expected.__name__}.")
@@ -76,8 +76,9 @@ def validate_inventory(inventory):
         if missing:
             raise ValueError(f"Regeneration would remove {name}: {', '.join(missing)}. "
                              "Check the release history and libraries; the existing inventory was kept.")
-        if name == "RELEASES" and any(values[stamp] != commit for stamp, commit in old.items()):
-            raise ValueError("Regeneration would change recorded release commits. "
+        if name in ("RELEASES", "EQUIPMENT") and any(values[stamp] != commit for stamp, commit in old.items()):
+            detail = "recorded release commits" if name == "RELEASES" else "historical equipment meanings"
+            raise ValueError(f"Regeneration would change {detail}. "
                              "Check the full Git history; the existing inventory was kept.")
 
 
@@ -100,6 +101,24 @@ def unit_family(name, stats):
     return queries.base_item_name_from_text(name)
 
 
+def equipment_description(name, stats):
+    """Read a released unit's meaning from its metadata or the supported older naming rules."""
+    if not isinstance(stats, dict):
+        raise ValueError(f"Released unit {name}: expected an object.")
+    metadata = stats.get("metadata")
+    if metadata is None:
+        metadata = migrations.legacy_unit_metadata(name, stats)
+    if not isinstance(metadata, dict) or not isinstance(metadata.get("research", {}), dict):
+        raise ValueError(f"Released unit {name}: invalid identity metadata.")
+    research = metadata.get("research", {})
+    if "year" not in research:
+        return None
+    family, tech, year = metadata.get("family"), research.get("tech"), research["year"]
+    if not isinstance(family, str) or not family or not isinstance(tech, str) or not tech or type(year) is not int:
+        raise ValueError(f"Released unit {name}: invalid equipment family, research track, or year.")
+    return family, tech, year
+
+
 def tuple_text(name, values):
     """Format sorted strings as a wrapped tuple."""
     lines, line = [], "   "
@@ -116,18 +135,25 @@ def tuple_text(name, values):
 def main():
     releases = release_commits()
     units, buildings, unit_families, building_families = set(), set(), set(), set()
+    equipment = {}
     for commit in releases.values():
         for name, stats in read_json(commit, UNIT_DATA).items():
             units.add(name)
             unit_families.add(unit_family(name, stats))
+            description = equipment_description(name, stats)
+            if description is not None:
+                if name in equipment and equipment[name] != description:
+                    raise ValueError(f"Released unit {name}: conflicting historical equipment meanings. "
+                                     "Keep the existing inventory and define an explicit compatibility rule.")
+                equipment[name] = description
         for name in read_json(commit, BUILDING_DATA):
             buildings.add(name)
             building_families.add(queries.base_item_name_from_text(name))
     validate_inventory({"RELEASES": releases, "UNITS": units, "BUILDINGS": buildings,
-                        "UNIT_FAMILIES": unit_families, "BUILDING_FAMILIES": building_families})
+                        "UNIT_FAMILIES": unit_families, "BUILDING_FAMILIES": building_families, "EQUIPMENT": equipment})
     text = ('"""Names that released games wrote into saves. Generated. Do not edit by hand.\n\n'
             "scripts/data/write_released_content.py writes this file from the version.txt history.\n"
-            "ReleasedContentTests in tests/test_data_migrations.py reads it.\n"
+            "Runtime aliases and ReleasedContentTests read this inventory.\n"
             '"""\n\n'
             "#: Each release in this file and its commit.\n"
             "RELEASES = {\n" + "".join(f"    {json.dumps(v)}: {json.dumps(c)},\n" for v, c in releases.items())
@@ -137,10 +163,14 @@ def main():
             "#: Keys of unit_disabled, unit_turn_overrides, and unit_range_overrides.\n"
             + tuple_text("UNIT_FAMILIES", unit_families) + "\n"
             "#: Keys of building_disabled and building_turn_overrides.\n"
-            + tuple_text("BUILDING_FAMILIES", building_families))
+            + tuple_text("BUILDING_FAMILIES", building_families) + "\n"
+            "#: Historical equipment identifier to (family, research track, equipment year).\n"
+            "EQUIPMENT = {\n" + "".join(
+                f"    {json.dumps(name)}: {description!r},\n" for name, description in sorted(equipment.items()))
+            + "}\n")
     OUTPUT.write_text(text, encoding="utf-8")
     print(f"Wrote {OUTPUT.relative_to(ROOT)}: {len(releases)} releases, {len(units)} units, "
-          f"{len(buildings)} buildings.")
+          f"{len(buildings)} buildings, {len(equipment)} equipment descriptions.")
 
 
 if __name__ == "__main__":

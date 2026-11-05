@@ -4,6 +4,8 @@ import copy
 import gzip
 import json
 import os
+import re
+import shutil
 from pathlib import Path
 import subprocess
 import sys
@@ -16,7 +18,9 @@ from data import constants as c, migrations, queries
 from data.map import history_io, load_map
 from map_logic.diplomacy import diplomacy_lifecycle
 from scripts.data import write_released_content
-from tests import add_test_cases, released_content
+from tests import add_test_cases
+from data.migrations import released_content
+from tests.migration_fixtures import malformed_records
 
 ROOT = Path(__file__).resolve().parents[1]
 #: A stamp from an older release. Conversion does not depend on it.
@@ -276,10 +280,13 @@ class OlderFormatTests(unittest.TestCase):
     def test_production_day_countdowns_become_turns_with_their_existing_priority(self):
         entries = [{"days_remaining": c.DEFAULT_DAYS_PER_TURN * 3, "turns_remaining": 8,
                     "custom_field": "preserved"}, {"days_remaining": 0}, {"turns_remaining": 5}]
+        for entry in entries:
+            entry["item_name"] = "Fixture Building"
         _meta, map_data, _history = upgraded(map_data={"P": {"building_queue": entries}})
         self.assertEqual(map_data["P"]["building_queue"], [
-            {"turns_remaining": 3, "custom_field": "preserved"}, {"turns_remaining": 1},
-            {"turns_remaining": 5}])
+            {"item_name": "Fixture Building", "turns_remaining": 3, "custom_field": "preserved"},
+            {"item_name": "Fixture Building", "turns_remaining": 1},
+            {"item_name": "Fixture Building", "turns_remaining": 5}])
 
     def test_old_replies_move_without_overwriting_current_proposals(self):
         proposal = {"action": "FIXTURE_PROPOSAL", "turns": 2, "custom_field": 7}
@@ -515,6 +522,141 @@ class MigrationBoundaryTests(unittest.TestCase):
         check_unknown_fields(round_trip(records))
 
 
+class MalformedInputTests(unittest.TestCase):
+    def setUp(self):
+        self.enterContext(mock.patch("builtins.print"))
+        self.enterContext(mock.patch("data.migrations.conversions.equipment_stage_aliases", return_value={}))
+
+    def test_malformed_local_records_recover_and_player_moves_still_reject(self):
+        for field, country, province in malformed_records():
+            for source in ("save", "history", "snapshot", "intents"):
+                with self.subTest(field=field, source=source):
+                    saved = {"nation_data": {"A": copy.deepcopy(country)},
+                             "provinces": {"P": copy.deepcopy(province)}}
+                    if source == "save":
+                        migrations.upgrade_save(saved, {})
+                    elif source == "history":
+                        migrations.upgrade_history_turn(saved, {})
+                    else:
+                        move = {"nation_data": copy.deepcopy(country),
+                                "provinces": {"P": copy.deepcopy(province)}}
+                        if source == "intents":
+                            move["player_intents"] = []
+                        with self.assertRaisesRegex(ValueError, re.escape(field)):
+                            migrations.upgrade_move(move)
+
+    def test_research_repairs_recover_malformed_containers_without_format_conversion(self):
+        for field, country, province in malformed_records():
+            if not country or not field.startswith(("research", "current_research")):
+                continue
+            for repair in (migrations.migrate_infantry_research, migrations.clamp_research_levels,
+                           migrations.grant_research_prerequisites):
+                with self.subTest(field=field, repair=repair.__name__):
+                    repaired = {"nation_data": {"A": copy.deepcopy(country)}}
+                    repair(repaired, {})
+                    before = round_trip(repaired)
+                    repair(repaired, {})
+                    self.assertEqual(repaired, before)
+
+    def test_unselected_history_only_repairs_research(self):
+        snapshot = {"nation_data": {"A": {"research": {"infantry_type": 1}}},
+                    "provinces": {"P": {"deployment_queue": None}}}
+        history = {"1": copy.deepcopy(snapshot)}
+        migrations.migrate_infantry_research({}, {}, history)
+        self.assertEqual(history["1"], snapshot)
+        history["1"]["nation_data"]["A"]["research_progress"] = None
+        migrations.migrate_infantry_research({}, {}, history)
+        self.assertEqual(history["1"]["nation_data"]["A"]["research_progress"], {})
+        self.assertIsNone(history["1"]["provinces"]["P"]["deployment_queue"])
+        migrations.upgrade_history_turn(history["1"], {})
+        self.assertNotIn("deployment_queue", history["1"]["provinces"]["P"])
+
+    def test_invalid_envelopes_and_map_records_raise_value_errors(self):
+        for value in (None, [], 7):
+            with self.subTest(value=value):
+                with self.assertRaisesRegex(ValueError, "meta"):
+                    migrations.upgrade_save(value, {})
+                with self.assertRaisesRegex(ValueError, "move"):
+                    migrations.upgrade_move(value)
+                with self.assertRaisesRegex(ValueError, "map_data"):
+                    migrations.upgrade_save({}, value)
+                migrations.upgrade_save({}, {"P": value})
+
+    def test_recovered_disk_save_can_process_queues_and_reload(self):
+        from map_logic.system32 import economy_processor, research_processor
+
+        source = ROOT / next(BuiltInMapTests.built_in_maps())
+        _meta, original, _history = load_map.read_save_files(source)
+        key, province = next(iter(original.items()))
+        province = copy.deepcopy(province)
+        country = "Recovery Fixture"
+        library = queries.get_unit_library()
+        unit_type = next(name for name, stats in library.items()
+                         if not stats.get("naval_unit") and not stats.get("air_role"))
+        unit = queries.create_unit_dict(unit_type, country, library)
+        unit.update(health="unreadable", order=[])
+        paid = {"unit_type": unit_type, "turns_remaining": 2, "refund": {"cost_materials": 17}}
+        province.update(owner=country, terrain="plains", units=[None, unit], buildings=[],
+                        building_queue=[{"order_type": "BUILDING", "item_name": []}],
+                        unit_queue=[copy.deepcopy(paid), None])
+        saved = {"version": PREVIOUS_VERSION,
+                 "date": {"year": c.START_YEAR, "month": 0, "day": 1, "total_turns": 0},
+                 "nation_data": {country: {
+            "is_playable": True, "research": {}, "research_progress": None, "research_queue": [None],
+            "inbox": None}}, "player_country": country, "active_players": [country]}
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            shutil.copyfile(source / "id_map.png", root / "id_map.png")
+            (root / "meta.json").write_text(json.dumps(saved))
+            (root / "map_data.json").write_text(json.dumps({key: province}))
+            game = load_map.load_backend_state(root, skip_initial_income=True,
+                                               scenario_settings=queries.get_default_scenario_settings())
+            loaded = next(iter(game.map_data.values()))
+            self.assertEqual(len(loaded["units"]), 1)
+            self.assertEqual(loaded["units"][0]["health"], library[unit_type]["health"])
+            self.assertEqual(loaded["unit_queue"], [paid])
+            self.assertEqual(loaded["building_queue"], [])
+            self.assertEqual(game.nation_data[country]["research_progress"], {})
+            research_processor.process_national_research(game)
+            economy_processor.process_queues(game)
+            self.assertEqual(loaded["unit_queue"][0]["turns_remaining"], 1)
+            current = queries.build_save_dict(game, include_provinces=False)
+            (root / "meta.json").write_text(json.dumps(current))
+            (root / "map_data.json").write_text(json.dumps(queries.build_map_data_save(game)))
+            restored = load_map.load_backend_state(root, skip_initial_income=True,
+                                                   scenario_settings=queries.get_default_scenario_settings())
+            economy_processor.process_queues(restored)
+            self.assertEqual(next(iter(restored.map_data.values()))["unit_queue"], [])
+
+    def test_local_identity_repairs_and_unknown_refund_fields_remain_supported(self):
+        unit = {"unit_id": [], "type": "Fixture"}
+        raw = {"P": {"units": [unit], "unit_queue": [
+            {"unit_type": "Fixture", "turns_remaining": 3,
+             "refund": {"cost_materials": 7, "future_receipt": {"text": "kept"}}}]}}
+        migrations.upgrade_save({}, raw)
+        self.assertEqual(unit["unit_id"], [])
+        queries.ensure_unit_ids(raw)
+        self.assertIsInstance(unit["unit_id"], str)
+        self.assertEqual(raw["P"]["unit_queue"][0]["refund"]["future_receipt"], {"text": "kept"})
+        before = round_trip(raw)
+        migrations.upgrade_save({}, raw)
+        self.assertEqual(raw, before)
+
+    def test_production_intents_use_the_shared_queue_converter(self):
+        item = {"unit_type": "Biplane", "days_remaining": 0, "turns_remaining": "obsolete",
+                "refund": {"cost_materials": 17}}
+        move = {"player_intents": [{"type": "province_queue", "queue": "unit_queue", "items": [item]}]}
+        migrations.upgrade_move(move)
+        self.assertEqual(item, {"unit_type": "Biplane Fighter I", "turns_remaining": 1,
+                                "refund": {"cost_materials": 17}})
+        before = round_trip(move)
+        migrations.upgrade_move(move)
+        self.assertEqual(move, before)
+        for bad in ({"item_name": []}, {"refund": None}):
+            with self.subTest(item=bad), self.assertRaises(ValueError):
+                migrations.upgrade_move({"player_intents": [{"type": "province_queue", "items": [bad]}]})
+
+
 class LoadRepairTests(unittest.TestCase):
     LIBRARY = {"Fixture Ground": {"health": 40, "attack": 6, "defense": 3, "speed": 5},
                "Fixture Ship": {"health": 90, "attack": 9, "defense": 2, "speed": 4, "naval_unit": True}}
@@ -661,7 +803,7 @@ add_test_cases(BuiltInMapTests, BuiltInMapTests.map_round_trip,
 class ReleasedContentTests(unittest.TestCase):
     """Every name that a release wrote into saves still has a current meaning.
 
-    tests/released_content.py lists the names. scripts/data/write_released_content.py writes it.
+    data/migrations/released_content.py lists the names. The generator writes that shared inventory.
     See data/migrations/MIGRATIONS.md, Released Names.
     """
 
@@ -721,7 +863,7 @@ class ReleasedContentWriterTests(unittest.TestCase):
     def inventory_text(**overrides):
         values = {"RELEASES": {"v1": "fixture"}, "UNITS": ("Fixture Unit I",),
                   "BUILDINGS": ("Fixture Building Lvl 1",), "UNIT_FAMILIES": ("Fixture Settings",),
-                  "BUILDING_FAMILIES": ("Fixture Building",)}
+                  "BUILDING_FAMILIES": ("Fixture Building",), "EQUIPMENT": {}}
         values.update(overrides)
         return "\n".join(f"{name} = {value!r}" for name, value in values.items())
 
@@ -757,7 +899,8 @@ class ReleasedContentWriterTests(unittest.TestCase):
         building = {"Fixture Building Lvl 1": {}}
         cases = {"RELEASES": {"v0": "older", "v1": "fixture"}, "UNITS": ("Removed Fixture I",),
                  "BUILDINGS": ("Removed Fixture Lvl 1",), "UNIT_FAMILIES": ("Removed Fixture",),
-                 "BUILDING_FAMILIES": ("Removed Fixture",)}
+                 "BUILDING_FAMILIES": ("Removed Fixture",),
+                 "EQUIPMENT": {"Removed Fixture": ("Fixture", "fixture", 1800)}}
         for name, previous in cases.items():
             with self.subTest(field=name), \
                     mock.patch.object(write_released_content, "release_commits", return_value={"v1": "fixture"}), \
@@ -816,6 +959,60 @@ class ReleasedContentWriterTests(unittest.TestCase):
         self.assertEqual(generated["BUILDINGS"], tuple(building))
         self.assertEqual(generated["UNIT_FAMILIES"], ("Fixture Settings",))
         self.assertEqual(generated["BUILDING_FAMILIES"], ("Fixture Building",))
+
+    def test_equipment_descriptions_are_written_to_the_shared_inventory(self):
+        unit = {"Fixture Unit I": {"metadata": {"family": "Fixture Unit", "settings_family": "Fixture Settings",
+                                                "research": {"tech": "fixture", "year": 1800}}}}
+        with mock.patch.object(write_released_content, "release_commits", return_value={"v1": "fixture"}), \
+                mock.patch.object(write_released_content, "git", side_effect=[json.dumps(unit), '{"Fixture Building Lvl 1": {}}']), \
+                mock.patch.object(Path, "exists", return_value=True), \
+                mock.patch.object(Path, "read_text", return_value=self.inventory_text()), \
+                mock.patch.object(Path, "write_text") as write, mock.patch("builtins.print"):
+            write_released_content.main()
+        generated = {}
+        exec(compile(write.call_args.args[0], "released_content.py", "exec"), generated)
+        self.assertEqual(generated["EQUIPMENT"], {"Fixture Unit I": ("Fixture Unit", "fixture", 1800)})
+
+    def test_equipment_history_uses_released_metadata_and_refuses_ambiguity(self):
+        older = {"Fixture I": {"metadata": {"family": "Fixture", "research": {"tech": "fixture", "year": 1800}}}}
+        newer = copy.deepcopy(older)
+        newer["Fixture I"]["metadata"]["research"]["year"] = 1900
+        self.assertEqual(write_released_content.equipment_description("Fixture I", older["Fixture I"]),
+                         ("Fixture", "fixture", 1800))
+        with mock.patch.object(write_released_content, "release_commits", return_value={"v1": "older", "v2": "newer"}), \
+                mock.patch.object(write_released_content, "read_json", side_effect=[older, {"Building": {}}, newer]), \
+                mock.patch.object(Path, "write_text") as write:
+            with self.assertRaisesRegex(ValueError, "conflicting historical equipment meanings"):
+                write_released_content.main()
+            write.assert_not_called()
+        previous = self.inventory_text(EQUIPMENT={"Fixture I": ("Fixture", "fixture", 1800)})
+        with mock.patch.object(Path, "exists", return_value=True), \
+                mock.patch.object(Path, "read_text", return_value=previous):
+            with self.assertRaisesRegex(ValueError, "change historical equipment meanings"):
+                write_released_content.validate_inventory({
+                    "RELEASES": {"v1": "fixture"}, "UNITS": ("Fixture Unit I",),
+                    "BUILDINGS": ("Fixture Building Lvl 1",), "UNIT_FAMILIES": ("Fixture Settings",),
+                    "BUILDING_FAMILIES": ("Fixture Building",),
+                    "EQUIPMENT": {"Fixture I": ("Fixture", "fixture", 1900)}})
+
+    def test_generator_can_import_before_its_output_exists(self):
+        code = ("import sys; sys.modules['data.migrations.released_content'] = None; "
+                "import scripts.data.write_released_content")
+        result = subprocess.run([sys.executable, "-B", "-c", code], cwd=ROOT,
+                                capture_output=True, text=True, timeout=30)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_generated_equipment_meaning_drives_aliases_without_current_name_parsing(self):
+        library = {"Early Stage I": {}, "Later Stage I": {}, "Existing Historical Name": {}}
+        descriptions = {"Renamed Historical Unit": ("Fixture", "fixture", 1810),
+                        "Existing Historical Name": ("Fixture", "fixture", 1800)}
+        index = {"Fixture": [("Later Stage I", 1820, 2), ("Early Stage I", 1800, 1)]}
+        with mock.patch.object(queries, "get_unit_library", return_value=library), \
+                mock.patch.object(queries, "get_unit_research_index", return_value=index), \
+                mock.patch("data.migrations.released_content.EQUIPMENT", descriptions):
+            aliases = migrations.equipment_stage_aliases()
+        self.assertEqual(aliases["Renamed Historical Unit"], "Early Stage I")
+        self.assertNotIn("Existing Historical Name", aliases)
 
     def test_regeneration_can_add_a_release_and_new_names(self):
         releases = {"v1": "fixture", "v2": "newer"}

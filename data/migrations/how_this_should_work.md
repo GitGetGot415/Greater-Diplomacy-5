@@ -15,3 +15,5 @@ ideally this should allow for conversions to be less hardcoded and able to handl
 also maybe instead of keeping dedicated version handling for handling tournament moves or older saves and such it's more general so this doesn't have to be updated as often
 
 perhaps instead of tests related to migration being just thrown in the test folder, it can be thrown in the migrations folder so they aren't run unless dealing with migration specifically, since migration doesn't really apply when playing / working on the current game so much as it applies when handling older saves / files
+
+IMPORTANT: getting it in a PLAYABLE state is better than failing because it isn't perfect

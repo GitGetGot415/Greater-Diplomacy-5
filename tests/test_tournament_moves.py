@@ -16,6 +16,7 @@ from unittest import mock
 import data.constants as c
 from tests.stub_map_screen import fill_state_defaults, map_double, synchronous_progress
 from tests.research_fixtures import research_lock_cases
+from tests.migration_fixtures import malformed_records
 from tests.tournament_fixtures import fast_tournament_crypto
 from data import queries
 from data.runtime_rules import RuntimeRules
@@ -676,6 +677,29 @@ class TournamentMoveTests(unittest.TestCase):
                 self.assertEqual(summary["loaded_countries"], ["Member"], summary)
                 self.assertEqual(host.nation_data["Leader"], before)
                 self.assertEqual(host.submitted_moves, {"Member"})
+
+    def test_malformed_known_fields_reject_one_move_and_continue_the_batch(self):
+        for field, country, province in malformed_records():
+            for intents in (False, True):
+                with self.subTest(field=field, intents=intents), tempfile.TemporaryDirectory() as directory:
+                    host = Host()
+                    before_country = copy.deepcopy(host.nation_data["Leader"])
+                    before_map = copy.deepcopy(host.map_data)
+                    bad = self.player_data("Leader", host, provinces={"P1": copy.deepcopy(province)})
+                    bad["nation_data"].update(copy.deepcopy(country))
+                    good = self.player_data("Member", host)
+                    if intents:
+                        bad["player_intents"] = []
+                        good["player_intents"] = []
+                    paths = [self.write_move(directory, "bad.gd5move", "Leader", bad),
+                             self.write_move(directory, "good.gd5move", "Member", good)]
+                    result = self.import_moves(host, paths, accept_stat_mismatches=True)
+                    self.assertEqual((result["rejected"], result["loaded_countries"]), (1, ["Member"]), result)
+                    self.assertIn(field, result["rejections"][0]["reason"])
+                    self.assertFalse(result["rejections"][0]["overridable"])
+                    self.assertEqual(host.nation_data["Leader"], before_country)
+                    self.assertEqual(host.map_data, before_map)
+                    self.assertEqual(host.submitted_moves, {"Member"})
 
     def test_duplicate_during_host_review_cannot_be_overridden(self):
         host = Host()

@@ -161,6 +161,8 @@ LEGACY_UNIT_NAMES = {
 def equipment_stage_aliases():
     """Map supported older equipment identifiers to current named stages."""
     from data import queries
+    # The generator must be importable before its output exists.
+    from data.migrations.released_content import EQUIPMENT
 
     library = queries.get_unit_library()
     families = dict(queries.get_unit_research_index(library))
@@ -180,15 +182,19 @@ def equipment_stage_aliases():
         "Artillery": ([1800, 1830, 1850, 1870, 1890, 1900], "artillery"),
         "Heavy Artillery": ([1800, 1830, 1850, 1870, 1890, 1900], "artillery"),
     }
+    # Keep names older loaders accepted even when those names never appeared in a release library.
+    historical = dict(EQUIPMENT)
     for family, (early, tech) in sources.items():
         old = [(f"{family} {year}", year) for year in early]
         for i, year in enumerate(LEGACY_INFANTRY_RESEARCH_YEARS[tech], 1):
             suffix = str(year) if tech == "infantry_type" else c.ROMAN_NUMERALS[i]
             old.append((f"{family} {suffix}", year))
         for name, year in old:
-            if name in library:
-                continue
-            target = next((unit for unit, tier, _ in families.get(family, ()) if tier <= year), None)
-            if target:
-                aliases[name] = target
+            historical.setdefault(name, (family, tech, year))
+    for name, (family, tech, year) in historical.items():
+        if name in library:
+            continue
+        target = next((unit for unit, tier, _ in families.get(family, ()) if tier <= year), None)
+        if target:
+            aliases[name] = target
     return aliases

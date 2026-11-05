@@ -3,6 +3,7 @@
 import math
 
 import data.constants as c
+from data.migrations.validation import container, expect, repaired, research_country
 
 
 # Original GD5 equipment dates. These describe older saved level numbers.
@@ -28,13 +29,36 @@ def _saved_level(level):
     return 0
 
 
+def _countries(saved, path):
+    expect(saved, dict, path)
+    for name, country in container(saved, "nation_data", dict, path, repair=True).items():
+        if name == "FACTION_WAR_MAPS":
+            continue
+        country_path = f"{path}.nation_data.{name}"
+        if not isinstance(country, dict):
+            country = saved["nation_data"][name] = {}
+            repaired(country_path)
+        research_country(country, country_path)
+        yield country
+
+
+def _default_research(saved):
+    # Existing writers and backend contexts allow null for no default research.
+    value = saved.get("default_research")
+    if value is not None and not isinstance(value, dict):
+        value = saved["default_research"] = {}
+        repaired("meta.default_research")
+    return value
+
+
 def migrate_infantry_research(saved, tech_tree, history=None):
     """Map completed equipment years to the active stages. Keep unfinished points.
 
     It converts every history snapshot too. All snapshots share the save's research_years.
-    Broken saved data does not stop a load. An unreadable level reads as the nearest whole
-    level, or 0. A malformed year list cannot tell what its levels mean, so those levels stay.
+    Unreadable levels read as the nearest whole level, or 0. Malformed year lists
+    keep their levels. Unreadable optional containers are repaired so the save can load.
     """
+    expect(saved, dict, "meta")
     saved_years = saved.get("research_years", LEGACY_INFANTRY_RESEARCH_YEARS)
     targets = {key: list(tech_tree[key]["years"])
                for key in c.DATED_UNIT_RESEARCH_TRACKS if key in tech_tree}
@@ -60,12 +84,8 @@ def migrate_infantry_research(saved, tech_tree, history=None):
             elif key in pending:
                 research[key] = sum(value < source[0] for value in target)
 
-    def convert_countries(countries):
-        if not isinstance(countries, dict):
-            return
-        for name, country in countries.items():
-            if name == "FACTION_WAR_MAPS" or not isinstance(country, dict):
-                continue
+    def convert_countries(payload, path):
+        for country in _countries(payload, path):
             pending = set(country.get("research_progress", {}))
             pending.update(project.get("tech_name") for project in country.get("research_queue", []))
             if isinstance(country.get("current_research"), str):
@@ -83,11 +103,13 @@ def migrate_infantry_research(saved, tech_tree, history=None):
             if isinstance(country.get("current_research"), str) and country["current_research"] in completed:
                 country["current_research"] = None
 
-    convert(saved.get("default_research"))
-    convert_countries(saved.get("nation_data"))
-    for snapshot in (history or {}).values():
-        if isinstance(snapshot, dict):
-            convert_countries(snapshot.get("nation_data"))
+    convert(_default_research(saved))
+    convert_countries(saved, "meta")
+    if history is not None:
+        if isinstance(history, dict):
+            for turn, snapshot in history.items():
+                if isinstance(snapshot, dict):
+                    convert_countries(snapshot, f"history.{turn}")
     saved["research_years"] = targets
     return saved
 
@@ -117,15 +139,11 @@ def clamp_research_levels(saved, tech_tree):
         if country.get("current_research") in done:
             country["current_research"] = None
 
-    def clamp_countries(countries):
-        if isinstance(countries, dict):
-            for name, country in countries.items():
-                if name != "FACTION_WAR_MAPS" and isinstance(country, dict):
-                    clamp(country)
-
-    if isinstance(saved.get("default_research"), dict):
-        clamp({"research": saved["default_research"]})
-    clamp_countries(saved.get("nation_data"))
+    defaults = _default_research(expect(saved, dict, "meta"))
+    if defaults is not None:
+        clamp({"research": defaults})
+    for country in _countries(saved, "meta"):
+        clamp(country)
     return saved
 
 
@@ -156,12 +174,7 @@ def grant_research_prerequisites(saved, tech_tree):
                 # A prerequisite the active tree cannot supply. Keep the saved levels.
                 continue
 
-    def grant_countries(countries):
-        if isinstance(countries, dict):
-            for name, country in countries.items():
-                if name != "FACTION_WAR_MAPS" and isinstance(country, dict):
-                    grant(country.get("research"))
-
-    grant(saved.get("default_research"))
-    grant_countries(saved.get("nation_data"))
+    grant(_default_research(expect(saved, dict, "meta")))
+    for country in _countries(saved, "meta"):
+        grant(country.get("research"))
     return saved

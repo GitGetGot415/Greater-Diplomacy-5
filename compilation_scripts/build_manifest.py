@@ -28,6 +28,8 @@ HIDDEN_IMPORTS = (
     "map_logic.system32.unit_events",
     "map_logic.system32.air_processor",
     "data.migrations",
+    "data.migrations.validation",
+    "data.migrations.released_content",
     "map_logic.diplomacy.diplomacy_lifecycle",
     "map_logic.actions.production_actions",
     "map_logic.actions.unit_actions", "map_logic.actions.player_actions",

@@ -4,7 +4,7 @@ This file explains how a newer game opens data from an older Greater Diplomacy 5
 "Migration" means this conversion.
 This file is the primary guide. It has the full rules, the list of current conversion rules, and the procedure to add a rule.
 
-For update checklists, see [the AI guide](how_to_update.txt) or [the human release guide](how_to_update_human.txt).
+For update checklists, see [the AI guide](update_ai.md) or [the human release guide](update_human.md).
 
 Imports from Greater Diplomacy 4 (GD4) and Greater Diplomacy Hex Edition are not migrations.
 Those are separate games. Their translation modules are in `map_logic/imports/`.
@@ -28,6 +28,7 @@ This project does not use a chain, for these reasons:
 - The project did not need one before. Older saves loaded because the loader converted older shapes when it found them.
 - Each step expects the output of the step before it. One broken step stops every older save from loading.
 - Each step uses the current game's helpers. A later change to a helper can break an old step without a change to the step.
+  Shape-based rules also use current helpers, so the rules still need regression coverage.
 - A chain grows with every release, and each release needs a new file and a new entry in a list.
 
 Do not write per-version files. Do not add step lists such as `SAVE_STEPS` or `MOVE_STEPS`.
@@ -42,6 +43,8 @@ Callers import names from the package: `from data import migrations`.
 | `__init__.py` | The names that callers import. |
 | `versions.py` | The version stamp, `upgrade_save`, and `upgrade_move`. |
 | `conversions.py` | Every conversion rule for older saves and moves. |
+| `validation.py` | Shared readers for known saved fields, including research containers. |
+| `released_content.py` | Generated released names and historical equipment meanings used by runtime aliases and tests. |
 | `research.py` | Research conversion by year, research level clamps, and the prerequisite grant. |
 | `units.py` | Older unit names, categories, and metadata. |
 | `settings.py` | Older settings names and mouse-button controls. |
@@ -155,6 +158,29 @@ The stamp never selects conversion rules.
 | Library conversion | On every load, after the scenario selects its libraries | Saved data that does not agree with the active unit and research libraries | `migrate_infantry_research`, `clamp_research_levels`, `grant_research_prerequisites`, `queries.refresh_unit_stats` |
 | Load repair | On every load | Current data that is not valid | `clamp_building_level`, `repair_faction_rosters` |
 
+### Recovery and Input Validation
+
+Getting an older save into a playable state takes priority over retaining every damaged value.
+`validation.py` shares the readers used by conversion and research repairs.
+For local saves and selected history, unreadable optional containers become empty containers.
+Readable list entries, unknown extension fields, valid unit identities, paid orders, and their progress remain intact.
+Numeric text is recovered when possible. Unreadable individual entries are dropped, invalid orders are canceled,
+and missing production countdowns default to one remaining turn.
+An order with no readable production target is dropped; conversion does not invent a refund for an unidentified order.
+Repairs are logged and do not rewrite the original save files.
+
+For example, `research_progress: null` becomes an empty mapping instead of preventing a load.
+`current_research: null` and `default_research: null` remain valid empty states.
+Local unit identity repair still replaces malformed or duplicate IDs.
+Equipment levels and year lists retain the specific recovery rules below.
+Unreadable world-file roots and files from newer game versions retain their existing errors.
+
+Tournament commands are input from another player. Structural readers reject malformed submitted choices
+before the host changes state; normal authentication, ownership, legality, session, turn, and duplicate checks remain mandatory.
+A bad move produces a rejection and does not stop the importer from processing the next file.
+Programming exceptions are not caught as input errors.
+History remains lazy: research conversion repairs historical research fields, while ordinary snapshot fields convert only when selected.
+
 ### Library Conversions
 
 A library conversion compares saved data with the active libraries.
@@ -235,9 +261,14 @@ Conversion follows these known fields in saves, selected history, and moves. It 
 When a new saved location holds a unit reference, include that location in the conversion.
 The stat refresh then gives each unit its new statistics. Health keeps its fraction.
 
-The list of older names in `equipment_stage_aliases` describes v46 names.
-Saves do not record the year of each unit name.
-Thus a later rename of stages needs new entries in that table.
+`released_content.EQUIPMENT` records each released equipment identifier's family, research track, and year.
+`scripts/data/write_released_content.py` derives these descriptions from committed release libraries.
+Explicit metadata supplies the meaning; libraries without metadata use the supported older naming rules.
+`equipment_stage_aliases` compares these recorded years with the current default library.
+Newly recorded equipment names therefore need no hand-written year ranges or aliases when the family still exists.
+The original v46 family/date rules remain as a supplement for names that older loaders accepted even when no release library listed them.
+Non-year renames and missing or renamed families still need explicit compatibility rules.
+The generator refuses conflicting historical equipment meanings instead of guessing.
 
 Some renames do not use years. Examples are `Piston Fighter` and `WW1 Tank`.
 `LEGACY_UNIT_NAMES` in `units.py` lists them.
@@ -303,11 +334,15 @@ If the list changed without the snapshots, their levels would be read against th
 
 ### Broken Research Data
 
-Broken research data does not stop a load:
+Equipment levels and year lists have specific recovery rules:
 
 - An unreadable equipment level reads as the nearest whole level, or 0.
 - A malformed year list cannot tell what its levels mean, so those levels stay as they are.
 - A missing year list uses the original GD5 dates in `LEGACY_INFANTRY_RESEARCH_YEARS`.
+
+Malformed local research objects and progress mappings become empty mappings.
+Unreadable queued projects are dropped, while readable projects and paused progress are retained.
+Research conversion and both research load repairs use the same recovery readers.
 
 The loader does not write the save during conversion.
 The next save writes the current format.
@@ -562,12 +597,14 @@ A release is a version that players received. Only released data needs conversio
 
 ### The List of Released Names
 
-`tests/released_content.py` lists the names that releases wrote into saves.
-It holds unit and building identifiers, and the family keys of scenario settings.
-`scripts/data/write_released_content.py` writes it from every release in the `version.txt` history.
+`data/migrations/released_content.py` lists the names that releases wrote into saves.
+It holds unit and building identifiers, scenario-settings family keys, and historical equipment descriptions.
+Runtime aliases and tests import this generated inventory directly.
+`scripts/data/write_released_content.py` writes the inventory from every release in the `version.txt` history.
 An unreadable, empty, or malformed release library stops generation before the existing list is overwritten.
 Generation requires full Git history. On a shallow clone, run `git fetch --unshallow` first.
 The generator also refuses missing releases, changed recorded release commits, and removal of any previously listed name or family.
+It also refuses removal or changed meanings of recorded equipment descriptions.
 It keeps the existing inventory when a check fails.
 
 `ReleasedContentTests` in `tests/test_data_migrations.py` checks each name:
@@ -633,9 +670,9 @@ Keep existing rules. Remove a rule only when the user asks to drop support for t
 - `tests/test_data_migrations.py` tests the conversion rules.
   It also loads every built-in map and checks that the rules do not change a current save.
   The map loads use the default scenario settings, not the local `data/json/scenario_settings.json`.
-  `ReleasedContentTests` checks the names in `tests/released_content.py`.
+  `ReleasedContentTests` checks the names in `data/migrations/released_content.py`.
   The pull request workflow runs this module together with the equipment and tournament migration tests.
-- `scripts/data/write_released_content.py` writes `tests/released_content.py`. See [Released Names](#released-names).
+- `scripts/data/write_released_content.py` writes `data/migrations/released_content.py`. See [Released Names](#released-names).
 - Write test fixtures as Python modules, not JSON files.
   `.gitignore` ignores `*.json` outside a few folders, so a JSON fixture in `tests/` is not committed.
 - `tests/test_tournament_moves.py` tests move conversion and host review.

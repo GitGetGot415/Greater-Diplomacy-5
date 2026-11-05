@@ -10,6 +10,7 @@ import re
 
 import data.constants as c
 from data.migrations import conversions
+from data.migrations.validation import expect
 
 
 class NewerVersionError(ValueError):
@@ -45,6 +46,7 @@ def upgrade_save(save_meta, map_data):
     rule runs, whatever version wrote the save. History snapshots are not converted here.
     upgrade_history_turn converts a snapshot when a player selects it. Return the saved version number.
     """
+    expect(save_meta, dict, "meta")
     version = check_version(save_meta.get("version"))
     conversions.convert_save(save_meta, map_data)
     save_meta["version"] = c.GAME_VERSION
@@ -58,6 +60,7 @@ def upgrade_history_turn(snapshot, map_data):
 
 def move_version(player_data):
     """Return a move's version number, or 0 for an unstamped move. Refuse a newer move."""
+    expect(player_data, dict, "move")
     return check_version(player_data.get("game_version"), "This move")
 
 

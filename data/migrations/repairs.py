@@ -18,6 +18,8 @@ def clamp_building_level(name, building_library):
     A numbered building whose level is not in the library moves to the nearest
     existing level of its family. A name with no family in the library gives None.
     """
+    if not isinstance(name, str):
+        return None
     if name in building_library:
         return name
     match = _BUILDING_LEVEL_NAME.fullmatch(name) if isinstance(name, str) else None
