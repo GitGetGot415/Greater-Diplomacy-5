@@ -1,6 +1,7 @@
 import pygame
 
 import data.constants as c
+from ui.rendering import province_pixels
 
 def avoid_chroma(color):
     """Nudges a nation color off the chroma key used as the map's colorkey.
@@ -17,25 +18,21 @@ def avoid_chroma(color):
 
 def update_single_province_surface(political_surf, id_map, province_color_id, new_nation_color):
     """
-    Updates exactly one province using a clean mask blit. 
+    Paints exactly the pixels of one province, in one flat color.
     Guarantees other tiles remain untouched.
+
+    The province's pixels come from the id map's cached index, so a repaint
+    touches only that province instead of scanning the whole id map for its
+    color and blitting a map-sized sticker.
     """
-    # 1. Create a Mask of where the province is in the id_map
-    # from_threshold finds the exact pixels matching the ID color
-    mask = pygame.mask.from_threshold(id_map, province_color_id, (1, 1, 1, 255))
-    
-    # 2. Convert that Mask into a Surface
-    # setcolor: The color of the province (your new nation color)
-    # unsetcolor: Fully transparent (0 alpha), so it doesn't touch other tiles
-    province_sticker = mask.to_surface(
-        setcolor=new_nation_color, 
-        unsetcolor=(0, 0, 0, 0)
-    )
-    
-    # 3. Blit the sticker onto the political map
-    # Since the background of the sticker is (0,0,0,0), 
-    # only the nation color pixels are transferred.
-    political_surf.blit(province_sticker, (0, 0))
+    pixels = province_pixels.for_id_map(id_map)
+    slot = pixels.slot_for(province_color_id)
+    if slot is None:
+        return  # No pixel shows this color.
+    xs, ys = pixels.pixels_of(slot)
+    surface_pixels = pygame.surfarray.pixels3d(political_surf)
+    surface_pixels[xs, ys] = tuple(new_nation_color)[:3]
+    del surface_pixels  # Unlocks the surface.
 
 def create_glow_surface(id_map, province_color_id):
     """Creates a cropped semi-transparent sticker for the hover effect."""

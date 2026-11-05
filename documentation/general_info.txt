@@ -562,6 +562,7 @@ Frame drawing and scrolling use cached presentation data.
 
 Map refreshes calculate layer inputs when game state changes.
 They reuse pixel surfaces that have not changed.
+Every layer still rebuilds each turn. A rebuild reuses the id map's pixel index, which ui/rendering/province_pixels.py builds once per id map, and recomputes border shading only around provinces that changed owner.
 Fog updates current visibility even when it can reuse its image.
 Hotseat blanking and player changes still apply.
 Editor painting invalidates the affected surface. Refresh Maps forces a full rebuild.

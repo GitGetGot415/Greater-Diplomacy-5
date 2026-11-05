@@ -379,5 +379,131 @@ class MapSurfaceCacheTests(unittest.TestCase):
             self.assertIsNone(self.screen.visible_provinces)
 
 
+def _rolled_shading_levels(owner_2d, water_ids):
+    """The border shading as first written with np.roll, kept as the reference.
+
+    The live pass reuses buffers, fills gaps on id-map slots and patches only
+    around changed provinces; all of that must still produce these bands.
+    """
+    filled = owner_2d.copy()
+    for _ in range(2):
+        for shift, axis in ((1, 1), (-1, 1), (1, 0), (-1, 0)):
+            gap = filled == 0
+            filled[gap] = np.roll(filled, shift, axis=axis)[gap]
+    land = ~np.isin(filled, water_ids) & (filled != 0)
+
+    def touching(band):
+        return (np.roll(band, 1, axis=1) | np.roll(band, -1, axis=1)
+                | np.roll(band, 1, axis=0) | np.roll(band, -1, axis=0))
+
+    edge_1 = land & ((filled != np.roll(filled, 1, axis=1)) | (filled != np.roll(filled, -1, axis=1))
+                     | (filled != np.roll(filled, 1, axis=0)) | (filled != np.roll(filled, -1, axis=0)))
+    edge_2 = land & ~edge_1 & touching(edge_1)
+    edge_3 = land & ~edge_1 & ~edge_2 & touching(edge_2)
+    edge_4 = land & ~edge_1 & ~edge_2 & ~edge_3 & touching(edge_3)
+    level = np.zeros(owner_2d.shape, dtype=np.uint8)
+    level[edge_1] = 1
+    level[edge_3] = 2
+    level[edge_4] = 3
+    level[land & ~edge_1 & ~edge_2 & ~edge_3 & ~edge_4] = 4
+    return level
+
+
+class MapLayerShadingTests(unittest.TestCase):
+    """Faster layer builds must paint exactly what a full np.roll rebuild paints."""
+
+    CELL = 9  # 8 px of province, then a 1 px black gap line.
+    COLUMNS, ROWS = 16, 10
+
+    def setUp(self):
+        self.rng = random.Random(7)
+        self.owners = ["A", "B", "C", "D"]
+        self.screen = map_double(
+            id_map=pygame.Surface((self.CELL * self.COLUMNS, self.CELL * self.ROWS)),
+            map_mode="POLITICAL", player_country="A",
+            nation_colors={"A": (200, 30, 20), "B": (30, 200, 20), "C": (20, 30, 200), "D": (250, 250, 0)},
+            nation_data={name: {} for name in self.owners},
+        )
+        self.screen.map_data = {}
+        for index in range(self.COLUMNS * self.ROWS):
+            column, row = divmod(index, self.ROWS)
+            color = (index + 1, 7, 9)
+            self.screen.id_map.fill(color, (column * self.CELL, row * self.CELL,
+                                            self.CELL - 1, self.CELL - 1))
+            terrain = "ocean" if index % 11 == 0 else "plains"
+            self.screen.map_data[color] = {
+                "id": index + 1, "terrain": terrain, "map_color": color, "cores": [],
+                "owner": "Ocean" if terrain == "ocean" else self.rng.choice(self.owners + ["Unclaimed"])}
+        self.screen.id_to_province = {p["id"]: p for p in self.screen.map_data.values()}
+
+    def political(self):
+        with contextlib.redirect_stdout(io.StringIO()):
+            refresh_map.refresh_political_map(self.screen)
+        return pygame.surfarray.array3d(self.screen.political_map)
+
+    def expected_political(self):
+        """The political layer rebuilt from scratch with the reference shading."""
+        id_3d = pygame.surfarray.array3d(self.screen.id_map)
+        owner_2d = np.zeros(id_3d.shape[:2], dtype=np.int64)
+        color_3d = np.zeros(id_3d.shape, dtype=np.uint8)
+        owner_ids = {}
+        for key, data in self.screen.map_data.items():
+            if data["terrain"] in refresh_map.VISUAL_WATER_MAPPING:
+                owner, color = "Ocean", c.COLOR_CHROMA_PINK
+            else:
+                owner = data["owner"]
+                color = self.screen.nation_colors.get(owner, refresh_map.UNOWNED_COLOR)
+            pixels = np.all(id_3d == key, axis=2)
+            owner_2d[pixels] = owner_ids.setdefault(owner, len(owner_ids) + 1)
+            color_3d[pixels] = color
+        water = [owner_ids.get(name, -1) for name in ("Ocean", "Lakes", "Unclaimed")]
+        level = _rolled_shading_levels(owner_2d, water)
+        return refresh_map._SHADE_LUT[level[:, :, None], color_3d]
+
+    def change_owners(self, provinces):
+        for province_id in provinces:
+            province = self.screen.id_to_province[province_id]
+            if province["terrain"] == "plains":
+                province["owner"] = self.rng.choice([o for o in self.owners if o != province["owner"]])
+
+    def test_a_full_build_matches_the_reference_shading(self):
+        self.assertTrue(np.array_equal(self.political(), self.expected_political()))
+        self.assertEqual(self.screen.political_map.get_colorkey()[:3], c.COLOR_CHROMA_PINK)
+
+    def test_a_few_captures_patch_last_turns_shading_including_across_the_map_edge(self):
+        self.political()
+        # Province 2 sits on the left edge, where the shading wraps to the right edge.
+        self.change_owners((2, self.COLUMNS * self.ROWS - 5))
+        with mock.patch.object(refresh_map._Layout, "full_levels",
+                               side_effect=AssertionError("swept the whole map")):
+            patched = self.political()
+        self.assertTrue(np.array_equal(patched, self.expected_political()))
+
+    def test_too_many_captures_fall_back_to_a_full_sweep_that_still_matches(self):
+        self.political()
+        self.change_owners(range(1, self.COLUMNS * self.ROWS + 1, 2))
+        with mock.patch.object(refresh_map._Layout, "full_levels",
+                               autospec=True, side_effect=refresh_map._Layout.full_levels) as sweep:
+            rebuilt = self.political()
+        sweep.assert_called_once()
+        self.assertTrue(np.array_equal(rebuilt, self.expected_political()))
+
+    def test_one_province_repaint_touches_only_that_province(self):
+        from ui.rendering import map_utils
+
+        before = self.political()
+        province = self.screen.id_to_province[5]
+        map_utils.update_single_province_surface(
+            self.screen.political_map, self.screen.id_map, province["map_color"], [1, 2, 3])
+        after = pygame.surfarray.array3d(self.screen.political_map)
+        inside = np.all(pygame.surfarray.array3d(self.screen.id_map) == province["map_color"], axis=2)
+        self.assertTrue(np.all(after[inside] == (1, 2, 3)))
+        self.assertTrue(np.array_equal(after[~inside], before[~inside]))
+        # A color no pixel shows paints nothing.
+        map_utils.update_single_province_surface(
+            self.screen.political_map, self.screen.id_map, (250, 251, 252), (9, 9, 9))
+        self.assertTrue(np.array_equal(pygame.surfarray.array3d(self.screen.political_map), after))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -2,6 +2,7 @@ import pygame
 import numpy as np
 import data.constants as c
 from data import queries
+from ui.rendering import province_pixels
 
 # Lakes and seas render the same color as oceans on political maps
 VISUAL_WATER_MAPPING = {
@@ -12,7 +13,7 @@ VISUAL_WATER_MAPPING = {
 }
 
 # Brightness applied to each shading band, indexed by the level ids assigned in
-# apply_border_shading: 0 unshaded, then edge_1, edge_3, edge_4, interior.
+# _shading_levels: 0 unshaded, then edge_1, edge_3, edge_4, interior.
 _SHADE_FACTORS = (1.0, 0.7, 0.8, 0.6, 0.4)
 
 # Pre-multiplying every possible channel value turns the shading pass into one
@@ -20,73 +21,170 @@ _SHADE_FACTORS = (1.0, 0.7, 0.8, 0.6, 0.4)
 # float expression the per-band version used, so the output is bit-identical.
 _SHADE_LUT = np.stack([(np.arange(256) * f).astype(np.uint8) for f in _SHADE_FACTORS])
 
+# The four one-pixel neighbors, as np.roll arguments. np.roll wraps at the map
+# edge, and the shading has always wrapped with it.
+_NEIGHBOR_SHIFTS = ((1, 1), (-1, 1), (1, 0), (-1, 0))
 
-def compute_shading_levels(owner_2d, water_ids):
+# How far a change of owner can reach through the shading. The gap fill makes
+# two rounds of one-pixel copies in each direction, so a pixel's filled owner
+# comes from at most 2 pixels away. Each of the four edge bands then looks one
+# pixel further than the band before it.
+_GAP_FILL_REACH = 2
+_EDGE_BAND_REACH = 4
+
+
+def _roll_into(array, shift, axis, out):
+    """np.roll(array, shift, axis) for a one-pixel shift, written into out.
+
+    The shading pass rolls whole-map arrays two dozen times; reusing one buffer
+    instead of allocating a fresh copy each time is most of what makes it fast.
+    """
+    source = np.moveaxis(array, axis, 0)
+    target = np.moveaxis(out, axis, 0)
+    if shift == 1:
+        target[1:] = source[:-1]
+        target[:1] = source[-1:]
+    else:
+        target[:-1] = source[1:]
+        target[-1:] = source[:1]
+    return out
+
+
+def _fill_gaps(slots, is_gap_slot, gap):
+    """Bridge the black gaps between provinces so internal borders are ignored.
+
+    Works on id-map slots rather than owners: a gap is a pixel whose color no
+    province uses, and a pixel's filled owner is always the owner of the slot
+    copied into it. So the fill depends only on the id map and which colors are
+    provinces, and every layer that shares both can share one fill.
+    """
+    filled = np.where(is_gap_slot[slots], slots.dtype.type(gap), slots)
+    shifted = np.empty_like(filled)
+    is_gap = np.empty(filled.shape, dtype=bool)
+    for _ in range(2):
+        for shift, axis in _NEIGHBOR_SHIFTS:
+            np.equal(filled, gap, out=is_gap)
+            np.copyto(filled, _roll_into(filled, shift, axis, shifted), where=is_gap)
+    return filled
+
+
+def _shading_levels(owner_2d, is_land):
     """Works out which shading band every pixel falls in.
 
-    Depends only on how tiles are grouped by owner, never on the colors drawn
-    on top -- which is what lets _build_map_surface reuse one result across the
-    map modes that group tiles the same way.
+    owner_2d is each pixel's gap-filled owner. The bands depend only on how
+    pixels are grouped by owner, never on the colors drawn on top -- which is
+    what lets _build_map_surface reuse one result across the map modes that
+    group tiles the same way. Water and unclaimed land are never shaded.
     """
-    # Bridge the black gaps on the OWNER array so internal province borders are ignored.
-    filled_owner = np.copy(owner_2d)
-    for _ in range(2): 
-        is_gap = (filled_owner == 0)
-        filled_owner[is_gap] = np.roll(filled_owner, 1, axis=1)[is_gap]
-        is_gap = (filled_owner == 0)
-        filled_owner[is_gap] = np.roll(filled_owner, -1, axis=1)[is_gap]
-        is_gap = (filled_owner == 0)
-        filled_owner[is_gap] = np.roll(filled_owner, 1, axis=0)[is_gap]
-        is_gap = (filled_owner == 0)
-        filled_owner[is_gap] = np.roll(filled_owner, -1, axis=0)[is_gap]
+    shifted = np.empty_like(owner_2d)
+    differs = np.empty(owner_2d.shape, dtype=bool)
+    edge_1 = np.zeros(owner_2d.shape, dtype=bool)
+    for shift, axis in _NEIGHBOR_SHIFTS:
+        np.not_equal(owner_2d, _roll_into(owner_2d, shift, axis, shifted), out=differs)
+        edge_1 |= differs
+    edge_1 &= is_land
 
-    # Identify water IDs and unclaimed IDs to exclude them from shading
-    is_land = ~np.isin(filled_owner, water_ids) & (filled_owner != 0)
+    # Each later band is the land touching the band before it that no earlier
+    # band has claimed, so the bands are mutually exclusive by construction.
+    remaining = is_land & ~edge_1
+    bands = [edge_1]
+    touching = np.empty(owner_2d.shape, dtype=bool)
+    for _ in range(3):
+        touching.fill(False)
+        for shift, axis in _NEIGHBOR_SHIFTS:
+            touching |= _roll_into(bands[-1], shift, axis, differs)
+        band = remaining & touching
+        remaining &= ~band
+        bands.append(band)
+    edge_1, edge_2, edge_3, edge_4 = bands
 
-    # Shift arrays to look at neighboring owners
-    shift_u = np.roll(filled_owner, 1, axis=1)
-    shift_d = np.roll(filled_owner, -1, axis=1)
-    shift_l = np.roll(filled_owner, 1, axis=0)
-    shift_r = np.roll(filled_owner, -1, axis=0)
-
-    # Calculate Edge Depths
-    edge_1 = is_land & ((filled_owner != shift_u) | (filled_owner != shift_d) | \
-                        (filled_owner != shift_l) | (filled_owner != shift_r))
-    edge_2 = is_land & ~edge_1 & (np.roll(edge_1, 1, axis=1) | np.roll(edge_1, -1, axis=1) | \
-                                  np.roll(edge_1, 1, axis=0) | np.roll(edge_1, -1, axis=0))
-    edge_3 = is_land & ~edge_1 & ~edge_2 & (np.roll(edge_2, 1, axis=1) | np.roll(edge_2, -1, axis=1) | \
-                                            np.roll(edge_2, 1, axis=0) | np.roll(edge_2, -1, axis=0))
-    edge_4 = is_land & ~edge_1 & ~edge_2 & ~edge_3 & (np.roll(edge_3, 1, axis=1) | np.roll(edge_3, -1, axis=1) | \
-                                                      np.roll(edge_3, 1, axis=0) | np.roll(edge_3, -1, axis=0))
-
-    interior = is_land & ~edge_1 & ~edge_2 & ~edge_3 & ~edge_4
-
-    # The bands are mutually exclusive by construction, so each pixel just
-    # records the row of the brightness table it belongs to.
+    # Each pixel records the row of the brightness table it belongs to.
     # edge_2 keeps level 0 (100% brightness)
     level = np.zeros(owner_2d.shape, dtype=np.uint8)
-    level[edge_1] = 1
-    level[edge_3] = 2
-    level[edge_4] = 3
-    level[interior] = 4
+    np.copyto(level, 1, where=edge_1)
+    np.copyto(level, 2, where=edge_3)
+    np.copyto(level, 3, where=edge_4)
+    np.copyto(level, 4, where=remaining)
     return level
 
 
-def apply_border_shading(out_2d, owner_2d, id_array, water_ids):
-    """
-    Helper function that applies HoI4-style inner borders and gradient shading.
-    Used by Political, Relations, and Cores maps.
-    """
-    return shade_packed_colors(out_2d, id_array.shape, compute_shading_levels(owner_2d, water_ids))
+# Every layer over the same provinces shares one gap fill, so keep the last.
+_FILLED = None
 
 
-def shade_packed_colors(out_2d, shape_3d, level):
-    """Unpacks packed RGB into channels and applies the shading band brightness."""
-    out_3d = np.empty(shape_3d, dtype=np.uint8)
-    out_3d[:, :, 0] = (out_2d >> 16) & 0xFF
-    out_3d[:, :, 1] = (out_2d >> 8) & 0xFF
-    out_3d[:, :, 2] = out_2d & 0xFF
-    return _SHADE_LUT[level[:, :, None], out_3d]
+def _filled_slots(pixels, is_gap_slot):
+    global _FILLED
+    key = is_gap_slot.tobytes()
+    if _FILLED is None or _FILLED[0] is not pixels or _FILLED[1] != key:
+        _FILLED = (pixels, key, _fill_gaps(pixels.slots, is_gap_slot, pixels.slot_count))
+    return _FILLED[2]
+
+
+class _Layout:
+    """One way of grouping provinces by owner, as a layer build resolved it.
+
+    `owners` lists each input's owner, aligned with `color_keys`. Owners alone
+    decide the shading: which pixels share an owner, and which owners are water
+    or unclaimed. So two layouts over the same provinces differ in shading only
+    near the provinces whose owner differs.
+    """
+
+    def __init__(self, pixels, inputs, slot_owner, slot_land):
+        self.pixels = pixels
+        self.color_keys = tuple(row[0] for row in inputs)
+        self.owners = tuple(row[1] for row in inputs)
+        self.slot_owner = slot_owner
+        self.slot_land = slot_land
+        self.is_gap_slot = slot_owner[:pixels.slot_count] == 0
+
+    def filled(self):
+        return _filled_slots(self.pixels, self.is_gap_slot)
+
+    def full_levels(self):
+        filled = self.filled()
+        return _shading_levels(self.slot_owner[filled], self.slot_land[filled])
+
+    def patched_levels(self, base):
+        """These levels, recomputed only around provinces that changed owner.
+
+        `base` is a cached (_Layout, levels) over the same provinces. Returns
+        None when the changes cover too much of the map for a patch to save
+        time. A pixel's level depends on owners within
+        _GAP_FILL_REACH + _EDGE_BAND_REACH pixels, so only pixels that close to
+        a changed province can change, and recomputing each of those windows
+        with _EDGE_BAND_REACH pixels of margin reproduces the full pass exactly.
+        """
+        base_layout, base_levels = base
+        width, height = base_levels.shape
+        changed = (index for index, (old, new) in enumerate(zip(base_layout.owners, self.owners))
+                   if old != new)
+        reach = _GAP_FILL_REACH + _EDGE_BAND_REACH
+        margin = reach + _EDGE_BAND_REACH
+        windows = []
+        area = 0
+        for index in changed:
+            slot = self.pixels.slot_for(self.color_keys[index])
+            if slot is None:
+                continue
+            x0, x1, y0, y1 = self.pixels.bounds_of(slot)
+            if x1 - x0 + 2 * margin > width or y1 - y0 + 2 * margin > height:
+                return None
+            windows.append((x0, x1, y0, y1))
+            area += (x1 - x0 + 2 * margin) * (y1 - y0 + 2 * margin)
+            if area > width * height * _PATCH_AREA_LIMIT:
+                return None
+
+        filled = self.filled()
+        levels = base_levels.copy()
+        trim = slice(_EDGE_BAND_REACH, -_EDGE_BAND_REACH)
+        for x0, x1, y0, y1 in windows:
+            # mode="wrap" matches the wrap-around of the full pass at map edges.
+            xs = np.arange(x0 - margin, x1 + margin)
+            ys = np.arange(y0 - margin, y1 + margin)
+            window = filled.take(xs, axis=0, mode="wrap").take(ys, axis=1, mode="wrap")
+            patch = _shading_levels(self.slot_owner[window], self.slot_land[window])
+            levels[np.ix_(xs[trim] % width, ys[trim] % height)] = patch[trim, trim]
+        return levels
 
 
 # The edge sweep above is the most expensive part of a rebuild, and several map
@@ -94,24 +192,42 @@ def shade_packed_colors(out_2d, shape_3d, level):
 # the raw province owner. Caching by that grouping runs the sweep once per
 # distinct layout per turn instead of once per map mode. The key names every
 # province's owner, so a cache hit cannot describe a different world.
+#
+# A miss is usually last turn's layout with a few provinces changed hands, so
+# the cache keeps its oldest entries until it is full rather than clearing, and
+# a miss patches the closest entry instead of sweeping the whole map again.
 _LEVEL_CACHE = {}
-_LEVEL_CACHE_MAP = None
-_LEVEL_CACHE_LIMIT = 4
+_LEVEL_CACHE_PIXELS = None
+# Political, cores and faction territories are each rebuilt every turn, and
+# each must still find its previous turn's entry, with room for a preview.
+_LEVEL_CACHE_LIMIT = 6
+# Patching beyond this share of the map costs about as much as a full sweep.
+_PATCH_AREA_LIMIT = 0.25
 
 
-def _cached_shading_levels(id_map, layout_key, build_owner_2d, water_ids):
-    global _LEVEL_CACHE_MAP
-    if _LEVEL_CACHE_MAP is not id_map:
+def _cached_shading_levels(layout, layout_key):
+    global _LEVEL_CACHE_PIXELS
+    if _LEVEL_CACHE_PIXELS is not layout.pixels:
         _LEVEL_CACHE.clear()
-        _LEVEL_CACHE_MAP = id_map
+        _LEVEL_CACHE_PIXELS = layout.pixels
 
-    level = _LEVEL_CACHE.get(layout_key)
-    if level is None:
+    entry = _LEVEL_CACHE.pop(layout_key, None)
+    if entry is None:
+        levels = None
+        candidates = [cached for cached in _LEVEL_CACHE.values()
+                      if cached[0].color_keys == layout.color_keys]
+        if candidates:
+            closest = min(candidates, key=lambda cached: sum(
+                old != new for old, new in zip(cached[0].owners, layout.owners)))
+            levels = layout.patched_levels(closest)
+        if levels is None:
+            levels = layout.full_levels()
+        entry = (layout, levels)
         if len(_LEVEL_CACHE) >= _LEVEL_CACHE_LIMIT:
-            _LEVEL_CACHE.clear()
-        level = compute_shading_levels(build_owner_2d(), water_ids)
-        _LEVEL_CACHE[layout_key] = level
-    return level
+            del _LEVEL_CACHE[next(iter(_LEVEL_CACHE))]
+    # Most recently used last, so eviction drops the least recently used.
+    _LEVEL_CACHE[layout_key] = entry
+    return entry[1]
 
 
 def invalidate_map_surface_cache(map_screen, *attrs):
@@ -119,9 +235,11 @@ def invalidate_map_surface_cache(map_screen, *attrs):
 
     Incremental editor/capture painting mutates a cached surface's pixels, so
     input comparison alone cannot certify that surface on its next refresh.
-    With no attrs this also drops geometry shading for the manual Refresh Maps
-    action, including externally edited map assets.
+    With no attrs this also drops geometry shading and the id map's pixel
+    index for the manual Refresh Maps action, including externally edited map
+    assets.
     """
+    global _FILLED
     # Optional for editor/test screens that have not rendered a layer yet.
     cache = map_screen._map_surface_cache
     if cache is not None:
@@ -134,15 +252,8 @@ def invalidate_map_surface_cache(map_screen, *attrs):
         map_screen._fog_surface_cache = None
     if not attrs:
         _LEVEL_CACHE.clear()
-
-
-def get_id_2d_array(id_map):
-    """Helper to avoid duplicating the 3D-to-2D bitwise array extraction."""
-    id_array = pygame.surfarray.pixels3d(id_map)
-    id_2d = (id_array[:, :, 0].astype(np.uint32) << 16) | \
-            (id_array[:, :, 1].astype(np.uint32) << 8) | \
-             id_array[:, :, 2].astype(np.uint32)
-    return id_array, id_2d
+        _FILLED = None
+        province_pixels.clear()
 
 
 def _map_surface_inputs(map_screen, get_owner_and_color):
@@ -175,42 +286,50 @@ def _build_map_surface(map_screen, get_owner_and_color, inputs=None):
     """Unified helper to build NumPy map surfaces to prevent array calculation duplication."""
     if inputs is None:
         inputs = _map_surface_inputs(map_screen, get_owner_and_color)
-    id_array, id_2d = get_id_2d_array(map_screen.id_map)
-    shape_3d = id_array.shape
-    lut = np.zeros(16777216, dtype=np.uint32)
-    owner_lut = np.zeros(16777216, dtype=np.uint32)
+    pixels = province_pixels.for_id_map(map_screen.id_map)
+    slot_count = pixels.slot_count
+
+    # One entry per id-map color. Colors no province uses stay owner 0 and
+    # black, and so does the extra last entry the gap fill uses as its marker.
     owner_to_int = {}
-    next_owner_id = 1
     owner_seq = []
-
+    slot_owner = np.zeros(slot_count + 1, dtype=np.uint32)
+    slot_color = np.zeros((slot_count, 3), dtype=np.uint8)
     for color_key, owner, color in inputs:
-
         if owner not in owner_to_int:
-            owner_to_int[owner] = next_owner_id
-            next_owner_id += 1
-
-        packed_key = (color_key[0] << 16) | (color_key[1] << 8) | color_key[2]
-        packed_color = (color[0] << 16) | (color[1] << 8) | color[2]
-
-        lut[packed_key] = packed_color
-        owner_lut[packed_key] = owner_to_int[owner]
+            owner_to_int[owner] = len(owner_to_int) + 1
         owner_seq.append(owner_to_int[owner])
-
-    out_2d = lut[id_2d]
+        slot = pixels.slot_for(color_key)
+        if slot is not None:
+            slot_owner[slot] = owner_to_int[owner]
+            slot_color[slot] = color
 
     # Process Shading
     water_ids = [owner_to_int.get("Ocean", -1), owner_to_int.get("Lakes", -1), owner_to_int.get("Unclaimed", -1)]
+    owner_is_land = np.ones(len(owner_to_int) + 1, dtype=bool)
+    owner_is_land[0] = False
+    owner_is_land[[owner_id for owner_id in water_ids if owner_id > 0]] = False
+    if len(owner_to_int) < np.iinfo(np.uint16).max:
+        # Half the memory traffic for every comparison in the shading pass.
+        slot_owner = slot_owner.astype(np.uint16)
+    layout = _Layout(pixels, inputs, slot_owner, owner_is_land[slot_owner])
     layout_key = (tuple((row[0], owner) for row, owner in zip(inputs, owner_seq)),
                   tuple(water_ids))
-    level = _cached_shading_levels(map_screen.id_map, layout_key, lambda: owner_lut[id_2d], water_ids)
-    out_3d = shade_packed_colors(out_2d, shape_3d, level)
+    level = _cached_shading_levels(layout, layout_key)
 
-    new_surf = pygame.Surface(map_screen.id_map.get_size(), depth=24)
-    pygame.surfarray.blit_array(new_surf, out_3d)
-    
+    # Each slot's color at every brightness, as the screen's own pixel values,
+    # read back with one lookup per pixel.
+    new_surf = pygame.Surface(map_screen.id_map.get_size())
+    shaded = _SHADE_LUT[:, slot_color].reshape(-1, 1, 3)
+    mapped = pygame.surfarray.map_array(new_surf, shaded).ravel()
+    index = level.astype(np.uint32)
+    index *= slot_count
+    index += pixels.slots
+    pygame.surfarray.blit_array(new_surf, mapped[index])
+
     # Now that the water is actually (255, 0, 255), this will punch out the transparency mask.
-    new_surf.set_colorkey(c.COLOR_CHROMA_PINK) 
-    
+    new_surf.set_colorkey(c.COLOR_CHROMA_PINK)
+
     return new_surf
 
 #: Color for a tile nobody owns, in every map mode that draws one.
@@ -479,12 +598,14 @@ def refresh_fog_map(map_screen):
         map_screen.fog_map = cached[2]
         return
 
-    id_array, id_2d = get_id_2d_array(map_screen.id_map)
-    lut = np.full(16777216, c.FOG_OF_WAR_ALPHA, dtype=np.uint8)
+    # Colors no province uses stay fully fogged.
+    pixels = province_pixels.for_id_map(map_screen.id_map)
+    slot_alpha = np.full(pixels.slot_count, c.FOG_OF_WAR_ALPHA, dtype=np.uint8)
     for color_key, alpha in inputs:
-        packed_key = (color_key[0] << 16) | (color_key[1] << 8) | color_key[2]
-        lut[packed_key] = alpha
-    alpha_2d = lut[id_2d]
+        slot = pixels.slot_for(color_key)
+        if slot is not None:
+            slot_alpha[slot] = alpha
+    alpha_2d = slot_alpha[pixels.slots]
 
     fog_surf = pygame.Surface(map_screen.id_map.get_size(), pygame.SRCALPHA)
     fog_surf.fill((0, 0, 0, 0)) # Base transparent layer
