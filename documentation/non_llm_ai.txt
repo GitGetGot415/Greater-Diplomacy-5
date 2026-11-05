@@ -321,7 +321,7 @@ Manage Battle shows the lanes and their units without changing orders on unit cl
 Its Edit button changes to the full-screen battle editor.
 The editor replaces the map and Orders view and shows opposing reserves,
 front-line units, and a lane list.
-Help explains dragging, held units, automatic filling, Reset, and the outlook.
+Help explains dragging, held units, automatic filling, Organize, and the outlook.
 The outlook shows the selected lane's expected winner and duration using the
 same forecast as Manage Battle. The forecast uses
 normal combat assignment, including reserves and automatic filling, and refreshes
@@ -332,7 +332,11 @@ gray, disabled, and cannot receive units. Front slots fill each column from
 top to bottom before moving to the next column on the right. Reserve grids
 and overflowing front grids scroll with their own scrollbars and mouse wheel.
 Your side's bottom area has Reserves on the left and Held on the right, each
-with its own scrollbar. Drag a unit into Reserves to clear its hold preference,
+with its own scrollbar. The enemy's top area has the same two read-only
+categories, using only visible troops. Real-time snapshots share visible
+troops' Hold preferences; their other private orders and lane targets remain
+hidden. Tournament views retain the same categories.
+Drag a unit into Reserves to clear its hold preference,
 or into Held to give available units priority. Both destinations clear its lane
 assignment and remove its cards from every front. Drag a reserve or held unit
 onto one of your front-line units to swap them, or into an empty front slot to
@@ -351,8 +355,12 @@ including held units, can return to the front. Continue Editing keeps the
 editor open; Leave As Is accepts the automatic filling and exits. Back or
 Escape from this popup continues editing. Empty slots that cannot be filled
 do not trigger the popup.
-Reset removes your manual lane assignments and uses the same automatic
-wounded-unit rotation as the rule-based AI. Exit returns to the existing
+Organize, under Automation, opens an explanation and confirmation popup.
+Confirming clears your controlled units' lane assignments and Hold preferences
+across this battle, rebuilds the front and reserves, and uses the same automatic
+wounded-unit rotation as the rule-based AI. Cancel leaves units and positions
+unchanged. A state or permission change before confirmation prevents the action.
+Exit returns to the existing
 Manage Battle and Orders view with its selection and scroll position intact.
 Edits apply to the current turn's orders; existing combat width and required
 front coverage still apply. Tactical players can edit only their own division.

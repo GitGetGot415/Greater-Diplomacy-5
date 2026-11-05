@@ -402,6 +402,79 @@ class BattleEditorTests(BattleScreenTestCase):
             if modal_stack.active() is modal:
                 modal_stack.pop()
 
+    def test_organize_control_opens_confirmation_and_cancel_preserves_the_edit(self):
+        from ui.navigation import modal_stack
+        from ui.widgets import ui_elements
+        screen = self.editor()
+        _rect, front = self.own_row(screen, battle_screen.PANE_FRONT)
+        screen.drop_unit(front, battle_screen.PANE_RESERVE)
+        before = copy.deepcopy(self.province['units'])
+        positions = {key: [id(unit) if unit is not None else None for unit in slots]
+                     for key, slots in screen.front_slots.items()}
+        organize = next(element for element in screen.elements if getattr(element, 'text', '') == 'Organize')
+        with mock.patch.object(ui_elements, 'play_ui_sound') as sound:
+            screen.handle_events([
+                pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=organize.rect.center, button=1),
+                pygame.event.Event(pygame.MOUSEBUTTONUP, pos=organize.rect.center, button=1)])
+            sound.assert_called_once_with('click')
+        modal = modal_stack.active()
+        self.assertIsNotNone(modal)
+        try:
+            self.assertTrue(screen._organize_confirmation_open)
+            self.assertEqual(self.province['units'], before)
+            screen.confirm_organize()
+            self.assertIs(modal_stack.active(), modal)
+            modal.draw(self.surface)
+            modal.handle_events([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_ESCAPE)])
+            modal.update()
+            self.assertFalse(screen._organize_confirmation_open)
+            self.assertEqual(self.province['units'], before)
+            self.assertEqual({key: [id(unit) if unit is not None else None for unit in slots]
+                              for key, slots in screen.front_slots.items()}, positions)
+        finally:
+            if modal_stack.active() is modal:
+                modal_stack.pop()
+
+    def test_confirmed_organize_runs_automatic_assignment_once(self):
+        screen = self.editor()
+        ours = screen.my_units()
+        ours[0].update(health=1, max_health=100)
+        for unit in ours:
+            unit['lane_target'] = self.x
+        before = copy.deepcopy(self.province['units'])
+        with mock.patch.object(battle_editor.dialogs, 'ask_yes_no') as ask:
+            screen.confirm_organize()
+        self.assertEqual(self.province['units'], before)
+        answered = ask.call_args.kwargs['on_result']
+        answered(True)
+        self.assertTrue(all('lane_target' not in unit for unit in ours))
+        self.assertEqual(ours[0].get('combat_stance'), 'RESERVE')
+        self.assertTrue(all('combat_stance' not in unit for unit in ours[1:]))
+        with mock.patch.object(screen, 'reset_assignments') as apply:
+            answered(True)
+        apply.assert_not_called()
+
+    def test_organize_confirmation_rejects_changed_state_or_permissions(self):
+        screen = self.editor()
+        for change in ('state', 'permission', 'closed'):
+            with self.subTest(change=change):
+                with mock.patch.object(battle_editor.dialogs, 'ask_yes_no') as ask:
+                    screen.confirm_organize()
+                answered = ask.call_args.kwargs['on_result']
+                before = copy.deepcopy(self.province['units'])
+                with mock.patch.object(battle_editor.unit_actions, 'reset_battle_orders') as apply:
+                    if change == 'state':
+                        self.map.invalidate_map_presentation_cache()
+                        answered(True)
+                    elif change == 'permission':
+                        with mock.patch.object(self.map, 'can_select_map_units', return_value=False):
+                            answered(True)
+                    else:
+                        screen._finish_exit()
+                        answered(True)
+                apply.assert_not_called()
+                self.assertEqual(self.province['units'], before)
+
     def test_outlook_uses_the_overview_forecast_for_the_selected_lane(self):
         screen = self.editor()
         forecast = {"winner_side": 0, "turns": 3}
@@ -906,6 +979,32 @@ class BattleEditorTests(BattleScreenTestCase):
                                button=1)])
         self.assertIsNone(screen.drag_unit)
         self.assertEqual(self.province["units"], before)
+
+    def test_enemy_reserves_and_held_are_separate_visible_read_only_groups(self):
+        screen = self.editor()
+        _lane, _near, far = screen.current()
+        enemies = [unit for unit in self.province['units']
+                   if unit['owner'] in far.nations and id(unit) not in screen.seated()]
+        available, held, hidden = enemies[:3]
+        held['combat_stance'] = hidden['combat_stance'] = 'RESERVE'
+        with mock.patch.object(queries, 'filter_visible_units',
+                               side_effect=lambda units, *args: [unit for unit in units if unit is not hidden]):
+            screen.refresh_ui()
+        listed_reserves = [unit for _rect, (unit, _note) in screen.row_paint[battle_editor.PANE_ENEMY_RESERVE]]
+        listed_held = [unit for _rect, (unit, _note) in screen.row_paint[battle_editor.PANE_ENEMY_HELD]]
+        self.assertIn(id(available), {id(unit) for unit in listed_reserves})
+        self.assertIn(id(held), {id(unit) for unit in listed_held})
+        self.assertTrue(all(unit.get('combat_stance') != 'RESERVE' for unit in listed_reserves))
+        self.assertTrue(all(unit.get('combat_stance') == 'RESERVE' for unit in listed_held))
+        self.assertNotIn(id(hidden), {id(unit) for unit in listed_reserves + listed_held})
+        before = copy.deepcopy(self.province['units'])
+        for pane, unit in ((battle_editor.PANE_ENEMY_RESERVE, available), (battle_editor.PANE_ENEMY_HELD, held)):
+            start = next(rect for rect, (current, _note) in screen.row_paint[pane] if current is unit)
+            screen.handle_events([
+                pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=start.center, button=1),
+                pygame.event.Event(pygame.MOUSEBUTTONUP, pos=screen.regions[battle_editor.PANE_HELD].center, button=1)])
+            self.assertIsNone(screen.drag_unit)
+        self.assertEqual(self.province['units'], before)
 
     def test_idle_frames_use_cached_battle_data(self):
         screen = self.editor()

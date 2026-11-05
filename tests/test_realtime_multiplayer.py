@@ -1174,6 +1174,31 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
         self.assertEqual({command["queue"] for command in queues}, {"building_queue", "unit_queue"})
         self.assertTrue(all(command["items"] == [] for command in queues))
 
+    def test_visible_enemy_hold_preferences_survive_projection_without_private_orders(self):
+        from data import queries
+        map_ref = self.make_map()
+        map_ref.scenario_settings = {'fog_of_war': True}
+        enemy = {'unit_id': 'visible', 'owner': 'B', 'type': 'Infantry',
+                 'combat_stance': 'RESERVE', 'lane_target': 'A',
+                 'order': {'type': 'MOVE', 'path': [2]}, 'repair_trip': 2, 'air_cargo': []}
+        map_ref.map_data['home']['units'].extend([enemy, dict(enemy, unit_id='hidden')])
+        map_ref.map_data['foreign']['units'] = [dict(enemy, unit_id='fogged')]
+        snapshot = {'nation_data': map_ref.nation_data, 'provinces': map_ref.map_data,
+                    '_raw_map_data': dict(map_ref.map_data)}
+        before = json.dumps(snapshot, sort_keys=True)
+        with (mock.patch.object(queries, 'get_visible_provinces', return_value=({1}, set())),
+              mock.patch.object(queries, 'is_unit_visible_to', side_effect=lambda unit, *args: unit['unit_id'] != 'hidden'),
+              mock.patch.object(queries, 'get_shared_country_economy_summaries', return_value={})):
+            projected = queries.player_snapshot_projection(map_ref, snapshot, 'A')
+        for records in (projected['provinces'], projected['_raw_map_data']):
+            units = records['home']['units']
+            self.assertEqual(len(units), 2)
+            visible_enemy = next(unit for unit in units if unit.get('unit_id') == 'visible')
+            self.assertEqual(visible_enemy['combat_stance'], 'RESERVE')
+            self.assertFalse(set(visible_enemy) & {'order', 'lane_target', 'repair_trip', 'air_cargo'})
+            self.assertEqual(records['foreign']['units'], [])
+        self.assertEqual(json.dumps(snapshot, sort_keys=True), before)
+
     def test_battle_editor_draft_is_validated_then_applied_only_by_the_server(self):
         map_ref = self.make_map()
         map_ref.nation_data["A"]["at_war_with"] = ["B"]

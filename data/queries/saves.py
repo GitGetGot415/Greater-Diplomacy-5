@@ -322,7 +322,9 @@ def player_snapshot_projection(context, snapshot, country_id):
                 unit, country_id, original, world_state.nation_data)]
         for unit in province["units"]:
             if unit.get("owner") != country_id:
-                for field in ("order", "combat_stance", "lane_target", "repair_trip", "air_cargo"):
+                # Visible troops' Hold preferences classify the battle's enemy
+                # reserve panels; their missions and lane targets remain private.
+                for field in ("order", "lane_target", "repair_trip", "air_cargo"):
                     unit.pop(field, None)
         if original.get("owner") != country_id:
             for field in ("building_queue", "unit_queue", "orders"):

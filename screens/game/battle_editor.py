@@ -21,6 +21,7 @@ from ui import dialogs
 
 DRAG_THRESHOLD = 6
 PANE_ENEMY_RESERVE = "enemy_reserve"
+PANE_ENEMY_HELD = "enemy_held"
 PANE_HELD = "held"
 EDITABLE_PANES = (PANE_FRONT, PANE_RESERVE, PANE_HELD)
 MARGIN = 16
@@ -29,8 +30,8 @@ HEADER_H = 24
 RESERVE_TOP = 54
 RESERVE_H = 150
 LANES_W = 188
-CONTROLS_W = 156
-CONTROL_BUTTON_H = 36
+AUTOMATION_W = 156
+AUTOMATION_BUTTON_H = 36
 CARD_H = 58
 CARD_MAX_W = 190
 CARD_MIN_W = 128
@@ -50,7 +51,8 @@ HELP_TEXT = (
     "Empty slots stay empty while editing. When you exit, combat fills required slots "
     "from available reserves. HELD means other units get priority; held units still "
     "fight when needed. A popup lets you continue editing before gaps are filled.\n\n"
-    "Reset restores automatic assignments and the AI's wounded-unit rotation.\n\n"
+    "Organize explains its changes and asks for confirmation before restoring "
+    "automatic assignments and the AI's wounded-unit rotation.\n\n"
     "The outlook estimates the selected lane's winner and duration using the same "
     "combat rules as Manage Battle, including reserves and automatic filling.\n\n"
     "Exit returns to Manage Battle."
@@ -78,6 +80,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
         self._observed_state = None
         self.front_slots = None
         self._exit_confirmation_open = False
+        self._organize_confirmation_open = False
         self.refresh_ui()
         if overview is not None:
             self.start(overview)
@@ -97,6 +100,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
         self.selected_lane = overview.selected_lane
         self.done = False
         self._exit_confirmation_open = False
+        self._organize_confirmation_open = False
         self.front_slots = None
         self.cancel_drag()
         for pane in self.regions:
@@ -148,24 +152,26 @@ class BattleEditorScreen(ScrollPanes, Screen):
         held_x = MARGIN + reserves_w + GAP
         middle_top = RESERVE_TOP + RESERVE_H + 2 * GAP
         middle_h = bottom_top - 2 * GAP - middle_top
-        self.controls_rect = pygame.Rect(
-            c.SCREEN_WIDTH - MARGIN - CONTROLS_W, middle_top,
-            CONTROLS_W, HEADER_H + CONTROL_BUTTON_H + 2 * GAP)
-        outcome_top = self.controls_rect.bottom + GAP
-        self.outcome_rect = pygame.Rect(self.controls_rect.x, outcome_top,
-                                        CONTROLS_W, middle_top + middle_h - outcome_top)
+        self.automation_rect = pygame.Rect(
+            c.SCREEN_WIDTH - MARGIN - AUTOMATION_W, middle_top,
+            AUTOMATION_W, HEADER_H + AUTOMATION_BUTTON_H + 2 * GAP)
+        outcome_top = self.automation_rect.bottom + GAP
+        self.outcome_rect = pygame.Rect(self.automation_rect.x, outcome_top,
+                                        AUTOMATION_W, middle_top + middle_h - outcome_top)
         self.lanes_rect = pygame.Rect(MARGIN, middle_top, LANES_W, middle_h)
         self.regions = {
             PANE_LANES: pygame.Rect(MARGIN, middle_top + HEADER_H, LANES_W, middle_h - HEADER_H),
             PANE_ENEMY_RESERVE: pygame.Rect(MARGIN, RESERVE_TOP + HEADER_H,
-                                           width, RESERVE_H - HEADER_H),
+                                           reserves_w, RESERVE_H - HEADER_H),
+            PANE_ENEMY_HELD: pygame.Rect(held_x, RESERVE_TOP + HEADER_H,
+                                        width - reserves_w - GAP, RESERVE_H - HEADER_H),
             PANE_RESERVE: pygame.Rect(MARGIN, bottom_top + HEADER_H,
                                      reserves_w, RESERVE_H - HEADER_H),
             PANE_HELD: pygame.Rect(held_x, bottom_top + HEADER_H,
                                   width - reserves_w - GAP, RESERVE_H - HEADER_H),
         }
         center_x = MARGIN + LANES_W + 2 * GAP
-        center_w = self.controls_rect.left - 2 * GAP - center_x
+        center_w = self.automation_rect.left - 2 * GAP - center_x
         half_h = (middle_h - 2 * GAP) // 2
         for pane, top in ((PANE_ENEMY, middle_top),
                           (PANE_FRONT, middle_top + half_h + 2 * GAP)):
@@ -176,7 +182,8 @@ class BattleEditorScreen(ScrollPanes, Screen):
         # move controls, card positions, clipping regions, or drop targets.
         self.header_rect = pygame.Rect(0, 0, c.SCREEN_WIDTH, RESERVE_TOP - GAP)
         self.reserve_bars = {
-            PANE_ENEMY_RESERVE: pygame.Rect(0, RESERVE_TOP, c.SCREEN_WIDTH, RESERVE_H),
+            PANE_ENEMY_RESERVE: pygame.Rect(0, RESERVE_TOP, MARGIN + reserves_w, RESERVE_H),
+            PANE_ENEMY_HELD: pygame.Rect(held_x, RESERVE_TOP, c.SCREEN_WIDTH - held_x, RESERVE_H),
             PANE_RESERVE: pygame.Rect(0, bottom_top, MARGIN + reserves_w, RESERVE_H),
             PANE_HELD: pygame.Rect(held_x, bottom_top, c.SCREEN_WIDTH - held_x, RESERVE_H),
         }
@@ -212,18 +219,18 @@ class BattleEditorScreen(ScrollPanes, Screen):
             self.overview.province = self.province
         for pane in self.regions:
             setattr(self, self.scroll_attrs(pane)["limit_attr"], 0)
-        controls = self.controls_rect
-        reset = Button(controls.x + GAP, controls.y + HEADER_H,
-                       (CONTROLS_W - 2 * GAP, CONTROL_BUTTON_H), "red", "Reset",
-                       self.reset_assignments, font_preset="button_small")
-        reset.disabled = not self.can_edit_now()
-        help_button = Button(c.SCREEN_WIDTH - MARGIN - (CONTROLS_W - 2 * GAP), GAP,
-                             (CONTROLS_W - 2 * GAP, CONTROL_BUTTON_H), "blue", "Help",
+        automation = self.automation_rect
+        organize = Button(automation.x + GAP, automation.y + HEADER_H,
+                          (AUTOMATION_W - 2 * GAP, AUTOMATION_BUTTON_H), "red", "Organize",
+                          self.confirm_organize, font_preset="button_small")
+        organize.disabled = not self.can_edit_now()
+        help_button = Button(c.SCREEN_WIDTH - MARGIN - (AUTOMATION_W - 2 * GAP), GAP,
+                             (AUTOMATION_W - 2 * GAP, AUTOMATION_BUTTON_H), "blue", "Help",
                              self.show_help, font_preset="button_small", sound_kind=None)
         done = Button(MARGIN, GAP,
-                      (CONTROLS_W - 2 * GAP, CONTROL_BUTTON_H), "red", "Exit",
+                      (AUTOMATION_W - 2 * GAP, AUTOMATION_BUTTON_H), "red", "Exit",
                       self.exit_screen, font_preset="button_small", sound_kind="back")
-        self.elements.extend((reset, help_button, done))
+        self.elements.extend((organize, help_button, done))
         if self.overview is None:
             return
         self.overview.visible = queries.is_province_visible(self.map_screen, self.province['id'])
@@ -262,11 +269,15 @@ class BattleEditorScreen(ScrollPanes, Screen):
                    if queries.get_unit_combat_owner(unit) in far.nations and id(unit) not in seated]
         enemies = queries.filter_visible_units(
             enemies, self.player, self.province, self.map_screen.nation_data)
-        self._card_grid(PANE_ENEMY_RESERVE, enemies)
+        enemy_reserves = [unit for unit in enemies if unit.get('combat_stance') != 'RESERVE']
+        enemy_held = [unit for unit in enemies if unit.get('combat_stance') == 'RESERVE']
+        self._card_grid(PANE_ENEMY_RESERVE, enemy_reserves)
+        self._card_grid(PANE_ENEMY_HELD, enemy_held)
         self._card_grid(PANE_RESERVE, reserves)
         self._card_grid(PANE_HELD, held)
         captions = {
-            PANE_ENEMY_RESERVE: f"ENEMY RESERVES ({len(enemies)})",
+            PANE_ENEMY_RESERVE: f"ENEMY RESERVES ({len(enemy_reserves)})",
+            PANE_ENEMY_HELD: f"ENEMY HELD ({len(enemy_held)})",
             PANE_ENEMY: f"ENEMY FRONT  {len(far.front)}/{lane.slots}",
             PANE_FRONT: f"YOUR FRONT  {len(near.front)}/{lane.slots}",
             PANE_RESERVE: f"YOUR SIDE'S RESERVES ({len(reserves)})",
@@ -413,15 +424,16 @@ class BattleEditorScreen(ScrollPanes, Screen):
         self._draw_mail_panel(surface, self.lanes_rect, 'contacts')
         self._draw_mail_panel(surface, self.header_rect, 'header')
         self._draw_mail_panel(surface, self.reserve_bars[PANE_ENEMY_RESERVE], 'requests')
+        self._draw_mail_panel(surface, self.reserve_bars[PANE_ENEMY_HELD], 'requests')
         self._draw_mail_panel(surface, self.reserve_bars[PANE_RESERVE], 'composer')
         self._draw_mail_panel(surface, self.reserve_bars[PANE_HELD], 'composer')
         for rect in self.front_panels.values():
             self._draw_mail_panel(surface, rect, 'contacts', translucent=True)
 
     def additional_draw(self, surface):
-        self._draw_mail_panel(surface, self.controls_rect, 'header')
+        self._draw_mail_panel(surface, self.automation_rect, 'header')
         font = fonts.get('small')
-        for caption, rect in (('LANES', self.lanes_rect), ('CONTROLS', self.controls_rect)):
+        for caption, rect in (('LANES', self.lanes_rect), ('AUTOMATION', self.automation_rect)):
             surface.blit(font.render(caption, True, c.UI_TEXT_LIGHT), (rect.x + GAP, rect.y + 3))
         for pane, heading in self.headings.items():
             rect = self.regions[pane]
@@ -508,6 +520,35 @@ class BattleEditorScreen(ScrollPanes, Screen):
             if index is not None:
                 slots[index] = unit
 
+    def confirm_organize(self):
+        if (self.done or self._organize_confirmation_open or self._exit_confirmation_open
+                or not self.can_edit_now()):
+            return
+        self.cancel_drag()
+        stamp = self._source_stamp()
+        self._organize_confirmation_open = True
+
+        def answered(organize):
+            if not self._organize_confirmation_open:
+                return
+            self._organize_confirmation_open = False
+            if not organize or self.done:
+                return
+            if stamp != self._source_stamp():
+                self.refresh_ui()
+                return
+            self.reset_assignments()
+
+        threshold = queries.format_number(c.AI_ROTATE_HEALTH_FRACTION * 100)
+        dialogs.ask_yes_no(
+            "Organize Battle?",
+            "This replaces your manual arrangement across every lane of this battle. "
+            "It clears lane assignments and Hold preferences for units you control, "
+            "then assigns the frontline and reserves automatically. "
+            f"Units below {threshold}% health are put in Held when other troops can cover the front. "
+            "Your existing card positions will be lost. Organize your units?",
+            on_result=answered, yes_label="Organize", no_label="Cancel")
+
     def reset_assignments(self):
         self.cancel_drag()
         if not self.can_edit_now():
@@ -580,7 +621,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
 
     def handle_events(self, events):
         for event in events:
-            if self.done or self._exit_confirmation_open:
+            if self.done or self._exit_confirmation_open or self._organize_confirmation_open:
                 return
             if event.type == pygame.WINDOWFOCUSLOST:
                 self.cancel_drag()
@@ -647,7 +688,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
             self.refresh_ui()
 
     def exit_screen(self):
-        if self.done or self._exit_confirmation_open:
+        if self.done or self._exit_confirmation_open or self._organize_confirmation_open:
             return
         self.cancel_drag()
         if self.can_edit_now():
@@ -689,6 +730,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
 
     def _finish_exit(self):
         self._exit_confirmation_open = False
+        self._organize_confirmation_open = False
         self.cancel_drag()
         if self.overview is not None:
             self.overview.selected_lane = self.selected_lane
