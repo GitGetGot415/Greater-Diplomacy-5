@@ -72,6 +72,30 @@ class MapSaveFormatTests(unittest.TestCase):
             older = load_map.load_backend_state(directory, skip_initial_income=True)
             self.assertEqual(older.session.conversation_colors, {})
 
+    def test_a_new_game_starts_with_no_world_events(self):
+        """A scenario's leftover events reached every LLM prompt as current news.
+        Loading a save in progress keeps its events."""
+        log = ["WAR DECLARED: Atlantis has declared war on Lemuria!"]
+        events = {"is_playable": False, "log": list(log), "news_flash": list(log)}
+        context = map_double(nation_data={"GLOBAL_EVENTS": events})
+        metadata = queries.build_save_dict(context, include_provinces=False)
+        with tempfile.TemporaryDirectory() as directory, \
+                mock.patch.object(queries, "get_country_data", return_value={}), \
+                mock.patch.object(queries, "get_settings", return_value={}):
+            with open(os.path.join(directory, "meta.json"), "w", encoding="utf-8") as handle:
+                json.dump(metadata, handle)
+            with open(os.path.join(directory, "map_data.json"), "w", encoding="utf-8") as handle:
+                json.dump({}, handle)
+            shutil.copyfile(os.path.join(c.BACKGROUNDS_DIR, "Province.png"), os.path.join(directory, "id_map.png"))
+            for is_scenario, expected in ((True, []), (False, log)):
+                with self.subTest(is_scenario=is_scenario):
+                    loaded = load_map.load_backend_state(
+                        directory, is_scenario=is_scenario, skip_initial_income=True,
+                        scenario_settings=queries.get_default_scenario_settings())
+                    record = loaded.nation_data["GLOBAL_EVENTS"]
+                    self.assertEqual((record["log"], record["news_flash"]), (expected, expected))
+                    self.assertFalse(record["is_playable"])
+
     def test_geometry_omits_only_fields_with_a_separate_state_record(self):
         raw = {"p": {"terrain": "fixture", "owner": "old", "unknown": {"keep": [1]}},
                "extra": {"owner": "preserved", "units": [{"fixture": True}]}}

@@ -179,6 +179,13 @@ Model requests in one turn must share the same world-context prefix.
 build_world_context puts shared information first:
 date, country list, politics, and world events.
 It then adds the selected country, its territory, relations, and task.
+
+World events are the 8 newest entries of GLOBAL_EVENTS.log. Their heading says the events already happened,
+and that a country they name which is not on the country list no longer exists.
+A model otherwise treats every country named in the log as one that exists now.
+A new game started from a scenario empties the log and news_flash after its load repairs (diplomacy_events.clear_global_events).
+A scenario file can still hold events from a game its author played, or notes from its load repairs.
+Loading a save in progress keeps its log.
 The ai_director system prompt must not name a specific country.
 
 ai_handler._combined_prompt puts user content before system content in one user message.

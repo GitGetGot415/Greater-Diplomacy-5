@@ -20,3 +20,17 @@ def log_global_event(nation_data, event_message):
     news = nation_data["GLOBAL_EVENTS"].setdefault("news_flash", [])
     news.append(event_message)
     del news[:-GLOBAL_EVENT_LIMIT]
+
+
+def clear_global_events(nation_data):
+    """Empties both event lists, for a game that is just starting.
+
+    The log is what happened in one game. A scenario file can still hold
+    events from a game its author played, or notes its load repairs wrote, and
+    every LLM prompt reads the log as current news. Other GLOBAL_EVENTS fields,
+    such as deleted_countries, are not events and stay.
+    """
+    record = nation_data.get("GLOBAL_EVENTS")
+    if isinstance(record, dict):
+        record["log"] = []
+        record["news_flash"] = []

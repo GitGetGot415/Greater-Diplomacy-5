@@ -3872,18 +3872,8 @@
         },
         "GLOBAL_EVENTS": {
             "is_playable": false,
-            "log": [
-                "WAR DECLARED: Guatemala has declared war on Colombia!",
-                "WAR DECLARED: Qing Dynasty has declared war on Rome!",
-                "WAR DECLARED: Israel has declared war on United Kingdom!",
-                "WAR DECLARED: Colombia has declared war on Rome!"
-            ],
-            "news_flash": [
-                "WAR DECLARED: Colombia has declared war on Rome!",
-                "WAR DECLARED: Israel has declared war on United Kingdom!",
-                "WAR DECLARED: Qing Dynasty has declared war on Rome!",
-                "WAR DECLARED: Guatemala has declared war on Colombia!"
-            ],
+            "log": [],
+            "news_flash": [],
             "flag_data": "DEFAULT",
             "portrait_data": "DEFAULT",
             "at_war_with": [],

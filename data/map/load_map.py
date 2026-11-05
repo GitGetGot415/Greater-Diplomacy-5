@@ -20,7 +20,8 @@ from data.runtime_rules import rebuild
 from data.state_access import BackendState
 from map_logic.random_map import procedural_map_generator
 from map_logic.system32 import unit_events, movement_processor, economy_processor
-from map_logic.diplomacy import diplomacy_lifecycle, faction_records, faction_leadership
+from map_logic.diplomacy import (diplomacy_events, diplomacy_lifecycle, faction_records,
+                                 faction_leadership)
 from map_logic.territory import ownership
 
 # Each yield in _load_map_asset_steps starts one stage. Keep these totals with that pipeline.
@@ -608,6 +609,11 @@ def _load_map_asset_steps(context, load_path, scenario_settings=None, *, load_pr
             "force_time_appropriate_research", c.DEFAULT_FORCE_TIME_APPROPRIATE_RESEARCH,
             world_state.scenario_settings):
         queries.apply_time_appropriate_research_to_map(context, world_state.time_manager.year)
+
+    # A new game starts with no world events. This runs after the load repairs
+    # above, whose notes would otherwise be the new game's first news.
+    if session_state.selection_mode:
+        diplomacy_events.clear_global_events(world_state.nation_data)
 
 
 def load_backend_state(load_path, *, is_scenario=False, scenario_settings=None, history_turn=None,

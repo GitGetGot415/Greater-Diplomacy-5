@@ -15042,14 +15042,8 @@
         "Dominion of Canada": {},
         "GLOBAL_EVENTS": {
             "is_playable": false,
-            "log": [
-                "Belgian Congo is no longer counted among Allies: its master Belgium is not in it.",
-                "Italian East Africa is no longer counted among Axis: it holds no territory."
-            ],
-            "news_flash": [
-                "Italian East Africa is no longer counted among Axis: it holds no territory.",
-                "Belgian Congo is no longer counted among Allies: its master Belgium is not in it."
-            ],
+            "log": [],
+            "news_flash": [],
             "at_war_with": [],
             "pending_diplomacy": {},
             "diplo_responses": {},

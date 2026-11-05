@@ -13226,12 +13226,8 @@
         "Bahrain": {},
         "GLOBAL_EVENTS": {
             "is_playable": false,
-            "log": [
-                "British Raj is no longer counted among Allies: it holds no territory."
-            ],
-            "news_flash": [
-                "British Raj is no longer counted among Allies: it holds no territory."
-            ],
+            "log": [],
+            "news_flash": [],
             "at_war_with": [],
             "pending_diplomacy": {},
             "diplo_responses": {},

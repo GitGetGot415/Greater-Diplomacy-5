@@ -287,6 +287,10 @@ def build_world_context(current_date, ai_nation, active_nations_str, manpower, m
 
     if events_str:
         context += "\n--- RECENT WORLD EVENTS ---\n"
+        # The log keeps events about countries that have since fallen, and a
+        # model reads every name in it as a country that exists now.
+        context += ("These already happened. A country named here that is not on the list "
+                    "above no longer exists.\n")
         context += events_str
 
     # --- per-nation tail ---------------------------------------------------
