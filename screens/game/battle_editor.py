@@ -27,11 +27,25 @@ RESERVE_H = 150
 LANES_W = 188
 CONTROLS_W = 156
 CONTROL_BUTTON_H = 36
+OUTLOOK_H = 136
 CARD_H = 58
 CARD_MAX_W = 190
 CARD_MIN_W = 128
 SCROLLBAR_W = 15
 LANE_ROW_H = 42
+
+HELP_TEXT = (
+    "Select a lane on the left. Drag your reserves into empty front-line slots, "
+    "or onto your front-line cards to swap units. Drag a front-line card into reserves "
+    "to hold it back. Allies and enemies are read-only.\n\n"
+    "Empty slots stay empty while editing. When you exit, combat fills required slots "
+    "from available reserves. HELD means other units get priority; held units still "
+    "fight when needed. A popup lets you continue editing before gaps are filled.\n\n"
+    "Reset restores automatic assignments and the AI's wounded-unit rotation.\n\n"
+    "The outlook estimates the selected lane's winner and duration using the same "
+    "combat rules as Manage Battle, including reserves and automatic filling.\n\n"
+    "Exit returns to Manage Battle."
+)
 
 
 class BattleEditorScreen(ScrollPanes, Screen):
@@ -125,7 +139,9 @@ class BattleEditorScreen(ScrollPanes, Screen):
         middle_h = bottom_top - 2 * GAP - middle_top
         self.controls_rect = pygame.Rect(
             c.SCREEN_WIDTH - MARGIN - CONTROLS_W, middle_top,
-            CONTROLS_W, HEADER_H + 2 * CONTROL_BUTTON_H + 3 * GAP)
+            CONTROLS_W, HEADER_H + 3 * CONTROL_BUTTON_H + 4 * GAP)
+        self.outcome_rect = pygame.Rect(self.controls_rect.x, self.controls_rect.bottom + GAP,
+                                        CONTROLS_W, OUTLOOK_H)
         self.lanes_rect = pygame.Rect(MARGIN, middle_top, LANES_W, middle_h)
         self.regions = {
             PANE_LANES: pygame.Rect(MARGIN, middle_top + HEADER_H, LANES_W, middle_h - HEADER_H),
@@ -151,6 +167,8 @@ class BattleEditorScreen(ScrollPanes, Screen):
         self.empty_slots = {}
         self.lane_labels = []
         self.headings = {}
+        self.lane_outcome = None
+        self.outcome_surface = None
         if self.overview is not None:
             stamp = self._source_stamp()
             if self._observed_state is not None and stamp != self._observed_state:
@@ -165,13 +183,16 @@ class BattleEditorScreen(ScrollPanes, Screen):
             setattr(self, self.scroll_attrs(pane)["limit_attr"], 0)
         controls = self.controls_rect
         reset = Button(controls.x + GAP, controls.y + HEADER_H,
-                       (CONTROLS_W - 2 * GAP, CONTROL_BUTTON_H), "orange", "Reset",
+                       (CONTROLS_W - 2 * GAP, CONTROL_BUTTON_H), "red", "Reset",
                        self.reset_assignments, font_preset="button_small")
         reset.disabled = not self.can_edit_now()
-        done = Button(controls.x + GAP, reset.rect.bottom + GAP,
+        help_button = Button(controls.x + GAP, reset.rect.bottom + GAP,
+                             (CONTROLS_W - 2 * GAP, CONTROL_BUTTON_H), "blue", "Help",
+                             self.show_help, font_preset="button_small")
+        done = Button(controls.x + GAP, help_button.rect.bottom + GAP,
                       (CONTROLS_W - 2 * GAP, CONTROL_BUTTON_H), "green", "Exit",
                       self.exit_screen, font_preset="button_small", sound_kind="back")
-        self.elements.extend((reset, done))
+        self.elements.extend((reset, help_button, done))
         if self.overview is None:
             return
         self.overview.visible = queries.is_province_visible(self.map_screen, self.province['id'])
@@ -192,6 +213,10 @@ class BattleEditorScreen(ScrollPanes, Screen):
                 self.front_slots[lane.index] = list(near.front) + [None] * (count - len(near.front))
         self._lane_rows()
         lane, near, far = self.current()
+        self.lane_outcome = self.overview._estimate_lane_outcome(lane)
+        self.outcome_surface = pygame.Surface(self.outcome_rect.size, pygame.SRCALPHA)
+        self.overview._paint_outcome(self.outcome_surface, lane,
+                                     rect=self.outcome_surface.get_rect(), outcome=self.lane_outcome)
         slots = len(self.front_slots[lane.index])
         self._card_grid(PANE_ENEMY, far.front, slots=slots)
         self._card_grid(PANE_FRONT, self.front_slots[lane.index], slots=slots)
@@ -316,6 +341,12 @@ class BattleEditorScreen(ScrollPanes, Screen):
             surface.blit(heading, (rect.x, rect.y - HEADER_H + 3))
         x, y, width = self.divider
         pygame.draw.line(surface, c.UI_TEXT_MUTED, (x, y), (x + width, y))
+        if self.outcome_surface is not None:
+            surface.blit(self.outcome_surface, self.outcome_rect)
+
+    def show_help(self):
+        self.cancel_drag()
+        dialogs.show_info("Battle Editor Help", HELP_TEXT)
 
     def _paint_cards(self, pane):
         def paint(surface):

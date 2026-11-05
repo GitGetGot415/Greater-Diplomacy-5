@@ -349,6 +349,53 @@ class BattleEditorTests(BattleScreenTestCase):
                     pygame.event.Event(pygame.MOUSEBUTTONUP, pos=pos, button=1)])
         self.assertEqual(self.province["units"], before)
 
+    def test_help_button_opens_shared_popup_without_changing_the_edit(self):
+        from ui.navigation import modal_stack
+        screen = self.editor()
+        _rect, front = self.own_row(screen, battle_screen.PANE_FRONT)
+        screen.drop_unit(front, battle_screen.PANE_RESERVE)
+        before = copy.deepcopy(self.province["units"])
+        positions = {key: [id(unit) if unit is not None else None for unit in slots]
+                     for key, slots in screen.front_slots.items()}
+        help_button = next(element for element in screen.elements if getattr(element, "text", "") == "Help")
+        help_button.callback()
+        modal = modal_stack.active()
+        self.assertIsNotNone(modal)
+        try:
+            modal.draw(self.surface)
+            modal.handle_events([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_ESCAPE)])
+            modal.update()
+            self.assertFalse(screen.done)
+            self.assertEqual(self.province["units"], before)
+            self.assertEqual({key: [id(unit) if unit is not None else None for unit in slots]
+                              for key, slots in screen.front_slots.items()}, positions)
+        finally:
+            if modal_stack.active() is modal:
+                modal_stack.pop()
+
+    def test_outlook_uses_the_overview_forecast_for_the_selected_lane(self):
+        screen = self.editor()
+        forecast = {"winner_side": 0, "turns": 3}
+        with mock.patch.object(screen.overview, "_estimate_lane_outcome", return_value=forecast) as estimate, \
+                mock.patch.object(screen.overview, "_paint_outcome",
+                                  wraps=screen.overview._paint_outcome) as paint:
+            screen._select(1)
+        self.assertEqual(estimate.call_args.args[0].index, 1)
+        self.assertIs(screen.lane_outcome, forecast)
+        self.assertIs(paint.call_args.kwargs["outcome"], forecast)
+
+    def test_outlook_refreshes_after_unit_changes_and_reset(self):
+        screen = self.editor()
+        _rect, front = self.own_row(screen, battle_screen.PANE_FRONT)
+        first = {"winner_side": 0, "turns": 2}
+        second = {"winner_side": 1, "turns": 4}
+        with mock.patch.object(screen.overview, "_estimate_lane_outcome", side_effect=[first, second]) as estimate:
+            self.assertTrue(screen.drop_unit(front, battle_screen.PANE_RESERVE))
+            self.assertIs(screen.lane_outcome, first)
+            screen.reset_assignments()
+            self.assertIs(screen.lane_outcome, second)
+        self.assertEqual(estimate.call_count, 2)
+
     def test_edit_changes_controller_state_and_exit_restores_orders(self):
         from types import SimpleNamespace
         from main import Controller
@@ -694,11 +741,13 @@ class BattleEditorTests(BattleScreenTestCase):
 
     def test_idle_frames_use_cached_battle_data(self):
         screen = self.editor()
-        with mock.patch.object(combat_rules, "build_battle") as build:
+        with mock.patch.object(combat_rules, "build_battle") as build, \
+                mock.patch.object(screen.overview, "_estimate_lane_outcome") as estimate:
             screen.draw(self.surface)
             screen.update()
             screen.draw(self.surface)
         build.assert_not_called()
+        estimate.assert_not_called()
 
     def test_submitted_realtime_turn_disables_changes(self):
         from types import SimpleNamespace

@@ -43,7 +43,7 @@ from ui.navigation.modal_screen import ModalScreen
 from ui.background_styles import COMBAT_PANEL_STYLES
 from ui.widgets.ui_elements import (draw_wrapped_icon_row, get_combat_stat_entries,
                           get_bombardment_stat_entries)
-from ui.widgets.text_utils import fit_text
+from ui.widgets.text_utils import fit_text, wrap_text
 
 from ui.rendering import overlay_renderer
 
@@ -615,9 +615,9 @@ class Battle_Screen(ModalScreen):
         return overlay_renderer.estimated_combat_outcome(
             sides, self.map_screen.nation_data, province=self.province)
 
-    def _paint_outcome(self, surface, lane):
-        """Paint the expected winner for the selected lane at the panel bottom."""
-        rect = self.outcome_rect
+    def _paint_outcome(self, surface, lane, *, rect=None, outcome=None):
+        """Shared outlook display for the overview and editor's narrow column."""
+        rect = self.outcome_rect if rect is None else rect
         ui_bars.draw_translucent_panel(
             surface, rect, (0, 0, 0, 90),
             border_color=c.UI_TEXT_MUTED, border_width=1)
@@ -626,11 +626,12 @@ class Battle_Screen(ModalScreen):
         heading = small.render(f"LANE {lane.index + 1} OUTLOOK", True, c.UI_TEXT_DIM)
         surface.blit(heading, (rect.x + 8, rect.y + 4))
 
-        outcome = self.lane_outcome or {}
+        outcome = (self.lane_outcome if outcome is None else outcome) or {}
         winner_index = outcome.get("winner_side")
         if winner_index is None:
-            message = small.render("No clear winner expected", True, c.UI_TEXT_MUTED)
-            surface.blit(message, (rect.x + 8, rect.y + 24))
+            for index, line in enumerate(wrap_text("No clear winner expected", small, rect.width - 16)):
+                surface.blit(small.render(line, True, c.UI_TEXT_MUTED),
+                             (rect.x + 8, rect.y + 24 + index * small.get_height()))
             return
 
         side = (lane.a, lane.b)[winner_index]
@@ -651,6 +652,14 @@ class Battle_Screen(ModalScreen):
         turn_surf = small.render(turns_text, True, c.UI_TEXT_LIGHT)
         turn_x = rect.right - 8 - turn_surf.get_width()
         available_width = max(1, turn_x - x - 8)
+        turn_y = line_y
+        if available_width < flag_icons.ROW_FLAG_SIZE[0]:
+            # Stack the same winner, flags and duration inside narrow panels.
+            x = rect.x + 8
+            line_y += small.get_height() + 4
+            available_width = max(1, rect.width - 16)
+            turn_x = x
+            turn_y = line_y + small.get_height() + 4
 
         # Show as many coalition flags as fit, retaining a +N marker for any
         # remaining members using the same convention as the lane list.
@@ -666,7 +675,7 @@ class Battle_Screen(ModalScreen):
         line_rect = pygame.Rect(x, line_y, max(1, available_width), small.get_height())
         self._paint_side_flags(surface, side, x, line_rect, small,
                                max_flags=max(1, max_flags))
-        surface.blit(turn_surf, (turn_x, line_y))
+        surface.blit(turn_surf, (turn_x, turn_y))
 
     def _paint_units(self, pane):
         """The stat block the Orders panel shows, on the row it belongs to.
