@@ -18,7 +18,64 @@ def get_relation_score(nation_a, nation_b, nation_data, id_to_province=None):
     """Calculates dynamic relations based on flat state modifiers and temporary modifiers."""
     if nation_a == nation_b:
         return 0
-        
+    claim_count = None
+    if id_to_province:
+        claims_a = nation_data.get(nation_a, {}).get("claims", [])
+        claims_b = nation_data.get(nation_b, {}).get("claims", [])
+
+        a_claims_b = 0
+        b_claims_a = 0
+
+        for prov in id_to_province.values():
+            owner = prov.get("owner")
+            if owner == nation_b:
+                if nation_a in prov.get("cores", []) or prov["id"] in claims_a:
+                    a_claims_b += 1
+            elif owner == nation_a:
+                if nation_b in prov.get("cores", []) or prov["id"] in claims_b:
+                    b_claims_a += 1
+        claim_count = a_claims_b + b_claims_a
+    return _relation_score(nation_a, nation_b, nation_data, claim_count)
+
+
+def get_relation_scores_toward(nation_b, nations, nation_data, id_to_province=None):
+    """get_relation_score(nation_a, nation_b, ...) for every nation_a in nations.
+
+    The relations map scores every country toward one viewpoint. Counting
+    claims pair by pair walked every province once per country; this walks the
+    provinces once for all of them and gives the same scores.
+    """
+    claim_counts = None
+    if id_to_province:
+        claim_counts = dict.fromkeys(nations, 0)
+        claims_b = set(nation_data.get(nation_b, {}).get("claims", []))
+        # Which rated countries claim each province, from their claim lists.
+        claimed_by = collections.defaultdict(set)
+        for nation_a in claim_counts:
+            for province_id in nation_data.get(nation_a, {}).get("claims", []):
+                claimed_by[province_id].add(nation_a)
+
+        for prov in id_to_province.values():
+            owner = prov.get("owner")
+            if owner == nation_b:
+                # Each rated country with a core or claim here claims nation_b's land.
+                for nation_a in set(prov.get("cores", [])) | claimed_by.get(prov["id"], set()):
+                    if nation_a in claim_counts:
+                        claim_counts[nation_a] += 1
+            elif owner in claim_counts:
+                if nation_b in prov.get("cores", []) or prov["id"] in claims_b:
+                    claim_counts[owner] += 1
+
+    return {nation_a: 0 if nation_a == nation_b else _relation_score(
+                nation_a, nation_b, nation_data,
+                None if claim_counts is None else claim_counts[nation_a])
+            for nation_a in nations}
+
+
+def _relation_score(nation_a, nation_b, nation_data, claim_count):
+    """The score of two different nations, given the provinces each claims of
+    the other's. claim_count None leaves claims out, as when no province map
+    was given."""
     score = 0
     if are_at_war(nation_a, nation_b, nation_data):
         score += c.REL_MOD_AT_WAR
@@ -46,29 +103,14 @@ def get_relation_score(nation_a, nation_b, nation_data, id_to_province=None):
     temp_mods = nation_data.get(nation_a, {}).get("temp_modifiers", {}).get(nation_b, {})
     for entry in temp_mods.values():
         score += modifier_value(entry)
-        
-    if id_to_province:
-        claims_a = nation_data.get(nation_a, {}).get("claims", [])
-        claims_b = nation_data.get(nation_b, {}).get("claims", [])
-        
-        a_claims_b = 0
-        b_claims_a = 0
-        
-        for prov in id_to_province.values():
-            owner = prov.get("owner")
-            if owner == nation_b:
-                if nation_a in prov.get("cores", []) or prov["id"] in claims_a:
-                    a_claims_b += 1
-            elif owner == nation_a:
-                if nation_b in prov.get("cores", []) or prov["id"] in claims_b:
-                    b_claims_a += 1
-        
+
+    if claim_count is not None:
         penalty_per_claim = abs(c.REL_MOD_PER_CLAIM)
         max_penalty = abs(c.REL_MOD_MAX_CLAIM_PENALTY)
-        
-        claim_penalty = min(max_penalty, (a_claims_b + b_claims_a) * penalty_per_claim)
+
+        claim_penalty = min(max_penalty, claim_count * penalty_per_claim)
         score -= claim_penalty
-        
+
     return score
 
 

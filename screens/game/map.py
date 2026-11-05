@@ -1714,6 +1714,8 @@ class Map(StateAccess, Screen):
         # reuse unchanged layers; saves and multiplayer state omit these.
         self._map_surface_cache = {}
         self._fog_surface_cache = None
+        # Other countries' views of the relations map, built on hover.
+        self._relations_views = {}
         self.visible_provinces = None
         self.mail_draft_text = ""
         self.mail_input_active = False

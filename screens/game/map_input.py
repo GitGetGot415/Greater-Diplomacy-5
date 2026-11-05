@@ -1,5 +1,5 @@
 import pygame
-from ui.rendering import map_utils, overlay_renderer
+from ui.rendering import map_utils, overlay_renderer, refresh_map
 from map_logic.territory import ownership
 from map_logic.actions import unit_actions
 import data.constants as c
@@ -461,6 +461,7 @@ def _update_map_hover(map_screen, on_ui, mx, my):
         map_screen.last_hovered_id = None
         map_screen.hover_glow_surf = None
     tooltip.prepare_building_yields(map_screen)
+    refresh_map.prepare_relations_view(map_screen)
 
 
 def _handle_editor_undo(map_screen, event):

@@ -1,5 +1,5 @@
 import pygame
-from ui.rendering import hover_renderer, province_select, overlay_renderer, country_names
+from ui.rendering import hover_renderer, province_select, overlay_renderer, country_names, refresh_map
 from ui.panels import turn_progress
 from ui.panels import minimap
 from data import queries
@@ -124,7 +124,7 @@ def draw_map_screen(map_screen, surface):
         return
         
     # --- LAYER 1: THE BASE MAP ---
-    current_base = map_screen.active_map
+    current_base = refresh_map.shown_base_map(map_screen)
 
     vw = surface.get_width() / map_screen.camera.zoom
     vh = (surface.get_height() - map_screen.total_ui_h) / (map_screen.camera.zoom * map_screen.camera.tilt_factor)

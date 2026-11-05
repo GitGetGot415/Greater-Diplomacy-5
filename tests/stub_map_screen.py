@@ -40,7 +40,7 @@ UI_STATE = {
     "_ignore_left_until_release": False, "_ignore_right_until_release": False,
     "_unit_render_index_cache": None, "_combat_unit_view_cache": None,
     "_combat_bubble_records_cache": None, "_unit_roster_cache": None, "_map_surface_cache": None,
-    "_fog_surface_cache": None, "_viewport_scale_cache": None, "_hover_glow_scale_cache": None,
+    "_fog_surface_cache": None, "_relations_views": None, "_viewport_scale_cache": None, "_hover_glow_scale_cache": None,
     "_badge_state_cache": None, "is_unit_selected": lambda _unit: False,
 }
 

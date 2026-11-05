@@ -320,16 +320,92 @@ class MapSurfaceCacheTests(unittest.TestCase):
         leader.assert_called_once_with("Pact", self.screen.nation_data)
 
     def test_relations_recompute_for_new_perspective_and_changed_scores(self):
-        with mock.patch.object(queries, "get_relation_score", return_value=-100) as score:
+        score = {"value": -100}
+
+        def scores(viewpoint, nations, *_args):
+            return {nation: score["value"] for nation in nations}
+
+        with mock.patch.object(queries, "get_relation_scores_toward", side_effect=scores):
             self.refresh(refresh_map.refresh_relations_map)
             old = self.screen.relations_map
             self.screen.player_country = "B"
             self.refresh(refresh_map.refresh_relations_map)
             self.assertIsNot(old, self.screen.relations_map)
             old = self.screen.relations_map
-            score.return_value = 100
+            score["value"] = 100
             self.refresh(refresh_map.refresh_relations_map)
             self.assertIsNot(old, self.screen.relations_map)
+
+    def test_batch_relation_scores_match_pairwise_scores(self):
+        provinces = {
+            1: {"id": 1, "owner": "A", "cores": ["B", "C"]},
+            2: {"id": 2, "owner": "B", "cores": ["A"]},
+            3: {"id": 3, "owner": "B", "cores": []},
+            4: {"id": 4, "owner": "C", "cores": ["B", "B"]},
+            5: {"id": 5, "owner": "B", "cores": ["C"]},
+        }
+        data = {
+            "A": {"claims": [3, 2], "temp_modifiers": {"B": {"general": 25}}},
+            "B": {"claims": [1, 4]},
+            "C": {"claims": [3], "temp_modifiers": {"B": {"general": -40}}},
+        }
+        for viewpoint in data:
+            for id_to_province in (provinces, None):
+                with self.subTest(viewpoint=viewpoint, with_claims=bool(id_to_province)):
+                    self.assertEqual(
+                        queries.get_relation_scores_toward(viewpoint, list(data), data, id_to_province),
+                        {nation: queries.get_relation_score(nation, viewpoint, data, id_to_province)
+                         for nation in data})
+
+    def hover_relations(self, owner):
+        """Hover one of owner's provinces with the relations layer showing."""
+        self.screen.map_mode = "RELATIONS"
+        self.refresh(refresh_map.refresh_relations_map)
+        self.screen.hovered_province = next(
+            p for p in self.screen.map_data.values() if p["owner"] == owner) if owner else None
+        refresh_map.prepare_relations_view(self.screen)
+
+    def test_hovering_another_country_shows_its_relations_view(self):
+        self.hover_relations("B")
+        self.assertEqual(refresh_map.shown_relations_viewpoint(self.screen), "B")
+        shown = refresh_map.shown_base_map(self.screen)
+        self.assertIsNot(shown, self.screen.relations_map)
+        # The same map the player would see playing as B.
+        self.screen.player_country = "B"
+        refresh_map.invalidate_map_surface_cache(self.screen, "relations_map")
+        self.refresh(refresh_map.refresh_relations_map)
+        self.assertTrue(np.array_equal(pygame.surfarray.array3d(shown),
+                                       pygame.surfarray.array3d(self.screen.relations_map)))
+
+    def test_own_country_no_country_and_water_show_the_players_view(self):
+        for owner in ("A", None):
+            with self.subTest(owner=owner):
+                self.hover_relations(owner)
+                self.assertIsNone(refresh_map.shown_relations_viewpoint(self.screen))
+                self.assertIs(refresh_map.shown_base_map(self.screen), self.screen.relations_map)
+                self.assertEqual(self.screen._relations_views, {})
+        self.screen.id_to_province[2]["terrain"] = "ocean"
+        self.hover_relations("B")
+        self.assertIs(refresh_map.shown_base_map(self.screen), self.screen.relations_map)
+
+    def test_clearing_the_hover_or_refreshing_returns_to_the_players_view(self):
+        self.hover_relations("B")
+        self.screen.hovered_province = None
+        self.assertIs(refresh_map.shown_base_map(self.screen), self.screen.relations_map)
+        self.hover_relations("B")
+        self.refresh(refresh_map.refresh_relations_map)
+        self.assertEqual(self.screen._relations_views, {})
+        self.assertIs(refresh_map.shown_base_map(self.screen), self.screen.relations_map)
+
+    def test_hover_views_wait_for_turn_refreshes_and_swapped_in_maps(self):
+        self.screen.is_refreshing = True
+        self.hover_relations("B")
+        self.assertEqual(self.screen._relations_views, {})
+        self.screen.is_refreshing = False
+        refresh_map.prepare_relations_view(self.screen)
+        preview = pygame.Surface(self.screen.id_map.get_size())
+        self.screen.active_map = preview
+        self.assertIs(refresh_map.shown_base_map(self.screen), preview)
 
     def test_incremental_core_paint_cannot_poison_a_later_cache_hit(self):
         self.screen.ai_is_thinking = False

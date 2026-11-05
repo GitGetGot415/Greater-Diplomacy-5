@@ -1,7 +1,7 @@
 import pygame
 import data.constants as c
 from data import queries
-from ui.rendering import overlay_renderer
+from ui.rendering import overlay_renderer, refresh_map
 
 UNIT_PREVIEW_LIMIT = 5
 
@@ -55,6 +55,10 @@ def draw_tooltip(map_screen, surface):
         # Display Relations
         rel_score = queries.get_relation_score(owner_id, map_screen.player_country, map_screen.nation_data, map_screen.id_to_province)
         lines = [f"ID: {prov['id']} | {owner_display}", f"Opinion: {rel_score}"]
+        viewpoint = refresh_map.shown_relations_viewpoint(map_screen)
+        if viewpoint is not None:
+            viewpoint_name = queries.get_country_display_name(viewpoint, map_screen.nation_data)
+            lines.append(f"Map: {viewpoint_name}'s relations")
     else:
         lines = [f"ID: {prov['id']} | {owner_display}"]
 
