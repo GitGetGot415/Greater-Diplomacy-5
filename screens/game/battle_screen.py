@@ -40,7 +40,7 @@ from ui.widgets import flag_icons
 from ui.panels import sidebar_info
 from ui.bars import ui_bars, view_mode_buttons
 from ui.navigation.modal_screen import ModalScreen
-from ui.background_styles import COMBAT_PANEL_STYLES
+from ui.background_styles import COMBAT_PANEL_STYLES, battle_card_color
 from ui.widgets.ui_elements import (
     draw_pixel_panel, draw_wrapped_icon_row, get_combat_stat_entries,
     get_bombardment_stat_entries,
@@ -482,9 +482,9 @@ class Battle_Screen(ModalScreen):
             # Keep the player's whole available bench, including allied units,
             # while showing the opposing lane's own reserves in its column.
             reserves = self.side_bench(side) if self.is_mine(side) else side.reserve
-            # Preserve the held-reserve priority without separating the roster
-            # into sections or starting reserves on a new grid row.
-            reserves = sorted(reserves, key=lambda unit: unit.get("combat_stance") != "RESERVE")
+            # Display available reserves before held units without changing
+            # combat priority or separating the continuous roster into sections.
+            reserves = sorted(reserves, key=lambda unit: unit.get("combat_stance") == "RESERVE")
             units = list(side.front) + list(reserves)
             self.side_counts[pane] = len(units)
             self._unit_cards(pane, units, reserve_ids={id(unit) for unit in reserves})
@@ -539,9 +539,9 @@ class Battle_Screen(ModalScreen):
     def _card_surface(self, unit, size, is_reserve):
         surface = pygame.Surface(size, pygame.SRCALPHA)
         held = unit.get("combat_stance") == "RESERVE"
-        color = "grey" if not self.can_command(unit) else (
-            "orange" if held else "green" if is_reserve else "blue")
-        draw_pixel_panel(surface, surface.get_rect(), c.UI_COLORS[color][0],
+        color = battle_card_color(
+            frontline=not is_reserve, held=held, controllable=self.can_command(unit))
+        draw_pixel_panel(surface, surface.get_rect(), color,
                          self.PANEL_BORDER)
         row = self.combat_row_data[id(unit)]
         icon = row["unit_icon"]

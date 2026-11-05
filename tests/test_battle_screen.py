@@ -1291,6 +1291,28 @@ class TacticalModeTests(BattleScreenTestCase):
 class RowOrderingTests(BattleScreenTestCase):
     """The viewer's units appear first in each lane."""
 
+    def test_rosters_list_frontline_then_available_reserves_then_held(self):
+        # Explicit small fronts leave both kinds of reserves on each side.
+        for unit in self.province["units"][::3]:
+            unit["combat_stance"] = "RESERVE"
+        before = copy.deepcopy(self.province["units"])
+        with mock.patch.object(combat_rules, "lane_slots", return_value=2):
+            screen = self.screen()
+        _lane, near, far = screen.current()
+        for pane, side in ((battle_screen.PANE_FRONT, near),
+                           (battle_screen.PANE_ENEMY, far)):
+            front_ids = {id(unit) for unit in side.front}
+            reserves = screen.side_bench(side) if screen.is_mine(side) else side.reserve
+            expected = list(side.front)
+            expected.extend(unit for unit in reserves if unit.get("combat_stance") != "RESERVE")
+            expected.extend(unit for unit in reserves if unit.get("combat_stance") == "RESERVE")
+            listed = [unit for _rect, (unit, _note) in screen.row_paint[pane]]
+            self.assertEqual([id(unit) for unit in listed], [id(unit) for unit in expected])
+            self.assertEqual({id(unit) for unit in listed[:len(side.front)]}, front_ids)
+        self.assertTrue(any(unit.get("combat_stance") == "RESERVE" for unit in screen.side_bench(near)))
+        self.assertTrue(any(unit.get("combat_stance") != "RESERVE" for unit in screen.side_bench(near)))
+        self.assertEqual(self.province["units"], before)
+
     def test_your_side_is_listed_first_whichever_half_of_the_lane_it_is(self):
         screen = self.screen()
         for lane in screen.battle.lanes:

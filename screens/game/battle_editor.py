@@ -15,7 +15,7 @@ from ui.widgets.ui_elements import Button, draw_pixel_panel, draw_wrapped_icon_r
 from ui.widgets import flag_icons
 from ui.widgets.text_utils import fit_text
 from ui.rendering.font_manager import fonts
-from ui.background_styles import MESSAGE_PANEL_STYLES
+from ui.background_styles import MESSAGE_PANEL_STYLES, battle_card_color
 from ui import dialogs
 
 
@@ -366,10 +366,11 @@ class BattleEditorScreen(ScrollPanes, Screen):
     def _card_surface(self, unit, pane, size):
         surface = pygame.Surface(size, pygame.SRCALPHA)
         mine = self.can_command(unit)
-        color = 'grey' if not mine else ('blue' if pane == PANE_FRONT else
-                                         'orange' if unit.get('combat_stance') == 'RESERVE' else 'green')
+        color = battle_card_color(
+            frontline=pane in (PANE_FRONT, PANE_ENEMY),
+            held=unit.get('combat_stance') == 'RESERVE', controllable=mine)
         style = MESSAGE_PANEL_STYLES['composer' if mine else 'contacts']
-        draw_pixel_panel(surface, surface.get_rect(), c.UI_COLORS[color][0], PANEL_BORDER,
+        draw_pixel_panel(surface, surface.get_rect(), color, PANEL_BORDER,
                          gradient_strength=style['gradient_strength'])
         row = self.overview.combat_row_data[id(unit)]
         font = fonts.get('small')

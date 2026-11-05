@@ -318,9 +318,13 @@ Movement clears both lane orders.
 Reserves neither fire nor take ordinary lane damage.
 They recover morale while front units fight.
 Manage Battle combines each side's front-line units and reserves, including allies,
-in one roster.
+in one roster, ordered as front-line units, available reserves, then held units.
 Unit cards show only the unit icon, attack, HP, and defense. Cards have no hover
 highlight and do not change orders when clicked.
+Manage Battle and Edit Battle use purple cards for front-line units, blue for
+available reserves, and green for held reserves. Units outside the player's
+control use muted versions of the same colors. A held unit required to fight
+uses the front-line color.
 Its Edit button changes to the full-screen battle editor.
 The editor replaces the map and Orders view and shows opposing reserves,
 front-line units, and a lane list.

@@ -82,6 +82,21 @@ COMBAT_PANEL_STYLES = {
     "main": {"color": c.PANEL_THEME_DANGER[0], "gradient_strength": 0.5},
 }
 
+BATTLE_CARD_MUTED_WEIGHT = 0.8
+
+
+def battle_card_color(*, frontline, held, controllable):
+    """Preserve battle status colors while muting cards outside player control."""
+    # A held preference cannot prevent a required front-line assignment.
+    preset = "purple" if frontline else "green" if held else "blue"
+    color = c.UI_COLORS[preset][0]
+    if controllable:
+        return color
+    return tuple(round(channel * (1 - BATTLE_CARD_MUTED_WEIGHT)
+                       + neutral * BATTLE_CARD_MUTED_WEIGHT)
+                 for channel, neutral in zip(color, c.UI_COLORS["grey"][0]))
+
+
 CLAIMS_PANEL_STYLES = {
     "main": {"color": (*c.HUD_PANEL_BG, 230), "gradient_strength": 0.5},
 }
