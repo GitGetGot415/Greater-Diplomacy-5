@@ -40,10 +40,11 @@ from ui.widgets import flag_icons
 from ui.panels import sidebar_info
 from ui.bars import ui_bars, view_mode_buttons
 from ui.navigation.modal_screen import ModalScreen
-from ui.background_styles import COMBAT_PANEL_STYLES, battle_card_color
+from ui.background_styles import BATTLE_CARD_COLORS, COMBAT_PANEL_STYLES, battle_card_color
+from ui import dialogs
 from ui.widgets.ui_elements import (
     draw_pixel_panel, draw_wrapped_icon_row, get_combat_stat_entries,
-    get_bombardment_stat_entries,
+    get_bombardment_stat_entries, make_info_button,
 )
 from ui.widgets.text_utils import wrap_text
 
@@ -74,6 +75,7 @@ SCROLLBAR_GAP = 4
 UNIT_ICON_GAP = 4
 UNIT_ICON_PADDING = 6
 UNIT_ICON_SIZE = 48
+COLOR_HELP_BUTTON_TOP = 8
 #: Flags a lane row shows per side before it gives up and counts the rest. Two
 #: keeps the compact lane button's flags and combat tally inside its width.
 LANE_FLAGS_SHOWN = 2
@@ -424,6 +426,14 @@ class Battle_Screen(ModalScreen):
     def pane_rects(self):
         return self.regions
 
+    def show_color_help(self):
+        dialogs.show_info(
+            "Battle Card Colors",
+            f"{BATTLE_CARD_COLORS['frontline'].capitalize()}: Frontline units.\n"
+            f"{BATTLE_CARD_COLORS['reserve'].capitalize()}: Available reserves.\n"
+            f"{BATTLE_CARD_COLORS['held'].capitalize()}: Held reserves.\n\n"
+            "Muted, grayer cards: Units you cannot control.")
+
     # ------------------------------------------------------------------ #
     #                             RENDERING                              #
     # ------------------------------------------------------------------ #
@@ -459,6 +469,9 @@ class Battle_Screen(ModalScreen):
         view_mode_reserve = 0 if self.embedded else VIEW_MODE_ROW_RESERVE
         btn_y = p.bottom - 52 - view_mode_reserve
         self._build_footer(btn_y)
+        color_help = make_info_button(0, p.y + COLOR_HELP_BUTTON_TOP, self.show_color_help)
+        color_help.rect.right = p.right - self.PAD
+        self.elements.append(color_help)
 
         if self.embedded:
             self.view_mode_buttons = []

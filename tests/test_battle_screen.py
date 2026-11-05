@@ -153,6 +153,42 @@ class BuildAndPaintTests(BattleScreenTestCase):
         self.assertTrue(screen.battle.lanes)
         self.assertTrue(screen.elements)
 
+    def test_color_help_opens_shared_popup_with_one_sound_and_preserves_orders(self):
+        from screens.game.orders import Orders_Screen
+        from ui.navigation import modal_stack
+        from ui.widgets import ui_elements
+
+        for embedded in (False, True):
+            with self.subTest(embedded=embedded):
+                if embedded:
+                    orders = Orders_Screen()
+                    orders.start_with_province(self.province, self.map)
+                    orders.go_to_battle()
+                    screen = orders.battle_screen
+                else:
+                    screen = self.screen()
+                screen._select(1)
+                before = copy.deepcopy(self.province["units"])
+                button = next(element for element in screen.elements
+                              if getattr(element, "callback", None) == screen.show_color_help)
+                with mock.patch.object(ui_elements, "play_ui_sound") as sound:
+                    screen.handle_events([
+                        pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=button.rect.center, button=1),
+                        pygame.event.Event(pygame.MOUSEBUTTONUP, pos=button.rect.center, button=1)])
+                    sound.assert_called_once_with("info")
+                modal = modal_stack.active()
+                self.assertIsNotNone(modal)
+                try:
+                    modal.draw(self.surface)
+                    modal.handle_events([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_ESCAPE)])
+                    modal.update()
+                    self.assertFalse(screen.done)
+                    self.assertEqual(screen.selected_lane, 1)
+                    self.assertEqual(self.province["units"], before)
+                finally:
+                    if modal_stack.active() is modal:
+                        modal_stack.pop()
+
     def test_overview_preserves_the_shared_fort_defense_entries(self):
         screen = self.screen()
         unit = self.province["units"][0]

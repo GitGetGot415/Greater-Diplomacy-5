@@ -83,12 +83,18 @@ COMBAT_PANEL_STYLES = {
 }
 
 BATTLE_CARD_MUTED_WEIGHT = 0.8
+BATTLE_CARD_COLORS = {
+    "frontline": "purple",
+    "reserve": "blue",
+    "held": "green",
+}
 
 
 def battle_card_color(*, frontline, held, controllable):
     """Preserve battle status colors while muting cards outside player control."""
     # A held preference cannot prevent a required front-line assignment.
-    preset = "purple" if frontline else "green" if held else "blue"
+    status = "frontline" if frontline else "held" if held else "reserve"
+    preset = BATTLE_CARD_COLORS[status]
     color = c.UI_COLORS[preset][0]
     if controllable:
         return color
