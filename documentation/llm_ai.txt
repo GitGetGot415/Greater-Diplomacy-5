@@ -102,6 +102,7 @@ MODEL DECISIONS
    No candidate, from the staff or the leader, mirrors a proposal waiting for this country's answer
    (ai_candidates.mirrors_waiting_proposal, c.AI_MIRRORED_PROPOSALS).
    A military access request mirrors a military access request, and a call to arms mirrors an offer to join wars.
+   A faction invitation mirrors a request to join a faction, and a proposal to found a faction mirrors the same proposal.
    The answer comes later in the turn from a separate call, so without this check a country refused a request and made the same request back.
    Only a delivered proposal (turns 1 or more) counts. A proposal still being drafted this turn has not reached the country.
 
@@ -130,6 +131,8 @@ Hosted providers keep their plain JSON mode. Their support for reply schemas dif
 Also, a reply schema that differs for each country could stop a hosted provider from reusing the shared prefix.
 The game still checks every reply, whether or not a reply schema constrained it.
 ai_prompts.REPLY_ACTIONS supplies both the prompt's action list and the reply schema's action list.
+NONE comes first, and the rules say most replies take no action and name a target only for an action taken.
+With WAR_DECLARATION first and a rule that a target MUST be named, small models answered friendly invitations by pressing for war.
 
 MODEL TEXT AND MESSAGE METADATA
 -------------------------------
@@ -144,6 +147,21 @@ The check is case-sensitive and ignores adjectives.
 Director messages, letters, proposal replies, message replies, and proactive lines pass their recipient to ai_prompts.unusable_message.
 In one save about one model message in six named its recipient. The Soviet Union asked the German Reich for access
 "to counter the German Reich's aggressive expansion", a plan copied from its notebook.
+
+ai_prompts.talks_peace_without_war rejects a message that talks of making peace, a peace treaty or terms, a ceasefire,
+an armistice, or a truce, when its sender and recipient are not at war. It needs the recipient, like names_recipient.
+Italy, in the Axis with Vichy France, offered to "make peace with you if you join the Axis", from its knowledge of history.
+Talk of peace in a third country's war is rejected too, because the game cannot broker one.
+A letter that recalls a peace already signed is also rejected.
+
+ai_prompts.invents_agreement rejects a message that names a treaty the game does not have:
+a non-aggression pact, mutual defense, a defense pact, treaty, or agreement, or a neutrality pact.
+The letters instructions already say there are no other treaties, and a model proposed a non-aggression pact anyway.
+
+A proposal or message reply that repeats, word for word, a sentence of at least 40 characters from the message history
+its prompt showed, or from the message it answers, takes its canned line (ai_prompts.repeats_shown, as letters use it).
+ai_evaluation._target_thread supplies that history to both the prompt and the check.
+The German Reich refused Spain's request to join the Axis with Spain's own refusal of the Axis's invitation.
 
 ai_prompts.CONDUCT_RULE appears in the letters, director, and reply instructions.
 It says to write to a country at war with you as an enemy, and never as if at peace or allied.
@@ -214,7 +232,7 @@ Letters follow the players' message timing in documentation/diplo_stuff.txt, Mes
 A letter has letter: true on both copies. The reader's copy gets letter_read: true when its reader is served.
 An unserved or failed sitting leaves letters unread for the next turn.
 A letter that the model refers to in the third person is dropped.
-A letter that repeats, word for word, a sentence of at least 40 characters from a letter its prompt showed is dropped (ai_letters.repeats_mail).
+A letter that repeats, word for word, a sentence of at least 40 characters from a letter its prompt showed is dropped (ai_prompts.repeats_shown).
 
 The prompt labels every country under WHO READS LETTERS, every waiting letter, and every earlier-letters thread with its relationship to the writer.
 The labels are "at war with you", "your overlord", "your puppet state", and "in your faction" (ai_evaluation.relationship).

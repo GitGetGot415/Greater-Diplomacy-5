@@ -474,23 +474,85 @@ def reads_as_template(message):
     return bool(message) and bool(_TEMPLATE_TEXT.search(message))
 
 
+#: Treaties the game does not have. Telling the model "There are no other
+#: treaties" did not stop the Soviet Union proposing Turkey a "non-aggression
+#: pact", or Mexico offering the United Kingdom one.
+_INVENTED_AGREEMENT = re.compile(
+    r"\bnon-?aggression\b|\bmutual defen[cs]e\b|\bdefen[cs]e (pact|treaty|agreement)s?\b"
+    r"|\bneutrality (pact|treaty|agreement)s?\b", re.IGNORECASE)
+
+
+def invents_agreement(message):
+    """Whether a message names a treaty that no government in the game can make."""
+    return bool(message) and bool(_INVENTED_AGREEMENT.search(message))
+
+
+#: Talk of ending a war.
+_PEACE_TALK = re.compile(
+    r"\b(make|making|made) peace\b|\bpeace (treaty|treaties|terms|talks|agreement|deal|negotiations?)\b"
+    r"|\bseparate peace\b|\b(ceasefire|cease-fire|cease fire|armistice|truce)s?\b",
+    re.IGNORECASE)
+
+
+def talks_peace_without_war(message, nation, recipient, nation_data=None):
+    """Whether a message talks of ending a war its sender and recipient are not fighting.
+
+    Italy, in the Axis with Vichy France and never at war with it, wrote "We
+    would be willing to make peace with you if you join the Axis", and Vichy
+    France answered in kind; Spain told the German Reich, which had invited it
+    into the Axis, that "we will not cease fire". Talk of brokering peace in a
+    third country's war is caught too: the game has no way to broker one.
+    """
+    if not message or not nation or not recipient or nation_data is None:
+        return False
+    if queries.are_at_war(nation, recipient, nation_data):
+        return False
+    return bool(_PEACE_TALK.search(message))
+
+
+#: A sentence at least this long, repeated word for word, was copied rather than written.
+_COPIED_SENTENCE_LENGTH = 40
+
+
+def repeats_shown(text, shown):
+    """Whether model text repeats a long sentence of a message its prompt showed.
+
+    `shown` is those messages' texts. 34 letters in the LOWBALLED save did: the
+    Soviet Union answered the Reich's "we are concerned about your growing
+    military presence along our border" with that same sentence. And the German
+    Reich refused Spain's request to join the Axis with Spain's own refusal of
+    the Axis's invitation, word for word.
+    """
+    lowered = (text or "").lower()
+    return any(sentence in lowered
+               for other in shown
+               for sentence in (part.strip().lower() for part in re.split(r"[.!?]", str(other)))
+               if len(sentence) >= _COPIED_SENTENCE_LENGTH)
+
+
 def unusable_message(message, nation, nation_data=None, recipient=None):
     """Whether model-written text must be replaced before anyone reads it.
 
     Every place that sends a model's words checks them here: the director's
     proposal messages, letters, proposal and message replies, and scripted
     event lines. `recipient`, where the caller knows it, is the country the
-    words are addressed to (names_recipient).
+    words are addressed to (names_recipient, talks_peace_without_war).
     """
     return (reads_as_third_person(message, nation, nation_data) or reads_as_template(message)
-            or names_recipient(message, recipient, nation_data))
+            or invents_agreement(message)
+            or names_recipient(message, recipient, nation_data)
+            or talks_peace_without_war(message, nation, recipient, nation_data))
 
 
 #: The actions a reply may take, in the order action_rules_and_schema lists
 #: them. diplomacy_processor._RETALIATION_HANDLERS performs all but NONE.
-REPLY_ACTIONS = ("WAR_DECLARATION", "JOIN_WARS", "LEAVE_FACTION", "JOIN_FACTION_REQ",
+#:
+#: NONE comes first. With WAR_DECLARATION first, a small model answering a
+#: friendly invitation picked it: Spain and the German Reich each pressed for
+#: war on the other in refusing a place in the Axis.
+REPLY_ACTIONS = ("NONE", "WAR_DECLARATION", "JOIN_WARS", "LEAVE_FACTION", "JOIN_FACTION_REQ",
                  "CEASEFIRE", "CALL_TO_ARMS", "CREATE_FACTION", "KICK_FACTION_MEMBER",
-                 "DISBAND_FACTION", "NONE")
+                 "DISBAND_FACTION")
 
 
 def reply_schema(nations, decides=False):
@@ -542,7 +604,9 @@ def action_rules_and_schema(subject, message_hint):
         "Valid actions: " + ", ".join(f"'{action}'" for action in REPLY_ACTIONS[:-1])
         + f" or '{REPLY_ACTIONS[-1]}'.\n"
         "RULES FOR ACTIONS:\n"
-        "- You MUST specify the target country for your action in 'action_target' (e.g., 'Germany', 'Russia', or the sender's name).\n"
+        "- Most replies take no action: 'NONE' is the normal choice. Take an action only when this "
+        f"{subject} truly calls for that move, never just to answer it.\n"
+        "- If you take an action, name its target country in 'action_target' (e.g., 'Germany', 'Russia', or the sender's name).\n"
         "- Do NOT output 'JOIN_FACTION_REQ' if you are already in a faction. You have to leave your faction before doing that.\n"
         "- Do NOT output 'LEAVE_FACTION' while you are fighting a war alongside your faction. You do not abandon allies mid-war, and the request will be refused.\n"
         "- Do NOT output 'WAR_DECLARATION' against a member of your own faction. You have to leave your faction before doing that.\n"

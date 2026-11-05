@@ -61,13 +61,16 @@ def _reply(message, source=None, accepted=None, llm=False):
     return reply
 
 
-def _model_reply(result, mode, canned, nation, nation_data, accepted=None, recipient=None):
+def _model_reply(result, mode, canned, nation, nation_data, accepted=None, recipient=None,
+                 answered=""):
     """A model's parsed reply as an answer dict, with canned words where its own fail.
 
     `canned` is a function returning the library line, called only when it is
     used, since library lookups can draw random numbers. None (an abandoned
     call) and words that fail ai_prompts.unusable_message take that line;
-    `recipient` is the country being answered. The
+    `recipient` is the country being answered. So do words that copy a long
+    sentence of the message history the prompt showed (_target_thread) or of
+    `answered`, the text being answered (ai_prompts.repeats_shown). The
     reply's decision fields, such as its opinion change and reactive move,
     still apply when only its words are replaced. A provider error keeps its
     text, because a bad API key showing on a reply is how a player finds out.
@@ -78,7 +81,11 @@ def _model_reply(result, mode, canned, nation, nation_data, accepted=None, recip
         return _reply(result.get("message", f"{mode} ERROR: reply had no 'message' field"),
                       result, accepted, llm=False)
     message = result["message"]
-    if ai_prompts.unusable_message(message, nation, nation_data, recipient=recipient):
+    shown = [answered] + ([str(msg.get("content", ""))
+                           for _speaker, msg in _target_thread(nation_data, nation, recipient)]
+                          if recipient and nation_data else [])
+    if (ai_prompts.unusable_message(message, nation, nation_data, recipient=recipient)
+            or ai_prompts.repeats_shown(message, shown)):
         return _reply(canned(), result, accepted, llm=False)
     return _reply(message, result, accepted, llm=bool(message))
 
@@ -233,20 +240,9 @@ def get_world_context(nation_data, active_nations, ai_nation, target_nation=None
     # 4. Establish Target Context & Message History
     target_context_str = ""
     if target_nation:
-        inbox = ai_stats.get("inbox", [])
         thread = []
-
-        # Reverse to read chronologically (oldest to newest)
-        for msg in reversed(inbox):
-            sender_field = msg.get("sender", "")
+        for speaker, msg in _target_thread(nation_data, ai_nation, target_nation):
             forwarded = diplomacy_messages.forwarded_details(msg)
-            if sender_field == target_nation:
-                speaker = target_nation
-            elif sender_field == f"To: {target_nation}":
-                speaker = "You"
-            else:
-                continue
-
             if forwarded:
                 provenance = (
                     f"[AUTHENTIC FORWARDED MESSAGE: originally sent by "
@@ -260,9 +256,7 @@ def get_world_context(nation_data, active_nations, ai_nation, target_nation=None
                 thread.append(f"{speaker}: '{msg.get('content')}'")
 
         if thread:
-            # Only give the last 10 messages so we don't blow up the context window
-            recent_thread = thread[-10:]
-            target_context_str = "\n".join(recent_thread) + "\n"
+            target_context_str = "\n".join(thread) + "\n"
 
     return ai_prompts.build_world_context(
         current_date, ai_nation, ', '.join(sorted(active_nations)),
@@ -270,6 +264,26 @@ def get_world_context(nation_data, active_nations, ai_nation, target_nation=None
         relations_str, _standing(nation_data, active_nations, ai_nation, world, current_date),
         _target_label(nation_data, active_nations, ai_nation, target_nation) if target_nation else ""
     )
+
+
+#: How many of the latest messages with the other country a reply's prompt shows.
+_THREAD_SHOWN = 10
+
+
+def _target_thread(nation_data, nation, other):
+    """The last _THREAD_SHOWN messages between the two, oldest first, as (speaker, msg).
+
+    The reply prompt's message history, and what _model_reply checks a reply
+    against for copied sentences.
+    """
+    thread = []
+    for msg in reversed((nation_data.get(nation) or {}).get("inbox") or []):
+        sender_field = msg.get("sender", "")
+        if sender_field == other:
+            thread.append((other, msg))
+        elif sender_field == f"To: {other}":
+            thread.append(("You", msg))
+    return thread[-_THREAD_SHOWN:]
 
 
 def _target_label(nation_data, active_nations, nation, other):
@@ -716,7 +730,7 @@ def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_natio
                                     verdict=verdict._replace(accepted=accepted))["message"]
 
     return _model_reply(reply, mode, canned, ai_nation, nation_data, accepted,
-                        recipient=sender_nation)
+                        recipient=sender_nation, answered=custom_msg)
 
 def process_custom_message(nation_data, active_nations, ai_nation, sender_nation, message_content, human_players=None, turn_id=None, current_date="Unknown", world=None):
     from map_logic.ai import ai_handler
@@ -744,7 +758,8 @@ def process_custom_message(nation_data, active_nations, ai_nation, sender_nation
     result = ai_handler._run_provider(mode, system_prompt, user_prompt, turn_id, None, raw=True,
                                       schema=ai_prompts.reply_schema(active_nations))
     return _model_reply(result, mode, lambda: ai_prompts.AI_FALLBACK_RESPONSES["GENERIC_MESSAGE"],
-                        ai_nation, nation_data, recipient=sender_nation)
+                        ai_nation, nation_data, recipient=sender_nation,
+                        answered=message_content)
 
 def generate_proactive_text(nation_data, active_nations, ai_nation, target_nation, action_context, human_players=None, turn_id=None, current_date="Unknown"):
     """Generates a quick one-liner for proactive hardcoded AI actions.

@@ -139,11 +139,88 @@ class RecipientNamedTests(unittest.TestCase):
     def test_no_recipient_checks_nothing(self):
         self.assertFalse(self.names("France will surely agree.", None))
 
+    def test_a_treaty_the_game_does_not_have_is_caught(self):
+        """The Soviet Union proposed Turkey a non-aggression pact."""
+        for text in ("We propose a non-aggression pact.", "We propose a nonaggression treaty.",
+                     "We seek a mutual defense agreement.", "A defence pact would serve us.",
+                     "We offer a neutrality pact."):
+            with self.subTest(text=text):
+                self.assertTrue(ai_prompts.invents_agreement(text))
+                self.assertTrue(ai_prompts.unusable_message(text, "Italy", self.NATIONS))
+        self.assertFalse(ai_prompts.invents_agreement("We will defend our borders."))
+
+    def test_peace_between_countries_not_at_war_is_caught(self):
+        """Italy offered peace to Vichy France, its own faction ally."""
+        data = {"Italy": {"at_war_with": ["Egypt"]}, "Vichy France": {"at_war_with": []},
+                "Egypt": {"at_war_with": ["Italy"]}}
+        for text in ("We would be willing to make peace with you if you join the Axis.",
+                     "We propose a ceasefire and negotiations.",
+                     "We will not cease fire.", "Let us discuss a separate peace."):
+            with self.subTest(text=text):
+                self.assertTrue(ai_prompts.talks_peace_without_war(text, "Italy",
+                                                                   "Vichy France", data))
+        self.assertFalse(ai_prompts.talks_peace_without_war(
+            "We propose a ceasefire.", "Italy", "Egypt", data))
+        self.assertFalse(ai_prompts.talks_peace_without_war(
+            "We value our peaceful relations.", "Italy", "Vichy France", data))
+        self.assertFalse(ai_prompts.talks_peace_without_war(
+            "We propose a ceasefire.", "Italy", None, data))
+
+    def test_a_long_copied_sentence_is_caught(self):
+        shown = ["We will not be swayed by your empty words. We will not join your faction."]
+        self.assertTrue(ai_prompts.repeats_shown(
+            "Know this: we will not be swayed by your empty words!", shown))
+        self.assertFalse(ai_prompts.repeats_shown("We will not join.", shown))
+
     def test_unusable_message_applies_it_only_with_a_recipient(self):
         message = "We hope France agrees."
         self.assertFalse(ai_prompts.unusable_message(message, "Italy", self.NATIONS))
         self.assertTrue(ai_prompts.unusable_message(message, "Italy", self.NATIONS,
                                                     recipient="France"))
+
+
+class ReplyCopyTests(unittest.TestCase):
+    """The German Reich refused Spain with Spain's own refusal, word for word."""
+
+    REFUSAL = ("We will not be swayed by your empty words. "
+               "We will not join your faction, and we will not cease fire.")
+
+    def setUp(self):
+        from map_logic.ai import ai_evaluation
+        self.ai_evaluation = ai_evaluation
+        self.data = {
+            "German Reich": {"at_war_with": [], "inbox": [
+                {"sender": "Spain", "content": self.REFUSAL, "date": "30 August, 1941 AD"}]},
+            "Spain": {"at_war_with": [], "inbox": []},
+        }
+
+    def reply(self, text, answered=""):
+        return self.ai_evaluation._model_reply(
+            {"message": text}, "OLLAMA", lambda: "No. Our answer is no.", "German Reich",
+            self.data, accepted=False, recipient="Spain", answered=answered)["message"]
+
+    def test_a_reply_that_copies_the_thread_takes_the_canned_line(self):
+        self.assertEqual(self.reply("We will not be swayed by your empty words. Leave."),
+                         "No. Our answer is no.")
+
+    def test_a_reply_that_copies_the_message_it_answers_takes_the_canned_line(self):
+        self.assertEqual(self.reply("We respect that you seek the strength of our pact.",
+                                    answered="We respect that you seek the strength of our pact."),
+                         "No. Our answer is no.")
+
+    def test_a_reply_in_its_own_words_is_kept(self):
+        self.assertEqual(self.reply("Your request comes too late. The answer is no."),
+                         "Your request comes too late. The answer is no.")
+
+
+class ReplyActionTests(unittest.TestCase):
+    def test_no_move_comes_first_and_is_called_normal(self):
+        """Spain and the Reich each pressed for war on the other in refusing a
+        place in the Axis, with WAR_DECLARATION first on the list."""
+        self.assertEqual(ai_prompts.REPLY_ACTIONS[0], "NONE")
+        rules = ai_prompts.action_rules_and_schema("proposal", "x")
+        self.assertIn("Most replies take no action", rules)
+        self.assertNotIn("You MUST specify the target country", rules)
 
 
 class DirectorMessageFilterTests(unittest.TestCase):

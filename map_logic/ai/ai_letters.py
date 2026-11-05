@@ -22,7 +22,6 @@ to it (answered_by_letter).
 
 from data.state_access import world_for, session_for
 import json
-import re
 
 import data.constants as c
 from data import queries
@@ -171,29 +170,11 @@ def _earlier_letters(nation_data, nation, mail, alive):
 
 
 def shown_letters(nation_data, nation, mail, alive):
-    """The text of every letter the sitting's prompt shows, for repeats_mail."""
+    """The text of every letter the sitting's prompt shows, for ai_prompts.repeats_shown."""
     texts = [str(msg.get("content", "")) for msg in mail]
     for _other, thread in _earlier_letters(nation_data, nation, mail, alive):
         texts.extend(str(msg.get("content", "")) for _speaker, msg in thread)
     return texts
-
-
-#: A sentence at least this long, repeated word for word, was copied rather than written.
-_COPIED_SENTENCE_LENGTH = 40
-
-
-def repeats_mail(text, shown):
-    """Whether a letter repeats a long sentence of a letter its writer was shown.
-
-    34 letters in the LOWBALLED save did. The Soviet Union answered the Reich's
-    "we are concerned about your growing military presence along our border"
-    with that same sentence, so each side sounded worried about the other.
-    """
-    lowered = (text or "").lower()
-    return any(sentence in lowered
-               for other in shown
-               for sentence in (part.strip().lower() for part in re.split(r"[.!?]", other))
-               if len(sentence) >= _COPIED_SENTENCE_LENGTH)
 
 
 SYSTEM_PROMPT = (
@@ -332,7 +313,7 @@ def parse_reply(reply, nation, readers, authors, nation_data, shown=()):
     its own recipient (ai_prompts.names_recipient), a
     letter with placeholder or menu text (ai_prompts.reads_as_template), and a
     letter that repeats a long sentence of a letter in `shown`, the letters the
-    prompt showed (repeats_mail).
+    prompt showed (ai_prompts.repeats_shown).
     """
     if isinstance(reply, str):
         try:
@@ -356,7 +337,7 @@ def parse_reply(reply, nation, readers, authors, nation_data, shown=()):
             continue
         text = text.strip()[:c.AI_LETTER_LENGTH]
         if (not text or ai_prompts.unusable_message(text, nation, nation_data, recipient=to)
-                or repeats_mail(text, shown)):
+                or ai_prompts.repeats_shown(text, shown)):
             continue
         letters.append((to, text))
 

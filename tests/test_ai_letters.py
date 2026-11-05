@@ -538,6 +538,25 @@ class InitiativeTests(LetterTestCase):
         self.assertFalse(ac.Collector("A", {}, context=self.game).add(
             ac.make("CALL_TO_ARMS", "B", 0.5, "sworn")))
 
+    def test_no_faction_request_mirrors_an_invitation(self):
+        """Spain refused the Reich's invitation into the Axis and asked to join
+        it in the same turn."""
+        data = self.game.nation_data
+        data["B"]["pending_diplomacy"]["A"] = {"action": "FACTION_INVITE", "turns": 1}
+        self.assertTrue(ac.mirrors_waiting_proposal(data, "A", "B", "JOIN_FACTION_REQ"))
+        data["B"]["pending_diplomacy"]["A"] = {"action": "JOIN_FACTION_REQ", "turns": 1}
+        self.assertTrue(ac.mirrors_waiting_proposal(data, "A", "B", "FACTION_INVITE"))
+        data["B"]["pending_diplomacy"]["A"] = {"action": "CREATE_FACTION", "turns": 1}
+        self.assertTrue(ac.mirrors_waiting_proposal(data, "A", "B", "CREATE_FACTION"))
+        self.assertFalse(ac.mirrors_waiting_proposal(data, "A", "B", "TRADE"))
+
+    def test_a_letter_of_peace_to_a_country_not_at_war_is_not_sent(self):
+        letters, _opinions, _notebook = ai_letters.parse_reply(
+            {"letters": [{"to": "B", "text": "We would make peace with you if you join us."},
+                         {"to": "C", "text": "We trust you will stand with us."}]},
+            "A", ["A", "B", "C"], [], self.game.nation_data)
+        self.assertEqual(letters, [("C", "We trust you will stand with us.")])
+
     def test_a_proposal_still_being_drafted_gives_no_warning(self):
         """Only a delivered proposal counts: a draft has not reached its target."""
         self.game.nation_data["B"]["pending_diplomacy"]["A"] = {

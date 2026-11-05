@@ -1558,6 +1558,11 @@ AI_MIRRORED_PROPOSALS = {
     "REQ_MILITARY_ACCESS": ("REQ_MILITARY_ACCESS",),
     "CALL_TO_ARMS": ("JOIN_WARS",),
     "JOIN_WARS": ("CALL_TO_ARMS",),
+    # Spain refused the German Reich's invitation into the Axis and asked to
+    # join the Axis in the same turn.
+    "FACTION_INVITE": ("JOIN_FACTION_REQ",),
+    "JOIN_FACTION_REQ": ("FACTION_INVITE",),
+    "CREATE_FACTION": ("CREATE_FACTION",),
 }
 
 # Baseline desirability for actions with no appetite function of their own.
