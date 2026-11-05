@@ -299,6 +299,27 @@ Keep tuning data in its source files:
 
 ### UI Appearance
 
+- **A button must never play two sound effects for one activation.**
+  Count sounds played by the button, its callback, and any screen or popup it
+  opens. Give that activation one sound owner. For example, a Help button that
+  opens a popup with a help/info sound must not also play a click sound; set
+  the calling button's `sound_kind=None` when the popup owns the sound.
+  Closing the popup is a separate activation and can play its own single sound.
+- **Changing appearance does not include changing layout.**
+  When asked for a visual or appearance-only change, keep existing buttons,
+  panels, cards, slots, scrollbars, and labels in their current positions and
+  sizes. Preserve their order, alignment, spacing, and screen regions.
+  Change colors, shading, borders, textures, and other styling in place.
+  Do not move, reorder, resize, or rearrange controls unless the user explicitly
+  requests a layout change. Referencing another screen's appearance does not
+  authorize copying its layout.
+- **Show only one copy of an item during click-and-drag.**
+  While an item is being dragged, show it only under the pointer and hide its
+  original rendering. Keep its source space reserved so the layout does not
+  shift. Restore it when the drag is canceled or dropped outside a valid
+  target; show it at its destination after a valid drop. Do not display both
+  a stationary source item and a dragged copy, or duplicate game data to draw
+  the drag. Copying requires an explicit user request.
 - **A separate screen and a subscreen are different UI formats.**
   A **separate screen** replaces the current view and owns the full application
   canvas, background, layout, input, and navigation. Register it in the

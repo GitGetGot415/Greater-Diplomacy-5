@@ -351,6 +351,7 @@ class BattleEditorTests(BattleScreenTestCase):
 
     def test_help_button_opens_shared_popup_without_changing_the_edit(self):
         from ui.navigation import modal_stack
+        from ui.widgets import ui_elements
         screen = self.editor()
         _rect, front = self.own_row(screen, battle_screen.PANE_FRONT)
         screen.drop_unit(front, battle_screen.PANE_RESERVE)
@@ -358,7 +359,11 @@ class BattleEditorTests(BattleScreenTestCase):
         positions = {key: [id(unit) if unit is not None else None for unit in slots]
                      for key, slots in screen.front_slots.items()}
         help_button = next(element for element in screen.elements if getattr(element, "text", "") == "Help")
-        help_button.callback()
+        with mock.patch.object(ui_elements, "play_ui_sound") as sound:
+            screen.handle_events([
+                pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=help_button.rect.center, button=1),
+                pygame.event.Event(pygame.MOUSEBUTTONUP, pos=help_button.rect.center, button=1)])
+            sound.assert_called_once_with("info")
         modal = modal_stack.active()
         self.assertIsNotNone(modal)
         try:

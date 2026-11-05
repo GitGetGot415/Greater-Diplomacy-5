@@ -13,7 +13,7 @@ from ui.widgets.ui_elements import Button, draw_pixel_panel, draw_wrapped_icon_r
 from ui.widgets import flag_icons
 from ui.widgets.text_utils import fit_text
 from ui.rendering.font_manager import fonts
-from ui.background_styles import COMBAT_PANEL_STYLES
+from ui.background_styles import MESSAGE_PANEL_STYLES
 from ui import dialogs
 
 
@@ -33,6 +33,8 @@ CARD_MAX_W = 190
 CARD_MIN_W = 128
 SCROLLBAR_W = 15
 LANE_ROW_H = 42
+PANEL_BORDER = MESSAGE_PANEL_STYLES['contacts']['color']
+ARENA_OPACITY = 180
 
 HELP_TEXT = (
     "Select a lane on the left. Drag your reserves into empty front-line slots, "
@@ -56,7 +58,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
     title = "Edit Battle"
     title_y = 12
     title_preset = "heading2"
-    bg_color = c.PANEL_THEME_DANGER[0]
+    bg_color = MESSAGE_PANEL_STYLES['contacts']['color']
 
     def __init__(self, overview=None):
         super().__init__()
@@ -160,11 +162,25 @@ class BattleEditorScreen(ScrollPanes, Screen):
             self.regions[pane] = pygame.Rect(center_x, top + HEADER_H, center_w, half_h - HEADER_H)
         self.divider = (center_x, middle_top + half_h + GAP, center_w)
 
+        # Decorative backdrops follow the established regions; they do not
+        # move controls, card positions, clipping regions, or drop targets.
+        self.header_rect = pygame.Rect(0, 0, c.SCREEN_WIDTH, RESERVE_TOP - GAP)
+        self.reserve_bars = {
+            PANE_ENEMY_RESERVE: pygame.Rect(0, RESERVE_TOP, c.SCREEN_WIDTH, RESERVE_H),
+            PANE_RESERVE: pygame.Rect(0, bottom_top, c.SCREEN_WIDTH, RESERVE_H),
+        }
+        self.front_panels = {
+            pane: pygame.Rect(rect.x - GAP, rect.y - HEADER_H,
+                              rect.width + 2 * GAP, rect.height + HEADER_H)
+            for pane, rect in self.regions.items() if pane in (PANE_ENEMY, PANE_FRONT)
+        }
+
     def refresh_ui(self, *, placed_unit=None):
         self._layout()
         self.elements = []
         self.row_paint = {}
         self.card_surfaces = {}
+        self.slot_surfaces = {}
         self.slot_rects = {}
         self.empty_slots = {}
         self.lane_labels = []
@@ -190,7 +206,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
         reset.disabled = not self.can_edit_now()
         help_button = Button(controls.x + GAP, reset.rect.bottom + GAP,
                              (CONTROLS_W - 2 * GAP, CONTROL_BUTTON_H), "blue", "Help",
-                             self.show_help, font_preset="button_small")
+                             self.show_help, font_preset="button_small", sound_kind=None)
         done = Button(controls.x + GAP, help_button.rect.bottom + GAP,
                       (CONTROLS_W - 2 * GAP, CONTROL_BUTTON_H), "green", "Exit",
                       self.exit_screen, font_preset="button_small", sound_kind="back")
@@ -290,6 +306,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
         self.row_paint[pane] = []
         self.slot_rects[pane] = []
         self.empty_slots[pane] = []
+        self.slot_surfaces[pane] = self._slot_surface(pane, (card_w, CARD_H))
         for grid_row, y in self.layout_list_rows(
                 rows, CARD_H + GAP, rect.y, view_h=rect.height, pad=-GAP,
                 cull_top=rect.top, cull_bottom=rect.bottom,
@@ -312,7 +329,9 @@ class BattleEditorScreen(ScrollPanes, Screen):
         mine = self.can_command(unit)
         color = 'grey' if not mine else ('blue' if pane == PANE_FRONT else
                                          'orange' if unit.get('combat_stance') == 'RESERVE' else 'green')
-        draw_pixel_panel(surface, surface.get_rect(), c.UI_COLORS[color][0], c.COLOR_DIM_BORDER)
+        style = MESSAGE_PANEL_STYLES['composer' if mine else 'contacts']
+        draw_pixel_panel(surface, surface.get_rect(), c.UI_COLORS[color][0], PANEL_BORDER,
+                         gradient_strength=style['gradient_strength'])
         row = self.overview.combat_row_data[id(unit)]
         font = fonts.get('small')
         x = flag_icons.draw_flag_centered(surface, unit.get('owner'), self.map_screen.nation_data,
@@ -326,17 +345,41 @@ class BattleEditorScreen(ScrollPanes, Screen):
                               c.UI_TEXT_LIGHT, size[0] - 12, line_height=font.get_height())
         return surface
 
+    def _slot_surface(self, pane, size):
+        """A recessed card well, using the mail panels' shared bevels and shades."""
+        surface = pygame.Surface(size, pygame.SRCALPHA)
+        style = MESSAGE_PANEL_STYLES['requests']
+        accent = c.UI_COLORS['blue'][0] if pane == PANE_FRONT else c.UI_TEXT_MUTED
+        draw_pixel_panel(surface, surface.get_rect(), style['color'], accent,
+                         gradient_strength=style['gradient_strength'], recessed=True)
+        inner = surface.get_rect().inflate(-2 * GAP, -2 * GAP)
+        draw_pixel_panel(surface, inner, MESSAGE_PANEL_STYLES['contacts']['color'], PANEL_BORDER,
+                         gradient_strength=style['gradient_strength'], recessed=True, border_width=1)
+        return surface
+
     def _select(self, index):
         self.selected_lane = index
         for pane in self.regions:
             setattr(self, self.scroll_attrs(pane)['attr'], 0)
         self.refresh_ui()
 
+    def _draw_mail_panel(self, surface, rect, name, *, translucent=False):
+        style = MESSAGE_PANEL_STYLES[name]
+        color = (*style['color'], ARENA_OPACITY) if translucent else style['color']
+        draw_pixel_panel(surface, rect, color, PANEL_BORDER,
+                         gradient_strength=style['gradient_strength'])
+
+    def draw_background(self, surface):
+        super().draw_background(surface)
+        self._draw_mail_panel(surface, self.lanes_rect, 'contacts')
+        self._draw_mail_panel(surface, self.header_rect, 'header')
+        self._draw_mail_panel(surface, self.reserve_bars[PANE_ENEMY_RESERVE], 'requests')
+        self._draw_mail_panel(surface, self.reserve_bars[PANE_RESERVE], 'composer')
+        for rect in self.front_panels.values():
+            self._draw_mail_panel(surface, rect, 'contacts', translucent=True)
+
     def additional_draw(self, surface):
-        style = COMBAT_PANEL_STYLES['main']
-        for rect in (self.lanes_rect, self.controls_rect):
-            draw_pixel_panel(surface, rect, style['color'], c.COLOR_DIM_BORDER,
-                             gradient_strength=style['gradient_strength'])
+        self._draw_mail_panel(surface, self.controls_rect, 'header')
         font = fonts.get('small')
         for caption, rect in (('LANES', self.lanes_rect), ('CONTROLS', self.controls_rect)):
             surface.blit(font.render(caption, True, c.UI_TEXT_LIGHT), (rect.x + GAP, rect.y + 3))
@@ -344,7 +387,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
             rect = self.regions[pane]
             surface.blit(heading, (rect.x, rect.y - HEADER_H + 3))
         x, y, width = self.divider
-        pygame.draw.line(surface, c.UI_TEXT_MUTED, (x, y), (x + width, y))
+        pygame.draw.line(surface, MESSAGE_PANEL_STYLES['header']['color'], (x, y), (x + width, y))
         if self.outcome_surface is not None:
             surface.blit(self.outcome_surface, self.outcome_rect)
 
@@ -355,9 +398,13 @@ class BattleEditorScreen(ScrollPanes, Screen):
     def _paint_cards(self, pane):
         def paint(surface):
             for rect in self.slot_rects.get(pane, ()):
-                pygame.draw.rect(surface, c.COLOR_DIM_BORDER, rect, 1)
+                surface.blit(self.slot_surfaces[pane], rect)
             for rect, (unit, _note) in self.row_paint.get(pane, ()):
-                surface.blit(self.card_surfaces[pane, id(unit)], rect)
+                # Keep the source position open while the single visible card
+                # follows the pointer in draw_foreground.
+                card = (self.slot_surfaces[pane] if unit is self.drag_unit
+                        else self.card_surfaces[pane, id(unit)])
+                surface.blit(card, rect)
         return paint
 
     def _paint_lanes(self, surface):
@@ -535,7 +582,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
         for pane, rect in self.regions.items():
             self.draw_pane_scrollbar(surface, pane, rect.right - SCROLLBAR_W,
                                      rect.top, rect.height, width=SCROLLBAR_W)
-            pygame.draw.line(surface, c.UI_TEXT_MUTED, (rect.left, rect.bottom),
+            pygame.draw.line(surface, PANEL_BORDER, (rect.left, rect.bottom),
                              (rect.right - 1, rect.bottom))
         if self.drag_surface is not None:
             for pane in (PANE_FRONT, PANE_RESERVE):
