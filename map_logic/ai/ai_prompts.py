@@ -415,6 +415,16 @@ def reads_as_template(message):
     return bool(message) and bool(_TEMPLATE_TEXT.search(message))
 
 
+def unusable_message(message, nation, nation_data=None):
+    """Whether model-written text must be replaced before anyone reads it.
+
+    Every place that sends a model's words checks them here: the director's
+    proposal messages, letters, proposal and message replies, and scripted
+    event lines.
+    """
+    return reads_as_third_person(message, nation, nation_data) or reads_as_template(message)
+
+
 #: The actions a reply may take, in the order action_rules_and_schema lists
 #: them. diplomacy_processor._RETALIATION_HANDLERS performs all but NONE.
 REPLY_ACTIONS = ("WAR_DECLARATION", "JOIN_WARS", "LEAVE_FACTION", "JOIN_FACTION_REQ",

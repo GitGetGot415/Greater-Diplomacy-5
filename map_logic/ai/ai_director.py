@@ -203,8 +203,7 @@ def messages_from(reply, nation=None, nation_data=None):
         return {}
     return {str(k): str(v) for k, v in messages.items()
             if isinstance(v, str) and v.strip()
-            and not ai_prompts.reads_as_third_person(v, nation, nation_data)
-            and not ai_prompts.reads_as_template(v)}
+            and not ai_prompts.unusable_message(v, nation, nation_data)}
 
 
 def parse(raw_reply, candidates, limit, nation=None, nation_data=None):

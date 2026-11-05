@@ -605,8 +605,10 @@ class _Retaliation:
         field carries the wargoal rather than prose, which is the same exception
         PROACTIVE_PROPOSALS.queued_message already makes.
         """
-        own_words = (self.reply.get("message") or "").strip()
-        if own_words and not ai_prompts.reads_as_third_person(
+        # Only words the model wrote: a reply whose words failed the check
+        # carries its canned verdict line instead, which suits no other move.
+        own_words = (self.reply.get("message") or "").strip() if self.reply.get("llm") else ""
+        if own_words and not ai_prompts.unusable_message(
                 own_words, self.country, self.world_state.nation_data):
             return own_words
         return ai_prompts.AI_FALLBACK_RESPONSES.get(fallback_key, default)

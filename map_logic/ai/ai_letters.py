@@ -303,8 +303,7 @@ def parse_reply(reply, nation, readers, authors, nation_data):
         if not to or any(to == sent for sent, _ in letters) or not isinstance(text, str):
             continue
         text = text.strip()[:c.AI_LETTER_LENGTH]
-        if (not text or ai_prompts.reads_as_third_person(text, nation, nation_data)
-                or ai_prompts.reads_as_template(text)):
+        if not text or ai_prompts.unusable_message(text, nation, nation_data):
             continue
         letters.append((to, text))
 

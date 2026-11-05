@@ -127,7 +127,16 @@ The director's instructions say that each message goes to its option's country a
 An option with trade or treaty terms lists them from the proposer's side, using diplomacy_messages.describe_trade, and the message must state them.
 Staff ratings and notes are for the leader only.
 ai_prompts.reads_as_template rejects text with a bracketed or braced placeholder, such as "[insert resource]", or with "staff rating".
-A rejected director message falls back to the proposal's library text. A rejected letter is not sent.
+ai_prompts.unusable_message combines that check with the third-person check. Every place that sends a model's words uses it:
+
+- A rejected director message falls back to the proposal's library text.
+- A rejected letter is not sent.
+- A rejected proposal reply takes canned_verdict_reply's line for the decision actually taken. So does a reply whose call was abandoned.
+- A rejected reply to a plain message takes the library's generic message line.
+- A rejected scripted-event line takes the event's fallback.
+
+Replacing a reply's words keeps its decision, opinion change, and reactive move. A reactive move reuses only words the model wrote (llm: true).
+A provider error keeps its text on a reply, so a player can see that an API key is wrong.
 
 The llm field marks model-authored text.
 _reply and the director's per-candidate messages set it where they create the text.

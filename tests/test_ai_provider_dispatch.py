@@ -257,6 +257,11 @@ class ProviderErrorTests(NoNetworkTestCase):
         self._patch(ai_handler, "_run_provider", lambda *a, **k: None)
         self.assertIsNone(self._generate_proactive())
 
+    def test_proactive_text_with_placeholder_words_takes_the_fallback(self):
+        self._patch(ai_handler, "_run_provider",
+                    lambda *a, **k: {"message": "We offer [insert resource]."})
+        self.assertIsNone(self._generate_proactive())
+
     def _generate_proactive(self):
         """Runs generate_proactive_text with the canned-reply gate forced open."""
         self._patch(ai_evaluation, "_use_canned_reply", lambda *a, **k: False)
@@ -265,6 +270,73 @@ class ProviderErrorTests(NoNetworkTestCase):
         return ai_evaluation.generate_proactive_text(
             nation_data, ["Avaria", "Borland"], "Avaria", "Borland",
             "declaring war", human_players=[], turn_id=None)
+
+
+class ReplyWordsTests(NoNetworkTestCase):
+    """Proposal and message replies drop words no leader writes, and keep the decision."""
+
+    NATIONS = {"Avaria": {"manpower": 1, "materials": 1, "inbox": []}, "Borland": {}}
+
+    def canned(self):
+        return "Canned line."
+
+    def reply(self, result, accepted=None):
+        return ai_evaluation._model_reply(result, "CLAUDE", self.canned, "Avaria",
+                                          self.NATIONS, accepted)
+
+    def test_placeholder_words_are_replaced_and_the_decision_kept(self):
+        answer = self.reply({"message": "We accept your [insert resource].",
+                             "action": "CEASEFIRE", "opinion_change": 5}, accepted=False)
+        self.assertEqual((answer["message"], answer["llm"]), ("Canned line.", False))
+        self.assertEqual((answer["action"], answer["opinion_change"], answer["accepted"]),
+                         ("CEASEFIRE", 5, False))
+
+    def test_third_person_words_are_replaced(self):
+        self.assertEqual(self.reply({"message": "Avaria accepts your offer."})["message"],
+                         "Canned line.")
+
+    def test_good_words_are_kept_and_marked_as_the_models(self):
+        answer = self.reply({"message": "We accept your offer."})
+        self.assertEqual((answer["message"], answer["llm"]), ("We accept your offer.", True))
+
+    def test_a_provider_error_still_shows(self):
+        answer = self.reply(ai_handler._provider_error("HTTP ERROR 401: bad key"))
+        self.assertIn("401", answer["message"])
+        self.assertFalse(answer["llm"])
+
+    def test_an_abandoned_call_takes_the_canned_line(self):
+        self.assertEqual(self.reply(None, accepted=True)["message"], "Canned line.")
+
+    def test_an_abandoned_refusal_does_not_say_it_accepts(self):
+        """The no-answer path used to answer "We accept" for every verdict."""
+        from map_logic.ai.ai_evaluation import Verdict
+        self._patch(ai_evaluation, "_use_canned_reply", lambda *a, **k: False)
+        self._patch(ai_evaluation, "evaluate_verdict",
+                    lambda *a, **k: Verdict(False, 1.0, "no"))
+        self._patch(ai_handler, "_run_provider", lambda *a, **k: None)
+        seen = {}
+
+        def canned(*args, verdict=None, **kwargs):
+            seen["verdict"] = verdict
+            return {"message": "We refuse.", "accepted": verdict.accepted}
+        self._patch(ai_evaluation, "canned_verdict_reply", canned)
+        answer = ai_evaluation.evaluate_diplomatic_proposal(
+            dict(self.NATIONS), {}, ["Avaria", "Borland"], "Avaria", "Borland", "TRADE",
+            human_players=[], turn_id=None)
+        self.assertEqual((answer["message"], answer["accepted"]), ("We refuse.", False))
+        self.assertFalse(seen["verdict"].accepted)
+
+    def test_a_message_reply_with_placeholder_words_takes_the_library_line(self):
+        self._patch(ai_evaluation, "_use_canned_reply", lambda *a, **k: False)
+        self._patch(ai_handler, "_run_provider",
+                    lambda *a, **k: {"message": "Dear {country}, hello.", "opinion_change": 3})
+        answer = ai_evaluation.process_custom_message(
+            dict(self.NATIONS), ["Avaria", "Borland"], "Avaria", "Borland", "Hello.",
+            human_players=["Borland"], turn_id=None)
+        # The library picks among several lines, so only the replacement is checked.
+        self.assertNotIn("{country}", answer["message"])
+        self.assertFalse(answer["llm"])
+        self.assertEqual(answer["opinion_change"], 3)
 
 
 class OllamaTests(NoNetworkTestCase):
