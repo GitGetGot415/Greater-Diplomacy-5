@@ -124,8 +124,12 @@ The sender must not refer to its own country in the third person.
 A reply that starts by naming its sender falls back to library text.
 
 The director's instructions say that each message goes to its option's country and addresses that government as "you".
-An option with trade or treaty terms lists them from the proposer's side, using diplomacy_messages.describe_trade, and the message must state them.
-Staff ratings and notes are for the leader only.
+They also say that every option is a proposal the country makes first, which nobody has offered to it.
+An option with trade or treaty terms lists them as "your offer", from the proposer's side, using diplomacy_messages.describe_trade.
+The message must state them. Staff ratings and notes are for the leader only.
+ai_director.reads_as_answer rejects a director message that says "your proposal", "your offer", or "your terms".
+A director message always makes a proposal, so those words mean the model thought the other country had offered first.
+Letters and replies do not use this check, because those words are normal there.
 ai_prompts.reads_as_template rejects text with a bracketed or braced placeholder, such as "[insert resource]", or with "staff rating".
 ai_prompts.unusable_message combines that check with the third-person check. Every place that sends a model's words uses it:
 
@@ -196,6 +200,9 @@ date, country list, politics, and world events.
 It then adds the selected country, its territory, relations, and task.
 That country-specific part also states the country's faction and its other members as existing allies, its wars, its master, and its puppets.
 The politics block holds the same facts, but a small model did not connect two of its lines and offered an alliance to a member of its own faction.
+With the turn's AIWorld, it also states the country's land neighbors and the countries across nearby water, from AIWorld.neighbors and AIWorld.sea_targets.
+Letters, the director, and both reply types pass that world. Scripted-event lines have none, so they omit geography.
+Without geography, a model names neighbors from its own knowledge of history.
 
 World events are the 8 newest entries of GLOBAL_EVENTS.log. Their heading says the events already happened,
 and that a country they name which is not on the country list no longer exists.

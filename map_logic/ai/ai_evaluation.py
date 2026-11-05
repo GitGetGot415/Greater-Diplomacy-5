@@ -178,7 +178,9 @@ def canned_verdict_reply(nation_data, map_data, ai_nation, sender_nation, action
                   accepted=verdict.accepted)
 
 
-def get_world_context(nation_data, active_nations, ai_nation, target_nation=None, current_date="Unknown"):
+def get_world_context(nation_data, active_nations, ai_nation, target_nation=None, current_date="Unknown",
+                      world=None):
+    """The world as one country sees it. `world` is the turn's AIWorld, for its geography."""
     ai_stats = nation_data.get(ai_nation, {})
     manpower = ai_stats.get("manpower", 0)
     materials = ai_stats.get("materials", 0)
@@ -263,28 +265,40 @@ def get_world_context(nation_data, active_nations, ai_nation, target_nation=None
     return ai_prompts.build_world_context(
         current_date, ai_nation, ', '.join(sorted(active_nations)),
         manpower, materials, politics_str, events_str, target_context_str, target_nation,
-        relations_str, _standing(nation_data, active_nations, ai_nation)
+        relations_str, _standing(nation_data, active_nations, ai_nation, world)
     )
 
 
-def _standing(nation_data, active_nations, nation):
-    """The country's own faction, wars, master, and puppets, stated outright.
+def _standing(nation_data, active_nations, nation, world=None):
+    """The country's own neighbors, faction, wars, master, and puppets, stated outright.
 
-    The politics block holds the same facts for every country, but a small model
+    The politics block holds the alliances for every country, but a small model
     has to match two of its lines to see that a faction member is already its
     ally. In the halla save it did not: Austria-Hungary wrote to the German
     Empire offering a defense agreement inside the Central Powers.
+
+    Neighbors come from the turn's AIWorld, which found them in its one sweep of
+    the map. Without geography, Belgium named Austria-Hungary as its neighbor.
+    A caller without a world, such as a scripted event's line, omits them.
     """
     data = nation_data.get(nation, {})
+    lines = []
+    if world is not None:
+        land = sorted(n for n in world.neighbors.get(nation, ()) if n in active_nations)
+        sea = sorted(n for n in world.sea_targets.get(nation, {})
+                     if n in active_nations and n != nation and n not in land)
+        lines.append(f"Your neighbors: {', '.join(land)}." if land else "You border no country by land.")
+        if sea:
+            lines.append(f"Across nearby water: {', '.join(sea)}.")
     faction = data.get("faction", "")
     if faction:
         allies = [m for m in sorted(queries.get_faction_members(faction, nation_data))
                   if m != nation and m in active_nations]
-        lines = [f"Your faction: '{faction}'. " + (
+        lines.append(f"Your faction: '{faction}'. " + (
             f"Its other members are already your allies: {', '.join(allies)}."
-            if allies else "You are its only member.")]
+            if allies else "You are its only member."))
     else:
-        lines = ["You are in no faction."]
+        lines.append("You are in no faction.")
     wars = [w for w in sorted(queries.get_enemies(nation, nation_data)) if w in active_nations]
     lines.append(f"You are at war with: {', '.join(wars)}." if wars else "You are at war with nobody.")
     master = data.get("master", "")
@@ -546,7 +560,7 @@ def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_natio
     print(f"[LLM CALL] {ai_nation} answering {action_type} from {sender_nation}... (Mode: {mode})")
 
     context = get_world_context(nation_data, active_nations, ai_nation, sender_nation,
-                                current_date)
+                                current_date, world=world)
 
     # A marginal judgement is exactly where a leader's own view should be allowed
     # to differ from the staff's. A hard rule -- an integrated puppet cannot
@@ -583,7 +597,7 @@ def evaluate_diplomatic_proposal(nation_data, map_data, active_nations, ai_natio
 
     return _model_reply(reply, mode, canned, ai_nation, nation_data, accepted)
 
-def process_custom_message(nation_data, active_nations, ai_nation, sender_nation, message_content, human_players=None, turn_id=None, current_date="Unknown"):
+def process_custom_message(nation_data, active_nations, ai_nation, sender_nation, message_content, human_players=None, turn_id=None, current_date="Unknown", world=None):
     from map_logic.ai import ai_handler
 
     if ai_handler._aborted(turn_id):
@@ -602,7 +616,7 @@ def process_custom_message(nation_data, active_nations, ai_nation, sender_nation
     print(f"[LLM CALL] {ai_nation} is drafting a reply to {sender_nation}... (Mode: {mode})")
 
     context = get_world_context(nation_data, active_nations, ai_nation, sender_nation,
-                                current_date)
+                                current_date, world=world)
     system_prompt = ai_prompts.get_custom_message_system_prompt()
     user_prompt = f"{context}\nMessage from {sender_nation}: '{message_content}'"
 

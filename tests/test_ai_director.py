@@ -121,13 +121,22 @@ class ValidationTests(NoNetworkTestCase):
                         parameters={"give_materials": 500, "take_fuel": 600}))
         _system, user = ai_director.build_prompt(None, "A", bag.ranked(), 2)
         line = next(line for line in user.splitlines() if "with B" in line)
-        self.assertIn("You receive: 600 Fuel", line)
+        self.assertIn("your offer: You receive: 600 Fuel", line)
         self.assertIn("You give: 500 Materials", line)
 
     def test_the_messages_are_written_to_their_recipients(self):
         system, _user = ai_director.build_prompt(None, "A", self.cands, 2)
         self.assertIn("as 'you'", system)
         self.assertIn("never quote them", system)
+        self.assertIn("a proposal you make first", system)
+
+    def test_a_message_that_answers_a_proposal_nobody_made_is_dropped(self):
+        """Switzerland wrote "We are interested in your proposal" to open its own trade."""
+        _chosen, messages = ai_director.parse({"picks": [1], "messages": {
+            "0": "We are interested in your proposal, as outlined in your terms.",
+            "1": "We would welcome your offer of coal.",
+            "2": "We propose an exchange of coal for oil."}}, self.cands, 2)
+        self.assertEqual(messages, {"2": "We propose an exchange of coal for oil."})
 
     def test_nothing_to_choose_between_is_not_worth_asking(self):
         """On a large map this is most nations most turns, and skipping them is
@@ -227,6 +236,8 @@ class EndToEndTests(NoNetworkTestCase):
         self.assertTrue(prompts, "the director never consulted the model")
         for prompt in prompts:
             self.assertIn(f"Current Date: {game.time_manager.get_date_string()}\n", prompt)
+            # The turn's world reaches the prompt, so its geography is stated.
+            self.assertTrue("Your neighbors:" in prompt or "You border no country by land." in prompt)
 
     def test_the_director_sends_its_menu_as_the_schema(self):
         self.set_mode("OLLAMA", "ABSOLUTE")

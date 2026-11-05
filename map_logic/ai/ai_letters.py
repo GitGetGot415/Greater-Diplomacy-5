@@ -186,16 +186,17 @@ SYSTEM_PROMPT = (
 )
 
 
-def build_prompt(world_state, nation, unread, readers, alive, current_date):
+def build_prompt(world_state, nation, unread, readers, alive, current_date, world=None):
     """(system, user) for one country's sitting.
 
     The world context comes first and is the same for every country this turn,
     and the system half names nobody, so the shared prefix survives (see
-    documentation/llm_ai.txt, SHARED PROMPT PREFIX).
+    documentation/llm_ai.txt, SHARED PROMPT PREFIX). `world` is the turn's
+    AIWorld, for the country's neighbors.
     """
     nation_data = world_state.nation_data
     lines = [ai_evaluation.get_world_context(nation_data, alive, nation,
-                                             current_date=current_date)]
+                                             current_date=current_date, world=world)]
     lines.append(f"Your temperament: "
                  f"{ai_personality.describe(nation_data, nation, world_state.scenario_settings)}.")
 
@@ -409,7 +410,8 @@ def process_letters(context):
     jobs = []
     for nation in first_sitting(nation_data, writers):
         mail = waiting_mail(nation_data, nation)
-        system, user = build_prompt(world_state, nation, mail, readers, alive, current_date)
+        system, user = build_prompt(world_state, nation, mail, readers, alive, current_date,
+                                    world=world)
         authors = {msg.get("sender") for msg in mail}
         jobs.append({"nation": nation, "system": system, "user": user,
                      "letter_ids": {msg.get("message_id") for msg in mail} - {None},

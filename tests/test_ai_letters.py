@@ -313,6 +313,12 @@ class NotebookTests(LetterTestCase):
         self.run_letters()
         self.assertEqual(ai_letters.notebook(self.game.nation_data, "A"), "Trust nobody.")
 
+    def test_the_writer_is_told_its_geography(self):
+        self.stub({})
+        self.run_letters()
+        prompt = next(user for writer, user in self.prompts if writer == "A")
+        self.assertTrue("Your neighbors:" in prompt or "You border no country by land." in prompt)
+
     def test_the_writer_reads_its_own_notebook(self):
         self.game.nation_data["A"][ai_letters.NOTEBOOK] = "C is the danger."
         self.stub({})

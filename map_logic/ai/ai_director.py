@@ -20,6 +20,7 @@ doing considerably more.
 """
 
 import json
+import re
 
 import data.constants as c
 
@@ -70,15 +71,27 @@ def should_consult(candidates, wants_prose=False):
 
 
 def _terms(candidate, nation, nation_data):
-    """A trade's or treaty's terms from the proposer's side, or "".
+    """A trade's or treaty's terms as this country's own offer, or "".
 
     Without them the model wrote its message to an offer it could not see:
     "our surplus of [insert resource] for their surplus of [insert resource]".
+    Labelled only "terms", they read as terms someone had sent: Switzerland
+    answered its own trade offer with "We are interested in your proposal".
     """
     params = candidate.payload.get("parameters")
     lines = diplomacy_messages.describe_trade(params, viewer_is_proposer=True, viewer=nation,
                                               nation_data=nation_data) if params else []
-    return f" -- terms: {'; '.join(lines)}" if lines else ""
+    return f" -- your offer: {'; '.join(lines)}" if lines else ""
+
+
+#: Words that answer a proposal. A director message always makes one, so these
+#: mean the model thought the other country had offered first.
+_ANSWERING_TEXT = re.compile(r"\byour (proposal|offer|terms)\b", re.IGNORECASE)
+
+
+def reads_as_answer(message):
+    """Whether a proposal's message answers a proposal nobody made."""
+    return bool(message) and bool(_ANSWERING_TEXT.search(message))
 
 
 def build_prompt(world, nation, candidates, limit, personality_note="", nation_data=None):
@@ -109,8 +122,10 @@ def build_prompt(world, nation, candidates, limit, personality_note="", nation_d
         f"reason to.\n"
         f"Choose at most {limit}, at most one per country. You may follow the "
         f"ratings or overrule them, but you may only choose from this list.\n"
+        f"Every option is a proposal you make first. Nobody has offered it to you, "
+        f"so do not write as if you were answering one. "
         f"Each message is sent to the country its option names. Write to that "
-        f"government directly, as 'you'. Where an option lists terms, the message "
+        f"government directly, as 'you'. Where an option lists your offer, the message "
         f"must state those terms. The staff ratings and notes are for you alone: "
         f"never quote them.\n\n"
         + ai_prompts.VOICE_RULE +
@@ -193,7 +208,8 @@ def messages_from(reply, nation=None, nation_data=None):
     than sent, and the proposal falls back to its canned line. Small models write
     "Switzerland accepts your offer" into a message already labelled as being
     from Switzerland; a dropped line costs one piece of flavour, a kept one
-    reads as a bug. A line with placeholder or menu text is dropped the same way.
+    reads as a bug. A line with placeholder or menu text is dropped the same way,
+    and so is one that answers a proposal nobody made (reads_as_answer).
     """
 
     if not isinstance(reply, dict):
@@ -203,7 +219,8 @@ def messages_from(reply, nation=None, nation_data=None):
         return {}
     return {str(k): str(v) for k, v in messages.items()
             if isinstance(v, str) and v.strip()
-            and not ai_prompts.unusable_message(v, nation, nation_data)}
+            and not ai_prompts.unusable_message(v, nation, nation_data)
+            and not reads_as_answer(v)}
 
 
 def parse(raw_reply, candidates, limit, nation=None, nation_data=None):

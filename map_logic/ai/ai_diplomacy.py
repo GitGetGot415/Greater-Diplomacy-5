@@ -119,7 +119,8 @@ def start_proactive_llm_tasks(context):
             world, nation, choice["candidates"], c.AI_MAX_ACTIONS_PER_TURN, note,
             nation_data=world_state.nation_data)
         world_context = ai_evaluation.get_world_context(
-            world_state.nation_data, active_nations, nation, current_date=current_date)
+            world_state.nation_data, active_nations, nation, current_date=current_date,
+            world=world)
         choice["_prompt"] = (system, f"{world_context}\n{user}")
         choice["_schema"] = ai_director.reply_schema(choice["candidates"],
                                                      c.AI_MAX_ACTIONS_PER_TURN)

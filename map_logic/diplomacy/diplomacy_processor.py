@@ -489,7 +489,8 @@ def _execute_ai_tasks(context, ai_tasks, active_nations_list):
         if task["action"] == "CUSTOM_MSG":
             return ai_handler.process_custom_message(
                 world_state.nation_data, active_nations_list, task["target"], task["sender"],
-                task["content"], human_players, my_turn_id, current_date=current_date)
+                task["content"], human_players, my_turn_id, current_date=current_date,
+                world=verdict_world)
         return ai_handler.evaluate_diplomatic_proposal(
             world_state.nation_data, world_state.map_data, active_nations_list, task["target"],
             task["sender"], task["action"], task.get("content", ""),

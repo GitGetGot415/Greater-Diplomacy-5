@@ -138,6 +138,25 @@ class StandingTests(unittest.TestCase):
         context = ai_evaluation.get_world_context(self.data, set(NATIONS), "Beta")
         self.assertIn("You are in no faction.", context)
 
+    def test_its_neighbors_come_from_the_turns_world(self):
+        """Without geography, Belgium named Austria-Hungary as its neighbor."""
+        from types import SimpleNamespace
+        world = SimpleNamespace(neighbors={"Alpha": {"Beta", "Ocean"}},
+                                sea_targets={"Alpha": {"Beta": {1}, "Gamma": {2}}})
+        context = ai_evaluation.get_world_context(self.data, set(NATIONS), "Alpha", world=world)
+        tail = context[context.index(ai_prompts.SHARED_CONTEXT_END):]
+        self.assertIn("Your neighbors: Beta.", tail)
+        self.assertIn("Across nearby water: Gamma.", tail)
+
+    def test_a_country_with_no_land_border_is_told_so(self):
+        from types import SimpleNamespace
+        world = SimpleNamespace(neighbors={}, sea_targets={})
+        self.assertIn("You border no country by land.",
+                      ai_evaluation.get_world_context(self.data, set(NATIONS), "Alpha", world=world))
+
+    def test_no_geography_is_claimed_without_a_world(self):
+        self.assertNotIn("neighbors", self.tail)
+
     def test_masters_and_puppets_are_named(self):
         self.data["Beta"]["master"] = "Alpha"
         self.data["Alpha"]["puppets"] = ["Beta"]
