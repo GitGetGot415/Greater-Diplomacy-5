@@ -300,8 +300,8 @@ class Orders_Screen(Screen):
             self.selected_unit_index = None
         elif self.map_screen.selected_unit_records() or open_battle_on_entry:
             # A map click or box drag may already have selected a group across
-            # several provinces. Retain that group verbatim; opening a battle
-            # bubble also leaves unit selection alone.
+            # several provinces, or the battle-click handler selected the
+            # clicked tile's troops. Retain that selection verbatim.
             self.selected_unit_index = None
         elif self.selected_unit_index == "ALL":
             self.map_screen.select_map_units(

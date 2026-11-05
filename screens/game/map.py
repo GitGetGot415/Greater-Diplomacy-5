@@ -2472,7 +2472,7 @@ class Map(StateAccess, Screen):
             self.selected_unit_ids.discard(unit.get("unit_id"))
             self.selected_unit_ids.discard(id(unit))
 
-    def select_map_units(self, units, additive=False):
+    def select_map_units(self, units, additive=False, *, sound_kind="select_unit"):
         """Select commandable units represented by one or more visible stacks."""
         if not self.can_select_map_units():
             return
@@ -2484,8 +2484,8 @@ class Map(StateAccess, Screen):
             self.selected_unit_ids.clear()
         queries.ensure_unit_ids(self.map_data)
         self.selected_unit_ids.update(unit["unit_id"] for unit in eligible)
-        if eligible and self.selected_unit_ids != previous_selection:
-            ui_elements.play_ui_sound("select_unit")
+        if eligible and self.selected_unit_ids != previous_selection and sound_kind is not None:
+            ui_elements.play_ui_sound(sound_kind)
         self.show_feedback(f"{len(self.selected_unit_ids)} unit{'s' if len(self.selected_unit_ids) != 1 else ''} selected")
 
     def click_select_map_units(self, units, additive=False):

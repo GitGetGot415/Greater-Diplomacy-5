@@ -1,6 +1,7 @@
 import pygame
 from ui.rendering import map_utils, overlay_renderer
 from map_logic.territory import ownership
+from map_logic.actions import unit_actions
 import data.constants as c
 from ui.camera import camera_handler
 from screens.setup import player_setup
@@ -705,6 +706,12 @@ def _handle_combat_bubble_click(map_screen, event, on_ui, origin=None):
     # opens, so units underneath the bubble never receive this gesture.
     map_screen.unit_selection_drag = None
     map_screen._ignore_left_until_release = True
+    # Troops on the tile need not participate in the fight to be selected.
+    # The bubble owns this activation's sound; selection remains silent.
+    units = [unit for unit in province.get("units", [])
+             if unit_actions.unit_permission(map_screen, map_screen.player_country, unit)]
+    if units and map_screen.can_select_map_units():
+        map_screen.select_map_units(units, sound_kind=None)
     if origin is None:
         map_screen._orders_entered_from_combat_bubble = True
         map_screen.selected_province = province

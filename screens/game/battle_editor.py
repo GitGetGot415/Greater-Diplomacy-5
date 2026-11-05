@@ -634,8 +634,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
                 dialogs.ask_yes_no(
                     "Empty Front-Line Slots",
                     "Some empty front-line slots will be filled automatically from available "
-                    "reserves when you leave. HELD units can still be put on the front line "
-                    "if needed. Continue editing, or leave the arrangement as is?",
+                    "reserves when you leave. Continue editing, or leave the arrangement as is?",
                     on_result=answered, yes_label="Leave As Is", no_label="Continue Editing")
                 return
         self._finish_exit()

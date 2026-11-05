@@ -194,13 +194,16 @@ class CombatBubbleClickTests(unittest.TestCase):
         self.game = fill_state_defaults(SimpleNamespace(
             id_to_province={1: self.tile}, viewing_ai_moves=False,
             unit_selection_drag=None, secondary_mode="UNITS",
-            can_select_map_units=Mock(return_value=True), change_state=Mock(),
+            player_country="A", map_data={"tile": self.tile},
+            selected_unit_ids=set(), show_feedback=Mock(), change_state=Mock(),
             click_select_map_units=Mock(),
             unit_stack_hitboxes=[{"rect": pygame.Rect(180, 180, 40, 40),
                                  "province": self.tile, "units": [self.unit]}]))
+        self.game.can_select_map_units = Map.can_select_map_units.__get__(self.game)
+        self.game.select_map_units = Map.select_map_units.__get__(self.game)
         self.enterContext(patch.object(overlay_renderer, "combat_bubble_at_screen_pos",
                                       return_value={"orders_province_id": 1}))
-        self.enterContext(patch.object(ui_elements, "play_ui_sound"))
+        self.sound = self.enterContext(patch.object(ui_elements, "play_ui_sound"))
         self.enterContext(patch.object(pygame.mouse, "get_pos", return_value=self.position))
 
     def test_map_bubble_takes_priority_over_an_overlapping_unit_stack(self):
@@ -216,11 +219,13 @@ class CombatBubbleClickTests(unittest.TestCase):
                 kind, pos=self.position, button=1))
 
         self.game.change_state.assert_called_once_with("ORDERS")
+        self.assertEqual(self.game.selected_unit_ids, {self.unit["unit_id"]})
+        self.sound.assert_called_once_with("click_province")
         self.game.click_select_map_units.assert_not_called()
         self.assertIsNone(self.game.unit_selection_drag)
         self.assertFalse(self.game._ignore_left_until_release)
 
-    def test_orders_bubble_preserves_unit_selection_and_consumes_release(self):
+    def test_orders_bubble_selects_tile_units_and_consumes_release(self):
         screen = bare_orders_screen()
         screen.map_screen = self.game
         screen.panel_rect = pygame.Rect(500, 0, 100, 300)
@@ -233,9 +238,69 @@ class CombatBubbleClickTests(unittest.TestCase):
 
         screen.inspect_province.assert_called_once_with(self.tile)
         screen.open_battle_panel.assert_called_once_with()
+        self.assertEqual(self.game.selected_unit_ids, {self.unit["unit_id"]})
+        self.sound.assert_called_once_with("click_province")
         self.game.click_select_map_units.assert_not_called()
         self.assertIsNone(self.game.unit_selection_drag)
         self.assertFalse(self.game._ignore_left_until_release)
+
+    def test_bubble_selects_all_own_troops_even_outside_the_fighting_countries(self):
+        second = {"owner": "A", "unit_id": "second", "combat_stance": "RESERVE"}
+        remote = {"owner": "A", "unit_id": "remote"}
+        self.game.map_data["remote"] = {"units": [remote]}
+        self.game.selected_unit_ids = {"remote"}
+        self.tile["units"].extend([second, {"owner": "B"}, {"owner": "C"}])
+        self.game.nation_data = {"A": {"at_war_with": []},
+                                 "B": {"at_war_with": ["C"]},
+                                 "C": {"at_war_with": ["B"]}}
+        event = pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=self.position, button=1)
+
+        self.assertTrue(map_input._handle_combat_bubble_click(self.game, event, False))
+
+        expected = {self.unit["unit_id"], second["unit_id"]}
+        self.assertEqual(self.game.selected_unit_ids, expected)
+        self.game._ignore_left_until_release = False
+        self.assertTrue(map_input._handle_combat_bubble_click(self.game, event, False))
+        self.assertEqual(self.game.selected_unit_ids, expected)
+
+    def test_bubble_without_commandable_troops_preserves_selection(self):
+        for owner, tactical in (("B", False), ("A", True)):
+            with self.subTest(owner=owner, tactical=tactical):
+                self.unit["owner"] = owner
+                self.game.tactical_mode = tactical
+                self.game.player_unit = {"owner": "A", "unit_id": "remote"}
+                self.game.selected_unit_ids = {"remote"}
+                self.game._ignore_left_until_release = False
+                event = pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=self.position, button=1)
+                self.assertTrue(map_input._handle_combat_bubble_click(self.game, event, False))
+                self.assertEqual(self.game.selected_unit_ids, {"remote"})
+
+    def test_tactical_bubble_selects_only_the_controlled_division(self):
+        self.game.tactical_mode = True
+        self.game.player_unit = self.unit
+        self.tile["units"].append({"owner": "A"})
+        event = pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=self.position, button=1)
+
+        self.assertTrue(map_input._handle_combat_bubble_click(self.game, event, False))
+
+        self.assertEqual(self.game.selected_unit_ids, {self.unit["unit_id"]})
+
+    def test_bubble_respects_spectator_and_closed_realtime_selection(self):
+        for player, realtime, submitted in (("Spectator", False, False),
+                                            (c.TOURNAMENT_SPECTATOR, False, False),
+                                            ("A", True, False), ("A", True, True)):
+            with self.subTest(player=player, realtime=realtime, submitted=submitted):
+                self.game.player_country = player
+                self.game.realtime_multiplayer = realtime
+                self.game.realtime_player_id = "player"
+                self.game.realtime_session = SimpleNamespace(
+                    phase="TURN" if submitted else "PROCESSING",
+                    players={"player": SimpleNamespace(submitted=submitted, eliminated=False)})
+                self.game.selected_unit_ids = {"remote"}
+                self.game._ignore_left_until_release = False
+                event = pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=self.position, button=1)
+                self.assertTrue(map_input._handle_combat_bubble_click(self.game, event, False))
+                self.assertEqual(self.game.selected_unit_ids, {"remote"})
 
     def test_opened_battle_panel_does_not_receive_the_bubble_release(self):
         screen = bare_orders_screen()

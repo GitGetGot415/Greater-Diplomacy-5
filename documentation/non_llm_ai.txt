@@ -351,6 +351,8 @@ Edits apply to the current turn's orders; existing combat width and required
 front coverage still apply. Tactical players can edit only their own division.
 Tournament moves and real-time drafts carry these existing unit orders normally.
 Orders and Battle can open for any visible province.
+Clicking a battle bubble selects all troops the player controls on that tile,
+including troops that are not participating in the battle.
 They are read-only when the player commands no units there.
 See documentation/ai_movement.txt for AI rotation, bombardment, and attack checks.
 
