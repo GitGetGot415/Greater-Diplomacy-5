@@ -486,14 +486,111 @@ class BattleEditorTests(BattleScreenTestCase):
         self.assertIsNone(screen.front_slots[lane.index][old_index])
 
     def test_exit_preserves_the_normal_combat_coverage_rule(self):
+        from ui import dialogs
         screen = self.editor()
         _rect, front = self.own_row(screen, battle_screen.PANE_FRONT)
         self.assertTrue(screen.drop_unit(front, battle_screen.PANE_RESERVE))
         self.assertTrue(any(unit is None for slots in screen.front_slots.values() for unit in slots))
-        screen.exit_screen()
+        with mock.patch.object(dialogs, "ask_yes_no") as ask:
+            screen.exit_screen()
+        self.assertFalse(screen.done)
+        ask.call_args.kwargs["on_result"](True)
+        self.assertTrue(screen.done)
         for lane in screen.overview.battle.lanes:
             self.assertTrue(lane.a.front)
             self.assertTrue(lane.b.front)
+
+    def test_exit_popup_continue_editing_keeps_the_arrangement(self):
+        from ui.navigation import modal_stack
+        screen = self.editor()
+        _rect, front = self.own_row(screen, battle_screen.PANE_FRONT)
+        screen.drop_unit(front, battle_screen.PANE_RESERVE)
+        before = copy.deepcopy(self.province["units"])
+        positions = {key: [id(unit) if unit is not None else None for unit in slots]
+                     for key, slots in screen.front_slots.items()}
+        exit_button = next(element for element in screen.elements if getattr(element, "text", "") == "Exit")
+        exit_button.callback()
+        modal = modal_stack.active()
+        self.assertIsNotNone(modal)
+        try:
+            self.assertEqual(modal.no_label, "Continue Editing")
+            self.assertEqual(modal.yes_label, "Leave As Is")
+            modal.draw(self.surface)
+            modal.handle_events([pygame.event.Event(
+                pygame.MOUSEBUTTONDOWN, pos=modal.no_rect.center, button=1)])
+            modal.update()
+            self.assertFalse(screen.done)
+            self.assertFalse(screen._exit_confirmation_open)
+            self.assertEqual(self.province["units"], before)
+            self.assertEqual({key: [id(unit) if unit is not None else None for unit in slots]
+                              for key, slots in screen.front_slots.items()}, positions)
+        finally:
+            if modal_stack.active() is modal:
+                modal_stack.pop()
+
+    def test_exit_popup_escape_continues_editing(self):
+        from ui.navigation import modal_stack
+        screen = self.editor()
+        _rect, front = self.own_row(screen, battle_screen.PANE_FRONT)
+        screen.drop_unit(front, battle_screen.PANE_RESERVE)
+        screen.handle_back_key()
+        modal = modal_stack.active()
+        self.assertIsNotNone(modal)
+        try:
+            modal.handle_events([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_ESCAPE)])
+            modal.update()
+            self.assertFalse(screen.done)
+            self.assertFalse(screen._exit_confirmation_open)
+            self.assertTrue(any(unit is None for slots in screen.front_slots.values() for unit in slots))
+        finally:
+            if modal_stack.active() is modal:
+                modal_stack.pop()
+
+    def test_back_checks_unselected_lanes_and_opens_only_one_popup(self):
+        from ui import dialogs
+        screen = self.editor()
+        lane, _near, _far = screen.current()
+        _rect, front = self.own_row(screen, battle_screen.PANE_FRONT)
+        screen.drop_unit(front, battle_screen.PANE_RESERVE)
+        screen._select(next(index for index in range(len(screen.battle.lanes)) if index != lane.index))
+        with mock.patch.object(dialogs, "ask_yes_no") as ask:
+            screen.handle_back_key()
+            screen.handle_back_key()
+        ask.assert_called_once()
+        self.assertFalse(screen.done)
+        ask.call_args.kwargs["on_result"](False)
+        self.assertFalse(screen.done)
+
+    def test_filled_front_exits_without_a_popup(self):
+        from ui import dialogs
+        screen = self.editor()
+        with mock.patch.object(dialogs, "ask_yes_no") as ask:
+            screen.exit_screen()
+        ask.assert_not_called()
+        self.assertTrue(screen.done)
+
+    def test_unfillable_empty_slots_do_not_trigger_a_popup(self):
+        from ui import dialogs
+        library = queries.get_unit_library()
+        self.province["units"] = [queries.create_unit_dict("Infantry", owner, library)
+                                  for owner in (self.a, self.x)]
+        screen = self.editor()
+        self.assertTrue(any(unit is None for slots in screen.front_slots.values() for unit in slots))
+        with mock.patch.object(dialogs, "ask_yes_no") as ask:
+            screen.exit_screen()
+        ask.assert_not_called()
+        self.assertTrue(screen.done)
+
+    def test_forced_exit_after_country_change_does_not_ask_for_confirmation(self):
+        from ui import dialogs
+        screen = self.editor()
+        _rect, front = self.own_row(screen, battle_screen.PANE_FRONT)
+        screen.drop_unit(front, battle_screen.PANE_RESERVE)
+        with mock.patch.object(dialogs, "ask_yes_no") as ask, \
+                mock.patch.object(self.map, "player_country", self.x):
+            screen.update()
+        ask.assert_not_called()
+        self.assertTrue(screen.done)
 
     def test_reset_removes_manual_pins_and_rotates_wounded_units(self):
         screen = self.editor()

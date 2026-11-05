@@ -14,6 +14,7 @@ from ui.widgets import flag_icons
 from ui.widgets.text_utils import fit_text
 from ui.rendering.font_manager import fonts
 from ui.background_styles import COMBAT_PANEL_STYLES
+from ui import dialogs
 
 
 DRAG_THRESHOLD = 6
@@ -53,6 +54,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
         self.back_state = "ORDERS"
         self._observed_state = None
         self.front_slots = None
+        self._exit_confirmation_open = False
         self.refresh_ui()
         if overview is not None:
             self.start(overview)
@@ -71,6 +73,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
         self.opened_turn = self.map_screen.time_manager.total_turns
         self.selected_lane = overview.selected_lane
         self.done = False
+        self._exit_confirmation_open = False
         self.front_slots = None
         self.cancel_drag()
         for pane in self.regions:
@@ -437,7 +440,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
 
     def handle_events(self, events):
         for event in events:
-            if self.done:
+            if self.done or self._exit_confirmation_open:
                 return
             if event.type == pygame.WINDOWFOCUSLOST:
                 self.cancel_drag()
@@ -495,13 +498,56 @@ class BattleEditorScreen(ScrollPanes, Screen):
         if (self.map_screen.player_country != self.player
                 or self.map_screen.time_manager.total_turns != self.opened_turn
                 or self.province['id'] not in self.map_screen.id_to_province):
-            self.exit_screen()
+            self._finish_exit()
             return
         stamp = self._source_stamp()
         if stamp != self._observed_state:
             self.refresh_ui()
 
     def exit_screen(self):
+        if self.done or self._exit_confirmation_open:
+            return
+        self.cancel_drag()
+        if self.can_edit_now():
+            if self._source_stamp() != self._observed_state:
+                self.refresh_ui()
+            if self._reserves_will_fill_gaps():
+                self._exit_confirmation_open = True
+
+                def answered(leave):
+                    if not self._exit_confirmation_open:
+                        return
+                    self._exit_confirmation_open = False
+                    if leave:
+                        self._finish_exit()
+                    else:
+                        self.update()
+
+                dialogs.ask_yes_no(
+                    "Empty Front-Line Slots",
+                    "Some empty front-line slots will be filled automatically from available "
+                    "reserves when you leave. HELD units can still be put on the front line "
+                    "if needed. Continue editing, or leave the arrangement as is?",
+                    on_result=answered, yes_label="Leave As Is", no_label="Continue Editing")
+                return
+        self._finish_exit()
+
+    def _reserves_will_fill_gaps(self):
+        if self.front_slots is None:
+            return False
+        # Read the execution owner's actual arrangement, across every lane;
+        # an empty slot alone does not mean enough reserves exist to fill it.
+        self.overview.rebuild()
+        for lane in self.overview.battle.lanes:
+            slots = self.front_slots.get(lane.index, ())
+            near, _far = self.overview.near_far(lane)
+            if any(unit is None for unit in slots) and len(near.front) > sum(
+                    unit is not None for unit in slots):
+                return True
+        return False
+
+    def _finish_exit(self):
+        self._exit_confirmation_open = False
         self.cancel_drag()
         if self.overview is not None:
             self.overview.selected_lane = self.selected_lane

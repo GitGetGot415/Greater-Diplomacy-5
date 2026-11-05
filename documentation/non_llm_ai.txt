@@ -331,6 +331,11 @@ switching lanes; other cards keep their positions. Held reserves appear first.
 These positions are temporary editing state. On exit, the normal combat rules
 fill required front slots from the resulting unit orders. Allies and enemies
 remain read-only.
+If exiting would automatically refill any gaps, a popup explains that reserves,
+including held units, can return to the front. Continue Editing keeps the
+editor open; Leave As Is accepts the automatic filling and exits. Back or
+Escape from this popup continues editing. Empty slots that cannot be filled
+do not trigger the popup.
 Reset removes your manual lane assignments and uses the same automatic
 wounded-unit rotation as the rule-based AI. Exit returns to the existing
 Manage Battle and Orders view with its selection and scroll position intact.

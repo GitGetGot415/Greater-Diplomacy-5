@@ -6,21 +6,25 @@ from ui.widgets import ui_elements
 class _YesNoModal(_BaseModal):
     BOX_MAX_W = 520
     BACK_BUTTON_GAP = 20
+    BUTTON_MIN_W = 120
+    BUTTON_TEXT_PADDING = 12
 
     def __init__(self, surface, title, message, on_result, yes_label, no_label, back_label=None):
         super().__init__(surface, title, message, on_result)
-        self.yes_rect = pygame.Rect(self.box_rect.centerx - 140, self.box_rect.bottom - 55, 120, 40)
-        self.no_rect = pygame.Rect(self.box_rect.centerx + 20, self.box_rect.bottom - 55, 120, 40)
         self.yes_label = yes_label
         self.no_label = no_label
         self.back_label = back_label
-        self.back_rect = None
-        if back_label is not None:
-            width, height = self.yes_rect.size
-            start_x = self.box_rect.centerx - (3 * width + 2 * self.BACK_BUTTON_GAP) // 2
-            for index, rect in enumerate((self.yes_rect, self.no_rect)):
-                rect.x = start_x + index * (width + self.BACK_BUTTON_GAP)
-            self.back_rect = pygame.Rect(start_x + 2 * (width + self.BACK_BUTTON_GAP), self.yes_rect.y, width, height)
+        labels = [yes_label, no_label] + ([back_label] if back_label is not None else [])
+        widths = [max(self.BUTTON_MIN_W, self.btn_font.size(label)[0] + 2 * self.BUTTON_TEXT_PADDING)
+                  for label in labels]
+        gap = self.BACK_BUTTON_GAP if back_label is not None else 2 * self.BACK_BUTTON_GAP
+        x = self.box_rect.centerx - (sum(widths) + gap * (len(widths) - 1)) // 2
+        rects = []
+        for width in widths:
+            rects.append(pygame.Rect(x, self.box_rect.bottom - 55, width, 40))
+            x += width + gap
+        self.yes_rect, self.no_rect = rects[:2]
+        self.back_rect = rects[2] if back_label is not None else None
 
     def handle_events(self, events):
         for event in events:
