@@ -2305,7 +2305,9 @@ def draw_unit_icon(map_screen, surface, sx, sy, province, is_partial=False,
     unit_index = _unit_render_index(map_screen)
     split_stacks = []
     for owner, army, stack_units in unit_stacks:
-        if map_screen.tactical_mode:
+        # Before tactical play starts, reuse normal stacks and let the
+        # existing unit picker choose a division from the clicked stack.
+        if map_screen.tactical_mode and not map_screen.selection_mode:
             split_stacks.extend((owner, army, [unit]) for unit in stack_units)
             continue
         for _key, records in _split_display_records(((unit, province) for unit in stack_units),

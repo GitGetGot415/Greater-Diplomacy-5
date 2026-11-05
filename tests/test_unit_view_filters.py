@@ -280,6 +280,34 @@ class UnitViewFilterTests(unittest.TestCase):
                                             200, 200, self.province, is_partial=True)
         badges.assert_not_called()
 
+    def test_tactical_selection_groups_units_and_picks_from_the_clicked_stack(self):
+        pygame.font.init()
+        units = [dict(self.units[0], unit_id=f"land-{index}") for index in range(2)]
+        self.province.update(owner="A", units=units)
+        self.game.tactical_mode = True
+        self.game.selection_mode = True
+        self.game.player_country = "Spectator"
+        self.game.show_feedback = Mock()
+        for zoom in (0.2, 4):
+            with self.subTest(zoom=zoom):
+                self.game.camera.zoom = zoom
+                self.game.unit_hover_hitboxes = []
+                self.game.unit_stack_hitboxes = []
+                overlay_renderer.draw_unit_icon(self.game, pygame.Surface((400, 400)),
+                                                200, 200, self.province)
+                self.assertEqual([box["units"] for box in self.game.unit_hover_hitboxes], [units])
+                self.assertEqual(self.game.unit_stack_hitboxes, [])
+                stack = self.game.unit_hover_hitboxes[0]
+                with (patch("screens.setup.player_setup.pickers.open_listbox_selector") as picker,
+                      patch("screens.setup.player_setup.ui_elements.play_ui_sound")):
+                    self.assertTrue(map_input._select_tactical_unit_stack(self.game, stack["rect"].center))
+                    labels, on_select = picker.call_args.args[-2:]
+                    self.assertEqual(len(labels), len(units))
+                    on_select(labels[1])
+                self.assertIs(self.game.pending_unit, units[1])
+                self.assertEqual(self.game.pending_selection, "A")
+                self.assertIs(self.game.selected_province, self.province)
+
     def test_tactical_view_keeps_every_division_separate_at_all_zooms(self):
         self.mission_units()
         self.game.tactical_mode = True
