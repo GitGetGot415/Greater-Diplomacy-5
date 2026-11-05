@@ -21,6 +21,8 @@ from ui import dialogs
 
 DRAG_THRESHOLD = 6
 PANE_ENEMY_RESERVE = "enemy_reserve"
+PANE_HELD = "held"
+EDITABLE_PANES = (PANE_FRONT, PANE_RESERVE, PANE_HELD)
 MARGIN = 16
 GAP = 6
 HEADER_H = 24
@@ -39,9 +41,10 @@ PANEL_BORDER = MESSAGE_PANEL_STYLES['contacts']['color']
 ARENA_OPACITY = 180
 
 HELP_TEXT = (
-    "Select a lane on the left. Drag your reserves into empty front-line slots, "
-    "or onto your front-line cards to swap units. Drag a front-line card into reserves "
-    "to hold it back. Allies and enemies are read-only.\n\n"
+    "Select a lane on the left. Drag units into empty front-line slots, "
+    "or onto your front-line cards to swap units. Displaced units return to Reserves. "
+    "Drag units to Reserves on the left to make them available, or Held on the right "
+    "to give other units priority. Allies and enemies are read-only.\n\n"
     "If combat requires one unit to defend several lanes, placing it in a front-line "
     "slot also places it in the other required lanes.\n\n"
     "Empty slots stay empty while editing. When you exit, combat fills required slots "
@@ -141,6 +144,8 @@ class BattleEditorScreen(ScrollPanes, Screen):
     def _layout(self):
         width = c.SCREEN_WIDTH - 2 * MARGIN
         bottom_top = c.SCREEN_HEIGHT - MARGIN - RESERVE_H
+        reserves_w = (width - GAP) // 2
+        held_x = MARGIN + reserves_w + GAP
         middle_top = RESERVE_TOP + RESERVE_H + 2 * GAP
         middle_h = bottom_top - 2 * GAP - middle_top
         self.controls_rect = pygame.Rect(
@@ -155,7 +160,9 @@ class BattleEditorScreen(ScrollPanes, Screen):
             PANE_ENEMY_RESERVE: pygame.Rect(MARGIN, RESERVE_TOP + HEADER_H,
                                            width, RESERVE_H - HEADER_H),
             PANE_RESERVE: pygame.Rect(MARGIN, bottom_top + HEADER_H,
-                                     width, RESERVE_H - HEADER_H),
+                                     reserves_w, RESERVE_H - HEADER_H),
+            PANE_HELD: pygame.Rect(held_x, bottom_top + HEADER_H,
+                                  width - reserves_w - GAP, RESERVE_H - HEADER_H),
         }
         center_x = MARGIN + LANES_W + 2 * GAP
         center_w = self.controls_rect.left - 2 * GAP - center_x
@@ -170,7 +177,8 @@ class BattleEditorScreen(ScrollPanes, Screen):
         self.header_rect = pygame.Rect(0, 0, c.SCREEN_WIDTH, RESERVE_TOP - GAP)
         self.reserve_bars = {
             PANE_ENEMY_RESERVE: pygame.Rect(0, RESERVE_TOP, c.SCREEN_WIDTH, RESERVE_H),
-            PANE_RESERVE: pygame.Rect(0, bottom_top, c.SCREEN_WIDTH, RESERVE_H),
+            PANE_RESERVE: pygame.Rect(0, bottom_top, MARGIN + reserves_w, RESERVE_H),
+            PANE_HELD: pygame.Rect(held_x, bottom_top, c.SCREEN_WIDTH - held_x, RESERVE_H),
         }
         self.front_panels = {
             pane: pygame.Rect(rect.x - GAP, rect.y - HEADER_H,
@@ -247,7 +255,8 @@ class BattleEditorScreen(ScrollPanes, Screen):
         slots = len(self.front_slots[lane.index])
         self._card_grid(PANE_ENEMY, far.front, slots=slots)
         self._card_grid(PANE_FRONT, self.front_slots[lane.index], slots=slots)
-        reserves = near.reserve
+        reserves = [unit for unit in near.reserve if unit.get('combat_stance') != 'RESERVE']
+        held = [unit for unit in near.reserve if unit.get('combat_stance') == 'RESERVE']
         seated = self.seated()
         enemies = [unit for unit in self.province.get('units', [])
                    if queries.get_unit_combat_owner(unit) in far.nations and id(unit) not in seated]
@@ -255,11 +264,13 @@ class BattleEditorScreen(ScrollPanes, Screen):
             enemies, self.player, self.province, self.map_screen.nation_data)
         self._card_grid(PANE_ENEMY_RESERVE, enemies)
         self._card_grid(PANE_RESERVE, reserves)
+        self._card_grid(PANE_HELD, held)
         captions = {
             PANE_ENEMY_RESERVE: f"ENEMY RESERVES ({len(enemies)})",
             PANE_ENEMY: f"ENEMY FRONT  {len(far.front)}/{lane.slots}",
             PANE_FRONT: f"YOUR FRONT  {len(near.front)}/{lane.slots}",
             PANE_RESERVE: f"YOUR SIDE'S RESERVES ({len(reserves)})",
+            PANE_HELD: f"YOUR SIDE'S HELD ({len(held)})",
         }
         font = fonts.get('small')
         self.headings = {pane: font.render(text, True, c.UI_TEXT_LIGHT)
@@ -403,6 +414,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
         self._draw_mail_panel(surface, self.header_rect, 'header')
         self._draw_mail_panel(surface, self.reserve_bars[PANE_ENEMY_RESERVE], 'requests')
         self._draw_mail_panel(surface, self.reserve_bars[PANE_RESERVE], 'composer')
+        self._draw_mail_panel(surface, self.reserve_bars[PANE_HELD], 'composer')
         for rect in self.front_panels.values():
             self._draw_mail_panel(surface, rect, 'contacts', translucent=True)
 
@@ -506,16 +518,17 @@ class BattleEditorScreen(ScrollPanes, Screen):
         self._changed()
 
     def drop_unit(self, unit, pane, replacement=None, slot_index=None):
-        """A front-row drop swaps troops; a reserve drop holds a unit back."""
+        """Move a unit to the front, available reserves, or held reserves."""
         if not self.can_edit_now() or not self.can_command(unit):
             return False
         lane, near, far = self.current()
         if lane is None or not self.is_mine(near):
             return False
-        if pane == PANE_RESERVE:
-            if id(unit) not in self.seated():
+        if pane in (PANE_RESERVE, PANE_HELD):
+            hold = pane == PANE_HELD
+            if id(unit) not in self.seated() and (unit.get('combat_stance') == 'RESERVE') == hold:
                 return False
-            changes = [(unit, None, True)]
+            changes = [(unit, None, hold)]
         elif pane == PANE_FRONT:
             nation = queries.get_unit_combat_owner(unit)
             if nation not in near.nations:
@@ -545,7 +558,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
                         or not self.can_command(replacement)
                         or queries.get_unit_combat_owner(replacement) != nation):
                     return False
-                changes.append((replacement, None, True))
+                changes.append((replacement, None, False))
         else:
             return False
         unit_actions.apply_battle_orders(self.map_screen, self.player, self.province, changes)
@@ -581,7 +594,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
                     if (stamp != self._source_stamp()
                             or pygame.Vector2(event.pos).distance_to(start) < DRAG_THRESHOLD):
                         continue
-                    for pane in (PANE_FRONT, PANE_RESERVE):
+                    for pane in EDITABLE_PANES:
                         if self.regions[pane].collidepoint(event.pos):
                             if any(rect.collidepoint(event.pos) for rect in self.disabled_slots.get(pane, ())):
                                 break
@@ -597,7 +610,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
                 continue
             if (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
                     and self.can_edit_now()):
-                for pane in (PANE_FRONT, PANE_RESERVE):
+                for pane in EDITABLE_PANES:
                     row = self._row_at(pane, event.pos)
                     if row is not None and self.can_command(row[1]):
                         rect, unit = row
@@ -617,7 +630,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
             pygame.draw.line(surface, PANEL_BORDER, (rect.left, rect.bottom),
                              (rect.right - 1, rect.bottom))
         if self.drag_surface is not None:
-            for pane in (PANE_FRONT, PANE_RESERVE):
+            for pane in EDITABLE_PANES:
                 pygame.draw.rect(surface, c.COLOR_GOLD_HIGHLIGHT, self.regions[pane], 1)
             surface.blit(self.drag_surface, self.drag_rect)
 

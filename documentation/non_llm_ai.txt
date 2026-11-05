@@ -331,10 +331,14 @@ Front grids show at least ten spaces; spaces beyond the lane's capacity are
 gray, disabled, and cannot receive units. Front slots fill each column from
 top to bottom before moving to the next column on the right. Reserve grids
 and overflowing front grids scroll with their own scrollbars and mouse wheel.
-Drag a reserve onto one of your front-line units to swap them, or into an empty
-front slot to fill that position. Drag a front-line unit into reserves to hold
-it back. Vacancies stay empty in the editor, including when scrolling or
-switching lanes; other cards keep their positions. Held reserves appear first.
+Your side's bottom area has Reserves on the left and Held on the right, each
+with its own scrollbar. Drag a unit into Reserves to clear its hold preference,
+or into Held to give available units priority. Both destinations clear its lane
+assignment and remove its cards from every front. Drag a reserve or held unit
+onto one of your front-line units to swap them, or into an empty front slot to
+fill that position. A displaced unit returns to available Reserves. Vacancies
+stay empty in the editor, including when scrolling or switching lanes; other
+cards keep their positions.
 When combat requires a unit to defend several lanes, placing it in one front
 also fills its vacant positions in the other required lanes. This uses the
 resolver's shared-unit assignments; it does not place other reserves or replace
