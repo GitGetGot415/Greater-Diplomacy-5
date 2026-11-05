@@ -54,6 +54,7 @@ async def prepare_turn(context):
         # the finally so nothing can read a stale one next turn.
         context.ai_world = ai_world.build(context)
 
+        director = None
         try:
             # --- Letters ---
             # Before the proactive pass, so each nation decides what to propose
@@ -66,6 +67,11 @@ async def prepare_turn(context):
             print("[SYSTEM] Running Proactive AI...")
             ai_diplomacy.process_basic_proactive_ai(context)
             await asyncio.sleep(0)
+
+            # The director's menus are complete now. Its requests wait on the
+            # model while research, economy and movement run, and its answers
+            # are recorded and carried out after movement, as before.
+            director = ai_diplomacy.start_proactive_llm_tasks(context)
 
             session_state.loading_status_text = "Running AI Research..."
             print("[SYSTEM] Running AI Research...")
@@ -85,9 +91,14 @@ async def prepare_turn(context):
 
             session_state.loading_status_text = "Drafting Proactive Responses..."
             print("[SYSTEM] Drafting Proactive Responses...")
-            ai_diplomacy.process_proactive_llm_tasks(context)
+            ai_diplomacy.finish_proactive_llm_tasks(context, director)
+            director = None
             await asyncio.sleep(0)
         finally:
+            # A pass that raised before the director's answers were collected
+            # must not leave its requests running.
+            if director is not None:
+                director.close()
             # --- TACTICAL RESTORE ---
             # In a finally because an AI pass that raises used to leave the
             # player's own unit owned by TACTICAL_HIDDEN for the rest of the game.

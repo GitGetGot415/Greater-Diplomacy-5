@@ -139,6 +139,55 @@ class BatchTests(unittest.TestCase):
         ai_llm_runner.run_llm_batch(["a"], lambda j: j, lambda j, r: None, lambda j: None)
 
 
+class StartedBatchTests(unittest.TestCase):
+    """A batch started early, with other turn work before it is collected."""
+
+    def test_answers_are_recorded_only_by_collect(self):
+        """The turn thread changes game state while the requests are out, so a
+        worker must never be the one to record an answer."""
+        release = threading.Event()
+        recorded_on = []
+        rec = Recorder()
+
+        def on_result(job, result):
+            recorded_on.append(threading.current_thread())
+            rec.on_result(job, result)
+
+        def call(job):
+            release.wait(5)
+            return job.upper()
+
+        batch = ai_llm_runner.start_llm_batch(["a", "b"], call, on_result, rec.on_fallback,
+                                              on_progress=rec.on_progress, max_workers=2)
+        try:
+            self.assertEqual((rec.results, rec.progress), ({}, []))
+        finally:
+            release.set()
+        outcome = batch.collect()
+
+        self.assertEqual(rec.results, {"a": "A", "b": "B"})
+        self.assertEqual(set(recorded_on), {threading.current_thread()})
+        self.assertEqual(outcome, ai_llm_runner.BatchOutcome(2, 2, 0, ""))
+
+    def test_close_abandons_the_batch_without_recording(self):
+        release = threading.Event()
+        rec = Recorder()
+
+        def call(job):
+            release.wait(5)
+            return job
+
+        batch = ai_llm_runner.start_llm_batch(["a"], call, rec.on_result, rec.on_fallback,
+                                              on_progress=rec.on_progress)
+        try:
+            batch.close()
+        finally:
+            release.set()
+
+        self.assertEqual((rec.results, rec.fallbacks, rec.progress), ({}, [], []))
+        self.assertEqual(batch.collect().abandoned, 1)
+
+
 class DeadlineTests(unittest.TestCase):
     """The wall-clock budget, which shares its give-up path with Force Skip.
 

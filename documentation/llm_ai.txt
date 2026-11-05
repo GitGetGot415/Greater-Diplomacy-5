@@ -217,6 +217,18 @@ AI_BUDGET_SHARE_LETTERS, AI_BUDGET_SHARE_DIRECTOR, and AI_BUDGET_SHARE_RESPONSES
 Do not restart the full budget for each phase.
 All letter passes share the letter phase's share. A pass does not start after that share ends.
 
+The director is the LLM step that decides which diplomatic moves each AI country makes on its own initiative this turn.
+The code calls it that because the country's leader (the LLM) directs its staff (the rule-based AI): the staff draws up a list of options,
+and the leader picks from that list. The code is in ai_director.py, and the phase runs from start_proactive_llm_tasks and finish_proactive_llm_tasks in ai_diplomacy.py.
+
+The director sends its requests after the rule-based proactive pass, with or without a limit.
+Rule-based research, economy, and movement planning run while those requests are out.
+After movement planning, the director collects the answers and carries out each country's choices.
+Its share starts when its requests go out. When the share ends during movement planning, answers that arrived by then still count.
+ai_llm_runner.start_llm_batch sends a batch, and LLMBatch.collect records its answers on the thread that collects them.
+Build every prompt before the batch starts, because the turn thread changes nation_data while the requests are out.
+A director prompt therefore shows the country's manpower and materials before its own rule-based spending in that turn.
+
 A phase must do the following:
 
 1. Reject time shares too small for useful work.

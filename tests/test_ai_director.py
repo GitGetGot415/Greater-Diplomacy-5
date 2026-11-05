@@ -9,6 +9,7 @@ have done on its own, which is also what happens with no model at all.
 Nothing here touches the network. The guard in setUp makes that a hard failure.
 """
 
+import threading
 import unittest
 
 
@@ -222,6 +223,30 @@ class EndToEndTests(NoNetworkTestCase):
             self.assertEqual(enum[-1], c.AI_DIRECTOR_NONE_CID)
             for cid in enum:
                 self.assertIn(f"[{cid}]", user)
+
+    def test_the_prompts_are_built_before_the_requests_go_out(self):
+        """prepare_turn runs research, economy and movement while the director's
+        requests are out. A worker that read nation_data then could see it
+        change mid-read, so every prompt is built on the turn's own thread."""
+        self.set_mode("CLAUDE", "ABSOLUTE")
+        self.patch(ai_handler, "_run_provider",
+                   lambda *a, **k: {"picks": [c.AI_DIRECTOR_NONE_CID]})
+        threads = []
+        build = ai_evaluation.get_world_context
+
+        def watched(*args, **kwargs):
+            threads.append(threading.current_thread())
+            return build(*args, **kwargs)
+
+        self.patch(ai_evaluation, "get_world_context", watched)
+        game = self.make_game()
+        game.force_skip_llm = False
+        ai_diplomacy.process_basic_proactive_ai(game)
+        batch = ai_diplomacy.start_proactive_llm_tasks(game)
+        self.assertIsNotNone(batch, "the director had nobody to consult")
+        ai_diplomacy.finish_proactive_llm_tasks(game, batch)
+        self.assertTrue(threads, "no director prompt was built")
+        self.assertEqual(set(threads), {threading.current_thread()})
 
     def test_a_provider_error_leaves_the_staff_choice_intact(self):
         self.set_mode("OFF")

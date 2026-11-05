@@ -56,6 +56,19 @@ def process_proactive_llm_tasks(context):
     ever pick something the heuristic layer had already judged legal. A nation
     with nothing to choose between is not asked at all, which on a large map is
     most of them.
+
+    prepare_turn calls the two halves separately, with research, economy and
+    movement between them; this runs them back to back.
+    """
+    finish_proactive_llm_tasks(context, start_proactive_llm_tasks(context))
+
+
+def start_proactive_llm_tasks(context):
+    """Sends the director requests. Returns the batch, or None with none to send.
+
+    Every prompt is built here, on the turn's own thread, before any request
+    goes out. The workers then only wait on the provider, so they never read
+    nation_data while the rule-based passes after this change it.
     """
     world_state = world_for(context)
     session_state = session_for(context)
@@ -65,7 +78,7 @@ def process_proactive_llm_tasks(context):
     if not pending_choices:
         session_state.proactive_llm_tasks_total = 0
         session_state.proactive_llm_tasks_completed = 0
-        return
+        return None
 
     world = ai_world.for_screen(context)
     mode = ai_handler.get_ai_mode()
@@ -92,7 +105,7 @@ def process_proactive_llm_tasks(context):
     active_nations = set(queries.get_living_nations(world_state.map_data))
     current_date = world_state.time_manager.get_date_string()
 
-    def call(choice):
+    for choice in jobs:
         nation = choice["nation"]
         note = (f"Your temperament: "
                 f"{ai_personality.describe(world_state.nation_data, nation, world_state.scenario_settings)}.\n")
@@ -106,9 +119,14 @@ def process_proactive_llm_tasks(context):
             world, nation, choice["candidates"], c.AI_MAX_ACTIONS_PER_TURN, note)
         world_context = ai_evaluation.get_world_context(
             world_state.nation_data, active_nations, nation, current_date=current_date)
-        return ai_handler._run_provider(
-            mode, system, f"{world_context}\n{user}", my_turn_id, None, raw=True,
-            schema=ai_director.reply_schema(choice["candidates"], c.AI_MAX_ACTIONS_PER_TURN))
+        choice["_prompt"] = (system, f"{world_context}\n{user}")
+        choice["_schema"] = ai_director.reply_schema(choice["candidates"],
+                                                     c.AI_MAX_ACTIONS_PER_TURN)
+
+    def call(choice):
+        system, user = choice["_prompt"]
+        return ai_handler._run_provider(mode, system, user, my_turn_id, None, raw=True,
+                                        schema=choice["_schema"])
 
     def record(choice, reply):
         # Stamped whether or not the reply was usable: the nation cost a call
@@ -131,13 +149,30 @@ def process_proactive_llm_tasks(context):
         context, "Directing AI Nations",
         "proactive_llm_tasks_completed", "proactive_llm_tasks_total")
 
-    if jobs:
-        outcome = ai_llm_runner.run_llm_batch(
-            jobs, call, record, record_fallback,
-            on_progress=count,
-            should_abort=lambda: session_state.force_skip_llm,
-            max_workers=queries.get_ai_threads(),
-            deadline=ai_llm_runner.turn_deadline(context, c.AI_BUDGET_SHARE_DIRECTOR))
+    if not jobs:
+        return None
+    return ai_llm_runner.start_llm_batch(
+        jobs, call, record, record_fallback,
+        on_progress=count,
+        should_abort=lambda: session_state.force_skip_llm,
+        max_workers=queries.get_ai_threads(),
+        deadline=ai_llm_runner.turn_deadline(context, c.AI_BUDGET_SHARE_DIRECTOR))
+
+
+def finish_proactive_llm_tasks(context, batch):
+    """Records the director's answers and carries out every nation's choices.
+
+    `batch` is what start_proactive_llm_tasks returned. A nation whose answer
+    did not come back keeps the heuristic's own pick.
+    """
+    session_state = session_for(context)
+    pending_choices = session_state.proactive_choices or []
+
+    if batch is not None:
+        session_state.loading_status_text = (
+            f"Directing AI Nations ({session_state.proactive_llm_tasks_completed}/"
+            f"{session_state.proactive_llm_tasks_total})...")
+        outcome = batch.collect()
         ai_llm_runner.report_unserved(context, outcome, "Directing AI nations")
 
     for choice in pending_choices:

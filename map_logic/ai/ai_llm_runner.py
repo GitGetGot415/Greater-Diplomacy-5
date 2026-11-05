@@ -197,98 +197,167 @@ def run_llm_batch(jobs, call, on_result, on_fallback, on_progress=None,
     caller is expected to tell the player when that is fewer than it asked for:
     running out of budget used to look exactly like having nothing to say.
     """
-    jobs = list(jobs)
-    if not jobs:
-        return BatchOutcome(0, 0, 0, "")
+    return start_llm_batch(jobs, call, on_result, on_fallback, on_progress=on_progress,
+                           should_abort=should_abort, max_workers=max_workers, poll=poll,
+                           sequential=sequential, deadline=deadline,
+                           min_calls=min_calls).collect()
 
-    tally = {"served": 0, "reason": ""}
 
-    def give_up():
-        if should_abort and should_abort():
-            tally["reason"] = tally["reason"] or "skipped"
+def start_llm_batch(jobs, call, on_result, on_fallback, on_progress=None,
+                    should_abort=None, max_workers=1, poll=0.1, sequential=None,
+                    deadline=None, min_calls=1):
+    """Sends a batch's requests and returns at once. See run_llm_batch.
+
+    The answers are recorded only by LLMBatch.collect, on the thread that
+    calls it, so the caller can do other work while the requests are out.
+    `call` must therefore not read game state that the caller changes in the
+    meantime: build each job's prompt before starting the batch.
+    """
+    return LLMBatch(jobs, call, on_result, on_fallback, on_progress, should_abort,
+                    max_workers, poll, sequential, deadline, min_calls)
+
+
+def _shutdown_now(executor):
+    """Stops an executor without waiting on in-flight API requests."""
+    try:
+        executor.shutdown(wait=False, cancel_futures=True)
+    except TypeError:   # cancel_futures landed in 3.9
+        executor.shutdown(wait=False)
+
+
+class LLMBatch:
+    """A started batch. collect() records its answers; close() abandons it."""
+
+    def __init__(self, jobs, call, on_result, on_fallback, on_progress, should_abort,
+                 max_workers, poll, sequential, deadline, min_calls):
+        self.jobs = list(jobs)
+        self.call = call
+        self.on_result = on_result
+        self.on_fallback = on_fallback
+        self.on_progress = on_progress
+        self.should_abort = should_abort
+        self.poll = poll
+        self.deadline = deadline
+        self.served = 0
+        self.reason = ""
+        self.declined = False
+        self.sequential = False
+        self.executor = None
+        self.futures = {}
+        self.outcome = None
+
+        if not self.jobs:
+            return
+
+        # Skipping before any request goes out costs nothing and avoids spawning
+        # threads only to cancel them. Nothing counts towards the bar here --
+        # the user asked not to wait for this batch at all.
+        if self._give_up():
+            self.declined = True
+            return
+
+        # Declining is not the same as running out, and is checked after it: a
+        # deadline already in the past is a batch with no budget, which is what
+        # "budget" has always meant. This is the other case -- time left, but not
+        # enough of it to finish the smallest piece of work this batch can show
+        # for itself, so the slice goes to the next phase instead of being spent
+        # on a request that will be cut off. `min_calls` is that smallest piece:
+        # one, where a job is a single request; more where a job only produces
+        # something after several requests.
+        if not affordable(deadline, min_calls):
+            self.reason = "unaffordable"
+            self.declined = True
+            return
+
+        # The sequential path sends nothing until collect, which runs every job
+        # inline on the collecting thread.
+        if IS_WEB if sequential is None else sequential:
+            self.sequential = True
+            return
+
+        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
+        self.futures = {self.executor.submit(call, job): job for job in self.jobs}
+
+    def _give_up(self):
+        if self.should_abort and self.should_abort():
+            self.reason = self.reason or "skipped"
             return True
-        if deadline is not None and time.monotonic() >= deadline:
-            tally["reason"] = tally["reason"] or "budget"
+        if self.deadline is not None and time.monotonic() >= self.deadline:
+            self.reason = self.reason or "budget"
             return True
         return False
 
-    def served(job, result):
-        tally["served"] += 1
-        on_result(job, result)
+    def _served(self, job, result):
+        self.served += 1
+        self.on_result(job, result)
 
-    # Skipping before any request goes out costs nothing and avoids spawning
-    # threads only to cancel them. Nothing counts towards the bar here --
-    # the user asked not to wait for this batch at all.
-    if give_up():
-        for job in jobs:
-            on_fallback(job)
-        return BatchOutcome(len(jobs), 0, len(jobs), tally["reason"])
+    def _resolved(self, job, answered):
+        if not answered:
+            self.on_fallback(job)
+        if self.on_progress:
+            self.on_progress(job)
 
-    # Declining is not the same as running out, and is checked after it: a
-    # deadline already in the past is a batch with no budget, which is what
-    # "budget" has always meant. This is the other case -- time left, but not
-    # enough of it to finish the smallest piece of work this batch can show
-    # for itself, so the slice goes to the next phase instead of being spent
-    # on a request that will be cut off. `min_calls` is that smallest piece:
-    # one, where a job is a single request; more where a job only produces
-    # something after several requests.
-    if not affordable(deadline, min_calls):
-        tally["reason"] = "unaffordable"
-        for job in jobs:
-            on_fallback(job)
-        return BatchOutcome(len(jobs), 0, len(jobs), "unaffordable")
+    def collect(self):
+        """Waits for the answers, records each one, and returns a BatchOutcome."""
+        if self.outcome is not None:
+            return self.outcome
 
-    if IS_WEB if sequential is None else sequential:
-        for job in jobs:
-            if give_up():
-                on_fallback(job)
-            elif not _settle_inline(job, call, served):
-                on_fallback(job)
-            if on_progress:
-                on_progress(job)
-        return BatchOutcome(len(jobs), tally["served"],
-                            len(jobs) - tally["served"], tally["reason"])
+        if self.declined:
+            for job in self.jobs:
+                self.on_fallback(job)
+        elif self.sequential:
+            for job in self.jobs:
+                self._resolved(job, not self._give_up()
+                               and _settle_inline(job, self.call, self._served))
+        elif self.executor is not None:
+            self._drain()
 
-    executor = concurrent.futures.ThreadPoolExecutor(max_workers=max_workers)
-    futures = {executor.submit(call, job): job for job in jobs}
-    abandoned = False
+        total = len(self.jobs)
+        self.outcome = BatchOutcome(total, self.served, total - self.served, self.reason)
+        return self.outcome
 
-    while futures:
-        if give_up():
-            abandoned = True
-            for future in futures:
+    def _drain(self):
+        futures = self.futures
+        while futures:
+            if self._give_up():
+                for future in futures:
+                    future.cancel()
+                _hang_up()
+
+                for future, job in futures.items():
+                    # A request that came back just before the cancel still counts;
+                    # everything else falls back.
+                    self._resolved(job, _settle_future(future, job, self._served))
+
+                futures.clear()
+                _shutdown_now(self.executor)
+                return
+
+            done, _ = concurrent.futures.wait(futures.keys(), timeout=self.poll,
+                                              return_when=concurrent.futures.FIRST_COMPLETED)
+            for future in done:
+                job = futures.pop(future)
+                self._resolved(job, _settle_future(future, job, self._served))
+
+        self.executor.shutdown(wait=True)
+
+    def close(self):
+        """Abandons a batch that will not be collected, recording nothing.
+
+        For a turn that fails between start and collect: its requests would
+        otherwise keep streaming, and a hosted provider would bill them.
+        """
+        if self.outcome is not None:
+            return
+        if self.futures:
+            for future in self.futures:
                 future.cancel()
             _hang_up()
-
-            for future, job in futures.items():
-                # A request that came back just before the cancel still counts;
-                # everything else falls back.
-                if not _settle_future(future, job, served):
-                    on_fallback(job)
-                if on_progress:
-                    on_progress(job)
-
-            # Do not wait on in-flight API requests the user asked to abandon.
-            try:
-                executor.shutdown(wait=False, cancel_futures=True)
-            except TypeError:   # cancel_futures landed in 3.9
-                executor.shutdown(wait=False)
-            break
-
-        done, _ = concurrent.futures.wait(futures.keys(), timeout=poll,
-                                          return_when=concurrent.futures.FIRST_COMPLETED)
-        for future in done:
-            job = futures.pop(future)
-            if not _settle_future(future, job, served):
-                on_fallback(job)
-            if on_progress:
-                on_progress(job)
-
-    if not abandoned:
-        executor.shutdown(wait=True)
-
-    return BatchOutcome(len(jobs), tally["served"],
-                        len(jobs) - tally["served"], tally["reason"])
+            self.futures.clear()
+            _shutdown_now(self.executor)
+        total = len(self.jobs)
+        self.outcome = BatchOutcome(total, self.served, total - self.served,
+                                    self.reason or "skipped")
 
 
 def _hang_up():
