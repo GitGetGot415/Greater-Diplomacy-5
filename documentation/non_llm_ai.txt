@@ -64,6 +64,8 @@ Research selection checks the active technology prerequisites for each new proje
 See documentation/general_info.txt for state and action ownership.
 AI maintenance and unit orders use map_logic/actions/unit_actions.py after selection.
 The diplomatic candidate collector checks shared availability before ranking or model selection.
+It also drops a candidate that mirrors a delivered proposal waiting for the country's answer, such as an access request
+to a country that has asked it for access. The country answers that proposal instead. See documentation/llm_ai.txt.
 AIWorld retains its source world's scenario settings. Evaluation reads that world's active libraries.
 
 HISTORICAL INFANTRY EQUIPMENT

@@ -93,9 +93,22 @@ MODEL DECISIONS
    A model-driven country also receives its own-initiative candidates.
    These are proposals to its recent correspondents that no rule-based section offered:
    faction invitations and requests, new factions, trades, military access, calls to arms, joined wars, and peace terms.
+   Military access is offered only when the country is at war and the correspondent borders one of its enemies by land.
+   Offered to every correspondent, it was a free pick on every menu, and countries asked for access with no war to reach.
    AI_CORRESPONDENTS_MAX limits the countries. A country can have several of these candidates.
    They pass the same availability, cooldown, and pending-request checks as other candidates.
    The rule-based fallback never selects them, so a skipped or failed call takes the staff's choice.
+
+   No candidate, from the staff or the leader, mirrors a proposal waiting for this country's answer
+   (ai_candidates.mirrors_waiting_proposal, c.AI_MIRRORED_PROPOSALS).
+   A military access request mirrors a military access request, and a call to arms mirrors an offer to join wars.
+   The answer comes later in the turn from a separate call, so without this check a country refused a request and made the same request back.
+   Only a delivered proposal (turns 1 or more) counts. A proposal still being drafted this turn has not reached the country.
+
+   Each option line says what its action does (c.AI_ACTION_EFFECTS, ai_candidates.effect),
+   naming the war for a call to arms, an offer to join wars, or a military access request.
+   A war declaration's line says the message announces the war and is not an offer.
+   The instructions say that doing nothing is a normal choice.
 
 2. Decide whether to accept a proposal where the rules permit a choice.
    Fixed restrictions, such as an integrated puppet's trade restriction, remain binding.
@@ -127,15 +140,21 @@ ai_prompts.CONDUCT_RULE appears in the letters, director, and reply instructions
 It says to write to a country at war with you as an enemy, and never as if at peace or allied.
 It also says the briefing has no troop information, so the model must never claim to have seen troops gathering or moving.
 No prompt contains unit positions. Without this rule, a model invented troop movements from its knowledge of history.
-A reply's "currently communicating with" line labels the target with its relationship, as letters do.
+A reply's "currently communicating with" line labels the target with its relationship, as letters do, and with the target's own other wars.
+Without the target's wars, Italy told France to "focus on your war with Albania", which was Italy's war.
+A rule-based military access request names the enemy the two share ({enemy} in PROACTIVE_REQ_MILITARY_ACCESS).
 
-The director's instructions say that each message goes to its option's country and addresses that government as "you".
-They also say that every option is a proposal the country makes first, which nobody has offered to it.
+The director's instructions say that each message goes to its option's country, addresses that government as "you",
+and is about that option's action and nothing else.
+They also say that every option is the country's own move, which nobody has offered to it, and that a declaration of war offers nothing.
+When the instructions called every option a proposal, a model declared war with "we propose a peaceful transfer of the territory".
 An option with trade or treaty terms lists them as "your offer", from the proposer's side, using diplomacy_messages.describe_trade.
 The message must state them. Staff ratings and notes are for the leader only.
-ai_director.copies_menu rejects a director message that quotes its menu: the own-initiative note, or any option's reason of at least 12 characters, word for word.
+ai_director.copies_menu rejects a director message that quotes its menu, word for word:
+the own-initiative note, or any option's reason or effect text of at least 12 characters.
 ai_director.reads_as_answer rejects a director message that says "your proposal", "your offer", or "your terms".
-A director message always makes a proposal, so those words mean the model thought the other country had offered first.
+A director message is always the country's own move, so those words mean the model thought the other country had offered first.
+ai_director.reads_as_offer rejects a war declaration's message that says "we propose" or "we offer".
 Letters and replies do not use this check, because those words are normal there.
 ai_prompts.reads_as_template rejects text with a bracketed or braced placeholder, such as "[insert resource]", or with "staff rating".
 ai_prompts.unusable_message combines that check with the third-person check. Every place that sends a model's words uses it:
@@ -188,6 +207,7 @@ The prompt labels every country under WHO READS LETTERS, every waiting letter, a
 The labels are "at war with you", "your overlord", "your puppet state", and "in your faction" (ai_evaluation.relationship).
 A recipient written with its label still resolves to its country.
 The instructions forbid a greeting and a signature, because each letter is already labelled with its sender and recipient.
+The prompt ends by saying that an empty list of letters is fine. It used to end "Sit down and write.", which read as an order to write.
 
 A player's plain message to an AI has no letter field. Its delivered MSG: request marks it as awaiting an answer.
 When the AI's sitting returns a usable reply, the sitting has answered the message, whether or not it wrote back.

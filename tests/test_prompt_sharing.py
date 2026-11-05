@@ -135,10 +135,25 @@ class StandingTests(unittest.TestCase):
         self.assertIn("You are at war with: Beta.", self.tail)
 
     def test_a_reply_names_its_target_with_their_relationship(self):
+        for nation in NATIONS:
+            self.data[nation]["at_war_with"] = []
+        self.data["Alpha"]["at_war_with"] = ["Beta"]
+        self.data["Beta"]["at_war_with"] = ["Alpha"]
         context = ai_evaluation.get_world_context(self.data, set(NATIONS), "Alpha", "Beta")
         self.assertIn("You are currently communicating with Beta (at war with you).", context)
         context = ai_evaluation.get_world_context(self.data, set(NATIONS), "Alpha", "Gamma")
         self.assertIn("You are currently communicating with Gamma (in your faction).", context)
+
+    def test_a_reply_names_its_targets_own_wars(self):
+        """Italy told France to focus on "your war with Albania", which was Italy's."""
+        self.data["Alpha"]["at_war_with"] = ["Beta"]
+        self.data["Beta"]["at_war_with"] = ["Alpha", "Delta"]
+        self.data["Gamma"]["at_war_with"] = ["Delta"]
+        context = ai_evaluation.get_world_context(self.data, set(NATIONS), "Alpha", "Gamma")
+        self.assertIn("communicating with Gamma (in your faction; at war with Delta).", context)
+        context = ai_evaluation.get_world_context(self.data, set(NATIONS), "Alpha", "Beta")
+        self.assertIn("communicating with Beta (at war with you; also at war with Delta).",
+                      context)
 
     def test_every_model_prompt_states_the_conduct_rule(self):
         """No claimed troop sightings, and enemies written to as enemies."""

@@ -509,6 +509,56 @@ class InitiativeTests(LetterTestCase):
         ai_diplomacy.process_proactive_llm_tasks(self.game)
         self.assertEqual(self.game.pending_action("A", "B"), "CREATE_FACTION")
 
+    def initiatives(self):
+        return {(cand.action, cand.target): cand for cand in self.menu()["A"]["candidates"]
+                if ac.is_initiative(cand)}
+
+    def test_access_is_offered_only_toward_an_enemy_next_door(self):
+        """About half the access requests in the extensive testing save went
+        between countries with no enemy to reach."""
+        self.write("B", "A", "Shall we stand together?")
+        self.assertNotIn(("REQ_MILITARY_ACCESS", "B"), self.initiatives())
+        self.game.set_war("A", "C")
+        self.assertNotIn(("REQ_MILITARY_ACCESS", "B"), self.initiatives())
+        self.game.border(self.game.home_of("B")["id"], self.game.home_of("C")["id"])
+        offered = self.initiatives()[("REQ_MILITARY_ACCESS", "B")]
+        self.assertEqual(offered.payload["context_target"], "C")
+
+    def test_no_proposal_mirrors_one_waiting_for_an_answer(self):
+        """France refused the Soviet Union's request for access and asked it for
+        access in the same turn."""
+        data = self.game.nation_data
+        data["B"]["pending_diplomacy"]["A"] = {"action": "REQ_MILITARY_ACCESS", "turns": 1}
+        bag = ac.Collector("A", {}, context=self.game)
+        self.assertFalse(bag.add_initiative(ac.make("REQ_MILITARY_ACCESS", "B", 0.0, "near")))
+        self.assertTrue(bag.add_initiative(ac.make("TRADE", "B", 0.0, "goods")))
+        data["B"]["pending_diplomacy"]["A"] = {"action": "JOIN_WARS", "turns": 1}
+        self.assertFalse(ac.Collector("A", {}, context=self.game).add(
+            ac.make("CALL_TO_ARMS", "B", 0.5, "sworn")))
+
+    def test_a_proposal_still_being_drafted_gives_no_warning(self):
+        """Only a delivered proposal counts: a draft has not reached its target."""
+        self.game.nation_data["B"]["pending_diplomacy"]["A"] = {
+            "action": "REQ_MILITARY_ACCESS", "turns": 0}
+        self.assertFalse(ac.mirrors_waiting_proposal(self.game.nation_data, "A", "B",
+                                                     "REQ_MILITARY_ACCESS"))
+
+    def test_the_canned_access_request_names_the_enemy(self):
+        """Italy, at war with Albania, read "we share an enemy" as its own war."""
+        pending = self.game.nation_data["A"]["pending_diplomacy"]
+        ai_diplomacy._queue_proactive_proposal(self.game, pending, "A", "B",
+                                               "REQ_MILITARY_ACCESS", context_target="C")
+        self.assertRegex(pending["B"]["message"], r"\bC\b")
+        ai_diplomacy._queue_proactive_proposal(self.game, pending, "A", "C",
+                                               "REQ_MILITARY_ACCESS")
+        self.assertNotIn("{", pending["C"]["message"])
+
+    def test_the_sitting_does_not_order_a_letter(self):
+        _system, user = ai_letters.build_prompt(self.game, "A", [], ["A", "B"],
+                                                ["A", "B", "C"], "1 January, 1939")
+        self.assertNotIn("Sit down and write", user)
+        self.assertIn("an empty list of letters is fine", user)
+
     def test_no_initiatives_without_the_model(self):
         self.set_mode("OFF", "ABSOLUTE")
         self.write("B", "A", "Shall we stand together?")

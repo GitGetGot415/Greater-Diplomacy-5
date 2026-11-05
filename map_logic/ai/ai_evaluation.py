@@ -266,8 +266,25 @@ def get_world_context(nation_data, active_nations, ai_nation, target_nation=None
         current_date, ai_nation, ', '.join(sorted(active_nations)),
         manpower, materials, politics_str, events_str, target_context_str, target_nation,
         relations_str, _standing(nation_data, active_nations, ai_nation, world),
-        labelled(nation_data, ai_nation, target_nation) if target_nation else ""
+        _target_label(nation_data, active_nations, ai_nation, target_nation) if target_nation else ""
     )
+
+
+def _target_label(nation_data, active_nations, nation, other):
+    """`other` with its relationship to `nation` and its own wars, for a reply.
+
+    Italy, at war with Albania, told France to "focus on your war with Albania":
+    its prompt named only its own wars, and France's canned "we share an enemy"
+    left it to guess whose.
+    """
+    parts = [relationship(nation_data, nation, other)]
+    wars = [w for w in sorted(queries.get_enemies(other, nation_data))
+            if w in active_nations and w != nation]
+    if wars:
+        also = "also " if queries.are_at_war(nation, other, nation_data) else ""
+        parts.append(f"{also}at war with {', '.join(wars)}")
+    parts = [p for p in parts if p]
+    return f"{other} ({'; '.join(parts)})" if parts else other
 
 
 def relationship(nation_data, nation, other):

@@ -266,7 +266,8 @@ def build_prompt(world_state, nation, unread, readers, alive, current_date, worl
 
     lines.append("\n--- WHO READS LETTERS ---")
     lines.append(", ".join(label(r) for r in readers if r != nation) or "Nobody.")
-    lines.append("\nSit down and write.")
+    # Not "Sit down and write.", which read as an order to write something.
+    lines.append("\nWrite only the letters worth sending; an empty list of letters is fine.")
     return SYSTEM_PROMPT, "\n".join(lines)
 
 

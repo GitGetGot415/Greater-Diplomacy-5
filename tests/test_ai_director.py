@@ -147,7 +147,57 @@ class ValidationTests(NoNetworkTestCase):
         system, _user = ai_director.build_prompt(None, "A", self.cands, 2)
         self.assertIn("as 'you'", system)
         self.assertIn("never quote them", system)
-        self.assertIn("a proposal you make first", system)
+        self.assertIn("your own move", system)
+
+    def test_doing_nothing_is_presented_as_normal(self):
+        """A small model rarely picks "do nothing" when a free option is on the menu."""
+        system, _user = ai_director.build_prompt(None, "A", self.cands, 2)
+        self.assertIn("Doing nothing is a normal choice", system)
+
+    def test_a_war_declaration_is_not_a_proposal(self):
+        """The prompt said every option was a proposal, and the Soviet Union
+        declared war on Latvia with "we propose a peaceful transfer"."""
+        system, _user = ai_director.build_prompt(None, "A", self.cands, 2)
+        self.assertNotIn("a proposal you make first", system)
+        self.assertIn("A declaration of war declares the war", system)
+
+    def test_a_war_declaration_that_makes_an_offer_is_dropped(self):
+        bag = ac.Collector("A", {})
+        bag.add(ac.make("WAR_DECLARATION", "B", 0.9, "our claims", context_target="B"))
+        bag.add(ac.make("TRADE", "C", 0.4, "goods"))
+        cands = bag.ranked()
+        war = next(cand.cid for cand in cands if cand.action == "WAR_DECLARATION")
+        trade = next(cand.cid for cand in cands if cand.action == "TRADE")
+        _chosen, messages = ai_director.parse({"picks": [war, trade], "messages": {
+            war: "We propose a peaceful transfer of the disputed territory.",
+            trade: "We offer you coal for your oil."}}, cands, 2)
+        self.assertEqual(messages, {trade: "We offer you coal for your oil."})
+        _chosen, messages = ai_director.parse({"picks": [war], "messages": {
+            war: "You have held our land long enough. The army marches."}}, cands, 2)
+        self.assertEqual(messages, {war: "You have held our land long enough. The army marches."})
+
+    def test_each_option_says_what_it_does(self):
+        """"call to arms Italy" alone, and the Reich called it a joint training exercise."""
+        bag = ac.Collector("A", {})
+        bag.add(ac.make("CALL_TO_ARMS", "B", 0.5, "sworn to us", context_target="D"))
+        bag.add(ac.make("WAR_DECLARATION", "C", 0.9, "our claims", context_target="C"))
+        bag.add_initiative(ac.make("JOIN_WARS", "E", 0.0, "help", context_target="F"))
+        bag.add_initiative(ac.make("REQ_MILITARY_ACCESS", "G", 0.0, "near", context_target="H"))
+        _system, user = ai_director.build_prompt(None, "A", bag.ranked(), 2)
+        self.assertIn("call to arms B (asks them to join your war against D)", user)
+        self.assertIn("declare war on C (this message announces the war; "
+                      "it is not an offer and cannot be refused)", user)
+        self.assertIn("offer to join the wars of E (you would join their war against F)", user)
+        self.assertIn("request military access through G (asks to let your troops "
+                      "cross their territory to reach H)", user)
+
+    def test_a_message_that_quotes_what_an_option_does_is_dropped(self):
+        bag = ac.Collector("A", {})
+        bag.add(ac.make("CALL_TO_ARMS", "B", 0.5, "sworn", context_target="D"))
+        cands = bag.ranked()
+        _chosen, messages = ai_director.parse({"picks": ["0"], "messages": {
+            "0": "This asks them to join your war against D."}}, cands, 1)
+        self.assertEqual(messages, {})
 
     def test_a_message_that_answers_a_proposal_nobody_made_is_dropped(self):
         """Switzerland wrote "We are interested in your proposal" to open its own trade."""

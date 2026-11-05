@@ -1530,6 +1530,32 @@ AI_ACTION_PHRASES = {
     "BREAK_ALLIANCE": "break our alliance with",
 }
 
+#: What each action does, said on the director's menu next to it. "call to
+#: arms Italy" alone told the model nothing, and the Reich wrote its call to
+#: arms as a "joint training exercise". {enemy} is the war the option is about.
+AI_ACTION_EFFECTS = {
+    "WAR_DECLARATION": "this message announces the war; it is not an offer and cannot be refused",
+    "CALL_TO_ARMS": "asks them to join your war against {enemy}",
+    "JOIN_WARS": "you would join their war against {enemy}",
+    "REQ_MILITARY_ACCESS": "asks to let your troops cross their territory to reach {enemy}",
+}
+
+#: {enemy} in AI_ACTION_EFFECTS when an option names no particular war.
+AI_ACTION_EFFECT_ENEMY = {
+    "CALL_TO_ARMS": "your enemies",
+    "JOIN_WARS": "their enemies",
+    "REQ_MILITARY_ACCESS": "your enemies",
+}
+
+#: Proposals that mirror one another. A nation is not offered one to a country
+#: whose mirror of it is already waiting for its answer (see
+#: ai_candidates.mirrors_waiting_proposal): it answers that one instead.
+AI_MIRRORED_PROPOSALS = {
+    "REQ_MILITARY_ACCESS": ("REQ_MILITARY_ACCESS",),
+    "CALL_TO_ARMS": ("JOIN_WARS",),
+    "JOIN_WARS": ("CALL_TO_ARMS",),
+}
+
 # Baseline desirability for actions with no appetite function of their own.
 # Access is cheap to ask for and often the difference between being able to
 # fight a shared war at all -- but it is a tactical convenience, and loses to

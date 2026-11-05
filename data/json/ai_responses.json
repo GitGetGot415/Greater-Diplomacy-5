@@ -17,7 +17,8 @@
     "  opinion     'hostile' | 'cold' | 'warm'     -- what we think of them",
     "A condition naming a list matches if any entry does: {\"strength\": [\"weaker\", \"even\"]}.",
     "",
-    "Placeholders: {target} in NOT_AT_WAR, {action} in the three GENERIC keys."
+    "Placeholders: {target} in NOT_AT_WAR, {action} in the three GENERIC keys,",
+    "{enemy} in PROACTIVE_REQ_MILITARY_ACCESS (the war the passage is for)."
   ],
 
   "AI_OFF_ACCEPT": ["We accept your proposal.", "Agreed. Let it be so.", "This is acceptable to us."],
@@ -108,8 +109,8 @@
                                "Neither of us is aligned. Together we would be harder to swallow."],
   "PROACTIVE_CALL_TO_ARMS": ["We request your aid in our ongoing conflicts!",
                              "The pact is being tested. Honour it."],
-  "PROACTIVE_REQ_MILITARY_ACCESS": ["As we both fight against a common foe, we request military access through your territory.",
-                                    "We share an enemy. Let us share a road to reach them."],
+  "PROACTIVE_REQ_MILITARY_ACCESS": ["As we both fight {enemy}, we request military access through your territory.",
+                                    "We share an enemy in {enemy}. Let us share a road to reach them."],
   "PROACTIVE_FACTION_INVITE": ["Our cause would be stronger with you in it. Join us.",
                                "There is a seat at our table, if you want it."],
   "PROACTIVE_CLAIM_LEADERSHIP": ["The pact needs a stronger hand at its head. It will be ours.",

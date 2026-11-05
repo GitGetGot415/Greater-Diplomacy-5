@@ -111,8 +111,19 @@ def copies_menu(message, candidates):
         return False
     if any(part in text for part in ("own initiative", "staff proposal")):
         return True
-    return any(len(cand.rationale) >= _MENU_COPY_MIN_LENGTH and cand.rationale.lower() in text
-               for cand in candidates if cand.rationale)
+    return any(len(note) >= _MENU_COPY_MIN_LENGTH and note.lower() in text
+               for cand in candidates
+               for note in (cand.rationale, ai_candidates.effect(cand)) if note)
+
+
+#: Words that make an offer. A war declaration made one: the Soviet Union
+#: declared war on Latvia with "we propose a peaceful transfer of the territory".
+_OFFER_TEXT = re.compile(r"\bwe (propose|offer)\b", re.IGNORECASE)
+
+
+def reads_as_offer(message):
+    """Whether a message proposes or offers something."""
+    return bool(message) and bool(_OFFER_TEXT.search(message))
 
 
 def build_prompt(world, nation, candidates, limit, personality_note="", nation_data=None):
@@ -142,12 +153,15 @@ def build_prompt(world, nation, candidates, limit, personality_note="", nation_d
         f"not recommend; take one when your letters or your notebook give you a "
         f"reason to.\n"
         f"Choose at most {limit}, at most one per country. You may follow the "
-        f"ratings or overrule them, but you may only choose from this list.\n"
-        f"Every option is a proposal you make first. Nobody has offered it to you, "
+        f"ratings or overrule them, but you may only choose from this list. "
+        f"Doing nothing is a normal choice: most leaders make no proposal most turns.\n"
+        f"Every option is your own move. Nobody has offered it to you, "
         f"so do not write as if you were answering one. "
-        f"Each message is sent to the country its option names. Write to that "
+        f"Each message is sent to the country its option names, and is about that "
+        f"option's action and nothing else. Write to that "
         f"government directly, as 'you'. Where an option lists your offer, the message "
-        f"must state those terms. The staff ratings and notes are for you alone: "
+        f"must state those terms. A declaration of war declares the war: it proposes "
+        f"and offers nothing. The staff ratings and notes are for you alone: "
         f"never quote them.\n\n"
         + ai_prompts.VOICE_RULE + ai_prompts.CONDUCT_RULE +
         "\nReply ONLY with a valid JSON object of this shape:\n"
@@ -230,8 +244,9 @@ def messages_from(reply, nation=None, nation_data=None, candidates=()):
     "Switzerland accepts your offer" into a message already labelled as being
     from Switzerland; a dropped line costs one piece of flavour, a kept one
     reads as a bug. A line with placeholder or menu text is dropped the same way,
-    and so is one that answers a proposal nobody made (reads_as_answer), or one
-    that quotes `candidates`, the menu it was chosen from (copies_menu).
+    and so is one that answers a proposal nobody made (reads_as_answer), one
+    that quotes `candidates`, the menu it was chosen from (copies_menu), or a
+    war declaration's that makes an offer (reads_as_offer).
     """
 
     if not isinstance(reply, dict):
@@ -239,11 +254,13 @@ def messages_from(reply, nation=None, nation_data=None, candidates=()):
     messages = reply.get("messages")
     if not isinstance(messages, dict):
         return {}
+    wars = {cand.cid for cand in candidates if cand.action == "WAR_DECLARATION"}
     return {str(k): str(v) for k, v in messages.items()
             if isinstance(v, str) and v.strip()
             and not ai_prompts.unusable_message(v, nation, nation_data)
             and not reads_as_answer(v)
-            and not copies_menu(v, candidates)}
+            and not copies_menu(v, candidates)
+            and not (str(k) in wars and reads_as_offer(v))}
 
 
 def parse(raw_reply, candidates, limit, nation=None, nation_data=None):

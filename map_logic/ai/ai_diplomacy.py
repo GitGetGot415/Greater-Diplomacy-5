@@ -272,10 +272,17 @@ def _queue_proactive_proposal(context, pending, ai_name, target, action,
     spec = PROACTIVE_PROPOSALS[action]
     # Who it is being said to decides how it is said: a nation that knows it is
     # outmatched declares war differently from one that knows it is not.
+    # An access request's {enemy} names the war it is for: a bare "we share an
+    # enemy" left Italy to guess, and it guessed its own war. A line that needs
+    # it and has none falls back to the spec's plain sentence.
+    named = action == "REQ_MILITARY_ACCESS" and context_target
     fallback = ai_prompts.resolve(spec.fallback_key, sender=ai_name, target=target,
                                   nation_data=world_state.nation_data,
                                   map_data=world_state.map_data,
-                                  default=spec.fallback)
+                                  default=spec.fallback,
+                                  fmt={"enemy": context_target} if named else None)
+    if "{enemy}" in fallback:
+        fallback = spec.fallback
 
     # What the leader actually says. For every action but one this is also what
     # gets queued, so it was written straight into `message` and nowhere else.
@@ -688,22 +695,24 @@ def _request_access_from_co_belligerents(bag, context, ai_name, my_enemies, acti
     passage if they're both fighting the same enemy, so allied fronts can
     actually link up."""
     world_state = world_for(context)
-    co_belligerents = []
-    for enemy in my_enemies:
+    # Each co-belligerent with the enemy we share, which the proposal names.
+    co_belligerents = {}
+    for enemy in sorted(my_enemies):
         if enemy not in active_nations: continue
-        for co in queries.get_enemies(enemy, world_state.nation_data):
+        for co in sorted(queries.get_enemies(enemy, world_state.nation_data)):
             if co == ai_name or co not in active_nations: continue
             if co in co_belligerents: continue
             if co in my_enemies: continue
             if not queries.needs_military_access_request(ai_name, co, world_state.nation_data): continue
-            co_belligerents.append(co)
+            co_belligerents[co] = enemy
 
-    for co in co_belligerents:
+    for co, enemy in co_belligerents.items():
         if not ai_candidates.not_on_cooldown(world_state.nation_data, ai_name, co, "REQ_MILITARY_ACCESS"):
             continue
         bag.add(ai_candidates.make(
             "REQ_MILITARY_ACCESS", co, c.AI_SCORE_MILITARY_ACCESS,
-            "we fight the same enemy and our fronts cannot link up without passage"))
+            "we fight the same enemy and our fronts cannot link up without passage",
+            context_target=enemy))
 
 
 def _join_faction_wars_proactively(bag, context, ai_name, my_faction, my_enemies,
@@ -981,12 +990,22 @@ def _offer_own_initiatives(bag, context, ai_name, pending, active_nations, world
     # One faction request at a time, as toggle_diplomacy_action requires of a player.
     asking_already = any(isinstance(info, dict) and info.get("action") in c.FACTION_REQUEST_ACTIONS
                          for info in pending.values())
+    enemies = sorted(e for e in queries.get_enemies(ai_name, nation_data) if e in active_nations)
 
     for other in ai_letters.correspondents(nation_data, ai_name, active_nations):
         alliance = ai_opinion.alliance_appetite(world, ai_name, other, settings)
         worth = f"our staff rate a bloc with them at {alliance:.2f}"
-        offers = [("FACTION_INVITE", alliance, worth, {}),
-                  ("REQ_MILITARY_ACCESS", 0.0, "passage through their territory", {})]
+        offers = [("FACTION_INVITE", alliance, worth, {})]
+
+        # Access only where it leads to a war. Offered to every correspondent,
+        # it was the free pick on every menu: in the extensive testing save
+        # about half of all access requests went between countries with no
+        # enemy to reach, one "to discuss Germany's aggressive wars".
+        reachable = next((e for e in enemies
+                          if e != other and e in world.neighbors.get(other, ())), None)
+        if reachable:
+            offers.append(("REQ_MILITARY_ACCESS", 0.0, f"they border {reachable}, our enemy",
+                           {"context_target": reachable}))
         if not asking_already:
             offers += [("JOIN_FACTION_REQ", alliance, worth, {}),
                        ("CREATE_FACTION", alliance, worth, {})]

@@ -22,6 +22,7 @@ import hashlib
 
 import data.constants as c
 from data import queries
+from data.state_access import world_for
 
 from map_logic.diplomacy.action_definitions import availability
 from map_logic.ai import ai_personality, ai_unit_eval
@@ -53,12 +54,31 @@ def is_initiative(candidate):
     return bool(candidate.payload.get("initiative"))
 
 
+def mirrors_waiting_proposal(nation_data, nation, target, action):
+    """Whether `target` has already proposed the mirror of `action` to `nation`.
+
+    Only a delivered proposal counts (turns >= 1): one still being drafted this
+    turn has not reached `nation`, and must not warn it. The answer to the
+    delivered one comes later in the same turn, from a separate call, so
+    France refused the Soviet Union's request for access and asked it for
+    access in one turn, and the Reich accepted Italy's offer to join its wars
+    while calling Italy to arms.
+    """
+    mirrors = c.AI_MIRRORED_PROPOSALS.get(action)
+    if not mirrors:
+        return False
+    request = ((nation_data.get(target) or {}).get("pending_diplomacy") or {}).get(nation)
+    return (isinstance(request, dict) and request.get("turns", 0) >= 1
+            and request.get("action") in mirrors)
+
+
 class Collector:
     """Gathers one nation's options for the turn.
 
     Deliberately dumb about legality: a section decides whether an action is
     allowed, exactly as it always did, and this only refuses to hold two
-    proposals aimed at the same nation.
+    proposals aimed at the same nation, or one that mirrors a proposal waiting
+    for this nation's answer (mirrors_waiting_proposal).
     """
 
     def __init__(self, nation, pending, *, context=None):
@@ -73,6 +93,10 @@ class Collector:
             return False
         if self.context is not None:
             if not availability(self.context, self.nation, candidate.target, candidate.action).allowed:
+                return False
+            world = world_for(self.context)
+            nation_data = world if isinstance(world, dict) else getattr(world, "nation_data", {})
+            if mirrors_waiting_proposal(nation_data, self.nation, candidate.target, candidate.action):
                 return False
         return self._target_is_free(candidate.target)
 
@@ -139,12 +163,24 @@ class Collector:
 INITIATIVE_NOTE = "your own initiative, not a staff proposal"
 
 
+def effect(candidate):
+    """What the option does, in a few words (c.AI_ACTION_EFFECTS), or ""."""
+    text = c.AI_ACTION_EFFECTS.get(candidate.action, "")
+    if "{enemy}" in text:
+        enemy = (candidate.payload.get("context_target")
+                 or c.AI_ACTION_EFFECT_ENEMY.get(candidate.action, "your enemies"))
+        text = text.replace("{enemy}", enemy)
+    return text
+
+
 def describe(candidate):
     """One line for a prompt or a log entry."""
     verb = c.AI_ACTION_PHRASES.get(candidate.action, candidate.action.replace("_", " ").lower())
+    does = effect(candidate)
+    head = f"{verb} {candidate.target}" + (f" ({does})" if does else "")
     if is_initiative(candidate):
-        return f"{verb} {candidate.target} -- {INITIATIVE_NOTE} -- {candidate.rationale}"
-    return f"{verb} {candidate.target} -- staff rating {candidate.score:.2f} -- {candidate.rationale}"
+        return f"{head} -- {INITIATIVE_NOTE} -- {candidate.rationale}"
+    return f"{head} -- staff rating {candidate.score:.2f} -- {candidate.rationale}"
 
 
 def _haggle(nation, partner, turn, spread=c.AI_TRADE_JITTER):
