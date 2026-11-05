@@ -946,6 +946,46 @@ class BattleEditorTests(BattleScreenTestCase):
                 unit_actions.apply_battle_orders(self.map, self.a, self.province, changes)
             self.assertEqual(self.province["units"], before)
 
+    def test_horizontal_front_scrollbars_reach_empty_slots_and_allow_drops(self):
+        self.enterContext(mock.patch.object(combat_rules, "combat_width_for_terrain", return_value=120))
+        screen = self.editor()
+        _rect, unit = self.own_row(screen, battle_screen.PANE_FRONT)
+        self.assertTrue(screen.drop_unit(unit, battle_screen.PANE_RESERVE))
+        pane = battle_screen.PANE_FRONT
+        initially_visible = {index for rect, index in screen.empty_slots[pane]
+                             if screen.regions[pane].collidepoint(rect.center)}
+        before = copy.deepcopy(self.province["units"])
+        positions = {index: list(slots) for index, slots in screen.front_slots.items()}
+        for pane in (battle_screen.PANE_FRONT, battle_screen.PANE_ENEMY):
+            screen.draw(self.surface)
+            other_scrolls = {name: screen.pane_scroll(name) for name in screen.regions if name != pane}
+            with mock.patch.object(pygame.mouse, "get_pos", return_value=screen.regions[pane].center):
+                screen.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=-1)])
+            self.assertLess(screen.pane_scroll(pane), 0)
+            screen.draw(self.surface)
+            track = getattr(screen, screen.scroll_attrs(pane)["track_attr"])
+            self.assertIsNotNone(track)
+            pos = (track.right - 1, track.centery)
+            screen.handle_events([
+                pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=pos, button=1),
+                pygame.event.Event(pygame.MOUSEBUTTONUP, pos=pos, button=1)])
+            self.assertEqual(screen.pane_scroll(pane), screen.pane_scroll_limit(pane))
+            self.assertEqual(other_scrolls, {name: screen.pane_scroll(name) for name in other_scrolls})
+        self.assertEqual(self.province["units"], before)
+        self.assertEqual(screen.front_slots, positions)
+
+        pane = battle_screen.PANE_FRONT
+        target, index = next((rect.center, index) for rect, index in screen.empty_slots[pane]
+                             if index not in initially_visible
+                             and screen.regions[pane].collidepoint(rect.center))
+        source = next(rect.center for rect, (candidate, _note)
+                      in screen.row_paint[battle_screen.PANE_RESERVE] if candidate is unit)
+        screen.handle_events([
+            pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=source, button=1),
+            pygame.event.Event(pygame.MOUSEBUTTONUP, pos=target, button=1)])
+        lane, _near, _far = screen.current()
+        self.assertIs(screen.front_slots[lane.index][index], unit)
+
     def test_reserve_scrollbar_browses_cards_without_changing_orders(self):
         from screens.game.battle_editor import PANE_ENEMY_RESERVE
         library = queries.get_unit_library()

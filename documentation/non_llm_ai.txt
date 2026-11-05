@@ -332,12 +332,14 @@ Help explains dragging, held units, automatic filling, Organize, and the outlook
 The outlook shows the selected lane's expected winner and duration using the
 same forecast as Manage Battle. The forecast uses
 normal combat assignment, including reserves and automatic filling, and refreshes
-when the selected lane or orders change. Unit cards fill the opposing front grids;
+when the selected lane or orders change. Front-line cards use the same width as
+reserve and held cards. Unit cards fill the opposing front grids;
 their usable slot counts come from the selected lane's actual combat width.
 Front grids show at least ten spaces; spaces beyond the lane's capacity are
-gray, disabled, and cannot receive units. Front slots fill each column from
-top to bottom before moving to the next column on the right. Reserve grids
-and overflowing front grids scroll with their own scrollbars and mouse wheel.
+gray, disabled, and cannot receive units. Front grids keep two rows and at least
+five columns. Front slots fill each column before moving to the next column.
+Overflowing fronts scroll horizontally; reserve and held grids scroll vertically.
+Each grid has its own scrollbar and mouse wheel scrolling.
 Your side's bottom area has Reserves on the left and Held on the right, each
 with its own scrollbar. The enemy's top area has the same two read-only
 categories, using only visible troops. Real-time snapshots share visible

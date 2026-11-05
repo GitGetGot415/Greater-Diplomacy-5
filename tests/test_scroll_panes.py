@@ -146,6 +146,55 @@ class WheelRoutingTests(unittest.TestCase):
         self.assertFalse(self.screen.route_pane_scroll(wheel(-1)))
 
 
+class HorizontalPaneTests(unittest.TestCase):
+    def setUp(self):
+        pygame.init()
+        self.screen = TwoPaneScreen()
+        self.screen.pane_scroll_axis = lambda name: "x" if name == "left" else "y"
+        self.screen._max_left = -300
+        self.screen._max_right = -300
+        self.screen._content_left = self.screen.left
+
+    def test_horizontal_and_vertical_wheels_pan_only_the_horizontal_pane(self):
+        with mock.patch.object(pygame.mouse, "get_pos", return_value=self.screen.left.center):
+            for event in (wheel(-1), pygame.event.Event(pygame.MOUSEWHEEL, x=1, y=0)):
+                previous = self.screen.pane_scroll("left")
+                self.assertTrue(self.screen.route_pane_scroll(event))
+                self.assertLess(self.screen.pane_scroll("left"), previous)
+                self.assertEqual(self.screen.pane_scroll("right"), 0)
+
+    def test_horizontal_scrollbar_reaches_both_ends(self):
+        surface = pygame.Surface((400, 400))
+        track, _handle = self.screen.draw_pane_scrollbar(surface, "left", 0, 285, 200)
+        pos = (track.right - 1, track.centery)
+        self.screen.route_pane_scroll(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=pos, button=1))
+        self.screen.route_pane_scroll(pygame.event.Event(pygame.MOUSEBUTTONUP, pos=pos, button=1))
+        self.assertEqual(self.screen.pane_scroll("left"), -300)
+        track, handle = self.screen.draw_pane_scrollbar(surface, "left", 0, 285, 200)
+        self.screen.route_pane_scroll(
+            pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=handle.center, button=1))
+        self.screen.route_pane_scroll(pygame.event.Event(
+            pygame.MOUSEMOTION, pos=(track.left, track.centery), rel=(-200, 0), buttons=(1, 0, 0)))
+        self.screen.route_pane_scroll(pygame.event.Event(
+            pygame.MOUSEBUTTONUP, pos=(track.left, track.centery), button=1))
+        self.assertEqual(self.screen.pane_scroll("left"), 0)
+        self.assertFalse(self.screen._drag_left)
+        self.assertEqual(self.screen.pane_scroll("right"), 0)
+
+    def test_horizontal_content_drag_follows_the_pointer(self):
+        self.screen._scroll_left = -150
+        self.screen.route_pane_scroll(pygame.event.Event(
+            pygame.MOUSEBUTTONDOWN, pos=(50, 150), button=1))
+        self.screen.route_pane_scroll(pygame.event.Event(
+            pygame.MOUSEMOTION, pos=(80, 150), rel=(30, 0), buttons=(1, 0, 0)))
+        self.assertEqual(self.screen.pane_scroll("left"), -120)
+        self.screen.route_pane_scroll(pygame.event.Event(
+            pygame.MOUSEMOTION, pos=(60, 150), rel=(-20, 0), buttons=(1, 0, 0)))
+        self.assertEqual(self.screen.pane_scroll("left"), -140)
+        self.screen.route_pane_scroll(pygame.event.Event(
+            pygame.MOUSEBUTTONUP, pos=(60, 150), button=1))
+
+
 class AddPaneRowTests(unittest.TestCase):
     def setUp(self):
         pygame.init()

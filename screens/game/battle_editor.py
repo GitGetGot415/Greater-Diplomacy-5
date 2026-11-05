@@ -34,9 +34,11 @@ AUTOMATION_W = 156
 AUTOMATION_BUTTON_H = 36
 CARD_H = 58
 CARD_MAX_W = 190
-CARD_MIN_W = 128
 FRONT_GRID_MIN_SLOTS = 10
+FRONT_GRID_ROWS = 2
 SCROLLBAR_W = 15
+FRONT_SCROLLBAR_H = 9
+FRONT_SCROLLBAR_BOTTOM_INSET = 1
 LANE_ROW_H = 42
 PANEL_BORDER = MESSAGE_PANEL_STYLES['contacts']['color']
 ARENA_OPACITY = 180
@@ -325,16 +327,19 @@ class BattleEditorScreen(ScrollPanes, Screen):
             # Extra wells are presentation only; front_slots retains the real capacity.
             count = max(FRONT_GRID_MIN_SLOTS, count)
         available_w = rect.width - SCROLLBAR_W - GAP
-        max_columns = max(1, (available_w + GAP) // (CARD_MIN_W + GAP))
-        if slots is None:
-            columns = max(1, (available_w + GAP) // (CARD_MAX_W + GAP))
-        else:
-            columns = min(max_columns, max(1, math.ceil(count / 2)))
+        # Match reserve/held card widths while keeping fronts in two rows.
+        columns = max(1, (available_w + GAP) // (CARD_MAX_W + GAP))
         card_w = min(CARD_MAX_W, (available_w - (columns - 1) * GAP) // columns)
-        rows = math.ceil(count / columns)
         attrs = self.scroll_attrs(pane)
-        limit = min(0, rect.height - rows * (CARD_H + GAP) + GAP)
+        if slots is not None:
+            rows = FRONT_GRID_ROWS
+            columns = math.ceil(count / rows)
+            limit = min(0, rect.width - columns * (card_w + GAP) + GAP)
+        else:
+            rows = math.ceil(count / columns)
+            limit = min(0, rect.height - rows * (CARD_H + GAP) + GAP)
         setattr(self, attrs['attr'], max(limit, min(0, self.pane_scroll(pane))))
+        setattr(self, attrs['limit_attr'], limit)
         self.row_paint[pane] = []
         self.slot_rects[pane] = []
         self.empty_slots[pane] = []
@@ -342,16 +347,25 @@ class BattleEditorScreen(ScrollPanes, Screen):
         self.slot_surfaces[pane] = self._slot_surface(pane, (card_w, CARD_H))
         if slots is not None and count > slots:
             self.disabled_slot_surfaces[pane] = self._slot_surface(pane, (card_w, CARD_H), disabled=True)
-        for grid_row, y in self.layout_list_rows(
+        if slots is not None:
+            grid_rows = ((row, rect.y + row * (CARD_H + GAP)) for row in range(rows))
+        else:
+            grid_rows = self.layout_list_rows(
                 rows, CARD_H + GAP, rect.y, view_h=rect.height, pad=-GAP,
                 cull_top=rect.top, cull_bottom=rect.bottom,
-                attr=attrs['attr'], limit_attr=attrs['limit_attr']):
+                attr=attrs['attr'], limit_attr=attrs['limit_attr'])
+        for grid_row, y in grid_rows:
             for column in range(columns):
                 # Fronts fill down each column before moving right; reserves fill across rows.
                 index = column * rows + grid_row if slots is not None else grid_row * columns + column
                 if index >= count:
                     break
-                card_rect = pygame.Rect(rect.x + column * (card_w + GAP), y, card_w, CARD_H)
+                x = rect.x + column * (card_w + GAP)
+                if slots is not None:
+                    x += self.pane_scroll(pane)
+                    if x + card_w <= rect.left or x >= rect.right:
+                        continue
+                card_rect = pygame.Rect(x, y, card_w, CARD_H)
                 if slots is not None and index >= slots:
                     self.disabled_slots[pane].append(card_rect)
                     continue
@@ -621,6 +635,9 @@ class BattleEditorScreen(ScrollPanes, Screen):
         return next(((rect, unit) for rect, (unit, _note) in self.row_paint.get(pane, ())
                      if rect.collidepoint(pos)), None)
 
+    def pane_scroll_axis(self, name):
+        return "x" if name in (PANE_FRONT, PANE_ENEMY) else "y"
+
     def handle_events(self, events):
         for event in events:
             if self.done or self._exit_confirmation_open or self._organize_confirmation_open:
@@ -668,8 +685,13 @@ class BattleEditorScreen(ScrollPanes, Screen):
 
     def draw_foreground(self, surface):
         for pane, rect in self.regions.items():
-            self.draw_pane_scrollbar(surface, pane, rect.right - SCROLLBAR_W,
-                                     rect.top, rect.height, width=SCROLLBAR_W)
+            if self.pane_scroll_axis(pane) == "x":
+                self.draw_pane_scrollbar(surface, pane, rect.left,
+                                         rect.bottom - FRONT_SCROLLBAR_H - FRONT_SCROLLBAR_BOTTOM_INSET,
+                                         rect.width, width=FRONT_SCROLLBAR_H)
+            else:
+                self.draw_pane_scrollbar(surface, pane, rect.right - SCROLLBAR_W,
+                                         rect.top, rect.height, width=SCROLLBAR_W)
             pygame.draw.line(surface, PANEL_BORDER, (rect.left, rect.bottom),
                              (rect.right - 1, rect.bottom))
         if self.drag_surface is not None:

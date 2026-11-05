@@ -300,9 +300,10 @@ class Screen:
         for drag_attr in self._armed_drag_attrs:
             setattr(self, drag_attr, None)
 
-    def scroll_by(self, event, attr="scroll_y", limit_attr="max_scroll", speed=None):
+    def scroll_by(self, event, attr="scroll_y", limit_attr="max_scroll", speed=None, axis="y"):
         """Applies a wheel event to a negative-range scroll offset and clamps it."""
-        step = event.y * (self.scroll_speed if speed is None else speed)
+        delta = -event.x if axis == "x" and event.x else event.y
+        step = delta * (self.scroll_speed if speed is None else speed)
         limit = getattr(self, limit_attr, 0)
         setattr(self, attr, max(limit, min(0, getattr(self, attr, 0) + step)))
         self.refresh_ui()
@@ -314,7 +315,7 @@ class Screen:
 
     def handle_list_scroll(self, event, speed=None, attr="scroll_y", limit_attr="max_scroll",
                            track_attr="scroll_track_rect", handle_attr="scroll_handle_rect",
-                           drag_attr="is_dragging_scrollbar", content_rect_attr=None):
+                           drag_attr="is_dragging_scrollbar", content_rect_attr=None, axis="y"):
         """Drives a scrollable list: wheel, scrollbar grab, drag and release.
 
         Track geometry is read off the rect the screen published when it drew
@@ -323,9 +324,11 @@ class Screen:
 
         Pass `content_rect_attr` (the same rect the list clips to) to also let
         the user grab the list body itself and drag it -- see handle_content_drag.
+        `axis="x"` uses a horizontal scrollbar and accepts either wheel axis.
         """
         if event.type == pygame.MOUSEWHEEL:
-            self.scroll_by(event, attr, limit_attr, self.list_scroll_speed if speed is None else speed)
+            self.scroll_by(event, attr, limit_attr,
+                           self.list_scroll_speed if speed is None else speed, axis=axis)
             return True
 
         if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
@@ -364,14 +367,20 @@ class Screen:
         if grabbing_scrollbar or getattr(self, drag_attr, False):
             setattr(self, content_drag_attr, None)
         elif content_rect_attr and self.handle_content_drag(event, attr, limit_attr, content_rect_attr,
-                                                             drag_attr=content_drag_attr):
+                                                             drag_attr=content_drag_attr, axis=axis):
             return True
 
         if not track:
             return False
 
-        def snap_to(mouse_y):
-            self.snap_scroll(mouse_y, track.top, track.height, attr, limit_attr)
+        def snap_to(pos):
+            if axis == "x":
+                value = ui_bars.calculate_scroll_snap_horizontal(
+                    pos[0], 0, -getattr(self, limit_attr, 0), track.left, track.width)
+                setattr(self, attr, -value)
+                self.refresh_ui()
+            else:
+                self.snap_scroll(pos[1], track.top, track.height, attr, limit_attr)
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if handle and handle.collidepoint(event.pos):
@@ -379,10 +388,10 @@ class Screen:
                 return True
             if track.collidepoint(event.pos):
                 setattr(self, drag_attr, True) # Clicking the bare track jumps to that spot
-                snap_to(event.pos[1])
+                snap_to(event.pos)
                 return True
         elif event.type == pygame.MOUSEMOTION and getattr(self, drag_attr, False):
-            snap_to(event.pos[1])
+            snap_to(event.pos)
             return True
 
         return False
@@ -555,16 +564,21 @@ class Screen:
     def draw_list_scrollbar(self, surface, track_x, track_y, view_h, width=15,
                             attr="scroll_y", limit_attr="max_scroll",
                             track_attr="scroll_track_rect", handle_attr="scroll_handle_rect",
-                            drag_attr=None, content_rect_attr=None):
+                            drag_attr=None, content_rect_attr=None, axis="y"):
         """Draws the list scrollbar and publishes its rects for handle_list_scroll.
 
         Accepts (and ignores) drag_attr/content_rect_attr so a screen can keep
         one dict of attribute names and hand it to both this and handle_list_scroll.
+        For `axis="x"`, view_h is the track length and width is its height.
         """
-        track, handle = ui_bars.draw_standard_scrollbar(
-            surface, getattr(self, attr, 0), getattr(self, limit_attr, 0),
-            track_x, track_y, view_h, width
-        )
+        if axis == "x":
+            track, handle = ui_bars.draw_standard_scrollbar_horizontal(
+                surface, -getattr(self, attr, 0), 0, -getattr(self, limit_attr, 0),
+                track_x, track_y, view_h, width)
+        else:
+            track, handle = ui_bars.draw_standard_scrollbar(
+                surface, getattr(self, attr, 0), getattr(self, limit_attr, 0),
+                track_x, track_y, view_h, width)
         setattr(self, track_attr, track)
         setattr(self, handle_attr, handle)
         return track, handle

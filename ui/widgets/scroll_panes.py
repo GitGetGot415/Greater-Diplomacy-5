@@ -59,6 +59,10 @@ class ScrollPanes:
     def pane_scroll_limit(self, name):
         return getattr(self, f"_max_{name}", 0)
 
+    def pane_scroll_axis(self, name):
+        """Screens can opt individual panes into horizontal scrolling."""
+        return "y"
+
     def pane_rows(self, name, count, top, view_h, row_h=None):
         """Yields (index, y) for the rows of `name` that are worth drawing.
 
@@ -92,12 +96,14 @@ class ScrollPanes:
             pos = pygame.mouse.get_pos()
             for name, rect in rects.items():
                 if rect and rect.collidepoint(pos):
-                    self.handle_list_scroll(event, **self.scroll_attrs(name))
+                    self.handle_list_scroll(event, axis=self.pane_scroll_axis(name),
+                                            **self.scroll_attrs(name))
                     return True
             return False
 
         for name in rects:
-            if self.handle_list_scroll(event, **self.scroll_attrs(name)):
+            if self.handle_list_scroll(event, axis=self.pane_scroll_axis(name),
+                                       **self.scroll_attrs(name)):
                 return True
         return False
 
@@ -138,4 +144,5 @@ class ScrollPanes:
     def draw_pane_scrollbar(self, surface, name, track_x, track_y, view_h, width=15):
         """Scrollbar for one pane, wired to the same attributes as its rows."""
         return self.draw_list_scrollbar(surface, track_x, track_y, view_h, width=width,
+                                        axis=self.pane_scroll_axis(name),
                                         **self.scroll_attrs(name))
