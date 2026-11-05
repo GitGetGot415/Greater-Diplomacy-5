@@ -115,3 +115,10 @@ These rules override the default capitalization and punctuation guidance for tha
 | Display oil cost and defense even when their values are zero. | show oil cost and defense even when they're zero |
 | This is a review only. Do not change any files. | this is just a review, don't actually change anything |
 | AGENTS.md should link to the writing guide. | AGENTS.md should link to the writing guide |
+
+### Exceptions
+
+- Category titles should be excluded from this style of wriring, for example:
+
+> ### This is a Properly Written Title where Punctuation and Capitalization are kept
+> casual english goes here for the description

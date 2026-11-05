@@ -4,6 +4,8 @@ This file explains how a newer game opens data from an older Greater Diplomacy 5
 "Migration" means this conversion.
 This file is the primary guide. It has the full rules, the list of current conversion rules, and the procedure to add a rule.
 
+For update checklists, see [the AI guide](how_to_update.txt) or [the human release guide](how_to_update_human.txt).
+
 Imports from Greater Diplomacy 4 (GD4) and Greater Diplomacy Hex Edition are not migrations.
 Those are separate games. Their translation modules are in `map_logic/imports/`.
 
