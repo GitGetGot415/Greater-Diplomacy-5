@@ -11,6 +11,7 @@ working.
 
 from map_logic.diplomacy.action_definitions import LITE_RESPONSE_KEYS
 import collections
+import re
 
 import data.constants as c
 from map_logic.ai import ai_opinion, ai_settings, ai_world
@@ -266,7 +267,7 @@ def get_world_context(nation_data, active_nations, ai_nation, target_nation=None
     return ai_prompts.build_world_context(
         current_date, ai_nation, ', '.join(sorted(active_nations)),
         manpower, materials, politics_str, events_str, target_context_str, target_nation,
-        relations_str, _standing(nation_data, active_nations, ai_nation, world),
+        relations_str, _standing(nation_data, active_nations, ai_nation, world, current_date),
         _target_label(nation_data, active_nations, ai_nation, target_nation) if target_nation else ""
     )
 
@@ -313,7 +314,64 @@ def labelled(nation_data, nation, other):
     return f"{other} ({standing})" if standing else other
 
 
-def _standing(nation_data, active_nations, nation, world=None):
+_MONTHS = ("January", "February", "March", "April", "May", "June", "July",
+           "August", "September", "October", "November", "December")
+
+
+def _day_number(date):
+    """A date string as time_handler writes it ("30 September, 1939 AD"), as a
+    count of days, or None. The game's calendar has twelve 30-day months."""
+    found = re.match(r"\s*(\d+)\s+([A-Za-z]+),\s*(\d+)\s*(AD|BC)?", str(date or ""))
+    if not found or found.group(2) not in _MONTHS:
+        return None
+    year = int(found.group(3)) * (-1 if found.group(4) == "BC" else 1)
+    return year * 360 + _MONTHS.index(found.group(2)) * 30 + int(found.group(1))
+
+
+#: Turns of slack between a declaration's date and the war's recorded start:
+#: the declaration is dated when it is sent, and war_durations starts counting
+#: when the war is processed.
+_WAR_START_SLACK_TURNS = 2
+
+
+def war_origin(nation_data, nation, enemy, current_date=None, days_per_turn=None):
+    """("they" or "you", date) for the declaration that began this war, or None.
+
+    Read from the newest WAR_DECLARATION between the two in `nation`'s mailbox,
+    so it needs no new state. Only the declarer's message carries that action.
+    Lithuania, declared on by the Soviet Union, wrote to the Soviet Union of
+    "the declaration of war by Poland": its prompt said who it was fighting but
+    not who began it, and the declaration had left the world events.
+
+    None when it cannot be told: no declaration between the two (a war joined
+    through an ally), one that has aged out of the mailbox, or one older than
+    the current war (war_durations), which belongs to an earlier war between
+    them. Without a current date the age check cannot run, so it is None too.
+    """
+    today = _day_number(current_date)
+    if today is None:
+        return None
+    data = nation_data.get(nation) or {}
+    duration = (data.get("war_durations") or {}).get(enemy, 0)
+    earliest = today - (duration + _WAR_START_SLACK_TURNS) * (days_per_turn or c.DEFAULT_DAYS_PER_TURN)
+    for msg in data.get("inbox") or []:
+        if msg.get("action") != "WAR_DECLARATION":
+            continue
+        sender = msg.get("sender", "")
+        if sender == enemy:
+            who = "they"
+        elif sender == f"To: {enemy}":
+            who = "you"
+        else:
+            continue
+        declared = _day_number(msg.get("date"))
+        if declared is None or declared < earliest:
+            return None
+        return who, msg.get("date")
+    return None
+
+
+def _standing(nation_data, active_nations, nation, world=None, current_date=None):
     """The country's own neighbors, faction, wars, master, and puppets, stated outright.
 
     The politics block holds the alliances for every country, but a small model
@@ -347,7 +405,17 @@ def _standing(nation_data, active_nations, nation, world=None):
     else:
         lines.append("You are in no faction.")
     wars = [w for w in sorted(queries.get_enemies(nation, nation_data)) if w in active_nations]
-    lines.append(f"You are at war with: {', '.join(wars)}." if wars else "You are at war with nobody.")
+    days_per_turn = queries.get_days_per_turn(getattr(world, "scenario_settings", None))
+    named = []
+    for enemy in wars:
+        origin = war_origin(nation_data, nation, enemy, current_date, days_per_turn)
+        if origin is None:
+            named.append(enemy)
+        elif origin[0] == "they":
+            named.append(f"{enemy} (it declared war on you on {origin[1]})")
+        else:
+            named.append(f"{enemy} (you declared war on it on {origin[1]})")
+    lines.append(f"You are at war with: {', '.join(named)}." if wars else "You are at war with nobody.")
     master = data.get("master", "")
     if master:
         lines.append(f"You are a puppet state of {master}.")

@@ -425,6 +425,28 @@ class OllamaTests(NoNetworkTestCase):
         self.assertEqual(self.sent["payload"]["messages"],
                          [{"role": "user", "content": "world\n\nsystem"}])
 
+    def test_every_request_caps_the_reply(self):
+        """Ollama's own default is no limit: the United States' reply in the
+        named save ran until the player pressed Force Skip."""
+        self.connect(lines=[self.chunk('{"message": "ok"}')])
+        ai_handler.call_ollama("s", "u")
+        self.assertEqual(self.sent["payload"]["options"]["num_predict"],
+                         ai_handler.OLLAMA_MAX_REPLY_TOKENS)
+
+    def test_a_reply_cut_off_at_the_cap_is_a_provider_error(self):
+        ended = (json.dumps({"message": {"content": ""}, "done": True,
+                             "done_reason": "length"}) + "\n").encode("utf-8")
+        self.connect(lines=[self.chunk('{"letters": [{"to": "A", "text": "and so on'), ended])
+        result = ai_handler.call_ollama("s", "u")
+        self.assertTrue(result["error"])
+        self.assertIn("ran past", result["message"])
+
+    def test_the_cap_has_room_for_the_longest_reply(self):
+        """A letter sitting: two letters and a notebook, at roughly four
+        characters to a token."""
+        longest = c.AI_LETTERS_PER_CALL * c.AI_LETTER_LENGTH + c.AI_NOTEBOOK_LENGTH
+        self.assertGreater(ai_handler.OLLAMA_MAX_REPLY_TOKENS, longest / 4 * 1.25)
+
     def test_every_request_keeps_the_model_loaded(self):
         """With Ollama's five-minute default, a long planning phase unloads the
         model and the next AI phase reads the whole world again."""

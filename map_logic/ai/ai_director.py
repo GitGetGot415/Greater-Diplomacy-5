@@ -116,14 +116,21 @@ def copies_menu(message, candidates):
                for note in (cand.rationale, ai_candidates.effect(cand)) if note)
 
 
-#: Words that make an offer. A war declaration made one: the Soviet Union
-#: declared war on Latvia with "we propose a peaceful transfer of the territory".
-_OFFER_TEXT = re.compile(r"\bwe (propose|offer)\b", re.IGNORECASE)
+#: Words of friendship or a deal, which no declaration of war says. The Soviet
+#: Union declared war on Latvia with "we propose a peaceful transfer of the
+#: territory", and the German Reich declared war on the Soviet Union with its
+#: notebook's plans for Slovakia: "a joint venture ... mutually beneficial ...
+#: exploring opportunities for cooperation".
+_FRIENDLY_TEXT = re.compile(
+    r"\b(propos\w*|offer\w*|cooperat\w*|co-operat\w*|mutual(ly)? benefi\w*|partnership\w*"
+    r"|joint ventures?|explor\w* (the )?(opportunit\w*|possibilit\w*|ways)|open to discuss\w*"
+    r"|friendship|strengthen\w* our (ties|bonds?|relations\w*|alliance|partnership))\b",
+    re.IGNORECASE)
 
 
-def reads_as_offer(message):
-    """Whether a message proposes or offers something."""
-    return bool(message) and bool(_OFFER_TEXT.search(message))
+def reads_as_friendly(message):
+    """Whether a message offers something, or speaks of friendship or a deal."""
+    return bool(message) and bool(_FRIENDLY_TEXT.search(message))
 
 
 def build_prompt(world, nation, candidates, limit, personality_note="", nation_data=None):
@@ -247,7 +254,7 @@ def messages_from(reply, nation=None, nation_data=None, candidates=()):
     reads as a bug. A line with placeholder or menu text is dropped the same way,
     and so is one that answers a proposal nobody made (reads_as_answer), one
     that quotes `candidates`, the menu it was chosen from (copies_menu), or a
-    war declaration's that makes an offer (reads_as_offer).
+    war declaration's that sounds friendly (reads_as_friendly).
     """
 
     if not isinstance(reply, dict):
@@ -263,7 +270,7 @@ def messages_from(reply, nation=None, nation_data=None, candidates=()):
                                                 recipient=targets.get(str(k)))
             and not reads_as_answer(v)
             and not copies_menu(v, candidates)
-            and not (str(k) in wars and reads_as_offer(v))}
+            and not (str(k) in wars and reads_as_friendly(v))}
 
 
 def parse(raw_reply, candidates, limit, nation=None, nation_data=None):

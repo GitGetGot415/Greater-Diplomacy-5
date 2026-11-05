@@ -576,6 +576,14 @@ OLLAMA_CONTEXT_TOKENS = 8192
 #: start: about 18 seconds per call instead of 5 on one local llama3.
 OLLAMA_KEEP_ALIVE = "60m"
 
+#: The most tokens Ollama may write for one reply (its num_predict option).
+#: Ollama's own default is no limit: a model that loses its way writes until it
+#: is stopped, and in the "named" save the United States' reply ran until the
+#: player pressed Force Skip. The longest reply the game asks for is a letter
+#: sitting -- AI_LETTERS_PER_CALL letters of AI_LETTER_LENGTH characters and an
+#: AI_NOTEBOOK_LENGTH notebook, about 1,100 tokens -- so this leaves room to spare.
+OLLAMA_MAX_REPLY_TOKENS = 1536
+
 #: A reply that has fallen into a loop: its last OLLAMA_REPEAT_MIN_CHARACTERS
 #: characters or more are one block of at most OLLAMA_REPEAT_MAX_BLOCK
 #: characters, repeated at least OLLAMA_REPEAT_COUNT times in a row.
@@ -629,7 +637,7 @@ def call_ollama(system_prompt, user_prompt, turn_id=None, schema=None):
         "messages": [
             {"role": "user", "content": _combined_prompt(system_prompt, user_prompt)}
         ],
-        "options": {"num_ctx": OLLAMA_CONTEXT_TOKENS},
+        "options": {"num_ctx": OLLAMA_CONTEXT_TOKENS, "num_predict": OLLAMA_MAX_REPLY_TOKENS},
         "keep_alive": OLLAMA_KEEP_ALIVE,
         "stream": True # Stream token-by-token
     }
@@ -694,6 +702,12 @@ def call_ollama(system_prompt, user_prompt, turn_id=None, schema=None):
                         # Closing the connection (below) stops the generation in Ollama.
                         return _provider_error("OLLAMA ERROR: the reply kept repeating itself, "
                                                "so the game stopped it.")
+                # Ollama ends a reply that reached num_predict with this reason.
+                # What it wrote is cut off mid-JSON, so it is reported as stopped
+                # rather than as mangled output.
+                if chunk.get("done") and chunk.get("done_reason") == "length":
+                    return _provider_error("OLLAMA ERROR: the reply ran past "
+                                           f"{OLLAMA_MAX_REPLY_TOKENS} tokens, so the game stopped it.")
 
         # Parse the final reconstructed string. Its fallback is prefixed so a
         # local model's mangled output reads as such, not as a diplomatic cable.

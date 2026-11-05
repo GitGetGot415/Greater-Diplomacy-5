@@ -176,6 +176,28 @@ class ValidationTests(NoNetworkTestCase):
             war: "You have held our land long enough. The army marches."}}, cands, 2)
         self.assertEqual(messages, {war: "You have held our land long enough. The army marches."})
 
+    def test_a_war_declaration_that_sounds_friendly_is_dropped(self):
+        """The Reich declared war on the Soviet Union with its notebook's plans
+        for Slovakia."""
+        bag = ac.Collector("A", {})
+        bag.add(ac.make("WAR_DECLARATION", "B", 0.9, "our claims", context_target="B"))
+        cands = bag.ranked()
+        for text in ("We believe a joint venture would be mutually beneficial.",
+                     "We are open to discussing the details and exploring opportunities "
+                     "for cooperation.",
+                     "We seek to strengthen our ties."):
+            with self.subTest(text=text):
+                _chosen, messages = ai_director.parse(
+                    {"picks": ["0"], "messages": {"0": text}}, cands, 1)
+                self.assertEqual(messages, {})
+
+    def test_only_a_war_declaration_is_held_to_that(self):
+        cands = candidates(("TRADE", "B", 0.4))
+        text = "We believe this exchange would be mutually beneficial."
+        _chosen, messages = ai_director.parse({"picks": ["0"], "messages": {"0": text}},
+                                              cands, 1)
+        self.assertEqual(messages, {"0": text})
+
     def test_each_option_says_what_it_does(self):
         """"call to arms Italy" alone, and the Reich called it a joint training exercise."""
         bag = ac.Collector("A", {})

@@ -163,8 +163,11 @@ ai_director.copies_menu rejects a director message that quotes its menu, word fo
 the own-initiative note, or any option's reason or effect text of at least 12 characters.
 ai_director.reads_as_answer rejects a director message that says "your proposal", "your offer", or "your terms".
 A director message is always the country's own move, so those words mean the model thought the other country had offered first.
-ai_director.reads_as_offer rejects a war declaration's message that says "we propose" or "we offer".
 Letters and replies do not use this check, because those words are normal there.
+ai_director.reads_as_friendly rejects a war declaration's message that offers something or speaks of friendship or a deal:
+words such as "propose", "offer", "cooperation", "mutually beneficial", "partnership", "joint venture",
+"exploring opportunities", "open to discussing", "friendship", and "strengthen our ties".
+A model declared war with "we propose a peaceful transfer of the territory", and another with its notebook's plans for "a joint venture".
 ai_prompts.reads_as_template rejects text with a bracketed or braced placeholder, such as "[insert resource]", or with "staff rating".
 ai_prompts.unusable_message combines that check with the third-person check, and with names_recipient when the caller passes a recipient.
 Every place that sends a model's words uses it:
@@ -248,6 +251,11 @@ date, country list, politics, and world events.
 It then adds the selected country, its territory, relations, and task.
 That country-specific part also states the country's faction and its other members as existing allies, its wars, its master, and its puppets.
 It says that faction members are bound to defend each other, so no treaty between them is needed.
+Each war names who declared it and when, as in "Soviet Union (it declared war on you on 30 September, 1939 AD)" (ai_evaluation.war_origin).
+That comes from the newest WAR_DECLARATION between the two in the country's mailbox, which only the declarer's message carries.
+A war joined through an ally has no such message, a declaration can age out of the mailbox, and one older than the current war's
+war_durations belongs to an earlier war. Those wars are listed without an origin.
+Without the origin, a country that the Soviet Union had declared war on blamed Poland, because the declaration had left the world events.
 The politics block holds the same facts, but a small model did not connect two of its lines and offered an alliance to a member of its own faction.
 With the turn's AIWorld, it also states the country's land neighbors and the countries across nearby water, from AIWorld.neighbors and AIWorld.sea_targets.
 Letters, the director, and both reply types pass that world. Scripted-event lines have none, so they omit geography.
@@ -338,6 +346,11 @@ call_ollama stops a reply that keeps repeating itself.
 That check applies when the end of the reply is one block of text, such as a sentence or whitespace, repeated at least OLLAMA_REPEAT_COUNT times.
 The reply becomes a provider error, and the caller uses its rule-based fallback.
 Without this check, a looping local model writes until its context window is full.
+
+Every Ollama request also sets num_predict to OLLAMA_MAX_REPLY_TOKENS, the most tokens one reply may have.
+Ollama's own default is no limit, so a loop that varies its text, which the repeat check misses, ran until the player used FORCE SKIP AI.
+The limit leaves room for the longest reply, a letter sitting: AI_LETTERS_PER_CALL letters of AI_LETTER_LENGTH characters and the notebook.
+A reply that reaches it ends with done_reason "length". call_ollama reports it as a provider error, and the caller uses its rule-based fallback.
 
 ai_handler.typical_call_seconds estimates request time from completed calls.
 It smooths measurements and ignores requests that the game interrupted.

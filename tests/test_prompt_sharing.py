@@ -139,6 +139,35 @@ class StandingTests(unittest.TestCase):
     def test_its_wars_are_named(self):
         self.assertIn("You are at war with: Beta.", self.tail)
 
+    def declared(self, sender, date, duration):
+        self.data["Alpha"]["inbox"] = [{"sender": sender, "action": "WAR_DECLARATION",
+                                        "date": date, "content": "War."}]
+        self.data["Alpha"]["war_durations"] = {"Beta": duration}
+        return ai_evaluation.get_world_context(self.data, set(NATIONS), "Alpha",
+                                               current_date="15 October, 1939 AD")
+
+    def test_it_is_told_who_began_each_war(self):
+        """Lithuania, declared on by the Soviet Union, blamed Poland."""
+        context = self.declared("Beta", "30 September, 1939 AD", 1)
+        self.assertIn("You are at war with: Beta (it declared war on you on "
+                      "30 September, 1939 AD).", context)
+        context = self.declared("To: Beta", "30 September, 1939 AD", 1)
+        self.assertIn("You are at war with: Beta (you declared war on it on "
+                      "30 September, 1939 AD).", context)
+
+    def test_a_declaration_from_an_earlier_war_is_not_used(self):
+        """A war that began a turn ago is not the one declared a year before."""
+        context = self.declared("Beta", "30 September, 1938 AD", 1)
+        self.assertIn("You are at war with: Beta.", context)
+
+    def test_without_a_date_or_a_declaration_the_line_is_plain(self):
+        self.data["Alpha"]["inbox"] = [{"sender": "Beta", "action": "WAR_DECLARATION",
+                                        "date": "30 September, 1939 AD"}]
+        context = ai_evaluation.get_world_context(self.data, set(NATIONS), "Alpha")
+        self.assertIn("You are at war with: Beta.", context)
+        self.assertIsNone(ai_evaluation.war_origin(self.data, "Alpha", "Gamma",
+                                                   "15 October, 1939 AD"))
+
     def test_a_reply_names_its_target_with_their_relationship(self):
         for nation in NATIONS:
             self.data[nation]["at_war_with"] = []
