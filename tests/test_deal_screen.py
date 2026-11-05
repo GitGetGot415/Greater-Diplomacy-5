@@ -215,11 +215,26 @@ class BalanceLineTests(DealScreenTestCase):
     def test_the_reading_agrees_with_the_verdict(self):
         """Both come off ai_opinion.trade_balance. A screen that prices a deal
         differently from the engine is how the old peace screen came to predict
-        the opposite of what happened."""
+        the opposite of what happened.
+
+        At peace: this fixture puts the two at war, and an AI refuses every
+        trade from an enemy whatever it is worth (see the test below).
+        """
+        for nation, other in ((self.player, self.enemy), (self.enemy, self.player)):
+            self.map.nation_data[nation]["at_war_with"].remove(other)
         screen = self.trade()
         gained, lost = ai_opinion.trade_balance(
             screen.world, self.enemy, self.player, screen.build_deal())
         self.assertEqual(gained > lost, screen.verdict_accepted)
+
+    def test_an_enemy_refuses_a_trade_however_good(self):
+        """Players may offer a trade in wartime; the AI always refuses one."""
+        screen = self.trade()
+        gained, lost = ai_opinion.trade_balance(
+            screen.world, self.enemy, self.player, screen.build_deal())
+        self.assertGreater(gained, lost)
+        self.assertFalse(screen.verdict_accepted)
+        self.assertIn("enemy", screen.verdict_text)
 
     def test_it_lists_what_will_be_sent_rather_than_what_was_typed(self):
         screen = self.screen(deal_mod.KIND_TRADE)

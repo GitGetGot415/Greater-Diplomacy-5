@@ -220,18 +220,25 @@ class ProactiveWordingTests(unittest.TestCase):
             self.nation_data = nation_data
             self.map_data = {}
 
-    def retaliate(self, message, action="CEASEFIRE"):
+    def retaliate(self, message, action="CEASEFIRE", llm=True):
+        """`llm` marks the words as the model's, as ai_evaluation._reply does.
+        A reply whose words failed the voice check carries its canned verdict
+        line with llm False, and that line suits no other move."""
         out = []
         self.dp._process_ai_retaliation(
             self.Screen(self.nation_data), ["Switzerland", "Austria"], out,
             "Switzerland",
             {"action": action, "action_target": "Austria", "message": message,
-             "follow_up_action": "NONE", "follow_up_target": "NONE"})
+             "follow_up_action": "NONE", "follow_up_target": "NONE", "llm": llm})
         return [row[4] for row in out]
 
     def test_the_leaders_own_words_are_what_gets_sent(self):
         self.assertEqual(self.retaliate("We have bled enough. Name your terms."),
                          ["We have bled enough. Name your terms."])
+
+    def test_a_canned_verdict_line_is_not_reused_for_the_move(self):
+        self.assertIn(self.retaliate("We reject your proposal.", llm=False)[0],
+                      ai_prompts.lines_for("PROACTIVE_CEASEFIRE"))
 
     def test_an_empty_reply_falls_back_to_the_canned_line(self):
         self.assertIn(self.retaliate("")[0], ai_prompts.lines_for("PROACTIVE_CEASEFIRE"))
