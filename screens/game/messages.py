@@ -26,7 +26,6 @@ from screens.game.deal_screen import open_trade_menu
 MSG_LEFT_PANE_W = 280
 MSG_INPUT_H = 80
 MSG_HEADER_H = 64
-MSG_REQUEST_H = 64
 MSG_MARGIN = 16
 MSG_CONTACT_ROW_H = 64
 MSG_NEW_CONTACT_ROW_H = 36
@@ -64,15 +63,16 @@ MSG_EXIT_EASING_POWER = 3.0
 MSG_QUEUED_BUBBLE_OPACITY = 0.5
 # Shared gradient strength: 0 is flat, 1 is the standard stepped gradient.
 MSG_BUBBLE_GRADIENT_STRENGTH = 1.0
-MSG_BOTTOM_BARS_H = MSG_REQUEST_H + MSG_INPUT_H
+MSG_BOTTOM_BARS_H = MSG_INPUT_H
 
 # Fixed controls stay above the scrollable conversation rows.
 MSG_CONTACT_LIST_TOP_Y = 128
 
-# Diplomacy buttons sit in a row above the compose box.
-MSG_DIPLO_BTN_ROW_OFFSET_Y = -MSG_REQUEST_H + 7
-MSG_DIPLO_BTN_START_X = MSG_LEFT_PANE_W + 20
-MSG_DIPLO_BTN_STEP_X = 220
+# An open offer's reply buttons sit in a row under the message that made it.
+MSG_OFFER_BUTTON_SIZE = (180, 30)
+MSG_OFFER_BUTTON_GAP = 8
+MSG_OFFER_ROW_GAP = 6
+MSG_OFFER_ROW_H = MSG_OFFER_BUTTON_SIZE[1] + MSG_OFFER_ROW_GAP
 
 MSG_BG_DARK = (25, 25, 30)
 # With no country selected the background is solid black with white text. Selecting a country
@@ -170,7 +170,11 @@ class Messages_Screen(Screen):
         self.is_dragging_contacts = False
         self.message_drag_state = None
         self.forward_button_rects = []
-        
+        # Reply buttons of the selected country's open offers, built with the
+        # thread, and the visible part of each as drawn this frame.
+        self.offer_buttons = []
+        self.offer_button_rects = []
+
         self.show_all_contacts = False
         self.contact_sort = MSG_SORT_ORDERS[0]
         self.processed_messages = []
@@ -205,6 +209,8 @@ class Messages_Screen(Screen):
         self.is_dragging_contacts = False
         self.message_drag_state = None
         self.forward_button_rects = []
+        self.offer_buttons = []
+        self.offer_button_rects = []
         self.show_all_contacts = False
         self.bar_shown = 0.0
         self.bar_target = 0.0
@@ -440,14 +446,19 @@ class Messages_Screen(Screen):
         in_thread = self.thread_rect.collidepoint((mx, my))
         if self.selected_recipient and event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION):
             clicked_action = any(rect.collidepoint((mx, my)) for rect, _ in
-                                 self.draft_edit_rects + self.forward_button_rects)
+                                 self.draft_edit_rects + self.forward_button_rects
+                                 + self.offer_button_rects)
             if not (event.type == pygame.MOUSEBUTTONDOWN and clicked_action):
                 if self.handle_content_drag(event, attr="msg_scroll_y", limit_attr="max_msg_scroll",
                                             rect_attr="thread_rect", drag_attr="message_drag_state",
                                             lo=0, hi=self.max_msg_scroll, refresh=False):
                     self.draft_edit_rects = []
                     self.forward_button_rects = []
+                    self.offer_button_rects = []
                     return
+
+        if self._handle_offer_buttons(event, (mx, my), in_thread):
+            return
         
         # --- Handle Draft Delete Clicks ---
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -530,6 +541,7 @@ class Messages_Screen(Screen):
             self.msg_scroll_y = max(0, min(self.msg_scroll_y, self.max_msg_scroll))
             self.draft_edit_rects = []
             self.forward_button_rects = []
+            self.offer_button_rects = []
 
         # --- Text Input Logic ---
         if self.selected_recipient:
@@ -541,6 +553,30 @@ class Messages_Screen(Screen):
                     self.send_message()
                 elif self.compose_text != previous_text:
                     self._prepare_composer()
+
+    def _handle_offer_buttons(self, event, pos, in_thread):
+        """Press and release an offer's reply button. True when one took the event.
+
+        The buttons move with the thread scroll, like Forward, so only the part
+        of a button drawn this frame inside the thread can be clicked.
+        """
+        if event.type not in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP) or event.button != 1:
+            return False
+        under = next((button for rect, button in reversed(self.offer_button_rects)
+                      if in_thread and rect.collidepoint(pos)), None)
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if under is None:
+                return False
+            under.handle_event(event)
+            self.message_drag_state = None
+            return True
+        pressed = [button for button in self.offer_buttons if button.is_pressed]
+        for button in pressed:
+            if button is under:
+                button.handle_event(event)
+            else:
+                button.is_pressed = False
+        return bool(pressed)
 
     def refresh_ui(self):
         self._build_ui()
@@ -577,6 +613,7 @@ class Messages_Screen(Screen):
         self.message_drag_state = None
         self.draft_edit_rects = []
         self.forward_button_rects = []
+        self.offer_button_rects = []
 
     def _bar_offsets(self):
         """Vertical shift of the top and bottom conversation bars at the current roll."""
@@ -616,7 +653,7 @@ class Messages_Screen(Screen):
         if not self.map_screen: return
         self.thread_rect = pygame.Rect(MSG_LEFT_PANE_W, MSG_HEADER_H,
                                        c.SCREEN_WIDTH - MSG_LEFT_PANE_W,
-                                       c.SCREEN_HEIGHT - MSG_HEADER_H - MSG_INPUT_H - MSG_REQUEST_H)
+                                       c.SCREEN_HEIGHT - MSG_HEADER_H - MSG_INPUT_H)
         self._prepare_thread()
         self._prepare_composer()
         unread_x = c.SCREEN_WIDTH - MSG_MARGIN - MSG_HEADER_UNREAD_W
@@ -748,77 +785,83 @@ class Messages_Screen(Screen):
         theme_button.disabled = not self.selected_recipient
         self.elements.append(theme_button)
 
-        # Ratification has its own channel. A leader can ask several members without replacing unrelated offers.
-        # Its controls take priority over ordinary bilateral replies.
-        if self.selected_recipient and self._offer_ratification_buttons():
-            return
-
-        incoming_action, incoming_turns = "", 0
-        queued_verdict, queued_action = "", ""
-        if self.selected_recipient:
-            incoming_action, incoming_turns = queries.get_diplomatic_status(self.selected_recipient, self.map_screen.player_country, self.map_screen.nation_data)
-            queued_verdict, queued_action = diplomacy_messages.get_response_status(
-                self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient)
-
-        has_offer = incoming_turns > 0 and incoming_action in c.BILATERAL_ACTIONS
-        answered = has_offer and queued_action == incoming_action
-        accepted = answered and queued_verdict == diplomacy_messages.RESPONSE_ACCEPT
-        declined = answered and queued_verdict == diplomacy_messages.RESPONSE_REJECT
-        action_name = incoming_action.replace("_", " ").title() if has_offer else ""
-        accept_label = "Undo Accept" if accepted else f"Accept {action_name}".strip()
-        decline_label = "Undo Decline" if declined else f"Decline {action_name}".strip()
-        # Replies remain independent of our outgoing diplomat's travel state.
-        editable = has_offer and not is_tactical
-        self.elements.append(self._reply_button(0, "green", accept_label,
-                                                lambda: self.accept_proposal(self.selected_recipient),
-                                                enabled=editable and not declined))
-        self.elements.append(self._reply_button(1, "red", decline_label,
-                                                lambda: self.reject_proposal(self.selected_recipient),
-                                                enabled=editable and not accepted))
-        is_peace = has_offer and incoming_action in ("PEACE_TREATY", "CEASEFIRE")
-        is_trade = has_offer and incoming_action == "TRADE"
-        view_label = "View Peace Treaty" if is_peace else "View Trade Deal" if is_trade else "View Offer"
-        view_callback = self.view_peace_treaty if is_peace else self.view_trade_deal
-        self.elements.append(self._reply_button(2, "yellow", view_label,
-                                                lambda: view_callback(self.selected_recipient),
-                                                enabled=is_peace or is_trade))
-
-    def _reply_button(self, slot, color, label, callback, *, enabled=True):
-        button = Button(MSG_DIPLO_BTN_START_X + MSG_DIPLO_BTN_STEP_X * slot,
-                        c.SCREEN_HEIGHT - MSG_INPUT_H + MSG_DIPLO_BTN_ROW_OFFSET_Y,
-                        (200, 50), color, label, callback, font_preset="button_small")
+    @staticmethod
+    def _offer_button(color, label, callback, enabled=True):
+        """One reply button. The thread positions it under its offer's message each frame."""
+        button = Button(0, 0, MSG_OFFER_BUTTON_SIZE, color, label, callback, font_preset="button_small")
         button.fit_text = True
         button.fit_single_line = True
         button.apply_state(enabled=enabled, color=color)
         return button
 
-    def _offer_ratification_buttons(self):
-        """Ratify / refuse, when the selected contact is the leader who signed.
+    def _open_offers(self):
+        """Every offer the selected country is waiting on us to answer, oldest channel first.
 
-        Returns True when it drew them, so the ordinary Accept/Reject pair for
-        that nation stays out of the way -- answering the treaty is the only
-        thing that matters while one is on the table.
+        A country can have an ordinary request open with us and, separately, a
+        treaty to ratify, so each offer carries its own reply buttons and is
+        shown under its own message. Both can be answered in the same turn.
         """
-
-        asked = ratification.pending_for(self.map_screen.nation_data,
-                                         self.map_screen.player_country)
-        if not asked or asked.get("signatory") != self.selected_recipient:
-            return False
-
-        verdict = asked.get("verdict")
+        nation_data = self.map_screen.nation_data
+        player = self.map_screen.player_country
+        target = self.selected_recipient
         editable = not self.map_screen.tactical_mode
+        offers = []
 
-        ratified = verdict == ratification.RATIFY
-        refused = verdict == ratification.REFUSE
-        self.elements.append(self._reply_button(0, "green", "Ratified (undo)" if ratified else "Ratify Treaty",
-                                                self.clear_ratification if ratified else lambda: self.answer_ratification(True),
-                                                enabled=editable and not refused))
-        self.elements.append(self._reply_button(1, "red", "Refused (undo)" if refused else "Refuse & Leave Faction",
-                                                self.clear_ratification if refused else lambda: self.answer_ratification(False),
-                                                enabled=editable and not ratified))
-        self.elements.append(self._reply_button(2, "yellow", "View Treaty",
-                                                lambda: self.view_peace_treaty(self.selected_recipient)))
-        return True
+        asked = ratification.pending_for(nation_data, player)
+        if asked and asked.get("signatory") == target:
+            verdict = asked.get("verdict")
+            ratified = verdict == ratification.RATIFY
+            refused = verdict == ratification.REFUSE
+            offers.append({
+                "action": ratification.ACTION, "request_id": None,
+                "fallback": ratification.ask_text(target, asked.get("opponent", "")),
+                "buttons": [
+                    self._offer_button("green", "Ratified (undo)" if ratified else "Ratify Treaty",
+                                       self.clear_ratification if ratified else lambda: self.answer_ratification(True),
+                                       editable and not refused),
+                    self._offer_button("red", "Refused (undo)" if refused else "Refuse & Leave Faction",
+                                       self.clear_ratification if refused else lambda: self.answer_ratification(False),
+                                       editable and not ratified),
+                    self._offer_button("yellow", "View Treaty", lambda: self.view_peace_treaty(target)),
+                ]})
+
+        action, turns = queries.get_diplomatic_status(target, player, nation_data)
+        if turns > 0 and action in c.BILATERAL_ACTIONS:
+            verdict, queued_action = diplomacy_messages.get_response_status(nation_data, player, target)
+            answered = queued_action == action
+            accepted = answered and verdict == diplomacy_messages.RESPONSE_ACCEPT
+            declined = answered and verdict == diplomacy_messages.RESPONSE_REJECT
+            name = action.replace("_", " ").title()
+            is_peace = action in ("PEACE_TREATY", "CEASEFIRE")
+            is_trade = action == "TRADE"
+            view_label = "View Peace Treaty" if is_peace else "View Trade Deal" if is_trade else "View Offer"
+            view = self.view_peace_treaty if is_peace else self.view_trade_deal
+            request = diplomacy_messages.get_pending(nation_data, target, player)
+            offers.append({
+                "action": action, "request_id": request.get("request_id"),
+                "fallback": diplomacy_messages.announcement_for(action),
+                "buttons": [
+                    # Replies remain independent of our outgoing diplomat's travel state.
+                    self._offer_button("green", "Undo Accept" if accepted else f"Accept {name}",
+                                       lambda: self.accept_proposal(target), editable and not declined),
+                    self._offer_button("red", "Undo Decline" if declined else f"Decline {name}",
+                                       lambda: self.reject_proposal(target), editable and not accepted),
+                    self._offer_button("yellow", view_label, lambda: view(target), is_peace or is_trade),
+                ]})
+        return offers
+
+    @staticmethod
+    def _made_offer(offer, msg):
+        """1 when `msg` is the message that made `offer`, 2 when it is by request ID, else 0."""
+        if (msg.get("type") != "DIPLOMACY" or msg.get("action") != offer["action"]
+                or diplomacy_messages.is_forwarded(msg)):
+            return 0
+        if not offer["request_id"]:
+            return 1
+        if msg.get("request_id") == offer["request_id"]:
+            return 2
+        # Older saves record the action but no request ID. Another ID is another request.
+        return 1 if not msg.get("request_id") else 0
 
     def answer_ratification(self, accept):
         if self.map_screen.tactical_mode:
@@ -847,15 +890,21 @@ class Messages_Screen(Screen):
         self.processed_messages = []
         self.max_msg_scroll = 0
         self.draft_edit_rects = []
+        self.offer_buttons = []
+        self.offer_button_rects = []
         self.delete_label = fonts.get("small").render("X", True, (255, 255, 255))
         if not self.selected_recipient:
             return
 
         p_data = self.map_screen.nation_data.get(self.map_screen.player_country, {})
         inbox = p_data.get("inbox", [])
-        
+
         display_thread = []
         archived_terms = False
+        # Each open offer's reply buttons go under the newest message that made it.
+        offers = self._open_offers()
+        for offer in offers:
+            offer["at"], offer["rank"] = None, 0
 
         # 1. Build thread with historical messages (reversed so oldest is at index 0)
         for msg in reversed(inbox):
@@ -916,6 +965,14 @@ class Messages_Screen(Screen):
                         "forward_source": None,
                     })
 
+                # Under the message's last bubble, its terms included. A match
+                # by request ID beats one by action alone; newer beats older.
+                if not is_player and display_thread:
+                    for offer in offers:
+                        rank = self._made_offer(offer, msg)
+                        if rank and rank >= offer["rank"]:
+                            offer["at"], offer["rank"] = len(display_thread) - 1, rank
+
         # Saves made before the terms were recorded on the message still have
         # them on the sender's pending entry, which is the only place they ever
         # lived. Read from there when the thread carried none.
@@ -923,14 +980,32 @@ class Messages_Screen(Screen):
             self.map_screen.nation_data, self.selected_recipient, self.map_screen.player_country)
         if (not archived_terms and their_offer.get("action") == "TRADE"
                 and their_offer.get("turns", 0) > 0):
-            for line in diplomacy_messages.describe_trade(
-                    their_offer.get("parameters"),
-                    nation_data=self.map_screen.nation_data):
+            legacy_lines = diplomacy_messages.describe_trade(
+                their_offer.get("parameters"),
+                nation_data=self.map_screen.nation_data)
+            for line in legacy_lines:
                 display_thread.append({
                     "content": line, "is_player": False, "is_draft": False,
                     "is_diplo": True, "date": "", "forwarded_header": [],
                     "forward_source": None,
                 })
+            if legacy_lines:
+                for offer in offers:
+                    if offer["action"] == "TRADE":
+                        offer["at"] = len(display_thread) - 1
+
+        # An offer whose message is gone (trimmed from a long inbox, or lost)
+        # still gets a bubble to answer it under, in its usual words.
+        for offer in offers:
+            if offer["at"] is None:
+                display_thread.append({
+                    "content": offer["fallback"], "is_player": False, "is_draft": False,
+                    "is_diplo": True, "date": "", "forwarded_header": [],
+                    "forward_source": None,
+                })
+                offer["at"] = len(display_thread) - 1
+            display_thread[offer["at"]].setdefault("offers", []).append(offer)
+            self.offer_buttons.extend(offer["buttons"])
 
         # Check if there is an active diplomatic action pending for this target
         pending = diplomacy_messages.get_pending(self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient)
@@ -1028,11 +1103,13 @@ class Messages_Screen(Screen):
             forward = None
             if msg["forward_source"] and not self.map_screen.tactical_mode:
                 forward = Button(0, 0, MSG_FORWARD_BUTTON_SIZE, "grey", "Forward", lambda: None, font_preset="tiny")
+            offer_rows = [offer["buttons"] for offer in msg.get("offers", ())]
+            box_height = height + len(offer_rows) * MSG_OFFER_ROW_H
             self.processed_messages.append({"msg_data": msg, "surface": cached, "anim_start": msg["anim_start"],
-                                            "box_height": height, "box_width": width,
+                                            "box_height": box_height, "box_width": width,
                                             "header_h": header_h, "bubble_h": bubble_h,
-                                            "forward_button": forward})
-            total_h += height + 15
+                                            "forward_button": forward, "offer_rows": offer_rows})
+            total_h += box_height + 15
         self.max_msg_scroll = max(0, total_h - self.thread_rect.height + 20)
         self.msg_scroll_y = max(0, min(self.msg_scroll_y, self.max_msg_scroll))
 
@@ -1085,10 +1162,7 @@ class Messages_Screen(Screen):
                                  self.scroll_content_rect.height, width=10,
                                  attr="contact_scroll_y", limit_attr="max_contact_scroll",
                                  track_attr="contact_scroll_track_rect", handle_attr="contact_scroll_handle_rect")
-        request_rect = pygame.Rect(MSG_LEFT_PANE_W, self.thread_rect.bottom + bottom_dy,
-                                    self.thread_rect.width, MSG_REQUEST_H)
-        self._draw_panel(surface, request_rect, "requests")
-        composer_rect = pygame.Rect(MSG_LEFT_PANE_W, request_rect.bottom,
+        composer_rect = pygame.Rect(MSG_LEFT_PANE_W, self.thread_rect.bottom + bottom_dy,
                                      self.thread_rect.width, MSG_INPUT_H)
         self._draw_panel(surface, composer_rect, "composer")
         input_rect = self.input_rect.move(0, bottom_dy)
@@ -1106,6 +1180,7 @@ class Messages_Screen(Screen):
                 center=(self.thread_rect.centerx, c.SCREEN_HEIGHT // 2)))
         self.draft_edit_rects = []
         self.forward_button_rects = []
+        self.offer_button_rects = []
         if self.exiting_thread:
             thread = self.exiting_thread
             self._draw_thread(surface, thread["messages"], thread["rect"], thread["scroll_y"],
@@ -1146,6 +1221,15 @@ class Messages_Screen(Screen):
                                                  button_y - MSG_FORWARD_BUTTON_SIZE[1] // 2)
                         forward.draw(surface)
                         self.forward_button_rects.append((forward.rect.clip(rect), msg["forward_source"]))
+                    # Each open offer's replies, one row per offer, under the bubble.
+                    row_y = current_y + prepared["header_h"] + prepared["bubble_h"] + MSG_OFFER_ROW_GAP
+                    for row in prepared.get("offer_rows", ()) if interactive else ():
+                        for index, button in enumerate(row):
+                            button.rect.topleft = (
+                                x + index * (MSG_OFFER_BUTTON_SIZE[0] + MSG_OFFER_BUTTON_GAP), row_y)
+                            button.draw(surface)
+                            self.offer_button_rects.append((button.rect.clip(rect), button))
+                        row_y += MSG_OFFER_ROW_H
                 current_y -= 15
 
     def exit_screen(self):

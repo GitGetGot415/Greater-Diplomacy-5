@@ -650,7 +650,7 @@ class ConversationInteractionTests(unittest.TestCase):
         screen = self.make_screen(tactical=True)
         screen.map_screen.nation_data["P"]["pending_ratification"] = {"signatory": "A"}
         screen.select_recipient("A")
-        buttons = {element.text: element for element in screen.elements}
+        buttons = {element.text: element for element in screen.elements + screen.offer_buttons}
         for label in ("Queue", "Trade", "Ratify Treaty", "Refuse & Leave Faction"):
             self.assertTrue(buttons[label].disabled)
         self.assertFalse(buttons["View Treaty"].disabled)
@@ -661,24 +661,15 @@ class ConversationInteractionTests(unittest.TestCase):
         screen.send_message()
         self.assertEqual(dm.get_pending(screen.map_screen.nation_data, "P", "A"), {})
 
-    def test_unavailable_offer_controls_cannot_answer_or_open_a_deal(self):
+    def test_no_reply_controls_exist_without_an_open_offer(self):
         screen = self.make_screen()
         for selected in (None, "A"):
             with self.subTest(selected=selected):
                 if selected:
                     screen.select_recipient(selected)
-                buttons = {element.text: element for element in screen.elements}
-                with mock.patch.object(screen, "accept_proposal") as accept, \
-                        mock.patch.object(screen, "reject_proposal") as decline, \
-                        mock.patch.object(screen, "view_trade_deal") as view:
-                    for label in ("Accept", "Decline", "View Offer"):
-                        button = buttons[label]
-                        self.assertTrue(button.disabled)
-                        button.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=button.rect.center))
-                        button.handle_event(pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=button.rect.center))
-                    accept.assert_not_called()
-                    decline.assert_not_called()
-                    view.assert_not_called()
+                self.assertEqual(screen.offer_buttons, [])
+                labels = {getattr(element, "text", "") for element in screen.elements}
+                self.assertFalse(labels & {"Accept", "Decline", "View Offer"})
 
     def test_offer_controls_keep_undo_and_terms_available_after_either_reply(self):
         screen = self.make_screen()
@@ -688,10 +679,10 @@ class ConversationInteractionTests(unittest.TestCase):
         for verdict in (dm.RESPONSE_ACCEPT, dm.RESPONSE_REJECT):
             with self.subTest(verdict=verdict):
                 screen.refresh_ui()
-                buttons = {element.text: element for element in screen.elements}
+                buttons = {button.text: button for button in screen.offer_buttons}
                 buttons["Accept Trade" if verdict == dm.RESPONSE_ACCEPT else "Decline Trade"].callback()
                 self.assertEqual(dm.get_response_status(screen.map_screen.nation_data, "P", "A"), (verdict, "TRADE"))
-                buttons = {element.text: element for element in screen.elements}
+                buttons = {button.text: button for button in screen.offer_buttons}
                 undo = buttons["Undo Accept" if verdict == dm.RESPONSE_ACCEPT else "Undo Decline"]
                 opposite = buttons["Decline Trade" if verdict == dm.RESPONSE_ACCEPT else "Accept Trade"]
                 self.assertFalse(undo.disabled)
@@ -704,9 +695,62 @@ class ConversationInteractionTests(unittest.TestCase):
                 self.assertEqual(dm.get_response_status(screen.map_screen.nation_data, "P", "A"), ("", ""))
         dm.clear_pending(screen.map_screen.nation_data, "A", "P")
         screen.refresh_ui()
-        buttons = {element.text: element for element in screen.elements}
-        for label in ("Accept", "Decline", "View Offer"):
-            self.assertTrue(buttons[label].disabled)
+        self.assertEqual(screen.offer_buttons, [])
+
+    def offer_owner(self, screen, label):
+        """The thread bubble whose reply row holds the button labelled `label`."""
+        return next(prepared for prepared in screen.processed_messages
+                    if any(button.text == label for row in prepared["offer_rows"] for button in row))
+
+    def test_reply_buttons_sit_under_the_message_that_made_the_offer(self):
+        screen = self.make_screen()
+        screen.map_screen.refresh_diplomacy_maps = mock.Mock()
+        dm.set_pending(screen.map_screen.nation_data, "A", "P", "TRADE", turns=1)
+        dm.send_treaty_message(screen.map_screen, "A", "P", "TRADE", "Coal for oil?")
+        screen.select_recipient("A")
+        self.assertEqual(self.offer_owner(screen, "Accept Trade")["msg_data"]["content"], "Coal for oil?")
+        screen.draw(pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT)))
+        rect, button = next((rect, button) for rect, button in screen.offer_button_rects
+                            if button.text == "Accept Trade" and rect.width and rect.height)
+        for kind in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
+            screen.additional_events(pygame.event.Event(kind, button=1, pos=rect.center))
+        self.assertEqual(dm.get_response_status(screen.map_screen.nation_data, "P", "A"),
+                         (dm.RESPONSE_ACCEPT, "TRADE"))
+
+    def test_a_ratification_and_a_request_from_one_country_are_both_answerable(self):
+        from map_logic.diplomacy import ratification
+
+        screen = self.make_screen()
+        screen.map_screen.nation_data["P"]["pending_ratification"] = {"signatory": "A", "opponent": "B"}
+        dm.send_message(screen.map_screen, "A", "P", "Ratify our treaty.", "DIPLOMACY",
+                        extra={"action": ratification.ACTION})
+        dm.set_pending(screen.map_screen.nation_data, "A", "P", "TRADE", turns=1)
+        dm.send_treaty_message(screen.map_screen, "A", "P", "TRADE", "Coal for oil?")
+        screen.select_recipient("A")
+        ratify, trade = self.offer_owner(screen, "Ratify Treaty"), self.offer_owner(screen, "Accept Trade")
+        self.assertIsNot(ratify, trade)
+        self.assertEqual(ratify["msg_data"]["content"], "Ratify our treaty.")
+        for label in ("Ratify Treaty", "Accept Trade"):
+            self.assertFalse(next(b for b in screen.offer_buttons if b.text == label).disabled)
+
+    def test_an_offer_whose_message_is_gone_still_gets_a_bubble_to_answer(self):
+        screen = self.make_screen()
+        dm.set_pending(screen.map_screen.nation_data, "A", "P", "FACTION_INVITE", turns=1)
+        screen.select_recipient("A")
+        owner = self.offer_owner(screen, "Accept Faction Invite")
+        self.assertEqual(owner["msg_data"]["content"], dm.announcement_for("FACTION_INVITE"))
+
+    def test_an_earlier_resolved_offer_keeps_no_controls(self):
+        """Only the open request's own message gets them, matched by request ID."""
+        screen = self.make_screen()
+        dm.set_pending(screen.map_screen.nation_data, "A", "P", "TRADE", turns=1)
+        dm.send_treaty_message(screen.map_screen, "A", "P", "TRADE", "Old offer.")
+        dm.set_pending(screen.map_screen.nation_data, "A", "P", "TRADE", turns=1)
+        dm.send_treaty_message(screen.map_screen, "A", "P", "TRADE", "New offer.")
+        screen.select_recipient("A")
+        owners = [prepared["msg_data"]["content"] for prepared in screen.processed_messages
+                  if prepared["offer_rows"]]
+        self.assertEqual(owners, ["New offer."])
 
     def test_ratification_keeps_terms_and_the_matching_undo_after_either_verdict(self):
         from map_logic.diplomacy import ratification
@@ -718,7 +762,7 @@ class ConversationInteractionTests(unittest.TestCase):
                 request = {"signatory": "A", "verdict": verdict}
                 screen.map_screen.nation_data["P"]["pending_ratification"] = request
                 screen.refresh_ui()
-                buttons = {element.text: element for element in screen.elements}
+                buttons = {button.text: button for button in screen.offer_buttons}
                 undo_label = "Ratified (undo)" if verdict == ratification.RATIFY else "Refused (undo)"
                 opposite_label = "Refuse & Leave Faction" if verdict == ratification.RATIFY else "Ratify Treaty"
                 self.assertFalse(buttons[undo_label].disabled)
@@ -729,7 +773,7 @@ class ConversationInteractionTests(unittest.TestCase):
                     view.assert_called_once_with("A")
                 buttons[undo_label].callback()
                 self.assertNotIn("verdict", request)
-                buttons = {element.text: element for element in screen.elements}
+                buttons = {button.text: button for button in screen.offer_buttons}
                 self.assertFalse(buttons["Ratify Treaty"].disabled)
                 self.assertFalse(buttons["Refuse & Leave Faction"].disabled)
 

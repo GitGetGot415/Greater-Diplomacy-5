@@ -42,6 +42,8 @@ from map_logic.diplomacy.faction_actions import finalize_faction_leave
 
 RATIFY = "RATIFY"
 REFUSE = "REFUSE"
+#: The action stamped on the message that asks a member to ratify.
+ACTION = "RATIFY_TREATY"
 
 
 def _members_with_something_to_lose(context, deal, signatory):
@@ -131,8 +133,8 @@ def open_round(context, signatory, opponent, deal, escrow=None):
             nation_data.setdefault(member, {})["pending_ratification"] = {
                 "signatory": binder, "opponent": other, "deal": deal, "turns": 0, "treaty_id": treaty_id}
             send_message(context, binder, member,
-                         _ask_text(binder, other), "DIPLOMACY",
-                         extra={"action": "RATIFY_TREATY", "parameters": deal})
+                         ask_text(binder, other), "DIPLOMACY",
+                         extra={"action": ACTION, "parameters": deal})
             awaiting.append(member)
         elif not _ai_ratifies(context, member, deal):
             refused.append(member)
@@ -147,7 +149,8 @@ def open_round(context, signatory, opponent, deal, escrow=None):
     return True
 
 
-def _ask_text(binder, other):
+def ask_text(binder, other):
+    """The request's wording. The Messages screen reuses it when the request's message is gone."""
     return (f"{binder} has agreed terms with {other} on our bloc's behalf. "
             f"These terms bind you. Refusing them means leaving the faction and "
             f"fighting on alone.")

@@ -556,7 +556,8 @@ class IncomingTradeButtonTests(DealScreenTestCase):
         messages = Messages_Screen()
         messages.start_messages(self.map)
         messages.select_recipient(self.enemy)
-        labels = [element.text for element in messages.elements]
+        # The reply buttons sit under the offer's message in the thread.
+        labels = [button.text for button in messages.offer_buttons]
         self.assertIn("View Trade Deal", labels)
 
 

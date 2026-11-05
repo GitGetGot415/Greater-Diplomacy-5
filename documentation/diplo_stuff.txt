@@ -89,7 +89,7 @@ Each conversation row shows its latest message preview and unread count.
 The conversation list and header show country flags and names.
 Add Contact uses compact rows with a flag and country name.
 Theme, Trade, and Mark Unread act on the selected conversation.
-Treaty reply controls let the player answer requests.
+Each open request has reply buttons on the message that made it. They scroll with the conversation.
 
 Theme changes the background color for the selected country's conversation.
 The country's conversation button uses the same color, including in Add Contact.
@@ -103,7 +103,7 @@ Loading another game uses that save's colors. Older saves and new games use the 
 Tournament moves and real-time broadcasts exclude these preferences. Real-time updates keep each client's local colors.
 Colors do not change messages or multiplayer state.
 
-The conversation header, reply area, and text field are hidden when no country is selected.
+The conversation header and text field are hidden when no country is selected.
 They roll in when the player selects a country. They roll out when the player clears the selection.
 Entry uses ease-out motion. Exit uses ease-in motion, which starts slowly and speeds up.
 
@@ -126,8 +126,15 @@ MSG_ENTER_EASING_POWER and MSG_EXIT_EASING_POWER set easing strength. A value of
 MSG_QUEUED_BUBBLE_OPACITY sets background opacity from 0, transparent, to 1, opaque.
 MSG_BUBBLE_GRADIENT_STRENGTH sets shading strength. Zero is flat; 1 uses the standard stepped gradient.
 
-Accept, Decline, and View Offer stay visible. Unavailable controls are disabled.
+An ordinary request has Accept, Decline, and View buttons. View opens a trade or peace treaty and is disabled for other requests.
+A ratification request has Ratify Treaty, Refuse & Leave Faction, and View Treaty.
+Messages finds a request's message by its request_id, or by its action in older saves. Only the newest matching message gets the buttons.
+When that message is gone, for example trimmed from a long inbox, the conversation shows the request's standard announcement with the buttons.
+A resolved request's message keeps no buttons. Unavailable buttons are disabled.
 Queued replies keep their undo control. Treaty and trade terms remain viewable while a reply is queued.
+
+One country can have one ordinary request and one ratification request open with the player at once, and both can be answered in the same turn.
+pending_diplomacy holds one request per country pair, so a country cannot have two ordinary requests open with the same player.
 
 Queue stores a message for the send phase. It does not send the message immediately.
 An unsent text message can share that send phase with a forwarded message to the same country.
