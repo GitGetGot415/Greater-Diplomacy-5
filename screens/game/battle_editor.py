@@ -38,6 +38,8 @@ HELP_TEXT = (
     "Select a lane on the left. Drag your reserves into empty front-line slots, "
     "or onto your front-line cards to swap units. Drag a front-line card into reserves "
     "to hold it back. Allies and enemies are read-only.\n\n"
+    "If combat requires one unit to defend several lanes, placing it in a front-line "
+    "slot also places it in the other required lanes.\n\n"
     "Empty slots stay empty while editing. When you exit, combat fills required slots "
     "from available reserves. HELD means other units get priority; held units still "
     "fight when needed. A popup lets you continue editing before gaps are filled.\n\n"
@@ -158,7 +160,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
             self.regions[pane] = pygame.Rect(center_x, top + HEADER_H, center_w, half_h - HEADER_H)
         self.divider = (center_x, middle_top + half_h + GAP, center_w)
 
-    def refresh_ui(self):
+    def refresh_ui(self, *, placed_unit=None):
         self._layout()
         self.elements = []
         self.row_paint = {}
@@ -211,6 +213,8 @@ class BattleEditorScreen(ScrollPanes, Screen):
                 near, far = self.overview.near_far(lane)
                 count = max(lane.slots, len(near.front), len(far.front))
                 self.front_slots[lane.index] = list(near.front) + [None] * (count - len(near.front))
+        if placed_unit is not None:
+            self._fill_shared_fronts(placed_unit)
         self._lane_rows()
         lane, near, far = self.current()
         self.lane_outcome = self.overview._estimate_lane_outcome(lane)
@@ -393,12 +397,27 @@ class BattleEditorScreen(ScrollPanes, Screen):
     def cancel_drag(self):
         self.drag_unit = self.drag_surface = self.drag_rect = self.drag_start = self.drag_stamp = None
 
-    def _changed(self):
+    def _changed(self, *, placed_unit=None):
         self.map_screen.invalidate_map_presentation_cache()
         # Our own order edits preserve the in-progress positions. External
         # state changes instead discard them at the refresh boundary above.
         self._observed_state = self._source_stamp()
-        self.refresh_ui()
+        self.refresh_ui(placed_unit=placed_unit)
+
+    def _fill_shared_fronts(self, unit):
+        """Mirror required shared defense without filling unrelated vacancies."""
+        if self.battle.shares.get(id(unit), 0) < 2:
+            return
+        for lane in self.battle.lanes:
+            near, _far = self.overview.near_far(lane)
+            if not any(current is unit for current in near.front):
+                continue
+            slots = self.front_slots[lane.index]
+            if any(current is unit for current in slots):
+                continue
+            index = next((index for index, current in enumerate(slots) if current is None), None)
+            if index is not None:
+                slots[index] = unit
 
     def reset_assignments(self):
         self.cancel_drag()
@@ -460,7 +479,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
                     slots[index] = None
         if pane == PANE_FRONT:
             self.front_slots[lane.index][slot_index] = unit
-        self._changed()
+        self._changed(placed_unit=unit if pane == PANE_FRONT else None)
         return True
 
     def _row_at(self, pane, pos):

@@ -457,6 +457,79 @@ class BattleEditorTests(BattleScreenTestCase):
         self.assertEqual(front["combat_stance"], "RESERVE")
         self.assertNotIn(id(front), screen.seated())
 
+    def three_way_editor_with_lone_defender(self):
+        library = queries.get_unit_library()
+        defender = queries.create_unit_dict("Infantry", self.a, library)
+        self.province["units"] = [defender] + [
+            queries.create_unit_dict("Infantry", owner, library)
+            for owner in (self.x, self.y) for _ in range(3)]
+        screen = self.editor()
+        self.assertEqual(screen.battle.shares[id(defender)], 2)
+        return screen, defender
+
+    def test_placing_a_lone_defender_in_either_lane_restores_both_fronts(self):
+        for enemy in (self.x, self.y):
+            with self.subTest(enemy=enemy):
+                screen, defender = self.three_way_editor_with_lone_defender()
+                required = [lane for lane in screen.battle.lanes
+                            if any(unit is defender for unit in screen.overview.near_far(lane)[0].front)]
+                chosen = next(lane for lane in required if enemy in screen.overview.near_far(lane)[1].nations)
+                screen._select(chosen.index)
+                self.assertTrue(screen.drop_unit(defender, battle_screen.PANE_RESERVE))
+                others = {index: [id(unit) if unit is not None else None for unit in slots]
+                          for index, slots in screen.front_slots.items()
+                          if index not in {lane.index for lane in required}}
+                units_before = list(self.province["units"])
+                foreign_before = copy.deepcopy(units_before[1:])
+                start, unit = self.own_row(screen, battle_screen.PANE_RESERVE)
+                end = screen.empty_slots[battle_screen.PANE_FRONT][0][0].center
+                self.assertIs(unit, defender)
+                screen.handle_events([
+                    pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=start.center, button=1),
+                    pygame.event.Event(pygame.MOUSEBUTTONUP, pos=end, button=1)])
+                for lane in required:
+                    screen._select(lane.index)
+                    self.assertEqual(sum(unit is defender for unit in screen.front_slots[lane.index]), 1)
+                    self.assertIn(id(defender), {id(unit) for unit in screen.current()[1].front})
+                for index, positions in others.items():
+                    self.assertEqual([id(unit) if unit is not None else None
+                                      for unit in screen.front_slots[index]], positions)
+                self.assertEqual([id(unit) for unit in self.province["units"]],
+                                 [id(unit) for unit in units_before])
+                self.assertEqual(self.province["units"][1:], foreign_before)
+                self.assertFalse(screen._reserves_will_fill_gaps())
+
+    def test_returning_shared_defender_to_reserves_removes_all_its_copies(self):
+        screen, defender = self.three_way_editor_with_lone_defender()
+        required = [lane.index for lane in screen.battle.lanes
+                    if any(unit is defender for unit in screen.overview.near_far(lane)[0].front)]
+        screen._select(required[0])
+        screen.drop_unit(defender, battle_screen.PANE_RESERVE)
+        screen.drop_unit(defender, battle_screen.PANE_FRONT)
+        screen._select(required[1])
+        self.assertTrue(screen.drop_unit(defender, battle_screen.PANE_RESERVE))
+        self.assertFalse(any(unit is defender for slots in screen.front_slots.values() for unit in slots))
+        self.assertEqual(sum(unit is defender for unit in screen.current()[1].reserve), 1)
+
+    def test_placing_an_unshared_unit_preserves_other_lanes_deliberate_gaps(self):
+        screen = self.editor()
+        first_lane, _near, _far = screen.current()
+        _rect, first = self.own_row(screen, battle_screen.PANE_FRONT)
+        first_index = next(index for index, unit in enumerate(screen.front_slots[first_lane.index]) if unit is first)
+        screen.drop_unit(first, battle_screen.PANE_RESERVE)
+        other_lane = next(lane for lane in screen.battle.lanes if lane.index != first_lane.index
+                          and any(unit is not None and screen.can_command(unit)
+                                  for unit in screen.front_slots[lane.index]))
+        screen._select(other_lane.index)
+        _rect, other = self.own_row(screen, battle_screen.PANE_FRONT)
+        screen.drop_unit(other, battle_screen.PANE_RESERVE)
+        expected = [id(unit) if unit is not None else None for unit in screen.front_slots[other_lane.index]]
+        screen._select(first_lane.index)
+        self.assertTrue(screen.drop_unit(first, battle_screen.PANE_FRONT, slot_index=first_index))
+        self.assertEqual(screen.battle.shares[id(first)], 1)
+        self.assertEqual([id(unit) if unit is not None else None
+                          for unit in screen.front_slots[other_lane.index]], expected)
+
     def test_dropping_outside_the_lists_changes_nothing(self):
         screen = self.editor()
         rect, _unit = self.own_row(screen, battle_screen.PANE_RESERVE)

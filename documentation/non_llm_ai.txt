@@ -332,6 +332,10 @@ Drag a reserve onto one of your front-line units to swap them, or into an empty
 front slot to fill that position. Drag a front-line unit into reserves to hold
 it back. Vacancies stay empty in the editor, including when scrolling or
 switching lanes; other cards keep their positions. Held reserves appear first.
+When combat requires a unit to defend several lanes, placing it in one front
+also fills its vacant positions in the other required lanes. This uses the
+resolver's shared-unit assignments; it does not place other reserves or replace
+existing cards. Returning that unit to reserves removes its cards from all lanes.
 These positions are temporary editing state. On exit, the normal combat rules
 fill required front slots from the resulting unit orders. Allies and enemies
 remain read-only.
