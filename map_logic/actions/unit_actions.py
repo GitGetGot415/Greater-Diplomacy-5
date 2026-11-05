@@ -6,6 +6,7 @@ from dataclasses import dataclass
 import data.constants as c
 from data import queries
 from data.state_access import world_for, session_for
+from map_logic.system32 import combat_rules
 
 COST_KEYS = tuple("cost_" + resource for resource in c.ECON_RESOURCE_KEYS)
 
@@ -39,6 +40,66 @@ def unit_permission(context, country_id, unit, *, authority="player"):
     if getattr(session, "tactical_mode", False):
         return unit is session.player_unit
     return session.player_country == country_id
+
+
+def validate_battle_choices(context, unit, stance, target):
+    """Shared local-draft, tournament-host and real-time battle validation."""
+    if stance not in (None, "RESERVE"):
+        raise ValueError("Invalid combat stance.")
+    nations = world_for(context).nation_data
+    # Volunteers command as their donor, but fight their host's enemies.
+    if target is not None and (
+            not isinstance(target, str) or target not in nations
+            or not queries.are_at_war(queries.get_unit_combat_owner(unit), target, nations)):
+        raise ValueError("Invalid battle lane target.")
+
+
+def apply_battle_orders(context, country_id, province, changes, *, authority="player"):
+    """Validate a group of lane/reserve choices before changing any unit.
+
+    These are the existing saved choices also carried by tournament moves and
+    real-time unit_order commands. Client changes remain local turn drafts.
+    """
+    world = world_for(context)
+    session = session_for(context)
+    if authority == "player" and (
+            not queries.realtime_turn_open(context) or session.selection_mode
+            or session.is_editor or session.ai_is_thinking or session.viewing_ai_moves):
+        raise ValueError("Battle orders are unavailable right now.")
+    if world.id_to_province.get(province["id"]) is not province:
+        raise ValueError("This battle has changed. Reopen it before editing.")
+    changes = list(changes)
+    for unit, target, reserve in changes:
+        if not unit_permission(context, country_id, unit, authority=authority):
+            raise ValueError("You cannot command that unit.")
+        if not any(current is unit for current in province.get("units", [])):
+            raise ValueError("The unit is no longer in that province.")
+        if queries.unit_is_air_drop_recovering(unit):
+            raise ValueError("Recovering units cannot receive battle orders.")
+        if not isinstance(reserve, bool):
+            raise ValueError("Invalid reserve choice.")
+        validate_battle_choices(context, unit, "RESERVE" if reserve else None, target)
+    for unit, target, reserve in changes:
+        if target is None:
+            unit.pop("lane_target", None)
+        else:
+            unit["lane_target"] = target
+        if reserve:
+            unit["combat_stance"] = "RESERVE"
+        else:
+            unit.pop("combat_stance", None)
+
+
+def reset_battle_orders(context, country_id, province, units):
+    """Restore automatic lane assignment and the AI's wounded-unit rotation."""
+    units = list(units)
+    apply_battle_orders(context, country_id, province,
+                        [(unit, None, False) for unit in units])
+    battle = combat_rules.build_battle(
+        [province.get("units", [])], world_for(context).nation_data,
+        terrain=province.get("terrain"))
+    for unit in combat_rules.rotation_reserves(battle, country_id, units):
+        unit["combat_stance"] = "RESERVE"
 
 
 def prepare_action(context, country_id, province, unit, order):

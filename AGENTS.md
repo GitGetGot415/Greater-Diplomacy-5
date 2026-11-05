@@ -299,6 +299,19 @@ Keep tuning data in its source files:
 
 ### UI Appearance
 
+- **A separate screen and a subscreen are different UI formats.**
+  A **separate screen** replaces the current view and owns the full application
+  canvas, background, layout, input, and navigation. Register it in the
+  controller's screen states and use the normal screen transition and
+  `on_enter` lifecycle. Back or Exit returns to the previous screen and restores
+  its context. Do not leave the map or parent screen visible underneath it.
+  A **subscreen** is a child panel, popup, dialog, modal, or overlay shown inside
+  or over its parent screen. It uses the parent's view as its surroundings or
+  background and closes to reveal that parent. `ModalScreen`, the modal stack,
+  and `_run_pygame_sub_screen` implement subscreens, even when the panel is large.
+  Putting a UI in a separate Python file or class does not make it a separate
+  screen. When the user requests a separate screen, implement the first format;
+  do not substitute a subscreen or modal.
 - **Always reuse existing UI features and shared components instead of creating duplicate implementations.**
   Search for the existing implementation before adding UI. Extend it when the requested behavior needs more support.
   For example, reuse the existing loading-screen UI instead of making a new loading screen.

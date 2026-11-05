@@ -317,7 +317,22 @@ Movement clears both lane orders.
 
 Reserves neither fire nor take ordinary lane damage.
 They recover morale while front units fight.
-Players can rotate units through the Battle screen.
+Manage Battle shows the lanes and their units without changing orders on unit clicks.
+Its bottom-left Edit button changes to the full-screen battle editor.
+The editor replaces the map and Orders view. Opposing reserves sit at the top,
+your side's reserves at the bottom, the lane list on the left, and Reset and Exit
+on the right. Unit cards fill the opposing front grids in the center; their
+slot counts come from the selected lane's actual combat width. Reserve grids
+and overflowing front grids scroll with their own scrollbars and mouse wheel.
+Drag a reserve onto one of your front-line units to swap them, or onto the front
+column to assign it to the selected lane. Drag a front-line unit into reserves
+to hold it back. Held reserves appear first. Allies and enemies remain read-only.
+Reset removes your manual lane assignments and uses the same automatic
+wounded-unit rotation as the rule-based AI. Exit returns to the existing
+Manage Battle and Orders view with its selection and scroll position intact.
+Edits apply to the current turn's orders; existing combat width and required
+front coverage still apply. Tactical players can edit only their own division.
+Tournament moves and real-time drafts carry these existing unit orders normally.
 Orders and Battle can open for any visible province.
 They are read-only when the player commands no units there.
 See documentation/ai_movement.txt for AI rotation, bombardment, and attack checks.

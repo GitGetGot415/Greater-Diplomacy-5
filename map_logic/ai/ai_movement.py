@@ -1690,21 +1690,10 @@ def _rotate_damaged_units(context, ai_name, active_battles):
         battle = combat_rules.build_battle(
             [province.get("units", ())], world_state.nation_data,
             terrain=province.get("terrain"))
-        slots = combat_rules.slots_held(battle, ai_name)
-        if not slots:
-            continue
-
-        def health_fraction(unit):
-            return unit.get("health", 0) / max(1.0, unit.get("max_health", 1))
-
         # Anything past the slots is standing in reserve regardless, so that is
         # exactly how many units can be held back without leaving one empty.
         # The worst-hurt go first.
-        spare = max(0, len(mine) - slots)
-        wounded = sorted((u for u in mine if health_fraction(u) < c.AI_ROTATE_HEALTH_FRACTION),
-                         key=health_fraction)
-
-        for unit in wounded[:spare]:
+        for unit in combat_rules.rotation_reserves(battle, ai_name, mine):
             unit["combat_stance"] = "RESERVE"
 
 

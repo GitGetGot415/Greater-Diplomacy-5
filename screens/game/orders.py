@@ -222,6 +222,17 @@ class Orders_Screen(Screen):
 
     def on_enter(self, app, previous):
         game_map = app.states["MAP"]
+        if (previous is app.states["BATTLE_EDITOR"]
+                and previous.overview is self.battle_screen
+                and self.battle_screen is not None
+                and previous.player == game_map.player_country
+                and previous.opened_turn == game_map.time_manager.total_turns):
+            # Returning from the full-screen editor keeps the existing Orders
+            # workspace, selected units, scroll position, and battle panel.
+            self.target_province = self.battle_screen.province
+            self.refresh_ui()
+            self.battle_screen.refresh_ui()
+            return
         if game_map.selected_province:
             self.start_with_province(game_map.selected_province, game_map)
 

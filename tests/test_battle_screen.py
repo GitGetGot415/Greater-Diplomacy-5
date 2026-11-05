@@ -39,6 +39,10 @@ class BattleScreenTestCase(unittest.TestCase):
 
     def setUp(self):
         game_map = self.map
+        # Battle commands require an ordinary player planning phase, rather
+        # than the scenario-selection state in which the harness boots.
+        for attribute in ("selection_mode", "is_editor", "ai_is_thinking", "viewing_ai_moves"):
+            self.enterContext(mock.patch.object(game_map, attribute, False))
         stats = {"attack": 20, "defense": 0, "health": 100, "speed": 1,
                  "cost_materials": 50, "cost_manpower": 10, "cost_fuel": 0,
                  "production_time": 1, "naval_unit": False}
@@ -316,6 +320,228 @@ class LaneOrderTests(BattleScreenTestCase):
         self.assertTrue(screen.my_units())
         for unit in screen.my_units():
             self.assertEqual(unit["owner"], self.a)
+
+
+class BattleEditorTests(BattleScreenTestCase):
+    def setUp(self):
+        super().setUp()
+        self.enterContext(mock.patch.object(combat_rules, "combat_width_for_terrain", return_value=12))
+        self.enterContext(mock.patch.object(c, "MIN_LANE_SLOTS_PER_SIDE", 1))
+        self.enterContext(mock.patch.object(c, "AI_ROTATE_HEALTH_FRACTION", 0.5))
+
+    def editor(self):
+        from screens.game.battle_editor import BattleEditorScreen
+        return BattleEditorScreen(self.screen())
+
+    def own_row(self, screen, pane):
+        return next((rect, unit) for rect, (unit, _note) in screen.row_paint[pane]
+                    if screen.can_command(unit))
+
+    def test_overview_unit_clicks_do_not_change_orders(self):
+        screen = self.screen()
+        before = copy.deepcopy(self.province["units"])
+        for pane in (battle_screen.PANE_FRONT, battle_screen.PANE_RESERVE):
+            rect, _unit = self.own_row(screen, pane)
+            pos = rect.clip(screen.regions[pane]).center
+            with mock.patch.object(pygame.mouse, "get_pos", return_value=pos):
+                screen.handle_events([
+                    pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=pos, button=1),
+                    pygame.event.Event(pygame.MOUSEBUTTONUP, pos=pos, button=1)])
+        self.assertEqual(self.province["units"], before)
+
+    def test_edit_changes_controller_state_and_exit_restores_orders(self):
+        from types import SimpleNamespace
+        from main import Controller
+        from screens.game.battle_editor import BattleEditorScreen
+        from screens.game.orders import Orders_Screen
+        from ui.navigation import modal_stack
+
+        orders = Orders_Screen()
+        orders.start_with_province(self.province, self.map)
+        orders.go_to_battle()
+        screen = orders.battle_screen
+        orders.scroll_y = orders.max_scroll_y
+        orders.refresh_ui()
+        previous_scroll = orders.scroll_y
+        previous_selection = set(self.map.selected_unit_ids)
+        screen._select(1)
+        editor = BattleEditorScreen()
+        app = SimpleNamespace(states={"MAP": self.map, "ORDERS": orders,
+                                      "BATTLE_EDITOR": editor}, active_state=orders)
+        previous_modal = modal_stack.active()
+        edit = next(element for element in screen.elements if getattr(element, "text", "") == "Edit")
+        edit.callback()
+        self.assertEqual(orders.next_state, "BATTLE_EDITOR")
+        Controller.flip_state(app)
+        self.assertIs(app.active_state, editor)
+        self.assertIs(modal_stack.active(), previous_modal)
+        editor.exit_screen()
+        Controller.flip_state(app)
+        self.assertIs(app.active_state, orders)
+        self.assertIs(orders.battle_screen, screen)
+        self.assertEqual(orders.scroll_y, previous_scroll)
+        self.assertEqual(set(self.map.selected_unit_ids), previous_selection)
+        self.assertEqual(screen.selected_lane, 1)
+        self.assertFalse(screen.done)
+
+    def test_dragging_a_reserve_onto_a_front_unit_swaps_them(self):
+        screen = self.editor()
+        start_rect, reserve = self.own_row(screen, battle_screen.PANE_RESERVE)
+        end_rect, front = self.own_row(screen, battle_screen.PANE_FRONT)
+        start, end = start_rect.center, end_rect.center
+        screen.handle_events([
+            pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=start, button=1),
+            pygame.event.Event(pygame.MOUSEMOTION, pos=end, rel=(1, 1), buttons=(1, 0, 0))])
+        screen.draw(self.surface)
+        screen.handle_events([pygame.event.Event(pygame.MOUSEBUTTONUP, pos=end, button=1)])
+        _lane, near, _far = screen.current()
+        self.assertIn(id(reserve), {id(unit) for unit in near.front})
+        self.assertNotIn(id(front), screen.seated())
+        self.assertEqual(front["combat_stance"], "RESERVE")
+        self.assertIsNone(screen.drag_unit)
+
+    def test_dragging_a_front_unit_to_reserves_clears_its_lane_pin(self):
+        screen = self.editor()
+        _rect, front = self.own_row(screen, battle_screen.PANE_FRONT)
+        _lane, _near, far = screen.current()
+        front["lane_target"] = far.nations[0]
+        self.assertTrue(screen.drop_unit(front, battle_screen.PANE_RESERVE))
+        self.assertNotIn("lane_target", front)
+        self.assertEqual(front["combat_stance"], "RESERVE")
+        self.assertNotIn(id(front), screen.seated())
+
+    def test_dropping_outside_the_lists_changes_nothing(self):
+        screen = self.editor()
+        rect, _unit = self.own_row(screen, battle_screen.PANE_RESERVE)
+        before = copy.deepcopy(self.province["units"])
+        outside = (0, 0)
+        screen.handle_events([
+            pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=rect.center, button=1),
+            pygame.event.Event(pygame.MOUSEBUTTONUP, pos=outside, button=1)])
+        self.assertEqual(self.province["units"], before)
+        self.assertIsNone(screen.drag_unit)
+
+    def test_reset_removes_manual_pins_and_rotates_wounded_units(self):
+        screen = self.editor()
+        ours = screen.my_units()
+        hurt = ours[0]
+        hurt["health"], hurt["max_health"] = 1, 100
+        for unit in ours:
+            unit["lane_target"] = self.x
+            unit["combat_stance"] = "RESERVE"
+        screen.reset_assignments()
+        self.assertTrue(all("lane_target" not in unit for unit in ours))
+        self.assertEqual(hurt.get("combat_stance"), "RESERVE")
+        self.assertTrue(all("combat_stance" not in unit for unit in ours[1:]))
+
+    def test_foreign_units_and_allied_front_rows_cannot_be_changed(self):
+        screen = self.editor()
+        _rect, reserve = self.own_row(screen, battle_screen.PANE_RESERVE)
+        _lane, near, far = screen.current()
+        ally = next(unit for unit in near.front if unit["owner"] != self.a)
+        enemy = far.front[0]
+        before = copy.deepcopy(self.province["units"])
+        self.assertFalse(screen.drop_unit(reserve, battle_screen.PANE_FRONT, ally))
+        self.assertFalse(screen.drop_unit(enemy, battle_screen.PANE_RESERVE))
+        self.assertEqual(self.province["units"], before)
+
+    def test_tactical_reset_leaves_other_divisions_unchanged(self):
+        self.map.tactical_mode = True
+        self.map.player_unit = next(unit for unit in self.province["units"] if unit["owner"] == self.a)
+        self.addCleanup(setattr, self.map, "tactical_mode", False)
+        self.addCleanup(setattr, self.map, "player_unit", None)
+        screen = self.editor()
+        others = [unit for unit in self.province["units"] if unit is not self.map.player_unit]
+        for unit in others:
+            unit["combat_stance"] = "RESERVE"
+        before = copy.deepcopy(others)
+        screen.reset_assignments()
+        self.assertEqual(others, before)
+
+    def test_stale_unit_reference_cannot_be_dropped(self):
+        screen = self.editor()
+        _rect, reserve = self.own_row(screen, battle_screen.PANE_RESERVE)
+        self.province["units"] = [unit for unit in self.province["units"] if unit is not reserve]
+        before = copy.deepcopy(self.province["units"])
+        self.assertFalse(screen.drop_unit(reserve, battle_screen.PANE_FRONT))
+        self.assertEqual(self.province["units"], before)
+
+    def test_snapshot_change_during_drag_cancels_the_drop(self):
+        screen = self.editor()
+        start, _reserve = self.own_row(screen, battle_screen.PANE_RESERVE)
+        end, _front = self.own_row(screen, battle_screen.PANE_FRONT)
+        before = copy.deepcopy(self.province["units"])
+        screen.handle_events([pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=start.center, button=1)])
+        self.map.invalidate_map_presentation_cache()
+        screen.handle_events([pygame.event.Event(pygame.MOUSEBUTTONUP, pos=end.center, button=1)])
+        self.assertEqual(self.province["units"], before)
+        self.assertIsNone(screen.drag_unit)
+
+    def test_invalid_batch_changes_no_units(self):
+        from map_logic.actions import unit_actions
+        screen = self.editor()
+        own = screen.my_units()[0]
+        foreign = next(unit for unit in self.province["units"] if unit["owner"] != self.a)
+        before = copy.deepcopy(self.province["units"])
+        for changes in ([(own, None, True), (foreign, None, True)],
+                        [(own, None, True), (own, [self.x], False)]):
+            with self.assertRaises(ValueError):
+                unit_actions.apply_battle_orders(self.map, self.a, self.province, changes)
+            self.assertEqual(self.province["units"], before)
+
+    def test_reserve_scrollbar_browses_cards_without_changing_orders(self):
+        from screens.game.battle_editor import PANE_ENEMY_RESERVE
+        library = queries.get_unit_library()
+        self.province["units"].extend(
+            queries.create_unit_dict("Infantry", self.a, library) for _ in range(30))
+        screen = self.editor()
+        screen.draw(self.surface)
+        pane = battle_screen.PANE_RESERVE
+        attrs = screen.scroll_attrs(pane)
+        track = getattr(screen, attrs["track_attr"])
+        self.assertIsNotNone(track)
+        before = copy.deepcopy(self.province["units"])
+        pos = (track.centerx, track.bottom - 2)
+        screen.handle_events([
+            pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=pos, button=1),
+            pygame.event.Event(pygame.MOUSEBUTTONUP, pos=pos, button=1)])
+        self.assertLess(screen.pane_scroll(pane), 0)
+        self.assertEqual(screen.pane_scroll(pane), screen.pane_scroll_limit(pane))
+        self.assertEqual(screen.pane_scroll(PANE_ENEMY_RESERVE), 0)
+        self.assertEqual(self.province["units"], before)
+
+    def test_enemy_cards_cannot_be_dragged(self):
+        screen = self.editor()
+        rect, (_unit, _note) = screen.row_paint[battle_screen.PANE_ENEMY][0]
+        before = copy.deepcopy(self.province["units"])
+        screen.handle_events([
+            pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=rect.center, button=1),
+            pygame.event.Event(pygame.MOUSEBUTTONUP, pos=screen.regions[battle_screen.PANE_FRONT].center,
+                               button=1)])
+        self.assertIsNone(screen.drag_unit)
+        self.assertEqual(self.province["units"], before)
+
+    def test_idle_frames_use_cached_battle_data(self):
+        screen = self.editor()
+        with mock.patch.object(combat_rules, "build_battle") as build:
+            screen.draw(self.surface)
+            screen.update()
+            screen.draw(self.surface)
+        build.assert_not_called()
+
+    def test_submitted_realtime_turn_disables_changes(self):
+        from types import SimpleNamespace
+        screen = self.editor()
+        _rect, front = self.own_row(screen, battle_screen.PANE_FRONT)
+        player = SimpleNamespace(submitted=True, eliminated=False)
+        session = SimpleNamespace(phase="TURN", players={"fixture": player})
+        with mock.patch.object(self.map, "realtime_multiplayer", True), \
+                mock.patch.object(self.map, "realtime_session", session), \
+                mock.patch.object(self.map, "realtime_player_id", "fixture"):
+            before = copy.deepcopy(self.province["units"])
+            self.assertFalse(screen.drop_unit(front, battle_screen.PANE_RESERVE))
+            screen.reset_assignments()
+            self.assertEqual(self.province["units"], before)
 
 
 class SideReserveTests(BattleScreenTestCase):

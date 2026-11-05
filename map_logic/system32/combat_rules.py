@@ -322,6 +322,22 @@ def _lane_membership(columns, coalition_groups, duels, can_fight):
     return lanes_of, foes
 
 
+def rotation_reserves(battle, nation, units):
+    """Units the automatic commander holds back to let healthier troops fight."""
+    slots = slots_held(battle, nation)
+    if not slots:
+        return []
+    spare = max(0, len(units) - slots)
+
+    def health_fraction(unit):
+        return unit.get("health", 0) / max(1.0, unit.get("max_health", 1))
+
+    wounded = sorted((unit for unit in units
+                      if health_fraction(unit) < c.AI_ROTATE_HEALTH_FRACTION),
+                     key=health_fraction)
+    return wounded[:spare]
+
+
 def _availability(columns, profiles=None):
     """{column: units, in the order that column would rather field them}.
 

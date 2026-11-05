@@ -1174,6 +1174,44 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
         self.assertEqual({command["queue"] for command in queues}, {"building_queue", "unit_queue"})
         self.assertTrue(all(command["items"] == [] for command in queues))
 
+    def test_battle_editor_draft_is_validated_then_applied_only_by_the_server(self):
+        map_ref = self.make_map()
+        map_ref.nation_data["A"]["at_war_with"] = ["B"]
+        map_ref.nation_data["B"]["at_war_with"] = ["A"]
+        units = map_ref.map_data["home"]["units"]
+        units[:] = [{"unit_id": identity, "owner": owner, "type": "Battle Fixture"}
+                    for identity, owner in (("reserve", "A"), ("front", "A"), ("enemy", "B"))]
+        units[0]["lane_target"] = "B"
+        units[1]["combat_stance"] = "RESERVE"
+        commands = [command for command in collect_map_commands(map_ref, "A")
+                    if command["type"] == "unit_order"]
+        units[0].pop("lane_target")
+        units[1].pop("combat_stance")
+        driver = MapRealtimeDriver(map_ref)
+        validated = driver.validate_draft("A", commands)
+        self.assertNotIn("lane_target", units[0])
+        self.assertNotIn("combat_stance", units[1])
+        for invalid in (dict(commands[0], unit_id="enemy"),
+                        dict(commands[0], combat_stance="invalid"),
+                        dict(commands[0], lane_target=["B"]),
+                        dict(commands[0], province_id=999)):
+            with self.assertRaises(ValueError):
+                driver.validate_draft("A", [invalid])
+        driver.apply_validated_drafts({"A": validated})
+        self.assertEqual(units[0]["lane_target"], "B")
+        self.assertEqual(units[1]["combat_stance"], "RESERVE")
+        self.assertNotIn("lane_target", units[2])
+
+    def test_volunteer_battle_lane_validation_uses_the_host_enemies(self):
+        map_ref = self.make_map()
+        map_ref.nation_data["P"]["at_war_with"] = ["B"]
+        unit = map_ref.map_data["home"]["units"][0]
+        unit.update(unit_id="volunteer", volunteer_host="P")
+        command = {"type": "unit_order", "province_id": 1, "unit_id": "volunteer",
+                   "order": None, "lane_target": "B", "combat_stance": None}
+        validated = MapRealtimeDriver(map_ref).validate_draft("A", [command])
+        self.assertEqual(validated[0]["lane_target"], "B")
+
     def test_a_faction_exile_is_not_eliminated_from_a_realtime_match(self):
         map_ref = self.make_map()
         map_ref.map_data["home"]["owner"] = "B"

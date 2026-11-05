@@ -118,6 +118,43 @@ class TournamentMoveTests(unittest.TestCase):
         result.update(extra)
         return result
 
+    def test_battle_editor_assignments_survive_host_import_and_reject_bad_moves(self):
+        for variant in ("valid", "unauthorized", "malformed", "stale"):
+            with self.subTest(variant=variant), tempfile.TemporaryDirectory() as directory:
+                host = Host()
+                host.nation_data["Leader"]["at_war_with"] = ["Outsider"]
+                host.nation_data["Outsider"]["at_war_with"] = ["Leader"]
+                units = [{"unit_id": identity, "owner": owner, "type": "Battle Fixture"}
+                         for identity, owner in (("reserve", "Leader"), ("front", "Leader"),
+                                                 ("enemy", "Outsider"))]
+                province = {"id": 1, "json_key": "battle", "owner": "Leader",
+                            "terrain": "plains", "units": units}
+                host.map_data = {"battle": province}
+                host.id_to_province = {1: province}
+                commands = [
+                    {"type": "unit_order", "province_id": 1, "unit_id": "reserve",
+                     "order": None, "lane_target": "Outsider", "combat_stance": None},
+                    {"type": "unit_order", "province_id": 1, "unit_id": "front",
+                     "order": None, "lane_target": None, "combat_stance": "RESERVE"}]
+                if variant == "unauthorized":
+                    commands[0]["unit_id"] = "enemy"
+                elif variant == "malformed":
+                    commands[0]["lane_target"] = ["Outsider"]
+                move = self.player_data("Leader", host, player_intents=commands)
+                if variant == "stale":
+                    move["tournament_turn"] += 1
+                before = copy.deepcopy(units)
+                path = self.write_move(directory, "battle.gd5move", "Leader", move)
+                result = self.import_moves(host, [path])
+                if variant == "valid":
+                    self.assertEqual(result["loaded"], 1, result["rejections"])
+                    self.assertEqual(units[0]["lane_target"], "Outsider")
+                    self.assertEqual(units[1]["combat_stance"], "RESERVE")
+                    self.assertEqual(units[2], before[2])
+                else:
+                    self.assertEqual(result["loaded"], 0)
+                    self.assertEqual(units, before)
+
     def v46_move(self, country_id, host, **extra):
         """A move with the sections every v46 export wrote, and no version stamp."""
         result = self.player_data(country_id, host, aircraft_orders=[], release_subjects=[])

@@ -3,7 +3,8 @@ waits in reserve.
 
 The Orders screen owns a compact unit-command panel on the left and this lane
 manager fills the clear space beside it when opened. This is where the two
-decisions the lane model actually gives a player live:
+decisions the lane model gives a player are edited on a separate drag-and-drop
+screen opened by the overview's Edit button:
 
   - which enemy a unit faces, when more than one is standing here. The default
     is the heaviest front first, which is usually right and occasionally very
@@ -33,6 +34,7 @@ import pygame
 import data.constants as c
 from data import queries
 from map_logic.system32 import combat_rules
+from map_logic.actions import unit_actions
 from ui.rendering.font_manager import fonts
 from ui.widgets import flag_icons
 from ui.panels import sidebar_info
@@ -275,11 +277,17 @@ class Battle_Screen(ModalScreen):
         """Pins a unit to the duel against whoever is on the other side."""
         if not self.can_command(unit) or not self.can_edit_realtime():
             return
-        far = lane.b if self.is_mine(lane.a) else lane.a
+        nation = queries.get_unit_combat_owner(unit)
+        far = lane.b if nation in lane.a.nations else lane.a
         # A pin names an enemy nation; build_battle resolves it back to whichever
         # lane has that nation on the other side.
-        unit["lane_target"] = far.nations[0]
-        unit.pop("combat_stance", None)
+        target = next((enemy for enemy in far.nations
+                       if queries.are_at_war(nation, enemy, self.map_screen.nation_data)), None)
+        if target is None:
+            return
+        unit_actions.apply_battle_orders(
+            self.map_screen, self.player, self.province, [(unit, target, False)])
+        self.map_screen.invalidate_map_presentation_cache()
         self.refresh_ui()
 
     def toggle_stance(self, unit):
@@ -287,23 +295,40 @@ class Battle_Screen(ModalScreen):
 
         Not out of the fight: combat_rules._availability reorders on this flag
         rather than filtering on it, so a held unit is seated once every unheld
-        one has a slot. Which is why a held unit can still show up in the front
-        pane -- it says [Release] there rather than [Hold].
+        one has a slot. A held unit can therefore still appear in the front
+        column, with its reserve preference shown as HELD.
         """
         if not self.can_command(unit) or not self.can_edit_realtime():
             return
-        if unit.get("combat_stance") == "RESERVE":
-            unit.pop("combat_stance", None)
-        else:
-            unit["combat_stance"] = "RESERVE"
+        unit_actions.apply_battle_orders(
+            self.map_screen, self.player, self.province,
+            [(unit, None, unit.get("combat_stance") != "RESERVE")])
+        self.map_screen.invalidate_map_presentation_cache()
         self.refresh_ui()
 
     def clear_orders(self):
         if not self.can_edit_realtime():
             return
-        for unit in self.my_units():
-            unit.pop("lane_target", None)
-            unit.pop("combat_stance", None)
+        unit_actions.apply_battle_orders(
+            self.map_screen, self.player, self.province,
+            [(unit, None, False) for unit in self.my_units()])
+        self.map_screen.invalidate_map_presentation_cache()
+        self.refresh_ui()
+
+    def open_editor(self):
+        if (not self.visible or not self.my_units()
+                or not self.map_screen.can_select_map_units() or not self.can_edit_realtime()):
+            return
+        self.origin_screen.battle_editor_overview = self
+        self.origin_screen.go_to("BATTLE_EDITOR")
+        if not self.embedded:
+            # Legacy modal callers must release the modal stack before the
+            # controller can switch the underlying registered screen.
+            self.done = True
+
+    def _editor_closed(self):
+        self.province = self.map_screen.id_to_province.get(self.province["id"], self.province)
+        self.visible = queries.is_province_visible(self.map_screen, self.province["id"])
         self.refresh_ui()
 
     def go_to_orders(self):
@@ -388,6 +413,24 @@ class Battle_Screen(ModalScreen):
     #                             RENDERING                              #
     # ------------------------------------------------------------------ #
 
+    def _build_footer(self, btn_y):
+        p = self.panel_rect
+        edit = self.button(p.x + self.PAD, btn_y, 130, "blue", "Edit", self.open_editor)
+        edit.disabled = not (self.visible and self.my_units()
+                             and self.map_screen.can_select_map_units())
+        self.elements.append(edit)
+        if self.embedded:
+            self.elements.append(
+                self.button(p.right - self.PAD - 130, btn_y, 130,
+                            "red", "Close Battle", self.exit_screen, sound_kind="back"))
+        else:
+            self.elements.append(
+                self.button(p.x + self.PAD + 140, btn_y, 150,
+                            "blue", "Unit Orders", self.go_to_orders))
+            self.elements.append(
+                self.button(p.right - self.PAD - 110, btn_y, 110,
+                            "red", "Close", self.exit_screen, sound_kind="back"))
+
     def refresh_ui(self):
         self.rebuild()
         self._layout()
@@ -398,20 +441,7 @@ class Battle_Screen(ModalScreen):
 
         view_mode_reserve = 0 if self.embedded else VIEW_MODE_ROW_RESERVE
         btn_y = p.bottom - 52 - view_mode_reserve
-        if self.embedded:
-            self.elements.append(
-                self.button(p.right - self.PAD - 130, btn_y, 130,
-                            "red", "Close Battle", self.exit_screen, sound_kind="back"))
-        else:
-            self.elements.append(
-                self.button(p.x + self.PAD, btn_y, 150, "blue", "Unit Orders", self.go_to_orders))
-            # Nothing to clear on a tile you command nothing on.
-            if self.my_units():
-                self.elements.append(
-                    self.button(p.x + self.PAD + 160, btn_y, 150, "orange", "Clear Lane Orders",
-                                self.clear_orders))
-            self.elements.append(
-                self.button(p.right - self.PAD - 110, btn_y, 110, "red", "Close", self.exit_screen, sound_kind="back"))
+        self._build_footer(btn_y)
 
         if self.embedded:
             self.view_mode_buttons = []
@@ -490,21 +520,22 @@ class Battle_Screen(ModalScreen):
                 note = ""
             elif is_bench:
                 btn = self.button(rect.x, y, row_w, "orange" if held else "green", "",
-                                  lambda u=unit, l=lane: self.send_to_lane(u, l))
-                note = f"{'HELD  ' if held else ''}->  lane {lane.index + 1}"
+                                  lambda: None)
+                note = "HELD" if held else ""
             else:
                 btn = self.button(rect.x, y, row_w, "blue", "",
-                                  lambda u=unit: self.toggle_stance(u))
+                                  lambda: None)
                 # A held unit reaches the front rank whenever nobody else can
-                # take the slot, so this pane has to be able to say so -- an
-                # honest [Hold] on a unit that is already held reads as if the
-                # flag had not stuck.
-                note = "[Release]" if held else "[Hold]"
+                # take the slot. Keep that preference visible in the overview.
+                note = "HELD" if held else ""
             # The default list-row button is shorter than the wrapped content
             # row. Match its hitbox/background to the full painted row.
             btn.rect.height = self.ROW_HEIGHT
             btn.height = self.ROW_HEIGHT
             self.add_pane_row(pane, btn)
+            # Preserve row colors and stats while keeping clicks passive.
+            # The editor handles drag gestures separately from these buttons.
+            btn.click_guard = lambda: False
             self.row_paint[pane].append((btn.rect, (unit, note)))
 
     # -- painting -------------------------------------------------------- #

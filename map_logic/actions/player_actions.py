@@ -651,13 +651,11 @@ class PlayerActions:
                                         or any(ord(character) < 32 for character in custom_name)):
             raise PlayerActionError("Invalid unit name.")
         stance = command.get("combat_stance")
-        if stance not in (None, "RESERVE"):
-            raise PlayerActionError("Invalid combat stance.")
         lane_target = command.get("lane_target")
-        if lane_target is not None and (not isinstance(lane_target, str)
-                                        or lane_target not in self.world.nation_data
-                                        or not queries.are_at_war(country_id, lane_target, self.world.nation_data)):
-            raise PlayerActionError("Invalid battle lane target.")
+        try:
+            unit_actions.validate_battle_choices(context, unit, stance, lane_target)
+        except ValueError as error:
+            raise PlayerActionError(str(error)) from error
         return {"type": "unit_order", "province_id": province["id"],
                 "unit_index": index, "unit_id": unit.get("unit_id"), "order": canonical_order,
                 "unit_refund": prepared.refund,
