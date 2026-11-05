@@ -473,6 +473,7 @@ def _handle_relations_viewpoint_click(map_screen, event, on_ui):
 
     A right-drag pans the map instead, and with units selected a right-click
     still gives their move orders. Returns True when the click chose a view.
+    Plays the province click sound, which is this click's only sound.
     """
     if (event.type not in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP)
             or event.button != 3 or map_screen.map_mode != "RELATIONS"):
@@ -489,7 +490,12 @@ def _handle_relations_viewpoint_click(map_screen, event, on_ui):
             or abs(event.pos[0] - start[0]) >= RELATIONS_CLICK_SLOP
             or abs(event.pos[1] - start[1]) >= RELATIONS_CLICK_SLOP):
         return False
-    refresh_map.choose_relations_viewpoint(map_screen, _interactive_province(map_screen, event.pos))
+    province = _interactive_province(map_screen, event.pos)
+    refresh_map.choose_relations_viewpoint(map_screen, province)
+    # The same sound as a left-click on a province, and likewise silent on
+    # empty space.
+    if province is not None:
+        ui_elements.play_ui_sound("click_province")
     return True
 
 

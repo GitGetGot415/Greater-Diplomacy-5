@@ -368,11 +368,40 @@ class MapSurfaceCacheTests(unittest.TestCase):
 
     def right_click(self, province, moved=0):
         """Press and release the right button over province, moving `moved` pixels."""
-        with mock.patch.object(queries, "get_clicked_province", return_value=province):
+        with mock.patch.object(queries, "get_clicked_province", return_value=province),                 mock.patch.object(map_input.ui_elements, "play_ui_sound") as self.sound:
             map_input._handle_relations_viewpoint_click(self.screen, pygame.event.Event(
                 pygame.MOUSEBUTTONDOWN, button=3, pos=(5, 5)), False)
             return map_input._handle_relations_viewpoint_click(self.screen, pygame.event.Event(
                 pygame.MOUSEBUTTONUP, button=3, pos=(5 + moved, 5)), False)
+
+    def test_a_viewpoint_click_plays_the_province_sound_once_but_empty_space_is_silent(self):
+        self.show_relations()
+        for province in (self.province_of("B"), self.province_of("A")):
+            self.right_click(province)
+            self.sound.assert_called_once_with("click_province")
+        self.right_click(None)
+        self.sound.assert_not_called()
+        self.right_click(self.province_of("B"), moved=map_input.RELATIONS_CLICK_SLOP)
+        self.sound.assert_not_called()
+
+    def test_the_tooltip_opinion_is_toward_the_chosen_country(self):
+        from ui.information import tooltip
+
+        self.show_relations()
+        self.screen.base_layer = "RELATIONS"
+        self.screen.secondary_mode = "BLANK"
+        self.screen.small_font = mock.Mock()
+        self.screen.small_font.render.side_effect = lambda *args: pygame.Surface((1, 1))
+        self.screen.hovered_province = self.province_of("A")
+
+        def opinion_toward():
+            with mock.patch.object(queries, "get_relation_score", return_value=7) as score,                     mock.patch.object(queries, "is_province_visible", return_value=True),                     mock.patch.object(pygame.mouse, "get_pos", return_value=(1, 1)):
+                tooltip.draw_tooltip(self.screen, pygame.Surface((50, 50)))
+            return score.call_args.args[:2]
+
+        self.assertEqual(opinion_toward(), ("A", "A"))
+        self.right_click(self.province_of("B"))
+        self.assertEqual(opinion_toward(), ("A", "B"))
 
     def test_right_clicking_another_country_shows_its_relations_view(self):
         self.show_relations()

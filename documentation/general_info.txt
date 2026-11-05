@@ -563,7 +563,7 @@ Frame drawing and scrolling use cached presentation data.
 Map refreshes calculate layer inputs when game state changes.
 They reuse pixel surfaces that have not changed.
 Every layer still rebuilds each turn. A rebuild reuses the id map's pixel index, which ui/rendering/province_pixels.py builds once per id map, and recomputes border shading only around provinces that changed owner.
-In the Relations view, right-clicking another country's land shows the map, and the minimap, as that country sees everyone. Right-clicking the player's own land, water, unowned land, or empty space returns to the player's view, and so does changing the map layer or the player. A right-drag pans instead, and with units selected a right-click still gives move orders. The chosen view is rebuilt at each relations refresh while that country still owns land.
+In the Relations view, right-clicking another country's land shows the map, and the minimap, as that country sees everyone. The hover tooltip's opinion is then each owner's opinion of that country. Right-clicking the player's own land, water, unowned land, or empty space returns to the player's view, and so does changing the map layer or the player. A right-drag pans instead, and with units selected a right-click still gives move orders. The chosen view is rebuilt at each relations refresh while that country still owns land.
 Fog updates current visibility even when it can reuse its image.
 Hotseat blanking and player changes still apply.
 Editor painting invalidates the affected surface. Refresh Maps forces a full rebuild.
