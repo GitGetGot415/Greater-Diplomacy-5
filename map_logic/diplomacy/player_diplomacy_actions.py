@@ -322,7 +322,7 @@ def handle_accept_req(context, target=None, custom_msg=None):
                 context.show_feedback(reason)
                 return
         elif action == "TRADE":
-            # The same rule that stops a trade being sent to an enemy.
+            # Check shared availability again when answering an offer.
             available = availability(context.nation_data, target, context.player_country, action)
             if not available.allowed:
                 context.show_feedback(f"Cannot accept: {available.reason}.")

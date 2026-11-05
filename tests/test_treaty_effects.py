@@ -53,8 +53,8 @@ class TreatyEffectTests(unittest.TestCase):
         self.assertTrue(outcome.canned, "peace acceptance produced an empty message")
         self.assertIn("ACCEPT_PEACE", ai_prompts.AI_FALLBACK_RESPONSES)
 
-    def test_a_trade_between_countries_at_war_is_blocked_and_its_escrow_returned(self):
-        """An offer can be accepted after a war broke out while it waited."""
+    def test_a_wartime_trade_accepted_by_ai_is_blocked_and_its_escrow_returned(self):
+        """Even a scripted AI acceptance cannot execute an enemy's trade."""
         host = self.world()
         host.set_war("A", "B")
         before = (int(host.nation_data["A"].get("materials", 0) or 0),

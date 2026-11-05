@@ -339,12 +339,15 @@ class TradeTests(VerdictTestCase):
         self.assertFalse(verdict.accepted)
         self.assertEqual(verdict.confidence, 1.0, "a structural refusal is not open to overrule")
 
-    def test_countries_at_war_cannot_send_a_trade(self):
+    def test_countries_at_war_can_send_a_trade(self):
         from map_logic.diplomacy.action_definitions import availability
         self.assertTrue(availability(self.nation_data, "Borland", "Avaria", "TRADE").allowed)
         for a, b in (("Avaria", "Borland"), ("Borland", "Avaria")):
             self.nation_data[a]["at_war_with"] = [b]
-        self.assertFalse(availability(self.nation_data, "Borland", "Avaria", "TRADE").allowed)
+        for sender, target in (("Borland", "Avaria"), ("Avaria", "Borland")):
+            for phase in ("draft", "send"):
+                with self.subTest(sender=sender, phase=phase):
+                    self.assertTrue(availability(self.nation_data, sender, target, "TRADE", phase=phase).allowed)
 
     def test_an_even_swap_is_refused(self):
         """The AI accepts a trade only if it gives literally nothing, which is

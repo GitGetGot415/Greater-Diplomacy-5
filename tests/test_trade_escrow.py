@@ -17,12 +17,57 @@ offer and a player's offer go down the same path.
 import unittest
 
 
-from map_logic.diplomacy import diplomacy_messages
+from map_logic.diplomacy import diplomacy_messages, player_diplomacy_actions
 from tests.stub_map_screen import StubMapScreen
 
 
 OFFER = {"give_materials": 300, "give_fuel": 0,
          "take_materials": 0, "take_fuel": 200, "puppet_state": "NONE"}
+
+
+class WartimeTradeTests(unittest.TestCase):
+    def test_players_can_accept_trades_before_or_after_war_begins(self):
+        for sender, receiver in (("A", "B"), ("B", "A")):
+            for war_stage in ("draft", "delivery", "reply"):
+                with self.subTest(sender=sender, war_stage=war_stage):
+                    game = StubMapScreen(["A", "B"], human_players=("A", "B"))
+                    if war_stage == "draft":
+                        game.set_war("A", "B")
+                    game.propose(sender, receiver, "TRADE", parameters=dict(OFFER))
+                    self.assertEqual(game.pending_action(sender, receiver), "TRADE")
+                    game.run_turn()
+                    self.assertTrue(game.inbound(receiver, sender))
+                    self.assertEqual(game.nation_data[sender]["materials"], 700)
+                    if war_stage == "delivery":
+                        game.set_war("A", "B")
+                    game.player_country = receiver
+                    player_diplomacy_actions.handle_accept_req(game, sender, "")
+                    self.assertEqual(diplomacy_messages.get_response_status(
+                        game.nation_data, receiver, sender), (diplomacy_messages.RESPONSE_ACCEPT, "TRADE"))
+                    if war_stage == "reply":
+                        game.set_war("A", "B")
+                    game.run_turn()
+                    self.assertEqual((game.nation_data[sender]["materials"], game.nation_data[sender]["fuel"]),
+                                     (700, 1200))
+                    self.assertEqual((game.nation_data[receiver]["materials"], game.nation_data[receiver]["fuel"]),
+                                     (1300, 800))
+                    self.assertIn(receiver, game.nation_data[sender]["at_war_with"])
+                    self.assertIn(sender, game.nation_data[receiver]["at_war_with"])
+                    self.assertEqual(game.pending_action(sender, receiver), "")
+
+    def test_ai_refuses_an_enemy_gift_and_refunds_it_after_delivery(self):
+        game = StubMapScreen(["A", "B"], human_players=("A",))
+        game.set_war("A", "B")
+        game.propose("A", "B", "TRADE", parameters={"give_materials": 300})
+        game.run_turn()
+        self.assertTrue(game.inbound("B", "A"))
+        self.assertEqual(game.nation_data["A"]["materials"], 700)
+        self.assertEqual(game.inbound("A", "B"), [])
+        game.run_turn()
+        self.assertEqual(game.nation_data["A"]["materials"], 1000)
+        self.assertEqual(game.nation_data["B"]["materials"], 1000)
+        self.assertTrue(game.inbound("A", "B"))
+        self.assertEqual(game.pending_action("A", "B"), "")
 
 
 class AiTradeEscrowTests(unittest.TestCase):

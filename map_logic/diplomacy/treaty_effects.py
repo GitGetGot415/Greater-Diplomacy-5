@@ -26,6 +26,7 @@ from map_logic.diplomacy import deal as deal_mod
 from map_logic.diplomacy import war_calls
 
 from data import queries
+from data.state_access import session_for
 from map_logic.diplomacy import peace_scope, deal_effects, ratification, military_attaches, volunteers
 from map_logic.diplomacy.faction_actions import finalize_create_faction, finalize_faction_join, join_faction_wars
 from map_logic.diplomacy.diplomacy_events import log_global_event
@@ -171,10 +172,11 @@ def _accept_peace(host, action, proposer, accepter, params, escrow):
 
 
 def _accept_trade(host, action, proposer, accepter, params, escrow):
-    # The backstop for the send rule, where every accepted trade converges: an
-    # offer can be accepted after a war broke out while it waited. The proposer
-    # gets back what it put up, since the caller has already taken the escrow.
-    if queries.are_at_war(proposer, accepter, host.nation_data):
+    # Players may trade with enemies. AI recipients always refuse, including
+    # scripted acceptances or offers whose countries went to war while waiting.
+    # Return the proposer's payment since the caller has already taken escrow.
+    if (accepter not in session_for(host).active_players
+            and queries.are_at_war(proposer, accepter, host.nation_data)):
         if escrow:
             deal_effects.release_escrow(host.nation_data, escrow, proposer)
         return _blocked("TRADE_AT_WAR")

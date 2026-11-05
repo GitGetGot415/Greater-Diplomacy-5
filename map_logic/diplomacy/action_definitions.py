@@ -47,13 +47,6 @@ def _check_existing(context, sender, target, action_type, nation_data, sender_da
     return True, ""
 
 
-def _check_trade(context, sender, target, action_type, nation_data, sender_data, target_data):
-    from data import queries
-    if queries.are_at_war(sender, target, nation_data):
-        return (False, 'countries at war cannot trade')
-    return True, ""
-
-
 def _check_subject_control(context, sender, target, action_type, nation_data, sender_data, target_data):
     if target_data.get("master") != sender:
         return False, "You can only issue this action for your own subject."
@@ -303,7 +296,7 @@ ACTION_DEFINITIONS = {
         proposal_notice="{sender} has proposed terms to end the war. Terms: {terms}",
     ),
     "TRADE": ActionDefinition(
-        "bilateral", "reply", _check_trade,
+        "bilateral", "reply", _check_existing,
         announcement="We propose a trade agreement.",
         proactive_context="proposing an exchange of resources, each of us sending what the other lacks",
         proposal_notice="{sender} has proposed a Trade Agreement. Terms: {terms}",

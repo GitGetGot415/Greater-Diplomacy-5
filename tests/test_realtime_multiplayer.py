@@ -880,6 +880,20 @@ class RealtimeSessionTests(unittest.TestCase):
             {"conscription_slider": 0.25}))
         self.assertEqual(resolved_bonuses["B"], 0.0)
 
+    def test_wartime_trade_draft_is_validated_and_applied_by_server(self):
+        game = map_double(map_data={}, id_to_province={}, nation_data={
+            "A": {"at_war_with": ["B"]}, "B": {"at_war_with": ["A"]}})
+        command = {"type": "country_diplomacy", "pending": {
+            "B": {"action": "TRADE", "message": "", "parameters": {"give_materials": 30}}}}
+        driver = MapRealtimeDriver(game)
+        canonical = driver.validate_draft("A", [command])
+        self.assertNotIn("pending_diplomacy", game.nation_data["A"])
+        driver.apply_validated_drafts({"A": canonical})
+        request = game.nation_data["A"]["pending_diplomacy"]["B"]
+        self.assertEqual(request["action"], "TRADE")
+        self.assertEqual(request["parameters"], {"give_materials": 30})
+        self.assertEqual(game.nation_data["A"]["at_war_with"], ["B"])
+
     def test_diplomacy_draft_is_collected_and_cannot_replace_inflight_offer(self):
         map_ref = map_double(
             map_data={}, id_to_province={}, nation_colors={},

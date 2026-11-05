@@ -553,12 +553,15 @@ def trade_verdict(world, nation, sender, agreement, scenario_settings=None):
     own answer was a bare `net > 0`, which is a coin-flip presented as a fact
     when the net is one material either way.
 
-    Two things are refused outright rather than priced. Being handed over as a
+    Enemy offers are always refused. Being handed over as a
     subject is not this nation's to agree to; and its own core ground is not for
     sale at any price, which is the one rule keeping a rich power from buying a
     poor one province by province in peacetime. Neither applies to a peace
     treaty, where losing the country is what losing means.
     """
+
+    if queries.are_at_war(nation, sender, world.nation_data):
+        return _verdict(False, _REFUSED_FLAT, "{we} do not trade with an enemy")
 
     if not deal_mod.is_deal(agreement):
         agreement = deal_mod.coerce(agreement, sender, nation, kind=deal_mod.KIND_TRADE)

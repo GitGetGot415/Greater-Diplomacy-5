@@ -563,6 +563,9 @@ def _scripted_event_response(actions, sender_nation, request_action):
 
 def scripted_event_response_preview(context, nation, sender, action):
     """Predict a scripted response without mutating state or consuming RNG."""
+    if (action == "TRADE" and nation not in session_for(context).active_players
+            and queries.are_at_war(nation, sender, world_for(context).nation_data)):
+        return "NO"
     return process_scripted_events(context, preview_request=(nation, sender, action))
 
 

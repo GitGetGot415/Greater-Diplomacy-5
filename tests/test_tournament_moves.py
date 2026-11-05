@@ -403,6 +403,22 @@ class TournamentMoveTests(unittest.TestCase):
                             self.assertEqual(accepted["loaded"], 1, accepted["rejections"])
                             self.assertEqual(host.id_to_province[province_id]["building_queue"], [])
 
+    def test_wartime_trade_intent_is_imported_by_host(self):
+        with tempfile.TemporaryDirectory() as directory:
+            host = Host()
+            host.nation_data["Leader"]["at_war_with"] = ["Outsider"]
+            host.nation_data["Outsider"]["at_war_with"] = ["Leader"]
+            command = {"type": "country_diplomacy", "pending": {
+                "Outsider": {"action": "TRADE", "message": "", "parameters": {"give_materials": 30}}}}
+            move = self.player_data("Leader", host, player_intents=[command])
+            path = self.write_move(directory, "trade.gd5move", "Leader", move)
+            result = self.import_moves(host, [path])
+            self.assertEqual(result["loaded"], 1, result["rejections"])
+            request = host.nation_data["Leader"]["pending_diplomacy"]["Outsider"]
+            self.assertEqual(request["action"], "TRADE")
+            self.assertEqual(request["parameters"], {"give_materials": 30})
+            self.assertEqual(host.nation_data["Leader"]["at_war_with"], ["Outsider"])
+
     def test_response_references_are_checked_before_country_merge(self):
         from map_logic.diplomacy import diplomacy_messages
         for correct in (True, False):

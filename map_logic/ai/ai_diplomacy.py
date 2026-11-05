@@ -992,7 +992,7 @@ def _offer_own_initiatives(bag, context, ai_name, pending, active_nations, world
                        ("CREATE_FACTION", alliance, worth, {})]
 
         trade = ai_candidates.resource_offer(world, ai_name, other, settings)
-        if trade:
+        if trade and not queries.are_at_war(ai_name, other, nation_data):
             offers.append(("TRADE", 0.0, "an exchange of what each of us lacks",
                            {"parameters": trade}))
 

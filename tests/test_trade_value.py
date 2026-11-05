@@ -54,6 +54,22 @@ class Fixture(unittest.TestCase):
 
 
 class LandCountsTests(Fixture):
+    def test_an_enemy_gift_is_forecast_as_a_firm_refusal(self):
+        self.game.set_war("A", "B")
+        self.refresh()
+        verdict = self.verdict(deal_mod.resources_clause("A", "B", "materials", self.cap()))
+        self.assertFalse(verdict.accepted)
+        self.assertEqual(verdict.slack, -1.0)
+
+    def test_scripted_acceptance_cannot_predict_a_wartime_ai_trade_acceptance(self):
+        from map_logic.ai.scripted_events import scripted_event_response_preview
+        self.game.scenario_settings["use_scripted_events"] = True
+        self.game.nation_data["B"]["scripted_events"] = [{
+            "conditions": [{"type": "True"}],
+            "actions": [{"type": "Accept Proposal", "target": "A"}]}]
+        self.game.set_war("A", "B")
+        self.assertEqual(scripted_event_response_preview(self.game, "B", "A", "TRADE"), "NO")
+
     def test_a_province_changes_the_answer_at_all(self):
         """The regression. Land was invisible, so these two were the same deal."""
         goods_only = self.verdict(

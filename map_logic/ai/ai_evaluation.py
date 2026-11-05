@@ -527,9 +527,8 @@ def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_typ
         # We are the AI: we take what they give, and give what they take.
         receive, give = deal_mod.resource_flows(agreement, ai_nation)
 
-        # Countries at war cannot trade (action_definitions._check_trade). An
-        # offer can still arrive after a war broke out while it waited, and
-        # pricing it let the Soviet Union sell fuel to the Reich invading it.
+        # Wartime trades are legal for players, but AI recipients always refuse.
+        # Full confidence keeps the model from overriding this preference.
         if queries.are_at_war(ai_nation, sender_nation, nation_data):
             return Verdict(False, 1.0, "we do not trade with an enemy")
 
