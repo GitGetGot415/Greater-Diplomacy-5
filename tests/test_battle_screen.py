@@ -337,6 +337,30 @@ class BattleEditorTests(BattleScreenTestCase):
         return next((rect, unit) for rect, (unit, _note) in screen.row_paint[pane]
                     if screen.can_command(unit))
 
+    def test_disabled_front_spaces_reject_reserve_drops_without_changing_capacity(self):
+        screen = self.editor()
+        pane = battle_screen.PANE_FRONT
+        start, reserve = self.own_row(screen, battle_screen.PANE_RESERVE)
+        disabled = next(rect for rect in screen.disabled_slots[pane]
+                        if screen.regions[pane].collidepoint(rect.center))
+        self.assertFalse(any(rect.collidepoint(disabled.center)
+                             for rect, _index in screen.empty_slots[pane]))
+        before = copy.deepcopy(self.province['units'])
+        positions = {index: [id(unit) if unit is not None else None for unit in slots]
+                     for index, slots in screen.front_slots.items()}
+
+        screen.handle_events([
+            pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=start.center, button=1),
+            pygame.event.Event(pygame.MOUSEBUTTONUP, pos=disabled.center, button=1)])
+
+        self.assertIsNone(screen.drag_unit)
+        self.assertEqual(self.province['units'], before)
+        self.assertEqual({index: [id(unit) if unit is not None else None for unit in slots]
+                          for index, slots in screen.front_slots.items()}, positions)
+        lane, _near, _far = screen.current()
+        self.assertFalse(screen.drop_unit(reserve, pane, slot_index=len(screen.front_slots[lane.index])))
+        self.assertEqual(self.province['units'], before)
+
     def test_overview_unit_clicks_do_not_change_orders(self):
         screen = self.screen()
         before = copy.deepcopy(self.province["units"])

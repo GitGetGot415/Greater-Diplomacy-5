@@ -32,6 +32,7 @@ CONTROL_BUTTON_H = 36
 CARD_H = 58
 CARD_MAX_W = 190
 CARD_MIN_W = 128
+FRONT_GRID_MIN_SLOTS = 10
 SCROLLBAR_W = 15
 LANE_ROW_H = 42
 PANEL_BORDER = MESSAGE_PANEL_STYLES['contacts']['color']
@@ -184,6 +185,8 @@ class BattleEditorScreen(ScrollPanes, Screen):
         self.card_surfaces = {}
         self.slot_surfaces = {}
         self.slot_rects = {}
+        self.disabled_slot_surfaces = {}
+        self.disabled_slots = {}
         self.empty_slots = {}
         self.lane_labels = []
         self.headings = {}
@@ -295,14 +298,17 @@ class BattleEditorScreen(ScrollPanes, Screen):
         units = list(units)
         if slots is None:
             units.sort(key=lambda unit: unit.get('combat_stance') != 'RESERVE')
+        count = max(len(units), slots or 0)
+        if slots is not None:
+            # Extra wells are presentation only; front_slots retains the real capacity.
+            count = max(FRONT_GRID_MIN_SLOTS, count)
         available_w = rect.width - SCROLLBAR_W - GAP
         max_columns = max(1, (available_w + GAP) // (CARD_MIN_W + GAP))
         if slots is None:
             columns = max(1, (available_w + GAP) // (CARD_MAX_W + GAP))
         else:
-            columns = min(max_columns, max(1, math.ceil(slots / 2)))
+            columns = min(max_columns, max(1, math.ceil(count / 2)))
         card_w = min(CARD_MAX_W, (available_w - (columns - 1) * GAP) // columns)
-        count = max(len(units), slots or 0)
         rows = math.ceil(count / columns)
         attrs = self.scroll_attrs(pane)
         limit = min(0, rect.height - rows * (CARD_H + GAP) + GAP)
@@ -310,16 +316,23 @@ class BattleEditorScreen(ScrollPanes, Screen):
         self.row_paint[pane] = []
         self.slot_rects[pane] = []
         self.empty_slots[pane] = []
+        self.disabled_slots[pane] = []
         self.slot_surfaces[pane] = self._slot_surface(pane, (card_w, CARD_H))
+        if slots is not None and count > slots:
+            self.disabled_slot_surfaces[pane] = self._slot_surface(pane, (card_w, CARD_H), disabled=True)
         for grid_row, y in self.layout_list_rows(
                 rows, CARD_H + GAP, rect.y, view_h=rect.height, pad=-GAP,
                 cull_top=rect.top, cull_bottom=rect.bottom,
                 attr=attrs['attr'], limit_attr=attrs['limit_attr']):
             for column in range(columns):
-                index = grid_row * columns + column
+                # Fronts fill down each column before moving right; reserves fill across rows.
+                index = column * rows + grid_row if slots is not None else grid_row * columns + column
                 if index >= count:
                     break
                 card_rect = pygame.Rect(rect.x + column * (card_w + GAP), y, card_w, CARD_H)
+                if slots is not None and index >= slots:
+                    self.disabled_slots[pane].append(card_rect)
+                    continue
                 if index >= len(units) or units[index] is None:
                     self.slot_rects[pane].append(card_rect)
                     self.empty_slots[pane].append((card_rect, index))
@@ -356,16 +369,20 @@ class BattleEditorScreen(ScrollPanes, Screen):
                               c.UI_TEXT_LIGHT, max(1, stat_right - 6), line_height=font.get_height())
         return surface
 
-    def _slot_surface(self, pane, size):
+    def _slot_surface(self, pane, size, *, disabled=False):
         """A recessed card well, using the mail panels' shared bevels and shades."""
         surface = pygame.Surface(size, pygame.SRCALPHA)
         style = MESSAGE_PANEL_STYLES['requests']
-        accent = c.UI_COLORS['blue'][0] if pane == PANE_FRONT else c.UI_TEXT_MUTED
-        draw_pixel_panel(surface, surface.get_rect(), style['color'], accent,
+        accent = c.UI_COLORS['blue'][0] if pane == PANE_FRONT and not disabled else c.UI_TEXT_MUTED
+        color = c.UI_COLORS['grey'][0] if disabled else style['color']
+        draw_pixel_panel(surface, surface.get_rect(), color, accent,
                          gradient_strength=style['gradient_strength'], recessed=True)
         inner = surface.get_rect().inflate(-2 * GAP, -2 * GAP)
         draw_pixel_panel(surface, inner, MESSAGE_PANEL_STYLES['contacts']['color'], PANEL_BORDER,
                          gradient_strength=style['gradient_strength'], recessed=True, border_width=1)
+        if disabled:
+            pygame.draw.line(surface, PANEL_BORDER, inner.topleft, inner.bottomright, 2)
+            pygame.draw.line(surface, PANEL_BORDER, inner.topright, inner.bottomleft, 2)
         return surface
 
     def _select(self, index):
@@ -410,6 +427,8 @@ class BattleEditorScreen(ScrollPanes, Screen):
         def paint(surface):
             for rect in self.slot_rects.get(pane, ()):
                 surface.blit(self.slot_surfaces[pane], rect)
+            for rect in self.disabled_slots.get(pane, ()):
+                surface.blit(self.disabled_slot_surfaces[pane], rect)
             for rect, (unit, _note) in self.row_paint.get(pane, ()):
                 # Keep the source position open while the single visible card
                 # follows the pointer in draw_foreground.
@@ -564,6 +583,8 @@ class BattleEditorScreen(ScrollPanes, Screen):
                         continue
                     for pane in (PANE_FRONT, PANE_RESERVE):
                         if self.regions[pane].collidepoint(event.pos):
+                            if any(rect.collidepoint(event.pos) for rect in self.disabled_slots.get(pane, ())):
+                                break
                             row = self._row_at(pane, event.pos)
                             slot = next((index for rect, index in self.empty_slots.get(pane, ())
                                          if rect.collidepoint(event.pos)), None)
