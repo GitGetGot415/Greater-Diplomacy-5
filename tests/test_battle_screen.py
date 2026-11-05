@@ -153,6 +153,21 @@ class BuildAndPaintTests(BattleScreenTestCase):
         self.assertTrue(screen.battle.lanes)
         self.assertTrue(screen.elements)
 
+    def test_overview_preserves_the_shared_fort_defense_entries(self):
+        screen = self.screen()
+        unit = self.province["units"][0]
+        row = screen.combat_row_data[id(unit)]
+        detailed_entries = [(c.ICON_ATTACK, "20"), (c.ICON_HEALTH, "100"),
+                            (c.ICON_DEFENSE, "7 + 5")]
+        with mock.patch.dict(row, defense=7, fort=5, entries=detailed_entries):
+            with mock.patch.object(battle_screen, "draw_wrapped_icon_row") as draw_stats:
+                screen._card_surface(unit, (84, battle_screen.CARD_H), False)
+            entries = dict(entry for call in draw_stats.call_args_list for entry in call.args[2])
+            self.assertEqual(entries[c.ICON_DEFENSE], dict(detailed_entries)[c.ICON_DEFENSE])
+            self.assertEqual(row["defense"], 7)
+            self.assertEqual(row["fort"], 5)
+            self.assertEqual(dict(row["entries"])[c.ICON_DEFENSE], "7 + 5")
+
     def test_it_survives_an_idle_event_pump(self):
         screen = self.screen()
         screen.handle_events([pygame.event.Event(pygame.MOUSEMOTION, pos=(640, 360), rel=(0, 0),
@@ -364,8 +379,11 @@ class BattleEditorTests(BattleScreenTestCase):
     def test_overview_unit_clicks_do_not_change_orders(self):
         screen = self.screen()
         before = copy.deepcopy(self.province["units"])
-        for pane in (battle_screen.PANE_FRONT, battle_screen.PANE_RESERVE):
-            rect, _unit = self.own_row(screen, pane)
+        pane = battle_screen.PANE_FRONT
+        reserve_ids = {id(unit) for unit in screen.bench()}
+        for is_reserve in (False, True):
+            rect = next(rect for rect, (unit, _note) in screen.row_paint[pane]
+                        if screen.can_command(unit) and (id(unit) in reserve_ids) == is_reserve)
             pos = rect.clip(screen.regions[pane]).center
             with mock.patch.object(pygame.mouse, "get_pos", return_value=pos):
                 screen.handle_events([
@@ -1033,7 +1051,7 @@ class BattleEditorTests(BattleScreenTestCase):
 
 
 class SideReserveTests(BattleScreenTestCase):
-    """The reserve column is the side's, not just ours.
+    """Each side's reserves include its allies.
 
     An ally's reserves are what steps into the front rank as it dies, so a side
     that reads three against six may be nothing of the kind. Listing only our own
@@ -1044,9 +1062,20 @@ class SideReserveTests(BattleScreenTestCase):
         _lane, near, _far = screen.current()
         return near
 
-    def rows(self, screen):
-        return [el for el in screen.elements
-                if getattr(el, "pane", None) == battle_screen.PANE_RESERVE]
+    def listed_units(self, screen, pane):
+        """Collect every card through the pane's independent scroll range."""
+        listed = set()
+        scroll = 0
+        while True:
+            setattr(screen, screen.scroll_attrs(pane)["attr"], scroll)
+            screen.refresh_ui()
+            listed.update(id(unit) for _rect, (unit, _note)
+                          in screen.row_paint[pane])
+            limit = screen.pane_scroll_limit(pane)
+            if scroll <= limit:
+                return listed
+            step = max(1, screen.regions[pane].height - battle_screen.ROW_H)
+            scroll = max(limit, scroll - step)
 
     def test_our_ally_s_reserves_are_listed_beside_ours(self):
         screen = self.screen()
@@ -1079,28 +1108,38 @@ class SideReserveTests(BattleScreenTestCase):
         for unit in screen.side_bench(self.our_side(screen)):
             self.assertNotIn(id(unit), seated)
 
-    def test_an_ally_s_row_is_dead(self):
-        """They are not ours to move -- the whole reason they can be shown."""
+    def test_reserve_cards_do_not_register_clickable_controls(self):
         screen = self.screen()
-        theirs = {id(u) for u in screen.side_bench(self.our_side(screen))
-                  if u["owner"] != self.a}
+        self.assertTrue(screen.row_paint[battle_screen.PANE_FRONT])
+        self.assertFalse([el for el in screen.elements
+                          if getattr(el, "pane", None) in battle_screen.UNIT_PANES])
 
-        self.assertTrue(theirs)
-        for rect, (unit, _note) in screen.row_paint[battle_screen.PANE_RESERVE]:
-            if id(unit) in theirs:
-                row = next(el for el in self.rows(screen) if el.rect == rect)
-                self.assertTrue(getattr(row, "disabled", False))
-
-    def test_our_own_rows_still_send_units_to_the_lane(self):
+    def test_both_sides_reserves_remain_reachable(self):
         screen = self.screen()
-        editable = [el for el in self.rows(screen) if not getattr(el, "disabled", False)]
+        _lane, near, far = screen.current()
+        self.assertEqual(self.listed_units(screen, battle_screen.PANE_FRONT),
+                         {id(unit) for unit in list(near.front) + screen.side_bench(near)})
+        self.assertEqual(self.listed_units(screen, battle_screen.PANE_ENEMY),
+                         {id(unit) for unit in list(far.front) + list(far.reserve)})
 
-        # The outlook footer consumes enough vertical room for a full reserve
-        # row to scroll below the first view. The rows remain editable, and the
-        # signed scroll limit exposes the rest of them.
-        self.assertTrue(editable)
-        self.assertLessEqual(len(editable), len(screen.bench()))
-        self.assertLess(screen.pane_scroll_limit(battle_screen.PANE_RESERVE), 0)
+    def test_scrolling_enemy_reserves_preserves_the_other_rosters(self):
+        # Small explicit fronts leave enough reserves to exercise scrolling,
+        # independent of terrain width and front-rank tuning.
+        self.province["units"].extend(
+            queries.create_unit_dict("Infantry", nation, queries.get_unit_library())
+            for nation in (self.x, self.y) for _ in range(12))
+        with mock.patch.object(combat_rules, "lane_slots", return_value=2):
+            screen = self.screen()
+            screen._select(max(range(len(screen.battle.lanes)), key=lambda index:
+                               len(screen.near_far(screen.battle.lanes[index])[1].reserve)))
+            screen.draw(self.surface)
+            pane = battle_screen.PANE_ENEMY
+            others = {name: screen.pane_scroll(name) for name in screen.regions if name != pane}
+            with mock.patch.object(pygame.mouse, "get_pos", return_value=screen.regions[pane].center):
+                screen.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=-1)])
+
+        self.assertLess(screen.pane_scroll(pane), 0)
+        self.assertEqual(others, {name: screen.pane_scroll(name) for name in others})
 
     def test_the_heading_counts_both(self):
         screen = self.screen()
@@ -1127,8 +1166,6 @@ class SideReserveTests(BattleScreenTestCase):
         self.assertGreater(len([u for u in bench if u["owner"] == self.a]), 1)
 
     def test_an_observer_still_sees_both_sides(self):
-        """Unchanged: a fight you are in shows your side's bench, one you are
-        only watching shows everybody's."""
         self.map.player_country = next(
             n for n in self.map.nation_data
             if queries.is_playable(n, self.map.nation_data)
@@ -1137,23 +1174,10 @@ class SideReserveTests(BattleScreenTestCase):
 
         screen = self.screen()
         _lane, near, far = screen.current()
-        listed = {id(u) for _rect, (u, _note)
-                  in screen.row_paint[battle_screen.PANE_RESERVE]}
-        # Taller rows can require several scroll positions before every
-        # reserve entry is visible; verify the whole pane is reachable.
-        reserve_limit = screen.pane_scroll_limit(battle_screen.PANE_RESERVE)
-        if reserve_limit < 0:
-            view_h = screen.regions[battle_screen.PANE_RESERVE].height
-            step = max(1, view_h - battle_screen.ROW_H)
-            scroll = 0
-            while scroll > reserve_limit:
-                scroll = max(reserve_limit, scroll - step)
-                screen._scroll_reserve = scroll
-                screen.refresh_ui()
-                listed.update(id(u) for _rect, (u, _note)
-                              in screen.row_paint[battle_screen.PANE_RESERVE])
-
-        self.assertEqual(listed, {id(u) for u in list(near.reserve) + list(far.reserve)})
+        for pane, side in ((battle_screen.PANE_FRONT, near),
+                           (battle_screen.PANE_ENEMY, far)):
+            self.assertEqual(self.listed_units(screen, pane),
+                             {id(unit) for unit in list(side.front) + list(side.reserve)})
 
 
 class ObserverTests(BattleScreenTestCase):
@@ -1186,14 +1210,11 @@ class ObserverTests(BattleScreenTestCase):
 
     def test_nothing_in_a_foreign_battle_is_editable(self):
         screen = self.screen()
-        rows = [el for el in screen.elements
-                if getattr(el, "pane", None) in (battle_screen.PANE_FRONT,
-                                                 battle_screen.PANE_ENEMY,
-                                                 battle_screen.PANE_RESERVE)]
-        self.assertTrue(rows)
-        for row in rows:
-            self.assertTrue(getattr(row, "disabled", False),
-                            "a unit the player does not command was clickable")
+        self.assertTrue(screen.row_paint[battle_screen.PANE_FRONT])
+        self.assertFalse([el for el in screen.elements
+                          if getattr(el, "pane", None) in battle_screen.UNIT_PANES])
+        self.assertTrue(all(not screen.can_command(unit)
+                            for unit in self.province["units"]))
 
     def test_it_paints_and_switches_lanes(self):
         screen = self.screen()
@@ -1248,15 +1269,11 @@ class TacticalModeTests(BattleScreenTestCase):
         for unit in screen.bench():
             self.assertIs(unit, self.map.player_unit)
 
-    def test_a_row_for_a_unit_you_do_not_command_is_disabled(self):
+    def test_overview_cards_cannot_issue_orders_in_tactical_mode(self):
         screen = self.screen()
-        editable = [el for el in screen.elements
-                    if getattr(el, "pane", None) in (battle_screen.PANE_FRONT,
-                                                     battle_screen.PANE_RESERVE)
-                    and not getattr(el, "disabled", False)]
-
-        # At most the one division, wherever it happens to be standing.
-        self.assertLessEqual(len(editable), 1)
+        self.assertFalse([el for el in screen.elements
+                          if getattr(el, "pane", None) in battle_screen.UNIT_PANES])
+        self.assertEqual(screen.my_units(), [self.map.player_unit])
 
     def test_clearing_lane_orders_leaves_the_rest_of_the_army_alone(self):
         screen = self.screen()

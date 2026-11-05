@@ -41,27 +41,33 @@ from ui.panels import sidebar_info
 from ui.bars import ui_bars, view_mode_buttons
 from ui.navigation.modal_screen import ModalScreen
 from ui.background_styles import COMBAT_PANEL_STYLES
-from ui.widgets.ui_elements import (draw_wrapped_icon_row, get_combat_stat_entries,
-                          get_bombardment_stat_entries)
-from ui.widgets.text_utils import fit_text, wrap_text
+from ui.widgets.ui_elements import (
+    draw_pixel_panel, draw_wrapped_icon_row, get_combat_stat_entries,
+    get_bombardment_stat_entries,
+)
+from ui.widgets.text_utils import wrap_text
 
 from ui.rendering import overlay_renderer, symbol_loader
 
 
-#: Panes, left to right. Lane list, then the selected lane's three columns.
+#: Lane list and the selected lane's two combined side rosters.
 PANE_LANES = "lanes"
 PANE_FRONT = "front"
 PANE_ENEMY = "enemy"
 PANE_RESERVE = "reserve"
+UNIT_PANES = (PANE_FRONT, PANE_ENEMY)
 
-# Keep the lane list readable while giving each of the three unit columns more
-# horizontal room in the compact right-hand panel.
+# Keep the original lane column beside the two opposing rosters.
 LANE_COL_W = 200
-#: Lane rows stay compact; only the unit/info rows need the extra height below.
 LANE_ROW_H = 42
-#: The unit and its flag, health, and up to three wrapped stat lines. The
-#: Orders panel shows the same stats on the same icons.
-ROW_H = 78
+CARD_COLUMNS = 3
+CARD_H = 86
+CARD_GAP = 4
+CARD_ICON_SIZE = 24
+CARD_PADDING = 4
+CARD_STAT_H = 16
+ROW_H = CARD_H + CARD_GAP
+COL_GAP = 10
 HEADER_H = 26
 SCROLLBAR_W = 15
 SCROLLBAR_GAP = 4
@@ -78,7 +84,7 @@ LANE_FLAGS_SHOWN = 2
 #: _layout, which both shrink to make room for it instead of drawing under it.
 VIEW_MODE_ROW_RESERVE = 40
 
-# The selected lane's projected winner lives below all four scrolling panes and
+# The selected lane's projected winner lives below the scrolling panes and
 # above the fixed footer controls. Keeping it outside the panes means it stays
 # visible while a roster is scrolled, and changing the selected lane can replace
 # the one-line forecast without making a second list compete for that space.
@@ -250,8 +256,8 @@ class Battle_Screen(ModalScreen):
     def side_bench(self, side):
         """The whole side's reserves: ours first, then everyone else's here.
 
-        An ally's reserves are not the player's to move, and their rows say so
-        by being dead. They are still the most important thing on the column:
+        An ally's reserves are not the player's to move. They are still
+        important to show in the side's column:
         they are what steps into the front rank as it dies, so a side that looks
         outnumbered three to six may be nothing of the kind. Showing only our
         own made every fight look like we were holding it alone.
@@ -403,14 +409,15 @@ class Battle_Screen(ModalScreen):
             max(1, p.width - 2 * self.PAD), OUTCOME_H)
         view_h = max(HEADER_H + 1,
                      self.outcome_rect.top - OUTCOME_GAP - top)
-        col_w = (p.width - 2 * self.PAD - LANE_COL_W - 3 * 10) // 3
-
         x = p.x + self.PAD
-        self.regions = {PANE_LANES: pygame.Rect(x, top, LANE_COL_W, view_h)}
-        x += LANE_COL_W + 10
-        for name in (PANE_FRONT, PANE_ENEMY, PANE_RESERVE):
-            self.regions[name] = pygame.Rect(x, top + HEADER_H, col_w, view_h - HEADER_H)
-            x += col_w + 10
+        self.regions = {PANE_LANES: pygame.Rect(
+            x, top, LANE_COL_W, view_h)}
+        x += LANE_COL_W + COL_GAP
+        col_w = (p.width - 2 * self.PAD - LANE_COL_W - 2 * COL_GAP) // 2
+        for pane in UNIT_PANES:
+            self.regions[pane] = pygame.Rect(
+                x, top + HEADER_H, col_w, view_h - HEADER_H)
+            x += col_w + COL_GAP
         self.list_top = top
         self.view_h = view_h
 
@@ -444,6 +451,8 @@ class Battle_Screen(ModalScreen):
         self._layout()
         self.elements = []
         self.row_paint = {}
+        self.card_surfaces = {}
+        self.side_counts = {}
         self.lane_outcome = None
         p = self.panel_rect
 
@@ -469,21 +478,16 @@ class Battle_Screen(ModalScreen):
         self._lane_rows()
         lane, near, far = self.current()
         self.lane_outcome = self._estimate_lane_outcome(lane)
-        self._unit_rows(PANE_FRONT, near.front, lane, editable=self.is_mine(near))
-        self._unit_rows(PANE_ENEMY, far.front, lane, editable=False)
-
-        # The reserve column is our side's bench when we are in this fight --
-        # ours to move, our allies' to count -- and both sides' when we are only
-        # watching.
-        if self.is_mine(near):
-            self._unit_rows(PANE_RESERVE, self.side_bench(near), lane,
-                            editable=True, is_bench=True)
-        elif self.is_mine(far):
-            self._unit_rows(PANE_RESERVE, self.side_bench(far), lane,
-                            editable=True, is_bench=True)
-        else:
-            self._unit_rows(PANE_RESERVE, list(near.reserve) + list(far.reserve),
-                            lane, editable=False)
+        for side, pane in ((near, PANE_FRONT), (far, PANE_ENEMY)):
+            # Keep the player's whole available bench, including allied units,
+            # while showing the opposing lane's own reserves in its column.
+            reserves = self.side_bench(side) if self.is_mine(side) else side.reserve
+            # Preserve the held-reserve priority without separating the roster
+            # into sections or starting reserves on a new grid row.
+            reserves = sorted(reserves, key=lambda unit: unit.get("combat_stance") != "RESERVE")
+            units = list(side.front) + list(reserves)
+            self.side_counts[pane] = len(units)
+            self._unit_cards(pane, units, reserve_ids={id(unit) for unit in reserves})
 
     def _lane_rows(self):
         """One row per lane: the two sides' flags, and how the fight stands.
@@ -501,50 +505,60 @@ class Battle_Screen(ModalScreen):
                                    rect.height, row_h=LANE_ROW_H):
             lane = self.battle.lanes[i]
             color = "blue" if id(lane) in mine else "grey"
-            btn = self.button(rect.x, y, rect.width - SCROLLBAR_W - SCROLLBAR_GAP, color, "",
-                              lambda idx=i: self._select(idx))
+            btn = self.button(rect.x, y, rect.width - SCROLLBAR_W - SCROLLBAR_GAP,
+                              color, "", lambda idx=i: self._select(idx))
             btn.rect.height = LANE_ROW_H
             btn.height = LANE_ROW_H
             btn.is_selected = (i == self.selected_lane)
             self.add_pane_row(PANE_LANES, btn)
             self.row_paint[PANE_LANES].append((btn.rect, lane))
 
-    def _unit_rows(self, pane, unit_list, lane, editable, is_bench=False):
-        if pane == PANE_RESERVE:
-            # Stable display-only sorting keeps held reserves above the rest
-            # without changing combat priority or the order within each group.
-            unit_list = sorted(unit_list, key=lambda unit: unit.get("combat_stance") != "RESERVE")
+    def _unit_cards(self, pane, unit_list, *, reserve_ids):
+        """Passive, cached cards; only lane rows and footer actions are buttons."""
         rect = self.regions[pane]
-        row_w = rect.width - SCROLLBAR_W - SCROLLBAR_GAP
+        card_w = (rect.width - SCROLLBAR_W - SCROLLBAR_GAP
+                  - (CARD_COLUMNS - 1) * CARD_GAP) // CARD_COLUMNS
         self.row_paint[pane] = []
-        for i, y in self.pane_rows(pane, len(unit_list), rect.y, rect.height):
-            unit = unit_list[i]
-            held = unit.get("combat_stance") == "RESERVE"
-            can_edit = editable and self.can_command(unit)
+        rows = (len(unit_list) + CARD_COLUMNS - 1) // CARD_COLUMNS
+        # A different lane can have fewer cards than the previously scrolled one.
+        attrs = self.scroll_attrs(pane)
+        limit = min(0, rect.height - rows * self.ROW_HEIGHT)
+        setattr(self, attrs["attr"], max(limit, min(0, self.pane_scroll(pane))))
+        for grid_row, y in self.pane_rows(pane, rows, rect.y, rect.height):
+            for column in range(CARD_COLUMNS):
+                index = grid_row * CARD_COLUMNS + column
+                if index >= len(unit_list):
+                    break
+                unit = unit_list[index]
+                card_rect = pygame.Rect(
+                    rect.x + column * (card_w + CARD_GAP), y, card_w, CARD_H)
+                self.row_paint[pane].append((card_rect, (unit, "")))
+                self.card_surfaces[pane, id(unit)] = self._card_surface(
+                    unit, card_rect.size, id(unit) in reserve_ids)
 
-            if not can_edit:
-                btn = self.button(rect.x, y, row_w, "grey", "", lambda: None)
-                btn.disabled = True
-                note = ""
-            elif is_bench:
-                btn = self.button(rect.x, y, row_w, "orange" if held else "green", "",
-                                  lambda: None)
-                note = "HELD" if held else ""
-            else:
-                btn = self.button(rect.x, y, row_w, "blue", "",
-                                  lambda: None)
-                # A held unit reaches the front rank whenever nobody else can
-                # take the slot. Keep that preference visible in the overview.
-                note = "HELD" if held else ""
-            # The default list-row button is shorter than the wrapped content
-            # row. Match its hitbox/background to the full painted row.
-            btn.rect.height = self.ROW_HEIGHT
-            btn.height = self.ROW_HEIGHT
-            self.add_pane_row(pane, btn)
-            # Preserve row colors and stats while keeping clicks passive.
-            # The editor handles drag gestures separately from these buttons.
-            btn.click_guard = lambda: False
-            self.row_paint[pane].append((btn.rect, (unit, note)))
+    def _card_surface(self, unit, size, is_reserve):
+        surface = pygame.Surface(size, pygame.SRCALPHA)
+        held = unit.get("combat_stance") == "RESERVE"
+        color = "grey" if not self.can_command(unit) else (
+            "orange" if held else "green" if is_reserve else "blue")
+        draw_pixel_panel(surface, surface.get_rect(), c.UI_COLORS[color][0],
+                         self.PANEL_BORDER)
+        row = self.combat_row_data[id(unit)]
+        icon = row["unit_icon"]
+        if icon is not None:
+            icon = pygame.transform.scale_by(icon, CARD_ICON_SIZE / max(icon.get_size()))
+            surface.blit(icon, icon.get_rect(
+                center=(size[0] // 2, CARD_PADDING + CARD_ICON_SIZE // 2)))
+        # Use the same stat entries as Orders and the editor, including the
+        # separate fort bonus. Always show defense, including zero.
+        entries = dict(row["entries"])
+        entries.setdefault(c.ICON_DEFENSE, queries.format_number(row["defense"]))
+        for index, key in enumerate((c.ICON_ATTACK, c.ICON_HEALTH, c.ICON_DEFENSE)):
+            draw_wrapped_icon_row(
+                surface, fonts.get("small"), [(key, entries[key])],
+                CARD_PADDING, CARD_PADDING * 2 + CARD_ICON_SIZE + index * CARD_STAT_H,
+                c.UI_TEXT_LIGHT, max(1, size[0] - CARD_PADDING * 2), icon_size=16)
+        return surface
 
     # -- painting -------------------------------------------------------- #
 
@@ -591,7 +605,7 @@ class Battle_Screen(ModalScreen):
         return x
 
     def _paint_side_heading(self, surface, rect, side, count_text):
-        """Paints a side's flags and front count above its unit column."""
+        """Paints a side's flags and roster count above its unit column."""
         header_rect = pygame.Rect(rect.x, rect.y - HEADER_H, rect.width, HEADER_H)
         small = fonts.get("small")
         count_surf = small.render(count_text, True, c.UI_TEXT_DIM)
@@ -686,70 +700,20 @@ class Battle_Screen(ModalScreen):
         surface.blit(turn_surf, (turn_x, turn_y))
 
     def _paint_units(self, pane):
-        """The stat block the Orders panel shows, on the row it belongs to.
-
-        Same helpers at labeled=False, so the two readings of a unit cannot
-        drift. Bombardment goes on the end of the stat line rather than a third
-        line of its own: pane_rows lays out one height for every row in a pane,
-        and a gunner is not worth making every infantry row taller for.
-        """
+        """Blit cached cards without hover states or gameplay queries."""
         def paint(surface):
-            small = fonts.get("small")
-            for rect, (unit, note) in self.row_paint.get(pane, ()):
-                row = self.combat_row_data[id(unit)]
-                profile = row["profile"]
-                owner = unit.get("owner", "?")
-                x = flag_icons.draw_flag_centered(surface, owner, self.map_screen.nation_data,
-                                                  rect.x + 6, rect.y + 2, small.get_height())
-
-                dim = owner != self.player or not self.can_command(unit)
-                hp_surf = small.render(queries.format_health_percent(profile), True, c.UI_TEXT_MUTED)
-                note_width = 0
-                if note:
-                    note_width = small.size(note)[0]
-                name_width = max(
-                    1, rect.right - 8 - note_width - x - hp_surf.get_width() - 4)
-                name = fit_text(
-                    queries.get_condensed_unit_name(profile.get("type", "Unit")),
-                    small, name_width)
-                name_surf = small.render(name, True,
-                                         c.UI_TEXT_MUTED if dim else c.UI_TEXT_LIGHT)
-                surface.blit(name_surf, (x, rect.y + 2))
-                surface.blit(hp_surf, (x + name_surf.get_width() + 4, rect.y + 2))
-
-                if note:
-                    note_surf = small.render(note, True, c.UI_TEXT_LIGHT)
-                    surface.blit(note_surf, (rect.right - 8 - note_surf.get_width(), rect.y + 2))
-
-                stat_y = rect.y + 2 + small.get_height() + 2
-                stat_right = rect.right - 10
-                icon = row["unit_icon"]
-                if icon is not None:
-                    icon_rect = icon.get_rect(bottomright=(rect.right - UNIT_ICON_PADDING,
-                                                           rect.bottom - UNIT_ICON_PADDING))
-                    surface.blit(icon, icon_rect)
-                    stat_right = icon_rect.left - UNIT_ICON_GAP
-                # Politics included: this row is a promise about what the unit
-                # will actually do this turn, and the resolver scales its shot
-                # by exactly this.
-                draw_wrapped_icon_row(
-                    surface, small, row["entries"], rect.x + 10, stat_y,
-                    (200, 200, 200), max(1, stat_right - rect.x - 10),
-                    line_height=small.get_height())
+            for rect, (unit, _note) in self.row_paint.get(pane, ()):
+                surface.blit(self.card_surfaces[pane, id(unit)], rect)
         return paint
 
     def draw_elements(self, surface):
         """Rows crop to their own pane, and their decoration crops with them.
 
-        Without this the screen leaned on Screen.draw_elements, which clips
-        to a single content rect -- there are four here, so nothing was clipped
-        at all and a long roster painted straight over the footer buttons.
+        Each side has one clip region shared by its front and reserve cards.
         """
         self.draw_panes(surface, foregrounds={
             PANE_LANES: self._paint_lanes,
-            PANE_FRONT: self._paint_units(PANE_FRONT),
-            PANE_ENEMY: self._paint_units(PANE_ENEMY),
-            PANE_RESERVE: self._paint_units(PANE_RESERVE),
+            **{pane: self._paint_units(pane) for pane in UNIT_PANES},
         })
 
     def _select(self, index):
@@ -798,27 +762,10 @@ class Battle_Screen(ModalScreen):
         self.label(surface, f"{self._composition(near)}   v   {self._composition(far)}",
                    (p.x + self.PAD, p.y + 48))
 
-        our_side = near if self.is_mine(near) else (far if self.is_mine(far) else None)
-        if our_side is None:
-            reserve_label = f"RESERVES ({len(near.reserve) + len(far.reserve)})"
-        else:
-            ours = len(self.bench())
-            allied = len(self.side_bench(our_side)) - ours
-            reserve_label = f"YOUR RESERVE ({ours})"
-            if allied:
-                reserve_label = f"SIDE RESERVE ({ours} yours / {allied} allied)"
-
-        headings = (
-            (PANE_FRONT, near, f"{len(near.front)}/{lane.slots}"),
-            (PANE_ENEMY, far, f"{len(far.front)}/{lane.slots}"),
-        )
-        for pane, side, count_text in headings:
-            rect = self.regions[pane]
-            self._paint_side_heading(surface, rect, side, count_text)
-
-        reserve_rect = self.regions[PANE_RESERVE]
-        self.label(surface, reserve_label,
-                   (reserve_rect.x, reserve_rect.y - HEADER_H + 4))
+        for side, pane in ((near, PANE_FRONT), (far, PANE_ENEMY)):
+            self._paint_side_heading(
+                surface, self.regions[pane], side,
+                f"{self.side_counts[pane]} units")
 
         ui_bars.draw_translucent_panel(
             surface, self.regions[PANE_LANES], (0, 0, 0, 60),
@@ -843,7 +790,7 @@ class Battle_Screen(ModalScreen):
         self.draw_foreground(surface)
 
     def draw_foreground(self, surface):
-        for pane in (PANE_LANES, PANE_FRONT, PANE_ENEMY, PANE_RESERVE):
+        for pane in (PANE_LANES, *UNIT_PANES):
             rect = self.regions.get(pane)
             if rect:
                 # Rows are clipped above this fixed edge as they scroll into
