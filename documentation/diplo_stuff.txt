@@ -143,8 +143,9 @@ An existing formal action or another queued forward still blocks a new forward.
 
 Multiplayer hosts resolve forwarded message references against the submitting country's received messages.
 
-AI countries send letters during AI turn preparation, so they arrive before the next planning phase.
-They use the same inbox and sent copies as other messages. See documentation/llm_ai.txt, LETTERS.
+AI countries follow this timing too. An AI writes its letters while its turn is processed, and they are sent in that turn's send phase with players' text.
+The receiver gets them in the next turn and answers them only then. A letter sitting also answers players' messages to that AI.
+Letters use the same inbox and sent copies as other messages. See documentation/llm_ai.txt, LETTERS.
 
 Message presentation is cached when the screen opens or refreshes. Text input changes refresh the text field cache.
 

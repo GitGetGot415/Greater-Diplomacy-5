@@ -49,6 +49,10 @@ class SessionState:
     responsive_tasks_completed: int = 0
     letters_total: int = 0
     letters_completed: int = 0
+    # This turn's AI letters as (sender, receiver, text), held for the send phase.
+    queued_letters: list = field(default_factory=list)
+    # [sender, recipient] for each message a recipient's letter sitting answered this turn.
+    letter_answers: list = field(default_factory=list)
     refresh_tasks_total: int = 0
     refresh_tasks_completed: int = 0
     turn_start_time: int = 0

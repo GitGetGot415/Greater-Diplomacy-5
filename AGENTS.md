@@ -47,7 +47,7 @@ AI means artificial intelligence. UI means user interface.
   Update inaccurate comments. Keep explanations of rules that are not obvious.
 - **Report every change that the user did not explicitly request.**
   This includes obvious bug fixes, improvements, cleanups, version numbers, and changes to other files.
-  For each change, say exactly what you changed and why.
+  For each change, say exactly what you changed and why, as well as if you think it was an obvious change to make or not.
   Give this report in the same handoff as the change. Do not wait until the user asks.
 - Do not change gameplay during a refactor.
   A behavior change needs a user request, an obvious bug, or a clear explanation to the user.
@@ -393,6 +393,11 @@ Keep tuning data in its source files:
 
 - Every action available to the rule-based AI must also be available to human players under the same game rules and conditions.
   Do not give AI exclusive actions or bypass human gameplay restrictions.
+- **AI countries, rule-based and LLM, follow the same rules as human players, including diplomatic timing.**
+  A message, letter, or proposal written in one turn is sent in the send phase after that turn.
+  The receiver gets it in the next turn and can answer it only then. See `documentation/diplo_stuff.txt`, Message timing.
+  An AI must not read, answer, or react to a message before it is delivered, and must not answer a message in the turn it was delivered.
+  This includes later passes or phases of the same turn's processing.
 - Keep rule-based AI authoritative when the LLM is enabled or disabled.
   Follow the legal-candidate restriction in the systems checklist.
 - Preserve shared prompt prefixes, turn-budget cancellation, and fairness rules from `documentation/llm_ai.txt`.

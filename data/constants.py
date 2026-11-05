@@ -1496,12 +1496,8 @@ AI_LLM_REQUEST_BONUS = 0.25
 # (map_logic/ai/ai_letters.py)
 # ==========================================
 
-# Passes of the letter phase in one turn. A letter written in one pass is read
-# and can be answered in the next, so three passes let A write, B answer, and A
-# answer back before anyone acts on the turn.
-AI_LETTER_PASSES = 3
-# Countries with no unread letters that still sit down to write in the first
-# pass, longest-waiting first. Countries with unread letters always do.
+# Countries with no mail waiting that still sit down to write in a turn,
+# longest-waiting first. Countries with mail waiting always do.
 AI_LETTER_WRITERS_PER_TURN = 6
 AI_LETTERS_PER_CALL = 2          # letters one country may send from one sitting
 AI_LETTER_LENGTH = 1200          # characters kept of one letter

@@ -518,7 +518,7 @@ response, and map-refresh bars.
 Movement progress counts AI countries after their planning passes finish.
 An unknown model workload shows Calculating... until its queue is built.
 A phase with no work shows a completed gray bar labeled N/A, including an unused letter phase.
-The letter bar counts letter passes.
+The letter bar counts the countries that write letters this turn.
 Turning the LLM off leaves rule-based strategy and movement progress active.
 
 ui/bars/ui_bars.py creates display surfaces through set_display_mode.

@@ -136,27 +136,32 @@ LETTERS
 -------
 
 AI countries talk to each other only through inbox letters, the same mail that players use.
-Every model-driven AI country can write. The letter phase runs before the proactive pass.
+Every model-driven AI country can write. The letter phase runs once per turn, before the proactive pass.
+Letters follow the players' message timing in documentation/diplo_stuff.txt, Message timing.
 
-1. The first pass seats every writer with unread letters.
+1. The sitting seats every writer with mail waiting.
+   Mail is its unread letters and every player's plain message still awaiting its answer.
    It also seats up to AI_LETTER_WRITERS_PER_TURN other writers.
    Countries that waited longest go first. letters_last_turn records the turn a country was served.
-2. Each country reads its unread letters, earlier letters, and its notebook.
+2. Each country reads its waiting mail, earlier letters, and its notebook.
    It writes up to AI_LETTERS_PER_CALL letters, one per country.
    Only players and model-driven AI countries can receive letters.
-3. It gives each letter it read an opinion change.
+3. It gives each letter and message it read an opinion change.
    queries.add_opinion_change limits the change to AI_OPINION_CHANGE_MAX and adds it to the general relation modifier.
 4. It rewrites its notebook, which is limited to AI_NOTEBOOK_LENGTH.
-5. Letters arrive in the recipient's inbox at once.
-   The next pass seats every writer that received one. AI_LETTER_PASSES limits the passes.
+5. Its letters wait in session_state.queued_letters until the send phase.
+   diplomacy_processor delivers them with players' text, after every AI phase of the turn.
+   No country reads, answers, or proposes in reaction to them until the next turn.
 
 A letter has letter: true on both copies. The reader's copy gets letter_read: true when its reader is served.
 An unserved or failed sitting leaves letters unread for the next turn.
 A letter that the model refers to in the third person is dropped.
 
-A player's plain message to an AI has no letter field.
-The response phase answers it with process_custom_message, and the reply's opinion_change uses the same limit.
-So a letter from a player and a letter from an AI can move an AI reader's opinion by the same amount.
+A player's plain message to an AI has no letter field. Its delivered MSG: request marks it as awaiting an answer.
+When the AI's sitting returns a usable reply, the sitting has answered the message, whether or not it wrote back.
+session_state.letter_answers records this, and the response phase sends no reply of its own.
+Otherwise, the response phase answers it with process_custom_message, as it answers messages to AI countries that do not write letters.
+That reply's opinion_change uses the same limit as a letter's.
 
 A letter does not change the game in any other way.
 Agreements need proposals. The director reads the notebook and can make own-initiative proposals to correspondents.
@@ -217,7 +222,7 @@ Unused time passes to the next phase. The final phase takes the remainder.
 
 AI_BUDGET_SHARE_LETTERS, AI_BUDGET_SHARE_DIRECTOR, and AI_BUDGET_SHARE_RESPONSES define those shares.
 Do not restart the full budget for each phase.
-All letter passes share the letter phase's share. A pass does not start after that share ends.
+The letter sitting uses the letter phase's share.
 
 The director is the LLM step that decides which diplomatic moves each AI country makes on its own initiative this turn.
 The code calls it that because the country's leader (the LLM) directs its staff (the rule-based AI): the staff draws up a list of options,
@@ -292,8 +297,7 @@ Hosted providers do not stream, so their whole reply appears when it arrives.
 map_logic/ai/ai_activity.py holds this record. ai_llm_runner opens one record per batch and one per job, and ai_handler adds the output.
 begin_turn clears the previous turn's record. The record is display data and never changes a game rule.
 
-The letter bar counts passes, because a later pass's work depends on the letters of the pass before it.
-A pass with no writers completes the remaining passes.
+The letter bar counts the countries in the turn's sitting.
 
 Size the response progress bar from the actual queue.
 Do not duplicate immersion rules to estimate its size.

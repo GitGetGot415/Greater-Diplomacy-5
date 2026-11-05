@@ -223,7 +223,7 @@ class SkipButtonReachableTests(Patcher):
     def test_letters_can_be_skipped(self):
         """Letters are the first model work of a turn, before any other model
         counter is set, so the button has to key off their counter too."""
-        self.assertTrue(self.drawn(self.counters(letters_total=c.AI_LETTER_PASSES)))
+        self.assertTrue(self.drawn(self.counters(letters_total=3)))
 
     def test_directing_can_be_skipped(self):
         self.assertTrue(self.drawn(self.counters(proactive_llm_tasks_total=10)))
@@ -258,7 +258,7 @@ class ThreadsPanelTests(Patcher):
 
     def test_the_toggle_opens_and_closes_the_panel(self):
         from ui.panels import llm_threads_panel
-        screen = self.counters(letters_total=c.AI_LETTER_PASSES)
+        screen = self.counters(letters_total=3)
         self.assertTrue(self.click(screen, llm_threads_panel.TOGGLE_RECT.center))
         self.assertTrue(screen.llm_threads_open)
         self.drawn(screen)    # an open panel with no batch yet still draws
@@ -271,7 +271,7 @@ class ThreadsPanelTests(Patcher):
         batch = ai_activity.start_batch("Testing", 2, 2)
         for request in [batch.begin(label) for label in ("A", "B")]:
             self.addCleanup(batch.end, request, ai_activity.DONE)
-        screen = self.counters(letters_total=c.AI_LETTER_PASSES)
+        screen = self.counters(letters_total=3)
         screen.llm_threads_open = True
         self.drawn(screen)
         self.click(screen, llm_threads_panel._row_rect(1).center)
@@ -285,11 +285,9 @@ class ThreadsPanelTests(Patcher):
 
 
 class LetterClockTests(Patcher):
-    """All letter passes share one phase share, and stop when it ends."""
+    """The letter sitting takes the letter share, and asks nothing once it ends."""
 
     def setUp(self):
-        # Started from the real clock: run_llm_batch keeps its own, and a
-        # deadline in what it considers the past would abandon the first pass.
         self.DEADLINE = time.monotonic() + 10.0
 
         for module in (ai_settings, ai_handler):
@@ -303,16 +301,14 @@ class LetterClockTests(Patcher):
         self.patch(ai_handler, "_CALL_SECONDS", [0.0])
 
         self.clock = FakeClock(self.DEADLINE - 10.0)
-        self.patch(ai_letters, "time", self.clock)
+        self.patch(ai_llm_runner, "time", self.clock)
         self.patch(ai_llm_runner, "turn_deadline",
                    lambda screen=None, share=1.0: self.DEADLINE)
 
-    def stub_provider(self, expire_after=None):
-        """A writes to B and everyone else writes to A, so each pass has work."""
+    def stub_provider(self):
+        """A writes to B and everyone else writes to A."""
         def fake(mode, system, user, turn_id, canned, accepted=None, raw=False, schema=None):
             self.calls.append(user)
-            if expire_after is not None and len(self.calls) >= expire_after:
-                self.clock.now = self.DEADLINE + 1
             to = "B" if "You are the leader of A." in user else "A"
             return {"letters": [{"to": to, "text": f"letter {len(self.calls)}"}],
                     "opinions": {}, "notebook": "notes"}
@@ -324,11 +320,12 @@ class LetterClockTests(Patcher):
         ai_letters.process_letters(self.game)
         self.assertEqual(self.calls, [])
 
-    def test_a_later_pass_does_not_start_after_the_share_ends(self):
-        self.stub_provider(expire_after=1)
+    def test_each_writer_sits_once_a_turn(self):
+        """Letters written this turn are not read this turn, so nobody sits twice."""
+        self.stub_provider()
         ai_letters.process_letters(self.game)
-        self.assertEqual(len(self.calls), 3, "only the first pass had time")
-        self.assertEqual(self.game.letters_completed, 1)
+        self.assertEqual(len(self.calls), 3)
+        self.assertEqual((self.game.letters_completed, self.game.letters_total), (3, 3))
 
     def test_letters_ask_for_their_own_share_and_not_the_turn(self):
         asked = []

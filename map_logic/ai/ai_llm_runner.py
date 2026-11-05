@@ -1,7 +1,7 @@
 """One driver for the game's batches of LLM calls.
 
 Three turn phases fan a list of prompts out to the model and collect the
-answers: the letter passes in map_logic/ai/ai_letters.py, the proactive-message
+answers: the letter sitting in map_logic/ai/ai_letters.py, the proactive-message
 pass in map_logic/ai/ai_diplomacy.py, and the proposal-response pass in
 map_logic/diplomacy/diplomacy_processor.py. The original two had their own
 copy of the same ~60 lines -- the ThreadPoolExecutor, the

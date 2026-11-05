@@ -6,19 +6,22 @@ reads the letters waiting for it, writes letters of its own, and rewrites a
 private notebook of opinions and plans.
 
 A letter changes the game in one way only: its reader's opinion of its author,
-bounded by AI_OPINION_CHANGE_MAX. A player's letter to an AI already does the
-same through the AI's reply (diplomacy_processor._react_to_reply). Agreements
-still need the ordinary proposals, which the director chooses each turn with
-the notebook in front of it and the countries it writes to on its menu.
+bounded by AI_OPINION_CHANGE_MAX. Agreements still need the ordinary
+proposals, which the director chooses each turn with the notebook in front of
+it and the countries it writes to on its menu.
 
-The phase runs before the proactive pass, in AI_LETTER_PASSES passes. Letters
-written in one pass reach their readers at once, so the next pass can answer
-them inside the same turn.
+AI countries follow the players' message timing (documentation/diplo_stuff.txt,
+Message timing). The phase runs once per turn, before the proactive pass. A
+country reads only mail delivered before this turn's processing: its unread
+letters, and any player's plain message still awaiting its answer. The letters
+it writes wait in session_state.queued_letters until the send phase
+(send_queued_letters), so no country reads or reacts to them until next turn.
+A sitting that answers a player's message replaces the response phase's reply
+to it (answered_by_letter).
 """
 
 from data.state_access import world_for, session_for
 import json
-import time
 
 import data.constants as c
 from data import queries
@@ -29,8 +32,8 @@ from map_logic.diplomacy import diplomacy_messages
 
 
 #: Stamped on both copies of a letter this phase sends. A player's plain message
-#: has no stamp: the response phase answers it (process_custom_message), so the
-#: letter phase never answers it a second time.
+#: has no stamp. It reaches the sitting through its sender's awaiting request
+#: instead (awaiting_messages).
 LETTER = "letter"
 #: Stamped on the reader's copy once its reader has sat down with it.
 LETTER_READ = "letter_read"
@@ -54,6 +57,57 @@ def unread_letters(nation_data, nation):
     return [msg for msg in reversed(inbox)
             if isinstance(msg, dict) and msg.get(LETTER) and not msg.get(LETTER_READ)
             and not str(msg.get("sender", "")).startswith(_SENT_PREFIX)]
+
+
+def awaiting_messages(nation_data, nation):
+    """(sender, text) for each delivered plain message still awaiting this country's answer.
+
+    A delivered MSG: request (turns == 1) is how the response phase finds a
+    message to answer. The letter sitting reads the same requests, so the two
+    agree about which messages are owed a reply.
+    """
+    found = []
+    for sender, data in nation_data.items():
+        if sender == nation or not isinstance(data, dict):
+            continue
+        request = (data.get("pending_diplomacy") or {}).get(nation)
+        if (isinstance(request, dict) and request.get("turns", 0) == 1
+                and str(request.get("action", "")).startswith("MSG:")):
+            found.append((sender, request["action"][len("MSG:"):]))
+    return found
+
+
+def waiting_mail(nation_data, nation):
+    """Everything this country's sitting must read: unread letters, then awaited messages.
+
+    An awaited message is shown as its inbox copy when one matches, so the
+    sitting sees its date and the earlier-letters list does not repeat it.
+    """
+    mail = unread_letters(nation_data, nation)
+    inbox = (nation_data.get(nation) or {}).get("inbox") or []
+    for sender, text in awaiting_messages(nation_data, nation):
+        copy = next((msg for msg in inbox if isinstance(msg, dict)
+                     and msg.get("sender") == sender and msg.get("content") == text), None)
+        mail.append(copy or {"sender": sender, "content": text, "date": "", "message_id": None})
+    return mail
+
+
+def answered_by_letter(context, sender, recipient):
+    """Whether recipient's letter sitting answered sender's message this turn.
+
+    The response phase then sends no reply of its own, so the message is
+    answered once, as a player would answer it.
+    """
+    return [sender, recipient] in session_for(context).letter_answers
+
+
+def send_queued_letters(context):
+    """Delivers this turn's AI letters. diplomacy_processor calls this in the send phase."""
+    session_state = session_for(context)
+    queued, session_state.queued_letters = session_state.queued_letters, []
+    for sender, receiver, text in queued:
+        diplomacy_messages.send_message(context, sender, receiver, text, "TEXT",
+                                        extra={LETTER: True}, llm=True)
 
 
 def _counterpart(msg):
@@ -264,9 +318,9 @@ def parse_reply(reply, nation, readers, authors, nation_data):
 
 
 def first_sitting(nation_data, writers, limit=None):
-    """Who writes in the first pass, in the order the batch serves them.
+    """Who sits this turn, in the order the batch serves them.
 
-    Every country with letters waiting, then up to `limit` others, which
+    Every country with mail waiting (waiting_mail), then up to `limit` others, which
     defaults to AI_LETTER_WRITERS_PER_TURN. Both groups put whoever has waited
     longest first, as the director does, so a short budget does not hand the
     desk to the same country every turn.
@@ -277,14 +331,20 @@ def first_sitting(nation_data, writers, limit=None):
         stamp = (nation_data.get(nation) or {}).get(LAST_SAT)
         return (0 if stamp is None else 1, stamp or 0, nation)
 
-    waiting = [n for n in writers if unread_letters(nation_data, n)]
+    waiting = [n for n in writers if waiting_mail(nation_data, n)]
     others = [n for n in writers if n not in waiting]
     return sorted(waiting, key=waited) + sorted(others, key=waited)[:max(0, limit)]
 
 
 def apply_reply(context, job, reply, readers, turn):
-    """Delivers one sitting's letters and records what its writer read and wrote."""
+    """Queues one sitting's letters and records what its writer read and wrote.
+
+    The letters go out in the send phase (send_queued_letters). A usable reply
+    answers the awaited messages it read, whether or not it wrote back, as a
+    player may read a message and not answer it.
+    """
     nation_data = world_for(context).nation_data
+    session_state = session_for(context)
     nation = job["nation"]
     record = nation_data.setdefault(nation, {})
     # Stamped whether or not the reply was usable, like the director's
@@ -297,31 +357,34 @@ def apply_reply(context, job, reply, readers, turn):
     letters, opinions, written = parse_reply(reply, nation, readers,
                                              job["authors"], nation_data)
 
-    # Only the letters that were in front of it. One that arrived while this
-    # sitting was out waits for the next pass.
+    # Only the mail that was in front of it.
     for msg in record.get("inbox") or []:
         if msg.get("message_id") in job["letter_ids"]:
             msg[LETTER_READ] = True
+    for sender in job["answers"]:
+        session_state.letter_answers.append([sender, nation])
 
     for author, amount in opinions.items():
         queries.add_opinion_change(nation, author, amount, nation_data)
     if written is not None:
         record[NOTEBOOK] = written
     for to, text in letters:
-        diplomacy_messages.send_message(context, nation, to, text, "TEXT",
-                                        extra={LETTER: True}, llm=True)
+        session_state.queued_letters.append((nation, to, text))
 
 
 def process_letters(context):
-    """Runs the turn's letter passes. Every model-driven AI country can write.
+    """Runs the turn's one letter sitting. Every model-driven AI country can write.
 
-    The loading bar counts passes, which are known before the work starts;
-    who sits in a later pass depends on the letters of the one before it.
+    The loading bar counts the countries that sit, which are known before the
+    work starts.
     """
     world_state = world_for(context)
     session_state = session_for(context)
     session_state.letters_total = 0
     session_state.letters_completed = 0
+    # Answers left by a turn that failed before its send phase must not
+    # suppress this turn's replies.
+    session_state.letter_answers = []
     mode = ai_handler.get_ai_mode()
     if IS_WEB or mode == "OFF":
         return
@@ -339,10 +402,24 @@ def process_letters(context):
     turn = queries.get_total_turns(world_state.time_manager)
     current_date = world_state.time_manager.get_date_string()
     my_turn_id = ai_handler.CURRENT_TURN_ID
-    deadline = ai_llm_runner.turn_deadline(context, c.AI_BUDGET_SHARE_LETTERS)
 
-    session_state.letters_total = c.AI_LETTER_PASSES
-    session_state.loading_status_text = "Writing Letters..."
+    # Built here, on the turn's own thread, before any request goes out.
+    jobs = []
+    for nation in first_sitting(nation_data, writers):
+        mail = waiting_mail(nation_data, nation)
+        system, user = build_prompt(world_state, nation, mail, readers, alive, current_date)
+        authors = {msg.get("sender") for msg in mail}
+        jobs.append({"nation": nation, "system": system, "user": user,
+                     "letter_ids": {msg.get("message_id") for msg in mail} - {None},
+                     "answers": [sender for sender, _ in awaiting_messages(nation_data, nation)],
+                     "authors": authors,
+                     "schema": reply_schema([r for r in readers if r != nation],
+                                            sorted(authors))})
+    if not jobs:
+        return
+
+    session_state.letters_total = len(jobs)
+    session_state.loading_status_text = f"Writing Letters (0/{len(jobs)})..."
 
     def call(job):
         return ai_handler._run_provider(mode, job["system"], job["user"],
@@ -352,50 +429,18 @@ def process_letters(context):
         apply_reply(context, job, reply, readers, turn)
 
     def record_fallback(job):
-        pass    # unread letters stay unread and wait for the next sitting
+        # Unread letters wait for the next sitting. An awaited message is
+        # left to the response phase, which still answers it this turn.
+        pass
 
-    for index in range(c.AI_LETTER_PASSES):
-        sitting = (first_sitting(nation_data, writers) if index == 0
-                   else [n for n in writers if unread_letters(nation_data, n)])
-        if not sitting:
-            # Letters only come from a pass, so no later pass has anyone either.
-            session_state.letters_completed = session_state.letters_total
-            return
-        if deadline is not None and time.monotonic() >= deadline:
-            return
-
-        # Built here, on the turn's own thread, so a worker never reads an inbox
-        # while another sitting's letters are being delivered into it.
-        jobs = []
-        for nation in sitting:
-            unread = unread_letters(nation_data, nation)
-            system, user = build_prompt(world_state, nation, unread, readers, alive,
-                                        current_date)
-            authors = {msg.get("sender") for msg in unread}
-            jobs.append({"nation": nation, "system": system, "user": user,
-                         "letter_ids": {msg.get("message_id") for msg in unread},
-                         "authors": authors,
-                         "schema": reply_schema([r for r in readers if r != nation],
-                                                sorted(authors))})
-
-        done = {"count": 0}
-
-        def progress(_job, index=index, total=len(jobs)):
-            done["count"] += 1
-            session_state.loading_status_text = (
-                f"Writing Letters (pass {index + 1}/{c.AI_LETTER_PASSES}, "
-                f"{done['count']}/{total})...")
-
-        outcome = ai_llm_runner.run_llm_batch(
-            jobs, call, record, record_fallback,
-            on_progress=progress,
-            should_abort=lambda: session_state.force_skip_llm,
-            max_workers=queries.get_ai_threads(),
-            deadline=deadline,
-            phase=f"Writing letters (pass {index + 1}/{c.AI_LETTER_PASSES})",
-            describe=lambda job: queries.get_country_display_name(job["nation"], nation_data))
-        ai_llm_runner.report_unserved(context, outcome, "Writing letters",
-                                      fallback="read their letters next turn")
-        if outcome.abandoned:
-            return
-        session_state.letters_completed += 1
+    outcome = ai_llm_runner.run_llm_batch(
+        jobs, call, record, record_fallback,
+        on_progress=ai_llm_runner.make_progress_counter(
+            context, "Writing Letters", "letters_completed", "letters_total"),
+        should_abort=lambda: session_state.force_skip_llm,
+        max_workers=queries.get_ai_threads(),
+        deadline=ai_llm_runner.turn_deadline(context, c.AI_BUDGET_SHARE_LETTERS),
+        phase="Writing letters",
+        describe=lambda job: queries.get_country_display_name(job["nation"], nation_data))
+    ai_llm_runner.report_unserved(context, outcome, "Writing letters",
+                                  fallback="read their letters next turn")

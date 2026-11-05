@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from data.state_access import world_for, session_for
-from map_logic.ai import ai_evaluation, ai_llm_runner, ai_prompts
+from map_logic.ai import ai_evaluation, ai_letters, ai_llm_runner, ai_prompts
 import data.constants as c
 from data import queries
 from map_logic.diplomacy import diplomacy_lifecycle as lifecycle
@@ -399,7 +399,8 @@ def _gather_ai_tasks(context):
                         ai_tasks.append({"sender": country_name, "target": target,
                                          "action": action, "content": custom_msg,
                                          "note": info.get("note", "")})
-                    elif action.startswith("MSG:"):
+                    elif (action.startswith("MSG:")
+                          and not ai_letters.answered_by_letter(context, country_name, target)):
                         ai_tasks.append({"sender": country_name, "target": target, "action": "CUSTOM_MSG", "content": action[4:]})
 
                 # Special self-targeting actions for Factions
@@ -1383,6 +1384,9 @@ def _process_pass1_immediate_actions(context):
                             and previous.get("turns", 0) > 0):
                         sent_followups[country_name, d_target] = combined_msg
             data["draft_lists"] = {}
+
+    # AI letters written this turn go out in the same send phase as players' text.
+    ai_letters.send_queued_letters(context)
     return sent_followups
 
 
@@ -1490,7 +1494,8 @@ def _resolve_awaited_action(context, ai_results, active_nations_list, delayed_re
                                     sender, target, action, info)
         return True
     if action.startswith("MSG:"):
-        if not is_human_target:
+        # The target's letter sitting may already have answered it this turn.
+        if not is_human_target and not ai_letters.answered_by_letter(context, sender, target):
             _resolve_ai_message_reply(context, ai_results, active_nations_list, delayed_responses, sender, target)
         return True
     if action in c.BILATERAL_ACTIONS:
@@ -1723,6 +1728,8 @@ def process_diplomacy_turn(context):
     _process_queued_responses(context)
     sent_followups = _process_pass1_immediate_actions(context)
     _process_pass2_delayed_actions(context, ai_results, active_nations_list, delayed_responses, sent_followups)
+    # Pass 2 has settled the messages the letter sitting answered.
+    session_for(context).letter_answers = []
     _apply_delayed_responses(context, delayed_responses)
 
     # --- PROCESS CLAIM QUEUES ---

@@ -56,7 +56,16 @@ class LetterTestCase(unittest.TestCase):
         self.patch(ai_handler, "_run_provider", fake)
 
     def run_letters(self):
+        """One turn's sitting, then the send phase that delivers its letters."""
         ai_letters.process_letters(self.game)
+        ai_letters.send_queued_letters(self.game)
+
+    def await_answer(self, sender, receiver, text):
+        """A player's plain message as the send phase leaves it: delivered, awaiting a reply."""
+        from map_logic.diplomacy import diplomacy_messages
+        diplomacy_messages.send_message(self.game, sender, receiver, text, "TEXT")
+        diplomacy_messages.set_pending(self.game.nation_data, sender, receiver, f"MSG:{text}",
+                                       turns=1, message=text)
 
     def letters_to(self, nation):
         return [m for m in self.game.nation_data[nation]["inbox"]
@@ -79,7 +88,23 @@ class DeliveryTests(LetterTestCase):
         self.assertTrue(received[0]["llm"])
         self.assertIn(("out", "We should talk about C."), self.game.thread("A", "B"))
 
-    def test_a_letter_is_answered_in_the_same_turn(self):
+    def test_a_letter_waits_for_the_send_phase(self):
+        """Nobody can read or react to a letter in the turn it was written."""
+        self.stub({"A": {"letters": [{"to": "B", "text": "We should talk about C."}]}})
+        ai_letters.process_letters(self.game)
+        self.assertEqual(self.letters_to("B"), [])
+        ai_letters.send_queued_letters(self.game)
+        self.assertEqual([m["content"] for m in self.letters_to("B")], ["We should talk about C."])
+        self.assertEqual(self.game.queued_letters, [])
+
+    def test_the_diplomacy_send_phase_delivers_them(self):
+        from map_logic.diplomacy import diplomacy_processor
+        self.stub({"A": {"letters": [{"to": "B", "text": "We should talk about C."}]}})
+        ai_letters.process_letters(self.game)
+        diplomacy_processor._process_pass1_immediate_actions(self.game)
+        self.assertEqual([m["content"] for m in self.letters_to("B")], ["We should talk about C."])
+
+    def test_a_letter_is_answered_only_in_the_next_turn(self):
         self.stub({
             "A": lambda user: ({"letters": [{"to": "B", "text": "Join us against C."}]}
                                if "From B" not in user else {"letters": []}),
@@ -87,7 +112,26 @@ class DeliveryTests(LetterTestCase):
                                if "Join us against C." in user else {"letters": []}),
         })
         self.run_letters()
+        b_prompts = [user for writer, user in self.prompts if writer == "B"]
+        self.assertTrue(b_prompts and not any("Join us against C." in u for u in b_prompts),
+                        "B read A's letter in the turn A wrote it")
+        self.assertEqual(self.letters_to("A"), [])
+        self.run_letters()
         self.assertEqual([m["content"] for m in self.letters_to("A")], ["We are listening."])
+
+    def test_the_director_cannot_react_to_a_letter_before_it_is_delivered(self):
+        """Its own-initiative proposals come from delivered correspondence only."""
+        def offered_to_b():
+            ai_diplomacy.process_basic_proactive_ai(self.game)
+            choice = {c["nation"]: c for c in self.game.proactive_choices}.get("A")
+            return [cand for cand in (choice["candidates"] if choice else [])
+                    if ac.is_initiative(cand) and cand.target == "B"]
+
+        self.stub({"B": {"letters": [{"to": "A", "text": "Shall we stand together?"}]}})
+        ai_letters.process_letters(self.game)
+        self.assertEqual(offered_to_b(), [])
+        ai_letters.send_queued_letters(self.game)
+        self.assertTrue(offered_to_b(), "a delivered letter should make B a correspondent")
 
     def test_the_schema_names_the_readers_and_the_authors(self):
         """Ollama enforces this schema: a letter goes only to a listed reader,
@@ -119,13 +163,60 @@ class DeliveryTests(LetterTestCase):
         sittings = [writer for writer, _ in self.prompts]
         self.assertEqual(sittings.count("B"), 1)
 
-    def test_a_players_message_is_left_to_the_response_phase(self):
-        """It has no letter stamp. process_custom_message answers it."""
+    def test_a_players_plain_message_is_not_a_letter(self):
         from map_logic.diplomacy import diplomacy_messages
         diplomacy_messages.send_message(self.game, "A", "B", "Hello from a player.", "TEXT")
         self.assertEqual(ai_letters.unread_letters(self.game.nation_data, "B"), [])
         self.assertEqual(ai_letters.correspondents(self.game.nation_data, "B", {"A", "B", "C"}),
                          ["A"])
+
+
+class PlayerMessageTests(LetterTestCase):
+    """A player's message to a letter-writing AI is answered once, by its sitting."""
+
+    def setUp(self):
+        super().setUp()
+        self.game = StubMapScreen(["P", "B", "C"], human_players=["P"])
+        self.game.force_skip_llm = False
+
+    def custom_tasks(self):
+        from map_logic.diplomacy import diplomacy_processor
+        return [t for t in diplomacy_processor._gather_ai_tasks(self.game)
+                if t["action"] == "CUSTOM_MSG"]
+
+    def test_the_sitting_reads_it_and_the_response_phase_does_not_reply(self):
+        from map_logic.diplomacy import diplomacy_processor
+        self.await_answer("P", "B", "Will you stand with us?")
+        self.stub({"B": {"letters": [{"to": "P", "text": "We will consider it."}]}})
+        self.run_letters()
+        prompt = next(user for writer, user in self.prompts if writer == "B")
+        self.assertIn("Will you stand with us?", prompt.split("--- LETTERS WAITING FOR YOU ---")[1])
+        self.assertTrue(ai_letters.answered_by_letter(self.game, "P", "B"))
+        self.assertEqual(self.custom_tasks(), [])
+
+        inbox = len(self.game.nation_data["P"]["inbox"])
+        info = self.game.nation_data["P"]["pending_diplomacy"]["B"]
+        self.assertTrue(diplomacy_processor._resolve_awaited_action(
+            self.game, {}, ["P", "B", "C"], [], "P", "B", info["action"], info))
+        self.assertEqual(len(self.game.nation_data["P"]["inbox"]), inbox,
+                         "the response phase replied a second time")
+        self.assertEqual([m["content"] for m in self.letters_to("P")], ["We will consider it."])
+
+    def test_a_failed_sitting_leaves_the_reply_to_the_response_phase(self):
+        self.await_answer("P", "B", "Will you stand with us?")
+        self.patch(ai_handler, "_run_provider",
+                   lambda *a, **k: ai_handler._provider_error("API ERROR: boom"))
+        self.run_letters()
+        self.assertFalse(ai_letters.answered_by_letter(self.game, "P", "B"))
+        self.assertEqual([(t["sender"], t["target"]) for t in self.custom_tasks()], [("P", "B")])
+
+    def test_an_ai_that_writes_no_letters_still_gets_the_response_phase_reply(self):
+        self.game.nation_data["B"]["llm_tier"] = c.AI_TIER_NEVER
+        self.await_answer("P", "B", "Will you stand with us?")
+        self.stub({})
+        self.run_letters()
+        self.assertNotIn("B", [writer for writer, _ in self.prompts])
+        self.assertEqual([(t["sender"], t["target"]) for t in self.custom_tasks()], [("P", "B")])
 
     def test_a_player_can_receive_letters(self):
         game = StubMapScreen(["A", "B"], human_players=["A"])
@@ -275,11 +366,11 @@ class PhaseTests(LetterTestCase):
         self.assertEqual(len(ai_letters.unread_letters(self.game.nation_data, "B")), 1)
         self.assertIsNotNone(self.game.nation_data["B"].get(ai_letters.LAST_SAT))
 
-    def test_the_bar_counts_every_pass(self):
+    def test_the_bar_counts_every_country_that_sits(self):
         self.stub({})
         self.run_letters()
-        self.assertEqual((self.game.letters_completed, self.game.letters_total),
-                         (c.AI_LETTER_PASSES, c.AI_LETTER_PASSES))
+        sat = len({writer for writer, _ in self.prompts})
+        self.assertEqual((self.game.letters_completed, self.game.letters_total), (sat, sat))
 
     def test_unread_letters_come_first_then_whoever_waited_longest(self):
         nd = self.game.nation_data
