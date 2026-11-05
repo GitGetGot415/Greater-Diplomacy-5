@@ -265,7 +265,7 @@ Full conscription gives no bonus. Half conscription gives one quarter of the max
 Quarter conscription gives half the maximum bonus. Zero conscription gives the maximum bonus.
 Read CONSCRIPTION_MAX_DAMAGE_BONUS in data/constants.py for the current maximum.
 
-The dmg modifier: label shows the current bonus to the right of the conscription slider.
+The dmg modifier: label shows the current conscription bonus.
 It includes fractional percentages and updates while you drag the slider.
 Its color changes exponentially between blue, green, yellow, and red as the bonus increases.
 Combat, unit panels, map forecasts, and AI battle estimates use combat_rules.effective_damage_multiplier.
@@ -318,17 +318,15 @@ Movement clears both lane orders.
 Reserves neither fire nor take ordinary lane damage.
 They recover morale while front units fight.
 Manage Battle shows the lanes and their units without changing orders on unit clicks.
-Its bottom-left Edit button changes to the full-screen battle editor.
-The editor replaces the map and Orders view. Opposing reserves sit at the top,
-your side's reserves at the bottom, the lane list on the left, and Reset on the
-right. Exit sits in the top-left corner and Help in the top-right corner.
-Help explains dragging, held units, automatic filling,
-Reset, and the outlook. The selected lane's expected winner and duration appear
-below the controls, filling the remaining column height and using the same
-forecast as Manage Battle. The forecast uses
+Its Edit button changes to the full-screen battle editor.
+The editor replaces the map and Orders view and shows opposing reserves,
+front-line units, and a lane list.
+Help explains dragging, held units, automatic filling, Reset, and the outlook.
+The outlook shows the selected lane's expected winner and duration using the
+same forecast as Manage Battle. The forecast uses
 normal combat assignment, including reserves and automatic filling, and refreshes
-when the selected lane or orders change. Unit cards fill the opposing front grids
-in the center; their slot counts come from the selected lane's actual combat width. Reserve grids
+when the selected lane or orders change. Unit cards fill the opposing front grids;
+their slot counts come from the selected lane's actual combat width. Reserve grids
 and overflowing front grids scroll with their own scrollbars and mouse wheel.
 Drag a reserve onto one of your front-line units to swap them, or into an empty
 front slot to fill that position. Drag a front-line unit into reserves to hold

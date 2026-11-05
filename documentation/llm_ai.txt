@@ -40,7 +40,7 @@ OPENROUTER SETTINGS
 
 Select OpenRouter in Settings to enter an OpenRouter API key and model ID.
 The model field accepts other OpenRouter models.
-Each provider's model field has a Default button to the right of its X button.
+Each provider's model field has a Default button.
 Default sets that provider's model to its value in data/json/starting_defaults.json.
 The game never replaces a saved model. A saved model that the provider retired stays until the player changes it.
 The provider ID is OPENROUTER. Its settings keys are openrouter_api_key and openrouter_model.
@@ -51,7 +51,7 @@ IMMERSION LEVELS
 ----------------
 
 Select an immersion level with the red buttons in Settings.
-The ? button to the right of the LLM AI toggle explains the model's role and these levels.
+The ? button for LLM AI explains the model's role and these levels.
 Its text is SETTINGS_AI_INFO_TEXT in screens/menus/settings.py. Update it when a level changes.
 
 OFF

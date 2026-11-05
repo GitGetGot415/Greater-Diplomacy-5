@@ -82,7 +82,7 @@ These controls do not change real-time multiplayer or local game modes.
 UNIT RANGE SETTINGS
 ===================
 
-Select Edit Unit Stats in Scenario Settings. This button is right of Edit Construction Turns.
+Select Edit Unit Stats in Scenario Settings.
 The Range category lists bombardment families and aircraft families from the complete unit library.
 Bombardment families appear first. Aircraft families follow. Each group uses alphabetical order.
 A labeled divider separates the two groups.
@@ -143,11 +143,10 @@ New Map opens map creation. Load Map opens the custom map browser.
 Both screens return to the Map Editor menu with Back.
 Load Game and the map browsers use ui/widgets/content_browser.py.
 Select a row to read its details. Select it again to clear the selection.
-Use the bottom-right button or Enter to open the selected item.
+Select Load Game or Edit Map, or press Enter, to open the selected item.
 Use the arrow keys to change the selection. Enter in the search field finishes the search without opening an item.
 
 Search filters names without matching capitalization. Clear shows all items.
-Search, Clear, and Sort share one row above each browser's item list.
 The Sort button cycles through modification date, ascending name, and descending name.
 The modification date comes from the folder. It is separate from the game date in the details panel.
 
@@ -166,29 +165,25 @@ Select Start Game or Create Map, or press Enter, to open the selected item.
 Selecting the same item again clears the selection. Search and sorting use the shared browser controls.
 Back from New Map returns to the Map Editor menu. Back from New Game returns to the main menu.
 
-Random Scenario is below Custom Scenarios and opens its existing setup screen.
-Scenario Settings is above Data Refresh at the bottom of New Game's left panel.
-Historical Leaders is in the top-right corner.
+Random Scenario opens its existing setup screen.
+New Game provides Scenario Settings, Data Refresh, and Historical Leaders.
 Returning from Scenario Settings keeps the selected category and scenario.
 Base maps and shipped scenarios open as copies. Their source folders cannot be renamed or deleted from this browser.
 
-New Map places Data Refresh at the bottom of the left panel and enables it for Base Maps.
+New Map enables Data Refresh for Base Maps.
 It requires confirmation before it changes the source data.
-New Game keeps its Data Refresh options at the bottom of the left panel.
 Historical Leaders is enabled in Historical Scenarios.
 
 Browsers read directory entries when they open, after file operations, and when the player clicks Refresh.
 Use Refresh after an external file change. Frame updates and scrolling use cached entries and metadata.
 Details read existing meta.json fields without loading map geometry or history.
-Load Game, Load Map, New Game, and New Map show the selected item's terrain.png above its details.
+Load Game, Load Map, New Game, and New Map show the selected item's terrain.png preview.
 Previews keep the image proportions. Missing or unreadable images do not block the browser.
 Previews are cached until Refresh, a file operation, or a directory change.
 
 New Game and New Map use compact category and item buttons without category icons.
 Start Game and Create Map use large text and a star icon.
 These buttons appear only when an item is selected.
-All three panels extend to the bottom screen margin. The details panel keeps its width at the right screen margin.
-The middle panel fills the space between the category and details panels.
 Panel sizes stay constant when you select, search, or change categories. Long lists and details use scrolling.
 Category metadata is cached when the category opens. Refresh reloads folder entries and metadata.
 
@@ -437,9 +432,9 @@ Map and algorithm choices in Random Scenario setup also use this sound.
 Checkbox selection uses the item sound. Confirm buttons retain their action sound.
 Automatic selection during screen setup stays silent. Research and unit actions retain their specific sounds.
 Paper.wav plays when Credits, Assets, Mods, or Translate opens from the main menu.
-It also plays for Identity and Claims in the left UI bar, and Metadata in the map editor.
+It also plays for Identity and Claims on the map, and Metadata in the map editor.
 Add Contact in Messages also plays Paper.wav.
-Puppets.wav plays when Puppets opens from the left UI bar.
+Puppets.wav plays when Puppets opens from the map.
 Send Message.mp3 plays when text is queued in Messages or a trade offer is sent or updated.
 Empty text and invalid trade offers do not play this sound. Opening the trade editor does not play it.
 Delete Message.mp3 plays when a queued text message or trade offer is deleted in Messages.
@@ -473,23 +468,20 @@ MUSIC PLAYBACK
 Desktop startup music begins after the first rendered frame is displayed.
 Browser startup music waits for the first mouse click or key press.
 Clear Starting removes the fixed starting song. It does not restore a distribution default.
-The song list has an album name divider before each album's songs. Songs within each album keep their usual spacing.
+The song list groups songs by album with album name dividers.
 
 beepbox_audio.py owns BeepBox and UltraBox JSON recognition, sample loading, and playback.
 Put song JSON files in an album folder under assets/music/.
 The "+ New Album" tile in the music screen asks for a name and makes an empty album folder.
 Every album shows a delete button, except the albums named in UNDELETABLE_ALBUMS in data/constants.py.
 Add the name of each album that ships with the game to that list.
-The "+ Add Song" button is the last row of the song list.
-This button stays enabled. If no album accepts new songs, a popup tells you to create an album first.
-A line separates this button from the last song when the list contains songs.
+The "+ Add Song" button stays enabled. If no album accepts new songs, a popup tells you to create an album first.
 It asks for an album, then for a file, and copies the file into that album folder.
 It lists only albums that are not in UNDELETABLE_ALBUMS.
 The file must be MP3, WAV, OGG, or a BeepBox or UltraBox JSON song.
-A song in an album that is not in UNDELETABLE_ALBUMS has a small delete button in its top-right corner.
+A song in an album that is not in UNDELETABLE_ALBUMS has a delete button.
 The game asks for confirmation first, and it does not delete the song that is playing.
-ALBUM_ORDER in screens/menus/music_player.py sets which albums show first. The "+ New Album" tile is always last.
-The last row fills text-only album tiles left to right across neighboring columns before stacking. The "+ New Album" tile follows the albums in that visual order.
+ALBUM_ORDER in screens/menus/music_player.py controls album sorting.
 The format field selects the original BeepBox synth or the separate UltraBox synth.
 The existing music controls apply to both formats.
 UltraBox duration and seeking use its tempo changes and next-bar commands.
@@ -520,8 +512,8 @@ Browser loading returns to the main loop between stages, including map layers.
 A single large file read, procedural generation, or layer can still pause a browser stage.
 Loading blocks other actions until it finishes or reports an error.
 
-Turn loading keeps letter, strategy, movement-order, proactive diplomacy,
-response, and map-refresh bars in fixed positions.
+Turn loading shows separate letter, strategy, movement-order, proactive diplomacy,
+response, and map-refresh bars.
 Movement progress counts AI countries after their planning passes finish.
 An unknown model workload shows Calculating... until its queue is built.
 A phase with no work shows a completed gray bar labeled N/A, including an unused letter phase.
@@ -636,7 +628,7 @@ TUTORIAL ICON MARKERS
 ====================
 
 The map tutorial uses image markers in UNIT_VIEW_NOTE in ui/dialogs/message_box.py.
-Move a [icon:naval:18] marker to change its position.
+Use [icon:naval:18] to include a naval icon in the tutorial text.
 Change 18 to set the maximum image dimension in pixels.
 Use an icon name from ui_elements.UI_ICONS.
 Omit :18 to use the text height.

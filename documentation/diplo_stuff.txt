@@ -15,7 +15,7 @@ Replies from the message screen use their explicit country target without requir
 Spectator country removal
 ------------------------
 
-Local spectators see Annex and Delete below the country faction controls.
+Local spectators can use Annex and Delete for the selected country.
 These actions are unavailable in the editor, tactical play, country selection, and both multiplayer modes.
 They are also unavailable during turn processing, map refresh, or saving.
 The game checks these permissions again when the spectator confirms an action.
@@ -84,15 +84,15 @@ See documentation/general_info.txt for disk history and tournament archive stora
 Message timing
 --------------
 
-Messages keeps conversations on the left and the selected conversation on the right.
+Messages lists conversations and displays the selected conversation.
 Each conversation row shows its latest message preview and unread count.
-Country flags appear before names in the conversation list and header.
+The conversation list and header show country flags and names.
 Add Contact uses compact rows with a flag and country name.
-Theme, Trade, and Mark Unread are in the conversation header.
-Treaty reply controls use a fixed area above the text field and Queue button.
+Theme, Trade, and Mark Unread act on the selected conversation.
+Treaty reply controls let the player answer requests.
 
 Theme changes the background color for the selected country's conversation.
-The country's button in the left list uses the same color, including in Add Contact.
+The country's conversation button uses the same color, including in Add Contact.
 Selecting a country keeps its button color. A marker identifies the selected country.
 
 The color picker has OK, Reset, and Cancel buttons.
@@ -108,12 +108,11 @@ They roll in when the player selects a country. They roll out when the player cl
 Entry uses ease-out motion. Exit uses ease-in motion, which starts slowly and speeds up.
 
 A message bubble slides in once when it first appears in a conversation.
-Bubbles that the player sent come in from the right. Bubbles from the other country come in from the left.
 
-When the player deselects a country, each bubble leaves through the side where it entered.
+When the player deselects a country, each bubble slides out.
 Bubble controls stop accepting input immediately. The exit uses cached presentation data and does not change stored messages.
 
-The left header with Exit and Mark All Read stays visible.
+Exit and Mark All Read stay visible.
 
 Queued bubble backgrounds use 50% opacity until they are sent. Their text and borders stay opaque.
 Bubbles use the shared stepped gradient.
@@ -329,12 +328,12 @@ The editor rejects any assignment that makes a country its own ancestor.
 Shared puppet-state propagation visits each country at most once.
 Malformed older scenario data must not cause endless recursion.
 
-Puppets opens a separate screen with a subject list on the left.
-Select a subject to show its controls on the right.
+Puppets opens a separate screen with a subject list.
+Select a subject to show its controls.
 Move Up and Move Down change the selected subject's order.
 Integrated subjects have Manpower, Materials, and Fuel siphon sliders.
-Each slider shows its percentage. The amount taken appears beside it.
-Edit, Release, Annex, and Take Puppets use fixed buttons below the resource controls.
+Each slider shows its percentage and the amount taken.
+Edit, Release, Annex, and Take Puppets act on the selected subject.
 Unavailable actions remain visible with disabled buttons.
 Pending actions show an Undo button. Actions already sent retain their existing cancellation restrictions.
 Create Nation opens the map creation panel. Back restores the subject selection and list position.
@@ -350,7 +349,7 @@ Back from the creation panel returns to the country list. Cancel closes the coun
 Tournament and real-time spectators cannot create countries for other players.
 Tactical players and map editors cannot use these creation controls.
 
-The creation panel offers Integrated, Autonomous, and Independent above Keep Cores.
+The creation panel offers Integrated, Autonomous, Independent, and Keep Cores.
 Each new panel starts with Integrated selected.
 Each queued creation stores its selected type. Later control changes do not change queued creations.
 Queued creation text is yellow for Integrated, green for Autonomous, and light blue for Independent.

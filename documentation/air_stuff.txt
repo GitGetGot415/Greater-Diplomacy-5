@@ -198,9 +198,9 @@ Closing the selector without a choice changes nothing.
 Map boxes separate aircraft from land and naval units.
 Aircraft with different missions use separate boxes, including idle aircraft and different patrol priorities.
 Aircraft with matching missions can share one rectangular box.
-Active missions show their command icon to the right of the box.
+Active missions show their command icon.
 
-The icon uses the same size rule as the army emblem on the left.
+The icon uses the same size rule as the army emblem.
 Only the unit rectangle supplies selection and hover hitboxes.
 Mission badges follow the map arrows' order visibility rule.
 Private foreign orders and fogged stacks reveal no mission badges.
@@ -269,7 +269,7 @@ Carrier repairs do not repair cargo.
 Release cargo before disbanding the carrier.
 
 Air Transport is the mission icon while cargo remains aboard without an active Air Drop order.
-An active Air Drop order uses Air Drop.png beside the aircraft's map box.
+An active Air Drop order uses Air Drop.png as its mission icon.
 Other orders and order cancellation use Air Transport while cargo remains aboard.
 Target selection retains the current icon until a valid target replaces the order.
 An empty carrier uses its current order's icon.

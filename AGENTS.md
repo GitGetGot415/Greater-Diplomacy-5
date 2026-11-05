@@ -464,6 +464,9 @@ A data edit must not make a test fail, unless the test checks that JSON matches 
 
 ### Shared Information
 
+- **Never document the positions of buttons or other UI elements.**
+  This applies to guides and design notes. This does NOT apply to in-game help and tutorials.
+  Identify controls by name and explain their behavior without screen coordinates, corners, or relative placement.
 - Keep each shared explanation in one primary guide. Check existing guides before adding documentation.
 - Use short references elsewhere. Keep local conditions, exceptions, permissions, and summaries needed to use each guide independently.
 - Update documentation when a change makes an existing explanation incomplete or inaccurate, or adds behavior that users must understand.
@@ -494,7 +497,7 @@ A data edit must not make a test fail, unless the test checks that JSON matches 
 
 The fresh-game map tutorial is in `ui/dialogs/message_box.py`.
 Treat it as player documentation.
-Update it when map navigation, unit selection, orders, or covered bottom-left controls change.
+Update it when map navigation, unit selection, orders, or covered map controls change.
 Add or update tests for changed tutorial behavior.
 
 Update documentation, comments, examples, tests, schemas, and UI text when the implementation makes them incomplete or inaccurate.
