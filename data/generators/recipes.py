@@ -679,7 +679,7 @@ RESEARCH_RECIPES = [
         (yr(1912, 2, 50),                            "fuel_refining",              "INDUSTRY", 1200, {"bergius_process": 1},   {}),
         (building_years("Basic Recruitment Center"), "basic_recruitment",          "INDUSTRY", 1200, {},                       {}),
         (building_years("Recruitment Building Lvl"), "recruitment_buildings",      "INDUSTRY", 1200, {"basic_recruitment": 1}, {}),
-        (yr(1810, 10, 35),                            "general_recruitment",        "INDUSTRY", 900,  GR,                       {}),
+        (yr(1810, 10, 35),                           "general_recruitment",        "INDUSTRY", 900,  GR,                       {}),
         (yr(1850, 2, 100),                           "resource_refining",          "INDUSTRY", 900,  {},                       {}),
     ],
     [
