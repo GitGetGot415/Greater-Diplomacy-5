@@ -45,7 +45,7 @@ from ui.widgets.ui_elements import (draw_wrapped_icon_row, get_combat_stat_entri
                           get_bombardment_stat_entries)
 from ui.widgets.text_utils import fit_text, wrap_text
 
-from ui.rendering import overlay_renderer
+from ui.rendering import overlay_renderer, symbol_loader
 
 
 #: Panes, left to right. Lane list, then the selected lane's three columns.
@@ -65,6 +65,9 @@ ROW_H = 78
 HEADER_H = 26
 SCROLLBAR_W = 15
 SCROLLBAR_GAP = 4
+UNIT_ICON_GAP = 4
+UNIT_ICON_PADDING = 6
+UNIT_ICON_SIZE = 48
 #: Flags a lane row shows per side before it gives up and counts the rest. Two
 #: keeps the compact lane button's flags and combat tally inside its width.
 LANE_FLAGS_SHOWN = 2
@@ -135,7 +138,7 @@ class Battle_Screen(ModalScreen):
     #                              THE FIGHT                             #
     # ------------------------------------------------------------------ #
 
-    def rebuild(self):
+    def rebuild(self, *, unit_icon_size=(UNIT_ICON_SIZE, UNIT_ICON_SIZE)):
         """Re-reads the battle. Called after every change, so slot counts and
         lane membership update as the player edits rather than on close."""
         self.combat_width = combat_rules.combat_width_for_terrain(
@@ -147,6 +150,11 @@ class Battle_Screen(ModalScreen):
         for unit in self.province.get("units", []):
             profile = self.battle.profiles.get(id(unit), unit)
             row = sidebar_info.unit_roster_row(profile, self.province, self.map_screen.nation_data, True)
+            combat_owner = queries.get_unit_combat_owner(unit)
+            row["unit_icon"] = symbol_loader.get_symbol(
+                unit["type"], zoom=1, country=combat_owner,
+                color=self.map_screen.nation_colors.get(combat_owner, c.UI_TEXT_LIGHT),
+                fit_size=unit_icon_size)
             row["entries"] = get_combat_stat_entries(
                 row["attack"], row["defense"], int(profile.get("health", 0)),
                 profile.get("speed", 0), labeled=False, defense_bonus=row["fort"])
@@ -415,7 +423,9 @@ class Battle_Screen(ModalScreen):
 
     def _build_footer(self, btn_y):
         p = self.panel_rect
-        edit = self.button(p.x + self.PAD, btn_y, 130, "blue", "Edit", self.open_editor)
+        edit = self.button(p.x + self.PAD, btn_y, 130, "grey", "Edit", self.open_editor)
+        icon_side = edit.font.get_height()
+        edit.image = symbol_loader.get_symbol("Gear", zoom=1, fit_size=(icon_side, icon_side))
         edit.disabled = not (self.visible and self.my_units()
                              and self.map_screen.can_select_map_units())
         self.elements.append(edit)
@@ -714,12 +724,19 @@ class Battle_Screen(ModalScreen):
                     surface.blit(note_surf, (rect.right - 8 - note_surf.get_width(), rect.y + 2))
 
                 stat_y = rect.y + 2 + small.get_height() + 2
+                stat_right = rect.right - 10
+                icon = row["unit_icon"]
+                if icon is not None:
+                    icon_rect = icon.get_rect(bottomright=(rect.right - UNIT_ICON_PADDING,
+                                                           rect.bottom - UNIT_ICON_PADDING))
+                    surface.blit(icon, icon_rect)
+                    stat_right = icon_rect.left - UNIT_ICON_GAP
                 # Politics included: this row is a promise about what the unit
                 # will actually do this turn, and the resolver scales its shot
                 # by exactly this.
                 draw_wrapped_icon_row(
                     surface, small, row["entries"], rect.x + 10, stat_y,
-                    (200, 200, 200), rect.width - 20,
+                    (200, 200, 200), max(1, stat_right - rect.x - 10),
                     line_height=small.get_height())
         return paint
 

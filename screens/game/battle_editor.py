@@ -6,7 +6,9 @@ import pygame
 import data.constants as c
 from data import queries
 from map_logic.actions import unit_actions
-from screens.game.battle_screen import PANE_FRONT, PANE_RESERVE, PANE_ENEMY, PANE_LANES
+from screens.game.battle_screen import (
+    PANE_FRONT, PANE_RESERVE, PANE_ENEMY, PANE_LANES, UNIT_ICON_GAP, UNIT_ICON_PADDING,
+)
 from ui.navigation.screen import Screen
 from ui.widgets.scroll_panes import ScrollPanes
 from ui.widgets.ui_elements import Button, draw_pixel_panel, draw_wrapped_icon_row
@@ -215,7 +217,9 @@ class BattleEditorScreen(ScrollPanes, Screen):
             return
         self.overview.visible = queries.is_province_visible(self.map_screen, self.province['id'])
         self.overview.selected_lane = self.selected_lane
-        self.overview.rebuild()
+        self.overview.rebuild(unit_icon_size=(
+            CARD_H - 2 * UNIT_ICON_PADDING,
+            CARD_H - fonts.get('small').get_height() - 2 * UNIT_ICON_PADDING))
         self.selected_lane = self.overview.selected_lane
         self.battle = self.overview.battle
         self.title = f"Edit Battle - Province {self.province['id']}"
@@ -341,8 +345,15 @@ class BattleEditorScreen(ScrollPanes, Screen):
         name = fit_text(name, font, max(1, size[0] - x - health.get_width() - 12))
         surface.blit(font.render(name, True, c.UI_TEXT_LIGHT), (x, 3))
         surface.blit(health, (size[0] - health.get_width() - 5, 3))
+        stat_right = size[0] - 6
+        icon = row['unit_icon']
+        if icon is not None:
+            icon_rect = icon.get_rect(bottomright=(size[0] - UNIT_ICON_PADDING,
+                                                   size[1] - UNIT_ICON_PADDING))
+            surface.blit(icon, icon_rect)
+            stat_right = icon_rect.left - UNIT_ICON_GAP
         draw_wrapped_icon_row(surface, font, row['entries'], 6, font.get_height() + 6,
-                              c.UI_TEXT_LIGHT, size[0] - 12, line_height=font.get_height())
+                              c.UI_TEXT_LIGHT, max(1, stat_right - 6), line_height=font.get_height())
         return surface
 
     def _slot_surface(self, pane, size):
