@@ -472,6 +472,8 @@ Running the launcher again replaces its previous server for the same checkout. O
 Servers started by older launchers must be stopped once manually because those processes have no owned Windows job.
 After source changes, rebuild the browser package to refresh the staged game code.
 Native and web audio filters retain their separate replacement rules.
+On web, text that Python sends to JavaScript must be ASCII. pygbag delivers each UTF-8 byte of any other character as a separate character.
+Pass JavaScript source through browser_js_source in data/platform.py before platform.window.eval. Send data as json.dumps output, which escapes non-ASCII characters.
 Each asset inventory checks Git ignore rules in one batch. A new inventory reads the rules again.
 Distributed saves and mods remain empty. Builds replace local preferences with distribution defaults and exclude editor scratch scenarios.
 

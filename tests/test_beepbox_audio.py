@@ -1,26 +1,91 @@
 import base64
 import json
 import os
+import platform
 import subprocess
 import sys
 import unittest
+from unittest import mock
 
 from beepbox_audio import (
     _JS_BRIDGE,
     _WEB_JS_BRIDGE,
     BeepBoxStream,
+    WebBeepBoxStream,
     has_beepbox_replacement,
     is_available,
     is_beepbox_song,
 )
 from compilation_scripts.html_compilation import _ignore_web_asset
 from data.constants import CREDITS_DATA
+from data.platform import browser_js_source
 
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SONG_PATH = os.path.join(ROOT, "assets", "music", "Greater Diplomacy 5", "Dschungel.json")
 SYNTH_PATH = os.path.join(ROOT, "assets", "beepbox", "beepbox_synth.min.js")
 RUN_NATIVE_AUDIO_TESTS = os.environ.get("GD5_RUN_NATIVE_AUDIO_TESTS") == "1"
+
+# Browser globals that the vendor synth's Web Audio playback needs.
+FAKE_WEB_AUDIO = r"""
+    globalThis.window = globalThis;
+    globalThis.performance = {now: function() { return 0; }};
+    globalThis.AudioContext = class {
+        constructor() { this.sampleRate = 44100; this.destination = {}; }
+        createScriptProcessor(size) {
+            const connections = [];
+            return {
+                bufferSize: size,
+                connect: function(node) { connections.push(node); },
+                disconnect: function(node) {
+                    if (arguments.length === 0) { connections.length = 0; return; }
+                    const index = connections.indexOf(node);
+                    if (index < 0) throw new Error("node is not connected");
+                    connections.splice(index, 1);
+                },
+            };
+        }
+        createGain() {
+            return {context: this, gain: {value: 1}, connect: function() {}};
+        }
+        resume() {}
+        close() {}
+    };
+"""
+
+
+def _garble(text):
+    """Reproduce pygbag 0.9.3: each UTF-8 byte of non-ASCII text arrives as one Latin-1 character."""
+    return text.encode("utf-8").decode("latin-1")
+
+
+class _GarblingWindow:
+    """A pygbag platform.window stand-in that garbles text the way pygbag does."""
+
+    def __init__(self, context):
+        object.__setattr__(self, "_context", context)
+
+    def _global(self, name):
+        return "window[" + json.dumps(name) + "]"
+
+    def eval(self, source):
+        return self._context.eval(_garble(source))
+
+    def __getattr__(self, name):
+        kind = self._context.eval("typeof " + self._global(name))
+        if kind == "undefined":
+            raise AttributeError(name)
+        if kind != "function":
+            return self._context.eval(self._global(name))
+
+        def call(*args):
+            literals = ", ".join(
+                json.dumps(_garble(arg) if isinstance(arg, str) else arg) for arg in args)
+            return self._context.eval(f"{self._global(name)}({literals})")
+        return call
+
+    def __setattr__(self, name, value):
+        self._context.eval(f"{self._global(name)} = {json.dumps(value)}")
 
 
 def _native_audio_tests_available():
@@ -125,31 +190,7 @@ class BeepBoxAudioTests(unittest.TestCase):
             synth_source = source_file.read()
 
         context = quickjs.Context()
-        context.eval(r"""
-            globalThis.window = globalThis;
-            globalThis.performance = {now: function() { return 0; }};
-            globalThis.AudioContext = class {
-                constructor() { this.sampleRate = 44100; this.destination = {}; }
-                createScriptProcessor(size) {
-                    const connections = [];
-                    return {
-                        bufferSize: size,
-                        connect: function(node) { connections.push(node); },
-                        disconnect: function(node) {
-                            if (arguments.length === 0) { connections.length = 0; return; }
-                            const index = connections.indexOf(node);
-                            if (index < 0) throw new Error("node is not connected");
-                            connections.splice(index, 1);
-                        },
-                    };
-                }
-                createGain() {
-                    return {context: this, gain: {value: 1}, connect: function() {}};
-                }
-                resume() {}
-                close() {}
-            };
-        """)
+        context.eval(FAKE_WEB_AUDIO)
         context.eval(synth_source)
         context.eval(_WEB_JS_BRIDGE)
         context.eval(
@@ -200,6 +241,34 @@ class BeepBoxAudioTests(unittest.TestCase):
 
         context.eval("window.__gd5_beepbox_stop()")
         self.assertEqual(context.eval("window.__gd5_beepbox_length()"), 0)
+
+    def test_browser_js_source_escapes_text_that_pygbag_would_garble(self):
+        text = "1←(2 3)←4 2× C♯ \U0001f3b5"
+        escaped = browser_js_source(json.dumps(text, ensure_ascii=False))
+        self.assertTrue(escaped.isascii())
+        # JSON and JavaScript read \u escapes and surrogate pairs the same way.
+        self.assertEqual(json.loads(escaped), text)
+        with self.assertRaises(ValueError):
+            browser_js_source('"\\×"')
+
+    @unittest.skipUnless(is_available(), "native QuickJS dependency is not installed")
+    def test_browser_synth_names_match_song_names_through_pygbag(self):
+        import importlib
+
+        quickjs = importlib.import_module("quickjs")
+        with open(SONG_PATH, encoding="utf-8") as song_file:
+            song = json.load(song_file)
+        # pygbag garbles only non-ASCII text, so the song must use a non-ASCII name.
+        self.assertFalse(song["key"].isascii())
+
+        context = quickjs.Context()
+        context.eval(FAKE_WEB_AUDIO)
+        with mock.patch.object(platform, "window", _GarblingWindow(context), create=True), \
+                mock.patch("data.constants.ASSETS_ROOT_DIR", os.path.join(ROOT, "assets")):
+            WebBeepBoxStream(SONG_PATH)
+
+        parsed_key = context.eval("window.__gd5_beepbox_synth.song.toJsonObject().key")
+        self.assertEqual(parsed_key, song["key"])
 
     @unittest.skipUnless(
         _native_audio_tests_available(),

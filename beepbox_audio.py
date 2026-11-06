@@ -12,6 +12,7 @@ import time
 from urllib.parse import unquote, urlsplit
 
 import data.constants as c
+from data.platform import browser_js_source
 
 
 SAMPLE_RATE = 44100
@@ -594,17 +595,20 @@ class WebBeepBoxStream:
         self._stopped = False
 
         song = _read_song(song_path)
+        # json.dumps writes non-ASCII characters as \u escapes. Keep its default
+        # ensure_ascii: pygbag garbles non-ASCII text on its way to JavaScript.
         song_json = json.dumps(song)
 
         # The bridge and vendor bundle are evaluated once per page. The synth's
         # own activateAudio() method creates/resumes AudioContext on the user's
         # first input event, which is where the controller starts this stream.
+        # Escape both sources so the synth's names match the song's names.
         engine_flag = "__gd5_" + song["format"].lower() + "_ready"
         if not getattr(self._window, engine_flag, False):
-            self._window.eval(_synth_source(song))
+            self._window.eval(browser_js_source(_synth_source(song)))
             setattr(self._window, engine_flag, True)
         if not getattr(self._window, "__gd5_music_bridge_ready", False):
-            self._window.eval(_WEB_JS_BRIDGE)
+            self._window.eval(browser_js_source(_WEB_JS_BRIDGE))
             setattr(self._window, "__gd5_music_bridge_ready", True)
 
         getattr(self._window, "__gd5_beepbox_load")(

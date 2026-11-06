@@ -15,10 +15,38 @@ import shutil
 
 import asyncio
 import os
+import re
 import sys
 import threading
 
 IS_WEB = sys.platform == "emscripten"
+
+_NON_ASCII = re.compile(r"[^\x00-\x7f]")
+
+
+def _js_unicode_escape(match):
+    """Write one character as JavaScript \\u escapes, using surrogate pairs above U+FFFF."""
+    units = match.group().encode("utf-16-be")
+    return "".join(f"\\u{int.from_bytes(units[i:i + 2], 'big'):04x}" for i in range(0, len(units), 2))
+
+
+def browser_js_source(source):
+    """Return JavaScript source that reaches the browser unchanged through pygbag.
+
+    pygbag 0.9.3 delivers each UTF-8 byte of a non-ASCII character as a
+    separate Latin-1 character, so "×" reaches JavaScript as "Ã\\x97". Vendor
+    synths compare such names with song data, so garbled source silently breaks
+    playback. JavaScript reads a \\uXXXX escape as the original character in
+    strings, regular expressions, and identifiers, and ignores it in comments.
+    Pass every non-ASCII source through this function before platform.window.eval.
+    """
+    if re.search(r"\\[^\x00-\x7f]", source):
+        raise ValueError(
+            "Cannot escape JavaScript source with a backslash before a non-ASCII "
+            "character; an added escape would change its meaning. Write that "
+            "character as a \\u escape in the source."
+        )
+    return _NON_ASCII.sub(_js_unicode_escape, source)
 
 
 class LoadingSteps:
