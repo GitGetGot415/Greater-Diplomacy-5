@@ -6,7 +6,9 @@ import asyncio
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
+import platform as browser_platform  # pygbag adds .window to the stdlib module
 import subprocess
 import sys
 import tempfile
@@ -20,6 +22,7 @@ import main as game_main
 import data.constants as c
 from data import platform as game_platform, queries
 from compilation_scripts import html_compilation
+from tests.web_fixtures import GarblingWindow
 from ui import music_playback
 from ui.widgets import ui_elements
 
@@ -173,7 +176,14 @@ class WebMP3BridgeTests(unittest.TestCase):
             };
         """)
         self.context.eval(music_playback._WEB_MP3_BRIDGE)
-        self.context.eval("globalThis.player = __gd5_mp3_load('/music/My Song.mp3', 2, 0.4)")
+        self.context.eval(
+            "globalThis.player = __gd5_mp3_load(JSON.stringify('/music/My Song.mp3'), 2, 0.4)")
+
+    def test_python_player_reads_a_non_ascii_path_through_pygbag(self):
+        track = os.path.join('music', 'Ode à la joie 歌.mp3')
+        with patch.object(browser_platform, 'window', GarblingWindow(self.context), create=True):
+            music_playback.WebMP3Playback(track, 0, 1)
+        self.assertEqual(self.context.eval('readPath'), os.path.abspath(track))
 
     def test_uses_uploaded_bytes_and_keeps_seek_before_metadata(self):
         self.assertEqual(self.context.eval('readPath'), '/music/My Song.mp3')

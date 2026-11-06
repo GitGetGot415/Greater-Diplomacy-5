@@ -19,6 +19,7 @@ from beepbox_audio import (
 from compilation_scripts.html_compilation import _ignore_web_asset
 from data.constants import CREDITS_DATA
 from data.platform import browser_js_source
+from tests.web_fixtures import GarblingWindow
 
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -52,40 +53,6 @@ FAKE_WEB_AUDIO = r"""
         close() {}
     };
 """
-
-
-def _garble(text):
-    """Reproduce pygbag 0.9.3: each UTF-8 byte of non-ASCII text arrives as one Latin-1 character."""
-    return text.encode("utf-8").decode("latin-1")
-
-
-class _GarblingWindow:
-    """A pygbag platform.window stand-in that garbles text the way pygbag does."""
-
-    def __init__(self, context):
-        object.__setattr__(self, "_context", context)
-
-    def _global(self, name):
-        return "window[" + json.dumps(name) + "]"
-
-    def eval(self, source):
-        return self._context.eval(_garble(source))
-
-    def __getattr__(self, name):
-        kind = self._context.eval("typeof " + self._global(name))
-        if kind == "undefined":
-            raise AttributeError(name)
-        if kind != "function":
-            return self._context.eval(self._global(name))
-
-        def call(*args):
-            literals = ", ".join(
-                json.dumps(_garble(arg) if isinstance(arg, str) else arg) for arg in args)
-            return self._context.eval(f"{self._global(name)}({literals})")
-        return call
-
-    def __setattr__(self, name, value):
-        self._context.eval(f"{self._global(name)} = {json.dumps(value)}")
 
 
 def _native_audio_tests_available():
@@ -263,7 +230,7 @@ class BeepBoxAudioTests(unittest.TestCase):
 
         context = quickjs.Context()
         context.eval(FAKE_WEB_AUDIO)
-        with mock.patch.object(platform, "window", _GarblingWindow(context), create=True), \
+        with mock.patch.object(platform, "window", GarblingWindow(context), create=True), \
                 mock.patch("data.constants.ASSETS_ROOT_DIR", os.path.join(ROOT, "assets")):
             WebBeepBoxStream(SONG_PATH)
 

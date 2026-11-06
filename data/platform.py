@@ -131,7 +131,8 @@ def download_file(path):
     import platform  # stdlib `platform`, patched by pygbag with `.window` on web
     if not _download_js_defined:
         platform.window.eval(
-            "window.__gd5_download = function(diskfile, filename) {"
+            "window.__gd5_download = function(diskfileJson, filenameJson) {"
+            "  var diskfile = JSON.parse(diskfileJson), filename = JSON.parse(filenameJson);"
             "  var blob = new Blob([FS.readFile(diskfile)]);"
             "  var elem = window.document.createElement('a');"
             "  elem.href = window.URL.createObjectURL(blob);"
@@ -142,7 +143,9 @@ def download_file(path):
             "};"
         )
         _download_js_defined = True
-    platform.window.__gd5_download(path, os.path.basename(path))
+    # pygbag garbles non-ASCII text on its way to JavaScript, and export names
+    # can contain it. json.dumps writes it as ASCII \u escapes.
+    platform.window.__gd5_download(json.dumps(path), json.dumps(os.path.basename(path)))
 
 
 _upload_js_defined = False

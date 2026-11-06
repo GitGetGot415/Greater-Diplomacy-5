@@ -16,6 +16,7 @@ The music player then keeps its last known position.
 """
 
 import ctypes
+import json
 import os
 
 import pygame
@@ -190,7 +191,9 @@ class SoLoudPlayback:
 
 
 _WEB_MP3_BRIDGE = r"""
-window.__gd5_mp3_load = function(path, seconds, volume) {
+window.__gd5_mp3_load = function(pathJson, seconds, volume) {
+    // The path arrives as JSON so that non-ASCII names survive pygbag.
+    const path = JSON.parse(pathJson);
     const audio = new Audio();
     const url = URL.createObjectURL(new Blob([FS.readFile(path)], {type: 'audio/mpeg'}));
     const player = {
@@ -263,8 +266,10 @@ class WebMP3Playback:
         self._stopped = False
         self._window = platform.window
         self._window.eval(_WEB_MP3_BRIDGE)
+        # pygbag garbles non-ASCII text on its way to JavaScript; json.dumps
+        # writes it as ASCII \u escapes that the bridge decodes.
         getattr(self._window, '__gd5_mp3_load')(
-            os.path.abspath(track_path), start_time, volume)
+            json.dumps(os.path.abspath(track_path)), start_time, volume)
 
     @property
     def error(self):
