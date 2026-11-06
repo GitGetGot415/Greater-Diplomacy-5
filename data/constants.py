@@ -560,7 +560,7 @@ TARGET_FPS = get_starting_value("settings_config.json", "target_fps")
 # ==========================================
 
 START_YEAR = 1800
-END_YEAR = 2150
+END_YEAR = 2200
 
 BASE_RESEARCH_POINTS_PER_DAY = 10
 RESEARCH_SLOTS = 3 # Number of techs a nation can research simultaneously

@@ -235,7 +235,7 @@ EQUIPMENT_STAGES = {
         (2000, "Optics-Equipped Infantry",    3500, 1100, 0,  1,  1350, 1000, 100, 2,   None, (5, 3, {'health': 100, 'attack': 50, 'cost_materials': 30})),
         (2015, "Networked Infantry",          4000, 1350, 0,  1,  1500, 1000, 115, 2,   None, (5, 3, {'health': 100, 'attack': 50, 'cost_materials': 40})),
         (2030, "Drone-Integrated Infantry",   4500, 1600, 0,  1,  1700, 1000, 130, 2,   None, (5, 2, {'health': 100, 'attack': 50, 'cost_materials': 40})),
-        (2040, "Sensor-Integrated Infantry",  5000, 1850, 0,  1,  1900, 1000, 140, 2,   None, (56, 2, {'health': 100, 'attack': 50, 'cost_materials': 50})),
+        (2040, "Sensor-Integrated Infantry",  5000, 1850, 0,  1,  1900, 1000, 140, 2,   None, (81, 2, {'health': 100, 'attack': 50, 'cost_materials': 50})),
     ],
     "cavalry": [
         #YR    NAME                       HP    ATK  DEF SPD MAT   MAN   FUEL TIME BOMB  UPGRADES
@@ -258,7 +258,7 @@ EQUIPMENT_STAGES = {
         (1980, "Assault-Rifle Militia",      1350, 180, 0,  1,  400, 1000, 0,   1,   None, (5, 4,  {'health': 50, 'attack': 8, 'cost_materials': 10})),
         (2000, "Radio-Equipped Militia",     1600, 220, 0,  1,  450, 1000, 0,   1,   None, (5, 4,  {'health': 50, 'attack': 8, 'cost_materials': 10})),
         (2020, "Optics-Equipped Militia",    1850, 260, 0,  1,  500, 1000, 0,   1,   None, (5, 4,  {'health': 50, 'attack': 8, 'cost_materials': 20})),
-        (2040, "Drone-Supported Militia",    2100, 300, 0,  1,  600, 1000, 0,   1,   None, (28, 4, {'health': 100, 'attack': 20, 'cost_materials': 50})),
+        (2040, "Drone-Supported Militia",    2100, 300, 0,  1,  600, 1000, 0,   1,   None, (41, 4, {'health': 100, 'attack': 20, 'cost_materials': 50})),
     ],
     "artillery": [
         #YR    NAME                                HP    ATK   DEF SPD MAT   MAN  FUEL TIME BOMB  UPGRADES
@@ -276,7 +276,7 @@ EQUIPMENT_STAGES = {
         (1995, "Digital Fire-Control Artillery",   950,  950,  0,  1,  1850, 500, 0,   2,   950,  (3, 5, {'health': 50, 'attack': 50, 'bombard_attack': 50, 'cost_materials': 50})),
         (2010, "Precision-Guided Artillery",       1100, 1100, 0,  1,  2000, 500, 0,   2,   1100, (3, 5, {'health': 50, 'attack': 50, 'bombard_attack': 50, 'cost_materials': 50})),
         (2025, "Sensor-Linked Artillery",          1250, 1250, 0,  1,  2150, 500, 0,   2,   1250, (3, 5, {'health': 50, 'attack': 50, 'bombard_attack': 50, 'cost_materials': 50})),
-        (2040, "Automated Fire-Control Artillery", 1400, 1400, 0,  1,  2300, 500, 0,   2,   1400, (28, 4, {'health': 100, 'attack': 100, 'bombard_attack': 100, 'cost_materials': 100})),
+        (2040, "Automated Fire-Control Artillery", 1400, 1400, 0,  1,  2300, 500, 0,   2,   1400, (41, 4, {'health': 100, 'attack': 100, 'bombard_attack': 100, 'cost_materials': 100})),
     ],
 }
 
@@ -392,15 +392,15 @@ LAND_UNIT_RECIPES = [
     #YR    NAME                          HP     ATK    DEF  SPD      MAT    MAN   FUEL  TIME BOMB   UPGRADES                                                                                         OPTIONS
     (1914, 'WW1 Tank',                   3000,  1500,  100, 1,       6000,  1000, 300,  6,   None,  (1, 1, {}),                                                                                      {}),
     (1912, 'WW1 Armored Car',            1000,  300,   50,  2,       3000,  1000, 100,  4,   None,  (1, 1, {}),                                                                                      {}),
-    (1916, 'Armored Car',                1000,  400,   60,  CAR_SPD, 3000,  1000, 100,  4,   None,  (59, 4, {'health': 100, 'attack': 100, 'defense': 10, 'cost_materials': 200, 'cost_fuel': 5}),   {}),
-    (1918, 'Light Tank',                 1800,  1200,  80,  LT_SPD,  5000,  1000, 150,  5,   None,  (59, 4, {'health': 200, 'attack': 150, 'defense': 10, 'cost_materials': 500, 'cost_fuel': 5}),   {}),
+    (1916, 'Armored Car',                1000,  400,   60,  CAR_SPD, 3000,  1000, 100,  4,   None,  (72, 4, {'health': 100, 'attack': 100, 'defense': 10, 'cost_materials': 200, 'cost_fuel': 5}),   {}),
+    (1918, 'Light Tank',                 1800,  1200,  80,  LT_SPD,  5000,  1000, 150,  5,   None,  (71, 4, {'health': 200, 'attack': 150, 'defense': 10, 'cost_materials': 500, 'cost_fuel': 5}),   {}),
     (1925, 'Medium Tank',                2500,  2400,  150, 2,       9000,  1000, 200,  6,   None,  (4, 5, {'health': 500, 'attack': 600, 'defense': 25, 'cost_materials': 1000, 'cost_fuel': 10}),  {}),
     (1929, 'Heavy Tank',                 3000,  3000,  350, 1,       12000, 1000, 200,  6,   None,  (4, 4, {'health': 500, 'attack': 500, 'defense': 50, 'cost_materials': 1000, 'cost_fuel': 10}),  {}),
     (1945, 'Super Heavy Tank',           5000,  5000,  550, 1,       16000, 1000, 240,  6,   None,  (5, 4, {'defense': 50, 'cost_materials': 2000, 'cost_fuel': 20}),                                {}),
     (1944, 'Landkreuzer P.1000 Ratte',   10000, 6000,  400, 1,       50000, 2000, 1000, 10,  1000,  (1, 1, {}),                                                                                      {'division_suffix': '1000'}),
     (1956, 'Landkreuzer P.1500 Monster', 15000, 8000,  500, 1,       60000, 2000, 1200, 12,  1200,  (1, 1, {}),                                                                                      {'division_suffix': '1500'}),
     (2030, 'Railgun',                    10000, 10000, 500, 1,       80000, 2000, 3000, 10,  10000, (1, 1, {}),                                                                                      {}),
-    (1945, 'Main Battle Tank',           5000,  5000,  250, 2,       16000, 1000, 240,  6,   None,  (42, 5, {'health': 500, 'attack': 500, 'defense': 25, 'cost_materials': 1000, 'cost_fuel': 10}), {}),
+    (1945, 'Main Battle Tank',           5000,  5000,  250, 2,       16000, 1000, 240,  6,   None,  (52, 5, {'health': 500, 'attack': 500, 'defense': 25, 'cost_materials': 1000, 'cost_fuel': 10}), {}),
     (1918, 'WW1 Railroad Gun',           1200,  500,   0,   1,       5000,  1000, 0,    6,   500,   (1, 1, {}),                                                                                      {}),
     (1932, 'WW2 Railroad Gun',           2000,  800,   0,   1,       8000,  1000, 0,    6,   800,   (1, 1, {}),                                                                                      {}),
 ]
@@ -409,12 +409,12 @@ NAVAL_UNIT_RECIPES = [
     #YR    NAME                HP    ATK   DEF  SPD MAT    MAN   FUEL TIME BOMB  UPGRADES                                                                                                                OPTIONS
     (1800, 'Carrack',          800,  400,  0,   1,  2000,  500,  0,   4,   None, (6, 10, {'health': 40, 'attack': 20, 'cost_materials': 100}),                                                           {}),
     (1860, 'Ironclad',         2000, 800,  200, 1,  6000,  1000, 100, 6,   None, (5, 4,  {'health': 200, 'attack': 50, 'defense': 20, 'cost_materials': 500, 'cost_fuel': 10}),                           {}),
-    (1880, 'Pre-Dreadnought',  3000, 1200, 300, 1,  10000, 2000, 150, 8,   None, (5, 4,  {'health': 200, 'attack': 200, 'defense': 20, 'cost_materials': 1000, 'cost_fuel': 10}),                         {}),
+    (1880, 'Pre-Dreadnought',  3000, 1200, 300, 1,  8000,  1000, 150, 8,   None, (5, 4,  {'health': 200, 'attack': 200, 'defense': 20, 'cost_materials': 500, 'cost_fuel': 10}),                         {}),
     (1900, 'Dreadnought',      4000, 3000, 400, 1,  16000, 2000, 200, 10,  300,  (5, 4,  {'health': 400, 'attack': 100, 'defense': 40, 'cost_materials': 800, 'cost_fuel': 20, 'bombard_attack': 40}),    {}),
     (1920, 'Battleship',       6000, 3500, 600, 1,  20000, 2000, 300, 10,  500,  (6, 4,  {'attack': 100, 'cost_materials': 1000, 'cost_fuel': 20, 'bombard_attack': 40}),   {}),
-    (1900, 'Destroyer',        2400, 1200, 200, 1,  8000,  1000, 250, 8,   None, (63, 4, {'health': 400, 'attack': 300, 'defense': 20, 'cost_materials': 500, 'cost_fuel': 5}),                          {}),
-    (1900, 'Submarine',        1200, 600,  0,   1,  6000,  1000, 150, 6,   None, (63, 4, {'health': 200, 'attack': 100, 'cost_materials': 400, 'cost_fuel': 5}),                                         {}),
-    (1920, 'Aircraft Carrier', 600,  300,  200, 1,  20000, 2000, 300, 10,  300,  (47, 5, {'health': 200, 'attack': 150, 'defense': 20, 'cost_materials': 1000, 'cost_fuel': 20, 'bombard_attack': 150}), {}),
+    (1900, 'Destroyer',        2400, 1200, 200, 1,  8000,  1000, 100, 8,   None, (76, 4, {'health': 400, 'attack': 300, 'defense': 20, 'cost_materials': 500, 'cost_fuel': 10}),                          {}),
+    (1900, 'Submarine',        1200, 600,  0,   1,  6000,  1000, 50,  6,   None, (76, 4, {'health': 200, 'attack': 100, 'cost_materials': 400, 'cost_fuel': 5}),                                         {}),
+    (1920, 'Aircraft Carrier', 600,  300,  200, 1,  20000, 2000, 300, 10,  300,  (57, 5, {'health': 200, 'attack': 150, 'defense': 20, 'cost_materials': 1000, 'cost_fuel': 20, 'bombard_attack': 150}), {}),
 ]
 
 AIR_UNIT_RECIPES = [
@@ -427,9 +427,9 @@ AIR_UNIT_RECIPES = [
     (1930, 'Monoplane Transport', 1000, 0,    0,   1,  9000,  1000, 200, 4,   None, 'transport', 60,  None,  None,   None,  None, 1,    (3, 5, {'cost_materials': 500, 'air_range_px': 10}),                                                                {}),
     (1940, 'V1 Flying Bomb',      1000, 800,  0,   1,  2000,  0,    60,  2,   None, 'strike',    200, None,  True,   None,  True, None, (1, 1, {}),                                                                                                         {}),
     (1945, 'V2 Rocket',           2000, 1200, 0,   1,  4000,  0,    80,  4,   None, 'strike',    300, None,  True,   True,  True, None, (1, 1, {}),                                                                                                         {}),
-    (1950, 'Jet Fighter',         4000, 1000, 100, 1,  5000,  500,  160, 4,   None, 'fighter',   200, 4,     None,   None,  None, None, (51, 4, {'health': 200, 'attack': 100, 'defense': 20, 'cost_materials': 200, 'cost_fuel': 10, 'air_range_px': 5}),  {}),
-    (1955, 'Jet Bomber',          6000, 1600, 200, 1,  6000,  500,  160, 6,   None, 'bomber',    300, None,  None,   None,  True, None, (40, 5, {'health': 200, 'attack': 200, 'defense': 20, 'cost_materials': 500, 'cost_fuel': 20, 'air_range_px': 10}), {}),
-    (1955, 'Jet Transport',       2000, 0,    0,   1,  25000, 1000, 500, 6,   None, 'transport', 100, None,  None,   None,  None, 2,    (40, 5, {'health': 200, 'cost_materials': 1000, 'air_range_px': 20}),                                               {}),
+    (1950, 'Jet Fighter',         4000, 1000, 100, 1,  5000,  500,  160, 4,   None, 'fighter',   200, 4,     None,   None,  None, None, (63, 4, {'health': 200, 'attack': 100, 'defense': 20, 'cost_materials': 200, 'cost_fuel': 10, 'air_range_px': 5}),  {}),
+    (1955, 'Jet Bomber',          6000, 1600, 200, 1,  6000,  500,  160, 6,   None, 'bomber',    300, None,  None,   None,  True, None, (50, 5, {'health': 200, 'attack': 200, 'defense': 20, 'cost_materials': 500, 'cost_fuel': 20, 'air_range_px': 10}), {}),
+    (1955, 'Jet Transport',       2000, 0,    0,   1,  25000, 1000, 500, 6,   None, 'transport', 100, None,  None,   None,  None, 2,    (50, 5, {'health': 200, 'cost_materials': 1000, 'air_range_px': 20}),                                               {}),
 ]
 
 
@@ -506,7 +506,7 @@ BUILDING_RECIPES = [
     [
         #YR    NAME                        TIME GROUP          MAT   MAN FUEL OUTMAT OUTMAN OUTFUEL UPGRADES                         OPTIONS
         (1800, "Basic Recruitment Center", 6,   "recruitment", 2500, 0,  0,   0,     50,    0,      (1, 1, {}),                      {"numbered": False}),
-        (1805, "Recruitment Building Lvl", 6,   "recruitment", 5000, 0,  0,   0,     100,   0,      (35, 10, {"prod_manpower": 100}), {}),
+        (1805, "Recruitment Building Lvl", 6,   "recruitment", 5000, 0,  0,   0,     100,   0,      (40, 10, {"prod_manpower": 100}), {}),
     ],
     [
         #YR    NAME        TIME GROUP            MAT   MAN FUEL OUTMAT OUTMAN OUTFUEL UPGRADES                                         OPTIONS
@@ -679,8 +679,8 @@ RESEARCH_RECIPES = [
         (yr(1912, 2, 50),                            "fuel_refining",              "INDUSTRY", 1200, {"bergius_process": 1},   {}),
         (building_years("Basic Recruitment Center"), "basic_recruitment",          "INDUSTRY", 1200, {},                       {}),
         (building_years("Recruitment Building Lvl"), "recruitment_buildings",      "INDUSTRY", 1200, {"basic_recruitment": 1}, {}),
-        (yr(1810, 10, 35),                           "general_recruitment",        "INDUSTRY", 900,  GR,                       {}),
-        (yr(1850, 2, 100),                           "resource_refining",          "INDUSTRY", 900,  {},                       {}),
+        (yr(1810, 10, 40),                           "general_recruitment",        "INDUSTRY", 900,  GR,                       {}),
+        (yr(1800, 4, 100),                           "resource_refining",          "INDUSTRY", 900,  {},                       {}),
     ],
     [
         #YEARS                              ID                         CAT    COST  REQ                                     OPTIONS
