@@ -18,6 +18,7 @@ import data.constants as c
 from data import queries
 from data.io import starting_defaults
 from ui.background_styles import SLIDER_STYLES, TEXT_INPUT_STYLES
+from ui import music_playback
 from ui.rendering.font_manager import fonts
 from ui.rendering import symbol_loader
 from ui.widgets.text_utils import wrap_text
@@ -402,6 +403,23 @@ def load_music_ui_sounds(sound_factory, *, soloud=False):
             sound = sound_factory(path)
         sounds[kind] = sound
         _pygame_sfx_pitch_cache[kind].clear()
+
+
+def _load_pygame_ui_sound(path):
+    try:
+        return music_playback.load_pygame_sound(path)
+    except (pygame.error, OSError) as error:
+        print(f"Cannot load UI sound {path}: {error}")
+        return None
+
+
+def load_pygame_ui_sounds():
+    """Load each effect independently so one bad file cannot mute every button."""
+    set_pygame_ui_sounds(
+        _load_pygame_ui_sound(c.SOUND_CLICK_PATH),
+        _load_pygame_ui_sound(c.SOUND_SLIDER_PATH),
+    )
+    load_music_ui_sounds(_load_pygame_ui_sound)
 
 
 def play_ui_sound(kind="click"):

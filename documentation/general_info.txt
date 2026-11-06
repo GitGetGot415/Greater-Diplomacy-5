@@ -429,6 +429,9 @@ The offset is in seconds from the start of the source sound, before the pitch se
 The sound effects volume setting multiplies the configured volume. This file does not control music.
 Both values must be finite numbers of zero or greater. Missing volume and offset values use 1.0 and 0.0.
 An offset at or past the sound length plays no sound. Restart the game after changes.
+The web build converts MP3 effects to OGG. Keep the original MP3 filenames in volumes.json;
+the sound loader resolves the converted files while preserving their volume and offset keys.
+The Pygame sound loader reports each failed effect and continues loading other effects.
 
 Select Category.wav plays when a control selects a browsing group or country scope.
 This includes research and construction tabs, art styles, editor country lists, message contacts, and folders.
@@ -459,6 +462,8 @@ Windows retains explicit PyInstaller hidden imports.
 macOS retains explicit py2app packages, the tkinter recipe workaround, and the ditto archive procedure.
 Desktop packages retain loose source copies for the existing source-replacement loader.
 Web retains libdragoman.so, the HTML template, and staged audio conversion.
+MP3 music and effects require imageio-ffmpeg at build time. Install it with python -m pip install imageio-ffmpeg.
+Missing conversion tools or a failed audio conversion stop the build rather than packaging silent MP3 files.
 Build the browser package with compilation_scripts/html_compilation.py before testing.
 The test_web_build.bat and test_web_build.sh launchers use the same Python helper.
 The browser opens after pygbag serves HTTP successfully. Startup failure stops the wait.

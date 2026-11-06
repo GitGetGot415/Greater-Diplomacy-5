@@ -256,33 +256,11 @@ class Controller:
         # any click, and it never resumes even after later clicks.
         if not c.USE_SOLOUD and not IS_WEB:
             pygame.mixer.init()
-            try:
-                ui_elements.set_pygame_ui_sounds(
-                    pygame.mixer.Sound(c.SOUND_CLICK_PATH),
-                    pygame.mixer.Sound(c.SOUND_SLIDER_PATH),
-                )
-                ui_elements.load_music_ui_sounds(pygame.mixer.Sound)
-            except Exception:
-                print("Warning: Sound files not found in assets folder")
+            ui_elements.load_pygame_ui_sounds()
 
         # Initialize fonts
         font_path = c.FONT_PATH_DEFAULT
         fonts.init_fonts(font_path)
-
-        self.screen = ui_bars.set_display_mode((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
-
-        # Load the sound into the ui_elements module using SoLoud Wav()
-        try:
-            ui_elements.click_sound = Wav()
-            ui_elements.click_sound.load(c.SOUND_CLICK_PATH)
-        except Exception:
-            print(f"Warning: {c.SOUND_CLICK_PATH} not found in assets folder")
-
-        try:
-            ui_elements.slider_sound = Wav()
-            ui_elements.slider_sound.load(c.SOUND_SLIDER_PATH)
-        except Exception:
-            print(f"Warning: {c.SOUND_SLIDER_PATH} not found in assets folder")
 
         self.screen = ui_bars.set_display_mode((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
 
@@ -580,14 +558,7 @@ class Controller:
     def init_web_audio(self):
         """Deferred pygame.mixer bootstrap for web -- see the IS_WEB guard in __init__."""
         pygame.mixer.init()
-        try:
-            ui_elements.set_pygame_ui_sounds(
-                pygame.mixer.Sound(c.SOUND_CLICK_PATH),
-                pygame.mixer.Sound(c.SOUND_SLIDER_PATH),
-            )
-            ui_elements.load_music_ui_sounds(pygame.mixer.Sound)
-        except Exception:
-            print("Warning: Sound files not found in assets folder")
+        ui_elements.load_pygame_ui_sounds()
 
     def build_playlist(self):
         self.playlist = []

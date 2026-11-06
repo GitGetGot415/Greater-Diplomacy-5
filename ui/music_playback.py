@@ -15,19 +15,35 @@ The music player then keeps its last known position.
 """
 
 import ctypes
+import os
 
 import pygame
+
+from data.platform import IS_WEB
 
 
 # Decoding a whole file to read its length is slow, so keep each result.
 _SOUND_FILE_LENGTHS = {}
 
 
+def pygame_audio_path(path):
+    """Resolve a staged browser MP3 conversion without changing its settings key."""
+    if IS_WEB and os.path.splitext(path)[1].lower() == ".mp3":
+        converted = os.path.splitext(path)[0] + ".ogg"
+        if os.path.isfile(converted):
+            return converted
+    return path
+
+
+def load_pygame_sound(path):
+    return pygame.mixer.Sound(pygame_audio_path(path))
+
+
 def sound_file_length(track_path):
     """The length of a track file in seconds, or 0 when Pygame cannot read it."""
     if track_path not in _SOUND_FILE_LENGTHS:
         try:
-            _SOUND_FILE_LENGTHS[track_path] = pygame.mixer.Sound(track_path).get_length()
+            _SOUND_FILE_LENGTHS[track_path] = load_pygame_sound(track_path).get_length()
         except (pygame.error, OSError):
             _SOUND_FILE_LENGTHS[track_path] = 0
     return _SOUND_FILE_LENGTHS[track_path]
@@ -188,7 +204,7 @@ class PygamePlayback:
         self._offset = 0.0
         self._base = 0.0
         self._awaiting_seek = False
-        pygame.mixer.music.load(track_path)
+        pygame.mixer.music.load(pygame_audio_path(track_path))
         pygame.mixer.music.play(start=start_time)
         pygame.mixer.music.set_volume(volume)
 

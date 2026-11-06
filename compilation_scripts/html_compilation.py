@@ -33,6 +33,38 @@ def _ignore_web_asset(path):
     return not include_asset(path, "web")
 
 
+def transcode_web_audio(stage_path):
+    """Convert staged MP3 music and effects to the browser mixer's OGG format."""
+    sources = []
+    for directory, _, filenames in os.walk(os.path.join(stage_path, "assets")):
+        sources.extend(os.path.join(directory, name) for name in filenames
+                       if name.lower().endswith(".mp3"))
+    if not sources:
+        return
+    try:
+        # Build-only dependency; desktop and browser runtime imports do not need it.
+        import imageio_ffmpeg
+    except ImportError as error:
+        raise RuntimeError(
+            "Web audio conversion requires imageio-ffmpeg. "
+            "Install it with: python -m pip install imageio-ffmpeg"
+        ) from error
+
+    ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+    print("Transcoding staged MP3 music and sound effects to OGG...")
+    for source in sources:
+        destination = os.path.splitext(source)[0] + ".ogg"
+        result = subprocess.run(
+            [ffmpeg_exe, "-y", "-i", source, "-c:a", "libvorbis", "-q:a", "4", destination],
+            capture_output=True,
+        )
+        if result.returncode != 0:
+            raise RuntimeError(
+                f"Cannot convert web audio {source}: {result.stderr.decode(errors='replace')}"
+            )
+        os.remove(source)
+
+
 def main():
     os.chdir(REPO_ROOT)
     stage_path = verified_build_path(REPO_ROOT, STAGE_DIR)
@@ -43,39 +75,12 @@ def main():
     if not os.path.isfile(os.path.join(stage_path, "libdragoman.so")):
         raise FileNotFoundError("Web staging requires libdragoman.so")
 
-    # 2b. Transcode remaining soundtrack MP3s to OGG for the web bundle only.
-    # Confirmed via real browser testing: this pygame-ce/SDL_mixer WASM build cannot
-    # decode MP3 at all ("Unrecognized audio format"), matching pygame-web's own docs
-    # (https://pygame-web.github.io/wiki/pygbag/ -- only WAV/OGG are reliably
-    # supported). Matching BeepBox tracks are played from their JSON instead. Desktop
-    # builds are untouched; only the staged copy is converted.
-    music_dir = os.path.join(STAGE_DIR, "assets", "music")
-    if os.path.exists(music_dir):
-        try:
-            import imageio_ffmpeg
-            ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
-        except ImportError:
-            print("Warning: imageio-ffmpeg not installed (pip install imageio-ffmpeg) -- "
-                  "skipping MP3->OGG transcode. Non-BeepBox MP3 music will not play "
-                  "in the web build.")
-            ffmpeg_exe = None
-
-        if ffmpeg_exe:
-            print("Transcoding non-BeepBox soundtrack MP3s to OGG for the web build...")
-            for dirpath, _, filenames in os.walk(music_dir):
-                for fname in filenames:
-                    if not fname.lower().endswith(".mp3"):
-                        continue
-                    src_path = os.path.join(dirpath, fname)
-                    dst_path = os.path.splitext(src_path)[0] + ".ogg"
-                    result = subprocess.run(
-                        [ffmpeg_exe, "-y", "-i", src_path, "-c:a", "libvorbis", "-q:a", "4", dst_path],
-                        capture_output=True,
-                    )
-                    if result.returncode != 0:
-                        print(f"  Failed to transcode {src_path}: {result.stderr.decode(errors='replace')}")
-                        continue
-                    os.remove(src_path)
+    # 2b. Transcode MP3s to OGG for the web bundle only.
+    # Browser checks confirm that this SDL_mixer build cannot decode MP3.
+    # Use the OGG format recommended by https://pygame-web.github.io/wiki/pygbag/.
+    # Matching BeepBox tracks are played from their JSON instead. Desktop builds
+    # are untouched; only the staged copy is converted.
+    transcode_web_audio(stage_path)
 
     print("Copying finished successfully.")
 
@@ -96,10 +101,8 @@ def main():
         "--archive",
         "--template", template_path,
         "--app_name", "Greater Diplomacy 5",
-        # Remaining soundtrack MP3s are transcoded to OGG above (confirmed required --
-        # this WASM build can't decode MP3 at all). This flag just covers any other stray
-        # .mp3 that isn't under assets/music (e.g. an unused leftover asset file) so
-        # the build doesn't fail outright over something that was never played anyway.
+        # MP3s are converted above. Keep WAV effects, which this runtime decodes
+        # directly; pygbag's format check would otherwise reject those files too.
         "--disable-sound-format-error",
         # Default (1) blocks the whole app behind an audio-unlock probe that pygbag's
         # own code marks buggy for non-interactive scripts (our case) -- it never
