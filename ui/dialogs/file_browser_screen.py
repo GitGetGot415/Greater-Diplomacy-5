@@ -350,6 +350,8 @@ class FileBrowserScreen(ModalScreen):
       "open_file"     -- pick a single file, on_confirm(full_path)
       "open_files"    -- pick one or more files, on_confirm([full_path, ...])
       "select_folder" -- pick the highlighted or current folder, on_confirm(folder_path)
+      "save_file"     -- choose a new or existing file, on_confirm(full_path)
+      "save_folder"   -- name a new or existing save folder, on_confirm(folder_path)
     on_confirm is never called on cancel.
     """
     PANEL_SIZE = (1180, 640)
@@ -391,12 +393,14 @@ class FileBrowserScreen(ModalScreen):
     MENU_ROW_H = 30
 
     def __init__(self, game_state, title, start_dir, on_confirm,
-                 mode="open_file", extensions=None, confirm_label=None):
+                 mode="open_file", extensions=None, confirm_label=None, initial_name=""):
         super().__init__(game_state, title)
         self.on_confirm = on_confirm
         self.mode = mode
+        self._save_name = initial_name
         self.extensions = tuple(e.lower() for e in extensions) if extensions else None
-        self.confirm_label = confirm_label or ("Select Folder" if mode == "select_folder" else "Open")
+        self.confirm_label = confirm_label or ("Save" if mode.startswith("save_") else
+                                               "Select Folder" if mode == "select_folder" else "Open")
 
         # Picked files. They survive navigation in "open_files", so a multi-select can span folders.
         self.selected = set()
@@ -427,8 +431,8 @@ class FileBrowserScreen(ModalScreen):
 
         self.path_field = PathField(0, 0, 10, self.TOOLBAR_H, "", on_submit=self._submit_path)
         self.path_field.click_guard = self._path_click_allowed
-        self.name_field = TextField(0, 0, 10, self.FORM_ROW_H, "", on_submit=self._open_action,
-                                    on_change=lambda _text: self._update_confirm())
+        self.name_field = TextField(0, 0, 10, self.FORM_ROW_H, initial_name, on_submit=self._open_action,
+                                    on_change=self._name_changed)
         self._layout()
 
         self._load_entries()
@@ -436,14 +440,14 @@ class FileBrowserScreen(ModalScreen):
         self.refresh_ui()
 
     def _resolve_start(self, start_dir):
-        """Opens where the caller asked. A start dir that does not exist yet (a
-        game folder nothing has written to, a stale path from settings) falls back
-        to its nearest existing ancestor rather than being created -- opening a
-        browser should never leave folders behind."""
+        """Save dialogs can start in an unwritten default folder without creating it.
+        Open dialogs use the nearest existing ancestor. Neither writes on open."""
         home = os.path.abspath(os.path.expanduser("~"))
         if not start_dir:
             return home
         path = os.path.abspath(os.path.expanduser(start_dir))
+        if self.mode.startswith("save_") and not os.path.exists(path):
+            return path
         while not os.path.isdir(path) and not _is_root(path):
             path = os.path.dirname(path)
         return path if os.path.isdir(path) else home
@@ -512,8 +516,14 @@ class FileBrowserScreen(ModalScreen):
                     entry = _read_entry(dir_entry)
                     if entry is None:
                         continue
-                    if entry.kind == "dir" or (self.mode != "select_folder" and self._matches_filter(entry.name)):
+                    if entry.kind == "dir" or (self.mode not in ("select_folder", "save_folder")
+                                               and self._matches_filter(entry.name)):
                         entries.append(entry)
+        except FileNotFoundError as e:
+            self.entries = []
+            if not self.mode.startswith("save_"):
+                self.status = f"Cannot open this folder: {e.strerror}."
+            return
         except OSError as e:
             self.entries = []
             self.status = f"Cannot open this folder: {e.strerror or 'access denied'}."
@@ -698,6 +708,8 @@ class FileBrowserScreen(ModalScreen):
             self._navigate(self._full_path(entry.name))
             return
         self.selected.add(self._full_path(entry.name))
+        if self.mode == "save_file":
+            self.name_field.text = entry.name
         self._confirm()
 
     def _selection_text(self):
@@ -708,8 +720,22 @@ class FileBrowserScreen(ModalScreen):
         return names[0] if len(names) == 1 else " ".join(f'"{name}"' for name in names)
 
     def _sync_name_field(self):
-        self.name_field.text = self._selection_text()
+        if not self.mode.startswith("save_") or self.selected:
+            self.name_field.text = self._selection_text()
+            if self.mode.startswith("save_"):
+                self._save_name = self.name_field.text
+        elif self.mode == "save_folder" and self.selected_folder:
+            self.name_field.text = self._selection_text()
+        else:
+            self.name_field.text = self._save_name
         self.name_field.active = False
+        self._update_confirm()
+
+    def _name_changed(self, _text):
+        if self.mode.startswith("save_"):
+            self._save_name = self.name_field.text
+            self.selected_folder = None
+            self.selected.clear()
         self._update_confirm()
 
     # ------------------------------------------------------------------ #
@@ -744,6 +770,8 @@ class FileBrowserScreen(ModalScreen):
     # ------------------------------------------------------------------ #
 
     def _has_valid_selection(self):
+        if self.mode.startswith("save_"):
+            return self.current_dir != DRIVE_VIEW and bool(self.name_field.text.strip())
         if self.mode == "select_folder":
             return bool(self.selected_folder) or self.current_dir != DRIVE_VIEW
         return bool(self.selected)
@@ -760,6 +788,12 @@ class FileBrowserScreen(ModalScreen):
                                          text=self._confirm_text(), color="green")
 
     def _open_action(self):
+        if self.mode.startswith("save_"):
+            if self.mode == "save_file" and self.selected_folder:
+                self._navigate(self.selected_folder)
+            else:
+                self._confirm()
+            return
         typed = self.name_field.text.strip()
         if typed != self._selection_text():
             if typed:
@@ -774,6 +808,28 @@ class FileBrowserScreen(ModalScreen):
 
     def _confirm(self):
         if not self._has_valid_selection():
+            return
+        if self.mode.startswith("save_"):
+            result = self._resolve_typed(self.name_field.text)
+            if self.mode == "save_file":
+                if os.path.isdir(result):
+                    self._navigate(result)
+                    return
+                if self.extensions and not result.lower().endswith(self.extensions):
+                    result += self.extensions[0]
+            parent = os.path.dirname(result)
+            unwritten_default = _same_path(parent, self.current_dir) and not os.path.exists(parent)
+            if not os.path.isdir(parent) and not unwritten_default:
+                self.status = "The destination folder does not exist."
+            elif self.mode == "save_folder" and os.path.lexists(result) and not os.path.isdir(result):
+                self.status = "A file already uses this folder name."
+            elif self.mode == "save_folder" and _is_root(result):
+                self.status = "Choose a save folder inside this drive."
+            else:
+                self.on_confirm(result)
+                self.exit_screen()
+                return
+            self.refresh_ui()
             return
         if self.mode == "select_folder":
             result = self.selected_folder or self.current_dir
@@ -1088,7 +1144,7 @@ class FileBrowserScreen(ModalScreen):
         ui_elements.draw_pixel_panel(surface, self.sidebar_rect, PANE_BG, recessed=True, border_width=self.PANE_BORDER)
         ui_elements.draw_pixel_panel(surface, self.list_rect, PANE_BG, recessed=True, border_width=self.PANE_BORDER)
 
-        name_label = "Folder name:" if self.mode == "select_folder" else "File name:"
+        name_label = "Folder name:" if self.mode in ("select_folder", "save_folder") else "File name:"
         self._draw_form_label(surface, name_label, self.form_y)
         if self.extensions and self.mode != "select_folder":
             self._draw_form_label(surface, "Files of type:", self.form_y + self.FORM_ROW_STEP)
@@ -1119,7 +1175,7 @@ class FileBrowserScreen(ModalScreen):
 # ---------------------------------------------------------------------- #
 
 def run_file_browser(title, start_dir=None, mode="open_file", extensions=None,
-                     confirm_label=None, game_state=None, tk_parent=None, on_result=None):
+                     confirm_label=None, game_state=None, tk_parent=None, on_result=None, initial_name=""):
     """Answers on_result(path) -- or (list of paths), or None if cancelled.
 
     Usable from the game (a display is already up, so this hands off to the
@@ -1132,6 +1188,6 @@ def run_file_browser(title, start_dir=None, mode="open_file", extensions=None,
     screen_runner.run_screen(lambda: FileBrowserScreen(game_state, title, start_dir,
                                          lambda picked: result.setdefault("picked", picked),
                                          mode=mode, extensions=extensions,
-                                         confirm_label=confirm_label),
+                                         confirm_label=confirm_label, initial_name=initial_name),
                on_done=lambda screen: on_result(result.get("picked")) if on_result else None,
                tk_parent=tk_parent, caption=title)

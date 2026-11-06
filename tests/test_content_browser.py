@@ -627,7 +627,48 @@ class ContentBrowserTests(unittest.TestCase):
                     mock.patch.object(file_exchange, "export_dir_as_zip") as export:
                 self.click(screen, button_named(screen, path.name))
                 self.click(screen, button_named(screen, "Export"))
-                export.assert_called_once_with(str(path), filename)
+                export.assert_called_once_with(str(path), filename, game_state=screen)
+
+    def test_browse_opens_a_game_or_editor_map_outside_the_default_library(self):
+        from ui.dialogs import pickers
+
+        outside = self.root / "External"
+        outside.mkdir()
+        (outside / "map_data.json").write_text("{}")
+        for screen in (self.save_screen(), self.map_screen()):
+            with self.subTest(screen=type(screen).__name__), \
+                    mock.patch.object(pickers, "open_file_browser") as browser, \
+                    mock.patch.object(screen, "go_to") as go:
+                self.click(screen, button_named(screen, "Browse..."))
+                self.assertEqual(browser.call_args.kwargs["mode"], "select_folder")
+                go.assert_not_called()
+                browser.call_args.kwargs["on_result"](str(outside))
+                self.assertEqual(screen.selected_save_path, str(outside))
+                go.assert_called_once_with("MAP")
+
+    def test_browse_rejects_incomplete_and_newer_saves_and_can_be_canceled(self):
+        from ui import dialogs
+        from ui.dialogs import pickers
+
+        outside = self.root / "External"
+        outside.mkdir()
+        newer = self.root / "Newer"
+        newer.mkdir()
+        (newer / "map_data.json").write_text("{}")
+        (newer / "meta.json").write_text('{"version": "v999999"}')
+        for screen in (self.save_screen(), self.map_screen()):
+            with self.subTest(screen=type(screen).__name__), \
+                    mock.patch.object(pickers, "open_file_browser") as browser, \
+                    mock.patch.object(dialogs, "show_error") as error, \
+                    mock.patch.object(screen, "go_to") as go:
+                self.click(screen, button_named(screen, "Browse..."))
+                picked = browser.call_args.kwargs["on_result"]
+                picked(None)
+                error.assert_not_called()
+                picked(str(outside))
+                picked(str(newer))
+                self.assertEqual(error.call_count, 2)
+                go.assert_not_called()
 
     def test_background_refresh_reloads_only_when_work_finishes(self):
         screen = self.map_screen()

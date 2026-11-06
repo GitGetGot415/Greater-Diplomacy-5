@@ -23,23 +23,20 @@ def editor_save_path(name):
     return path
 
 
-def available_editor_name(name):
-    """Add the first unused numeric suffix without changing another scenario."""
-    candidate = name
-    number = 1
-    while os.path.lexists(editor_save_path(candidate)):
-        candidate = f"{name}-{number}"
-        number += 1
-    return candidate
-
-
-async def save_map_data(self, save_name=None, *, overwrite=False):
+async def save_map_data(self, save_name=None, *, overwrite=False, save_path=None):
     """Saves logical data and visual state. Runs as a background coroutine (see
     data.platform.run_background) so a 'Saving...' screen can be shown instead
     of freezing the window while a large history.json/images are written."""
     try:
         # --- CONDITIONAL PATH LOGIC ---
-        if self.is_editor:
+        if save_path is not None:
+            # Only the UI's explicit destination choice bypasses the default roots.
+            save_path = os.path.abspath(save_path)
+            save_name = os.path.basename(save_path)
+            if self.is_editor:
+                queries.validated_scenario_name(save_name)
+            os.makedirs(save_path, exist_ok=overwrite)
+        elif self.is_editor:
             if not save_name:
                 save_name = session_for(self).editor_scenario_name or (
                     "MapExport_" + datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))

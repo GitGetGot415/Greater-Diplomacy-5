@@ -145,10 +145,10 @@ def export_next_turn(map_ref):
         map_ref.show_feedback("Error: Host keys missing. Did you init multiplayer?")
         return
 
-    def export():
+    def export(path, _overwrite):
         try:
-            tournament_files.export_tournament(map_ref, export_path, master_key, keys_dict)
-        except ValueError as error:
+            tournament_files.export_tournament(map_ref, path, master_key, keys_dict)
+        except (OSError, ValueError) as error:
             # This also protects a tournament created by an older build before
             # the public ``Spectator`` key became reserved.
             map_ref.show_feedback(f"Tournament export blocked: {error}")
@@ -157,9 +157,10 @@ def export_next_turn(map_ref):
         # Reset protected countries only after the export completes.
         map_ref.multiplayer_protected_countries = set()
         map_ref.submitted_moves = set()
-        map_ref.show_feedback(f"Tournament exported to {export_path}")
+        map_ref.show_feedback(f"Tournament exported to {path}")
 
-    file_exchange.export_with_overwrite_confirmation(export_path, export)
+    file_exchange.choose_save_destination(export_path, export, game_state=map_ref,
+                                          title="Export Tournament")
 
 def _playable_countries(map_ref):
     """Every playable nation still on the map, ordered by display name."""

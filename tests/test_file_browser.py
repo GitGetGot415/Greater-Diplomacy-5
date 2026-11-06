@@ -44,9 +44,9 @@ class FileBrowserTests(unittest.TestCase):
         with open(self.path(name), "wb") as file:
             file.write(b"x" * size)
 
-    def browser(self, mode="open_file", extensions=(".zip",), start=None):
+    def browser(self, mode="open_file", extensions=(".zip",), start=None, initial_name=""):
         return fb.FileBrowserScreen(None, "Test", start or self.root, self.picked.append,
-                                    mode=mode, extensions=extensions)
+                                    mode=mode, extensions=extensions, initial_name=initial_name)
 
     def names(self, screen):
         return [entry.name for entry in screen.entries]
@@ -205,6 +205,80 @@ class FileBrowserTests(unittest.TestCase):
         self.assertEqual(self.picked, [])
         self.assertTrue(screen.status)
         self.assertEqual(screen.name_field.text, "missing.zip")
+
+    def test_save_mode_keeps_the_suggested_name_when_navigating_and_adds_the_extension(self):
+        screen = self.browser("save_file", initial_name="new export")
+        screen._navigate(self.path("alpha"))
+        self.assertEqual(screen.name_field.text, "new export")
+        screen._open_action()
+        self.assertEqual(self.picked, [self.path("alpha", "new export.zip")])
+        self.assertFalse(os.path.exists(self.picked[0]))
+
+    def test_save_mode_accepts_an_existing_file_without_writing_it(self):
+        screen = self.browser("save_file", initial_name="new.zip")
+        self.click(screen, "a.zip")
+        screen._open_action()
+        self.assertEqual(self.picked, [self.path("a.zip")])
+        self.assertEqual(os.path.getsize(self.path("a.zip")), 300)
+
+    def test_save_mode_folder_navigation_preserves_the_filename(self):
+        screen = self.browser("save_file", initial_name="new.zip")
+        self.click(screen, "alpha")
+        screen._open_action()
+        self.assertEqual(screen.current_dir, self.path("alpha"))
+        self.assertEqual(screen.name_field.text, "new.zip")
+        self.assertEqual(self.picked, [])
+
+    def test_save_folder_navigation_preserves_the_suggested_name(self):
+        screen = self.browser("save_folder", extensions=None, initial_name="Campaign")
+        self.click(screen, "alpha")
+        self.click(screen, "alpha", tick=100)
+        self.assertEqual(screen.current_dir, self.path("alpha"))
+        self.assertEqual(screen.name_field.text, "Campaign")
+        screen._open_action()
+        self.assertEqual(self.picked, [self.path("alpha", "Campaign")])
+
+    def test_save_mode_starts_in_a_missing_default_folder_without_creating_it(self):
+        missing = self.path("unwritten", "saves")
+        screen = self.browser("save_folder", extensions=None, start=missing, initial_name="Campaign")
+        self.assertEqual(screen.current_dir, missing)
+        self.assertFalse(os.path.exists(missing))
+        screen._open_action()
+        self.assertEqual(self.picked, [os.path.join(missing, "Campaign")])
+        self.assertFalse(os.path.exists(missing))
+
+    def test_editing_the_save_name_clears_a_highlighted_folder(self):
+        screen = self.browser("save_file", initial_name="new.zip")
+        self.click(screen, "alpha")
+        screen.name_field.text = "edited.zip"
+        screen._name_changed("edited.zip")
+        screen._open_action()
+        self.assertEqual(self.picked, [self.path("edited.zip")])
+
+    def test_save_folder_accepts_a_new_name_and_an_existing_folder(self):
+        for name in ("New Save", "alpha"):
+            with self.subTest(name=name):
+                self.picked.clear()
+                screen = self.browser("save_folder", extensions=None, initial_name=name)
+                screen._open_action()
+                self.assertEqual(self.picked, [self.path(name)])
+        self.assertFalse(os.path.exists(self.path("New Save")))
+
+    def test_save_mode_rejects_missing_parents_and_folder_names_used_by_files(self):
+        for mode, name in (("save_file", "missing/new.zip"), ("save_folder", "notes.txt")):
+            with self.subTest(mode=mode):
+                screen = self.browser(mode, initial_name=name)
+                screen._open_action()
+                self.assertEqual(self.picked, [])
+                self.assertTrue(screen.status)
+                self.assertFalse(screen.done)
+
+    def test_canceling_save_mode_does_not_choose_or_create_a_destination(self):
+        screen = self.browser("save_folder", initial_name="New Save")
+        screen.handle_back_key()
+        self.assertTrue(screen.done)
+        self.assertEqual(self.picked, [])
+        self.assertFalse(os.path.exists(self.path("New Save")))
 
     def test_typed_file_outside_the_filter_turns_the_filter_off(self):
         screen = self.browser()

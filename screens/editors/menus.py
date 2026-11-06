@@ -6,7 +6,7 @@ import data.constants as c
 from data.map import load_map, save_map
 from data import queries
 from data.state_access import session_for
-from ui.dialogs import pickers
+from ui.dialogs import file_exchange, pickers
 from ui import dialogs
 
 from data.io import country_io
@@ -103,25 +103,17 @@ def prepare_editor_save(context, on_ready):
         dialogs.show_error("Save Scenario", str(error))
         return
 
-    def ready(name, overwrite):
+    def ready(path, overwrite):
         if queries.can_bulk_edit_map(context):
-            on_ready(name, overwrite)
+            try:
+                queries.validated_scenario_name(os.path.basename(path))
+            except ValueError as error:
+                dialogs.show_error("Save Scenario", str(error))
+                return
+            on_ready(path, overwrite)
 
-    if not os.path.lexists(path):
-        ready(name, False)
-    elif not os.path.isdir(path):
-        ready(save_map.available_editor_name(name), False)
-    else:
-        def confirmed(answer):
-            if answer is True:
-                ready(name, True)
-            elif answer is False:
-                ready(save_map.available_editor_name(name), False)
-        dialogs.ask_yes_no(
-            "Scenario Already Exists",
-            f'A scenario named "{name}" already exists.\n'
-            "Overwrite it, save a numbered copy, or cancel?",
-            confirmed, yes_label="Overwrite", no_label="Save Copy", back_label="Cancel")
+    file_exchange.choose_save_destination(path, ready, game_state=context,
+                                          title="Save Scenario", directory=True, allow_copy=True)
 
 
 def _select_brush(map_screen, mode, attr, items, title, prompt, feedback_label="Brush"):

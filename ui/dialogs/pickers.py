@@ -77,12 +77,13 @@ def open_character_picker(game_state, current_path, on_confirm_callback):
 
 
 def open_file_browser(game_state, title, start_dir=None, mode="open_file", extensions=None,
-                      on_confirm_callback=None, tk_parent=None, on_result=None):
+                      on_confirm_callback=None, tk_parent=None, on_result=None, initial_name=""):
     """In-engine file/folder picker: replaces filedialog.askopenfilename,
     askopenfilenames and askdirectory.
 
     Browses the whole machine -- `start_dir` is only where it opens, never a
-    fence. `mode` is "open_file", "open_files" (multi-select) or "select_folder".
+    fence. `mode` is "open_file", "open_files" (multi-select), "select_folder",
+    "save_file", or "save_folder". Save modes accept an initial_name.
     Answers on_result with the pick (a path, a list of paths, or None when
     cancelled); on_confirm_callback, when given, fires only on a real pick.
     """
@@ -94,11 +95,12 @@ def open_file_browser(game_state, title, start_dir=None, mode="open_file", exten
             on_result(picked)
 
     if IS_WEB:
-        if mode == "select_folder":
+        if mode == "select_folder" or mode.startswith("save_"):
             # There's no native browser equivalent of "pick a folder on my
             # real disk" (a browser sandbox has no notion of an arbitrary
             # host path) -- not supported on web.
-            dialogs.show_error("Not Available", "Choosing a folder isn't supported in the browser build.", tk_parent=tk_parent)
+            dialogs.show_error("Not Available", "Choosing a destination folder isn't supported in the browser build.",
+                               tk_parent=tk_parent)
             _on_result(None)
             return
         pick_upload_file(_on_result, extensions=extensions, multiple=(mode == "open_files"))
@@ -106,7 +108,8 @@ def open_file_browser(game_state, title, start_dir=None, mode="open_file", exten
 
     from ui.dialogs.file_browser_screen import run_file_browser
     run_file_browser(title, start_dir, mode=mode, extensions=extensions,
-                     game_state=game_state, tk_parent=tk_parent, on_result=_on_result)
+                     game_state=game_state, tk_parent=tk_parent, on_result=_on_result,
+                     initial_name=initial_name)
 
 
 def copy_to_clipboard(text):

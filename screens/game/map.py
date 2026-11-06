@@ -8,6 +8,7 @@ import traceback
 import threading
 import re
 import json
+from datetime import datetime
 from types import MappingProxyType
 
 import pygame
@@ -361,11 +362,16 @@ def _export_tournament_move(map_screen):
     export_path = os.path.join(c.TOURNAMENT_SAVES_DIR, save_name)
     player_key = map_screen.multiplayer_player_key
 
-    def export():
-        tournament_files.export_move_file(map_screen, export_path, player_key)
-        map_screen.show_feedback(f"Move exported to {export_path}")
+    def export(path, _overwrite):
+        try:
+            tournament_files.export_move_file(map_screen, path, player_key)
+        except (OSError, ValueError) as error:
+            map_screen.show_feedback(f"Move export failed: {error}")
+            return
+        map_screen.show_feedback(f"Move exported to {path}")
 
-    file_exchange.export_with_overwrite_confirmation(export_path, export)
+    file_exchange.choose_save_destination(export_path, export, game_state=map_screen,
+                                          title="Export Turn")
 
 
 def _import_tournament_move(map_screen):
@@ -2177,11 +2183,20 @@ class Map(StateAccess, Screen):
         update_button_states(self)
         self.show_feedback("Map Unlocked")
 
-    def save_map_data(self, save_name=None, *, overwrite=False):
+    def save_map_data(self, save_name=None, *, overwrite=False, save_path=None):
+        if self.is_saving:
+            return # Already saving, ignore duplicate clicks
         if self.realtime_multiplayer:
             session = self.realtime_session
             if session.phase != "GAME_OVER":
                 self.show_feedback("Real-time matches can be saved after they end.")
+                return
+            if save_path is None:
+                default_name = save_name or datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                file_exchange.choose_save_destination(
+                    os.path.join(c.SAVES_DIR, default_name),
+                    lambda path, replace: self.save_map_data(overwrite=replace, save_path=path),
+                    game_state=self, title="Save Game", directory=True)
                 return
             authoritative_map = self.realtime_server_map or self
             authoritative_map.realtime_match_metadata = session.completed_metadata()
@@ -2193,17 +2208,22 @@ class Map(StateAccess, Screen):
             authoritative_map.active_players = []
             authoritative_map.current_player_index = 0
             authoritative_map.show_feedback = self.show_feedback
-            authoritative_map.save_map_data()
-            return
-        if self.is_saving:
-            return # Already saving, ignore duplicate clicks
+            if authoritative_map is not self:
+                authoritative_map.save_map_data(save_name, overwrite=overwrite, save_path=save_path)
+                return
         if self.is_editor:
             if not queries.can_bulk_edit_map(self):
                 return
-            if save_name is None:
+            if save_name is None and save_path is None:
                 editor_menus.prepare_editor_save(
-                    self, lambda name, replace: self.save_map_data(name, overwrite=replace))
+                    self, lambda path, replace: self.save_map_data(overwrite=replace, save_path=path))
                 return
+        elif save_name is None and save_path is None:
+            file_exchange.choose_save_destination(
+                os.path.join(c.SAVES_DIR, datetime.now().strftime("%Y-%m-%d_%H-%M-%S")),
+                lambda path, replace: self.save_map_data(overwrite=replace, save_path=path),
+                game_state=self, title="Save Game", directory=True)
+            return
         self.is_saving = True
         self.loading_status_text = "Saving Game..."
         self.save_progress_completed = 0
@@ -2214,7 +2234,7 @@ class Map(StateAccess, Screen):
         self.draw(pygame.display.get_surface())
         pygame.display.flip()
 
-        run_background(save_map.save_map_data, self, save_name, overwrite=overwrite)
+        run_background(save_map.save_map_data, self, save_name, overwrite=overwrite, save_path=save_path)
 
     MAP_LAYER_REFRESHERS = {
         "political": refresh_map.refresh_political_map,

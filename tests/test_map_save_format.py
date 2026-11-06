@@ -244,11 +244,11 @@ class MapSaveFormatTests(unittest.TestCase):
 
             archive_path = os.path.join(temporary, "export.zip")
 
-            def export_without_ui(_name, produce, _parent=None):
+            def export_without_ui(_name, produce, _parent=None, **_kwargs):
                 produce(archive_path)
                 return archive_path
 
-            with mock.patch.object(file_exchange, "_export_to_downloads", export_without_ui):
+            with mock.patch.object(file_exchange, "export_file", export_without_ui):
                 file_exchange.export_dir_as_zip(source_dir, "export.zip")
 
             with zipfile.ZipFile(archive_path) as archive:

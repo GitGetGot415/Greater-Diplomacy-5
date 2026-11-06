@@ -5,60 +5,98 @@ import json
 import os
 import shutil
 import zipfile
+import pygame
 from pathlib import Path
 from data.platform import CHARACTERS_DIR, CUSTOM_SUBDIR, IS_WEB, download_file, downloads_dir, sync_persisted_dir
 from data.queries.content import IMAGE_EXTENSIONS
-from data.queries.files import extract_and_flatten_zip
+from data.queries.files import extract_and_flatten_zip, read_saved_content_summary
 from ui import dialogs
 from ui.dialogs import pickers
 
 
 def export_with_overwrite_confirmation(file_path, export, parent=None):
     """Run an export after confirmation when its destination already exists."""
-    if not os.path.exists(file_path):
+    if not os.path.lexists(file_path):
         return export()
 
     def after_choice(overwrite):
         if overwrite:
             export()
 
+    kind = "folder" if os.path.isdir(file_path) else "file"
     dialogs.ask_yes_no(
-        "Overwrite existing file?",
+        f"Overwrite existing {kind}?",
         f"{os.path.basename(file_path)} already exists in:\n{os.path.dirname(file_path) or '.'}\n\n"
-        "Overwrite this file?",
+        f"Overwrite this {kind}?",
         on_result=after_choice, tk_parent=parent, yes_label="Overwrite", no_label="Cancel")
     return None
 
 
-def _export_to_downloads(file_name, produce, parent=None):
-    """Sends a file to the user, however it gets made.
+def choose_save_destination(default_path, on_ready, *, game_state=None, parent=None,
+                            title="Save As", directory=False, allow_copy=False):
+    """Choose a destination before writing. on_ready receives (path, overwrite).
 
-    Desktop: written straight into the real Downloads folder. Web: there is no
-    real filesystem to write into, so it is built in the browser's virtual FS
-    and then handed to platform.download_file(), which uses pygbag's JS bridge
-    to push it out to the user's real Downloads folder as a browser download.
-
-    `produce(dest_path)` is the only part that differs between exporting a
-    zipped folder and copying one file -- the destination, the web/desktop
-    split and the success/error dialogs were written out twice, identically.
+    Browser builds retain virtual storage and browser-managed downloads because
+    the in-game browser cannot select destinations on the host filesystem.
     """
-    dest_path = file_name if IS_WEB else os.path.join(downloads_dir(), file_name)
+    def picked(path):
+        if not path:
+            return
+        if directory and os.path.lexists(path) and not os.path.isdir(path):
+            dialogs.show_error(title, "A file already uses this folder name.", tk_parent=parent)
+            return
+        if directory and allow_copy and os.path.isdir(path):
+            def chosen(answer):
+                if answer is True:
+                    on_ready(path, True)
+                elif answer is False:
+                    number = 1
+                    while os.path.lexists(f"{path}-{number}"):
+                        number += 1
+                    on_ready(f"{path}-{number}", False)
+            dialogs.ask_yes_no(
+                "Scenario Already Exists", f'"{os.path.basename(path)}" already exists in:\n'
+                f"{os.path.dirname(path)}\n\nOverwrite it, save a numbered copy, or cancel?",
+                chosen, tk_parent=parent, yes_label="Overwrite", no_label="Save Copy", back_label="Cancel")
+            return
+        exists = os.path.lexists(path)
+        return export_with_overwrite_confirmation(path, lambda: on_ready(path, exists), parent)
 
-    def export():
+    if IS_WEB:
+        return picked(default_path)
+    extension = os.path.splitext(default_path)[1]
+    return pickers.open_file_browser(
+        game_state, title, os.path.dirname(default_path),
+        mode="save_folder" if directory else "save_file",
+        extensions=[extension] if extension and not directory else None,
+        initial_name=os.path.basename(default_path), tk_parent=parent, on_result=picked)
+
+
+def export_file(file_name, produce, parent=None, *, game_state=None):
+    """Choose an export destination, starting in Downloads, then produce the file.
+
+    Web exports use the existing browser download bridge and virtual filesystem.
+    """
+    default_path = file_name if IS_WEB else os.path.join(downloads_dir(), file_name)
+
+    def export(dest_path, _overwrite):
         try:
+            if not IS_WEB:
+                os.makedirs(os.path.dirname(os.path.abspath(dest_path)), exist_ok=True)
             produce(dest_path)
 
             if IS_WEB:
                 download_file(dest_path)
                 dialogs.show_success("Export Success", f"{file_name} downloaded.", tk_parent=parent)
             else:
-                dialogs.show_success("Export Success", f"Exported to Downloads as {file_name}", tk_parent=parent)
+                dialogs.show_success("Export Success", f"Exported to {dest_path}", tk_parent=parent)
             return dest_path
-        except (OSError, ValueError, zipfile.BadZipFile, zipfile.LargeZipFile) as e:
+        except (OSError, ValueError, pygame.error, zipfile.BadZipFile, zipfile.LargeZipFile) as e:
             dialogs.show_error("Export Error", str(e), tk_parent=parent)
             return None
 
-    return export_with_overwrite_confirmation(dest_path, export, parent)
+    return choose_save_destination(default_path, export, game_state=game_state,
+                                   parent=parent, title="Export File")
 
 
 def _readable_json_payload(file_path):
@@ -82,7 +120,7 @@ def _readable_json_payload(file_path):
     return json.dumps(value, indent=c.SAVE_INDENT).encode("utf-8")
 
 
-def export_dir_as_zip(source_dir, zip_name, parent=None):
+def export_dir_as_zip(source_dir, zip_name, parent=None, *, game_state=None):
     """Zips a folder and sends it to the user.
 
     Counterpart to extract_and_flatten_zip, and the single implementation
@@ -90,10 +128,13 @@ def export_dir_as_zip(source_dir, zip_name, parent=None):
     in the archive so older compact saves are readable too.
     """
     def zip_it(dest_path):
+        destination = os.path.realpath(dest_path)
         with zipfile.ZipFile(dest_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for root_dir, _dirs, files in os.walk(source_dir):
                 for file in files:
                     full = os.path.join(root_dir, file)
+                    if os.path.realpath(full) == destination:
+                        continue
                     archive_name = os.path.relpath(full, source_dir)
                     readable_json = _readable_json_payload(full)
                     if readable_json is None:
@@ -101,12 +142,27 @@ def export_dir_as_zip(source_dir, zip_name, parent=None):
                     else:
                         zipf.writestr(archive_name, readable_json)
 
-    return _export_to_downloads(zip_name, zip_it, parent)
+    return export_file(zip_name, zip_it, parent, game_state=game_state)
 
 
-def export_json_file(source_path, file_name, parent=None):
-    """Copies a single JSON file to the user's Downloads folder."""
-    return _export_to_downloads(file_name, lambda dest: shutil.copy2(source_path, dest), parent)
+def export_json_file(source_path, file_name, parent=None, *, game_state=None):
+    """Copy a JSON file to the chosen export destination."""
+    return export_file(file_name, lambda dest: shutil.copy2(source_path, dest), parent,
+                       game_state=game_state)
+
+
+def open_saved_content_folder(game_state, title, start_dir, on_selected):
+    """Browse outside the library using the library's existing load checks."""
+    def picked(path):
+        if not path:
+            return
+        error = read_saved_content_summary(path)["error"]
+        if error:
+            dialogs.show_error(title, error)
+            return
+        on_selected(path)
+
+    pickers.open_file_browser(game_state, title, start_dir, mode="select_folder", on_result=picked)
 
 
 def import_json_file(game_state, title, on_loaded):

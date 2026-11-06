@@ -31,21 +31,43 @@ class ExportOverwriteTests(unittest.TestCase):
                 ("success", mock.patch.object(dialogs, "show_success")),
                 ("error", mock.patch.object(dialogs, "show_error")),
                 ("download", mock.patch.object(file_exchange, "download_file")),
+                ("picker", mock.patch.object(file_exchange.pickers, "open_file_browser",
+                                            side_effect=self.pick_default)),
                 ("downloads_dir", mock.patch.object(file_exchange, "downloads_dir", return_value=str(self.downloads))),
                 ("web", mock.patch.object(file_exchange, "IS_WEB", False))):
             setattr(self, name, patcher.start())
             self.addCleanup(patcher.stop)
 
+    @staticmethod
+    def pick_default(_context, _title, start_dir, **kwargs):
+        return kwargs["on_result"](os.path.join(start_dir, kwargs["initial_name"]))
+
     def export_move(self):
         return file_exchange.export_json_file(str(self.source), self.destination.name)
 
-    def test_new_download_exports_immediately(self):
+    def test_new_download_exports_after_choosing_a_destination(self):
         result = self.export_move()
         self.assertEqual(result, str(self.destination))
         self.assertEqual(self.destination.read_bytes(), self.source.read_bytes())
         self.ask.assert_not_called()
         self.success.assert_called_once()
         self.download.assert_not_called()
+        self.assertEqual(self.picker.call_args.args[2], str(self.downloads))
+        self.assertEqual(self.picker.call_args.kwargs["initial_name"], self.destination.name)
+
+    def test_canceling_destination_selection_does_not_export_or_prompt(self):
+        self.picker.side_effect = lambda *_args, **kwargs: kwargs["on_result"](None)
+        self.export_move()
+        self.assertFalse(self.destination.exists())
+        self.ask.assert_not_called()
+        self.success.assert_not_called()
+
+    def test_export_uses_the_chosen_folder_and_filename(self):
+        destination = self.root / "chosen.gd5move"
+        self.picker.side_effect = lambda *_args, **kwargs: kwargs["on_result"](str(destination))
+        self.export_move()
+        self.assertEqual(destination.read_bytes(), self.source.read_bytes())
+        self.assertFalse(self.destination.exists())
 
     def test_cancel_existing_download_exports_nothing(self):
         self.destination.write_bytes(b"original move")
@@ -93,6 +115,29 @@ class ExportOverwriteTests(unittest.TestCase):
             self.assertEqual(archive.read("fixture.txt"), b"new archive content")
         self.success.assert_called_once()
 
+    def test_zip_export_inside_the_source_does_not_include_itself(self):
+        source = self.root / "save"
+        source.mkdir()
+        (source / "meta.json").write_text('{"name": "fixture"}')
+        destination = source / "export.zip"
+        self.picker.side_effect = lambda *_args, **kwargs: kwargs["on_result"](str(destination))
+        file_exchange.export_dir_as_zip(str(source), "export.zip")
+        with zipfile.ZipFile(destination) as archive:
+            self.assertEqual(archive.namelist(), ["meta.json"])
+
+    def test_canceling_a_missing_default_download_folder_creates_nothing(self):
+        missing = self.root / "missing-downloads"
+        self.downloads_dir.return_value = str(missing)
+        self.picker.side_effect = lambda *_args, **kwargs: kwargs["on_result"](None)
+        self.export_move()
+        self.assertFalse(missing.exists())
+
+    def test_confirming_a_missing_default_download_folder_creates_it(self):
+        missing = self.root / "missing-downloads"
+        self.downloads_dir.return_value = str(missing)
+        self.export_move()
+        self.assertEqual((missing / self.destination.name).read_bytes(), self.source.read_bytes())
+
     def test_error_after_confirmation_does_not_report_success(self):
         self.destination.write_bytes(b"original move")
         self.export_move()
@@ -102,16 +147,22 @@ class ExportOverwriteTests(unittest.TestCase):
         self.success.assert_not_called()
         self.assertEqual(self.destination.read_bytes(), b"original move")
 
+    def test_image_write_errors_are_reported_after_choosing_a_destination(self):
+        produce = mock.Mock(side_effect=file_exchange.pygame.error("Cannot write PNG"))
+        file_exchange.export_file("portrait.png", produce)
+        self.error.assert_called_once()
+        self.success.assert_not_called()
+
     def test_web_confirmation_checks_virtual_file_before_producing_or_downloading(self):
         produce = mock.Mock()
         for answer in (False, True):
             with self.subTest(answer=answer), mock.patch.object(file_exchange, "IS_WEB", True), \
-                    mock.patch.object(file_exchange.os.path, "exists", return_value=True) as exists:
+                    mock.patch.object(file_exchange.os.path, "lexists", return_value=True) as exists:
                 produce.reset_mock()
                 self.download.reset_mock()
                 self.success.reset_mock()
-                file_exchange._export_to_downloads(self.destination.name, produce)
-                exists.assert_called_once_with(self.destination.name)
+                file_exchange.export_file(self.destination.name, produce)
+                self.assertTrue(exists.called)
                 produce.assert_not_called()
                 self.download.assert_not_called()
                 self.ask.call_args.kwargs["on_result"](answer)

@@ -153,6 +153,11 @@ The modification date comes from the folder. It is separate from the game date i
 Rename, Export, and Delete apply to the selected save or custom map. Delete requires confirmation.
 History opens the selected save's turn list. Choose a turn to load that snapshot.
 Import .zip uses the existing desktop file picker or browser upload control.
+Desktop saves and exports open the shared file picker with the current destination folder and a suggested name.
+Game saves and editor maps remain folders. File exports keep their existing formats.
+Existing destinations require confirmation before writing. Editor maps also offer Save Copy.
+Browse opens a saved game or editor map from a folder outside the configured library.
+Browser builds retain virtual save storage and browser-managed downloads.
 
 When no item is selected, New Game opens the new game screen.
 New Game and New Map use the shared category library in ui/widgets/content_browser.py.

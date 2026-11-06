@@ -11,6 +11,7 @@ from data.multiplayer.tournament import files as tournament_files
 from screens.setup.scenario_settings import Scenario_Settings
 from screens.game.map import Map
 from ui import dialogs
+from ui.dialogs import file_exchange
 from ui.navigation import screen_runner
 from data.platform import LoadingSteps
 class Multiplayer_New(MenuListScreen):
@@ -56,12 +57,9 @@ class Multiplayer_New(MenuListScreen):
                     safe_tour_name = "Tournament"
 
                 tournament_dir = os.path.join(c.TOURNAMENT_SAVES_DIR, safe_tour_name)
-                if os.path.exists(tournament_dir):
-                    dialogs.show_error("Error", f"Tournament with this name already exists in {c.TOURNAMENT_SAVES_DIR}")
-                    ask_tour_name()
-                    return
-
-                ask_master_key(safe_tour_name, tournament_dir)
+                file_exchange.choose_save_destination(
+                    tournament_dir, lambda path, _overwrite: ask_master_key(safe_tour_name, path),
+                    game_state=self, title="Save Tournament", directory=True)
 
             dialogs.ask_string("Tournament Name", "Enter a name for this tournament:", on_name)
 

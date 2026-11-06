@@ -9,8 +9,7 @@ from ui.rendering.font_manager import fonts
 import data.constants as c
 from data import queries
 from ui import dialogs
-from ui.dialogs import pickers
-from data.platform import downloads_dir
+from ui.dialogs import file_exchange, pickers
 from data.io.country_io import DEFAULT_NATION_COLOR
 from ui.rendering import country_names
 
@@ -309,18 +308,10 @@ class Edit_Country_Screen(Screen):
         pickers.open_color_picker(self, "Choose Brush Color", tuple(self.active_color)[:3], on_confirm)
 
     def _export_image(self, surf, suffix, fallback_name):
-        """Writes one of the country's images out to Downloads.
-
-        The flag and portrait buttons were the same eight lines apart from
-        which surface and which filename suffix.
-        """
+        """Export a flag or portrait to the player's chosen PNG destination."""
         safe_name = "".join(ch for ch in self.country_name if ch.isalnum() or ch in " _-") or fallback_name
-        export_path = os.path.join(downloads_dir(), f"{safe_name}_{suffix}.png")
-        try:
-            pygame.image.save(surf, export_path)
-            self.map_screen.show_feedback("Exported to Downloads")
-        except Exception:
-            self.map_screen.show_feedback("Failed to export")
+        file_exchange.export_file(f"{safe_name}_{suffix}.png", lambda path: pygame.image.save(surf, path),
+                                   game_state=self)
 
     def export_flag(self):
         self._export_image(self.flag_surf, "flag", "Flag")

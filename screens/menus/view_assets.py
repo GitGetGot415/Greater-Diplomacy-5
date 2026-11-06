@@ -10,6 +10,7 @@ from ui.widgets.scroll_panes import ScrollPanes
 from ui.widgets.ui_elements import Button, make_back_button, make_choice_button
 from ui.rendering.font_manager import fonts
 from data.platform import IS_WEB, download_file, downloads_dir
+from ui.dialogs import file_exchange
 import data.constants as c
 
 # ==========================================
@@ -201,31 +202,32 @@ class View_Assets(ScrollPanes, Screen):
         self.refresh_ui()
 
     def download_current_file(self):
-        """Copies the full-resolution source file (not the scaled/wrapped preview) to Downloads."""
+        """Export the full-resolution source to the chosen destination."""
         if not self.current_folder or not self.current_file:
             return
 
         src = os.path.join(c.ASSETS_ROOT_DIR, self.current_folder, self.current_file)
-        try:
-            if IS_WEB:
-                # No real filesystem to copy into on web -- push the asset (already
-                # in pygbag's virtual FS) out via the browser download bridge instead.
-                download_file(src)
-                self.download_status = "Downloaded"
-            else:
-                dest_dir = downloads_dir()
-                os.makedirs(dest_dir, exist_ok=True)
-                # copy() (not copy2()) so the download gets today's mtime instead of
-                # inheriting the source asset's, which can be months old and would
-                # otherwise bury it in a Downloads folder sorted by date modified.
-                shutil.copy(src, os.path.join(dest_dir, os.path.basename(self.current_file)))
-                self.download_status = "Saved to Downloads"
-            self.download_status_color = c.COLOR_SUCCESS_GREEN
-        except Exception as e:
-            self.download_status = f"Failed to save: {e}"
-            self.download_status_color = (255, 100, 100)
+        def export(path, _overwrite):
+            try:
+                if IS_WEB:
+                    # Web assets stay in the virtual filesystem until downloaded.
+                    download_file(src)
+                    self.download_status = "Downloaded"
+                else:
+                    # Keep today's modification time when copying an exported asset.
+                    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+                    shutil.copy(src, path)
+                    self.download_status = f"Saved to {path}"
+                self.download_status_color = c.COLOR_SUCCESS_GREEN
+            except OSError as e:
+                self.download_status = f"Failed to save: {e}"
+                self.download_status_color = (255, 100, 100)
 
-        self.download_status_timer = pygame.time.get_ticks()
+            self.download_status_timer = pygame.time.get_ticks()
+
+        file_exchange.choose_save_destination(
+            os.path.join(downloads_dir(), os.path.basename(self.current_file)), export,
+            game_state=self, title="Save Asset")
 
     # ------------------------------------------------------------------ #
     #                               UI                                   #

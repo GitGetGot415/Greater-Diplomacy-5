@@ -338,7 +338,7 @@ class Historical_Leaders_Editor(ScrollPanes, Screen):
         exports the last saved state, not unsaved edits still sitting in the
         on-screen fields (same "Save is its own separate step" split the rest
         of this editor already uses)."""
-        file_exchange.export_json_file(c.HISTORICAL_LEADERS_PATH, "historical_leaders.json")
+        file_exchange.export_json_file(c.HISTORICAL_LEADERS_PATH, "historical_leaders.json", game_state=self)
 
     @staticmethod
     def _is_valid_timeline(data):

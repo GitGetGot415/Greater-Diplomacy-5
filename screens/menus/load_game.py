@@ -7,7 +7,7 @@ from ui.widgets.content_browser import ContentBrowserScreen
 from screens.game import map_launch
 from ui.widgets.ui_elements import Button, make_back_button, play_ui_sound
 from ui.navigation import screen_runner
-from data.platform import LoadingSteps
+from data.platform import IS_WEB, LoadingSteps
 import data.constants as c
 
 from data.map.load_map import newer_version_message
@@ -43,8 +43,12 @@ class Load_Game(ContentBrowserScreen):
 
     def refresh_ui(self):
         self.build_browser(self.managed_dir, "No saves yet. Save a game or import a .zip archive.")
+        browse_button = Button(c.SCREEN_WIDTH - 496, 24, (160, 40), "blue", "Browse...", self.browse_save,
+                               font_preset="button_small")
+        browse_button.apply_state(enabled=not IS_WEB)
         self.elements.extend([
             make_back_button(self.exit_screen),
+            browse_button,
             Button(c.SCREEN_WIDTH - 324, 24, (160, 40), "green", "Import .zip",
                    lambda: file_exchange.import_zip_to_dir(self, self.managed_dir, self.reload_entries),
                    font_preset="button_small"),
@@ -64,7 +68,13 @@ class Load_Game(ContentBrowserScreen):
             self.call_selected(self.load_specific_save)
 
     def export_save_zip(self, folder_name):
-        file_exchange.export_dir_as_zip(os.path.join(self.managed_dir, folder_name), f"{folder_name}.zip")
+        file_exchange.export_dir_as_zip(os.path.join(self.managed_dir, folder_name), f"{folder_name}.zip",
+                                        game_state=self)
+
+    def browse_save(self):
+        file_exchange.open_saved_content_folder(
+            self, "Select Saved Game Folder", self.managed_dir,
+            lambda path: self.load_specific_save(path, play_sound=False))
 
     def open_history_menu(self, folder_name):
         save_dir = os.path.join(self.managed_dir, folder_name)
@@ -103,13 +113,13 @@ class Load_Game(ContentBrowserScreen):
 
         screen_runner.run_loading(LoadingSteps(read_dates(), 1), "Loading History...", on_done=show_turns)
 
-    def load_specific_save(self, folder_name, history_turn=None):
+    def load_specific_save(self, folder_name, history_turn=None, *, play_sound=True):
         message = newer_version_message(os.path.join(self.managed_dir, folder_name))
         if message:
             dialogs.show_info("Update Required", message)
             return
         # A history row already played its selection sound.
-        if history_turn is None:
+        if history_turn is None and play_sound:
             play_ui_sound("click")
         self.selected_save_path = os.path.join(self.managed_dir, folder_name)
         self.selected_history_turn = history_turn

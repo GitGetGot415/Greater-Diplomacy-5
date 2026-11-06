@@ -32,6 +32,12 @@ class ScenarioMetadataTests(unittest.TestCase):
         self.enterContext(mock.patch.object(c, "SCENARIOS_CUSTOM_DIR", self.directory))
         self.enterContext(mock.patch.object(queries, "get_country_data", return_value={}))
         self.enterContext(mock.patch("data.queries.saves.get_research_years", return_value={}))
+        self.picker = self.enterContext(mock.patch.object(
+            editor_menus.pickers, "open_file_browser", side_effect=self.pick_default))
+
+    @staticmethod
+    def pick_default(_context, _title, start_dir, **kwargs):
+        return kwargs["on_result"](os.path.join(start_dir, kwargs["initial_name"]))
 
     def test_apply_validates_before_changing_state_and_preserves_unknown_metadata(self):
         self.game.scenario_metadata = {"extension": {"keep": True}}
@@ -81,19 +87,35 @@ class ScenarioMetadataTests(unittest.TestCase):
         load_map.restore_scenario_metadata(self.game, {}, os.path.join(self.directory, "Saved Game"))
         self.assertEqual(self.game.editor_scenario_name, "")
 
-    def test_named_and_unnamed_saves_choose_paths_without_a_name_prompt(self):
+    def test_named_and_unnamed_saves_prefill_the_destination_picker(self):
         with mock.patch("ui.dialogs.ask_yes_no") as ask:
             ready = mock.Mock()
             self.game.editor_scenario_name = "Chosen Name"
             editor_menus.prepare_editor_save(self.game, ready)
-            ready.assert_called_once_with("Chosen Name", False)
+            ready.assert_called_once_with(os.path.join(self.directory, "Chosen Name"), False)
+            self.assertEqual(self.picker.call_args.kwargs["initial_name"], "Chosen Name")
             ready.reset_mock()
             self.game.editor_scenario_name = ""
             with mock.patch.object(editor_menus, "datetime") as clock:
                 clock.now.return_value.strftime.return_value = "timestamp"
                 editor_menus.prepare_editor_save(self.game, ready)
-            ready.assert_called_once_with("MapExport_timestamp", False)
+            ready.assert_called_once_with(os.path.join(self.directory, "MapExport_timestamp"), False)
             ask.assert_not_called()
+
+    def test_canceling_the_destination_picker_does_not_prepare_a_save(self):
+        self.picker.side_effect = lambda *_args, **kwargs: kwargs["on_result"](None)
+        ready = mock.Mock()
+        editor_menus.prepare_editor_save(self.game, ready)
+        ready.assert_not_called()
+        self.assertEqual(os.listdir(self.directory), [])
+
+    def test_editor_save_rechecks_permissions_after_destination_selection(self):
+        self.picker.side_effect = None
+        ready = mock.Mock()
+        editor_menus.prepare_editor_save(self.game, ready)
+        self.game.multiplayer_mode = True
+        self.picker.call_args.kwargs["on_result"](os.path.join(self.directory, "Chosen"))
+        ready.assert_not_called()
 
     def test_collision_offers_overwrite_numbered_copy_and_cancel(self):
         self.game.editor_scenario_name = "Existing"
@@ -107,10 +129,10 @@ class ScenarioMetadataTests(unittest.TestCase):
             callback(None)
             ready.assert_not_called()
             callback(False)
-            ready.assert_called_once_with("Existing-3", False)
+            ready.assert_called_once_with(os.path.join(self.directory, "Existing-3"), False)
             ready.reset_mock()
             callback(True)
-            ready.assert_called_once_with("Existing", True)
+            ready.assert_called_once_with(os.path.join(self.directory, "Existing"), True)
             ready.reset_mock()
             self.game.realtime_multiplayer = True
             callback(True)
@@ -125,7 +147,7 @@ class ScenarioMetadataTests(unittest.TestCase):
             with open(os.path.join(self.directory, "Existing-1"), "w") as handle:
                 handle.write("Preserve")
             ask.call_args.args[2](False)
-            ready.assert_called_once_with("Existing-2", False)
+            ready.assert_called_once_with(os.path.join(self.directory, "Existing-2"), False)
 
     def test_save_preparation_rejects_invalid_names_before_prompting_or_writing(self):
         self.game.editor_scenario_name = "../outside"
@@ -147,12 +169,12 @@ class ScenarioMetadataTests(unittest.TestCase):
                 ask.assert_not_called()
                 ready.assert_not_called()
 
-    def write_scenario(self, name=None, overwrite=False):
+    def write_scenario(self, name=None, overwrite=False, save_path=None):
         self.game.is_saving = True
         with mock.patch.object(save_map.pygame.image, "save"), \
                 mock.patch.object(queries, "scrub_default_images"), \
                 mock.patch.object(save_map, "sync_persisted_dir") as sync:
-            result = asyncio.run(save_map.save_map_data(self.game, name, overwrite=overwrite))
+            result = asyncio.run(save_map.save_map_data(self.game, name, overwrite=overwrite, save_path=save_path))
         return result, sync
 
     def test_disk_round_trip_uses_exact_folder_name_and_survives_renaming(self):
@@ -186,6 +208,33 @@ class ScenarioMetadataTests(unittest.TestCase):
         with open(meta_path) as handle:
             self.assertIsInstance(json.load(handle), dict)
 
+    def test_chosen_paths_outside_the_default_roots_round_trip_for_games_and_maps(self):
+        for is_editor in (True, False):
+            with self.subTest(is_editor=is_editor), tempfile.TemporaryDirectory() as outside:
+                self.game.is_editor = is_editor
+                self.game.scenario_metadata = {"author": "Creator", "description": "Chosen destination"}
+                destination = os.path.join(outside, "Chosen Name")
+                path, _sync = self.write_scenario(save_path=destination)
+                self.assertEqual(path, destination)
+                saved, map_data, _history = load_map.read_save_files(path)
+                self.assertEqual(saved["scenario_metadata"], self.game.scenario_metadata)
+                self.assertEqual(saved["nation_data"], self.game.nation_data)
+                self.assertIn("p", map_data)
+                self.assertEqual(os.listdir(self.directory), [])
+
+    def test_selected_destination_still_requires_overwrite_in_the_writer(self):
+        destination = os.path.join(self.directory, "Chosen")
+        os.mkdir(destination)
+        previous = os.path.join(destination, "meta.json")
+        with open(previous, "w") as handle:
+            handle.write("Keep existing save")
+        self.game.is_editor = False
+        with mock.patch("builtins.print"):
+            path, _sync = self.write_scenario(save_path=destination)
+        self.assertIsNone(path)
+        with open(previous) as handle:
+            self.assertEqual(handle.read(), "Keep existing save")
+
     def test_save_copy_writes_numbered_folder_and_preserves_previous_scenario(self):
         previous = os.path.join(self.directory, "Existing")
         os.mkdir(previous)
@@ -197,8 +246,8 @@ class ScenarioMetadataTests(unittest.TestCase):
         with mock.patch("ui.dialogs.ask_yes_no") as ask:
             editor_menus.prepare_editor_save(self.game, ready)
             ask.call_args.args[2](False)
-        name, overwrite = ready.call_args.args
-        path, _sync = self.write_scenario(name, overwrite)
+        destination, overwrite = ready.call_args.args
+        path, _sync = self.write_scenario(overwrite=overwrite, save_path=destination)
         self.assertEqual(path, os.path.join(self.directory, "Existing-1"))
         self.assertEqual(self.game.editor_scenario_name, "Existing-1")
         with open(previous_meta) as handle:
@@ -283,8 +332,74 @@ class ScenarioMetadataTests(unittest.TestCase):
             ask.call_args.args[2](None)
             background.assert_not_called()
             ask.call_args.args[2](True)
-            background.assert_called_once_with(save_map.save_map_data, game, "Existing", overwrite=True)
+            background.assert_called_once_with(save_map.save_map_data, game, None, overwrite=True,
+                                               save_path=os.path.join(self.directory, "Existing"))
             self.assertTrue(game.is_saving)
+
+    def test_game_save_button_waits_for_the_picker_before_starting_work(self):
+        from screens.game import map as map_module
+
+        game = self.game
+        game.is_editor = False
+        game.save_map_data = MethodType(map_module.Map.save_map_data, game)
+        game.draw = mock.Mock()
+        self.picker.side_effect = None
+        destination = os.path.join(self.directory, "Chosen")
+        with mock.patch.object(c, "SAVES_DIR", self.directory), \
+                mock.patch.object(map_module, "run_background") as background, \
+                mock.patch.object(map_module.pygame.display, "get_surface"), \
+                mock.patch.object(map_module.pygame.display, "flip"):
+            game.save_map_data()
+            self.assertEqual(self.picker.call_args.args[2], self.directory)
+            background.assert_not_called()
+            self.assertFalse(game.is_saving)
+            callback = self.picker.call_args.kwargs["on_result"]
+            callback(None)
+            background.assert_not_called()
+            callback(destination)
+            background.assert_called_once_with(save_map.save_map_data, game, None, overwrite=False,
+                                               save_path=destination)
+
+    def test_completed_realtime_save_chooses_a_destination_before_changing_replay_state(self):
+        from screens.game import map as map_module
+
+        game = self.game
+        game.is_editor = False
+        game.realtime_multiplayer = True
+        game.realtime_session = SimpleNamespace(phase="GAME_OVER", completed_metadata=mock.Mock(return_value={}))
+        game.realtime_server_map = mock.Mock()
+        game.save_map_data = MethodType(map_module.Map.save_map_data, game)
+        self.picker.side_effect = None
+        game.save_map_data()
+        game.realtime_session.completed_metadata.assert_not_called()
+        callback = self.picker.call_args.kwargs["on_result"]
+        callback(None)
+        game.realtime_server_map.save_map_data.assert_not_called()
+        destination = os.path.join(self.directory, "Replay")
+        callback(destination)
+        game.realtime_server_map.save_map_data.assert_called_once_with(None, overwrite=False, save_path=destination)
+
+    def test_completed_realtime_client_can_save_its_own_replay_without_recursing(self):
+        from screens.game import map as map_module
+
+        game = self.game
+        game.is_editor = False
+        game.realtime_multiplayer = True
+        game.realtime_session = SimpleNamespace(phase="GAME_OVER", completed_metadata=lambda: {"offline_view": "spectator"})
+        game.realtime_server_map = None
+        game.save_map_data = MethodType(map_module.Map.save_map_data, game)
+        game.draw = mock.Mock()
+        self.picker.side_effect = None
+        destination = os.path.join(self.directory, "Replay")
+        with mock.patch.object(map_module, "run_background") as background, \
+                mock.patch.object(map_module.pygame.display, "get_surface"), \
+                mock.patch.object(map_module.pygame.display, "flip"):
+            game.save_map_data()
+            self.picker.call_args.kwargs["on_result"](destination)
+            background.assert_called_once_with(save_map.save_map_data, game, None, overwrite=False,
+                                               save_path=destination)
+            self.assertEqual(game.player_country, "Spectator")
+            self.assertEqual(game.realtime_match_metadata, {"offline_view": "spectator"})
 
 
 if __name__ == "__main__":

@@ -1,5 +1,6 @@
 """Each screen that opens MAP builds the map from its own selection."""
 
+import os
 import unittest
 import threading
 from contextlib import ExitStack
@@ -246,6 +247,8 @@ class ScreenHookTests(unittest.TestCase):
                 mock.patch.object(multiplayer_new.os.path, "exists", return_value=False), \
                 mock.patch.object(multiplayer_new.os, "makedirs"), \
                 mock.patch.object(multiplayer_new.c, "TOURNAMENT_SAVES_DIR", "fixture-tournaments"), \
+                mock.patch.object(multiplayer_new.file_exchange.pickers, "open_file_browser",
+                                  side_effect=lambda *_args, **kwargs: kwargs["on_result"]("chosen-tournament")), \
                 mock.patch.object(multiplayer_new.queries, "get_scenario_settings", return_value={}), \
                 mock.patch.object(multiplayer_new.Map, "loading_steps", side_effect=build), \
                 mock.patch.object(multiplayer_new.tournament_files, "export_tournament", return_value=("keys", "all-keys")) as export, \
@@ -258,10 +261,27 @@ class ScreenHookTests(unittest.TestCase):
             export.assert_called_once()
             self.assertTrue(game.multiplayer_host_mode)
             self.assertEqual(game.multiplayer_master_key, "secret-key")
+            self.assertEqual(export.call_args.args[1], os.path.join("chosen-tournament", "Turn_4_Host.gd5tour"))
             success.assert_not_called()
             loading.call_args.kwargs["on_done"](turn)
             success.assert_called_once()
         source.go_to.assert_called_once_with("MULTIPLAYER_HOST")
+
+    def test_canceling_a_new_tournament_destination_does_not_create_or_load_anything(self):
+        from screens.multiplayer import multiplayer_new
+
+        source = SimpleNamespace(go_to=mock.Mock())
+        with mock.patch.object(multiplayer_new.dialogs, "ask_string") as ask, \
+                mock.patch.object(multiplayer_new.file_exchange.pickers, "open_file_browser") as browser, \
+                mock.patch.object(multiplayer_new.os, "makedirs") as mkdir, \
+                mock.patch.object(multiplayer_new.screen_runner, "run_loading") as loading:
+            multiplayer_new.Multiplayer_New.start_host_setup(source, "Fixture", "fixture-scenarios")
+            ask.call_args.args[2]("Tournament")
+            browser.call_args.kwargs["on_result"](None)
+            self.assertEqual(ask.call_count, 1)
+            mkdir.assert_not_called()
+            loading.assert_not_called()
+            source.go_to.assert_not_called()
 
 
 class LoadingRunnerTests(unittest.TestCase):

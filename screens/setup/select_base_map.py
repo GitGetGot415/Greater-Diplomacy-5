@@ -3,6 +3,7 @@ import os
 import data.constants as c
 from ui import dialogs
 from ui.dialogs import file_exchange
+from data.platform import IS_WEB
 from screens.game import map_launch
 from ui.navigation.screen import ButtonMenuScreen
 from ui.widgets.content_browser import ScenarioLibraryScreen
@@ -84,8 +85,12 @@ class Select_Base_Map(ScenarioLibraryScreen):
             self.open_button = self.add_primary_action("Create Map")
             return
         self.build_browser(directory, "")
+        browse_button = Button(c.SCREEN_WIDTH - 496, 24, (160, 40), "blue", "Browse...", self.browse_map,
+                               font_preset="button_small")
+        browse_button.apply_state(enabled=not IS_WEB)
         self.elements.extend([
             make_back_button(self.exit_screen),
+            browse_button,
             Button(c.SCREEN_WIDTH - 324, 24, (160, 40), "green", "Import .zip", self.import_custom_map,
                    font_preset="button_small"),
             Button(c.SCREEN_WIDTH - 152, 24, (128, 40), "grey", "Refresh", self.reload_entries,
@@ -129,7 +134,13 @@ class Select_Base_Map(ScenarioLibraryScreen):
 
     def export_scenario_zip(self, scenario_name):
         file_exchange.export_dir_as_zip(os.path.join(self.managed_dir, scenario_name),
-                                        f"{scenario_name}_scenario.zip")
+                                        f"{scenario_name}_scenario.zip", game_state=self)
+
+    def browse_map(self):
+        def picked(path):
+            self.selected_save_path = path
+            self.go_to("MAP")
+        file_exchange.open_saved_content_folder(self, "Select Map Folder to Edit", self.managed_dir, picked)
 
     def start_editor_with_map(self, map_name, directory):
         self.selected_save_path = os.path.join(directory, map_name)
