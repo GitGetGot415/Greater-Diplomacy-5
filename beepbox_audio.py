@@ -10,7 +10,6 @@ import queue
 import threading
 import time
 from urllib.parse import unquote, urlsplit
-import wave
 
 import data.constants as c
 
@@ -163,6 +162,8 @@ def _native_sample_data(song, stop_event=None):
         return {}
     # Load native decoding dependencies only when a song needs sample playback.
     import numpy as np
+    # Pygbag omits wave; browser playback uses Web Audio's decoder instead.
+    import wave
 
     samples = {}
     for reference in song.get("customSamples", []):

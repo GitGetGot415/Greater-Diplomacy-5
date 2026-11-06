@@ -15,7 +15,6 @@ import copy
 import gzip
 import zlib
 import pygame
-from cryptography.fernet import Fernet, InvalidToken
 import data.constants as c
 from data import migrations, queries
 from data.map import history_io
@@ -86,6 +85,9 @@ def generate_fernet_key_from_password(password, salt):
     return base64.urlsafe_b64encode(derived_key)
 
 def encrypt_dict(data_dict, password, *, compress=False):
+    # Native encryption is optional at startup; pygbag cannot import cryptography.
+    from cryptography.fernet import Fernet
+
     salt = secrets.token_bytes(16)
     key = generate_fernet_key_from_password(password, salt)
     f = Fernet(key)
@@ -100,6 +102,9 @@ def encrypt_dict(data_dict, password, *, compress=False):
     return f"{salt_b64}:{encrypted_token}"
 
 def decrypt_dict(encrypted_str, password):
+    # Keep the optional encryption dependency out of shared map/UI imports.
+    from cryptography.fernet import Fernet, InvalidToken
+
     try:
         salt_b64, encrypted_token = encrypted_str.split(":", 1)
         salt = base64.urlsafe_b64decode(salt_b64.encode('utf-8'))

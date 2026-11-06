@@ -459,6 +459,11 @@ Windows retains explicit PyInstaller hidden imports.
 macOS retains explicit py2app packages, the tkinter recipe workaround, and the ditto archive procedure.
 Desktop packages retain loose source copies for the existing source-replacement loader.
 Web retains libdragoman.so, the HTML template, and staged audio conversion.
+Build the browser package with compilation_scripts/html_compilation.py before testing.
+The test_web_build.bat and test_web_build.sh launchers use the same Python helper.
+The browser opens after pygbag serves HTTP successfully. Startup failure stops the wait.
+Close an existing test server before launching another; the helper does not terminate other programs using port 8000.
+After source changes, rebuild the browser package to refresh the staged game code.
 Native and web audio filters retain their separate replacement rules.
 Each asset inventory checks Git ignore rules in one batch. A new inventory reads the rules again.
 Distributed saves and mods remain empty. Builds replace local preferences with distribution defaults and exclude editor scratch scenarios.

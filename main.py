@@ -832,7 +832,7 @@ class Controller:
                     self.play_startup_song()
             await asyncio.sleep(0)  # yield to the browser tab / event loop every frame
 
-async def _bootstrap():
+async def _run_game():
     # Web only: pull mods/ back out of IndexedDB before mod_loader.install()
     # (called from _import_project_modules() below) decides what to patch --
     # this has to be a real `await`, inside a coroutine _bootstrap() is
@@ -855,6 +855,38 @@ async def _bootstrap():
         await restore_persisted_dir(os.path.join(CHARACTERS_DIR, CUSTOM_SUBDIR))
     game = Controller()
     await game.run()
+
+
+async def _bootstrap():
+    # Pygbag schedules asyncio.run() and returns immediately. Catch failures
+    # inside the task; a synchronous handler around asyncio.run() misses them.
+    try:
+        await _run_game()
+    except Exception:
+        if sys.platform != "emscripten":
+            raise
+        _report_web_crash()
+
+
+def _report_web_crash():
+    # Keep crash reporting independent of project imports: startup may fail
+    # before IS_WEB or the UI modules have been initialized.
+    import traceback
+
+    traceback.print_exc()
+    try:
+        import platform  # Pygbag supplies platform.window in the browser.
+
+        platform.window.console.error(
+            "[gd5] fatal error during startup:\n" + traceback.format_exc()
+        )
+        # Pygbag's terminal normally stays hidden outside #debug. Reveal the
+        # existing traceback so a failed startup does not leave a blank canvas.
+        platform.window.pyconsole.hidden = False
+    except Exception:
+        # A logging failure must never replace the original traceback.
+        pass
+
 
 def _write_crash_log(crash_log_path=None):
     """Writes a crash report and tells the player where it is.
@@ -942,34 +974,12 @@ if __name__ == "__main__":
     try:
         asyncio.run(_bootstrap())
     except Exception:
-        import traceback
         # sys.platform, not IS_WEB -- if _import_project_modules() itself
         # blew up (e.g. mod_loader.install() raised), IS_WEB was never set,
         # and referencing it here would mask the real exception with a
         # NameError.
         if sys.platform == "emscripten":
-            # ~/GD5_crash.log isn't reachable from a browser sandbox, so the
-            # traceback has to find the player some other way -- and
-            # print_exc() alone does NOT do it. Under pygbag stderr only
-            # reaches its own in-page xterm overlay, which web_index.tmpl
-            # hides on every non-#debug load (custom_onload's
-            # `pyconsole.hidden = debug_hidden`), so a startup crash renders
-            # as a black canvas with an empty devtools console and no other
-            # clue. Confirmed the hard way by a WebP-mislabelled-as-.png file
-            # in assets/hanskolmer/ that killed symbol_loader on web only:
-            # nothing surfaced anywhere until that hidden terminal was
-            # scraped by hand. Mirror it to window.console.error -- the same
-            # route, for the same reason, as mod_loader._log().
-            traceback.print_exc()
-            try:
-                import platform  # stdlib `platform`, patched by pygbag with `.window`
-                platform.window.console.error(
-                    "[gd5] fatal error during startup:\n" + traceback.format_exc()
-                )
-            except Exception:
-                # A logging failure must never be what replaces the real
-                # traceback, same guard mod_loader puts around its own.
-                pass
+            _report_web_crash()
         else:
             _write_crash_log()
             raise
