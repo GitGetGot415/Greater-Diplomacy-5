@@ -15,6 +15,7 @@
 - make music pitch work with regular audio files on macOS and web
 - look into another audio backend if the current options can't do what's needed
 - use different selection sounds for different unit types `(like HOI4)`
+- make UltraBox mod channels play on desktop. Desktop playback never calls the synth's `play()`, so `isPlayingSong` stays false and UltraBox skips its mod channels. Vibrato, pan, and other automation stay at their starting values. Web playback runs them correctly.
 
 ## Diplomacy and Countries
 
