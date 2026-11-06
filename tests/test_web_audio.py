@@ -2,23 +2,92 @@
 
 from collections import OrderedDict
 from contextlib import redirect_stdout
+import asyncio
+import importlib.util
 import io
+import json
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
 from types import SimpleNamespace
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, call, patch
 
 import pygame
 
+import main as game_main
+import data.constants as c
+from data import platform as game_platform, queries
 from compilation_scripts import html_compilation
 from ui import music_playback
 from ui.widgets import ui_elements
 
 
 class WebAudioTests(unittest.TestCase):
+    def test_controller_uses_browser_decoder_only_for_unconverted_web_mp3(self):
+        controller = object.__new__(game_main.Controller)
+        controller.track_start_times = {}
+        controller.music_pitch = 0.5
+        controller.music_volume = 0.7
+        controller.music = None
+        with patch.object(game_main, 'IS_WEB', True, create=True), \
+                patch.object(game_main, 'music_playback', music_playback, create=True), \
+                patch.object(game_main, 'c', c, create=True), \
+                patch.object(c, 'USE_SOLOUD', False), \
+                patch.object(music_playback, 'pygame_audio_path', side_effect=lambda path: path), \
+                patch.object(music_playback, 'WebMP3Playback') as browser, \
+                patch.object(music_playback, 'PygamePlayback') as mixer:
+            controller.play_specific_song('custom.mp3')
+            browser.assert_called_once_with('custom.mp3', 0.0, 0.7)
+            mixer.assert_not_called()
+            controller.play_specific_song('custom.ogg')
+            browser.return_value.stop.assert_called_once()
+            mixer.assert_called_once_with('custom.ogg', 0.0, 0.7)
+            with patch.object(music_playback, 'pygame_audio_path', return_value='bundled.ogg'):
+                controller.play_specific_song('bundled.mp3')
+            self.assertEqual(browser.call_count, 1)
+            self.assertEqual(mixer.call_args.args[0], 'bundled.mp3')
+            with patch.object(game_main, 'IS_WEB', False):
+                controller.play_specific_song('desktop.mp3')
+            self.assertEqual(browser.call_count, 1)
+            self.assertEqual(mixer.call_args.args[0], 'desktop.mp3')
+
+    def test_browser_player_controls_and_pending_metadata(self):
+        import platform
+
+        window = SimpleNamespace(eval=Mock())
+        bridge = {name: Mock() for name in ('load', 'pause', 'seek', 'stop', 'set_volume',
+                                          'position', 'length', 'error', 'finished')}
+        for name, function in bridge.items():
+            setattr(window, '__gd5_mp3_' + name, function)
+        bridge['position'].return_value = 2.5
+        bridge['length'].return_value = 0
+        bridge['error'].return_value = ''
+        bridge['finished'].return_value = False
+        with patch.object(platform, 'window', window, create=True):
+            playback = music_playback.WebMP3Playback('custom.mp3', 2.5, 0.4)
+        self.assertEqual(playback.source_length(), 0)
+        self.assertEqual(playback.source_position(), 2.5)
+        self.assertFalse(playback.finished)
+        playback.pause(True)
+        playback.seek(4)
+        bridge['seek'].assert_called_once_with(4)
+        self.assertEqual(bridge['pause'].call_args_list, [call(True), call(False)])
+        self.assertFalse(playback.paused)
+        playback.set_volume(0.2)
+        bridge['set_volume'].assert_called_once_with(0.2)
+        bridge['position'].return_value = 4
+        bridge['length'].return_value = 20
+        self.assertEqual(playback.source_length(), 20)
+        self.assertEqual(playback.source_position(), 4)
+        bridge['error'].return_value = 'Cannot decode audio'
+        self.assertEqual(playback.error, 'Cannot decode audio')
+        bridge['finished'].return_value = True
+        self.assertTrue(playback.finished)
+        playback.stop()
+        bridge['stop'].assert_called_once()
+
     def test_browser_resolves_mp3_effect_without_changing_its_settings_key(self):
         with tempfile.TemporaryDirectory() as temporary:
             original = str(Path(temporary, "Info.mp3"))
@@ -73,6 +142,117 @@ class WebAudioTests(unittest.TestCase):
         music.play.assert_called_once_with(start=1.25)
         music.set_volume.assert_called_once_with(0.5)
         self.assertEqual(playback.track_path, "track.mp3")
+
+
+@unittest.skipUnless(importlib.util.find_spec('quickjs'), 'QuickJS is not installed')
+class WebMP3BridgeTests(unittest.TestCase):
+    def setUp(self):
+        import quickjs
+
+        self.context = quickjs.Context()
+        self.context.eval(r"""
+            globalThis.window = globalThis;
+            globalThis.readPath = null;
+            globalThis.FS = {readFile(path) { readPath = path; return new Uint8Array([1,2]); }};
+            globalThis.Blob = class {constructor(parts, options) { this.type = options.type; }};
+            globalThis.revoked = [];
+            globalThis.URL = {
+                createObjectURL(blob) { return 'blob:' + blob.type; },
+                revokeObjectURL(url) { revoked.push(url); }
+            };
+            globalThis.Audio = class {
+                constructor() {
+                    this.readyState = 0; this.currentTime = 0; this.ended = false;
+                    this.events = {}; this.playCount = 0;
+                }
+                addEventListener(name, callback) { this.events[name] = callback; }
+                play() { this.playCount++; return Promise.resolve(); }
+                pause() { this.paused = true; }
+                removeAttribute(name) { delete this[name]; }
+                load() {}
+            };
+        """)
+        self.context.eval(music_playback._WEB_MP3_BRIDGE)
+        self.context.eval("globalThis.player = __gd5_mp3_load('/music/My Song.mp3', 2, 0.4)")
+
+    def test_uses_uploaded_bytes_and_keeps_seek_before_metadata(self):
+        self.assertEqual(self.context.eval('readPath'), '/music/My Song.mp3')
+        self.assertEqual(self.context.eval('player.audio.src'), 'blob:audio/mpeg')
+        self.context.eval("player.seek(7); player.audio.readyState = 1; player.audio.events.loadedmetadata()")
+        self.assertEqual(self.context.eval('player.audio.currentTime'), 7)
+        self.assertEqual(self.context.eval('player.audio.playCount'), 1)
+        self.assertEqual(self.context.eval('__gd5_mp3_position()'), 7)
+        self.context.eval('player.audio.duration = 20')
+        self.assertEqual(self.context.eval('__gd5_mp3_length()'), 20)
+        self.context.eval('player.audio.duration = NaN')
+        self.assertEqual(self.context.eval('__gd5_mp3_length()'), 0)
+
+    def test_stop_releases_blob_and_does_not_restart_when_metadata_arrives(self):
+        self.context.eval("player.stop(); player.stop(); player.audio.events.loadedmetadata()")
+        self.assertEqual(self.context.eval('revoked.length'), 1)
+        self.assertTrue(self.context.eval('player.audio.paused'))
+        self.assertEqual(self.context.eval('player.audio.currentTime'), 0)
+        self.assertEqual(self.context.eval('player.audio.playCount'), 1)
+
+    def test_decode_and_play_errors_are_reported_but_pause_abort_is_ignored(self):
+        self.context.eval("player.audio.play = () => Promise.reject({name:'AbortError'}); player.play()")
+        while self.context.execute_pending_job():
+            pass
+        self.assertIsNone(self.context.eval('player.error'))
+        self.context.eval("player.audio.play = () => Promise.reject({name:'NotSupportedError', message:'bad MP3'}); player.play()")
+        while self.context.execute_pending_job():
+            pass
+        self.assertEqual(self.context.eval('player.error'), 'bad MP3')
+        self.context.eval("player.audio.error = {message:'decode failed'}; player.audio.events.error()")
+        self.assertEqual(self.context.eval('player.error'), 'decode failed')
+
+
+class MusicPersistenceTests(unittest.TestCase):
+    def test_all_album_mutations_sync_browser_storage_after_success(self):
+        with tempfile.TemporaryDirectory() as temporary, \
+                patch.object(c, 'MUSIC_DIR', str(Path(temporary, 'music'))), \
+                patch.object(queries, 'sync_persisted_dir') as sync:
+            source = Path(temporary, 'song.mp3')
+            source.write_bytes(b'mp3 fixture')
+            queries.create_album('Mine')
+            queries.add_song_to_album(str(source), 'Mine')
+            queries.delete_song(str(Path(c.MUSIC_DIR, 'Mine/song.mp3')))
+            queries.delete_album('Mine')
+            self.assertEqual(sync.call_args_list, [call(c.MUSIC_DIR)] * 4)
+            with self.assertRaises(ValueError):
+                queries.add_song_to_album(str(source), 'Missing')
+            self.assertEqual(sync.call_count, 4)
+
+    def test_music_is_persisted_without_overriding_bundled_albums(self):
+        self.assertIn(c.MUSIC_DIR, game_platform._persisted_roots())
+        self.assertEqual(json.loads(game_platform._persisted_exclusions(c.MUSIC_DIR)),
+                         list(c.UNDELETABLE_ALBUMS))
+        self.assertEqual(json.loads(game_platform._persisted_exclusions(c.SAVES_DIR)), [])
+
+    def test_only_music_writes_directory_markers_to_shared_storage(self):
+        import platform
+
+        push = Mock()
+        window = SimpleNamespace(__gd5_persist_push=push)
+        with patch.object(platform, 'window', window, create=True), \
+                patch.object(game_platform, 'IS_WEB', True), \
+                patch.object(game_platform, '_ensure_persist_js'):
+            game_platform.sync_persisted_dir(c.MUSIC_DIR)
+            game_platform.sync_persisted_dir(c.MODS_DIR)
+        self.assertTrue(push.call_args_list[0].args[2])
+        self.assertFalse(push.call_args_list[1].args[2])
+
+    def test_startup_restores_music_before_controller_scans_albums(self):
+        trace = []
+        game = SimpleNamespace(run=AsyncMock())
+        with patch.object(game_main, '_import_project_modules'), \
+                patch.object(game_main, 'IS_WEB', True, create=True), \
+                patch.object(game_main, 'c', c, create=True), \
+                patch.object(game_main, 'restore_persisted_dir',
+                             AsyncMock(side_effect=lambda root: trace.append(root)), create=True), \
+                patch.object(game_main, 'Controller', side_effect=lambda: trace.append('controller') or game):
+            asyncio.run(game_main._run_game())
+        self.assertLess(trace.index(c.MUSIC_DIR), trace.index('controller'))
 
 
 class WebAudioBuildTests(unittest.TestCase):

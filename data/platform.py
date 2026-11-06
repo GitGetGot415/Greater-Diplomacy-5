@@ -242,7 +242,8 @@ window.__gd5_idb_open = function() {
   });
 };
 
-window.__gd5_persist_push = function(root) {
+window.__gd5_persist_push = function(root, excludedJson, preserveDirectories) {
+  var excluded = JSON.parse(excludedJson || '[]');
   window.__gd5_persist_push_ready = false;
   window.__gd5_idb_open().then(function(db) {
     var tx = db.transaction('files', 'readwrite');
@@ -254,10 +255,14 @@ window.__gd5_persist_push = function(root) {
       try { entries = FS.readdir(dir); } catch (e) { return; }
       entries.forEach(function(name) {
         if (name === '.' || name === '..') return;
+        if (dir === root && excluded.indexOf(name) !== -1) return;
         var full = dir + '/' + name;
         var st;
         try { st = FS.stat(full); } catch (e) { return; }
         if (FS.isDir(st.mode)) {
+          // Music preserves empty albums. Other roots keep their byte-only records,
+          // which the independent early mod loader also reads.
+          if (preserveDirectories) store.put(null, full);
           walk(full);
         } else {
           try { store.put(FS.readFile(full), full); } catch (e) {}
@@ -284,7 +289,8 @@ window.__gd5_persist_push = function(root) {
   }).catch(function() { window.__gd5_persist_push_ready = true; });
 };
 
-window.__gd5_persist_pull = function(root) {
+window.__gd5_persist_pull = function(root, excludedJson) {
+  var excluded = JSON.parse(excludedJson || '[]');
   window.__gd5_persist_pull_ready = false;
   window.__gd5_idb_open().then(function(db) {
     var tx = db.transaction('files', 'readonly');
@@ -295,10 +301,13 @@ window.__gd5_persist_pull = function(root) {
       var cursor = e.target.result;
       if (cursor) {
         var path = cursor.key;
-        if (path.indexOf(prefix) === 0) {
+        if (path.indexOf(prefix) === 0 && excluded.indexOf(path.slice(prefix.length).split('/')[0]) === -1) {
           var dir = path.substring(0, path.lastIndexOf('/'));
           try { FS.mkdirTree(dir); } catch (e) {}
-          try { FS.writeFile(path, new Uint8Array(cursor.value)); } catch (e) {}
+          try {
+            if (cursor.value === null) FS.mkdirTree(path);
+            else FS.writeFile(path, new Uint8Array(cursor.value));
+          } catch (e) {}
         }
         cursor.continue();
       }
@@ -331,7 +340,14 @@ def _persisted_roots():
     # module can't import data.constants back at top level.
     import data.constants as c
     custom_characters_dir = os.path.join(CHARACTERS_DIR, CUSTOM_SUBDIR)
-    return (c.SAVES_DIR, c.TOURNAMENT_SAVES_DIR, c.SCENARIOS_CUSTOM_DIR, c.MODS_DIR, custom_characters_dir)
+    return (c.SAVES_DIR, c.TOURNAMENT_SAVES_DIR, c.SCENARIOS_CUSTOM_DIR, c.MODS_DIR,
+            custom_characters_dir, c.MUSIC_DIR)
+
+
+def _persisted_exclusions(root):
+    # Same circular dependency boundary as _persisted_roots above.
+    import data.constants as c
+    return json.dumps(c.UNDELETABLE_ALBUMS if root == c.MUSIC_DIR else [])
 
 
 async def restore_persisted_dir(root):
@@ -353,7 +369,7 @@ async def restore_persisted_dir(root):
     # under whatever directory happened to be current instead of the repo
     # root. Resolving once, right here, keeps push and pull pointed at the
     # same place regardless of what cwd does elsewhere.
-    platform.window.__gd5_persist_pull(os.path.abspath(root))
+    platform.window.__gd5_persist_pull(os.path.abspath(root), _persisted_exclusions(root))
     for _ in range(200):  # ~20s safety net, mirrors the upload-picker pattern above
         if platform.window.__gd5_persist_pull_ready:
             break
@@ -373,8 +389,11 @@ def sync_persisted_dir(root):
     if not IS_WEB or root not in _persisted_roots():
         return
     import platform
+    # constants imports IS_WEB from this module; defer this import as above.
+    import data.constants as c
     _ensure_persist_js()
     # See the matching comment in restore_persisted_dir: resolve to an
     # absolute path so this can't silently target the wrong directory if
     # cwd has drifted since boot.
-    platform.window.__gd5_persist_push(os.path.abspath(root))
+    platform.window.__gd5_persist_push(
+        os.path.abspath(root), _persisted_exclusions(root), root == c.MUSIC_DIR)

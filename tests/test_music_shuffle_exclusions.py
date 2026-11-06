@@ -13,7 +13,7 @@ from screens.menus.music_player import Music_Player, NEW_ALBUM_LABEL
 def make_controller():
     controller = object.__new__(game_main.Controller)
     controller.playlist = []
-    controller._failed_beepbox_tracks = set()
+    controller._failed_music_tracks = set()
     controller.shuffle_disabled_tracks = set()
     controller.now_playing = "None"
     return controller

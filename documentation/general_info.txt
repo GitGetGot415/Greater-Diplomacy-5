@@ -495,6 +495,9 @@ Every album shows a delete button, except the albums named in UNDELETABLE_ALBUMS
 Add the name of each album that ships with the game to that list.
 The "+ Add Song" button stays enabled. If no album accepts new songs, a popup tells you to create an album first.
 It asks for an album, then for a file, and copies the file into that album folder.
+On web, uploaded MP3 files use the browser's audio decoder; bundled converted tracks keep using the mixer.
+Custom albums and songs are saved in browser storage and restored before the music library is scanned.
+Empty custom albums and song/album deletions are preserved. Bundled albums are not copied into browser storage.
 It lists only albums that are not in UNDELETABLE_ALBUMS.
 The file must be MP3, WAV, OGG, or a BeepBox or UltraBox JSON song.
 A song in an album that is not in UNDELETABLE_ALBUMS has a delete button.

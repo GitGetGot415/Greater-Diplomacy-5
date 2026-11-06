@@ -338,7 +338,7 @@ class Controller:
         self.playlist = []
         self.shuffle_disabled_tracks = set()
         self.now_playing = "None"
-        self._failed_beepbox_tracks = set()
+        self._failed_music_tracks = set()
         self.starting_song = None
         self.track_start_times = {} # Keeps track of offsets specified in start_times.json
 
@@ -569,7 +569,7 @@ class Controller:
     def play_random_song(self):
         available_tracks = [
             track for track in self.playlist
-            if (track not in self._failed_beepbox_tracks
+            if (track not in self._failed_music_tracks
                 and not self.is_shuffle_disabled(track))
         ]
         if not available_tracks:
@@ -626,6 +626,10 @@ class Controller:
                     speed=speed,
                     start_time=beepbox_start_time,
                 ))
+            elif (IS_WEB and track_path.lower().endswith('.mp3')
+                  and music_playback.pygame_audio_path(track_path) == track_path):
+                self.music = music_playback.WebMP3Playback(
+                    track_path, start_time, self.music_volume)
             elif c.USE_SOLOUD:
                 self.music = music_playback.SoLoudPlayback(
                     self.soloud, self.music_stream, track_path,
@@ -644,7 +648,7 @@ class Controller:
                     print(f"Falling back to the matching {extension} track.")
                     self.play_specific_song(fallback)
                 else:
-                    self._failed_beepbox_tracks.add(track_path)
+                    self._failed_music_tracks.add(track_path)
                     self.play_random_song()
 
     def _shutdown_audio(self):
@@ -693,18 +697,19 @@ class Controller:
             if music is not None:
                 music.update()
                 if music.error is not None:
-                    # Only a BeepBox synthesizer reports an error.
+                    # Synths and browser MP3 decoding can fail asynchronously.
                     failed_track = self.now_playing
                     music.stop()
                     self.music = None
-                    self._failed_beepbox_tracks.add(failed_track)
-                    fallback = self._beepbox_audio_fallback(failed_track)
+                    self._failed_music_tracks.add(failed_track)
+                    fallback = (self._beepbox_audio_fallback(failed_track)
+                                if failed_track.lower().endswith('.json') else None)
                     if fallback:
                         extension = os.path.splitext(fallback)[1][1:].upper()
                         print(f"BeepBox playback failed ({music.error}); using the {extension} fallback.")
                         self.play_specific_song(fallback)
                     else:
-                        print(f"BeepBox playback failed: {music.error}")
+                        print(f"Music playback failed: {music.error}")
                         self.play_random_song()
                     if self.active_state == self.states.get("MUSIC_PLAYER"):
                         self.states["MUSIC_PLAYER"].refresh_ui()
@@ -822,6 +827,7 @@ async def _run_game():
         await restore_persisted_dir(c.SAVES_DIR)
         await restore_persisted_dir(c.TOURNAMENT_SAVES_DIR)
         await restore_persisted_dir(c.SCENARIOS_CUSTOM_DIR)
+        await restore_persisted_dir(c.MUSIC_DIR)
         from ui.dialogs.character_select_screen import CHARACTERS_DIR, CUSTOM_SUBDIR
         await restore_persisted_dir(os.path.join(CHARACTERS_DIR, CUSTOM_SUBDIR))
     game = Controller()

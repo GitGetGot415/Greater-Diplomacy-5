@@ -1,8 +1,9 @@
-"""One interface for the three music backends.
+"""One interface for the music backends.
 
 The controller holds at most one playback object in `Controller.music`.
 BeepBox and UltraBox songs use BeepBoxPlayback. Other tracks use
 SoLoudPlayback on desktop or PygamePlayback when SoLoud is not available.
+Unconverted browser MP3s use WebMP3Playback and the browser's audio decoder.
 The callers do not need to know which backend plays the current track.
 
 Positions and lengths are in seconds of the source track. The music player
@@ -186,6 +187,126 @@ class SoLoudPlayback:
         # let the scrubber seek past SoLoud's actual stream end.
         length = self.stream.get_length()
         return length if length > 0 else sound_file_length(self.track_path)
+
+
+_WEB_MP3_BRIDGE = r"""
+window.__gd5_mp3_load = function(path, seconds, volume) {
+    const audio = new Audio();
+    const url = URL.createObjectURL(new Blob([FS.readFile(path)], {type: 'audio/mpeg'}));
+    const player = {
+        audio: audio, error: null, position: seconds, stopped: false,
+        play: function() {
+            audio.play().catch(function(error) {
+                // Pausing or replacing a loading track can abort its play promise.
+                if (!player.stopped && error.name !== 'AbortError') {
+                    player.error = error.message || 'Cannot play MP3 audio.';
+                }
+            });
+        },
+        seek: function(seconds) {
+            player.position = seconds;
+            if (audio.readyState >= 1) audio.currentTime = seconds;
+        },
+        stop: function() {
+            if (player.stopped) return;
+            player.stopped = true;
+            audio.pause();
+            audio.removeAttribute('src');
+            audio.load();
+            URL.revokeObjectURL(url);
+        }
+    };
+    audio.addEventListener('loadedmetadata', function() {
+        if (!player.stopped) audio.currentTime = player.position;
+    }, {once: true});
+    audio.addEventListener('error', function() {
+        if (!player.stopped) player.error = audio.error.message || 'Cannot decode MP3 audio.';
+    });
+    audio.volume = volume;
+    audio.src = url;
+    player.play();
+    window.__gd5_mp3_player = player;
+    return player;
+};
+// Keep the Python boundary primitive-only, like the BeepBox browser bridge.
+window.__gd5_mp3_error = function() { return window.__gd5_mp3_player.error || ''; };
+window.__gd5_mp3_finished = function() { return window.__gd5_mp3_player.audio.ended; };
+window.__gd5_mp3_pause = function(paused) {
+    const player = window.__gd5_mp3_player;
+    if (paused) player.audio.pause(); else player.play();
+};
+window.__gd5_mp3_stop = function() { window.__gd5_mp3_player.stop(); };
+window.__gd5_mp3_set_volume = function(volume) { window.__gd5_mp3_player.audio.volume = volume; };
+window.__gd5_mp3_seek = function(seconds) { window.__gd5_mp3_player.seek(seconds); };
+window.__gd5_mp3_position = function() {
+    const player = window.__gd5_mp3_player;
+    return player.audio.readyState >= 1 ? player.audio.currentTime : player.position;
+};
+window.__gd5_mp3_length = function() {
+    const duration = window.__gd5_mp3_player.audio.duration;
+    return Number.isFinite(duration) ? duration : 0;
+};
+"""
+
+
+class WebMP3Playback:
+    """Play uploaded MP3 bytes without requiring the web SDL_mixer MP3 codec."""
+
+    # Preserve the existing web file player's fixed playback speed.
+    speed = 1.0
+
+    def __init__(self, track_path, start_time, volume):
+        import platform  # Pygbag supplies platform.window only in the browser.
+
+        self.track_path = track_path
+        self.paused = False
+        self._stopped = False
+        self._window = platform.window
+        self._window.eval(_WEB_MP3_BRIDGE)
+        getattr(self._window, '__gd5_mp3_load')(
+            os.path.abspath(track_path), start_time, volume)
+
+    @property
+    def error(self):
+        return getattr(self._window, '__gd5_mp3_error')() or None
+
+    @property
+    def finished(self):
+        return self._stopped or (not self.paused and bool(
+            getattr(self._window, '__gd5_mp3_finished')()))
+
+    def update(self):
+        pass
+
+    def pause(self, paused):
+        if self._stopped:
+            return
+        self.paused = paused
+        getattr(self._window, '__gd5_mp3_pause')(paused)
+
+    def stop(self):
+        if self._stopped:
+            return
+        getattr(self._window, '__gd5_mp3_stop')()
+        self._stopped = True
+        self.paused = False
+
+    def set_volume(self, volume):
+        getattr(self._window, '__gd5_mp3_set_volume')(volume)
+
+    def set_speed(self, speed):
+        pass
+
+    def seek(self, source_seconds):
+        getattr(self._window, '__gd5_mp3_seek')(source_seconds)
+        if self.paused:
+            self.pause(False)
+
+    def source_position(self):
+        return float(getattr(self._window, '__gd5_mp3_position')())
+
+    def source_length(self):
+        return float(getattr(self._window, '__gd5_mp3_length')())
 
 
 class PygamePlayback:

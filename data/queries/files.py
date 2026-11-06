@@ -113,6 +113,7 @@ def create_album(name):
         os.makedirs(album_dir)
     except OSError as error:
         raise ValueError(f"Could not create the album: {error}") from error
+    queries.sync_persisted_dir(c.MUSIC_DIR)
     return name
 
 
@@ -139,6 +140,7 @@ def add_song_to_album(source_path, album):
         shutil.copy2(source_path, os.path.join(album_dir, file_name))
     except OSError as error:
         raise ValueError(f"Could not add the song: {error}") from error
+    queries.sync_persisted_dir(c.MUSIC_DIR)
     return file_name
 
 
@@ -162,6 +164,7 @@ def delete_song(track_path):
         os.remove(track_path)
     except OSError as error:
         raise ValueError(f"Could not delete the song: {error}") from error
+    queries.sync_persisted_dir(c.MUSIC_DIR)
 
 
 def delete_album(album):
@@ -175,6 +178,7 @@ def delete_album(album):
         shutil.rmtree(os.path.join(c.MUSIC_DIR, album))
     except OSError as error:
         raise ValueError(f"Could not delete the album: {error}") from error
+    queries.sync_persisted_dir(c.MUSIC_DIR)
 
 
 def extract_and_flatten_zip(zip_path, extract_target_dir):
