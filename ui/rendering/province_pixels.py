@@ -66,7 +66,9 @@ class ProvincePixels:
         flat = self.slots.ravel()
         self._order = np.argsort(flat, kind="stable").astype(np.int32)
         counts = np.bincount(flat, minlength=self.slot_count)
-        self._starts = np.concatenate(([0], np.cumsum(counts))).astype(np.int64)
+        # np.intp, not np.int64: the web build's 32-bit NumPy traps with
+        # "indirect call signature mismatch" when reduceat gets int64 indices.
+        self._starts = np.concatenate(([0], np.cumsum(counts))).astype(np.intp)
 
         height = self.slots.shape[1]
         xs = self._order // height
