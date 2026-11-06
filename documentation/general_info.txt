@@ -467,7 +467,9 @@ Missing conversion tools or a failed audio conversion stop the build rather than
 Build the browser package with compilation_scripts/html_compilation.py before testing.
 The test_web_build.bat and test_web_build.sh launchers use the same Python helper.
 The browser opens after pygbag serves HTTP successfully. Startup failure stops the wait.
-Close an existing test server before launching another; the helper does not terminate other programs using port 8000.
+On Windows, closing the launcher stops the server's entire process tree, including child Python processes.
+Running the launcher again replaces its previous server for the same checkout. Other programs using port 8000 are left running.
+Servers started by older launchers must be stopped once manually because those processes have no owned Windows job.
 After source changes, rebuild the browser package to refresh the staged game code.
 Native and web audio filters retain their separate replacement rules.
 Each asset inventory checks Git ignore rules in one batch. A new inventory reads the rules again.
