@@ -423,10 +423,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -1803,10 +1803,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -1918,10 +1918,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -1935,10 +1935,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -1952,10 +1952,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -1969,10 +1969,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -1986,10 +1986,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -2084,11 +2084,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry IV",
                 "owner": "Mongolia",
-                "health": 3000.0,
-                "max_health": 3000,
+                "health": 1840.0,
+                "max_health": 1840,
                 "speed": 2,
-                "attack": 500,
-                "defense": 160,
+                "attack": 440,
+                "defense": 88.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -2101,11 +2101,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry IV",
                 "owner": "Mongolia",
-                "health": 3000.0,
-                "max_health": 3000,
+                "health": 1840.0,
+                "max_health": 1840,
                 "speed": 2,
-                "attack": 500,
-                "defense": 160,
+                "attack": 440,
+                "defense": 88.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -2532,10 +2532,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Finland",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -2796,10 +2796,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Finland",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -3090,11 +3090,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry IV",
                 "owner": "Mongolia",
-                "health": 3000.0,
-                "max_health": 3000,
+                "health": 1840.0,
+                "max_health": 1840,
                 "speed": 2,
-                "attack": 500,
-                "defense": 160,
+                "attack": 440,
+                "defense": 88.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -3107,11 +3107,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry IV",
                 "owner": "Mongolia",
-                "health": 3000.0,
-                "max_health": 3000,
+                "health": 1840.0,
+                "max_health": 1840,
                 "speed": 2,
-                "attack": 500,
-                "defense": 160,
+                "attack": 440,
+                "defense": 88.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -3259,10 +3259,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -3276,10 +3276,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -3293,10 +3293,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -3310,10 +3310,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -3327,10 +3327,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -3733,10 +3733,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Norway",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -3817,10 +3817,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Estonia",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -3988,10 +3988,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -4072,10 +4072,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Norway",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -4306,11 +4306,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry IV",
                 "owner": "Mongolia",
-                "health": 3000.0,
-                "max_health": 3000,
+                "health": 1840.0,
+                "max_health": 1840,
                 "speed": 2,
-                "attack": 500,
-                "defense": 160,
+                "attack": 440,
+                "defense": 88.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -4323,11 +4323,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry IV",
                 "owner": "Mongolia",
-                "health": 3000.0,
-                "max_health": 3000,
+                "health": 1840.0,
+                "max_health": 1840,
                 "speed": 2,
-                "attack": 500,
-                "defense": 160,
+                "attack": 440,
+                "defense": 88.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -4788,10 +4788,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Latvia",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -4904,10 +4904,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -4921,10 +4921,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -4938,10 +4938,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -4955,10 +4955,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -4972,10 +4972,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -5661,11 +5661,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry IV",
                 "owner": "Mongolia",
-                "health": 3000.0,
-                "max_health": 3000,
+                "health": 1840.0,
+                "max_health": 1840,
                 "speed": 2,
-                "attack": 500,
-                "defense": 160,
+                "attack": 440,
+                "defense": 88.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -5678,11 +5678,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry IV",
                 "owner": "Mongolia",
-                "health": 3000.0,
-                "max_health": 3000,
+                "health": 1840.0,
+                "max_health": 1840,
                 "speed": 2,
-                "attack": 500,
-                "defense": 160,
+                "attack": 440,
+                "defense": 88.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -5932,10 +5932,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "United Kingdom",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -6017,10 +6017,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Sweden",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -6316,10 +6316,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -6333,10 +6333,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -6350,10 +6350,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -6367,10 +6367,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -6384,10 +6384,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -6469,10 +6469,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -6759,10 +6759,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Sweden",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -6810,10 +6810,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Lithuania",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -6895,10 +6895,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Denmark",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -7013,10 +7013,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Ireland",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -7624,10 +7624,10 @@
             {
                 "type": "Motorized Squad-Automatic Infantry V",
                 "owner": "German Reich",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 2,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -7746,10 +7746,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -7763,10 +7763,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -7780,10 +7780,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -7797,10 +7797,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -7814,10 +7814,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -7994,10 +7994,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "German Reich",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -8114,10 +8114,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Poland",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -8184,11 +8184,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry IV",
                 "owner": "Mongolia",
-                "health": 3000.0,
-                "max_health": 3000,
+                "health": 1840.0,
+                "max_health": 1840,
                 "speed": 2,
-                "attack": 500,
-                "defense": 160,
+                "attack": 440,
+                "defense": 88.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -8201,11 +8201,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry IV",
                 "owner": "Mongolia",
-                "health": 3000.0,
-                "max_health": 3000,
+                "health": 1840.0,
+                "max_health": 1840,
                 "speed": 2,
-                "attack": 500,
-                "defense": 160,
+                "attack": 440,
+                "defense": 88.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -8377,10 +8377,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "German Reich",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -8724,10 +8724,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Poland",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -9041,10 +9041,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -9418,10 +9418,10 @@
             {
                 "type": "Motorized Squad-Automatic Infantry V",
                 "owner": "German Reich",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 2,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -9540,10 +9540,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -9557,10 +9557,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -9574,10 +9574,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -9591,10 +9591,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -9608,10 +9608,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -9734,11 +9734,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry IV",
                 "owner": "Mongolia",
-                "health": 3000.0,
-                "max_health": 3000,
+                "health": 1840.0,
+                "max_health": 1840,
                 "speed": 2,
-                "attack": 500,
-                "defense": 160,
+                "attack": 440,
+                "defense": 88.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -9751,11 +9751,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry IV",
                 "owner": "Mongolia",
-                "health": 3000.0,
-                "max_health": 3000,
+                "health": 1840.0,
+                "max_health": 1840,
                 "speed": 2,
-                "attack": 500,
-                "defense": 160,
+                "attack": 440,
+                "defense": 88.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -9836,10 +9836,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "United Kingdom",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -9853,10 +9853,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "United Kingdom",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -9870,10 +9870,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "United Kingdom",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -9887,10 +9887,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "United Kingdom",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -9904,10 +9904,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "United Kingdom",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -9921,10 +9921,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "United Kingdom",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -9991,10 +9991,10 @@
             {
                 "type": "Motorized Squad-Automatic Infantry V",
                 "owner": "German Reich",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 2,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -10423,10 +10423,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Netherlands",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -10626,10 +10626,10 @@
             {
                 "type": "Motorized Squad-Automatic Infantry V",
                 "owner": "German Reich",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 2,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -10643,10 +10643,10 @@
             {
                 "type": "Motorized Squad-Automatic Infantry V",
                 "owner": "German Reich",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 2,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -10660,10 +10660,10 @@
             {
                 "type": "Motorized Squad-Automatic Infantry V",
                 "owner": "German Reich",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 2,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -11069,10 +11069,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Poland",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -11086,10 +11086,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Poland",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -11103,10 +11103,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Poland",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -11120,10 +11120,10 @@
             {
                 "type": "Motorized Squad-Automatic Infantry V",
                 "owner": "Poland",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 2,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -11368,10 +11368,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -11385,10 +11385,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -11402,10 +11402,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -11419,10 +11419,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -11436,10 +11436,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -11554,10 +11554,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -12618,11 +12618,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry IV",
                 "owner": "Mongolia",
-                "health": 3000.0,
-                "max_health": 3000,
+                "health": 1840.0,
+                "max_health": 1840,
                 "speed": 2,
-                "attack": 500,
-                "defense": 160,
+                "attack": 440,
+                "defense": 88.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -12635,11 +12635,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry IV",
                 "owner": "Mongolia",
-                "health": 3000.0,
-                "max_health": 3000,
+                "health": 1840.0,
+                "max_health": 1840,
                 "speed": 2,
-                "attack": 500,
-                "defense": 160,
+                "attack": 440,
+                "defense": 88.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -12782,10 +12782,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Belgium",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -12938,10 +12938,10 @@
             {
                 "type": "Motorized Squad-Automatic Infantry V",
                 "owner": "German Reich",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 2,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -12990,10 +12990,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Poland",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -13314,10 +13314,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Poland",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -13368,10 +13368,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "German Reich",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -13490,10 +13490,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -13507,10 +13507,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -13524,10 +13524,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -13541,10 +13541,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -13558,10 +13558,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -13693,10 +13693,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -14244,10 +14244,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "France",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -14261,10 +14261,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "France",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -14278,10 +14278,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "France",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -14295,10 +14295,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "France",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -14312,10 +14312,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "France",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -14329,10 +14329,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "France",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -14346,10 +14346,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "France",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -14363,10 +14363,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "France",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -14380,10 +14380,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "France",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -14483,10 +14483,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -14500,10 +14500,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -14517,10 +14517,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -14534,10 +14534,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -14551,10 +14551,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -14689,10 +14689,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "France",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -14706,10 +14706,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "France",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -14723,10 +14723,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "France",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -15034,10 +15034,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Slovakia",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -15117,10 +15117,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "German Reich",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -15169,10 +15169,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "German Reich",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -15307,11 +15307,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry IV",
                 "owner": "Mongolia",
-                "health": 3000.0,
-                "max_health": 3000,
+                "health": 1840.0,
+                "max_health": 1840,
                 "speed": 2,
-                "attack": 500,
-                "defense": 160,
+                "attack": 440,
+                "defense": 88.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -15324,11 +15324,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry IV",
                 "owner": "Mongolia",
-                "health": 3000.0,
-                "max_health": 3000,
+                "health": 1840.0,
+                "max_health": 1840,
                 "speed": 2,
-                "attack": 500,
-                "defense": 160,
+                "attack": 440,
+                "defense": 88.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -15447,10 +15447,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "France",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -15464,10 +15464,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "France",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -15481,10 +15481,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "France",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -15870,10 +15870,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Hungary",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -16190,10 +16190,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Canada",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -16344,10 +16344,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -16498,10 +16498,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Romania",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -16629,11 +16629,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry IV",
                 "owner": "Mongolia",
-                "health": 3000.0,
-                "max_health": 3000,
+                "health": 1840.0,
+                "max_health": 1840,
                 "speed": 2,
-                "attack": 500,
-                "defense": 160,
+                "attack": 440,
+                "defense": 88.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -16646,11 +16646,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry IV",
                 "owner": "Mongolia",
-                "health": 3000.0,
-                "max_health": 3000,
+                "health": 1840.0,
+                "max_health": 1840,
                 "speed": 2,
-                "attack": 500,
-                "defense": 160,
+                "attack": 440,
+                "defense": 88.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -16765,10 +16765,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "United States of America",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -16815,10 +16815,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Canada",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -16897,10 +16897,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Romania",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -17013,10 +17013,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "German Reich",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -17114,11 +17114,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry IV",
                 "owner": "Mongolia",
-                "health": 3000.0,
-                "max_health": 3000,
+                "health": 1840.0,
+                "max_health": 1840,
                 "speed": 2,
-                "attack": 500,
-                "defense": 160,
+                "attack": 440,
+                "defense": 88.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -17131,11 +17131,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry IV",
                 "owner": "Mongolia",
-                "health": 3000.0,
-                "max_health": 3000,
+                "health": 1840.0,
+                "max_health": 1840,
                 "speed": 2,
-                "attack": 500,
-                "defense": 160,
+                "attack": 440,
+                "defense": 88.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -17553,10 +17553,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Hungary",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -17710,10 +17710,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "German Reich",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -17799,10 +17799,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -17816,10 +17816,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -17833,10 +17833,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -17850,10 +17850,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -17867,10 +17867,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -17918,10 +17918,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Switzerland",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -18051,11 +18051,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry IV",
                 "owner": "Mongolia",
-                "health": 3000.0,
-                "max_health": 3000,
+                "health": 1840.0,
+                "max_health": 1840,
                 "speed": 2,
-                "attack": 500,
-                "defense": 160,
+                "attack": 440,
+                "defense": 88.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -18068,11 +18068,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry IV",
                 "owner": "Mongolia",
-                "health": 3000.0,
-                "max_health": 3000,
+                "health": 1840.0,
+                "max_health": 1840,
                 "speed": 2,
-                "attack": 500,
-                "defense": 160,
+                "attack": 440,
+                "defense": 88.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -18202,10 +18202,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Switzerland",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -18384,10 +18384,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "German Reich",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -18721,10 +18721,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Romania",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -18839,10 +18839,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Hungary",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -19127,10 +19127,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Switzerland",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -19206,10 +19206,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -19223,10 +19223,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -19240,10 +19240,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -19257,10 +19257,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -19274,10 +19274,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -19357,10 +19357,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Switzerland",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -19441,10 +19441,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Switzerland",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -19655,10 +19655,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -19672,10 +19672,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -19689,10 +19689,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -19706,10 +19706,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -19723,10 +19723,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -19874,10 +19874,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Italy",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -19989,10 +19989,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -20107,10 +20107,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Italy",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -20224,10 +20224,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Romania",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -20442,10 +20442,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -20459,10 +20459,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -20476,10 +20476,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -20493,10 +20493,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -20510,10 +20510,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -20561,10 +20561,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Yugoslavia",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -20647,10 +20647,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "France",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -20664,10 +20664,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "France",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -20681,10 +20681,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "France",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -20732,10 +20732,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Yugoslavia",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -20852,10 +20852,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Italy",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -20902,10 +20902,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Canada",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -21020,10 +21020,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Italy",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -21174,10 +21174,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Italy",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -21191,10 +21191,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Italy",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -21447,10 +21447,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "United States of America",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -22054,10 +22054,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Bulgaria",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -22303,10 +22303,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -22452,10 +22452,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "France",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -22469,10 +22469,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "France",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -22486,10 +22486,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "France",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -22851,10 +22851,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Yugoslavia",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -23102,10 +23102,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -23250,10 +23250,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Bulgaria",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -23469,10 +23469,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Turkey",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -24042,10 +24042,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Turkey",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -24641,10 +24641,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Yugoslavia",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -24692,10 +24692,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Turkey",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -24813,10 +24813,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Spain",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -25057,10 +25057,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Soviet Union",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -25179,10 +25179,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Italy",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -25546,10 +25546,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "United States of America",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -25756,10 +25756,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Portugal",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -26141,10 +26141,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Greece",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -26619,10 +26619,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Turkey",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -27988,10 +27988,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "France",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -28991,10 +28991,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Greece",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -30741,10 +30741,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "France",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -30985,10 +30985,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "United Kingdom",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -31103,10 +31103,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Italy",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -31309,10 +31309,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Italy",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -31358,10 +31358,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "France",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -31519,10 +31519,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Iran",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -31672,10 +31672,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Iraq",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -31880,10 +31880,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Italy",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -31929,10 +31929,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "United Kingdom",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -33304,10 +33304,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "United States of America",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -33603,10 +33603,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Saudi Arabia",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -34387,10 +34387,10 @@
             {
                 "type": "Squad-Automatic Infantry V",
                 "owner": "Cuba",
-                "health": 2450.0,
-                "max_health": 2450,
+                "health": 1540.0,
+                "max_health": 1540,
                 "speed": 1,
-                "attack": 390,
+                "attack": 320,
                 "defense": 0,
                 "level": 0,
                 "order": {

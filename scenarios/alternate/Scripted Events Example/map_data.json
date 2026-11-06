@@ -252,10 +252,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "European Union",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -334,10 +334,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "Soviet Union",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -692,10 +692,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "Soviet Union",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -744,10 +744,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "Soviet Union",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -828,11 +828,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "European Union",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 2,
-                "attack": 400,
-                "defense": 120,
+                "attack": 350,
+                "defense": 70.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -963,10 +963,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "Soviet Union",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -1131,11 +1131,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Soviet Union",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 2,
-                "attack": 400,
-                "defense": 120,
+                "attack": 350,
+                "defense": 70.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -1165,11 +1165,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Soviet Union",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 2,
-                "attack": 400,
-                "defense": 120,
+                "attack": 350,
+                "defense": 70.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -1219,10 +1219,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "Nationalist China",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -1272,10 +1272,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "European Union",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -1358,10 +1358,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "Soviet Union",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -1429,11 +1429,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "European Union",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 2,
-                "attack": 400,
-                "defense": 120,
+                "attack": 350,
+                "defense": 70.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -1446,11 +1446,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "European Union",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 2,
-                "attack": 400,
-                "defense": 120,
+                "attack": 350,
+                "defense": 70.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -1643,10 +1643,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "Mongolia",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -1727,10 +1727,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "Soviet Union",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -1796,11 +1796,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Soviet Union",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 2,
-                "attack": 400,
-                "defense": 120,
+                "attack": 350,
+                "defense": 70.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -1950,10 +1950,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "European Union",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -2040,10 +2040,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "Nationalist China",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -2137,11 +2137,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Japanese Empire",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 2,
-                "attack": 400,
-                "defense": 120,
+                "attack": 350,
+                "defense": 70.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -2228,11 +2228,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Soviet Union",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 2,
-                "attack": 400,
-                "defense": 120,
+                "attack": 350,
+                "defense": 70.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -2298,10 +2298,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "Korea",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -2369,11 +2369,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "European Union",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 2,
-                "attack": 400,
-                "defense": 120,
+                "attack": 350,
+                "defense": 70.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -2423,10 +2423,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "Nationalist China",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -2505,10 +2505,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "European Union",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -2642,10 +2642,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "Soviet Union",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -2659,10 +2659,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "Soviet Union",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -2986,10 +2986,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "Ottoman Empire",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -3056,11 +3056,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Ottoman Empire",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 2,
-                "attack": 400,
-                "defense": 120,
+                "attack": 350,
+                "defense": 70.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -3073,11 +3073,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Ottoman Empire",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 2,
-                "attack": 400,
-                "defense": 120,
+                "attack": 350,
+                "defense": 70.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -3308,11 +3308,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Ottoman Empire",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 2,
-                "attack": 400,
-                "defense": 120,
+                "attack": 350,
+                "defense": 70.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -3378,10 +3378,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "Afghanistan",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -3524,10 +3524,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "Pakistan",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -3635,11 +3635,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Nationalist China",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 2,
-                "attack": 400,
-                "defense": 120,
+                "attack": 350,
+                "defense": 70.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -3741,11 +3741,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "India",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 2,
-                "attack": 400,
-                "defense": 120,
+                "attack": 350,
+                "defense": 70.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -3794,10 +3794,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "Nationalist China",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -3881,10 +3881,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "Ottoman Empire",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -4092,11 +4092,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Ottoman Empire",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 2,
-                "attack": 400,
-                "defense": 120,
+                "attack": 350,
+                "defense": 70.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -4192,11 +4192,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Nationalist China",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 2,
-                "attack": 400,
-                "defense": 120,
+                "attack": 350,
+                "defense": 70.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -4306,11 +4306,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "India",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 2,
-                "attack": 400,
-                "defense": 120,
+                "attack": 350,
+                "defense": 70.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -4442,10 +4442,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "Myanmar",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -4606,11 +4606,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Nationalist China",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 2,
-                "attack": 400,
-                "defense": 120,
+                "attack": 350,
+                "defense": 70.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -4795,10 +4795,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "Vietnam",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -4965,10 +4965,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "Sudan",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -5017,10 +5017,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "Thailand",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -5070,10 +5070,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "Mali Empire",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -5329,10 +5329,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "Chad",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -5379,10 +5379,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "Mali Empire",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -5459,11 +5459,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Ethiopia",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 2,
-                "attack": 400,
-                "defense": 120,
+                "attack": 350,
+                "defense": 70.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -5476,11 +5476,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Ethiopia",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 2,
-                "attack": 400,
-                "defense": 120,
+                "attack": 350,
+                "defense": 70.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -5674,11 +5674,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Mali Empire",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 2,
-                "attack": 400,
-                "defense": 120,
+                "attack": 350,
+                "defense": 70.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -5956,10 +5956,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "Democratic Republic of the Congo",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -6330,10 +6330,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "Indonesia",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -6384,10 +6384,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "Tanzania",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -6437,10 +6437,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "Democratic Republic of the Congo",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -6454,10 +6454,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "Democratic Republic of the Congo",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -6599,10 +6599,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "Indonesia",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -6933,11 +6933,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Union of South Africa",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 2,
-                "attack": 400,
-                "defense": 120,
+                "attack": 350,
+                "defense": 70.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -6981,10 +6981,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "Australia",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -7146,11 +7146,11 @@
             {
                 "type": "Mechanized Semi-Automatic Infantry I",
                 "owner": "Union of South Africa",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 2,
-                "attack": 400,
-                "defense": 120,
+                "attack": 350,
+                "defense": 70.0,
                 "level": 0,
                 "order": {
                     "type": "MOVE",
@@ -7421,10 +7421,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "Union of South Africa",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -7470,10 +7470,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "Australia",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -8040,10 +8040,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "Australia",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -8319,10 +8319,10 @@
             {
                 "type": "Semi-Automatic Infantry I",
                 "owner": "Australia",
-                "health": 2500.0,
-                "max_health": 2500,
+                "health": 1600.0,
+                "max_health": 1600,
                 "speed": 1,
-                "attack": 400,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {

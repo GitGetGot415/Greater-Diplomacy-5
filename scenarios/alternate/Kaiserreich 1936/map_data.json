@@ -568,11 +568,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "United States of America",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -814,11 +814,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Russia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -993,11 +993,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Finland",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -1584,11 +1584,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Russia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -1641,7 +1641,7 @@
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 420,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -2264,11 +2264,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Russia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -2886,11 +2886,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Russia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -3133,11 +3133,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Finland",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -3186,11 +3186,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Russia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -4012,11 +4012,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Finland",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -4193,11 +4193,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Russia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -4508,11 +4508,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Finland",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -4722,11 +4722,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Russia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -5000,7 +5000,7 @@
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 420,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -5120,11 +5120,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Sweden",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -5339,11 +5339,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Norway",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -5845,11 +5845,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Russia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -5929,11 +5929,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Norway",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -6275,11 +6275,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "United Baltic Dutchy",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -6365,11 +6365,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Russia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -6383,11 +6383,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Russia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -6401,11 +6401,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Russia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -6419,11 +6419,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Russia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -6956,11 +6956,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Union of Britain",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -7608,11 +7608,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Sweden",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -8030,11 +8030,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Russia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -8379,11 +8379,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "United Baltic Dutchy",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -8465,11 +8465,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Dominion of Canada",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -8540,11 +8540,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Kingdom of Lithuania",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -8628,11 +8628,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Union of Britain",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -8679,11 +8679,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Denmark",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -8927,11 +8927,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Dominion of Canada",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -9377,11 +9377,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Russia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -9557,11 +9557,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Kingdom of Lithuania",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -9674,11 +9674,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Ireland",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -9754,11 +9754,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Sweden",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -9979,11 +9979,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Dominion of Canada",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -10395,11 +10395,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Union of Britain",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -10520,11 +10520,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "German Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -10862,11 +10862,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "White Ruthenia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -10915,11 +10915,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Ireland",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -11392,11 +11392,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "United States of America",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -11617,11 +11617,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Kingdom of Lithuania",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -11925,11 +11925,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Netherlands",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -12273,11 +12273,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "German Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -12458,11 +12458,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "White Ruthenia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -12510,11 +12510,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Union of Britain",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -12601,11 +12601,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "German Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -12653,11 +12653,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Dominion of Canada",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -12776,11 +12776,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Russia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -13390,11 +13390,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Russia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -13600,11 +13600,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Russia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -13682,11 +13682,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Union of Britain",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -13700,11 +13700,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Union of Britain",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -13842,11 +13842,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Poland",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -14380,11 +14380,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Ukraine",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -14431,11 +14431,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Russia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -14482,11 +14482,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Union of Britain",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -14557,11 +14557,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "German Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -14575,11 +14575,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "German Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -14593,11 +14593,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "German Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -14879,11 +14879,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Russia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -15138,11 +15138,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Poland",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -15224,11 +15224,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "United States of America",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -15377,11 +15377,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Kingdom of Flanders-Wallonia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -15616,11 +15616,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Russia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -15734,11 +15734,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "German Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -15855,11 +15855,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Netherlands",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -16004,11 +16004,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "United States of America",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -16058,11 +16058,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "United States of America",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -16326,11 +16326,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Commune of France",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -16344,11 +16344,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Commune of France",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -16785,11 +16785,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Kingdom of Flanders-Wallonia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -16904,11 +16904,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "German Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -16958,11 +16958,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Ukraine",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -17245,11 +17245,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Manchukuo",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -17331,11 +17331,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Commune of France",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -17349,11 +17349,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Commune of France",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -17371,7 +17371,7 @@
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 420,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -17518,11 +17518,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Ukraine",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -17707,11 +17707,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Poland",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -17861,11 +17861,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Russia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -17945,11 +17945,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Bohemia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -18169,11 +18169,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "German Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -18257,11 +18257,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "German Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -18275,11 +18275,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "German Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -18297,7 +18297,7 @@
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 420,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -18382,11 +18382,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Russia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -18533,11 +18533,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Japanese Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -18873,11 +18873,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Commune of France",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -18891,11 +18891,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Commune of France",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -18909,11 +18909,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Commune of France",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -18931,7 +18931,7 @@
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 420,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -19017,11 +19017,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "German Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -19070,11 +19070,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Ukraine",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -19407,11 +19407,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Russia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -19555,11 +19555,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Commune of France",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -19595,7 +19595,7 @@
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 420,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -19646,11 +19646,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Bohemia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -19832,11 +19832,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Russia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -19919,11 +19919,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "German Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -19937,11 +19937,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "German Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -19955,11 +19955,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "German Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -19977,7 +19977,7 @@
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 420,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -20250,11 +20250,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Commune of France",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -20268,11 +20268,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Commune of France",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -20286,11 +20286,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Commune of France",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -20326,7 +20326,7 @@
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 420,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -20547,11 +20547,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "German Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -20670,11 +20670,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Galicia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -20789,11 +20789,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Manchukuo",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -20914,11 +20914,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "German Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -20932,11 +20932,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "German Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -20950,11 +20950,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "German Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -20972,7 +20972,7 @@
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 420,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -21732,11 +21732,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Austria",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -21940,11 +21940,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Commune of France",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -21958,11 +21958,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Commune of France",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -21976,11 +21976,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Commune of France",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -22016,7 +22016,7 @@
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 420,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -22066,11 +22066,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Alash Autonomy",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -22218,11 +22218,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Russia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -22439,11 +22439,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "German Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -22490,11 +22490,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Hungary",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -22546,11 +22546,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Romania",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -22596,11 +22596,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Russia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -22713,11 +22713,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Russia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -22832,11 +22832,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "United States of America",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -22883,11 +22883,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Dominion of Canada",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -23065,11 +23065,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "German Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -23184,11 +23184,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Dominion of Canada",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -23399,11 +23399,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Russia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -23622,11 +23622,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Ukraine",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -23716,11 +23716,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Hungary",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -23900,11 +23900,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Manchukuo",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -24022,11 +24022,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Commune of France",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -24040,11 +24040,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Commune of France",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -24058,11 +24058,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Commune of France",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -24080,7 +24080,7 @@
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 420,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -24230,11 +24230,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Russia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -24666,11 +24666,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Switzerland",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -24848,11 +24848,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Dominion of Canada",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -25098,11 +25098,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Russia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -25152,11 +25152,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Manchukuo",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -25329,11 +25329,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Alash Autonomy",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -25381,11 +25381,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Commune of France",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -25777,11 +25777,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Hungary",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -26056,11 +26056,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "United States of America",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -26109,11 +26109,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Switzerland",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -26164,11 +26164,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Mongolia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -26213,11 +26213,11 @@
             {
                 "type": "Aircraft Carrier I",
                 "owner": "Japanese Empire",
-                "health": 400.0,
-                "max_health": 800,
+                "health": 300.0,
+                "max_health": 600,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 600,
+                "attack": 300,
                 "defense": 200,
                 "level": 0,
                 "order": {
@@ -26933,11 +26933,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Ukraine",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -27022,11 +27022,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Mongolia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -27143,11 +27143,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Austria",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -27200,11 +27200,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Russia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -27316,11 +27316,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Romania",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -27536,11 +27536,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Bulgaria",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -27692,11 +27692,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Hungary",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -27745,11 +27745,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Commune of France",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -28125,11 +28125,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Socialist Republic of Italy",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -28180,11 +28180,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Dominion of Canada",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -28271,11 +28271,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Italy",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -28326,11 +28326,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Austria",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -28452,11 +28452,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Italy",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -28915,11 +28915,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "United States of America",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -29001,11 +29001,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Russia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -29290,11 +29290,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "United States of America",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -29620,11 +29620,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Russia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -29735,11 +29735,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Spain",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -29823,11 +29823,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Socialist Republic of Italy",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -29984,11 +29984,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Alash Autonomy",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -30075,11 +30075,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Russia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -30223,11 +30223,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Commune of France",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -30279,11 +30279,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Serbia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -30334,11 +30334,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Georgia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -30643,11 +30643,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Russia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -30698,11 +30698,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Russia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -31030,11 +31030,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Kingdom of Portugal",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -31161,11 +31161,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Commune of France",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -31216,11 +31216,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Croatia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -31269,11 +31269,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Bulgaria",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -31357,11 +31357,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Japanese Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -31709,11 +31709,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Commune of France",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -31836,11 +31836,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Turkestan Republic",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -32195,11 +32195,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Ottoman Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -32421,11 +32421,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Socialist Republic of Italy",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -32477,11 +32477,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Croatia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -32916,11 +32916,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Commune of France",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -33005,11 +33005,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Bulgaria",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -33158,11 +33158,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Khiva",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -33340,11 +33340,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Socialist Republic of Italy",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -34199,11 +34199,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Japanese Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -34353,11 +34353,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Ottoman Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -34371,11 +34371,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Ottoman Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -34528,11 +34528,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Spain",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -34582,11 +34582,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Kingdom of Two Sicilies",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -34670,11 +34670,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Turkestan Republic",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -34771,11 +34771,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "National France",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -34995,11 +34995,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Ottoman Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -35191,11 +35191,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Papal States",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -35350,11 +35350,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Bulgaria",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -35404,11 +35404,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Khiva",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -35560,11 +35560,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Spain",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -35612,11 +35612,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Ottoman Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -35735,11 +35735,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Mongolia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -36221,11 +36221,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Kingdom of Portugal",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -36344,11 +36344,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Azerbaijan",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -36469,11 +36469,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Albania",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -36622,11 +36622,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Xinjiang",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -36781,11 +36781,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Japanese Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -36832,11 +36832,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "United States of America",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -36950,11 +36950,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Bulgaria",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -37572,11 +37572,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Manchukuo",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -37590,11 +37590,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Manchukuo",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -37779,11 +37779,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Kingdom of Two Sicilies",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -37838,11 +37838,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Ottoman Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -38095,11 +38095,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Manchukuo",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -38150,11 +38150,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Japanese Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -38609,11 +38609,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "United States of America",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -38760,11 +38760,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Kingdom of Sardinia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -38914,11 +38914,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Manchukuo",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -38932,11 +38932,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Manchukuo",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -39018,11 +39018,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Greece",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -39136,11 +39136,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Emirate of Bukhara",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -39570,11 +39570,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Japanese Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -39692,11 +39692,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Emirate of Bukhara",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -39868,11 +39868,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Iran",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -40260,11 +40260,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Iran",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -40508,11 +40508,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Xinjiang Clique",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -40602,11 +40602,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Qing Dynasty",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -40655,11 +40655,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Qing Dynasty",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -40709,11 +40709,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Japanese Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -41440,11 +41440,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Kingdom of Two Sicilies",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -41570,11 +41570,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Ottoman Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -41622,11 +41622,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Japanese Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -41707,11 +41707,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Greece",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -41792,11 +41792,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Japanese Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -41844,11 +41844,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Mexico",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -41930,11 +41930,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Iran",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -42086,11 +42086,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Ottoman Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -42239,11 +42239,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Emirate of Bukhara",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -42359,11 +42359,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Spain",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -42476,11 +42476,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Spain",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -42602,11 +42602,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Ottoman Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -42748,11 +42748,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Ottoman Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -43078,11 +43078,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Qing Dynasty",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -43197,11 +43197,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Iran",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -43249,11 +43249,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Japanese Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -43906,11 +43906,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "National France",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -44050,11 +44050,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Mexico",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -44134,11 +44134,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Xibei San Ma",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -44360,11 +44360,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "United States of America",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -44778,11 +44778,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Kingdom of Two Sicilies",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -45037,11 +45037,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Shanxi",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -45092,11 +45092,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Qing Dynasty",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -45145,11 +45145,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Japanese Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -45197,11 +45197,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Japanese Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -45796,11 +45796,11 @@
             {
                 "type": "Aircraft Carrier I",
                 "owner": "Japanese Empire",
-                "health": 400.0,
-                "max_health": 800,
+                "health": 300.0,
+                "max_health": 600,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 600,
+                "attack": 300,
                 "defense": 200,
                 "level": 0,
                 "order": {
@@ -45947,11 +45947,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Shangdong Clique",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -46408,11 +46408,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Japanese Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -46494,11 +46494,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Afghanistan",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -46545,11 +46545,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Japanese Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -47521,11 +47521,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Japanese Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -47944,11 +47944,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "National France",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -48470,11 +48470,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Morocco",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -48553,11 +48553,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Afghanistan",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -48687,11 +48687,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "League of Eight Provinces",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -48877,11 +48877,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "National France",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -48999,11 +48999,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Mexico",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -49119,11 +49119,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Israel",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -49278,11 +49278,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Qing Dynasty",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -49431,11 +49431,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Ottoman Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -49707,11 +49707,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "League of Eight Provinces",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -49795,11 +49795,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Japanese Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -50109,11 +50109,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Iran",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -50199,11 +50199,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Morocco",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -50349,11 +50349,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Ottoman Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -50611,11 +50611,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "British Raj",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -50668,11 +50668,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "British Raj",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -51333,11 +51333,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Egypt",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -51387,11 +51387,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Emirate of Jabal Shammar",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -51725,11 +51725,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "United States of America",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -51778,11 +51778,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Israel",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -51899,11 +51899,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Qing Dynasty",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -52024,11 +52024,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Egypt",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -52275,11 +52275,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Ottoman Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -52329,11 +52329,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Ottoman Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -52514,11 +52514,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Iran",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -52642,11 +52642,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Qing Dynasty",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -52791,11 +52791,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Emirate of Cyrenaica",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -53007,11 +53007,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Nationalist China",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -53043,11 +53043,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Nationalist China",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -53241,11 +53241,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Ottoman Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -53571,11 +53571,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Bharatiya Commune",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -53893,11 +53893,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "British Raj",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -53946,11 +53946,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Bharatiya Commune",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -54102,11 +54102,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Hunan Clique",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -54161,11 +54161,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Mexico",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -54274,11 +54274,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "British Raj",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -54429,11 +54429,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Emirate of Nedj and Hasa",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -54843,11 +54843,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Bhutan",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -54899,11 +54899,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "League of Eight Provinces",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -54949,11 +54949,11 @@
             {
                 "type": "Aircraft Carrier I",
                 "owner": "United States of America",
-                "health": 400.0,
-                "max_health": 800,
+                "health": 300.0,
+                "max_health": 600,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 600,
+                "attack": 300,
                 "defense": 200,
                 "level": 0,
                 "order": {
@@ -55169,11 +55169,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Nepal",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -55357,11 +55357,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Nationalist China",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -55393,11 +55393,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Nationalist China",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -55688,11 +55688,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Sichuan Clique",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -56241,11 +56241,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "British Raj",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -56769,11 +56769,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Bharatiya Commune",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -56994,11 +56994,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Japanese Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -57129,11 +57129,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Egypt",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -57431,11 +57431,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "League of Eight Provinces",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -57889,11 +57889,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Japanese Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -58013,11 +58013,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Bharatiya Commune",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -58136,11 +58136,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Yunnan Clique",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -58575,11 +58575,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Oman",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -58821,11 +58821,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Bharatiya Commune",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -58875,11 +58875,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Liangguang Clique",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -58930,11 +58930,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Ottoman Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -60224,11 +60224,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Cuba",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -60452,11 +60452,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Mexico",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -60638,11 +60638,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Myanmar",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -60986,11 +60986,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Liangguang Clique",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -61040,11 +61040,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "National France",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -61094,11 +61094,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Bharatiya Commune",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -61183,11 +61183,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Liangguang Clique",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -61818,11 +61818,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "East Asia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -61969,11 +61969,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Bharatiya Commune",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -62091,11 +62091,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Mexico",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -62666,11 +62666,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Egypt",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -62720,11 +62720,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Ottoman Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -63317,11 +63317,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Philippines",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -63466,11 +63466,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "British America",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -63616,11 +63616,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Princely Federation",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -63708,11 +63708,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Bharatiya Commune",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -63932,11 +63932,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Yemen",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -64465,11 +64465,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Myanmar",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -64720,11 +64720,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Thailand",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -64993,11 +64993,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Princely Federation",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -65403,11 +65403,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Princely Federation",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -67558,11 +67558,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Ethiopia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -67737,11 +67737,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Venezuela",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -68545,11 +68545,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "East Asia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -68695,11 +68695,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "National France",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -68813,11 +68813,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "German Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -68897,11 +68897,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Colombia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -69046,11 +69046,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Thailand",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -70684,11 +70684,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "National France",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -71357,11 +71357,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Ethiopia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -72268,11 +72268,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Philippines",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -72480,11 +72480,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "British America",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -72660,11 +72660,11 @@
             {
                 "type": "Aircraft Carrier I",
                 "owner": "German Empire",
-                "health": 400.0,
-                "max_health": 800,
+                "health": 300.0,
+                "max_health": 600,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 600,
+                "attack": 300,
                 "defense": 200,
                 "level": 0,
                 "order": {
@@ -72850,11 +72850,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Ecuador",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -72966,11 +72966,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Ostafrika",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -73116,11 +73116,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "National France",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -73168,11 +73168,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Liberia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -73290,11 +73290,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Thailand",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -73504,11 +73504,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Ostafrika",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -73831,11 +73831,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "East Asia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -74077,11 +74077,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Somalia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -74436,11 +74436,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "East Asia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -76850,11 +76850,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Ostafrika",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -77498,11 +77498,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Dutch East Indies",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -77780,11 +77780,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Ostafrika",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -78156,11 +78156,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Dutch East Indies",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -78602,11 +78602,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "East Asia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -78687,11 +78687,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Dutch East Indies",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -79142,11 +79142,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Dutch East Indies",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -79193,11 +79193,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Peru",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -79371,11 +79371,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Brazil",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -79812,11 +79812,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Australia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -80420,11 +80420,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Ostafrika",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -81004,11 +81004,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Ostafrika",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -81117,11 +81117,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Union of Britain",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -81528,11 +81528,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Dutch East Indies",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -81867,11 +81867,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Brazil",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -81950,11 +81950,11 @@
             {
                 "type": "Aircraft Carrier I",
                 "owner": "German Empire",
-                "health": 400.0,
-                "max_health": 800,
+                "health": 300.0,
+                "max_health": 600,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 600,
+                "attack": 300,
                 "defense": 200,
                 "level": 0,
                 "order": {
@@ -82616,11 +82616,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Bolivia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -83248,11 +83248,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Paraguay",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -83841,11 +83841,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Kingdom of Portugal",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -84840,11 +84840,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "German Empire",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -84963,11 +84963,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Chile",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -85152,11 +85152,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Kingdom of Portugal",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -85428,11 +85428,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Ostafrika",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -86487,11 +86487,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Union of South Africa",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -87163,11 +87163,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Uruguay",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -87544,11 +87544,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Argentina",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -87566,7 +87566,7 @@
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 420,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -87751,11 +87751,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Ostafrika",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -88189,11 +88189,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Chile",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -88245,11 +88245,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Argentina",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -88719,11 +88719,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Argentina",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -89155,11 +89155,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Union of South Africa",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -89685,11 +89685,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Patagonian Workers Front",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -89707,7 +89707,7 @@
                 "max_health": 350,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 420,
+                "attack": 350,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -89721,11 +89721,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Patagonian Workers Front",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -89775,11 +89775,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Australia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -90470,11 +90470,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Union of South Africa",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -90850,11 +90850,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Australia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
@@ -91180,11 +91180,11 @@
             {
                 "type": "Squad-Automatic Infantry IV",
                 "owner": "Australia",
-                "health": 2300.0,
-                "max_health": 2300,
+                "health": 1480.0,
+                "max_health": 1480,
                 "morale": 100.0,
                 "speed": 1,
-                "attack": 360,
+                "attack": 290,
                 "defense": 0,
                 "level": 0,
                 "order": {
