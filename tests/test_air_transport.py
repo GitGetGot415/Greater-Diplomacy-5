@@ -549,7 +549,7 @@ class TransportTests(unittest.TestCase):
     def test_loaded_transport_air_mission_button_opens_cargo_picker_directly(self):
         self.load()
         screen = self.screen()
-        with patch("screens.game.orders._AirMissionSelectScreen") as mission_picker, \
+        with patch("ui.panels.unit_commands._AirMissionSelectScreen") as mission_picker, \
                 patch("ui.navigation.screen_runner._run_pygame_sub_screen") as runner:
             screen.open_air_mission_select(0, self.base)
         mission_picker.assert_not_called()

@@ -347,6 +347,12 @@ class Battle_Screen(ModalScreen):
         self.visible = queries.is_province_visible(self.map_screen, self.province["id"])
         self.refresh_ui()
 
+    def _orders_state(self):
+        # Deferred import: screens.game.map_input imports this module at load
+        # time to open battles.
+        from screens.game import map_input
+        return map_input.orders_state(self.map_screen)
+
     def go_to_orders(self):
         """Bombard and retreat live in Orders, and both matter mid-battle."""
         if self.embedded:
@@ -358,7 +364,7 @@ class Battle_Screen(ModalScreen):
         if self.origin_screen is not self.map_screen:
             self.done = True
         else:
-            self.close_and_navigate("ORDERS")
+            self.close_and_navigate(self._orders_state())
 
     def exit_screen(self):
         """Closing the battle inspector -- the Close button, or Back/Esc.
@@ -376,7 +382,7 @@ class Battle_Screen(ModalScreen):
         if self.origin_screen is not self.map_screen:
             self.done = True
             return
-        self.close_and_navigate("ORDERS")
+        self.close_and_navigate(self._orders_state())
 
     def go_to(self, state_name):
         """Overridden so screens.game.map_input.navigate_view_mode's generic

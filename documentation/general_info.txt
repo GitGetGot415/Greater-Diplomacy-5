@@ -616,6 +616,12 @@ Check tactical_mode instead of inferring the mode from that attribute.
 diplomatic_popups.spawn_popups_for_player marks suppressed host messages as shown during tactical play.
 This prevents old host messages from appearing after independence.
 
+Tactical mode opens the Tactical Orders screen (TACTICAL_ORDERS) instead of Orders.
+map_input.orders_state names the screen for every route into Orders, including battle panels.
+Tactical Orders commands only the tactical division. It lists the other units on the opened tile as read-only rows.
+It has no selection, batch, army, or clear-all controls.
+Both screens share unit rows, unit commands, and map targeting through ui/panels/unit_commands.py.
+
 DERIVED ARMY ENTRIES
 -------------------
 

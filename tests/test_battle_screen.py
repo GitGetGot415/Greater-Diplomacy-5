@@ -1758,5 +1758,128 @@ class ButtonSwapTests(BattleScreenTestCase):
         self.assertEqual(self.map.next_state, "ORDERS")
 
 
+class TacticalOrdersScreenTests(BattleScreenTestCase):
+    """Tactical mode has its own Orders screen for the one division it commands."""
+
+    GROUP_CONTROLS = {"Select All", "Clear ALL Orders", "Ungroup", "Set Mission"}
+
+    def setUp(self):
+        super().setUp()
+        for attribute, value in (("tactical_mode", True), ("player_country", self.a)):
+            self.enterContext(mock.patch.object(self.map, attribute, value))
+        own = [unit for unit in self.province["units"] if unit["owner"] == self.a]
+        self.player_unit, self.peer = own[0], own[1]
+        self.enterContext(mock.patch.object(self.map, "player_unit", self.player_unit))
+        self.addCleanup(self.map.clear_map_unit_selection)
+        self.map.clear_map_unit_selection()
+
+    def tactical_screen(self, province=None):
+        from screens.game.tactical_orders import Tactical_Orders_Screen
+
+        screen = Tactical_Orders_Screen()
+        screen.start_with_province(province or self.province, self.map)
+        return screen
+
+    def test_every_orders_route_names_the_tactical_screen(self):
+        from screens.game import map_input
+
+        self.assertEqual(map_input.orders_state(self.map), "TACTICAL_ORDERS")
+        with mock.patch.object(self.map, "tactical_mode", False):
+            self.assertEqual(map_input.orders_state(self.map), "ORDERS")
+
+        old_navigation = c.MAP_NAVIGATION_MODE
+        self.addCleanup(setattr, c, "MAP_NAVIGATION_MODE", old_navigation)
+        # go_to_orders_screen leaves a one-shot flag for the screen it opens.
+        self.addCleanup(lambda: vars(self.map).pop("_orders_return_to_province_menu", None))
+        for attribute in ("done", "next_state", "secondary_mode"):
+            self.enterContext(mock.patch.object(self.map, attribute, getattr(self.map, attribute)))
+        for navigation in ("CLASSIC", "PREEMPTIVE"):
+            with self.subTest(navigation=navigation):
+                c.MAP_NAVIGATION_MODE = navigation
+                self.map.done = False
+                self.map.next_state = None
+                with mock.patch.object(map_input, "_resync_view_mode_row"):
+                    map_input.go_to_orders_screen(self.map)
+                self.assertTrue(self.map.done)
+                self.assertEqual(self.map.next_state, "TACTICAL_ORDERS")
+
+    def test_closing_a_direct_battle_returns_to_tactical_orders(self):
+        for attribute in ("done", "next_state"):
+            self.enterContext(mock.patch.object(self.map, attribute, getattr(self.map, attribute)))
+        self.map.done = False
+        battle = battle_screen.Battle_Screen(self.map, self.province)
+
+        battle.exit_screen()
+
+        self.assertEqual(self.map.next_state, "TACTICAL_ORDERS")
+
+    def test_only_the_division_gets_commands_and_no_group_controls_exist(self):
+        screen = self.tactical_screen()
+
+        labels = {getattr(element, "text", "") for element in screen.elements}
+        self.assertFalse(labels & self.GROUP_CONTROLS)
+        self.assertIn("Manage Battle", labels)
+        self.assertTrue(screen.action_buttons)
+        self.assertEqual({button.unit_index for button in screen.action_buttons},
+                         {screen._player_row_key})
+        self.assertTrue(self.map.is_unit_selected(self.player_unit))
+        listed = [unit for _key, unit, _province, _index in screen._other_rows]
+        self.assertNotIn(self.player_unit, listed)
+        self.assertEqual(len(listed), len(self.province["units"]) - 1)
+
+    def test_listed_units_cannot_be_ordered(self):
+        screen = self.tactical_screen()
+        peer_index = self.province["units"].index(self.peer)
+        order = {"type": "MOVE", "path": [self.province["id"]]}
+        self.peer["order"] = order
+        self.addCleanup(self.peer.pop, "order", None)
+
+        screen.cancel_unit_order(peer_index, self.province)
+        screen.disband_unit(peer_index, self.province)
+        screen.start_renaming(peer_index, self.province)
+
+        self.assertIs(self.peer["order"], order)
+        self.assertIsNone(screen.renaming_unit_index)
+        self.assertNotIn(self.peer, [unit for unit, _province in self.map.selected_unit_records()])
+
+    def test_army_peers_elsewhere_are_not_listed(self):
+        far = next(p for p in self.map.map_data.values()
+                   if p is not self.province and not queries.is_water_province(p))
+        far_peer = queries.create_unit_dict("Infantry", self.a, queries.get_unit_library(self.map))
+        self.enterContext(mock.patch.dict(far, units=[far_peer]))
+        nation = self.map.nation_data[self.a]
+        self.enterContext(mock.patch.dict(nation, armies=list(nation.get("armies", []))))
+        queries.ensure_unit_ids(self.map.map_data)
+        queries.create_army(self.a, [self.player_unit["unit_id"], far_peer["unit_id"]],
+                            self.map.nation_data, self.map.map_data)
+
+        screen = self.tactical_screen()
+
+        listed = [unit for _key, unit, _province, _index in screen._other_rows]
+        self.assertNotIn(far_peer, listed)
+        self.assertTrue(all(province is self.province
+                            for _key, _unit, province, _index in screen._other_rows))
+
+    def test_clicking_another_stack_lists_that_tile_without_commands(self):
+        far = next(p for p in self.map.map_data.values()
+                   if p is not self.province and not queries.is_water_province(p))
+        screen = self.tactical_screen()
+
+        screen.inspect_province(far)
+
+        self.assertIs(screen.target_province, far)
+        self.assertTrue(self.map.is_unit_selected(self.player_unit))
+        self.assertEqual({button.unit_index for button in screen.action_buttons},
+                         {screen._player_row_key})
+
+    def test_screen_builds_and_paints(self):
+        screen = self.tactical_screen()
+        screen.open_battle_panel()
+
+        screen.draw(self.surface)
+
+        self.assertIsNotNone(screen.battle_screen)
+
+
 if __name__ == "__main__":
     unittest.main()

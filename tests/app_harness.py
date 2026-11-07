@@ -44,7 +44,7 @@ STATES_UNBUILT_AT_BOOT = set()
 SCENARIO_PATH = "scenarios/historical/1939"
 
 # The screens whose on_enter hook hands them the map.
-MAP_LAYERED_STATES = ("PRODUCTION", "ORDERS", "EDIT_COUNTRY", "RESEARCH", "ECONOMY",
+MAP_LAYERED_STATES = ("PRODUCTION", "ORDERS", "TACTICAL_ORDERS", "EDIT_COUNTRY", "RESEARCH", "ECONOMY",
                       "MESSAGES", "FACTION", "FACTION_TERRITORIES")
 
 

@@ -88,7 +88,7 @@ def _import_project_modules():
     global music_playback
     global Load_Game, Map, Menu, New_Game, Settings, Credits, Music_Player, View_Assets, Mods, Unit_Art, Keybinds, Mouse_Settings, Edit_Portrait, default_keybinds
     global Translate, Translation_Menu, Greater_Diplomacy_4_Translation, Greater_Diplomacy_Hex_Translation
-    global Orders_Screen, keybind_io, settings_schema, symbol_loader, modal_stack, screen_runner
+    global Orders_Screen, Tactical_Orders_Screen, keybind_io, settings_schema, symbol_loader, modal_stack, screen_runner
     global BattleEditorScreen
     global Research_Screen, Economy_Screen, Edit_Country_Screen, Production_Screen
     global Faction_Screen, Faction_Territories_Screen
@@ -156,6 +156,7 @@ def _import_project_modules():
     from screens.menus.mouse_settings import Mouse_Settings
     from screens.menus.edit_portrait import Edit_Portrait
     from screens.game.orders import Orders_Screen
+    from screens.game.tactical_orders import Tactical_Orders_Screen
     from screens.game.battle_editor import BattleEditorScreen
     from data.io import keybind_io, settings_schema
     from ui.rendering import symbol_loader
@@ -382,6 +383,7 @@ class Controller:
             "MAP": None,
             "PRODUCTION": Production_Screen(),
             "ORDERS": Orders_Screen(),
+            "TACTICAL_ORDERS": Tactical_Orders_Screen(),
             "BATTLE_EDITOR": BattleEditorScreen(),
             "RESEARCH": Research_Screen(),
             "ECONOMY": Economy_Screen(),

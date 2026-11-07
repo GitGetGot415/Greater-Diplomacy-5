@@ -2141,7 +2141,7 @@ class Map(StateAccess, Screen):
     # --- Screen Transitions ---
     def change_state(self, next_state):
         if (self.realtime_multiplayer
-                and next_state in {"PRODUCTION", "ORDERS", "RESEARCH", "ECONOMY", "EDIT_COUNTRY",
+                and next_state in {"PRODUCTION", "ORDERS", "TACTICAL_ORDERS", "RESEARCH", "ECONOMY", "EDIT_COUNTRY",
                                   "MESSAGES", "FACTION", "FACTION_TERRITORIES", "POLITICS",
                                   "AUTOMATION", "PUPPETS", "CLAIMS", "DECLARE_INDEPENDENCE"}):
             player = self.realtime_session.players.get(self.realtime_player_id)
@@ -2684,7 +2684,7 @@ class Map(StateAccess, Screen):
         self.focus_camera_on_army(records)
         if open_orders:
             self._orders_return_to_province_menu = False
-            self.change_state("ORDERS")
+            self.change_state(map_input.orders_state(self))
         return True
 
     def open_orders_for_unit_stack(self, province, units, return_to_province_menu=False):
@@ -2692,7 +2692,7 @@ class Map(StateAccess, Screen):
         self.select_map_units(units)
         self.selected_province = province
         self._orders_return_to_province_menu = return_to_province_menu
-        self.change_state("ORDERS")
+        self.change_state(map_input.orders_state(self))
 
     def sync_units_to_data(self):
         unit_library = queries.get_unit_library(self)

@@ -1424,7 +1424,7 @@ class AirMissionSelectionTests(unittest.TestCase):
         return {call.args[2]: call for call in add.call_args_list}
 
     def test_icon_tracks_each_mission_and_upgrade_stays_separate(self):
-        from screens.game.orders import ACTION_COL_BOMBARD, ACTION_COL_UPGRADE
+        from ui.panels.unit_commands import ACTION_COL_BOMBARD, ACTION_COL_UPGRADE
         for mission, icon in (("NONE", "No Mission"), ("WEAKEST", "Weakest First"),
                               ("STRONGEST", "Strongest First"), ("RANDOM", "Random First")):
             with self.subTest(mission=mission):
@@ -1438,7 +1438,7 @@ class AirMissionSelectionTests(unittest.TestCase):
 
     def test_move_icon_tracks_relocation_and_ground_movement(self):
         from pathlib import Path
-        from screens.game.orders import ACTION_COL_BOMBARD
+        from ui.panels.unit_commands import ACTION_COL_BOMBARD
         asset = Path(__file__).resolve().parents[1] / "assets" / "images" / "Air Move.png"
         self.assertEqual(asset.read_bytes()[:8], b"\x89PNG\r\n\x1a\n")
         for name, order in (("Monoplane Fighter I", {"type": "AIR_REPOSITION", "target_id": 2}),
@@ -1458,7 +1458,7 @@ class AirMissionSelectionTests(unittest.TestCase):
             with self.subTest(unit=name):
                 self.unit["type"] = name
                 before = dict(self.unit["order"])
-                with patch("screens.game.orders._AirMissionSelectScreen") as popup, \
+                with patch("ui.panels.unit_commands._AirMissionSelectScreen") as popup, \
                         patch("ui.navigation.screen_runner._run_pygame_sub_screen"):
                     self.screen.open_air_mission_select(0, self.base)
                 choices = [choice[0] for choice in popup.call_args.args[1]]
@@ -1541,7 +1541,7 @@ class AirMissionSelectionTests(unittest.TestCase):
                     self.screen._mark_draft_changed.assert_not_called()
 
     def test_active_mission_button_opens_selector_and_no_mission_cancels(self):
-        from screens.game.orders import ACTION_COL_BOMBARD
+        from ui.panels.unit_commands import ACTION_COL_BOMBARD
         missions = [{"type": "AIR_PATROL", "priority": priority}
                     for priority in queries.AIR_INTERCEPTION_PRIORITIES]
         missions += [{"type": "AIR_ATTACK", "target_id": self.target["id"]},
@@ -1550,7 +1550,7 @@ class AirMissionSelectionTests(unittest.TestCase):
             with self.subTest(mission=mission):
                 self.unit["order"] = queries.canonical_air_order(self.game, self.unit, self.base, mission)
                 before = deepcopy(self.unit["order"])
-                with patch("screens.game.orders._AirMissionSelectScreen") as popup, \
+                with patch("ui.panels.unit_commands._AirMissionSelectScreen") as popup, \
                         patch("ui.navigation.screen_runner._run_pygame_sub_screen"):
                     self.buttons()[ACTION_COL_BOMBARD].args[5]()
                     popup.assert_called_once()
@@ -1619,7 +1619,7 @@ class AirMissionSelectionTests(unittest.TestCase):
         self.assertEqual(self.unit["type"], "Monoplane Fighter I")
 
     def test_numbered_aircraft_use_existing_upgrade_button_and_rule(self):
-        from screens.game.orders import ACTION_COL_UPGRADE
+        from ui.panels.unit_commands import ACTION_COL_UPGRADE
         # Artificial numbered family isolates the control from content tuning.
         stats = dict(queries.get_unit_library()[self.unit["type"]])
         library = {"Test Plane I": stats, "Test Plane II": dict(stats)}
@@ -1639,7 +1639,7 @@ class AirMissionSelectionTests(unittest.TestCase):
             self.assertEqual(self.unit["type"], target)
 
     def test_aircraft_upgrades_agree_in_ui_ai_networks_and_resolution(self):
-        from screens.game.orders import ACTION_COL_UPGRADE
+        from ui.panels.unit_commands import ACTION_COL_UPGRADE
         library, tree = queries.get_unit_library(), queries.get_tech_tree()
         for name, stats in library.items():
             if not stats.get("air_role") or queries.get_unit_tier(name) != 1:
@@ -2029,7 +2029,8 @@ class AirAppSmokeTests(unittest.TestCase):
 
     def test_group_mission_callback_sets_orders_and_draws_from_cache(self):
         from ui.navigation import modal_stack
-        from screens.game.orders import BATCH_BTN_ROW_OFFSET_Y, PANEL_Y, ACTION_COL_BOMBARD
+        from screens.game.orders import BATCH_BTN_ROW_OFFSET_Y
+        from ui.panels.unit_commands import PANEL_Y, ACTION_COL_BOMBARD
         loaded = runtime_map()
         loaded.selection_mode = False
         loaded.player_country = "A"
@@ -2408,7 +2409,7 @@ class AirAppSmokeTests(unittest.TestCase):
             self.assertEqual(screen.air_strike_range_previews, expected_strike)
 
     def test_air_range_previews_deduplicate_and_use_cached_rules(self):
-        from screens.game.orders import MOVE_TARGET_COLOR, BOMBARD_TARGET_COLOR
+        from ui.panels.unit_commands import MOVE_TARGET_COLOR, BOMBARD_TARGET_COLOR
         loaded = runtime_map()
         loaded.selection_mode = False
         loaded.player_country = "A"
@@ -2439,7 +2440,7 @@ class AirAppSmokeTests(unittest.TestCase):
                 self.assertEqual(self.surface.get_clip(), clip_before)
 
     def test_air_range_hover_events_switch_the_cached_circle_and_lock_active_missions(self):
-        from screens.game.orders import MOVE_TARGET_COLOR, BOMBARD_TARGET_COLOR
+        from ui.panels.unit_commands import MOVE_TARGET_COLOR, BOMBARD_TARGET_COLOR
         loaded = runtime_map()
         loaded.selection_mode = False
         loaded.player_country = "A"

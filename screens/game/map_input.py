@@ -754,7 +754,7 @@ def _handle_combat_bubble_click(map_screen, event, on_ui, origin=None):
     if origin is None:
         map_screen._orders_entered_from_combat_bubble = True
         map_screen.selected_province = province
-        map_screen.change_state("ORDERS")
+        map_screen.change_state(orders_state(map_screen))
     else:
         origin.inspect_province(province)
         origin.entered_from_combat_bubble = True
@@ -962,17 +962,17 @@ def _jump_to_view_mode_screen(map_screen, mode, origin=None):
             # so bombardment, retreat, and battle controls all live together.
             # Clicking Units while already there is a no-op rather than a
             # self-transition that would reset the selected unit and scroll.
-            # The imports are deferred here because Orders imports this module
-            # for its view-mode row. Both screens already exist by the time a
-            # user can click this control.
-            from screens.game.orders import Orders_Screen
-            if not isinstance(origin, (Orders_Screen, battle_screen.Battle_Screen)):
-                to("ORDERS")
+            # The import is deferred here because the shared unit commands
+            # import this module for their view-mode row. Every command screen
+            # already exists by the time a user can click this control.
+            from ui.panels.unit_commands import UnitCommandControls
+            if not isinstance(origin, (UnitCommandControls, battle_screen.Battle_Screen)):
+                to(orders_state(map_screen))
         else:
             # Orders_Screen already renders fine with nothing to show -- an
             # empty unit list just skips the panel -- so an empty tile still
             # opens it rather than bouncing back to the map.
-            to("ORDERS")
+            to(orders_state(map_screen))
     elif mode == "ECONOMY":
         owner = province.get("owner")
         owned = owner == map_screen.player_country or map_screen.player_country == "Spectator"
@@ -988,11 +988,20 @@ def _jump_to_view_mode_screen(map_screen, mode, origin=None):
 # Battle management is intentionally reached from Orders, so the map never
 # skips over the order controls on a contested tile.
 
+def orders_state(map_screen):
+    """Name the unit command screen for the current mode.
+
+    A tactical player commands one division, so tactical mode has its own
+    Tactical Orders screen. Every route into Orders uses this name.
+    """
+    return "TACTICAL_ORDERS" if map_screen.tactical_mode else "ORDERS"
+
+
 def go_to_orders_screen(map_screen):
     """Give Orders sidebar button."""
     map_screen._orders_return_to_province_menu = True
     if is_classic_navigation():
-        map_screen.change_state("ORDERS")
+        map_screen.change_state(orders_state(map_screen))
     else:
         navigate_view_mode(map_screen, "UNITS")
 

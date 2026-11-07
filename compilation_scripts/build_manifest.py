@@ -24,6 +24,7 @@ HIDDEN_IMPORTS = (
     "screens.game.unit_events_screen",
     "screens.game.country_summary",
     "screens.game.battle_editor",
+    "screens.game.tactical_orders",
     "screens.editors.unit_stats_editor",
     "map_logic.system32.unit_events",
     "map_logic.system32.air_processor",

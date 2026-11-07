@@ -85,6 +85,8 @@ Keep this name unless the user explicitly requests a different name.
 | Change how a screen opens the map | The `prepare_map` method of that screen and `screens/game/map_launch.py` |
 | Add or change a diplomatic action | `map_logic/diplomacy/action_definitions.py`, `treaty_effects.py`, and `diplomacy_processor.py` |
 | Change initial country or tactical-unit selection | `screens/setup/player_setup.py` |
+| Change unit rows, unit commands, or map targeting in Orders and Tactical Orders | `ui/panels/unit_commands.py` |
+| Change the Orders or Tactical Orders panel itself | `screens/game/orders.py` or `screens/game/tactical_orders.py` |
 | Change country-edit controls | `screens/editors/edit_country.py` |
 | Change application settings buttons | `screens/menus/settings.py` |
 | Change map drawing or display caches | `ui/rendering/` |
