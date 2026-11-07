@@ -2,17 +2,24 @@
 
 The Scripted Events editor writes these rules to WorldState.global_rules. Each rule is
 
-    {"country": "<country ID>", "rule": "<one of RULE_TYPES>", "target": "<country ID>"}
+    {"country": "<country ID>", "rule": "<one of RULE_TYPES>", "target": "<country ID>",
+     "strength": "<one of STRENGTHS>"}
 
 and reads as "<country> may never <rule> <target>", for example
 "German Reich may never Make Peace With Soviet Union".
 
-Rules apply only while the scenario's scripted events are enabled. They bind players, the
-rule-based AI, the LLM, and scripted events alike, because two shared gates read them:
+A Strong rule binds every country. A Weak rule binds only AI-controlled countries: an AI
+country never proposes, declares, or accepts what the rule forbids, but human players may.
+Scripted events act for their country, so a Weak rule also stops an AI country's events.
+
+Rules apply only while the scenario's scripted events are enabled. Three shared gates read them:
 
   * action_definitions.availability refuses to draft or send a forbidden action.
-  * treaty_effects.apply_treaty_effect refuses to settle a forbidden agreement. An offer
-    waits a turn for its answer, and factions and wars can change while it waits.
+    The sender decides.
+  * treaty_effects.apply_treaty_effect refuses to settle a forbidden agreement. The accepter
+    decides. An offer waits a turn for its answer, and factions and wars can change meanwhile.
+  * ai_evaluation.evaluate_verdict makes an AI country refuse a forbidden proposal, so its
+    answer and the acceptance forecast agree.
 
 A rule judges every country an action binds, not only the two that exchange it. A faction
 leader's peace binds its members. A faction join brings in the joiner's subjects. A call
@@ -21,7 +28,7 @@ to arms puts the country that answers it at war with each of the caller's enemie
 
 from data import queries
 import data.constants as c
-from data.state_access import world_for
+from data.state_access import session_for, world_for
 from map_logic.diplomacy import peace_scope, war_calls
 from map_logic.diplomacy.puppet_actions import apply_to_puppets_recursively
 
@@ -35,6 +42,10 @@ GRANT_ACCESS = "Grant Military Access To"
 RULE_TYPES = [DECLARE_WAR, MAKE_PEACE, SHARE_FACTION, GUARANTEE, TRADE, GRANT_ACCESS]
 # The two countries in these rules are equal partners, so each rule also covers the reverse order.
 MUTUAL_RULES = {MAKE_PEACE, SHARE_FACTION, TRADE}
+
+STRONG = "Strong"
+WEAK = "Weak"
+STRENGTHS = [STRONG, WEAK]
 
 
 def _pair(sender, target, _nation_data):
@@ -101,6 +112,9 @@ _ACTION_CHECKS = {
 def active_rules(context):
     """The rules in force for this game. Disabling scripted events disables them too."""
     world = world_for(context)
+    if isinstance(world, dict):
+        # Standalone country records from older callers carry no scenario, so no rules reach them.
+        return []
     if not queries.get_scenario_flag("use_scripted_events", c.DEFAULT_USE_SCRIPTED_EVENTS,
                                      world.scenario_settings):
         return []
@@ -131,16 +145,29 @@ def _breaks(rule, side_a, side_b, nation_data):
                for a in side_a for b in side_b)
 
 
-def forbidden_reason(context, sender, target, action):
-    """Why a global rule forbids this action from sender to target, or "" when none does."""
+def is_ai_controlled(context, country):
+    # Player screens that pass only country records act for a human player and carry no session.
+    players = getattr(session_for(context), "active_players", None)
+    return players is not None and country not in players
+
+
+def forbidden_reason(context, sender, target, action, *, ai_decides=None):
+    """Why a global rule forbids this action from sender to target, or "" when none does.
+
+    ai_decides says whether an AI-controlled country makes this choice, which decides
+    whether Weak rules apply. By default the sender decides.
+    """
     rules = active_rules(context)
     checks = _ACTION_CHECKS.get(action)
     if not rules or not checks:
         return ""
+    if ai_decides is None:
+        ai_decides = is_ai_controlled(context, sender)
     nation_data = world_for(context).nation_data
     for rule_type, sides in checks:
         side_a, side_b = sides(sender, target, nation_data)
         for rule in rules:
-            if rule["rule"] == rule_type and _breaks(rule, side_a, side_b, nation_data):
+            if (rule["rule"] == rule_type and (ai_decides or rule["strength"] == STRONG)
+                    and _breaks(rule, side_a, side_b, nation_data)):
                 return f"a scenario rule says {describe(rule, nation_data)}"
     return ""

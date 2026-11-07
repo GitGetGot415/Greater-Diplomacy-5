@@ -12,14 +12,16 @@ from tests.stub_map_screen import StubMapScreen
 import data.constants as c
 from data import queries
 from data.map import load_map
+from data.world_nations import WorldNations
+from map_logic.ai import ai_evaluation
 from map_logic.diplomacy import global_rules, treaty_effects
 from map_logic.diplomacy.action_definitions import availability
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def rule(country, rule_type, target):
-    return {"country": country, "rule": rule_type, "target": target}
+def rule(country, rule_type, target, strength=global_rules.STRONG):
+    return {"country": country, "rule": rule_type, "target": target, "strength": strength}
 
 
 class GlobalRuleTests(unittest.TestCase):
@@ -109,6 +111,36 @@ class GlobalRuleTests(unittest.TestCase):
         self.game.run_turn()
 
         self.assertTrue(queries.are_at_war("A", "B", self.game.nation_data))
+
+    def test_a_weak_rule_binds_ai_senders_but_not_human_players(self):
+        # A and B are human. C and D are AI.
+        self.game.global_rules = [rule("A", global_rules.DECLARE_WAR, "C", global_rules.WEAK),
+                                  rule("C", global_rules.DECLARE_WAR, "A", global_rules.WEAK)]
+
+        self.assertTrue(self.allowed("A", "C", "WAR_DECLARATION"))
+        self.assertFalse(self.allowed("C", "A", "WAR_DECLARATION"))
+
+    def test_an_ai_refuses_and_cannot_accept_what_a_weak_rule_forbids(self):
+        self.game.set_war("A", "C")
+        self.game.global_rules = [rule("A", global_rules.MAKE_PEACE, "C", global_rules.WEAK)]
+        self.assertTrue(self.allowed("A", "C", "CEASEFIRE"))
+
+        # The game passes country records that resolve to their world.
+        nation_data = WorldNations(self.game, self.game.nation_data)
+        verdict = ai_evaluation.evaluate_verdict(nation_data, self.game.map_data, "C", "A", "CEASEFIRE")
+        outcome = treaty_effects.apply_treaty_effect(self.game, "CEASEFIRE", "A", "C")
+
+        self.assertFalse(verdict.accepted)
+        self.assertIn("may never", verdict.reason)
+        self.assertIn("may never", outcome.blocked)
+        self.assertTrue(queries.are_at_war("A", "C", self.game.nation_data))
+
+    def test_a_weak_rule_lets_human_players_agree_with_each_other(self):
+        self.game.global_rules = [rule("A", global_rules.TRADE, "B", global_rules.WEAK)]
+
+        self.assertTrue(self.allowed("A", "B", "TRADE"))
+        self.assertEqual(global_rules.forbidden_reason(
+            self.game, "A", "B", "TRADE", ai_decides=global_rules.is_ai_controlled(self.game, "B")), "")
 
     def test_find_rule_matches_mutual_rules_in_either_order(self):
         rules = [rule("A", global_rules.TRADE, "B"), rule("A", global_rules.GUARANTEE, "B")]

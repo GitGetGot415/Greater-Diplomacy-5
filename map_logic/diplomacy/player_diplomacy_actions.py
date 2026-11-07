@@ -302,7 +302,8 @@ def handle_accept_req(context, target=None, custom_msg=None):
     queued_verdict, queued_action = diplomacy_messages.get_response_status(
         context.nation_data, context.player_country, target)
     if not (queued_verdict == diplomacy_messages.RESPONSE_ACCEPT and queued_action == action):
-        forbidden = global_rules.forbidden_reason(context, target, context.player_country, action)
+        forbidden = global_rules.forbidden_reason(context, target, context.player_country, action,
+                                                  ai_decides=False)
         if forbidden:
             context.show_feedback(f"Cannot accept: {forbidden}.")
             return

@@ -277,7 +277,8 @@ def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=No
         return _NOTHING
     # The send phase already refused forbidden offers, but factions and wars can
     # change while an offer waits for its answer.
-    forbidden = global_rules.forbidden_reason(host, proposer, accepter, action)
+    forbidden = global_rules.forbidden_reason(
+        host, proposer, accepter, action, ai_decides=global_rules.is_ai_controlled(host, accepter))
     if forbidden:
         if escrow:
             deal_effects.release_escrow(host.nation_data, escrow, proposer)

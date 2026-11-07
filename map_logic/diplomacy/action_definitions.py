@@ -348,6 +348,6 @@ def availability(context, sender, target, action, *, phase="draft"):
         return Availability(False, "unknown diplomatic action")
     allowed, reason = definition.legality(context, sender, target, action, nation_data, sender_data, target_data)
     if allowed:
-        reason = global_rules.forbidden_reason(world, sender, target, action)
+        reason = global_rules.forbidden_reason(context, sender, target, action)
         allowed = not reason
     return Availability(allowed, reason)

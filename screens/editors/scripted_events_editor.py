@@ -27,7 +27,7 @@ from ui.bars import ui_bars
 from ui.widgets import ui_elements
 from ui.navigation.modal_screen import ModalScreen
 from ui.widgets import text_utils
-from ui.widgets.ui_elements import Button, TextField, make_back_button
+from ui.widgets.ui_elements import Button, TextField, make_back_button, make_info_button
 
 from ui.navigation import screen_runner
 
@@ -108,6 +108,23 @@ HELP_TEXT = """ === EVENT TYPE ===
 
 The AI Msg Checkbox means that you can allow the ai to generate custom text for that message
 It will fallback to whatever you manually entered if the llm ai is turned off or otherwise fails"""
+
+GLOBAL_RULES_HELP_TEXT = """Global rules stop one diplomatic action between two countries for the whole game. Each rule reads "<country> may never <rule> <target>".
+
+Strong rules bind every country, including human players.
+Weak rules bind only AI countries. An AI country never proposes, declares, or accepts what the rule forbids, but a human player still can. Scripted events count as their country's actions, so a Weak rule also stops an AI country's events.
+
+Rules only apply while scripted events are enabled in scenario settings.
+
+- Declare War On: also covers joining a war against the target through Call to Arms or Join Wars.
+- Make Peace With: covers any ceasefire or peace treaty that would end their war, including one a faction leader signs for its members.
+- Be In Faction With: covers faction invitations, join requests, and new factions. Subjects that follow a joining country count.
+- Guarantee Independence Of: covers guaranteeing the target.
+- Trade With: covers trade offers.
+- Grant Military Access To: covers the target getting military access.
+Make Peace With, Be In Faction With, and Trade With work in both directions. The other rules work in one direction.
+
+Rules do not stop map editor setup or spectator controls. A country that becomes a subject still joins its new master's faction, and a guarantee can still pull a country into a war."""
 
 
 # ==========================================
@@ -421,6 +438,10 @@ class _GlobalRulesScreen(_ModalScreen):
     LIST_W = 620
     FORM_W = 400
     ROW_H = 30
+    # Each form field is a label with its picker 20px below it.
+    FORM_TOP = 84
+    FORM_STEP = 66
+    HELP_Y = 12
 
     def __init__(self, game_state, map_ref):
         super().__init__(game_state, "Global Rules")
@@ -429,6 +450,7 @@ class _GlobalRulesScreen(_ModalScreen):
         self.country = ""
         self.rule_type = global_rules.RULE_TYPES[0]
         self.target = ""
+        self.strength = global_rules.STRONG
 
         nation_data = map_ref.nation_data
         # Unlike event targets, rules can name countries that do not exist yet,
@@ -452,6 +474,7 @@ class _GlobalRulesScreen(_ModalScreen):
         self.selected = index
         rule = self.rules[index]
         self.country, self.rule_type, self.target = rule["country"], rule["rule"], rule["target"]
+        self.strength = rule["strength"]
         self.refresh_ui()
 
     def add_rule(self):
@@ -464,7 +487,8 @@ class _GlobalRulesScreen(_ModalScreen):
         if global_rules.find_rule(self.rules, self.rule_type, self.country, self.target):
             dialogs.show_error("Error", "That rule already exists.")
             return
-        self.rules.append({"country": self.country, "rule": self.rule_type, "target": self.target})
+        self.rules.append({"country": self.country, "rule": self.rule_type, "target": self.target,
+                           "strength": self.strength})
         self.selected = len(self.rules) - 1
         self.refresh_ui()
 
@@ -481,16 +505,27 @@ class _GlobalRulesScreen(_ModalScreen):
         return self.combo(self.form_x, y, self.FORM_W, country, self.country_items, title,
                           lambda v: self._assign(attr, v), display_value=name)
 
+    def _field_y(self, index):
+        """The top of form field `index`'s label, as a screen y."""
+        return self.panel_rect.y + self.FORM_TOP + index * self.FORM_STEP
+
+    def show_help(self):
+        dialogs.show_info("Global Rules", GLOBAL_RULES_HELP_TEXT)
+
     def refresh_ui(self):
         p = self.panel_rect
-        self.elements = [Button(self.form_x, p.bottom - 56, "small", "red", "Close", self.exit_screen,
-                                sound_kind="back")]
+        info_w = c.SIZES["scenario_setting_info"][0]
+        self.elements = [
+            Button(self.form_x, p.bottom - 56, "small", "red", "Close", self.exit_screen, sound_kind="back"),
+            make_info_button(p.right - self.PAD - info_w, p.y + self.HELP_Y, self.show_help),
+        ]
 
         self._content_rules = pygame.Rect(self.list_x, self.list_top, self.LIST_W, self.list_view_h)
         self.scroll_content_rect = self._content_rules
         row_w = self.LIST_W - 24
         for i, y in self.pane_rows("rules", len(self.rules), self.list_top, self.list_view_h, row_h=self.ROW_H):
-            text = global_rules.describe(self.rules[i], self.map_ref.nation_data)
+            rule = self.rules[i]
+            text = f"[{rule['strength']}] {global_rules.describe(rule, self.map_ref.nation_data)}"
             btn = self.button(self.list_x, y, row_w, "blue", text_utils.truncate_chars(text, row_w // 9),
                               lambda idx=i: self.select(idx), sound_kind="select_sub_category")
             btn.is_selected = i == self.selected
@@ -498,14 +533,18 @@ class _GlobalRulesScreen(_ModalScreen):
             btn.click_guard = self._guard_rules
             self.elements.append(btn)
 
+        picker_y = [self._field_y(i) + 20 for i in range(4)]
+        buttons_y = self._field_y(4) + 20
         self.elements += [
-            self._country_combo(p.y + 104, "country", "Country"),
-            self.combo(self.form_x, p.y + 170, self.FORM_W, self.rule_type, global_rules.RULE_TYPES,
+            self._country_combo(picker_y[0], "country", "Country"),
+            self.combo(self.form_x, picker_y[1], self.FORM_W, self.rule_type, global_rules.RULE_TYPES,
                        "Rule", lambda v: self._assign("rule_type", v)),
-            self._country_combo(p.y + 236, "target", "Target Country"),
-            self.button(self.form_x, p.y + 300, 120, "blue", "Add", self.add_rule),
+            self._country_combo(picker_y[2], "target", "Target Country"),
+            self.combo(self.form_x, picker_y[3], self.FORM_W, self.strength, global_rules.STRENGTHS,
+                       "Strength", lambda v: self._assign("strength", v)),
+            self.button(self.form_x, buttons_y, 120, "blue", "Add", self.add_rule),
         ]
-        delete_btn = self.button(self.form_x + 128, p.y + 300, 120, "red", "Delete", self.delete_rule)
+        delete_btn = self.button(self.form_x + 128, buttons_y, 120, "red", "Delete", self.delete_rule)
         delete_btn.apply_state(enabled=self.selected is not None, color="red")
         self.elements.append(delete_btn)
 
@@ -513,11 +552,9 @@ class _GlobalRulesScreen(_ModalScreen):
         self.route_pane_scroll(event, {"rules": self._content_rules})
 
     def draw_body(self, surface):
-        p = self.panel_rect
         self.label(surface, "Rules:", (self.list_x, self.list_top - 20))
-        self.label(surface, "Country:", (self.form_x, p.y + 84))
-        self.label(surface, "May Never:", (self.form_x, p.y + 150))
-        self.label(surface, "Target Country:", (self.form_x, p.y + 216))
+        for i, text in enumerate(("Country:", "May Never:", "Target Country:", "Strength:")):
+            self.label(surface, text, (self.form_x, self._field_y(i)))
         self.draw_list_scrollbar(surface, self.list_x + self.LIST_W - 18, self.list_top,
                                  self.list_view_h, **self.scroll_attrs("rules"))
 

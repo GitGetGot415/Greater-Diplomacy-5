@@ -286,10 +286,18 @@ The Scripted Events editor edits them. Each rule reads "<country> may never <rul
 Rules apply only while scripted events are enabled.
 A rule can name a country that does not exist yet, such as one released partway through the game.
 
-Rules bind players, the rule-based AI, the LLM, scripted events, and both multiplayer modes.
-Shared availability refuses a forbidden draft or send, so outgoing indicators show NO for it.
-Accepting an offer checks the rules again, because factions and wars can change while the offer waits.
-A refused acceptance returns the proposer's escrow. Crossed requests that a rule forbids do not settle.
+Each rule is Strong or Weak.
+A Strong rule binds every country, including human players, in both multiplayer modes.
+A Weak rule binds only AI-controlled countries, with or without the LLM.
+An AI country never proposes, declares, or accepts what a Weak rule forbids. Human players still can.
+Scripted events act for their country, so a Weak rule also stops an AI country's events.
+
+The country that makes the choice decides whether a Weak rule applies.
+Shared availability checks the sender when a request is drafted or sent.
+Accepting an offer checks the accepter again, because factions and wars can change while the offer waits.
+The AI's acceptance verdict refuses forbidden offers, so outgoing indicators show NO for them.
+A refused acceptance returns the proposer's escrow.
+Crossed requests that a rule forbids do not settle. For a Weak rule, either country being AI-controlled is enough.
 
 Each rule checks every country that an action binds:
 - Declare War On also covers joining a war against the target through Call to Arms or Join Wars.

@@ -19,7 +19,7 @@ from data import queries
 from map_logic.ai import ai_prompts
 from map_logic.diplomacy import diplomacy_messages
 
-from map_logic.diplomacy import deal as deal_mod, volunteers, military_attaches
+from map_logic.diplomacy import deal as deal_mod, global_rules, volunteers, military_attaches
 
 
 def _to_int(value, default=0):
@@ -506,6 +506,12 @@ def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_typ
     here: the relation lookup omits id_to_province and so skips the claim
     penalty, and `custom_msg` doubles as the peace terms string.
     """
+    # Global rules, Weak ones included, decide before any judgement call.
+    forbidden = global_rules.forbidden_reason(nation_data, sender_nation, ai_nation, action_type,
+                                              ai_decides=True)
+    if forbidden:
+        return Verdict(False, 1.0, forbidden)
+
     ai_stats = nation_data.get(ai_nation, {})
     at_war = len(ai_stats.get("at_war_with", [])) > 0
     in_faction = bool(ai_stats.get("faction", ""))
