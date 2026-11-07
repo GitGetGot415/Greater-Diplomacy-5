@@ -391,7 +391,10 @@ def _gather_ai_tasks(context):
             # EVERY ACTION NOW EVALUATES ON TURN 1
             if turns == 1:
                 is_human_target = target in session_state.active_players
-                if not is_human_target:
+                # A self-aimed action (a leadership claim, leaving or disbanding a
+                # faction) has nobody to answer it but its own sender. Asking
+                # anyway is how Turkey wrote "No. Our answer is no." to itself.
+                if not is_human_target and target != country_name:
                     if action in c.UNILATERAL_ACTIONS or action in c.BILATERAL_ACTIONS:
                         # `content` is what the offer *is*; `note` is what its
                         # sender said about it. Kept apart so neither can be
@@ -1429,7 +1432,7 @@ def _resolve_unilateral_replies(context, ai_results, active_nations_list, delaye
                              extra={"action": action},
                              llm=bool(reply_dict.get("llm")))
 
-    elif target not in session_state.active_players:
+    elif target != sender and target not in session_state.active_players:
         reply_dict = ai_results.get((sender, target, action), {})
         message = reply_dict.get("message", ai_prompts.AI_FALLBACK_RESPONSES.get("GENERIC_MESSAGE", "Message received."))
         _react_to_reply(context, active_nations_list, delayed_responses, target, sender, reply_dict)
