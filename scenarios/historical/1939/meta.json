@@ -1,6 +1,6 @@
 {
     "version": "v47",
-    "generated_at": "2026-11-05T20:19:23.145191",
+    "generated_at": "2026-11-07T00:30:28.064840",
     "date": {
         "day": 15,
         "month": 2,
@@ -1490,7 +1490,31 @@
             "adjective": "Soviet",
             "diplo_responses": {},
             "military_attaches": [],
-            "scripted_events": [],
+            "scripted_events": [
+                {
+                    "conditions": [
+                        {
+                            "chain": "AND",
+                            "type": "Turn Number",
+                            "variable": "",
+                            "operator": "==",
+                            "value": "11"
+                        }
+                    ],
+                    "actions": [
+                        {
+                            "type": "Declare War",
+                            "target": "Poland",
+                            "unit_type": "Supported Rifle Infantry III",
+                            "message": "Let this happen. Please.",
+                            "ai_generate": false,
+                            "send_up_to": false
+                        }
+                    ],
+                    "fire_once": true,
+                    "trigger_type": "AI Only"
+                }
+            ],
             "armies": []
         },
         "Hungary": {
@@ -5776,7 +5800,8 @@
             "adjective": "Albanian",
             "diplo_responses": {},
             "military_attaches": [],
-            "armies": []
+            "armies": [],
+            "research_queue": []
         },
         "Brazil": {
             "name": "Brazil",
@@ -8601,5 +8626,6 @@
         "turn": 0,
         "events": []
     },
-    "unit_event_read_turns": {}
+    "unit_event_read_turns": {},
+    "conversation_colors": {}
 }
