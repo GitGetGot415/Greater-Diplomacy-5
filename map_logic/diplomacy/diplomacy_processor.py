@@ -8,7 +8,7 @@ from map_logic.diplomacy import diplomacy_lifecycle as lifecycle
 # Import from our newly created submodules
 from map_logic.diplomacy.diplomacy_events import log_global_event
 from map_logic.diplomacy import (
-    faction_actions, faction_leadership, guarantees, military_attaches, peace_scope, ratification, restrictions, treaty_effects, volunteers, war_actions, war_calls
+    faction_actions, faction_leadership, global_rules, guarantees, military_attaches, peace_scope, ratification, restrictions, treaty_effects, volunteers, war_actions, war_calls
 )
 from map_logic.diplomacy.diplomacy_messages import (
     get_pending_action, send_message, send_treaty_message, forward_message,
@@ -304,14 +304,18 @@ def _resolve_simultaneous_clashes(context):
             a_action = a_info.get("action")
             b_action = b_info.get("action")
 
+            # These crossings settle here, before Pass 1 checks availability. A crossing
+            # that a global rule forbids is left alone, and Pass 1 then drops both requests.
             if (a_action == "JOIN_FACTION_REQ" and b_action == "FACTION_INVITE"
-                    and queries.can_invite_to_faction(nation_b, world_state.nation_data)):
+                    and queries.can_invite_to_faction(nation_b, world_state.nation_data)
+                    and not global_rules.forbidden_reason(context, nation_a, nation_b, a_action)):
                 if finalize_faction_join(world_state.map_data, world_state.nation_data, nation_b, nation_a):
                     log_global_event(world_state.nation_data, f"{nation_a} and {nation_b} have united their factions!")
                 _resolve_cross_action(context, nation_a, nation_b, a_data, b_data, "CROSS_FACTION_JOIN")
 
             elif (b_action == "JOIN_FACTION_REQ" and a_action == "FACTION_INVITE"
-                  and queries.can_invite_to_faction(nation_a, world_state.nation_data)):
+                  and queries.can_invite_to_faction(nation_a, world_state.nation_data)
+                  and not global_rules.forbidden_reason(context, nation_b, nation_a, b_action)):
                 if finalize_faction_join(world_state.map_data, world_state.nation_data, nation_a, nation_b):
                     log_global_event(world_state.nation_data, f"{nation_a} and {nation_b} have united their factions!")
                 _resolve_cross_action(context, nation_a, nation_b, a_data, b_data, "CROSS_FACTION_JOIN")
@@ -328,13 +332,17 @@ def _resolve_simultaneous_clashes(context):
                 send_message(context, nation_b, nation_a, msg, "DIPLOMACY")
                 lifecycle.remove_request(a_data, nation_b)
 
-            elif a_action == "CEASEFIRE" and b_action == "CEASEFIRE":
+            elif (a_action == "CEASEFIRE" and b_action == "CEASEFIRE"
+                  and not global_rules.forbidden_reason(context, nation_a, nation_b, a_action)):
                 finalize_neutral(world_state.nation_data, nation_a, nation_b)
                 log_global_event(world_state.nation_data, f"{nation_a} and {nation_b} have signed a mutual ceasefire.")
                 _resolve_cross_action(context, nation_a, nation_b, a_data, b_data, "CROSS_CEASEFIRE")
 
-            elif (a_action == "CALL_TO_ARMS" and b_action == "JOIN_WARS") or \
-                 (a_action == "JOIN_WARS" and b_action == "CALL_TO_ARMS"):
+            elif (((a_action == "CALL_TO_ARMS" and b_action == "JOIN_WARS")
+                   or (a_action == "JOIN_WARS" and b_action == "CALL_TO_ARMS"))
+                  # Each country joins the other's wars.
+                  and not global_rules.forbidden_reason(context, nation_a, nation_b, "JOIN_WARS")
+                  and not global_rules.forbidden_reason(context, nation_b, nation_a, "JOIN_WARS")):
 
                 join_faction_wars(world_state.map_data, world_state.nation_data, nation_a, nation_b)
                 join_faction_wars(world_state.map_data, world_state.nation_data, nation_b, nation_a)

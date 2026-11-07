@@ -370,6 +370,11 @@ This additive field does not change an older field's meaning or require a conver
 Scenario information remains the same when a selected history turn becomes live state.
 Only local map editors can change it. Multiplayer commands cannot change it.
 
+`WorldState.global_rules` owns the scenario's global rules. See `documentation/diplo_stuff.txt`, Editor and scripted events.
+The shared save builder writes `global_rules` to `meta.json`, saves, and multiplayer snapshots.
+The loader supplies an empty list when an older file omits this optional field. It needs no conversion rule.
+Each rule stores its type as the editor label, such as `Make Peace With`. Renaming a released label needs a conversion rule.
+
 `SessionState.editor_scenario_name` is an editor draft. It is not saved in scenario data.
 The loader derives the name from the selected folder.
 `screens/editors/menus.py` owns save confirmation dialogs.

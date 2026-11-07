@@ -25,6 +25,7 @@ class WorldState:
     factions_initialized: bool = False
     diplomacy_revision: int = 0
     script_variables: list = field(default_factory=list)
+    global_rules: list = field(default_factory=list)
     default_research: object = None
     time_manager: TimeHandler = field(default_factory=TimeHandler)
     loop_map: bool = False

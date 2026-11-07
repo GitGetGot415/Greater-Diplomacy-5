@@ -155,6 +155,7 @@
 
   "NO_WAR_TO_JOIN": "There is no war between us to answer for. Whatever pact you think binds us here, it does not.",
   "TRADE_AT_WAR": "We are at war. There will be no trade between us.",
+  "GLOBAL_RULE_FORBIDS": "We cannot agree to this: {reason}.",
 
   "GD4_DENIED_FRIENDSHIP": [
     {

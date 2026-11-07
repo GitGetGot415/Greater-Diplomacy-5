@@ -251,6 +251,7 @@ def build_save_dict(context, *, include_provinces=True, compact_nations=False, i
         "scenario_settings": scenario_settings,
         "scenario_metadata": normalized_scenario_metadata(world_state.scenario_metadata),
         "script_variables": world_state.script_variables,
+        "global_rules": world_state.global_rules,
         "default_research": world_state.default_research,
         "research_years": get_research_years(context=context),
         "nation_data": world_state.nation_data,

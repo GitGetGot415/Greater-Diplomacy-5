@@ -280,6 +280,31 @@ Event conditions can test:
 - Committed volunteer divisions.
 - Remaining volunteer capacity.
 
+Global Rules forbid one diplomatic outcome between two countries for the whole game.
+The Scripted Events editor edits them. Each rule reads "<country> may never <rule> <target>".
+`map_logic/diplomacy/global_rules.py` owns the rule types and their checks.
+Rules apply only while scripted events are enabled.
+A rule can name a country that does not exist yet, such as one released partway through the game.
+
+Rules bind players, the rule-based AI, the LLM, scripted events, and both multiplayer modes.
+Shared availability refuses a forbidden draft or send, so outgoing indicators show NO for it.
+Accepting an offer checks the rules again, because factions and wars can change while the offer waits.
+A refused acceptance returns the proposer's escrow. Crossed requests that a rule forbids do not settle.
+
+Each rule checks every country that an action binds:
+- Declare War On also covers joining a war against the target through Call to Arms or Join Wars.
+- Make Peace With covers a ceasefire or peace treaty that would end their war, including one a faction leader signs for its members.
+  It also covers a faction join that would end their war.
+- Be In Faction With covers faction invitations, join requests, and new factions. Subjects that follow a joining country count.
+- Guarantee Independence Of covers a guarantee of the target.
+- Trade With covers trade offers.
+- Grant Military Access To covers a military access request from the target.
+Make Peace With, Be In Faction With, and Trade With apply in both directions. The other rules apply in one direction.
+
+Editor diplomacy setup and spectator controls do not check global rules.
+A country that becomes a subject, for example through a peace treaty, still joins its new master's faction.
+The Be In Faction With rule does not stop this.
+
 Acceptance indicators
 ---------------------
 

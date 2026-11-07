@@ -27,7 +27,7 @@ from map_logic.diplomacy import war_calls
 
 from data import queries
 from data.state_access import session_for
-from map_logic.diplomacy import peace_scope, deal_effects, ratification, military_attaches, volunteers
+from map_logic.diplomacy import peace_scope, deal_effects, global_rules, ratification, military_attaches, volunteers
 from map_logic.diplomacy.faction_actions import finalize_create_faction, finalize_faction_join, join_faction_wars
 from map_logic.diplomacy.diplomacy_events import log_global_event
 
@@ -275,4 +275,11 @@ def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=No
     effect = _ACCEPTANCE_EFFECTS.get(action)
     if effect is None:
         return _NOTHING
+    # The send phase already refused forbidden offers, but factions and wars can
+    # change while an offer waits for its answer.
+    forbidden = global_rules.forbidden_reason(host, proposer, accepter, action)
+    if forbidden:
+        if escrow:
+            deal_effects.release_escrow(host.nation_data, escrow, proposer)
+        return TreatyOutcome(_fallback("GLOBAL_RULE_FORBIDS").format(reason=forbidden), None)
     return effect(host, action, proposer, accepter, params, escrow)

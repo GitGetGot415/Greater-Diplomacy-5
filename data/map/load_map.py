@@ -361,6 +361,8 @@ def _restore_session_properties(context, save_meta):
         world_state.loop_map = save_meta.get("loop_map", False)
         world_state.default_research = save_meta.get("default_research", None)
         world_state.script_variables = save_meta.get("script_variables", [])
+        # Saves written before global rules existed have none.
+        world_state.global_rules = save_meta.get("global_rules", [])
 
         world_state.time_manager = TimeHandler(start_year=save_meta["date"]["year"])
         world_state.time_manager.day = save_meta["date"]["day"]
@@ -373,6 +375,7 @@ def _restore_session_properties(context, save_meta):
         world_state.loop_map = True
         world_state.default_research = None
         world_state.script_variables = []
+        world_state.global_rules = []
         world_state.time_manager = TimeHandler(start_year=c.START_YEAR)
 
     local_metadata = {} if session_state.selection_mode or session_state.is_editor else save_meta or {}

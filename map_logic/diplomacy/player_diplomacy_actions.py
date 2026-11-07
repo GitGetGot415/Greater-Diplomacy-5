@@ -4,7 +4,7 @@
 from data.state_access import world_for, session_for
 from data import queries
 from ui.dialogs import pickers
-from map_logic.diplomacy import diplomacy_messages, diplomacy_processor, peace_scope, ratification
+from map_logic.diplomacy import diplomacy_messages, diplomacy_processor, global_rules, peace_scope, ratification
 from map_logic.diplomacy import volunteers
 from map_logic.diplomacy import guarantees
 from map_logic.diplomacy import military_attaches
@@ -133,6 +133,11 @@ def handle_ceasefire(context):
     if not peace_scope.has_settleable_war(context.player_country, target,
                                           context.nation_data):
         context.show_feedback("There is no active war to settle with that country.")
+        return
+    # Refuse before the player writes terms that could never be sent.
+    forbidden = global_rules.forbidden_reason(context, context.player_country, target, "PEACE_TREATY")
+    if forbidden:
+        context.show_feedback(f"Cannot make peace: {forbidden}.")
         return
 
     # Guard check: Prevent modifying or opening a peace offer if it has already been sent (turns > 0)
@@ -297,6 +302,10 @@ def handle_accept_req(context, target=None, custom_msg=None):
     queued_verdict, queued_action = diplomacy_messages.get_response_status(
         context.nation_data, context.player_country, target)
     if not (queued_verdict == diplomacy_messages.RESPONSE_ACCEPT and queued_action == action):
+        forbidden = global_rules.forbidden_reason(context, target, context.player_country, action)
+        if forbidden:
+            context.show_feedback(f"Cannot accept: {forbidden}.")
+            return
         my_faction = context.nation_data[context.player_country].get("faction", "")
 
         if action == "FACTION_INVITE":

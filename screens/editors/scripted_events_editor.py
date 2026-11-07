@@ -20,6 +20,7 @@ from map_logic.system32.time_handler import TimeHandler
 from map_logic.ai.scripted_events import (ACT_TYPES, CHAIN_OPS, COND_TYPES, EDIT_ACTIONS, NUMERIC_OPS,
                                           SELF_NUMERIC_CONDITION_TYPES, SELF_OR_TARGET_TYPES,
                                           TARGET_LIST_TYPES, TURN_OPS, VAR_MATH_OPS)
+from map_logic.diplomacy import global_rules
 from ui.rendering.font_manager import fonts
 from ui import dialogs
 from ui.bars import ui_bars
@@ -405,6 +406,120 @@ class _VariablesScreen(_ModalScreen):
 
         self.draw_list_scrollbar(surface, self.list_x + self.LIST_W - 18, self.list_top,
                                  self.list_view_h, **self.scroll_attrs("vars"))
+
+
+# ==========================================
+# GLOBAL RULES EDITOR
+# ==========================================
+
+class _GlobalRulesScreen(_ModalScreen):
+    """Rules that hold for the whole game, such as "German Reich may never make peace with Soviet Union".
+
+    map_logic/diplomacy/global_rules.py owns their meaning and enforcement.
+    """
+    PANEL_SIZE = (1100, 580)
+    LIST_W = 620
+    FORM_W = 400
+    ROW_H = 30
+
+    def __init__(self, game_state, map_ref):
+        super().__init__(game_state, "Global Rules")
+        self.map_ref = map_ref
+        self.selected = None
+        self.country = ""
+        self.rule_type = global_rules.RULE_TYPES[0]
+        self.target = ""
+
+        nation_data = map_ref.nation_data
+        # Unlike event targets, rules can name countries that do not exist yet,
+        # such as a country released partway through the game.
+        country_ids = sorted((cid for cid in nation_data if cid not in c.UNPLAYABLE_NATIONS),
+                             key=lambda cid: queries.get_country_display_name(cid, nation_data).lower())
+        self.country_items = queries.country_picker_items(country_ids, nation_data)
+
+        p = self.panel_rect
+        self.list_x = p.x + self.PAD
+        self.list_top = p.y + 82
+        self.list_view_h = p.bottom - 20 - self.list_top
+        self.form_x = self.list_x + self.LIST_W + 24
+        self.refresh_ui()
+
+    @property
+    def rules(self):
+        return self.map_ref.global_rules
+
+    def select(self, index):
+        self.selected = index
+        rule = self.rules[index]
+        self.country, self.rule_type, self.target = rule["country"], rule["rule"], rule["target"]
+        self.refresh_ui()
+
+    def add_rule(self):
+        if not self.country or not self.target:
+            dialogs.show_error("Error", "Choose both countries.")
+            return
+        if self.country == self.target:
+            dialogs.show_error("Error", "A rule needs two different countries.")
+            return
+        if global_rules.find_rule(self.rules, self.rule_type, self.country, self.target):
+            dialogs.show_error("Error", "That rule already exists.")
+            return
+        self.rules.append({"country": self.country, "rule": self.rule_type, "target": self.target})
+        self.selected = len(self.rules) - 1
+        self.refresh_ui()
+
+    def delete_rule(self):
+        if self.selected is None or self.selected >= len(self.rules):
+            return
+        self.rules.pop(self.selected)
+        self.selected = None
+        self.refresh_ui()
+
+    def _country_combo(self, y, attr, title):
+        country = getattr(self, attr)
+        name = queries.get_country_display_name(country, self.map_ref.nation_data) if country else "-"
+        return self.combo(self.form_x, y, self.FORM_W, country, self.country_items, title,
+                          lambda v: self._assign(attr, v), display_value=name)
+
+    def refresh_ui(self):
+        p = self.panel_rect
+        self.elements = [Button(self.form_x, p.bottom - 56, "small", "red", "Close", self.exit_screen,
+                                sound_kind="back")]
+
+        self._content_rules = pygame.Rect(self.list_x, self.list_top, self.LIST_W, self.list_view_h)
+        self.scroll_content_rect = self._content_rules
+        row_w = self.LIST_W - 24
+        for i, y in self.pane_rows("rules", len(self.rules), self.list_top, self.list_view_h, row_h=self.ROW_H):
+            text = global_rules.describe(self.rules[i], self.map_ref.nation_data)
+            btn = self.button(self.list_x, y, row_w, "blue", text_utils.truncate_chars(text, row_w // 9),
+                              lambda idx=i: self.select(idx), sound_kind="select_sub_category")
+            btn.is_selected = i == self.selected
+            btn.is_scrollable = True
+            btn.click_guard = self._guard_rules
+            self.elements.append(btn)
+
+        self.elements += [
+            self._country_combo(p.y + 104, "country", "Country"),
+            self.combo(self.form_x, p.y + 170, self.FORM_W, self.rule_type, global_rules.RULE_TYPES,
+                       "Rule", lambda v: self._assign("rule_type", v)),
+            self._country_combo(p.y + 236, "target", "Target Country"),
+            self.button(self.form_x, p.y + 300, 120, "blue", "Add", self.add_rule),
+        ]
+        delete_btn = self.button(self.form_x + 128, p.y + 300, 120, "red", "Delete", self.delete_rule)
+        delete_btn.apply_state(enabled=self.selected is not None, color="red")
+        self.elements.append(delete_btn)
+
+    def additional_events(self, event):
+        self.route_pane_scroll(event, {"rules": self._content_rules})
+
+    def draw_body(self, surface):
+        p = self.panel_rect
+        self.label(surface, "Rules:", (self.list_x, self.list_top - 20))
+        self.label(surface, "Country:", (self.form_x, p.y + 84))
+        self.label(surface, "May Never:", (self.form_x, p.y + 150))
+        self.label(surface, "Target Country:", (self.form_x, p.y + 216))
+        self.draw_list_scrollbar(surface, self.list_x + self.LIST_W - 18, self.list_top,
+                                 self.list_view_h, **self.scroll_attrs("rules"))
 
 
 # ==========================================
@@ -889,6 +1004,9 @@ class _EventEditScreen(_ModalScreen):
 
 class Scripted_Events_Editor_Screen(_ModalScreen):
     NAT_W = 260
+    # The Variables and Global Rules buttons stack under the nation list.
+    SIDE_BUTTON_GAP = 12
+    SIDE_BUTTON_STEP = 40
 
     def __init__(self, map_ref):
         super().__init__(map_ref, "Scripted Events Editor")
@@ -900,7 +1018,7 @@ class Scripted_Events_Editor_Screen(_ModalScreen):
         p = self.panel_rect
         self.nat_x = p.x + self.PAD
         self.nations_top = p.y + 112
-        self.nations_view_h = 500
+        self.nations_view_h = 460
 
         self.events_x = self.nat_x + self.NAT_W + 40
         self.events_top = p.y + 130
@@ -1007,6 +1125,10 @@ class Scripted_Events_Editor_Screen(_ModalScreen):
         _run(_VariablesScreen(self.map_screen, self.map_ref))
         self.refresh_ui()
 
+    def open_global_rules(self):
+        _run(_GlobalRulesScreen(self.map_screen, self.map_ref))
+        self.refresh_ui()
+
     # -- rendering ------------------------------------------------------ #
 
     def refresh_ui(self):
@@ -1028,8 +1150,11 @@ class Scripted_Events_Editor_Screen(_ModalScreen):
             btn.click_guard = self._guard_nations
             self.elements.append(btn)
 
-        self.elements.append(self.button(self.nat_x, self.nations_top + self.nations_view_h + 12,
-                                         self.NAT_W - 24, "green", "Variables", self.open_variables))
+        side_top = self.nations_top + self.nations_view_h + self.SIDE_BUTTON_GAP
+        for i, (label, callback) in enumerate((("Variables", self.open_variables),
+                                               ("Global Rules", self.open_global_rules))):
+            self.elements.append(self.button(self.nat_x, side_top + i * self.SIDE_BUTTON_STEP,
+                                             self.NAT_W - 24, "green", label, callback))
 
         events = self._events()
         row_w = p.right - self.PAD - self.events_x - 20

@@ -329,10 +329,11 @@ LITE_RESPONSE_KEYS = {action: definition.lite_response for action, definition in
 def availability(context, sender, target, action, *, phase="draft"):
     """Check game rules independently of selection, player authority, and AI preference."""
     from data.state_access import world_for
+    from map_logic.diplomacy import global_rules
     world = world_for(context)
     if isinstance(world, dict):
         # Public helpers also accept standalone country records at input boundaries.
-        world = SimpleNamespace(nation_data=world, scenario_settings={})
+        world = SimpleNamespace(nation_data=world, scenario_settings={}, global_rules=[])
         context = world
     nation_data = world.nation_data
     sender_data, target_data = nation_data.get(sender), nation_data.get(target)
@@ -346,4 +347,7 @@ def availability(context, sender, target, action, *, phase="draft"):
     if definition is None:
         return Availability(False, "unknown diplomatic action")
     allowed, reason = definition.legality(context, sender, target, action, nation_data, sender_data, target_data)
+    if allowed:
+        reason = global_rules.forbidden_reason(world, sender, target, action)
+        allowed = not reason
     return Availability(allowed, reason)

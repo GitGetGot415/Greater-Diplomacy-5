@@ -49,6 +49,29 @@ class EditorScreenSmokeTests(unittest.TestCase):
         from screens.editors import scripted_events_editor as se
         self.exercise(se._VariablesScreen(self.map, self.map))
 
+    def test_scripted_events_global_rules_add_and_delete(self):
+        from screens.editors import scripted_events_editor as se
+        from map_logic.diplomacy import global_rules
+        saved_rules = self.map.global_rules
+        self.map.global_rules = []
+        try:
+            screen = se._GlobalRulesScreen(self.map, self.map)
+            first, second = (country for _label, country in screen.country_items[:2])
+            screen.country, screen.rule_type, screen.target = first, global_rules.MAKE_PEACE, second
+            with mock.patch("ui.dialogs.show_error") as show_error:
+                screen.add_rule()
+                screen.country, screen.target = second, first  # The same mutual rule, reversed.
+                screen.add_rule()
+            show_error.assert_called_once()
+            self.assertEqual(self.map.global_rules,
+                             [{"country": first, "rule": global_rules.MAKE_PEACE, "target": second}])
+            self.exercise(screen)
+            screen.select(0)
+            screen.delete_rule()
+            self.assertEqual(self.map.global_rules, [])
+        finally:
+            self.map.global_rules = saved_rules
+
     def test_scripted_events_event_edit(self):
         from screens.editors import scripted_events_editor as se
         target = self.map.player_country

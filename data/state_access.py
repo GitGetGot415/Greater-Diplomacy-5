@@ -109,7 +109,8 @@ class _Forward:
 # Every session field is public on the map. World fields not listed here,
 # such as factions and runtime_rules, are reached only through `world`.
 WORLD_ATTRIBUTES = ("map_data", "id_to_province", "nation_data", "raw_json_data", "history",
-                    "scenario_settings", "scenario_metadata", "script_variables", "default_research", "time_manager",
+                    "scenario_settings", "scenario_metadata", "script_variables", "global_rules",
+                    "default_research", "time_manager",
                     "loop_map", "map_w", "map_h", "unit_event_log")
 for _name in WORLD_ATTRIBUTES:
     setattr(StateAccess, _name, _Forward("world", _name))
