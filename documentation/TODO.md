@@ -1,5 +1,7 @@
 # TODO
 
+- is AI_PEACE_PRIZE_W too low?
+
 ## Check First
 
 - check why refreshing country data can show countries that don't exist anymore
