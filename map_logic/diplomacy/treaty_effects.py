@@ -261,7 +261,7 @@ _ACCEPTANCE_EFFECTS = {
 }
 
 
-def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=None):
+def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=None, *, scripted=False):
     """Applies an accepted proposal and returns a TreatyOutcome.
 
     `proposer` offered the deal and `accepter` agreed to it, whichever side is
@@ -271,14 +271,16 @@ def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=No
     `escrow` is what was taken from the proposer when the offer was sent, so the
     payment half of a trade or a reparations clause is delivered rather than
     charged twice. See deal_effects for why that no longer lives in the UI.
+
+    `scripted` says a scripted event chose the acceptance, which global rules may exempt.
     """
     effect = _ACCEPTANCE_EFFECTS.get(action)
     if effect is None:
         return _NOTHING
     # The send phase already refused forbidden offers, but factions and wars can
     # change while an offer waits for its answer.
-    forbidden = global_rules.forbidden_reason(
-        host, proposer, accepter, action, ai_decides=global_rules.is_ai_controlled(host, accepter))
+    choice = global_rules.Choice(global_rules.is_ai_controlled(host, accepter), accepting=True, scripted=scripted)
+    forbidden = global_rules.forbidden_reason(host, proposer, accepter, action, choices=(choice,))
     if forbidden:
         if escrow:
             deal_effects.release_escrow(host.nation_data, escrow, proposer)

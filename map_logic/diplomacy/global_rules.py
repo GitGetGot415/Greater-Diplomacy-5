@@ -3,28 +3,40 @@
 The Scripted Events editor writes these rules to WorldState.global_rules. Each rule is
 
     {"country": "<country ID>", "rule": "<one of RULE_TYPES>", "target": "<country ID>",
-     "strength": "<one of STRENGTHS>"}
+     "strength": "<one of STRENGTHS>", "bypass_scripted_events": <bool>}
 
 and reads as "<country> may never <rule> <target>", for example
 "German Reich may never Make Peace With Soviet Union".
 
-A Strong rule binds every country. A Weak rule binds only AI-controlled countries: an AI
-country never proposes, declares, or accepts what the rule forbids, but human players may.
-Scripted events act for their country, so a Weak rule also stops an AI country's events.
+Each check describes the Choice that makes the action happen: who chooses, whether they are
+proposing or accepting, and whether a scripted event made the choice. The rule's strength
+decides which choices it binds:
+
+  * Strong binds every choice, including a human player's.
+  * Decent binds AI-controlled countries. They never propose, declare, or accept it.
+  * Weak binds AI-controlled countries only when they propose or declare. They may accept.
+
+With bypass_scripted_events on, the rule also binds choices that scripted events make,
+following the strength above. With it off, scripted events may break the rule.
 
 Rules apply only while the scenario's scripted events are enabled. Three shared gates read them:
 
   * action_definitions.availability refuses to draft or send a forbidden action.
-    The sender decides.
+    The sender chooses.
   * treaty_effects.apply_treaty_effect refuses to settle a forbidden agreement. The accepter
-    decides. An offer waits a turn for its answer, and factions and wars can change meanwhile.
+    chooses. An offer waits a turn for its answer, and factions and wars can change meanwhile.
   * ai_evaluation.evaluate_verdict makes an AI country refuse a forbidden proposal, so its
     answer and the acceptance forecast agree.
+
+Scripted events mark the requests and answers they create with "scripted": True. They run
+and are sent within the host's turn processing, so a player's move never needs that mark.
 
 A rule judges every country an action binds, not only the two that exchange it. A faction
 leader's peace binds its members. A faction join brings in the joiner's subjects. A call
 to arms puts the country that answers it at war with each of the caller's enemies.
 """
+
+from dataclasses import dataclass
 
 from data import queries
 import data.constants as c
@@ -44,8 +56,27 @@ RULE_TYPES = [DECLARE_WAR, MAKE_PEACE, SHARE_FACTION, GUARANTEE, TRADE, GRANT_AC
 MUTUAL_RULES = {MAKE_PEACE, SHARE_FACTION, TRADE}
 
 STRONG = "Strong"
+DECENT = "Decent"
 WEAK = "Weak"
-STRENGTHS = [STRONG, WEAK]
+STRENGTHS = [STRONG, DECENT, WEAK]
+
+
+@dataclass(frozen=True)
+class Choice:
+    """One country's decision that makes an action happen."""
+    ai: bool
+    accepting: bool = False
+    scripted: bool = False
+
+
+def _binds(rule, choice):
+    if choice.scripted and not rule["bypass_scripted_events"]:
+        return False
+    if rule["strength"] == STRONG:
+        return True
+    if rule["strength"] == DECENT:
+        return choice.ai
+    return choice.ai and not choice.accepting
 
 
 def _pair(sender, target, _nation_data):
@@ -151,23 +182,23 @@ def is_ai_controlled(context, country):
     return players is not None and country not in players
 
 
-def forbidden_reason(context, sender, target, action, *, ai_decides=None):
+def forbidden_reason(context, sender, target, action, *, choices=None):
     """Why a global rule forbids this action from sender to target, or "" when none does.
 
-    ai_decides says whether an AI-controlled country makes this choice, which decides
-    whether Weak rules apply. By default the sender decides.
+    `choices` are the decisions that make the action happen. A rule forbids the action when
+    it binds any of them. By default the sender proposes it without a scripted event.
     """
     rules = active_rules(context)
     checks = _ACTION_CHECKS.get(action)
     if not rules or not checks:
         return ""
-    if ai_decides is None:
-        ai_decides = is_ai_controlled(context, sender)
+    if choices is None:
+        choices = (Choice(is_ai_controlled(context, sender)),)
     nation_data = world_for(context).nation_data
     for rule_type, sides in checks:
         side_a, side_b = sides(sender, target, nation_data)
         for rule in rules:
-            if (rule["rule"] == rule_type and (ai_decides or rule["strength"] == STRONG)
+            if (rule["rule"] == rule_type and any(_binds(rule, choice) for choice in choices)
                     and _breaks(rule, side_a, side_b, nation_data)):
                 return f"a scenario rule says {describe(rule, nation_data)}"
     return ""

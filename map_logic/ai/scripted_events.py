@@ -9,7 +9,7 @@ from data import queries
 from data.state_access import world_for, session_for
 from map_logic.ai import ai_handler, ai_prompts
 from map_logic.diplomacy import diplomacy_lifecycle as lifecycle
-from map_logic.diplomacy import diplomacy_messages, guarantees, military_attaches, volunteers
+from map_logic.diplomacy import diplomacy_messages, global_rules, guarantees, military_attaches, volunteers
 from map_logic.diplomacy.diplomacy_processor import action_is_legal
 from map_logic.territory import ownership
 
@@ -403,8 +403,10 @@ def _answer_request(run, nation, target, act, expected_action, verdict):
     pending_action, pending_turns = queries.get_diplomatic_status(target, nation, run.world.nation_data)
     if pending_turns > 0 and pending_action == expected_action:
         request = diplomacy_messages.get_pending(run.world.nation_data, target, nation)
+        # Global rules read the scripted mark when the answer is settled.
         diplomacy_messages.set_response(run.world.nation_data, nation, target, verdict, expected_action,
-                                        message=act.get("message", ""), parameters=request.get("parameters"))
+                                        message=act.get("message", ""), parameters=request.get("parameters"),
+                                        scripted=True)
 
 
 def _answer_proposal(run, nation, target, act):
@@ -447,16 +449,18 @@ def _send_request(run, nation, pending, target, act, action):
     # guard before entering pending_diplomacy. This keeps an authored event from
     # starting an illegal war, faction change, or diplomatic request merely
     # because the board changed since it was made.
-    legal, reason = action_is_legal(run.context, nation, target, action)
+    legal, reason = action_is_legal(run.context, nation, target, action, scripted=True)
     if not legal:
         print(f"[SCRIPTED EVENT] Skipping {action} from {nation} to {target}: {reason}.")
         return
     custom_message = act.get("message", "")
+    # Global rules read the scripted mark again when the request is sent.
     lifecycle.put_request(run.world.nation_data, nation, target, **{
         "action": action,
         "turns": 0,
         "timer": 0,
         "message": custom_message,
+        "scripted": True,
     })
     if act.get("ai_generate", False):
         # Generated here rather than queued. Scripted events run *after* the LLM
@@ -566,7 +570,13 @@ def scripted_event_response_preview(context, nation, sender, action):
     if (action == "TRADE" and nation not in session_for(context).active_players
             and queries.are_at_war(nation, sender, world_for(context).nation_data)):
         return "NO"
-    return process_scripted_events(context, preview_request=(nation, sender, action))
+    response = process_scripted_events(context, preview_request=(nation, sender, action))
+    # An accepting event cannot break a global rule that binds scripted events.
+    choice = global_rules.Choice(global_rules.is_ai_controlled(context, nation), accepting=True, scripted=True)
+    if response in ("YES", "MAYBE") and global_rules.forbidden_reason(context, sender, nation, action,
+                                                                      choices=(choice,)):
+        return "NO"
+    return response
 
 
 def _event_can_fire(event, index, fired_events, nation, human_players):

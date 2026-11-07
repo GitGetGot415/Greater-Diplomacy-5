@@ -326,8 +326,11 @@ LITE_RESPONSE_KEYS = {action: definition.lite_response for action, definition in
                       if definition.lite_response}
 
 
-def availability(context, sender, target, action, *, phase="draft"):
-    """Check game rules independently of selection, player authority, and AI preference."""
+def availability(context, sender, target, action, *, phase="draft", scripted=False):
+    """Check game rules independently of selection, player authority, and AI preference.
+
+    `scripted` says a scripted event chose this action, which global rules may exempt.
+    """
     from data.state_access import world_for
     from map_logic.diplomacy import global_rules
     world = world_for(context)
@@ -348,6 +351,7 @@ def availability(context, sender, target, action, *, phase="draft"):
         return Availability(False, "unknown diplomatic action")
     allowed, reason = definition.legality(context, sender, target, action, nation_data, sender_data, target_data)
     if allowed:
-        reason = global_rules.forbidden_reason(context, sender, target, action)
+        choice = global_rules.Choice(global_rules.is_ai_controlled(context, sender), scripted=scripted)
+        reason = global_rules.forbidden_reason(context, sender, target, action, choices=(choice,))
         allowed = not reason
     return Availability(allowed, reason)

@@ -14,14 +14,17 @@ from data import queries
 from data.map import load_map
 from data.world_nations import WorldNations
 from map_logic.ai import ai_evaluation
+from map_logic.ai.scripted_events import process_scripted_events
 from map_logic.diplomacy import global_rules, treaty_effects
+from tests.test_scripted_diplomacy_actions import event
 from map_logic.diplomacy.action_definitions import availability
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def rule(country, rule_type, target, strength=global_rules.STRONG):
-    return {"country": country, "rule": rule_type, "target": target, "strength": strength}
+def rule(country, rule_type, target, strength=global_rules.STRONG, bypass=True):
+    return {"country": country, "rule": rule_type, "target": target, "strength": strength,
+            "bypass_scripted_events": bypass}
 
 
 class GlobalRuleTests(unittest.TestCase):
@@ -112,17 +115,19 @@ class GlobalRuleTests(unittest.TestCase):
 
         self.assertTrue(queries.are_at_war("A", "B", self.game.nation_data))
 
-    def test_a_weak_rule_binds_ai_senders_but_not_human_players(self):
+    def test_decent_and_weak_rules_bind_ai_senders_but_not_human_players(self):
         # A and B are human. C and D are AI.
-        self.game.global_rules = [rule("A", global_rules.DECLARE_WAR, "C", global_rules.WEAK),
-                                  rule("C", global_rules.DECLARE_WAR, "A", global_rules.WEAK)]
+        for strength in (global_rules.DECENT, global_rules.WEAK):
+            with self.subTest(strength=strength):
+                self.game.global_rules = [rule("A", global_rules.DECLARE_WAR, "C", strength),
+                                          rule("C", global_rules.DECLARE_WAR, "A", strength)]
 
-        self.assertTrue(self.allowed("A", "C", "WAR_DECLARATION"))
-        self.assertFalse(self.allowed("C", "A", "WAR_DECLARATION"))
+                self.assertTrue(self.allowed("A", "C", "WAR_DECLARATION"))
+                self.assertFalse(self.allowed("C", "A", "WAR_DECLARATION"))
 
-    def test_an_ai_refuses_and_cannot_accept_what_a_weak_rule_forbids(self):
+    def test_an_ai_refuses_and_cannot_accept_what_a_decent_rule_forbids(self):
         self.game.set_war("A", "C")
-        self.game.global_rules = [rule("A", global_rules.MAKE_PEACE, "C", global_rules.WEAK)]
+        self.game.global_rules = [rule("A", global_rules.MAKE_PEACE, "C", global_rules.DECENT)]
         self.assertTrue(self.allowed("A", "C", "CEASEFIRE"))
 
         # The game passes country records that resolve to their world.
@@ -135,12 +140,65 @@ class GlobalRuleTests(unittest.TestCase):
         self.assertIn("may never", outcome.blocked)
         self.assertTrue(queries.are_at_war("A", "C", self.game.nation_data))
 
-    def test_a_weak_rule_lets_human_players_agree_with_each_other(self):
-        self.game.global_rules = [rule("A", global_rules.TRADE, "B", global_rules.WEAK)]
+    def test_an_ai_may_accept_what_a_weak_rule_forbids(self):
+        self.game.set_war("A", "C")
+        self.game.global_rules = [rule("A", global_rules.MAKE_PEACE, "C", global_rules.WEAK)]
+        self.assertFalse(self.allowed("C", "A", "CEASEFIRE"))
 
-        self.assertTrue(self.allowed("A", "B", "TRADE"))
-        self.assertEqual(global_rules.forbidden_reason(
-            self.game, "A", "B", "TRADE", ai_decides=global_rules.is_ai_controlled(self.game, "B")), "")
+        nation_data = WorldNations(self.game, self.game.nation_data)
+        verdict_check = global_rules.forbidden_reason(
+            nation_data, "A", "C", "CEASEFIRE", choices=(global_rules.Choice(True, accepting=True),))
+        outcome = treaty_effects.apply_treaty_effect(self.game, "CEASEFIRE", "A", "C")
+
+        self.assertEqual(verdict_check, "")
+        self.assertIsNone(outcome.blocked)
+        self.assertFalse(queries.are_at_war("A", "C", self.game.nation_data))
+
+    def test_decent_and_weak_rules_let_human_players_agree_with_each_other(self):
+        for strength in (global_rules.DECENT, global_rules.WEAK):
+            with self.subTest(strength=strength):
+                self.game.global_rules = [rule("A", global_rules.TRADE, "B", strength)]
+                accepting = global_rules.Choice(global_rules.is_ai_controlled(self.game, "B"), accepting=True)
+
+                self.assertTrue(self.allowed("A", "B", "TRADE"))
+                self.assertEqual(global_rules.forbidden_reason(
+                    self.game, "A", "B", "TRADE", choices=(accepting,)), "")
+
+    def test_scripted_events_break_a_rule_only_when_it_does_not_bypass_them(self):
+        for bypass in (True, False):
+            with self.subTest(bypass=bypass):
+                self.game.global_rules = [rule("C", global_rules.DECLARE_WAR, "D", bypass=bypass)]
+
+                self.assertFalse(self.allowed("C", "D", "WAR_DECLARATION"))
+                self.assertEqual(
+                    availability(self.game, "C", "D", "WAR_DECLARATION", scripted=True).allowed, not bypass)
+
+    def test_a_scripted_declaration_reaches_war_when_the_rule_lets_events_through(self):
+        self.game.global_rules = [rule("C", global_rules.DECLARE_WAR, "D", bypass=False)]
+        self.game.nation_data["C"]["scripted_events"] = [event("Declare War", "D")]
+
+        process_scripted_events(self.game)
+        self.game.run_turn()
+
+        self.assertTrue(queries.are_at_war("C", "D", self.game.nation_data))
+
+    def test_a_scripted_declaration_is_skipped_when_the_rule_bypasses_events(self):
+        self.game.global_rules = [rule("C", global_rules.DECLARE_WAR, "D")]
+        self.game.nation_data["C"]["scripted_events"] = [event("Declare War", "D")]
+
+        process_scripted_events(self.game)
+
+        self.assertEqual(self.game.pending_action("C", "D"), "")
+
+    def test_a_scripted_acceptance_follows_the_bypass_setting(self):
+        self.game.global_rules = [rule("A", global_rules.TRADE, "C", global_rules.DECENT, bypass=False)]
+
+        outcome = treaty_effects.apply_treaty_effect(self.game, "TRADE", "A", "C", scripted=True)
+        self.assertIsNone(outcome.blocked)
+
+        self.game.global_rules[0]["bypass_scripted_events"] = True
+        outcome = treaty_effects.apply_treaty_effect(self.game, "TRADE", "A", "C", scripted=True)
+        self.assertIn("may never", outcome.blocked)
 
     def test_find_rule_matches_mutual_rules_in_either_order(self):
         rules = [rule("A", global_rules.TRADE, "B"), rule("A", global_rules.GUARANTEE, "B")]

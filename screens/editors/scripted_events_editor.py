@@ -111,8 +111,14 @@ It will fallback to whatever you manually entered if the llm ai is turned off or
 
 GLOBAL_RULES_HELP_TEXT = """Global rules stop one diplomatic action between two countries for the whole game. Each rule reads "<country> may never <rule> <target>".
 
-Strong rules bind every country, including human players.
-Weak rules bind only AI countries. An AI country never proposes, declares, or accepts what the rule forbids, but a human player still can. Scripted events count as their country's actions, so a Weak rule also stops an AI country's events.
+Strength:
+- Strong: binds every country, including human players.
+- Decent: binds only AI countries. An AI country never proposes, declares, or accepts what the rule forbids. A human player still can.
+- Weak: an AI country never proposes or declares what the rule forbids, but it may still accept it when another country proposes it.
+
+Bypass Scripted Events?:
+- On: scripted events cannot break the rule. Each event follows the rule's strength, as the country it belongs to.
+- Off: scripted events can break the rule.
 
 Rules only apply while scripted events are enabled in scenario settings.
 
@@ -441,6 +447,8 @@ class _GlobalRulesScreen(_ModalScreen):
     # Each form field is a label with its picker 20px below it.
     FORM_TOP = 84
     FORM_STEP = 66
+    # The Bypass Scripted Events? toggle labels itself, so the buttons sit this far below its top.
+    TOGGLE_TO_BUTTONS = 50
     HELP_Y = 12
 
     def __init__(self, game_state, map_ref):
@@ -451,6 +459,7 @@ class _GlobalRulesScreen(_ModalScreen):
         self.rule_type = global_rules.RULE_TYPES[0]
         self.target = ""
         self.strength = global_rules.STRONG
+        self.bypass_scripted_events = True
 
         nation_data = map_ref.nation_data
         # Unlike event targets, rules can name countries that do not exist yet,
@@ -475,6 +484,7 @@ class _GlobalRulesScreen(_ModalScreen):
         rule = self.rules[index]
         self.country, self.rule_type, self.target = rule["country"], rule["rule"], rule["target"]
         self.strength = rule["strength"]
+        self.bypass_scripted_events = rule["bypass_scripted_events"]
         self.refresh_ui()
 
     def add_rule(self):
@@ -488,7 +498,7 @@ class _GlobalRulesScreen(_ModalScreen):
             dialogs.show_error("Error", "That rule already exists.")
             return
         self.rules.append({"country": self.country, "rule": self.rule_type, "target": self.target,
-                           "strength": self.strength})
+                           "strength": self.strength, "bypass_scripted_events": self.bypass_scripted_events})
         self.selected = len(self.rules) - 1
         self.refresh_ui()
 
@@ -525,7 +535,8 @@ class _GlobalRulesScreen(_ModalScreen):
         row_w = self.LIST_W - 24
         for i, y in self.pane_rows("rules", len(self.rules), self.list_top, self.list_view_h, row_h=self.ROW_H):
             rule = self.rules[i]
-            text = f"[{rule['strength']}] {global_rules.describe(rule, self.map_ref.nation_data)}"
+            tags = rule["strength"] if rule["bypass_scripted_events"] else f"{rule['strength']}, Events Can Break"
+            text = f"[{tags}] {global_rules.describe(rule, self.map_ref.nation_data)}"
             btn = self.button(self.list_x, y, row_w, "blue", text_utils.truncate_chars(text, row_w // 9),
                               lambda idx=i: self.select(idx), sound_kind="select_sub_category")
             btn.is_selected = i == self.selected
@@ -534,7 +545,8 @@ class _GlobalRulesScreen(_ModalScreen):
             self.elements.append(btn)
 
         picker_y = [self._field_y(i) + 20 for i in range(4)]
-        buttons_y = self._field_y(4) + 20
+        toggle_y = self._field_y(4)
+        buttons_y = toggle_y + self.TOGGLE_TO_BUTTONS
         self.elements += [
             self._country_combo(picker_y[0], "country", "Country"),
             self.combo(self.form_x, picker_y[1], self.FORM_W, self.rule_type, global_rules.RULE_TYPES,
@@ -542,6 +554,8 @@ class _GlobalRulesScreen(_ModalScreen):
             self._country_combo(picker_y[2], "target", "Target Country"),
             self.combo(self.form_x, picker_y[3], self.FORM_W, self.strength, global_rules.STRENGTHS,
                        "Strength", lambda v: self._assign("strength", v)),
+            self.toggle(self.form_x, toggle_y, self.FORM_W, self.bypass_scripted_events, "Bypass Scripted Events?",
+                        lambda: self._assign("bypass_scripted_events", not self.bypass_scripted_events)),
             self.button(self.form_x, buttons_y, 120, "blue", "Add", self.add_rule),
         ]
         delete_btn = self.button(self.form_x + 128, buttons_y, 120, "red", "Delete", self.delete_rule)

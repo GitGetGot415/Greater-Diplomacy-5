@@ -286,18 +286,25 @@ The Scripted Events editor edits them. Each rule reads "<country> may never <rul
 Rules apply only while scripted events are enabled.
 A rule can name a country that does not exist yet, such as one released partway through the game.
 
-Each rule is Strong or Weak.
-A Strong rule binds every country, including human players, in both multiplayer modes.
-A Weak rule binds only AI-controlled countries, with or without the LLM.
-An AI country never proposes, declares, or accepts what a Weak rule forbids. Human players still can.
-Scripted events act for their country, so a Weak rule also stops an AI country's events.
+Each rule has a strength. AI-controlled countries follow it with or without the LLM.
+- Strong binds every country, including human players, in both multiplayer modes.
+- Decent binds only AI-controlled countries. They never propose, declare, or accept what the rule forbids.
+- Weak binds AI-controlled countries only when they propose or declare. They may accept what the rule forbids.
+Human players are bound only by Strong rules.
 
-The country that makes the choice decides whether a Weak rule applies.
+Each rule also has Bypass Scripted Events?. When it is on, scripted events cannot break the rule.
+An event follows the rule's strength as the country it belongs to.
+When it is off, scripted events can break the rule.
+Scripted events mark the requests and answers they create as scripted.
+Tournament hosts remove that mark from player moves, and real-time commands cannot set it.
+
+The country that makes each choice decides whether a rule binds it.
 Shared availability checks the sender when a request is drafted or sent.
 Accepting an offer checks the accepter again, because factions and wars can change while the offer waits.
-The AI's acceptance verdict refuses forbidden offers, so outgoing indicators show NO for them.
+The AI's acceptance verdict refuses offers that a rule forbids it to accept, so outgoing indicators show NO for them.
+Scripted acceptance forecasts follow the same rules.
 A refused acceptance returns the proposer's escrow.
-Crossed requests that a rule forbids do not settle. For a Weak rule, either country being AI-controlled is enough.
+Crossed requests do not settle when a rule binds either country's request.
 
 Each rule checks every country that an action binds:
 - Declare War On also covers joining a war against the target through Call to Arms or Join Wars.

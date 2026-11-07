@@ -147,6 +147,8 @@ def legacy_player_country(context, country_id, nation_update):
                 intent["request_id"] = host_record["request_id"]
                 drafts[target] = intent
         else:
+            # Only the host's scripted events may mark a request as scripted.
+            record.pop("scripted", None)
             available = availability(context, country_id, target, record.get("action", ""))
             if not available.allowed:
                 # Older snapshots discard invalid drafts while retaining unrelated choices.
@@ -158,6 +160,7 @@ def legacy_player_country(context, country_id, nation_update):
     for target, response in submitted[country_id]["diplo_responses"].items():
         canonical = dict(response)
         canonical.pop("legacy_unmatched", None)
+        canonical.pop("scripted", None)
         canonical.update(lifecycle.canonical_response_reference(probe, country_id, target, response))
         canonical_responses[target] = canonical
     lifecycle.apply_draft(probe, country_id, drafts, canonical_responses, draft_lists)

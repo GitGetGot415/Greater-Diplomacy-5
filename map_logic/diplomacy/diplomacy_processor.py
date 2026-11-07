@@ -188,9 +188,9 @@ def _decay_modifiers_and_truces(context):
                 del war_durs[enemy]
 
 
-def action_is_legal(context, sender, target, action_type):
+def action_is_legal(context, sender, target, action_type, *, scripted=False):
     """Preserve the AI follow-up policy around shared gameplay legality."""
-    result = availability(context, sender, target, action_type)
+    result = availability(context, sender, target, action_type, scripted=scripted)
     if result.allowed and action_type == "LEAVE_FACTION":
         blocked = why_an_ai_may_not_leave(sender, world_for(context).nation_data)
         if blocked:
@@ -245,10 +245,12 @@ def _resolve_cross_action(context, nation_a, nation_b, a_data, b_data, msg_key):
     if b_data and nation_a in b_data: lifecycle.remove_request(b_data, nation_a)
 
 
-def _crossing_forbidden(context, sender, target, action):
-    """Whether a global rule forbids settling a crossed request. Both countries chose it."""
-    ai_decides = global_rules.is_ai_controlled(context, sender) or global_rules.is_ai_controlled(context, target)
-    return bool(global_rules.forbidden_reason(context, sender, target, action, ai_decides=ai_decides))
+def _crossing_forbidden(context, sender, target, action, sender_info, target_info):
+    """Whether a global rule forbids settling a crossed request. Both countries proposed it."""
+    choices = tuple(global_rules.Choice(global_rules.is_ai_controlled(context, country),
+                                        scripted=info.get("scripted", False))
+                    for country, info in ((sender, sender_info), (target, target_info)))
+    return bool(global_rules.forbidden_reason(context, sender, target, action, choices=choices))
 
 
 def _war_cancels_response(context, declarer, victim):
@@ -315,14 +317,14 @@ def _resolve_simultaneous_clashes(context):
             # the rule forbids its sender, and the normal answer process handles the rest.
             if (a_action == "JOIN_FACTION_REQ" and b_action == "FACTION_INVITE"
                     and queries.can_invite_to_faction(nation_b, world_state.nation_data)
-                    and not _crossing_forbidden(context, nation_a, nation_b, a_action)):
+                    and not _crossing_forbidden(context, nation_a, nation_b, a_action, a_info, b_info)):
                 if finalize_faction_join(world_state.map_data, world_state.nation_data, nation_b, nation_a):
                     log_global_event(world_state.nation_data, f"{nation_a} and {nation_b} have united their factions!")
                 _resolve_cross_action(context, nation_a, nation_b, a_data, b_data, "CROSS_FACTION_JOIN")
 
             elif (b_action == "JOIN_FACTION_REQ" and a_action == "FACTION_INVITE"
                   and queries.can_invite_to_faction(nation_a, world_state.nation_data)
-                  and not _crossing_forbidden(context, nation_b, nation_a, b_action)):
+                  and not _crossing_forbidden(context, nation_b, nation_a, b_action, b_info, a_info)):
                 if finalize_faction_join(world_state.map_data, world_state.nation_data, nation_a, nation_b):
                     log_global_event(world_state.nation_data, f"{nation_a} and {nation_b} have united their factions!")
                 _resolve_cross_action(context, nation_a, nation_b, a_data, b_data, "CROSS_FACTION_JOIN")
@@ -340,7 +342,7 @@ def _resolve_simultaneous_clashes(context):
                 lifecycle.remove_request(a_data, nation_b)
 
             elif (a_action == "CEASEFIRE" and b_action == "CEASEFIRE"
-                  and not _crossing_forbidden(context, nation_a, nation_b, a_action)):
+                  and not _crossing_forbidden(context, nation_a, nation_b, a_action, a_info, b_info)):
                 finalize_neutral(world_state.nation_data, nation_a, nation_b)
                 log_global_event(world_state.nation_data, f"{nation_a} and {nation_b} have signed a mutual ceasefire.")
                 _resolve_cross_action(context, nation_a, nation_b, a_data, b_data, "CROSS_CEASEFIRE")
@@ -348,8 +350,8 @@ def _resolve_simultaneous_clashes(context):
             elif (((a_action == "CALL_TO_ARMS" and b_action == "JOIN_WARS")
                    or (a_action == "JOIN_WARS" and b_action == "CALL_TO_ARMS"))
                   # Each country joins the other's wars.
-                  and not _crossing_forbidden(context, nation_a, nation_b, "JOIN_WARS")
-                  and not _crossing_forbidden(context, nation_b, nation_a, "JOIN_WARS")):
+                  and not _crossing_forbidden(context, nation_a, nation_b, "JOIN_WARS", a_info, b_info)
+                  and not _crossing_forbidden(context, nation_b, nation_a, "JOIN_WARS", b_info, a_info)):
 
                 join_faction_wars(world_state.map_data, world_state.nation_data, nation_a, nation_b)
                 join_faction_wars(world_state.map_data, world_state.nation_data, nation_b, nation_a)
@@ -937,7 +939,7 @@ def _process_queued_responses(context):
                 # pass below runs the same rules -- see treaty_effects.
                 outcome = treaty_effects.apply_treaty_effect(
                     context, orig_action, sender, country_name, params,
-                    escrow=their_request.pop("escrow", None))
+                    escrow=their_request.pop("escrow", None), scripted=resp.get("scripted", False))
                 if outcome.blocked:
                     msg_text = outcome.blocked
                     wrote_it = False
@@ -1349,7 +1351,8 @@ def _process_pass1_immediate_actions(context):
                     turns = 0 # Force execution this turn
 
             if turns == 0:
-                available = availability(context, country_name, target, action, phase="send")
+                available = availability(context, country_name, target, action, phase="send",
+                                         scripted=info.get("scripted", False))
                 if not available.allowed:
                     actions_to_clear.append(target)
                     continue

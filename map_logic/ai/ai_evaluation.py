@@ -506,9 +506,9 @@ def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_typ
     here: the relation lookup omits id_to_province and so skips the claim
     penalty, and `custom_msg` doubles as the peace terms string.
     """
-    # Global rules, Weak ones included, decide before any judgement call.
+    # Global rules that bind an AI's acceptance decide before any judgement call.
     forbidden = global_rules.forbidden_reason(nation_data, sender_nation, ai_nation, action_type,
-                                              ai_decides=True)
+                                              choices=(global_rules.Choice(True, accepting=True),))
     if forbidden:
         return Verdict(False, 1.0, forbidden)
 

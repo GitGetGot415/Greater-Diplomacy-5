@@ -59,6 +59,7 @@ class EditorScreenSmokeTests(unittest.TestCase):
             first, second = (country for _label, country in screen.country_items[:2])
             screen.country, screen.rule_type, screen.target = first, global_rules.MAKE_PEACE, second
             screen.strength = global_rules.WEAK
+            screen.bypass_scripted_events = False
             with mock.patch("ui.dialogs.show_error") as show_error:
                 screen.add_rule()
                 screen.country, screen.target = second, first  # The same mutual rule, reversed.
@@ -66,7 +67,7 @@ class EditorScreenSmokeTests(unittest.TestCase):
             show_error.assert_called_once()
             self.assertEqual(self.map.global_rules,
                              [{"country": first, "rule": global_rules.MAKE_PEACE, "target": second,
-                               "strength": global_rules.WEAK}])
+                               "strength": global_rules.WEAK, "bypass_scripted_events": False}])
             self.exercise(screen)
             with mock.patch("ui.dialogs.show_info") as show_info:
                 screen.show_help()
