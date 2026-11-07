@@ -1,4 +1,4 @@
-# Greater Diplomacy 5 Agent Guide
+# Greater Diplomacy 5 Agent Guide (READ EVERYTHING DO NOT SKIM JUST A FEW LINES)
 
 This file gives the rules for AI-assisted changes in this repository.
 AI means artificial intelligence. UI means user interface.
