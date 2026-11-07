@@ -887,6 +887,10 @@ class AirIntegrationTests(unittest.TestCase):
         self.assertEqual(self.plane, before)
 
     def test_ai_candidates_are_canonical_and_heuristic_issues_attack(self):
+        # Something worth hitting: a strike on empty ground destroys nothing,
+        # and the AI only flies strikes with a positive projected exchange.
+        defender = wing(self.target, "Infantry Type 1910", "B")
+        defender.update(attack=0, defense=0)
         candidates = ai_movement.legal_air_candidates(self.game, self.plane, self.base)
         for order in candidates:
             self.assertEqual(order, queries.canonical_air_order(self.game, self.plane, self.base, order))
@@ -1667,10 +1671,20 @@ class AirMissionSelectionTests(unittest.TestCase):
                 _, drafts = snapshot_moves._validate_aircraft_orders(self.game, "A",
                     {"aircraft_orders": [{"unit_id": self.unit["unit_id"], "order": self.unit["order"]}]}, {})
                 self.assertEqual(drafts[0][1]["target_type"], target)
+                upgrade = dict(self.unit["order"])
+                # The AI repairs a wounded aircraft rather than upgrading it: an
+                # upgrade keeps the health percentage, so it would stay wounded.
                 self.unit["order"] = {}
                 with patch.object(ai_movement, "_air_base_threats", return_value=set()):
                     ai_movement._assign_air_orders(self.game, "A", [(self.unit, self.base)])
-                self.assertEqual(self.unit["order"]["target_type"], target)
+                self.assertEqual(self.unit["order"]["type"], "REPAIR")
+                healthy = dict(self.unit, health=self.unit["max_health"], order={})
+                self.base["units"] = [healthy]
+                with patch.object(ai_movement, "_air_base_threats", return_value=set()):
+                    ai_movement._assign_air_orders(self.game, "A", [(healthy, self.base)])
+                self.assertEqual(healthy["order"]["target_type"], target)
+                self.base["units"] = [self.unit]
+                self.unit["order"] = upgrade
                 before = {field: self.unit[field] for field in ("health", "max_health", "attack", "defense", "speed")}
                 movement_processor.process_upgrades(self.game)
                 self.assertEqual(self.unit["type"], target)

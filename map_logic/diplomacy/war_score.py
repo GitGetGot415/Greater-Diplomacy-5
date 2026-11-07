@@ -86,35 +86,42 @@ def occupation(context, side_a, side_b):
 # STRENGTH
 # ==========================================
 
-def nation_power(context, nation, world=None):
+def nation_power(context, nation, world=None, viewer=None):
     """One nation's weight: its army plus a hundredth of its economy.
 
     The game's answer to "how strong is this country", and the unit _bloc_power
     sums. Public because a faction leadership challenge weighs one member
     against another and must use the same scale the peace table does -- two
     definitions of strength would be two different answers to the same question.
+
+    With a `viewer` (and an AIWorld), the answer is that country's estimate
+    instead: exact for its own side, a fog-limited guess for everyone else.
+    The war-score bar and every other public reading pass no viewer.
     """
     world_state = world_for(context)
+    if world is not None and viewer is not None:
+        return (world.perceived_military(viewer, nation)
+                + world.perceived_econ(viewer, nation) / 100.0)
     if world is not None:
         return world.military(nation) + world.econ_power(nation) / 100.0
     return (queries.get_military_strength(nation, world_state.map_data)
             + queries.get_economic_power(nation, world_state.nation_data) / 100.0)
 
 
-def _bloc_power(context, members, world=None):
+def _bloc_power(context, members, world=None, viewer=None):
     """Armies plus economy for a whole side.
 
     Summed per member rather than through get_alliance_military_strength, which
     walks each nation's own friend list and would count a faction of four once
     per member.
     """
-    return sum(nation_power(context, nation, world) for nation in members)
+    return sum(nation_power(context, nation, world, viewer) for nation in members)
 
 
-def strength_share(context, side_a, side_b, world=None):
-    """Side a's share of the two blocs' combined power, 0..1."""
-    power_a = _bloc_power(context, side_a, world)
-    power_b = _bloc_power(context, side_b, world)
+def strength_share(context, side_a, side_b, world=None, viewer=None):
+    """Side a's share of the two blocs' combined power, 0..1. See nation_power for `viewer`."""
+    power_a = _bloc_power(context, side_a, world, viewer)
+    power_b = _bloc_power(context, side_b, world, viewer)
     combined = power_a + power_b
     if combined <= 0:
         return 0.5
@@ -125,7 +132,7 @@ def strength_share(context, side_a, side_b, world=None):
 # THE HAND
 # ==========================================
 
-def leverage(context, side_a, side_b, world=None):
+def leverage(context, side_a, side_b, world=None, viewer=None):
     """Each side's position at the table.
 
     Returns {"a": 0..1, "b": 0..1, "parts": {...}} where a and b sum to 1, so the
@@ -140,10 +147,14 @@ def leverage(context, side_a, side_b, world=None):
 
     `world` is an AIWorld when one is in scope, purely to reuse its memoised
     strength figures; the answer is the same without it.
+
+    `viewer` makes this one country's reading of the war: strength comes from
+    its own estimate of the other side (see nation_power). Occupation is public
+    map data and reads the same for everyone. A viewer needs a `world`.
     """
     side_a, side_b = list(side_a), list(side_b)
     occ_a, occ_b = occupation(context, side_a, side_b)
-    share_a = strength_share(context, side_a, side_b, world)
+    share_a = strength_share(context, side_a, side_b, world, viewer)
 
     parts_a = {"occupation": occ_a, "strength": share_a}
     parts_b = {"occupation": occ_b, "strength": 1.0 - share_a}
@@ -167,17 +178,18 @@ def _raw(parts):
             + c.WAR_SCORE_W_STRENGTH * parts["strength"])
 
 
-def between(context, nation, opponent, world=None):
+def between(context, nation, opponent, world=None, viewer=None):
     """Leverage from `nation`'s point of view, sides resolved from the war itself.
 
     The convenience form: peace_scope decides who is actually bound by a
     settlement between these two, and this reports it as
-    {"mine": 0..1, "theirs": 0..1, ...}.
+    {"mine": 0..1, "theirs": 0..1, ...}. Pass `viewer` for one country's own
+    reading of the war, as leverage describes.
     """
     world_state = world_for(context)
 
     side_mine, side_theirs = peace_scope.war_sides(nation, opponent, world_state.nation_data)
-    scores = leverage(context, side_mine, side_theirs, world)
+    scores = leverage(context, side_mine, side_theirs, world, viewer)
     return {"mine": scores["a"], "theirs": scores["b"],
             "parts": scores["parts"]["a"], "their_parts": scores["parts"]["b"],
             "sides": (side_mine, side_theirs)}

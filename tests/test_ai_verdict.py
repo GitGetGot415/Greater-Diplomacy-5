@@ -83,10 +83,17 @@ class ShapeTests(VerdictTestCase):
         """A marginal call is exactly where a leader's own judgement should be
         allowed to differ from the staff's, which is what the model reads this
         for. It was flat 1.0 while the decision was a string comparison."""
+        from unittest.mock import patch
+        from map_logic.ai import ai_opinion
+
         self.nation_data["Avaria"]["at_war_with"] = ["Borland"]
         self.nation_data["Borland"]["at_war_with"] = ["Avaria"]
         self.nation_data["Avaria"]["war_durations"] = {"Borland": 20}
-        v = self.verdict("CEASEFIRE")
+        # A close call, fixed here rather than found in the fixture's armies,
+        # so retuning the peace weights cannot turn this into a clear one.
+        close = ai_opinion.Peace(True, 0.05, "a close call", "")
+        with patch.object(ai_opinion, "peace_verdict", return_value=close):
+            v = self.verdict("CEASEFIRE")
         self.assertLess(v.confidence, 1.0)
         self.assertTrue(v.reason)
 

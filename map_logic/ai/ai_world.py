@@ -26,26 +26,47 @@ which *can* hand territory around, runs after every AI phase. The one thing
 that does change mid-pass is relation modifiers, so call invalidate_relations()
 after writing any.
 
-Stdlib and `data` only -- no requests, no google.genai -- so it imports under
-Pyodide alongside the rest of the heuristic AI.
+No requests, no google.genai -- stdlib, `data`, and the pure-Python deal
+valuation -- so it imports under Pyodide alongside the rest of the heuristic AI.
+
+Perception: the perceived_* answers are one country's estimate of another, for
+peace decisions. A country sees its own side exactly, sees enemy units on tiles
+it can see, and guesses the rest from public land. See perceived_military.
 """
 
 from data.state_access import world_for, session_for
 import collections
 import random
+from types import SimpleNamespace
 
 import data.constants as c
 from data import queries
+from map_logic.ai import ai_personality
+from map_logic.diplomacy import deal as deal_mod
+
+
+def visible_to(map_data, nation_data, id_to_province, viewer):
+    """Province ids `viewer` can see now, as the shared fog rules compute it.
+
+    None means the viewer sees everything. This builds the same view a
+    player's map uses, so the AI sees no more and no less than a player would.
+    """
+    view = SimpleNamespace(player_country=viewer, map_data=map_data,
+                           nation_data=nation_data, id_to_province=id_to_province,
+                           tactical_mode=False, player_unit=None)
+    visible, _partial = queries.get_visible_provinces(view)
+    return visible
 
 
 class AIWorld:
     """Per-turn snapshot of the map, with memoised strength/relation queries."""
 
     def __init__(self, map_data, nation_data, id_to_province, total_turns=0,
-                 human_players=()):
+                 human_players=(), scenario_settings=None):
         self.map_data = map_data
         self.nation_data = nation_data
-        self.scenario_settings = getattr(world_for(nation_data), "scenario_settings", {})
+        self.scenario_settings = (scenario_settings if scenario_settings is not None
+                                  else getattr(world_for(nation_data), "scenario_settings", {}))
         self.id_to_province = id_to_province
         self.total_turns = total_turns
 
@@ -106,6 +127,11 @@ class AIWorld:
         self._core_claim_targets = {}
         self._economies = None
         self._major_powers = None
+        self._visible = {}
+        self._land_value = {}
+        self._perceived_military = {}
+        self._perceived_econ = {}
+        self._perceived_ratio = {}
         #: Who is playing, so "a country the player would notice" can be
         #: answered. Empty is fine -- a spectator notices everyone equally.
         self.human_players = list(human_players or ())
@@ -255,18 +281,28 @@ class AIWorld:
         self._border_strength[(nation_b, nation_a)] = (result[1], result[0])
         return result
 
-    def _front_strength(self, prov_ids, evaluating_nation, opposing_nation):
+    def _front_strength(self, prov_ids, evaluating_nation, opposing_nation, viewer=None):
+        """`evaluating_nation`'s side's strength on these tiles.
+
+        With a `viewer`, only what that country can see counts: tiles outside
+        its vision and units hidden from it (submarines) are left out.
+        """
         nation_data = self.nation_data
         friendly = queries.get_all_friendly_nations(evaluating_nation, nation_data)
+        visible = self.visible_provinces(viewer) if viewer is not None else None
         strength = 0
 
         for prov_id in prov_ids:
             prov = self.id_to_province.get(prov_id)
             if not prov:
                 continue
+            if visible is not None and prov_id not in visible:
+                continue
 
             units = prov.get("units", [])
-            friendly_units = [u for u in units if u.get("owner") in friendly]
+            friendly_units = [u for u in units if u.get("owner") in friendly
+                              and (visible is None
+                                   or queries.is_unit_visible_to(u, viewer, prov, nation_data))]
             top_units = queries.get_front_and_relief(
                 friendly_units, terrain=prov.get("terrain"))
 
@@ -301,6 +337,129 @@ class AIWorld:
                            + self.econ_power(target_nation) / 100.0)
 
         return my_border / target_border, my_total / target_total
+
+    # ------------------------------------------------------------------
+    # Perception: one country's view of another, for peace decisions
+    # ------------------------------------------------------------------
+
+    def visible_provinces(self, viewer):
+        """Province ids `viewer` sees this turn, or None when it sees everything."""
+        if viewer not in self._visible:
+            fog = queries.get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR,
+                                            self.scenario_settings)
+            self._visible[viewer] = (visible_to(self.map_data, self.nation_data,
+                                                self.id_to_province, viewer)
+                                     if fog else None)
+        return self._visible[viewer]
+
+    def land_value(self, nation):
+        """What a country's territory is worth, from the public map alone."""
+        cached = self._land_value.get(nation)
+        if cached is None:
+            cached = sum(deal_mod.tile_value(prov) for prov in self.provs_by_owner.get(nation, ()))
+            self._land_value[nation] = cached
+        return cached
+
+    def _knows_exactly(self, viewer, nation):
+        """A country sees its own side; with fog off it sees everyone."""
+        return (nation == viewer
+                or nation in queries.get_all_friendly_nations(viewer, self.nation_data)
+                or self.visible_provinces(viewer) is None)
+
+    def _guess_scale(self, viewer):
+        """How far the viewer's temperament bends a guess about what it cannot see.
+
+        Cautious countries assume the worst about hidden armies and aggressive
+        ones assume the best, by AI_PERCEPTION_SKEW per unit of difference.
+        """
+        person = ai_personality.get(self.nation_data, viewer, self.scenario_settings)
+        return max(0.0, 1.0 + c.AI_PERCEPTION_SKEW
+                   * (person.get("caution", 0.5) - person.get("aggression", 0.5)))
+
+    def _hidden_land_share(self, viewer, nation):
+        """The share of `nation`'s land value the viewer cannot see."""
+        total = self.land_value(nation)
+        if total <= 0:
+            return 0.0
+        visible = self.visible_provinces(viewer)
+        hidden = sum(deal_mod.tile_value(prov) for prov in self.provs_by_owner.get(nation, ())
+                     if prov["id"] not in visible)
+        return hidden / total
+
+    def perceived_military(self, viewer, nation):
+        """`viewer`'s estimate of `nation`'s army.
+
+        Exact for the viewer's own side, and for everyone when fog of war is off.
+        Otherwise: the strength of the units the viewer can actually see, plus a
+        guess for the land it cannot. The guess assumes the other country is as
+        militarized, per unit of land value, as the viewer is itself, scaled by
+        the viewer's temperament (_guess_scale). No randomness: two countries
+        disagree because they see different things and think differently.
+        """
+        if self._knows_exactly(viewer, nation):
+            return self.military(nation)
+        key = (viewer, nation)
+        cached = self._perceived_military.get(key)
+        if cached is None:
+            visible = self.visible_provinces(viewer)
+            seen = sum(queries.calculate_unit_strength(member)
+                       for unit, prov in self.units_by_owner.get(nation, ())
+                       if prov["id"] in visible
+                       and queries.is_unit_visible_to(unit, viewer, prov, self.nation_data)
+                       for member in queries.units_with_air_cargo([unit]))
+            per_land = self.military(viewer) / max(1.0, self.land_value(viewer))
+            guess = (self.land_value(nation) * per_land * self._guess_scale(viewer)
+                     * self._hidden_land_share(viewer, nation))
+            cached = seen + guess
+            self._perceived_military[key] = cached
+        return cached
+
+    def perceived_econ(self, viewer, nation):
+        """`viewer`'s estimate of `nation`'s economic power. Stockpiles are private.
+
+        Exact where perceived_military is exact. Otherwise the viewer assumes
+        the other country's economy matches its own per unit of land value.
+        """
+        if self._knows_exactly(viewer, nation):
+            return self.econ_power(nation)
+        key = (viewer, nation)
+        cached = self._perceived_econ.get(key)
+        if cached is None:
+            cached = (self.land_value(nation) * self.econ_power(viewer)
+                      / max(1.0, self.land_value(viewer)))
+            self._perceived_econ[key] = cached
+        return cached
+
+    def perceived_power_ratio(self, viewer, enemy):
+        """power_ratio as `viewer` sees it: (border_ratio, global_ratio).
+
+        The viewer's own side is exact. Every other country's army and economy
+        is the viewer's estimate, and the enemy's front counts only the units
+        the viewer can see on it. power_ratio itself stays exact, because war
+        declarations and other strategy still read it.
+        """
+        key = (viewer, enemy)
+        cached = self._perceived_ratio.get(key)
+        if cached is not None:
+            return cached
+
+        tiles = self.border_tiles.get(frozenset((viewer, enemy)), ())
+        my_border = self.border_strength(viewer, enemy)[0]
+        target_border = max(1, self._front_strength(tiles, enemy, viewer, viewer=viewer))
+
+        enemy_side = queries.get_all_friendly_nations(enemy, self.nation_data)
+        enemy_distraction = sum(self.perceived_military(viewer, other)
+                                for other in queries.get_enemies(enemy, self.nation_data)
+                                if other in self.nation_data and other not in c.UNPLAYABLE_NATIONS)
+        my_total = (self.alliance_strength(viewer)
+                    + self.econ_power(viewer) / 100.0
+                    + enemy_distraction * c.AI_ENEMY_DISTRACTION_WEIGHT)
+        target_total = max(1.0, sum(self.perceived_military(viewer, member) for member in enemy_side)
+                           + self.perceived_econ(viewer, enemy) / 100.0)
+
+        cached = (my_border / target_border, my_total / target_total)
+        self._perceived_ratio[key] = cached
+        return cached
 
     def war_power_ratio(self, ai_nation, target_nation):
         """Use overall power when a nearby sea target has no shared land front."""
@@ -475,7 +634,8 @@ def build(context):
 
     return AIWorld(world_state.map_data, world_state.nation_data,
                    world_state.id_to_province, total_turns,
-                   human_players=session_for(context).active_players)
+                   human_players=session_for(context).active_players,
+                   scenario_settings=world_state.scenario_settings)
 
 
 def for_screen(context):

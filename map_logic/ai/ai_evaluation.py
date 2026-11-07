@@ -598,7 +598,8 @@ def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_typ
         # actually decided could and did disagree in front of the player.
         if world is None:
             world = ai_world.AIWorld(map_data, nation_data,
-                                     {prov["id"]: prov for prov in map_data.values()})
+                                     {prov["id"]: prov for prov in map_data.values()},
+                                     scenario_settings=scenario_settings)
 
         terms = _peace_terms(nation_data, sender_nation, ai_nation, custom_msg)
         # One number decides and explains, so the sentence under the player's

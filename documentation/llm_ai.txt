@@ -103,6 +103,7 @@ MODEL DECISIONS
    (ai_candidates.mirrors_waiting_proposal, c.AI_MIRRORED_PROPOSALS).
    A military access request mirrors a military access request, and a call to arms mirrors an offer to join wars.
    A faction invitation mirrors a request to join a faction, and a proposal to found a faction mirrors the same proposal.
+   A peace treaty or ceasefire mirrors either of those.
    The answer comes later in the turn from a separate call, so without this check a country refused a request and made the same request back.
    Only a delivered proposal (turns 1 or more) counts. A proposal still being drafted this turn has not reached the country.
 

@@ -14,6 +14,7 @@ destination stops being worth walking to.
 """
 
 import unittest
+from unittest.mock import patch
 
 
 import data.constants as c
@@ -57,7 +58,7 @@ def run(screen, provs, units_info, **ctx_over):
         "friendly_nations": {"Avaria"}, "unsafe_waters": {},
     }
     ctx.update(ctx_over)
-    ctx["repair_havens"] = ai_movement._repair_havens(screen, "Avaria", mine, ctx)
+    ctx["repair_havens"] = ai_movement._repair_havens(screen, "Avaria", mine)
 
     allowed = {p["id"] for p in provs}
     neighbors = {p["id"]: list(p.get("neighbors", ())) for p in provs}
@@ -69,12 +70,10 @@ def run(screen, provs, units_info, **ctx_over):
 class HavenTests(unittest.TestCase):
     """Where a unit can be repaired at all."""
 
-    def havens(self, provs, **ctx_over):
+    def havens(self, provs):
         screen = Screen(provs)
-        ctx = {"war_borders": set(), "active_battles": set()}
-        ctx.update(ctx_over)
         return ai_movement._repair_havens(
-            screen, "Avaria", [p for p in provs if p["owner"] == "Avaria"], ctx)
+            screen, "Avaria", [p for p in provs if p["owner"] == "Avaria"])
 
     def test_a_factory_province_is_a_haven(self):
         self.assertEqual(self.havens([province(1, industry=True)]), {1})
@@ -96,7 +95,7 @@ class HavenTests(unittest.TestCase):
         where to be: it holds the tile either way, and at 4% health it is
         barely holding it. Where the tile sits does not enter into it.
         """
-        self.assertEqual(self.havens([province(1, industry=True)], war_borders={1}), {1})
+        self.assertEqual(self.havens([province(1, industry=True)]), {1})
 
     def test_a_war_border_is_still_not_somewhere_to_march_to(self):
         """The other half of the split -- see _march_havens."""
@@ -207,30 +206,36 @@ class TheWalkHomeTests(unittest.TestCase):
 class NotAtTheCostOfTheFrontTests(unittest.TestCase):
     """The repair trip is the one order that walks a unit away from the war."""
 
-    def try_trip(self, front_over=None, **ctx_over):
+    def try_trip(self, **ctx_over):
         hurt = unit(health=100)
         garrison = unit(health=1000)
-        front = province(1, [hurt, garrison], neighbors=[2])
-        front.update(front_over or {})
+        front = province(1, [hurt, garrison], neighbors=[2, 4])
         middle = province(2, neighbors=[1, 3])
         home = province(3, neighbors=[2], industry=True)
-        provs = [front, middle, home]
+        side = province(4, neighbors=[1])
+        provs = [front, middle, home, side]
         run(Screen(provs), provs, [(hurt, front)], **ctx_over)
         return hurt.get("repair_trip")
 
-    def test_it_will_not_leave_a_war_border(self):
-        self.assertIsNone(self.try_trip(war_borders={1}))
+    def test_it_may_leave_a_war_border_another_unit_holds(self):
+        """A stack that fell back from a lost battle stands on the war border.
+        Keeping its wounded there is what sent them straight back in."""
+        self.assertEqual(self.try_trip(war_borders={1}), 3)
+
+    def test_it_may_leave_a_tile_next_to_a_battle(self):
+        self.assertEqual(self.try_trip(active_battles={4}), 3)
 
     def test_it_will_not_march_to_a_war_border(self):
         """Arriving somewhere about to be attacked is what it was sent away
         from -- but only for a unit that is choosing where to be."""
         self.assertIsNone(self.try_trip(war_borders={3}))
 
-    def test_it_will_not_leave_a_battle(self):
-        self.assertIsNone(self.try_trip(active_battles={1}))
-
-    def test_it_will_not_leave_a_tile_next_to_a_battle(self):
+    def test_it_will_not_walk_through_a_battle(self):
         self.assertIsNone(self.try_trip(active_battles={2}))
+
+    def test_a_battle_tile_is_not_left_by_this_route(self):
+        """Leaving a battle is _wounded_who_can_leave's decision."""
+        self.assertIsNone(self.try_trip(active_battles={1}))
 
     def test_the_last_unit_on_a_tile_stays(self):
         hurt = unit(health=100)
@@ -240,27 +245,109 @@ class NotAtTheCostOfTheFrontTests(unittest.TestCase):
         run(Screen(provs), provs, [(hurt, front)])
         self.assertIsNone(hurt.get("repair_trip"))
 
-    def test_only_so_many_go_at_once(self):
+    def test_only_a_share_of_the_army_goes_at_once(self):
         """Without a cap a bad turn at the front routs an army into the rear as
-        a maintenance decision."""
-        hurt = [unit(health=100) for _ in range(c.AI_MAX_REPAIR_TRIPS + 3)]
+        a maintenance decision. The cap scales with the army."""
+        hurt = [unit(health=100) for _ in range(20)]
         front = province(1, hurt + [unit(health=1000)], neighbors=[2])
         provs = [front, province(2, neighbors=[1, 3]),
                  province(3, neighbors=[2], industry=True)]
         run(Screen(provs), provs, [(u, front) for u in hurt])
         walking = [u for u in hurt if u.get("repair_trip") is not None]
-        self.assertEqual(len(walking), c.AI_MAX_REPAIR_TRIPS)
+        self.assertEqual(len(walking), max(1, int(len(hurt) * c.AI_MAX_REPAIR_TRIP_SHARE)))
 
-    def test_ships_and_convoys_do_not_march(self):
-        """A ship cannot reach a factory and a convoy is mid-crossing."""
-        for u_type in ("Destroyer I", "Convoy (Rifles)"):
-            with self.subTest(u_type=u_type):
-                sailor = unit(u_type=u_type, health=100)
-                front = province(1, [sailor, unit(health=1000)], neighbors=[2])
-                provs = [front, province(2, neighbors=[1, 3]),
-                         province(3, neighbors=[2], industry=True)]
-                run(Screen(provs), provs, [(sailor, front)])
-                self.assertIsNone(sailor.get("repair_trip"))
+    def test_a_convoy_does_not_start_a_trip(self):
+        """A convoy is a land unit mid-crossing; it finishes the crossing first."""
+        sailor = unit(u_type="Convoy (Rifles)", health=100)
+        front = province(1, [sailor, unit(health=1000)], neighbors=[2])
+        provs = [front, province(2, neighbors=[1, 3]),
+                 province(3, neighbors=[2], industry=True)]
+        run(Screen(provs), provs, [(sailor, front)])
+        self.assertIsNone(sailor.get("repair_trip"))
+
+
+def sea(pid, neighbors=()):
+    return {"id": pid, "json_key": str(pid), "owner": "Ocean", "cores": [],
+            "neighbors": list(neighbors), "units": [], "unit_queue": [],
+            "buildings": [], "terrain": "ocean", "is_coastal": False}
+
+
+class ShipsSailHomeTests(unittest.TestCase):
+    """A wounded warship sails to a friendly port with a factory."""
+
+    def setUp(self):
+        library = dict(ai_movement.queries.get_unit_library())
+        library["Fixture Ship"] = {"naval_unit": True, "health": 1000, "attack": 10,
+                                   "defense": 0, "speed": 1, "cost_materials": 10,
+                                   "cost_manpower": 10, "cost_fuel": 0}
+        self.enterContext(patch.object(ai_movement.queries, "get_unit_library",
+                                       return_value=library))
+
+    def fleet(self, port_industry=True):
+        ship = unit(u_type="Fixture Ship", health=100)
+        here = sea(10, neighbors=[11])
+        here["units"] = [ship, unit(u_type="Fixture Ship", health=1000)]
+        lane = sea(11, neighbors=[10, 3])
+        port = province(3, neighbors=[11], industry=port_industry)
+        port["is_coastal"] = True
+        return ship, [here, lane, port]
+
+    def sail(self, ship, provs):
+        mine = [p for p in provs if p["owner"] == "Avaria"]
+        screen = Screen(provs)
+        ctx = {"war_borders": set(), "peace_borders": set(), "coastal_borders": set(),
+               "active_battles": set(), "target_assignments": {},
+               "friendly_nations": {"Avaria"}, "unsafe_waters": {}}
+        ctx["repair_havens"] = ai_movement._repair_havens(screen, "Avaria", mine)
+        water = {p["id"] for p in provs if p["terrain"] == "ocean"}
+        neighbors = {p["id"]: list(p["neighbors"]) for p in provs}
+        ai_movement._assign_maintenance_orders(
+            screen, "Avaria", [(ship, provs[0])], ctx,
+            {p["id"] for p in provs}, water, neighbors)
+
+    def test_a_wounded_ship_sails_for_a_factory_port(self):
+        ship, provs = self.fleet()
+        self.sail(ship, provs)
+        self.assertEqual(ship["repair_trip"], 3)
+        self.assertEqual(ship["order"]["path"], [11])
+
+    def test_a_port_without_industry_is_no_destination(self):
+        ship, provs = self.fleet(port_industry=False)
+        self.sail(ship, provs)
+        self.assertIsNone(ship.get("repair_trip"))
+
+
+class LeavingABattleTests(unittest.TestCase):
+    """A wounded unit steps out of a fight the rest of its stack can hold.
+
+    The front slots it holds are fixed by patching combat_rules.slots_held, so
+    the rule is tested apart from combat-width tuning.
+    """
+
+    def battle(self, wounded=1, fresh=2, slots=2):
+        hurt = [unit(health=100) for _ in range(wounded)]
+        healthy = [unit(health=1000) for _ in range(fresh)]
+        front = province(1, hurt + healthy + [unit(owner="Borland", health=1000)],
+                         neighbors=[2])
+        provs = [front, province(2, neighbors=[1, 3]),
+                 province(3, neighbors=[2], industry=True)]
+        with patch.object(ai_movement.combat_rules, "slots_held", return_value=slots):
+            run(Screen(provs), provs, [(u, front) for u in hurt + healthy])
+        return hurt
+
+    def test_a_spare_wounded_unit_steps_out_and_heads_home(self):
+        hurt = self.battle()[0]
+        self.assertEqual(hurt["order"]["path"], [2])
+        self.assertEqual(hurt["repair_trip"], 3)
+
+    def test_not_when_the_front_would_be_short(self):
+        hurt = self.battle(slots=3)[0]
+        self.assertEqual(hurt["order"]["path"], [])
+        self.assertIsNone(hurt.get("repair_trip"))
+
+    def test_not_when_only_the_wounded_would_be_left(self):
+        hurt = self.battle(wounded=2, fresh=0, slots=1)
+        self.assertTrue(all(not u["order"]["path"] for u in hurt))
 
 
 class UpgradeReachabilityTests(unittest.TestCase):

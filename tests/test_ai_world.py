@@ -309,5 +309,91 @@ class AIWorldParityTests(unittest.TestCase):
                             [different_turn.rng.random() for _ in range(5)])
 
 
+class PerceptionTests(unittest.TestCase):
+    """One country's estimate of another, for peace decisions.
+
+    Unlike the parity tests above, these answers are meant to differ from the
+    exact figures: a country sees its own side and the enemy units in view,
+    and guesses the rest. Visibility is fixed by patching ai_world.visible_to,
+    so the rule is tested apart from the fog-of-war rules that compute it.
+    """
+
+    def setUp(self):
+        _world, self.map_data, self.nation_data, self.id_to_province = build_world()
+
+    def world(self, visible=None, fog=True, traits=None):
+        from unittest.mock import patch
+        if visible is None:
+            visible = set(self.id_to_province)
+        patches = [patch.object(ai_world, "visible_to", return_value=set(visible))]
+        if traits is not None:
+            patches.append(patch.object(ai_world.ai_personality, "get", return_value=traits))
+        for item in patches:
+            self.enterContext(item)
+        return ai_world.AIWorld(self.map_data, self.nation_data, self.id_to_province,
+                                scenario_settings={"fog_of_war": fog})
+
+    def test_without_fog_every_estimate_is_exact(self):
+        world = self.world(visible=set(), fog=False)
+        self.assertEqual(world.perceived_military("Avaria", "Borland"), world.military("Borland"))
+        self.assertEqual(world.perceived_power_ratio("Avaria", "Borland"),
+                         world.power_ratio("Avaria", "Borland"))
+
+    def test_a_country_knows_its_own_side_exactly(self):
+        world = self.world(visible=set())
+        for member in ("Avaria", "Carrow", "Dunmar"):
+            self.assertEqual(world.perceived_military("Avaria", member), world.military(member))
+
+    def test_an_enemy_in_full_view_is_seen_exactly(self):
+        world = self.world()
+        self.assertEqual(world.perceived_military("Avaria", "Borland"), world.military("Borland"))
+
+    def test_hidden_armies_do_not_leak_into_the_estimate(self):
+        hidden = {1, 2, 3, 4}  # Borland's tiles 5 and 6 are out of view
+        before = self.world(visible=hidden).perceived_military("Avaria", "Borland")
+        self.id_to_province[5]["units"][0]["attack"] *= 50
+        after = self.world(visible=hidden).perceived_military("Avaria", "Borland")
+        self.assertEqual(before, after)
+
+    def test_units_in_view_count_exactly(self):
+        view = {1, 2, 3, 4}
+        before = self.world(visible=view).perceived_military("Avaria", "Borland")
+        borland_unit = next(u for u in self.id_to_province[4]["units"] if u["owner"] == "Borland")
+        old = queries.calculate_unit_strength(borland_unit)
+        borland_unit["attack"] *= 3
+        gained = queries.calculate_unit_strength(borland_unit) - old
+        after = self.world(visible=view).perceived_military("Avaria", "Borland")
+        self.assertAlmostEqual(after - before, gained)
+
+    def test_a_cautious_country_fears_hidden_armies_more_than_an_aggressive_one(self):
+        cautious = self.world(visible=set(), traits={"caution": 0.9, "aggression": 0.1})
+        guess_cautious = cautious.perceived_military("Avaria", "Borland")
+        bold = self.world(visible=set(), traits={"caution": 0.1, "aggression": 0.9})
+        self.assertGreater(guess_cautious, bold.perceived_military("Avaria", "Borland"))
+
+    def test_two_enemies_do_not_read_the_war_as_mirror_images(self):
+        """With exact figures each side's ratio is the other's inverse, which is
+        how two countries reached the same peace decision on the same turn."""
+        world = self.world(visible={1, 2, 3, 4})
+        _border_a, global_a = world.perceived_power_ratio("Avaria", "Borland")
+        _border_b, global_b = world.perceived_power_ratio("Borland", "Avaria")
+        self.assertNotAlmostEqual(global_a * global_b, 1.0)
+
+    def test_the_public_war_score_ignores_fog_and_a_viewer_reads_its_own(self):
+        """The war-score bar stays exact; only a viewer's reading uses perception."""
+        from map_logic.ai import ai_opinion
+        from map_logic.diplomacy import war_score
+
+        open_world = self.world(fog=False)
+        fogged = self.world(visible={1, 2, 3, 4})
+        public = war_score.between(ai_opinion._host(fogged), "Avaria", "Borland", fogged)
+        exact = war_score.between(ai_opinion._host(open_world), "Avaria", "Borland", open_world)
+        self.assertEqual(public["mine"], exact["mine"])
+        own = war_score.between(ai_opinion._host(fogged), "Avaria", "Borland", fogged,
+                                viewer="Avaria")
+        self.assertNotAlmostEqual(own["mine"], public["mine"])
+        self.assertEqual(own["their_parts"]["occupation"], public["their_parts"]["occupation"])
+
+
 if __name__ == "__main__":
     unittest.main()

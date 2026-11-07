@@ -225,8 +225,12 @@ class BombardmentPriorityTests(unittest.TestCase):
 
     def test_a_losing_fleet_withdraws_instead_of_shelling(self):
         screen, ship = self.screen_with_a_losing_fleet()
+        units_info = [(ship, screen.map_data["home"])]
+        battles = ai_movement._track_battles_and_convoys(
+            screen, "Avaria", units_info, {"Avaria"}, set(), set(), set())
+        self.assertEqual(battles["lost_battles"], {1})
         ai_movement._assign_unit_orders(
-            screen, "Avaria", [(ship, screen.map_data["home"])], empty_ctx(),
+            screen, "Avaria", units_info, empty_ctx(lost_battles=battles["lost_battles"]),
             {1, 2, 3}, {1, 2, 3}, {})
         self.assertNotEqual(ship["order"].get("type"), "BOMBARD")
         self.assertTrue(ship["order"].get("path"), "it should be running")
@@ -295,6 +299,232 @@ class ImmediateLossAttackTests(unittest.TestCase):
             self.context(), {1, 2}, set(), {1: [2], 2: [1]})
 
         self.assertEqual(attacker["order"]["path"], [2])
+
+
+def fixture_unit(owner="Avaria", attack=100, health=100, max_health=None, defense=0):
+    """A unit read entirely from its own fields; no library entry backs it."""
+    return {"type": "Fixture Rifles", "owner": owner, "attack": attack,
+            "defense": defense, "health": health,
+            "max_health": max_health or health, "speed": 1,
+            "order": {"type": "MOVE", "path": []}}
+
+
+class GridScreen:
+    """Provinces from {id: (owner, neighbors)}; Avaria and Bruland at war."""
+
+    def __init__(self, layout, scenario_settings=None):
+        self.map_data = {}
+        for pid, (owner, neighbors) in layout.items():
+            self.map_data[str(pid)] = {"id": pid, "json_key": str(pid), "owner": owner,
+                                       "cores": [owner], "neighbors": list(neighbors),
+                                       "units": [], "buildings": [], "terrain": "plains",
+                                       "is_coastal": False}
+        self.id_to_province = {p["id"]: p for p in self.map_data.values()}
+        self.nation_data = {"Avaria": {"at_war_with": ["Bruland"]},
+                            "Bruland": {"at_war_with": ["Avaria"]},
+                            "Cirenia": {"at_war_with": []}}
+        self.scenario_settings = dict(scenario_settings or {})
+        fill_state_defaults(self)
+
+    def place(self, pid, *units):
+        self.id_to_province[pid]["units"].extend(units)
+        return [(unit, self.id_to_province[pid]) for unit in units]
+
+
+class WoundedUnitsDoNotChargeTests(unittest.TestCase):
+    """A routed stack used to walk straight back into the tile it fled."""
+
+    context = ImmediateLossAttackTests.context
+    screen = ImmediateLossAttackTests.screen
+    attacker = ImmediateLossAttackTests.attacker
+    defender = ImmediateLossAttackTests.defender
+
+    def test_a_wounded_unit_does_not_charge_a_target_it_would_survive(self):
+        screen = self.screen(self.defender(attack=1, health=1000))
+        hurt = self.attacker(attack=100, health=100)
+        hurt["health"] = int(hurt["max_health"] * c.AI_REPAIR_HEALTH_FRACTION) - 1
+        screen.map_data["home"]["units"] = [hurt]
+
+        ai_movement._assign_unit_orders(
+            screen, "Avaria", [(hurt, screen.map_data["home"])],
+            self.context(), {1, 2}, set(), {1: [2], 2: [1]})
+
+        self.assertEqual(hurt["order"], {"type": "MOVE", "path": []})
+
+
+class LoneGuardTests(unittest.TestCase):
+    """One guard stays on each quiet border, war or no war."""
+
+    def test_a_lone_guard_holds_its_peace_border_in_wartime(self):
+        # 1 and 3 border neutral Cirenia; 4 joins them. A guard stands on 1.
+        screen = GridScreen({1: ("Avaria", [2, 4]), 2: ("Cirenia", [1]),
+                             3: ("Avaria", [4, 5]), 4: ("Avaria", [1, 3]),
+                             5: ("Cirenia", [3])})
+        units_info = screen.place(1, fixture_unit())
+        borders = {"peace_borders": {1, 3}, "coastal_borders": set(), "war_borders": set(),
+                   "unclaimed_targets": set(), "all_unclaimed_coasts": set(),
+                   "enemy_targets": set(), "all_enemy_coasts": set(),
+                   "enemy_coastal_waters": set(), "expedition_targets": set()}
+        battles = {"active_battles": set(), "lost_battles": set(), "friendly_convoys": set(),
+                   "convoy_in_combat": set(), "convoy_near_ship": set(),
+                   "convoy_near_coast": set()}
+        built = ai_movement._build_target_assignments(units_info, borders, battles, at_war=True)
+        # The weighted count carries the rear-guard penalty; the unit count does not.
+        self.assertGreater(built["target_assignments"][1], 1)
+        ctx = empty_ctx(**borders, **battles, **built)
+        neighbors = {pid: list(p["neighbors"]) for pid, p in screen.id_to_province.items()}
+
+        ai_movement._assign_unit_orders(screen, "Avaria", units_info, ctx,
+                                        set(screen.id_to_province), set(), neighbors)
+
+        self.assertEqual(units_info[0][0]["order"]["path"], [])
+
+
+class SurpriseAttackSettingTests(unittest.TestCase):
+    """The flag is read from this game's settings, not the global settings file."""
+
+    def enemies(self, world_flag, global_flag):
+        from unittest.mock import patch
+        from data import queries
+        screen = GridScreen({1: ("Avaria", [])}, {"surprise_attack": world_flag})
+        screen.nation_data["Avaria"]["queued_ai_actions"] = [
+            {"action": "WAR_DECLARATION", "target": "Cirenia"}]
+        with patch.object(queries, "get_scenario_settings",
+                          return_value={"surprise_attack": global_flag}):
+            return ai_movement._gather_enemies(screen, "Avaria")
+
+    def test_the_games_own_setting_wins(self):
+        self.assertIn("Cirenia", self.enemies(True, False))
+        self.assertNotIn("Cirenia", self.enemies(False, True))
+
+
+class ForecastRetreatTests(unittest.TestCase):
+    """A battle is lost when the shared forecast says so within a few exchanges."""
+
+    def tile(self, ours, theirs, reinforcements=()):
+        screen = GridScreen({1: ("Avaria", [2]), 2: ("Avaria", [1])})
+        screen.place(1, *ours, *theirs)
+        screen.place(2, *reinforcements)
+        return screen, screen.id_to_province[1]
+
+    def test_a_hopeless_fight_is_lost(self):
+        screen, prov = self.tile([fixture_unit(attack=1)],
+                                 [fixture_unit("Bruland", attack=1000, health=1000)])
+        self.assertTrue(ai_movement._tile_is_lost(screen, "Avaria", prov, {"Avaria"}))
+
+    def test_a_slow_defeat_counts_before_the_last_turn(self):
+        """The old check read one exchange: a stack that would die over a few
+        turns was never 'lost', so it bled out a unit at a time."""
+        enemy_attack = 100
+        health = enemy_attack * (c.AI_RETREAT_FORECAST_TURNS - 0.5)
+        screen, prov = self.tile([fixture_unit(attack=1, health=health)],
+                                 [fixture_unit("Bruland", attack=enemy_attack, health=100000)])
+        self.assertTrue(ai_movement._tile_is_lost(screen, "Avaria", prov, {"Avaria"}))
+
+    def test_a_winning_fight_is_not(self):
+        screen, prov = self.tile([fixture_unit(attack=1000, health=1000)],
+                                 [fixture_unit("Bruland", attack=1)])
+        self.assertFalse(ai_movement._tile_is_lost(screen, "Avaria", prov, {"Avaria"}))
+
+    def test_reinforcements_that_turn_it_keep_the_tile(self):
+        help_ = [fixture_unit(attack=5000, health=5000)]
+        screen, prov = self.tile([fixture_unit(attack=1)],
+                                 [fixture_unit("Bruland", attack=1000, health=1000)], help_)
+        self.assertFalse(ai_movement._tile_is_lost(screen, "Avaria", prov, {"Avaria"}, help_))
+
+
+class RetreatTileTests(unittest.TestCase):
+    """Each unit falls back to its own best tile."""
+
+    def setUp(self):
+        # 1 is the battle; 2 is plain, 3 has an enemy on it, 4 has a factory.
+        self.screen = GridScreen({1: ("Avaria", [2, 3, 4]), 2: ("Avaria", [1]),
+                                  3: ("Avaria", [1]), 4: ("Avaria", [1])})
+        self.screen.place(3, fixture_unit("Bruland"))
+        self.unit = fixture_unit()
+        self.screen.place(1, self.unit)
+
+    def pick(self, havens):
+        return ai_movement._retreat_tile(self.screen, "Avaria", self.unit,
+                                         self.screen.id_to_province[1], {"Avaria"},
+                                         set(), havens)
+
+    def test_a_repair_haven_comes_first(self):
+        self.assertEqual(self.pick({4}), 4)
+
+    def test_a_tile_with_a_visible_enemy_is_never_chosen(self):
+        self.assertEqual(self.pick(set()), 2)
+
+
+class CoastThreatTests(unittest.TestCase):
+    """A quiet coast is guarded only when something could land on it.
+
+    Tile 1 is Avaria's coast. Water 10 and 11 lie off it; across them is the
+    shore at 20. saves/runv3 had more than half of some armies guarding beaches
+    no enemy could reach.
+    """
+
+    def setUp(self):
+        from unittest.mock import patch
+        from data import queries
+        library = dict(queries.get_unit_library())
+        library["Fixture Warship"] = {"naval_unit": True, "attack": 500, "defense": 100,
+                                      "health": 2000, "speed": 2, "cost_materials": 10,
+                                      "cost_manpower": 10, "cost_fuel": 0}
+        self.enterContext(patch.object(queries, "get_unit_library", return_value=library))
+
+    def screen(self, shore_owner="Bruland", fog=False):
+        screen = GridScreen({1: ("Avaria", [10]), 10: ("Ocean", [1, 11]),
+                             11: ("Ocean", [10, 20]), 20: (shore_owner, [11])},
+                            {"fog_of_war": fog})
+        for pid in (10, 11):
+            screen.id_to_province[pid]["terrain"] = "ocean"
+        for pid in (1, 20):
+            screen.id_to_province[pid]["is_coastal"] = True
+        return screen
+
+    def threatened(self, screen, enemies=("Bruland",)):
+        return ai_movement._threatened_coasts(screen, "Avaria", {1}, list(enemies), {"Avaria"})
+
+    def ship(self, owner, kind="Fixture Warship"):
+        return {"type": kind, "owner": owner, "attack": 500, "defense": 100,
+                "health": 2000, "max_health": 2000}
+
+    def test_an_enemy_shore_across_the_water_is_a_threat(self):
+        self.assertEqual(self.threatened(self.screen()), {1})
+
+    def test_a_sea_with_only_friendly_shores_is_not(self):
+        self.assertEqual(self.threatened(self.screen(shore_owner="Avaria")), set())
+
+    def test_at_peace_no_coast_is_guarded(self):
+        self.assertEqual(self.threatened(self.screen(), enemies=()), set())
+
+    def test_naval_supremacy_removes_the_threat(self):
+        screen = self.screen()
+        screen.place(10, self.ship("Avaria"))
+        self.assertEqual(self.threatened(screen), set())
+
+    def test_but_not_against_an_equal_enemy_fleet(self):
+        screen = self.screen()
+        screen.place(10, self.ship("Avaria"))
+        screen.place(11, self.ship("Bruland"))
+        self.assertEqual(self.threatened(screen), {1})
+
+    def test_a_visible_enemy_convoy_is_a_threat_even_with_no_enemy_shore(self):
+        screen = self.screen(shore_owner="Cirenia")
+        screen.place(11, fixture_unit("Bruland") | {"type": "Convoy (Fixture Rifles)"})
+        self.assertEqual(self.threatened(screen), {1})
+
+    def test_a_hidden_submarine_is_not(self):
+        screen = self.screen(shore_owner="Cirenia", fog=True)
+        screen.place(11, self.ship("Bruland", kind="Submarine Fixture"))
+        self.assertEqual(self.threatened(screen), set())
+
+    def test_only_threatened_quiet_coasts_are_destinations(self):
+        screen = self.screen(shore_owner="Cirenia")
+        borders = ai_movement._discover_borders_and_targets(
+            screen, "Avaria", [screen.id_to_province[1]], ["Bruland"], {"Avaria"})
+        self.assertEqual(borders["coastal_borders"], set())
 
 
 if __name__ == "__main__":

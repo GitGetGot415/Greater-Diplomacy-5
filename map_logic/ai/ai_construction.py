@@ -130,6 +130,10 @@ def _compute_economy_ratios(context, ai_name, data, my_provs, econ, unit_library
     upk_man = econ["upkeep"]["manpower"]
     inc_fuel = econ["total_inc"]["fuel"]
     upk_fuel = econ["upkeep"]["fuel"]
+    # Manpower income before the conscription slider converts any of it, which
+    # is what the slider's own floor is measured against.
+    raw_man = sum(value for key, value in econ.get("breakdown", {}).get("manpower", {}).items()
+                  if key not in ("conscription", "policy"))
 
     income = {"manpower": inc_man, "materials": inc_mat, "fuel": inc_fuel}
     targets = {"manpower": target_man, "materials": target_mat, "fuel": target_fuel}
@@ -168,7 +172,7 @@ def _compute_economy_ratios(context, ai_name, data, my_provs, econ, unit_library
     return {
         "at_war": at_war,
         "target_man": target_man, "target_mat": target_mat, "target_fuel": target_fuel,
-        "inc_man": inc_man, "inc_mat": inc_mat, "inc_fuel": inc_fuel,
+        "inc_man": inc_man, "inc_mat": inc_mat, "inc_fuel": inc_fuel, "raw_man": raw_man,
         "upk_man": upk_man, "upk_mat": upk_mat, "upk_fuel": upk_fuel,
         "ratio_man": ratio_man, "ratio_mat": ratio_mat, "ratio_fuel": ratio_fuel,
         "deficits": deficits,
@@ -190,11 +194,23 @@ def _update_conscription_slider(data, state):
     ratio_man, target_man = state["ratio_man"], state["target_man"]
 
     if ratio_mat > target_mat and ratio_man < target_man and data.get("manpower", 0) > c.AI_CONSCRIPTION_MIN_MANPOWER:
-        data["conscription_slider"] = 0.5 # Convert 50%
+        slider = 0.5 # Convert 50%
     elif (data.get("manpower", 0) > c.AI_CONSCRIPTION_PANIC_MANPOWER and data.get("materials", 0) < c.AI_CONSCRIPTION_PANIC_MATERIALS) or data.get("manpower", 0) > c.AI_CONSCRIPTION_EMERGENCY_MANPOWER:
-        data["conscription_slider"] = 0.25 # Emergency: Convert 75%
+        slider = 0.25 # Emergency: Convert 75%
     else:
-        data["conscription_slider"] = 1.0 # Normal (keep 100%)
+        slider = 1.0 # Normal (keep 100%)
+
+    # Never convert away the manpower the army needs. The emergency branch
+    # fired on a big stockpile alone, kept a quarter of the income, and left the
+    # Soviet Union in saves/runv3 below its own manpower upkeep -- so the
+    # purchase loop's upkeep cap stopped every purchase with 50,000 banked.
+    # Kept income must cover upkeep inside the peacetime target, which leaves
+    # the wartime target room to buy.
+    raw_man = state.get("raw_man", 0)
+    if raw_man > 0:
+        needed = state["upk_man"] / (c.AI_UPKEEP_TARGETS["manpower"] * raw_man)
+        slider = max(slider, min(1.0, needed))
+    data["conscription_slider"] = slider
 
 
 def _update_fuel_conversion_slider(data, state):
@@ -213,7 +229,11 @@ def _update_fuel_conversion_slider(data, state):
 
     if max_conversion > 0:
         if ratio_fuel > target_fuel and ratio_mat < target_mat and data.get("materials", 0) > c.AI_CONVERSION_MIN_MATERIALS:
-            data["mat_to_fuel_slider"] = max_conversion * 0.5 # Convert using 50% of their LEGAL MAXIMUM capability
+            # Short of fuel with materials to spare: use all of the legal
+            # conversion. Half of it left armies fuel-starved while materials
+            # piled up (saves/runv3: Germany at 0.07 of 0.14, materials upkeep
+            # at 40% of a 90% target, and no tank affordable).
+            data["mat_to_fuel_slider"] = max_conversion
         elif (data.get("materials", 0) > c.AI_CONVERSION_PANIC_MATERIALS and data.get("fuel", 0) < c.AI_CONVERSION_PANIC_FUEL) or data.get("materials", 0) > c.AI_CONVERSION_EMERGENCY_MATERIALS:
             data["mat_to_fuel_slider"] = max_conversion # Emergency: Maximize production safely
         else:
@@ -342,11 +362,45 @@ def _disband_worst_unit_if_deficit(context, data, my_provs, ai_name, deficits,
                               {"type": "DISBAND"}, authority="ai")
 
 
-def _panic_militia_and_tally_forces(context, ai_name, data, my_provs, unit_library, state, roles):
+def _panic_unit(context, ai_name, prov, candidates, unit_library):
+    """The best land unit `prov` can raise in one turn, or None.
+
+    Chosen from data, not by name. It used to be the best tier of the Militia
+    family whatever the rules said: with militia set to two turns no panic
+    build ever happened, and a unit made to build in one turn never counted.
+    Now every buildable land unit whose production time is one turn under the
+    active rules qualifies, if production_actions would accept it in this
+    province, and the highest score from the purchase loop's own valuation
+    (ai_unit_eval) wins. Ties go to the name, so the choice is reproducible.
+    """
+    best = None
+    for value in candidates.values():
+        if value.role not in ai_unit_eval.LAND_ROLES or value.stats.get("production_time", 1) != 1:
+            continue
+        try:
+            production_actions.prepare_production(
+                context, ai_name, prov, "unit_queue", {"unit_type": value.name},
+                unit_library=unit_library)
+        except ValueError:
+            continue
+        if best is None or (value.score, value.name) > (best.score, best.name):
+            best = value
+    return best.name if best else None
+
+
+def _panic_build_and_tally_forces(context, ai_name, data, my_provs, unit_library, state, roles,
+                                  weights=None, panic_candidates=None):
     """Section: per-province pass that clears losing tiles' build queues,
-    panic-queues a Militia on any core threatened by an adjacent enemy, and
-    tallies current + queued forces (by role) and land/sea border counts."""
+    panic-queues a one-turn unit (_panic_unit) on any core threatened by an
+    adjacent enemy, and tallies current + queued forces (by role) and land/sea
+    border counts.
+
+    `weights` is how much of its role each unit type fills (one when absent);
+    see ai_unit_eval._apply_slot_quality. `panic_candidates` is the nation's
+    buildable valuation, {name: UnitValue}, that the panic unit is chosen from."""
     world_state = world_for(context)
+    weights = weights or {}
+    panic_candidates = panic_candidates or {}
     role_counts = {}
     land_border_count = 0
     sea_border_count = 0
@@ -372,9 +426,9 @@ def _panic_militia_and_tally_forces(context, ai_name, data, my_provs, unit_libra
                     item = prov["building_queue"].pop(0)
                     if "refund" in item: queries.refund_resources(data, item["refund"])
 
-            continue # Skip panic militia check since it's already in combat and can't build anyway
+            continue # Skip the panic build since it's already in combat and can't build anyway
 
-        # 2. Panic Militia
+        # 2. Panic build
         if has_factory and queries.has_core(ai_name, prov):
             enemy_adjacent = False
             for n_id in prov.get("neighbors", []):
@@ -402,37 +456,42 @@ def _panic_militia_and_tally_forces(context, ai_name, data, my_provs, unit_libra
                     if not is_naval and turns <= 1:
                         safe_to_panic = False # Let the ground unit finish!
 
-                militia_name = queries.get_best_preferred_unit(data.get("research", {}), unit_library, ["Militia"], context=context)
-                militia_stats = unit_library.get(militia_name, {})
-                militia_time = militia_stats.get("production_time", 1)
+                # Only units that build in one turn are candidates, so the
+                # production-time test the Militia branch used to make here is
+                # part of the choice itself.
+                panic_name = _panic_unit(context, ai_name, prov, panic_candidates, unit_library)
+                panic_stats = unit_library.get(panic_name, {})
+                panic_family = (queries.get_base_unit_name(panic_name, context=context)
+                                if panic_name else None)
 
                 if not restrictions.can_raise_units(ai_name, world_state.nation_data):
                     safe_to_panic = False  # demilitarized by treaty; not even in a panic
 
-                if militia_name and safe_to_panic and militia_time == 1 and (not queue or queries.get_base_unit_name(queue[0].get("unit_type", ""), context=context) != "Militia"):
+                if panic_name and safe_to_panic and (not queue or queries.get_base_unit_name(queue[0].get("unit_type", ""), context=context) != panic_family):
                     # Cancel existing queue
                     while queue:
                         production_actions.cancel_production(
                             context, ai_name, prov, "unit_queue", 0,
                             authority="ai", recorded_refund_only=True)
 
-                    # Queue Militia
-                    c_mat = militia_stats.get("cost_materials", 0)
-                    c_man = militia_stats.get("cost_manpower", 0)
-                    c_fuel = militia_stats.get("cost_fuel", 0)
+                    # Queue the panic unit
+                    c_mat = panic_stats.get("cost_materials", 0)
+                    c_man = panic_stats.get("cost_manpower", 0)
+                    c_fuel = panic_stats.get("cost_fuel", 0)
 
                     if data.get("materials", 0) >= c_mat and data.get("manpower", 0) >= c_man and data.get("fuel", 0) >= c_fuel:
                         production_actions.submit_production(
-                            context, ai_name, prov, "unit_queue", {"unit_type": militia_name},
+                            context, ai_name, prov, "unit_queue", {"unit_type": panic_name},
                             authority="ai", unit_library=unit_library)
 
                         # Adjust upkeep tracking
-                        militia_upkeep = queries.get_unit_upkeep(militia_stats)
-                        state["upk_man"] += militia_upkeep["manpower"]
-                        state["upk_mat"] += militia_upkeep["materials"]
-                        state["upk_fuel"] += militia_upkeep["fuel"]
-                        militia_role = roles.get(militia_name, ai_unit_eval.ROLE_LINE)
-                        role_counts[militia_role] = role_counts.get(militia_role, 0) + 1
+                        panic_upkeep = queries.get_unit_upkeep(panic_stats)
+                        state["upk_man"] += panic_upkeep["manpower"]
+                        state["upk_mat"] += panic_upkeep["materials"]
+                        state["upk_fuel"] += panic_upkeep["fuel"]
+                        panic_role = roles.get(panic_name, ai_unit_eval.ROLE_LINE)
+                        role_counts[panic_role] = (role_counts.get(panic_role, 0)
+                                                   + weights.get(panic_name, 1.0))
 
 
 
@@ -447,7 +506,7 @@ def _panic_militia_and_tally_forces(context, ai_name, data, my_provs, unit_libra
         for u_type in standing + ordered:
             role = roles.get(u_type)
             if role:
-                role_counts[role] = role_counts.get(role, 0) + 1
+                role_counts[role] = role_counts.get(role, 0) + weights.get(u_type, 1.0)
 
         # Check neighbors to determine land/sea ratios
         is_land_border = False
@@ -646,7 +705,7 @@ def _run_purchase_loop(context, ai_name, data, my_provs, unit_library, tech_tree
         upk_man += upkeep["manpower"]
         upk_mat += upkeep["materials"]
         upk_fuel += upkeep["fuel"]
-        have[pick.role] = have.get(pick.role, 0) + 1
+        have[pick.role] = have.get(pick.role, 0) + pick.weight
 
         # Spread the load rather than stacking one province's queue.
         target_prov = min(deployable[pick.name], key=lambda p: len(p.get("unit_queue", [])))
@@ -847,6 +906,9 @@ def process_ai_economy_decisions(context):
         all_values = ai_unit_eval.evaluate(
             sorted(set(candidates) | {t for t in owned_types if t}), unit_library, unit_ctx)
         roles = {name: value.role for name, value in all_values.items()}
+        # How much of its role each unit fills. One per unit, except assault,
+        # which counts firepower; see ai_unit_eval._apply_slot_quality.
+        weights = {name: value.weight for name, value in all_values.items()}
         buildable_values = {n: v for n, v in all_values.items() if n in set(candidates)}
 
         # Sliders no longer have a tank quota to save up for; they key off the
@@ -857,9 +919,10 @@ def process_ai_economy_decisions(context):
         _disband_worst_unit_if_deficit(context, data, my_provs, ai_name,
                                        state["disband_deficits"], unit_library, all_values)
 
-        # --- NEW: Panic Militia & Combat Queue Clearing ---
-        force_tally = _panic_militia_and_tally_forces(
-            context, ai_name, data, my_provs, unit_library, state, roles)
+        # --- Panic Builds & Combat Queue Clearing ---
+        force_tally = _panic_build_and_tally_forces(
+            context, ai_name, data, my_provs, unit_library, state, roles, weights,
+            panic_candidates=buildable_values)
 
         state.update(force_tally)
         state["econ"] = econ

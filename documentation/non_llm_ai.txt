@@ -158,6 +158,34 @@ Lakes do not count. Overseas claims target the nearby coast.
 Without a shared land front, both odds calculations use overall power.
 Wargoal, truce, faction, and turn restrictions still apply.
 
+Peace decisions read each country's own view of the war, not the exact figures.
+ai_world.AIWorld.perceived_military gives one country's estimate of another's army:
+- Its own side, and every country when fog of war is off, are known exactly.
+- Otherwise it counts the enemy units it can see, and guesses the rest from the land it cannot see.
+  The guess assumes the enemy is as militarized, per unit of land value, as the country itself.
+- AI_PERCEPTION_SKEW scales the guess by caution minus aggression: cautious countries fear hidden armies, aggressive ones discount them.
+- Enemy economic power is guessed from land the same way, because stockpiles are private.
+perceived_power_ratio and war_score.between(..., viewer=country) use these estimates.
+The war-score bar and war declarations still use the exact figures. No randomness is involved.
+
+Peace desire (ai_opinion.peace_appetite) combines two pressures with the caution trait.
+The first is losing the military balance, from the country's perceived border and global power ratios.
+The second is occupation: war_score's value-weighted share of the country's pre-war homeland that the enemy side holds.
+Occupation is public map data. AI_W_PEACE_OCCUPIED sets its weight.
+With its homeland intact, a country judges by the military balance alone. The length of a war does not count.
+The peace verdict (ai_opinion.peace_verdict) also reads the country's own leverage, so an AI's answer is its own belief.
+
+The rule-based AI offers peace in two situations:
+- Losing: peace desire is at least AI_PEACE_OFFER_THRESHOLD.
+  It concedes a share of the provinces the enemy side holds of its side, least valuable first.
+  The share grows from none at the threshold to all of them at full peace desire.
+  It also asks for what its own holdings justify.
+- Winning: its leverage is above one half. The AI offers to keep the enemy land it holds.
+An AI sends terms only when its own peace verdict accepts them. It never reads the other side's verdict.
+Two countries therefore judge the same war separately, and rarely offer each other peace on the same turn.
+A country holding a delivered peace offer answers it instead of sending its own (c.AI_MIRRORED_PROPOSALS).
+War length and MIN_TURNS_FOR_CEASEFIRE still gate every offer.
+
 See documentation/diplo_stuff.txt for AI acceptance and conflict handling of attach?s and volunteer offers.
 
 VALUATION RULES
@@ -184,6 +212,13 @@ Purchase and disbanding
     Use ai_unit_eval's marginal value for both decisions.
     A separate raw-attack ranking can make the AI buy and disband the same type.
 
+Front-slot quality
+    Only a lane's front rank fires, and a battle tile seats a few units a side.
+    ai_unit_eval._apply_slot_quality multiplies each assault unit's score by its combat value
+    relative to the assault mean, raised to AI_SLOT_QUALITY_EXPONENT.
+    The same relative combat is how much of the assault role one unit fills, so many weak units
+    do not read as a front already full of firepower. Other roles count one per unit.
+
 Obsolescence
     Aircraft, land units, and naval units use constants.OBSOLESCENCE_RULES.
     Obsolescence requires completed replacement research. A queued research project does not make units obsolete.
@@ -203,6 +238,8 @@ AI_WAR_DESIRE_THRESHOLD
     Minimum war desire for a declaration.
 AI_LINE_SPEND_RATIO
     Spending balance between unit numbers and firepower.
+AI_SLOT_QUALITY_EXPONENT
+    How strongly front-slot quality favors stronger assault units over cheaper ones.
 AI_W_SOAK
     Value of defense that absorbs damage in the front rank.
     Reserves do not absorb the current volley.
@@ -402,6 +439,16 @@ Protection depends on active tactical mode, not just a retained player_unit attr
 Check fuel when purchasing.
 A fuel shortage excludes fuel-consuming units from affordable candidates and saving plans.
 It does not block units that need no fuel.
+Short of fuel with materials under target, the AI converts materials to fuel at its full legal maximum.
+
+A cored industry province with a visible enemy unit next to it gets a panic build (ai_construction._panic_unit).
+The panic unit is the best-scoring buildable land unit whose production time is one turn under the active rules
+and that production_actions would accept in that province. It is chosen from data, never by family name,
+so slower militia are skipped and any other one-turn unit qualifies.
+
+The AI's conscription slider never converts so much manpower that kept income falls below
+the manpower upkeep allowed by the peacetime AI_UPKEEP_TARGETS. Otherwise a large stockpile
+could convert away the income the purchase loop's upkeep cap needs, and stop all purchases.
 
 RESPONSE TEXT AND MESSAGE METADATA
 ----------------------------------

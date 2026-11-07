@@ -701,7 +701,13 @@ AI_PEACE_MARGIN_CAUTION = 0.12
 #: was free, so a nation overrunning its enemy would sign a white peace for one
 #: material and call it a gain. A winner now has to be offered more than the war
 #: is still worth to it.
-AI_PEACE_PRIZE_W = 0.5
+#:
+#: At 0.5 a clear winner refused almost everything: on saves/same peace deals the
+#: German Reich, at 90% leverage, turned down 65 provinces from the Soviet Union.
+#: At 0.15 a winner takes a real concession of land but still refuses a white
+#: peace or a token offer. At 0 it would take a white peace, which is the free
+#: peace this term exists to prevent.
+AI_PEACE_PRIZE_W = 0.15
 
 #: The hard ceiling on a demand: you may ask for at most this multiple of the
 #: share of their homeland you actually occupy. Slightly over 1 so that having
@@ -1347,6 +1353,21 @@ AI_WAR_LOAD_SATURATION = 3.0    # wars at which a nation counts as fully committ
 # of a war because it is losing one, not because it is bored of it.
 AI_W_PEACE_LOSING = 0.8
 AI_W_PEACE_CAUTION = 0.2
+# How strongly losing its homeland pushes a nation toward peace, on top of
+# losing the military balance. The two combine as independent pressures --
+# losing = 1 - (1 - military) * (1 - AI_W_PEACE_OCCUPIED * occupied) -- so a
+# nation with its land intact judges by its army exactly as before, while one
+# whose heartland is overrun wants out even with an army still in the field.
+# `occupied` is war_score's value-weighted share of the pre-war homeland the
+# enemy side holds, the same figure under the war-score bar.
+AI_W_PEACE_OCCUPIED = 1.0
+# Peace decisions read each country's own view of the war (see
+# ai_world.AIWorld.perceived_military). Under fog of war a country guesses the
+# armies it cannot see, and its temperament bends the guess: the estimate is
+# scaled by 1 + AI_PERCEPTION_SKEW * (caution - aggression), so a cautious
+# country fears hidden armies and an aggressive one discounts them. This is
+# what lets two countries at war read the same war differently.
+AI_PERCEPTION_SKEW = 0.5
 #
 # AI_PEACE_CEASEFIRE_THRESHOLD, the bar appetite had to clear before a bare
 # ceasefire was agreed, is gone with the shortcut that read it. A white peace is
@@ -1563,6 +1584,10 @@ AI_MIRRORED_PROPOSALS = {
     "FACTION_INVITE": ("JOIN_FACTION_REQ",),
     "JOIN_FACTION_REQ": ("FACTION_INVITE",),
     "CREATE_FACTION": ("CREATE_FACTION",),
+    # A country holding the enemy's peace terms answers them rather than
+    # writing its own back across the table in the same turn.
+    "PEACE_TREATY": ("PEACE_TREATY", "CEASEFIRE"),
+    "CEASEFIRE": ("CEASEFIRE", "PEACE_TREATY"),
 }
 
 # Baseline desirability for actions with no appetite function of their own.
@@ -1682,11 +1707,19 @@ AI_REPAIR_HEALTH_FRACTION = 0.4
 # arguably right here, but a unit at 95% is not worth a turn out of the line.
 AI_REPAIR_ON_SITE_FRACTION = 0.8
 
-# How many units one nation will have walking home to a factory at once. The
-# repair trip is the only order in the AI that deliberately moves a unit AWAY
-# from the war, so it is capped rather than trusted: without this a bad turn at
-# the front would rout an entire army into the rear as a maintenance decision.
-AI_MAX_REPAIR_TRIPS = 2
+# Share of a nation's ground and naval units that may be on a repair trip at
+# once (at least one). The repair trip is the only order in the AI that
+# deliberately moves a unit AWAY from the war, so it is capped rather than
+# trusted: without this a bad turn at the front would rout an entire army into
+# the rear as a maintenance decision. A share rather than a count, because a
+# fixed two let a hundred-division army fix two divisions at a time.
+AI_MAX_REPAIR_TRIP_SHARE = 0.15
+
+# How many exchanges ahead the AI looks when deciding a battle is lost (see
+# ai_movement._tile_is_lost). The forecast is the shared one Manage Battle
+# shows. Longer sees a slow defeat sooner but also gives up fights a
+# reinforcement could still have turned.
+AI_RETREAT_FORECAST_TURNS = 3
 
 # What a unit contributes, given how combat actually resolves:
 #  - only a lane's front rank deals damage -- LANE_SLOTS_TYPICAL of them in an
@@ -1758,6 +1791,15 @@ AI_MIN_ROLE_TARGET = 2.0    # even a landlocked one-province nation wants a coup
 # body. Below 0.5 on purpose: a unit that does most of its work shooting still
 # has to survive to do it, so the best attackers are never pure offence.
 AI_ASSAULT_OFFENSE_SHARE = 0.45
+# Front-slot quality: an assault unit's score is multiplied by its combat value
+# relative to the assault mean, raised to this power, and it fills its role by
+# that relative combat. A battle tile seats only a few units a side, so the
+# unit in the slot matters more than its price per point suggests. At 0, cost
+# per point decides alone and cheap infantry wins every slot. Tuned over ten
+# turns on a copy of saves/runv3: the purchase loop's ground buys went from
+# under 1% armor at 0 to 17% at 1.0, 20% here and 22% at 1.5, where fuel
+# rather than the score becomes the limit.
+AI_SLOT_QUALITY_EXPONENT = 1.25
 
 # Stop buying when the best remaining option is worth less than this fraction of
 # the best option overall -- the AI has better uses for the resources.
@@ -1805,6 +1847,11 @@ AI_SEA_PATH_PENALTY_MULTIPLIER = 2.0 # Land troops prefer land routes unless sea
 
 AI_REINFORCE_COMBAT_WEIGHT = 20 # Pulls pathing land units toward active battles
 AI_REAR_GUARD_PENALTY = 50 # Pushes units off a quiet border once one is standing there
+# A coast with no land border is guarded only when an enemy shore or visible
+# enemy ship is within AI_NEARBY_SEA_TILES of water -- unless friendly warships
+# there outweigh the visible enemy ones by this ratio, so no landing would get
+# through. See ai_movement._threatened_coasts.
+AI_COAST_SUPREMACY_RATIO = 1.5
 
 AI_MIN_COAST_FOR_NAVY = 8 # Tiles needed to justify building a navy
 
