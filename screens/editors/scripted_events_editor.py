@@ -1004,9 +1004,13 @@ class _EventEditScreen(_ModalScreen):
 
 class Scripted_Events_Editor_Screen(_ModalScreen):
     NAT_W = 260
-    # The Variables and Global Rules buttons stack under the nation list.
-    SIDE_BUTTON_GAP = 12
-    SIDE_BUTTON_STEP = 40
+    # Left column, top to bottom, as offsets from the panel top: Back, Global Rules,
+    # the nation list, then Variables. The nation list fills the space between.
+    BACK_Y = 16
+    GLOBAL_RULES_Y = 62
+    NATIONS_TOP = 124
+    VARIABLES_Y = 624
+    VARIABLES_GAP = 12
 
     def __init__(self, map_ref):
         super().__init__(map_ref, "Scripted Events Editor")
@@ -1017,8 +1021,8 @@ class Scripted_Events_Editor_Screen(_ModalScreen):
 
         p = self.panel_rect
         self.nat_x = p.x + self.PAD
-        self.nations_top = p.y + 112
-        self.nations_view_h = 460
+        self.nations_top = p.y + self.NATIONS_TOP
+        self.nations_view_h = self.VARIABLES_Y - self.VARIABLES_GAP - self.NATIONS_TOP
 
         self.events_x = self.nat_x + self.NAT_W + 40
         self.events_top = p.y + 130
@@ -1133,7 +1137,13 @@ class Scripted_Events_Editor_Screen(_ModalScreen):
 
     def refresh_ui(self):
         p = self.panel_rect
-        self.elements = [make_back_button(self.exit_screen, pos=(self.nat_x, p.y + 46))]
+        self.elements = [
+            make_back_button(self.exit_screen, pos=(self.nat_x, p.y + self.BACK_Y)),
+            self.button(self.nat_x, p.y + self.GLOBAL_RULES_Y, self.NAT_W - 24, "green", "Global Rules",
+                        self.open_global_rules),
+            self.button(self.nat_x, p.y + self.VARIABLES_Y, self.NAT_W - 24, "orange", "Variables",
+                        self.open_variables),
+        ]
 
         self._content_nations = pygame.Rect(self.nat_x, self.nations_top, self.NAT_W, self.nations_view_h)
         self._content_events = pygame.Rect(self.events_x, self.events_top,
@@ -1149,12 +1159,6 @@ class Scripted_Events_Editor_Screen(_ModalScreen):
             btn.pane = "nations"
             btn.click_guard = self._guard_nations
             self.elements.append(btn)
-
-        side_top = self.nations_top + self.nations_view_h + self.SIDE_BUTTON_GAP
-        for i, (label, callback) in enumerate((("Variables", self.open_variables),
-                                               ("Global Rules", self.open_global_rules))):
-            self.elements.append(self.button(self.nat_x, side_top + i * self.SIDE_BUTTON_STEP,
-                                             self.NAT_W - 24, "green", label, callback))
 
         events = self._events()
         row_w = p.right - self.PAD - self.events_x - 20
