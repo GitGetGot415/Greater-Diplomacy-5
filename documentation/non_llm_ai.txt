@@ -212,6 +212,13 @@ Purchase and disbanding
     Use ai_unit_eval's marginal value for both decisions.
     A separate raw-attack ranking can make the AI buy and disband the same type.
 
+Front-slot quality
+    Only a lane's front rank fires, and a battle tile seats a few units a side.
+    ai_unit_eval._apply_slot_quality multiplies each assault unit's score by its combat value
+    relative to the assault mean, raised to AI_SLOT_QUALITY_EXPONENT.
+    The same relative combat is how much of the assault role one unit fills, so many weak units
+    do not read as a front already full of firepower. Other roles count one per unit.
+
 Obsolescence
     Aircraft, land units, and naval units use constants.OBSOLESCENCE_RULES.
     Obsolescence requires completed replacement research. A queued research project does not make units obsolete.
@@ -231,6 +238,8 @@ AI_WAR_DESIRE_THRESHOLD
     Minimum war desire for a declaration.
 AI_LINE_SPEND_RATIO
     Spending balance between unit numbers and firepower.
+AI_SLOT_QUALITY_EXPONENT
+    How strongly front-slot quality favors stronger assault units over cheaper ones.
 AI_W_SOAK
     Value of defense that absorbs damage in the front rank.
     Reserves do not absorb the current volley.
@@ -430,6 +439,11 @@ Protection depends on active tactical mode, not just a retained player_unit attr
 Check fuel when purchasing.
 A fuel shortage excludes fuel-consuming units from affordable candidates and saving plans.
 It does not block units that need no fuel.
+Short of fuel with materials under target, the AI converts materials to fuel at its full legal maximum.
+
+The AI's conscription slider never converts so much manpower that kept income falls below
+the manpower upkeep allowed by the peacetime AI_UPKEEP_TARGETS. Otherwise a large stockpile
+could convert away the income the purchase loop's upkeep cap needs, and stop all purchases.
 
 RESPONSE TEXT AND MESSAGE METADATA
 ----------------------------------

@@ -130,6 +130,10 @@ def _compute_economy_ratios(context, ai_name, data, my_provs, econ, unit_library
     upk_man = econ["upkeep"]["manpower"]
     inc_fuel = econ["total_inc"]["fuel"]
     upk_fuel = econ["upkeep"]["fuel"]
+    # Manpower income before the conscription slider converts any of it, which
+    # is what the slider's own floor is measured against.
+    raw_man = sum(value for key, value in econ.get("breakdown", {}).get("manpower", {}).items()
+                  if key not in ("conscription", "policy"))
 
     income = {"manpower": inc_man, "materials": inc_mat, "fuel": inc_fuel}
     targets = {"manpower": target_man, "materials": target_mat, "fuel": target_fuel}
@@ -168,7 +172,7 @@ def _compute_economy_ratios(context, ai_name, data, my_provs, econ, unit_library
     return {
         "at_war": at_war,
         "target_man": target_man, "target_mat": target_mat, "target_fuel": target_fuel,
-        "inc_man": inc_man, "inc_mat": inc_mat, "inc_fuel": inc_fuel,
+        "inc_man": inc_man, "inc_mat": inc_mat, "inc_fuel": inc_fuel, "raw_man": raw_man,
         "upk_man": upk_man, "upk_mat": upk_mat, "upk_fuel": upk_fuel,
         "ratio_man": ratio_man, "ratio_mat": ratio_mat, "ratio_fuel": ratio_fuel,
         "deficits": deficits,
@@ -190,11 +194,23 @@ def _update_conscription_slider(data, state):
     ratio_man, target_man = state["ratio_man"], state["target_man"]
 
     if ratio_mat > target_mat and ratio_man < target_man and data.get("manpower", 0) > c.AI_CONSCRIPTION_MIN_MANPOWER:
-        data["conscription_slider"] = 0.5 # Convert 50%
+        slider = 0.5 # Convert 50%
     elif (data.get("manpower", 0) > c.AI_CONSCRIPTION_PANIC_MANPOWER and data.get("materials", 0) < c.AI_CONSCRIPTION_PANIC_MATERIALS) or data.get("manpower", 0) > c.AI_CONSCRIPTION_EMERGENCY_MANPOWER:
-        data["conscription_slider"] = 0.25 # Emergency: Convert 75%
+        slider = 0.25 # Emergency: Convert 75%
     else:
-        data["conscription_slider"] = 1.0 # Normal (keep 100%)
+        slider = 1.0 # Normal (keep 100%)
+
+    # Never convert away the manpower the army needs. The emergency branch
+    # fired on a big stockpile alone, kept a quarter of the income, and left the
+    # Soviet Union in saves/runv3 below its own manpower upkeep -- so the
+    # purchase loop's upkeep cap stopped every purchase with 50,000 banked.
+    # Kept income must cover upkeep inside the peacetime target, which leaves
+    # the wartime target room to buy.
+    raw_man = state.get("raw_man", 0)
+    if raw_man > 0:
+        needed = state["upk_man"] / (c.AI_UPKEEP_TARGETS["manpower"] * raw_man)
+        slider = max(slider, min(1.0, needed))
+    data["conscription_slider"] = slider
 
 
 def _update_fuel_conversion_slider(data, state):
@@ -213,7 +229,11 @@ def _update_fuel_conversion_slider(data, state):
 
     if max_conversion > 0:
         if ratio_fuel > target_fuel and ratio_mat < target_mat and data.get("materials", 0) > c.AI_CONVERSION_MIN_MATERIALS:
-            data["mat_to_fuel_slider"] = max_conversion * 0.5 # Convert using 50% of their LEGAL MAXIMUM capability
+            # Short of fuel with materials to spare: use all of the legal
+            # conversion. Half of it left armies fuel-starved while materials
+            # piled up (saves/runv3: Germany at 0.07 of 0.14, materials upkeep
+            # at 40% of a 90% target, and no tank affordable).
+            data["mat_to_fuel_slider"] = max_conversion
         elif (data.get("materials", 0) > c.AI_CONVERSION_PANIC_MATERIALS and data.get("fuel", 0) < c.AI_CONVERSION_PANIC_FUEL) or data.get("materials", 0) > c.AI_CONVERSION_EMERGENCY_MATERIALS:
             data["mat_to_fuel_slider"] = max_conversion # Emergency: Maximize production safely
         else:
@@ -342,11 +362,16 @@ def _disband_worst_unit_if_deficit(context, data, my_provs, ai_name, deficits,
                               {"type": "DISBAND"}, authority="ai")
 
 
-def _panic_militia_and_tally_forces(context, ai_name, data, my_provs, unit_library, state, roles):
+def _panic_militia_and_tally_forces(context, ai_name, data, my_provs, unit_library, state, roles,
+                                    weights=None):
     """Section: per-province pass that clears losing tiles' build queues,
     panic-queues a Militia on any core threatened by an adjacent enemy, and
-    tallies current + queued forces (by role) and land/sea border counts."""
+    tallies current + queued forces (by role) and land/sea border counts.
+
+    `weights` is how much of its role each unit type fills (one when absent);
+    see ai_unit_eval._apply_slot_quality."""
     world_state = world_for(context)
+    weights = weights or {}
     role_counts = {}
     land_border_count = 0
     sea_border_count = 0
@@ -432,7 +457,8 @@ def _panic_militia_and_tally_forces(context, ai_name, data, my_provs, unit_libra
                         state["upk_mat"] += militia_upkeep["materials"]
                         state["upk_fuel"] += militia_upkeep["fuel"]
                         militia_role = roles.get(militia_name, ai_unit_eval.ROLE_LINE)
-                        role_counts[militia_role] = role_counts.get(militia_role, 0) + 1
+                        role_counts[militia_role] = (role_counts.get(militia_role, 0)
+                                                     + weights.get(militia_name, 1.0))
 
 
 
@@ -447,7 +473,7 @@ def _panic_militia_and_tally_forces(context, ai_name, data, my_provs, unit_libra
         for u_type in standing + ordered:
             role = roles.get(u_type)
             if role:
-                role_counts[role] = role_counts.get(role, 0) + 1
+                role_counts[role] = role_counts.get(role, 0) + weights.get(u_type, 1.0)
 
         # Check neighbors to determine land/sea ratios
         is_land_border = False
@@ -646,7 +672,7 @@ def _run_purchase_loop(context, ai_name, data, my_provs, unit_library, tech_tree
         upk_man += upkeep["manpower"]
         upk_mat += upkeep["materials"]
         upk_fuel += upkeep["fuel"]
-        have[pick.role] = have.get(pick.role, 0) + 1
+        have[pick.role] = have.get(pick.role, 0) + pick.weight
 
         # Spread the load rather than stacking one province's queue.
         target_prov = min(deployable[pick.name], key=lambda p: len(p.get("unit_queue", [])))
@@ -847,6 +873,9 @@ def process_ai_economy_decisions(context):
         all_values = ai_unit_eval.evaluate(
             sorted(set(candidates) | {t for t in owned_types if t}), unit_library, unit_ctx)
         roles = {name: value.role for name, value in all_values.items()}
+        # How much of its role each unit fills. One per unit, except assault,
+        # which counts firepower; see ai_unit_eval._apply_slot_quality.
+        weights = {name: value.weight for name, value in all_values.items()}
         buildable_values = {n: v for n, v in all_values.items() if n in set(candidates)}
 
         # Sliders no longer have a tank quota to save up for; they key off the
@@ -859,7 +888,7 @@ def process_ai_economy_decisions(context):
 
         # --- NEW: Panic Militia & Combat Queue Clearing ---
         force_tally = _panic_militia_and_tally_forces(
-            context, ai_name, data, my_provs, unit_library, state, roles)
+            context, ai_name, data, my_provs, unit_library, state, roles, weights)
 
         state.update(force_tally)
         state["econ"] = econ

@@ -527,5 +527,63 @@ class ThreatProfileTests(unittest.TestCase):
         self.assertGreaterEqual(enemy_stack, 1.0)
 
 
+class SlotQualityTests(unittest.TestCase):
+    """A battle seats a few units a side, so an assault slot is worth filling well.
+
+    "Heavy" is "Light" scaled by ten in every stat and every cost, so the two
+    are worth exactly the same per unit of cost. Before the front-slot factor
+    they scored equally and the cheaper one won the tie in practice; saves/runv3
+    bought one tank in 190 ground units over ten turns.
+    """
+
+    LIBRARY = {
+        "Light": unit(attack=1000, health=100, mat=500, man=100, fuel=10, time=2),
+        "Heavy": unit(attack=10000, health=1000, mat=5000, man=1000, fuel=100, time=2),
+        "Bunkers": unit(attack=40, defense=120, health=1200, mat=700, man=900, time=2),
+    }
+
+    def values(self, exponent=None):
+        from unittest.mock import patch
+        exponent = c.AI_SLOT_QUALITY_EXPONENT if exponent is None else exponent
+        with patch.object(c, "AI_SLOT_QUALITY_EXPONENT", exponent):
+            return scores(library=self.LIBRARY)
+
+    def test_the_fixture_is_two_assault_units_of_equal_value_per_cost(self):
+        flat = self.values(exponent=0)
+        self.assertEqual(flat["Light"].role, ue.ROLE_ASSAULT)
+        self.assertEqual(flat["Heavy"].role, ue.ROLE_ASSAULT)
+        self.assertAlmostEqual(flat["Heavy"].score, flat["Light"].score)
+
+    def test_the_stronger_unit_wins_the_slot(self):
+        values = self.values(exponent=1.0)
+        self.assertGreater(values["Heavy"].score, values["Light"].score)
+
+    def test_other_roles_are_left_alone(self):
+        flat, weighted = self.values(exponent=0), self.values(exponent=1.0)
+        self.assertNotEqual(weighted["Bunkers"].role, ue.ROLE_ASSAULT)
+        self.assertEqual(weighted["Bunkers"].score, flat["Bunkers"].score)
+        self.assertEqual((weighted["Bunkers"].quality, weighted["Bunkers"].weight), (1.0, 1.0))
+
+    def test_an_assault_unit_fills_its_role_by_firepower(self):
+        values = self.values(exponent=1.0)
+        self.assertAlmostEqual(values["Heavy"].weight / values["Light"].weight,
+                               values["Heavy"].combat / values["Light"].combat)
+
+    def test_many_weak_units_leave_room_for_a_strong_one(self):
+        values = self.values(exponent=1.0)
+        targets = {ue.ROLE_ASSAULT: 5.0}
+        weak_army = {ue.ROLE_ASSAULT: 5 * values["Light"].weight}
+        self.assertLess(weak_army[ue.ROLE_ASSAULT], targets[ue.ROLE_ASSAULT])
+        self.assertGreater(ue.marginal_score(values["Heavy"], weak_army, targets),
+                           ue.marginal_score(values["Heavy"], {ue.ROLE_ASSAULT: 5}, targets))
+
+    def test_repricing_keeps_the_slot_factor(self):
+        values = self.values(exponent=1.0)
+        repriced = ue.reprice(values, context().prices)
+        self.assertGreater(repriced["Heavy"].score, repriced["Light"].score)
+        self.assertAlmostEqual(repriced["Heavy"].score / repriced["Light"].score,
+                               values["Heavy"].score / values["Light"].score)
+
+
 if __name__ == "__main__":
     unittest.main()

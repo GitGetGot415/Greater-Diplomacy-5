@@ -60,8 +60,12 @@ ALL_ROLES = LAND_ROLES + (ROLE_NAVAL, ROLE_AIR, ROLE_TRANSPORT)
 #: One unit's worth to one nation this turn.
 #: `score` is value per unit of resource pain; `pain` is what it costs in those
 #: terms, so a caller that has to check affordability separately still can.
+#: `quality` is the front-slot factor already folded into `score`, and `weight`
+#: is how much of its role one unit fills; both are 1.0 outside the assault
+#: role. See _apply_slot_quality.
 UnitValue = collections.namedtuple(
-    "UnitValue", "name role score combat offense durability soak pain stats naval")
+    "UnitValue", "name role score combat offense durability soak pain stats naval quality weight",
+    defaults=(1.0, 1.0))
 
 #: What the valuation is relative to -- the war this nation is actually fighting.
 #: prices      -- pain per point of each resource, from resource_prices()
@@ -398,7 +402,37 @@ def evaluate(names, unit_library, ctx):
         values[name] = UnitValue(name=name, role=role, score=score, combat=combat,
                                  offense=offense, durability=durability, soak=health,
                                  pain=pain, stats=stats, naval=naval)
-    return values
+    return _apply_slot_quality(values)
+
+
+def _apply_slot_quality(values):
+    """Weighs assault units by what they do with the front slot they take.
+
+    Only a lane's front rank fires, and a battle tile seats a few units a side.
+    Scored per unit of cost alone, a tank and an infantry division came out
+    even (saves/runv3: 0.143 against 0.137 for the German Reich), so the cheap
+    division always won -- though in the slot they both need, the tank does
+    eleven times the damage. Each assault unit's score is multiplied by its
+    combat relative to the assault mean, to the power AI_SLOT_QUALITY_EXPONENT.
+
+    Saturation follows the same idea: one assault unit fills its role by that
+    relative combat (`weight`), so forty weak divisions do not read as a front
+    already full of firepower. Other roles are left as they are.
+    """
+    assault = [value.combat for value in values.values()
+               if value.role == ROLE_ASSAULT and value.combat > 0]
+    mean = _mean(assault)
+    if mean <= 0:
+        return values
+    out = {}
+    for name, value in values.items():
+        if value.role != ROLE_ASSAULT:
+            out[name] = value
+            continue
+        relative = max(0.0, value.combat) / mean
+        quality = relative ** c.AI_SLOT_QUALITY_EXPONENT
+        out[name] = value._replace(score=value.score * quality, quality=quality, weight=relative)
+    return out
 
 
 # ----------------------------------------------------------------------------
@@ -430,7 +464,8 @@ def reprice(values, prices):
         pain = unit_pain(value.stats, prices)
         timed = value.combat / max(
             1.0, float(value.stats.get("production_time", 1))) ** c.AI_TIME_EXPONENT
-        out[name] = value._replace(pain=pain, score=(timed / pain if pain > 0 else 0.0))
+        out[name] = value._replace(
+            pain=pain, score=(timed / pain * value.quality if pain > 0 else 0.0))
     return out
 
 
