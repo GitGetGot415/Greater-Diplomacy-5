@@ -3,12 +3,17 @@
 A losing AI used to offer only a white peace. A white peace hands every occupied
 province back (deal_effects.restore_occupied), so the offer asked a clear winner
 to give up everything it had taken, and the winner always refused. A winning AI
-never offered terms at all. Wars against a clear winner ran until the loser was
-gone.
+never offered terms at all.
 
-The verdicts are patched here, so these tests pin down which terms are chosen
-and who is asked, apart from the tuning of ai_opinion.peace_verdict itself
-(tests/test_ai_opinion.py covers that arithmetic).
+Each AI now decides from its own position only. It never reads the other side's
+verdict, which is that side's private business: two AIs that both read both
+verdicts reached the same answer on the same turn and sent each other the same
+deal (saves/same peace deals). A loser concedes more of its lost land the worse
+it wants out.
+
+The verdicts and wish for peace are patched here, so these tests pin down which
+terms are chosen and whose verdict is read, apart from the tuning of
+ai_opinion.peace_verdict itself (tests/test_ai_opinion.py covers that).
 """
 
 import unittest
@@ -21,13 +26,17 @@ from tests.stub_map_screen import StubMapScreen
 
 
 class Overrun:
-    """FOE has overrun two of AV's provinces. Shared by the test classes below."""
+    """FOE has overrun four of AV's provinces, each worth more than the last."""
 
     HUMANS = ()
 
     def setUp(self):
         self.game = StubMapScreen(["AV", "FOE"], human_players=self.HUMANS)
-        self.taken = [self.game.add_province("AV", cores=["AV"]) for _ in range(2)]
+        self.taken = []
+        for value in range(4):
+            prov = self.game.add_province("AV", cores=["AV"])
+            prov["buildings"] = ["Basic Factory"] * value
+            self.taken.append(prov)
         self.kept = self.game.add_province("AV", cores=["AV"])
         self.game.border(self.game.home_of("AV")["id"], self.game.home_of("FOE")["id"],
                          *(p["id"] for p in self.taken), self.kept["id"])
@@ -46,8 +55,8 @@ class Overrun:
         return {str(prov_id) for prov_id
                 in deal.tile_transfers(terms, self.game.map_data, self.game.nation_data)}
 
-    def taken_ids(self):
-        return {str(p["id"]) for p in self.taken}
+    def ids(self, provs):
+        return {str(p["id"]) for p in provs}
 
     def judge(self, accepts):
         """A stand-in peace_verdict: `accepts(nation, terms)` decides."""
@@ -64,92 +73,111 @@ class Overrun:
             section(bag, self.game, nation, [enemy], [nation, enemy], self.world)
         return [candidate for candidate in bag.ranked() if candidate.action == "PEACE_TREATY"]
 
-    def losing_offers(self):
+    def losing_offers(self, appetite=1.0):
         return self.offers(ai_diplomacy._offer_peace_when_losing, "AV", "FOE",
-                           appetite=0.95, leverage=0.2)
+                           appetite=appetite, leverage=0.2)
 
-    def winning_offers(self):
+    def winning_offers(self, leverage=0.8):
         return self.offers(ai_diplomacy._offer_terms_when_winning, "FOE", "AV",
-                           appetite=0.1, leverage=0.8)
+                           appetite=0.1, leverage=leverage)
+
+    def conceded(self, appetite):
+        return self.moved(ai_diplomacy._concession_terms(self.game, "AV", "FOE", appetite, 0.2))
 
 
+class ConcessionTests(Overrun, unittest.TestCase):
+    """The more a loser wants out, the more of its lost land it gives up."""
 
-class PeaceOfferTests(Overrun, unittest.TestCase):
-    # --- the terms ---------------------------------------------------------
+    def test_just_past_the_threshold_it_concedes_nothing(self):
+        self.assertEqual(self.conceded(c.AI_PEACE_OFFER_THRESHOLD), set())
 
-    def test_status_quo_terms_hand_over_exactly_what_is_occupied(self):
-        terms = ai_diplomacy._status_quo_terms(self.game, "AV", "FOE")
-        self.assertEqual(self.moved(terms), self.taken_ids())
+    def test_at_full_desperation_it_concedes_everything_occupied(self):
+        self.assertEqual(self.conceded(1.0), self.ids(self.taken))
 
-    def test_and_executing_them_leaves_the_holder_in_place(self):
-        """Through the same execution path a signed treaty takes."""
-        deal_effects.execute(self.game, ai_diplomacy._status_quo_terms(self.game, "AV", "FOE"))
-        self.assertTrue(all(prov["owner"] == "FOE" for prov in self.taken))
+    def test_in_between_it_gives_up_the_least_valuable_land_first(self):
+        halfway = (c.AI_PEACE_OFFER_THRESHOLD + 1.0) / 2
+        self.assertEqual(self.conceded(halfway), self.ids(self.taken[:2]))
+
+    def test_the_concession_never_shrinks_as_desperation_grows(self):
+        steps = [c.AI_PEACE_OFFER_THRESHOLD + (1.0 - c.AI_PEACE_OFFER_THRESHOLD) * k / 8
+                 for k in range(9)]
+        sizes = [len(self.conceded(appetite)) for appetite in steps]
+        self.assertEqual(sizes, sorted(sizes))
+
+    def test_land_it_still_holds_is_never_on_the_table(self):
+        self.assertNotIn(str(self.kept["id"]), self.conceded(1.0))
+
+    def test_signed_terms_leave_the_conceded_land_with_its_holder(self):
+        """Through the same execution path a signed treaty takes. The rest of
+        the occupied land goes home, as a white peace sends it."""
+        halfway = (c.AI_PEACE_OFFER_THRESHOLD + 1.0) / 2
+        deal_effects.execute(self.game, ai_diplomacy._concession_terms(
+            self.game, "AV", "FOE", halfway, 0.2))
+        self.assertEqual([p["owner"] for p in self.taken], ["FOE", "FOE", "AV", "AV"])
         self.assertEqual(self.kept["owner"], "AV")
 
-    # --- the losing side ---------------------------------------------------
 
-    def test_a_loser_offers_the_cheapest_terms_both_sides_accept(self):
+class OwnJudgementTests(Overrun, unittest.TestCase):
+    """Each AI reads its own verdict only, never the other side's."""
+
+    def test_a_loser_sends_the_terms_it_would_sign(self):
         with self.judge(lambda nation, terms: True):
             offers = self.losing_offers()
         self.assertEqual(len(offers), 1)
-        self.assertEqual(self.moved(offers[0].payload["parameters"]), set())
+        self.assertEqual(self.moved(offers[0].payload["parameters"]), self.ids(self.taken))
+        self.assertEqual(set(self.asked), {"AV"})
 
-    def test_a_loser_concedes_the_occupied_land_when_the_winner_insists(self):
-        def winner_wants_its_gains(nation, terms):
-            return nation == "AV" or self.moved(terms) == self.taken_ids()
-        with self.judge(winner_wants_its_gains):
-            offers = self.losing_offers()
-        self.assertEqual(len(offers), 1)
-        self.assertEqual(self.moved(offers[0].payload["parameters"]), self.taken_ids())
-
-    def test_nothing_is_sent_when_no_terms_would_be_signed(self):
-        """A refused offer spends the cooldown; an unsendable one is not sent."""
-        with self.judge(lambda nation, terms: nation == "AV"):
+    def test_a_loser_sends_nothing_it_would_refuse_itself(self):
+        with self.judge(lambda nation, terms: False):
             self.assertEqual(self.losing_offers(), [])
 
-    def test_a_loser_does_not_sign_away_land_it_would_refuse_itself(self):
-        with self.judge(lambda nation, terms: nation == "FOE"):
-            self.assertEqual(self.losing_offers(), [])
-
-    # --- the winning side --------------------------------------------------
+    def test_a_loser_below_the_threshold_sends_nothing(self):
+        with self.judge(lambda nation, terms: True):
+            self.assertEqual(self.losing_offers(appetite=c.AI_PEACE_OFFER_THRESHOLD - 0.01), [])
 
     def test_a_winner_offers_to_keep_what_it_holds(self):
         with self.judge(lambda nation, terms: True):
             offers = self.winning_offers()
         self.assertEqual(len(offers), 1)
-        self.assertEqual(self.moved(offers[0].payload["parameters"]), self.taken_ids())
+        self.assertEqual(self.moved(offers[0].payload["parameters"]), self.ids(self.taken))
+        self.assertEqual(set(self.asked), {"FOE"})
 
     def test_a_winner_that_would_rather_fight_on_offers_nothing(self):
-        with self.judge(lambda nation, terms: nation != "FOE"):
+        with self.judge(lambda nation, terms: False):
             self.assertEqual(self.winning_offers(), [])
 
     def test_a_winner_with_little_leverage_offers_nothing(self):
         with self.judge(lambda nation, terms: True):
-            offers = self.offers(ai_diplomacy._offer_terms_when_winning, "FOE", "AV",
-                                 appetite=0.1, leverage=0.4)
-        self.assertEqual(offers, [])
-
-    def test_both_sides_are_asked_when_both_are_ai(self):
-        with self.judge(lambda nation, terms: True):
-            self.winning_offers()
-        self.assertEqual(set(self.asked), {"FOE", "AV"})
+            self.assertEqual(self.winning_offers(leverage=0.4), [])
 
 
-class HumanTargetTests(Overrun, unittest.TestCase):
-    """A human's answer is never predicted: only the AI's own verdict is read."""
+class DeliveredOfferTests(Overrun, unittest.TestCase):
+    """A country holding the enemy's delivered terms answers them instead of
+    sending its own back across the table in the same turn."""
 
-    HUMANS = ("AV",)
+    def sued(self):
+        bag = ai_candidates.Collector("AV", {}, context=self.game)
+        with self.judge(lambda nation, terms: True), \
+                patch.object(ai_opinion, "peace_appetite", return_value=1.0):
+            ai_diplomacy._offer_peace_when_losing(bag, self.game, "AV", ["FOE"],
+                                                  ["AV", "FOE"], self.world)
+        return [cand for cand in bag.ranked() if cand.action == "PEACE_TREATY"]
 
-    def test_only_the_ai_is_asked(self):
-        with self.judge(lambda nation, terms: True):
-            offers = self.winning_offers()
-        self.assertEqual(set(self.asked), {"FOE"})
-        self.assertEqual(len(offers), 1)
+    def test_a_delivered_peace_offer_blocks_a_mirror_offer(self):
+        self.assertEqual(len(self.sued()), 1, "the fixture must offer without one")
+        self.game.nation_data["FOE"]["pending_diplomacy"]["AV"] = {
+            "action": "PEACE_TREATY", "turns": 1}
+        self.assertEqual(self.sued(), [])
+
+    def test_an_offer_still_being_drafted_does_not(self):
+        """Only a delivered offer counts; a draft has not reached AV yet."""
+        self.assertFalse(ai_candidates.mirrors_waiting_proposal(
+            {"FOE": {"pending_diplomacy": {"AV": {"action": "PEACE_TREATY", "turns": 0}}}},
+            "AV", "FOE", "PEACE_TREATY"))
 
 
 class OccupationAppetiteTests(unittest.TestCase):
-    """Item 13: losing homeland pushes a nation toward peace, not only its army."""
+    """Losing homeland pushes a nation toward peace, not only its army."""
 
     def test_an_occupied_homeland_raises_the_wish_for_peace(self):
         game = StubMapScreen(["AV", "FOE"], human_players=())

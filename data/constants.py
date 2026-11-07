@@ -1355,6 +1355,13 @@ AI_W_PEACE_CAUTION = 0.2
 # `occupied` is war_score's value-weighted share of the pre-war homeland the
 # enemy side holds, the same figure under the war-score bar.
 AI_W_PEACE_OCCUPIED = 1.0
+# Peace decisions read each country's own view of the war (see
+# ai_world.AIWorld.perceived_military). Under fog of war a country guesses the
+# armies it cannot see, and its temperament bends the guess: the estimate is
+# scaled by 1 + AI_PERCEPTION_SKEW * (caution - aggression), so a cautious
+# country fears hidden armies and an aggressive one discounts them. This is
+# what lets two countries at war read the same war differently.
+AI_PERCEPTION_SKEW = 0.5
 #
 # AI_PEACE_CEASEFIRE_THRESHOLD, the bar appetite had to clear before a bare
 # ceasefire was agreed, is gone with the shortcut that read it. A white peace is
@@ -1571,6 +1578,10 @@ AI_MIRRORED_PROPOSALS = {
     "FACTION_INVITE": ("JOIN_FACTION_REQ",),
     "JOIN_FACTION_REQ": ("FACTION_INVITE",),
     "CREATE_FACTION": ("CREATE_FACTION",),
+    # A country holding the enemy's peace terms answers them rather than
+    # writing its own back across the table in the same turn.
+    "PEACE_TREATY": ("PEACE_TREATY", "CEASEFIRE"),
+    "CEASEFIRE": ("CEASEFIRE", "PEACE_TREATY"),
 }
 
 # Baseline desirability for actions with no appetite function of their own.

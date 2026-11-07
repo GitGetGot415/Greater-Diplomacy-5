@@ -287,8 +287,8 @@ Available bilateral proposals to AI countries show the shared deterministic acce
 MAYBE is used for legal proposals to human-controlled targets, whose response cannot be predicted.
 The indicator provides information only.
 It does not change eligibility or queue a proposal.
-A rule-based AI reads the same peace verdict before it sends peace terms to another AI country.
-See documentation/non_llm_ai.txt, DIPLOMACY.
+For peace terms, the verdict is the AI country's own belief about the war.
+Under fog of war it can differ from the exact war-score bar. See documentation/non_llm_ai.txt, DIPLOMACY.
 
 When scripted events are enabled, forecasts also check matching Accept/Reject actions and their conditions.
 This applies to outgoing diplomacy indicators and deal acceptance forecasts.

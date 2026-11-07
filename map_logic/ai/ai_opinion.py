@@ -134,9 +134,13 @@ def peace_appetite(world, nation, enemy, scenario_settings=None):
     the nation's homeland the enemy is standing on. Reading only the first, a
     nation with most of its land overrun but an army still comparable to the
     enemy's never wanted to talk. See AI_W_PEACE_OCCUPIED for how they combine.
+
+    The military balance is this nation's own reading of it
+    (AIWorld.perceived_power_ratio): under fog of war it sees the enemy units in
+    view and guesses the rest. Occupation is on the public map.
     """
     person = traits(world, nation, scenario_settings)
-    border_ratio, global_ratio = world.power_ratio(nation, enemy)
+    border_ratio, global_ratio = world.perceived_power_ratio(nation, enemy)
     outgunned = 1.0 - _sigmoid((border_ratio + global_ratio) / 2.0, 1.0, c.AI_ODDS_STEEPNESS)
     occupied = war_score.between(_host(world), nation, enemy, world)["their_parts"]["occupation"]
     losing = 1.0 - (1.0 - outgunned) * (1.0 - clamp01(c.AI_W_PEACE_OCCUPIED * occupied))
@@ -268,7 +272,9 @@ def peace_verdict(world, nation, proposer, agreement, scenario_settings=None):
                         f"you hold {_pct(occupied)} of {land} and are asking "
                         f"for {_pct(asked)} of {country}")
 
-    scores = war_score.between(_host(world), nation, proposer, world)
+    # This nation's own reading of the war, not the exact figures: see
+    # war_score.leverage on `viewer`.
+    scores = war_score.between(_host(world), nation, proposer, world, viewer=nation)
     occupied = deal_mod.occupied_fraction(agreement, nation, map_data, nation_data)
     appetite = peace_appetite(world, nation, proposer, scenario_settings)
     willingness = (c.AI_PEACE_LEVERAGE_W * scores["theirs"]

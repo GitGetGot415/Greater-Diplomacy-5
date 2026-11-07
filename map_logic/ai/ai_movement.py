@@ -1,7 +1,6 @@
 # --- START OF FILE CHANGES ---
 from data.state_access import world_for, session_for
 import heapq
-from types import SimpleNamespace
 import data.constants as c
 from data import queries
 from map_logic.actions import unit_actions
@@ -252,10 +251,8 @@ def _assign_air_orders(context, country, units_info):
                   if queries.is_air_unit(unit, context=context) or queries.is_air_transport(unit, context=context)]
     if not units_info:
         return
-    view = SimpleNamespace(player_country=country, map_data=world_state.map_data,
-        nation_data=world_state.nation_data, id_to_province=world_state.id_to_province,
-        tactical_mode=False, player_unit=None)
-    visible, _partial = queries.get_visible_provinces(view)
+    visible = ai_world.visible_to(world_state.map_data, world_state.nation_data,
+                                  world_state.id_to_province, country)
     enemies = [province for province in world_state.map_data.values()
                if (not queries.get_scenario_flag("fog_of_war", c.DEFAULT_FOG_OF_WAR, context.scenario_settings) or visible is None or province["id"] in visible)
                and queries.air_target_is_hostile({"owner": country}, province,
