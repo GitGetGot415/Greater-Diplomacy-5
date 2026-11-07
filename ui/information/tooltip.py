@@ -103,14 +103,16 @@ def draw_tooltip(map_screen, surface):
                 for u in units[:UNIT_PREVIEW_LIMIT]:
                     u_name = u.get("type", "Unit")
                     level = u.get("level", 0)
+                    # Single-level families omit their numeral in visible labels.
+                    display_name = queries.get_unit_display_name(u_name, context=map_screen)
 
                     if level > 0:
                         # refactor: Use 'Type' for Infantry, 'Lvl' for others
                         base_name = queries.get_base_unit_name(u_name, context=map_screen)
                         label = "Type" if base_name == "Infantry" else "Lvl"
-                        lines.append(f"- {u_name} ({label} {level})")
+                        lines.append(f"- {display_name} ({label} {level})")
                     else:
-                        lines.append(f"- {u_name}")
+                        lines.append(f"- {display_name}")
 
                 if len(units) > UNIT_PREVIEW_LIMIT:
                     lines.append(f"...and {len(units)-UNIT_PREVIEW_LIMIT} more")
