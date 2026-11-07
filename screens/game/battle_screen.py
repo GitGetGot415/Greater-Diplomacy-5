@@ -4,7 +4,8 @@ waits in reserve.
 The Orders screen owns a compact unit-command panel on the left and this lane
 manager fills the clear space beside it when opened. This is where the two
 decisions the lane model gives a player are edited on a separate drag-and-drop
-screen opened by the overview's Edit button:
+screen opened by the overview's Edit button (labeled View, and read-only, for a
+player with no units here):
 
   - which enemy a unit faces, when more than one is standing here. The default
     is the heaviest front first, which is usually right and occasionally very
@@ -332,8 +333,11 @@ class Battle_Screen(ModalScreen):
         self.refresh_ui()
 
     def open_editor(self):
-        if (not self.visible or not self.my_units()
-                or not self.map_screen.can_select_map_units() or not self.can_edit_realtime()):
+        """Opens the battle editor; a player with no units here opens it read-only."""
+        if not self.visible:
+            return
+        if self.my_units() and (not self.map_screen.can_select_map_units()
+                                or not self.can_edit_realtime()):
             return
         self.origin_screen.battle_editor_overview = self
         self.origin_screen.go_to("BATTLE_EDITOR")
@@ -446,9 +450,10 @@ class Battle_Screen(ModalScreen):
 
     def _build_footer(self, btn_y):
         p = self.panel_rect
-        edit = self.button(p.x + self.PAD, btn_y, 130, "blue", "Edit", self.open_editor)
-        edit.disabled = not (self.visible and self.my_units()
-                             and self.map_screen.can_select_map_units())
+        viewing = not self.my_units()
+        edit = self.button(p.x + self.PAD, btn_y, 130, "blue",
+                           "View" if viewing else "Edit", self.open_editor)
+        edit.disabled = not (self.visible and (viewing or self.map_screen.can_select_map_units()))
         self.elements.append(edit)
         if self.embedded:
             self.elements.append(

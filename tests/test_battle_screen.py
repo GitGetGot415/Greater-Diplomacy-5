@@ -436,7 +436,8 @@ class BattleEditorTests(BattleScreenTestCase):
         before = copy.deepcopy(self.province["units"])
         positions = {key: [id(unit) if unit is not None else None for unit in slots]
                      for key, slots in screen.front_slots.items()}
-        help_button = next(element for element in screen.elements if getattr(element, "text", "") == "Help")
+        help_button = next(element for element in screen.elements
+                           if getattr(element, "callback", None) == screen.show_help)
         with mock.patch.object(ui_elements, "play_ui_sound") as sound:
             screen.handle_events([
                 pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=help_button.rect.center, button=1),
@@ -640,6 +641,23 @@ class BattleEditorTests(BattleScreenTestCase):
         self.assertIs(screen.front_slots[lane.index][index], unit)
         self.assertFalse(any(current is unit for current in screen.current()[1].reserve))
         self.assertEqual([id(current) for current in self.province['units']], roster)
+
+    def test_switch_perspective_swaps_areas_and_drops_follow_them(self):
+        screen = self.editor()
+        before = dict(screen.regions)
+        switch = next(element for element in screen.elements
+                      if getattr(element, "callback", None) == screen.switch_perspective)
+        switch.callback()
+        for top, bottom in battle_editor.OPPOSING_PANES:
+            self.assertEqual(screen.regions[top], before[bottom])
+            self.assertEqual(screen.regions[bottom], before[top])
+        start, unit = self.own_row(screen, battle_screen.PANE_RESERVE)
+        screen.handle_events([
+            pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=start.center, button=1),
+            pygame.event.Event(pygame.MOUSEBUTTONUP, pos=screen.regions[battle_editor.PANE_HELD].center, button=1)])
+        self.assertEqual(unit.get('combat_stance'), 'RESERVE')
+        screen.switch_perspective()
+        self.assertEqual(screen.regions, before)
 
     def test_dragging_a_reserve_to_held_and_back_changes_its_hold_preference(self):
         screen = self.editor()
@@ -1301,6 +1319,39 @@ class ObserverTests(BattleScreenTestCase):
 
     def test_the_title_says_view_rather_than_manage(self):
         self.assertIn("View Battle", self.screen().get_panel_title())
+
+    def test_view_opens_the_battle_editor_read_only(self):
+        screen = self.screen()
+        labels = [getattr(el, "text", "") for el in screen.elements]
+        self.assertNotIn("Edit", labels)
+        view = next(el for el in screen.elements if getattr(el, "text", "") == "View")
+        self.assertFalse(view.disabled)
+        with mock.patch.object(self.map, "go_to") as go_to:
+            view.callback()
+        go_to.assert_called_once_with("BATTLE_EDITOR")
+        self.assertIs(self.map.battle_editor_overview, screen)
+        del self.map.battle_editor_overview
+
+        editor = battle_editor.BattleEditorScreen(screen)
+        self.assertFalse(editor.can_edit_now())
+        self.assertIn("View Battle", editor.title)
+        before = copy.deepcopy(self.province["units"])
+        rect, unit = next((rect, unit) for rect, (unit, _note)
+                          in editor.row_paint[battle_screen.PANE_RESERVE])
+        editor.handle_events([
+            pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=rect.center, button=1),
+            pygame.event.Event(pygame.MOUSEBUTTONUP,
+                               pos=editor.regions[battle_editor.PANE_HELD].center, button=1)])
+        self.assertIsNone(editor.drag_unit)
+        self.assertEqual(self.province["units"], before)
+
+    def test_observed_sides_are_named_by_who_holds_the_province(self):
+        self.enterContext(mock.patch.dict(self.province, owner=self.x))
+        editor = battle_editor.BattleEditorScreen(self.screen())
+        for lane in editor.battle.lanes:
+            for side in (lane.a, lane.b):
+                expected = "DEFENDER" if self.x in side.nations else "ATTACKER"
+                self.assertEqual(editor.side_role(side), expected)
 
     def test_there_is_nothing_to_clear(self):
         screen = self.screen()

@@ -365,9 +365,18 @@ available reserves, and green for held reserves. Units outside the player's
 control use muted versions of the same colors. A held unit required to fight
 uses the front-line color.
 Its Edit button changes to the full-screen battle editor.
+A player with no units in the battle sees View instead. View opens the same
+editor read-only, titled View Battle.
 The editor replaces the map and Orders view and shows opposing reserves,
 front-line units, and a lane list.
-Help explains dragging, held units, automatic filling, Organize, and the outlook.
+In a lane the player has no side in, the two sides are captioned Attacker and
+Defender. The defender is the side that includes the province owner or a member
+of the owner's faction, the same test as fort defense. When neither side
+qualifies, both are attackers.
+Switch Perspective swaps the two sides' areas and the order of each lane's
+flags and tally. Orders and editing permissions do not change.
+Help explains dragging, held units, automatic filling, Organize, the outlook, and
+Switch Perspective.
 The outlook shows the selected lane's expected winner and duration using the
 same forecast as Manage Battle. The forecast uses
 normal combat assignment, including reserves and automatic filling, and refreshes

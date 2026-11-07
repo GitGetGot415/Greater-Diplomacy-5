@@ -11,7 +11,7 @@ from screens.game.battle_screen import (
 )
 from ui.navigation.screen import Screen
 from ui.widgets.scroll_panes import ScrollPanes
-from ui.widgets.ui_elements import Button, draw_pixel_panel, draw_wrapped_icon_row
+from ui.widgets.ui_elements import Button, draw_pixel_panel, draw_wrapped_icon_row, make_info_button
 from ui.widgets import flag_icons
 from ui.widgets.text_utils import fit_text
 from ui.rendering.font_manager import fonts
@@ -32,6 +32,7 @@ RESERVE_H = 150
 LANES_W = 188
 AUTOMATION_W = 156
 AUTOMATION_BUTTON_H = 36
+PERSPECTIVE_W = 180
 CARD_H = 58
 CARD_MAX_W = 190
 FRONT_GRID_MIN_SLOTS = 10
@@ -42,6 +43,10 @@ FRONT_SCROLLBAR_BOTTOM_INSET = 1
 LANE_ROW_H = 42
 PANEL_BORDER = MESSAGE_PANEL_STYLES['contacts']['color']
 ARENA_OPACITY = 180
+# Switch Perspective trades these areas, so each side's cards, captions, and
+# drop targets move together.
+OPPOSING_PANES = ((PANE_ENEMY, PANE_FRONT), (PANE_ENEMY_RESERVE, PANE_RESERVE),
+                  (PANE_ENEMY_HELD, PANE_HELD))
 
 HELP_TEXT = (
     "Select a lane on the left. Drag units into empty front-line slots, "
@@ -57,6 +62,7 @@ HELP_TEXT = (
     "automatic assignments and the AI's wounded-unit rotation.\n\n"
     "The outlook estimates the selected lane's winner and duration using the same "
     "combat rules as Manage Battle, including reserves and automatic filling.\n\n"
+    "Switch Perspective swaps the two sides' areas.\n\n"
     "Exit returns to Manage Battle."
 )
 
@@ -81,6 +87,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
         self.back_state = "ORDERS"
         self._observed_state = None
         self.front_slots = None
+        self.flipped = False
         self._exit_confirmation_open = False
         self._organize_confirmation_open = False
         self.refresh_ui()
@@ -101,6 +108,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
         self.opened_turn = self.map_screen.time_manager.total_turns
         self.selected_lane = overview.selected_lane
         self.done = False
+        self.flipped = False
         self._exit_confirmation_open = False
         self._organize_confirmation_open = False
         self.front_slots = None
@@ -189,6 +197,11 @@ class BattleEditorScreen(ScrollPanes, Screen):
             PANE_RESERVE: pygame.Rect(0, bottom_top, MARGIN + reserves_w, RESERVE_H),
             PANE_HELD: pygame.Rect(held_x, bottom_top, c.SCREEN_WIDTH - held_x, RESERVE_H),
         }
+        if self.flipped:
+            for top, bottom in OPPOSING_PANES:
+                for areas in (self.regions, self.reserve_bars):
+                    if top in areas:
+                        areas[top], areas[bottom] = areas[bottom], areas[top]
         self.front_panels = {
             pane: pygame.Rect(rect.x - GAP, rect.y - HEADER_H,
                               rect.width + 2 * GAP, rect.height + HEADER_H)
@@ -226,13 +239,16 @@ class BattleEditorScreen(ScrollPanes, Screen):
                           (AUTOMATION_W - 2 * GAP, AUTOMATION_BUTTON_H), "red", "Organize",
                           self.confirm_organize, font_preset="button_small")
         organize.disabled = not self.can_edit_now()
-        help_button = Button(c.SCREEN_WIDTH - MARGIN - (AUTOMATION_W - 2 * GAP), GAP,
-                             (AUTOMATION_W - 2 * GAP, AUTOMATION_BUTTON_H), "blue", "Help",
-                             self.show_help, font_preset="button_small", sound_kind=None)
+        help_button = make_info_button(0, 0, self.show_help)
+        help_button.rect.topright = (c.SCREEN_WIDTH - MARGIN,
+                                     GAP + (AUTOMATION_BUTTON_H - help_button.rect.height) // 2)
+        perspective = Button(help_button.rect.left - GAP - PERSPECTIVE_W, GAP,
+                             (PERSPECTIVE_W, AUTOMATION_BUTTON_H), "blue", "Switch Perspective",
+                             self.switch_perspective, font_preset="button_small")
         done = Button(MARGIN, GAP,
                       (AUTOMATION_W - 2 * GAP, AUTOMATION_BUTTON_H), "red", "Exit",
                       self.exit_screen, font_preset="button_small", sound_kind="back")
-        self.elements.extend((organize, help_button, done))
+        self.elements.extend((organize, perspective, help_button, done))
         if self.overview is None:
             return
         self.overview.visible = queries.is_province_visible(self.map_screen, self.province['id'])
@@ -242,7 +258,8 @@ class BattleEditorScreen(ScrollPanes, Screen):
             CARD_H - fonts.get('small').get_height() - 2 * UNIT_ICON_PADDING))
         self.selected_lane = self.overview.selected_lane
         self.battle = self.overview.battle
-        self.title = f"Edit Battle - Province {self.province['id']}"
+        verb = "Edit" if self.my_units() else "View"
+        self.title = f"{verb} Battle - Province {self.province['id']}"
         if not self.overview.visible or not self.battle.lanes:
             return
         if self.front_slots is None:
@@ -264,8 +281,12 @@ class BattleEditorScreen(ScrollPanes, Screen):
         slots = len(self.front_slots[lane.index])
         self._card_grid(PANE_ENEMY, far.front, slots=slots)
         self._card_grid(PANE_FRONT, self.front_slots[lane.index], slots=slots)
-        reserves = [unit for unit in near.reserve if unit.get('combat_stance') != 'RESERVE']
-        held = [unit for unit in near.reserve if unit.get('combat_stance') == 'RESERVE']
+        # Own and allied units are always visible; this hides only the hidden
+        # submarines a viewer outside the battle may not see.
+        near_reserve = queries.filter_visible_units(
+            near.reserve, self.player, self.province, self.map_screen.nation_data)
+        reserves = [unit for unit in near_reserve if unit.get('combat_stance') != 'RESERVE']
+        held = [unit for unit in near_reserve if unit.get('combat_stance') == 'RESERVE']
         seated = self.seated()
         enemies = [unit for unit in self.province.get('units', [])
                    if queries.get_unit_combat_owner(unit) in far.nations and id(unit) not in seated]
@@ -277,13 +298,19 @@ class BattleEditorScreen(ScrollPanes, Screen):
         self._card_grid(PANE_ENEMY_HELD, enemy_held)
         self._card_grid(PANE_RESERVE, reserves)
         self._card_grid(PANE_HELD, held)
+        if self.is_mine(near) or self.is_mine(far):
+            near_name, far_name = "YOUR SIDE'S", "ENEMY"
+            near_front = "YOUR"
+        else:
+            near_name, far_name = self.side_role(near), self.side_role(far)
+            near_front = near_name
         captions = {
-            PANE_ENEMY_RESERVE: f"ENEMY RESERVES ({len(enemy_reserves)})",
-            PANE_ENEMY_HELD: f"ENEMY HELD ({len(enemy_held)})",
-            PANE_ENEMY: f"ENEMY FRONT  {len(far.front)}/{lane.slots}",
-            PANE_FRONT: f"YOUR FRONT  {len(near.front)}/{lane.slots}",
-            PANE_RESERVE: f"YOUR SIDE'S RESERVES ({len(reserves)})",
-            PANE_HELD: f"YOUR SIDE'S HELD ({len(held)})",
+            PANE_ENEMY_RESERVE: f"{far_name} RESERVES ({len(enemy_reserves)})",
+            PANE_ENEMY_HELD: f"{far_name} HELD ({len(enemy_held)})",
+            PANE_ENEMY: f"{far_name} FRONT  {len(far.front)}/{lane.slots}",
+            PANE_FRONT: f"{near_front} FRONT  {len(near.front)}/{lane.slots}",
+            PANE_RESERVE: f"{near_name} RESERVES ({len(reserves)})",
+            PANE_HELD: f"{near_name} HELD ({len(held)})",
         }
         font = fonts.get('small')
         self.headings = {pane: font.render(text, True, c.UI_TEXT_LIGHT)
@@ -309,11 +336,15 @@ class BattleEditorScreen(ScrollPanes, Screen):
             number = font.render(f"{index + 1}.", True, c.UI_TEXT_LIGHT)
             label.blit(number, (x, 12))
             x += number.get_width() + GAP
-            for side in (near, far):
+            # The lower area's side is listed first, following Switch Perspective.
+            sides = ((near, front_count), (far, len(far.front)))
+            if self.flipped:
+                sides = sides[::-1]
+            for side, _count in sides:
                 owner = self.overview.side_display_nations(side)[0]
                 x = flag_icons.draw_flag_centered(label, owner, self.map_screen.nation_data,
                                                   x, 0, LANE_ROW_H) + GAP
-            tally = font.render(f"{front_count} v {len(far.front)}", True, c.UI_TEXT_LIGHT)
+            tally = font.render(f"{sides[0][1]} v {sides[1][1]}", True, c.UI_TEXT_LIGHT)
             label.blit(tally, (label.get_width() - tally.get_width() - 5, 12))
             self.lane_labels.append((button.rect, label))
 
@@ -461,6 +492,18 @@ class BattleEditorScreen(ScrollPanes, Screen):
     def show_help(self):
         self.cancel_drag()
         dialogs.show_info("Battle Editor Help", HELP_TEXT)
+
+    def switch_perspective(self):
+        """Swaps which side fills the upper and lower areas; orders are unchanged."""
+        self.cancel_drag()
+        self.flipped = not self.flipped
+        self.refresh_ui()
+
+    def side_role(self, side):
+        """A caption for a side in a battle the player is not fighting in."""
+        defends = queries.combat_side_defends_tile(
+            self.province, side.nations, self.map_screen.nation_data)
+        return "DEFENDER" if defends else "ATTACKER"
 
     def _paint_cards(self, pane):
         def paint(surface):

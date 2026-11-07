@@ -34,6 +34,15 @@ def is_fort_defended_territory(province, nation, nation_data):
                 (nation == owner or are_in_same_faction(owner, nation, nation_data)))
 
 
+def combat_side_defends_tile(province, side_nations, nation_data):
+    """Whether a combat side defends this province: it includes the owner or the owner's faction.
+
+    When neither side qualifies, as in a fight on a third country's land, both sides are attacking.
+    """
+    return any(is_fort_defended_territory(province, nation, nation_data)
+               for nation in side_nations)
+
+
 def get_combat_location_category(province, perspective_nation, nation_data,
                                  battle_units=None):
     """Classify a battle from the viewer's aligned side.
@@ -56,25 +65,17 @@ def get_combat_location_category(province, perspective_nation, nation_data,
 
     friendly_nations = queries.get_all_friendly_nations(
         perspective_nation, nation_data)
-    owner = province.get("owner")
 
     def side_matches_viewer(side):
         return (any(nation in friendly_nations for nation in side.nations)
                 or any(unit.get("owner") in friendly_nations
                        for unit in side.front + side.reserve))
 
-    def side_defends_tile(side):
-        if not owner:
-            return False
-        return any(
-            nation == owner or are_in_same_faction(owner, nation, nation_data)
-            for nation in side.nations)
-
     for lane in battle.lanes:
         for side in (lane.a, lane.b):
             if side_matches_viewer(side):
                 return (COMBAT_LOCATION_DEFENSE
-                        if side_defends_tile(side)
+                        if combat_side_defends_tile(province, side.nations, nation_data)
                         else COMBAT_LOCATION_OFFENSE)
 
     return COMBAT_LOCATION_GENERIC
