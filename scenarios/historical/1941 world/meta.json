@@ -1,6 +1,6 @@
 {
     "version": "v47",
-    "generated_at": "2026-11-07T11:12:58.737484",
+    "generated_at": "2026-11-07T11:16:11.602233",
     "date": {
         "day": 15,
         "month": 5,
@@ -37,6 +37,13 @@
             "country": "United States of America",
             "rule": "Be In Faction With",
             "target": "Japan",
+            "strength": "Weak",
+            "bypass_scripted_events": false
+        },
+        {
+            "country": "United Kingdom",
+            "rule": "Make Peace With",
+            "target": "German Reich",
             "strength": "Weak",
             "bypass_scripted_events": false
         }
