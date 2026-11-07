@@ -1791,6 +1791,15 @@ AI_MIN_ROLE_TARGET = 2.0    # even a landlocked one-province nation wants a coup
 # body. Below 0.5 on purpose: a unit that does most of its work shooting still
 # has to survive to do it, so the best attackers are never pure offence.
 AI_ASSAULT_OFFENSE_SHARE = 0.45
+# Front-slot quality: an assault unit's score is multiplied by its combat value
+# relative to the assault mean, raised to this power, and it fills its role by
+# that relative combat. A battle tile seats only a few units a side, so the
+# unit in the slot matters more than its price per point suggests. At 0, cost
+# per point decides alone and cheap infantry wins every slot. Tuned over ten
+# turns on a copy of saves/runv3: the purchase loop's ground buys went from
+# under 1% armor at 0 to 17% at 1.0, 20% here and 22% at 1.5, where fuel
+# rather than the score becomes the limit.
+AI_SLOT_QUALITY_EXPONENT = 1.25
 
 # Stop buying when the best remaining option is worth less than this fraction of
 # the best option overall -- the AI has better uses for the resources.
@@ -1838,6 +1847,11 @@ AI_SEA_PATH_PENALTY_MULTIPLIER = 2.0 # Land troops prefer land routes unless sea
 
 AI_REINFORCE_COMBAT_WEIGHT = 20 # Pulls pathing land units toward active battles
 AI_REAR_GUARD_PENALTY = 50 # Pushes units off a quiet border once one is standing there
+# A coast with no land border is guarded only when an enemy shore or visible
+# enemy ship is within AI_NEARBY_SEA_TILES of water -- unless friendly warships
+# there outweigh the visible enemy ones by this ratio, so no landing would get
+# through. See ai_movement._threatened_coasts.
+AI_COAST_SUPREMACY_RATIO = 1.5
 
 AI_MIN_COAST_FOR_NAVY = 8 # Tiles needed to justify building a navy
 

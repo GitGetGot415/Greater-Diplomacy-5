@@ -845,6 +845,67 @@ def _compute_unsafe_waters(context, ai_name):
     return unsafe_waters
 
 
+def _threatened_coasts(context, ai_name, prov_ids, enemies, friendly_nations):
+    """The coastal tiles in `prov_ids` an enemy could land on soon.
+
+    A tile is threatened when, within AI_NEARBY_SEA_TILES of water from it,
+    one of `enemies` owns a shore or has units this nation can see. Lakes
+    count: a convoy can cross one. Friendly naval supremacy in that water
+    removes the threat -- visible friendly warship strength at least
+    AI_COAST_SUPREMACY_RATIO times the visible enemy warship strength, and
+    above zero -- because convoys crossing it would be sunk.
+
+    Shores are public map data; enemy ships count only when visible, so a
+    hidden submarine is no reason to guard a beach.
+    """
+    world_state = world_for(context)
+    world = ai_world.for_screen(context)
+    nation_data = world_state.nation_data
+    if not enemies or not prov_ids:
+        return set()
+    enemies = set(enemies)
+    visible = world.visible_provinces(ai_name)
+
+    def reach(prov_id):
+        start = [n for n in world.neighbor_ids.get(prov_id, ()) if n in world.water_ids]
+        seen, frontier = set(start), list(start)
+        for _ in range(c.AI_NEARBY_SEA_TILES - 1):
+            frontier = [n for w in frontier for n in world.neighbor_ids.get(w, ())
+                        if n in world.water_ids and n not in seen]
+            seen.update(frontier)
+        return seen
+
+    def warship_strength(units):
+        return sum(queries.calculate_unit_strength(u) for u in units
+                   if queries.is_naval_unit(u.get("type", ""), context=context)
+                   and not u.get("type", "").startswith("Convoy"))
+
+    threatened = set()
+    for prov_id in prov_ids:
+        waters = reach(prov_id)
+        enemy_shore = any(world_state.id_to_province[n].get("owner") in enemies
+                          for w in waters for n in world.neighbor_ids.get(w, ())
+                          if n not in world.water_ids)
+        enemy_units, friendly_units = [], []
+        for w in waters:
+            if visible is not None and w not in visible:
+                continue
+            water = world_state.id_to_province[w]
+            for unit in queries.filter_visible_units(water.get("units", ()), ai_name, water, nation_data):
+                owner = queries.get_unit_combat_owner(unit)
+                if owner in enemies or queries.are_at_war(ai_name, owner, nation_data):
+                    enemy_units.append(unit)
+                elif owner in friendly_nations:
+                    friendly_units.append(unit)
+        if not (enemy_shore or enemy_units):
+            continue
+        ours = warship_strength(friendly_units)
+        if ours > 0 and ours >= c.AI_COAST_SUPREMACY_RATIO * warship_strength(enemy_units):
+            continue
+        threatened.add(prov_id)
+    return threatened
+
+
 def _discover_borders_and_targets(context, ai_name, my_provs, enemies, friendly_nations):
     """Locates coastal/enemy/unclaimed tiles globally (for naval targeting and
     island hopping and distant-ally expeditions) and classifies each of this
@@ -926,6 +987,13 @@ def _discover_borders_and_targets(context, ai_name, my_provs, enemies, friendly_
             peace_borders.add(prov["id"])
         elif is_coastal:
             coastal_borders.add(prov["id"])
+
+    # A coast with no land border needs a guard only if something could land
+    # on it. Guarding every one of them kept half of some armies on beaches no
+    # enemy could reach (saves/runv3: 47 of the United States' 61 land units,
+    # at war with nobody).
+    coastal_borders = _threatened_coasts(context, ai_name, coastal_borders, enemies,
+                                         friendly_nations)
 
     return {
         "war_borders": war_borders,

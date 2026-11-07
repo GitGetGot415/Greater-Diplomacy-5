@@ -71,6 +71,14 @@ DISBAND, CONVERT, and REPAIR orders survive the AI's next movement plan.
 A lone guard holds a quiet peace or coastal border, in war and in peace.
 The hold reads the real number of units on the tile, not the weighted assignment that carries AI_REAR_GUARD_PENALTY.
 
+A coastal tile with no land border is a destination only when it is threatened (ai_movement._threatened_coasts).
+It is threatened when, within AI_NEARBY_SEA_TILES of water from it, an enemy owns a shore or has visible units.
+Lakes count. Enemies include pending war targets when surprise attacks are on.
+Friendly naval supremacy removes the threat: visible friendly warship strength in that water at least
+AI_COAST_SUPREMACY_RATIO times the visible enemy warship strength, and above zero.
+Shores are public map data. Enemy ships count only when visible, so a hidden submarine raises no guard.
+A sea surrounded by friendly land, and every coast at peace, needs no guard.
+
 Every AI move goes through map_logic/actions/unit_actions.py, which checks each step with queries.can_unit_move_step.
 A fast unit's extra steps pass the same check. A refused move leaves the unit to its next choice.
 
@@ -206,3 +214,5 @@ AI_REINFORCE_COMBAT_WEIGHT
 AI_REAR_GUARD_PENALTY
     Reduces movement toward a quiet border after it has a guard.
     Quiet-border guarding does not grow with combat width.
+AI_COAST_SUPREMACY_RATIO
+    Friendly-to-enemy warship strength at which a nearby enemy no longer makes a quiet coast need a guard.

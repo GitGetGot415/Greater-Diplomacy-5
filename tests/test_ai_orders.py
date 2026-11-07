@@ -456,5 +456,76 @@ class RetreatTileTests(unittest.TestCase):
         self.assertEqual(self.pick(set()), 2)
 
 
+class CoastThreatTests(unittest.TestCase):
+    """A quiet coast is guarded only when something could land on it.
+
+    Tile 1 is Avaria's coast. Water 10 and 11 lie off it; across them is the
+    shore at 20. saves/runv3 had more than half of some armies guarding beaches
+    no enemy could reach.
+    """
+
+    def setUp(self):
+        from unittest.mock import patch
+        from data import queries
+        library = dict(queries.get_unit_library())
+        library["Fixture Warship"] = {"naval_unit": True, "attack": 500, "defense": 100,
+                                      "health": 2000, "speed": 2, "cost_materials": 10,
+                                      "cost_manpower": 10, "cost_fuel": 0}
+        self.enterContext(patch.object(queries, "get_unit_library", return_value=library))
+
+    def screen(self, shore_owner="Bruland", fog=False):
+        screen = GridScreen({1: ("Avaria", [10]), 10: ("Ocean", [1, 11]),
+                             11: ("Ocean", [10, 20]), 20: (shore_owner, [11])},
+                            {"fog_of_war": fog})
+        for pid in (10, 11):
+            screen.id_to_province[pid]["terrain"] = "ocean"
+        for pid in (1, 20):
+            screen.id_to_province[pid]["is_coastal"] = True
+        return screen
+
+    def threatened(self, screen, enemies=("Bruland",)):
+        return ai_movement._threatened_coasts(screen, "Avaria", {1}, list(enemies), {"Avaria"})
+
+    def ship(self, owner, kind="Fixture Warship"):
+        return {"type": kind, "owner": owner, "attack": 500, "defense": 100,
+                "health": 2000, "max_health": 2000}
+
+    def test_an_enemy_shore_across_the_water_is_a_threat(self):
+        self.assertEqual(self.threatened(self.screen()), {1})
+
+    def test_a_sea_with_only_friendly_shores_is_not(self):
+        self.assertEqual(self.threatened(self.screen(shore_owner="Avaria")), set())
+
+    def test_at_peace_no_coast_is_guarded(self):
+        self.assertEqual(self.threatened(self.screen(), enemies=()), set())
+
+    def test_naval_supremacy_removes_the_threat(self):
+        screen = self.screen()
+        screen.place(10, self.ship("Avaria"))
+        self.assertEqual(self.threatened(screen), set())
+
+    def test_but_not_against_an_equal_enemy_fleet(self):
+        screen = self.screen()
+        screen.place(10, self.ship("Avaria"))
+        screen.place(11, self.ship("Bruland"))
+        self.assertEqual(self.threatened(screen), {1})
+
+    def test_a_visible_enemy_convoy_is_a_threat_even_with_no_enemy_shore(self):
+        screen = self.screen(shore_owner="Cirenia")
+        screen.place(11, fixture_unit("Bruland") | {"type": "Convoy (Fixture Rifles)"})
+        self.assertEqual(self.threatened(screen), {1})
+
+    def test_a_hidden_submarine_is_not(self):
+        screen = self.screen(shore_owner="Cirenia", fog=True)
+        screen.place(11, self.ship("Bruland", kind="Submarine Fixture"))
+        self.assertEqual(self.threatened(screen), set())
+
+    def test_only_threatened_quiet_coasts_are_destinations(self):
+        screen = self.screen(shore_owner="Cirenia")
+        borders = ai_movement._discover_borders_and_targets(
+            screen, "Avaria", [screen.id_to_province[1]], ["Bruland"], {"Avaria"})
+        self.assertEqual(borders["coastal_borders"], set())
+
+
 if __name__ == "__main__":
     unittest.main()
