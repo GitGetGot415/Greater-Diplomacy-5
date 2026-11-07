@@ -80,6 +80,7 @@
 ## Combat and Units
 
 - let infantry variants turn back into regular infantry
+- rework aircraft carriers so they can carry a certain amount of air units
 - add guerrilla units as faster militia `(it's like cavalry but worse!)`
 - add armored trains with their own role `(wouldn't this need railways first)`
 - add entrenchment
