@@ -129,10 +129,17 @@ def peace_appetite(world, nation, enemy, scenario_settings=None):
     because of anything happening on the map, and the same counter was reading
     as "leverage" on the war-score bar besides. What a nation wants out of a war
     is now decided by how the war is going.
+
+    How the war is going has two halves: the military balance, and how much of
+    the nation's homeland the enemy is standing on. Reading only the first, a
+    nation with most of its land overrun but an army still comparable to the
+    enemy's never wanted to talk. See AI_W_PEACE_OCCUPIED for how they combine.
     """
     person = traits(world, nation, scenario_settings)
     border_ratio, global_ratio = world.power_ratio(nation, enemy)
-    losing = 1.0 - _sigmoid((border_ratio + global_ratio) / 2.0, 1.0, c.AI_ODDS_STEEPNESS)
+    outgunned = 1.0 - _sigmoid((border_ratio + global_ratio) / 2.0, 1.0, c.AI_ODDS_STEEPNESS)
+    occupied = war_score.between(_host(world), nation, enemy, world)["their_parts"]["occupation"]
+    losing = 1.0 - (1.0 - outgunned) * (1.0 - clamp01(c.AI_W_PEACE_OCCUPIED * occupied))
 
     return clamp01(c.AI_W_PEACE_LOSING * losing
                     + c.AI_W_PEACE_CAUTION * person.get("caution", 0.5))

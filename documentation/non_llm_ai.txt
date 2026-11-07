@@ -158,6 +158,23 @@ Lakes do not count. Overseas claims target the nearby coast.
 Without a shared land front, both odds calculations use overall power.
 Wargoal, truce, faction, and turn restrictions still apply.
 
+Peace desire (ai_opinion.peace_appetite) combines two pressures with the caution trait.
+The first is losing the military balance, from the border and global power ratios.
+The second is occupation: war_score's value-weighted share of the country's pre-war homeland that the enemy side holds.
+AI_W_PEACE_OCCUPIED sets the weight of occupation. With its homeland intact, a country judges by the military balance alone.
+The length of a war does not count.
+
+The rule-based AI offers peace in two situations:
+- Losing: peace desire is at least AI_PEACE_OFFER_THRESHOLD.
+  The AI tries the terms its own holdings justify, then terms where each side keeps what it holds.
+- Winning: its leverage is above one half. The AI offers to keep the enemy land it holds.
+An AI sends terms only when its own peace verdict (ai_opinion.peace_verdict) accepts them.
+When the receiver is also an AI, the receiver's verdict must accept them too.
+Players see the same verdict before they send an offer. See documentation/diplo_stuff.txt, Acceptance indicators.
+The AI does not predict a human receiver's answer.
+If no terms qualify, the AI sends no offer, so no refusal starts the proposal cooldown.
+War length and MIN_TURNS_FOR_CEASEFIRE still gate every offer.
+
 See documentation/diplo_stuff.txt for AI acceptance and conflict handling of attach?s and volunteer offers.
 
 VALUATION RULES
