@@ -23,7 +23,10 @@ class AirMissionPlanningTests(unittest.TestCase):
             "Support Wing": stats,
             "Screen Wing": dict(stats, attack=100, health=2000, air_attack_multiplier=20),
             "Incoming Wing": dict(stats, attack=600),
-            "Ground Target": {key: value for key, value in dict(stats, attack=0, health=2000).items()
+            # Worth more than the wings that strike it, so a strike on its tile
+            # has a positive projected exchange for the AI to weigh.
+            "Ground Target": {key: value for key, value in dict(
+                stats, attack=0, health=2000, cost_materials=5000).items()
                               if not key.startswith("air_")},
         })
         library_patch = patch.object(queries, "get_unit_library", return_value=self.library)
@@ -50,6 +53,9 @@ class AirMissionPlanningTests(unittest.TestCase):
             self.game, self.screen, self.base, self.screen["order"]))
 
     def test_another_interceptor_strikes_after_cover_saturates(self):
+        # A target valuable enough that even an interceptor's light strike
+        # pays; the AI never flies a strike it projects to lose.
+        self.library["Ground Target"]["cost_materials"] = 20000
         another = wing(self.base, "Screen Wing")
         with patch.dict(self.game.scenario_settings, {"fog_of_war": False}):
             ai_movement._assign_air_orders(self.game, "A",
@@ -99,16 +105,24 @@ class AirMissionPlanningTests(unittest.TestCase):
                 self.assertEqual(self.screen["order"]["type"], "AIR_PATROL")
 
     def test_out_of_range_or_immune_threat_does_not_trigger_defense(self):
+        """Only a visible, interceptable enemy that can reach us is a threat.
+
+        Checked at the threat list rather than at the final order: an aircraft
+        with no defensive job can still end up patrolling, when no strike it
+        could join is worth flying.
+        """
         remote = tile(self.game, 3, 800, owner="B")
         self.enemy["units"].remove(self.incoming)
         remote["units"].append(self.incoming)
-        self.plan()
-        self.assertEqual(self.screen["order"]["type"], "AIR_ATTACK")
+        self.assertEqual(ai_movement._air_patrol_threats(self.game, "A", None), {})
         remote["units"].remove(self.incoming)
         self.enemy["units"].append(self.incoming)
+        self.assertTrue(ai_movement._air_patrol_threats(self.game, "A", None))
         self.library["Incoming Wing"]["air_interception_immune"] = True
-        self.plan()
-        self.assertEqual(self.screen["order"]["type"], "AIR_ATTACK")
+        # A patrol cannot touch an immune strike, so it is no threat to plan
+        # cover against. (Whether the interceptor then strikes depends on what
+        # it adds to the strike group, which this fixture does not pin down.)
+        self.assertEqual(ai_movement._air_patrol_threats(self.game, "A", None), {})
 
     def test_tactical_patrol_counts_as_cover_without_changing_its_order(self):
         self.game.tactical_mode = True
@@ -143,6 +157,64 @@ class AirMissionPlanningTests(unittest.TestCase):
         self.assertTrue(any({id(unit) for unit in stack} == {id(self.support), id(self.screen)} for stack in strike_stacks))
         self.assertTrue(any(stack == [self.support] for stack in strike_stacks))
         self.assertEqual(self.support["order"], before)
+
+    # --- strike value, grouping, protection and repair ---------------------
+
+    def strike_only(self, *wings):
+        """Plan these aircraft with no enemy aircraft around to defend against."""
+        self.enemy["units"] = [u for u in self.enemy["units"] if u is not self.incoming]
+        with patch.dict(self.game.scenario_settings, {"fog_of_war": False}):
+            ai_movement._assign_air_orders(self.game, "A", [(w, self.base) for w in wings])
+
+    def test_a_strike_that_loses_more_than_it_destroys_is_not_flown(self):
+        """Why the AI stopped bombing warships: a target with a lot of health
+        that hits back hard out-trades its attackers. Read from the projected
+        exchange, not from what the target is called."""
+        self.library["Armored Target"] = dict(self.library["Ground Target"],
+                                              attack=5000, health=50000, cost_materials=100)
+        self.enemy["units"] = [wing(self.enemy, "Armored Target", "B")]
+        self.strike_only(self.support)
+        self.assertNotEqual(self.support["order"]["type"], "AIR_ATTACK")
+
+    def test_aircraft_strike_together_when_only_a_group_gets_through(self):
+        """Each wing alone does nothing against this defense; two together do."""
+        attack = self.library["Support Wing"]["attack"]
+        pair = 2 * attack * queries.air_stack_attack_efficiency(2)
+        self.library["Hard Target"] = dict(self.library["Ground Target"],
+                                           defense=(attack + pair) / 2)
+        self.enemy["units"] = [wing(self.enemy, "Hard Target", "B")]
+        another = wing(self.base, "Support Wing")
+        self.assertLessEqual(ai_movement._air_exchange_value(
+            self.game, [self.support], self.enemy["units"], target=self.enemy), 0)
+        self.strike_only(self.support, another)
+        for plane in (self.support, another):
+            self.assertEqual(plane["order"]["type"], "AIR_ATTACK")
+            self.assertEqual(plane["order"]["target_id"], self.enemy["id"])
+
+    def test_a_patrol_is_worth_the_strike_it_blunts(self):
+        """Interception happens before the strike, so a patrol protects the
+        garrison below as well as trading in the air."""
+        self.base["units"].append(wing(self.base, "Ground Target", "A"))
+        threats = [self.incoming]
+        air_only = ai_movement._air_exchange_value(self.game, [self.screen], threats, air_combat=True)
+        self.assertGreater(ai_movement._patrol_protection_value(
+            self.game, "A", [self.screen], threats, self.base), air_only)
+
+    def test_a_wounded_aircraft_on_a_safe_factory_repairs(self):
+        self.base["buildings"] = ["Basic Factory"]
+        self.support["health"] = self.support["max_health"] * c.AI_REPAIR_HEALTH_FRACTION / 2
+        for resource in ("materials", "manpower", "fuel"):
+            self.game.nation_data["A"][resource] = 10 ** 6
+        self.strike_only(self.support)
+        self.assertEqual(self.support["order"]["type"], "REPAIR")
+
+    def test_a_wounded_aircraft_elsewhere_flies_to_a_factory_base(self):
+        factory = tile(self.game, 3, 16)
+        factory["buildings"] = ["Basic Factory"]
+        self.support["health"] = self.support["max_health"] * c.AI_REPAIR_HEALTH_FRACTION / 2
+        self.strike_only(self.support)
+        self.assertEqual(self.support["order"]["type"], "AIR_REPOSITION")
+        self.assertEqual(self.support["order"]["target_id"], factory["id"])
 
 
 class AirMoveSafetyTests(unittest.TestCase):

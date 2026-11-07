@@ -1347,6 +1347,14 @@ AI_WAR_LOAD_SATURATION = 3.0    # wars at which a nation counts as fully committ
 # of a war because it is losing one, not because it is bored of it.
 AI_W_PEACE_LOSING = 0.8
 AI_W_PEACE_CAUTION = 0.2
+# How strongly losing its homeland pushes a nation toward peace, on top of
+# losing the military balance. The two combine as independent pressures --
+# losing = 1 - (1 - military) * (1 - AI_W_PEACE_OCCUPIED * occupied) -- so a
+# nation with its land intact judges by its army exactly as before, while one
+# whose heartland is overrun wants out even with an army still in the field.
+# `occupied` is war_score's value-weighted share of the pre-war homeland the
+# enemy side holds, the same figure under the war-score bar.
+AI_W_PEACE_OCCUPIED = 1.0
 #
 # AI_PEACE_CEASEFIRE_THRESHOLD, the bar appetite had to clear before a bare
 # ceasefire was agreed, is gone with the shortcut that read it. A white peace is
@@ -1682,11 +1690,19 @@ AI_REPAIR_HEALTH_FRACTION = 0.4
 # arguably right here, but a unit at 95% is not worth a turn out of the line.
 AI_REPAIR_ON_SITE_FRACTION = 0.8
 
-# How many units one nation will have walking home to a factory at once. The
-# repair trip is the only order in the AI that deliberately moves a unit AWAY
-# from the war, so it is capped rather than trusted: without this a bad turn at
-# the front would rout an entire army into the rear as a maintenance decision.
-AI_MAX_REPAIR_TRIPS = 2
+# Share of a nation's ground and naval units that may be on a repair trip at
+# once (at least one). The repair trip is the only order in the AI that
+# deliberately moves a unit AWAY from the war, so it is capped rather than
+# trusted: without this a bad turn at the front would rout an entire army into
+# the rear as a maintenance decision. A share rather than a count, because a
+# fixed two let a hundred-division army fix two divisions at a time.
+AI_MAX_REPAIR_TRIP_SHARE = 0.15
+
+# How many exchanges ahead the AI looks when deciding a battle is lost (see
+# ai_movement._tile_is_lost). The forecast is the shared one Manage Battle
+# shows. Longer sees a slow defeat sooner but also gives up fights a
+# reinforcement could still have turned.
+AI_RETREAT_FORECAST_TURNS = 3
 
 # What a unit contributes, given how combat actually resolves:
 #  - only a lane's front rank deals damage -- LANE_SLOTS_TYPICAL of them in an

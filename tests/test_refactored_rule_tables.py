@@ -55,25 +55,26 @@ class FastUnitPathTests(unittest.TestCase):
             4: {"neighbors": [2], "owner": "Closed"},
             5: {"neighbors": [3], "owner": "Open"},
         }
-        self.world = SimpleNamespace(id_to_province=provinces)
-        self.claim = Mock()
+        self.world = SimpleNamespace(id_to_province=provinces, nation_data={})
 
-    def extend(self, speed, can_push):
-        unit = {"speed": speed, "order": {"path": [2]}}
-        with patch.object(queries, "is_water_province", return_value=False):
-            ai_movement._extend_fast_unit_path(self.world, unit, 2, 1, False, set(), lambda tile: tile, self.claim, can_push)
-        return unit["order"]["path"]
+    def extend(self, speed, can_push, can_step=True):
+        unit = {"speed": speed}
+        with patch.object(queries, "is_water_province", return_value=False),                 patch.object(queries, "can_unit_move_step", return_value=can_step):
+            return [2] + ai_movement._extend_fast_unit_path(
+                self.world, unit, 2, 1, False, set(), lambda tile: tile, can_push)
 
     def test_slow_units_keep_their_first_step(self):
         self.assertEqual(self.extend(1, lambda owner: True), [2])
-        self.claim.assert_not_called()
 
-    def test_each_extra_step_follows_the_callers_rule_and_is_claimed(self):
+    def test_each_extra_step_follows_the_callers_rule(self):
         self.assertEqual(self.extend(3, lambda owner: owner == "Open"), [2, 3, 5])
-        self.assertEqual([call.args[0] for call in self.claim.call_args_list], [3, 5])
 
     def test_path_stops_when_no_tile_passes(self):
         self.assertEqual(self.extend(3, lambda owner: False), [2])
+
+    def test_path_stops_where_the_movement_rules_refuse_a_step(self):
+        """The order owner checks every step, so the planner must too."""
+        self.assertEqual(self.extend(3, lambda owner: True, can_step=False), [2])
 
 
 class RealtimeMapEntryTests(unittest.TestCase):

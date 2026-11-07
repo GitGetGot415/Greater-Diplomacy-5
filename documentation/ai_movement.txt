@@ -21,14 +21,19 @@ map_logic/ai/ai_movement.py
     _build_target_assignments records destination assignments and combat capacity.
     _assign_unit_orders chooses orders for individual units.
     _bfs_nearest_target selects a path using current assignments.
+    _tile_is_lost decides whether a battle is lost. _retreat_tile picks each unit's fallback tile.
     _assign_maintenance_orders plans repairs, upgrades, and movement to suitable provinces.
-    _assign_air_orders chooses aircraft missions and relocation.
+    _wounded_who_can_leave chooses wounded units that may leave a battle.
+    _assign_air_orders chooses aircraft missions, repairs, and relocation.
     _air_base_threats finds tiles that visible enemy ground units can reach this turn.
     legal_air_candidates obtains aircraft orders from shared legality helpers.
     _rotate_damaged_units rotates damaged units in active battles.
 
 map_logic/system32/combat_rules.py
     Shared combat capacity and damage rules support movement estimates.
+
+map_logic/system32/combat_forecast.py
+    The non-mutating battle forecast. Battle bubbles, Manage Battle's outlook, and AI retreat decisions share it.
 
 data/queries/ (movement.py, movement_access.py, air.py, tech.py, unit_info.py)
     Shared movement and aircraft helpers define legal orders and paths.
@@ -63,8 +68,14 @@ Keep actual unit counts separate from weighted movement scores.
 
 DISBAND, CONVERT, and REPAIR orders survive the AI's next movement plan.
 
-ATTACK CHECKS, BOMBARDMENT, AND ROTATION
-----------------------------------------
+A lone guard holds a quiet peace or coastal border, in war and in peace.
+The hold reads the real number of units on the tile, not the weighted assignment that carries AI_REAR_GUARD_PENALTY.
+
+Every AI move goes through map_logic/actions/unit_actions.py, which checks each step with queries.can_unit_move_step.
+A fast unit's extra steps pass the same check. A refused move leaves the unit to its next choice.
+
+ATTACK CHECKS, BOMBARDMENT, ROTATION, AND RETREAT
+-------------------------------------------------
 
 For units with legal bombardment orders, the AI prefers an in-range bombardment over melee movement.
 
@@ -72,6 +83,33 @@ Before a charge, the AI estimates the first lane exchange.
 It skips a hostile occupied tile if every proposed attacker would be destroyed in that exchange.
 
 ai_movement._rotate_damaged_units rotates damaged AI units.
+
+A battle is lost when the shared forecast (combat_forecast.estimated_combat_outcome) says the country's side loses within AI_RETREAT_FORECAST_TURNS exchanges.
+The forecast counts friendly units and visible enemy units only.
+Before giving up, the AI repeats the forecast with its healthy units on adjacent tiles that could step in this turn.
+If they would turn the result, the tile stays an active battle and draws reinforcements.
+On a lost tile, each unit falls back to its own best neighboring tile (_retreat_tile).
+That tile must be a legal step, not hostile land, free of visible enemy units, and outside unsafe waters.
+A repair haven comes first, then friendly land, then the tile with the fewest visible threats nearby.
+A unit with no such tile stays and fights. A convoy leaves any fight it is caught in.
+
+A wounded unit is below AI_REPAIR_HEALTH_FRACTION of its health.
+It does not charge an adjacent enemy and is not routed toward a battle or enemy land.
+It can still garrison quiet tiles while it waits for a repair trip.
+
+REPAIR TRIPS
+------------
+
+A unit repairs where it stands when it is below AI_REPAIR_ON_SITE_FRACTION on one of its country's factory tiles, out of combat, and the country can pay.
+A wounded unit elsewhere makes a repair trip. It stores the destination in its repair_trip key, because the AI clears ordinary orders every turn.
+Land units walk overland. Warships sail to a friendly coastal factory they may enter. Convoys do not start trips.
+No trip ends on a war border or passes through an active battle.
+A unit may leave a war border, or a tile next to a battle, when another friendly unit stays on the tile.
+A wounded unit in a battle may leave when the country keeps enough units there to fill its current front slots (combat_rules.slots_held),
+and at least one of those staying units is not wounded. The most wounded leave first.
+It steps to its retreat tile and continues the trip from there.
+At most AI_MAX_REPAIR_TRIP_SHARE of the country's ground and naval units, and at least one, are on trips at once.
+A trip ends when the unit heals to AI_REPAIR_ON_SITE_FRACTION, when its destination stops being a haven, or when the route is cut.
 
 AIRCRAFT ORDERS AND VISIBILITY
 ------------------------------
@@ -87,7 +125,10 @@ Released units join the normal ground-order planning pass.
 The planner preserves paid orders and the tactical player's division.
 Transport aircraft receive no strike or defense candidates.
 At an industry building, it upgrades numbered aircraft to the highest researched level in their current family.
-It does not upgrade the tactical player's division, aircraft in combat, or aircraft at threatened bases.
+It does not upgrade the tactical player's division, aircraft in combat, aircraft at threatened bases, or wounded aircraft.
+An aircraft below AI_REPAIR_ON_SITE_FRACTION repairs on its country's factory base when that base is not threatened and the country can pay.
+Elsewhere it flies to the nearest such factory base it can reach.
+An upgrade keeps the health percentage, so a wounded aircraft repairs instead.
 The AI still selects replacement missions during its normal planning pass.
 It compares strikes with defense against visible enemy aircraft.
 It moves reusable aircraft to closer friendly land when no enemy target is reachable and defense does not take priority.
@@ -104,14 +145,22 @@ Each coalition's aircraft use the shared stack attack efficiency.
 Equipment value uses unit costs and the shared upkeep horizon.
 Strike value also includes completed fort levels that a capable aircraft can remove.
 
-Defense value measures the additional benefit after existing patrol assignments.
-Strike comparisons measure the additional benefit after existing strike assignments.
-Separate interception-immune missions have separate assignment counts.
-The aircraft patrols when that benefit exceeds its best strike value and is positive.
+Patrols are planned first. Defense value is the additional benefit after existing patrol assignments.
+It counts the air exchange plus the strike damage the interception prevents.
+Interception happens before a strike and only survivors strike, so the prevented damage is the threat's projected strike on the covered tile's garrison and forts,
+unopposed, minus the same strike flown by the survivors.
+An aircraft patrols when that benefit is positive and exceeds what it adds to the full group that could strike each of its targets.
 This allows useful interceptors to defend while other aircraft strike.
 
+Strikes are planned target-first in groups. For each reachable target, aircraft in range join strongest first,
+and the group with the highest projected exchange value is kept. The best group overall flies, and the rest are planned again.
+The shared stack efficiency and the target's defense decide the group size. A weak aircraft that would lower a group's damage stays out.
+A strike flies only when its projected exchange value is positive.
+A target with high health and strong return fire, such as a warship, can out-trade its attackers and is then left alone.
+The rule reads the projected exchange, not the unit type.
+
 The tactical player's patrol counts as cover. The planner does not change that unit's order.
-Without visible aircraft threats, strikes retain their target-strength preference.
+The tactical player's strike counts toward its target's group.
 Exchange projections are cached during one country's order pass.
 
 Before choosing a mission, reusable aircraft leave bases threatened by visible enemy ground movement.
@@ -123,7 +172,8 @@ It avoids threatened landing tiles when moving closer to a target.
 If no safe landing tile is reachable, normal mission selection continues.
 Aircraft already caught in ground combat cannot escape through flight.
 
-Reusable combat aircraft patrol when no strike or closer safe base is available.
+An aircraft with no target in range moves to a safe base nearer the enemy.
+Reusable combat aircraft patrol when no worthwhile strike or closer safe base is available.
 Shared capability checks select legal ground routes, patrols, or flights from current unit data.
 The AI uses Convoys for reachable crossings when no land route is available.
 
@@ -143,6 +193,14 @@ Read current tuning values in data/constants.py.
 
 AI_ROTATE_HEALTH_FRACTION
     Health threshold for replacing a damaged front unit with a healthier available unit.
+AI_REPAIR_HEALTH_FRACTION
+    Health threshold below which a unit is wounded: it makes repair trips and does not charge.
+AI_REPAIR_ON_SITE_FRACTION
+    Health threshold for repairing on a factory tile the unit already stands on. A repair trip ends here.
+AI_MAX_REPAIR_TRIP_SHARE
+    Share of a country's ground and naval units that may be on repair trips at once.
+AI_RETREAT_FORECAST_TURNS
+    Exchanges the battle forecast looks ahead when deciding a battle is lost.
 AI_REINFORCE_COMBAT_WEIGHT
     Attraction to a battle. It decreases as the front and relief ranks fill.
 AI_REAR_GUARD_PENALTY
