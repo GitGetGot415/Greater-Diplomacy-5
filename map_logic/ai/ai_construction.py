@@ -362,16 +362,45 @@ def _disband_worst_unit_if_deficit(context, data, my_provs, ai_name, deficits,
                               {"type": "DISBAND"}, authority="ai")
 
 
-def _panic_militia_and_tally_forces(context, ai_name, data, my_provs, unit_library, state, roles,
-                                    weights=None):
+def _panic_unit(context, ai_name, prov, candidates, unit_library):
+    """The best land unit `prov` can raise in one turn, or None.
+
+    Chosen from data, not by name. It used to be the best tier of the Militia
+    family whatever the rules said: with militia set to two turns no panic
+    build ever happened, and a unit made to build in one turn never counted.
+    Now every buildable land unit whose production time is one turn under the
+    active rules qualifies, if production_actions would accept it in this
+    province, and the highest score from the purchase loop's own valuation
+    (ai_unit_eval) wins. Ties go to the name, so the choice is reproducible.
+    """
+    best = None
+    for value in candidates.values():
+        if value.role not in ai_unit_eval.LAND_ROLES or value.stats.get("production_time", 1) != 1:
+            continue
+        try:
+            production_actions.prepare_production(
+                context, ai_name, prov, "unit_queue", {"unit_type": value.name},
+                unit_library=unit_library)
+        except ValueError:
+            continue
+        if best is None or (value.score, value.name) > (best.score, best.name):
+            best = value
+    return best.name if best else None
+
+
+def _panic_build_and_tally_forces(context, ai_name, data, my_provs, unit_library, state, roles,
+                                  weights=None, panic_candidates=None):
     """Section: per-province pass that clears losing tiles' build queues,
-    panic-queues a Militia on any core threatened by an adjacent enemy, and
-    tallies current + queued forces (by role) and land/sea border counts.
+    panic-queues a one-turn unit (_panic_unit) on any core threatened by an
+    adjacent enemy, and tallies current + queued forces (by role) and land/sea
+    border counts.
 
     `weights` is how much of its role each unit type fills (one when absent);
-    see ai_unit_eval._apply_slot_quality."""
+    see ai_unit_eval._apply_slot_quality. `panic_candidates` is the nation's
+    buildable valuation, {name: UnitValue}, that the panic unit is chosen from."""
     world_state = world_for(context)
     weights = weights or {}
+    panic_candidates = panic_candidates or {}
     role_counts = {}
     land_border_count = 0
     sea_border_count = 0
@@ -397,9 +426,9 @@ def _panic_militia_and_tally_forces(context, ai_name, data, my_provs, unit_libra
                     item = prov["building_queue"].pop(0)
                     if "refund" in item: queries.refund_resources(data, item["refund"])
 
-            continue # Skip panic militia check since it's already in combat and can't build anyway
+            continue # Skip the panic build since it's already in combat and can't build anyway
 
-        # 2. Panic Militia
+        # 2. Panic build
         if has_factory and queries.has_core(ai_name, prov):
             enemy_adjacent = False
             for n_id in prov.get("neighbors", []):
@@ -427,38 +456,42 @@ def _panic_militia_and_tally_forces(context, ai_name, data, my_provs, unit_libra
                     if not is_naval and turns <= 1:
                         safe_to_panic = False # Let the ground unit finish!
 
-                militia_name = queries.get_best_preferred_unit(data.get("research", {}), unit_library, ["Militia"], context=context)
-                militia_stats = unit_library.get(militia_name, {})
-                militia_time = militia_stats.get("production_time", 1)
+                # Only units that build in one turn are candidates, so the
+                # production-time test the Militia branch used to make here is
+                # part of the choice itself.
+                panic_name = _panic_unit(context, ai_name, prov, panic_candidates, unit_library)
+                panic_stats = unit_library.get(panic_name, {})
+                panic_family = (queries.get_base_unit_name(panic_name, context=context)
+                                if panic_name else None)
 
                 if not restrictions.can_raise_units(ai_name, world_state.nation_data):
                     safe_to_panic = False  # demilitarized by treaty; not even in a panic
 
-                if militia_name and safe_to_panic and militia_time == 1 and (not queue or queries.get_base_unit_name(queue[0].get("unit_type", ""), context=context) != "Militia"):
+                if panic_name and safe_to_panic and (not queue or queries.get_base_unit_name(queue[0].get("unit_type", ""), context=context) != panic_family):
                     # Cancel existing queue
                     while queue:
                         production_actions.cancel_production(
                             context, ai_name, prov, "unit_queue", 0,
                             authority="ai", recorded_refund_only=True)
 
-                    # Queue Militia
-                    c_mat = militia_stats.get("cost_materials", 0)
-                    c_man = militia_stats.get("cost_manpower", 0)
-                    c_fuel = militia_stats.get("cost_fuel", 0)
+                    # Queue the panic unit
+                    c_mat = panic_stats.get("cost_materials", 0)
+                    c_man = panic_stats.get("cost_manpower", 0)
+                    c_fuel = panic_stats.get("cost_fuel", 0)
 
                     if data.get("materials", 0) >= c_mat and data.get("manpower", 0) >= c_man and data.get("fuel", 0) >= c_fuel:
                         production_actions.submit_production(
-                            context, ai_name, prov, "unit_queue", {"unit_type": militia_name},
+                            context, ai_name, prov, "unit_queue", {"unit_type": panic_name},
                             authority="ai", unit_library=unit_library)
 
                         # Adjust upkeep tracking
-                        militia_upkeep = queries.get_unit_upkeep(militia_stats)
-                        state["upk_man"] += militia_upkeep["manpower"]
-                        state["upk_mat"] += militia_upkeep["materials"]
-                        state["upk_fuel"] += militia_upkeep["fuel"]
-                        militia_role = roles.get(militia_name, ai_unit_eval.ROLE_LINE)
-                        role_counts[militia_role] = (role_counts.get(militia_role, 0)
-                                                     + weights.get(militia_name, 1.0))
+                        panic_upkeep = queries.get_unit_upkeep(panic_stats)
+                        state["upk_man"] += panic_upkeep["manpower"]
+                        state["upk_mat"] += panic_upkeep["materials"]
+                        state["upk_fuel"] += panic_upkeep["fuel"]
+                        panic_role = roles.get(panic_name, ai_unit_eval.ROLE_LINE)
+                        role_counts[panic_role] = (role_counts.get(panic_role, 0)
+                                                   + weights.get(panic_name, 1.0))
 
 
 
@@ -886,9 +919,10 @@ def process_ai_economy_decisions(context):
         _disband_worst_unit_if_deficit(context, data, my_provs, ai_name,
                                        state["disband_deficits"], unit_library, all_values)
 
-        # --- NEW: Panic Militia & Combat Queue Clearing ---
-        force_tally = _panic_militia_and_tally_forces(
-            context, ai_name, data, my_provs, unit_library, state, roles, weights)
+        # --- Panic Builds & Combat Queue Clearing ---
+        force_tally = _panic_build_and_tally_forces(
+            context, ai_name, data, my_provs, unit_library, state, roles, weights,
+            panic_candidates=buildable_values)
 
         state.update(force_tally)
         state["econ"] = econ

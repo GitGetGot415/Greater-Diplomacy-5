@@ -441,6 +441,11 @@ A fuel shortage excludes fuel-consuming units from affordable candidates and sav
 It does not block units that need no fuel.
 Short of fuel with materials under target, the AI converts materials to fuel at its full legal maximum.
 
+A cored industry province with a visible enemy unit next to it gets a panic build (ai_construction._panic_unit).
+The panic unit is the best-scoring buildable land unit whose production time is one turn under the active rules
+and that production_actions would accept in that province. It is chosen from data, never by family name,
+so slower militia are skipped and any other one-turn unit qualifies.
+
 The AI's conscription slider never converts so much manpower that kept income falls below
 the manpower upkeep allowed by the peacetime AI_UPKEEP_TARGETS. Otherwise a large stockpile
 could convert away the income the purchase loop's upkeep cap needs, and stop all purchases.
