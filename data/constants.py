@@ -704,10 +704,14 @@ AI_PEACE_MARGIN_CAUTION = 0.12
 #:
 #: At 0.5 a clear winner refused almost everything: on saves/same peace deals the
 #: German Reich, at 90% leverage, turned down 65 provinces from the Soviet Union.
-#: At 0.15 a winner takes a real concession of land but still refuses a white
+#: This is honestly a pretty reasonable stance, given that if you're winnning, you
+#: might not feel the need to make a peace deal with someone you know you can get
+#: more out of.
+#: At 0.15 a winner takes a small concession of land but still refuses a white
 #: peace or a token offer. At 0 it would take a white peace, which is the free
 #: peace this term exists to prevent.
-AI_PEACE_PRIZE_W = 0.15
+#: 0.5 seems more realistic
+AI_PEACE_PRIZE_W = 0.5
 
 #: The hard ceiling on a demand: you may ask for at most this multiple of the
 #: share of their homeland you actually occupy. Slightly over 1 so that having
