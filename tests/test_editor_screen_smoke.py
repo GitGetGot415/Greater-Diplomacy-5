@@ -47,7 +47,18 @@ class EditorScreenSmokeTests(unittest.TestCase):
 
     def test_scripted_events_variables(self):
         from screens.editors import scripted_events_editor as se
-        self.exercise(se._VariablesScreen(self.map, self.map))
+        screen = se._VariablesScreen(self.map, self.map)
+        self.exercise(screen)
+        with mock.patch("ui.dialogs.show_info") as show_info:
+            screen.show_help()
+        self.assertEqual(show_info.call_args.kwargs["align"], "left")
+
+    def test_message_popup_accepts_an_alignment_and_defaults_to_center(self):
+        from ui.dialogs.message_box import _MessageModal
+        modal = _MessageModal(self.surface, "Help", "Short", None, "info", align="left")
+        self.assertEqual(modal.BODY_ALIGN, "left")
+        self.assertEqual(_MessageModal(self.surface, "Help", "Short", None, "info").BODY_ALIGN, "center")
+        modal.draw(self.surface)
 
     def test_scripted_events_global_rules_add_and_delete(self):
         from screens.editors import scripted_events_editor as se
@@ -71,7 +82,7 @@ class EditorScreenSmokeTests(unittest.TestCase):
             self.exercise(screen)
             with mock.patch("ui.dialogs.show_info") as show_info:
                 screen.show_help()
-            show_info.assert_called_once()
+            self.assertEqual(show_info.call_args.kwargs["align"], "left")
             screen.select(0)
             screen.delete_rule()
             self.assertEqual(self.map.global_rules, [])

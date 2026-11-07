@@ -109,6 +109,27 @@ HELP_TEXT = """ === EVENT TYPE ===
 The AI Msg Checkbox means that you can allow the ai to generate custom text for that message
 It will fallback to whatever you manually entered if the llm ai is turned off or otherwise fails"""
 
+VARIABLES_HELP_TEXT = """Variables hold values that every country's scripted events share. Events check them with the Variable condition and change them with the Set Variable action.
+
+Each variable has a unique name, a type, and a starting value:
+- int: a whole number. Decimals are dropped.
+- double: a number that can have decimals.
+- string: text.
+
+Variable conditions:
+- int and double variables can be compared with ==, !=, >, <, >=, and <=.
+- string variables can only be compared with == and !=.
+
+Set Variable actions:
+- int and double variables can be set, added to, subtracted from, multiplied, or divided. Dividing by 0 leaves the value unchanged.
+- string variables can only be set.
+
+Buttons:
+- Add: creates a variable from the fields.
+- Update: saves the fields to the selected variable. Renaming it also renames it in every event that uses it. Changing a number type to string changes its conditions to == and its actions to Set. Changing string to a number type resets values that are not numbers to 0. The editor asks first when events use the variable.
+- Delete: removes the variable and every event that uses it. The editor asks first when events use the variable.
+- Move Up and Move Down: change the order of the list."""
+
 GLOBAL_RULES_HELP_TEXT = """Global rules stop one diplomatic action between two countries for the whole game. Each rule reads "<country> may never <rule> <target>".
 
 Strength:
@@ -192,6 +213,7 @@ class _HelpScreen(_ModalScreen):
 class _VariablesScreen(_ModalScreen):
     PANEL_SIZE = (960, 580)
     LIST_W = 400
+    HELP_Y = 12
 
     def __init__(self, game_state, map_ref):
         super().__init__(game_state, "Variables Editor")
@@ -382,9 +404,16 @@ class _VariablesScreen(_ModalScreen):
 
     # -- rendering ------------------------------------------------------ #
 
+    def show_help(self):
+        dialogs.show_info("Variables", VARIABLES_HELP_TEXT, align="left")
+
     def refresh_ui(self):
         p = self.panel_rect
-        self.elements = [Button(p.x + self.PAD, p.bottom - 56, "small", "red", "Close", self.exit_screen, sound_kind="back")]
+        info_w = c.SIZES["scenario_setting_info"][0]
+        self.elements = [
+            Button(p.x + self.PAD, p.bottom - 56, "small", "red", "Close", self.exit_screen, sound_kind="back"),
+            make_info_button(p.right - self.PAD - info_w, p.y + self.HELP_Y, self.show_help),
+        ]
 
         self._content_vars = pygame.Rect(self.list_x, self.list_top, self.LIST_W, self.list_view_h)
         self.scroll_content_rect = self._content_vars
@@ -520,7 +549,7 @@ class _GlobalRulesScreen(_ModalScreen):
         return self.panel_rect.y + self.FORM_TOP + index * self.FORM_STEP
 
     def show_help(self):
-        dialogs.show_info("Global Rules", GLOBAL_RULES_HELP_TEXT)
+        dialogs.show_info("Global Rules", GLOBAL_RULES_HELP_TEXT, align="left")
 
     def refresh_ui(self):
         p = self.panel_rect

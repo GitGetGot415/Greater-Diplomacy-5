@@ -43,7 +43,9 @@ class _MessageModal(_BaseModal):
     SCROLLBAR_WIDTH = 15
     SCROLLBAR_GAP = 12
 
-    def __init__(self, surface, title, message, on_result, kind, inline_parts=None, extra_h=0):
+    def __init__(self, surface, title, message, on_result, kind, inline_parts=None, extra_h=0, *, align=None):
+        if align is not None:
+            self.BODY_ALIGN = align
         self.accent = _KIND_ACCENTS.get(kind, _KIND_ACCENTS["info"])
         self.is_info = self.accent == _KIND_ACCENTS["info"]
         if self.is_info:
@@ -638,18 +640,21 @@ class _NavigationIntroPopup:
             surface.blit(button, button.get_rect(center=rect.center))
 
 
-def show_message(title, message, tk_parent=None, kind="info", on_result=None, *, inline_parts=None):
+def show_message(title, message, tk_parent=None, kind="info", on_result=None, *, inline_parts=None, align=None):
     """Drop-in replacement for messagebox.showinfo / showwarning / showerror.
 
     `kind` picks the accent color: "info", "success", "warning", or "error".
+    `align` sets plain message lines to "left", "center", or "right". The default is centered.
     on_result, if given, is called (with no arguments) once the user dismisses it.
     """
-    open_modal(lambda surface, callback: _MessageModal(surface, title, message, callback, kind, inline_parts),
+    open_modal(lambda surface, callback: _MessageModal(surface, title, message, callback, kind, inline_parts,
+                                                       align=align),
                on_result, tk_parent)
 
 
-def show_info(title, message, tk_parent=None, on_result=None, *, inline_parts=None):
-    show_message(title, message, tk_parent=tk_parent, kind="info", on_result=on_result, inline_parts=inline_parts)
+def show_info(title, message, tk_parent=None, on_result=None, *, inline_parts=None, align=None):
+    show_message(title, message, tk_parent=tk_parent, kind="info", on_result=on_result, inline_parts=inline_parts,
+                 align=align)
 
 
 def show_success(title, message, tk_parent=None, on_result=None):
