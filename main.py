@@ -286,7 +286,7 @@ class Controller:
             "terrain": symbol_loader.get_symbol("Mountains", 1.5),
             "political": symbol_loader.get_symbol("Flag", 1.5),
             "relations": symbol_loader.get_symbol("Heart", 2),
-            "research": symbol_loader.get_symbol("Research", 1.5),
+            "research": symbol_loader.get_symbol("Research", 2.5),
             "mail": symbol_loader.get_symbol("Mail", 2),
             "save": symbol_loader.get_symbol("Save", 2),
             "core": symbol_loader.get_symbol("Star", 2),
