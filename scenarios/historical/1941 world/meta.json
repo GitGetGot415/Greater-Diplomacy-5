@@ -1,6 +1,6 @@
 {
     "version": "v47",
-    "generated_at": "2026-11-05T20:19:25.467390",
+    "generated_at": "2026-11-07T11:12:58.737484",
     "date": {
         "day": 15,
         "month": 5,
@@ -8,7 +8,7 @@
         "total_turns": 0
     },
     "loop_map": true,
-    "player_country": "None",
+    "player_country": "Editor",
     "active_players": [],
     "current_player_index": 0,
     "scenario_settings": {
@@ -25,6 +25,22 @@
         "description": ""
     },
     "script_variables": [],
+    "global_rules": [
+        {
+            "country": "German Reich",
+            "rule": "Make Peace With",
+            "target": "Soviet Union",
+            "strength": "Weak",
+            "bypass_scripted_events": false
+        },
+        {
+            "country": "United States of America",
+            "rule": "Be In Faction With",
+            "target": "Japan",
+            "strength": "Weak",
+            "bypass_scripted_events": false
+        }
+    ],
     "default_research": {
         "infantry_type": 33,
         "cavalry": 33,
@@ -20731,5 +20747,6 @@
         "turn": 0,
         "events": []
     },
-    "unit_event_read_turns": {}
+    "unit_event_read_turns": {},
+    "conversation_colors": {}
 }
