@@ -187,6 +187,70 @@ class BattleSimulationTests(unittest.TestCase):
         simulation.advance(60)
         self.assertEqual(simulation.elapsed, elapsed)
 
+    def test_controlled_unit_only_moves_along_its_heading_and_turns_in_place(self):
+        simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"], controlled_index=0)
+        player = simulation.controlled
+        x, y = player.x, player.y
+        simulation.advance(0.1)
+        self.assertEqual((player.x, player.y, player.angle), (x, y, 0.0))
+        player.angle = math.pi / 2
+        simulation.set_player_input(throttle=1)
+        simulation.advance(0.1)
+        self.assertAlmostEqual(player.x, x)
+        self.assertGreater(player.y, y)
+        simulation.set_player_input(throttle=-1)
+        simulation.advance(0.1)
+        self.assertAlmostEqual(player.x, x)
+        self.assertAlmostEqual(player.y, y)
+        simulation.set_player_input(turn=1)
+        simulation.advance(0.1)
+        self.assertGreater(player.angle, math.pi / 2)
+        self.assertAlmostEqual(player.x, x)
+        self.assertAlmostEqual(player.y, y)
+        simulation.set_player_input(turn=-1)
+        simulation.advance(0.1)
+        self.assertAlmostEqual(player.angle, math.pi / 2)
+
+    def test_manual_fire_uses_heading_and_cooldown_even_when_space_is_held(self):
+        simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"], controlled_index=0)
+        player = simulation.controlled
+        player.angle = math.pi / 2
+        with patch.object(combat, "Projectile", wraps=combat.Projectile) as projectiles:
+            simulation.advance(combat.FIXED_STEP)
+            self.assertEqual(projectiles.call_count, 0)
+            simulation.set_player_input(fire=True)
+            simulation.advance(combat.FIXED_STEP)
+            self.assertEqual(projectiles.call_count, 1)
+            shot = simulation.projectiles[0]
+            self.assertAlmostEqual(shot.vx, 0)
+            self.assertGreater(shot.vy, 0)
+            simulation.advance(combat.FIRE_INTERVAL / 2)
+            self.assertEqual(projectiles.call_count, 1)
+            simulation.set_player_input(fire=False)
+            simulation.set_player_input(fire=True)
+            simulation.advance(combat.FIRE_INTERVAL / 2 + 2 * combat.FIXED_STEP)
+            self.assertEqual(projectiles.call_count, 2)
+
+    def test_manual_shots_can_miss_and_hit_without_homing(self):
+        simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"], controlled_index=0)
+        player, target = simulation.fighters
+        target.x, target.y = player.x + 100, player.y
+        target.data["speed"] = 0
+        initial_health = target.data["health"]
+        player.angle = math.pi / 2
+        simulation.set_player_input(fire=True)
+        simulation.advance(0.3)
+        self.assertEqual(target.data["health"], initial_health)
+        player.angle = 0
+        player.cooldown = 0
+        simulation.advance(0.3)
+        self.assertLess(target.data["health"], initial_health)
+
+    def test_controlled_index_must_refer_to_a_friendly_entry(self):
+        for index in (-1, 1, True, "0"):
+            with self.subTest(index=index), self.assertRaises(ValueError):
+                combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"], controlled_index=index)
+
 
 class CustomBattleScreenTests(unittest.TestCase):
     @classmethod
@@ -277,8 +341,8 @@ class CustomBattleScreenTests(unittest.TestCase):
                                buttons=(1, 0, 0)),
             pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=end)])
 
-    def test_start_requires_two_armies_and_picker_can_add_repeated_levels(self):
-        self.click("Start")
+    def test_simulate_requires_two_armies_and_picker_can_add_repeated_levels(self):
+        self.click("Simulate")
         self.assertEqual(self.screen.mode, "setup")
         with patch("ui.dialogs.pickers.open_listbox_selector") as picker:
             self.click("Add Friendly")
@@ -305,6 +369,7 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.click("Remove")
         self.assertEqual(self.screen.rosters[0], [])
         self.screen.add_unit(0, "Fixture II")
+        self.click("Simulate")
         self.click("Start")
         self.screen.draw(self.surface)
         self.click("Pause")
@@ -324,6 +389,7 @@ class CustomBattleScreenTests(unittest.TestCase):
 
     def test_winner_screen_restart_and_edit_armies(self):
         self.fill_armies()
+        self.click("Simulate")
         self.click("Start")
         self.screen.simulation.advance(60)
         self.screen.update()
@@ -331,12 +397,117 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.assertEqual(self.screen.simulation.winner, 0)
         self.screen.draw(self.surface)
         self.click("Run Again")
-        self.assertEqual(self.screen.mode, "battle")
+        self.assertEqual(self.screen.mode, "preview")
         self.assertEqual(self.screen.simulation.elapsed, 0)
+        self.click("Start")
         self.screen.simulation.advance(60)
         self.screen.update()
         self.click("Edit Armies")
         self.assertEqual(self.screen.mode, "setup")
+
+    def test_preview_freezes_deployment_and_only_preview_can_start_combat(self):
+        self.fill_armies()
+        self.assertNotIn("Start", [button.text for button in self.screen.elements])
+        self.screen.start_battle()
+        self.assertEqual(self.screen.mode, "setup")
+        self.click("Control")
+        self.click("Simulate")
+        simulation = self.screen.simulation
+        self.assertEqual(self.screen.mode, "preview")
+        self.assertTrue(simulation.paused)
+        before = [(f.x, f.y, f.angle, f.data["health"]) for f in simulation.fighters]
+        self.screen.handle_events([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_w),
+                                   pygame.event.Event(pygame.KEYDOWN, key=pygame.K_SPACE)])
+        with patch.object(simulation, "advance", side_effect=AssertionError("preview executed combat")):
+            self.screen.update()
+            self.screen.draw(self.surface)
+        self.assertEqual(simulation.elapsed, 0)
+        self.assertEqual(before, [(f.x, f.y, f.angle, f.data["health"]) for f in simulation.fighters])
+        rosters = copy.deepcopy(self.screen.rosters)
+        self.screen.add_unit(0, "Fixture I")
+        self.screen.remove_unit(0)
+        self.screen.generate_armies()
+        self.screen.toggle_control()
+        with patch("ui.dialogs.pickers.open_listbox_selector") as picker:
+            self.screen.open_picker(0)
+            picker.assert_not_called()
+        self.assertEqual(self.screen.rosters, rosters)
+        self.click("Start")
+        self.assertEqual(self.screen.mode, "battle")
+        self.assertIs(self.screen.simulation, simulation)
+        self.assertFalse(simulation.paused)
+        self.assertFalse(self.screen.held_keys)
+        self.assertNotIn("Start", [button.text for button in self.screen.elements])
+
+    def test_control_follows_reordered_entries_and_clears_when_removed(self):
+        for name in ("Fixture I", "Fixture II", "Fixture Gun I"):
+            self.screen.add_unit(0, name)
+        self.click("Control")
+        self.assertEqual(self.screen.controlled_index, 2)
+        self.drag_card(self.screen.card_rect(0, 2).center, self.screen.card_rect(0, 0).center)
+        self.assertEqual(self.screen.controlled_index, 0)
+        self.screen.add_unit(1, "Fixture I")
+        self.click("Simulate")
+        self.assertEqual(self.screen.simulation.controlled.data["type"], "Fixture Gun I")
+        self.click("Exit")
+        self.drag_card(self.screen.card_rect(0, 2).center, self.screen.card_rect(0, 0).center)
+        self.assertEqual(self.screen.controlled_index, 1)
+        self.click("Remove")
+        self.assertEqual(self.screen.controlled_index, 0)
+        self.drag_card(self.screen.card_rect(0, 0).center, self.screen.card_rect(0, 0).center)
+        self.click("Remove")
+        self.assertIsNone(self.screen.controlled_index)
+
+    def test_release_control_and_random_generation_return_to_automatic_armies(self):
+        self.fill_armies()
+        self.click("Control")
+        self.assertEqual(self.screen.controlled_index, 0)
+        self.click("Release Control")
+        self.assertIsNone(self.screen.controlled_index)
+        self.click("Control")
+        self.screen.random_candidates = ["Fixture I", "Fixture II"]
+        self.screen.refresh_ui()
+        self.click("Random")
+        self.assertIsNone(self.screen.controlled_index)
+
+    def test_player_key_events_move_and_fire_and_pause_clears_held_input(self):
+        self.fill_armies()
+        self.click("Control")
+        self.click("Simulate")
+        self.click("Start")
+        player = self.screen.simulation.controlled
+        initial_x = player.x
+        self.screen.handle_events([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_w),
+                                   pygame.event.Event(pygame.KEYDOWN, key=pygame.K_SPACE)])
+        with patch("pygame.time.get_ticks", return_value=self.screen.last_tick + 100):
+            self.screen.update()
+        self.assertGreater(player.x, initial_x)
+        self.assertTrue(any(shot.source is player for shot in self.screen.simulation.projectiles))
+        self.click("Pause")
+        self.assertFalse(self.screen.held_keys)
+        self.click("Resume")
+        stopped_x = player.x
+        with patch("pygame.time.get_ticks", return_value=self.screen.last_tick + 100):
+            self.screen.update()
+        self.assertEqual(player.x, stopped_x)
+        self.screen.handle_events([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_w),
+                                   pygame.event.Event(pygame.WINDOWFOCUSLOST)])
+        self.assertTrue(self.screen.simulation.paused)
+        self.assertFalse(self.screen.held_keys)
+
+    def test_player_keys_are_reserved_from_rebound_menu_and_mouse_commands(self):
+        from ui.navigation.screen import dispatch_global_keys, synthesize_keybind_mouse_events
+        self.fill_armies()
+        self.click("Control")
+        self.click("Simulate")
+        self.click("Start")
+        event = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_w)
+        with patch("ui.navigation.screen.queries.get_keybind", return_value=pygame.K_w):
+            dispatch_global_keys(self.screen, event)
+        self.assertFalse(self.screen.simulation.paused)
+        translated = synthesize_keybind_mouse_events(
+            [event], {"MOUSE_LEFT_CLICK": pygame.K_w}, reserved_keys=self.screen.reserved_keys)
+        self.assertEqual(translated, [event])
 
     def test_unit_limit_is_rechecked_and_setup_draw_uses_cached_cards(self):
         self.screen.rosters[0] = ["Fixture I"] * c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE

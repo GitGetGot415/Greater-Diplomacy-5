@@ -759,9 +759,11 @@ class Controller:
             listening_screen = self.active_state if top_modal is None else getattr(top_modal, "screen", top_modal)
             events = synthesize_keybind_mouse_events(
                 events, self.keybinds,
-                allow_keydown=not keyboard_input_is_captured(listening_screen))
+                allow_keydown=not keyboard_input_is_captured(listening_screen),
+                reserved_keys=getattr(listening_screen, "reserved_keys", ()))
             for event in events:
                 if (event.type == pygame.KEYDOWN and not getattr(listening_screen, "listening_for", None)
+                        and event.key not in getattr(listening_screen, "reserved_keys", ())
                         and event.key == self.keybinds.get("FULLSCREEN", pygame.K_F11)):
                     ui_elements.play_ui_sound("click")
                     self.toggle_fullscreen()

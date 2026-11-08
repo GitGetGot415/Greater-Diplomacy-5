@@ -36,14 +36,15 @@ def host_map_screen(screen):
 _MOUSE_KEYBIND_PRESSES = {}
 
 
-def synthesize_keybind_mouse_events(events, keybinds=None, allow_keydown=True):
+def synthesize_keybind_mouse_events(events, keybinds=None, allow_keydown=True, reserved_keys=()):
     """Add normal mouse down/up events for configured keyboard mouse clicks.
 
     Physical mouse input remains in ``events`` unchanged.  Keybinds receive
     the cursor's current position and otherwise follow the same UI, map, and
     drag paths as their physical button counterparts. ``allow_keydown`` keeps
     focused text fields from receiving new synthetic clicks while still
-    releasing a click that began before a screen change.
+    releasing a click that began before a screen change. ``reserved_keys`` lets
+    gameplay controls keep their physical keys without generating extra clicks.
     """
     if keybinds is None:
         keybinds = {
@@ -56,7 +57,7 @@ def synthesize_keybind_mouse_events(events, keybinds=None, allow_keydown=True):
     focus_lost = getattr(pygame, "WINDOWFOCUSLOST", None)
     for event in events:
         translated.append(event)
-        if event.type == pygame.KEYDOWN and allow_keydown:
+        if event.type == pygame.KEYDOWN and allow_keydown and event.key not in reserved_keys:
             if event.key in _MOUSE_KEYBIND_PRESSES:
                 continue
             buttons = tuple(button for action, button in c.KEYBIND_MOUSE_BUTTONS.items()
@@ -103,6 +104,10 @@ def dispatch_global_keys(state, event):
     typing_in_ui_bar = keyboard_input_is_captured(state)
     if event.type != pygame.KEYDOWN:
         return
+    # Gameplay screens can own physical controls even when a menu action was
+    # rebound to that key. Lightweight non-Screen callers need no reservation.
+    if event.key in getattr(state, "reserved_keys", ()):
+        return
     back_key = resolve_keybind(state, "BACK", keybind_io.default_keybind("BACK"))
     # Back remains available while editing so a field or screen can offer its
     # normal cancel behavior; the remaining rebindable actions stay reserved
@@ -142,6 +147,7 @@ class ScreenLayer:
 
 class Screen:
     bg_color = c.DEFAULT_BG_COLOR
+    reserved_keys = ()
     _armed_drag_attrs = ()
 
     # Screens layered over the map set this; it drives feedback text and keybind lookup.

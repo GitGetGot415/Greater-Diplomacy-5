@@ -1,4 +1,4 @@
-"""Custom battle setup and the standalone automatic land-combat prototype."""
+"""Army setup, deployment preview, and optional player-controlled land battles."""
 
 import math
 
@@ -37,6 +37,10 @@ GENERATION_SLIDER_POSITION = (c.SCREEN_WIDTH - 270, 48)
 GENERATION_SLIDER_WIDTH = 240
 GENERATION_BUTTON_SIZE = (100, 40)
 GENERATION_BUTTON_POSITION = (GENERATION_SLIDER_POSITION[0] - GENERATION_BUTTON_SIZE[0] - 20, 25)
+SIMULATE_BUTTON_SIZE = (100, 40)
+SIMULATE_BUTTON_POSITION = (GENERATION_BUTTON_POSITION[0] - SIMULATE_BUTTON_SIZE[0] - 10, 25)
+PLAYER_COLOR = (255, 225, 95)
+CONTROL_KEYS = frozenset((pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d, pygame.K_SPACE))
 
 
 def draw_unit_shape(surface, shape, center, angle, color, *, scale=1.0):
@@ -60,6 +64,17 @@ def draw_unit_shape(surface, shape, center, angle, color, *, scale=1.0):
     surface.blit(rotated, rotated.get_rect(center=center))
 
 
+def draw_player_arrow(surface, center, angle):
+    """Mark the controlled unit and point along its hull heading."""
+    forward = pygame.Vector2(math.cos(angle), math.sin(angle))
+    sideways = pygame.Vector2(-forward.y, forward.x)
+    origin = pygame.Vector2(center)
+    points = [origin + forward * 33, origin + forward * 19 + sideways * 6,
+              origin + forward * 23, origin + forward * 19 - sideways * 6]
+    pygame.draw.polygon(surface, OUTLINE_COLOR, points)
+    pygame.draw.polygon(surface, PLAYER_COLOR, points, 2)
+
+
 class CustomBattleScreen(Screen):
     back_state = "MENU"
     title = "Custom Battle"
@@ -73,6 +88,8 @@ class CustomBattleScreen(Screen):
         self.random_candidates = []
         self.rosters = [[], []]
         self.selected = [None, None]
+        self.controlled_index = None
+        self.held_keys = set()
         self.card_surfaces = {}
         self.roster_labels = []
         self.panes = []
@@ -101,6 +118,8 @@ class CustomBattleScreen(Screen):
         allowed = set(self.unit_names)
         self.rosters = [[name for name in roster if name in allowed] for roster in self.rosters]
         self.selected = [None, None]
+        self.controlled_index = None
+        self.held_keys.clear()
         self.card_surfaces.clear()
         self.simulation = None
         self.cancel_active_drags()
@@ -110,7 +129,15 @@ class CustomBattleScreen(Screen):
     def get_title(self):
         if self.mode == "result":
             return "You Win" if self.simulation.winner == 0 else "You Lose"
+        if self.mode == "preview":
+            return "Battle Preview"
         return "Custom Battle" if self.mode == "setup" else "Battle Simulation"
+
+    @property
+    def reserved_keys(self):
+        if self.mode in {"preview", "battle"} and self.simulation.controlled is not None:
+            return CONTROL_KEYS
+        return ()
 
     @staticmethod
     def _scroll_options(side):
@@ -145,9 +172,18 @@ class CustomBattleScreen(Screen):
                                 lambda side=side: self.remove_unit(side), font_size=20)
                 remove.apply_state(enabled=self.selected[side] is not None, color="red")
                 self.elements.extend((add, remove))
-            start = Button("centered", 625, (220, 50), "green", "Start", self.start_battle)
-            start.apply_state(enabled=all(self.rosters), color="green")
-            self.elements.append(start)
+                if side == 0:
+                    controlling = self.controlled_index is not None and self.controlled_index == self.selected[0]
+                    control = Button(x, top + 178, (BUTTON_WIDTH, 32), "yellow",
+                                     "Release Control" if controlling else "Control",
+                                     self.toggle_control, font_size=18)
+                    control.apply_state(enabled=self.selected[0] is not None,
+                                        color="yellow" if controlling else "green")
+                    self.elements.append(control)
+            simulate = Button(*SIMULATE_BUTTON_POSITION, SIMULATE_BUTTON_SIZE, "green", "Simulate",
+                              self.preview_battle, font_size=18)
+            simulate.apply_state(enabled=all(self.rosters), color="green")
+            self.elements.append(simulate)
             self.generate_button = Button(
                 *GENERATION_BUTTON_POSITION, GENERATION_BUTTON_SIZE, "purple", "Random",
                 self.generate_armies, font_size=20)
@@ -158,16 +194,21 @@ class CustomBattleScreen(Screen):
                 self.update_generation_year, visual_max=c.END_YEAR - c.START_YEAR,
                 allowed_max=c.END_YEAR - c.START_YEAR)
             self.elements.extend((self.generate_button, self.year_slider))
+        elif self.mode == "preview":
+            self.elements.append(Button(c.SCREEN_WIDTH - 150, 20, (130, 40), "green", "Start",
+                                        self.start_battle))
         elif self.mode == "battle":
             self.pause_button = Button(c.SCREEN_WIDTH - 150, 20, (130, 40), "yellow",
                                        "Resume" if self.simulation.paused else "Pause", self.toggle_pause)
             self.elements.append(self.pause_button)
         else:
             self.elements.extend((
-                Button("centered", 370, (220, 50), "green", "Run Again", self.start_battle),
+                Button("centered", 370, (220, 50), "green", "Run Again", self.preview_battle),
                 Button("centered", 440, (220, 50), "blue", "Edit Armies", self.return_to_setup)))
 
     def update_generation_year(self, value):
+        if self.mode != "setup":
+            return
         year = max(c.START_YEAR, min(c.END_YEAR, c.START_YEAR + round(value)))
         if year != self.generation_year:
             self.generation_year = year
@@ -185,11 +226,14 @@ class CustomBattleScreen(Screen):
         self.cancel_active_drags()
         self.rosters = combat.random_armies(self.random_candidates)
         self.selected = [None, None]
+        self.controlled_index = None
         for side in (0, 1):
             setattr(self, f"roster_{side}_scroll", 0)
         self.refresh_ui()
 
     def open_picker(self, side):
+        if self.mode != "setup":
+            return
         self.cancel_active_drags()
         pickers.open_listbox_selector(
             self, "Add Friendly Units" if side == 0 else "Add Enemy Units", "",
@@ -213,22 +257,51 @@ class CustomBattleScreen(Screen):
         if self.mode != "setup" or index is None or not 0 <= index < len(self.rosters[side]):
             return
         self.rosters[side].pop(index)
+        if side == 0 and self.controlled_index is not None:
+            if self.controlled_index == index:
+                self.controlled_index = None
+            elif self.controlled_index > index:
+                self.controlled_index -= 1
         self.selected[side] = None
         self.refresh_ui()
 
-    def start_battle(self):
-        if not all(self.rosters):
+    def toggle_control(self):
+        index = self.selected[0]
+        if self.mode != "setup" or index is None or not 0 <= index < len(self.rosters[0]):
+            return
+        self.controlled_index = None if self.controlled_index == index else index
+        self.refresh_ui()
+
+    def preview_battle(self):
+        if self.mode not in {"setup", "result"} or not all(self.rosters):
             return
         self.cancel_active_drags()
-        self.simulation = combat.BattleSimulation(self.library, *self.rosters)
-        self.mode = "battle"
-        self.last_tick = pygame.time.get_ticks()
+        self.simulation = combat.BattleSimulation(self.library, *self.rosters,
+                                                  controlled_index=self.controlled_index)
+        self.simulation.paused = True
+        self.clear_controls()
+        self.mode = "preview"
         self.status_key = None
         self._refresh_status()
         self.refresh_ui()
 
+    def start_battle(self):
+        if self.mode != "preview":
+            return
+        self.clear_controls()
+        self.simulation.paused = False
+        self.mode = "battle"
+        self.last_tick = pygame.time.get_ticks()
+        self.refresh_ui()
+
+    def clear_controls(self):
+        self.held_keys.clear()
+        if self.simulation is not None:
+            self.simulation.set_player_input()
+
     def return_to_setup(self):
         self.cancel_active_drags()
+        self.clear_controls()
         self.mode = "setup"
         self.simulation = None
         self.refresh_ui()
@@ -242,6 +315,7 @@ class CustomBattleScreen(Screen):
 
     def toggle_pause(self):
         if self.mode == "battle":
+            self.clear_controls()
             self.simulation.paused = not self.simulation.paused
             self.last_tick = pygame.time.get_ticks()
             self.refresh_ui()
@@ -283,6 +357,13 @@ class CustomBattleScreen(Screen):
                     destination = min(len(self.rosters[side]) - 1, max(0, destination))
                     name = self.rosters[side].pop(index)
                     self.rosters[side].insert(destination, name)
+                    if side == 0 and self.controlled_index is not None:
+                        if self.controlled_index == index:
+                            self.controlled_index = destination
+                        elif index < self.controlled_index <= destination:
+                            self.controlled_index -= 1
+                        elif destination <= self.controlled_index < index:
+                            self.controlled_index += 1
                     self.selected[side] = destination
                 self.drag = None
                 self.refresh_ui()
@@ -312,10 +393,18 @@ class CustomBattleScreen(Screen):
         for event in events:
             if event.type == pygame.WINDOWFOCUSLOST:
                 self.cancel_active_drags()
+                self.clear_controls()
                 if self.mode == "battle" and not self.simulation.paused:
                     self.toggle_pause()
             if self.done:
                 return
+            if event.type == pygame.KEYUP:
+                self.held_keys.discard(event.key)
+            if (event.type == pygame.KEYDOWN and event.key in CONTROL_KEYS
+                    and self.mode == "battle" and not self.simulation.paused
+                    and self.simulation.controlled is not None and self.simulation.controlled.alive):
+                self.held_keys.add(event.key)
+                continue
             if (self.mode == "setup" and event.type == pygame.MOUSEWHEEL
                     and self.year_slider.rect.inflate(20, 40).collidepoint(pygame.mouse.get_pos())):
                 # A shorter track skips some years when dragged at pixel resolution.
@@ -342,9 +431,14 @@ class CustomBattleScreen(Screen):
         now = pygame.time.get_ticks()
         dt = min(MAX_FRAME_SECONDS, max(0, now - self.last_tick) / 1000.0)
         self.last_tick = now
+        self.simulation.set_player_input(
+            throttle=int(pygame.K_w in self.held_keys) - int(pygame.K_s in self.held_keys),
+            turn=int(pygame.K_d in self.held_keys) - int(pygame.K_a in self.held_keys),
+            fire=pygame.K_SPACE in self.held_keys)
         self.simulation.advance(dt)
         self._refresh_status()
         if self.simulation.winner is not None:
+            self.clear_controls()
             self.mode = "result"
             self.refresh_ui()
 
@@ -383,13 +477,18 @@ class CustomBattleScreen(Screen):
                 surface.blit(self.card_surfaces[(side, name)], rect)
                 if self.selected[side] == index:
                     pygame.draw.rect(surface, TEAM_COLORS[side], rect, 2)
+                if side == 0 and self.controlled_index == index:
+                    draw_player_arrow(surface, (rect.centerx, rect.y + 28), 0)
             surface.set_clip(old_clip)
             self.draw_list_scrollbar(surface, self.panes[side].x, self.panes[side].bottom + 10,
                                      ROSTER_WIDTH, width=SCROLLBAR_HEIGHT, **self._scroll_options(side))
         if self.drag is not None and self.drag[3]:
             side, index, origin, active = self.drag
             card = self.card_surfaces[(side, self.rosters[side][index])]
-            surface.blit(card, card.get_rect(center=pygame.mouse.get_pos()))
+            rect = card.get_rect(center=pygame.mouse.get_pos())
+            surface.blit(card, rect)
+            if side == 0 and self.controlled_index == index:
+                draw_player_arrow(surface, (rect.centerx, rect.y + 28), 0)
 
     def _draw_battle(self, surface):
         field = pygame.Rect((c.SCREEN_WIDTH - c.CUSTOM_BATTLE_ARENA_SIZE[0]) // 2,
@@ -408,13 +507,16 @@ class CustomBattleScreen(Screen):
             pygame.draw.rect(surface, OUTLINE_COLOR, bar)
             ratio = fighter.data["health"] / max(1, fighter.data["max_health"])
             pygame.draw.rect(surface, (105, 215, 85), (bar.x, bar.y, round(bar.width * ratio), bar.height))
+            if fighter is self.simulation.controlled:
+                pygame.draw.circle(surface, PLAYER_COLOR, center, 18, 2)
+                draw_player_arrow(surface, center, fighter.angle)
         for shot in self.simulation.projectiles:
             head = (round(field.x + shot.x), round(field.y + shot.y))
             tail = (round(head[0] - shot.vx / c.CUSTOM_BATTLE_PROJECTILE_SPEED * 8),
                     round(head[1] - shot.vy / c.CUSTOM_BATTLE_PROJECTILE_SPEED * 8))
             pygame.draw.line(surface, (250, 232, 150), tail, head, 2)
         surface.set_clip(old_clip)
-        if self.simulation.paused:
+        if self.mode == "battle" and self.simulation.paused:
             rect = pygame.Rect(0, 0, 210, 70)
             rect.center = field.center
             ui_elements.draw_pixel_panel(surface, rect, (39, 44, 58), (15, 19, 27))
@@ -427,5 +529,5 @@ class CustomBattleScreen(Screen):
         else:
             for image, center in zip(self.status_surfaces, ((220, 103), (1060, 103), (640, 103))):
                 surface.blit(image, image.get_rect(center=center))
-            if self.mode == "battle":
+            if self.mode in {"preview", "battle"}:
                 self._draw_battle(surface)

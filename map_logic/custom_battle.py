@@ -1,4 +1,4 @@
-"""Standalone, automatic land battles. No campaign state or resource spending."""
+"""Standalone land battles with optional player control and no campaign state."""
 
 import math
 import random
@@ -23,6 +23,7 @@ SPAWN_MARGIN = 70.0
 RANDOM_ARMY_MIN_UNITS = 3
 RANDOM_ARMY_MAX_UNITS = 5
 RANDOM_UNIT_AGE_LIMIT = 5
+PLAYER_TURN_SPEED = math.radians(150)
 
 
 def land_unit_types(library):
@@ -105,14 +106,22 @@ class BattleSimulation:
     library: dict
     friendly: list
     enemy: list
+    controlled_index: object = None
+    controlled: object = field(init=False, default=None)
     fighters: list = field(init=False, default_factory=list)
     projectiles: list = field(init=False, default_factory=list)
     winner: object = field(init=False, default=None)
     elapsed: float = field(init=False, default=0.0)
     paused: bool = field(init=False, default=False)
     _accumulator: float = field(init=False, default=0.0)
+    _throttle: float = field(init=False, default=0.0)
+    _turn: float = field(init=False, default=0.0)
+    _fire: bool = field(init=False, default=False)
 
     def __post_init__(self):
+        if self.controlled_index is not None and (
+                type(self.controlled_index) is not int or not 0 <= self.controlled_index < len(self.friendly)):
+            raise ValueError("The controlled unit must be an existing friendly roster entry.")
         allowed = set(land_unit_types(self.library))
         for side, roster in enumerate((self.friendly, self.enemy)):
             if not roster or len(roster) > c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE:
@@ -135,6 +144,14 @@ class BattleSimulation:
                     WEAPON_RANGE + bombard_range * BOMBARD_RANGE_PIXELS,
                     "bombard_attack" if bombard_range else "attack",
                     angle=math.pi if side else 0.0))
+                if side == 0 and index == self.controlled_index:
+                    self.controlled = self.fighters[-1]
+
+    def set_player_input(self, throttle=0.0, turn=0.0, fire=False):
+        """Receive held controls; movement and firing still execute on fixed ticks."""
+        self._throttle = max(-1.0, min(1.0, throttle))
+        self._turn = max(-1.0, min(1.0, turn))
+        self._fire = bool(fire)
 
     def advance(self, seconds):
         """Use fixed simulation ticks; paused time is never saved up for later."""
@@ -159,12 +176,18 @@ class BattleSimulation:
             target = min(opponents, key=lambda other: (other.x - fighter.x) ** 2 + (other.y - fighter.y) ** 2)
             dx, dy = target.x - fighter.x, target.y - fighter.y
             distance = math.hypot(dx, dy)
-            fighter.angle = math.atan2(dy, dx)
             speed = max(0, fighter.data["speed"]) * MOVE_PIXELS_PER_SPEED
-            move = min(speed * dt, max(0, distance - fighter.weapon_range * 0.85))
-            mx, my = (dx / distance * move, dy / distance * move) if distance else (0.0, 0.0)
+            player_controlled = fighter is self.controlled
+            if player_controlled:
+                fighter.angle = (fighter.angle + self._turn * PLAYER_TURN_SPEED * dt) % math.tau
+                move = self._throttle * speed * dt
+                mx, my = math.cos(fighter.angle) * move, math.sin(fighter.angle) * move
+            else:
+                fighter.angle = math.atan2(dy, dx)
+                move = min(speed * dt, max(0, distance - fighter.weapon_range * 0.85))
+                mx, my = (dx / distance * move, dy / distance * move) if distance else (0.0, 0.0)
             # A small separation keeps accompanying units visible on an empty field.
-            for other in sides[fighter.side]:
+            for other in (() if player_controlled else sides[fighter.side]):
                 if other is fighter:
                     continue
                 sx, sy = fighter.x - other.x, fighter.y - other.y
@@ -175,7 +198,8 @@ class BattleSimulation:
                     my += sy / gap * push
             movements.append((fighter, mx, my))
             fighter.cooldown = max(0.0, fighter.cooldown - dt)
-            if distance <= fighter.weapon_range and fighter.cooldown <= 0:
+            wants_fire = self._fire if player_controlled else distance <= fighter.weapon_range
+            if wants_fire and fighter.cooldown <= 0:
                 # Shared health scaling and target capability rules own attack strength.
                 attack = sum(shot[1] for shot in combat_rules.damage_shots(
                     [fighter.data], [target.data], attack_field=fighter.attack_field))
@@ -183,9 +207,12 @@ class BattleSimulation:
                     shots.append((fighter, target, attack, distance))
                     fighter.cooldown = FIRE_INTERVAL
         for fighter, target, attack, distance in shots:
-            lead_time = distance / c.CUSTOM_BATTLE_PROJECTILE_SPEED
-            dx = target.x + target.vx * lead_time - fighter.x
-            dy = target.y + target.vy * lead_time - fighter.y
+            if fighter is self.controlled:
+                dx, dy = math.cos(fighter.angle), math.sin(fighter.angle)
+            else:
+                lead_time = distance / c.CUSTOM_BATTLE_PROJECTILE_SPEED
+                dx = target.x + target.vx * lead_time - fighter.x
+                dy = target.y + target.vy * lead_time - fighter.y
             length = math.hypot(dx, dy) or 1.0
             self.projectiles.append(Projectile(
                 fighter, fighter.x, fighter.y, dx / length * c.CUSTOM_BATTLE_PROJECTILE_SPEED,

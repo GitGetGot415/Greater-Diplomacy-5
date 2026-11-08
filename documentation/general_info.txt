@@ -32,7 +32,17 @@ of each land-unit family at or before the selected year, including any additiona
 research requirements. Units researched five or more years before the selected
 year are excluded. The mouse wheel over the Year slider adjusts one year at a
 time. Manual unit selection remains unrestricted by the slider.
-Start runs both armies automatically on an open grass battlefield.
+Select a friendly roster card and choose Control to command that unit. Release
+Control restores an entirely automatic battle. The controlled unit is marked
+with a yellow arrow. Reordering cards preserves the controlled unit; removing
+that unit or generating new armies clears control.
+Simulate opens the deployed armies on an open grass battlefield without running
+combat. The preview has no army-editing controls. Start begins combat from that
+deployment. Returning with Exit allows army editing again.
+W moves the controlled unit forward and S reverses along its facing direction.
+A turns left and D turns right. Space fires straight ahead with the same weapon
+cooldown as AI units. Holding Space fires again only when the cooldown expires.
+Other friendly units and all enemy units use automatic movement and firing.
 Tanks and vehicles use rectangles, artillery uses thin rectangles, infantry and
 militia use circles, and cavalry uses ovals. Health bars show remaining strength.
 Units approach enemies and fire visible projectiles. Health, attack, defense,
@@ -41,9 +51,10 @@ The prototype converts movement and range to battlefield pixels and uses shared
 health-scaled combat damage. Positive damage rounds up to whole health points so
 weakening armies can finish a battle. No resources are spent and no campaign state changes.
 Pause freezes combat. The Back key toggles pause during combat. Losing focus also
-pauses combat. Exit returns to army setup; Exit from setup returns to the main menu.
+pauses combat. Pausing and leaving combat clear held movement and fire controls.
+Exit returns to army setup; Exit from setup returns to the main menu.
 Destroying the enemy army wins. Losing the friendly army, including mutual
-destruction, loses. Run Again starts fresh armies; Edit Armies returns to setup.
+destruction, loses. Run Again previews fresh armies; Edit Armies returns to setup.
 Custom battles are temporary and are not saved, exported, or used in multiplayer.
 
 TOURNAMENT FILE STORAGE
