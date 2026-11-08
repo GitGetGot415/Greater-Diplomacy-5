@@ -6,7 +6,7 @@
             "topics": [
                 {
                     "title": "Your First Turn",
-                    "subtitle": "A quick path through one turn. Each step has its own category in this Help window.",
+                    "subtitle": "No idea what to do? Start here! Each step has its own category in this Help window. You can also drag this Help window around.",
                     "blocks": [
                         {
                             "type": "steps",
@@ -45,7 +45,7 @@
                             "items": [
                                 {"heading": "Next Turn", "text": "Press Next Turn in the bottom bar when your orders are ready. In real-time multiplayer the button reads Submit Turn, and in tournaments it reads Export Turn."},
                                 {"heading": "What happens", "text": "Unit orders such as conversions, disbanding, repairs, and upgrades advance first. Then production, air missions, bombardment, movement, and battles resolve. Income and research come last."},
-                                {"heading": "Save", "text": "Press Save on the left bar and choose a name. Load the game again from Load Game in the main menu."}
+                                {"icon": "save", "heading": "Save", "text": "Press Save on the left bar and choose a name. Load the game again from Load Game in the main menu."}
                             ]
                         }
                     ]
@@ -156,7 +156,7 @@
                                 {"heading": "Land again", "text": "Move the Convoy onto a land tile, then press Convert to turn it back into the land unit. A Convoy caught in a battle on land unloads by itself."},
                                 {"heading": "Ships over land", "text": "With Trucks research, a ship on a coastal tile can convert into a Truck and travel over land. Convert it back on a coast."},
                                 {"heading": "Ships and the coast", "text": "Ships can dock in friendly coastal tiles, but they cannot take land. Warships caught in a battle on land are destroyed."},
-                                {"heading": "Timing", "text": "A conversion takes time and cannot start during a battle. Press Convert again to cancel it."}
+                                {"icon": "clock", "heading": "Timing", "text": "A conversion takes time and cannot start during a battle. Press Convert again to cancel it."}
                             ]
                         }
                     ]
@@ -210,7 +210,7 @@
                                 {"heading": "Capture", "text": "Move a land unit into unclaimed land, or into land of a country you are at war with. The tile becomes yours at the end of the turn once no defenders are left."},
                                 {"heading": "Ships and aircraft", "text": "Ships and aircraft cannot take land."},
                                 {"heading": "Forts", "text": "A Fort gives the defenders of its tile a bonus. Bombardment can damage a fort."},
-                                {"heading": "Cores", "text": "Land you do not have a core on gives much less income. Use Core Territory in Production to add your core."}
+                                {"icon": "core", "heading": "Cores", "text": "Land you do not have a core on gives much less income. Use Core Territory in Production to add your core."}
                             ]
                         }
                     ]
