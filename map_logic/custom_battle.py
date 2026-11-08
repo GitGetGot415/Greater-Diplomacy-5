@@ -36,6 +36,9 @@ FAMILY_SHAPES = {
     "Landkreuzer P.1000 Ratte": "colossus",
     "Landkreuzer P.1500 Monster": "colossus",
     "Railgun": "colossus",
+    "Motorized Infantry Type": "motorized",
+    "Mechanized Infantry Type": "mechanized",
+    "Infantry Fighting Vehicle Type": "ifv",
 }
 
 

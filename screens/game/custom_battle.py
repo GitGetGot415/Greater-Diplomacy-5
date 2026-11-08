@@ -96,8 +96,11 @@ UNIT_SHAPE_SIZES = {
     "heavy_tank": (33, 22),
     "railroad_gun": (52, 9),
     "colossus": (50, 34),  # Landkreuzers and the Railgun.
+    # Troop carriers match a vehicle's hull but carry no gun: armored car, light tank, medium tank.
+    "motorized": (24, 16), "mechanized": (24, 16), "ifv": (28, 19),
 }
-ROUNDED_SHAPES = frozenset(("armored_car",))
+ROUNDED_SHAPES = frozenset(("armored_car", "motorized"))
+UNARMED_SHAPES = frozenset(("motorized", "mechanized", "ifv"))  # Drawn without the gun line.
 ROUNDED_CORNER_RADIUS = 6
 CONTROL_KEYS = frozenset((pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d, pygame.K_SPACE))
 
@@ -115,8 +118,9 @@ def draw_unit_shape(surface, shape, center, angle, color, *, scale=1.0):
         radius = round(ROUNDED_CORNER_RADIUS * scale) if shape in ROUNDED_SHAPES else 0
         pygame.draw.rect(sprite, OUTLINE_COLOR, body, border_radius=radius)
         pygame.draw.rect(sprite, color, body.inflate(-4, -4), border_radius=max(0, radius - 2))
-        pygame.draw.line(sprite, OUTLINE_COLOR, body.center,
-                         (sprite.get_width() - 1, body.centery), max(2, round(3 * scale)))
+        if shape not in UNARMED_SHAPES:
+            pygame.draw.line(sprite, OUTLINE_COLOR, body.center,
+                             (sprite.get_width() - 1, body.centery), max(2, round(3 * scale)))
     rotated = pygame.transform.rotate(sprite, -math.degrees(angle))
     surface.blit(rotated, rotated.get_rect(center=center))
 
