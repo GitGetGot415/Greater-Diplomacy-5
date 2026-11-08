@@ -33,6 +33,20 @@ Select a roster card and choose **Remove** to remove that entry.
 Drag cards within an army to change deployment order. Scroll long rosters with the wheel, scrollbar, or by dragging the roster background.
 Each army has a size limit. Both armies need at least one unit before **Simulate** becomes available.
 
+The gray gear button opens **Unit Settings** for that roster entry.
+**Nationality** chooses a country from the base country library. **Starting HP** sets
+the unit's health between one and its full library HP. **Done** closes the settings.
+Each change applies to that unit immediately; canceling a picker keeps the current value.
+Units of the same type can have different nationalities and starting health.
+Reordering preserves those choices, and replaying uses the configured starting HP.
+New units start at full health. The two sides initially use the first two playable
+countries by display name, or the same country when only one is available.
+
+Editing and preview cards show the nationality's flag, remaining HP percentage,
+and symbols for health, health-adjusted attack, and defense, including zero defense.
+Nationality selects the preview art's country variant where available; army sides
+still determine friend and foe.
+
 **Random** replaces both armies with independently chosen groups of three to five units.
 The **Year** slider limits random generation to the highest available level of each land-unit family at or before the selected year, including additional research requirements.
 Units researched five or more years before the selected year are excluded.
@@ -62,6 +76,7 @@ Other preview controls become available when the transition finishes.
 Preview uses the same friendly and enemy roster panels as editing.
 Preview cards use the base game's unit art and symbols for health, attack, and defense.
 The rosters can be scrolled, but units cannot be added, removed, reordered, or reassigned to player control.
+Nationality and starting HP are read-only in preview; gear buttons are absent.
 Editing buttons, **Random**, **Simulate**, and the **Year** slider are absent.
 
 Preview shows the units involved in the encounter. It shows no battlefield.

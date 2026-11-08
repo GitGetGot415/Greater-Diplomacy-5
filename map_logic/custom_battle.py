@@ -26,6 +26,12 @@ RANDOM_UNIT_AGE_LIMIT = 5
 PLAYER_TURN_SPEED = math.radians(150)
 
 
+def valid_starting_health(health, max_health):
+    """A participating unit must start alive and within its library health limit."""
+    return (isinstance(health, (int, float)) and not isinstance(health, bool)
+            and 0 < health <= max_health)
+
+
 def land_unit_types(library):
     """Keep library identifiers, including levels, and exclude ships and aircraft."""
     return [name for name, stats in library.items()
@@ -103,6 +109,8 @@ class Projectile:
 
 @dataclass
 class BattleSimulation:
+    """Accept unit names at full health or unit records with owner and starting health."""
+
     library: dict
     friendly: list
     enemy: list
@@ -126,16 +134,23 @@ class BattleSimulation:
         for side, roster in enumerate((self.friendly, self.enemy)):
             if not roster or len(roster) > c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE:
                 raise ValueError(f"Each army needs 1 to {c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE} land units.")
-            if any(name not in allowed for name in roster):
+            if any((entry["type"] if isinstance(entry, dict) else entry) not in allowed
+                   for entry in roster):
                 raise ValueError("Custom battles accept only current land-unit identifiers.")
             rows = min(SPAWN_ROWS, len(roster))
-            for index, name in enumerate(roster):
+            for index, entry in enumerate(roster):
+                name = entry["type"] if isinstance(entry, dict) else entry
                 column, row = divmod(index, rows)
                 x = SPAWN_MARGIN + column * SPAWN_GAP
                 if side:
                     x = c.CUSTOM_BATTLE_ARENA_SIZE[0] - x
                 y = c.CUSTOM_BATTLE_ARENA_SIZE[1] / 2 + (row - (rows - 1) / 2) * SPAWN_GAP
-                data = queries.create_unit_dict(name, "Enemy" if side else "Friendly", self.library)
+                owner = entry["owner"] if isinstance(entry, dict) else "Enemy" if side else "Friendly"
+                data = queries.create_unit_dict(name, owner, self.library)
+                if isinstance(entry, dict):
+                    if not valid_starting_health(entry["health"], data["max_health"]):
+                        raise ValueError("Starting HP must be above zero and no greater than the unit's maximum HP.")
+                    data["health"] = entry["health"]
                 # Bombardment attack belongs to the unit library, not to saved instances.
                 data["bombard_attack"] = self.library[name].get("bombard_attack", data["attack"])
                 bombard_range = queries.get_bombardment_range(name, self.library[name])

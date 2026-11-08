@@ -8,11 +8,16 @@ import data.constants as c
 from data import queries
 from data.io import starting_defaults
 from map_logic import custom_battle as combat
+from map_logic.system32 import combat_rules
+from ui import dialogs
 from ui.dialogs import pickers
+from ui.navigation import screen_runner
+from ui.navigation.modal_screen import ModalScreen
 from ui.navigation.screen import Screen
 from ui.rendering import symbol_loader
 from ui.rendering.font_manager import fonts
 from ui.widgets import ui_elements
+from ui.widgets import flag_icons
 from ui.widgets.text_utils import fit_text, wrap_text
 from ui.widgets.ui_elements import Button, Slider
 
@@ -24,8 +29,13 @@ PANEL_TOPS = (365, 120)  # Friendly and enemy rosters retain their separate area
 CARD_SIZE = (158, 132)
 CARD_GAP = 12
 PREVIEW_CARD_ICON_SIZE = (44, 36)
-PREVIEW_CARD_STATS_TOP = 96
-PREVIEW_CARD_STAT_ICON_SIZE = 14
+CARD_STATS_TOP = 96
+CARD_STAT_ICON_SIZE = 14
+CARD_FLAG_SIZE = (30, 20)
+CARD_FLAG_POSITION = (8, 14)
+CARD_HEALTH_POSITION = (6, 36)
+CARD_EDIT_SIZE = 24
+CARD_EDIT_INSET = 6
 ROSTER_INSET = 20
 ROSTER_WIDTH = 900
 ROSTER_TOP = 56
@@ -100,6 +110,8 @@ class CustomBattleScreen(Screen):
         self.mode = "setup"
         self.controller = None
         self.library = {}
+        self.country_data = {}
+        self.nationalities = []
         self.generation_year = starting_defaults.get_starting_value("random_setup", "start_year")
         self.random_candidates = []
         self.rosters = [[], []]
@@ -107,6 +119,8 @@ class CustomBattleScreen(Screen):
         self.controlled_index = None
         self.held_keys = set()
         self.card_surfaces = {}
+        self.unit_buttons = {}
+        self.gear_icon = None
         self.roster_labels = []
         self.panes = []
         self.drag = None
@@ -135,11 +149,19 @@ class CustomBattleScreen(Screen):
         self.preview_intro_stage = None
         # Main-menu battles use the default library, never a loaded world's overrides.
         self.library = queries.get_unit_library()
+        self.country_data = queries.get_country_data()
+        self.gear_icon = symbol_loader.get_symbol(
+            "Gear", zoom=1, fit_size=(CARD_EDIT_SIZE - 8, CARD_EDIT_SIZE - 8))
+        self.nationalities = sorted(
+            (country for country in self.country_data if queries.is_playable(country, self.country_data)),
+            key=lambda country: queries.get_country_display_name(country, self.country_data))
+        if not self.nationalities:
+            raise ValueError("Custom battles need at least one playable country in countries_data.json.")
         self.unit_names = sorted(combat.land_unit_types(self.library), key=lambda name: (
             queries.get_unit_metadata(name, self.library)["family"],
             queries.get_unit_tier(name, self.library)))
         allowed = set(self.unit_names)
-        self.rosters = [[name for name in roster if name in allowed] for roster in self.rosters]
+        self.rosters = [[unit for unit in roster if unit["type"] in allowed] for roster in self.rosters]
         self.selected = [None, None]
         self.controlled_index = None
         self.held_keys.clear()
@@ -171,6 +193,7 @@ class CustomBattleScreen(Screen):
                     axis="x")
 
     def refresh_ui(self):
+        self.unit_buttons = {}
         self.elements = [Button(20, 20, "small", "red", "Exit", self.leave,
                                 sound_kind="back")]
         if self.mode in {"setup", "preview"}:
@@ -180,8 +203,14 @@ class CustomBattleScreen(Screen):
                 name = "Friendly Units" if side == 0 else "Enemy Units"
                 self.roster_labels.append(fonts.get("heading2").render(
                     f"{name} ({len(roster)})", True, TEAM_COLORS[side]))
-                for unit_name in set(roster):
-                    self._cache_card(side, unit_name)
+                for index, unit in enumerate(roster):
+                    self._cache_card(side, unit)
+                    if self.mode == "setup":
+                        self.unit_buttons[side, index] = Button(
+                            0, 0, (CARD_EDIT_SIZE, CARD_EDIT_SIZE), "grey", "",
+                            lambda side=side, unit=unit: self.edit_unit(side, unit),
+                            image=self.gear_icon, show_text=False,
+                            sound_kind="open_settings")
                 limit = min(0, ROSTER_WIDTH - len(roster) * (CARD_SIZE[0] + CARD_GAP) + CARD_GAP)
                 setattr(self, f"roster_{side}_limit", limit)
                 offset = max(limit, min(0, getattr(self, f"roster_{side}_scroll")))
@@ -252,7 +281,8 @@ class CustomBattleScreen(Screen):
         if self.mode != "setup" or not self.random_candidates:
             return
         self.cancel_active_drags()
-        self.rosters = combat.random_armies(self.random_candidates)
+        self.rosters = [[self._new_unit(side, name) for name in roster]
+                        for side, roster in enumerate(combat.random_armies(self.random_candidates))]
         self.selected = [None, None]
         self.controlled_index = None
         for side in (0, 1):
@@ -275,10 +305,35 @@ class CustomBattleScreen(Screen):
         roster = self.rosters[side]
         if len(roster) >= c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE:
             return
-        roster.append(name)
+        roster.append(self._new_unit(side, name))
         self.selected[side] = len(roster) - 1
         self.refresh_ui()
         setattr(self, f"roster_{side}_scroll", getattr(self, f"roster_{side}_limit"))
+
+    def _new_unit(self, side, name):
+        country = self.nationalities[min(side, len(self.nationalities) - 1)]
+        return queries.create_unit_dict(name, country, self.library)
+
+    def edit_unit(self, side, unit):
+        if self.mode != "setup" or not any(entry is unit for entry in self.rosters[side]):
+            return
+        self.cancel_active_drags()
+        screen_runner._run_pygame_sub_screen(self, CustomBattleUnitEditor(self, side, unit))
+
+    def set_unit_options(self, side, unit, *, owner=None, health=None):
+        if self.mode != "setup" or not any(entry is unit for entry in self.rosters[side]):
+            return False
+        if owner is not None and owner not in self.nationalities:
+            return False
+        if health is not None and not combat.valid_starting_health(health, unit["max_health"]):
+            return False
+        if owner is not None:
+            unit["owner"] = owner
+        if health is not None:
+            unit["health"] = health
+        self.card_surfaces.clear()
+        self.refresh_ui()
+        return True
 
     def remove_unit(self, side):
         index = self.selected[side]
@@ -372,6 +427,8 @@ class CustomBattleScreen(Screen):
         for element in self.elements:
             if isinstance(element, Slider):
                 element.dragging = False
+        for button in self.unit_buttons.values():
+            button.is_pressed = False
         for side in (0, 1):
             setattr(self, f"roster_{side}_dragging", False)
 
@@ -379,6 +436,25 @@ class CustomBattleScreen(Screen):
         pane = self.panes[side]
         return pygame.Rect(pane.x + index * (CARD_SIZE[0] + CARD_GAP)
                            + getattr(self, f"roster_{side}_scroll"), pane.y, *CARD_SIZE)
+
+    @staticmethod
+    def _position_edit_button(button, card):
+        button.rect.topright = (card.right - CARD_EDIT_INSET, card.top + CARD_EDIT_INSET)
+
+    def _unit_button_events(self, event):
+        if (self.mode != "setup" or self.drag is not None
+                or event.type not in {pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP}):
+            return False
+        for (side, index), button in self.unit_buttons.items():
+            self._position_edit_button(button, self.card_rect(side, index))
+            if self.panes[side].collidepoint(event.pos):
+                engaged = button.is_pressed or button.rect.collidepoint(event.pos)
+                if engaged:
+                    button.handle_event(event)
+                    return True
+            elif event.type == pygame.MOUSEBUTTONUP:
+                button.is_pressed = False
+        return False
 
     def _roster_events(self, event):
         if self.drag is not None and self.mode == "setup":
@@ -393,8 +469,8 @@ class CustomBattleScreen(Screen):
                     destination = int((event.pos[0] - self.panes[side].x - offset)
                                       // (CARD_SIZE[0] + CARD_GAP))
                     destination = min(len(self.rosters[side]) - 1, max(0, destination))
-                    name = self.rosters[side].pop(index)
-                    self.rosters[side].insert(destination, name)
+                    unit = self.rosters[side].pop(index)
+                    self.rosters[side].insert(destination, unit)
                     if side == 0 and self.controlled_index is not None:
                         if self.controlled_index == index:
                             self.controlled_index = destination
@@ -441,6 +517,8 @@ class CustomBattleScreen(Screen):
                 self.held_keys.discard(event.key)
             if self.preview_intro_stage is not None:
                 # Global Back handling remains available while the UI is covered.
+                continue
+            if self._unit_button_events(event):
                 continue
             if (event.type == pygame.KEYDOWN and event.key in CONTROL_KEYS
                     and self.mode == "battle" and not self.simulation.paused
@@ -532,37 +610,40 @@ class CustomBattleScreen(Screen):
             ui_elements.draw_pixel_panel(surface, rect, PREVIEW_BAR_COLOR, PREVIEW_BAR_BORDER,
                                          gradient_strength=PREVIEW_BAR_GRADIENT_STRENGTH)
 
-    def _cache_card(self, side, name):
-        key = (self.mode, side, name)
+    def _card_key(self, side, unit):
+        return (self.mode, side, unit["type"], unit["owner"], unit["health"], unit["max_health"])
+
+    def _cache_card(self, side, unit):
+        key = self._card_key(side, unit)
         if key not in self.card_surfaces:
             card = pygame.Surface(CARD_SIZE)
             ui_elements.draw_pixel_panel(card, card.get_rect(), (46, 51, 65), (15, 19, 27))
             preview = self.mode == "preview"
+            name = unit["type"]
             if preview:
                 icon = symbol_loader.get_symbol(name, zoom=1, color=TEAM_COLORS[side],
-                                                fit_size=PREVIEW_CARD_ICON_SIZE)
+                                                country=unit["owner"], fit_size=PREVIEW_CARD_ICON_SIZE)
                 if icon is not None:
                     card.blit(icon, icon.get_rect(center=(CARD_SIZE[0] // 2, 28)))
             else:
                 draw_unit_shape(card, combat.unit_shape(name, self.library), (CARD_SIZE[0] // 2, 28),
                                 0 if side == 0 else math.pi, TEAM_COLORS[side], scale=1.4)
-            font = fonts.get("tiny" if preview else "small")
+            flag_icons.draw_flag(card, unit["owner"], self.country_data,
+                                 *CARD_FLAG_POSITION, size=CARD_FLAG_SIZE)
+            font = fonts.get("tiny")
+            card.blit(font.render(queries.format_health_percent(unit), True, c.UI_TEXT_LIGHT),
+                      CARD_HEALTH_POSITION)
             label = queries.get_unit_display_name(name, self.library)
-            line_height = font.get_height() if preview else 18
+            line_height = font.get_height()
             for line_number, line in enumerate(wrap_text(label, font, CARD_SIZE[0] - 16)[:3]):
                 text = font.render(fit_text(line, font, CARD_SIZE[0] - 16), True, c.UI_TEXT_BRIGHT)
                 card.blit(text, text.get_rect(midtop=(CARD_SIZE[0] // 2, 52 + line_number * line_height)))
-            stats = self.library[name]
-            if preview:
-                entries = [(icon, queries.format_number(stats[field])) for icon, field in (
-                    (c.ICON_HEALTH, "health"), (c.ICON_ATTACK, "attack"), (c.ICON_DEFENSE, "defense"))]
-                ui_elements.draw_wrapped_icon_row(
-                    card, font, entries, 6, PREVIEW_CARD_STATS_TOP, c.UI_TEXT_LIGHT,
-                    CARD_SIZE[0] - 12, icon_size=PREVIEW_CARD_STAT_ICON_SIZE)
-            else:
-                caption = fit_text(f"HP {stats['health']:g}  ATK {stats['attack']:g}", font, CARD_SIZE[0] - 12)
-                text = font.render(caption, True, c.UI_TEXT_LIGHT)
-                card.blit(text, text.get_rect(midbottom=(CARD_SIZE[0] // 2, CARD_SIZE[1] - 8)))
+            attack = unit["attack"] * combat_rules.effective_damage_multiplier(unit)
+            entries = [(icon, queries.format_number(value)) for icon, value in (
+                (c.ICON_HEALTH, unit["health"]), (c.ICON_ATTACK, attack), (c.ICON_DEFENSE, unit["defense"]))]
+            ui_elements.draw_wrapped_icon_row(
+                card, font, entries, 6, CARD_STATS_TOP, c.UI_TEXT_LIGHT,
+                CARD_SIZE[0] - 12, icon_size=CARD_STAT_ICON_SIZE)
             self.card_surfaces[key] = card
         return self.card_surfaces[key]
 
@@ -573,13 +654,17 @@ class CustomBattleScreen(Screen):
             surface.blit(self.roster_labels[side], (panel.x + ROSTER_INSET, panel.y + 14))
             old_clip = surface.get_clip()
             surface.set_clip(old_clip.clip(self.panes[side]))
-            for index, name in enumerate(self.rosters[side]):
+            for index, unit in enumerate(self.rosters[side]):
                 rect = self.card_rect(side, index)
                 if not rect.colliderect(self.panes[side]):
                     continue
                 if self.drag is not None and self.drag[0] == side and self.drag[1] == index and self.drag[3]:
                     continue
-                surface.blit(self.card_surfaces[(self.mode, side, name)], rect)
+                surface.blit(self.card_surfaces[self._card_key(side, unit)], rect)
+                if self.mode == "setup":
+                    button = self.unit_buttons[side, index]
+                    self._position_edit_button(button, rect)
+                    button.draw(surface)
                 if self.selected[side] == index:
                     pygame.draw.rect(surface, TEAM_COLORS[side], rect, 2)
                 if side == 0 and self.controlled_index == index:
@@ -589,9 +674,12 @@ class CustomBattleScreen(Screen):
                                      ROSTER_WIDTH, width=SCROLLBAR_HEIGHT, **self._scroll_options(side))
         if self.drag is not None and self.drag[3]:
             side, index, origin, active = self.drag
-            card = self.card_surfaces[(self.mode, side, self.rosters[side][index])]
+            card = self.card_surfaces[self._card_key(side, self.rosters[side][index])]
             rect = card.get_rect(center=pygame.mouse.get_pos())
             surface.blit(card, rect)
+            button = self.unit_buttons[side, index]
+            self._position_edit_button(button, rect)
+            button.draw(surface)
             if side == 0 and self.controlled_index == index:
                 draw_player_arrow(surface, (rect.centerx, rect.y + 28), 0)
 
@@ -636,3 +724,55 @@ class CustomBattleScreen(Screen):
                 surface.blit(image, image.get_rect(center=center))
             if self.mode == "battle":
                 self._draw_battle(surface)
+
+
+class CustomBattleUnitEditor(ModalScreen):
+    """Edit one custom roster entry through the existing country and HP dialogs."""
+
+    PANEL_SIZE = (460, 250)
+    ROW_TOP = 70
+    ROW_HEIGHT = 42
+    ROW_GAP = 12
+    DONE_SIZE = (100, 34)
+
+    def __init__(self, battle_screen, side, unit):
+        super().__init__(battle_screen, "Unit Settings")
+        self.battle_screen = battle_screen
+        self.side = side
+        self.unit = unit
+        self.refresh_ui()
+
+    def refresh_ui(self):
+        x = self.panel_rect.x + self.PAD
+        y = self.panel_rect.y + self.ROW_TOP
+        width = self.panel_rect.width - self.PAD * 2
+        country = queries.get_country_display_name(self.unit["owner"], self.battle_screen.country_data)
+        health = queries.format_number(self.unit["health"])
+        maximum = queries.format_number(self.unit["max_health"])
+        self.elements = [
+            Button(x, y, (width, self.ROW_HEIGHT), "grey", f"Nationality: {country}",
+                   self.choose_country, font_size=18),
+            Button(x, y + self.ROW_HEIGHT + self.ROW_GAP, (width, self.ROW_HEIGHT), "grey",
+                   f"Starting HP: {health} / {maximum}", self.choose_health, font_size=18),
+            Button(self.panel_rect.centerx - self.DONE_SIZE[0] // 2,
+                   y + (self.ROW_HEIGHT + self.ROW_GAP) * 2, self.DONE_SIZE, "blue", "Done",
+                   self.exit_screen, font_size=18, sound_kind="back"),
+        ]
+        for button in self.elements:
+            button.fit_text = True
+            button.fit_single_line = True
+
+    def _set_options(self, **options):
+        if self.battle_screen.set_unit_options(self.side, self.unit, **options):
+            self.refresh_ui()
+
+    def choose_country(self):
+        pickers.open_listbox_selector(
+            self, "Nationality", "",
+            queries.country_picker_items(self.battle_screen.nationalities, self.battle_screen.country_data),
+            lambda country: self._set_options(owner=country))
+
+    def choose_health(self):
+        dialogs.ask_integer(
+            "Starting HP", "HP:", lambda health: self._set_options(health=health) if health is not None else None,
+            minvalue=1, maxvalue=math.floor(self.unit["max_health"]), initial=round(self.unit["health"]))
