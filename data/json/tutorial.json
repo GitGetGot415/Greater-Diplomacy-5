@@ -1,0 +1,469 @@
+{
+    "categories": [
+        {
+            "title": "Getting Started",
+            "icon": "new_game",
+            "topics": [
+                {
+                    "title": "Your First Turn",
+                    "subtitle": "A quick path through one turn. Each step has its own category in this Help window.",
+                    "blocks": [
+                        {
+                            "type": "steps",
+                            "items": [
+                                {"icon": "terrain", "heading": "Look around", "text": "Use the map view buttons to see terrain, countries, and resources. See Map & Controls."},
+                                {"icon": "research", "heading": "Start research", "text": "Open R&D on the left bar and start a few technologies. See Research."},
+                                {"icon": "industry", "heading": "Build something", "text": "Click one of your provinces and press Production to queue buildings or units. See Production."},
+                                {"icon": "unit", "heading": "Move units", "text": "In Units view, left-click a unit stack, then right-click a tile to send it there. See Units & Orders."},
+                                {"icon": "clock", "heading": "End the turn", "text": "Press Next Turn. Every country's orders resolve at the same time."}
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "title": "Reading the Screen",
+                    "subtitle": "Where to find your country's situation at a glance.",
+                    "blocks": [
+                        {
+                            "type": "steps",
+                            "items": [
+                                {"icon": "economy(the_economy_of_a_country_to_be_unusually_specific)", "heading": "Resources", "text": "The bottom bar shows your Manpower, Materials, and Fuel. The number in brackets is how much each one changes next turn."},
+                                {"icon": "clock", "heading": "Date", "text": "The date is shown in the bottom bar. Each turn moves it forward."},
+                                {"icon": "political", "heading": "Country name", "text": "The top bar names your country, or the owner of the tile you selected."},
+                                {"icon": "settings", "heading": "Left bar", "text": "Opens your country's screens: Identity, Economy, R&D, Mail, Save, Settings, Music, Faction, Claims, Puppets, Automation, and Politics."},
+                                {"icon": "mail", "heading": "Unit events", "text": "The yellow mail button beside the resource bar lists what happened to your units last turn."}
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "title": "Ending a Turn",
+                    "subtitle": "Orders take effect when the turn ends, not when you give them.",
+                    "blocks": [
+                        {
+                            "type": "steps",
+                            "items": [
+                                {"heading": "Next Turn", "text": "Press Next Turn in the bottom bar when your orders are ready. In real-time multiplayer the button reads Submit Turn, and in tournaments it reads Export Turn."},
+                                {"heading": "What happens", "text": "Unit orders such as conversions, disbanding, repairs, and upgrades advance first. Then production, air missions, bombardment, movement, and battles resolve. Income and research come last."},
+                                {"heading": "Save", "text": "Press Save on the left bar and choose a name. Load the game again from Load Game in the main menu."}
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "title": "Map & Controls",
+            "icon": "terrain",
+            "topics": [
+                {
+                    "title": "Map Navigation",
+                    "subtitle": "Your country is centered automatically when a game opens or after you choose it. If you're familiar with how HOI4 map controls work, then the default map controls for GD5 should be very easy to understand.",
+                    "blocks": [
+                        {
+                            "type": "mouse_buttons",
+                            "items": [
+                                {"image": "Left.png", "heading": "LEFT MOUSE", "lines": ["Click a unit stack to select it; Shift-click adds more.", "Drag in Units view to box-select units."]},
+                                {"image": "Middle.png", "heading": "MIDDLE MOUSE", "lines": ["Hold and drag to pan the map.", "Scroll up or down to zoom in or out."]},
+                                {"image": "Right.png", "heading": "RIGHT MOUSE", "lines": ["Drag to pan the map outside Orders.", "Right-click moves selected units; Shift queues a waypoint."]}
+                            ]
+                        },
+                        {
+                            "type": "key_box",
+                            "heading": "ARROW KEYS",
+                            "text": "Use the arrow keys to pan the map. You can customize these in Settings > Keybinds."
+                        },
+                        {
+                            "type": "text",
+                            "align": "center",
+                            "text": "Customize mouse gestures in Settings > Mouse Settings."
+                        }
+                    ]
+                },
+                {
+                    "title": "Map UI",
+                    "subtitle": "These buttons are important! Located on the bottom left of the screen, they edit the appearance of the map, giving you the information you need to play effectively.",
+                    "blocks": [
+                        {
+                            "type": "steps",
+                            "columns": 2,
+                            "items": [
+                                {"icon": "terrain", "heading": "Terrain", "text": "Shows the terrain map."},
+                                {"icon": "political", "heading": "Political", "text": "Shows the actual countries on the map."},
+                                {"icon": "relations", "heading": "Relations", "text": "Shows diplomatic relations."},
+                                {"icon": "core", "heading": "Cores", "text": "Shows the territory each country has cores on."},
+                                {"icon": "faction", "heading": "Factions", "text": "Shows factions."},
+                                {"icon": "resource", "heading": "Resources", "text": "Shows province resources."},
+                                {"icon": "blank", "heading": "Blank", "text": "Hides the secondary map overlay."},
+                                {"icon": "unit", "heading": "Units", "text": "Shows unit stacks and their commands."},
+                                {"icon": "industry", "heading": "Economy", "text": "Shows economic map information."},
+                                {"icon": "names", "heading": "Names", "text": "Shows or hides country names."}
+                            ]
+                        },
+                        {
+                            "type": "text",
+                            "text": "In Units view you will see 4 colored buttons in the bottom left corner, which are Naval [icon:naval:24], Land [icon:land:24], Air [icon:air:24], and All [icon:all:24]. These filter your view of the map so you only see units that belong in that category. Click Hide above the buttons to slide the strip down. Click Show to slide it up again. Your selected filter stays active. Switching away from Units view slides the strip closed. The Hide/Show button stays visible, disabled, and without text. Returning opens the strip unless you used Hide. All is selected whenever a game opens. "
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "title": "Units & Orders",
+            "icon": "unit",
+            "topics": [
+                {
+                    "title": "Moving Units",
+                    "subtitle": "Units follow the shortest path they are allowed to take.",
+                    "blocks": [
+                        {
+                            "type": "steps",
+                            "items": [
+                                {"heading": "Select", "text": "In Units view, left-click a unit stack. Shift-click adds more stacks, and dragging draws a selection box. Orders opens for the selected units."},
+                                {"heading": "Move", "text": "Right-click a tile to send the selected units there. Hold Shift while right-clicking to add a waypoint."},
+                                {"heading": "Speed", "text": "A unit's speed is how many tiles it can move each turn. Longer moves continue over the next turns."},
+                                {"heading": "Where land units can go", "text": "Your land, land of your faction members, land where you have military access, unclaimed land, and land of countries you are at war with."},
+                                {"heading": "Change orders", "text": "A new move order replaces the old one. Clear ALL Orders in Orders cancels the orders of the units shown there."}
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "title": "Unit Commands",
+                    "subtitle": "Each unit row in Orders has command buttons. Hover over a button to see what it does, or why it is unavailable.",
+                    "blocks": [
+                        {
+                            "type": "steps",
+                            "items": [
+                                {"heading": "Convert", "text": "Turns a land unit on the coast into a Convoy, or a ship into a Truck. See Crossing Water."},
+                                {"heading": "Repair", "text": "Restores a damaged unit. The unit needs a factory on its tile and cannot be in a battle."},
+                                {"heading": "Upgrade", "text": "Replaces the unit with a newer researched model. The unit needs a factory on its tile and cannot be in a battle."},
+                                {"heading": "Disband", "text": "Removes the unit after one turn and refunds its cost."},
+                                {"heading": "Rename and Bombard", "text": "Rename gives the unit its own name. Units with bombardment, such as artillery, can fire at a target tile."},
+                                {"heading": "Several units", "text": "With more than one unit selected, the Disband, Repair, and Upgrade buttons at the top of Orders apply to all of them."}
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "title": "Crossing Water",
+                    "subtitle": "Land units need to become a Convoy before they can cross the sea.",
+                    "blocks": [
+                        {
+                            "type": "steps",
+                            "items": [
+                                {"heading": "Board a convoy", "text": "On a coastal tile, press Convert on a land unit. When the conversion finishes, the unit is a Convoy that can move onto water."},
+                                {"heading": "Land again", "text": "Move the Convoy onto a land tile, then press Convert to turn it back into the land unit. A Convoy caught in a battle on land unloads by itself."},
+                                {"heading": "Ships over land", "text": "With Trucks research, a ship on a coastal tile can convert into a Truck and travel over land. Convert it back on a coast."},
+                                {"heading": "Ships and the coast", "text": "Ships can dock in friendly coastal tiles, but they cannot take land. Warships caught in a battle on land are destroyed."},
+                                {"heading": "Timing", "text": "A conversion takes time and cannot start during a battle. Press Convert again to cancel it."}
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "title": "Armies",
+                    "subtitle": "Learn how to create, organize, and command armies, including target areas.",
+                    "blocks": [
+                        {
+                            "type": "steps",
+                            "items": [
+                                {"heading": "Select units", "text": "Left-click stacks or drag in Units view. In Orders, right-click a unit row to add or remove it without changing the other selected units."},
+                                {"heading": "Unassigned", "text": "Select units outside armies with this first, dark grey card. It has no emblem or editing controls. It hides when all units are assigned or Settings > Show Unassigned is OFF. Unassigned units keep their map icons."},
+                                {"heading": "Create an army", "text": "In Orders, click + Create Army in the Army tray. (Located on the right side of the screen)"},
+                                {"heading": "Personalize", "text": "Click a card to select the units in said army. Pressing the E button edits its name and emblem."},
+                                {"heading": "Target areas", "text": "Press T on an army card, select its target tiles, and confirm. The army fills uncovered tiles first, then balances its units. Units that have no orders given will automatically be ordered to fill in the target area next turn."},
+                                {"heading": "Need to Assign more units?", "text": "With units selected, right-click an army card."}
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "title": "Combat",
+            "icon": "battle",
+            "topics": [
+                {
+                    "title": "Battles",
+                    "subtitle": "A battle starts when units of countries at war share a tile.",
+                    "blocks": [
+                        {
+                            "type": "steps",
+                            "items": [
+                                {"heading": "Front and reserve", "text": "Each turn, the front units of both sides fight. Terrain decides how many units fit in the front. The rest wait in reserve, take no damage, and recover morale."},
+                                {"heading": "Leaving a battle", "text": "Units fighting in a battle stop their moves. They can only leave by one tile per turn, into land that is not hostile."},
+                                {"heading": "Find battles", "text": "In Units view, battles show as bubbles. Click a bubble to open Orders for that tile."},
+                                {"heading": "Manage Battle", "text": "In Orders, Manage Battle lets you choose which enemy each unit faces and which units wait in reserve. Without units there, the button reads View Battle."},
+                                {"heading": "Production pauses", "text": "Buildings and units queued in a province stop progressing while a battle is fought there."}
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "title": "Taking Land",
+                    "subtitle": "Land units take a tile by standing in it after its defenders are gone.",
+                    "blocks": [
+                        {
+                            "type": "steps",
+                            "items": [
+                                {"heading": "Capture", "text": "Move a land unit into unclaimed land, or into land of a country you are at war with. The tile becomes yours at the end of the turn once no defenders are left."},
+                                {"heading": "Ships and aircraft", "text": "Ships and aircraft cannot take land."},
+                                {"heading": "Forts", "text": "A Fort gives the defenders of its tile a bonus. Bombardment can damage a fort."},
+                                {"heading": "Cores", "text": "Land you do not have a core on gives much less income. Use Core Territory in Production to add your core."}
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "title": "Aircraft",
+            "icon": "air",
+            "topics": [
+                {
+                    "title": "Aircraft",
+                    "subtitle": "Green outlines represent an aircraft's movement range, yellow ones represent their mission range.",
+                    "blocks": [
+                        {
+                            "type": "steps",
+                            "items": [
+                                {"heading": "Missions", "text": "Choose Move, Strike, Transport, Air Drop, or defense from the mission button. Click a target for a flight mission. No mission cancels the order. Esc cancels target selection."},
+                                {"heading": "Strike / defend", "text": "Click enemy territory or visible enemy units while giving movement orders to strike, including enemies on your land. Aircraft attack without landing. Defenders can fire back, and surviving aircraft return with losses. Enemy aircraft on defense missions may intercept several missions."},
+                                {"heading": "Reposition", "text": "With Move or Strike active, another order click changes the target but keeps the mission type. Use the mission selector to switch missions. Idle planes show green relocation range (except V1 and V2); defense and strikes show yellow."},
+                                {"heading": "V1 / V2", "text": "V1 and V2 air units die when their strike completes, and they relocate on land at ground speed, unlike other planes."},
+                                {"heading": "Aircraft details", "text": "Research shows current range and abilities. Unavailable missions are disabled. Use range outlines to choose targets. Air missions have no aircraft limit; larger allied stacks reduce attack efficiency."},
+                                {"heading": "Other Information", "text": "Tanks cannot damage aircraft in flight. Aircraft cannot land on enemy or unclaimed land. Aircraft caught in ground combat die immediately. Aircraft carriers cannot hold aircraft (yet)."}
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "title": "Air transport",
+                    "subtitle": "Carry ground units between accessible land tiles, or air drop them into enemy territory.",
+                    "blocks": [
+                        {
+                            "type": "steps",
+                            "items": [
+                                {"heading": "Load cargo", "text": "Choose Transport, then select your ground units on the plane's tile. Transports also offer Move and Air Drop."},
+                                {"heading": "Eligible units", "text": "Ships and other planes cannot be cargo. A ship packed into a Truck can be loaded. Research details show each transport's current capacity and range. Cancel a unit's paid order before loading it."},
+                                {"heading": "Fly with cargo", "text": "Loaded units leave the map and stay aboard the plane. Use Move to fly with cargo. The Air Transport icon stays during Move and order cancellation. An active Air Drop order uses the Air Drop icon."},
+                                {"heading": "Air Drop", "text": "Choose Air Drop in the cargo picker, then enemy land. Idle loaded planes also drop when ordered there. Range is half Move range. Patrols intercept before the drop. Surviving planes return to base. During recovery, dropped units can capture land and destroy grounded enemy aircraft. They cannot move, take commands, or deal normal combat damage. Orders shows the turns remaining."},
+                                {"heading": "Cargo damage", "text": "Cargo loses the same fraction of its current health as the plane. For example, losing half the plane's remaining health also removes half each carried unit's remaining health. If the plane is destroyed, its cargo is destroyed too."},
+                                {"heading": "Release cargo", "text": "Choose Transport again and select Release for a carried unit. It appears on the plane's tile and can move immediately. Loading and releasing it in the same turn does not consume its movement. Load and release on land outside combat."}
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "title": "Production",
+            "icon": "industry",
+            "topics": [
+                {
+                    "title": "The Production Screen",
+                    "subtitle": "Click one of your provinces, then press Production in the province menu.",
+                    "blocks": [
+                        {
+                            "type": "steps",
+                            "items": [
+                                {"heading": "Rows", "text": "The list has administrative actions, buildings, and units. Each row shows the cost, the build time, and what the row produces."},
+                                {"heading": "Grey buttons", "text": "A grey button cannot be used in this province yet. Building... means one building of that type is already in progress."},
+                                {"heading": "Queues", "text": "The Buildings and Units panels list what this province is producing. See Queues and Refunds."},
+                                {"heading": "Stockpiles", "text": "The bar at the bottom of the screen shows the resources you have."}
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "title": "Buildings",
+                    "subtitle": "A province holds one building of each type. Building the next level replaces the current one.",
+                    "blocks": [
+                        {
+                            "type": "steps",
+                            "items": [
+                                {"heading": "Factory", "text": "Produces resources, mainly materials. A province needs a factory to recruit most units and to repair or upgrade them."},
+                                {"heading": "Recruitment Building", "text": "Produces manpower. It needs a Basic Factory in the province first."},
+                                {"heading": "Fort", "text": "Gives the defenders of the province a bonus in battle."},
+                                {"heading": "Levels", "text": "Each row offers the next level of that building. Some levels appear only after research."},
+                                {"heading": "Cores", "text": "Core Territory adds your core to the province over a few turns, which raises its income. Remove Cores removes foreign cores, needs a garrison, and starts a rebellion."}
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "title": "Recruiting Units",
+                    "subtitle": "The unit sections list the newest unit of each type you have researched.",
+                    "blocks": [
+                        {
+                            "type": "steps",
+                            "items": [
+                                {"heading": "Queue a unit", "text": "Click a unit button to pay for the unit and add it to the province's unit queue."},
+                                {"heading": "Factories", "text": "Most units need a finished factory in the province. Their buttons stay grey until the province has one."},
+                                {"heading": "Variants", "text": "Small toggles such as Mot, Mec, IFV, and Hvy switch a row to that variant once you have researched it."},
+                                {"heading": "Custom", "text": "The Custom section lets you choose older researched units to build."},
+                                {"heading": "Deployment", "text": "The new unit appears in the province when its build time is over."}
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "title": "Queues and Refunds",
+                    "subtitle": "You pay the full cost when you place an order.",
+                    "blocks": [
+                        {
+                            "type": "steps",
+                            "items": [
+                                {"heading": "Two queues", "text": "Each province has a building queue and a unit queue. Only the first item in each queue makes progress each turn."},
+                                {"heading": "Cancel", "text": "Click an entry in the Buildings or Units panel to cancel it. You get back what you paid."},
+                                {"heading": "Battles", "text": "Queues stop progressing while a battle is fought in the province."},
+                                {"heading": "Not enough resources", "text": "An order you cannot afford is refused, and nothing is charged."}
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "title": "Economy",
+            "icon": "economy(the_economy_of_a_country_to_be_unusually_specific)",
+            "topics": [
+                {
+                    "title": "Resources",
+                    "subtitle": "Your country uses three resources: Manpower, Materials, and Fuel.",
+                    "blocks": [
+                        {
+                            "type": "steps",
+                            "items": [
+                                {"heading": "Manpower", "text": "Units cost manpower to recruit and to keep."},
+                                {"heading": "Materials", "text": "Buildings and units cost materials."},
+                                {"heading": "Fuel", "text": "Many vehicles, ships, and aircraft cost fuel."},
+                                {"heading": "Upkeep", "text": "Every unit costs part of its price each turn. The number in brackets on the resource bar is your income minus upkeep."},
+                                {"heading": "Running low", "text": "A stockpile cannot drop below zero, but you cannot place new orders without enough resources."}
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "title": "Income",
+                    "subtitle": "Income is added at the end of every turn.",
+                    "blocks": [
+                        {
+                            "type": "steps",
+                            "items": [
+                                {"icon": "core", "heading": "Land", "text": "Every tile you own adds income. Tiles you have a core on give more than tiles you do not."},
+                                {"icon": "resource", "heading": "Natural resources", "text": "Iron adds materials, Coal and Oil add fuel, and Wheat adds manpower. The Resources map view shows where they are."},
+                                {"icon": "industry", "heading": "Buildings", "text": "Factories and Recruitment Buildings add income from their province."},
+                                {"icon": "research", "heading": "Research and policies", "text": "Some technologies and Politics policies raise income."}
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "title": "The Economy Tab",
+                    "subtitle": "Open Economy on the left bar to see where your income comes from.",
+                    "blocks": [
+                        {
+                            "type": "steps",
+                            "items": [
+                                {"heading": "Breakdown", "text": "Each resource is split into its sources and costs, so you can see what each one adds."},
+                                {"heading": "Conscription", "text": "The Conscription (Keep Manpower %) slider sets how much manpower you keep. The rest becomes materials."},
+                                {"heading": "Fuel conversion", "text": "The Convert % Mats to Fuel slider turns part of your materials into fuel. It needs Fuel Refining research."},
+                                {"heading": "Expenses", "text": "Expenses lists the upkeep of your units."}
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "title": "Research",
+            "icon": "research",
+            "topics": [
+                {
+                    "title": "Researching Technology",
+                    "subtitle": "Open R&D on the left bar.",
+                    "blocks": [
+                        {
+                            "type": "steps",
+                            "items": [
+                                {"heading": "Choose a category", "text": "Pick a category at the top. Its technologies are placed on a timeline by year."},
+                                {"heading": "Start", "text": "Click a technology to see its details and what it unlocks, then press Start Research."},
+                                {"heading": "Slots", "text": "You can research only a few technologies at once. Slots Full means every slot is in use."},
+                                {"heading": "Pause", "text": "Pause stops a project and keeps its progress."},
+                                {"heading": "Missing Reqs", "text": "Research the required technologies first."},
+                                {"heading": "Researching early", "text": "A technology researched before its year takes longer. The further ahead it is, the slower it goes."}
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "title": "What Research Unlocks",
+                    "subtitle": "Finished research changes what you can build and earn.",
+                    "blocks": [
+                        {
+                            "type": "steps",
+                            "items": [
+                                {"icon": "unit", "heading": "Units", "text": "New units appear in Production once you research them."},
+                                {"icon": "paper", "heading": "Upgrades", "text": "Units you already have can upgrade to newer models from Orders."},
+                                {"icon": "industry", "heading": "Buildings", "text": "Some building levels need research before they appear in Production."},
+                                {"icon": "economy(the_economy_of_a_country_to_be_unusually_specific)", "heading": "Economy", "text": "Technologies such as General Recruitment, Resource Refining, Fuel Refining, and Bergius Process add income or new options."}
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "title": "Diplomacy",
+            "icon": "relations",
+            "topics": [
+                {
+                    "title": "Other Countries",
+                    "subtitle": "Reach other countries through the Mail tab or directly from their territory on the map.",
+                    "blocks": [
+                        {
+                            "type": "steps",
+                            "items": [
+                                {"icon": "political", "heading": "Country summary", "text": "Click the top-left flag for a read-only summary. Select another country's tile to inspect that country."},
+                                {"icon": "mail", "heading": "Mail", "text": "Open the Mail tab (located to the left) to read, reply to, or start conversations."},
+                                {"icon": "relations", "heading": "Country actions", "text": "Click another country's tile to see available diplomatic actions you can take against them."}
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "title": "War and Peace",
+                    "subtitle": "Select another country's tile to see what you can do with that country.",
+                    "blocks": [
+                        {
+                            "type": "steps",
+                            "items": [
+                                {"heading": "Declare war", "text": "Press Declare War. While you are at war with that country, the same button offers Ceasefire / Peace."},
+                                {"heading": "Military access", "text": "Request Mil. Access to move units through another country's land without a war."},
+                                {"heading": "Factions", "text": "Faction members are friendly, and their units can enter each other's land. Use Create Faction, Invite to Faction, or Req. Join Faction."},
+                                {"heading": "Shared wars", "text": "Within a faction, Join Wars joins that member's wars, and Call to Arms asks that member to join yours."}
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "title": "Mail and Timing",
+                    "subtitle": "Diplomacy happens between turns, not instantly.",
+                    "blocks": [
+                        {
+                            "type": "steps",
+                            "items": [
+                                {"heading": "Sending", "text": "Messages, requests, and declarations are queued. They are sent when the turn ends."},
+                                {"heading": "Replies", "text": "The other country receives them next turn, and can answer only then."},
+                                {"heading": "Requests", "text": "In Mail, a request has Accept, Decline, and View buttons. View opens the terms of a trade or peace treaty."},
+                                {"heading": "Queued replies", "text": "A queued reply can be undone until the turn ends."}
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

@@ -46,6 +46,7 @@ temp
 !historical_leaders_DEFAULT.json
 !ai_responses.json
 !building_data.json
+!tutorial.json
 
 # Maps written by the Translate screen -- generated, not source.
 translated/
