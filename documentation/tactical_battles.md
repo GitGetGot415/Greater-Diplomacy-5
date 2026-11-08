@@ -67,6 +67,13 @@ Select a friendly roster card and choose **Control** to command that unit during
 **Release Control** restores an entirely automatic battle.
 A yellow arrow identifies the controlled unit. Reordering preserves the chosen entry; removing that entry or generating new armies clears control.
 
+When both armies have units, a line below the rosters forecasts how the same fight would end in the normal game:
+which army wins and in how many turns, that both armies are destroyed, or that there is no clear winner.
+It uses the normal game's own battle forecast (`combat_forecast.estimated_combat_outcome`, which the map's
+battle bubbles and Manage Battle also use) with each army standing in for one of two countries at war.
+Nationality, terrain width, forts, politics, and conscription therefore do not affect it.
+It changes when unit types, order, or starting HP change, and it can differ from the result of actual battle.
+
 **Simulate** opens preview. Editing has no **Start** button.
 
 ### Preview: Preview Battle

@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 import data.constants as c
 from data import queries
 from data.state_access import session_for, world_for
-from map_logic.system32 import combat_rules
+from map_logic.system32 import combat_forecast, combat_rules
 
 
 # These values translate campaign statistics into a real-time battlefield.
@@ -34,6 +34,8 @@ SPAWN_MARGIN = 70.0
 RANDOM_ARMY_MIN_UNITS = 3
 RANDOM_ARMY_MAX_UNITS = 5
 RANDOM_UNIT_AGE_LIMIT = 5
+# Placeholder countries for the normal-game forecast; real country IDs never use these names.
+FORECAST_NATIONS = ("Custom Battle Friendly Army", "Custom Battle Enemy Army")
 # Library families that get their own silhouette; sizes are in screens/game/custom_battle.py.
 FAMILY_SHAPES = {
     "Light Tank": "light_tank",
@@ -142,6 +144,20 @@ def apply_campaign_result(simulation, units, province):
     for index, unit in enumerate(units):
         unit["health"] = simulation.division_health_fraction(index) * unit["max_health"]
     province["units"] = [unit for unit in province["units"] if unit.get("health", 0) > 0]
+
+
+def normal_game_forecast(friendly, enemy):
+    """How this fight would end in the normal game: (winning army index or None, turns or None).
+
+    The normal game's turn-by-turn forecast resolves it. Each army stands in for one of two
+    countries at war with each other, so nationality, terrain width, forts, politics, and
+    conscription do not apply. ``turns`` is None when the forecast finds no end.
+    """
+    nation_data = {nation: {"at_war_with": [other]}
+                   for nation, other in zip(FORECAST_NATIONS, reversed(FORECAST_NATIONS))}
+    sides = [[dict(unit, owner=nation) for unit in roster] for nation, roster in zip(FORECAST_NATIONS, (friendly, enemy))]
+    outcome = combat_forecast.estimated_combat_outcome(sides, nation_data)
+    return outcome["winner_side"], outcome["turns"]
 
 
 def land_unit_types_for_year(library, year):

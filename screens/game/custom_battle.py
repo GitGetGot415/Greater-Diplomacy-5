@@ -78,6 +78,7 @@ GENERATION_BUTTON_SIZE = (100, 40)
 GENERATION_BUTTON_POSITION = (GENERATION_SLIDER_POSITION[0] - GENERATION_BUTTON_SIZE[0] - 20, 25)
 SIMULATE_BUTTON_SIZE = (100, 40)
 SIMULATE_BUTTON_POSITION = (GENERATION_BUTTON_POSITION[0] - SIMULATE_BUTTON_SIZE[0] - 10, 25)
+FORECAST_CENTER_Y = 650  # Edit Battle's normal-game forecast line, below the friendly roster.
 PREVIEW_START_POSITION = ("centered", 625)
 PREVIEW_START_SIZE = (220, 50)
 PREVIEW_RETREAT_SIZE = (160, 50)
@@ -252,6 +253,8 @@ class CustomBattleScreen(Screen):
         self.preview_intro_stage = None
         self.status_key = None
         self.status_surfaces = []
+        self.forecast_key = None  # The armies the forecast line was calculated for.
+        self.forecast_surface = None
         for side, top in enumerate(PANEL_TOPS):
             self.panes.append(pygame.Rect(PANEL_X + ROSTER_INSET, top + ROSTER_TOP,
                                           ROSTER_WIDTH, CARD_SIZE[1]))
@@ -452,6 +455,7 @@ class CustomBattleScreen(Screen):
                                  sound_kind="back")
                 self.elements.extend((start, retreat))
                 return
+            self._refresh_forecast()
             simulate = Button(*SIMULATE_BUTTON_POSITION, SIMULATE_BUTTON_SIZE, "green", "Simulate",
                               self.preview_battle, font_size=18, sound_kind=None)
             simulate.apply_state(enabled=all(self.rosters), color="green")
@@ -478,6 +482,27 @@ class CustomBattleScreen(Screen):
                 Button("centered", 370, (220, 50), "green", "Run Again", self.preview_battle,
                        sound_kind=None),
                 Button("centered", 440, (220, 50), "blue", "Edit Armies", self.return_to_setup)))
+
+    def _refresh_forecast(self):
+        """Forecast how the armies would fare in the normal game, only when their types, order, or health change."""
+        key = tuple(tuple((unit["type"], unit["health"]) for unit in roster) for roster in self.rosters)
+        if key == self.forecast_key:
+            return
+        self.forecast_key = key
+        if not all(self.rosters):
+            self.forecast_surface = None
+            return
+        winner, turns = combat.normal_game_forecast(*self.rosters)
+        if turns is None:
+            text, color = "Normal game: no clear winner", c.UI_TEXT_MUTED
+        else:
+            span = f"{turns} turn" if turns == 1 else f"{turns} turns"
+            if winner is None:
+                text, color = f"Normal game: both armies destroyed in {span}", c.UI_TEXT_MUTED
+            else:
+                army = "Friendly" if winner == 0 else "Enemy"
+                text, color = f"Normal game: {army} army wins in {span}", TEAM_COLORS[winner]
+        self.forecast_surface = fonts.get("normal").render(text, True, color)
 
     def update_generation_year(self, value):
         if self.mode != "setup":
@@ -1243,6 +1268,9 @@ class CustomBattleScreen(Screen):
     def additional_draw(self, surface):
         if self.mode in {"setup", "preview"}:
             self._draw_rosters(surface)
+            if self.mode == "setup" and self.forecast_surface is not None:
+                surface.blit(self.forecast_surface,
+                             self.forecast_surface.get_rect(center=(c.SCREEN_WIDTH // 2, FORECAST_CENTER_Y)))
             return
         for image, center in zip(self.status_surfaces, ((220, 103), (1060, 103), (640, 103))):
             surface.blit(image, image.get_rect(center=center))

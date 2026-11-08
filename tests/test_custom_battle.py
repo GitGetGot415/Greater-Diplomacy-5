@@ -468,6 +468,29 @@ class BattleSimulationTests(unittest.TestCase):
         self.assertFalse(simulation.controlled_division_alive)
         self.assertIsNone(simulation.winner)  # The rest of the friendly army fights on.
 
+    def test_normal_game_forecast_treats_the_armies_as_countries_at_war(self):
+        from map_logic.system32 import combat_forecast
+
+        def roster(name, owner, count=1):
+            return [queries.create_unit_dict(name, owner, self.library) for _ in range(count)]
+
+        strong, weak = roster("Fixture II", "First Country", 2), roster("Fixture I", "First Country")
+        before = copy.deepcopy([strong, weak])
+        with patch("data.queries.get_unit_library", return_value=self.library):
+            winner, turns = combat.normal_game_forecast(strong, weak)
+            # The same countries on both sides still fight, and nationality changes nothing.
+            self.assertEqual(combat.normal_game_forecast(roster("Fixture II", "Second Country", 2), weak),
+                             (winner, turns))
+            self.assertEqual(combat.normal_game_forecast(weak, strong)[0], 1)
+            nations = {combat.FORECAST_NATIONS[0]: {"at_war_with": [combat.FORECAST_NATIONS[1]]}}
+            expected = combat_forecast.estimated_combat_outcome(
+                [[dict(unit, owner=nation) for unit in side]
+                 for nation, side in zip(combat.FORECAST_NATIONS, (strong, weak))], nations)
+        self.assertEqual((winner, turns), (expected["winner_side"], expected["turns"]))
+        self.assertEqual(winner, 0)
+        self.assertGreaterEqual(turns, 1)
+        self.assertEqual([strong, weak], before)
+
     def test_nearest_enemy_search_matches_checking_every_unit(self):
         rng = random.Random(5)
         width, height = c.CUSTOM_BATTLE_ARENA_SIZE
@@ -1270,6 +1293,26 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.assertEqual(self.screen.camera, camera)
         self.assertTrue(self.screen.firing)
         self.screen.draw(self.surface)
+
+    def test_edit_battle_forecasts_the_normal_game_only_when_the_armies_change(self):
+        self.screen.add_unit(0, "Fixture II")
+        self.assertIsNone(self.screen.forecast_surface)
+        with patch.object(battle_screen.combat, "normal_game_forecast", return_value=(0, 3)) as forecast:
+            self.screen.add_unit(1, "Fixture I")
+            self.assertIsNotNone(self.screen.forecast_surface)
+            self.assertEqual(forecast.call_count, 1)
+            self.assertEqual(forecast.call_args.args, tuple(self.screen.rosters))
+            # Selection and nationality leave the forecast alone; health changes it.
+            self.screen.selected[0] = None
+            self.screen.refresh_ui()
+            self.screen.set_unit_options(1, self.screen.rosters[1], owner="Fixture A")
+            self.assertEqual(forecast.call_count, 1)
+            self.screen.set_unit_options(1, self.screen.rosters[1], health_percent=50)
+            self.assertEqual(forecast.call_count, 2)
+            self.screen.draw(self.surface)
+        self.screen.remove_unit(1)
+        self.screen.refresh_ui()
+        self.assertIsNone(self.screen.forecast_surface)
 
     def test_wheel_zooms_around_the_pointer_and_buttons_still_take_clicks(self):
         self.fill_armies()
