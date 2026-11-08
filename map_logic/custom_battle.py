@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 
 import data.constants as c
 from data import queries
+from data.state_access import session_for, world_for
 from map_logic.system32 import combat_rules
 
 
@@ -61,6 +62,20 @@ def campaign_forces(player_unit, province, nation_data, library):
     if not friendly or not enemy or friendly[0] is not player_unit:
         return None
     return friendly, enemy
+
+
+def tactical_encounter(context, province):
+    """The (friendly, enemy) campaign units of the tactical battle held on ``province``, or None.
+
+    Only the tile holding the tactical player's land unit has one, and only while hostile land
+    units share it. The battle deals that tile's damage, so campaign combat must skip the tile.
+    """
+    session = session_for(context)
+    # Lightweight test doubles carry no tactical state.
+    unit = getattr(session, "tactical_mode", False) and getattr(session, "player_unit", None)
+    if not unit or not any(other is unit for other in province.get("units", [])):
+        return None
+    return campaign_forces(unit, province, world_for(context).nation_data, queries.get_unit_library(context))
 
 
 def campaign_roster(units, library):

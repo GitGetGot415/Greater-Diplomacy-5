@@ -143,18 +143,19 @@ The flow is **campaign encounter → preview → actual battle → campaign**.
 After each turn resolves, once per turn, the game opens preview at once when the player's land unit shares a tile
 with hostile land units. Preview starts with that unit controlled. The friendly army is that unit followed by friendly
 land units on the tile, and the enemy army is the hostile land units there, each up to the army size limit.
-Each unit enters with its current health. Naval and air units do not take part.
+Each unit enters with its current health. Campaign combat deals no damage on that tile during turn resolution,
+so the battle is where the damage happens. Naval and air units do not take part.
 Tactical play has no editing view and no route for adding, removing, randomly generating, or replacing units.
 
 **Retreat** opens the map with the tiles the unit can fall back to marked: neighboring tiles it may enter
-that hold no hostile units. Choose a marked tile to give the unit a move order there and return to the map.
-**Back** returns to the preview. **Retreat** is available even when no tile is marked, so the player can look and go back.
+that are not hostile land and hold no hostile units, the same rule the rule-based AI uses to retreat. Choose a marked tile to give the unit a move order there and return to the map.
+The mouse wheel zooms and the pan buttons move the map. **Back** returns to the preview. **Retreat** is available even when no tile is marked, so the player can look and go back.
 
 Actual battle has no **Exit** button in tactical play. When it ends, **Continue** returns to the map.
 If the controlled unit was destroyed, even in a won battle, it is removed, tactical mode ends,
 and the game continues in spectator mode.
 When the battle ends, every unit that took part keeps its remaining fraction of health in the campaign, and destroyed units, friendly or enemy, are removed from the tile.
-Nothing else changes until the next turn, when the campaign rules resolve the tile, including any capture.
+The tile is then captured as after any campaign combat: if only enemies remain, they take it. Everything else waits for the next turn.
 The tactical division has no resource-management costs, including repair costs, and does not charge the parent country for those actions.
 Tactical battles in multiplayer remain unavailable.
 

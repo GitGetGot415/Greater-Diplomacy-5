@@ -9,6 +9,7 @@ import data.constants as c
 from data import queries
 from data.io import starting_defaults
 from map_logic import custom_battle as combat
+from map_logic.system32 import combat_processor
 from map_logic.system32 import combat_rules
 from ui.dialogs import pickers
 from ui.navigation import screen_runner
@@ -272,6 +273,8 @@ class CustomBattleScreen(Screen):
         campaign.result_applied = True
         combat.apply_campaign_result(self.simulation, campaign.units, campaign.province)
         queries.normalize_armies(campaign.map_screen.nation_data, campaign.map_screen.map_data)
+        # Whoever is left standing on the tile takes it, as after any campaign combat.
+        combat_processor.check_for_post_combat_captures(campaign.map_screen)
         campaign.map_screen.invalidate_map_presentation_cache()
 
     def continue_campaign(self):

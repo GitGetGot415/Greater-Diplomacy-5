@@ -12,7 +12,7 @@ from data.queries.unit_info import (
     is_naval_unit,
     unit_is_air_drop_recovering,
 )
-from data.queries.combat_state import get_unit_combat_owner
+from data.queries.combat_state import get_unit_combat_owner, is_hostile_territory
 from data.queries.diplomacy import get_enemies
 from data.queries.movement_access import can_convoy_enter, can_land_units_enter, can_ships_enter
 from data.queries.air import (
@@ -100,7 +100,7 @@ def find_unit_move_path(unit, start_province, destination_id, id_to_province, na
 
 def find_retreat_routes(unit, province, id_to_province, nation_data, *, context=None):
     """One-step routes, keyed by tile id, from ``province`` to neighbors the unit may enter
-    that hold no units hostile to the unit's side."""
+    that are not hostile land and hold no units hostile to the unit's side (the AI's retreat rule)."""
     if context is None:
         context = nation_data
     enemies = get_enemies(get_unit_combat_owner(unit), nation_data)
@@ -109,6 +109,9 @@ def find_retreat_routes(unit, province, id_to_province, nation_data, *, context=
         destination = id_to_province.get(neighbor_id)
         if destination is None or any(get_unit_combat_owner(other) in enemies
                                       for other in destination.get("units", [])):
+            continue
+        if not is_water_province(destination) and is_hostile_territory(
+                get_unit_combat_owner(unit), destination.get("owner", "Unclaimed"), nation_data):
             continue
         if can_unit_move_step(unit, province, destination, nation_data, context=context):
             routes[neighbor_id] = [neighbor_id]

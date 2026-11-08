@@ -57,6 +57,10 @@ class Tactical_Retreat_Screen(Screen):
         self.go_to("MAP")
         return True
 
+    def update(self):
+        # The camera's zoom and pan run on this update, as on the map and Orders.
+        self.map_screen.camera.update(self.map_screen, c.SCREEN_HEIGHT)
+
     def additional_events(self, event):
         map_ref = self.map_screen
         on_ui = any(isinstance(el, Button) and el.rect.collidepoint(getattr(event, "pos", (-1, -1)))

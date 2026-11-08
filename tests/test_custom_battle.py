@@ -438,12 +438,17 @@ class CustomBattleScreenTests(unittest.TestCase):
             self.screen.update()
 
     def enter_campaign(self):
+        from tests.combat_fixtures import StubBattleMap
+        map_screen = StubBattleMap()
+        for name, enemy in (("Fixture A", "Fixture B"), ("Fixture B", "Fixture A")):
+            map_screen.add_nation(name, at_war_with=[enemy])
         player = queries.create_unit_dict("Fixture II", "Fixture A", self.library)
         enemy = queries.create_unit_dict("Fixture I", "Fixture B", self.library)
-        province = {"id": 1, "units": [player, enemy]}
-        map_screen = SimpleNamespace(player_unit=player, nation_data=self.countries,
-                                     map_data={"key": province},
-                                     invalidate_map_presentation_cache=Mock())
+        province = map_screen.add_province("p1", "Fixture A", units=[player, enemy])
+        province["_turn_start_owner"] = "Fixture A"
+        map_screen.player_unit = player
+        map_screen.tactical_mode = True
+        map_screen.invalidate_map_presentation_cache = Mock()
         custom = self.screen.rosters
         with patch("data.queries.get_unit_library", return_value=self.library):
             self.screen._enter_campaign(map_screen, province, [player], [enemy])
@@ -456,7 +461,7 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.assertEqual(self.screen.mode, "preview")
         self.assertEqual(self.screen.controlled_index, 0)
         self.assertIs(self.screen.simulation.controlled.data["owner"], "Fixture A")
-        self.assertEqual(self.screen.country_data, self.countries)
+        self.assertIs(self.screen.country_data, map_screen.nation_data)
         labels = [button.text for button in self.screen.elements]
         self.assertNotIn("Exit", labels)
         start, retreat = (next(b for b in self.screen.elements if b.text == label)
@@ -509,6 +514,31 @@ class CustomBattleScreenTests(unittest.TestCase):
                 if dies:
                     lose.assert_called_once_with(map_screen, province)
 
+    def test_the_side_left_standing_takes_the_tile_when_the_battle_ends(self):
+        from tests.combat_fixtures import StubBattleMap
+        for player_dies, owner in ((True, "Fixture B"), (False, "Fixture A")):
+            with self.subTest(player_dies=player_dies):
+                world = StubBattleMap()
+                for name, enemy in (("Fixture A", "Fixture B"), ("Fixture B", "Fixture A")):
+                    world.add_nation(name, at_war_with=[enemy])
+                player = queries.create_unit_dict("Fixture II", "Fixture A", self.library)
+                foe = queries.create_unit_dict("Fixture I", "Fixture B", self.library)
+                province = world.add_province("p1", "Fixture A", units=[player, foe])
+                province["_turn_start_owner"] = "Fixture A"
+                world.player_unit = player
+                world.tactical_mode = True
+                world.invalidate_map_presentation_cache = Mock()
+                with patch("data.queries.get_unit_library", return_value=self.library):
+                    self.screen._enter_campaign(world, province, [player], [foe])
+                self.finish_intro()
+                self.click("Start")
+                fighters = self.screen.simulation.fighters
+                fighters[0].data["health"] = 0 if player_dies else fighters[0].data["max_health"]
+                fighters[1].data["health"] = foe["max_health"] if player_dies else 0
+                self.screen.simulation.winner = 1 if player_dies else 0
+                self.screen.update()
+                self.assertEqual(province["owner"], owner)
+
     def test_campaign_forces_lead_with_the_player_unit_and_need_a_land_enemy(self):
         nations = {"Fixture A": {"at_war_with": ["Fixture B"]}, "Fixture B": {"at_war_with": ["Fixture A"]}}
         player = queries.create_unit_dict("Fixture II", "Fixture A", self.library)
@@ -547,12 +577,33 @@ class CustomBattleScreenTests(unittest.TestCase):
             Map.open_tactical_battle(foe_free)
         foe_free.go_to.assert_not_called()
 
-    def test_retreat_routes_skip_enemy_tiles_and_blocked_edges(self):
+    def test_campaign_combat_skips_the_tactical_tile_so_the_battle_deals_the_damage(self):
+        from map_logic.system32 import combat_processor
+        from tests.combat_fixtures import StubBattleMap
+        for tactical in (False, True):
+            with self.subTest(tactical=tactical):
+                screen = StubBattleMap()
+                for name, enemy in (("Fixture A", "Fixture B"), ("Fixture B", "Fixture A")):
+                    screen.add_nation(name, at_war_with=[enemy])
+                player = queries.create_unit_dict("Fixture II", "Fixture A", self.library)
+                foe = queries.create_unit_dict("Fixture I", "Fixture B", self.library)
+                screen.add_province("p1", "Fixture A", units=[player, foe])
+                screen.tactical_mode = tactical
+                screen.player_unit = player
+                with patch("data.queries.get_unit_library", return_value=self.library):
+                    combat_processor.process_combat(screen)
+                damaged = player["health"] < player["max_health"] or foe["health"] < foe["max_health"]
+                self.assertEqual(damaged, not tactical)
+
+    def test_retreat_routes_skip_enemy_units_enemy_land_and_blocked_edges(self):
         nations = {"Fixture A": {"at_war_with": ["Fixture B"]}, "Fixture B": {"at_war_with": ["Fixture A"]}}
         unit = {"type": "Fixture I", "owner": "Fixture A"}
         foe = {"type": "Fixture I", "owner": "Fixture B"}
-        tiles = {1: {"id": 1, "neighbors": [2, 3, 4], "units": [unit, foe]},
-                 2: {"id": 2, "units": []}, 3: {"id": 3, "units": [foe]}, 4: {"id": 4, "units": []}}
+        tiles = {1: {"id": 1, "neighbors": [2, 3, 4, 5], "units": [unit, foe]},
+                 2: {"id": 2, "owner": "Fixture A", "units": []},
+                 3: {"id": 3, "owner": "Fixture A", "units": [foe]},
+                 4: {"id": 4, "owner": "Fixture A", "units": []},
+                 5: {"id": 5, "owner": "Fixture B", "units": []}}
         with patch("data.queries.movement.can_unit_move_step",
                    side_effect=lambda _unit, _here, dest, *_args, **_kw: dest["id"] != 4):
             routes = queries.find_retreat_routes(unit, tiles[1], tiles, nations)

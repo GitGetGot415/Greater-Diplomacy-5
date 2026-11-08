@@ -1,5 +1,8 @@
 # TODO
 
+- make it so that in tactical mode you can get other units to make simmilar movement orders to you to coordinate attacks n such
+- you can bring allies when declaring independence
+
 ## Check First
 
 - check why refreshing country data can show countries that don't exist anymore

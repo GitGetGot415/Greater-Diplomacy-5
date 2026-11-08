@@ -2,6 +2,7 @@ from data.state_access import world_for, session_for
 import data.constants as c
 from data import queries
 from map_logic.system32 import combat_rules, unit_events
+from map_logic import custom_battle
 from map_logic.territory import ownership
 import random # Imported for the random tiebreaker
 from collections import namedtuple
@@ -435,14 +436,18 @@ def process_combat(context):
         # Every volley is measured before any of it lands, so the fight is
         # simultaneous: a nation wiped out this turn still fires this turn, and
         # nobody's share depends on who happened to be resolved first.
-        for targets, total_atk, sources in combat_rules.exchange(battle, world_state.nation_data, with_sources=True):
-            apply_group_damage(
-                total_atk,
-                targets,
-                lambda unit, province=province: queries.get_fort_defense_bonus(
-                    province, unit, world_state.nation_data, combat_active=True),
-                sources=sources, tile=province["id"],
-                nation_data=world_state.nation_data)
+        # A tactical player's fight deals its damage in the tactical battle instead,
+        # so the tile's units reach that battle undamaged by this turn's combat.
+        if custom_battle.tactical_encounter(context, province) is None:
+            for targets, total_atk, sources in combat_rules.exchange(
+                    battle, world_state.nation_data, with_sources=True):
+                apply_group_damage(
+                    total_atk,
+                    targets,
+                    lambda unit, province=province: queries.get_fort_defense_bonus(
+                        province, unit, world_state.nation_data, combat_active=True),
+                    sources=sources, tile=province["id"],
+                    nation_data=world_state.nation_data)
 
         # Remove dead units (HP <= 0) BEFORE checking if we should wipe paths
         surviving_units = [u for u in units if u.get("health", 0) > 0]
