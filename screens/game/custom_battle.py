@@ -20,6 +20,7 @@ from ui.widgets import ui_elements
 from ui.widgets import flag_icons
 from ui.widgets.text_utils import fit_text, wrap_text
 from ui.widgets.ui_elements import Button, Slider
+from screens.setup import player_setup
 
 
 PANEL_X = 60
@@ -71,6 +72,8 @@ SIMULATE_BUTTON_SIZE = (100, 40)
 SIMULATE_BUTTON_POSITION = (GENERATION_BUTTON_POSITION[0] - SIMULATE_BUTTON_SIZE[0] - 10, 25)
 PREVIEW_START_POSITION = ("centered", 625)
 PREVIEW_START_SIZE = (220, 50)
+PREVIEW_RETREAT_SIZE = (160, 50)
+PREVIEW_RETREAT_GAP = 20  # Between Start and Retreat.
 # Preview entry animation: edit these durations in seconds, then restart the game.
 # Slide durations must be positive; the hold can be zero.
 PREVIEW_SLIDE_IN_SECONDS = 0.2
@@ -116,6 +119,16 @@ def draw_player_arrow(surface, center, angle):
     pygame.draw.polygon(surface, PLAYER_COLOR, points, 2)
 
 
+class CampaignBattle:
+    """The tactical-mode encounter a battle belongs to. The player's unit is friendly entry 0."""
+
+    def __init__(self, map_screen, province, unit, custom_rosters):
+        self.map_screen = map_screen
+        self.province = province
+        self.unit = unit
+        self.custom_rosters = custom_rosters  # The custom-battle armies to restore afterward.
+
+
 class CustomBattleScreen(Screen):
     back_state = "MENU"
     title = "Edit Battle"
@@ -134,6 +147,8 @@ class CustomBattleScreen(Screen):
         self.selected = [None, None]
         # Roster indices chosen by a selection square; two or more entries per side.
         self.group = [[], []]
+        self.campaign = None  # A CampaignBattle while a tactical-mode encounter is shown.
+        self.choosing_retreat = False
         self.bar_drag = None  # (side, index) of the card whose health bar is being dragged
         self.marquee = None  # [side, start position, current position] while dragging a square
         self.controlled_index = None
@@ -160,6 +175,20 @@ class CustomBattleScreen(Screen):
 
     def on_enter(self, app, previous):
         self.controller = app
+        request = getattr(previous, "tactical_battle_request", None)
+        if request is not None:
+            previous.tactical_battle_request = None
+            self._enter_campaign(previous, *request)
+            return
+        if self.choosing_retreat:
+            # Back from the retreat map: show the same preview again.
+            self.choosing_retreat = False
+            self.done = False
+            self.next_state = None
+            self.controller.set_tactical_battle_music(True)
+            return
+        if self.campaign is not None:
+            self._end_campaign()
         if self.controller is not None:
             self.controller.set_tactical_battle_music(False)
         self.done = False
@@ -192,6 +221,57 @@ class CustomBattleScreen(Screen):
         self.random_candidates = combat.land_unit_types_for_year(self.library, self.generation_year)
         self.refresh_ui()
 
+    def _enter_campaign(self, map_screen, province, friendly, enemy):
+        """Open preview at once for a tactical player's encounter, controlling their unit."""
+        self.done = False
+        self.next_state = None
+        self.campaign = CampaignBattle(map_screen, province, map_screen.player_unit, self.rosters)
+        self.library = queries.get_unit_library(map_screen)
+        self.country_data = map_screen.nation_data
+        self.rosters = [friendly, enemy]
+        self.selected = [None, None]
+        self.group = [[], []]
+        self.controlled_index = 0
+        self.held_keys.clear()
+        self.card_surfaces.clear()
+        self.simulation = None
+        self.mode = "setup"
+        self.cancel_active_drags()
+        for side in (0, 1):
+            setattr(self, f"roster_{side}_scroll", 0)
+        self.preview_battle()
+
+    def _end_campaign(self):
+        self.rosters = self.campaign.custom_rosters
+        self.campaign = None
+        self.choosing_retreat = False
+
+    def retreat(self):
+        """Custom battles return to editing; a tactical encounter picks a tile on the map."""
+        if self.mode != "preview" or self.preview_intro_stage is not None:
+            return
+        if self.campaign is None:
+            self.return_to_setup()
+            return
+        self.clear_controls()
+        self.choosing_retreat = True
+        self.go_to("TACTICAL_RETREAT")
+
+    def finish_retreat(self):
+        """The retreat order is given: the encounter is over."""
+        self._end_campaign()
+
+    def continue_campaign(self):
+        """Leave the finished encounter. A dead tactical unit sends the player to spectating."""
+        if self.mode != "result" or self.campaign is None:
+            return
+        campaign = self.campaign
+        died = not self.simulation.controlled.alive
+        self._end_campaign()
+        if died:
+            player_setup.lose_tactical_unit(campaign.map_screen, campaign.province)
+        self.go_to("MAP")
+
     def get_title(self):
         if self.mode == "result":
             return "You Win" if self.simulation.winner == 0 else "You Lose"
@@ -215,8 +295,10 @@ class CustomBattleScreen(Screen):
 
     def refresh_ui(self):
         self.unit_buttons = {}
-        self.elements = [Button(20, 20, "small", "red", "Exit", self.leave,
-                                sound_kind="back")]
+        self.elements = []
+        if self.mode == "setup" or (self.mode in {"battle", "result"} and self.campaign is None):
+            self.elements.append(Button(20, 20, "small", "red", "Exit", self.leave,
+                                        sound_kind="back"))
         if self.mode in {"setup", "preview"}:
             self.roster_labels = []
             for side, top in enumerate(PANEL_TOPS):
@@ -257,8 +339,12 @@ class CustomBattleScreen(Screen):
                                         color="yellow" if controlling else "green")
                     self.elements.append(control)
             if self.mode == "preview":
-                self.elements.append(Button(*PREVIEW_START_POSITION, PREVIEW_START_SIZE,
-                                            "green", "Start", self.start_battle))
+                start = Button(*PREVIEW_START_POSITION, PREVIEW_START_SIZE,
+                               "green", "Start", self.start_battle)
+                retreat = Button(start.rect.right + PREVIEW_RETREAT_GAP, start.rect.y,
+                                 PREVIEW_RETREAT_SIZE, "red", "Retreat", self.retreat,
+                                 sound_kind="back")
+                self.elements.extend((start, retreat))
                 return
             simulate = Button(*SIMULATE_BUTTON_POSITION, SIMULATE_BUTTON_SIZE, "green", "Simulate",
                               self.preview_battle, font_size=18, sound_kind=None)
@@ -278,6 +364,9 @@ class CustomBattleScreen(Screen):
             self.pause_button = Button(c.SCREEN_WIDTH - 150, 20, (130, 40), "yellow",
                                        "Resume" if self.simulation.paused else "Pause", self.toggle_pause)
             self.elements.append(self.pause_button)
+        elif self.campaign is not None:
+            self.elements.append(Button("centered", 370, (220, 50), "green", "Continue",
+                                        self.continue_campaign))
         else:
             self.elements.extend((
                 Button("centered", 370, (220, 50), "green", "Run Again", self.preview_battle,
@@ -453,7 +542,7 @@ class CustomBattleScreen(Screen):
             self.cancel_active_drags()
         elif self.mode == "battle":
             self.toggle_pause()
-        else:
+        elif self.campaign is None:
             self.leave()
 
     def cancel_active_drags(self):

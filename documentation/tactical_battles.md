@@ -8,8 +8,7 @@ AI means artificial intelligence.
 The playable land-combat prototype is available through **Custom Battle** in the main menu.
 Custom battles run separately from the campaign. They spend no resources, change no campaign units, and are not saved, exported, or used in multiplayer.
 
-Connecting the preview and actual battle to campaign tactical mode is planned.
-The intended campaign flow described below is not yet implemented.
+Campaign tactical mode uses the same preview and actual battle. See [Tactical-mode flow](#tactical-mode-flow).
 The existing campaign battle editor for front-line and reserve orders has its own rules in [non_llm_ai.txt](non_llm_ai.txt).
 
 ## The three views
@@ -17,11 +16,11 @@ The existing campaign battle editor for front-line and reserve orders has its ow
 | Term | Screen name | Purpose | Availability |
 | --- | --- | --- | --- |
 | Editing | Edit Battle | Build the armies, reorder units, and choose a controlled unit. | Custom battles only. |
-| Preview | Preview Battle | Review the participating units in read-only roster panels before combat starts. | Custom battles now; intended for campaign tactical mode. |
-| Actual | Actual Battle | Fight on the battlefield. | Custom battles now; intended for campaign tactical mode. |
+| Preview | Preview Battle | Review the participating units in read-only roster panels before combat starts. | Custom battles and campaign tactical mode. |
+| Actual | Actual Battle | Fight on the battlefield. | Custom battles and campaign tactical mode. |
 
 **Editing should only be viewable when making a custom battle.**
-Playing tactical mode should use preview and actual battle, with participants supplied by the campaign encounter.
+Playing tactical mode uses preview and actual battle, with participants supplied by the campaign encounter.
 
 ### Editing: Edit Battle
 
@@ -82,8 +81,9 @@ Edit `PREVIEW_SLIDE_IN_SECONDS`, `PREVIEW_HOLD_SECONDS`, and
 `PREVIEW_SLIDE_OUT_SECONDS` near the top of
 [screens/game/custom_battle.py](../screens/game/custom_battle.py) to change the timing.
 Slide durations must be positive; the hold can be zero. Restart after changing them.
-The configured Back key cancels the transition and returns to editing.
 Other preview controls become available when the transition finishes.
+Preview has no **Exit** button. **Retreat** sits beside **Start**. In a custom battle it returns to editing,
+as does the configured Back key. In a tactical encounter it opens the retreat map.
 
 Preview uses the same friendly and enemy roster panels as editing.
 Preview cards use the base game's unit art and symbols for health, attack, and defense.
@@ -101,7 +101,7 @@ result view, stops the tactical song and uses normal playlist selection.
 See MUSIC PLAYBACK in [general_info.txt](general_info.txt) for selection and persistence.
 
 **Start** is available only in preview. Choosing **Start** opens actual battle with the prepared forces.
-In a custom battle, **Exit** returns to editing while preserving the army setup.
+In a custom battle, **Retreat** returns to editing while preserving the army setup.
 
 ### Actual: Actual Battle
 
@@ -132,26 +132,35 @@ The custom battle is won when the enemy army is destroyed and lost when the frie
 Mutual destruction counts as a loss. If the controlled unit is destroyed while friendly units remain, those friendly units continue fighting under AI control.
 
 **Run Again** opens preview with fresh armies from the same setup.
-**Edit Armies** returns to editing. **Exit** from preview, actual battle, or the result view also returns to editing.
+**Edit Armies** returns to editing. **Exit** from actual battle or the result view also returns to editing.
 **Exit** from editing returns to the main menu. These routes back to editing belong to the custom-battle prototype.
 
-## Intended tactical-mode flow
+## Tactical-mode flow
 
 During campaign tactical play, the player commands one land division while the parent country remains AI-controlled.
-The intended encounter flow is **campaign encounter → preview → actual battle → campaign result**.
+The flow is **campaign encounter → preview → actual battle → campaign**.
 
-The campaign should supply the participating units and the player's controlled division.
-Preview should allow the player to inspect those units and start the encounter.
-Tactical play should expose no editing view and no route for adding, removing, randomly generating, or replacing the encounter's units.
+After each turn resolves, once per turn, the game opens preview at once when the player's land unit shares a tile
+with hostile land units. Preview starts with that unit controlled. The friendly army is that unit followed by friendly
+land units on the tile, and the enemy army is the hostile land units there, each up to the army size limit.
+Each unit enters with its current health. Naval and air units do not take part.
+Tactical play has no editing view and no route for adding, removing, randomly generating, or replacing units.
 
-Actual battle should resolve the encounter to a win or loss: destroy all hostile units on the tile or lose the controlled division.
-The campaign would then apply the encounter's consequences and continue turn processing.
-The intended tactical division has no resource-management costs, including repair costs, and does not charge the parent country for those actions.
-Selecting naval or air units for this tactical combat and multiplayer integration remain outside the current scope.
+**Retreat** opens the map with the tiles the unit can fall back to marked: neighboring tiles it may enter
+that hold no hostile units. Choose a marked tile to give the unit a move order there and return to the map.
+**Back** returns to the preview. **Retreat** is available even when no tile is marked, so the player can look and go back.
+
+Actual battle has no **Exit** button in tactical play. When it ends, **Continue** returns to the map.
+If the controlled unit was destroyed, even in a won battle, it is removed, tactical mode ends,
+and the game continues in spectator mode.
+The battle does not change surviving units' health or the tile; the campaign combat rules still resolve the encounter on the next turn.
+The tactical division has no resource-management costs, including repair costs, and does not charge the parent country for those actions.
+Tactical battles in multiplayer remain unavailable.
 
 ## Rules and implementation owners
 
 [screens/game/custom_battle.py](../screens/game/custom_battle.py) owns the three views, roster controls, navigation, and keyboard input.
+[screens/game/tactical_retreat.py](../screens/game/tactical_retreat.py) owns the retreat map. `Map.open_tactical_battle` starts an encounter.
 [map_logic/custom_battle.py](../map_logic/custom_battle.py) owns unit generation, deployment, movement, projectiles, cooldowns, and results.
 
 Unit statistics and capabilities come from [unit_data.json](../data/json/unit_data.json).

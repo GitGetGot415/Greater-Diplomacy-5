@@ -13,6 +13,7 @@ from data.queries.unit_info import (
     unit_is_air_drop_recovering,
 )
 from data.queries.combat_state import get_unit_combat_owner
+from data.queries.diplomacy import get_enemies
 from data.queries.movement_access import can_convoy_enter, can_land_units_enter, can_ships_enter
 from data.queries.air import (
     air_drop_target_is_legal,
@@ -95,6 +96,23 @@ def find_unit_move_path(unit, start_province, destination_id, id_to_province, na
                 return list(reversed(path))
             frontier.append(neighbor_id)
     return None
+
+
+def find_retreat_routes(unit, province, id_to_province, nation_data, *, context=None):
+    """One-step routes, keyed by tile id, from ``province`` to neighbors the unit may enter
+    that hold no units hostile to the unit's side."""
+    if context is None:
+        context = nation_data
+    enemies = get_enemies(get_unit_combat_owner(unit), nation_data)
+    routes = {}
+    for neighbor_id in sorted(province.get("neighbors", []), key=str):
+        destination = id_to_province.get(neighbor_id)
+        if destination is None or any(get_unit_combat_owner(other) in enemies
+                                      for other in destination.get("units", [])):
+            continue
+        if can_unit_move_step(unit, province, destination, nation_data, context=context):
+            routes[neighbor_id] = [neighbor_id]
+    return routes
 
 
 def air_move_order(context, unit, base, destination, mission=None):

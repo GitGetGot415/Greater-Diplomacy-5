@@ -25,6 +25,7 @@ HIDDEN_IMPORTS = (
     "screens.game.country_summary",
     "screens.game.battle_editor",
     "screens.game.custom_battle",
+    "screens.game.tactical_retreat",
     "map_logic.custom_battle",
     "screens.game.tactical_orders",
     "screens.editors.unit_stats_editor",

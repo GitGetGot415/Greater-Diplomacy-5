@@ -112,6 +112,20 @@ def cancel_selection(map_screen):
     map_screen.pending_unit = None
     map_screen.selected_province = None
 
+def lose_tactical_unit(map_screen, province):
+    """The tactical division died: remove it, end tactical play, and watch as a spectator."""
+    unit = map_screen.player_unit
+    if unit in province.get("units", []):
+        province["units"].remove(unit)
+    queries.normalize_armies(map_screen.nation_data, map_screen.map_data)
+    map_screen.player_unit = None
+    map_screen.tactical_mode = False
+    map_screen.clear_map_unit_selection()
+    map_screen.invalidate_map_presentation_cache()
+    start_spectator(map_screen)
+    map_screen.refresh_map_layers("fog")
+
+
 def start_spectator(map_screen):
     """Initializes spectator mode, giving the player global vision and no direct control."""
     map_screen.active_players = ["Spectator"]

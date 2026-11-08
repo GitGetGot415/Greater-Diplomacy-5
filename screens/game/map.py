@@ -46,6 +46,7 @@ from ui.rendering import map_renderer, overlay_renderer, refresh_map
 from ui.rendering.font_manager import fonts
 from ui.rendering.country_names import update_country_centers as calc_country_centers
 from screens.setup import player_setup
+from map_logic import custom_battle as tactical_battle
 from screens.editors import scripted_events_editor
 
 from data.io import country_io
@@ -1684,6 +1685,10 @@ class Map(StateAccess, Screen):
         # --- TACTICAL MODE STATE ---
         self.tactical_mode = False
         self.player_unit = None
+        # (province, friendly roster, enemy roster) handed to the tactical preview, and the
+        # last turn whose battle was offered, so one turn opens at most one preview.
+        self.tactical_battle_request = None
+        self._tactical_battle_turn = None
 
         # --- MULTI-TURN FLAGS ---
         self.multi_turn_processing_complete = False
@@ -1836,6 +1841,23 @@ class Map(StateAccess, Screen):
 
         self.show_exit_confirmation = False
         self.confirm_box_rect = pygame.Rect(0, 0, 400, 200)
+
+    def open_tactical_battle(self):
+        """Once per turn, put a tactical player whose land unit is fighting into battle preview."""
+        if (not self.tactical_mode or self.player_unit is None or self.multiplayer_mode
+                or self.realtime_multiplayer
+                or self._tactical_battle_turn == self.time_manager.total_turns):
+            return
+        self._tactical_battle_turn = self.time_manager.total_turns
+        province = next((tile for tile in self.map_data.values()
+                         if any(unit is self.player_unit for unit in tile.get("units", []))), None)
+        if province is None:
+            return
+        forces = tactical_battle.campaign_forces(
+            self.player_unit, province, self.nation_data, queries.get_unit_library(self))
+        if forces is not None:
+            self.tactical_battle_request = (province, *forces)
+            self.go_to("CUSTOM_BATTLE")
 
     def draw_clean_map_background(self, surface):
         """Temporarily hides UI elements and province selection to draw a clean map background."""
@@ -3100,6 +3122,9 @@ class Map(StateAccess, Screen):
         if self.show_player_ready_screen:
             for el in self.elements: el.visible = False
             return
+
+        if is_playing and not self.is_refreshing:
+            self.open_tactical_battle()
 
         if self.multi_turn_processing_complete:
             self.multi_turn_processing_complete = False

@@ -387,7 +387,7 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.click("Run Again")
         self.assertEqual(self.screen.simulation.controlled.data["health"], unit["health"])
         self.assertEqual(self.screen.rosters, before)
-        self.click("Exit")
+        self.click("Retreat")
         self.assertEqual(self.screen.rosters, before)
 
     def test_settings_reject_invalid_values_and_removed_units(self):
@@ -428,6 +428,122 @@ class CustomBattleScreenTests(unittest.TestCase):
         drag_bar(1, 0.25)
         for unit in (first, second):
             self.assertEqual(unit["health"], unit["max_health"] * 0.25)
+
+    def finish_intro(self):
+        self.screen.draw(self.surface)
+        duration = (battle_screen.PREVIEW_SLIDE_IN_SECONDS + battle_screen.PREVIEW_HOLD_SECONDS
+                    + battle_screen.PREVIEW_SLIDE_OUT_SECONDS)
+        with patch("pygame.time.get_ticks",
+                   return_value=self.screen.preview_intro_started + math.ceil(duration * 1000)):
+            self.screen.update()
+
+    def enter_campaign(self):
+        player = queries.create_unit_dict("Fixture II", "Fixture A", self.library)
+        enemy = queries.create_unit_dict("Fixture I", "Fixture B", self.library)
+        map_screen = SimpleNamespace(player_unit=player, nation_data=self.countries)
+        province = {"id": 1, "units": [player]}
+        custom = self.screen.rosters
+        with patch("data.queries.get_unit_library", return_value=self.library):
+            self.screen._enter_campaign(map_screen, province, [player], [enemy])
+        self.finish_intro()
+        return map_screen, province, custom
+
+    def test_tactical_encounter_opens_preview_controlling_the_players_unit(self):
+        self.fill_armies()
+        map_screen, province, custom = self.enter_campaign()
+        self.assertEqual(self.screen.mode, "preview")
+        self.assertEqual(self.screen.controlled_index, 0)
+        self.assertIs(self.screen.simulation.controlled.data["owner"], "Fixture A")
+        self.assertEqual(self.screen.country_data, self.countries)
+        labels = [button.text for button in self.screen.elements]
+        self.assertNotIn("Exit", labels)
+        start, retreat = (next(b for b in self.screen.elements if b.text == label)
+                          for label in ("Start", "Retreat"))
+        self.assertGreater(retreat.rect.left, start.rect.right)
+        self.screen.handle_back_key()
+        self.assertEqual(self.screen.mode, "preview")
+        # Retreat opens the map chooser; backing out shows the same preview again.
+        self.click("Retreat")
+        self.assertEqual(self.screen.next_state, "TACTICAL_RETREAT")
+        self.assertTrue(self.screen.choosing_retreat)
+        self.screen.on_enter(self.controller, SimpleNamespace())
+        self.assertEqual(self.screen.mode, "preview")
+        self.assertIsNotNone(self.screen.campaign)
+        self.assertFalse(self.screen.done)
+        self.click("Retreat")
+        self.screen.finish_retreat()
+        self.assertIsNone(self.screen.campaign)
+        self.assertIs(self.screen.rosters, custom)
+
+    def test_tactical_result_continues_to_map_and_spectates_only_after_death(self):
+        for dies in (False, True):
+            with self.subTest(dies=dies):
+                self.screen.next_state = None
+                self.screen.done = False
+                map_screen, province, _custom = self.enter_campaign()
+                self.click("Start")
+                self.assertNotIn("Exit", [button.text for button in self.screen.elements])
+                if dies:
+                    self.screen.simulation.controlled.data["health"] = 0
+                self.screen.simulation.winner = 1 if dies else 0
+                self.screen.update()
+                self.assertEqual(self.screen.mode, "result")
+                self.assertEqual([b.text for b in self.screen.elements if b.text != ""], ["Continue"])
+                with patch("screens.game.custom_battle.player_setup.lose_tactical_unit") as lose:
+                    self.click("Continue")
+                self.assertEqual(self.screen.next_state, "MAP")
+                self.assertIsNone(self.screen.campaign)
+                self.assertEqual(lose.called, dies)
+                if dies:
+                    lose.assert_called_once_with(map_screen, province)
+
+    def test_campaign_forces_lead_with_the_player_unit_and_need_a_land_enemy(self):
+        nations = {"Fixture A": {"at_war_with": ["Fixture B"]}, "Fixture B": {"at_war_with": ["Fixture A"]}}
+        player = queries.create_unit_dict("Fixture II", "Fixture A", self.library)
+        ally = queries.create_unit_dict("Fixture I", "Fixture A", self.library)
+        ally["health"] = ally["max_health"] / 2
+        foe = queries.create_unit_dict("Fixture I", "Fixture B", self.library)
+        ship = queries.create_unit_dict("Fixture Ship I", "Fixture B", self.library)
+        province = {"units": [ally, player, foe, ship]}
+        friendly, enemy = combat.campaign_forces(player, province, nations, self.library)
+        self.assertEqual([unit["type"] for unit in friendly], ["Fixture II", "Fixture I"])
+        self.assertEqual(friendly[1]["health"], ally["health"])
+        self.assertEqual([unit["owner"] for unit in enemy], ["Fixture B"])
+        self.assertIsNone(combat.campaign_forces(player, {"units": [player, ally]}, nations, self.library))
+        self.assertIsNone(combat.campaign_forces(player, {"units": [player, ship]}, nations, self.library))
+
+    def test_map_offers_one_tactical_preview_per_turn_for_a_fighting_land_unit(self):
+        from screens.game.map import Map
+        nations = {"Fixture A": {"at_war_with": ["Fixture B"]}, "Fixture B": {"at_war_with": ["Fixture A"]}}
+        player = queries.create_unit_dict("Fixture II", "Fixture A", self.library)
+        foe = queries.create_unit_dict("Fixture I", "Fixture B", self.library)
+        province = {"id": 1, "units": [player, foe]}
+        fake = SimpleNamespace(
+            tactical_mode=True, player_unit=player, multiplayer_mode=False, realtime_multiplayer=False,
+            _tactical_battle_turn=None, time_manager=SimpleNamespace(total_turns=4),
+            map_data={"key": province}, nation_data=nations, tactical_battle_request=None, go_to=Mock())
+        with patch("data.queries.get_unit_library", return_value=self.library):
+            Map.open_tactical_battle(fake)
+            Map.open_tactical_battle(fake)
+        fake.go_to.assert_called_once_with("CUSTOM_BATTLE")
+        self.assertEqual(fake.tactical_battle_request[0], province)
+        self.assertIs(fake.tactical_battle_request[1][0]["type"], player["type"])
+        foe_free = SimpleNamespace(**{**vars(fake), "go_to": Mock(), "_tactical_battle_turn": None,
+                                      "map_data": {"key": {"id": 1, "units": [player]}}})
+        with patch("data.queries.get_unit_library", return_value=self.library):
+            Map.open_tactical_battle(foe_free)
+        foe_free.go_to.assert_not_called()
+
+    def test_retreat_routes_skip_enemy_tiles_and_blocked_edges(self):
+        nations = {"Fixture A": {"at_war_with": ["Fixture B"]}, "Fixture B": {"at_war_with": ["Fixture A"]}}
+        unit = {"type": "Fixture I", "owner": "Fixture A"}
+        foe = {"type": "Fixture I", "owner": "Fixture B"}
+        tiles = {1: {"id": 1, "neighbors": [2, 3, 4], "units": [unit, foe]},
+                 2: {"id": 2, "units": []}, 3: {"id": 3, "units": [foe]}, 4: {"id": 4, "units": []}}
+        with patch("data.queries.movement.can_unit_move_step",
+                   side_effect=lambda _unit, _here, dest, *_args, **_kw: dest["id"] != 4):
+            routes = queries.find_retreat_routes(unit, tiles[1], tiles, nations)
+        self.assertEqual(routes, {2: [2]})
 
     def test_selection_square_groups_cards_and_edits_them_together(self):
         self.fill_armies()
@@ -751,7 +867,7 @@ class CustomBattleScreenTests(unittest.TestCase):
                                              "Release Control", "Random", "Simulate"}
                              for button in self.screen.elements))
         self.assertFalse(any(isinstance(element, Slider) for element in self.screen.elements))
-        self.click("Exit")
+        self.click("Retreat")
         self.assertEqual(self.screen.mode, "setup")
         self.assertEqual(self.screen.rosters, rosters)
 
@@ -788,7 +904,7 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.screen.add_unit(1, "Fixture I")
         self.click("Simulate")
         self.assertEqual(self.screen.simulation.controlled.data["type"], "Fixture Gun I")
-        self.click("Exit")
+        self.click("Retreat")
         self.drag_card(self.screen.card_rect(0, 2).center, self.screen.card_rect(0, 0).center)
         self.assertEqual(self.screen.controlled_index, 1)
         self.click("Remove")

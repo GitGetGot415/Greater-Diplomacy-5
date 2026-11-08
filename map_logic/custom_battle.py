@@ -38,6 +38,35 @@ def land_unit_types(library):
             if not stats.get("naval_unit") and not stats.get("air_role")]
 
 
+def campaign_forces(player_unit, province, nation_data, library):
+    """Rosters (friendly, enemy) for a tactical player's land unit on a contested tile.
+
+    The player's unit leads the friendly roster. Returns None when that unit is not a land
+    unit or no hostile land unit shares its tile. Each side keeps the units' current health.
+    """
+    land = set(land_unit_types(library))
+    country = queries.get_unit_combat_owner(player_unit)
+    enemies = queries.get_enemies(country, nation_data)
+    friends = {country, *queries.get_all_friendly_nations(country, nation_data)}
+
+    def roster(units):
+        entries = []
+        for unit in units:
+            if unit.get("type") in land and unit.get("health", 0) > 0:
+                entry = queries.create_unit_dict(unit["type"], unit["owner"], library)
+                entry["health"] = min(unit["health"], entry["max_health"])
+                entries.append(entry)
+        return entries[:c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE]
+
+    units = province.get("units", [])
+    friendly = roster([player_unit] + [unit for unit in units if unit is not player_unit
+                                       and queries.get_unit_combat_owner(unit) in friends])
+    enemy = roster([unit for unit in units if queries.get_unit_combat_owner(unit) in enemies])
+    if not friendly or not enemy or player_unit.get("type") not in land:
+        return None
+    return friendly, enemy
+
+
 def land_unit_types_for_year(library, year):
     """Choose the latest unlocked land tiers less than five research years old."""
     land = set(land_unit_types(library))

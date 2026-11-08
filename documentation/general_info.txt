@@ -11,7 +11,7 @@ documentation/llm_ai.txt: model settings, legal choices, prompts, letters, budge
 documentation/other/llm_benchmark_notes.txt: historical model performance measurements.
 documentation/diplo_stuff.txt: diplomacy controls, rules, and message timing.
 documentation/air_stuff.txt: aircraft controls and rules.
-documentation/tactical_battles.md: tactical battle terminology, custom battles, controls, and intended tactical-mode flow.
+documentation/tactical_battles.md: tactical battle terminology, custom battles, controls, and the tactical-mode flow.
 data/migrations/MIGRATIONS.md: compatibility with older GD5 data, and how older saves and moves convert.
 documentation/other/ai_responses_gd4_reference.txt: archived Greater Diplomacy 4 response text.
 documentation/other/recommended-relay-defaults.txt: relay setup defaults.
@@ -22,7 +22,7 @@ CUSTOM BATTLES
 ==============
 
 See documentation/tactical_battles.md for the custom-battle prototype, the editing,
-preview, and actual battle views, and the intended campaign tactical-mode flow.
+preview, and actual battle views, and the campaign tactical-mode flow.
 
 TOURNAMENT FILE STORAGE
 =======================
