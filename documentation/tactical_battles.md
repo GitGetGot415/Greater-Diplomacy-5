@@ -26,10 +26,14 @@ Playing tactical mode uses preview and actual battle, with participants supplied
 
 Choose **Custom Battle** to open editing.
 **Add Friendly** and **Add Enemy** open the searchable land-unit picker. Each selection adds one unit at the chosen library level.
+Artillery-type units (everything that can bombard: artillery, railroad guns, Landkreuzers, and the Railgun)
+take no part in tactical battles, so the picker and **Random** never offer them.
 **Cancel** closes the picker and keeps units already added.
 
 Select a roster card and choose **Remove** to remove that entry.
-Drag cards within an army to change deployment order. Scroll long rosters with the wheel, scrollbar, or by dragging the roster background.
+Drag cards within an army to change deployment order: the leftmost card deploys in the front rank, closest to the
+enemy, and each card to its right deploys one rank further back.
+Scroll long rosters with the wheel, scrollbar, or by dragging the roster background.
 Each army has a size limit. Both armies need at least one unit before **Simulate** becomes available.
 
 The gray gear button opens **Unit Settings** for that roster entry.
@@ -115,14 +119,17 @@ In a custom battle, **Retreat** returns to editing while preserving the army set
 Actual battle is the fighting on the grass battlefield.
 The two armies deploy facing each other around the middle of the battlefield, their front ranks a fixed distance apart
 (`SPAWN_FRONT_GAP` in [map_logic/custom_battle.py](../map_logic/custom_battle.py)) whatever their size.
-Tanks and vehicles use rectangles, artillery uses thin rectangles, infantry and militia use circles, and cavalry uses ovals.
+Each division deploys as one vertical line of its sub-units, centered top to bottom, in its own rank.
+Sub-units keep the same spacing along a line, so a division with fewer sub-units makes a shorter line.
+Roster order runs front to back, and the battlefield is wide enough for two full armies.
+Tanks and vehicles use rectangles, infantry and militia use circles, and cavalry uses ovals.
 Health bars show remaining strength, with the unit's nationality flag beside each bar, and projectiles show shots in flight.
 
 #### Sub-units
 
 Each roster entry is a division. On the battlefield a division becomes several sub-units, each with its own shape,
-health bar, and flag. Infantry-type, cavalry, and troop-carrier divisions bring the most; tanks, armored cars, and
-artillery bring fewer; railroad guns, Landkreuzers, and the Railgun bring one. `SUBUNIT_COUNTS` in
+health bar, and flag. Infantry-type, cavalry, and troop-carrier divisions bring the most; tanks and armored cars
+bring fewer. `SUBUNIT_COUNTS` in
 [map_logic/custom_battle.py](../map_logic/custom_battle.py) sets each count.
 A wounded division brings fewer sub-units: with fraction `f` of full health and `N` sub-units at full health,
 it brings `ceil(f × N)` sub-units that share its health equally. For example, with 10 sub-units at full health,
@@ -136,12 +143,10 @@ Tactical defense stays constant as health falls; campaign combat scales defense 
 A shot's damage uses the shooter's strength when it fired and the rules for the unit it actually hits.
 A shot already in flight still lands after its shooter is destroyed.
 
-Direct shots fly in a straight line and hit the first enemy they cross.
-Artillery, railroad guns, Landkreuzers, and the Railgun fire arcing shells instead. A shell flies over every unit
-on its way and hits only where it lands, damaging every enemy within its blast radius. It never damages friendly units.
+Every sub-unit has the same long weapon range. Shots fly fast in a straight line and hit the first enemy they cross.
 
-Infantry-type, cavalry, troop-carrier, artillery, railroad gun, and Railgun sub-units fire only inside a cone in front of the hull.
-Tanks, armored cars, and Landkreuzers aim all the way around. Every gun turns toward its aim at its own speed,
+Infantry-type, cavalry, and troop-carrier sub-units fire only inside a cone in front of the hull.
+Tanks and armored cars aim all the way around. Every gun turns toward its aim at its own speed,
 so it cannot swing from one direction to another at once. Sub-units also speed up, slow down, and start and stop
 turning gradually. These rules apply to AI sub-units and the controlled sub-unit alike.
 
@@ -154,19 +159,19 @@ turning gradually. These rules apply to AI sub-units and the controlled sub-unit
 | A | Turn left. |
 | D | Turn right. |
 | Mouse | Aim. The gun turns toward the pointer, inside the firing cone if the unit has one. |
-| Left mouse | Fire along the gun. An arcing shell lands at the pointer, up to the weapon's range. |
+| Left mouse | Fire along the gun. |
 | Mouse wheel | Zoom in or out. |
 
 Movement follows the hull's facing direction. A and D rotate the hull rather than moving it sideways, and turning
 the hull carries the firing cone with it.
 Firing uses a reload time shared with AI units. Holding the left mouse button fires again only after reloading.
 
-Only the controlled sub-unit shows its range and firing cone (a circle for units that aim all the way around),
-a line along its gun, and the landing area of an arcing shell. Its yellow ring has an arrow along the hull that
+Only the controlled sub-unit shows its range and firing cone (a circle for units that aim all the way around)
+and a line along its gun. Its yellow ring has an arrow along the hull that
 lengthens with speed and points back while reversing. A second ring fills while the weapon reloads.
 Other sub-units show none of these.
 
-Control covers one sub-unit of the controlled division. The division's other sub-units fight automatically.
+Control covers the middle sub-unit of the controlled division's line. The division's other sub-units fight automatically.
 If the controlled sub-unit is destroyed, the player controls no unit for the rest of the battle and spectates it.
 Dragging the battlefield then moves the view.
 Other friendly units and all enemy units move and fire automatically.
@@ -193,13 +198,18 @@ The status line counts the divisions on each side that still have a sub-unit.
 ## Tactical-mode flow
 
 During campaign tactical play, the player commands one land division while the parent country remains AI-controlled.
+The tactical division cannot be an artillery-type unit: choosing a tile or stack leaves artillery out, and a tile or
+stack holding only artillery offers no division.
 The flow is **campaign encounter → preview → actual battle → campaign**.
 
 After each turn resolves, once per turn, the game opens preview at once when the player's land unit shares a tile
-with hostile land units. Preview starts with that unit controlled. The friendly army is that unit followed by friendly
+with hostile land units that can fight a tactical battle. Preview starts with that unit controlled. The friendly army is that unit followed by friendly
 land units on the tile, and the enemy army is the hostile land units there, each up to the army size limit.
 Each unit enters with its current health. Campaign combat deals no damage on that tile during turn resolution,
 so the battle is where the damage happens. Naval and air units do not take part.
+Artillery-type units on the tile sit the battle out. When it ends, the losing side's artillery on the tile is destroyed
+and the winning side's artillery is untouched; mutual destruction counts as a friendly loss.
+Hostile artillery alone does not start a tactical battle, so normal campaign combat resolves that tile.
 Tactical play has no editing view and no route for adding, removing, randomly generating, or replacing units.
 
 **Retreat** opens the map with the tiles the unit can fall back to marked: neighboring tiles it may enter
@@ -221,6 +231,8 @@ Tactical battles in multiplayer remain unavailable.
 [screens/game/tactical_retreat.py](../screens/game/tactical_retreat.py) owns the retreat map. `Map.open_tactical_battle` starts an encounter.
 [map_logic/custom_battle.py](../map_logic/custom_battle.py) owns unit generation, sub-units, deployment, movement, aiming, projectiles, cooldowns, and results.
 Its `SUBUNIT_COUNTS`, `MOBILITY`, and `AIM` tables set sub-unit counts, acceleration and turning, and firing cones and gun speeds for each battlefield shape.
+`WEAPON_RANGE`, `PROJECTILE_SPEED`, `RANK_GAP`, `SUBUNIT_SPACING`, and `SPAWN_FRONT_GAP` set range, shot speed, and deployment.
+`is_artillery` decides which units sit tactical battles out.
 
 Unit statistics and capabilities come from [unit_data.json](../data/json/unit_data.json).
 Research dates come from [research_template.json](../data/json/research_template.json) through the shared [unit queries](../data/queries/unit_info.py).

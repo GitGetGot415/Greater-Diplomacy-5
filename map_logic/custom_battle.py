@@ -15,11 +15,8 @@ from map_logic.system32 import combat_forecast, combat_rules
 FIXED_STEP = 1.0 / 30.0
 MOVE_PIXELS_PER_SPEED = 35.0
 FIRE_INTERVAL = 2.0
-WEAPON_RANGE = 400.0
-BOMBARD_RANGE_PIXELS = 220.0
-# Direct shots. Arcing artillery shells keep c.CUSTOM_BATTLE_PROJECTILE_SPEED as their ground speed.
-DIRECT_PROJECTILE_SPEED = 1300.0
-ARTILLERY_BLAST_RADIUS = 40.0
+WEAPON_RANGE = 1000.0
+PROJECTILE_SPEED = 3000.0
 UNIT_RADIUS = 12.0
 AI_HOLD_RANGE = 0.85  # AI units stop closing in at this share of their weapon range.
 AIM_TOLERANCE = math.radians(4)  # AI units fire once the gun points this close to the aim angle.
@@ -27,12 +24,15 @@ RETARGET_SECONDS = 0.25  # AI units choose the nearest enemy again this often.
 # Collision and separation cells, and the coarser cells of the nearest-enemy search.
 GRID_CELL = 64.0
 TARGET_CELL = 256.0
-SPAWN_ROWS = 8
-DIVISION_GAP = 120.0  # Between division centers at deployment.
-SUBUNIT_GAP = 26.0  # Between the sub-units of one division.
+# Each division deploys as one vertical line of its sub-units, one division per rank.
+# Roster order runs front to back: the first division stands closest to the enemy.
+RANK_GAP = 40.0  # Between ranks, front to back.
+SUBUNIT_SPACING = 50.0  # Between neighboring sub-units along a division's line.
 # Distance between the two armies' front ranks at deployment, centered on the battlefield.
-# A full army of 64 divisions still fits behind its front rank.
 SPAWN_FRONT_GAP = 2000.0
+SPAWN_MARGIN = 100.0  # Between the battlefield edge and the last rank of the largest army.
+# The battlefield is wide enough for two full armies behind their front ranks.
+ARENA_SIZE = (SPAWN_FRONT_GAP + 2 * (SPAWN_MARGIN + (c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE - 1) * RANK_GAP), 1100.0)
 RANDOM_ARMY_MIN_UNITS = 3
 RANDOM_ARMY_MAX_UNITS = 5
 RANDOM_UNIT_AGE_LIMIT = 5
@@ -44,11 +44,6 @@ FAMILY_SHAPES = {
     "Armored Car": "armored_car",
     "WW1 Armored Car": "armored_car",
     "Heavy Tank": "heavy_tank",
-    "WW1 Railroad Gun": "railroad_gun",
-    "WW2 Railroad Gun": "railroad_gun",
-    "Landkreuzer P.1000 Ratte": "colossus",
-    "Landkreuzer P.1500 Monster": "colossus",
-    "Railgun": "railgun",  # Drawn like the Landkreuzers, but aims with a cone.
     "Motorized Infantry Type": "motorized",
     "Mechanized Infantry Type": "mechanized",
     "Infantry Fighting Vehicle Type": "ifv",
@@ -56,24 +51,21 @@ FAMILY_SHAPES = {
 # Sub-units a division at full health becomes on the battlefield. A wounded division brings fewer.
 SUBUNIT_COUNTS = {
     "infantry": 10, "cavalry": 10, "motorized": 10, "mechanized": 10, "ifv": 10,
-    "armored_car": 5, "light_tank": 5, "tank": 5, "heavy_tank": 5, "artillery": 5,
-    "railroad_gun": 1, "colossus": 1, "railgun": 1,
+    "armored_car": 5, "light_tank": 5, "tank": 5, "heavy_tank": 5,
 }
 # (seconds to reach full speed, top turn speed in degrees per second, seconds to reach top turn speed)
 MOBILITY = {
     "infantry": (0.3, 180, 0.15), "cavalry": (0.6, 150, 0.25),
     "motorized": (0.8, 120, 0.3), "mechanized": (0.9, 110, 0.3), "ifv": (1.0, 100, 0.35),
     "armored_car": (0.8, 130, 0.3), "light_tank": (1.0, 110, 0.35),
-    "tank": (1.2, 90, 0.4), "heavy_tank": (1.6, 70, 0.5), "artillery": (1.2, 60, 0.4),
-    "railroad_gun": (2.5, 25, 0.8), "colossus": (2.5, 30, 0.8), "railgun": (2.5, 25, 0.8),
+    "tank": (1.2, 90, 0.4), "heavy_tank": (1.6, 70, 0.5),
 }
 # (firing cone width in degrees, or None to aim all the way around; gun turn speed in degrees per second)
 AIM = {
     "infantry": (90, 240), "cavalry": (90, 240),
     "motorized": (90, 200), "mechanized": (90, 200), "ifv": (90, 180),
-    "artillery": (60, 60), "railroad_gun": (20, 30), "railgun": (20, 30),
     "armored_car": (None, 180), "light_tank": (None, 150), "tank": (None, 120),
-    "heavy_tank": (None, 90), "colossus": (None, 45),
+    "heavy_tank": (None, 90),
 }
 
 
@@ -83,35 +75,55 @@ def valid_starting_health(health, max_health):
             and 0 < health <= max_health)
 
 
+def is_artillery(name, library):
+    """Artillery-type units (everything that can bombard) take no part in tactical battles."""
+    return queries.get_bombardment_range(name, library.get(name)) > 0
+
+
+def _is_land(stats):
+    return not stats.get("naval_unit") and not stats.get("air_role")
+
+
 def land_unit_types(library):
-    """Keep library identifiers, including levels, and exclude ships and aircraft."""
-    return [name for name, stats in library.items()
-            if not stats.get("naval_unit") and not stats.get("air_role")]
+    """Units that can fight tactical battles: library identifiers, including levels, of land units.
+
+    Ships, aircraft, and artillery-type units are excluded.
+    """
+    return [name for name, stats in library.items() if _is_land(stats) and not is_artillery(name, library)]
+
+
+def _campaign_sides(player_unit, province, nation_data):
+    """Every living unit on the tile on the player's side (player's unit first) and on the enemy side."""
+    country = queries.get_unit_combat_owner(player_unit)
+    enemies = queries.get_enemies(country, nation_data)
+    friends = {country, *queries.get_all_friendly_nations(country, nation_data)}
+    units = [unit for unit in province.get("units", []) if unit.get("health", 0) > 0]
+    friendly = ([unit for unit in units if unit is player_unit]
+                + [unit for unit in units if unit is not player_unit
+                   and queries.get_unit_combat_owner(unit) in friends])
+    return friendly, [unit for unit in units if queries.get_unit_combat_owner(unit) in enemies]
 
 
 def campaign_forces(player_unit, province, nation_data, library):
     """The campaign units (friendly, enemy) fighting a tactical player's land unit on its tile.
 
-    The player's unit leads the friendly list. Returns None when that unit is not a land
-    unit or no hostile land unit shares its tile. Each list holds at most one army's units.
+    The player's unit leads the friendly list. Returns None when that unit cannot fight a
+    tactical battle or no hostile unit that can shares its tile. Artillery sits the battle out.
+    Each list holds at most one army's units.
     """
     land = set(land_unit_types(library))
-    country = queries.get_unit_combat_owner(player_unit)
-    enemies = queries.get_enemies(country, nation_data)
-    friends = {country, *queries.get_all_friendly_nations(country, nation_data)}
-
-    def fighting(units):
-        return [unit for unit in units
-                if unit.get("type") in land and unit.get("health", 0) > 0
-                ][:c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE]
-
-    units = province.get("units", [])
-    friendly = fighting([player_unit] + [unit for unit in units if unit is not player_unit
-                                         and queries.get_unit_combat_owner(unit) in friends])
-    enemy = fighting([unit for unit in units if queries.get_unit_combat_owner(unit) in enemies])
+    friendly, enemy = ([unit for unit in side if unit.get("type") in land][:c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE]
+                       for side in _campaign_sides(player_unit, province, nation_data))
     if not friendly or not enemy or friendly[0] is not player_unit:
         return None
     return friendly, enemy
+
+
+def campaign_artillery(player_unit, province, nation_data, library):
+    """The land artillery-type units (friendly, enemy) on a tactical player's tile, which sit the battle out."""
+    return tuple([unit for unit in side if unit.get("type") in library
+                  and _is_land(library[unit["type"]]) and is_artillery(unit["type"], library)]
+                 for side in _campaign_sides(player_unit, province, nation_data))
 
 
 def tactical_encounter(context, province):
@@ -138,13 +150,17 @@ def campaign_roster(units, library):
     return roster
 
 
-def apply_campaign_result(simulation, units, province):
+def apply_campaign_result(simulation, units, province, artillery):
     """Write a finished battle back: each unit keeps its division's fraction of health and the dead are removed.
 
     ``units`` are the campaign units in roster order, friendly army then enemy army.
+    ``artillery`` is (friendly, enemy) from campaign_artillery. The losing side's artillery is
+    destroyed; the winning side's is untouched.
     """
     for index, unit in enumerate(units):
         unit["health"] = simulation.division_health_fraction(index) * unit["max_health"]
+    for unit in artillery[1 - simulation.winner]:
+        unit["health"] = 0
     province["units"] = [unit for unit in province["units"] if unit.get("health", 0) > 0]
 
 
@@ -189,11 +205,8 @@ def unit_shape(name, library):
     """Choose prototype geometry from existing family and capability metadata."""
     stats = library[name]
     family = queries.get_unit_metadata(name, library).get("family", "")
-    # Named families come first: the railroad guns and super-tanks also bombard.
     if family in FAMILY_SHAPES:
         return FAMILY_SHAPES[family]
-    if queries.get_bombardment_range(name, stats) > 0:
-        return "artillery"
     if family == "Cavalry":
         return "cavalry"
     if queries.classify_unit_group(family, stats) == queries.UNIT_GROUP_TANKS:
@@ -208,13 +221,6 @@ def firing_cone(shape):
     """The firing cone's full width in radians, or None when the gun aims all the way around."""
     cone = AIM[shape][0]
     return None if cone is None else math.radians(cone)
-
-
-def shot_reach(fighter, aim_point):
-    """How far a player's shot travels: an arcing shell lands at the pointer, up to the weapon's range."""
-    if aim_point is None:
-        return fighter.weapon_range
-    return min(fighter.weapon_range, math.hypot(aim_point[0] - fighter.x, aim_point[1] - fighter.y))
 
 
 def _wrap(angle):
@@ -235,8 +241,6 @@ class Fighter:
     x: float
     y: float
     shape: str
-    weapon_range: float
-    attack_field: str
     division: int = 0  # Index into BattleSimulation.divisions.
     cooldown: float = 0.0
     angle: float = 0.0  # Hull heading: movement follows it.
@@ -253,40 +257,21 @@ class Fighter:
         return self.data["health"] > 0
 
     @property
-    def arcing(self):
-        """Artillery-type weapons lob shells that hit only where they land."""
-        return self.attack_field == "bombard_attack"
-
-    @property
     def max_speed(self):
         return max(0, self.data["speed"]) * MOVE_PIXELS_PER_SPEED
 
 
 @dataclass
 class Projectile:
-    """A shot in flight.
-
-    A direct shot hits the first enemy it crosses. An arcing shell (``flight`` above zero)
-    passes over everything and hits every enemy near the point where it lands.
-    """
+    """A shot in flight. It hits the first enemy it crosses."""
 
     source: Fighter
     source_data: dict  # The shooter as it fired, so a shot still lands after the shooter dies.
-    x: float  # Ground position.
+    x: float
     y: float
     vx: float
     vy: float
     remaining: float  # Seconds left in flight.
-    flight: float = 0.0  # Total seconds an arcing shell flies; zero for direct shots.
-
-    @property
-    def arcing(self):
-        return self.flight > 0
-
-    @property
-    def progress(self):
-        """How far through its flight an arcing shell is, from 0 to 1."""
-        return 1.0 - self.remaining / self.flight if self.flight else 0.0
 
 
 class _Grid:
@@ -297,7 +282,7 @@ class _Grid:
         self.cells = {}
         for fighter in fighters:
             self.cells.setdefault(self._key(fighter.x, fighter.y), []).append(fighter)
-        self.reach = math.ceil(max(c.CUSTOM_BATTLE_ARENA_SIZE) / cell) + 1
+        self.reach = math.ceil(max(ARENA_SIZE) / cell) + 1
 
     def _key(self, x, y):
         return int(x // self.cell), int(y // self.cell)
@@ -377,56 +362,42 @@ class BattleSimulation:
             if any((entry["type"] if isinstance(entry, dict) else entry) not in allowed
                    for entry in roster):
                 raise ValueError("Custom battles accept only current land-unit identifiers.")
-            rows = min(SPAWN_ROWS, len(roster))
-            # The last column of divisions forms the front rank; earlier columns stand behind it.
-            columns = math.ceil(len(roster) / rows)
-            front = (c.CUSTOM_BATTLE_ARENA_SIZE[0] - SPAWN_FRONT_GAP) / 2
+            front = (ARENA_SIZE[0] - SPAWN_FRONT_GAP) / 2
             for index, entry in enumerate(roster):
                 name = entry["type"] if isinstance(entry, dict) else entry
-                column, row = divmod(index, rows)
-                x = front - (columns - 1 - column) * DIVISION_GAP
+                # The first roster entry stands in the front rank, the last one furthest back.
+                x = front - index * RANK_GAP
                 if side:
-                    x = c.CUSTOM_BATTLE_ARENA_SIZE[0] - x
-                y = c.CUSTOM_BATTLE_ARENA_SIZE[1] / 2 + (row - (rows - 1) / 2) * DIVISION_GAP
+                    x = ARENA_SIZE[0] - x
                 owner = entry["owner"] if isinstance(entry, dict) else "Enemy" if side else "Friendly"
                 data = queries.create_unit_dict(name, owner, self.library)
                 if isinstance(entry, dict):
                     if not valid_starting_health(entry["health"], data["max_health"]):
                         raise ValueError("Starting HP must be above zero and no greater than the unit's maximum HP.")
                     data["health"] = entry["health"]
-                # Bombardment attack belongs to the unit library, not to saved instances.
-                data["bombard_attack"] = self.library[name].get("bombard_attack", data["attack"])
-                bombard_range = queries.get_bombardment_range(name, self.library[name])
-                members = self._deploy_division(
-                    data, side, x, y, unit_shape(name, self.library),
-                    WEAPON_RANGE + bombard_range * BOMBARD_RANGE_PIXELS,
-                    "bombard_attack" if bombard_range else "attack")
+                members = self._deploy_division(data, side, x, unit_shape(name, self.library))
                 if side == 0 and index == self.controlled_index:
-                    self.controlled = members[0]
+                    self.controlled = members[len(members) // 2]  # The middle of the line.
 
-    def _deploy_division(self, data, side, x, y, shape, weapon_range, attack_field):
-        """Split one division into sub-units around (x, y), front rank first.
+    def _deploy_division(self, data, side, x, shape):
+        """Split one division into sub-units standing in a vertical line at ``x``, centered top to bottom.
 
         A division at fraction ``f`` of full health brings ceil(f * N) of its N sub-units,
         sharing its health equally: 63% of 10 is 7 sub-units at 90% each.
+        A line with fewer sub-units is shorter, since the spacing between them stays the same.
         """
         full = data["max_health"]
         size = SUBUNIT_COUNTS[shape]
         # The small allowance keeps float error from adding a sub-unit: 0.7 * 10 is 7.000000000000001.
         count = max(1, math.ceil(data["health"] / full * size - 1e-9))
-        across = math.ceil(math.sqrt(count))
-        ranks = math.ceil(count / across)
         facing = math.pi if side else 0.0
         division = len(self.divisions)
         members = []
         for number in range(count):
-            rank, file = divmod(number, across)
-            forward = ((ranks - 1) / 2 - rank) * SUBUNIT_GAP
             members.append(Fighter(
                 dict(data, max_health=full / size, health=data["health"] / count), side,
-                x - forward if side else x + forward,
-                y + (file - (across - 1) / 2) * SUBUNIT_GAP,
-                shape, weapon_range, attack_field, division=division, angle=facing, aim=facing,
+                x, ARENA_SIZE[1] / 2 + (number - (count - 1) / 2) * SUBUNIT_SPACING,
+                shape, division=division, angle=facing, aim=facing,
                 # Spread target searches across ticks instead of running them all at once.
                 retarget=(len(self.fighters) + number) % round(RETARGET_SECONDS / FIXED_STEP) * FIXED_STEP))
         self.divisions.append(members)
@@ -499,9 +470,9 @@ class BattleSimulation:
         fighter.aim = (fighter.angle + _approach(current, goal, step)) % math.tau
 
     @staticmethod
-    def _attack(source, target, attack_field):
+    def _attack(source, target):
         """Shared health scaling and target capability rules own attack strength."""
-        return sum(shot[1] for shot in combat_rules.damage_shots([source], [target], attack_field=attack_field))
+        return sum(shot[1] for shot in combat_rules.damage_shots([source], [target]))
 
     def _drive_player(self, fighter, dt, shots):
         self._steer(fighter, self._turn, dt)
@@ -509,7 +480,7 @@ class BattleSimulation:
         aim = self._aim_point
         self._slew_aim(fighter, fighter.aim if aim is None else math.atan2(aim[1] - fighter.y, aim[0] - fighter.x), dt)
         if self._fire and fighter.cooldown <= 0:
-            shots.append((fighter, shot_reach(fighter, aim)))
+            shots.append(fighter)
             fighter.cooldown = FIRE_INTERVAL
 
     def _drive_ai(self, fighter, enemies, dt, shots):
@@ -526,31 +497,22 @@ class BattleSimulation:
         _seconds, degrees, seconds = MOBILITY[fighter.shape]
         # Ease off the turn before the hull lines up, since the turn rate cannot stop at once.
         self._steer(fighter, max(-1.0, min(1.0, turning / (math.radians(degrees) * seconds))), dt)
-        closing = distance > fighter.weapon_range * AI_HOLD_RANGE
+        closing = distance > WEAPON_RANGE * AI_HOLD_RANGE
         self._accelerate(fighter, max(0.0, math.cos(turning)) if closing else 0.0, dt)
-        flight = distance / (c.CUSTOM_BATTLE_PROJECTILE_SPEED if fighter.arcing else DIRECT_PROJECTILE_SPEED)
+        flight = distance / PROJECTILE_SPEED
         lead_x, lead_y = target.x + target.vx * flight, target.y + target.vy * flight
         desired = math.atan2(lead_y - fighter.y, lead_x - fighter.x)
         self._slew_aim(fighter, desired, dt)
-        if (fighter.cooldown <= 0 and distance <= fighter.weapon_range
+        if (fighter.cooldown <= 0 and distance <= WEAPON_RANGE
                 and abs(_wrap(desired - fighter.aim)) <= AIM_TOLERANCE
-                and self._attack(fighter.data, target.data, fighter.attack_field) > 0):
-            shots.append((fighter, min(fighter.weapon_range, math.hypot(lead_x - fighter.x, lead_y - fighter.y))))
+                and self._attack(fighter.data, target.data) > 0):
+            shots.append(fighter)
             fighter.cooldown = FIRE_INTERVAL
 
-    def _fire_shot(self, fighter, reach):
-        direction_x, direction_y = math.cos(fighter.aim), math.sin(fighter.aim)
-        data = dict(fighter.data)
-        if fighter.arcing:
-            flight = max(FIXED_STEP, reach / c.CUSTOM_BATTLE_PROJECTILE_SPEED)
-            speed = reach / flight
-            self.projectiles.append(Projectile(fighter, data, fighter.x, fighter.y, direction_x * speed,
-                                               direction_y * speed, flight, flight))
-        else:
-            self.projectiles.append(Projectile(
-                fighter, data, fighter.x, fighter.y, direction_x * DIRECT_PROJECTILE_SPEED,
-                direction_y * DIRECT_PROJECTILE_SPEED,
-                (fighter.weapon_range + UNIT_RADIUS * 2) / DIRECT_PROJECTILE_SPEED))
+    def _fire_shot(self, fighter):
+        self.projectiles.append(Projectile(
+            fighter, dict(fighter.data), fighter.x, fighter.y, math.cos(fighter.aim) * PROJECTILE_SPEED,
+            math.sin(fighter.aim) * PROJECTILE_SPEED, (WEAPON_RANGE + UNIT_RADIUS * 2) / PROJECTILE_SPEED))
 
     def _step(self, dt):
         self.elapsed += dt
@@ -584,11 +546,11 @@ class BattleSimulation:
                     mx += sx / gap * push
                     my += sy / gap * push
             movements.append((fighter, mx, my))
-        for fighter, reach in shots:
-            self._fire_shot(fighter, reach)
+        for fighter in shots:
+            self._fire_shot(fighter)
         for fighter, mx, my in movements:
-            x = min(c.CUSTOM_BATTLE_ARENA_SIZE[0] - UNIT_RADIUS, max(UNIT_RADIUS, fighter.x + mx))
-            y = min(c.CUSTOM_BATTLE_ARENA_SIZE[1] - UNIT_RADIUS, max(UNIT_RADIUS, fighter.y + my))
+            x = min(ARENA_SIZE[0] - UNIT_RADIUS, max(UNIT_RADIUS, fighter.x + mx))
+            y = min(ARENA_SIZE[1] - UNIT_RADIUS, max(UNIT_RADIUS, fighter.y + my))
             fighter.vx, fighter.vy = (x - fighter.x) / dt, (y - fighter.y) / dt
             fighter.x, fighter.y = x, y
 
@@ -598,18 +560,6 @@ class BattleSimulation:
         remaining = []
         for shot in self.projectiles:
             enemies = hittable[1 - shot.source.side]
-            if shot.arcing:
-                # A shell in the air passes over units; it hits only where it lands.
-                travel = min(dt, shot.remaining)
-                shot.x += shot.vx * travel
-                shot.y += shot.vy * travel
-                shot.remaining -= dt
-                if shot.remaining > 1e-9:
-                    remaining.append(shot)
-                    continue
-                hits.extend((shot, target) for target in enemies.around(shot.x, shot.y, ARTILLERY_BLAST_RADIUS)
-                            if math.hypot(target.x - shot.x, target.y - shot.y) <= ARTILLERY_BLAST_RADIUS)
-                continue
             nx, ny = shot.x + shot.vx * dt, shot.y + shot.vy * dt
             collisions = []
             for target in enemies.within(min(shot.x, nx) - UNIT_RADIUS, min(shot.y, ny) - UNIT_RADIUS,
@@ -628,7 +578,7 @@ class BattleSimulation:
         self.projectiles = remaining
         for shot, target in hits:
             # Attack is measured against the unit actually hit, so its capability rules apply.
-            attack = self._attack(shot.source_data, target.data, shot.source.attack_field)
+            attack = self._attack(shot.source_data, target.data)
             # Tactical defense blocks a flat amount per hit, even when wounded.
             # Campaign combat instead scales defense with remaining health.
             loss = max(0.0, attack - target.data["defense"])

@@ -95,14 +95,11 @@ PREVIEW_BAR_GRADIENT_STRENGTH = 0.5
 PLAYER_COLOR = (255, 225, 95)
 # Body (width, height) in pixels at scale 1.0, before the barrel line.
 UNIT_SHAPE_SIZES = {
-    "tank": (28, 19), "artillery": (34, 10),
+    "tank": (28, 19),
     "infantry": (21, 21), "cavalry": (30, 17),
     "light_tank": (24, 16),
     "armored_car": (24, 16),  # Same size as the light tank, drawn with rounded edges.
     "heavy_tank": (33, 22),
-    "railroad_gun": (52, 9),
-    "colossus": (50, 34),  # Landkreuzers.
-    "railgun": (50, 34),  # Same body as the Landkreuzers.
     # Troop carriers match a vehicle's hull but carry no gun: armored car, light tank, medium tank.
     "motorized": (24, 16), "mechanized": (24, 16), "ifv": (28, 19),
 }
@@ -113,11 +110,7 @@ SPRITE_ANGLE_STEP = 4  # Degrees between the cached rotations of each battlefiel
 DEAD_COLOR = (53, 65, 44)
 BATTLE_HEALTH_COLOR = (105, 215, 85)
 SHOT_COLOR = (250, 232, 150)
-SHOT_TAIL = 8  # Pixels behind a direct shot's head.
-SHELL_COLOR = (240, 240, 225)
-SHELL_SHADOW_COLOR = (40, 60, 32)
-SHELL_RADIUS = 3
-SHELL_ARC_RATIO = 0.25  # An arcing shell's peak height as a share of its ground distance.
+SHOT_TAIL = 8  # Pixels behind a shot's head.
 RANGE_COLOR = (255, 225, 95)
 AIM_LINE_COLOR = (255, 245, 200)
 CONE_ARC_STEP = math.radians(3)  # Spacing of the points that draw the cone's curved edge.
@@ -358,7 +351,9 @@ class CustomBattleScreen(Screen):
         if campaign is None or campaign.result_applied:
             return
         campaign.result_applied = True
-        combat.apply_campaign_result(self.simulation, campaign.units, campaign.province)
+        artillery = combat.campaign_artillery(campaign.unit, campaign.province,
+                                              campaign.map_screen.nation_data, self.library)
+        combat.apply_campaign_result(self.simulation, campaign.units, campaign.province, artillery)
         queries.normalize_armies(campaign.map_screen.nation_data, campaign.map_screen.map_data)
         # Whoever is left standing on the tile takes it, as after any campaign combat.
         owner_before = campaign.province.get("owner")
@@ -640,7 +635,7 @@ class CustomBattleScreen(Screen):
         if controlled is not None:
             self._center_camera(controlled.x, controlled.y)
         else:
-            self._center_camera(c.CUSTOM_BATTLE_ARENA_SIZE[0] / 2, c.CUSTOM_BATTLE_ARENA_SIZE[1] / 2)
+            self._center_camera(combat.ARENA_SIZE[0] / 2, combat.ARENA_SIZE[1] / 2)
         self.refresh_ui()
 
     def clear_controls(self):
@@ -669,7 +664,7 @@ class CustomBattleScreen(Screen):
     def _move_camera(self, left, top):
         """Keep the view inside the battlefield, or center the battlefield when it is smaller than the view."""
         self.camera = [(arena - span) / 2 if span >= arena else max(0.0, min(arena - span, start))
-                       for start, span, arena in zip((left, top), self._view_span(), c.CUSTOM_BATTLE_ARENA_SIZE)]
+                       for start, span, arena in zip((left, top), self._view_span(), combat.ARENA_SIZE)]
 
     def zoom_by(self, steps, pos):
         """Step through ZOOM_LEVELS, keeping the battlefield point under ``pos`` in place."""
@@ -1154,7 +1149,7 @@ class CustomBattleScreen(Screen):
         """Range, firing cone, gun direction, heading arrow, and reload for the controlled sub-unit only."""
         zoom = self.zoom
         cone = combat.firing_cone(fighter.shape)
-        reach = round(fighter.weapon_range * zoom)
+        reach = round(combat.WEAPON_RANGE * zoom)
         if cone is None:
             pygame.draw.circle(surface, RANGE_COLOR, center, reach, 1)
         else:
@@ -1163,14 +1158,8 @@ class CustomBattleScreen(Screen):
             edge = [(center[0] + math.cos(start + cone * step / steps) * reach,
                      center[1] + math.sin(start + cone * step / steps) * reach) for step in range(steps + 1)]
             pygame.draw.lines(surface, RANGE_COLOR, True, [center, *edge])
-        aim = (self.to_field(pygame.mouse.get_pos()) if self.mode == "battle" and not self.simulation.paused
-               else None)
-        length = (combat.shot_reach(fighter, aim) if fighter.arcing else fighter.weapon_range) * zoom
-        end = (center[0] + math.cos(fighter.aim) * length, center[1] + math.sin(fighter.aim) * length)
+        end = (center[0] + math.cos(fighter.aim) * reach, center[1] + math.sin(fighter.aim) * reach)
         pygame.draw.line(surface, AIM_LINE_COLOR, center, end, 1)
-        if fighter.arcing:
-            # Where the shell will land, and the area it will hit.
-            pygame.draw.circle(surface, AIM_LINE_COLOR, end, combat.ARTILLERY_BLAST_RADIUS * zoom, 1)
         pygame.draw.circle(surface, PLAYER_COLOR, center, PLAYER_RING_RADIUS * zoom, 2)
         draw_player_arrow(surface, center, fighter.angle,
                           fighter.speed / fighter.max_speed if fighter.max_speed else 0.0, scale=zoom)
@@ -1188,7 +1177,7 @@ class CustomBattleScreen(Screen):
         """The battlefield and its faint, fixed checkerboard; anything past its edges is dark."""
         surface.fill(OFF_FIELD_COLOR)
         zoom = self.zoom
-        width, height = c.CUSTOM_BATTLE_ARENA_SIZE
+        width, height = combat.ARENA_SIZE
         left, top = self.to_screen(0, 0)
         right, bottom = self.to_screen(width, height)
         field = pygame.Rect(left, top, right - left, bottom - top)
@@ -1239,19 +1228,10 @@ class CustomBattleScreen(Screen):
                                  bar.centery - flag_size[1] // 2, size=flag_size)
         if controlled is not None and controlled.alive:
             self._draw_controls(surface, controlled, self.to_screen(controlled.x, controlled.y))
-        shell_radius = max(1, round(SHELL_RADIUS * zoom))
         line_width = max(1, round(2 * zoom))
         for shot in self.simulation.projectiles:
             head = self.to_screen(shot.x, shot.y)
             if not visible.collidepoint(head):
-                continue
-            if shot.arcing:
-                # The shadow travels the ground; the shell rises and falls above it.
-                progress = shot.progress
-                height = (math.hypot(shot.vx, shot.vy) * shot.flight * SHELL_ARC_RATIO
-                          * 4 * progress * (1 - progress) * zoom)
-                pygame.draw.circle(surface, SHELL_SHADOW_COLOR, head, shell_radius)
-                pygame.draw.circle(surface, SHELL_COLOR, (head[0], round(head[1] - height)), shell_radius)
                 continue
             tail_length = SHOT_TAIL * zoom / (math.hypot(shot.vx, shot.vy) or 1.0)
             tail = (round(head[0] - shot.vx * tail_length), round(head[1] - shot.vy * tail_length))

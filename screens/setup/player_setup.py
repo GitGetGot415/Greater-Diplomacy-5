@@ -1,5 +1,6 @@
 import data.constants as c
 from data import queries
+from map_logic import custom_battle as tactical_battle
 from ui.dialogs import pickers
 from ui.widgets import ui_elements
 
@@ -23,7 +24,13 @@ def select_tactical_unit(map_screen, province, candidate_units=None):
         return
 
     units = list(candidate_units) if candidate_units is not None else province.get("units", [])
-    
+    # Artillery takes no part in tactical battles, so it cannot be the player's division.
+    library = queries.get_unit_library(map_screen)
+    if units and all(tactical_battle.is_artillery(unit.get("type"), library) for unit in units):
+        map_screen.show_feedback("Artillery cannot be a tactical division")
+        return
+    units = [unit for unit in units if not tactical_battle.is_artillery(unit.get("type"), library)]
+
     if not units:
         # SPAWN A BLANK UNIT
         nation_data = map_screen.nation_data.get(owner, {})

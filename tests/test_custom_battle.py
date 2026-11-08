@@ -31,6 +31,8 @@ def fixture_library():
     return {
         "Fixture I": unit_stats(),
         "Fixture II": unit_stats(tier=2, attack=200),
+        "Fixture III": unit_stats(tier=3, attack=120),
+        # Artillery: it can bombard, so it takes no part in tactical battles.
         "Fixture Gun I": unit_stats("Fixture Gun", bombard_range=2, bombard_attack=130),
         "Fixture Ship I": dict(unit_stats(), naval_unit=True),
         "Fixture Plane I": unit_stats(air_role="fighter", air_range_px=100),
@@ -110,7 +112,7 @@ class RandomBattleTests(unittest.TestCase):
 
 def single_subunits():
     """One sub-unit per fixture division, so a test can follow one unit per roster entry."""
-    return patch.dict(combat.SUBUNIT_COUNTS, {"infantry": 1, "artillery": 1})
+    return patch.dict(combat.SUBUNIT_COUNTS, {"infantry": 1})
 
 
 def hold_still(simulation):
@@ -125,24 +127,23 @@ class BattleSimulationTests(unittest.TestCase):
         self.library = fixture_library()
         self.enterContext(single_subunits())
 
-    def test_catalog_and_constructor_reject_air_sea_unknown_and_empty_rosters(self):
-        self.assertEqual(set(combat.land_unit_types(self.library)),
-                         {"Fixture I", "Fixture II", "Fixture Gun I"})
-        for roster in ([], ["missing"], ["Fixture Ship I"], ["Fixture Plane I"],
+    def test_catalog_and_constructor_reject_air_sea_artillery_unknown_and_empty_rosters(self):
+        self.assertEqual(set(combat.land_unit_types(self.library)), {"Fixture I", "Fixture II", "Fixture III"})
+        for roster in ([], ["missing"], ["Fixture Ship I"], ["Fixture Plane I"], ["Fixture Gun I"],
                        ["Fixture I"] * (c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE + 1)):
             with self.subTest(roster=roster[:2]), self.assertRaises(ValueError):
                 combat.BattleSimulation(self.library, roster, ["Fixture I"])
 
     def test_units_use_library_stats_without_mutating_content_or_rosters(self):
         before = copy.deepcopy(self.library)
-        roster = ["Fixture I", "Fixture II", "Fixture Gun I"]
+        roster = ["Fixture I", "Fixture II", "Fixture III"]
         simulation = combat.BattleSimulation(self.library, roster, ["Fixture I"])
         for fighter, name in zip(simulation.fighters, roster):
             for field in ("health", "attack", "defense", "speed"):
                 self.assertEqual(fighter.data[field], self.library[name][field])
         simulation.advance(30)
         self.assertEqual(self.library, before)
-        self.assertEqual(roster, ["Fixture I", "Fixture II", "Fixture Gun I"])
+        self.assertEqual(roster, ["Fixture I", "Fixture II", "Fixture III"])
 
     def test_automatic_battle_reaches_win_and_loss(self):
         for friendly, enemy, expected in (("Fixture II", "Fixture I", 0),
@@ -196,12 +197,6 @@ class BattleSimulationTests(unittest.TestCase):
         simulation.advance(combat.FIXED_STEP)
         self.assertAlmostEqual(simulation.elapsed, 1 + combat.FIXED_STEP)
 
-    def test_bombardment_uses_library_weapon_and_longer_range(self):
-        simulation = combat.BattleSimulation(self.library, ["Fixture Gun I"], ["Fixture I"])
-        gun, infantry = simulation.fighters
-        self.assertEqual(gun.data["bombard_attack"], self.library["Fixture Gun I"]["bombard_attack"])
-        self.assertGreater(gun.weapon_range, infantry.weapon_range)
-
     def test_projectile_impacts_subtract_full_defense_even_when_wounded_on_either_side(self):
         for target_side in (0, 1):
             for health, defense, expected_health in (
@@ -238,46 +233,6 @@ class BattleSimulationTests(unittest.TestCase):
             simulation.advance(combat.FIXED_STEP)
         self.assertEqual([call.args[1] for call in damage.call_args_list], [[second.data]])
         self.assertEqual((first.data["health"], second.data["health"]), (100, 70))
-
-    def test_arcing_shells_pass_over_units_and_hit_every_enemy_where_they_land(self):
-        simulation = combat.BattleSimulation(self.library, ["Fixture Gun I", "Fixture I"],
-                                             ["Fixture I", "Fixture I", "Fixture I"])
-        hold_still(simulation)
-        gun, friend, below, landed, beside = simulation.fighters
-        steps = 10
-        flight = steps * combat.FIXED_STEP
-        start, landing = (100, 500), (400, 500)
-        friend.x, friend.y = landing[0], landing[1] + 10
-        below.x, below.y = 250, 500
-        landed.x, landed.y = landing
-        beside.x, beside.y = landing[0] + combat.ARTILLERY_BLAST_RADIUS + 20, landing[1]
-        for fighter in (friend, below, landed, beside):
-            fighter.data.update(health=500, max_health=500, defense=0)
-        simulation.projectiles = [combat.Projectile(
-            gun, dict(gun.data), *start, (landing[0] - start[0]) / flight, 0, flight, flight)]
-        simulation.advance(flight - combat.FIXED_STEP)
-        self.assertEqual(len(simulation.projectiles), 1)
-        self.assertTrue(all(f.data["health"] == 500 for f in (friend, below, landed, beside)))
-        simulation.advance(combat.FIXED_STEP)
-        self.assertEqual(simulation.projectiles, [])
-        bombard = self.library["Fixture Gun I"]["bombard_attack"]
-        self.assertEqual([f.data["health"] for f in (friend, below, landed, beside)],
-                         [500, 500, 500 - bombard, 500])
-
-    def test_player_shells_land_at_the_pointer_up_to_weapon_range(self):
-        simulation = combat.BattleSimulation(self.library, ["Fixture Gun I"], ["Fixture I"], controlled_index=0)
-        hold_still(simulation)
-        gun = simulation.controlled
-        gun.cooldown = 0
-        for distance, expected in ((150, 150), (gun.weapon_range * 2, gun.weapon_range)):
-            with self.subTest(distance=distance):
-                simulation.projectiles = []
-                gun.cooldown = 0
-                simulation.set_player_input(fire=True, aim_point=(gun.x + distance, gun.y))
-                simulation.advance(combat.FIXED_STEP)
-                shot = next(shot for shot in simulation.projectiles if shot.source is gun)
-                self.assertTrue(shot.arcing)
-                self.assertAlmostEqual(math.hypot(shot.vx, shot.vy) * shot.flight, expected)
 
     def test_simultaneous_destruction_is_a_loss_and_finished_battle_stays_finished(self):
         simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"])
@@ -357,7 +312,7 @@ class BattleSimulationTests(unittest.TestCase):
             self.assertEqual(projectiles.call_count, 1)
             shot = simulation.projectiles[0]
             self.assertAlmostEqual(math.atan2(shot.vy, shot.vx), math.pi / 4)
-            self.assertAlmostEqual(math.hypot(shot.vx, shot.vy), combat.DIRECT_PROJECTILE_SPEED)
+            self.assertAlmostEqual(math.hypot(shot.vx, shot.vy), combat.PROJECTILE_SPEED)
             simulation.advance(combat.FIRE_INTERVAL / 2)
             self.assertEqual(projectiles.call_count, 1)
             simulation.set_player_input(fire=False)
@@ -385,7 +340,8 @@ class BattleSimulationTests(unittest.TestCase):
         shooter, target = simulation.fighters
         target.data["speed"] = shooter.data["speed"] = 0
         target.cooldown = 1000
-        target.x, target.y = shooter.x, shooter.y + 100  # Outside the cone of a unit facing right.
+        # Outside the cone of a unit facing right, and far enough that a shot needs several ticks to arrive.
+        target.x, target.y = shooter.x, shooter.y + 4 * combat.PROJECTILE_SPEED * combat.FIXED_STEP
         simulation.advance(combat.FIXED_STEP)
         self.assertEqual(simulation.projectiles, [])
         for _ in range(round(5 / combat.FIXED_STEP)):
@@ -421,8 +377,29 @@ class BattleSimulationTests(unittest.TestCase):
                 self.assertAlmostEqual(simulation.division_health_fraction(0), percent / 100)
                 self.assertEqual(len(simulation.fighters), count + len(simulation.divisions[1]))
 
+    def test_each_division_deploys_as_a_centered_line_with_the_first_entry_in_front(self):
+        with patch.dict(combat.SUBUNIT_COUNTS, {"infantry": 10}):
+            wounded = queries.create_unit_dict("Fixture I", "First Country", self.library)
+            wounded["health"] = wounded["max_health"] / 2
+            simulation = combat.BattleSimulation(self.library, ["Fixture I", wounded, "Fixture I"], ["Fixture I"])
+        middle = combat.ARENA_SIZE[1] / 2
+        front, short, back = simulation.divisions[:3]
+        for division in (front, short, back):
+            # One vertical line: same x, evenly spaced from top to bottom, centered on the battlefield.
+            self.assertEqual({fighter.x for fighter in division}, {division[0].x})
+            ys = [fighter.y for fighter in division]
+            for upper, lower in zip(ys, ys[1:]):
+                self.assertAlmostEqual(lower - upper, combat.SUBUNIT_SPACING)
+            self.assertAlmostEqual(sum(ys) / len(ys), middle)
+        self.assertLess(max(f.y for f in short) - min(f.y for f in short),
+                        max(f.y for f in front) - min(f.y for f in front))
+        # The enemy is to the right of the friendly army, so the first entry stands furthest right.
+        self.assertAlmostEqual(front[0].x - short[0].x, combat.RANK_GAP)
+        self.assertAlmostEqual(short[0].x - back[0].x, combat.RANK_GAP)
+        self.assertGreater(simulation.divisions[3][0].x, front[0].x)
+
     def test_armies_deploy_the_same_gap_apart_whatever_their_size(self):
-        width, height = c.CUSTOM_BATTLE_ARENA_SIZE
+        width, height = combat.ARENA_SIZE
         for size in (1, 5, c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE):
             with self.subTest(size=size):
                 simulation = combat.BattleSimulation(self.library, ["Fixture I"] * size, ["Fixture I"] * size)
@@ -455,11 +432,36 @@ class BattleSimulationTests(unittest.TestCase):
         for unit in units:
             unit["max_health"] = 1000  # Campaign health is written back as the same fraction.
         province = {"units": list(units)}
-        combat.apply_campaign_result(simulation, units, province)
+        simulation.winner = 0
+        combat.apply_campaign_result(simulation, units, province, ([], []))
         self.assertAlmostEqual(units[0]["health"], 550)
         self.assertAlmostEqual(units[1]["health"], 1000)
         self.assertEqual(province["units"], units[:2])
         self.assertEqual(len(healthy), 10)
+
+    def test_artillery_sits_out_campaign_battles_and_only_the_losers_is_destroyed(self):
+        nations = {"Fixture A": {"at_war_with": ["Fixture B"]}, "Fixture B": {"at_war_with": ["Fixture A"]}}
+        player, foe = (queries.create_unit_dict("Fixture I", owner, self.library) for owner in ("Fixture A", "Fixture B"))
+        our_gun, their_gun = (queries.create_unit_dict("Fixture Gun I", owner, self.library)
+                              for owner in ("Fixture A", "Fixture B"))
+        tile = [our_gun, player, their_gun, foe]
+        province = {"units": list(tile)}
+        self.assertEqual(combat.campaign_forces(player, province, nations, self.library), ([player], [foe]))
+        artillery = combat.campaign_artillery(player, province, nations, self.library)
+        self.assertEqual(artillery, ([our_gun], [their_gun]))
+        # Artillery alone never makes a tactical battle.
+        self.assertIsNone(combat.campaign_forces(player, {"units": [player, their_gun]}, nations, self.library))
+        for winner, survivor, destroyed in ((0, our_gun, their_gun), (1, their_gun, our_gun)):
+            with self.subTest(winner=winner):
+                for unit in tile:
+                    unit["health"] = unit["max_health"]
+                province["units"] = list(tile)
+                simulation = combat.BattleSimulation(self.library, [player], [foe])
+                simulation.winner = winner
+                combat.apply_campaign_result(simulation, [player, foe], province, artillery)
+                self.assertEqual(survivor["health"], survivor["max_health"])
+                self.assertNotIn(destroyed, province["units"])
+                self.assertIn(survivor, province["units"])
 
     def test_losing_the_controlled_sub_unit_ends_control_without_taking_over_another(self):
         with patch.dict(combat.SUBUNIT_COUNTS, {"infantry": 10}):
@@ -468,7 +470,7 @@ class BattleSimulationTests(unittest.TestCase):
         hold_still(simulation)
         division = simulation.divisions[1]
         first = simulation.controlled
-        self.assertIs(first, division[0])
+        self.assertIs(first, division[len(division) // 2])  # The middle of the line.
         first.data["health"] = 0
         simulation.advance(combat.FIXED_STEP)
         self.assertIs(simulation.controlled, first)
@@ -506,7 +508,7 @@ class BattleSimulationTests(unittest.TestCase):
 
     def test_nearest_enemy_search_matches_checking_every_unit(self):
         rng = random.Random(5)
-        width, height = c.CUSTOM_BATTLE_ARENA_SIZE
+        width, height = combat.ARENA_SIZE
         units = [SimpleNamespace(x=rng.uniform(0, width), y=rng.uniform(0, height)) for _ in range(200)]
         for cell in (combat.GRID_CELL, combat.TARGET_CELL):
             grid = combat._Grid(units, cell)
@@ -781,6 +783,25 @@ class CustomBattleScreenTests(unittest.TestCase):
                 self.assertEqual(layers, list(battle_screen.TILE_CAPTURE_LAYERS) if player_dies else [])
                 self.assertEqual(world.update_country_centers.called, player_dies)
 
+    def test_artillery_cannot_join_a_custom_army_or_be_the_tactical_division(self):
+        from screens.setup import player_setup
+        self.assertNotIn("Fixture Gun I", self.screen.unit_names)
+        self.screen.add_unit(0, "Fixture Gun I")
+        self.assertEqual(self.screen.rosters[0], [])
+        gun = queries.create_unit_dict("Fixture Gun I", "Fixture A", self.library)
+        foot = queries.create_unit_dict("Fixture I", "Fixture A", self.library)
+        map_screen = SimpleNamespace(show_feedback=Mock(), pending_unit=None, pending_selection=None,
+                                     selected_province=None)
+        with patch("data.queries.get_unit_library", return_value=self.library), \
+                patch("screens.setup.player_setup.ui_elements.play_ui_sound"):
+            player_setup.select_tactical_unit(map_screen, {"owner": "Fixture A", "units": [gun, foot]})
+            self.assertIs(map_screen.pending_unit, foot)
+            map_screen.pending_unit = None
+            only_artillery = {"owner": "Fixture A", "units": [gun]}
+            player_setup.select_tactical_unit(map_screen, only_artillery)
+        self.assertIsNone(map_screen.pending_unit)
+        self.assertEqual(only_artillery["units"], [gun])  # No replacement division is spawned.
+
     def test_campaign_forces_lead_with_the_player_unit_and_need_a_land_enemy(self):
         nations = {"Fixture A": {"at_war_with": ["Fixture B"]}, "Fixture B": {"at_war_with": ["Fixture A"]}}
         player = queries.create_unit_dict("Fixture II", "Fixture A", self.library)
@@ -988,11 +1009,11 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.assertFalse(options["close_on_select"])
 
     def test_reordering_and_invalid_drop_preserve_armies(self):
-        for name in ("Fixture I", "Fixture II", "Fixture Gun I"):
+        for name in ("Fixture I", "Fixture II", "Fixture III"):
             self.screen.add_unit(0, name)
         self.screen.draw(self.surface)
         self.drag_card(self.screen.card_rect(0, 0).center, self.screen.card_rect(0, 2).center)
-        self.assertEqual(self.roster_types(0), ["Fixture II", "Fixture Gun I", "Fixture I"])
+        self.assertEqual(self.roster_types(0), ["Fixture II", "Fixture III", "Fixture I"])
         before = list(self.screen.rosters[0])
         self.drag_card(self.screen.card_rect(0, 0).center, self.screen.panes[1].center)
         self.assertEqual(self.screen.rosters[0], before)
@@ -1203,7 +1224,7 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.assertEqual(music.call_args.args, (False,))
 
     def test_control_follows_reordered_entries_and_clears_when_removed(self):
-        for name in ("Fixture I", "Fixture II", "Fixture Gun I"):
+        for name in ("Fixture I", "Fixture II", "Fixture III"):
             self.screen.add_unit(0, name)
         self.click("Control")
         self.assertEqual(self.screen.controlled_index, 2)
@@ -1211,7 +1232,7 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.assertEqual(self.screen.controlled_index, 0)
         self.screen.add_unit(1, "Fixture I")
         self.click("Simulate")
-        self.assertEqual(self.screen.simulation.controlled.data["type"], "Fixture Gun I")
+        self.assertEqual(self.screen.simulation.controlled.data["type"], "Fixture III")
         self.click("Retreat")
         self.drag_card(self.screen.card_rect(0, 2).center, self.screen.card_rect(0, 0).center)
         self.assertEqual(self.screen.controlled_index, 1)
@@ -1275,7 +1296,7 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.click("Simulate")
         self.click("Start")
         view = self.screen.view_rect()
-        width, height = c.CUSTOM_BATTLE_ARENA_SIZE
+        width, height = combat.ARENA_SIZE
         self.assertEqual(self.screen.camera, [(width - view.width) / 2, (height - view.height) / 2])
         start = self.screen.camera
         # The battlefield follows the pointer, so dragging right moves the view left.
@@ -1349,9 +1370,14 @@ class CustomBattleScreenTests(unittest.TestCase):
             self.screen.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=-1)
                                        for _ in battle_screen.ZOOM_LEVELS])
         self.assertEqual(self.screen.zoom, battle_screen.ZOOM_LEVELS[0])
-        # Zoomed out past its edges, the battlefield sits in the middle of the screen.
-        width, height = c.CUSTOM_BATTLE_ARENA_SIZE
-        self.assertEqual(self.screen.to_screen(width / 2, height / 2), self.screen.view_rect().center)
+        # Zoomed out past an edge, the battlefield sits in the middle of the screen along that direction.
+        width, height = combat.ARENA_SIZE
+        span_width, span_height = self.screen._view_span()
+        center = self.screen.to_screen(width / 2, height / 2)
+        self.assertGreater(span_height, height)
+        self.assertEqual(center[1], self.screen.view_rect().centery)
+        if span_width > width:
+            self.assertEqual(center[0], self.screen.view_rect().centerx)
         self.screen.draw(self.surface)
         self.click("Pause")
         self.assertTrue(self.screen.simulation.paused)

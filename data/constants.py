@@ -1019,12 +1019,9 @@ DEFAULT_UNIT_ATK = 5
 DEFAULT_UNIT_DEF = 0
 DEFAULT_UNIT_SPD = 1
 
-# Custom-battle battlefield shared by simulation and presentation. It is larger than the
-# on-screen view, which a camera moves across.
-CUSTOM_BATTLE_ARENA_SIZE = (3000, 1100)
+# Most divisions per army in a tactical battle. The battlefield size (ARENA_SIZE in
+# map_logic/custom_battle.py) is derived from it so two full armies fit.
 CUSTOM_BATTLE_MAX_UNITS_PER_SIDE = 64
-# Ground speed of arcing artillery shells. Direct shots use DIRECT_PROJECTILE_SPEED in map_logic/custom_battle.py.
-CUSTOM_BATTLE_PROJECTILE_SPEED = 420.0
 
 #: The roman numeral alphabet, largest first. Both directions of the conversion
 #: read it, so they cannot disagree about which symbols exist: data/queries/unit_info.py's
