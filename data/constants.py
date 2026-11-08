@@ -1007,6 +1007,11 @@ DEFAULT_UNIT_ATK = 5
 DEFAULT_UNIT_DEF = 0
 DEFAULT_UNIT_SPD = 1
 
+# Standalone custom-battle arena shared by simulation and presentation.
+CUSTOM_BATTLE_ARENA_SIZE = (1120, 520)
+CUSTOM_BATTLE_MAX_UNITS_PER_SIDE = 64
+CUSTOM_BATTLE_PROJECTILE_SPEED = 420.0
+
 #: The roman numeral alphabet, largest first. Both directions of the conversion
 #: read it, so they cannot disagree about which symbols exist: data/queries/unit_info.py's
 #: roman_to_int used to know only I/V/X while _gen_roman could emit L and C, so

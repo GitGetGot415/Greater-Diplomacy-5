@@ -17,6 +17,29 @@ documentation/other/recommended-relay-defaults.txt: relay setup defaults.
 documentation/other/SANDBOX_SECURITY.md: sandbox rules and limitations.
 README.md, For MacOS Users: macOS quarantine instructions.
 
+CUSTOM BATTLES
+==============
+
+Custom Battle opens a standalone land battle from the main menu.
+Add Friendly and Add Enemy open the searchable unit picker. Each selection adds
+one unit at its selected library level. Cancel closes the picker and keeps added units.
+Select a roster card and choose Remove to remove that unit. Drag cards within an
+army to change deployment order. Scroll long rosters with the wheel, scrollbar,
+or by dragging the roster background. Each army supports up to 64 units.
+Start runs both armies automatically on an open grass battlefield.
+Tanks and vehicles use rectangles, artillery uses thin rectangles, infantry and
+militia use circles, and cavalry uses ovals. Health bars show remaining strength.
+Units approach enemies and fire visible projectiles. Health, attack, defense,
+speed, bombardment capabilities, and unit labels come from the default unit library.
+The prototype converts movement and range to battlefield pixels and uses shared
+health-scaled combat damage. Positive damage rounds up to whole health points so
+weakening armies can finish a battle. No resources are spent and no campaign state changes.
+Pause freezes combat. The Back key toggles pause during combat. Losing focus also
+pauses combat. Exit returns to army setup; Exit from setup returns to the main menu.
+Destroying the enemy army wins. Losing the friendly army, including mutual
+destruction, loses. Run Again starts fresh armies; Edit Armies returns to setup.
+Custom battles are temporary and are not saved, exported, or used in multiplayer.
+
 TOURNAMENT FILE STORAGE
 =======================
 

@@ -90,6 +90,7 @@ def _import_project_modules():
     global Translate, Translation_Menu, Greater_Diplomacy_4_Translation, Greater_Diplomacy_Hex_Translation
     global Orders_Screen, Tactical_Orders_Screen, keybind_io, settings_schema, symbol_loader, modal_stack, screen_runner
     global BattleEditorScreen
+    global CustomBattleScreen
     global Research_Screen, Economy_Screen, Edit_Country_Screen, Production_Screen
     global Faction_Screen, Faction_Territories_Screen
     global Map_Editor_Menu, Select_Base_Map, Random_Setup, Scenario_Settings
@@ -158,6 +159,7 @@ def _import_project_modules():
     from screens.game.orders import Orders_Screen
     from screens.game.tactical_orders import Tactical_Orders_Screen
     from screens.game.battle_editor import BattleEditorScreen
+    from screens.game.custom_battle import CustomBattleScreen
     from data.io import keybind_io, settings_schema
     from ui.rendering import symbol_loader
     from ui.navigation import modal_stack, screen_runner
@@ -385,6 +387,7 @@ class Controller:
             "ORDERS": Orders_Screen(),
             "TACTICAL_ORDERS": Tactical_Orders_Screen(),
             "BATTLE_EDITOR": BattleEditorScreen(),
+            "CUSTOM_BATTLE": CustomBattleScreen(),
             "RESEARCH": Research_Screen(),
             "ECONOMY": Economy_Screen(),
             "EDIT_COUNTRY": Edit_Country_Screen(),

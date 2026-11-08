@@ -136,6 +136,7 @@ MENU_BUTTON_PANEL_BORDER_COLOR = (15, 15, 25)
 MENU_BUTTON_PANEL_BORDER_WIDTH = 2
 MENU_BUTTON_GROUP_INTRO_DELAY_MS = 200
 MENU_BUTTON_GROUP_INTRO_DURATION_MS = 650
+MENU_CUSTOM_BATTLE_POSITION = (c.SCREEN_WIDTH - 180, 70)
 
 # Edit these RGB colors
 MENU_SKY_START_COLOR = (24, 28, 65)
@@ -551,11 +552,16 @@ class Menu(Screen):
             )
             self.elements.append(self.exit_btn)
 
+        self.custom_battle_btn = Button(
+            *MENU_CUSTOM_BATTLE_POSITION, (160, 40), "green", "Custom Battle",
+            lambda: self.go_to("CUSTOM_BATTLE"), font_size=20)
+        self.elements.append(self.custom_battle_btn)
+
         # These controls skip the rise-from-bottom cascade below and instead
         # slide in horizontally: the refresh and exit buttons from the right,
         # alongside the sign and in the top corner respectively, and the
         # portrait edit button from the left, alongside Hildehrand.
-        right_intro_buttons = [self.refresh_btn]
+        right_intro_buttons = [self.refresh_btn, self.custom_battle_btn]
         if self.exit_btn:
             right_intro_buttons.append(self.exit_btn)
         for button in right_intro_buttons:
