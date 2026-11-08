@@ -169,16 +169,28 @@ class BattleSimulationTests(unittest.TestCase):
         self.assertEqual(gun.data["bombard_attack"], self.library["Fixture Gun I"]["bombard_attack"])
         self.assertGreater(gun.weapon_range, infantry.weapon_range)
 
-    def test_projectile_impacts_use_shared_defense(self):
-        from map_logic.system32 import combat_processor
+    def test_projectile_impacts_subtract_full_defense_even_when_wounded_on_either_side(self):
+        for target_side in (0, 1):
+            for health, defense, expected_health in (
+                    (100, 15, 85), (50, 15, 35), (50, 30, 50), (50, 40, 50), (10, 0, 0)):
+                with self.subTest(target_side=target_side, health=health, defense=defense):
+                    simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"])
+                    target = simulation.fighters[target_side]
+                    source = simulation.fighters[1 - target_side]
+                    target.data.update(defense=defense, health=health, max_health=100)
+                    simulation.projectiles = [combat.Projectile(
+                        source, target.x - 5, target.y, 300, 0, 30, 1)]
+                    simulation.advance(combat.FIXED_STEP)
+                    self.assertEqual(target.data["health"], expected_health)
+
+    def test_defense_blocks_each_simultaneous_hit_separately(self):
         simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"])
         source, target = simulation.fighters
-        target.data.update(defense=15, health=50, max_health=100)
-        expected = dict(target.data)
-        combat_processor.apply_group_damage(30, [expected])
-        simulation.projectiles = [combat.Projectile(source, target.x - 5, target.y, 300, 0, 30, 1)]
+        target.data.update(defense=20, health=100, max_health=100)
+        simulation.projectiles = [combat.Projectile(
+            source, target.x - 5, target.y, 300, 0, 30, 1) for _ in range(2)]
         simulation.advance(combat.FIXED_STEP)
-        self.assertEqual(target.data["health"], math.floor(expected["health"]))
+        self.assertEqual(target.data["health"], 80)
 
     def test_simultaneous_destruction_is_a_loss_and_finished_battle_stays_finished(self):
         simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"])
@@ -431,12 +443,12 @@ class CustomBattleScreenTests(unittest.TestCase):
                     self.screen.draw(self.surface)
                 for now, expected in (
                         (1199, ["open_music"]),
-                        (1200, ["open_music", "cancel_orders"]),
-                        (1200, ["open_music", "cancel_orders"]),
-                        (1499, ["open_music", "cancel_orders"]),
-                        (1500, ["open_music", "cancel_orders", "open_music"]),
-                        (1500, ["open_music", "cancel_orders", "open_music"]),
-                        (1899, ["open_music", "cancel_orders", "open_music"])):
+                        (1200, ["open_music", "select_unit_filter"]),
+                        (1200, ["open_music", "select_unit_filter"]),
+                        (1499, ["open_music", "select_unit_filter"]),
+                        (1500, ["open_music", "select_unit_filter", "open_music"]),
+                        (1500, ["open_music", "select_unit_filter", "open_music"]),
+                        (1899, ["open_music", "select_unit_filter", "open_music"])):
                     with self.subTest(now=now), patch("pygame.time.get_ticks", return_value=now):
                         self.screen.update()
                         self.screen.draw(self.surface)
@@ -485,7 +497,7 @@ class CustomBattleScreenTests(unittest.TestCase):
                 self.screen.update()
             self.assertIsNone(self.screen.preview_intro_stage)
             self.assertEqual([call.args[0] for call in sound.call_args_list],
-                             ["open_music", "open_music", "cancel_orders", "open_music"])
+                             ["open_music", "open_music", "select_unit_filter", "open_music"])
             self.assertTrue(self.screen.simulation.paused)
 
     def test_preview_freezes_deployment_and_only_preview_can_start_combat(self):
@@ -502,7 +514,8 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.screen.handle_events([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_w),
                                    pygame.event.Event(pygame.KEYDOWN, key=pygame.K_SPACE)])
         with patch.object(simulation, "advance", side_effect=AssertionError("preview executed combat")), \
-                patch.object(self.screen, "_draw_battle", side_effect=AssertionError("preview opened battlefield")):
+                patch.object(self.screen, "_draw_battle", side_effect=AssertionError("preview opened battlefield")), \
+                patch("ui.rendering.symbol_loader.get_symbol", side_effect=AssertionError("uncached unit art")):
             self.screen.update()
             self.screen.draw(self.surface)
         self.assertEqual(simulation.elapsed, 0)

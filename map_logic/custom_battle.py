@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 
 import data.constants as c
 from data import queries
-from map_logic.system32 import combat_processor, combat_rules
+from map_logic.system32 import combat_rules
 
 
 # These values translate campaign statistics into a small real-time arena.
@@ -243,13 +243,10 @@ class BattleSimulation:
                 if shot.remaining > 0:
                     remaining.append(shot)
         self.projectiles = remaining
-        # Defense is evaluated before any impacts from this tick change health.
-        damage = []
         for shot, target in hits:
-            before = dict(target.data)
-            combat_processor.apply_group_damage(shot.attack, [before])
-            damage.append((target, target.data["health"] - before["health"]))
-        for target, loss in damage:
+            # Tactical defense blocks a flat amount per hit, even when wounded.
+            # Campaign combat instead scales defense with remaining health.
+            loss = max(0.0, shot.attack - target.data["defense"])
             # Whole health points keep equal, weakening armies from approaching
             # zero forever when the shared health-scaled attack has no floor.
             target.data["health"] = max(0.0, target.data["health"] - math.ceil(loss))

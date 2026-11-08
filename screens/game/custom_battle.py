@@ -10,6 +10,7 @@ from data.io import starting_defaults
 from map_logic import custom_battle as combat
 from ui.dialogs import pickers
 from ui.navigation.screen import Screen
+from ui.rendering import symbol_loader
 from ui.rendering.font_manager import fonts
 from ui.widgets import ui_elements
 from ui.widgets.text_utils import fit_text, wrap_text
@@ -22,6 +23,9 @@ PANEL_HEIGHT = 220
 PANEL_TOPS = (365, 120)  # Friendly and enemy rosters retain their separate areas.
 CARD_SIZE = (158, 132)
 CARD_GAP = 12
+PREVIEW_CARD_ICON_SIZE = (44, 36)
+PREVIEW_CARD_STATS_TOP = 96
+PREVIEW_CARD_STAT_ICON_SIZE = 14
 ROSTER_INSET = 20
 ROSTER_WIDTH = 900
 ROSTER_TOP = 56
@@ -529,21 +533,36 @@ class CustomBattleScreen(Screen):
                                          gradient_strength=PREVIEW_BAR_GRADIENT_STRENGTH)
 
     def _cache_card(self, side, name):
-        key = (side, name)
+        key = (self.mode, side, name)
         if key not in self.card_surfaces:
             card = pygame.Surface(CARD_SIZE)
             ui_elements.draw_pixel_panel(card, card.get_rect(), (46, 51, 65), (15, 19, 27))
-            draw_unit_shape(card, combat.unit_shape(name, self.library), (CARD_SIZE[0] // 2, 28),
-                            0 if side == 0 else math.pi, TEAM_COLORS[side], scale=1.4)
-            font = fonts.get("small")
+            preview = self.mode == "preview"
+            if preview:
+                icon = symbol_loader.get_symbol(name, zoom=1, color=TEAM_COLORS[side],
+                                                fit_size=PREVIEW_CARD_ICON_SIZE)
+                if icon is not None:
+                    card.blit(icon, icon.get_rect(center=(CARD_SIZE[0] // 2, 28)))
+            else:
+                draw_unit_shape(card, combat.unit_shape(name, self.library), (CARD_SIZE[0] // 2, 28),
+                                0 if side == 0 else math.pi, TEAM_COLORS[side], scale=1.4)
+            font = fonts.get("tiny" if preview else "small")
             label = queries.get_unit_display_name(name, self.library)
+            line_height = font.get_height() if preview else 18
             for line_number, line in enumerate(wrap_text(label, font, CARD_SIZE[0] - 16)[:3]):
                 text = font.render(fit_text(line, font, CARD_SIZE[0] - 16), True, c.UI_TEXT_BRIGHT)
-                card.blit(text, text.get_rect(midtop=(CARD_SIZE[0] // 2, 52 + line_number * 18)))
+                card.blit(text, text.get_rect(midtop=(CARD_SIZE[0] // 2, 52 + line_number * line_height)))
             stats = self.library[name]
-            caption = fit_text(f"HP {stats['health']:g}  ATK {stats['attack']:g}", font, CARD_SIZE[0] - 12)
-            text = font.render(caption, True, c.UI_TEXT_LIGHT)
-            card.blit(text, text.get_rect(midbottom=(CARD_SIZE[0] // 2, CARD_SIZE[1] - 8)))
+            if preview:
+                entries = [(icon, queries.format_number(stats[field])) for icon, field in (
+                    (c.ICON_HEALTH, "health"), (c.ICON_ATTACK, "attack"), (c.ICON_DEFENSE, "defense"))]
+                ui_elements.draw_wrapped_icon_row(
+                    card, font, entries, 6, PREVIEW_CARD_STATS_TOP, c.UI_TEXT_LIGHT,
+                    CARD_SIZE[0] - 12, icon_size=PREVIEW_CARD_STAT_ICON_SIZE)
+            else:
+                caption = fit_text(f"HP {stats['health']:g}  ATK {stats['attack']:g}", font, CARD_SIZE[0] - 12)
+                text = font.render(caption, True, c.UI_TEXT_LIGHT)
+                card.blit(text, text.get_rect(midbottom=(CARD_SIZE[0] // 2, CARD_SIZE[1] - 8)))
             self.card_surfaces[key] = card
         return self.card_surfaces[key]
 
@@ -560,7 +579,7 @@ class CustomBattleScreen(Screen):
                     continue
                 if self.drag is not None and self.drag[0] == side and self.drag[1] == index and self.drag[3]:
                     continue
-                surface.blit(self.card_surfaces[(side, name)], rect)
+                surface.blit(self.card_surfaces[(self.mode, side, name)], rect)
                 if self.selected[side] == index:
                     pygame.draw.rect(surface, TEAM_COLORS[side], rect, 2)
                 if side == 0 and self.controlled_index == index:
@@ -570,7 +589,7 @@ class CustomBattleScreen(Screen):
                                      ROSTER_WIDTH, width=SCROLLBAR_HEIGHT, **self._scroll_options(side))
         if self.drag is not None and self.drag[3]:
             side, index, origin, active = self.drag
-            card = self.card_surfaces[(side, self.rosters[side][index])]
+            card = self.card_surfaces[(self.mode, side, self.rosters[side][index])]
             rect = card.get_rect(center=pygame.mouse.get_pos())
             surface.blit(card, rect)
             if side == 0 and self.controlled_index == index:
