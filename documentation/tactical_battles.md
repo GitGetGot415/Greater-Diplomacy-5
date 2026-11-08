@@ -113,6 +113,8 @@ In a custom battle, **Retreat** returns to editing while preserving the army set
 ### Actual: Actual Battle
 
 Actual battle is the fighting on the grass battlefield.
+The two armies deploy facing each other around the middle of the battlefield, their front ranks a fixed distance apart
+(`SPAWN_FRONT_GAP` in [map_logic/custom_battle.py](../map_logic/custom_battle.py)) whatever their size.
 Tanks and vehicles use rectangles, artillery uses thin rectangles, infantry and militia use circles, and cavalry uses ovals.
 Health bars show remaining strength, with the unit's nationality flag beside each bar, and projectiles show shots in flight.
 

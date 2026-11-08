@@ -30,7 +30,9 @@ TARGET_CELL = 256.0
 SPAWN_ROWS = 8
 DIVISION_GAP = 120.0  # Between division centers at deployment.
 SUBUNIT_GAP = 26.0  # Between the sub-units of one division.
-SPAWN_MARGIN = 70.0
+# Distance between the two armies' front ranks at deployment, centered on the battlefield.
+# A full army of 64 divisions still fits behind its front rank.
+SPAWN_FRONT_GAP = 2000.0
 RANDOM_ARMY_MIN_UNITS = 3
 RANDOM_ARMY_MAX_UNITS = 5
 RANDOM_UNIT_AGE_LIMIT = 5
@@ -376,10 +378,13 @@ class BattleSimulation:
                    for entry in roster):
                 raise ValueError("Custom battles accept only current land-unit identifiers.")
             rows = min(SPAWN_ROWS, len(roster))
+            # The last column of divisions forms the front rank; earlier columns stand behind it.
+            columns = math.ceil(len(roster) / rows)
+            front = (c.CUSTOM_BATTLE_ARENA_SIZE[0] - SPAWN_FRONT_GAP) / 2
             for index, entry in enumerate(roster):
                 name = entry["type"] if isinstance(entry, dict) else entry
                 column, row = divmod(index, rows)
-                x = SPAWN_MARGIN + column * DIVISION_GAP
+                x = front - (columns - 1 - column) * DIVISION_GAP
                 if side:
                     x = c.CUSTOM_BATTLE_ARENA_SIZE[0] - x
                 y = c.CUSTOM_BATTLE_ARENA_SIZE[1] / 2 + (row - (rows - 1) / 2) * DIVISION_GAP

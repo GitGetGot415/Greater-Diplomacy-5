@@ -325,6 +325,7 @@ class BattleSimulationTests(unittest.TestCase):
 
     def test_gun_turns_toward_the_pointer_at_its_own_speed_inside_the_firing_cone(self):
         simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"], controlled_index=0)
+        hold_still(simulation)  # The enemy must not close in and destroy the player during the test.
         player = simulation.controlled
         cone, gun_degrees = combat.AIM[player.shape]
         self.assertIsNotNone(cone)
@@ -419,6 +420,18 @@ class BattleSimulationTests(unittest.TestCase):
                     self.assertEqual(fighter.division, 0)
                 self.assertAlmostEqual(simulation.division_health_fraction(0), percent / 100)
                 self.assertEqual(len(simulation.fighters), count + len(simulation.divisions[1]))
+
+    def test_armies_deploy_the_same_gap_apart_whatever_their_size(self):
+        width, height = c.CUSTOM_BATTLE_ARENA_SIZE
+        for size in (1, 5, c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE):
+            with self.subTest(size=size):
+                simulation = combat.BattleSimulation(self.library, ["Fixture I"] * size, ["Fixture I"] * size)
+                friendly_front = max(f.x for f in simulation.fighters if f.side == 0)
+                enemy_front = min(f.x for f in simulation.fighters if f.side == 1)
+                self.assertAlmostEqual(enemy_front - friendly_front, combat.SPAWN_FRONT_GAP)
+                self.assertTrue(all(combat.UNIT_RADIUS <= f.x <= width - combat.UNIT_RADIUS
+                                    and combat.UNIT_RADIUS <= f.y <= height - combat.UNIT_RADIUS
+                                    for f in simulation.fighters))
 
     def test_sub_units_of_one_division_deploy_without_overlapping(self):
         with patch.dict(combat.SUBUNIT_COUNTS, {"infantry": 10}):
