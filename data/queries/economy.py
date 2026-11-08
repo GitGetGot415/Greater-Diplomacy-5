@@ -660,20 +660,18 @@ def get_resource_hud_strings(context, include_net=False, target_nation=None):
     """Generates unified resource tracking strings and colors for all UI HUDs."""
     world_state = world_for(context)
     session_state = session_for(context)
-    is_tactical = session_state.tactical_mode and session_state.player_unit
 
     if target_nation is None:
         target_nation = session_state.player_country
-        
-    if is_tactical and target_nation == session_state.player_country:
-        manpower = int(context.player_manpower)
-        materials = int(context.player_materials)
-        fuel = int(context.player_fuel)
-    else:
-        n_data = world_state.nation_data.get(target_nation, {})
-        manpower = int(n_data.get("manpower", 0))
-        materials = int(n_data.get("materials", 0))
-        fuel = int(n_data.get("fuel", 0))
+
+    # A tactical division manages no resources, so its host country's stockpile is not shown.
+    if session_state.tactical_mode and session_state.player_unit and target_nation == session_state.player_country:
+        return []
+
+    n_data = world_state.nation_data.get(target_nation, {})
+    manpower = int(n_data.get("manpower", 0))
+    materials = int(n_data.get("materials", 0))
+    fuel = int(n_data.get("fuel", 0))
 
     res_order = [
         ("manpower", "Manpower", c.COLOR_RESOURCE_MANPOWER, manpower),
@@ -685,22 +683,14 @@ def get_resource_hud_strings(context, include_net=False, target_nation=None):
     total_upkeep = {r: 0 for r in c.ECON_RESOURCE_KEYS}
 
     if include_net:
-        if is_tactical and target_nation == session_state.player_country:
-            u_type = session_state.player_unit.get("original_type", session_state.player_unit.get("type"))
-            stats = queries.get_unit_library(context).get(u_type, {})
-            total_inc = get_unit_upkeep(stats)
-            morale = session_state.player_unit.get("morale", c.DEFAULT_UNIT_MORALE)
-            desertion_cost = total_inc.get("manpower", 0) * ((100.0 - float(morale)) / 100.0)
-            total_upkeep["manpower"] = desertion_cost
-        else:
-            if not hasattr(context, 'econ_cache_time') or pygame.time.get_ticks() - context.econ_cache_time > 1000 or getattr(context, 'econ_cache_target', None) != target_nation:
-                context.econ_cache = queries.get_economy_projections(target_nation, world_state.map_data, world_state.nation_data, context=context)
-                context.econ_cache_time = pygame.time.get_ticks()
-                context.econ_cache_target = target_nation
-                
-            cached = context.econ_cache
-            if cached and len(cached) == 3:
-                total_inc, total_upkeep, _ = cached
+        if not hasattr(context, 'econ_cache_time') or pygame.time.get_ticks() - context.econ_cache_time > 1000 or getattr(context, 'econ_cache_target', None) != target_nation:
+            context.econ_cache = queries.get_economy_projections(target_nation, world_state.map_data, world_state.nation_data, context=context)
+            context.econ_cache_time = pygame.time.get_ticks()
+            context.econ_cache_target = target_nation
+
+        cached = context.econ_cache
+        if cached and len(cached) == 3:
+            total_inc, total_upkeep, _ = cached
 
     def fmt_net(inc, exp):
         net = int(inc - exp)
@@ -709,18 +699,7 @@ def get_resource_hud_strings(context, include_net=False, target_nation=None):
     hud_strings = []
     for res_key, name, color, p_val in res_order:
         net_str = fmt_net(total_inc.get(res_key, 0), total_upkeep.get(res_key, 0)) if include_net else ""
-
-        if is_tactical and target_nation == session_state.player_country:
-            if res_key == "manpower":
-                max_val = c.TACTICAL_MAX_MANPOWER
-            elif res_key == "materials":
-                max_val = c.TACTICAL_MAX_MATERIALS
-            else:
-                max_val = c.TACTICAL_MAX_FUEL
-
-            hud_strings.append((f"{name}: {format_number(p_val)}/{format_number(int(max_val))}{net_str}", color))
-        else:
-            hud_strings.append((f"{name}: {format_number(p_val)}{net_str}", color))
+        hud_strings.append((f"{name}: {format_number(p_val)}{net_str}", color))
             
     return hud_strings
 

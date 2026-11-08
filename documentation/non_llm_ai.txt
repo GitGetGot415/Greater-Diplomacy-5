@@ -355,7 +355,6 @@ A country cannot avoid combat by holding every unit in reserve.
 Movement clears both lane orders.
 
 Reserves neither fire nor take ordinary lane damage.
-They recover morale while front units fight.
 Manage Battle combines each side's front-line units and reserves, including allies,
 in one roster, ordered as front-line units, available reserves, then held units.
 Unit cards show only the unit icon, attack, HP, and defense. Cards have no hover

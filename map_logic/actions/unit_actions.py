@@ -24,13 +24,6 @@ def order_refund(unit):
     return dict(order.get("refund", {})) if isinstance(order, dict) else {}
 
 
-def payment_account(context, country_id, unit, *, authority="player"):
-    session = session_for(context)
-    if authority == "player" and session.tactical_mode and unit is session.player_unit:
-        return session.unit_economy
-    return world_for(context).nation_data[country_id]
-
-
 def unit_permission(context, country_id, unit, *, authority="player"):
     if unit.get("owner") != country_id:
         return False
@@ -128,8 +121,7 @@ def apply_action(context, country_id, province, unit, order, *, authority="playe
     if not any(current is unit for current in province.get("units", [])):
         raise ValueError("The unit is no longer in that province.")
     result = prepare_action(context, country_id, province, unit, order)
-    account = (payment_account(context, country_id, unit, authority=authority)
-               if result.cost or result.refund else {})
+    account = world_for(context).nation_data[country_id] if result.cost or result.refund else {}
     available = dict(account)
     queries.refund_resources(available, result.refund)
     if not payment_settled and not queries.can_afford(available, result.cost):
@@ -160,7 +152,7 @@ def apply_batch(context, country_id, choices, *, authority="player"):
         prepared.append((unit, prepare_action(context, country_id, province, unit, order)))
     if not prepared:
         return []
-    account = payment_account(context, country_id, prepared[0][0], authority=authority)
+    account = world_for(context).nation_data[country_id]
     cost = {key: sum(result.cost.get(key, 0) for _, result in prepared) for key in COST_KEYS}
     refund = {key: sum(result.refund.get(key, 0) for _, result in prepared) for key in COST_KEYS}
     available = dict(account)
@@ -180,7 +172,9 @@ def apply_batch(context, country_id, choices, *, authority="player"):
 
 def repair_costs(context, unit, unit_library=None):
     world = world_for(context)
-    if queries.get_scenario_flag("free_repairs", c.DEFAULT_FREE_REPAIRS, world.scenario_settings):
+    # The tactical division's repairs are free, and its host country does not pay for them.
+    if (queries.get_scenario_flag("free_repairs", c.DEFAULT_FREE_REPAIRS, world.scenario_settings)
+            or queries.is_tactical_player_unit(context, unit)):
         return dict.fromkeys(COST_KEYS, 0)
     library = queries.get_unit_library(context) if unit_library is None else unit_library
     stats = library.get(unit.get("original_type", unit.get("type", "")), {})

@@ -1990,7 +1990,7 @@ def _rotate_damaged_units(context, ai_name, active_battles):
     """Pulls shot-up units out of the front rank when a fresh one can take the slot.
 
     The only thing the lane model asks of a commander that movement cannot
-    express. A reserve takes no damage and recovers morale, so a unit down to a
+    express. A reserve takes no damage, so a unit down to a
     fraction of its health is worth more waiting than standing -- but only if
     somebody healthier is behind it, since an empty slot is worse than a hurt one
     and an uncovered lane dissolves entirely.

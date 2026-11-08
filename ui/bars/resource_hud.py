@@ -44,6 +44,8 @@ def draw_bottom_text(map_screen, surface):
     hud_y = c.SCREEN_HEIGHT - HUD_HEIGHT_OFFSET
 
     resources = queries.get_resource_hud_strings(map_screen, include_net=True)
+    if not resources:
+        return
 
     # Draw Background Box
     bg_width = (len(resources) * HUD_SPACING) - HUD_BOX_TRIM

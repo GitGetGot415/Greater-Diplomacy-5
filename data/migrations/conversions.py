@@ -346,6 +346,8 @@ def _unit_name(name, aliases):
 def _unit(unit, aliases, path, *, player_input=False):
     """Visit only unit fields and cargo; unknown extension data keeps its meaning."""
     text_fields(unit, ("type", "original_type"), path, repair=not player_input)
+    # Morale was removed. Combat never read it, and only tactical desertion did.
+    unit.pop("morale", None)
     # Local saves retain the established identity repair. Player input cannot establish IDs.
     if player_input and unit.get("unit_id") is not None:
         text_fields(unit, ("unit_id",), path)

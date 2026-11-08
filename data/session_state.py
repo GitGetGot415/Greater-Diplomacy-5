@@ -1,7 +1,6 @@
 """Own participants, control permissions, and processing progress."""
 
 from dataclasses import dataclass, field
-import data.constants as c
 
 
 @dataclass
@@ -13,7 +12,6 @@ class SessionState:
     viewing_country: object = None
     tactical_mode: bool = False
     player_unit: object = None
-    unit_economy: dict = field(default_factory=lambda: {**{res: 0 for res in c.ECON_RESOURCE_KEYS}, "fuel_inc": 0})
     is_editor: bool = False
     editor_scenario_name: str = ""
     selection_mode: bool = False

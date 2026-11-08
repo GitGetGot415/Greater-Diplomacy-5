@@ -40,7 +40,6 @@ def make_unit(owner, path, speed=1, health=1000, attack=100, defense=50):
         "max_health": health,
         "attack": attack,
         "defense": defense,
-        "morale": 50.0,
     }
 
 

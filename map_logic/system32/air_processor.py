@@ -100,9 +100,6 @@ def process_air_orders(context):
                                                    air_combat=True)
                 for targets, attack, sources in combat_rules.exchange(battle, world_state.nation_data, with_sources=True):
                     combat_processor.apply_group_damage(attack, targets, sources=sources, tile=key[0], nation_data=world_state.nation_data)
-                for lane in battle.lanes:
-                    for unit in lane.a.front + lane.b.front:
-                        unit["_in_combat_this_turn"] = True
                 _cleanup(context)
 
         survivors = [unit for unit in force if unit.get("health", 0) > 0]
@@ -145,9 +142,6 @@ def process_air_orders(context):
                     queries.get_fort_defense_bonus(target, unit, world_state.nation_data,
                                                   combat_active=True)
                     if id(unit) in garrison_ids else 0, sources=sources, tile=target["id"], nation_data=world_state.nation_data)
-            for lane in battle.lanes:
-                for unit in lane.a.front + lane.b.front:
-                    unit["_in_combat_this_turn"] = True
 
         # Preserve fort damage even on an empty tile: each capable wing that
         # reaches the target removes one level, after the fort protects this

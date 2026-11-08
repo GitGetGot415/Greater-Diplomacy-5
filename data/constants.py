@@ -335,9 +335,8 @@ GAME_VERSION = "v47"
 VERSION_CHECK_URL = "https://raw.githubusercontent.com/GitGetGot415/Greater-Diplomacy-5/main/version.txt"
 
 # --- TACTICAL MODE CONSTANTS ---
-TACTICAL_MAX_MANPOWER = 2000
-TACTICAL_MAX_MATERIALS = 20000
-TACTICAL_MAX_FUEL = 500
+# The stockpile of a country that a tactical division founds with Declare Independence.
+TACTICAL_INDEPENDENCE_STOCKPILE = {"manpower": 1000, "materials": 1000, "fuel": 1000}
 
 TACTICAL_DEFAULT_YEAR = 1910
 
@@ -1007,7 +1006,6 @@ DEFAULT_UNIT_HP = 100
 DEFAULT_UNIT_ATK = 5
 DEFAULT_UNIT_DEF = 0
 DEFAULT_UNIT_SPD = 1
-DEFAULT_UNIT_MORALE = 100.0
 
 #: The roman numeral alphabet, largest first. Both directions of the conversion
 #: read it, so they cannot disagree about which symbols exist: data/queries/unit_info.py's
@@ -1690,7 +1688,7 @@ AI_NAVAL_UNIT_PREFERENCE = [
 AI_RESERVE_DEPTH = 2.0
 
 # Below this share of its health, a unit is worth more in reserve than in the
-# front rank -- a reserve takes no damage and recovers morale. Only ever applied
+# front rank -- a reserve takes no damage. Only ever applied
 # when a healthier unit is free to take the slot, since an empty slot dissolves
 # the lane and is worse than a hurt one holding it.
 AI_ROTATE_HEALTH_FRACTION = 0.4

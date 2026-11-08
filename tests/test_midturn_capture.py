@@ -36,7 +36,6 @@ def unit(owner, health=2450):
         "max_health": 2800,
         "attack": 1950,
         "defense": 130,
-        "morale": 82.5,
     }
 
 

@@ -41,7 +41,7 @@ def fixture():
 def unit(game, owner, pid=1, health=10, attack=6, name="Test division"):
     # Artificial stats isolate report arithmetic from content tuning.
     result = {"owner": owner, "type": "Infantry", "custom_name": name, "health": health,
-              "max_health": health, "attack": attack, "defense": 0, "morale": c.DEFAULT_UNIT_MORALE,
+              "max_health": health, "attack": attack, "defense": 0,
               "order": {"type": "MOVE", "path": []}}
     game.id_to_province[pid]["units"].append(result)
     return result
@@ -272,8 +272,7 @@ class UnitEventRulesTests(unittest.TestCase):
         garrison = wing(target, "Infantry", owner="B")
         # Artificial combat stats keep both exchanges independent of unit tuning.
         for participant in (attacker, patrol, garrison):
-            participant.update(health=10000, max_health=10000, attack=100, defense=0,
-                               morale=c.DEFAULT_UNIT_MORALE)
+            participant.update(health=10000, max_health=10000, attack=100, defense=0)
         return game, attacker, patrol, garrison, target
 
     def test_interception_and_strikes_have_distinct_details_and_survive_projection(self):

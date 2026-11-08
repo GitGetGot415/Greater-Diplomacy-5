@@ -12,8 +12,8 @@ player with no units here):
     wrong -- a nation that would rather finish off a weak neighbour than trade
     with the strong one has no other way to say so.
   - where a unit stands in the queue for the front rank. Holding a damaged unit
-    back lets a fresh one take its slot, and a reserve takes no damage and
-    recovers morale while the front bleeds. It is a preference, not a veto: a
+    back lets a fresh one take its slot, and a reserve takes no damage while
+    the front bleeds. It is a preference, not a veto: a
     held unit still fills a slot nobody else can, because an empty slot is worse
     for the side than a hurt unit standing in it. Hold four of six men and the
     other two do not inherit four idle slots -- all four are still fielded.

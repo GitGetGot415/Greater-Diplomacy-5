@@ -21,7 +21,7 @@ from map_logic.diplomacy import faction_actions
 from map_logic.diplomacy.puppet_actions import canonical_puppet_release_queue
 
 
-TOURNAMENT_UNIT_STATS = ("health", "max_health", "morale", "speed", "attack", "defense", "level")
+TOURNAMENT_UNIT_STATS = ("health", "max_health", "speed", "attack", "defense", "level")
 
 
 @dataclass

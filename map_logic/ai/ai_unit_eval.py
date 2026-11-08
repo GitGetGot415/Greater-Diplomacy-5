@@ -22,8 +22,7 @@ resolves rather than from a general notion of "good stats":
     and nothing at all as protection. Under the pot this replaced they thinned
     the volley for the whole stack, which is why AI_RESERVE_DEPTH now caps how
     many of them are worth buying.
-  - Morale is decremented but never read back in combat, and terrain never
-    affects it. Neither is scored, because neither does anything.
+  - Terrain never affects combat, so it is not scored.
 
 Cost is priced against the nation's own scarcity rather than in absolute
 numbers, which is what replaces the old `fuel_shortage` boolean: a nation with

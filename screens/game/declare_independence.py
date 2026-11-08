@@ -128,9 +128,7 @@ class Declare_Independence_Screen(MapOverlayScreen):
             "puppet_type": "",
             "faction": "",
             "is_faction_leader": False,
-            "manpower": self.map_screen.unit_economy.get("manpower", 0),
-            "materials": self.map_screen.unit_economy.get("materials", 0),
-            "fuel": self.map_screen.unit_economy.get("fuel", 0)
+            **c.TACTICAL_INDEPENDENCE_STOCKPILE,
         }
         self.map_screen.nation_data[new_tag] = new_data
         

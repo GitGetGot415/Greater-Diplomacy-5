@@ -159,7 +159,8 @@ class WidthTests(unittest.TestCase):
 
                 for side in troops:
                     self.assertAlmostEqual(damage_taken(side), 10.0 * slots)
-                    self.assertEqual(sum(bool(u.get("_in_combat_this_turn"))
+                    # Only the front rank fights, so only its units are damaged.
+                    self.assertEqual(sum(u["health"] < u["max_health"]
                                          for u in side), slots)
 
     def test_explicit_width_overrides_terrain_and_unknown_terrain_uses_default(self):

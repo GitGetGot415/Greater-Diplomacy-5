@@ -306,16 +306,6 @@ class BystanderTests(unittest.TestCase):
 
         self.assertGreater(damage_taken(troops["D"]), 0)
 
-    def test_a_neutral_does_not_lose_morale_for_a_battle_it_was_not_in(self):
-        screen, _prov, troops = five_nation_tile()
-
-        combat_processor.process_combat(screen)
-
-        # turn_processor reads this flag to dock 5 morale; without it a unit
-        # recovers 5 instead.
-        self.assertNotIn("_in_combat_this_turn", troops["E"][0])
-        self.assertTrue(troops["A"][0].get("_in_combat_this_turn"))
-
     def test_a_neutral_convoy_stays_loaded(self):
         screen = StubBattleMap()
         screen.add_nation("A", at_war_with=["B"])
@@ -370,7 +360,6 @@ class WhoIsActuallyFightingTests(unittest.TestCase):
         combat_processor.process_combat(screen)
 
         self.assertEqual(damage_taken([elsewhere]), 0)
-        self.assertNotIn("_in_combat_this_turn", elsewhere)
 
     def test_a_lopsided_war_list_resolves_the_same_whoever_stands_first(self):
         # A scenario or the editor can leave one side's war list out of step.

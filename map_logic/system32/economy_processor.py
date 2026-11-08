@@ -10,22 +10,6 @@ def process_economy(context):
     """Calculates income, applies building yields, and deducts unit upkeep."""
     world_state = world_for(context)
     session_state = session_for(context)
-    
-    # --- TACTICAL ECONOMY OVERRIDE ---
-    if session_state.tactical_mode and session_state.player_unit:
-        u_type = session_state.player_unit.get("original_type", session_state.player_unit.get("type"))
-        stats = queries.get_unit_library(context).get(u_type, {})
-        
-        upkeep = queries.get_unit_upkeep(stats)
-        
-        morale = session_state.player_unit.get("morale", c.DEFAULT_UNIT_MORALE)
-        desertion_cost = upkeep["manpower"] * ((100.0 - float(morale)) / 100.0)
-        
-        session_state.unit_economy["fuel_inc"] = upkeep["fuel"] # Stored cleanly for movement calcs
-        
-        session_state.unit_economy["manpower"] = max(0, min(session_state.unit_economy.get("manpower", 0) + upkeep["manpower"] - desertion_cost, c.TACTICAL_MAX_MANPOWER))
-        session_state.unit_economy["materials"] = min(session_state.unit_economy.get("materials", 0) + upkeep["materials"], c.TACTICAL_MAX_MATERIALS)
-        session_state.unit_economy["fuel"] = min(session_state.unit_economy.get("fuel", 0) + upkeep["fuel"], c.TACTICAL_MAX_FUEL)
 
     all_econ = queries.calculate_all_economies(world_state.map_data, world_state.nation_data, context=context)
 

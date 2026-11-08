@@ -154,8 +154,6 @@ class Economy_Screen(Screen):
         
         # Expenses button positioned in the top right corner
         btn_expenses = Button(c.SCREEN_WIDTH - EXPENSES_BTN_OFFSET_X, c.BACK_BTN_TOPLEFT[1], "small", "orange", "Expenses", self.open_expenses_table, sound_kind=None)
-        if self.map_screen.tactical_mode:
-            btn_expenses.apply_state(enabled=False)
         self.elements.append(btn_expenses)
         
         # Conversion Slider positioned below the resource rows
@@ -171,14 +169,13 @@ class Economy_Screen(Screen):
         conscript_val = p_data.get("conscription_slider", 1.0)
         p_data["conscription_slider"] = conscript_val
         
-        if not self.map_screen.tactical_mode:
-            conscription = Slider(c.SCREEN_WIDTH // 2 - SLIDER_WIDTH // 2, CONSCRIPTION_SLIDER_Y, SLIDER_WIDTH, "Conscription (Keep Manpower %)", conscript_val, self.set_conscription, visual_max=1.0, allowed_max=1.0)
-            self.conscription_slider = conscription
-            conversion = Slider(c.SCREEN_WIDTH // 2 - SLIDER_WIDTH // 2, CONVERSION_SLIDER_Y, SLIDER_WIDTH, "Convert % Mats to Fuel", slider_val, self.set_conversion, visual_max=c.MAX_CONVERSION_SLIDER_VAL, allowed_max=max_allowed)
-            for slider in (conscription, conversion):
-                slider.click_guard = self.can_edit_realtime
-                self.elements.append(slider)
-            self.refresh_economy_preview()
+        conscription = Slider(c.SCREEN_WIDTH // 2 - SLIDER_WIDTH // 2, CONSCRIPTION_SLIDER_Y, SLIDER_WIDTH, "Conscription (Keep Manpower %)", conscript_val, self.set_conscription, visual_max=1.0, allowed_max=1.0)
+        self.conscription_slider = conscription
+        conversion = Slider(c.SCREEN_WIDTH // 2 - SLIDER_WIDTH // 2, CONVERSION_SLIDER_Y, SLIDER_WIDTH, "Convert % Mats to Fuel", slider_val, self.set_conversion, visual_max=c.MAX_CONVERSION_SLIDER_VAL, allowed_max=max_allowed)
+        for slider in (conscription, conversion):
+            slider.click_guard = self.can_edit_realtime
+            self.elements.append(slider)
+        self.refresh_economy_preview()
 
     def refresh_economy_preview(self):
         """Cache income and the damage caption when economy inputs change."""
@@ -210,38 +207,15 @@ class Economy_Screen(Screen):
     def additional_draw(self, surface):
         if not self.map_screen: return
         
-        is_tactical = self.map_screen.tactical_mode
-        title_text = "Tactical Unit Economy" if is_tactical else "National Economy"
-        ui_bars.draw_centered_title(surface, title_text, TITLE_Y)
-        
-        if is_tactical and self.map_screen.player_unit:
-            u_type = self.map_screen.player_unit.get("original_type", self.map_screen.player_unit.get("type"))
-            stats = queries.get_unit_library(self.map_screen).get(u_type, {})
-            
-            total_inc = queries.get_unit_upkeep(stats)
-            
-            morale = self.map_screen.player_unit.get("morale", c.DEFAULT_UNIT_MORALE)
-            desertion_cost = total_inc.get("manpower", 0) * ((100.0 - float(morale)) / 100.0)
-            
-            upkeep = {"manpower": desertion_cost, "materials": 0, "fuel": 0} 
-            breakdown = {k: EMPTY_BREAKDOWN.copy() for k in c.ECON_RESOURCE_KEYS}
-            
-            breakdown["manpower"]["morale"] = morale
-            breakdown["manpower"]["desertion"] = desertion_cost
-            
-            max_res = {
-                "manpower": c.TACTICAL_MAX_MANPOWER,
-                "materials": c.TACTICAL_MAX_MATERIALS,
-                "fuel": c.TACTICAL_MAX_FUEL
-            }
+        ui_bars.draw_centered_title(surface, "National Economy", TITLE_Y)
+
+        econ_tuple = self.econ_cache
+        if len(econ_tuple) == 3:
+            total_inc, upkeep, breakdown = econ_tuple
         else:
-            econ_tuple = self.econ_cache
-            if len(econ_tuple) == 3:
-                total_inc, upkeep, breakdown = econ_tuple
-            else:
-                total_inc, upkeep = econ_tuple
-                breakdown = {k: EMPTY_BREAKDOWN.copy() for k in c.ECON_RESOURCE_KEYS}
-            
+            total_inc, upkeep = econ_tuple
+            breakdown = {k: EMPTY_BREAKDOWN.copy() for k in c.ECON_RESOURCE_KEYS}
+
         font_large = fonts.get("heading1")
         font_med = fonts.get("heading2")
         font_small = fonts.get("normal")
@@ -267,42 +241,30 @@ class Economy_Screen(Screen):
                                          border_width=1, gradient_strength=style["gradient_strength"])
             
             # Current Resource Amount
-            if is_tactical:
-                max_val = max_res.get(res_key, 0)
-                surface.blit(font_large.render(f"{name}: {int(current)}/{int(max_val)}", True, color), (row_rect.x + 20, row_rect.y + 15))
-            else:
-                surface.blit(font_large.render(f"{name}: {int(current)}", True, color), (row_rect.x + 20, row_rect.y + 15))
-            
-            if is_tactical:
-                main_breakdown = f"Income: +{int(inc)}   |   Upkeep: -{int(exp)}   |   Net: {net_str}"
-                detail_breakdown = "Tactical Unit Subsistence (Income is supplied directly by HQ)"
-                if res_key == "manpower":
-                    morale_val = bd.get("morale", c.DEFAULT_UNIT_MORALE)
-                    desertion_val = bd.get("desertion", 0.0)
-                    detail_breakdown += f"  |  Morale: {int(morale_val)}%  |  Desertion Cost: -{int(desertion_val)}"
-            else:
-                main_breakdown = f"Total Income: +{int(inc)}   |   Upkeep: -{int(exp)}   |   Net: {net_str}"
-                detail_breakdown = f"Details -> Base: +{int(bd.get('base',0))}  |  Core: +{int(bd.get('core',0))}  |  Non-Core: +{int(bd.get('non_core',0))}  |  Buildings: +{int(bd.get('buildings',0))}  |  Resources: +{int(bd.get('resources',0))}"
-                if bd.get('conscription', 0) != 0:
-                    cons_val = int(bd.get('conscription', 0))
-                    sign = "+" if cons_val > 0 else ""
-                    label = "Unused Equipment Income" if cons_val > 0 else "Relaxed Conscription Cost"
-                    detail_breakdown += f"  |  {label}: {sign}{cons_val}"
-                if bd.get('conversion', 0) != 0:
-                    conv_val = int(bd.get('conversion', 0))
-                    sign = "+" if conv_val > 0 else ""
-                    label = "Conversion Income" if conv_val > 0 else "Conversion Cost"
-                    detail_breakdown += f"  |  {label}: {sign}{conv_val}"
+            surface.blit(font_large.render(f"{name}: {int(current)}", True, color), (row_rect.x + 20, row_rect.y + 15))
 
-                if bd.get('policy', 0) != 0:
-                    policy_val = int(bd.get('policy', 0))
-                    sign = "+" if policy_val > 0 else ""
-                    detail_breakdown += f"  |  Policy: {sign}{policy_val}"
-                    
-                if bd.get('siphon', 0) != 0:
-                    detail_breakdown += f"  |  Siphoned to Master: {int(bd.get('siphon', 0))}"
-                if bd.get('siphon_income', 0) != 0:
-                    detail_breakdown += f"  |  Siphon Income: +{int(bd.get('siphon_income', 0))}"
+            main_breakdown = f"Total Income: +{int(inc)}   |   Upkeep: -{int(exp)}   |   Net: {net_str}"
+            detail_breakdown = f"Details -> Base: +{int(bd.get('base',0))}  |  Core: +{int(bd.get('core',0))}  |  Non-Core: +{int(bd.get('non_core',0))}  |  Buildings: +{int(bd.get('buildings',0))}  |  Resources: +{int(bd.get('resources',0))}"
+            if bd.get('conscription', 0) != 0:
+                cons_val = int(bd.get('conscription', 0))
+                sign = "+" if cons_val > 0 else ""
+                label = "Unused Equipment Income" if cons_val > 0 else "Relaxed Conscription Cost"
+                detail_breakdown += f"  |  {label}: {sign}{cons_val}"
+            if bd.get('conversion', 0) != 0:
+                conv_val = int(bd.get('conversion', 0))
+                sign = "+" if conv_val > 0 else ""
+                label = "Conversion Income" if conv_val > 0 else "Conversion Cost"
+                detail_breakdown += f"  |  {label}: {sign}{conv_val}"
+
+            if bd.get('policy', 0) != 0:
+                policy_val = int(bd.get('policy', 0))
+                sign = "+" if policy_val > 0 else ""
+                detail_breakdown += f"  |  Policy: {sign}{policy_val}"
+                
+            if bd.get('siphon', 0) != 0:
+                detail_breakdown += f"  |  Siphoned to Master: {int(bd.get('siphon', 0))}"
+            if bd.get('siphon_income', 0) != 0:
+                detail_breakdown += f"  |  Siphon Income: +{int(bd.get('siphon_income', 0))}"
 
             # Stats Breakdown (Main)
             surface.blit(font_med.render(main_breakdown, True, c.UI_TEXT_LIGHT), (row_rect.x + 350, row_rect.y + 18))
@@ -312,25 +274,24 @@ class Economy_Screen(Screen):
             
             y_offset += ROW_STEP_Y
 
-        if not is_tactical:
-            damage_txt = font_small.render(self.conscription_damage_caption, True, self.conscription_damage_color)
-            surface.blit(damage_txt, damage_txt.get_rect(midleft=(
-                self.conscription_slider.rect.right + SLIDER_SIDE_CAPTION_GAP,
-                self.conscription_slider.rect.centery)))
+        damage_txt = font_small.render(self.conscription_damage_caption, True, self.conscription_damage_color)
+        surface.blit(damage_txt, damage_txt.get_rect(midleft=(
+            self.conscription_slider.rect.right + SLIDER_SIDE_CAPTION_GAP,
+            self.conscription_slider.rect.centery)))
 
-            # Draw dynamic conversion info below sliders.
-            man_lost = -breakdown.get("manpower", {}).get("conscription", 0)
-            mat_gained = breakdown.get("materials", {}).get("conscription", 0)
-            if man_lost > 0:
-                cons_txt = font_small.render(f"Converting {int(man_lost)} Manpower -> {int(mat_gained)} Materials", True, c.COLOR_GOLD_HIGHLIGHT)
-                surface.blit(cons_txt, (c.SCREEN_WIDTH // 2 - cons_txt.get_width() // 2,
-                                       CONSCRIPTION_SLIDER_Y + SLIDER_CAPTION_OFFSET_Y))
+        # Draw dynamic conversion info below sliders.
+        man_lost = -breakdown.get("manpower", {}).get("conscription", 0)
+        mat_gained = breakdown.get("materials", {}).get("conscription", 0)
+        if man_lost > 0:
+            cons_txt = font_small.render(f"Converting {int(man_lost)} Manpower -> {int(mat_gained)} Materials", True, c.COLOR_GOLD_HIGHLIGHT)
+            surface.blit(cons_txt, (c.SCREEN_WIDTH // 2 - cons_txt.get_width() // 2,
+                                   CONSCRIPTION_SLIDER_Y + SLIDER_CAPTION_OFFSET_Y))
 
-            mat_lost = -breakdown.get("materials", {}).get("conversion", 0)
-            fuel_gained = breakdown.get("fuel", {}).get("conversion", 0)
-            if mat_lost > 0:
-                conv_txt = font_small.render(f"Converting {int(mat_lost)} Materials -> {int(fuel_gained)} Fuel", True, c.COLOR_GOLD_HIGHLIGHT)
-                surface.blit(conv_txt, (c.SCREEN_WIDTH // 2 - conv_txt.get_width() // 2, CONVERSION_SLIDER_Y + SLIDER_CAPTION_OFFSET_Y))
+        mat_lost = -breakdown.get("materials", {}).get("conversion", 0)
+        fuel_gained = breakdown.get("fuel", {}).get("conversion", 0)
+        if mat_lost > 0:
+            conv_txt = font_small.render(f"Converting {int(mat_lost)} Materials -> {int(fuel_gained)} Fuel", True, c.COLOR_GOLD_HIGHLIGHT)
+            surface.blit(conv_txt, (c.SCREEN_WIDTH // 2 - conv_txt.get_width() // 2, CONVERSION_SLIDER_Y + SLIDER_CAPTION_OFFSET_Y))
 
     def open_expenses_table(self):
         if not self.map_screen: return

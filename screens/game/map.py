@@ -1064,7 +1064,8 @@ def _update_gameplay_buttons(map_screen, is_sel, is_thinking):
 
     # --- TACTICAL MODE LOCKDOWNS ---
     if map_screen.tactical_mode:
-        for btn in (map_screen.btn_gp_faction, map_screen.btn_gp_puppets, map_screen.btn_gp_edit, map_screen.btn_gp_automation):
+        for btn in (map_screen.btn_gp_faction, map_screen.btn_gp_puppets, map_screen.btn_gp_edit,
+                    map_screen.btn_gp_econ, map_screen.btn_gp_automation):
             btn.apply_state(enabled=False)
     else:
         if bool(my_faction):
@@ -1683,7 +1684,6 @@ class Map(StateAccess, Screen):
         # --- TACTICAL MODE STATE ---
         self.tactical_mode = False
         self.player_unit = None
-        self.unit_economy = {**{res: 0 for res in c.ECON_RESOURCE_KEYS}, "fuel_inc": 0}
 
         # --- MULTI-TURN FLAGS ---
         self.multi_turn_processing_complete = False
@@ -1873,32 +1873,17 @@ class Map(StateAccess, Screen):
 
     @property
     def player_manpower(self):
-        if self.tactical_mode: return self.unit_economy.get("manpower", 0)
         return self.nation_data.get(self.player_country, {}).get("manpower", 0)
     @player_manpower.setter
     def player_manpower(self, value):
-        if self.tactical_mode: self.unit_economy["manpower"] = value
-        elif self.player_country in self.nation_data: self.nation_data[self.player_country]["manpower"] = value
+        if self.player_country in self.nation_data: self.nation_data[self.player_country]["manpower"] = value
 
     @property
     def player_materials(self):
-        if self.tactical_mode: return self.unit_economy.get("materials", 0)
         return self.nation_data.get(self.player_country, {}).get("materials", 0)
 
     @property
     def player_fuel(self):
-        if self.tactical_mode and self.player_unit:
-            base_fuel = self.unit_economy.get("fuel", 0)
-            u = self.player_unit
-            order = u.get("order")
-            path = order.get("path", []) if isinstance(order, dict) else []
-            if path:
-                fuel_inc = self.unit_economy.get("fuel_inc", 0)
-                cost_per_tile = queries.get_tactical_fuel_cost_per_tile(u, fuel_inc)
-                calc_speed = queries.get_tactical_speed(u)
-                immediate_steps = min(len(path), calc_speed)
-                return max(0, base_fuel - (cost_per_tile * immediate_steps))
-            return base_fuel
         return self.nation_data.get(self.player_country, {}).get("fuel", 0)
 
     def set_camera_tilt(self, val):
@@ -2602,12 +2587,6 @@ class Map(StateAccess, Screen):
             if segment is None:
                 self.show_feedback("No legal route exists for every selected unit.")
                 return False
-            if (self.tactical_mode and unit is self.player_unit and segment
-                    and len(old_path) < queries.get_tactical_speed(unit)):
-                fuel_inc = self.unit_economy.get("fuel_inc", 0)
-                if self.player_fuel < queries.get_tactical_fuel_cost_per_tile(unit, fuel_inc):
-                    self.show_feedback("Not enough fuel!")
-                    return False
             planned.append((unit, origin, old_path + segment))
 
         choices = [(unit, origin, path if isinstance(path, dict) else

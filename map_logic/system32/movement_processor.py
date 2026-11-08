@@ -1,7 +1,7 @@
 
 # Faction and agreement cleanup calls movement helpers. Keep those mutation imports local to avoid cycles.
 
-from data.state_access import world_for, session_for
+from data.state_access import world_for
 from collections import deque
 
 import data.constants as c
@@ -241,7 +241,6 @@ def _resolve_step_swaps(context, moving_units, step, get_eff_speed):
 
 def process_movement(context):
     world_state = world_for(context)
-    session_state = session_for(context)
     moving_units = []
     # Defense areas only reassign units that began this turn idle.  Keep this
     # evidence on the live map controller rather than unit dictionaries so it
@@ -281,13 +280,9 @@ def process_movement(context):
     if not hasattr(context, 'cached_unit_library'):
         context.cached_unit_library = queries.get_unit_library(context)
 
-    # --- NEW HELPER FOR TACTICAL SPEED ---
     def get_eff_speed(u):
-        if session_state.tactical_mode and u is session_state.player_unit:
-            return queries.get_tactical_speed(u)
         return u.get("speed", 1)
 
-    # Calculate max turns loop using the new helper
     max_speed = max(get_eff_speed(u) for u in moving_units)
 
     for step in range(max_speed):
@@ -364,18 +359,6 @@ def process_movement(context):
                 can_enter = queries.can_land_units_enter(combat_owner, target_prov, world_state.nation_data)
 
             if can_enter:
-                # --- TACTICAL MOVEMENT ECONOMY ---
-                if session_state.tactical_mode and unit is session_state.player_unit:
-                    fuel_inc = session_state.unit_economy.get("fuel_inc", 0)
-                    cost_per_tile = queries.get_tactical_fuel_cost_per_tile(unit, fuel_inc)
-
-                    if session_state.unit_economy.get("fuel", 0) >= cost_per_tile:
-                        session_state.unit_economy["fuel"] -= cost_per_tile
-                    else:
-                        unit["_skip_remaining_steps"] = True
-                        continue
-                # ---------------------------------
-
                 unit["_previous_province_id"] = unit["_current_province_id"]
                 unit["_current_province_id"] = target_id
                 order["path"].pop(0)

@@ -182,6 +182,22 @@ class SharedActionTests(unittest.TestCase):
         unit_actions.cancel_action(context, "A", province, unit)
         self.assertEqual(context.nation_data["A"], before)
 
+    def test_tactical_division_repairs_cost_nothing_for_any_country(self):
+        context = game()
+        province = context.map_data[1]
+        unit = province["units"][0]
+        self.assertGreater(unit_actions.repair_costs(context, unit)["cost_materials"], 0)
+        context.tactical_mode = True
+        context.player_unit = unit
+        before = copy.deepcopy(context.nation_data)
+        result = unit_actions.prepare_action(context, "A", province, unit, {"type": "REPAIR"})
+        self.assertEqual(set(result.cost.values()), {0})
+        unit_actions.apply_action(context, "A", province, unit, {"type": "REPAIR"})
+        self.assertEqual(unit["order"]["type"], "REPAIR")
+        self.assertEqual(context.nation_data, before)
+        unit_actions.cancel_action(context, "A", province, unit)
+        self.assertEqual(context.nation_data, before)
+
     def test_local_tournament_and_realtime_apply_the_same_choices(self):
         local, realtime, tournament = game(), game(), game()
         province = local.map_data[1]

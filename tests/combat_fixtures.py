@@ -63,7 +63,6 @@ def unit(owner, attack=100, health=100000, defense=0, path=(), kind="Infantry", 
         "max_health": health,
         "attack": attack,
         "defense": defense,
-        "morale": 50.0,
     }
 
 

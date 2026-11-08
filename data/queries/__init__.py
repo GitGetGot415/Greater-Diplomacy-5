@@ -19,7 +19,7 @@ The submodules are layered. A module imports only from modules earlier in this l
     tech            Technology and research queries, unit unlock lookups, and research-edit previews.
     economy         Resources, costs, production output, administrative actions, and economy projections.
     forts           Fort levels, fort defense bonuses, and fort damage.
-    movement        Unit move steps, path-finding, tactical speed and fuel, and air move orders.
+    movement        Unit move steps, path-finding, and air move orders.
     strength        Military and economic strength, attacker ranking, and combat predictions.
     armies          Army groups, army symbols, defense-area orders, unit creation, and air-drop recovery.
     relations       Relation scores, temporary modifiers, reachability, and the AI checks for war and peace.

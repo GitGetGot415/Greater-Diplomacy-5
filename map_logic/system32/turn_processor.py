@@ -269,15 +269,6 @@ async def _resolve_turn_logic(context): # Renamed from resolve_turn
         print(f"[SYSTEM] Queued {queued_target_returns} army target-area return order(s).")
     await asyncio.sleep(0)
 
-    # Process Morale updates
-    for prov in world_state.map_data.values():
-        for u in prov.get("units", []):
-            if u.get("_in_combat_this_turn"):
-                u["morale"] = max(0.0, float(u.get("morale", c.DEFAULT_UNIT_MORALE)) - 5.0)
-                u.pop("_in_combat_this_turn", None)
-            else:
-                u["morale"] = min(100.0, float(u.get("morale", c.DEFAULT_UNIT_MORALE)) + 5.0)
-
     print("[SYSTEM] Calculating Economy...")
     economy_processor.process_economy(context)
     await asyncio.sleep(0)

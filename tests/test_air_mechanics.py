@@ -263,8 +263,7 @@ class AirResolutionTests(unittest.TestCase):
     def combat_fixture(self, base, name, owner, attack=80, health=1000, defense=0, order=None):
         # Artificial combat stats isolate resolution from content tuning.
         unit = wing(base, name, owner, order)
-        unit.update(attack=attack, health=health, max_health=health, defense=defense,
-                    morale=c.DEFAULT_UNIT_MORALE)
+        unit.update(attack=attack, health=health, max_health=health, defense=defense)
         return unit
 
     def test_bomber_patrol_intercepts_and_remains_at_its_base(self):
@@ -327,8 +326,6 @@ class AirResolutionTests(unittest.TestCase):
         air_processor.process_air_orders(self.game)
         for unit in (aircraft, defender):
             self.assertAlmostEqual(before[id(unit)] - unit["health"], expected[id(unit)])
-            self.assertLess(unit["morale"], c.DEFAULT_UNIT_MORALE)
-            self.assertTrue(unit["_in_combat_this_turn"])
         self.assertGreater(expected[id(aircraft)], 0)
         self.assertGreater(expected[id(defender)], 0)
         self.assertTrue(queries.is_air_unit(aircraft))
@@ -376,7 +373,6 @@ class AirResolutionTests(unittest.TestCase):
         air_processor.process_air_orders(self.game)
         for units, count in ((attackers, len(attackers)), (defenders, slots)):
             self.assertEqual(sum(u["health"] < u["max_health"] for u in units), count)
-            self.assertEqual(sum(bool(u.get("_in_combat_this_turn")) for u in units), count)
         self.assertTrue(all(queries.is_air_unit(u) for u in attackers))
 
     def test_strike_obeys_multiparty_lanes_and_leaves_bystanders_alone(self):
@@ -394,7 +390,6 @@ class AirResolutionTests(unittest.TestCase):
         for unit in [aircraft] + defenders:
             self.assertAlmostEqual(unit["max_health"] - unit["health"], expected[id(unit)])
         self.assertEqual(neutral["health"], neutral["max_health"])
-        self.assertNotIn("_in_combat_this_turn", neutral)
 
     def test_fort_protects_garrison_only_and_is_damaged_after_exchange(self):
         self.target["buildings"] = ["Fort Lvl 5"]
@@ -478,10 +473,13 @@ class AirResolutionTests(unittest.TestCase):
                 weapon = self.combat_fixture(self.base, name, "A",
                     order={"type": "AIR_ATTACK", "target_id": 2})
                 defender = self.combat_fixture(self.target, "Infantry Type 1910", "B")
-                air_processor.process_air_orders(self.game)
-                # Consumption clears health, but morale still records damage
-                # from the defender. V2 immunity applies only to interception.
-                self.assertLess(weapon["morale"], c.DEFAULT_UNIT_MORALE)
+                with patch.object(queries, "apply_unit_health_loss",
+                                  wraps=queries.apply_unit_health_loss) as health_loss:
+                    air_processor.process_air_orders(self.game)
+                # Consumption clears health, so the health-loss call records the
+                # defender's return fire. V2 immunity applies only to interception.
+                self.assertTrue(any(call.args[0] is weapon and call.args[1] > 0
+                                    for call in health_loss.call_args_list))
                 self.assertLess(defender["health"], defender["max_health"])
                 self.assertNotIn(weapon, self.base["units"])
 
@@ -573,7 +571,6 @@ class AirResolutionTests(unittest.TestCase):
                     incoming = sum(enemy["attack"] for enemy in enemies) * queries.air_stack_attack_efficiency(len(enemies))
                     for unit in units:
                         self.assertAlmostEqual(unit["max_health"] - unit["health"], incoming / len(units))
-                        self.assertTrue(unit["_in_combat_this_turn"])
 
     def test_large_strike_scales_attack_before_defense_without_changing_saved_stats(self):
         count = c.COMBAT_WIDTH * 2
@@ -614,7 +611,6 @@ class AirResolutionTests(unittest.TestCase):
         expected = sum(unit["attack"] for unit in attackers) * queries.air_stack_attack_efficiency(len(attackers))
         self.assertAlmostEqual(defender["max_health"] - defender["health"], expected)
         self.assertEqual(neutral["health"], neutral["max_health"])
-        self.assertFalse(neutral.get("_in_combat_this_turn"))
 
     def test_hostile_stacks_have_separate_efficiency_and_split_attack_across_lanes(self):
         units = {owner: [self.combat_fixture(self.base, "Monoplane Bomber I", owner, health=100000)
@@ -841,7 +837,6 @@ class AirIntegrationTests(unittest.TestCase):
                 expected = sum(unit["attack"] for unit in aircraft) * queries.air_stack_attack_efficiency(len(aircraft))
                 air_processor.process_air_orders(self.game)
                 self.assertAlmostEqual(defender["max_health"] - defender["health"], expected)
-                self.assertTrue(all(unit["_in_combat_this_turn"] for unit in aircraft))
 
     def test_listed_strike_boundary_agrees_in_ai_networks_and_resolution(self):
         radius = queries.air_unit_stats(self.plane)["air_range_px"]
@@ -2305,7 +2300,6 @@ class AirAppSmokeTests(unittest.TestCase):
             recovered = next(u for u in loaded.id_to_province[1]["units"]
                              if u["unit_id"] == aircraft["unit_id"])
             self.assertEqual(recovered["health"], aircraft["health"])
-            self.assertEqual(recovered["morale"], aircraft["morale"])
             self.assertEqual(recovered["order"], aircraft["order"])
             self.assertTrue(queries.is_air_unit(recovered))
 

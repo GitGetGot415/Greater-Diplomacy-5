@@ -30,7 +30,6 @@ def create_unit_dict(unit_type, owner, unit_library):
         "owner": owner,
         "health": combat["max_health"],
         "max_health": combat["max_health"],
-        "morale": stats.get("morale", c.DEFAULT_UNIT_MORALE),
         "speed": combat["speed"],
         "attack": combat["attack"],
         "defense": combat["defense"],

@@ -25,7 +25,7 @@ from ui.widgets.ui_elements import Slider
 def fixture_unit(owner):
     return {"owner": owner, "type": "Conscription fixture", "health": 1000,
             "max_health": 1000, "attack": 80, "bombard_attack": 60,
-            "defense": 0, "morale": 50, "speed": 1, "order": {"type": "IDLE"}}
+            "defense": 0, "speed": 1, "order": {"type": "IDLE"}}
 
 
 class ConscriptionCurveTests(unittest.TestCase):
@@ -205,7 +205,6 @@ class ConscriptionSliderTests(unittest.TestCase):
         before = dict(game.nation_data["A"])
         screen.set_conscription(0.0)
         self.assertEqual(game.nation_data["A"], before)
-        self.assertFalse(any(isinstance(element, Slider) for element in screen.elements))
 
     def test_submitted_realtime_players_cannot_start_a_drag_or_change_setting(self):
         screen, game = self.screen()

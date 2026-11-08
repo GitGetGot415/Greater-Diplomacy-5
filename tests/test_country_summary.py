@@ -20,7 +20,7 @@ from ui.bars import flag_renderer
 
 def unit(owner, attack=80, kind="Summary fixture"):
     return {"owner": owner, "type": kind, "attack": attack, "defense": 0,
-            "health": 500, "max_health": 1000, "speed": 1, "morale": 50}
+            "health": 500, "max_health": 1000, "speed": 1}
 
 
 def world():

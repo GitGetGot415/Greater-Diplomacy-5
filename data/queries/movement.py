@@ -1,8 +1,6 @@
-"""Unit move steps, path-finding, tactical speed and fuel, and air move orders."""
+"""Unit move steps, path-finding, and air move orders."""
 
 import collections
-import data.constants as c
-import math
 from data.state_access import world_for
 from data.queries.geometry import is_water_province
 from data.queries.unit_info import (
@@ -97,17 +95,6 @@ def find_unit_move_path(unit, start_province, destination_id, id_to_province, na
                 return list(reversed(path))
             frontier.append(neighbor_id)
     return None
-
-
-def get_tactical_speed(unit):
-    """Calculates the effective speed of a unit in tactical mode."""
-    return unit.get("speed", c.DEFAULT_UNIT_SPD)
-
-
-def get_tactical_fuel_cost_per_tile(unit, fuel_inc):
-    """Calculates the fuel cost per tile moved in tactical mode."""
-    calc_speed = get_tactical_speed(unit)
-    return math.ceil(fuel_inc / (calc_speed * 0.75)) if calc_speed > 0 else 0
 
 
 def air_move_order(context, unit, base, destination, mission=None):

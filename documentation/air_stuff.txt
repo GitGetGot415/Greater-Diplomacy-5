@@ -397,7 +397,7 @@ Read the effect in map_logic/system32/air_processor.py.
 This also applies to empty tiles.
 Research unlock details show the capability.
 
-Surviving reusable aircraft stay at their exact base with health and morale losses retained.
+Surviving reusable aircraft stay at their exact base with health losses retained.
 Remove destroyed aircraft.
 
 A barrage or ranged strike against based aircraft uses shared target damage modifiers.

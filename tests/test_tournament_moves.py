@@ -314,7 +314,7 @@ class TournamentMoveTests(unittest.TestCase):
     def stat_move(self, host):
         unit = {"unit_id": "test-unit", "owner": "Leader", "type": "Test ground unit",
                 "health": 12, "max_health": 20, "attack": 4, "defense": 3,
-                "speed": 2, "morale": 1, "level": 0}
+                "speed": 2, "level": 0}
         host.map_data = {"home": {"id": 1, "json_key": "P1", "owner": "Leader", "units": [unit]}}
         move = self.player_data("Leader", host, unit_snapshot=True,
                                 provinces={"P1": {"units": [copy.deepcopy(unit)]}})
@@ -467,7 +467,7 @@ class TournamentMoveTests(unittest.TestCase):
         # The host's load already applied the library. Health keeps its fraction.
         current = {"unit_id": "soldier", "owner": "Leader", "type": "Fixture soldier",
                    "health": 15, "max_health": 30, "attack": 5, "defense": 4, "speed": 2,
-                   "naval_unit": False, "morale": 1, "level": 0}
+                   "naval_unit": False, "level": 0}
         host.map_data = {"home": {"id": 1, "json_key": "P1", "owner": "Leader", "units": [current]}}
         older = dict(current, health=10, max_health=20, attack=9, defense=8, speed=1)
         move = self.v46_move("Leader", host, unit_snapshot=True, provinces={"P1": {"units": [older]}})

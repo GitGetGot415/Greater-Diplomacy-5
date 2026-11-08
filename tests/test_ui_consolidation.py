@@ -191,6 +191,27 @@ class DeclareIndependenceFieldTests(SharedUiTestCase):
         screen.handle_back_key()
         self.assertTrue(screen.done)
 
+    def test_new_country_starts_with_the_independence_stockpile(self):
+        import data.constants as c
+        from screens.game import declare_independence
+
+        screen = self.screen()
+        game = screen.map_screen
+        game.realtime_multiplayer = game.multiplayer_mode = False
+        game.nation_data["Alpha"] = {"manpower": 7, "materials": 7, "fuel": 7, "research": {}}
+        game.player_unit = {"type": "Fixture", "owner": "Alpha", "order": {"type": "MOVE", "path": [2]}}
+        game.active_players = ["Alpha"]
+        game.nation_colors = {}
+        screen.name_field.text = "Breakaway"
+        with mock.patch.object(declare_independence.turn_manager, "advance_time"), \
+                mock.patch.object(declare_independence.queries, "set_unit_owner"), \
+                mock.patch.object(declare_independence, "log_global_event"):
+            screen.confirm_independence()
+        country = game.nation_data["Breakaway"]
+        for resource, amount in c.TACTICAL_INDEPENDENCE_STOCKPILE.items():
+            self.assertEqual(country[resource], amount)
+        self.assertEqual(game.player_country, "Breakaway")
+
     def test_choosing_a_core_renames_and_enter_confirms(self):
         screen = self.screen()
         screen.select_core("Core")

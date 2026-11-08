@@ -266,6 +266,23 @@ class OlderFormatTests(unittest.TestCase):
             self.assertEqual(record["building_queue"][0]["item_name"], "Fixture Building")
             self.assertEqual(record["custom_field"], {"value": 23})
 
+    def test_removed_morale_is_dropped_from_units_cargo_history_and_moves(self):
+        def province():
+            return {"units": [{"unit_id": "fixture", "type": "Fixture Unit", "health": 5,
+                               "max_health": 10, "morale": 40.0, "custom_field": 7,
+                               "air_cargo": [{"type": "Fixture Cargo", "morale": 20.0}]}]}
+        meta = {"provinces": {"P": province()}}
+        history = {"4": {"provinces": {"P": province()}}}
+        _meta, map_data, history = upgraded(meta, {"P": province()}, history)
+        move = {"nation_data": {}, "provinces": {"P": province()}}
+        migrations.upgrade_move(move)
+        for record in (map_data["P"], meta["provinces"]["P"], history["4"]["provinces"]["P"],
+                       move["provinces"]["P"]):
+            unit = record["units"][0]
+            self.assertNotIn("morale", unit)
+            self.assertNotIn("morale", unit["air_cargo"][0])
+            self.assertEqual((unit["health"], unit["max_health"], unit["custom_field"]), (5, 10, 7))
+
     def test_research_projects_gain_points_and_keep_current_points(self):
         projects = [{"tech_name": "a", "days_remaining": 7, "custom_field": "preserved"},
                     {"tech_name": "b"}, {"tech_name": "c", "points_remaining": 0, "days_remaining": 7}]

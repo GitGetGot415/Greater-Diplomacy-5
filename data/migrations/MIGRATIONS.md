@@ -105,6 +105,7 @@ They also keep support for older save formats that v46 accepted.
 - Country records lose `ai_commitments` and `summit_log`, which AI summits wrote until summits were removed.
   Relation modifiers that those commitments added stay until they expire.
   Country conversion and research repairs skip the `FACTION_WAR_MAPS` bookkeeping record.
+- Units, including aircraft cargo, lose the removed `morale` field.
 - `deployment_queue` entries move into `unit_queue` and `building_queue`.
 - Research projects without `points_remaining` receive points from their day countdown.
 - Production entries with `days_remaining` receive `turns_remaining`. The day field has priority.

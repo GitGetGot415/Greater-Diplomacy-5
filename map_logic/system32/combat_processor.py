@@ -35,11 +35,6 @@ def apply_group_damage(total_atk, target_units, defense_bonus_fn=None, *, source
                    + defense_bonus)
         actual_dmg = max(0, damage_per_unit - defense)
 
-        if actual_dmg > 0:
-            max_hp = u.get("max_health", 1)
-            percent_lost = (actual_dmg / max_hp) * 100.0
-            u["morale"] = max(0.0, float(u.get("morale", c.DEFAULT_UNIT_MORALE)) - percent_lost)
-
         queries.apply_unit_health_loss(u, actual_dmg, sources=sources, tile=tile)
 
 def process_bombardments(context):
@@ -134,9 +129,6 @@ def process_bombardments(context):
             for _ in range(fort_hits):
                 queries.damage_fort(
                     target_prov, world_state.nation_data, world_state.map_data, context=context)
-
-            for u in targets:
-                u["_in_combat_this_turn"] = True
 
     # Clear the casualties out before movement and combat run
     for province in world_state.map_data.values():
@@ -257,10 +249,6 @@ def process_pinning(context):
                              for unit in sources], tile=dest_id,
                 nation_data=world_state.nation_data)
 
-            for lane in probe.lanes:
-                for u in lane.a.front + lane.b.front:
-                    u["_in_combat_this_turn"] = True
-
             # 2. Kill the attackers and remove them from incoming_attacks
             for a_unit, a_origin_id in hostile_attackers:
                 unit_events.record_damage(a_unit, max(0, a_unit.get("health", 0)),
@@ -372,12 +360,6 @@ def resolve_meeting_engagement(prov1, prov2, units1, units2, nation_data):
     for targets, total_atk, sources in combat_rules.exchange(battle, nation_data, with_sources=True):
         apply_group_damage(total_atk, targets, sources=sources, nation_data=nation_data)
 
-    # Only the front rank is in combat: a reserve rests and recovers morale
-    # while the units ahead of it bleed, which is the pressure to rotate.
-    for lane in battle.lanes:
-        for u in lane.a.front + lane.b.front:
-            u["_in_combat_this_turn"] = True
-
     surviving_units1 = [u for u in units1 if u.get("health", 0) > 0]
     surviving_units2 = [u for u in units2 if u.get("health", 0) > 0]
 
@@ -461,12 +443,6 @@ def process_combat(context):
                     province, unit, world_state.nation_data, combat_active=True),
                 sources=sources, tile=province["id"],
                 nation_data=world_state.nation_data)
-
-        # Only the front rank is in combat: a reserve rests and recovers morale
-        # while the units ahead of it bleed, which is the pressure to rotate.
-        for lane in battle.lanes:
-            for u in lane.a.front + lane.b.front:
-                u["_in_combat_this_turn"] = True
 
         # Remove dead units (HP <= 0) BEFORE checking if we should wipe paths
         surviving_units = [u for u in units if u.get("health", 0) > 0]

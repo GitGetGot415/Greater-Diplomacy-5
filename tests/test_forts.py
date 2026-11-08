@@ -19,7 +19,6 @@ def unit(owner, attack=0, defense=0, health=100000):
         "max_health": health,
         "attack": attack,
         "defense": defense,
-        "morale": 50.0,
     }
 
 

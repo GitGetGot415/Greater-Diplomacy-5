@@ -191,7 +191,7 @@
                         {
                             "type": "steps",
                             "items": [
-                                {"heading": "Front and reserve", "text": "Each turn, the front units of both sides fight. Terrain decides how many units fit in the front. The rest wait in reserve, take no damage, and recover morale."},
+                                {"heading": "Front and reserve", "text": "Each turn, the front units of both sides fight. Terrain decides how many units fit in the front. The rest wait in reserve and take no damage."},
                                 {"heading": "Leaving a battle", "text": "Units fighting in a battle stop their moves. They can only leave by one tile per turn, into land that is not hostile."},
                                 {"heading": "Find battles", "text": "In Units view, battles show as bubbles. Click a bubble to open Orders for that tile."},
                                 {"heading": "Manage Battle", "text": "In Orders, Manage Battle lets you choose which enemy each unit faces and which units wait in reserve. Without units there, the button reads View Battle."},

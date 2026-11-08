@@ -37,7 +37,6 @@ def unit(owner, kind="Infantry Type 1943", path=(), health=2000, attack=430,
         "max_health": health,
         "attack": attack,
         "defense": defense,
-        "morale": 50.0,
         "naval_unit": naval,
     }
 

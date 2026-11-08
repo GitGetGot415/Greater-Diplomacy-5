@@ -615,6 +615,10 @@ map_screen.player_unit can remain after independence ends tactical mode.
 Check tactical_mode instead of inferring the mode from that attribute.
 diplomatic_popups.spawn_popups_for_player marks suppressed host messages as shown during tactical play.
 This prevents old host messages from appearing after independence.
+Tactical play has no resource pool. The tactical division moves without fuel.
+unit_actions.repair_costs makes its repairs free, so neither the player nor the host country pays.
+Tactical mode hides the resource strip and disables the Economy button.
+Declare Independence starts the new country with c.TACTICAL_INDEPENDENCE_STOCKPILE.
 
 Tactical mode opens the Tactical Orders screen (TACTICAL_ORDERS) instead of Orders.
 map_input.orders_state names the screen for every route into Orders, including battle panels.
