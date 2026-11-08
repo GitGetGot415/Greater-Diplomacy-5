@@ -11,6 +11,7 @@ documentation/llm_ai.txt: model settings, legal choices, prompts, letters, budge
 documentation/other/llm_benchmark_notes.txt: historical model performance measurements.
 documentation/diplo_stuff.txt: diplomacy controls, rules, and message timing.
 documentation/air_stuff.txt: aircraft controls and rules.
+documentation/tactical_battles.md: tactical battle terminology, custom battles, controls, and intended tactical-mode flow.
 data/migrations/MIGRATIONS.md: compatibility with older GD5 data, and how older saves and moves convert.
 documentation/other/ai_responses_gd4_reference.txt: archived Greater Diplomacy 4 response text.
 documentation/other/recommended-relay-defaults.txt: relay setup defaults.
@@ -20,44 +21,8 @@ README.md, For MacOS Users: macOS quarantine instructions.
 CUSTOM BATTLES
 ==============
 
-Custom Battle opens Edit Battle for a standalone land battle from the main menu.
-Add Friendly and Add Enemy open the searchable unit picker. Each selection adds
-one unit at its selected library level. Cancel closes the picker and keeps added units.
-Select a roster card and choose Remove to remove that unit. Drag cards within an
-army to change deployment order. Scroll long rosters with the wheel, scrollbar,
-or by dragging the roster background. Each army supports up to 64 units.
-Random replaces both armies with independently chosen groups of three
-to five units. The Year slider limits generation to the highest available level
-of each land-unit family at or before the selected year, including any additional
-research requirements. Units researched five or more years before the selected
-year are excluded. The mouse wheel over the Year slider adjusts one year at a
-time. Manual unit selection remains unrestricted by the slider.
-Select a friendly roster card and choose Control to command that unit. Release
-Control restores an entirely automatic battle. The controlled unit is marked
-with a yellow arrow. Reordering cards preserves the controlled unit; removing
-that unit or generating new armies clears control.
-Simulate opens Preview Battle with the same friendly and enemy roster panels as
-Edit Battle. The rosters can be scrolled, but unit editing, reordering, control
-selection, random generation, and the Year slider are unavailable in the preview.
-Preview Battle shows no battlefield and runs no combat. Start opens Actual Battle
-on the grass battlefield. Exit returns to Edit Battle so armies can be changed.
-W moves the controlled unit forward and S reverses along its facing direction.
-A turns left and D turns right. Space fires straight ahead with the same weapon
-cooldown as AI units. Holding Space fires again only when the cooldown expires.
-Other friendly units and all enemy units use automatic movement and firing.
-Tanks and vehicles use rectangles, artillery uses thin rectangles, infantry and
-militia use circles, and cavalry uses ovals. Health bars show remaining strength.
-Units approach enemies and fire visible projectiles. Health, attack, defense,
-speed, bombardment capabilities, and unit labels come from the default unit library.
-The prototype converts movement and range to battlefield pixels and uses shared
-health-scaled combat damage. Positive damage rounds up to whole health points so
-weakening armies can finish a battle. No resources are spent and no campaign state changes.
-Pause freezes combat. The Back key toggles pause during combat. Losing focus also
-pauses combat. Pausing and leaving combat clear held movement and fire controls.
-Exit returns to army setup; Exit from setup returns to the main menu.
-Destroying the enemy army wins. Losing the friendly army, including mutual
-destruction, loses. Run Again previews fresh armies; Edit Armies returns to setup.
-Custom battles are temporary and are not saved, exported, or used in multiplayer.
+See documentation/tactical_battles.md for the custom-battle prototype, the editing,
+preview, and actual battle views, and the intended campaign tactical-mode flow.
 
 TOURNAMENT FILE STORAGE
 =======================
