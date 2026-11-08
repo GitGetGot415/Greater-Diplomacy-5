@@ -500,7 +500,8 @@ A data edit must not make a test fail, unless the test checks that JSON matches 
 
 ### Tutorial and Maintenance
 
-The fresh-game map tutorial is in `ui/dialogs/message_box.py`.
+The fresh-game map tutorial is the Help window. Its text is in `data/json/tutorial.json`, and `ui/dialogs/message_box.py` draws it.
+See `documentation/general_info.txt`, HELP CONTENT.
 Treat it as player documentation.
 Update it when map navigation, unit selection, orders, or covered map controls change.
 Add or update tests for changed tutorial behavior.

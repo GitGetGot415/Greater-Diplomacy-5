@@ -123,8 +123,9 @@ SETTINGS_INFO_ROWS = (
      "Shows the Unassigned army card for your units outside army groups. "
      "Enabled by default. The card stays hidden when all units are assigned."),
     (SETTINGS_INTRO_POPUP_Y, "Show Tutorial Popup",
-     "Shows the map tutorial when a fresh game begins. It covers map navigation "
-     "and the bottom-left map UI buttons."),
+     "Shows the Help window when a fresh game begins. Its categories cover the "
+     "basics, from map controls to production, research, and diplomacy. "
+     "The Help button on the map reopens it."),
     (SETTINGS_MAP_NAV_Y, "Map Navigation",
      "Classic: clicking a tile always opens the plain province menu, and the "
      "Resources/Blank/Units/Economy ui view buttons only switch "

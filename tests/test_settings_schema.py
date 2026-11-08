@@ -625,6 +625,8 @@ class NavigationIntroPopupTests(unittest.TestCase):
 
         pygame.init()
         pygame.display.set_mode((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
+        self.addCleanup(setattr, message_box._NavigationIntroPopup, "last_topic_index",
+                        message_box._NavigationIntroPopup.last_topic_index)
         map_stub = type("MapStub", (), {"navigation_intro_popup": None})()
         popup = message_box._NavigationIntroPopup(map_stub)
         surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
@@ -664,44 +666,28 @@ class NavigationIntroPopupTests(unittest.TestCase):
             sound.assert_not_called()
             popup.handle_event(pygame.event.Event(
                 pygame.MOUSEBUTTONDOWN, pos=popup.next_rect.center, button=1))
-            self.assertEqual(popup.page_index, 1)
+            self.assertEqual(popup.topic_index, 1)
             sound.assert_called_once_with("click")
-        popup.handle_event(pygame.event.Event(
-            pygame.MOUSEBUTTONDOWN, pos=popup.next_rect.center, button=1))
-        self.assertEqual(popup.page_index, 2)
-        popup.draw(surface)
 
-        popup.handle_event(pygame.event.Event(
-            pygame.MOUSEBUTTONDOWN, pos=popup.next_rect.center, button=1))
-        self.assertEqual(popup.page_index, 3)
-        popup.draw(surface)
-
-        # Navigate to all aircraft help pages and return to the army page.
-        for page in range(4, len(popup.PAGE_TITLES)):
+        # Previous and Next step through every topic, across categories. Each
+        # topic is drawn once when it is selected; frames must only blit it.
+        for topic in range(2, len(popup.topics)):
             popup.handle_event(pygame.event.Event(
                 pygame.MOUSEBUTTONDOWN, pos=popup.next_rect.center, button=1))
-            self.assertEqual(popup.page_index, page)
-            # Editable aircraft and transport instructions are wrapped when
-            # the popup opens. Navigation must not rebuild this content.
-            with mock.patch.object(popup, "_army_step_lines", side_effect=AssertionError("Frame prepared help")):
+            self.assertEqual(popup.topic_index, topic)
+            with mock.patch.object(popup, "_prepare_topic", side_effect=AssertionError("Frame prepared help")), \
+                    mock.patch.object(message_box, "render_inline_text",
+                                      side_effect=AssertionError("Frame wrapped help")):
                 popup.draw(surface)
-        self.assertEqual(popup.page_index, len(popup.PAGE_TITLES) - 1)
+        self.assertEqual(popup.topic_index, len(popup.topics) - 1)
         with mock.patch.object(message_box.ui_elements, "play_ui_sound") as sound:
             popup.handle_event(pygame.event.Event(
                 pygame.MOUSEBUTTONDOWN, pos=popup.next_rect.center, button=1))
             sound.assert_not_called()
-        for _page in range(popup.page_index, 3, -1):
+        for _topic in range(len(popup.topics) - 1):
             popup.handle_event(pygame.event.Event(
                 pygame.MOUSEBUTTONDOWN, pos=popup.prev_rect.center, button=1))
-        self.assertEqual(popup.page_index, 3)
-
-        popup.handle_event(pygame.event.Event(
-            pygame.MOUSEBUTTONDOWN, pos=popup.prev_rect.center, button=1))
-        self.assertEqual(popup.page_index, 2)
-
-        popup.handle_event(pygame.event.Event(
-            pygame.MOUSEBUTTONDOWN, pos=popup.prev_rect.center, button=1))
-        self.assertEqual(popup.page_index, 1)
+        self.assertEqual(popup.topic_index, 0)
 
         popup.handle_event(pygame.event.Event(
             pygame.MOUSEBUTTONDOWN, pos=popup.close_rect.center, button=1))

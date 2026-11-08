@@ -209,7 +209,7 @@ class ControllerConstructionTests(unittest.TestCase):
         game_map = app_harness.boot_map()
         with mock.patch("ui.dialogs.show_navigation_intro") as show_tutorial:
             game_map.btn_help.callback()
-        show_tutorial.assert_called_once_with(game_map)
+        show_tutorial.assert_called_once_with(game_map, resume=True)
 
     def test_map_with_no_assigned_country_is_read_only_until_selection_recovers(self):
         """An interrupted map handoff must not treat the ``None`` sentinel as

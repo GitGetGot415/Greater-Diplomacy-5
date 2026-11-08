@@ -94,7 +94,8 @@ Keep this name unless the user explicitly requests a different name.
 | Change tournament file exchange | `data/multiplayer/tournament/files.py` |
 | Change real-time authority or snapshots | `data/multiplayer/realtime/session.py` |
 | Change real-time transport or relay provisioning | `data/multiplayer/realtime/networking.py` and `relay.py` |
-| Change the fresh-game tutorial | `ui/dialogs/message_box.py` |
+| Change the Help window text (the fresh-game tutorial) | `data/json/tutorial.json` |
+| Change how the Help window draws or navigates | `ui/dialogs/message_box.py` |
 | Check source packaging and dynamic imports | `compilation_scripts/build_manifest.py` and `tests/test_build_manifest.py` |
 
 Read `general_info.txt`, DISPLAY SUPPORT, for shared image caches.

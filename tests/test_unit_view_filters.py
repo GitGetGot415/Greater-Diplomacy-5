@@ -1,4 +1,5 @@
 """Map-only unit filters share classification, fog and rendered hitboxes."""
+import re
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -773,8 +774,15 @@ class UnitViewControlTests(unittest.TestCase):
                     game, pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT)))
                 self.assertEqual([call.args[3] for call in arrows.call_args_list], expected)
 
-    def test_tutorial_filter_content_is_cached_before_drawing(self):
-        from ui.widgets import text_utils
+    def _help_topic_with_inline_icons(self, popup):
+        """Return the index and text of the shipped Help text that shows inline icons."""
+        for index, (category_index, topic_index) in enumerate(popup.topics):
+            for block in popup.categories[category_index]["topics"][topic_index]["blocks"]:
+                if "[icon:" in block.get("text", ""):
+                    return index, block["text"]
+        self.fail("No Help text shows inline icons.")
+
+    def test_tutorial_shows_every_filter_icon_and_caches_it_before_drawing(self):
         from ui.dialogs import message_box
         icons = {}
         for index, view_filter in enumerate(queries.UNIT_VIEW_FILTERS):
@@ -782,40 +790,33 @@ class UnitViewControlTests(unittest.TestCase):
             icon = pygame.Surface((20, 14))
             icon.fill(color)
             icons[view_filter.lower()] = icon
-        with patch.dict(message_box.ui_elements.UI_ICONS, icons), \
-                patch.object(message_box, "render_inline_text", wraps=text_utils.render_inline_text) as render:
+        self.addCleanup(setattr, _NavigationIntroPopup, "last_topic_index",
+                        _NavigationIntroPopup.last_topic_index)
+        with patch.dict(message_box.ui_elements.UI_ICONS, icons):
             popup = _NavigationIntroPopup(SimpleNamespace())
-        groups = [icon for text, icon in render.call_args.args[0] if icon is not None]
-        self.assertEqual(len(groups), len(queries.UNIT_VIEW_FILTERS))
-        popup.page_index = 1
+            topic, text = self._help_topic_with_inline_icons(popup)
+            self.assertLessEqual(set(icons), set(re.findall(r"\[icon:([a-z_]+)", text)))
+            popup.select_topic(topic)
         with patch.object(message_box, "render_inline_text", side_effect=AssertionError("Frame prepared tutorial")):
             popup.draw(pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT)))
 
     def test_tutorial_image_markers_preserve_text_and_image_order(self):
-        from ui.widgets import text_utils
         from ui.dialogs import message_box
         icon = pygame.Surface((20, 10))
         icon.fill((17, 83, 121))
         note = "[icon:air:32] first\nChanged [icon:naval:12] repeated [icon:air] end"
-        with patch.object(_NavigationIntroPopup, "UNIT_VIEW_NOTE", note), \
-                patch.dict(message_box.ui_elements.UI_ICONS, {"air": icon, "naval": icon}), \
-                patch.object(message_box, "render_inline_text", wraps=text_utils.render_inline_text) as render:
-            _NavigationIntroPopup(SimpleNamespace())
-        parts = render.call_args.args[0]
+        with patch.dict(message_box.ui_elements.UI_ICONS, {"air": icon, "naval": icon}):
+            popup = _NavigationIntroPopup(SimpleNamespace())
+            parts = popup._inline_parts(note, (225, 225, 225))
         groups = [image for text, image in parts if image is not None]
         self.assertEqual(len(groups), 3)
         self.assertIn((" first\n", None), parts)
         self.assertEqual(parts[-1], (" end", None))
 
     def test_tutorial_without_markers_keeps_plain_text(self):
-        from ui.widgets import text_utils
-        from ui.dialogs import message_box
         note = "Air and Naval can appear without images."
-        with patch.object(_NavigationIntroPopup, "UNIT_VIEW_NOTE", note), \
-                patch.object(message_box, "render_inline_text", wraps=text_utils.render_inline_text) as render:
-            _NavigationIntroPopup(SimpleNamespace())
-        self.assertEqual(render.call_args.args[0], [(note, None)])
-
+        popup = _NavigationIntroPopup(SimpleNamespace())
+        self.assertEqual(popup._inline_parts(note, (225, 225, 225)), [(note, None)])
 
 if __name__ == "__main__":
     unittest.main()

@@ -2324,8 +2324,8 @@ class Map(StateAccess, Screen):
         self.show_feedback("Maps refreshed!")
 
     def show_navigation_tutorial(self):
-        """Open the map tutorial again from the persistent Help button."""
-        dialogs.show_navigation_intro(self)
+        """Reopen Help from the persistent Help button, at the topic viewed last."""
+        dialogs.show_navigation_intro(self, resume=True)
 
     def auto_assign_cores(self):
 
@@ -3116,7 +3116,7 @@ class Map(StateAccess, Screen):
         if self.show_navigation_intro_when_ready and is_playing:
             self.show_navigation_intro_when_ready = False
             if settings_schema.read_setting(queries.get_settings(), "show_intro_popup"):
-                self.show_navigation_tutorial()
+                dialogs.show_navigation_intro(self)
 
         if self.show_player_ready_screen:
             for el in self.elements: el.visible = False

@@ -655,15 +655,35 @@ Real-time snapshots include only the receiving player's entries.
 Player move files and real-time commands cannot replace host reports.
 Real-time broadcasts preserve local read status for the same turn.
 
-TUTORIAL ICON MARKERS
-====================
+HELP CONTENT
+============
 
-The map tutorial uses image markers in UNIT_VIEW_NOTE in ui/dialogs/message_box.py.
-Use [icon:naval:18] to include a naval icon in the tutorial text.
+The Help window opens over the map for a fresh game and from the map's Help button.
+data/json/tutorial.json holds its text. ui/dialogs/message_box.py reads, checks, and draws it.
+Restart the game after editing the file. A malformed file raises an error that names the field to correct.
+
+The file contains a list of categories. Each category has a title, an optional icon, and a list of topics.
+Each topic has a title, an optional subtitle, and a list of blocks. Blocks stack from top to bottom.
+Icon names come from ui_elements.UI_ICONS, which main.py fills at startup.
+
+Block types:
+- text: a paragraph. Set "align" to "center" to center its lines. The default is "left".
+- steps: items with a heading and text. An item with an "icon" shows that icon; other items show their number.
+  Set "columns" to 2 to fill two columns, top to bottom.
+- mouse_buttons: columns that each show an image from assets/mouse, a heading, and caption lines.
+- key_box: a recessed strip with a heading and text, for keyboard controls.
+
+A topic taller than its area scrolls with the mouse wheel and a scrollbar.
+The category list shows every category, with the open category's topics below it. Keep it within the list's height.
+tests/test_help_tutorial.py checks the list height, icon names, and mouse images of the shipped file.
+
+Text in text blocks, step items, mouse captions, and key boxes can contain image markers.
+Use [icon:naval:18] to include a naval icon in the text.
 Change 18 to set the maximum image dimension in pixels.
-Use an icon name from ui_elements.UI_ICONS.
 Omit :18 to use the text height.
 Images keep their original proportions. Images stay with the preceding word when lines wrap.
+
+.gitignore excludes *.json. Add a new file in data/json to Git with git add -f, as the other data/json files were.
 
 PROJECT FILES
 =============
