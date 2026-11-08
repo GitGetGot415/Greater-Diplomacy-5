@@ -324,11 +324,10 @@ class PygamePlayback:
     def __init__(self, track_path, start_time, volume):
         self.track_path = track_path
         self.paused = False
-        self._paused_position = None
         # get_pos() counts from play(), not from set_pos(). After a seek, the
         # position is the seek target plus the time since the seek. The next
         # update() records get_pos() at the seek as the base.
-        self._offset = start_time
+        self._offset = 0.0
         self._base = 0.0
         self._awaiting_seek = False
         pygame.mixer.music.load(pygame_audio_path(track_path))
@@ -347,8 +346,6 @@ class PygamePlayback:
 
     def pause(self, paused):
         if paused:
-            if not self.paused:
-                self._paused_position = self._offset if self._awaiting_seek else self.source_position()
             pygame.mixer.music.pause()
         else:
             pygame.mixer.music.unpause()
@@ -379,9 +376,7 @@ class PygamePlayback:
         self._awaiting_seek = True
 
     def source_position(self):
-        if self.paused:
-            return self._paused_position
-        if self._awaiting_seek:
+        if self._awaiting_seek or self.paused:
             return None
         raw_pos = max(0.0, pygame.mixer.music.get_pos() / 1000.0)
         return self._offset + (raw_pos - self._base)

@@ -136,6 +136,10 @@ Success in one does not prove compatibility with the other.
 - Follow KISS (Keep It Simple, Stupid).
   Use the simplest solution that meets the request and existing rules.
   Add abstractions, state, queues, or fallback behavior only when the required behavior needs them.
+- **Implement the action the user requested. Do not substitute a more elaborate behavior.**
+  Stop, pause, resume, restart, clear, and delete have different meanings.
+  A request to stop something and continue normal operation does not ask for preserving and restoring its previous state.
+  Do not add snapshots, saved positions, restoration, or extra preferences unless the request or an existing rule requires them.
 
 Example: An object spawns every five seconds.
 If the screen is at its object cap, skip that spawn.
@@ -144,6 +148,10 @@ Do not queue skipped spawns for later.
 Example 2: You are asked to extend research of a certain unit until the end of the timeline.
 Do not create an entire system where if you enter in something like None it automates it for you.
 Simply edit the number of levels the unit has and call that done.
+
+Example 3: The user asks to stop battle music on exit and continue normal playlist playback.
+Stop the battle track and use the existing playlist selection.
+Do not save the previous song, playback position, or paused state and restore them afterward.
 
 ### One Source of Truth
 

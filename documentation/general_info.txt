@@ -501,9 +501,9 @@ The choice is a global preference stored as tactical_battle_song in settings_con
 Older settings without this key use the distribution default, which disables the override.
 The pinned song plays independently of active albums and shuffle exclusions and
 repeats through preview and actual combat. Editing does not activate the override.
-Leaving preview or combat, including reaching the result view, restores the prior
-playlist track and its playback position and paused state. Without a prior track,
-normal playlist selection resumes. See documentation/tactical_battles.md for the views.
+Leaving preview or combat, including reaching the result view, stops the tactical
+song and uses normal playlist selection. Previous songs, playback positions, and
+paused states are not restored. See documentation/tactical_battles.md for the views.
 The song list groups songs by album with album name dividers.
 
 beepbox_audio.py owns BeepBox and UltraBox JSON recognition, sample loading, and playback.

@@ -86,7 +86,6 @@ class TacticalMusicTests(unittest.TestCase):
         controller = self.controller
         controller.tactical_battle_song = "battle.ogg"
         controller._tactical_music_active = False
-        controller._tactical_music_resume = None
         controller._failed_music_tracks = set()
         controller.shuffle_disabled_tracks = {"battle.ogg"}
         controller.playlist = ["playlist.ogg", "other.ogg"]
@@ -95,7 +94,7 @@ class TacticalMusicTests(unittest.TestCase):
         controller.music_pitch = 0.5
         controller.music_pitch_timeline = main.c.MUSIC_PITCH_TIMELINE_STATIC
         controller.track_start_times = {}
-        self.original_music = self.playback(position=37.5)
+        self.original_music = self.playback()
         controller.music = self.original_music
         self.played = []
 
@@ -109,11 +108,10 @@ class TacticalMusicTests(unittest.TestCase):
         self.play = self.enterContext(patch.object(controller, "play_specific_song", side_effect=play))
 
     @staticmethod
-    def playback(position=0.0):
-        return Mock(finished=False, paused=False, error=None,
-                    source_position=Mock(return_value=position))
+    def playback():
+        return Mock(finished=False, paused=False, error=None)
 
-    def test_override_loops_without_changing_playlist_and_restores_position(self):
+    def test_override_loops_then_stops_and_uses_normal_playlist_selection(self):
         controller = self.controller
         controller.set_tactical_battle_music(True)
         self.assertEqual(self.played, ["battle.ogg"])
@@ -121,15 +119,20 @@ class TacticalMusicTests(unittest.TestCase):
         self.assertEqual(self.played, ["battle.ogg"])
         controller.play_random_song()
         self.assertEqual(self.played, ["battle.ogg", "battle.ogg"])
-        controller.set_tactical_battle_music(False)
-        self.assertEqual(controller.now_playing, "playlist.ogg")
-        controller.music.seek.assert_called_once_with(37.5)
-        controller.music.pause.assert_called_once_with(False)
+        battle_music = controller.music
+        with patch("main.random.choice", return_value="other.ogg"):
+            controller.set_tactical_battle_music(False)
+        battle_music.stop.assert_called_once_with()
+        battle_music.pause.assert_not_called()
+        self.assertEqual(controller.now_playing, "other.ogg")
+        controller.music.seek.assert_not_called()
+        controller.music.pause.assert_not_called()
+        self.original_music.source_position.assert_not_called()
         self.assertEqual(controller.playlist, ["playlist.ogg", "other.ogg"])
         self.assertEqual(controller.shuffle_disabled_tracks, {"battle.ogg"})
         self.assertFalse(controller._tactical_music_active)
         controller.set_tactical_battle_music(False)
-        self.assertEqual(self.played, ["battle.ogg", "battle.ogg", "playlist.ogg"])
+        self.assertEqual(self.played, ["battle.ogg", "battle.ogg", "other.ogg"])
 
     def test_no_selection_does_not_interrupt_normal_music(self):
         self.controller.tactical_battle_song = ""
@@ -138,11 +141,13 @@ class TacticalMusicTests(unittest.TestCase):
         self.play.assert_not_called()
         self.original_music.stop.assert_not_called()
 
-    def test_prior_pause_state_is_restored(self):
+    def test_prior_pause_state_is_not_restored(self):
         self.original_music.paused = True
         self.controller.set_tactical_battle_music(True)
         self.controller.set_tactical_battle_music(False)
-        self.controller.music.pause.assert_called_once_with(True)
+        self.assertFalse(self.controller.music.paused)
+        self.controller.music.pause.assert_not_called()
+        self.original_music.source_position.assert_not_called()
 
     def test_no_prior_track_returns_to_normal_playlist_selection(self):
         self.controller.music = None
@@ -151,11 +156,15 @@ class TacticalMusicTests(unittest.TestCase):
         self.controller.set_tactical_battle_music(False)
         self.assertIn(self.controller.now_playing, self.controller.playlist)
 
-    def test_missing_position_does_not_seek_the_resumed_song(self):
-        self.original_music.source_position.return_value = None
+    def test_empty_playlist_stops_battle_music(self):
+        self.controller.playlist = []
         self.controller.set_tactical_battle_music(True)
+        battle_music = self.controller.music
         self.controller.set_tactical_battle_music(False)
-        self.controller.music.seek.assert_not_called()
+        battle_music.stop.assert_called_once_with()
+        battle_music.pause.assert_not_called()
+        self.assertIsNone(self.controller.music)
+        self.assertEqual(self.controller.now_playing, "None")
 
     def test_failed_beepbox_song_repeats_its_working_audio_fallback(self):
         self.controller.tactical_battle_song = "battle.json"
@@ -184,8 +193,9 @@ class TacticalMusicTests(unittest.TestCase):
             self.controller.play_random_song()
             self.assertEqual(sum(call.args[0] == "battle.ogg" for call in playback.call_args_list), 1)
             self.controller.set_tactical_battle_music(False)
-            self.assertEqual(self.controller.now_playing, "playlist.ogg")
-            self.controller.music.seek.assert_called_once_with(37.5)
+            self.assertIn(self.controller.now_playing, self.controller.playlist)
+            self.controller.music.seek.assert_not_called()
+            self.controller.music.pause.assert_not_called()
 
     def test_failed_synth_and_audio_counterpart_return_to_playlist_without_recursion(self):
         import main

@@ -344,7 +344,6 @@ class Controller:
         self._failed_music_tracks = set()
         self.starting_song = None
         self._tactical_music_active = False
-        self._tactical_music_resume = None
         self.track_start_times = {} # Keeps track of offsets specified in start_times.json
 
         self.load_music_data()
@@ -566,36 +565,13 @@ class Controller:
         queries.save_global_settings(self)
 
     def set_tactical_battle_music(self, active):
-        """Temporarily replace playlist playback, then restore its track and position."""
-        if active:
-            if self._tactical_music_active or not self.tactical_battle_song:
-                return
-            music = self.music
-            self._tactical_music_resume = (
-                (self.now_playing, music.source_position(), music.paused)
-                if music is not None and not music.finished else None)
-            self._tactical_music_active = True
-            self.play_random_song()
+        """Switch between battle music and normal playlist selection."""
+        if active and not self.tactical_battle_song:
             return
-        if not self._tactical_music_active:
+        if self._tactical_music_active == active:
             return
-        resume = self._tactical_music_resume
-        self._tactical_music_active = False
-        self._tactical_music_resume = None
-        if resume is None or resume[0] in self._failed_music_tracks:
-            self.play_random_song()
-            return
-        track, position, paused = resume
-        restored_tracks = {track}
-        if track.lower().endswith(".json"):
-            fallback = self._beepbox_audio_fallback(track)
-            if fallback:
-                restored_tracks.add(fallback)
-        self.play_specific_song(track)
-        if self.music is not None and self.now_playing in restored_tracks:
-            if position is not None:
-                self.music.seek(position)
-            self.music.pause(paused)
+        self._tactical_music_active = active
+        self.play_random_song()
 
     def play_startup_song(self):
         """Plays the pinned starting song if one is set, else falls back to random."""
