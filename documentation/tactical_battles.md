@@ -167,7 +167,8 @@ lengthens with speed and points back while reversing. A second ring fills while 
 Other sub-units show none of these.
 
 Control covers one sub-unit of the controlled division. The division's other sub-units fight automatically.
-If the controlled sub-unit is destroyed, control passes to the nearest surviving sub-unit of the same division.
+If the controlled sub-unit is destroyed, the player controls no unit for the rest of the battle and spectates it.
+Dragging the battlefield then moves the view.
 Other friendly units and all enemy units move and fire automatically.
 When no unit is controlled, both armies fight automatically.
 
@@ -182,7 +183,7 @@ edges, the whole battlefield is centered on a dark surround.
 Losing window focus also pauses combat. Pausing or leaving combat clears held movement and fire controls.
 
 The custom battle is won when the enemy army is destroyed and lost when the friendly army is destroyed.
-Mutual destruction counts as a loss. If every sub-unit of the controlled division is destroyed while friendly units remain, those friendly units continue fighting under AI control.
+Mutual destruction counts as a loss. If the controlled sub-unit is destroyed while friendly units remain, those friendly units continue fighting under AI control.
 The status line counts the divisions on each side that still have a sub-unit.
 
 **Run Again** opens preview with fresh armies from the same setup.
@@ -207,7 +208,8 @@ The mouse wheel zooms and the pan buttons move the map. **Back** returns to the 
 
 Actual battle has no **Exit** button in tactical play. When it ends, **Continue** returns to the map.
 If every sub-unit of the controlled division was destroyed, even in a won battle, the division is removed, tactical mode ends,
-and the game continues in spectator mode. While any of its sub-units survives, the player keeps the division.
+and the game continues in spectator mode. While any of its sub-units survives, the player keeps the division,
+even when the controlled sub-unit was destroyed and the player spectated the rest of the battle.
 When the battle ends, every unit that took part keeps its sub-units' remaining share of its full health in the campaign, and destroyed units, friendly or enemy, are removed from the tile.
 The tile is then captured as after any campaign combat: if only enemies remain, they take it. Everything else waits for the next turn.
 The tactical division has no resource-management costs, including repair costs, and does not charge the parent country for those actions.

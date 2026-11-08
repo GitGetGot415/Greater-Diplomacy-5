@@ -461,7 +461,7 @@ class BattleSimulationTests(unittest.TestCase):
         self.assertEqual(province["units"], units[:2])
         self.assertEqual(len(healthy), 10)
 
-    def test_control_passes_to_the_nearest_survivor_until_the_division_is_gone(self):
+    def test_losing_the_controlled_sub_unit_ends_control_without_taking_over_another(self):
         with patch.dict(combat.SUBUNIT_COUNTS, {"infantry": 10}):
             simulation = combat.BattleSimulation(self.library, ["Fixture I", "Fixture I"], ["Fixture I"],
                                                  controlled_index=1)
@@ -471,13 +471,13 @@ class BattleSimulationTests(unittest.TestCase):
         self.assertIs(first, division[0])
         first.data["health"] = 0
         simulation.advance(combat.FIXED_STEP)
-        expected = min(division[1:], key=lambda other: math.hypot(other.x - first.x, other.y - first.y))
-        self.assertIs(simulation.controlled, expected)
+        self.assertIs(simulation.controlled, first)
+        self.assertFalse(simulation.controlled.alive)
+        # The division's other sub-units still count for the campaign, and they fight on automatically.
         self.assertTrue(simulation.controlled_division_alive)
         for fighter in division:
             fighter.data["health"] = 0
         simulation.advance(combat.FIXED_STEP)
-        self.assertIn(simulation.controlled, division)
         self.assertFalse(simulation.controlled_division_alive)
         self.assertIsNone(simulation.winner)  # The rest of the friendly army fights on.
 
@@ -1356,17 +1356,26 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.click("Pause")
         self.assertTrue(self.screen.simulation.paused)
 
-    def test_tactical_play_continues_while_any_sub_unit_of_the_division_lives(self):
+    def test_losing_the_controlled_sub_unit_spectates_but_keeps_a_surviving_division(self):
         with patch.dict(combat.SUBUNIT_COUNTS, {"infantry": 10}):
             map_screen, province, _custom = self.enter_campaign()
         self.click("Start")
         simulation = self.screen.simulation
         player, enemy = province["units"]
+        view = self.screen.view_rect()
+        self.screen.handle_events([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_w),
+                                   pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=view.center)])
+        self.assertTrue(self.screen.firing)
         lost = simulation.controlled
         lost.data["health"] = 0
-        simulation.advance(combat.FIXED_STEP)
-        self.assertIsNot(simulation.controlled, lost)
-        self.assertTrue(simulation.controlled.alive)
+        self.screen.update()
+        # Spectating: no unit takes the player's input, and dragging moves the view instead of firing.
+        self.assertIs(simulation.controlled, lost)
+        self.assertFalse(self.screen.held_keys)
+        self.assertFalse(self.screen.firing)
+        self.screen.handle_events([pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=view.center)])
+        self.assertFalse(self.screen.firing)
+        self.assertEqual(self.screen.pan_drag, view.center)
         for fighter in simulation.divisions[1]:
             fighter.data["health"] = 0
         simulation.winner = 0

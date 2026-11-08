@@ -153,6 +153,10 @@ Example 3: The user asks to stop battle music on exit and continue normal playli
 Stop the battle track and use the existing playlist selection.
 Do not save the previous song, playback position, or paused state and restore them afterward.
 
+Example 4: The player's controlled unit is destroyed during a tactical battle.
+End control and let the player spectate the rest of the battle.
+Do not hand control to another unit, such as a surviving sub-unit of the same division.
+
 ### One Source of Truth
 
 - **Keep `data/json/starting_defaults.json` as the one source of truth for preference and setup defaults.**

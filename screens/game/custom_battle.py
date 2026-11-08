@@ -690,7 +690,7 @@ class CustomBattleScreen(Screen):
         return round((x - self.camera[0]) * self.zoom), round((y - self.camera[1]) * self.zoom)
 
     def _driving(self):
-        """The player steers and fires only while a sub-unit of the controlled division lives."""
+        """The player steers and fires only while the controlled sub-unit lives; afterward the player spectates."""
         return (self.mode == "battle" and not self.simulation.paused
                 and self.simulation.controlled is not None and self.simulation.controlled.alive)
 
@@ -983,10 +983,9 @@ class CustomBattleScreen(Screen):
         self.simulation.advance(dt)
         controlled = self.simulation.controlled
         if controlled is not None and controlled.alive:
-            # Control can pass to another sub-unit of the division; the camera follows whichever it is.
             self._center_camera(controlled.x, controlled.y)
-        elif driving:
-            # The whole controlled division is gone: drop held input and leave the camera free.
+        elif self.held_keys or self.firing:
+            # The controlled sub-unit is gone: the player spectates, so drop held input and leave the camera free.
             self.clear_controls()
         self._refresh_status()
         if self.simulation.winner is not None:

@@ -440,7 +440,11 @@ class BattleSimulation:
 
     @property
     def controlled_division_alive(self):
-        """The player keeps playing while any sub-unit of the controlled division survives."""
+        """Whether any sub-unit of the controlled division survives.
+
+        Losing the controlled sub-unit ends control for the rest of the battle; the player spectates.
+        A tactical player still keeps the division in the campaign while any of its sub-units survives.
+        """
         return self.controlled is not None and any(
             fighter.alive for fighter in self.divisions[self.controlled.division])
 
@@ -631,12 +635,6 @@ class BattleSimulation:
             # Whole health points keep equal, weakening armies from approaching
             # zero forever when the shared health-scaled attack has no floor.
             target.data["health"] = max(0.0, target.data["health"] - math.ceil(loss))
-        if self.controlled is not None and not self.controlled.alive:
-            # The player takes over the nearest surviving sub-unit of the same division.
-            lost = self.controlled
-            survivors = [fighter for fighter in self.divisions[lost.division] if fighter.alive]
-            if survivors:
-                self.controlled = min(survivors, key=lambda other: (other.x - lost.x) ** 2 + (other.y - lost.y) ** 2)
         alive_sides = {fighter.side for fighter in self.fighters if fighter.alive}
         if len(alive_sides) < 2:
             # Mutual destruction is a loss for the friendly army; there is no draw screen.
