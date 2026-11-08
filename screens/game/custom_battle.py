@@ -122,10 +122,12 @@ def draw_player_arrow(surface, center, angle):
 class CampaignBattle:
     """The tactical-mode encounter a battle belongs to. The player's unit is friendly entry 0."""
 
-    def __init__(self, map_screen, province, unit, custom_rosters):
+    def __init__(self, map_screen, province, units, custom_rosters):
         self.map_screen = map_screen
         self.province = province
-        self.unit = unit
+        self.units = units  # The campaign units in roster order: friendly army, then enemy army.
+        self.unit = units[0]
+        self.result_applied = False
         self.custom_rosters = custom_rosters  # The custom-battle armies to restore afterward.
 
 
@@ -225,10 +227,11 @@ class CustomBattleScreen(Screen):
         """Open preview at once for a tactical player's encounter, controlling their unit."""
         self.done = False
         self.next_state = None
-        self.campaign = CampaignBattle(map_screen, province, map_screen.player_unit, self.rosters)
+        self.campaign = CampaignBattle(map_screen, province, friendly + enemy, self.rosters)
         self.library = queries.get_unit_library(map_screen)
         self.country_data = map_screen.nation_data
-        self.rosters = [friendly, enemy]
+        self.rosters = [combat.campaign_roster(friendly, self.library),
+                        combat.campaign_roster(enemy, self.library)]
         self.selected = [None, None]
         self.group = [[], []]
         self.controlled_index = 0
@@ -260,6 +263,16 @@ class CustomBattleScreen(Screen):
     def finish_retreat(self):
         """The retreat order is given: the encounter is over."""
         self._end_campaign()
+
+    def _apply_campaign_result(self):
+        """A finished tactical encounter changes the campaign: damage stays and the dead are gone."""
+        campaign = self.campaign
+        if campaign is None or campaign.result_applied:
+            return
+        campaign.result_applied = True
+        combat.apply_campaign_result(self.simulation, campaign.units, campaign.province)
+        queries.normalize_armies(campaign.map_screen.nation_data, campaign.map_screen.map_data)
+        campaign.map_screen.invalidate_map_presentation_cache()
 
     def continue_campaign(self):
         """Leave the finished encounter. A dead tactical unit sends the player to spectating."""
@@ -775,6 +788,7 @@ class CustomBattleScreen(Screen):
             if self.controller is not None:
                 self.controller.set_tactical_battle_music(False)
             self.mode = "result"
+            self._apply_campaign_result()
             self.refresh_ui()
 
     def _update_preview_intro(self):

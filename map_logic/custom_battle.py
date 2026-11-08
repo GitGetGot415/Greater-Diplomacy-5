@@ -39,32 +39,48 @@ def land_unit_types(library):
 
 
 def campaign_forces(player_unit, province, nation_data, library):
-    """Rosters (friendly, enemy) for a tactical player's land unit on a contested tile.
+    """The campaign units (friendly, enemy) fighting a tactical player's land unit on its tile.
 
-    The player's unit leads the friendly roster. Returns None when that unit is not a land
-    unit or no hostile land unit shares its tile. Each side keeps the units' current health.
+    The player's unit leads the friendly list. Returns None when that unit is not a land
+    unit or no hostile land unit shares its tile. Each list holds at most one army's units.
     """
     land = set(land_unit_types(library))
     country = queries.get_unit_combat_owner(player_unit)
     enemies = queries.get_enemies(country, nation_data)
     friends = {country, *queries.get_all_friendly_nations(country, nation_data)}
 
-    def roster(units):
-        entries = []
-        for unit in units:
-            if unit.get("type") in land and unit.get("health", 0) > 0:
-                entry = queries.create_unit_dict(unit["type"], unit["owner"], library)
-                entry["health"] = min(unit["health"], entry["max_health"])
-                entries.append(entry)
-        return entries[:c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE]
+    def fighting(units):
+        return [unit for unit in units
+                if unit.get("type") in land and unit.get("health", 0) > 0
+                ][:c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE]
 
     units = province.get("units", [])
-    friendly = roster([player_unit] + [unit for unit in units if unit is not player_unit
-                                       and queries.get_unit_combat_owner(unit) in friends])
-    enemy = roster([unit for unit in units if queries.get_unit_combat_owner(unit) in enemies])
-    if not friendly or not enemy or player_unit.get("type") not in land:
+    friendly = fighting([player_unit] + [unit for unit in units if unit is not player_unit
+                                         and queries.get_unit_combat_owner(unit) in friends])
+    enemy = fighting([unit for unit in units if queries.get_unit_combat_owner(unit) in enemies])
+    if not friendly or not enemy or friendly[0] is not player_unit:
         return None
     return friendly, enemy
+
+
+def campaign_roster(units, library):
+    """Battle roster entries for campaign units, keeping each unit's fraction of health."""
+    roster = []
+    for unit in units:
+        entry = queries.create_unit_dict(unit["type"], unit["owner"], library)
+        entry["health"] = unit["health"] / unit["max_health"] * entry["max_health"]
+        roster.append(entry)
+    return roster
+
+
+def apply_campaign_result(simulation, units, province):
+    """Write a finished battle back: each unit keeps its fraction of health and the dead are removed.
+
+    ``units`` are the campaign units in roster order, friendly army then enemy army.
+    """
+    for fighter, unit in zip(simulation.fighters, units):
+        unit["health"] = fighter.data["health"] / fighter.data["max_health"] * unit["max_health"]
+    province["units"] = [unit for unit in province["units"] if unit.get("health", 0) > 0]
 
 
 def land_unit_types_for_year(library, year):

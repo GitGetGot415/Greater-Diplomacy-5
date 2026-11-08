@@ -440,8 +440,10 @@ class CustomBattleScreenTests(unittest.TestCase):
     def enter_campaign(self):
         player = queries.create_unit_dict("Fixture II", "Fixture A", self.library)
         enemy = queries.create_unit_dict("Fixture I", "Fixture B", self.library)
-        map_screen = SimpleNamespace(player_unit=player, nation_data=self.countries)
-        province = {"id": 1, "units": [player]}
+        province = {"id": 1, "units": [player, enemy]}
+        map_screen = SimpleNamespace(player_unit=player, nation_data=self.countries,
+                                     map_data={"key": province},
+                                     invalidate_map_presentation_cache=Mock())
         custom = self.screen.rosters
         with patch("data.queries.get_unit_library", return_value=self.library):
             self.screen._enter_campaign(map_screen, province, [player], [enemy])
@@ -485,9 +487,19 @@ class CustomBattleScreenTests(unittest.TestCase):
                 self.assertNotIn("Exit", [button.text for button in self.screen.elements])
                 if dies:
                     self.screen.simulation.controlled.data["health"] = 0
+                player, enemy = province["units"]
+                half = player["max_health"] / 2
+                self.screen.simulation.fighters[0].data["health"] = 0 if dies else half
+                self.screen.simulation.fighters[1].data["health"] = enemy["max_health"] if dies else 0
                 self.screen.simulation.winner = 1 if dies else 0
                 self.screen.update()
                 self.assertEqual(self.screen.mode, "result")
+                # The result is written back as soon as the battle ends.
+                if dies:
+                    self.assertEqual(province["units"], [enemy])
+                else:
+                    self.assertEqual(province["units"], [player])
+                    self.assertEqual(player["health"], half)
                 self.assertEqual([b.text for b in self.screen.elements if b.text != ""], ["Continue"])
                 with patch("screens.game.custom_battle.player_setup.lose_tactical_unit") as lose:
                     self.click("Continue")
@@ -506,9 +518,10 @@ class CustomBattleScreenTests(unittest.TestCase):
         ship = queries.create_unit_dict("Fixture Ship I", "Fixture B", self.library)
         province = {"units": [ally, player, foe, ship]}
         friendly, enemy = combat.campaign_forces(player, province, nations, self.library)
-        self.assertEqual([unit["type"] for unit in friendly], ["Fixture II", "Fixture I"])
-        self.assertEqual(friendly[1]["health"], ally["health"])
-        self.assertEqual([unit["owner"] for unit in enemy], ["Fixture B"])
+        self.assertEqual(friendly, [player, ally])
+        self.assertEqual(enemy, [foe])
+        roster = combat.campaign_roster(friendly, self.library)
+        self.assertEqual(roster[1]["health"] / roster[1]["max_health"], 0.5)
         self.assertIsNone(combat.campaign_forces(player, {"units": [player, ally]}, nations, self.library))
         self.assertIsNone(combat.campaign_forces(player, {"units": [player, ship]}, nations, self.library))
 

@@ -153,7 +153,8 @@ that hold no hostile units. Choose a marked tile to give the unit a move order t
 Actual battle has no **Exit** button in tactical play. When it ends, **Continue** returns to the map.
 If the controlled unit was destroyed, even in a won battle, it is removed, tactical mode ends,
 and the game continues in spectator mode.
-The battle does not change surviving units' health or the tile; the campaign combat rules still resolve the encounter on the next turn.
+When the battle ends, every unit that took part keeps its remaining fraction of health in the campaign, and destroyed units, friendly or enemy, are removed from the tile.
+Nothing else changes until the next turn, when the campaign rules resolve the tile, including any capture.
 The tactical division has no resource-management costs, including repair costs, and does not charge the parent country for those actions.
 Tactical battles in multiplayer remain unavailable.
 
