@@ -35,8 +35,15 @@ Each army has a size limit. Both armies need at least one unit before **Simulate
 
 The gray gear button opens **Unit Settings** for that roster entry.
 **Nationality** chooses a country from the base country library. **Starting HP** sets
-the unit's health between one and its full library HP. **Done** closes the settings.
-Each change applies to that unit immediately; canceling a picker keeps the current value.
+the unit's health as a percent of its full library HP, from 1% to 100%. **Done** closes the settings.
+Each change applies immediately; canceling a picker keeps the current value.
+
+To edit several units at once, press in empty space of a roster panel (not on the card
+area, a button, or the scrollbar) and drag a square over the cards. All touched cards of
+that army are selected, and the gear button on any selected card opens **Group Settings**
+for all of them. A field shows **Mixed** when the selected units differ. Selecting one
+card is an ordinary selection. Clicking empty panel space, reordering, removing, or
+generating armies clears the group.
 Units of the same type can have different nationalities and starting health.
 Reordering preserves those choices, and replaying uses the configured starting HP.
 New units start at full health. The two sides initially use the first two playable
@@ -48,6 +55,7 @@ Nationality selects the preview art's country variant where available; army side
 still determine friend and foe.
 
 **Random** replaces both armies with independently chosen groups of three to five units.
+Each generated unit also gets a random nationality from the playable countries.
 The **Year** slider limits random generation to the highest available level of each land-unit family at or before the selected year, including additional research requirements.
 Units researched five or more years before the selected year are excluded.
 The mouse wheel over the slider adjusts the year one year at a time. Manual selection remains unrestricted by the slider.
@@ -95,7 +103,7 @@ In a custom battle, **Exit** returns to editing while preserving the army setup.
 
 Actual battle is the fighting on the grass battlefield.
 Tanks and vehicles use rectangles, artillery uses thin rectangles, infantry and militia use circles, and cavalry uses ovals.
-Health bars show remaining strength, and projectiles show shots in flight.
+Health bars show remaining strength, with the unit's nationality flag beside each bar, and projectiles show shots in flight.
 The controlled unit has a yellow outline and an arrow pointing along its facing direction.
 Each hit is reduced by the target's full defense stat, down to zero damage.
 Tactical defense stays constant as health falls; campaign combat scales defense with health.

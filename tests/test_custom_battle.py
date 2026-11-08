@@ -342,7 +342,7 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.assertIsNone(self.screen.drag)
         sound.assert_called_once_with("open_settings")
         editor = opened.call_args.args[1]
-        self.assertIs(editor.unit, unit)
+        self.assertEqual(editor.units, [unit])
         editor.draw(self.surface)
         with patch("ui.dialogs.pickers.open_listbox_selector") as picker:
             editor.elements[0].callback()
@@ -366,7 +366,8 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.fill_armies()
         self.screen.add_unit(0, "Fixture I")
         unit = self.screen.rosters[0][1]
-        self.assertTrue(self.screen.set_unit_options(0, unit, owner="Fixture B", health=25))
+        self.assertTrue(self.screen.set_unit_options(0, [unit], owner="Fixture B", health_percent=25))
+        self.assertEqual(unit["health"], unit["max_health"] * 0.25)
         self.click("Control")
         self.drag_card(self.screen.card_rect(0, 1).center, self.screen.card_rect(0, 0).center)
         self.assertIs(self.screen.rosters[0][0], unit)
@@ -375,18 +376,18 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.click("Simulate")
         self.assertFalse(self.screen.unit_buttons)
         player = self.screen.simulation.controlled
-        self.assertEqual((player.data["owner"], player.data["health"]), ("Fixture B", 25))
-        self.assertFalse(self.screen.set_unit_options(0, unit, health=50))
+        self.assertEqual((player.data["owner"], player.data["health"]), ("Fixture B", unit["health"]))
+        self.assertFalse(self.screen.set_unit_options(0, [unit], health_percent=50))
         with patch("ui.navigation.screen_runner._run_pygame_sub_screen") as opened:
             self.screen.edit_unit(0, unit)
         opened.assert_not_called()
         self.click("Start")
-        self.assertEqual(player.data["health"], 25)
+        self.assertEqual(player.data["health"], unit["health"])
         player.data["health"] = 1
         self.screen.simulation.winner = 0
         self.screen.update()
         self.click("Run Again")
-        self.assertEqual(self.screen.simulation.controlled.data["health"], 25)
+        self.assertEqual(self.screen.simulation.controlled.data["health"], unit["health"])
         self.assertEqual(self.screen.rosters, before)
         self.click("Exit")
         self.assertEqual(self.screen.rosters, before)
@@ -395,13 +396,43 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.fill_armies()
         unit = self.screen.rosters[0][0]
         before = copy.deepcopy(unit)
-        for options in ({"owner": "missing"}, {"health": 0}, {"health": -1}, {"health": 101},
-                        {"health": True}, {"health": "25"}):
+        for options in ({"owner": "missing"}, {"health_percent": 0}, {"health_percent": -1},
+                        {"health_percent": 101}, {"health_percent": True}, {"health_percent": "25"}):
             with self.subTest(options=options):
-                self.assertFalse(self.screen.set_unit_options(0, unit, **options))
+                self.assertFalse(self.screen.set_unit_options(0, [unit], **options))
                 self.assertEqual(unit, before)
         self.click("Remove")
-        self.assertFalse(self.screen.set_unit_options(0, unit, health=50))
+        self.assertFalse(self.screen.set_unit_options(0, [unit], health_percent=50))
+
+    def test_selection_square_groups_cards_and_edits_them_together(self):
+        self.fill_armies()
+        for _ in range(2):
+            self.screen.add_unit(0, "Fixture I")
+        first, second, third = self.screen.rosters[0]
+        self.screen.draw(self.surface)
+        start = (self.screen.card_rect(0, 0).left, self.screen.panes[0].top - 20)
+        end = (self.screen.card_rect(0, 1).right - 1, self.screen.panes[0].centery)
+        self.screen.handle_events([
+            pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=start),
+            pygame.event.Event(pygame.MOUSEMOTION, pos=end, rel=(0, 0), buttons=(1, 0, 0)),
+            pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=end)])
+        self.assertEqual(self.screen.group[0], [0, 1])
+        self.assertEqual(self.screen.roster_0_scroll, 0)
+        with patch("ui.navigation.screen_runner._run_pygame_sub_screen") as opened:
+            self.click_card_settings(0, 1)
+        editor = opened.call_args.args[1]
+        self.assertEqual(editor.units, [first, second])
+        before = copy.deepcopy(third)
+        editor.draw(self.surface)
+        self.assertTrue(self.screen.set_unit_options(0, editor.units, owner="Fixture B", health_percent=40))
+        for unit in (first, second):
+            self.assertEqual((unit["owner"], unit["health"]), ("Fixture B", unit["max_health"] * 0.4))
+        self.assertEqual(third, before)
+        # A click on empty panel space clears the group.
+        self.screen.handle_events([
+            pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=start),
+            pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=start)])
+        self.assertEqual(self.screen.group[0], [])
 
     def test_gear_clicks_respect_roster_clipping_and_do_not_intercept_unit_drops(self):
         self.fill_armies()
@@ -435,15 +466,24 @@ class CustomBattleScreenTests(unittest.TestCase):
             self.assertEqual(self.screen.generation_year, 1913)
             self.assertIs(self.screen.year_slider, slider)
             self.assertEqual(self.roster_types(0), ["Car 1"])
-            with patch("map_logic.custom_battle.random.randint", side_effect=[3, 5]):
+            countries = iter(["Fixture A", "Fixture B"] * 4)
+            real_choice = random.choice
+
+            def choose(options):
+                # Only nationality picks are scripted; unit picks stay random.
+                return next(countries) if options is self.screen.nationalities else real_choice(options)
+
+            with patch("map_logic.custom_battle.random.randint", side_effect=[3, 5]), \
+                    patch("screens.game.custom_battle.random.choice", side_effect=choose):
                 self.click("Random")
             self.assertEqual(tuple(map(len, self.screen.rosters)), (3, 5))
             self.assertTrue({unit["type"] for roster in self.screen.rosters for unit in roster}
                             <= {"Car 2", "Foot 1910"})
             self.assertTrue(all(unit["health"] == unit["max_health"]
                                 for roster in self.screen.rosters for unit in roster))
-            self.assertEqual([{unit["owner"] for unit in roster} for roster in self.screen.rosters],
-                             [{"Fixture A"}, {"Fixture B"}])
+            # Every generated unit draws its own nationality from the playable countries.
+            self.assertEqual([unit["owner"] for roster in self.screen.rosters for unit in roster],
+                             ["Fixture A", "Fixture B"] * 4)
             self.assertEqual(self.screen.selected, [None, None])
             self.assertEqual(self.screen.mode, "setup")
             self.screen.draw(self.surface)
