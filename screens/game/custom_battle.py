@@ -1,4 +1,4 @@
-"""Army setup, deployment preview, and optional player-controlled land battles."""
+"""Edit Battle, read-only Preview Battle, and optional player-controlled combat."""
 
 import math
 
@@ -39,6 +39,8 @@ GENERATION_BUTTON_SIZE = (100, 40)
 GENERATION_BUTTON_POSITION = (GENERATION_SLIDER_POSITION[0] - GENERATION_BUTTON_SIZE[0] - 20, 25)
 SIMULATE_BUTTON_SIZE = (100, 40)
 SIMULATE_BUTTON_POSITION = (GENERATION_BUTTON_POSITION[0] - SIMULATE_BUTTON_SIZE[0] - 10, 25)
+PREVIEW_START_POSITION = ("centered", 625)
+PREVIEW_START_SIZE = (220, 50)
 PLAYER_COLOR = (255, 225, 95)
 CONTROL_KEYS = frozenset((pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d, pygame.K_SPACE))
 
@@ -77,7 +79,7 @@ def draw_player_arrow(surface, center, angle):
 
 class CustomBattleScreen(Screen):
     back_state = "MENU"
-    title = "Custom Battle"
+    title = "Edit Battle"
     title_y = 42
 
     def __init__(self):
@@ -130,8 +132,8 @@ class CustomBattleScreen(Screen):
         if self.mode == "result":
             return "You Win" if self.simulation.winner == 0 else "You Lose"
         if self.mode == "preview":
-            return "Battle Preview"
-        return "Custom Battle" if self.mode == "setup" else "Battle Simulation"
+            return "Preview Battle"
+        return "Edit Battle" if self.mode == "setup" else "Actual Battle"
 
     @property
     def reserved_keys(self):
@@ -149,7 +151,7 @@ class CustomBattleScreen(Screen):
     def refresh_ui(self):
         self.elements = [Button(20, 20, "small", "red", "Exit", self.leave,
                                 sound_kind="back")]
-        if self.mode == "setup":
+        if self.mode in {"setup", "preview"}:
             self.roster_labels = []
             for side, top in enumerate(PANEL_TOPS):
                 roster = self.rosters[side]
@@ -162,6 +164,8 @@ class CustomBattleScreen(Screen):
                 setattr(self, f"roster_{side}_limit", limit)
                 offset = max(limit, min(0, getattr(self, f"roster_{side}_scroll")))
                 setattr(self, f"roster_{side}_scroll", offset)
+                if self.mode == "preview":
+                    continue
                 x = PANEL_X + PANEL_WIDTH - BUTTON_WIDTH - ROSTER_INSET
                 add = Button(x, top + 70, (BUTTON_WIDTH, 42), "blue" if side == 0 else "red",
                              "Add Friendly" if side == 0 else "Add Enemy",
@@ -180,6 +184,10 @@ class CustomBattleScreen(Screen):
                     control.apply_state(enabled=self.selected[0] is not None,
                                         color="yellow" if controlling else "green")
                     self.elements.append(control)
+            if self.mode == "preview":
+                self.elements.append(Button(*PREVIEW_START_POSITION, PREVIEW_START_SIZE,
+                                            "green", "Start", self.start_battle))
+                return
             simulate = Button(*SIMULATE_BUTTON_POSITION, SIMULATE_BUTTON_SIZE, "green", "Simulate",
                               self.preview_battle, font_size=18)
             simulate.apply_state(enabled=all(self.rosters), color="green")
@@ -194,9 +202,6 @@ class CustomBattleScreen(Screen):
                 self.update_generation_year, visual_max=c.END_YEAR - c.START_YEAR,
                 allowed_max=c.END_YEAR - c.START_YEAR)
             self.elements.extend((self.generate_button, self.year_slider))
-        elif self.mode == "preview":
-            self.elements.append(Button(c.SCREEN_WIDTH - 150, 20, (130, 40), "green", "Start",
-                                        self.start_battle))
         elif self.mode == "battle":
             self.pause_button = Button(c.SCREEN_WIDTH - 150, 20, (130, 40), "yellow",
                                        "Resume" if self.simulation.paused else "Pause", self.toggle_pause)
@@ -343,7 +348,7 @@ class CustomBattleScreen(Screen):
                            + getattr(self, f"roster_{side}_scroll"), pane.y, *CARD_SIZE)
 
     def _roster_events(self, event):
-        if self.drag is not None:
+        if self.drag is not None and self.mode == "setup":
             side, index, origin, active = self.drag
             if event.type == pygame.MOUSEMOTION:
                 if math.dist(event.pos, origin) >= DRAG_THRESHOLD:
@@ -378,7 +383,8 @@ class CustomBattleScreen(Screen):
                        or self.is_content_dragging(options["attr"]))
             if not engaged:
                 continue
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and pane.collidepoint(event.pos):
+            if (self.mode == "setup" and event.type == pygame.MOUSEBUTTONDOWN
+                    and event.button == 1 and pane.collidepoint(event.pos)):
                 for index in range(len(self.rosters[side])):
                     if self.card_rect(side, index).collidepoint(event.pos):
                         self.selected[side] = index
@@ -410,7 +416,7 @@ class CustomBattleScreen(Screen):
                 # A shorter track skips some years when dragged at pixel resolution.
                 self.update_generation_year(self.generation_year - c.START_YEAR + event.y)
                 continue
-            if self.mode == "setup" and self._roster_events(event):
+            if self.mode in {"setup", "preview"} and self._roster_events(event):
                 continue
             for element in list(self.elements):
                 element.handle_event(event)
@@ -461,7 +467,7 @@ class CustomBattleScreen(Screen):
             self.card_surfaces[key] = card
         return self.card_surfaces[key]
 
-    def _draw_setup(self, surface):
+    def _draw_rosters(self, surface):
         for side, top in enumerate(PANEL_TOPS):
             panel = pygame.Rect(PANEL_X, top, PANEL_WIDTH, PANEL_HEIGHT)
             ui_elements.draw_pixel_panel(surface, panel, (39, 44, 58), (15, 19, 27))
@@ -524,10 +530,10 @@ class CustomBattleScreen(Screen):
             surface.blit(label, label.get_rect(center=rect.center))
 
     def additional_draw(self, surface):
-        if self.mode == "setup":
-            self._draw_setup(surface)
+        if self.mode in {"setup", "preview"}:
+            self._draw_rosters(surface)
         else:
             for image, center in zip(self.status_surfaces, ((220, 103), (1060, 103), (640, 103))):
                 surface.blit(image, image.get_rect(center=center))
-            if self.mode in {"preview", "battle"}:
+            if self.mode == "battle":
                 self._draw_battle(surface)

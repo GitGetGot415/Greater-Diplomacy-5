@@ -13,6 +13,7 @@ import data.constants as c
 from map_logic import custom_battle as combat
 from screens.game.custom_battle import CustomBattleScreen
 from ui.rendering.font_manager import fonts
+from ui.widgets.ui_elements import Slider
 
 
 def unit_stats(family="Fixture Infantry", *, tier=1, health=100, attack=40,
@@ -418,7 +419,8 @@ class CustomBattleScreenTests(unittest.TestCase):
         before = [(f.x, f.y, f.angle, f.data["health"]) for f in simulation.fighters]
         self.screen.handle_events([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_w),
                                    pygame.event.Event(pygame.KEYDOWN, key=pygame.K_SPACE)])
-        with patch.object(simulation, "advance", side_effect=AssertionError("preview executed combat")):
+        with patch.object(simulation, "advance", side_effect=AssertionError("preview executed combat")), \
+                patch.object(self.screen, "_draw_battle", side_effect=AssertionError("preview opened battlefield")):
             self.screen.update()
             self.screen.draw(self.surface)
         self.assertEqual(simulation.elapsed, 0)
@@ -438,6 +440,34 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.assertFalse(simulation.paused)
         self.assertFalse(self.screen.held_keys)
         self.assertNotIn("Start", [button.text for button in self.screen.elements])
+
+    def test_roster_preview_allows_scrolling_without_selection_or_reordering(self):
+        self.fill_armies()
+        for _ in range(10):
+            self.screen.add_unit(0, "Fixture I")
+        self.click("Control")
+        self.screen.roster_0_scroll = 0
+        self.click("Simulate")
+        self.screen.draw(self.surface)
+        rosters = copy.deepcopy(self.screen.rosters)
+        selected = list(self.screen.selected)
+        controlled = self.screen.controlled_index
+        self.drag_card(self.screen.card_rect(0, 0).center, self.screen.card_rect(0, 1).center)
+        self.assertEqual(self.screen.rosters, rosters)
+        self.assertEqual(self.screen.selected, selected)
+        self.assertEqual(self.screen.controlled_index, controlled)
+        self.assertIsNone(self.screen.drag)
+        with patch("pygame.mouse.get_pos", return_value=self.screen.panes[0].center):
+            self.screen.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=-1)])
+        self.assertLess(self.screen.roster_0_scroll, 0)
+        self.assertEqual(self.screen.rosters, rosters)
+        self.assertFalse(any(button.text in {"Add Friendly", "Add Enemy", "Remove", "Control",
+                                             "Release Control", "Random", "Simulate"}
+                             for button in self.screen.elements))
+        self.assertFalse(any(isinstance(element, Slider) for element in self.screen.elements))
+        self.click("Exit")
+        self.assertEqual(self.screen.mode, "setup")
+        self.assertEqual(self.screen.rosters, rosters)
 
     def test_control_follows_reordered_entries_and_clears_when_removed(self):
         for name in ("Fixture I", "Fixture II", "Fixture Gun I"):

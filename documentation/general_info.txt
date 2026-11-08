@@ -20,7 +20,7 @@ README.md, For MacOS Users: macOS quarantine instructions.
 CUSTOM BATTLES
 ==============
 
-Custom Battle opens a standalone land battle from the main menu.
+Custom Battle opens Edit Battle for a standalone land battle from the main menu.
 Add Friendly and Add Enemy open the searchable unit picker. Each selection adds
 one unit at its selected library level. Cancel closes the picker and keeps added units.
 Select a roster card and choose Remove to remove that unit. Drag cards within an
@@ -36,9 +36,11 @@ Select a friendly roster card and choose Control to command that unit. Release
 Control restores an entirely automatic battle. The controlled unit is marked
 with a yellow arrow. Reordering cards preserves the controlled unit; removing
 that unit or generating new armies clears control.
-Simulate opens the deployed armies on an open grass battlefield without running
-combat. The preview has no army-editing controls. Start begins combat from that
-deployment. Returning with Exit allows army editing again.
+Simulate opens Preview Battle with the same friendly and enemy roster panels as
+Edit Battle. The rosters can be scrolled, but unit editing, reordering, control
+selection, random generation, and the Year slider are unavailable in the preview.
+Preview Battle shows no battlefield and runs no combat. Start opens Actual Battle
+on the grass battlefield. Exit returns to Edit Battle so armies can be changed.
 W moves the controlled unit forward and S reverses along its facing direction.
 A turns left and D turns right. Space fires straight ahead with the same weapon
 cooldown as AI units. Holding Space fires again only when the cooldown expires.
