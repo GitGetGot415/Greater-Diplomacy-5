@@ -49,8 +49,10 @@ Reordering preserves those choices, and replaying uses the configured starting H
 New units start at full health. The two sides initially use the first two playable
 countries by display name, or the same country when only one is available.
 
-Editing and preview cards show the nationality's flag, remaining HP percentage,
+Editing cards show the unit name, the nationality's flag, remaining HP percentage,
 and symbols for health, health-adjusted attack, and defense, including zero defense.
+Preview cards are taller and omit the unit name. They show a larger icon, a health bar
+with the nationality's flag to its right, and the same stat symbols.
 Nationality selects the preview art's country variant where available; army sides
 still determine friend and foe.
 

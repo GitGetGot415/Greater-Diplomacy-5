@@ -25,11 +25,20 @@ from ui.widgets.ui_elements import Button, Slider
 
 PANEL_X = 60
 PANEL_WIDTH = 1160
-PANEL_HEIGHT = 220
 PANEL_TOPS = (365, 120)  # Friendly and enemy rosters retain their separate areas.
 CARD_SIZE = (158, 132)
 CARD_GAP = 12
-PREVIEW_CARD_ICON_SIZE = (44, 36)
+PREVIEW_CARD_SIZE = (158, 148)  # Taller than CARD_SIZE: no name text, larger icon, health bar row.
+PREVIEW_CARD_ICON_SIZE = (96, 60)
+PREVIEW_ICON_CENTER_Y = 40
+PREVIEW_BAR_TOP = 80
+PREVIEW_BAR_HEIGHT = 14
+PREVIEW_ROW_INSET = 8
+PREVIEW_BAR_FLAG_GAP = 6
+PREVIEW_FLAG_SIZE = (24, 16)
+PREVIEW_STATS_TOP = 108
+HEALTH_BAR_COLOR = (105, 215, 85)
+PANEL_BOTTOM_SPACE = 32  # Below the cards: scrollbar row and margin.
 CARD_STATS_TOP = 96
 CARD_STAT_ICON_SIZE = 14
 CARD_FLAG_SIZE = (30, 20)
@@ -179,6 +188,14 @@ class CustomBattleScreen(Screen):
         self.random_candidates = combat.land_unit_types_for_year(self.library, self.generation_year)
         self.refresh_ui()
 
+    @property
+    def card_size(self):
+        return PREVIEW_CARD_SIZE if self.mode == "preview" else CARD_SIZE
+
+    @property
+    def panel_height(self):
+        return ROSTER_TOP + self.card_size[1] + PANEL_BOTTOM_SPACE
+
     def get_title(self):
         if self.mode == "result":
             return "You Win" if self.simulation.winner == 0 else "You Lose"
@@ -201,6 +218,8 @@ class CustomBattleScreen(Screen):
                     axis="x")
 
     def refresh_ui(self):
+        for pane in self.panes:
+            pane.height = self.card_size[1]
         self.unit_buttons = {}
         self.elements = [Button(20, 20, "small", "red", "Exit", self.leave,
                                 sound_kind="back")]
@@ -455,7 +474,7 @@ class CustomBattleScreen(Screen):
     def card_rect(self, side, index):
         pane = self.panes[side]
         return pygame.Rect(pane.x + index * (CARD_SIZE[0] + CARD_GAP)
-                           + getattr(self, f"roster_{side}_scroll"), pane.y, *CARD_SIZE)
+                           + getattr(self, f"roster_{side}_scroll"), pane.y, *self.card_size)
 
     @staticmethod
     def _position_edit_button(button, card):
@@ -498,7 +517,7 @@ class CustomBattleScreen(Screen):
                for element in self.elements):
             return False
         for side, top in enumerate(PANEL_TOPS):
-            if (pygame.Rect(PANEL_X, top, PANEL_WIDTH, PANEL_HEIGHT).collidepoint(event.pos)
+            if (pygame.Rect(PANEL_X, top, PANEL_WIDTH, self.panel_height).collidepoint(event.pos)
                     and not self.panes[side].collidepoint(event.pos)
                     and not self._on_scrollbar(side, event.pos)):
                 self.marquee = [side, event.pos, event.pos]
@@ -686,40 +705,52 @@ class CustomBattleScreen(Screen):
     def _cache_card(self, side, unit):
         key = self._card_key(side, unit)
         if key not in self.card_surfaces:
-            card = pygame.Surface(CARD_SIZE)
+            width, height = self.card_size
+            card = pygame.Surface((width, height))
             ui_elements.draw_pixel_panel(card, card.get_rect(), (46, 51, 65), (15, 19, 27))
-            preview = self.mode == "preview"
             name = unit["type"]
-            if preview:
+            font = fonts.get("tiny")
+            if self.mode == "preview":
+                # Preview shows no unit name: a large icon, then a health bar with the flag to its right.
                 icon = symbol_loader.get_symbol(name, zoom=1, color=TEAM_COLORS[side],
                                                 country=unit["owner"], fit_size=PREVIEW_CARD_ICON_SIZE)
                 if icon is not None:
-                    card.blit(icon, icon.get_rect(center=(CARD_SIZE[0] // 2, 28)))
+                    card.blit(icon, icon.get_rect(center=(width // 2, PREVIEW_ICON_CENTER_Y)))
+                flag_x = width - PREVIEW_ROW_INSET - PREVIEW_FLAG_SIZE[0]
+                bar = pygame.Rect(PREVIEW_ROW_INSET, PREVIEW_BAR_TOP,
+                                  flag_x - PREVIEW_BAR_FLAG_GAP - PREVIEW_ROW_INSET, PREVIEW_BAR_HEIGHT)
+                pygame.draw.rect(card, OUTLINE_COLOR, bar)
+                ratio = max(0.0, min(1.0, unit["health"] / unit["max_health"]))
+                pygame.draw.rect(card, HEALTH_BAR_COLOR,
+                                 (bar.x + 1, bar.y + 1, round((bar.width - 2) * ratio), bar.height - 2))
+                flag_icons.draw_flag(card, unit["owner"], self.country_data, flag_x,
+                                     bar.centery - PREVIEW_FLAG_SIZE[1] // 2, size=PREVIEW_FLAG_SIZE)
+                stats_top = PREVIEW_STATS_TOP
             else:
-                draw_unit_shape(card, combat.unit_shape(name, self.library), (CARD_SIZE[0] // 2, 28),
+                draw_unit_shape(card, combat.unit_shape(name, self.library), (width // 2, 28),
                                 0 if side == 0 else math.pi, TEAM_COLORS[side], scale=1.4)
-            flag_icons.draw_flag(card, unit["owner"], self.country_data,
-                                 *CARD_FLAG_POSITION, size=CARD_FLAG_SIZE)
-            font = fonts.get("tiny")
-            card.blit(font.render(queries.format_health_percent(unit), True, c.UI_TEXT_LIGHT),
-                      CARD_HEALTH_POSITION)
-            label = queries.get_unit_display_name(name, self.library)
-            line_height = font.get_height()
-            for line_number, line in enumerate(wrap_text(label, font, CARD_SIZE[0] - 16)[:3]):
-                text = font.render(fit_text(line, font, CARD_SIZE[0] - 16), True, c.UI_TEXT_BRIGHT)
-                card.blit(text, text.get_rect(midtop=(CARD_SIZE[0] // 2, 52 + line_number * line_height)))
+                flag_icons.draw_flag(card, unit["owner"], self.country_data,
+                                     *CARD_FLAG_POSITION, size=CARD_FLAG_SIZE)
+                card.blit(font.render(queries.format_health_percent(unit), True, c.UI_TEXT_LIGHT),
+                          CARD_HEALTH_POSITION)
+                label = queries.get_unit_display_name(name, self.library)
+                line_height = font.get_height()
+                for line_number, line in enumerate(wrap_text(label, font, width - 16)[:3]):
+                    text = font.render(fit_text(line, font, width - 16), True, c.UI_TEXT_BRIGHT)
+                    card.blit(text, text.get_rect(midtop=(width // 2, 52 + line_number * line_height)))
+                stats_top = CARD_STATS_TOP
             attack = unit["attack"] * combat_rules.effective_damage_multiplier(unit)
             entries = [(icon, queries.format_number(value)) for icon, value in (
                 (c.ICON_HEALTH, unit["health"]), (c.ICON_ATTACK, attack), (c.ICON_DEFENSE, unit["defense"]))]
             ui_elements.draw_wrapped_icon_row(
-                card, font, entries, 6, CARD_STATS_TOP, c.UI_TEXT_LIGHT,
-                CARD_SIZE[0] - 12, icon_size=CARD_STAT_ICON_SIZE)
+                card, font, entries, 6, stats_top, c.UI_TEXT_LIGHT,
+                width - 12, icon_size=CARD_STAT_ICON_SIZE)
             self.card_surfaces[key] = card
         return self.card_surfaces[key]
 
     def _draw_rosters(self, surface):
         for side, top in enumerate(PANEL_TOPS):
-            panel = pygame.Rect(PANEL_X, top, PANEL_WIDTH, PANEL_HEIGHT)
+            panel = pygame.Rect(PANEL_X, top, PANEL_WIDTH, self.panel_height)
             ui_elements.draw_pixel_panel(surface, panel, (39, 44, 58), (15, 19, 27))
             surface.blit(self.roster_labels[side], (panel.x + ROSTER_INSET, panel.y + 14))
             old_clip = surface.get_clip()
