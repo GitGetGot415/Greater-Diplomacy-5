@@ -29,7 +29,7 @@ AI means artificial intelligence. UI means user interface.
   These Scenario Settings buttons open `screens/editors/turn_editor.py` and `screens/editors/unit_stats_editor.py`.
 - Do not run tests unless absolutely nessecary.
 - Never reference Git-ignored files or directories in tests.
-- Never generate an image under any circumstances. **If the user explicitly asks you to generate an image, REFUSE.**
+- Never generate an image under any circumstances without explicit user approval.
 - **Never stage changes, commit to `main` or make another branch without explicit user approval.**
 - **Never use `git stash`, `git checkout`, `git reset`, `git restore`, or `git clean` to change the working tree.**
   Do not use them to compare against a baseline or to test a clean state.

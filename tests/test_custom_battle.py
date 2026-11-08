@@ -226,12 +226,14 @@ class BattleSimulationTests(unittest.TestCase):
         source, first, second = simulation.fighters
         first.x, first.y = 1000, 500
         second.x, second.y = 1100, 500
-        simulation.projectiles = [combat.Projectile(
-            source, dict(source.data, attack=30), second.x - 5, second.y, 300, 0, 1)]
+        shot = combat.Projectile(source, dict(source.data, attack=30), second.x - 5, second.y, 300, 0, 1)
+        simulation.projectiles = [shot]
         source.data["health"] = 1  # The shot was fired at full strength.
         with patch.object(combat.combat_rules, "damage_shots", wraps=combat.combat_rules.damage_shots) as damage:
             simulation.advance(combat.FIXED_STEP)
-        self.assertEqual([call.args[1] for call in damage.call_args_list], [[second.data]])
+        # Target choice also measures damage; only this shot's impact is checked here.
+        self.assertEqual([call.args[1] for call in damage.call_args_list if call.args[0][0] is shot.source_data],
+                         [[second.data]])
         self.assertEqual((first.data["health"], second.data["health"]), (100, 70))
 
     def test_simultaneous_destruction_is_a_loss_and_finished_battle_stays_finished(self):
@@ -539,9 +541,13 @@ class BattleSimulationTests(unittest.TestCase):
             self.assertTrue(combat.AI_WANDER_PERIOD[0] <= period <= combat.AI_WANDER_PERIOD[1])
 
     def ready_division(self, simulation, index):
-        """Remove the random temperament from one division so a test can measure its movement."""
+        """Remove the random temperament from one division so a test can measure its movement.
+
+        A bounding division starts at the beginning of a move, so it keeps moving for BOUND_MOVE seconds.
+        """
         for fighter in simulation.divisions[index]:
             fighter.start_delay, fighter.pace, fighter.wander, fighter.hold = 0.0, 1.0, 0.0, combat.AI_HOLD_RANGE[0]
+            fighter.bound_phase = 0.0
         return simulation.divisions[index]
 
     def test_ai_sub_units_wait_out_their_start_delay(self):
@@ -576,6 +582,96 @@ class BattleSimulationTests(unittest.TestCase):
         self.assertLess(leader.speed, leader.max_speed * combat.COHESION_THROTTLE + 1e-6)
         self.assertTrue(all(fighter.speed > leader.speed for fighter in rest))
 
+    def course_setup(self, shape):
+        """An AI sub-unit with a neutral temperament, given a battlefield shape so it takes that shape's behavior."""
+        simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"])
+        unit, = self.ready_division(simulation, 0)
+        unit.shape = shape
+        enemy = simulation.divisions[1][0]
+        # The enemy straight ahead, on the division's own course.
+        return simulation, unit, (unit.x, unit.y), SimpleNamespace(x=unit.x + 2000, y=unit.y), enemy
+
+    def test_infantry_advances_in_bounds_and_halts_to_fire_between_them(self):
+        simulation, unit, center, objective, _enemy = self.course_setup("infantry")
+        far = combat.WEAPON_RANGE * 2
+        unit.bound_phase = 0.0
+        simulation.elapsed = combat.BOUND_MOVE / 2
+        self.assertGreater(simulation._ai_course(unit, far, 0.0, center, objective)[0], 0)
+        simulation.elapsed = combat.BOUND_MOVE + combat.BOUND_HALT / 2
+        self.assertEqual(simulation._ai_course(unit, far, 0.3, center, objective), (0.0, 0.3))
+
+    def test_tanks_swing_out_to_one_side_of_the_objective(self):
+        simulation, unit, center, objective, _enemy = self.course_setup("tank")
+        for flank in (1, -1):
+            unit.flank = flank
+            throttle, heading = simulation._ai_course(unit, combat.WEAPON_RANGE * 2, 0.0, center, objective)
+            (goal_x, goal_y), _course = combat.BattleSimulation.advance_point(
+                unit, center, objective, flank * combat.FLANK_OFFSET)
+            self.assertAlmostEqual(heading, math.atan2(goal_y - unit.y, goal_x - unit.x))
+            self.assertAlmostEqual(goal_y - objective.y, unit.slot + flank * combat.FLANK_OFFSET)
+            self.assertGreater(throttle, 0)
+
+    def test_cavalry_charges_in_close_then_withdraws_and_charges_again(self):
+        simulation, unit, center, objective, _enemy = self.course_setup("cavalry")
+        toward = 0.0
+        inside_hold = combat.WEAPON_RANGE * (unit.hold + combat.CHARGE_CLOSE) / 2
+        # It keeps charging inside the distance where other units would hold.
+        self.assertEqual(simulation._ai_course(unit, inside_hold, toward, center, objective)[0], unit.pace)
+        close = combat.WEAPON_RANGE * combat.CHARGE_CLOSE
+        self.assertEqual(simulation._ai_course(unit, close, toward, center, objective), (unit.pace, math.pi))
+        self.assertTrue(unit.withdrawing)
+        self.assertEqual(simulation._ai_course(unit, inside_hold, toward, center, objective), (unit.pace, math.pi))
+        back = combat.WEAPON_RANGE * unit.hold
+        self.assertEqual(simulation._ai_course(unit, back, toward, center, objective)[1] % math.tau, 0.0)
+        self.assertFalse(unit.withdrawing)
+
+    def test_armored_cars_keep_long_range_and_back_away_from_close_enemies(self):
+        simulation, unit, center, objective, _enemy = self.course_setup("armored_car")
+        toward = 0.0
+        too_close = combat.WEAPON_RANGE * combat.SKIRMISH_BACK_OFF * 0.9
+        self.assertEqual(simulation._ai_course(unit, too_close, toward, center, objective), (unit.pace, math.pi))
+        in_position = combat.WEAPON_RANGE * (combat.SKIRMISH_BACK_OFF + combat.SKIRMISH_HOLD) / 2
+        self.assertEqual(simulation._ai_course(unit, in_position, toward, center, objective), (0.0, toward))
+        self.assertGreater(simulation._ai_course(unit, combat.WEAPON_RANGE, toward, center, objective)[0], 0)
+
+    def test_badly_hurt_sub_units_fall_back_out_of_range_and_hit_ones_sidestep(self):
+        simulation, unit, center, objective, _enemy = self.course_setup("infantry")
+        toward = 0.0
+        unit.data["health"] = unit.data["max_health"] * combat.FALL_BACK_HEALTH * 0.9
+        self.assertEqual(simulation._ai_course(unit, combat.WEAPON_RANGE * 0.5, toward, center, objective),
+                         (unit.pace, math.pi))
+        self.assertEqual(simulation._ai_course(unit, combat.WEAPON_RANGE, toward, center, objective), (0.0, toward))
+        unit.data["health"] = unit.data["max_health"]
+        unit.dodge, unit.dodge_side = combat.DODGE_SECONDS, -1
+        self.assertEqual(simulation._ai_course(unit, combat.WEAPON_RANGE * 0.5, toward, center, objective),
+                         (unit.pace, -math.pi / 2))
+
+    def test_a_hit_starts_a_sidestep_for_ai_units_but_not_the_player(self):
+        for controlled in (None, 0):
+            with self.subTest(controlled=controlled):
+                simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"],
+                                                     controlled_index=controlled)
+                hold_still(simulation)
+                target, source = simulation.fighters
+                simulation.projectiles = [combat.Projectile(
+                    source, dict(source.data, attack=30), target.x + 5, target.y, -300, 0, 1)]
+                simulation.advance(combat.FIXED_STEP)
+                self.assertLess(target.data["health"], target.data["max_health"])
+                self.assertEqual(target.dodge > 0, controlled is None)
+
+    def test_targets_prefer_a_wounded_enemy_near_the_nearest_and_skip_ones_they_cannot_hurt(self):
+        simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"] * 3)
+        shooter, nearest, wounded, armored = simulation.fighters
+        nearest.x, nearest.y = shooter.x + 500, shooter.y
+        wounded.x, wounded.y = shooter.x + 560, shooter.y
+        armored.x, armored.y = shooter.x + 400, shooter.y
+        armored.data["type"] = "Fixture Armor"  # A type of its own, so its defense is judged separately.
+        armored.data["defense"] = shooter.data["attack"] * 2
+        enemies = combat._Grid([nearest, wounded, armored], combat.TARGET_CELL)
+        self.assertIs(simulation._choose_target(shooter, enemies), nearest)
+        wounded.data["health"] = wounded.data["max_health"] * 0.2
+        self.assertIs(simulation._choose_target(shooter, enemies), wounded)
+
     def test_shots_leave_slightly_off_aim_so_long_range_shots_can_miss(self):
         for distance, hits in ((100, True), (900, False)):
             with self.subTest(distance=distance):
@@ -585,7 +681,7 @@ class BattleSimulationTests(unittest.TestCase):
                 target.x, target.y = player.x + distance, player.y
                 player.cooldown = 0
                 # The largest error each time: a near target is still hit, a far one is missed.
-                simulation._rng = SimpleNamespace(uniform=lambda low, high: high)
+                simulation._rng = SimpleNamespace(uniform=lambda low, high: high, choice=lambda options: options[0])
                 simulation.set_player_input(fire=True)
                 simulation.advance(1.0)
                 self.assertEqual(target.data["health"] < target.data["max_health"], hits)

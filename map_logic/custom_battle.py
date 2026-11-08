@@ -28,6 +28,22 @@ AI_WANDER_ANGLE = math.radians(20)  # Widest weave either side of its course.
 # Divisions advance as loose groups: a sub-unit this far ahead of its division's center slows to wait.
 COHESION_SLACK = 60.0
 COHESION_THROTTLE = 0.4  # Share of its pace while it waits.
+# How AI sub-units of each battlefield shape fight. Shapes not listed advance and hold.
+BEHAVIORS = {
+    "infantry": "bound", "cavalry": "charge", "armored_car": "skirmish",
+    "light_tank": "flank", "tank": "flank", "heavy_tank": "flank",
+}
+BOUND_MOVE = 3.0  # Bounding infantry advances for this many seconds...
+BOUND_HALT = 2.0  # ...then halts to fire for this many, and repeats.
+FLANK_OFFSET = 300.0  # Flanking tanks head this far to one side of their division's objective.
+CHARGE_CLOSE = 0.25  # Cavalry charges in to this share of weapon range, then withdraws to its hold distance.
+SKIRMISH_HOLD = 0.9  # Armored cars stop at this share of weapon range...
+SKIRMISH_BACK_OFF = 0.6  # ...and back away from an enemy closer than this share.
+# Reacting to the fight.
+FALL_BACK_HEALTH = 0.3  # Below this share of its health, a sub-unit falls back out of enemy range.
+DODGE_SECONDS = 0.6  # A sub-unit that is hit sidesteps for this long.
+TARGET_CHOICE_SLACK = 200.0  # Enemies this close to the nearest enemy are also considered as targets...
+TARGET_WOUNDED_PULL = 0.5  # ...and a wounded one counts as up to this share closer.
 AIM_TOLERANCE = math.radians(4)  # AI units fire once the gun points this close to the aim angle.
 RETARGET_SECONDS = 0.25  # AI units choose the nearest enemy again this often.
 # Collision and separation cells, and the coarser cells of the nearest-enemy search.
@@ -280,6 +296,12 @@ class Fighter:
     wander: float = 0.0  # Radians.
     wander_period: float = 6.0
     wander_phase: float = 0.0
+    bound_phase: float = 0.0  # Seconds into its move-and-halt cycle when the battle starts.
+    flank: int = 1  # Which side its division swings out to when flanking: 1 or -1.
+    # AI only: state while fighting.
+    withdrawing: bool = False  # A charging sub-unit pulling back before it charges again.
+    dodge: float = 0.0  # Seconds of sidestepping left after being hit.
+    dodge_side: int = 1
 
     @property
     def alive(self):
@@ -379,6 +401,7 @@ class BattleSimulation:
     _division_targets: list = field(init=False, default_factory=list)  # The enemy each division advances on.
     _division_retarget: list = field(init=False, default_factory=list)  # Seconds until each chooses again.
     _rng: object = field(init=False, default=None)
+    _hurts: dict = field(init=False, default_factory=dict)  # (shooter type, target type) -> can it do damage.
     _accumulator: float = field(init=False, default=0.0)
     _throttle: float = field(init=False, default=0.0)
     _turn: float = field(init=False, default=0.0)
@@ -430,6 +453,7 @@ class BattleSimulation:
         # Spread target searches across ticks instead of running them all at once.
         stagger = round(RETARGET_SECONDS / FIXED_STEP)
         rng = self._rng
+        flank = rng.choice((-1, 1))  # The whole division swings out to the same side.
         members = []
         for number in range(count):
             slot = (number - (count - 1) / 2) * SUBUNIT_SPACING
@@ -439,7 +463,8 @@ class BattleSimulation:
                 retarget=(len(self.fighters) + number) % stagger * FIXED_STEP, slot=slot,
                 hold=rng.uniform(*AI_HOLD_RANGE), pace=rng.uniform(*AI_PACE),
                 start_delay=rng.uniform(*AI_START_DELAY), wander=rng.uniform(0.0, AI_WANDER_ANGLE),
-                wander_period=rng.uniform(*AI_WANDER_PERIOD), wander_phase=rng.uniform(0.0, math.tau)))
+                wander_period=rng.uniform(*AI_WANDER_PERIOD), wander_phase=rng.uniform(0.0, math.tau),
+                bound_phase=rng.uniform(0.0, BOUND_MOVE + BOUND_HALT), flank=flank))
         self.divisions.append(members)
         self._division_health.append(full)
         self._division_targets.append(None)
@@ -526,10 +551,11 @@ class BattleSimulation:
             fighter.cooldown = FIRE_INTERVAL
 
     @staticmethod
-    def advance_point(fighter, center, objective):
+    def advance_point(fighter, center, objective, offset=0.0):
         """Where a sub-unit heads while closing in: beside its division's objective, at its own place in the line.
 
         Sideways places keep their deployment order, so a division arrives spread out rather than in one clump.
+        ``offset`` moves the whole division's destination further to one side, for flanking.
         """
         dx, dy = objective.x - center[0], objective.y - center[1]
         length = math.hypot(dx, dy)
@@ -538,8 +564,74 @@ class BattleSimulation:
         else:
             dx, dy = (-1.0, 0.0) if fighter.side else (1.0, 0.0)
         # Rotate the course a quarter turn so a positive slot stays on the side it deployed on.
-        sideways = -1.0 if fighter.side else 1.0
-        return (objective.x - dy * sideways * fighter.slot, objective.y + dx * sideways * fighter.slot), (dx, dy)
+        sideways = (-1.0 if fighter.side else 1.0) * (fighter.slot + offset)
+        return (objective.x - dy * sideways, objective.y + dx * sideways), (dx, dy)
+
+    def _can_hurt(self, shooter, target):
+        """Whether a shooter at full health could do any damage to this kind of target; cached per type pair."""
+        key = (shooter.data["type"], target.data["type"])
+        if key not in self._hurts:
+            full = dict(shooter.data, health=shooter.data["max_health"])
+            self._hurts[key] = self._attack(full, target.data) > target.data["defense"]
+        return self._hurts[key]
+
+    def _choose_target(self, fighter, enemies):
+        """The enemy to shoot: the nearest, unless one close to it is wounded and this sub-unit can hurt it.
+
+        A wounded enemy counts as nearer, and enemies this sub-unit cannot damage are passed over.
+        """
+        nearest = enemies.nearest(fighter.x, fighter.y)
+        best, best_score = None, math.inf
+        for enemy in enemies.around(nearest.x, nearest.y, TARGET_CHOICE_SLACK):
+            if not self._can_hurt(fighter, enemy):
+                continue
+            wounds = 1.0 - enemy.data["health"] / enemy.data["max_health"]
+            score = math.hypot(enemy.x - fighter.x, enemy.y - fighter.y) * (1.0 - TARGET_WOUNDED_PULL * wounds)
+            if score < best_score:
+                best, best_score = enemy, score
+        return best or nearest
+
+    def _ai_course(self, fighter, distance, toward, center, objective):
+        """(throttle share, heading) for an AI sub-unit. ``toward`` is the heading to the enemy it shoots at.
+
+        Reactions come first: a badly hurt sub-unit falls back, and one that was just hit sidesteps.
+        Otherwise its shape's behavior decides (BEHAVIORS).
+        """
+        away = toward + math.pi
+        if fighter.data["health"] < fighter.data["max_health"] * FALL_BACK_HEALTH:
+            # Badly hurt: fall back out of the enemy's reach, then turn to face it again.
+            return (fighter.pace, away) if distance < WEAPON_RANGE else (0.0, toward)
+        if fighter.dodge > 0:
+            return fighter.pace, toward + fighter.dodge_side * math.pi / 2
+        behavior = BEHAVIORS.get(fighter.shape)
+        hold = fighter.hold
+        if behavior == "skirmish":
+            if distance < WEAPON_RANGE * SKIRMISH_BACK_OFF:
+                return fighter.pace, away
+            hold = SKIRMISH_HOLD
+        elif behavior == "charge":
+            if fighter.withdrawing and distance < WEAPON_RANGE * fighter.hold:
+                return fighter.pace, away
+            fighter.withdrawing = distance <= WEAPON_RANGE * CHARGE_CLOSE
+            if fighter.withdrawing:
+                return fighter.pace, away
+            hold = CHARGE_CLOSE
+        if distance <= WEAPON_RANGE * hold:
+            # In position: face the enemy it shoots at, so a firing cone covers it.
+            return 0.0, toward
+        if self.elapsed < fighter.start_delay or (
+                behavior == "bound"
+                and (self.elapsed + fighter.bound_phase) % (BOUND_MOVE + BOUND_HALT) >= BOUND_MOVE):
+            return 0.0, toward
+        (goal_x, goal_y), (course_x, course_y) = self.advance_point(
+            fighter, center, objective, fighter.flank * FLANK_OFFSET if behavior == "flank" else 0.0)
+        weave = fighter.wander * math.sin(math.tau * self.elapsed / fighter.wander_period + fighter.wander_phase)
+        throttle = fighter.pace
+        # A sub-unit well ahead of its division slows down to let the division catch up; charging cavalry does not.
+        if (behavior != "charge"
+                and (fighter.x - center[0]) * course_x + (fighter.y - center[1]) * course_y > COHESION_SLACK):
+            throttle *= COHESION_THROTTLE
+        return throttle, math.atan2(goal_y - fighter.y, goal_x - fighter.x) + weave
 
     def _drive_ai(self, fighter, enemies, dt, shots, center, objective):
         fighter.retarget -= dt
@@ -547,24 +639,15 @@ class BattleSimulation:
             fighter.retarget += RETARGET_SECONDS
             fighter.target = None
         if fighter.target is None or not fighter.target.alive:
-            fighter.target = enemies.nearest(fighter.x, fighter.y)
+            fighter.target = self._choose_target(fighter, enemies)
+        fighter.dodge = max(0.0, fighter.dodge - dt)
         target = fighter.target
         dx, dy = target.x - fighter.x, target.y - fighter.y
         distance = math.hypot(dx, dy)
-        closing = distance > WEAPON_RANGE * fighter.hold
-        throttle = 0.0
-        if closing:
-            (goal_x, goal_y), (course_x, course_y) = self.advance_point(fighter, center, objective)
-            weave = fighter.wander * math.sin(math.tau * self.elapsed / fighter.wander_period + fighter.wander_phase)
-            turning = _wrap(math.atan2(goal_y - fighter.y, goal_x - fighter.x) + weave - fighter.angle)
-            if self.elapsed >= fighter.start_delay:
-                throttle = fighter.pace * max(0.0, math.cos(turning))
-                # A sub-unit well ahead of its division slows down to let the division catch up.
-                if (fighter.x - center[0]) * course_x + (fighter.y - center[1]) * course_y > COHESION_SLACK:
-                    throttle *= COHESION_THROTTLE
-        else:
-            # Holding position: face the enemy it shoots at, so a firing cone covers it.
-            turning = _wrap(math.atan2(dy, dx) - fighter.angle)
+        throttle, heading = self._ai_course(fighter, distance, math.atan2(dy, dx), center, objective)
+        turning = _wrap(heading - fighter.angle)
+        # Turn toward the heading before driving hard along it.
+        throttle *= max(0.0, math.cos(turning))
         _seconds, degrees, seconds = MOBILITY[fighter.shape]
         # Ease off the turn before the hull lines up, since the turn rate cannot stop at once.
         self._steer(fighter, max(-1.0, min(1.0, turning / (math.radians(degrees) * seconds))), dt)
@@ -679,6 +762,10 @@ class BattleSimulation:
             # Whole health points keep equal, weakening armies from approaching
             # zero forever when the shared health-scaled attack has no floor.
             target.data["health"] = max(0.0, target.data["health"] - math.ceil(loss))
+            if loss > 0 and target.alive and target is not self.controlled:
+                # A hit AI sub-unit sidesteps, to a random side.
+                target.dodge = DODGE_SECONDS
+                target.dodge_side = self._rng.choice((-1, 1))
         alive_sides = {fighter.side for fighter in self.fighters if fighter.alive}
         if len(alive_sides) < 2:
             # Mutual destruction is a loss for the friendly army; there is no draw screen.

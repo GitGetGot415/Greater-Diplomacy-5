@@ -159,7 +159,24 @@ sub-units heads for a point beside that enemy matching its own place in the divi
 spread out in its deployment order. A sub-unit that gets well ahead of its division slows down until the division
 catches up. Each sub-unit also has its own temperament, drawn at deployment: how close it comes before it stops to
 fight, its cruising speed, a short delay before it first moves, and a gentle weave from side to side while advancing.
-Each sub-unit shoots at the enemy nearest to itself. Once it has stopped, it faces that enemy so its firing cone covers it.
+Once it has stopped, a sub-unit faces the enemy it shoots at so its firing cone covers it.
+
+Each sub-unit chooses whom to shoot from the enemies close to its nearest one. A wounded enemy counts as nearer than
+it is, and an enemy it could not damage even at full health is passed over.
+
+AI sub-units also fight according to their type:
+
+| Type | Behavior |
+| --- | --- |
+| Infantry and militia | Advance in bounds: move for a few seconds, halt to fire, then move again. |
+| Tanks | Flank: the division swings out to one side of the enemy it advances on and approaches at an angle. |
+| Cavalry | Charge in close, withdraw to its usual distance, then charge again. Charging cavalry does not wait for its division. |
+| Armored cars | Skirmish: stop at long range and back away from any enemy that comes close. |
+| Troop carriers | Advance and hold, with no special behavior. |
+
+Two reactions come before the type's behavior. A sub-unit below a set share of its health falls back until it is out
+of the enemy's range, then turns to face it again. An AI sub-unit that is hit and survives sidesteps briefly, to a
+random side. The player's sub-unit never reacts on its own.
 
 #### Control
 
@@ -248,7 +265,9 @@ Its `SUBUNIT_COUNTS`, `MOBILITY`, and `AIM` tables set sub-unit counts, accelera
 `WEAPON_RANGE`, `PROJECTILE_SPEED`, `RANK_GAP`, `SUBUNIT_SPACING`, and `SPAWN_FRONT_GAP` set range, shot speed, and deployment.
 `is_artillery` decides which units sit tactical battles out.
 `SHOT_SPREAD` sets how far shots can stray. The `AI_*` ranges set the temperaments, and `COHESION_SLACK` and
-`COHESION_THROTTLE` set how far ahead a sub-unit may get and how much it slows. `BattleSimulation(seed=...)`
+`COHESION_THROTTLE` set how far ahead a sub-unit may get and how much it slows. `BEHAVIORS` assigns each shape its
+behavior; `BOUND_*`, `FLANK_OFFSET`, `CHARGE_CLOSE`, `SKIRMISH_*`, `FALL_BACK_HEALTH`, `DODGE_SECONDS`, and
+`TARGET_*` tune the behaviors, reactions, and target choice. `BattleSimulation(seed=...)`
 fixes the random temperaments and shot spread so a battle can be replayed; the game leaves it unset, so every battle differs.
 
 Unit statistics and capabilities come from [unit_data.json](../data/json/unit_data.json).
