@@ -33,9 +33,10 @@ GRASS_COLOR = (72, 115, 57)
 OUTLINE_COLOR = (22, 30, 22)
 MAX_FRAME_SECONDS = 0.25
 DRAG_THRESHOLD = 6
-GENERATION_BUTTON_POSITION = (60, 625)
-GENERATION_SLIDER_POSITION = (820, 640)
-GENERATION_SLIDER_WIDTH = 400
+GENERATION_SLIDER_POSITION = (c.SCREEN_WIDTH - 270, 48)
+GENERATION_SLIDER_WIDTH = 240
+GENERATION_BUTTON_SIZE = (100, 40)
+GENERATION_BUTTON_POSITION = (GENERATION_SLIDER_POSITION[0] - GENERATION_BUTTON_SIZE[0] - 20, 25)
 
 
 def draw_unit_shape(surface, shape, center, angle, color, *, scale=1.0):
@@ -148,7 +149,7 @@ class CustomBattleScreen(Screen):
             start.apply_state(enabled=all(self.rosters), color="green")
             self.elements.append(start)
             self.generate_button = Button(
-                *GENERATION_BUTTON_POSITION, (230, 50), "purple", "Randomly Generate",
+                *GENERATION_BUTTON_POSITION, GENERATION_BUTTON_SIZE, "purple", "Random",
                 self.generate_armies, font_size=20)
             self.generate_button.apply_state(enabled=bool(self.random_candidates), color="purple")
             self.year_slider = Slider(
@@ -174,6 +175,9 @@ class CustomBattleScreen(Screen):
             self.generate_button.apply_state(enabled=bool(self.random_candidates), color="purple")
         # Keep the current slider alive while dragging instead of rebuilding controls.
         self.year_slider.text = f"Year: {self.generation_year}"
+        self.year_slider.value = self.generation_year - c.START_YEAR
+        self.year_slider.handle_rect.centerx = self.year_slider.rect.left + round(
+            self.year_slider.rect.width * self.year_slider.value / self.year_slider.visual_max)
 
     def generate_armies(self):
         if self.mode != "setup" or not self.random_candidates:
@@ -312,6 +316,11 @@ class CustomBattleScreen(Screen):
                     self.toggle_pause()
             if self.done:
                 return
+            if (self.mode == "setup" and event.type == pygame.MOUSEWHEEL
+                    and self.year_slider.rect.inflate(20, 40).collidepoint(pygame.mouse.get_pos())):
+                # A shorter track skips some years when dragged at pixel resolution.
+                self.update_generation_year(self.generation_year - c.START_YEAR + event.y)
+                continue
             if self.mode == "setup" and self._roster_events(event):
                 continue
             for element in list(self.elements):

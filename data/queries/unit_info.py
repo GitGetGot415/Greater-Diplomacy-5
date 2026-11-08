@@ -568,6 +568,19 @@ def get_unit_tier(unit_name, unit_library=None, *, context=None):
     return queries.get_unit_metadata(unit_name, unit_library, context=context)["tier_order"]
 
 
+def get_unit_research_year(unit_name, unit_library=None, *, context=None):
+    """Read an equipment date directly or resolve its numbered research level."""
+    if context is None and isinstance(unit_library, ActiveLibrary):
+        context = unit_library
+    requirement = queries.get_unit_metadata(unit_name, unit_library, context=context)["research"]
+    for key in ("year", "minimum_year"):
+        if key in requirement:
+            return requirement[key]
+    years = queries.get_tech_tree(context).get(requirement["tech"], {}).get("years", [])
+    level = requirement["level"]
+    return years[level - 1] if 1 <= level <= len(years) else None
+
+
 def get_latest_units_for_year(unit_library, year, *, context=None):
     """Return each family's highest tier whose research is available by this year."""
     if context is None and isinstance(unit_library, ActiveLibrary):

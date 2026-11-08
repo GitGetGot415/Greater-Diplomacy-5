@@ -22,6 +22,7 @@ SPAWN_GAP = 30.0
 SPAWN_MARGIN = 70.0
 RANDOM_ARMY_MIN_UNITS = 3
 RANDOM_ARMY_MAX_UNITS = 5
+RANDOM_UNIT_AGE_LIMIT = 5
 
 
 def land_unit_types(library):
@@ -31,9 +32,16 @@ def land_unit_types(library):
 
 
 def land_unit_types_for_year(library, year):
-    """Use shared research requirements, then restrict generated armies to land."""
+    """Choose the latest unlocked land tiers less than five research years old."""
     land = set(land_unit_types(library))
-    return [name for name in queries.get_latest_units_for_year(library, year) if name in land]
+    candidates = []
+    for name in queries.get_latest_units_for_year(library, year):
+        if name not in land:
+            continue
+        researched = queries.get_unit_research_year(name, library)
+        if researched is not None and 0 <= year - researched < RANDOM_UNIT_AGE_LIMIT:
+            candidates.append(name)
+    return candidates
 
 
 def random_armies(candidates, *, rng=None):

@@ -76,14 +76,23 @@ class RandomBattleTests(unittest.TestCase):
         self.assertEqual(set(combat.land_unit_types_for_year(self.library, 1913)),
                          {"Car 2", "Foot 1910"})
         self.assertEqual(set(combat.land_unit_types_for_year(self.library, 1916)),
-                         {"Car 2", "Foot 1910", "Motorized 1910", "Tank 1"})
+                         {"Car 2", "Tank 1"})
+        self.assertEqual(set(combat.land_unit_types_for_year(self.library, 1914)),
+                         {"Car 2", "Foot 1910", "Motorized 1910"})
 
     def test_year_is_inclusive_and_advances_levels_without_keeping_obsolete_tiers(self):
         self.assertEqual(set(combat.land_unit_types_for_year(self.library, 1912)),
                          {"Car 2", "Foot 1910"})
         self.assertEqual(set(combat.land_unit_types_for_year(self.library, 1920)),
-                         {"Car 3", "Foot 1918", "Motorized 1910", "Tank 1"})
+                         {"Car 3", "Foot 1918", "Tank 1"})
         self.assertEqual(combat.land_unit_types_for_year(self.library, 1799), [])
+
+    def test_numbered_and_year_based_units_are_excluded_at_exactly_five_years(self):
+        self.assertIn("Car 2", combat.land_unit_types_for_year(self.library, 1916))
+        self.assertNotIn("Car 2", combat.land_unit_types_for_year(self.library, 1917))
+        self.assertIn("Foot 1910", combat.land_unit_types_for_year(self.library, 1914))
+        self.assertNotIn("Foot 1910", combat.land_unit_types_for_year(self.library, 1915))
+        self.assertEqual(combat.land_unit_types_for_year(self.library, 1925), [])
 
     def test_random_armies_have_independent_three_to_five_unit_counts_and_valid_types(self):
         candidates = combat.land_unit_types_for_year(self.library, 1913)
@@ -221,7 +230,7 @@ class CustomBattleScreenTests(unittest.TestCase):
             self.assertIs(self.screen.year_slider, slider)
             self.assertEqual(self.screen.rosters[0], ["Car 1"])
             with patch("map_logic.custom_battle.random.randint", side_effect=[3, 5]):
-                self.click("Randomly Generate")
+                self.click("Random")
             self.assertEqual(tuple(map(len, self.screen.rosters)), (3, 5))
             self.assertTrue(set(sum(self.screen.rosters, [])) <= {"Car 2", "Foot 1910"})
             self.assertEqual(self.screen.selected, [None, None])
@@ -236,10 +245,30 @@ class CustomBattleScreenTests(unittest.TestCase):
             self.screen.update_generation_year(0)
             self.screen.add_unit(0, "Car 1")
             self.assertTrue(self.screen.generate_button.disabled)
-            self.click("Randomly Generate")
+            self.click("Random")
             self.assertEqual(self.screen.rosters[0], ["Car 1"])
             self.screen.generate_armies()
             self.assertEqual(self.screen.rosters[0], ["Car 1"])
+
+    def test_short_year_slider_wheel_selects_single_years_and_clamps_bounds(self):
+        library, tree = dated_fixture_content()
+        with patch("data.queries.get_unit_library", return_value=library), \
+                patch("data.queries.get_tech_tree", return_value=tree):
+            self.screen.on_enter(SimpleNamespace(), None)
+            self.screen.update_generation_year(1916 - c.START_YEAR)
+            with patch("pygame.mouse.get_pos", return_value=self.screen.year_slider.rect.center):
+                self.screen.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=1)])
+                self.assertEqual(self.screen.generation_year, 1917)
+                self.assertNotIn("Car 2", self.screen.random_candidates)
+                self.screen.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=-1)])
+                self.assertEqual(self.screen.generation_year, 1916)
+                self.assertIn("Car 2", self.screen.random_candidates)
+                self.screen.update_generation_year(0)
+                self.screen.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=-1)])
+                self.assertEqual(self.screen.generation_year, c.START_YEAR)
+                self.screen.update_generation_year(c.END_YEAR - c.START_YEAR)
+                self.screen.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=1)])
+                self.assertEqual(self.screen.generation_year, c.END_YEAR)
 
     def drag_card(self, start, end):
         self.screen.handle_events([
