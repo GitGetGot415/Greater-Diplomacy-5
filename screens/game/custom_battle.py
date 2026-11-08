@@ -53,6 +53,8 @@ CARD_STAT_ICON_SIZE = 14
 BATTLE_FLAG_SIZE = (14, 9)
 BATTLE_FLAG_GAP = 3
 MIXED_LABEL = "Mixed"
+# Map layers a turn's end rebuilds; a captured tile needs the same, in this order.
+TILE_CAPTURE_LAYERS = ("political", "relations", "factions", "cores", "faction_territories", "fog")
 CARD_EDIT_SIZE = 24
 CARD_EDIT_INSET = 6
 ROSTER_INSET = 20
@@ -274,8 +276,14 @@ class CustomBattleScreen(Screen):
         combat.apply_campaign_result(self.simulation, campaign.units, campaign.province)
         queries.normalize_armies(campaign.map_screen.nation_data, campaign.map_screen.map_data)
         # Whoever is left standing on the tile takes it, as after any campaign combat.
+        owner_before = campaign.province.get("owner")
         combat_processor.check_for_post_combat_captures(campaign.map_screen)
         campaign.map_screen.invalidate_map_presentation_cache()
+        if campaign.province.get("owner") != owner_before:
+            # The single-tile repaint is not enough: rebuild the layers a turn's end rebuilds.
+            for layer in TILE_CAPTURE_LAYERS:
+                campaign.map_screen.refresh_map_layers(layer)
+            campaign.map_screen.update_country_centers()
 
     def continue_campaign(self):
         """Leave the finished encounter. A dead tactical unit sends the player to spectating."""

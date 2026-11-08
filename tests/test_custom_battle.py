@@ -449,6 +449,8 @@ class CustomBattleScreenTests(unittest.TestCase):
         map_screen.player_unit = player
         map_screen.tactical_mode = True
         map_screen.invalidate_map_presentation_cache = Mock()
+        map_screen.refresh_map_layers = Mock()
+        map_screen.update_country_centers = Mock()
         custom = self.screen.rosters
         with patch("data.queries.get_unit_library", return_value=self.library):
             self.screen._enter_campaign(map_screen, province, [player], [enemy])
@@ -528,6 +530,8 @@ class CustomBattleScreenTests(unittest.TestCase):
                 world.player_unit = player
                 world.tactical_mode = True
                 world.invalidate_map_presentation_cache = Mock()
+                world.refresh_map_layers = Mock()
+                world.update_country_centers = Mock()
                 with patch("data.queries.get_unit_library", return_value=self.library):
                     self.screen._enter_campaign(world, province, [player], [foe])
                 self.finish_intro()
@@ -538,6 +542,10 @@ class CustomBattleScreenTests(unittest.TestCase):
                 self.screen.simulation.winner = 1 if player_dies else 0
                 self.screen.update()
                 self.assertEqual(province["owner"], owner)
+                # A changed owner rebuilds every layer a turn's end rebuilds; no change rebuilds none.
+                layers = [call.args[0] for call in world.refresh_map_layers.call_args_list]
+                self.assertEqual(layers, list(battle_screen.TILE_CAPTURE_LAYERS) if player_dies else [])
+                self.assertEqual(world.update_country_centers.called, player_dies)
 
     def test_campaign_forces_lead_with_the_player_unit_and_need_a_land_enemy(self):
         nations = {"Fixture A": {"at_war_with": ["Fixture B"]}, "Fixture B": {"at_war_with": ["Fixture A"]}}
