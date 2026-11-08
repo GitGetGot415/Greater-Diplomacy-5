@@ -18,7 +18,16 @@ FIRE_INTERVAL = 2.0
 WEAPON_RANGE = 1000.0
 PROJECTILE_SPEED = 1000.0
 UNIT_RADIUS = 12.0
-AI_HOLD_RANGE = 0.85  # AI units stop closing in at this share of their weapon range.
+SHOT_SPREAD = math.radians(1.5)  # Every shot leaves up to this far off its aim, either way, so range costs hits.
+# Each AI sub-unit draws its own temperament from these (low, high) ranges at deployment.
+AI_HOLD_RANGE = (0.6, 0.95)  # Share of weapon range at which it stops closing in.
+AI_PACE = (0.7, 1.0)  # Cruising throttle.
+AI_START_DELAY = (0.0, 1.5)  # Seconds before it first moves.
+AI_WANDER_PERIOD = (4.0, 9.0)  # Seconds per weave from side to side while advancing.
+AI_WANDER_ANGLE = math.radians(20)  # Widest weave either side of its course.
+# Divisions advance as loose groups: a sub-unit this far ahead of its division's center slows to wait.
+COHESION_SLACK = 60.0
+COHESION_THROTTLE = 0.4  # Share of its pace while it waits.
 AIM_TOLERANCE = math.radians(4)  # AI units fire once the gun points this close to the aim angle.
 RETARGET_SECONDS = 0.25  # AI units choose the nearest enemy again this often.
 # Collision and separation cells, and the coarser cells of the nearest-enemy search.
@@ -261,8 +270,16 @@ class Fighter:
     turn_rate: float = 0.0  # Radians per second.
     vx: float = 0.0
     vy: float = 0.0
-    target: object = None  # AI only: the enemy it closes on and shoots at.
+    target: object = None  # AI only: the enemy it shoots at, its nearest.
     retarget: float = 0.0  # AI only: seconds until it chooses the nearest enemy again.
+    slot: float = 0.0  # Sideways place in its division's line: positive is downward at deployment.
+    # AI only: its temperament, drawn at deployment (see the AI_* ranges).
+    hold: float = 0.85
+    pace: float = 1.0
+    start_delay: float = 0.0
+    wander: float = 0.0  # Radians.
+    wander_period: float = 6.0
+    wander_phase: float = 0.0
 
     @property
     def alive(self):
@@ -343,12 +360,14 @@ class BattleSimulation:
 
     Each roster entry is a division. It becomes one or more sub-units (``SUBUNIT_COUNTS``)
     that share the division's health; attack and defense are not divided.
+    ``seed`` fixes the random temperaments and shot spread, so a battle can be replayed.
     """
 
     library: dict
     friendly: list
     enemy: list
     controlled_index: object = None
+    seed: object = None
     controlled: object = field(init=False, default=None)
     fighters: list = field(init=False, default_factory=list)
     divisions: list = field(init=False, default_factory=list)  # Sub-unit lists, friendly roster then enemy roster.
@@ -357,6 +376,9 @@ class BattleSimulation:
     elapsed: float = field(init=False, default=0.0)
     paused: bool = field(init=False, default=False)
     _division_health: list = field(init=False, default_factory=list)  # Each division's full health.
+    _division_targets: list = field(init=False, default_factory=list)  # The enemy each division advances on.
+    _division_retarget: list = field(init=False, default_factory=list)  # Seconds until each chooses again.
+    _rng: object = field(init=False, default=None)
     _accumulator: float = field(init=False, default=0.0)
     _throttle: float = field(init=False, default=0.0)
     _turn: float = field(init=False, default=0.0)
@@ -367,6 +389,7 @@ class BattleSimulation:
         if self.controlled_index is not None and (
                 type(self.controlled_index) is not int or not 0 <= self.controlled_index < len(self.friendly)):
             raise ValueError("The controlled unit must be an existing friendly roster entry.")
+        self._rng = random.Random(self.seed)
         allowed = set(land_unit_types(self.library))
         for side, roster in enumerate((self.friendly, self.enemy)):
             if not roster or len(roster) > c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE:
@@ -404,16 +427,23 @@ class BattleSimulation:
         count = max(1, math.ceil(data["health"] / full * size - 1e-9))
         facing = math.pi if side else 0.0
         division = len(self.divisions)
+        # Spread target searches across ticks instead of running them all at once.
+        stagger = round(RETARGET_SECONDS / FIXED_STEP)
+        rng = self._rng
         members = []
         for number in range(count):
+            slot = (number - (count - 1) / 2) * SUBUNIT_SPACING
             members.append(Fighter(
                 dict(data, max_health=full / size, health=data["health"] / count), side,
-                x, ARENA_SIZE[1] / 2 + (number - (count - 1) / 2) * SUBUNIT_SPACING,
-                shape, division=division, angle=facing, aim=facing,
-                # Spread target searches across ticks instead of running them all at once.
-                retarget=(len(self.fighters) + number) % round(RETARGET_SECONDS / FIXED_STEP) * FIXED_STEP))
+                x, ARENA_SIZE[1] / 2 + slot, shape, division=division, angle=facing, aim=facing,
+                retarget=(len(self.fighters) + number) % stagger * FIXED_STEP, slot=slot,
+                hold=rng.uniform(*AI_HOLD_RANGE), pace=rng.uniform(*AI_PACE),
+                start_delay=rng.uniform(*AI_START_DELAY), wander=rng.uniform(0.0, AI_WANDER_ANGLE),
+                wander_period=rng.uniform(*AI_WANDER_PERIOD), wander_phase=rng.uniform(0.0, math.tau)))
         self.divisions.append(members)
         self._division_health.append(full)
+        self._division_targets.append(None)
+        self._division_retarget.append(division % stagger * FIXED_STEP)
         self.fighters.extend(members)
         return members
 
@@ -495,7 +525,23 @@ class BattleSimulation:
             shots.append(fighter)
             fighter.cooldown = FIRE_INTERVAL
 
-    def _drive_ai(self, fighter, enemies, dt, shots):
+    @staticmethod
+    def advance_point(fighter, center, objective):
+        """Where a sub-unit heads while closing in: beside its division's objective, at its own place in the line.
+
+        Sideways places keep their deployment order, so a division arrives spread out rather than in one clump.
+        """
+        dx, dy = objective.x - center[0], objective.y - center[1]
+        length = math.hypot(dx, dy)
+        if length:
+            dx, dy = dx / length, dy / length
+        else:
+            dx, dy = (-1.0, 0.0) if fighter.side else (1.0, 0.0)
+        # Rotate the course a quarter turn so a positive slot stays on the side it deployed on.
+        sideways = -1.0 if fighter.side else 1.0
+        return (objective.x - dy * sideways * fighter.slot, objective.y + dx * sideways * fighter.slot), (dx, dy)
+
+    def _drive_ai(self, fighter, enemies, dt, shots, center, objective):
         fighter.retarget -= dt
         if fighter.retarget <= 0:
             fighter.retarget += RETARGET_SECONDS
@@ -505,12 +551,24 @@ class BattleSimulation:
         target = fighter.target
         dx, dy = target.x - fighter.x, target.y - fighter.y
         distance = math.hypot(dx, dy)
-        turning = _wrap(math.atan2(dy, dx) - fighter.angle)
+        closing = distance > WEAPON_RANGE * fighter.hold
+        throttle = 0.0
+        if closing:
+            (goal_x, goal_y), (course_x, course_y) = self.advance_point(fighter, center, objective)
+            weave = fighter.wander * math.sin(math.tau * self.elapsed / fighter.wander_period + fighter.wander_phase)
+            turning = _wrap(math.atan2(goal_y - fighter.y, goal_x - fighter.x) + weave - fighter.angle)
+            if self.elapsed >= fighter.start_delay:
+                throttle = fighter.pace * max(0.0, math.cos(turning))
+                # A sub-unit well ahead of its division slows down to let the division catch up.
+                if (fighter.x - center[0]) * course_x + (fighter.y - center[1]) * course_y > COHESION_SLACK:
+                    throttle *= COHESION_THROTTLE
+        else:
+            # Holding position: face the enemy it shoots at, so a firing cone covers it.
+            turning = _wrap(math.atan2(dy, dx) - fighter.angle)
         _seconds, degrees, seconds = MOBILITY[fighter.shape]
         # Ease off the turn before the hull lines up, since the turn rate cannot stop at once.
         self._steer(fighter, max(-1.0, min(1.0, turning / (math.radians(degrees) * seconds))), dt)
-        closing = distance > WEAPON_RANGE * AI_HOLD_RANGE
-        self._accelerate(fighter, max(0.0, math.cos(turning)) if closing else 0.0, dt)
+        self._accelerate(fighter, throttle, dt)
         flight = distance / PROJECTILE_SPEED
         lead_x, lead_y = target.x + target.vx * flight, target.y + target.vy * flight
         desired = math.atan2(lead_y - fighter.y, lead_x - fighter.x)
@@ -522,9 +580,32 @@ class BattleSimulation:
             fighter.cooldown = FIRE_INTERVAL
 
     def _fire_shot(self, fighter):
+        # The shot leaves slightly off the aim, so the same error misses more often at long range.
+        angle = fighter.aim + self._rng.uniform(-SHOT_SPREAD, SHOT_SPREAD)
         self.projectiles.append(Projectile(
-            fighter, dict(fighter.data), fighter.x, fighter.y, math.cos(fighter.aim) * PROJECTILE_SPEED,
-            math.sin(fighter.aim) * PROJECTILE_SPEED, (WEAPON_RANGE + UNIT_RADIUS * 2) / PROJECTILE_SPEED))
+            fighter, dict(fighter.data), fighter.x, fighter.y, math.cos(angle) * PROJECTILE_SPEED,
+            math.sin(angle) * PROJECTILE_SPEED, (WEAPON_RANGE + UNIT_RADIUS * 2) / PROJECTILE_SPEED))
+
+    def _division_objectives(self, targets, dt):
+        """Each division with living sub-units and enemies left: its center and the enemy it advances on.
+
+        The objective is the nearest enemy to the division's center, chosen again every RETARGET_SECONDS.
+        """
+        objectives = {}
+        for index, members in enumerate(self.divisions):
+            alive = [fighter for fighter in members if fighter.alive]
+            if not alive or not targets[1 - alive[0].side].cells:
+                continue
+            center = (sum(fighter.x for fighter in alive) / len(alive), sum(fighter.y for fighter in alive) / len(alive))
+            self._division_retarget[index] -= dt
+            if self._division_retarget[index] <= 0:
+                self._division_retarget[index] += RETARGET_SECONDS
+                self._division_targets[index] = None
+            objective = self._division_targets[index]
+            if objective is None or not objective.alive:
+                objective = self._division_targets[index] = targets[1 - alive[0].side].nearest(*center)
+            objectives[index] = center, objective
+        return objectives
 
     def _step(self, dt):
         self.elapsed += dt
@@ -532,6 +613,7 @@ class BattleSimulation:
         sides = [[fighter for fighter in living if fighter.side == side] for side in (0, 1)]
         crowds = [_Grid(side, GRID_CELL) for side in sides]
         targets = [_Grid(side, TARGET_CELL) for side in sides]
+        objectives = self._division_objectives(targets, dt)
         # All movement and fire decisions use the same pre-step positions.
         movements = []
         shots = []
@@ -543,7 +625,7 @@ class BattleSimulation:
             if player_controlled:
                 self._drive_player(fighter, dt, shots)
             else:
-                self._drive_ai(fighter, targets[1 - fighter.side], dt, shots)
+                self._drive_ai(fighter, targets[1 - fighter.side], dt, shots, *objectives[fighter.division])
             move = fighter.speed * dt
             mx, my = math.cos(fighter.angle) * move, math.sin(fighter.angle) * move
             # A small separation keeps accompanying units visible on an empty field.

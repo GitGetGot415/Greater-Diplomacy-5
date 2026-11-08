@@ -146,11 +146,20 @@ A shot's damage uses the shooter's strength when it fired and the rules for the 
 A shot already in flight still lands after its shooter is destroyed.
 
 Every sub-unit has the same long weapon range. Shots fly fast in a straight line and hit the first enemy they cross.
+Each shot, the player's included, leaves at a small random angle off where the gun points. The same small error
+carries a shot further off target over a longer distance, so long-range shots miss more often than close ones.
 
 Infantry-type, cavalry, and troop-carrier sub-units fire only inside a cone in front of the hull.
 Tanks and armored cars aim all the way around. Every gun turns toward its aim at its own speed,
 so it cannot swing from one direction to another at once. Sub-units also speed up, slow down, and start and stop
 turning gradually. These rules apply to AI sub-units and the controlled sub-unit alike.
+
+AI sub-units move as loose divisions. Each division advances on the enemy nearest its center, and each of its
+sub-units heads for a point beside that enemy matching its own place in the division's line, so a division arrives
+spread out in its deployment order. A sub-unit that gets well ahead of its division slows down until the division
+catches up. Each sub-unit also has its own temperament, drawn at deployment: how close it comes before it stops to
+fight, its cruising speed, a short delay before it first moves, and a gentle weave from side to side while advancing.
+Each sub-unit shoots at the enemy nearest to itself. Once it has stopped, it faces that enemy so its firing cone covers it.
 
 #### Control
 
@@ -238,6 +247,9 @@ Tactical battles in multiplayer remain unavailable.
 Its `SUBUNIT_COUNTS`, `MOBILITY`, and `AIM` tables set sub-unit counts, acceleration and turning, and firing cones and gun speeds for each battlefield shape.
 `WEAPON_RANGE`, `PROJECTILE_SPEED`, `RANK_GAP`, `SUBUNIT_SPACING`, and `SPAWN_FRONT_GAP` set range, shot speed, and deployment.
 `is_artillery` decides which units sit tactical battles out.
+`SHOT_SPREAD` sets how far shots can stray. The `AI_*` ranges set the temperaments, and `COHESION_SLACK` and
+`COHESION_THROTTLE` set how far ahead a sub-unit may get and how much it slows. `BattleSimulation(seed=...)`
+fixes the random temperaments and shot spread so a battle can be replayed; the game leaves it unset, so every battle differs.
 
 Unit statistics and capabilities come from [unit_data.json](../data/json/unit_data.json).
 Research dates come from [research_template.json](../data/json/research_template.json) through the shared [unit queries](../data/queries/unit_info.py).
