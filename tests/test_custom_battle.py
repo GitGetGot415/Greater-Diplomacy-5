@@ -449,8 +449,13 @@ class BattleSimulationTests(unittest.TestCase):
         self.assertEqual(combat.campaign_forces(player, province, nations, self.library), ([player], [foe]))
         artillery = combat.campaign_artillery(player, province, nations, self.library)
         self.assertEqual(artillery, ([our_gun], [their_gun]))
-        # Artillery alone never makes a tactical battle.
-        self.assertIsNone(combat.campaign_forces(player, {"units": [player, their_gun]}, nations, self.library))
+        # Hostile artillery alone is an encounter with no enemy army: the player wins without a battle.
+        lone = {"units": [our_gun, player, their_gun]}
+        self.assertEqual(combat.campaign_forces(player, lone, nations, self.library), ([player], []))
+        combat.win_against_artillery(player, lone, nations, self.library)
+        self.assertEqual(lone["units"], [our_gun, player])
+        self.assertEqual(their_gun["health"], 0)
+        self.assertIsNone(combat.campaign_forces(player, {"units": [player, our_gun]}, nations, self.library))
         for winner, survivor, destroyed in ((0, our_gun, their_gun), (1, their_gun, our_gun)):
             with self.subTest(winner=winner):
                 for unit in tile:
@@ -780,7 +785,7 @@ class CustomBattleScreenTests(unittest.TestCase):
                 self.assertEqual(province["owner"], owner)
                 # A changed owner rebuilds every layer a turn's end rebuilds; no change rebuilds none.
                 layers = [call.args[0] for call in world.refresh_map_layers.call_args_list]
-                self.assertEqual(layers, list(battle_screen.TILE_CAPTURE_LAYERS) if player_dies else [])
+                self.assertEqual(layers, list(battle_screen.player_setup.TILE_CAPTURE_LAYERS) if player_dies else [])
                 self.assertEqual(world.update_country_centers.called, player_dies)
 
     def test_artillery_cannot_join_a_custom_army_or_be_the_tactical_division(self):
@@ -840,16 +845,37 @@ class CustomBattleScreenTests(unittest.TestCase):
             Map.open_tactical_battle(foe_free)
         foe_free.go_to.assert_not_called()
 
+    def test_map_wins_at_once_when_only_hostile_artillery_shares_the_tile(self):
+        from screens.game.map import Map
+        nations = {"Fixture A": {"at_war_with": ["Fixture B"]}, "Fixture B": {"at_war_with": ["Fixture A"]}}
+        player = queries.create_unit_dict("Fixture II", "Fixture A", self.library)
+        gun = queries.create_unit_dict("Fixture Gun I", "Fixture B", self.library)
+        province = {"id": 1, "units": [player, gun]}
+        fake = SimpleNamespace(
+            tactical_mode=True, player_unit=player, multiplayer_mode=False, realtime_multiplayer=False,
+            _tactical_battle_turn=None, time_manager=SimpleNamespace(total_turns=4),
+            map_data={"key": province}, nation_data=nations, tactical_battle_request=None, go_to=Mock())
+        with patch("data.queries.get_unit_library", return_value=self.library), \
+                patch("screens.game.map.player_setup.settle_tactical_tile") as settle:
+            Map.open_tactical_battle(fake)
+        fake.go_to.assert_not_called()
+        self.assertIsNone(fake.tactical_battle_request)
+        self.assertEqual(province["units"], [player])
+        self.assertEqual(player["health"], player["max_health"])
+        settle.assert_called_once_with(fake, province)
+
     def test_campaign_combat_skips_the_tactical_tile_so_the_battle_deals_the_damage(self):
         from map_logic.system32 import combat_processor
         from tests.combat_fixtures import StubBattleMap
-        for tactical in (False, True):
-            with self.subTest(tactical=tactical):
+        # Hostile artillery alone is still the tactical player's encounter: the player wins it without a battle.
+        for tactical, foe_type in ((False, "Fixture I"), (True, "Fixture I"), (False, "Fixture Gun I"),
+                                   (True, "Fixture Gun I")):
+            with self.subTest(tactical=tactical, foe=foe_type):
                 screen = StubBattleMap()
                 for name, enemy in (("Fixture A", "Fixture B"), ("Fixture B", "Fixture A")):
                     screen.add_nation(name, at_war_with=[enemy])
                 player = queries.create_unit_dict("Fixture II", "Fixture A", self.library)
-                foe = queries.create_unit_dict("Fixture I", "Fixture B", self.library)
+                foe = queries.create_unit_dict(foe_type, "Fixture B", self.library)
                 screen.add_province("p1", "Fixture A", units=[player, foe])
                 screen.tactical_mode = tactical
                 screen.player_unit = player

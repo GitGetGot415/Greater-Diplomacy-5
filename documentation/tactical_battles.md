@@ -209,7 +209,9 @@ Each unit enters with its current health. Campaign combat deals no damage on tha
 so the battle is where the damage happens. Naval and air units do not take part.
 Artillery-type units on the tile sit the battle out. When it ends, the losing side's artillery on the tile is destroyed
 and the winning side's artillery is untouched; mutual destruction counts as a friendly loss.
-Hostile artillery alone does not start a tactical battle, so normal campaign combat resolves that tile.
+When hostile artillery is the only hostile land force on the tile, the player wins at once without a battle:
+no preview opens, campaign combat skips the tile, and that artillery is destroyed. The player's side is untouched,
+and the tile is then captured as after any campaign combat.
 Tactical play has no editing view and no route for adding, removing, randomly generating, or replacing units.
 
 **Retreat** opens the map with the tiles the unit can fall back to marked: neighboring tiles it may enter

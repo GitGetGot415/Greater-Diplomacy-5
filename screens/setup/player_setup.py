@@ -1,10 +1,14 @@
 import data.constants as c
 from data import queries
 from map_logic import custom_battle as tactical_battle
+from map_logic.system32 import combat_processor
 from ui.dialogs import pickers
 from ui.widgets import ui_elements
 
 # The map imports player_setup. Keep map-screen callbacks local to avoid that cycle.
+
+# Map layers a turn's end rebuilds; a captured tile needs the same, in this order.
+TILE_CAPTURE_LAYERS = ("political", "relations", "factions", "cores", "faction_territories", "fog")
 
 def select_player_country(map_screen, province):
     owner = province.get("owner", "Unclaimed")
@@ -118,6 +122,19 @@ def cancel_selection(map_screen):
     map_screen.pending_selection = None
     map_screen.pending_unit = None
     map_screen.selected_province = None
+
+def settle_tactical_tile(map_screen, province):
+    """After a tactical encounter changed a tile's units, update armies, captures, and the map."""
+    queries.normalize_armies(map_screen.nation_data, map_screen.map_data)
+    # Whoever is left standing on the tile takes it, as after any campaign combat.
+    owner_before = province.get("owner")
+    combat_processor.check_for_post_combat_captures(map_screen)
+    map_screen.invalidate_map_presentation_cache()
+    if province.get("owner") != owner_before:
+        # The single-tile repaint is not enough: rebuild the layers a turn's end rebuilds.
+        for layer in TILE_CAPTURE_LAYERS:
+            map_screen.refresh_map_layers(layer)
+        map_screen.update_country_centers()
 
 def lose_tactical_unit(map_screen, province):
     """The tactical division died: remove it, end tactical play, and watch as a spectator."""

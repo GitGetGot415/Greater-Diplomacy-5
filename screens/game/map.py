@@ -1843,7 +1843,10 @@ class Map(StateAccess, Screen):
         self.confirm_box_rect = pygame.Rect(0, 0, 400, 200)
 
     def open_tactical_battle(self):
-        """Once per turn, put a tactical player whose land unit is fighting into battle preview."""
+        """Once per turn, put a tactical player whose land unit is fighting into battle preview.
+
+        Hostile artillery alone cannot fight back: the player wins at once without a battle.
+        """
         if (not self.tactical_mode or self.player_unit is None or self.multiplayer_mode
                 or self.realtime_multiplayer
                 or self._tactical_battle_turn == self.time_manager.total_turns):
@@ -1853,11 +1856,16 @@ class Map(StateAccess, Screen):
                          if any(unit is self.player_unit for unit in tile.get("units", []))), None)
         if province is None:
             return
-        forces = tactical_battle.campaign_forces(
-            self.player_unit, province, self.nation_data, queries.get_unit_library(self))
-        if forces is not None:
-            self.tactical_battle_request = (province, *forces)
-            self.go_to("CUSTOM_BATTLE")
+        library = queries.get_unit_library(self)
+        forces = tactical_battle.campaign_forces(self.player_unit, province, self.nation_data, library)
+        if forces is None:
+            return
+        if not forces[1]:
+            tactical_battle.win_against_artillery(self.player_unit, province, self.nation_data, library)
+            player_setup.settle_tactical_tile(self, province)
+            return
+        self.tactical_battle_request = (province, *forces)
+        self.go_to("CUSTOM_BATTLE")
 
     def draw_clean_map_background(self, surface):
         """Temporarily hides UI elements and province selection to draw a clean map background."""

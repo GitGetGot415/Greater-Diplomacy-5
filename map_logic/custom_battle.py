@@ -104,33 +104,45 @@ def _campaign_sides(player_unit, province, nation_data):
     return friendly, [unit for unit in units if queries.get_unit_combat_owner(unit) in enemies]
 
 
+def _artillery(units, library):
+    return [unit for unit in units if unit.get("type") in library
+            and _is_land(library[unit["type"]]) and is_artillery(unit["type"], library)]
+
+
 def campaign_forces(player_unit, province, nation_data, library):
     """The campaign units (friendly, enemy) fighting a tactical player's land unit on its tile.
 
     The player's unit leads the friendly list. Returns None when that unit cannot fight a
-    tactical battle or no hostile unit that can shares its tile. Artillery sits the battle out.
-    Each list holds at most one army's units.
+    tactical battle or no hostile land unit shares its tile. Artillery sits the battle out,
+    so the enemy list is empty when hostile artillery alone shares the tile: the player wins
+    without a battle (win_against_artillery). Each list holds at most one army's units.
     """
     land = set(land_unit_types(library))
+    sides = _campaign_sides(player_unit, province, nation_data)
     friendly, enemy = ([unit for unit in side if unit.get("type") in land][:c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE]
-                       for side in _campaign_sides(player_unit, province, nation_data))
-    if not friendly or not enemy or friendly[0] is not player_unit:
+                       for side in sides)
+    if not friendly or friendly[0] is not player_unit or not (enemy or _artillery(sides[1], library)):
         return None
     return friendly, enemy
 
 
 def campaign_artillery(player_unit, province, nation_data, library):
     """The land artillery-type units (friendly, enemy) on a tactical player's tile, which sit the battle out."""
-    return tuple([unit for unit in side if unit.get("type") in library
-                  and _is_land(library[unit["type"]]) and is_artillery(unit["type"], library)]
-                 for side in _campaign_sides(player_unit, province, nation_data))
+    return tuple(_artillery(side, library) for side in _campaign_sides(player_unit, province, nation_data))
+
+
+def win_against_artillery(player_unit, province, nation_data, library):
+    """Hostile artillery alone cannot fight a tactical battle: the player wins at once and that artillery is destroyed."""
+    for unit in campaign_artillery(player_unit, province, nation_data, library)[1]:
+        unit["health"] = 0
+    province["units"] = [unit for unit in province["units"] if unit.get("health", 0) > 0]
 
 
 def tactical_encounter(context, province):
-    """The (friendly, enemy) campaign units of the tactical battle held on ``province``, or None.
+    """The (friendly, enemy) campaign units of the tactical encounter on ``province``, or None.
 
     Only the tile holding the tactical player's land unit has one, and only while hostile land
-    units share it. The battle deals that tile's damage, so campaign combat must skip the tile.
+    units share it. The encounter deals that tile's damage, so campaign combat must skip the tile.
     """
     session = session_for(context)
     # Lightweight test doubles carry no tactical state.
