@@ -34,7 +34,7 @@ Drag cards within an army to change deployment order. Scroll long rosters with t
 Each army has a size limit. Both armies need at least one unit before **Simulate** becomes available.
 
 The gray gear button opens **Unit Settings** for that roster entry.
-**Nationality** chooses a country from the base country library. **Starting HP** sets
+**Nationality** chooses a country from the base country library. **Starting HP** is a slider that sets
 the unit's health as a percent of its full library HP, from 1% to 100%. **Done** closes the settings.
 Each change applies immediately; canceling a picker keeps the current value.
 
@@ -49,9 +49,10 @@ Reordering preserves those choices, and replaying uses the configured starting H
 New units start at full health. The two sides initially use the first two playable
 countries by display name, or the same country when only one is available.
 
-Editing cards show the unit name, the nationality's flag, remaining HP percentage,
-and symbols for health, health-adjusted attack, and defense, including zero defense.
-Preview cards are taller and omit the unit name. They show a larger icon, a health bar
+Editing cards show the unit name, symbols for health, health-adjusted attack, and defense
+(including zero defense), and a health bar along the bottom with the nationality's flag to its right.
+Drag along the bar to set that unit's starting HP; on a card in a selected group, it sets the whole group.
+Preview cards omit the unit name. They show a larger icon, a health bar
 with the nationality's flag to its right, and the same stat symbols.
 Nationality selects the preview art's country variant where available; army sides
 still determine friend and foe.

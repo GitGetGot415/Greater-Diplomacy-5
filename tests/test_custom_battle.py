@@ -349,16 +349,14 @@ class CustomBattleScreenTests(unittest.TestCase):
         items, callback = picker.call_args.args[3:5]
         self.assertEqual(items, [("First Country", "Fixture A"), ("Second Country", "Fixture B")])
         callback("Fixture B")
-        with patch("ui.dialogs.ask_integer") as number:
-            editor.elements[1].callback()
-        self.assertEqual(number.call_args.kwargs["minvalue"], 1)
-        self.assertEqual(number.call_args.kwargs["maxvalue"], 100)
-        number.call_args.args[2](25)
+        slider = editor.elements[1]
+        self.assertEqual((slider.visual_max, slider.allowed_max), (100, 100))
+        slider.callback(25)
         self.assertEqual((unit["owner"], unit["health"]), ("Fixture B", 25))
+        self.assertEqual(slider.text, "Starting HP: 25%")
         self.assertEqual(duplicate, before)
-        before = copy.deepcopy(unit)
-        number.call_args.args[2](None)
-        self.assertEqual(unit, before)
+        slider.callback(0)  # The slider track starts at zero; starting HP stays above zero.
+        self.assertEqual(unit["health"], unit["max_health"] * 0.01)
         editor.elements[-1].callback()
         self.assertTrue(editor.done)
 
@@ -403,6 +401,33 @@ class CustomBattleScreenTests(unittest.TestCase):
                 self.assertEqual(unit, before)
         self.click("Remove")
         self.assertFalse(self.screen.set_unit_options(0, [unit], health_percent=50))
+
+    def test_dragging_a_card_health_bar_sets_starting_hp_for_the_card_or_its_group(self):
+        self.fill_armies()
+        self.screen.add_unit(0, "Fixture I")
+        self.screen.draw(self.surface)
+        bar, _flag_x = self.screen._bar_geometry(battle_screen.EDIT_BAR_TOP)
+
+        def drag_bar(index, fraction):
+            card = self.screen.card_rect(0, index)
+            y = card.y + bar.centery
+            start = (card.x + bar.left + 1, y)
+            end = (card.x + bar.left + round(bar.width * fraction), y)
+            self.screen.handle_events([
+                pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=start),
+                pygame.event.Event(pygame.MOUSEMOTION, pos=end, rel=(0, 0), buttons=(1, 0, 0)),
+                pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=end)])
+            self.screen.draw(self.surface)
+
+        first, second = self.screen.rosters[0]
+        drag_bar(0, 0.5)
+        self.assertEqual(first["health"], first["max_health"] * 0.5)
+        self.assertEqual(second["health"], second["max_health"])
+        self.assertIsNone(self.screen.drag)
+        self.screen.group[0] = [0, 1]
+        drag_bar(1, 0.25)
+        for unit in (first, second):
+            self.assertEqual(unit["health"], unit["max_health"] * 0.25)
 
     def test_selection_square_groups_cards_and_edits_them_together(self):
         self.fill_armies()

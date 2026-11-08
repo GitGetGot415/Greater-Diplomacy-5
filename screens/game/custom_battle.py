@@ -10,7 +10,6 @@ from data import queries
 from data.io import starting_defaults
 from map_logic import custom_battle as combat
 from map_logic.system32 import combat_rules
-from ui import dialogs
 from ui.dialogs import pickers
 from ui.navigation import screen_runner
 from ui.navigation.modal_screen import ModalScreen
@@ -24,26 +23,27 @@ from ui.widgets.ui_elements import Button, Slider
 
 
 PANEL_X = 60
+ROSTER_TOP = 56
 PANEL_WIDTH = 1160
 PANEL_TOPS = (365, 120)  # Friendly and enemy rosters retain their separate areas.
-CARD_SIZE = (158, 132)
+CARD_SIZE = (158, 148)
 CARD_GAP = 12
-PREVIEW_CARD_SIZE = (158, 148)  # Taller than CARD_SIZE: no name text, larger icon, health bar row.
 PREVIEW_CARD_ICON_SIZE = (96, 60)
 PREVIEW_ICON_CENTER_Y = 40
+# Health bar rows: preview puts the bar under the icon; editing puts it at the card bottom.
 PREVIEW_BAR_TOP = 80
-PREVIEW_BAR_HEIGHT = 14
-PREVIEW_ROW_INSET = 8
-PREVIEW_BAR_FLAG_GAP = 6
-PREVIEW_FLAG_SIZE = (24, 16)
+EDIT_BAR_TOP = 124
+CARD_BAR_HEIGHT = 14
+CARD_BAR_GRAB_PAD = 6  # Extra pixels above and below the bar that still grab it in editing.
+CARD_ROW_INSET = 8
+CARD_BAR_FLAG_GAP = 6
+CARD_BAR_FLAG_SIZE = (24, 16)
 PREVIEW_STATS_TOP = 108
 HEALTH_BAR_COLOR = (105, 215, 85)
 PANEL_BOTTOM_SPACE = 32  # Below the cards: scrollbar row and margin.
+PANEL_HEIGHT = ROSTER_TOP + CARD_SIZE[1] + PANEL_BOTTOM_SPACE
 CARD_STATS_TOP = 96
 CARD_STAT_ICON_SIZE = 14
-CARD_FLAG_SIZE = (30, 20)
-CARD_FLAG_POSITION = (8, 14)
-CARD_HEALTH_POSITION = (6, 36)
 BATTLE_FLAG_SIZE = (14, 9)
 BATTLE_FLAG_GAP = 3
 MIXED_LABEL = "Mixed"
@@ -51,7 +51,6 @@ CARD_EDIT_SIZE = 24
 CARD_EDIT_INSET = 6
 ROSTER_INSET = 20
 ROSTER_WIDTH = 900
-ROSTER_TOP = 56
 SCROLLBAR_HEIGHT = 14
 BUTTON_WIDTH = 170
 FIELD_TOP = 140
@@ -131,6 +130,7 @@ class CustomBattleScreen(Screen):
         self.selected = [None, None]
         # Roster indices chosen by a selection square; two or more entries per side.
         self.group = [[], []]
+        self.bar_drag = None  # (side, index) of the card whose health bar is being dragged
         self.marquee = None  # [side, start position, current position] while dragging a square
         self.controlled_index = None
         self.held_keys = set()
@@ -188,14 +188,6 @@ class CustomBattleScreen(Screen):
         self.random_candidates = combat.land_unit_types_for_year(self.library, self.generation_year)
         self.refresh_ui()
 
-    @property
-    def card_size(self):
-        return PREVIEW_CARD_SIZE if self.mode == "preview" else CARD_SIZE
-
-    @property
-    def panel_height(self):
-        return ROSTER_TOP + self.card_size[1] + PANEL_BOTTOM_SPACE
-
     def get_title(self):
         if self.mode == "result":
             return "You Win" if self.simulation.winner == 0 else "You Lose"
@@ -218,8 +210,6 @@ class CustomBattleScreen(Screen):
                     axis="x")
 
     def refresh_ui(self):
-        for pane in self.panes:
-            pane.height = self.card_size[1]
         self.unit_buttons = {}
         self.elements = [Button(20, 20, "small", "red", "Exit", self.leave,
                                 sound_kind="back")]
@@ -347,10 +337,13 @@ class CustomBattleScreen(Screen):
         if self.mode != "setup" or not any(entry is unit for entry in self.rosters[side]):
             return
         self.cancel_active_drags()
-        # The gear of a card in a selected group edits the whole group.
+        screen_runner._run_pygame_sub_screen(
+            self, CustomBattleUnitEditor(self, side, self._units_to_edit(side, unit)))
+
+    def _units_to_edit(self, side, unit):
+        """A card in a selected group edits the whole group; any other card edits itself."""
         grouped = [self.rosters[side][index] for index in self.group[side]]
-        units = grouped if any(entry is unit for entry in grouped) else [unit]
-        screen_runner._run_pygame_sub_screen(self, CustomBattleUnitEditor(self, side, units))
+        return grouped if any(entry is unit for entry in grouped) else [unit]
 
     def set_unit_options(self, side, units, *, owner=None, health_percent=None):
         """Set nationality and starting HP (a percent of each unit's maximum HP) for roster entries."""
@@ -463,6 +456,7 @@ class CustomBattleScreen(Screen):
         super().cancel_active_drags()
         self.drag = None
         self.marquee = None
+        self.bar_drag = None
         for element in self.elements:
             if isinstance(element, Slider):
                 element.dragging = False
@@ -474,7 +468,7 @@ class CustomBattleScreen(Screen):
     def card_rect(self, side, index):
         pane = self.panes[side]
         return pygame.Rect(pane.x + index * (CARD_SIZE[0] + CARD_GAP)
-                           + getattr(self, f"roster_{side}_scroll"), pane.y, *self.card_size)
+                           + getattr(self, f"roster_{side}_scroll"), pane.y, *CARD_SIZE)
 
     @staticmethod
     def _position_edit_button(button, card):
@@ -517,7 +511,7 @@ class CustomBattleScreen(Screen):
                for element in self.elements):
             return False
         for side, top in enumerate(PANEL_TOPS):
-            if (pygame.Rect(PANEL_X, top, PANEL_WIDTH, self.panel_height).collidepoint(event.pos)
+            if (pygame.Rect(PANEL_X, top, PANEL_WIDTH, PANEL_HEIGHT).collidepoint(event.pos)
                     and not self.panes[side].collidepoint(event.pos)
                     and not self._on_scrollbar(side, event.pos)):
                 self.marquee = [side, event.pos, event.pos]
@@ -541,8 +535,42 @@ class CustomBattleScreen(Screen):
         self.group[side] = picked if len(picked) > 1 else []
         self.refresh_ui()
 
+    def _set_bar_health(self, side, index, x):
+        """Set starting HP from the pointer's position along a card's health bar."""
+        card = self.card_rect(side, index)
+        bar, _flag_x = self._bar_geometry(EDIT_BAR_TOP)
+        percent = round((x - card.x - bar.x) / bar.width * 100)
+        unit = self.rosters[side][index]
+        self.set_unit_options(side, self._units_to_edit(side, unit), health_percent=max(1, min(100, percent)))
+
+    def _health_bar_events(self, event):
+        """Press or drag along a card's health bar to set its starting HP."""
+        if self.bar_drag is not None:
+            side, index = self.bar_drag
+            if event.type == pygame.MOUSEMOTION:
+                self._set_bar_health(side, index, event.pos[0])
+                return True
+            if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                self._set_bar_health(side, index, event.pos[0])
+                self.bar_drag = None
+                return True
+            return False
+        if event.type != pygame.MOUSEBUTTONDOWN or event.button != 1 or self.drag is not None:
+            return False
+        bar, _flag_x = self._bar_geometry(EDIT_BAR_TOP)
+        for side, pane in enumerate(self.panes):
+            if not pane.collidepoint(event.pos):
+                continue
+            for index in range(len(self.rosters[side])):
+                card = self.card_rect(side, index)
+                if bar.move(card.topleft).inflate(0, 2 * CARD_BAR_GRAB_PAD).collidepoint(event.pos):
+                    self.bar_drag = (side, index)
+                    self._set_bar_health(side, index, event.pos[0])
+                    return True
+        return False
+
     def _roster_events(self, event):
-        if self.mode == "setup" and self._marquee_events(event):
+        if self.mode == "setup" and (self._marquee_events(event) or self._health_bar_events(event)):
             return True
         if self.drag is not None and self.mode == "setup":
             side, index, origin, active = self.drag
@@ -702,11 +730,28 @@ class CustomBattleScreen(Screen):
     def _card_key(self, side, unit):
         return (self.mode, side, unit["type"], unit["owner"], unit["health"], unit["max_health"])
 
+    @staticmethod
+    def _bar_geometry(top):
+        """The health bar rect and the flag's x, in card coordinates; the flag sits right of the bar."""
+        flag_x = CARD_SIZE[0] - CARD_ROW_INSET - CARD_BAR_FLAG_SIZE[0]
+        bar = pygame.Rect(CARD_ROW_INSET, top,
+                          flag_x - CARD_BAR_FLAG_GAP - CARD_ROW_INSET, CARD_BAR_HEIGHT)
+        return bar, flag_x
+
+    def _draw_health_bar(self, card, unit, top):
+        bar, flag_x = self._bar_geometry(top)
+        pygame.draw.rect(card, OUTLINE_COLOR, bar)
+        ratio = max(0.0, min(1.0, unit["health"] / unit["max_health"]))
+        pygame.draw.rect(card, HEALTH_BAR_COLOR,
+                         (bar.x + 1, bar.y + 1, round((bar.width - 2) * ratio), bar.height - 2))
+        flag_icons.draw_flag(card, unit["owner"], self.country_data, flag_x,
+                             bar.centery - CARD_BAR_FLAG_SIZE[1] // 2, size=CARD_BAR_FLAG_SIZE)
+
     def _cache_card(self, side, unit):
         key = self._card_key(side, unit)
         if key not in self.card_surfaces:
-            width, height = self.card_size
-            card = pygame.Surface((width, height))
+            width, height = CARD_SIZE
+            card = pygame.Surface(CARD_SIZE)
             ui_elements.draw_pixel_panel(card, card.get_rect(), (46, 51, 65), (15, 19, 27))
             name = unit["type"]
             font = fonts.get("tiny")
@@ -716,28 +761,17 @@ class CustomBattleScreen(Screen):
                                                 country=unit["owner"], fit_size=PREVIEW_CARD_ICON_SIZE)
                 if icon is not None:
                     card.blit(icon, icon.get_rect(center=(width // 2, PREVIEW_ICON_CENTER_Y)))
-                flag_x = width - PREVIEW_ROW_INSET - PREVIEW_FLAG_SIZE[0]
-                bar = pygame.Rect(PREVIEW_ROW_INSET, PREVIEW_BAR_TOP,
-                                  flag_x - PREVIEW_BAR_FLAG_GAP - PREVIEW_ROW_INSET, PREVIEW_BAR_HEIGHT)
-                pygame.draw.rect(card, OUTLINE_COLOR, bar)
-                ratio = max(0.0, min(1.0, unit["health"] / unit["max_health"]))
-                pygame.draw.rect(card, HEALTH_BAR_COLOR,
-                                 (bar.x + 1, bar.y + 1, round((bar.width - 2) * ratio), bar.height - 2))
-                flag_icons.draw_flag(card, unit["owner"], self.country_data, flag_x,
-                                     bar.centery - PREVIEW_FLAG_SIZE[1] // 2, size=PREVIEW_FLAG_SIZE)
+                self._draw_health_bar(card, unit, PREVIEW_BAR_TOP)
                 stats_top = PREVIEW_STATS_TOP
             else:
                 draw_unit_shape(card, combat.unit_shape(name, self.library), (width // 2, 28),
                                 0 if side == 0 else math.pi, TEAM_COLORS[side], scale=1.4)
-                flag_icons.draw_flag(card, unit["owner"], self.country_data,
-                                     *CARD_FLAG_POSITION, size=CARD_FLAG_SIZE)
-                card.blit(font.render(queries.format_health_percent(unit), True, c.UI_TEXT_LIGHT),
-                          CARD_HEALTH_POSITION)
                 label = queries.get_unit_display_name(name, self.library)
                 line_height = font.get_height()
                 for line_number, line in enumerate(wrap_text(label, font, width - 16)[:3]):
                     text = font.render(fit_text(line, font, width - 16), True, c.UI_TEXT_BRIGHT)
                     card.blit(text, text.get_rect(midtop=(width // 2, 52 + line_number * line_height)))
+                self._draw_health_bar(card, unit, EDIT_BAR_TOP)
                 stats_top = CARD_STATS_TOP
             attack = unit["attack"] * combat_rules.effective_damage_multiplier(unit)
             entries = [(icon, queries.format_number(value)) for icon, value in (
@@ -750,7 +784,7 @@ class CustomBattleScreen(Screen):
 
     def _draw_rosters(self, surface):
         for side, top in enumerate(PANEL_TOPS):
-            panel = pygame.Rect(PANEL_X, top, PANEL_WIDTH, self.panel_height)
+            panel = pygame.Rect(PANEL_X, top, PANEL_WIDTH, PANEL_HEIGHT)
             ui_elements.draw_pixel_panel(surface, panel, (39, 44, 58), (15, 19, 27))
             surface.blit(self.roster_labels[side], (panel.x + ROSTER_INSET, panel.y + 14))
             old_clip = surface.get_clip()
@@ -835,13 +869,15 @@ class CustomBattleScreen(Screen):
 
 
 class CustomBattleUnitEditor(ModalScreen):
-    """Edit one custom roster entry, or a selected group, through the existing country and HP dialogs."""
+    """Edit one custom roster entry, or a selected group, with the country picker and an HP slider."""
 
     PANEL_SIZE = (460, 250)
     ROW_TOP = 70
     ROW_HEIGHT = 42
     ROW_GAP = 12
     DONE_SIZE = (100, 34)
+    SLIDER_OFFSET = ROW_HEIGHT + ROW_GAP + 28
+    DONE_GAP = 40
 
     def __init__(self, battle_screen, side, units):
         super().__init__(battle_screen, "Unit Settings" if len(units) == 1 else "Group Settings")
@@ -862,18 +898,27 @@ class CustomBattleUnitEditor(ModalScreen):
         country = (queries.get_country_display_name(next(iter(owners)), self.battle_screen.country_data)
                    if len(owners) == 1 else MIXED_LABEL)
         health = f"{next(iter(percents))}%" if len(percents) == 1 else MIXED_LABEL
-        self.elements = [
+        buttons = [
             Button(x, y, (width, self.ROW_HEIGHT), "grey", f"Nationality: {country}",
                    self.choose_country, font_size=18),
-            Button(x, y + self.ROW_HEIGHT + self.ROW_GAP, (width, self.ROW_HEIGHT), "grey",
-                   f"Starting HP: {health}", self.choose_health, font_size=18),
             Button(self.panel_rect.centerx - self.DONE_SIZE[0] // 2,
-                   y + (self.ROW_HEIGHT + self.ROW_GAP) * 2, self.DONE_SIZE, "blue", "Done",
+                   y + self.SLIDER_OFFSET + self.DONE_GAP, self.DONE_SIZE, "blue", "Done",
                    self.exit_screen, font_size=18, sound_kind="back"),
         ]
-        for button in self.elements:
+        for button in buttons:
             button.fit_text = True
             button.fit_single_line = True
+        # The label is drawn above the track, so the slider sits below that label's room.
+        self.hp_slider = Slider(x, y + self.SLIDER_OFFSET, width, f"Starting HP: {health}",
+                                self._health_percent(self.units[0]), self.set_percent,
+                                visual_max=100, allowed_max=100)
+        self.elements = [buttons[0], self.hp_slider, buttons[1]]
+
+    def set_percent(self, value):
+        percent = max(1, round(value))
+        if self.battle_screen.set_unit_options(self.side, self.units, health_percent=percent):
+            # Keep the dragged slider alive instead of rebuilding the controls.
+            self.hp_slider.text = f"Starting HP: {percent}%"
 
     def _set_options(self, **options):
         if self.battle_screen.set_unit_options(self.side, self.units, **options):
@@ -884,9 +929,3 @@ class CustomBattleUnitEditor(ModalScreen):
             self, "Nationality", "",
             queries.country_picker_items(self.battle_screen.nationalities, self.battle_screen.country_data),
             lambda country: self._set_options(owner=country))
-
-    def choose_health(self):
-        dialogs.ask_integer(
-            "Starting HP", "HP %:",
-            lambda percent: self._set_options(health_percent=percent) if percent is not None else None,
-            minvalue=1, maxvalue=100, initial=round(self._health_percent(self.units[0])))
