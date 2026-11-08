@@ -50,8 +50,8 @@ FAMILY_SHAPES = {
 }
 # Sub-units a division at full health becomes on the battlefield. A wounded division brings fewer.
 SUBUNIT_COUNTS = {
-    "infantry": 10, "cavalry": 10, "motorized": 10, "mechanized": 10, "ifv": 10,
-    "armored_car": 5, "light_tank": 5, "tank": 5, "heavy_tank": 5,
+    "infantry": 6, "cavalry": 6, "motorized": 6, "mechanized": 6, "ifv": 6,
+    "armored_car": 3, "light_tank": 3, "tank": 3, "heavy_tank": 3,
 }
 # (seconds to reach full speed, top turn speed in degrees per second, seconds to reach top turn speed)
 MOBILITY = {
