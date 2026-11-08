@@ -87,15 +87,24 @@ PREVIEW_BAR_COLOR = (46, 56, 72)
 PREVIEW_BAR_BORDER = (13, 17, 24)
 PREVIEW_BAR_GRADIENT_STRENGTH = 0.5
 PLAYER_COLOR = (255, 225, 95)
+# Body (width, height) in pixels at scale 1.0, before the barrel line.
+UNIT_SHAPE_SIZES = {
+    "tank": (28, 19), "artillery": (34, 10),
+    "infantry": (21, 21), "cavalry": (30, 17),
+    "light_tank": (24, 16),
+    "armored_car": (24, 16),  # Same size as the light tank, drawn with rounded edges.
+    "heavy_tank": (33, 22),
+    "railroad_gun": (52, 9),
+    "colossus": (50, 34),  # Landkreuzers and the Railgun.
+}
+ROUNDED_SHAPES = frozenset(("armored_car",))
+ROUNDED_CORNER_RADIUS = 6
 CONTROL_KEYS = frozenset((pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d, pygame.K_SPACE))
 
 
 def draw_unit_shape(surface, shape, center, angle, color, *, scale=1.0):
     """Draw the same geometric silhouettes in setup cards and on the field."""
-    width, height = {
-        "tank": (28, 19), "artillery": (34, 10),
-        "infantry": (21, 21), "cavalry": (30, 17),
-    }[shape]
+    width, height = UNIT_SHAPE_SIZES[shape]
     width, height = round(width * scale), round(height * scale)
     sprite = pygame.Surface((width + 12, max(height, 24)), pygame.SRCALPHA)
     body = pygame.Rect(2, (sprite.get_height() - height) // 2, width, height)
@@ -103,8 +112,9 @@ def draw_unit_shape(surface, shape, center, angle, color, *, scale=1.0):
         pygame.draw.ellipse(sprite, OUTLINE_COLOR, body)
         pygame.draw.ellipse(sprite, color, body.inflate(-4, -4))
     else:
-        pygame.draw.rect(sprite, OUTLINE_COLOR, body)
-        pygame.draw.rect(sprite, color, body.inflate(-4, -4))
+        radius = round(ROUNDED_CORNER_RADIUS * scale) if shape in ROUNDED_SHAPES else 0
+        pygame.draw.rect(sprite, OUTLINE_COLOR, body, border_radius=radius)
+        pygame.draw.rect(sprite, color, body.inflate(-4, -4), border_radius=max(0, radius - 2))
         pygame.draw.line(sprite, OUTLINE_COLOR, body.center,
                          (sprite.get_width() - 1, body.centery), max(2, round(3 * scale)))
     rotated = pygame.transform.rotate(sprite, -math.degrees(angle))

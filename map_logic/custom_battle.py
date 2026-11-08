@@ -25,6 +25,18 @@ RANDOM_ARMY_MIN_UNITS = 3
 RANDOM_ARMY_MAX_UNITS = 5
 RANDOM_UNIT_AGE_LIMIT = 5
 PLAYER_TURN_SPEED = math.radians(150)
+# Library families that get their own silhouette; sizes are in screens/game/custom_battle.py.
+FAMILY_SHAPES = {
+    "Light Tank": "light_tank",
+    "Armored Car": "armored_car",
+    "WW1 Armored Car": "armored_car",
+    "Heavy Tank": "heavy_tank",
+    "WW1 Railroad Gun": "railroad_gun",
+    "WW2 Railroad Gun": "railroad_gun",
+    "Landkreuzer P.1000 Ratte": "colossus",
+    "Landkreuzer P.1500 Monster": "colossus",
+    "Railgun": "colossus",
+}
 
 
 def valid_starting_health(health, max_health):
@@ -125,6 +137,9 @@ def unit_shape(name, library):
     """Choose prototype geometry from existing family and capability metadata."""
     stats = library[name]
     family = queries.get_unit_metadata(name, library).get("family", "")
+    # Named families come first: the railroad guns and super-tanks also bombard.
+    if family in FAMILY_SHAPES:
+        return FAMILY_SHAPES[family]
     if queries.get_bombardment_range(name, stats) > 0:
         return "artillery"
     if family == "Cavalry":
