@@ -39,7 +39,10 @@ CARD_ROW_INSET = 8
 CARD_BAR_FLAG_GAP = 6
 CARD_BAR_FLAG_SIZE = (24, 16)
 PREVIEW_STATS_TOP = 108
-HEALTH_BAR_COLOR = (105, 215, 85)
+HEALTH_BAR_FULL_COLOR = (105, 215, 85)
+HEALTH_BAR_EMPTY_COLOR = (215, 60, 50)  # The fill blends from full to this color as health falls.
+HEALTH_BAR_SHADE = 30  # Brightness step between the light, middle, and dark bands of the fill.
+HEALTH_BAR_BANDS = 3
 PANEL_BOTTOM_SPACE = 32  # Below the cards: scrollbar row and margin.
 PANEL_HEIGHT = ROSTER_TOP + CARD_SIZE[1] + PANEL_BOTTOM_SPACE
 CARD_STATS_TOP = 96
@@ -742,8 +745,21 @@ class CustomBattleScreen(Screen):
         bar, flag_x = self._bar_geometry(top)
         pygame.draw.rect(card, OUTLINE_COLOR, bar)
         ratio = max(0.0, min(1.0, unit["health"] / unit["max_health"]))
-        pygame.draw.rect(card, HEALTH_BAR_COLOR,
-                         (bar.x + 1, bar.y + 1, round((bar.width - 2) * ratio), bar.height - 2))
+        fill = pygame.Rect(bar.x + 1, bar.y + 1, round((bar.width - 2) * ratio), bar.height - 2)
+        base = [round(empty + (full - empty) * ratio)
+                for empty, full in zip(HEALTH_BAR_EMPTY_COLOR, HEALTH_BAR_FULL_COLOR)]
+        # Light, middle, and dark bands; a checkerboard of the neighboring shade softens each edge.
+        shades = [tuple(max(0, min(255, channel + HEALTH_BAR_SHADE * (1 - band)))
+                        for channel in base) for band in range(HEALTH_BAR_BANDS)]
+        for row in range(fill.height):
+            band = row * HEALTH_BAR_BANDS // fill.height
+            first = band > 0 and (row - 1) * HEALTH_BAR_BANDS // fill.height < band
+            last = band < HEALTH_BAR_BANDS - 1 and (row + 1) * HEALTH_BAR_BANDS // fill.height > band
+            for column in range(fill.width):
+                shade = band
+                if (column + row) % 2 == 0:
+                    shade += 1 if last else -1 if first else 0
+                card.set_at((fill.x + column, fill.y + row), shades[shade])
         flag_icons.draw_flag(card, unit["owner"], self.country_data, flag_x,
                              bar.centery - CARD_BAR_FLAG_SIZE[1] // 2, size=CARD_BAR_FLAG_SIZE)
 

@@ -51,6 +51,7 @@ countries by display name, or the same country when only one is available.
 
 Editing cards show the unit name, symbols for health, health-adjusted attack, and defense
 (including zero defense), and a health bar along the bottom with the nationality's flag to its right.
+The bar is shaded in dithered bands and blends from green to red as health falls.
 Drag along the bar to set that unit's starting HP; on a card in a selected group, it sets the whole group.
 Preview cards omit the unit name. They show a larger icon, a health bar
 with the nationality's flag to its right, and the same stat symbols.
