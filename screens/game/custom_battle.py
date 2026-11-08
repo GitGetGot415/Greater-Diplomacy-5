@@ -61,10 +61,14 @@ ROSTER_INSET = 20
 ROSTER_WIDTH = 900
 SCROLLBAR_HEIGHT = 14
 BUTTON_WIDTH = 170
-FIELD_TOP = 140
-FIELD_VIEW_SIZE = (1120, 520)  # The on-screen window onto the larger battlefield.
 TEAM_COLORS = ((85, 170, 245), (235, 100, 90))
 GRASS_COLOR = (72, 115, 57)
+# Actual battle fills the whole screen. The mouse wheel steps through these scales, starting at 1.0.
+ZOOM_LEVELS = (0.4, 0.5, 0.6, 0.75, 1.0, 1.25, 1.5, 2.0)
+DEFAULT_ZOOM_INDEX = ZOOM_LEVELS.index(1.0)
+GRASS_TILE = 64  # Battlefield pixels per square of the battlefield's faint checkerboard.
+GRASS_CHECK_COLOR = (76, 119, 61)  # The lighter squares; the darker ones are GRASS_COLOR.
+OFF_FIELD_COLOR = (24, 30, 22)  # Outside the battlefield when zoomed out past its edges.
 OUTLINE_COLOR = (22, 30, 22)
 MAX_FRAME_SECONDS = 0.25
 DRAG_THRESHOLD = 6
@@ -148,6 +152,11 @@ def _unit_sprite(shape, color, scale, barrel):
     return _BODY_SPRITES[key]
 
 
+def clear_rotated_sprites():
+    """Drop the cached rotations, e.g. when the battlefield zoom changes, so old scales do not pile up."""
+    _ROTATED_SPRITES.clear()
+
+
 def draw_unit_shape(surface, shape, center, angle, color, *, scale=1.0, aim=None):
     """Draw the same geometric silhouettes in setup cards and on the field.
 
@@ -162,25 +171,26 @@ def draw_unit_shape(surface, shape, center, angle, color, *, scale=1.0, aim=None
         _ROTATED_SPRITES[key] = rotated
     surface.blit(rotated, rotated.get_rect(center=center))
     if aim is not None and shape not in UNARMED_SHAPES:
-        # Same reach as the sprite's own gun line: half the body plus the sprite's margin.
-        length = round(UNIT_SHAPE_SIZES[shape][0] * scale) / 2 + 9
+        # Same reach as the sprite's own gun line at full scale: half the body plus the sprite's margin.
+        length = (UNIT_SHAPE_SIZES[shape][0] / 2 + 9) * scale
         pygame.draw.line(surface, OUTLINE_COLOR, center,
                          (center[0] + math.cos(aim) * length, center[1] + math.sin(aim) * length),
-                         max(2, round(3 * scale)))
+                         max(1, round(3 * scale)))
 
 
-def draw_player_arrow(surface, center, angle, stretch=0.0):
+def draw_player_arrow(surface, center, angle, stretch=0.0, scale=1.0):
     """Mark the controlled unit and point along its hull heading.
 
     ``stretch`` is the signed share of top speed: the arrow lengthens with speed and points back while reversing.
+    ``scale`` follows the battlefield zoom.
     """
     if stretch < 0:
         angle += math.pi
     extra = abs(stretch) * ARROW_STRETCH
-    forward = pygame.Vector2(math.cos(angle), math.sin(angle))
+    forward = pygame.Vector2(math.cos(angle), math.sin(angle)) * scale
     sideways = pygame.Vector2(-forward.y, forward.x)
     origin = pygame.Vector2(center)
-    if extra >= 1:
+    if extra * scale >= 1:
         pygame.draw.line(surface, OUTLINE_COLOR, origin + forward * 19, origin + forward * (19 + extra), 4)
         pygame.draw.line(surface, PLAYER_COLOR, origin + forward * 19, origin + forward * (19 + extra), 2)
     head = origin + forward * extra
@@ -227,7 +237,8 @@ class CustomBattleScreen(Screen):
         self.controlled_index = None
         self.held_keys = set()
         self.firing = False  # Left mouse held on the battlefield while controlling a sub-unit.
-        self.camera = [0.0, 0.0]  # Battlefield coordinates at the view's top-left corner.
+        self.camera = [0.0, 0.0]  # Battlefield coordinates at the screen's top-left corner.
+        self.zoom_index = DEFAULT_ZOOM_INDEX
         self.pan_drag = None  # Last pointer position while dragging the battlefield.
         self.card_surfaces = {}
         self.unit_buttons = {}
@@ -615,20 +626,43 @@ class CustomBattleScreen(Screen):
 
     @staticmethod
     def view_rect():
-        return pygame.Rect((c.SCREEN_WIDTH - FIELD_VIEW_SIZE[0]) // 2, FIELD_TOP, *FIELD_VIEW_SIZE)
+        """Actual battle fills the whole screen."""
+        return pygame.Rect(0, 0, c.SCREEN_WIDTH, c.SCREEN_HEIGHT)
+
+    @property
+    def zoom(self):
+        return ZOOM_LEVELS[self.zoom_index]
+
+    def _view_span(self):
+        """How much of the battlefield the screen shows at the current zoom."""
+        return c.SCREEN_WIDTH / self.zoom, c.SCREEN_HEIGHT / self.zoom
 
     def _center_camera(self, x, y):
-        self._move_camera(x - FIELD_VIEW_SIZE[0] / 2, y - FIELD_VIEW_SIZE[1] / 2)
+        width, height = self._view_span()
+        self._move_camera(x - width / 2, y - height / 2)
 
     def _move_camera(self, left, top):
-        """Keep the view inside the battlefield."""
-        self.camera = [max(0.0, min(c.CUSTOM_BATTLE_ARENA_SIZE[0] - FIELD_VIEW_SIZE[0], left)),
-                       max(0.0, min(c.CUSTOM_BATTLE_ARENA_SIZE[1] - FIELD_VIEW_SIZE[1], top))]
+        """Keep the view inside the battlefield, or center the battlefield when it is smaller than the view."""
+        self.camera = [(arena - span) / 2 if span >= arena else max(0.0, min(arena - span, start))
+                       for start, span, arena in zip((left, top), self._view_span(), c.CUSTOM_BATTLE_ARENA_SIZE)]
+
+    def zoom_by(self, steps, pos):
+        """Step through ZOOM_LEVELS, keeping the battlefield point under ``pos`` in place."""
+        index = max(0, min(len(ZOOM_LEVELS) - 1, self.zoom_index + steps))
+        if index == self.zoom_index:
+            return
+        anchor = self.to_field(pos)
+        self.zoom_index = index
+        clear_rotated_sprites()
+        self._move_camera(anchor[0] - pos[0] / self.zoom, anchor[1] - pos[1] / self.zoom)
 
     def to_field(self, pos):
         """A screen position in battlefield coordinates."""
-        view = self.view_rect()
-        return pos[0] - view.x + self.camera[0], pos[1] - view.y + self.camera[1]
+        return pos[0] / self.zoom + self.camera[0], pos[1] / self.zoom + self.camera[1]
+
+    def to_screen(self, x, y):
+        """A battlefield position on the screen."""
+        return round((x - self.camera[0]) * self.zoom), round((y - self.camera[1]) * self.zoom)
 
     def _driving(self):
         """The player steers and fires only while a sub-unit of the controlled division lives."""
@@ -870,21 +904,24 @@ class CustomBattleScreen(Screen):
                 element.handle_event(event)
 
     def _battlefield_mouse(self, event):
-        """Left mouse fires while controlling a sub-unit; otherwise dragging the battlefield pans the view.
+        """The wheel zooms. Left mouse fires while controlling a sub-unit; otherwise dragging the battlefield pans the view.
 
         The battlefield follows the pointer while dragged.
         """
+        if event.type == pygame.MOUSEWHEEL:
+            self.zoom_by(1 if event.y > 0 else -1 if event.y < 0 else 0, pygame.mouse.get_pos())
+            return True
         if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             self.firing = False
             self.pan_drag = None
             return False  # Buttons still need the release.
         if event.type == pygame.MOUSEMOTION and self.pan_drag is not None:
-            self._move_camera(self.camera[0] - (event.pos[0] - self.pan_drag[0]),
-                              self.camera[1] - (event.pos[1] - self.pan_drag[1]))
+            self._move_camera(self.camera[0] - (event.pos[0] - self.pan_drag[0]) / self.zoom,
+                              self.camera[1] - (event.pos[1] - self.pan_drag[1]) / self.zoom)
             self.pan_drag = event.pos
             return True
         if (event.type != pygame.MOUSEBUTTONDOWN or event.button != 1
-                or not self.view_rect().collidepoint(event.pos)):
+                or any(element.rect.collidepoint(event.pos) for element in self.elements)):
             return False
         if self._driving():
             self.firing = True
@@ -1091,8 +1128,9 @@ class CustomBattleScreen(Screen):
 
     def _draw_controls(self, surface, fighter, center):
         """Range, firing cone, gun direction, heading arrow, and reload for the controlled sub-unit only."""
+        zoom = self.zoom
         cone = combat.firing_cone(fighter.shape)
-        reach = round(fighter.weapon_range)
+        reach = round(fighter.weapon_range * zoom)
         if cone is None:
             pygame.draw.circle(surface, RANGE_COLOR, center, reach, 1)
         else:
@@ -1103,84 +1141,117 @@ class CustomBattleScreen(Screen):
             pygame.draw.lines(surface, RANGE_COLOR, True, [center, *edge])
         aim = (self.to_field(pygame.mouse.get_pos()) if self.mode == "battle" and not self.simulation.paused
                else None)
-        length = combat.shot_reach(fighter, aim) if fighter.arcing else fighter.weapon_range
+        length = (combat.shot_reach(fighter, aim) if fighter.arcing else fighter.weapon_range) * zoom
         end = (center[0] + math.cos(fighter.aim) * length, center[1] + math.sin(fighter.aim) * length)
         pygame.draw.line(surface, AIM_LINE_COLOR, center, end, 1)
         if fighter.arcing:
             # Where the shell will land, and the area it will hit.
-            pygame.draw.circle(surface, AIM_LINE_COLOR, end, combat.ARTILLERY_BLAST_RADIUS, 1)
-        pygame.draw.circle(surface, PLAYER_COLOR, center, PLAYER_RING_RADIUS, 2)
+            pygame.draw.circle(surface, AIM_LINE_COLOR, end, combat.ARTILLERY_BLAST_RADIUS * zoom, 1)
+        pygame.draw.circle(surface, PLAYER_COLOR, center, PLAYER_RING_RADIUS * zoom, 2)
         draw_player_arrow(surface, center, fighter.angle,
-                          fighter.speed / fighter.max_speed if fighter.max_speed else 0.0)
+                          fighter.speed / fighter.max_speed if fighter.max_speed else 0.0, scale=zoom)
         if fighter.cooldown > 0:
             # The ring fills clockwise from the top as the weapon reloads.
             loaded = 1.0 - fighter.cooldown / combat.FIRE_INTERVAL
+            radius = RELOAD_RING_RADIUS * zoom
             steps = max(2, math.ceil(math.tau * loaded / CONE_ARC_STEP))
-            ring = [(center[0] + math.cos(-math.pi / 2 + math.tau * loaded * step / steps) * RELOAD_RING_RADIUS,
-                     center[1] + math.sin(-math.pi / 2 + math.tau * loaded * step / steps) * RELOAD_RING_RADIUS)
+            ring = [(center[0] + math.cos(-math.pi / 2 + math.tau * loaded * step / steps) * radius,
+                     center[1] + math.sin(-math.pi / 2 + math.tau * loaded * step / steps) * radius)
                     for step in range(steps + 1)]
             pygame.draw.lines(surface, RELOAD_COLOR, False, ring, 2)
 
+    def _draw_grass(self, surface):
+        """The battlefield and its faint, fixed checkerboard; anything past its edges is dark."""
+        surface.fill(OFF_FIELD_COLOR)
+        zoom = self.zoom
+        width, height = c.CUSTOM_BATTLE_ARENA_SIZE
+        left, top = self.to_screen(0, 0)
+        right, bottom = self.to_screen(width, height)
+        field = pygame.Rect(left, top, right - left, bottom - top)
+        surface.fill(GRASS_COLOR, field)
+        span_width, span_height = self._view_span()
+        columns = range(max(0, int(self.camera[0] // GRASS_TILE)),
+                        min(math.ceil(width / GRASS_TILE), math.ceil((self.camera[0] + span_width) / GRASS_TILE)))
+        rows = range(max(0, int(self.camera[1] // GRASS_TILE)),
+                     min(math.ceil(height / GRASS_TILE), math.ceil((self.camera[1] + span_height) / GRASS_TILE)))
+        # Squares sit on the battlefield, so they pan and zoom with it but never animate.
+        edges_x = {column: (round((column * GRASS_TILE - self.camera[0]) * zoom),
+                            round((min(width, (column + 1) * GRASS_TILE) - self.camera[0]) * zoom))
+                   for column in columns}
+        for row in rows:
+            y0 = round((row * GRASS_TILE - self.camera[1]) * zoom)
+            y1 = round((min(height, (row + 1) * GRASS_TILE) - self.camera[1]) * zoom)
+            for column in columns:
+                if (row + column) % 2:
+                    x0, x1 = edges_x[column]
+                    surface.fill(GRASS_CHECK_COLOR, (x0, y0, x1 - x0, y1 - y0))
+        pygame.draw.rect(surface, OUTLINE_COLOR, field.inflate(6, 6), 3)
+
     def _draw_battle(self, surface):
-        view = self.view_rect()
-        pygame.draw.rect(surface, GRASS_COLOR, view)
-        old_clip = surface.get_clip()
-        surface.set_clip(old_clip.clip(view))
-        offset_x, offset_y = view.x - self.camera[0], view.y - self.camera[1]
-        # Shapes partly inside the view still draw; the widest shape fits inside this margin.
-        visible = view.inflate(140, 140)
+        self._draw_grass(surface)
+        zoom = self.zoom
+        # Shapes partly on screen still draw; the widest shape fits inside this margin.
+        margin = math.ceil(140 * zoom)
+        visible = self.view_rect().inflate(margin, margin)
+        bar_size = (max(2, round(28 * zoom)), max(1, round(4 * zoom)))
+        flag_size = tuple(max(2, round(side * zoom)) for side in BATTLE_FLAG_SIZE)
         controlled = self.simulation.controlled
         for fighter in self.simulation.fighters:
-            center = (round(offset_x + fighter.x), round(offset_y + fighter.y))
+            center = self.to_screen(fighter.x, fighter.y)
             if not visible.collidepoint(center):
                 continue
             if not fighter.alive:
-                draw_unit_shape(surface, fighter.shape, center, fighter.angle, DEAD_COLOR, aim=fighter.aim)
+                draw_unit_shape(surface, fighter.shape, center, fighter.angle, DEAD_COLOR,
+                                scale=zoom, aim=fighter.aim)
                 continue
             draw_unit_shape(surface, fighter.shape, center, fighter.angle, TEAM_COLORS[fighter.side],
-                            aim=fighter.aim)
-            bar = pygame.Rect(center[0] - 14, center[1] - 23, 28, 4)
+                            scale=zoom, aim=fighter.aim)
+            bar = pygame.Rect(center[0] - bar_size[0] // 2, center[1] - round(23 * zoom), *bar_size)
             pygame.draw.rect(surface, OUTLINE_COLOR, bar)
             ratio = fighter.data["health"] / fighter.data["max_health"]
             pygame.draw.rect(surface, BATTLE_HEALTH_COLOR, (bar.x, bar.y, round(bar.width * ratio), bar.height))
             flag_icons.draw_flag(surface, fighter.data["owner"], self.country_data,
-                                 bar.right + BATTLE_FLAG_GAP,
-                                 bar.centery - BATTLE_FLAG_SIZE[1] // 2, size=BATTLE_FLAG_SIZE)
+                                 bar.right + round(BATTLE_FLAG_GAP * zoom),
+                                 bar.centery - flag_size[1] // 2, size=flag_size)
         if controlled is not None and controlled.alive:
-            self._draw_controls(surface, controlled,
-                                (round(offset_x + controlled.x), round(offset_y + controlled.y)))
+            self._draw_controls(surface, controlled, self.to_screen(controlled.x, controlled.y))
+        shell_radius = max(1, round(SHELL_RADIUS * zoom))
+        line_width = max(1, round(2 * zoom))
         for shot in self.simulation.projectiles:
-            head = (round(offset_x + shot.x), round(offset_y + shot.y))
+            head = self.to_screen(shot.x, shot.y)
             if not visible.collidepoint(head):
                 continue
             if shot.arcing:
                 # The shadow travels the ground; the shell rises and falls above it.
                 progress = shot.progress
                 height = (math.hypot(shot.vx, shot.vy) * shot.flight * SHELL_ARC_RATIO
-                          * 4 * progress * (1 - progress))
-                pygame.draw.circle(surface, SHELL_SHADOW_COLOR, head, SHELL_RADIUS)
-                pygame.draw.circle(surface, SHELL_COLOR, (head[0], round(head[1] - height)), SHELL_RADIUS)
+                          * 4 * progress * (1 - progress) * zoom)
+                pygame.draw.circle(surface, SHELL_SHADOW_COLOR, head, shell_radius)
+                pygame.draw.circle(surface, SHELL_COLOR, (head[0], round(head[1] - height)), shell_radius)
                 continue
-            speed = math.hypot(shot.vx, shot.vy) or 1.0
-            tail = (round(head[0] - shot.vx / speed * SHOT_TAIL), round(head[1] - shot.vy / speed * SHOT_TAIL))
-            pygame.draw.line(surface, SHOT_COLOR, tail, head, 2)
-        surface.set_clip(old_clip)
-        pygame.draw.rect(surface, OUTLINE_COLOR, view, 3)
-        if self.mode == "battle" and self.simulation.paused:
-            rect = pygame.Rect(0, 0, 210, 70)
-            rect.center = view.center
-            ui_elements.draw_pixel_panel(surface, rect, (39, 44, 58), (15, 19, 27))
-            label = fonts.get("heading2").render("Paused", True, c.UI_TEXT_BRIGHT)
-            surface.blit(label, label.get_rect(center=rect.center))
+            tail_length = SHOT_TAIL * zoom / (math.hypot(shot.vx, shot.vy) or 1.0)
+            tail = (round(head[0] - shot.vx * tail_length), round(head[1] - shot.vy * tail_length))
+            pygame.draw.line(surface, SHOT_COLOR, tail, head, line_width)
+
+    def draw_background(self, surface):
+        """Actual battle replaces the moving checkerboard with the battlefield across the whole screen."""
+        if self.mode == "battle":
+            self._draw_battle(surface)
+        else:
+            super().draw_background(surface)
 
     def additional_draw(self, surface):
         if self.mode in {"setup", "preview"}:
             self._draw_rosters(surface)
-        else:
-            for image, center in zip(self.status_surfaces, ((220, 103), (1060, 103), (640, 103))):
-                surface.blit(image, image.get_rect(center=center))
-            if self.mode == "battle":
-                self._draw_battle(surface)
+            return
+        for image, center in zip(self.status_surfaces, ((220, 103), (1060, 103), (640, 103))):
+            surface.blit(image, image.get_rect(center=center))
+        if self.mode == "battle" and self.simulation.paused:
+            rect = pygame.Rect(0, 0, 210, 70)
+            rect.center = self.view_rect().center
+            ui_elements.draw_pixel_panel(surface, rect, (39, 44, 58), (15, 19, 27))
+            label = fonts.get("heading2").render("Paused", True, c.UI_TEXT_BRIGHT)
+            surface.blit(label, label.get_rect(center=rect.center))
 
 
 class CustomBattleUnitEditor(ModalScreen):

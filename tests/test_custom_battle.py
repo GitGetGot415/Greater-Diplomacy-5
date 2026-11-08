@@ -1205,14 +1205,13 @@ class CustomBattleScreenTests(unittest.TestCase):
         player = self.screen.simulation.controlled
         initial_x = player.x
         view = self.screen.view_rect()
-        self.screen.handle_events([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_SPACE),
-                                   pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(view.x - 5, view.y))])
+        self.screen.handle_events([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_SPACE)])
         self.assertFalse(self.screen.firing)
         self.screen.handle_events([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_w),
                                    pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=view.center)])
         self.assertTrue(self.screen.firing)
         # The pointer sits straight ahead of the unit, so the gun need not turn.
-        ahead = (view.x + player.x + 100 - self.screen.camera[0], view.y + player.y - self.screen.camera[1])
+        ahead = self.screen.to_screen(player.x + 100, player.y)
         with patch("pygame.time.get_ticks", return_value=self.screen.last_tick + 100), \
                 patch("pygame.mouse.get_pos", return_value=ahead):
             self.screen.update()
@@ -1271,6 +1270,35 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.assertEqual(self.screen.camera, camera)
         self.assertTrue(self.screen.firing)
         self.screen.draw(self.surface)
+
+    def test_wheel_zooms_around_the_pointer_and_buttons_still_take_clicks(self):
+        self.fill_armies()
+        self.click("Simulate")
+        self.click("Start")
+        pointer = (500, 300)
+        anchor = self.screen.to_field(pointer)
+        with patch("pygame.mouse.get_pos", return_value=pointer):
+            self.screen.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=1)])
+        self.assertEqual(self.screen.zoom, battle_screen.ZOOM_LEVELS[battle_screen.DEFAULT_ZOOM_INDEX + 1])
+        for got, expected in zip(self.screen.to_field(pointer), anchor):
+            self.assertAlmostEqual(got, expected)
+        # Dragging pans by battlefield distance, so it moves less on screen when zoomed in.
+        start = self.screen.camera
+        self.screen.handle_events([
+            pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=pointer),
+            pygame.event.Event(pygame.MOUSEMOTION, pos=(pointer[0] + 50, pointer[1]), rel=(50, 0), buttons=(1, 0, 0)),
+            pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=(pointer[0] + 50, pointer[1]))])
+        self.assertAlmostEqual(self.screen.camera[0], start[0] - 50 / self.screen.zoom)
+        with patch("pygame.mouse.get_pos", return_value=pointer):
+            self.screen.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=-1)
+                                       for _ in battle_screen.ZOOM_LEVELS])
+        self.assertEqual(self.screen.zoom, battle_screen.ZOOM_LEVELS[0])
+        # Zoomed out past its edges, the battlefield sits in the middle of the screen.
+        width, height = c.CUSTOM_BATTLE_ARENA_SIZE
+        self.assertEqual(self.screen.to_screen(width / 2, height / 2), self.screen.view_rect().center)
+        self.screen.draw(self.surface)
+        self.click("Pause")
+        self.assertTrue(self.screen.simulation.paused)
 
     def test_tactical_play_continues_while_any_sub_unit_of_the_division_lives(self):
         with patch.dict(combat.SUBUNIT_COUNTS, {"infantry": 10}):

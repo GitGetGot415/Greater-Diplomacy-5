@@ -146,6 +146,7 @@ turning gradually. These rules apply to AI sub-units and the controlled sub-unit
 | D | Turn right. |
 | Mouse | Aim. The gun turns toward the pointer, inside the firing cone if the unit has one. |
 | Left mouse | Fire along the gun. An arcing shell lands at the pointer, up to the weapon's range. |
+| Mouse wheel | Zoom in or out. |
 
 Movement follows the hull's facing direction. A and D rotate the hull rather than moving it sideways, and turning
 the hull carries the firing cone with it.
@@ -161,8 +162,12 @@ If the controlled sub-unit is destroyed, control passes to the nearest surviving
 Other friendly units and all enemy units move and fire automatically.
 When no unit is controlled, both armies fight automatically.
 
-The battlefield is larger than the screen. While a sub-unit is controlled, the view follows it.
+Actual battle fills the whole screen; the title, status line, and buttons sit on top of the battlefield.
+The battlefield has a faint checkerboard that moves only with the view.
+It is larger than the screen. While a sub-unit is controlled, the view follows it.
 Otherwise, drag the battlefield with the left mouse button to move the view.
+The mouse wheel zooms in and out around the pointer through fixed steps. Zoomed out past the battlefield's
+edges, the whole battlefield is centered on a dark surround.
 
 **Pause** freezes combat, and **Resume** continues it. The configured Back key toggles pause during actual battle.
 Losing window focus also pauses combat. Pausing or leaving combat clears held movement and fire controls.
