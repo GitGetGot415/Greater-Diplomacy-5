@@ -55,11 +55,17 @@ TRACK_ALBUM_LABEL_GAP = 10
 TRACK_ADD_SONG_DIVIDER_HEIGHT = 12
 TRACK_ADD_SONG_DIVIDER_TOP_GAP = 8
 TRACK_ADD_SONG_GAP = 8
-# The right pane holds the audio sliders and the starting-song controls.
+# The right pane holds audio sliders and pinned song controls.
 MUSIC_RIGHT_PANE_W = 260
 MUSIC_RIGHT_PANE_X = c.SCREEN_WIDTH - MUSIC_RIGHT_PANE_W
 MUSIC_RIGHT_CONTROL_W = 200
 MUSIC_RIGHT_CONTROL_X = MUSIC_RIGHT_PANE_X + (MUSIC_RIGHT_PANE_W - MUSIC_RIGHT_CONTROL_W) // 2
+MUSIC_STARTING_SONG_Y = 390
+MUSIC_PIN_BUTTON_SIZE = (MUSIC_RIGHT_CONTROL_W, 32)
+MUSIC_PIN_LABEL_GAP = 28
+MUSIC_PIN_BUTTON_GAP = 8
+MUSIC_TACTICAL_SONG_Y = (MUSIC_STARTING_SONG_Y + MUSIC_PIN_LABEL_GAP
+                         + 2 * (MUSIC_PIN_BUTTON_SIZE[1] + MUSIC_PIN_BUTTON_GAP) + 24)
 MUSIC_PROGRESS_X = MUSIC_LEFT_PANE_W + 20
 MUSIC_PROGRESS_Y = 155
 MUSIC_PROGRESS_SIZE = (400, 15)
@@ -448,20 +454,24 @@ class Music_Player(ScrollPanes, Screen):
         reset_y = 300
         self.elements.append(Button(slider_x, reset_y, "medium", "red", "Reset to Default", self.reset_audio_defaults))
 
-        # --- 6. Starting Song Selector (Bottom Right) ---
-        # Pins whichever track is currently playing so it always opens the
-        # game, independent of which albums happen to be toggled active.
-        self.elements.append(ScreenLayer(self, "draw_starting_song_label"))
-
-        set_start_btn = Button(slider_x, c.SCREEN_HEIGHT - 130, "medium", "blue",
-                                "Set as Starting Song", self.set_starting_song)
-        set_start_btn.disabled = (self.controller.now_playing == "None")
-        self.elements.append(set_start_btn)
-
-        reset_start_btn = Button(slider_x, c.SCREEN_HEIGHT - 70, "medium", "red",
-                                  "Clear Starting Song", self.reset_starting_song)
-        reset_start_btn.disabled = not self.controller.starting_song
-        self.elements.append(reset_start_btn)
+        # Pinned songs are independent of active albums and shuffle exclusions.
+        for label_y, draw_method, set_text, set_action, clear_text, clear_action, selected in (
+                (MUSIC_STARTING_SONG_Y, "draw_starting_song_label", "Set as Starting Song",
+                 self.set_starting_song, "Clear Starting Song", self.reset_starting_song,
+                 self.controller.starting_song),
+                (MUSIC_TACTICAL_SONG_Y, "draw_tactical_song_label", "Set Tactical Song",
+                 self.set_tactical_song, "Clear Tactical Song", self.reset_tactical_song,
+                 self.controller.tactical_battle_song)):
+            self.elements.append(ScreenLayer(self, draw_method))
+            set_y = label_y + MUSIC_PIN_LABEL_GAP
+            set_button = Button(slider_x, set_y, MUSIC_PIN_BUTTON_SIZE, "blue", set_text,
+                                set_action, font_size=18)
+            set_button.apply_state(enabled=bool(self.controller.now_playing)
+                                   and self.controller.now_playing != "None", color="blue")
+            clear_button = Button(slider_x, set_y + MUSIC_PIN_BUTTON_SIZE[1] + MUSIC_PIN_BUTTON_GAP,
+                                  MUSIC_PIN_BUTTON_SIZE, "red", clear_text, clear_action, font_size=18)
+            clear_button.apply_state(enabled=bool(selected), color="red")
+            self.elements.extend((set_button, clear_button))
 
     def is_paused(self):
         music = self.controller.music
@@ -627,6 +637,17 @@ class Music_Player(ScrollPanes, Screen):
         self.controller.save_starting_song()
         self.refresh_ui()
 
+    def set_tactical_song(self):
+        if self.controller.now_playing and self.controller.now_playing != "None":
+            self.controller.tactical_battle_song = self.controller.now_playing
+            self.controller.save_tactical_battle_song()
+            self.refresh_ui()
+
+    def reset_tactical_song(self):
+        self.controller.tactical_battle_song = ""
+        self.controller.save_tactical_battle_song()
+        self.refresh_ui()
+
     # --- PLAYLIST ACTIONS ---
     def album_display_order(self):
         """Album names in screen order: ALBUM_ORDER first, then the rest A to Z."""
@@ -770,11 +791,20 @@ class Music_Player(ScrollPanes, Screen):
 
     def draw_starting_song_label(self, surface):
         """Fixed HUD label showing which track, if any, starts on boot."""
+        self._draw_pinned_song_label(surface, "Starting Song", self.controller.starting_song,
+                                     MUSIC_STARTING_SONG_Y, "None (Random)")
+
+    def draw_tactical_song_label(self, surface):
+        self._draw_pinned_song_label(surface, "Tactical Song", self.controller.tactical_battle_song,
+                                     MUSIC_TACTICAL_SONG_Y, "None (Playlist)")
+
+    @staticmethod
+    def _draw_pinned_song_label(surface, caption, track, y, empty_label):
         font = fonts.get("normal")
-        name = os.path.basename(self.controller.starting_song) if self.controller.starting_song else "None (Random)"
-        label = fit_text(f"Starting Song: {name}", font, MUSIC_RIGHT_CONTROL_W)
+        name = os.path.basename(track) if track else empty_label
+        label = fit_text(f"{caption}: {name}", font, MUSIC_RIGHT_CONTROL_W)
         surface.blit(font.render(label, True, c.COLOR_GOLD_HIGHLIGHT),
-                     (MUSIC_RIGHT_CONTROL_X, c.SCREEN_HEIGHT - 150))
+                     (MUSIC_RIGHT_CONTROL_X, y))
 
     def draw_elements(self, surface):
         """Two independent scrolling panes, each cropped to its own rect."""

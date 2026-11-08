@@ -41,6 +41,7 @@ GOLDEN_ORDER = (
     "openrouter_api_key", "openrouter_model",
     "checkerboard_gradient_strength",
     "checkerboard_scroll_speed",
+    "tactical_battle_song",
 )
 
 GOLDEN_JSON_KEYS = set(GOLDEN_ORDER)
@@ -67,6 +68,19 @@ class SchemaContractTests(unittest.TestCase):
 
 
 class RoundTripTests(unittest.TestCase):
+    def test_tactical_song_round_trip_and_older_settings_default(self):
+        values = settings_schema.defaults()
+        values["tactical_battle_song"] = "assets/music/Fixture/battle.ogg"
+        saved = settings_schema.to_json_dict(values)
+        self.assertEqual(settings_schema.from_json_dict(saved)["tactical_battle_song"],
+                         values["tactical_battle_song"])
+        saved.pop("tactical_battle_song")
+        self.assertEqual(settings_schema.from_json_dict(saved)["tactical_battle_song"],
+                         settings_schema.defaults()["tactical_battle_song"])
+        older_tuple = settings_schema.to_tuple(values, {})[:-1]
+        self.assertEqual(settings_schema.from_tuple(older_tuple)["tactical_battle_song"],
+                         settings_schema.defaults()["tactical_battle_song"])
+
     def sample(self):
         values = settings_schema.defaults()
         values.update({"num_players": 3, "ai_mode": "OPENROUTER", "target_fps": 144,

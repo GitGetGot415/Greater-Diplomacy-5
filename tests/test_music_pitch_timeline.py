@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import data.constants as c
 from screens.menus.music_player import Music_Player
-from ui.music_playback import BeepBoxPlayback, SoLoudPlayback
+from ui.music_playback import BeepBoxPlayback, PygamePlayback, SoLoudPlayback
 
 
 class FakeBeepBoxStream:
@@ -171,6 +171,29 @@ class MusicPitchTimelineTests(unittest.TestCase):
 
         self.assertEqual(controller.music_pitch_timeline,
                          c.MUSIC_PITCH_TIMELINE_DYNAMIC)
+
+
+class PygamePositionTests(unittest.TestCase):
+    def test_source_position_includes_the_configured_track_start_offset(self):
+        with patch("ui.music_playback.pygame.mixer.music") as mixer:
+            mixer.get_pos.return_value = 12000
+            playback = PygamePlayback("fixture.ogg", 30, 0.5)
+            self.assertEqual(playback.source_position(), 42)
+
+    def test_paused_track_retains_position_for_temporary_music_restore(self):
+        with patch("ui.music_playback.pygame.mixer.music") as mixer:
+            mixer.get_pos.return_value = 12000
+            playback = PygamePlayback("fixture.ogg", 0, 0.5)
+            playback.pause(True)
+            mixer.get_pos.return_value = 99999
+            self.assertEqual(playback.source_position(), 12)
+
+    def test_pausing_immediately_after_seek_retains_the_seek_target(self):
+        with patch("ui.music_playback.pygame.mixer.music"):
+            playback = PygamePlayback("fixture.ogg", 0, 0.5)
+            playback.seek(37.5)
+            playback.pause(True)
+            self.assertEqual(playback.source_position(), 37.5)
 
 
 if __name__ == "__main__":

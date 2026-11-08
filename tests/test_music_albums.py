@@ -138,7 +138,7 @@ class AlbumTileTests(unittest.TestCase):
             is_shuffle_disabled=lambda path: False,
             sfx_volume=0.5, sfx_pitch=0.5, music_volume=0.5, music_pitch=0.5,
             music_pitch_timeline=c.MUSIC_PITCH_TIMELINE_STATIC,
-            starting_song=None, music=None,
+            starting_song=None, tactical_battle_song="", music=None,
             load_music_data=mock.Mock(),
         )
         player = object.__new__(Music_Player)
@@ -190,6 +190,21 @@ class AlbumTileTests(unittest.TestCase):
         self.assertIsNone(player.controller.starting_song)
         player.controller.save_starting_song.assert_called_once_with()
         self.assertTrue(clear_button().disabled)
+
+    def test_tactical_song_buttons_save_and_clear_the_current_track(self):
+        player = self.make_player([])
+        player.controller.now_playing = "fixture-current.ogg"
+        player.controller.save_tactical_battle_song = mock.Mock()
+        player.refresh_ui()
+        for action, expected in ((player.set_tactical_song, "fixture-current.ogg"),
+                                 (player.reset_tactical_song, "")):
+            button = next(element for element in player.elements
+                          if isinstance(element, music_player.Button) and element.callback == action)
+            player.handle_events([
+                pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=button.rect.center),
+                pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=button.rect.center)])
+            self.assertEqual(player.controller.tactical_battle_song, expected)
+        self.assertEqual(player.controller.save_tactical_battle_song.call_count, 2)
 
     def test_new_album_tile_is_last_even_when_pinned_by_order(self):
         player = self.make_player(["Alpha", "Zulu"])

@@ -16,6 +16,7 @@ def make_controller():
     controller._failed_music_tracks = set()
     controller.shuffle_disabled_tracks = set()
     controller.now_playing = "None"
+    controller._tactical_music_active = False
     return controller
 
 
@@ -33,7 +34,7 @@ class ShuffleExclusionTests(unittest.TestCase):
             music_volume=0.5,
             music_pitch=0.5,
             music_pitch_timeline=c.MUSIC_PITCH_TIMELINE_STATIC,
-            starting_song=None,
+            starting_song=None, tactical_battle_song="",
             music=None,
         )
         player = object.__new__(Music_Player)
@@ -94,7 +95,7 @@ class ShuffleExclusionTests(unittest.TestCase):
             music_volume=0.5,
             music_pitch=0.5,
             music_pitch_timeline=c.MUSIC_PITCH_TIMELINE_STATIC,
-            starting_song=None,
+            starting_song=None, tactical_battle_song="",
             music=None,
         )
         player = object.__new__(Music_Player)
@@ -145,7 +146,7 @@ class ShuffleExclusionTests(unittest.TestCase):
             music_volume=0.5,
             music_pitch=0.5,
             music_pitch_timeline=c.MUSIC_PITCH_TIMELINE_STATIC,
-            starting_song=None,
+            starting_song=None, tactical_battle_song="",
             music=None,
         )
         player = object.__new__(Music_Player)

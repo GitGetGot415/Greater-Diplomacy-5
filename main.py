@@ -343,6 +343,8 @@ class Controller:
         self.now_playing = "None"
         self._failed_music_tracks = set()
         self.starting_song = None
+        self._tactical_music_active = False
+        self._tactical_music_resume = None
         self.track_start_times = {} # Keeps track of offsets specified in start_times.json
 
         self.load_music_data()
@@ -432,6 +434,8 @@ class Controller:
         if next_state_name == "MAP" and not previous_state.prepare_map(self):
             return
         next_state = self.states[next_state_name]
+        if previous_state is self.states.get("CUSTOM_BATTLE") and next_state is not previous_state:
+            self.set_tactical_battle_music(False)
         next_state.on_enter(self, previous_state)
         previous_state.done = False
         self.active_state = next_state
@@ -530,6 +534,11 @@ class Controller:
             else:
                 self.starting_song = None
 
+        if self.tactical_battle_song and self.tactical_battle_song not in all_tracks:
+            replacement = os.path.splitext(self.tactical_battle_song.replace("\\", "/"))[0] + ".json"
+            self.tactical_battle_song = replacement if replacement in all_tracks else ""
+            self.save_tactical_battle_song()
+
     def save_active_albums(self):
         queries.save_cached_json("active_albums", self.active_albums)
 
@@ -553,6 +562,41 @@ class Controller:
     def save_starting_song(self):
         queries.save_cached_json("starting_song", {"track": self.starting_song})
 
+    def save_tactical_battle_song(self):
+        queries.save_global_settings(self)
+
+    def set_tactical_battle_music(self, active):
+        """Temporarily replace playlist playback, then restore its track and position."""
+        if active:
+            if self._tactical_music_active or not self.tactical_battle_song:
+                return
+            music = self.music
+            self._tactical_music_resume = (
+                (self.now_playing, music.source_position(), music.paused)
+                if music is not None and not music.finished else None)
+            self._tactical_music_active = True
+            self.play_random_song()
+            return
+        if not self._tactical_music_active:
+            return
+        resume = self._tactical_music_resume
+        self._tactical_music_active = False
+        self._tactical_music_resume = None
+        if resume is None or resume[0] in self._failed_music_tracks:
+            self.play_random_song()
+            return
+        track, position, paused = resume
+        restored_tracks = {track}
+        if track.lower().endswith(".json"):
+            fallback = self._beepbox_audio_fallback(track)
+            if fallback:
+                restored_tracks.add(fallback)
+        self.play_specific_song(track)
+        if self.music is not None and self.now_playing in restored_tracks:
+            if position is not None:
+                self.music.seek(position)
+            self.music.pause(paused)
+
     def play_startup_song(self):
         """Plays the pinned starting song if one is set, else falls back to random."""
         if self.starting_song:
@@ -572,6 +616,13 @@ class Controller:
                 self.playlist.extend(self.all_albums[album])
 
     def play_random_song(self):
+        if self._tactical_music_active:
+            track = self.tactical_battle_song
+            if track in self._failed_music_tracks and track.lower().endswith(".json"):
+                track = self._beepbox_audio_fallback(track)
+            if track and track not in self._failed_music_tracks:
+                self.play_specific_song(track)
+                return
         available_tracks = [
             track for track in self.playlist
             if (track not in self._failed_music_tracks
@@ -646,15 +697,18 @@ class Controller:
             self.now_playing = track_path
         except Exception as e:
             print(f"Error playing track {track_path}: {e}")
+            # A failed temporary battle song must not be retried every frame.
+            # Cache the failure before trying its audio counterpart as well.
+            self._failed_music_tracks.add(track_path)
+            self.music = None
             if track_path.lower().endswith(".json"):
                 fallback = self._beepbox_audio_fallback(track_path)
-                if fallback:
+                if fallback and fallback not in self._failed_music_tracks:
                     extension = os.path.splitext(fallback)[1][1:].upper()
                     print(f"Falling back to the matching {extension} track.")
                     self.play_specific_song(fallback)
-                else:
-                    self._failed_music_tracks.add(track_path)
-                    self.play_random_song()
+                    return
+            self.play_random_song()
 
     def _shutdown_audio(self):
         if not IS_WEB:

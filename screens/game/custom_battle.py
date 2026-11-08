@@ -85,6 +85,7 @@ class CustomBattleScreen(Screen):
     def __init__(self):
         super().__init__()
         self.mode = "setup"
+        self.controller = None
         self.library = {}
         self.generation_year = starting_defaults.get_starting_value("random_setup", "start_year")
         self.random_candidates = []
@@ -109,6 +110,9 @@ class CustomBattleScreen(Screen):
         self.refresh_ui()
 
     def on_enter(self, app, previous):
+        self.controller = app
+        if self.controller is not None:
+            self.controller.set_tactical_battle_music(False)
         self.done = False
         self.next_state = None
         self.mode = "setup"
@@ -286,6 +290,8 @@ class CustomBattleScreen(Screen):
         self.simulation.paused = True
         self.clear_controls()
         self.mode = "preview"
+        if self.controller is not None:
+            self.controller.set_tactical_battle_music(True)
         self.status_key = None
         self._refresh_status()
         self.refresh_ui()
@@ -307,6 +313,8 @@ class CustomBattleScreen(Screen):
     def return_to_setup(self):
         self.cancel_active_drags()
         self.clear_controls()
+        if self.controller is not None:
+            self.controller.set_tactical_battle_music(False)
         self.mode = "setup"
         self.simulation = None
         self.refresh_ui()
@@ -445,6 +453,8 @@ class CustomBattleScreen(Screen):
         self._refresh_status()
         if self.simulation.winner is not None:
             self.clear_controls()
+            if self.controller is not None:
+                self.controller.set_tactical_battle_music(False)
             self.mode = "result"
             self.refresh_ui()
 

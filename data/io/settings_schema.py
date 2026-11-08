@@ -106,6 +106,7 @@ SETTINGS_FIELDS = (
     _field("openrouter_model", "openrouter_model"),
     _field("checkerboard_gradient_strength", "checkerboard_gradient_strength", coerce=_coerce_checkerboard_gradient),
     _field("checkerboard_scroll_speed", "checkerboard_scroll_speed", coerce=_coerce_checkerboard_speed),
+    _field("tactical_battle_song", "tactical_battle_song"),
 )
 
 SETTINGS_ORDER = tuple(field.name for field in SETTINGS_FIELDS)

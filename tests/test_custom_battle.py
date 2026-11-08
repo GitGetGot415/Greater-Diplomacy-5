@@ -5,7 +5,7 @@ import math
 import random
 from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pygame
 
@@ -263,8 +263,9 @@ class CustomBattleScreenTests(unittest.TestCase):
     def setUp(self):
         self.library = fixture_library()
         self.screen = CustomBattleScreen()
+        self.controller = SimpleNamespace(set_tactical_battle_music=Mock())
         with patch("data.queries.get_unit_library", return_value=self.library):
-            self.screen.on_enter(SimpleNamespace(), None)
+            self.screen.on_enter(self.controller, None)
 
     def click(self, label):
         button = next(button for button in self.screen.elements if button.text == label)
@@ -280,7 +281,7 @@ class CustomBattleScreenTests(unittest.TestCase):
         library, tree = dated_fixture_content()
         with patch("data.queries.get_unit_library", return_value=library), \
                 patch("data.queries.get_tech_tree", return_value=tree):
-            self.screen.on_enter(SimpleNamespace(), None)
+            self.screen.on_enter(self.controller, None)
             self.screen.add_unit(0, "Car 1")
             slider = self.screen.year_slider
             x = slider.rect.x + round(slider.rect.width * (1913 - c.START_YEAR)
@@ -306,7 +307,7 @@ class CustomBattleScreenTests(unittest.TestCase):
         library, tree = dated_fixture_content()
         with patch("data.queries.get_unit_library", return_value=library), \
                 patch("data.queries.get_tech_tree", return_value=tree):
-            self.screen.on_enter(SimpleNamespace(), None)
+            self.screen.on_enter(self.controller, None)
             self.screen.update_generation_year(0)
             self.screen.add_unit(0, "Car 1")
             self.assertTrue(self.screen.generate_button.disabled)
@@ -319,7 +320,7 @@ class CustomBattleScreenTests(unittest.TestCase):
         library, tree = dated_fixture_content()
         with patch("data.queries.get_unit_library", return_value=library), \
                 patch("data.queries.get_tech_tree", return_value=tree):
-            self.screen.on_enter(SimpleNamespace(), None)
+            self.screen.on_enter(self.controller, None)
             self.screen.update_generation_year(1916 - c.START_YEAR)
             with patch("pygame.mouse.get_pos", return_value=self.screen.year_slider.rect.center):
                 self.screen.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=1)])
@@ -468,6 +469,29 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.click("Exit")
         self.assertEqual(self.screen.mode, "setup")
         self.assertEqual(self.screen.rosters, rosters)
+
+    def test_music_override_spans_preview_and_actual_and_ends_on_exit_or_result(self):
+        music = self.controller.set_tactical_battle_music
+        music.reset_mock()
+        self.fill_armies()
+        music.assert_not_called()
+        self.click("Simulate")
+        music.assert_called_once_with(True)
+        self.click("Start")
+        self.click("Pause")
+        self.click("Resume")
+        music.assert_called_once_with(True)
+        self.click("Exit")
+        self.assertEqual(music.call_args.args, (False,))
+        self.click("Simulate")
+        self.screen.handle_back_key()
+        self.assertEqual(music.call_args.args, (False,))
+        self.click("Simulate")
+        self.click("Start")
+        self.screen.simulation.advance(60)
+        self.screen.update()
+        self.assertEqual(self.screen.mode, "result")
+        self.assertEqual(music.call_args.args, (False,))
 
     def test_control_follows_reordered_entries_and_clears_when_removed(self):
         for name in ("Fixture I", "Fixture II", "Fixture Gun I"):
