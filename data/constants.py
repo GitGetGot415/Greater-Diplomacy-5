@@ -1007,9 +1007,11 @@ DEFAULT_UNIT_ATK = 5
 DEFAULT_UNIT_DEF = 0
 DEFAULT_UNIT_SPD = 1
 
-# Standalone custom-battle arena shared by simulation and presentation.
-CUSTOM_BATTLE_ARENA_SIZE = (1120, 520)
+# Custom-battle battlefield shared by simulation and presentation. It is larger than the
+# on-screen view, which a camera moves across.
+CUSTOM_BATTLE_ARENA_SIZE = (3000, 1100)
 CUSTOM_BATTLE_MAX_UNITS_PER_SIDE = 64
+# Ground speed of arcing artillery shells. Direct shots use DIRECT_PROJECTILE_SPEED in map_logic/custom_battle.py.
 CUSTOM_BATTLE_PROJECTILE_SPEED = 420.0
 
 #: The roman numeral alphabet, largest first. Both directions of the conversion

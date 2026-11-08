@@ -108,28 +108,68 @@ In a custom battle, **Retreat** returns to editing while preserving the army set
 Actual battle is the fighting on the grass battlefield.
 Tanks and vehicles use rectangles, artillery uses thin rectangles, infantry and militia use circles, and cavalry uses ovals.
 Health bars show remaining strength, with the unit's nationality flag beside each bar, and projectiles show shots in flight.
-The controlled unit has a yellow outline and an arrow pointing along its facing direction.
+
+#### Sub-units
+
+Each roster entry is a division. On the battlefield a division becomes several sub-units, each with its own shape,
+health bar, and flag. Infantry-type, cavalry, and troop-carrier divisions bring the most; tanks, armored cars, and
+artillery bring fewer; railroad guns, Landkreuzers, and the Railgun bring one. `SUBUNIT_COUNTS` in
+[map_logic/custom_battle.py](../map_logic/custom_battle.py) sets each count.
+A wounded division brings fewer sub-units: with fraction `f` of full health and `N` sub-units at full health,
+it brings `ceil(f × N)` sub-units that share its health equally. For example, with 10 sub-units at full health,
+70% brings 7 at full health, 63% brings 7 at 90%, and 60% brings 6 at full health.
+Sub-units divide only health. Each keeps the division's full attack and defense.
+
+#### Combat
+
 Each hit is reduced by the target's full defense stat, down to zero damage.
 Tactical defense stays constant as health falls; campaign combat scales defense with health.
+A shot's damage uses the shooter's strength when it fired and the rules for the unit it actually hits.
+A shot already in flight still lands after its shooter is destroyed.
+
+Direct shots fly in a straight line and hit the first enemy they cross.
+Artillery, railroad guns, Landkreuzers, and the Railgun fire arcing shells instead. A shell flies over every unit
+on its way and hits only where it lands, damaging every enemy within its blast radius. It never damages friendly units.
+
+Infantry-type, cavalry, troop-carrier, artillery, railroad gun, and Railgun sub-units fire only inside a cone in front of the hull.
+Tanks, armored cars, and Landkreuzers aim all the way around. Every gun turns toward its aim at its own speed,
+so it cannot swing from one direction to another at once. Sub-units also speed up, slow down, and start and stop
+turning gradually. These rules apply to AI sub-units and the controlled sub-unit alike.
+
+#### Control
 
 | Control | Action |
 | --- | --- |
-| W | Move forward along the unit's facing direction. |
-| S | Reverse along the unit's facing direction. |
+| W | Speed up forward along the hull's facing direction. |
+| S | Slow down, then reverse along the hull's facing direction. |
 | A | Turn left. |
 | D | Turn right. |
-| Space | Fire straight ahead. |
+| Mouse | Aim. The gun turns toward the pointer, inside the firing cone if the unit has one. |
+| Left mouse | Fire along the gun. An arcing shell lands at the pointer, up to the weapon's range. |
 
-Movement follows the unit's facing direction. A and D rotate the unit rather than moving it sideways.
-Firing uses a cooldown shared with AI units. Holding Space fires again only after the cooldown expires.
+Movement follows the hull's facing direction. A and D rotate the hull rather than moving it sideways, and turning
+the hull carries the firing cone with it.
+Firing uses a reload time shared with AI units. Holding the left mouse button fires again only after reloading.
+
+Only the controlled sub-unit shows its range and firing cone (a circle for units that aim all the way around),
+a line along its gun, and the landing area of an arcing shell. Its yellow ring has an arrow along the hull that
+lengthens with speed and points back while reversing. A second ring fills while the weapon reloads.
+Other sub-units show none of these.
+
+Control covers one sub-unit of the controlled division. The division's other sub-units fight automatically.
+If the controlled sub-unit is destroyed, control passes to the nearest surviving sub-unit of the same division.
 Other friendly units and all enemy units move and fire automatically.
 When no unit is controlled, both armies fight automatically.
+
+The battlefield is larger than the screen. While a sub-unit is controlled, the view follows it.
+Otherwise, drag the battlefield with the left mouse button to move the view.
 
 **Pause** freezes combat, and **Resume** continues it. The configured Back key toggles pause during actual battle.
 Losing window focus also pauses combat. Pausing or leaving combat clears held movement and fire controls.
 
 The custom battle is won when the enemy army is destroyed and lost when the friendly army is destroyed.
-Mutual destruction counts as a loss. If the controlled unit is destroyed while friendly units remain, those friendly units continue fighting under AI control.
+Mutual destruction counts as a loss. If every sub-unit of the controlled division is destroyed while friendly units remain, those friendly units continue fighting under AI control.
+The status line counts the divisions on each side that still have a sub-unit.
 
 **Run Again** opens preview with fresh armies from the same setup.
 **Edit Armies** returns to editing. **Exit** from actual battle or the result view also returns to editing.
@@ -152,18 +192,19 @@ that are not hostile land and hold no hostile units, the same rule the rule-base
 The mouse wheel zooms and the pan buttons move the map. **Back** returns to the preview. **Retreat** is available even when no tile is marked, so the player can look and go back.
 
 Actual battle has no **Exit** button in tactical play. When it ends, **Continue** returns to the map.
-If the controlled unit was destroyed, even in a won battle, it is removed, tactical mode ends,
-and the game continues in spectator mode.
-When the battle ends, every unit that took part keeps its remaining fraction of health in the campaign, and destroyed units, friendly or enemy, are removed from the tile.
+If every sub-unit of the controlled division was destroyed, even in a won battle, the division is removed, tactical mode ends,
+and the game continues in spectator mode. While any of its sub-units survives, the player keeps the division.
+When the battle ends, every unit that took part keeps its sub-units' remaining share of its full health in the campaign, and destroyed units, friendly or enemy, are removed from the tile.
 The tile is then captured as after any campaign combat: if only enemies remain, they take it. Everything else waits for the next turn.
 The tactical division has no resource-management costs, including repair costs, and does not charge the parent country for those actions.
 Tactical battles in multiplayer remain unavailable.
 
 ## Rules and implementation owners
 
-[screens/game/custom_battle.py](../screens/game/custom_battle.py) owns the three views, roster controls, navigation, and keyboard input.
+[screens/game/custom_battle.py](../screens/game/custom_battle.py) owns the three views, roster controls, navigation, the camera, and keyboard and mouse input.
 [screens/game/tactical_retreat.py](../screens/game/tactical_retreat.py) owns the retreat map. `Map.open_tactical_battle` starts an encounter.
-[map_logic/custom_battle.py](../map_logic/custom_battle.py) owns unit generation, deployment, movement, projectiles, cooldowns, and results.
+[map_logic/custom_battle.py](../map_logic/custom_battle.py) owns unit generation, sub-units, deployment, movement, aiming, projectiles, cooldowns, and results.
+Its `SUBUNIT_COUNTS`, `MOBILITY`, and `AIM` tables set sub-unit counts, acceleration and turning, and firing cones and gun speeds for each battlefield shape.
 
 Unit statistics and capabilities come from [unit_data.json](../data/json/unit_data.json).
 Research dates come from [research_template.json](../data/json/research_template.json) through the shared [unit queries](../data/queries/unit_info.py).

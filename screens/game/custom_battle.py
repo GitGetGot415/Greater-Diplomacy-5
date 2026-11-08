@@ -62,6 +62,7 @@ ROSTER_WIDTH = 900
 SCROLLBAR_HEIGHT = 14
 BUTTON_WIDTH = 170
 FIELD_TOP = 140
+FIELD_VIEW_SIZE = (1120, 520)  # The on-screen window onto the larger battlefield.
 TEAM_COLORS = ((85, 170, 245), (235, 100, 90))
 GRASS_COLOR = (72, 115, 57)
 OUTLINE_COLOR = (22, 30, 22)
@@ -95,43 +96,96 @@ UNIT_SHAPE_SIZES = {
     "armored_car": (24, 16),  # Same size as the light tank, drawn with rounded edges.
     "heavy_tank": (33, 22),
     "railroad_gun": (52, 9),
-    "colossus": (50, 34),  # Landkreuzers and the Railgun.
+    "colossus": (50, 34),  # Landkreuzers.
+    "railgun": (50, 34),  # Same body as the Landkreuzers.
     # Troop carriers match a vehicle's hull but carry no gun: armored car, light tank, medium tank.
     "motorized": (24, 16), "mechanized": (24, 16), "ifv": (28, 19),
 }
 ROUNDED_SHAPES = frozenset(("armored_car", "motorized"))
 UNARMED_SHAPES = frozenset(("motorized", "mechanized", "ifv"))  # Drawn without the gun line.
 ROUNDED_CORNER_RADIUS = 6
-CONTROL_KEYS = frozenset((pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d, pygame.K_SPACE))
+SPRITE_ANGLE_STEP = 4  # Degrees between the cached rotations of each battlefield shape.
+DEAD_COLOR = (53, 65, 44)
+BATTLE_HEALTH_COLOR = (105, 215, 85)
+SHOT_COLOR = (250, 232, 150)
+SHOT_TAIL = 8  # Pixels behind a direct shot's head.
+SHELL_COLOR = (240, 240, 225)
+SHELL_SHADOW_COLOR = (40, 60, 32)
+SHELL_RADIUS = 3
+SHELL_ARC_RATIO = 0.25  # An arcing shell's peak height as a share of its ground distance.
+RANGE_COLOR = (255, 225, 95)
+AIM_LINE_COLOR = (255, 245, 200)
+CONE_ARC_STEP = math.radians(3)  # Spacing of the points that draw the cone's curved edge.
+PLAYER_RING_RADIUS = 18
+RELOAD_RING_RADIUS = 22
+RELOAD_COLOR = (255, 245, 200)
+ARROW_STRETCH = 26  # Extra arrow length at top speed.
+CONTROL_KEYS = frozenset((pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d))
+
+_BODY_SPRITES = {}
+_ROTATED_SPRITES = {}
 
 
-def draw_unit_shape(surface, shape, center, angle, color, *, scale=1.0):
-    """Draw the same geometric silhouettes in setup cards and on the field."""
-    width, height = UNIT_SHAPE_SIZES[shape]
-    width, height = round(width * scale), round(height * scale)
-    sprite = pygame.Surface((width + 12, max(height, 24)), pygame.SRCALPHA)
-    body = pygame.Rect(2, (sprite.get_height() - height) // 2, width, height)
-    if shape in {"infantry", "cavalry"}:
-        pygame.draw.ellipse(sprite, OUTLINE_COLOR, body)
-        pygame.draw.ellipse(sprite, color, body.inflate(-4, -4))
-    else:
-        radius = round(ROUNDED_CORNER_RADIUS * scale) if shape in ROUNDED_SHAPES else 0
-        pygame.draw.rect(sprite, OUTLINE_COLOR, body, border_radius=radius)
-        pygame.draw.rect(sprite, color, body.inflate(-4, -4), border_radius=max(0, radius - 2))
-        if shape not in UNARMED_SHAPES:
-            pygame.draw.line(sprite, OUTLINE_COLOR, body.center,
-                             (sprite.get_width() - 1, body.centery), max(2, round(3 * scale)))
-    rotated = pygame.transform.rotate(sprite, -math.degrees(angle))
+def _unit_sprite(shape, color, scale, barrel):
+    """An unrotated silhouette pointing right; cached because battles draw hundreds per frame."""
+    key = (shape, tuple(color), scale, barrel)
+    if key not in _BODY_SPRITES:
+        width, height = UNIT_SHAPE_SIZES[shape]
+        width, height = round(width * scale), round(height * scale)
+        sprite = pygame.Surface((width + 12, max(height, 24)), pygame.SRCALPHA)
+        body = pygame.Rect(2, (sprite.get_height() - height) // 2, width, height)
+        if shape in {"infantry", "cavalry"}:
+            pygame.draw.ellipse(sprite, OUTLINE_COLOR, body)
+            pygame.draw.ellipse(sprite, color, body.inflate(-4, -4))
+        else:
+            radius = round(ROUNDED_CORNER_RADIUS * scale) if shape in ROUNDED_SHAPES else 0
+            pygame.draw.rect(sprite, OUTLINE_COLOR, body, border_radius=radius)
+            pygame.draw.rect(sprite, color, body.inflate(-4, -4), border_radius=max(0, radius - 2))
+            if barrel and shape not in UNARMED_SHAPES:
+                pygame.draw.line(sprite, OUTLINE_COLOR, body.center,
+                                 (sprite.get_width() - 1, body.centery), max(2, round(3 * scale)))
+        _BODY_SPRITES[key] = sprite
+    return _BODY_SPRITES[key]
+
+
+def draw_unit_shape(surface, shape, center, angle, color, *, scale=1.0, aim=None):
+    """Draw the same geometric silhouettes in setup cards and on the field.
+
+    With ``aim``, the gun line is drawn along ``aim`` instead of the hull ``angle``.
+    """
+    step = round(math.degrees(angle) / SPRITE_ANGLE_STEP) % (360 // SPRITE_ANGLE_STEP)
+    key = (shape, tuple(color), scale, aim is None, step)
+    rotated = _ROTATED_SPRITES.get(key)
+    if rotated is None:
+        rotated = pygame.transform.rotate(_unit_sprite(shape, color, scale, aim is None),
+                                          -step * SPRITE_ANGLE_STEP)
+        _ROTATED_SPRITES[key] = rotated
     surface.blit(rotated, rotated.get_rect(center=center))
+    if aim is not None and shape not in UNARMED_SHAPES:
+        # Same reach as the sprite's own gun line: half the body plus the sprite's margin.
+        length = round(UNIT_SHAPE_SIZES[shape][0] * scale) / 2 + 9
+        pygame.draw.line(surface, OUTLINE_COLOR, center,
+                         (center[0] + math.cos(aim) * length, center[1] + math.sin(aim) * length),
+                         max(2, round(3 * scale)))
 
 
-def draw_player_arrow(surface, center, angle):
-    """Mark the controlled unit and point along its hull heading."""
+def draw_player_arrow(surface, center, angle, stretch=0.0):
+    """Mark the controlled unit and point along its hull heading.
+
+    ``stretch`` is the signed share of top speed: the arrow lengthens with speed and points back while reversing.
+    """
+    if stretch < 0:
+        angle += math.pi
+    extra = abs(stretch) * ARROW_STRETCH
     forward = pygame.Vector2(math.cos(angle), math.sin(angle))
     sideways = pygame.Vector2(-forward.y, forward.x)
     origin = pygame.Vector2(center)
-    points = [origin + forward * 33, origin + forward * 19 + sideways * 6,
-              origin + forward * 23, origin + forward * 19 - sideways * 6]
+    if extra >= 1:
+        pygame.draw.line(surface, OUTLINE_COLOR, origin + forward * 19, origin + forward * (19 + extra), 4)
+        pygame.draw.line(surface, PLAYER_COLOR, origin + forward * 19, origin + forward * (19 + extra), 2)
+    head = origin + forward * extra
+    points = [head + forward * 33, head + forward * 19 + sideways * 6,
+              head + forward * 23, head + forward * 19 - sideways * 6]
     pygame.draw.polygon(surface, OUTLINE_COLOR, points)
     pygame.draw.polygon(surface, PLAYER_COLOR, points, 2)
 
@@ -172,6 +226,9 @@ class CustomBattleScreen(Screen):
         self.marquee = None  # [side, start position, current position] while dragging a square
         self.controlled_index = None
         self.held_keys = set()
+        self.firing = False  # Left mouse held on the battlefield while controlling a sub-unit.
+        self.camera = [0.0, 0.0]  # Battlefield coordinates at the view's top-left corner.
+        self.pan_drag = None  # Last pointer position while dragging the battlefield.
         self.card_surfaces = {}
         self.unit_buttons = {}
         self.gear_icon = None
@@ -300,11 +357,11 @@ class CustomBattleScreen(Screen):
             campaign.map_screen.update_country_centers()
 
     def continue_campaign(self):
-        """Leave the finished encounter. A dead tactical unit sends the player to spectating."""
+        """Leave the finished encounter. A destroyed tactical division sends the player to spectating."""
         if self.mode != "result" or self.campaign is None:
             return
         campaign = self.campaign
-        died = not self.simulation.controlled.alive
+        died = not self.simulation.controlled_division_alive
         self._end_campaign()
         if died:
             player_setup.lose_tactical_unit(campaign.map_screen, campaign.province)
@@ -543,12 +600,40 @@ class CustomBattleScreen(Screen):
         self.simulation.paused = False
         self.mode = "battle"
         self.last_tick = pygame.time.get_ticks()
+        controlled = self.simulation.controlled
+        if controlled is not None:
+            self._center_camera(controlled.x, controlled.y)
+        else:
+            self._center_camera(c.CUSTOM_BATTLE_ARENA_SIZE[0] / 2, c.CUSTOM_BATTLE_ARENA_SIZE[1] / 2)
         self.refresh_ui()
 
     def clear_controls(self):
         self.held_keys.clear()
+        self.firing = False
         if self.simulation is not None:
             self.simulation.set_player_input()
+
+    @staticmethod
+    def view_rect():
+        return pygame.Rect((c.SCREEN_WIDTH - FIELD_VIEW_SIZE[0]) // 2, FIELD_TOP, *FIELD_VIEW_SIZE)
+
+    def _center_camera(self, x, y):
+        self._move_camera(x - FIELD_VIEW_SIZE[0] / 2, y - FIELD_VIEW_SIZE[1] / 2)
+
+    def _move_camera(self, left, top):
+        """Keep the view inside the battlefield."""
+        self.camera = [max(0.0, min(c.CUSTOM_BATTLE_ARENA_SIZE[0] - FIELD_VIEW_SIZE[0], left)),
+                       max(0.0, min(c.CUSTOM_BATTLE_ARENA_SIZE[1] - FIELD_VIEW_SIZE[1], top))]
+
+    def to_field(self, pos):
+        """A screen position in battlefield coordinates."""
+        view = self.view_rect()
+        return pos[0] - view.x + self.camera[0], pos[1] - view.y + self.camera[1]
+
+    def _driving(self):
+        """The player steers and fires only while a sub-unit of the controlled division lives."""
+        return (self.mode == "battle" and not self.simulation.paused
+                and self.simulation.controlled is not None and self.simulation.controlled.alive)
 
     def return_to_setup(self):
         self.cancel_active_drags()
@@ -588,6 +673,7 @@ class CustomBattleScreen(Screen):
         self.drag = None
         self.marquee = None
         self.bar_drag = None
+        self.pan_drag = None
         for element in self.elements:
             if isinstance(element, Slider):
                 element.dragging = False
@@ -768,10 +854,10 @@ class CustomBattleScreen(Screen):
                 continue
             if self._unit_button_events(event):
                 continue
-            if (event.type == pygame.KEYDOWN and event.key in CONTROL_KEYS
-                    and self.mode == "battle" and not self.simulation.paused
-                    and self.simulation.controlled is not None and self.simulation.controlled.alive):
+            if event.type == pygame.KEYDOWN and event.key in CONTROL_KEYS and self._driving():
                 self.held_keys.add(event.key)
+                continue
+            if self.mode == "battle" and self._battlefield_mouse(event):
                 continue
             if (self.mode == "setup" and event.type == pygame.MOUSEWHEEL
                     and self.year_slider.rect.inflate(20, 40).collidepoint(pygame.mouse.get_pos())):
@@ -783,8 +869,33 @@ class CustomBattleScreen(Screen):
             for element in list(self.elements):
                 element.handle_event(event)
 
+    def _battlefield_mouse(self, event):
+        """Left mouse fires while controlling a sub-unit; otherwise dragging the battlefield pans the view.
+
+        The battlefield follows the pointer while dragged.
+        """
+        if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+            self.firing = False
+            self.pan_drag = None
+            return False  # Buttons still need the release.
+        if event.type == pygame.MOUSEMOTION and self.pan_drag is not None:
+            self._move_camera(self.camera[0] - (event.pos[0] - self.pan_drag[0]),
+                              self.camera[1] - (event.pos[1] - self.pan_drag[1]))
+            self.pan_drag = event.pos
+            return True
+        if (event.type != pygame.MOUSEBUTTONDOWN or event.button != 1
+                or not self.view_rect().collidepoint(event.pos)):
+            return False
+        if self._driving():
+            self.firing = True
+        elif self.simulation.controlled is None or not self.simulation.controlled.alive:
+            self.pan_drag = event.pos
+        return True
+
     def _refresh_status(self):
-        counts = tuple(sum(fighter.alive and fighter.side == side for fighter in self.simulation.fighters)
+        # Divisions, not sub-units: a division counts while any of its sub-units survives.
+        counts = tuple(sum(any(fighter.alive for fighter in division)
+                           for division in self.simulation.divisions if division[0].side == side)
                        for side in (0, 1))
         key = (*counts, int(self.simulation.elapsed))
         if key != self.status_key:
@@ -802,11 +913,19 @@ class CustomBattleScreen(Screen):
         now = pygame.time.get_ticks()
         dt = min(MAX_FRAME_SECONDS, max(0, now - self.last_tick) / 1000.0)
         self.last_tick = now
+        driving = self._driving()
         self.simulation.set_player_input(
             throttle=int(pygame.K_w in self.held_keys) - int(pygame.K_s in self.held_keys),
             turn=int(pygame.K_d in self.held_keys) - int(pygame.K_a in self.held_keys),
-            fire=pygame.K_SPACE in self.held_keys)
+            fire=self.firing, aim_point=self.to_field(pygame.mouse.get_pos()) if driving else None)
         self.simulation.advance(dt)
+        controlled = self.simulation.controlled
+        if controlled is not None and controlled.alive:
+            # Control can pass to another sub-unit of the division; the camera follows whichever it is.
+            self._center_camera(controlled.x, controlled.y)
+        elif driving:
+            # The whole controlled division is gone: drop held input and leave the camera free.
+            self.clear_controls()
         self._refresh_status()
         if self.simulation.winner is not None:
             self.clear_controls()
@@ -970,38 +1089,86 @@ class CustomBattleScreen(Screen):
             if math.dist(origin, current) >= DRAG_THRESHOLD:
                 pygame.draw.rect(surface, TEAM_COLORS[side], self._marquee_rect(origin, current), 1)
 
+    def _draw_controls(self, surface, fighter, center):
+        """Range, firing cone, gun direction, heading arrow, and reload for the controlled sub-unit only."""
+        cone = combat.firing_cone(fighter.shape)
+        reach = round(fighter.weapon_range)
+        if cone is None:
+            pygame.draw.circle(surface, RANGE_COLOR, center, reach, 1)
+        else:
+            steps = max(1, math.ceil(cone / CONE_ARC_STEP))
+            start = fighter.angle - cone / 2
+            edge = [(center[0] + math.cos(start + cone * step / steps) * reach,
+                     center[1] + math.sin(start + cone * step / steps) * reach) for step in range(steps + 1)]
+            pygame.draw.lines(surface, RANGE_COLOR, True, [center, *edge])
+        aim = (self.to_field(pygame.mouse.get_pos()) if self.mode == "battle" and not self.simulation.paused
+               else None)
+        length = combat.shot_reach(fighter, aim) if fighter.arcing else fighter.weapon_range
+        end = (center[0] + math.cos(fighter.aim) * length, center[1] + math.sin(fighter.aim) * length)
+        pygame.draw.line(surface, AIM_LINE_COLOR, center, end, 1)
+        if fighter.arcing:
+            # Where the shell will land, and the area it will hit.
+            pygame.draw.circle(surface, AIM_LINE_COLOR, end, combat.ARTILLERY_BLAST_RADIUS, 1)
+        pygame.draw.circle(surface, PLAYER_COLOR, center, PLAYER_RING_RADIUS, 2)
+        draw_player_arrow(surface, center, fighter.angle,
+                          fighter.speed / fighter.max_speed if fighter.max_speed else 0.0)
+        if fighter.cooldown > 0:
+            # The ring fills clockwise from the top as the weapon reloads.
+            loaded = 1.0 - fighter.cooldown / combat.FIRE_INTERVAL
+            steps = max(2, math.ceil(math.tau * loaded / CONE_ARC_STEP))
+            ring = [(center[0] + math.cos(-math.pi / 2 + math.tau * loaded * step / steps) * RELOAD_RING_RADIUS,
+                     center[1] + math.sin(-math.pi / 2 + math.tau * loaded * step / steps) * RELOAD_RING_RADIUS)
+                    for step in range(steps + 1)]
+            pygame.draw.lines(surface, RELOAD_COLOR, False, ring, 2)
+
     def _draw_battle(self, surface):
-        field = pygame.Rect((c.SCREEN_WIDTH - c.CUSTOM_BATTLE_ARENA_SIZE[0]) // 2,
-                            FIELD_TOP, *c.CUSTOM_BATTLE_ARENA_SIZE)
-        pygame.draw.rect(surface, GRASS_COLOR, field)
-        pygame.draw.rect(surface, OUTLINE_COLOR, field, 3)
+        view = self.view_rect()
+        pygame.draw.rect(surface, GRASS_COLOR, view)
         old_clip = surface.get_clip()
-        surface.set_clip(old_clip.clip(field))
+        surface.set_clip(old_clip.clip(view))
+        offset_x, offset_y = view.x - self.camera[0], view.y - self.camera[1]
+        # Shapes partly inside the view still draw; the widest shape fits inside this margin.
+        visible = view.inflate(140, 140)
+        controlled = self.simulation.controlled
         for fighter in self.simulation.fighters:
-            center = (round(field.x + fighter.x), round(field.y + fighter.y))
-            if not fighter.alive:
-                draw_unit_shape(surface, fighter.shape, center, fighter.angle, (53, 65, 44))
+            center = (round(offset_x + fighter.x), round(offset_y + fighter.y))
+            if not visible.collidepoint(center):
                 continue
-            draw_unit_shape(surface, fighter.shape, center, fighter.angle, TEAM_COLORS[fighter.side])
+            if not fighter.alive:
+                draw_unit_shape(surface, fighter.shape, center, fighter.angle, DEAD_COLOR, aim=fighter.aim)
+                continue
+            draw_unit_shape(surface, fighter.shape, center, fighter.angle, TEAM_COLORS[fighter.side],
+                            aim=fighter.aim)
             bar = pygame.Rect(center[0] - 14, center[1] - 23, 28, 4)
             pygame.draw.rect(surface, OUTLINE_COLOR, bar)
-            ratio = fighter.data["health"] / max(1, fighter.data["max_health"])
-            pygame.draw.rect(surface, (105, 215, 85), (bar.x, bar.y, round(bar.width * ratio), bar.height))
+            ratio = fighter.data["health"] / fighter.data["max_health"]
+            pygame.draw.rect(surface, BATTLE_HEALTH_COLOR, (bar.x, bar.y, round(bar.width * ratio), bar.height))
             flag_icons.draw_flag(surface, fighter.data["owner"], self.country_data,
                                  bar.right + BATTLE_FLAG_GAP,
                                  bar.centery - BATTLE_FLAG_SIZE[1] // 2, size=BATTLE_FLAG_SIZE)
-            if fighter is self.simulation.controlled:
-                pygame.draw.circle(surface, PLAYER_COLOR, center, 18, 2)
-                draw_player_arrow(surface, center, fighter.angle)
+        if controlled is not None and controlled.alive:
+            self._draw_controls(surface, controlled,
+                                (round(offset_x + controlled.x), round(offset_y + controlled.y)))
         for shot in self.simulation.projectiles:
-            head = (round(field.x + shot.x), round(field.y + shot.y))
-            tail = (round(head[0] - shot.vx / c.CUSTOM_BATTLE_PROJECTILE_SPEED * 8),
-                    round(head[1] - shot.vy / c.CUSTOM_BATTLE_PROJECTILE_SPEED * 8))
-            pygame.draw.line(surface, (250, 232, 150), tail, head, 2)
+            head = (round(offset_x + shot.x), round(offset_y + shot.y))
+            if not visible.collidepoint(head):
+                continue
+            if shot.arcing:
+                # The shadow travels the ground; the shell rises and falls above it.
+                progress = shot.progress
+                height = (math.hypot(shot.vx, shot.vy) * shot.flight * SHELL_ARC_RATIO
+                          * 4 * progress * (1 - progress))
+                pygame.draw.circle(surface, SHELL_SHADOW_COLOR, head, SHELL_RADIUS)
+                pygame.draw.circle(surface, SHELL_COLOR, (head[0], round(head[1] - height)), SHELL_RADIUS)
+                continue
+            speed = math.hypot(shot.vx, shot.vy) or 1.0
+            tail = (round(head[0] - shot.vx / speed * SHOT_TAIL), round(head[1] - shot.vy / speed * SHOT_TAIL))
+            pygame.draw.line(surface, SHOT_COLOR, tail, head, 2)
         surface.set_clip(old_clip)
+        pygame.draw.rect(surface, OUTLINE_COLOR, view, 3)
         if self.mode == "battle" and self.simulation.paused:
             rect = pygame.Rect(0, 0, 210, 70)
-            rect.center = field.center
+            rect.center = view.center
             ui_elements.draw_pixel_panel(surface, rect, (39, 44, 58), (15, 19, 27))
             label = fonts.get("heading2").render("Paused", True, c.UI_TEXT_BRIGHT)
             surface.blit(label, label.get_rect(center=rect.center))

@@ -108,9 +108,22 @@ class RandomBattleTests(unittest.TestCase):
             combat.random_armies([])
 
 
+def single_subunits():
+    """One sub-unit per fixture division, so a test can follow one unit per roster entry."""
+    return patch.dict(combat.SUBUNIT_COUNTS, {"infantry": 1, "artillery": 1})
+
+
+def hold_still(simulation):
+    """Stop every unit from moving or firing on its own, so only a test's shots act."""
+    for fighter in simulation.fighters:
+        fighter.data["speed"] = 0
+        fighter.cooldown = 1000
+
+
 class BattleSimulationTests(unittest.TestCase):
     def setUp(self):
         self.library = fixture_library()
+        self.enterContext(single_subunits())
 
     def test_catalog_and_constructor_reject_air_sea_unknown_and_empty_rosters(self):
         self.assertEqual(set(combat.land_unit_types(self.library)),
@@ -199,7 +212,7 @@ class BattleSimulationTests(unittest.TestCase):
                     source = simulation.fighters[1 - target_side]
                     target.data.update(defense=defense, health=health, max_health=100)
                     simulation.projectiles = [combat.Projectile(
-                        source, target.x - 5, target.y, 300, 0, 30, 1)]
+                        source, dict(source.data, attack=30), target.x - 5, target.y, 300, 0, 1)]
                     simulation.advance(combat.FIXED_STEP)
                     self.assertEqual(target.data["health"], expected_health)
 
@@ -208,9 +221,63 @@ class BattleSimulationTests(unittest.TestCase):
         source, target = simulation.fighters
         target.data.update(defense=20, health=100, max_health=100)
         simulation.projectiles = [combat.Projectile(
-            source, target.x - 5, target.y, 300, 0, 30, 1) for _ in range(2)]
+            source, dict(source.data, attack=30), target.x - 5, target.y, 300, 0, 1) for _ in range(2)]
         simulation.advance(combat.FIXED_STEP)
         self.assertEqual(target.data["health"], 80)
+
+    def test_shot_damage_uses_the_unit_hit_and_lands_after_the_shooter_dies(self):
+        simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I", "Fixture I"])
+        hold_still(simulation)
+        source, first, second = simulation.fighters
+        first.x, first.y = 1000, 500
+        second.x, second.y = 1100, 500
+        simulation.projectiles = [combat.Projectile(
+            source, dict(source.data, attack=30), second.x - 5, second.y, 300, 0, 1)]
+        source.data["health"] = 1  # The shot was fired at full strength.
+        with patch.object(combat.combat_rules, "damage_shots", wraps=combat.combat_rules.damage_shots) as damage:
+            simulation.advance(combat.FIXED_STEP)
+        self.assertEqual([call.args[1] for call in damage.call_args_list], [[second.data]])
+        self.assertEqual((first.data["health"], second.data["health"]), (100, 70))
+
+    def test_arcing_shells_pass_over_units_and_hit_every_enemy_where_they_land(self):
+        simulation = combat.BattleSimulation(self.library, ["Fixture Gun I", "Fixture I"],
+                                             ["Fixture I", "Fixture I", "Fixture I"])
+        hold_still(simulation)
+        gun, friend, below, landed, beside = simulation.fighters
+        steps = 10
+        flight = steps * combat.FIXED_STEP
+        start, landing = (100, 500), (400, 500)
+        friend.x, friend.y = landing[0], landing[1] + 10
+        below.x, below.y = 250, 500
+        landed.x, landed.y = landing
+        beside.x, beside.y = landing[0] + combat.ARTILLERY_BLAST_RADIUS + 20, landing[1]
+        for fighter in (friend, below, landed, beside):
+            fighter.data.update(health=500, max_health=500, defense=0)
+        simulation.projectiles = [combat.Projectile(
+            gun, dict(gun.data), *start, (landing[0] - start[0]) / flight, 0, flight, flight)]
+        simulation.advance(flight - combat.FIXED_STEP)
+        self.assertEqual(len(simulation.projectiles), 1)
+        self.assertTrue(all(f.data["health"] == 500 for f in (friend, below, landed, beside)))
+        simulation.advance(combat.FIXED_STEP)
+        self.assertEqual(simulation.projectiles, [])
+        bombard = self.library["Fixture Gun I"]["bombard_attack"]
+        self.assertEqual([f.data["health"] for f in (friend, below, landed, beside)],
+                         [500, 500, 500 - bombard, 500])
+
+    def test_player_shells_land_at_the_pointer_up_to_weapon_range(self):
+        simulation = combat.BattleSimulation(self.library, ["Fixture Gun I"], ["Fixture I"], controlled_index=0)
+        hold_still(simulation)
+        gun = simulation.controlled
+        gun.cooldown = 0
+        for distance, expected in ((150, 150), (gun.weapon_range * 2, gun.weapon_range)):
+            with self.subTest(distance=distance):
+                simulation.projectiles = []
+                gun.cooldown = 0
+                simulation.set_player_input(fire=True, aim_point=(gun.x + distance, gun.y))
+                simulation.advance(combat.FIXED_STEP)
+                shot = next(shot for shot in simulation.projectiles if shot.source is gun)
+                self.assertTrue(shot.arcing)
+                self.assertAlmostEqual(math.hypot(shot.vx, shot.vy) * shot.flight, expected)
 
     def test_simultaneous_destruction_is_a_loss_and_finished_battle_stays_finished(self):
         simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"])
@@ -220,34 +287,67 @@ class BattleSimulationTests(unittest.TestCase):
         simulation.advance(60)
         self.assertEqual(simulation.elapsed, elapsed)
 
-    def test_controlled_unit_only_moves_along_its_heading_and_turns_in_place(self):
+    def test_controlled_unit_eases_into_speed_and_turns_along_its_heading(self):
         simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"], controlled_index=0)
         player = simulation.controlled
+        speed_seconds, turn_degrees, turn_seconds = combat.MOBILITY[player.shape]
+        top_speed = player.max_speed
         x, y = player.x, player.y
         simulation.advance(0.1)
-        self.assertEqual((player.x, player.y, player.angle), (x, y, 0.0))
+        self.assertEqual((player.x, player.y, player.angle, player.speed), (x, y, 0.0, 0.0))
         player.angle = math.pi / 2
         simulation.set_player_input(throttle=1)
-        simulation.advance(0.1)
+        simulation.advance(combat.FIXED_STEP)
+        self.assertAlmostEqual(player.speed, top_speed / speed_seconds * combat.FIXED_STEP)
+        self.assertLess(player.speed, top_speed)
+        simulation.advance(speed_seconds)
+        self.assertAlmostEqual(player.speed, top_speed)
         self.assertAlmostEqual(player.x, x)
         self.assertGreater(player.y, y)
+        # Reversing first slows down, then backs up along the same heading.
         simulation.set_player_input(throttle=-1)
-        simulation.advance(0.1)
-        self.assertAlmostEqual(player.x, x)
-        self.assertAlmostEqual(player.y, y)
+        simulation.advance(combat.FIXED_STEP)
+        self.assertGreater(player.speed, 0)
+        simulation.advance(2 * speed_seconds)
+        self.assertAlmostEqual(player.speed, -top_speed)
+        simulation.set_player_input()
+        simulation.advance(2 * speed_seconds)
+        self.assertEqual(player.speed, 0)
+        x, y = player.x, player.y
         simulation.set_player_input(turn=1)
-        simulation.advance(0.1)
+        simulation.advance(combat.FIXED_STEP)
+        top_turn = math.radians(turn_degrees)
+        self.assertAlmostEqual(player.turn_rate, top_turn / turn_seconds * combat.FIXED_STEP)
+        simulation.advance(turn_seconds)
+        self.assertAlmostEqual(player.turn_rate, top_turn)
         self.assertGreater(player.angle, math.pi / 2)
-        self.assertAlmostEqual(player.x, x)
-        self.assertAlmostEqual(player.y, y)
-        simulation.set_player_input(turn=-1)
-        simulation.advance(0.1)
-        self.assertAlmostEqual(player.angle, math.pi / 2)
+        self.assertEqual((player.x, player.y), (x, y))
 
-    def test_manual_fire_uses_heading_and_cooldown_even_when_space_is_held(self):
+    def test_gun_turns_toward_the_pointer_at_its_own_speed_inside_the_firing_cone(self):
         simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"], controlled_index=0)
         player = simulation.controlled
+        cone, gun_degrees = combat.AIM[player.shape]
+        self.assertIsNotNone(cone)
+        below = (player.x, player.y + 100)  # Straight down, outside the cone of a unit facing right.
+        simulation.set_player_input(aim_point=below)
+        simulation.advance(combat.FIXED_STEP)
+        self.assertAlmostEqual(player.aim, math.radians(gun_degrees) * combat.FIXED_STEP)
+        simulation.advance(5)
+        self.assertAlmostEqual(player.aim, math.radians(cone) / 2)
+        # Turning the hull carries the cone, so the gun can now reach the pointer.
         player.angle = math.pi / 2
+        simulation.advance(5)
+        self.assertAlmostEqual(player.aim, math.pi / 2)
+        with patch.dict(combat.AIM, {player.shape: (None, gun_degrees)}):
+            player.angle = 0.0
+            simulation.set_player_input(aim_point=(player.x - 100, player.y))
+            simulation.advance(5)
+            self.assertAlmostEqual(player.aim, math.pi)
+
+    def test_manual_fire_follows_the_gun_and_waits_for_reload_while_held(self):
+        simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"], controlled_index=0)
+        player = simulation.controlled
+        player.aim = math.pi / 4  # The hull still faces right.
         with patch.object(combat, "Projectile", wraps=combat.Projectile) as projectiles:
             simulation.advance(combat.FIXED_STEP)
             self.assertEqual(projectiles.call_count, 0)
@@ -255,8 +355,8 @@ class BattleSimulationTests(unittest.TestCase):
             simulation.advance(combat.FIXED_STEP)
             self.assertEqual(projectiles.call_count, 1)
             shot = simulation.projectiles[0]
-            self.assertAlmostEqual(shot.vx, 0)
-            self.assertGreater(shot.vy, 0)
+            self.assertAlmostEqual(math.atan2(shot.vy, shot.vx), math.pi / 4)
+            self.assertAlmostEqual(math.hypot(shot.vx, shot.vy), combat.DIRECT_PROJECTILE_SPEED)
             simulation.advance(combat.FIRE_INTERVAL / 2)
             self.assertEqual(projectiles.call_count, 1)
             simulation.set_player_input(fire=False)
@@ -270,19 +370,116 @@ class BattleSimulationTests(unittest.TestCase):
         target.x, target.y = player.x + 100, player.y
         target.data["speed"] = 0
         initial_health = target.data["health"]
-        player.angle = math.pi / 2
+        player.angle = player.aim = math.pi / 2
         simulation.set_player_input(fire=True)
         simulation.advance(0.3)
         self.assertEqual(target.data["health"], initial_health)
-        player.angle = 0
+        player.angle = player.aim = 0
         player.cooldown = 0
         simulation.advance(0.3)
         self.assertLess(target.data["health"], initial_health)
+
+    def test_ai_units_fire_only_once_their_gun_points_at_the_target(self):
+        simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"])
+        shooter, target = simulation.fighters
+        target.data["speed"] = shooter.data["speed"] = 0
+        target.cooldown = 1000
+        target.x, target.y = shooter.x, shooter.y + 100  # Outside the cone of a unit facing right.
+        simulation.advance(combat.FIXED_STEP)
+        self.assertEqual(simulation.projectiles, [])
+        for _ in range(round(5 / combat.FIXED_STEP)):
+            simulation.advance(combat.FIXED_STEP)
+            if simulation.projectiles:
+                break
+        shot, = simulation.projectiles
+        self.assertLessEqual(abs(combat._wrap(math.atan2(shot.vy, shot.vx) - math.pi / 2)), combat.AIM_TOLERANCE)
 
     def test_controlled_index_must_refer_to_a_friendly_entry(self):
         for index in (-1, 1, True, "0"):
             with self.subTest(index=index), self.assertRaises(ValueError):
                 combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"], controlled_index=index)
+
+    def test_divisions_split_into_sub_units_that_share_only_health(self):
+        stats = self.library["Fixture I"]
+        for size, percent, count in ((10, 100, 10), (10, 70, 7), (10, 63, 7), (10, 60, 6),
+                                     (5, 70, 4), (5, 1, 1), (1, 63, 1)):
+            with self.subTest(size=size, percent=percent), \
+                    patch.dict(combat.SUBUNIT_COUNTS, {"infantry": size}):
+                unit = queries.create_unit_dict("Fixture I", "First Country", self.library)
+                unit["health"] = unit["max_health"] * percent / 100
+                simulation = combat.BattleSimulation(self.library, [unit], ["Fixture I"])
+                division = simulation.divisions[0]
+                self.assertEqual(len(division), count)
+                self.assertEqual(len({id(fighter.data) for fighter in division}), count)
+                for fighter in division:
+                    self.assertAlmostEqual(fighter.data["max_health"], stats["health"] / size)
+                    self.assertAlmostEqual(fighter.data["health"], unit["health"] / count)
+                    self.assertEqual((fighter.data["attack"], fighter.data["defense"]),
+                                     (stats["attack"], stats["defense"]))
+                    self.assertEqual(fighter.division, 0)
+                self.assertAlmostEqual(simulation.division_health_fraction(0), percent / 100)
+                self.assertEqual(len(simulation.fighters), count + len(simulation.divisions[1]))
+
+    def test_sub_units_of_one_division_deploy_without_overlapping(self):
+        with patch.dict(combat.SUBUNIT_COUNTS, {"infantry": 10}):
+            simulation = combat.BattleSimulation(self.library, ["Fixture I"] * 9, ["Fixture I"])
+        for first in simulation.fighters:
+            for second in simulation.fighters:
+                if first is not second:
+                    self.assertGreaterEqual(math.hypot(first.x - second.x, first.y - second.y),
+                                            combat.UNIT_RADIUS * 2)
+
+    def test_campaign_result_keeps_each_divisions_remaining_share_of_health(self):
+        with patch.dict(combat.SUBUNIT_COUNTS, {"infantry": 10}):
+            simulation = combat.BattleSimulation(self.library, ["Fixture I", "Fixture I"], ["Fixture I"])
+        wounded, healthy = simulation.divisions[0], simulation.divisions[1]
+        for fighter in wounded[:4]:
+            fighter.data["health"] = 0
+        wounded[4].data["health"] /= 2
+        for fighter in simulation.divisions[2]:
+            fighter.data["health"] = 0
+        units = [queries.create_unit_dict("Fixture I", "First Country", self.library) for _ in range(3)]
+        for unit in units:
+            unit["max_health"] = 1000  # Campaign health is written back as the same fraction.
+        province = {"units": list(units)}
+        combat.apply_campaign_result(simulation, units, province)
+        self.assertAlmostEqual(units[0]["health"], 550)
+        self.assertAlmostEqual(units[1]["health"], 1000)
+        self.assertEqual(province["units"], units[:2])
+        self.assertEqual(len(healthy), 10)
+
+    def test_control_passes_to_the_nearest_survivor_until_the_division_is_gone(self):
+        with patch.dict(combat.SUBUNIT_COUNTS, {"infantry": 10}):
+            simulation = combat.BattleSimulation(self.library, ["Fixture I", "Fixture I"], ["Fixture I"],
+                                                 controlled_index=1)
+        hold_still(simulation)
+        division = simulation.divisions[1]
+        first = simulation.controlled
+        self.assertIs(first, division[0])
+        first.data["health"] = 0
+        simulation.advance(combat.FIXED_STEP)
+        expected = min(division[1:], key=lambda other: math.hypot(other.x - first.x, other.y - first.y))
+        self.assertIs(simulation.controlled, expected)
+        self.assertTrue(simulation.controlled_division_alive)
+        for fighter in division:
+            fighter.data["health"] = 0
+        simulation.advance(combat.FIXED_STEP)
+        self.assertIn(simulation.controlled, division)
+        self.assertFalse(simulation.controlled_division_alive)
+        self.assertIsNone(simulation.winner)  # The rest of the friendly army fights on.
+
+    def test_nearest_enemy_search_matches_checking_every_unit(self):
+        rng = random.Random(5)
+        width, height = c.CUSTOM_BATTLE_ARENA_SIZE
+        units = [SimpleNamespace(x=rng.uniform(0, width), y=rng.uniform(0, height)) for _ in range(200)]
+        for cell in (combat.GRID_CELL, combat.TARGET_CELL):
+            grid = combat._Grid(units, cell)
+            for _ in range(100):
+                x, y = rng.uniform(0, width), rng.uniform(0, height)
+                expected = min(math.hypot(unit.x - x, unit.y - y) for unit in units)
+                found = grid.nearest(x, y)
+                self.assertAlmostEqual(math.hypot(found.x - x, found.y - y), expected)
+        self.assertIsNone(combat._Grid([], combat.GRID_CELL).nearest(10, 10))
 
 
 class CustomBattleScreenTests(unittest.TestCase):
@@ -294,6 +491,7 @@ class CustomBattleScreenTests(unittest.TestCase):
 
     def setUp(self):
         self.library = fixture_library()
+        self.enterContext(single_subunits())
         self.countries = {
             "Fixture A": {"name": "First Country", "is_playable": True, "flag_data": "DEFAULT"},
             "Fixture B": {"name": "Second Country", "is_playable": True, "flag_data": "DEFAULT"},
@@ -891,7 +1089,9 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.assertTrue(simulation.paused)
         before = [(f.x, f.y, f.angle, f.data["health"]) for f in simulation.fighters]
         self.screen.handle_events([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_w),
-                                   pygame.event.Event(pygame.KEYDOWN, key=pygame.K_SPACE)])
+                                   pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1,
+                                                      pos=self.screen.view_rect().center)])
+        self.assertFalse(self.screen.firing)
         with patch.object(simulation, "advance", side_effect=AssertionError("preview executed combat")), \
                 patch.object(self.screen, "_draw_battle", side_effect=AssertionError("preview opened battlefield")), \
                 patch("ui.rendering.symbol_loader.get_symbol", side_effect=AssertionError("uncached unit art")):
@@ -997,22 +1197,35 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.click("Random")
         self.assertIsNone(self.screen.controlled_index)
 
-    def test_player_key_events_move_and_fire_and_pause_clears_held_input(self):
+    def test_player_keys_move_left_mouse_fires_and_pause_clears_held_input(self):
         self.fill_armies()
         self.click("Control")
         self.click("Simulate")
         self.click("Start")
         player = self.screen.simulation.controlled
         initial_x = player.x
+        view = self.screen.view_rect()
+        self.screen.handle_events([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_SPACE),
+                                   pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(view.x - 5, view.y))])
+        self.assertFalse(self.screen.firing)
         self.screen.handle_events([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_w),
-                                   pygame.event.Event(pygame.KEYDOWN, key=pygame.K_SPACE)])
-        with patch("pygame.time.get_ticks", return_value=self.screen.last_tick + 100):
+                                   pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=view.center)])
+        self.assertTrue(self.screen.firing)
+        # The pointer sits straight ahead of the unit, so the gun need not turn.
+        ahead = (view.x + player.x + 100 - self.screen.camera[0], view.y + player.y - self.screen.camera[1])
+        with patch("pygame.time.get_ticks", return_value=self.screen.last_tick + 100), \
+                patch("pygame.mouse.get_pos", return_value=ahead):
             self.screen.update()
         self.assertGreater(player.x, initial_x)
         self.assertTrue(any(shot.source is player for shot in self.screen.simulation.projectiles))
+        self.screen.handle_events([pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=view.center)])
+        self.assertFalse(self.screen.firing)
+        self.screen.handle_events([pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=view.center)])
         self.click("Pause")
         self.assertFalse(self.screen.held_keys)
+        self.assertFalse(self.screen.firing)
         self.click("Resume")
+        player.speed = 0
         stopped_x = player.x
         with patch("pygame.time.get_ticks", return_value=self.screen.last_tick + 100):
             self.screen.update()
@@ -1021,6 +1234,65 @@ class CustomBattleScreenTests(unittest.TestCase):
                                    pygame.event.Event(pygame.WINDOWFOCUSLOST)])
         self.assertTrue(self.screen.simulation.paused)
         self.assertFalse(self.screen.held_keys)
+
+    def test_camera_follows_the_controlled_unit_or_pans_when_dragged(self):
+        self.fill_armies()
+        self.click("Simulate")
+        self.click("Start")
+        view = self.screen.view_rect()
+        width, height = c.CUSTOM_BATTLE_ARENA_SIZE
+        self.assertEqual(self.screen.camera, [(width - view.width) / 2, (height - view.height) / 2])
+        start = self.screen.camera
+        # The battlefield follows the pointer, so dragging right moves the view left.
+        self.screen.handle_events([
+            pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=view.center),
+            pygame.event.Event(pygame.MOUSEMOTION, pos=(view.centerx + 30, view.centery - 20),
+                               rel=(30, -20), buttons=(1, 0, 0)),
+            pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=(view.centerx + 30, view.centery - 20))])
+        self.assertEqual(self.screen.camera, [start[0] - 30, start[1] + 20])
+        self.assertFalse(self.screen.firing)
+        self.screen.handle_events([
+            pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=view.center),
+            pygame.event.Event(pygame.MOUSEMOTION, pos=(view.centerx + 5000, view.centery + 5000),
+                               rel=(5000, 5000), buttons=(1, 0, 0))])
+        self.assertEqual(self.screen.camera, [0.0, 0.0])
+        self.click("Exit")
+        self.click("Control")
+        self.click("Simulate")
+        self.click("Start")
+        player = self.screen.simulation.controlled
+        camera = self.screen.camera
+        self.assertEqual(self.screen.to_field(view.center),
+                         (max(view.width / 2, player.x), player.y))
+        self.screen.handle_events([
+            pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=view.center),
+            pygame.event.Event(pygame.MOUSEMOTION, pos=(view.centerx + 30, view.centery),
+                               rel=(30, 0), buttons=(1, 0, 0))])
+        self.assertEqual(self.screen.camera, camera)
+        self.assertTrue(self.screen.firing)
+        self.screen.draw(self.surface)
+
+    def test_tactical_play_continues_while_any_sub_unit_of_the_division_lives(self):
+        with patch.dict(combat.SUBUNIT_COUNTS, {"infantry": 10}):
+            map_screen, province, _custom = self.enter_campaign()
+        self.click("Start")
+        simulation = self.screen.simulation
+        player, enemy = province["units"]
+        lost = simulation.controlled
+        lost.data["health"] = 0
+        simulation.advance(combat.FIXED_STEP)
+        self.assertIsNot(simulation.controlled, lost)
+        self.assertTrue(simulation.controlled.alive)
+        for fighter in simulation.divisions[1]:
+            fighter.data["health"] = 0
+        simulation.winner = 0
+        self.screen.update()
+        self.assertEqual(province["units"], [player])
+        self.assertAlmostEqual(player["health"], player["max_health"] * 0.9)
+        with patch("screens.game.custom_battle.player_setup.lose_tactical_unit") as lose:
+            self.click("Continue")
+        lose.assert_not_called()
+        self.assertEqual(self.screen.next_state, "MAP")
 
     def test_player_keys_are_reserved_from_rebound_menu_and_mouse_commands(self):
         from ui.navigation.screen import dispatch_global_keys, synthesize_keybind_mouse_events
