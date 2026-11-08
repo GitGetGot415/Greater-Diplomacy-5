@@ -175,8 +175,10 @@ AI sub-units also fight according to their type:
 | Troop carriers | Advance and hold, with no special behavior. |
 
 Two reactions come before the type's behavior. A sub-unit below a set share of its health falls back until it is out
-of the enemy's range, then turns to face it again. An AI sub-unit that is hit and survives sidesteps briefly, to a
-random side. The player's sub-unit never reacts on its own.
+of the enemy's range, then turns to face it again. An AI sub-unit sidesteps briefly, at right angles to a shot's
+path and away from it, when it is hit and survives, and also when an enemy shot is about to pass close to it while
+it is not about to fire (its weapon is reloading or its target is out of range). Sub-units still move only along
+their hull, so a sidestep starts with a turn. The player's sub-unit never reacts on its own.
 
 #### Control
 
@@ -266,7 +268,7 @@ Its `SUBUNIT_COUNTS`, `MOBILITY`, and `AIM` tables set sub-unit counts, accelera
 `is_artillery` decides which units sit tactical battles out.
 `SHOT_SPREAD` sets how far shots can stray. The `AI_*` ranges set the temperaments, and `COHESION_SLACK` and
 `COHESION_THROTTLE` set how far ahead a sub-unit may get and how much it slows. `BEHAVIORS` assigns each shape its
-behavior; `BOUND_*`, `FLANK_OFFSET`, `CHARGE_CLOSE`, `SKIRMISH_*`, `FALL_BACK_HEALTH`, `DODGE_SECONDS`, and
+behavior; `BOUND_*`, `FLANK_OFFSET`, `CHARGE_CLOSE`, `SKIRMISH_*`, `FALL_BACK_HEALTH`, `DODGE_*`, and
 `TARGET_*` tune the behaviors, reactions, and target choice. `BattleSimulation(seed=...)`
 fixes the random temperaments and shot spread so a battle can be replayed; the game leaves it unset, so every battle differs.
 

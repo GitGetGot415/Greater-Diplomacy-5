@@ -41,7 +41,9 @@ SKIRMISH_HOLD = 0.9  # Armored cars stop at this share of weapon range...
 SKIRMISH_BACK_OFF = 0.6  # ...and back away from an enemy closer than this share.
 # Reacting to the fight.
 FALL_BACK_HEALTH = 0.3  # Below this share of its health, a sub-unit falls back out of enemy range.
-DODGE_SECONDS = 0.6  # A sub-unit that is hit sidesteps for this long.
+DODGE_SECONDS = 0.6  # A sub-unit that is hit, or sees a shot coming, sidesteps for this long.
+DODGE_LOOKAHEAD = 0.6  # Seconds ahead a sub-unit that is not about to fire watches incoming shots.
+DODGE_DANGER = UNIT_RADIUS * 2  # It sidesteps a shot whose path will pass this close.
 TARGET_CHOICE_SLACK = 200.0  # Enemies this close to the nearest enemy are also considered as targets...
 TARGET_WOUNDED_PULL = 0.5  # ...and a wounded one counts as up to this share closer.
 AIM_TOLERANCE = math.radians(4)  # AI units fire once the gun points this close to the aim angle.
@@ -300,8 +302,8 @@ class Fighter:
     flank: int = 1  # Which side its division swings out to when flanking: 1 or -1.
     # AI only: state while fighting.
     withdrawing: bool = False  # A charging sub-unit pulling back before it charges again.
-    dodge: float = 0.0  # Seconds of sidestepping left after being hit.
-    dodge_side: int = 1
+    dodge: float = 0.0  # Seconds of sidestepping left.
+    dodge_heading: float = 0.0  # The sidestep's direction: at right angles to the shot it avoids.
 
     @property
     def alive(self):
@@ -602,7 +604,7 @@ class BattleSimulation:
             # Badly hurt: fall back out of the enemy's reach, then turn to face it again.
             return (fighter.pace, away) if distance < WEAPON_RANGE else (0.0, toward)
         if fighter.dodge > 0:
-            return fighter.pace, toward + fighter.dodge_side * math.pi / 2
+            return fighter.pace, fighter.dodge_heading
         behavior = BEHAVIORS.get(fighter.shape)
         hold = fighter.hold
         if behavior == "skirmish":
@@ -669,6 +671,36 @@ class BattleSimulation:
             fighter, dict(fighter.data), fighter.x, fighter.y, math.cos(angle) * PROJECTILE_SPEED,
             math.sin(angle) * PROJECTILE_SPEED, (WEAPON_RANGE + UNIT_RADIUS * 2) / PROJECTILE_SPEED))
 
+    def _start_dodge(self, unit, shot):
+        """Sidestep at right angles to a shot's path, away from it (to a random side when it is dead on)."""
+        # How far the unit sits to the left of the shot's path; negative is to the right.
+        offset = ((unit.y - shot.y) * shot.vx - (unit.x - shot.x) * shot.vy) / math.hypot(shot.vx, shot.vy)
+        side = (1 if offset > 0 else -1) if abs(offset) > 1e-9 else self._rng.choice((-1, 1))
+        unit.dodge = DODGE_SECONDS
+        unit.dodge_heading = math.atan2(shot.vy, shot.vx) + side * math.pi / 2
+
+    def _ready_to_fire(self, unit):
+        """Whether an AI sub-unit is about to shoot: loaded, with its target in range. It then holds rather than dodging."""
+        target = unit.target
+        return (unit.cooldown <= 0 and target is not None and target.alive
+                and math.hypot(target.x - unit.x, target.y - unit.y) <= WEAPON_RANGE)
+
+    def _dodge_incoming(self, crowds):
+        """AI sub-units that are not about to fire sidestep enemy shots whose paths will pass close to them."""
+        for shot in self.projectiles:
+            speed = math.hypot(shot.vx, shot.vy)
+            reach = speed * min(DODGE_LOOKAHEAD, shot.remaining)
+            end_x, end_y = shot.x + shot.vx / speed * reach, shot.y + shot.vy / speed * reach
+            for unit in crowds[1 - shot.source.side].within(
+                    min(shot.x, end_x) - DODGE_DANGER, min(shot.y, end_y) - DODGE_DANGER,
+                    max(shot.x, end_x) + DODGE_DANGER, max(shot.y, end_y) + DODGE_DANGER):
+                if unit is self.controlled or unit.dodge > 0 or self._ready_to_fire(unit):
+                    continue
+                along = ((unit.x - shot.x) * shot.vx + (unit.y - shot.y) * shot.vy) / speed
+                across = ((unit.y - shot.y) * shot.vx - (unit.x - shot.x) * shot.vy) / speed
+                if 0 <= along <= reach and abs(across) <= DODGE_DANGER:
+                    self._start_dodge(unit, shot)
+
     def _division_objectives(self, targets, dt):
         """Each division with living sub-units and enemies left: its center and the enemy it advances on.
 
@@ -697,6 +729,7 @@ class BattleSimulation:
         crowds = [_Grid(side, GRID_CELL) for side in sides]
         targets = [_Grid(side, TARGET_CELL) for side in sides]
         objectives = self._division_objectives(targets, dt)
+        self._dodge_incoming(crowds)
         # All movement and fire decisions use the same pre-step positions.
         movements = []
         shots = []
@@ -763,9 +796,7 @@ class BattleSimulation:
             # zero forever when the shared health-scaled attack has no floor.
             target.data["health"] = max(0.0, target.data["health"] - math.ceil(loss))
             if loss > 0 and target.alive and target is not self.controlled:
-                # A hit AI sub-unit sidesteps, to a random side.
-                target.dodge = DODGE_SECONDS
-                target.dodge_side = self._rng.choice((-1, 1))
+                self._start_dodge(target, shot)
         alive_sides = {fighter.side for fighter in self.fighters if fighter.alive}
         if len(alive_sides) < 2:
             # Mutual destruction is a loss for the friendly army; there is no draw screen.

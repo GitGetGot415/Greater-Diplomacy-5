@@ -642,7 +642,7 @@ class BattleSimulationTests(unittest.TestCase):
                          (unit.pace, math.pi))
         self.assertEqual(simulation._ai_course(unit, combat.WEAPON_RANGE, toward, center, objective), (0.0, toward))
         unit.data["health"] = unit.data["max_health"]
-        unit.dodge, unit.dodge_side = combat.DODGE_SECONDS, -1
+        unit.dodge, unit.dodge_heading = combat.DODGE_SECONDS, -math.pi / 2
         self.assertEqual(simulation._ai_course(unit, combat.WEAPON_RANGE * 0.5, toward, center, objective),
                          (unit.pace, -math.pi / 2))
 
@@ -658,6 +658,41 @@ class BattleSimulationTests(unittest.TestCase):
                 simulation.advance(combat.FIXED_STEP)
                 self.assertLess(target.data["health"], target.data["max_health"])
                 self.assertEqual(target.dodge > 0, controlled is None)
+
+    def test_sub_units_not_about_to_fire_sidestep_shots_headed_their_way(self):
+        speed = combat.PROJECTILE_SPEED
+        lookahead = speed * combat.DODGE_LOOKAHEAD
+
+        def watch(start_dx, start_dy, velocity=-speed, *, controlled=None, ready=False, friendly_shot=False):
+            simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"],
+                                                 controlled_index=controlled)
+            hold_still(simulation)  # Both reloading, so neither is about to fire.
+            unit, shooter = simulation.fighters
+            shooter.x = unit.x + combat.WEAPON_RANGE / 2
+            if ready:
+                unit.cooldown, unit.target = 0, shooter
+            source = unit if friendly_shot else shooter
+            simulation.projectiles = [combat.Projectile(
+                source, dict(source.data), unit.x + start_dx, unit.y + start_dy, velocity, 0, 1)]
+            crowds = [combat._Grid([f for f in simulation.fighters if f.side == side], combat.GRID_CELL)
+                      for side in (0, 1)]
+            simulation._dodge_incoming(crowds)
+            return unit
+
+        # A shot about to pass just below the unit: it steps up, away from the shot's path.
+        unit = watch(lookahead / 2, combat.UNIT_RADIUS)
+        self.assertEqual(unit.dodge, combat.DODGE_SECONDS)
+        self.assertAlmostEqual(math.cos(unit.dodge_heading), 0)
+        self.assertLess(math.sin(unit.dodge_heading), 0)
+        for label, case in (
+                ("passing wide", dict(start_dx=lookahead / 2, start_dy=combat.DODGE_DANGER * 2)),
+                ("moving away", dict(start_dx=-lookahead / 2, start_dy=0)),
+                ("still far off", dict(start_dx=lookahead + 100, start_dy=0)),
+                ("about to fire", dict(start_dx=lookahead / 2, start_dy=0, ready=True)),
+                ("player's unit", dict(start_dx=lookahead / 2, start_dy=0, controlled=0)),
+                ("its own side's shot", dict(start_dx=lookahead / 2, start_dy=0, friendly_shot=True))):
+            with self.subTest(label):
+                self.assertEqual(watch(**case).dodge, 0)
 
     def test_targets_prefer_a_wounded_enemy_near_the_nearest_and_skip_ones_they_cannot_hurt(self):
         simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"] * 3)
