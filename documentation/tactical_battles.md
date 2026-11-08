@@ -136,7 +136,9 @@ bring fewer. `SUBUNIT_COUNTS` in
 A wounded division brings fewer sub-units: with fraction `f` of full health and `N` sub-units at full health,
 it brings `ceil(f × N)` sub-units that share its health equally. For example, with 10 sub-units at full health,
 70% brings 7 at full health, 63% brings 7 at 90%, and 60% brings 6 at full health.
-Sub-units divide only health. Each keeps the division's full attack and defense.
+Sub-units also divide the division's damage. Each hit is worked out with the sub-unit's full attack against the
+target's full defense, then the damage that gets through is divided by the division's sub-unit count at full health.
+A full division therefore hits about as hard as one unsplit unit, and the full stats still decide who can hurt whom.
 
 #### Combat
 
@@ -175,10 +177,11 @@ AI sub-units also fight according to their type:
 | Troop carriers | Advance and hold, with no special behavior. |
 
 Two reactions come before the type's behavior. A sub-unit below a set share of its health falls back until it is out
-of the enemy's range, then turns to face it again. An AI sub-unit sidesteps briefly, at right angles to a shot's
-path and away from it, when it is hit and survives, and also when an enemy shot is about to pass close to it while
-it is not about to fire (its weapon is reloading or its target is out of range). Sub-units still move only along
-their hull, so a sidestep starts with a turn. The player's sub-unit never reacts on its own.
+of the enemy's range, then turns to face it again. A fast AI sub-unit (library speed at least `DODGE_MIN_SPEED`)
+sidesteps briefly, at right angles to a shot's path and away from it, when it is hit and survives, and also when an
+enemy shot is about to pass close to it while it is not about to fire (its weapon is reloading or its target is out
+of range). Slower sub-units never sidestep: they would spend the time turning away instead of aiming. Sub-units still
+move only along their hull, so a sidestep starts with a turn. The player's sub-unit never reacts on its own.
 
 #### Control
 

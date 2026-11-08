@@ -41,6 +41,7 @@ SKIRMISH_HOLD = 0.9  # Armored cars stop at this share of weapon range...
 SKIRMISH_BACK_OFF = 0.6  # ...and back away from an enemy closer than this share.
 # Reacting to the fight.
 FALL_BACK_HEALTH = 0.3  # Below this share of its health, a sub-unit falls back out of enemy range.
+DODGE_MIN_SPEED = 3  # Library speed a sub-unit needs before it sidesteps at all; slower units keep aiming.
 DODGE_SECONDS = 0.6  # A sub-unit that is hit, or sees a shot coming, sidesteps for this long.
 DODGE_LOOKAHEAD = 0.6  # Seconds ahead a sub-unit that is not about to fire watches incoming shots.
 DODGE_DANGER = UNIT_RADIUS * 2  # It sidesteps a shot whose path will pass this close.
@@ -281,6 +282,7 @@ class Fighter:
     y: float
     shape: str
     division: int = 0  # Index into BattleSimulation.divisions.
+    attack_share: float = 1.0  # The share of its division's damage each hit carries: 1 / its full sub-unit count.
     cooldown: float = 0.0
     angle: float = 0.0  # Hull heading: movement follows it.
     aim: float = 0.0  # Gun heading: shots follow it.
@@ -383,7 +385,8 @@ class BattleSimulation:
     """Accept unit names at full health or unit records with owner and starting health.
 
     Each roster entry is a division. It becomes one or more sub-units (``SUBUNIT_COUNTS``)
-    that share the division's health; attack and defense are not divided.
+    that share the division's health. Each sub-unit keeps the full attack and defense stats, but the
+    damage of each of its hits is divided by its division's full sub-unit count.
     ``seed`` fixes the random temperaments and shot spread, so a battle can be replayed.
     """
 
@@ -461,7 +464,8 @@ class BattleSimulation:
             slot = (number - (count - 1) / 2) * SUBUNIT_SPACING
             members.append(Fighter(
                 dict(data, max_health=full / size, health=data["health"] / count), side,
-                x, ARENA_SIZE[1] / 2 + slot, shape, division=division, angle=facing, aim=facing,
+                x, ARENA_SIZE[1] / 2 + slot, shape, division=division, attack_share=1 / size,
+                angle=facing, aim=facing,
                 retarget=(len(self.fighters) + number) % stagger * FIXED_STEP, slot=slot,
                 hold=rng.uniform(*AI_HOLD_RANGE), pace=rng.uniform(*AI_PACE),
                 start_delay=rng.uniform(*AI_START_DELAY), wander=rng.uniform(0.0, AI_WANDER_ANGLE),
@@ -671,6 +675,10 @@ class BattleSimulation:
             fighter, dict(fighter.data), fighter.x, fighter.y, math.cos(angle) * PROJECTILE_SPEED,
             math.sin(angle) * PROJECTILE_SPEED, (WEAPON_RANGE + UNIT_RADIUS * 2) / PROJECTILE_SPEED))
 
+    def _can_dodge(self, unit):
+        """Only fast AI sub-units sidestep; for slower ones the time spent turning away costs more aim than it saves."""
+        return unit is not self.controlled and unit.data["speed"] >= DODGE_MIN_SPEED
+
     def _start_dodge(self, unit, shot):
         """Sidestep at right angles to a shot's path, away from it (to a random side when it is dead on)."""
         # How far the unit sits to the left of the shot's path; negative is to the right.
@@ -694,7 +702,7 @@ class BattleSimulation:
             for unit in crowds[1 - shot.source.side].within(
                     min(shot.x, end_x) - DODGE_DANGER, min(shot.y, end_y) - DODGE_DANGER,
                     max(shot.x, end_x) + DODGE_DANGER, max(shot.y, end_y) + DODGE_DANGER):
-                if unit is self.controlled or unit.dodge > 0 or self._ready_to_fire(unit):
+                if not self._can_dodge(unit) or unit.dodge > 0 or self._ready_to_fire(unit):
                     continue
                 along = ((unit.x - shot.x) * shot.vx + (unit.y - shot.y) * shot.vy) / speed
                 across = ((unit.y - shot.y) * shot.vx - (unit.x - shot.x) * shot.vy) / speed
@@ -791,11 +799,13 @@ class BattleSimulation:
             attack = self._attack(shot.source_data, target.data)
             # Tactical defense blocks a flat amount per hit, even when wounded.
             # Campaign combat instead scales defense with remaining health.
-            loss = max(0.0, attack - target.data["defense"])
+            # A sub-unit's hit carries its share of its division's damage, so a full division hits as hard as
+            # one unsplit unit while the full attack against full defense still decides who can hurt whom.
+            loss = max(0.0, attack - target.data["defense"]) * shot.source.attack_share
             # Whole health points keep equal, weakening armies from approaching
             # zero forever when the shared health-scaled attack has no floor.
             target.data["health"] = max(0.0, target.data["health"] - math.ceil(loss))
-            if loss > 0 and target.alive and target is not self.controlled:
+            if loss > 0 and target.alive and self._can_dodge(target):
                 self._start_dodge(target, shot)
         alive_sides = {fighter.side for fighter in self.fighters if fighter.alive}
         if len(alive_sides) < 2:

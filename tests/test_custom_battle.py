@@ -646,28 +646,32 @@ class BattleSimulationTests(unittest.TestCase):
         self.assertEqual(simulation._ai_course(unit, combat.WEAPON_RANGE * 0.5, toward, center, objective),
                          (unit.pace, -math.pi / 2))
 
-    def test_a_hit_starts_a_sidestep_for_ai_units_but_not_the_player(self):
-        for controlled in (None, 0):
-            with self.subTest(controlled=controlled):
+    def test_a_hit_starts_a_sidestep_only_for_fast_ai_units(self):
+        for controlled, speed, dodges in ((None, combat.DODGE_MIN_SPEED, True), (0, combat.DODGE_MIN_SPEED, False),
+                                          (None, combat.DODGE_MIN_SPEED - 1, False)):
+            with self.subTest(controlled=controlled, speed=speed):
                 simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"],
                                                      controlled_index=controlled)
                 hold_still(simulation)
                 target, source = simulation.fighters
+                target.data["speed"] = speed
                 simulation.projectiles = [combat.Projectile(
                     source, dict(source.data, attack=30), target.x + 5, target.y, -300, 0, 1)]
                 simulation.advance(combat.FIXED_STEP)
                 self.assertLess(target.data["health"], target.data["max_health"])
-                self.assertEqual(target.dodge > 0, controlled is None)
+                self.assertEqual(target.dodge > 0, dodges)
 
-    def test_sub_units_not_about_to_fire_sidestep_shots_headed_their_way(self):
+    def test_fast_sub_units_not_about_to_fire_sidestep_shots_headed_their_way(self):
         speed = combat.PROJECTILE_SPEED
         lookahead = speed * combat.DODGE_LOOKAHEAD
 
-        def watch(start_dx, start_dy, velocity=-speed, *, controlled=None, ready=False, friendly_shot=False):
+        def watch(start_dx, start_dy, velocity=-speed, *, controlled=None, ready=False, friendly_shot=False,
+                  unit_speed=combat.DODGE_MIN_SPEED):
             simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"],
                                                  controlled_index=controlled)
             hold_still(simulation)  # Both reloading, so neither is about to fire.
             unit, shooter = simulation.fighters
+            unit.data["speed"] = unit_speed
             shooter.x = unit.x + combat.WEAPON_RANGE / 2
             if ready:
                 unit.cooldown, unit.target = 0, shooter
@@ -690,9 +694,27 @@ class BattleSimulationTests(unittest.TestCase):
                 ("still far off", dict(start_dx=lookahead + 100, start_dy=0)),
                 ("about to fire", dict(start_dx=lookahead / 2, start_dy=0, ready=True)),
                 ("player's unit", dict(start_dx=lookahead / 2, start_dy=0, controlled=0)),
-                ("its own side's shot", dict(start_dx=lookahead / 2, start_dy=0, friendly_shot=True))):
+                ("its own side's shot", dict(start_dx=lookahead / 2, start_dy=0, friendly_shot=True)),
+                ("too slow", dict(start_dx=lookahead / 2, start_dy=0, unit_speed=combat.DODGE_MIN_SPEED - 1))):
             with self.subTest(label):
                 self.assertEqual(watch(**case).dodge, 0)
+
+    def test_each_hit_carries_the_shooters_share_of_its_divisions_damage(self):
+        for size in (1, 3, 6):
+            with self.subTest(size=size), patch.dict(combat.SUBUNIT_COUNTS, {"infantry": size}):
+                simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"])
+                hold_still(simulation)
+                source = simulation.divisions[0][0]
+                target = simulation.divisions[1][0]
+                self.assertAlmostEqual(source.attack_share, 1 / size)
+                # The full attack still meets the full defense; only the damage that gets through is divided.
+                self.assertEqual(source.data["attack"], self.library["Fixture I"]["attack"])
+                target.data.update(defense=10, health=500, max_health=500)
+                simulation.projectiles = [combat.Projectile(
+                    source, dict(source.data, attack=70, health=source.data["max_health"]),
+                    target.x - 5, target.y, 300, 0, 1)]
+                simulation.advance(combat.FIXED_STEP)
+                self.assertEqual(target.data["health"], 500 - math.ceil((70 - 10) / size))
 
     def test_targets_prefer_a_wounded_enemy_near_the_nearest_and_skip_ones_they_cannot_hurt(self):
         simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"] * 3)
