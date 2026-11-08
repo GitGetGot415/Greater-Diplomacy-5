@@ -41,6 +41,15 @@ SIMULATE_BUTTON_SIZE = (100, 40)
 SIMULATE_BUTTON_POSITION = (GENERATION_BUTTON_POSITION[0] - SIMULATE_BUTTON_SIZE[0] - 10, 25)
 PREVIEW_START_POSITION = ("centered", 625)
 PREVIEW_START_SIZE = (220, 50)
+# Preview entry animation: edit these durations in seconds, then restart the game.
+# Slide durations must be positive; the hold can be zero.
+PREVIEW_SLIDE_IN_SECONDS = 0.2
+PREVIEW_HOLD_SECONDS = 0.5
+PREVIEW_SLIDE_OUT_SECONDS = 0.2
+# Independent of Messages so the battle bars can be restyled separately.
+PREVIEW_BAR_COLOR = (46, 56, 72)
+PREVIEW_BAR_BORDER = (13, 17, 24)
+PREVIEW_BAR_GRADIENT_STRENGTH = 0.5
 PLAYER_COLOR = (255, 225, 95)
 CONTROL_KEYS = frozenset((pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d, pygame.K_SPACE))
 
@@ -99,6 +108,8 @@ class CustomBattleScreen(Screen):
         self.drag = None
         self.simulation = None
         self.last_tick = 0
+        self.preview_intro_started = None
+        self.preview_intro_stage = None
         self.status_key = None
         self.status_surfaces = []
         for side, top in enumerate(PANEL_TOPS):
@@ -116,6 +127,8 @@ class CustomBattleScreen(Screen):
         self.done = False
         self.next_state = None
         self.mode = "setup"
+        self.preview_intro_started = None
+        self.preview_intro_stage = None
         # Main-menu battles use the default library, never a loaded world's overrides.
         self.library = queries.get_unit_library()
         self.unit_names = sorted(combat.land_unit_types(self.library), key=lambda name: (
@@ -141,7 +154,8 @@ class CustomBattleScreen(Screen):
 
     @property
     def reserved_keys(self):
-        if self.mode in {"preview", "battle"} and self.simulation.controlled is not None:
+        if (self.preview_intro_stage is None and self.mode in {"preview", "battle"}
+                and self.simulation.controlled is not None):
             return CONTROL_KEYS
         return ()
 
@@ -193,7 +207,7 @@ class CustomBattleScreen(Screen):
                                             "green", "Start", self.start_battle))
                 return
             simulate = Button(*SIMULATE_BUTTON_POSITION, SIMULATE_BUTTON_SIZE, "green", "Simulate",
-                              self.preview_battle, font_size=18)
+                              self.preview_battle, font_size=18, sound_kind=None)
             simulate.apply_state(enabled=all(self.rosters), color="green")
             self.elements.append(simulate)
             self.generate_button = Button(
@@ -212,7 +226,8 @@ class CustomBattleScreen(Screen):
             self.elements.append(self.pause_button)
         else:
             self.elements.extend((
-                Button("centered", 370, (220, 50), "green", "Run Again", self.preview_battle),
+                Button("centered", 370, (220, 50), "green", "Run Again", self.preview_battle,
+                       sound_kind=None),
                 Button("centered", 440, (220, 50), "blue", "Edit Armies", self.return_to_setup)))
 
     def update_generation_year(self, value):
@@ -290,6 +305,10 @@ class CustomBattleScreen(Screen):
         self.simulation.paused = True
         self.clear_controls()
         self.mode = "preview"
+        # Start the clock on the first draw so entry always includes a black frame.
+        self.preview_intro_started = None
+        self.preview_intro_stage = 0
+        ui_elements.play_ui_sound("open_music")
         if self.controller is not None:
             self.controller.set_tactical_battle_music(True)
         self.status_key = None
@@ -297,7 +316,7 @@ class CustomBattleScreen(Screen):
         self.refresh_ui()
 
     def start_battle(self):
-        if self.mode != "preview":
+        if self.mode != "preview" or self.preview_intro_stage is not None:
             return
         self.clear_controls()
         self.simulation.paused = False
@@ -316,6 +335,8 @@ class CustomBattleScreen(Screen):
         if self.controller is not None:
             self.controller.set_tactical_battle_music(False)
         self.mode = "setup"
+        self.preview_intro_started = None
+        self.preview_intro_stage = None
         self.simulation = None
         self.refresh_ui()
 
@@ -414,6 +435,9 @@ class CustomBattleScreen(Screen):
                 return
             if event.type == pygame.KEYUP:
                 self.held_keys.discard(event.key)
+            if self.preview_intro_stage is not None:
+                # Global Back handling remains available while the UI is covered.
+                continue
             if (event.type == pygame.KEYDOWN and event.key in CONTROL_KEYS
                     and self.mode == "battle" and not self.simulation.paused
                     and self.simulation.controlled is not None and self.simulation.controlled.alive):
@@ -440,6 +464,9 @@ class CustomBattleScreen(Screen):
                                                  f"{int(self.simulation.elapsed)}s")]
 
     def update(self):
+        if self.preview_intro_stage is not None:
+            self._update_preview_intro()
+            return
         if self.mode != "battle":
             return
         now = pygame.time.get_ticks()
@@ -457,6 +484,49 @@ class CustomBattleScreen(Screen):
                 self.controller.set_tactical_battle_music(False)
             self.mode = "result"
             self.refresh_ui()
+
+    def _update_preview_intro(self):
+        if self.preview_intro_started is None:
+            return
+        elapsed = (pygame.time.get_ticks() - self.preview_intro_started) / 1000.0
+        opening_at = PREVIEW_SLIDE_IN_SECONDS + PREVIEW_HOLD_SECONDS
+        # Check both boundaries in order, even if a slow frame crosses both.
+        if self.preview_intro_stage == 0 and elapsed >= PREVIEW_SLIDE_IN_SECONDS:
+            ui_elements.play_ui_sound("select_unit_filter")
+            self.preview_intro_stage = 1
+        if self.preview_intro_stage == 1 and elapsed >= opening_at:
+            ui_elements.play_ui_sound("open_music")
+            self.preview_intro_stage = 2
+        if elapsed >= opening_at + PREVIEW_SLIDE_OUT_SECONDS:
+            self.preview_intro_stage = None
+            self.preview_intro_started = None
+
+    def draw(self, surface):
+        if self.preview_intro_stage is None:
+            super().draw(surface)
+            return
+        if self.preview_intro_started is None:
+            self.preview_intro_started = pygame.time.get_ticks()
+            surface.fill((0, 0, 0))
+            return
+        elapsed = (pygame.time.get_ticks() - self.preview_intro_started) / 1000.0
+        if self.preview_intro_stage == 2:
+            # Reveal the roster preview only as the bars move apart.
+            super().draw(surface)
+            elapsed -= PREVIEW_SLIDE_IN_SECONDS + PREVIEW_HOLD_SECONDS
+            shown = 1.0 - min(1.0, max(0.0, elapsed / PREVIEW_SLIDE_OUT_SECONDS))
+        else:
+            surface.fill((0, 0, 0))
+            shown = min(1.0, max(0.0, elapsed / PREVIEW_SLIDE_IN_SECONDS))
+        top_height = c.SCREEN_HEIGHT // 2
+        bottom_height = c.SCREEN_HEIGHT - top_height
+        bars = (
+            pygame.Rect(0, -top_height + round(top_height * shown), c.SCREEN_WIDTH, top_height),
+            pygame.Rect(0, c.SCREEN_HEIGHT - round(bottom_height * shown), c.SCREEN_WIDTH, bottom_height),
+        )
+        for rect in bars:
+            ui_elements.draw_pixel_panel(surface, rect, PREVIEW_BAR_COLOR, PREVIEW_BAR_BORDER,
+                                         gradient_strength=PREVIEW_BAR_GRADIENT_STRENGTH)
 
     def _cache_card(self, side, name):
         key = (side, name)

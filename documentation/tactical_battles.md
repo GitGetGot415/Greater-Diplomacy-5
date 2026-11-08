@@ -46,6 +46,19 @@ A yellow arrow identifies the controlled unit. Reordering preserves the chosen e
 
 ### Preview: Preview Battle
 
+Entering preview first shows a black screen. Two blank bars slide linearly inward
+from the top and bottom, meet, wait, then slide apart to reveal the roster preview.
+The sound sequence is **Open Music**, **Cancel Orders** when the bars meet, then
+**Open Music** as the bars start moving apart. The bars have their own styling,
+similar to the Messages panels, and can be changed independently.
+
+Edit `PREVIEW_SLIDE_IN_SECONDS`, `PREVIEW_HOLD_SECONDS`, and
+`PREVIEW_SLIDE_OUT_SECONDS` near the top of
+[screens/game/custom_battle.py](../screens/game/custom_battle.py) to change the timing.
+Slide durations must be positive; the hold can be zero. Restart after changing them.
+The configured Back key cancels the transition and returns to editing.
+Other preview controls become available when the transition finishes.
+
 Preview uses the same friendly and enemy roster panels as editing.
 The rosters can be scrolled, but units cannot be added, removed, reordered, or reassigned to player control.
 Editing buttons, **Random**, **Simulate**, and the **Year** slider are absent.

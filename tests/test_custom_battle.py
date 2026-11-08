@@ -11,7 +11,7 @@ import pygame
 
 import data.constants as c
 from map_logic import custom_battle as combat
-from screens.game.custom_battle import CustomBattleScreen
+from screens.game import custom_battle as battle_screen
 from ui.rendering.font_manager import fonts
 from ui.widgets.ui_elements import Slider
 
@@ -262,16 +262,23 @@ class CustomBattleScreenTests(unittest.TestCase):
 
     def setUp(self):
         self.library = fixture_library()
-        self.screen = CustomBattleScreen()
+        self.screen = battle_screen.CustomBattleScreen()
         self.controller = SimpleNamespace(set_tactical_battle_music=Mock())
         with patch("data.queries.get_unit_library", return_value=self.library):
             self.screen.on_enter(self.controller, None)
 
-    def click(self, label):
+    def click(self, label, *, finish_intro=True):
         button = next(button for button in self.screen.elements if button.text == label)
         self.screen.handle_events([
             pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=button.rect.center),
             pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=button.rect.center)])
+        if finish_intro and self.screen.preview_intro_stage is not None:
+            self.screen.draw(self.surface)
+            duration = (battle_screen.PREVIEW_SLIDE_IN_SECONDS + battle_screen.PREVIEW_HOLD_SECONDS
+                        + battle_screen.PREVIEW_SLIDE_OUT_SECONDS)
+            with patch("pygame.time.get_ticks",
+                       return_value=self.screen.preview_intro_started + math.ceil(duration * 1000)):
+                self.screen.update()
 
     def fill_armies(self):
         self.screen.add_unit(0, "Fixture II")
@@ -406,6 +413,80 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.screen.update()
         self.click("Edit Armies")
         self.assertEqual(self.screen.mode, "setup")
+
+    def test_preview_intro_times_cues_once_and_blocks_start_until_finished(self):
+        self.fill_armies()
+        with patch.object(battle_screen, "PREVIEW_SLIDE_IN_SECONDS", 0.2), \
+                patch.object(battle_screen, "PREVIEW_HOLD_SECONDS", 0.3), \
+                patch.object(battle_screen, "PREVIEW_SLIDE_OUT_SECONDS", 0.4), \
+                patch("ui.widgets.ui_elements.play_ui_sound") as sound:
+            self.click("Simulate", finish_intro=False)
+            self.assertEqual([call.args[0] for call in sound.call_args_list], ["open_music"])
+            simulation = self.screen.simulation
+            with patch.object(simulation, "advance") as advance:
+                # No timing or combat progresses before the initial black frame.
+                self.screen.update()
+                self.assertIsNone(self.screen.preview_intro_started)
+                with patch("pygame.time.get_ticks", return_value=1000):
+                    self.screen.draw(self.surface)
+                for now, expected in (
+                        (1199, ["open_music"]),
+                        (1200, ["open_music", "cancel_orders"]),
+                        (1200, ["open_music", "cancel_orders"]),
+                        (1499, ["open_music", "cancel_orders"]),
+                        (1500, ["open_music", "cancel_orders", "open_music"]),
+                        (1500, ["open_music", "cancel_orders", "open_music"]),
+                        (1899, ["open_music", "cancel_orders", "open_music"])):
+                    with self.subTest(now=now), patch("pygame.time.get_ticks", return_value=now):
+                        self.screen.update()
+                        self.screen.draw(self.surface)
+                        self.click("Start", finish_intro=False)
+                        self.screen.start_battle()
+                        self.assertEqual(self.screen.mode, "preview")
+                        self.assertTrue(simulation.paused)
+                        self.assertEqual([call.args[0] for call in sound.call_args_list], expected)
+                with patch("pygame.time.get_ticks", return_value=1900):
+                    self.screen.update()
+                    self.screen.draw(self.surface)
+                advance.assert_not_called()
+            self.assertIsNone(self.screen.preview_intro_stage)
+            self.assertEqual(simulation.elapsed, 0)
+            self.click("Start")
+            self.assertEqual(self.screen.mode, "battle")
+            self.assertFalse(simulation.paused)
+
+    def test_back_cancels_intro_and_reentry_handles_skipped_frames(self):
+        from ui.navigation.screen import dispatch_global_keys
+        self.fill_armies()
+        self.click("Control")
+        rosters = copy.deepcopy(self.screen.rosters)
+        with patch("ui.widgets.ui_elements.play_ui_sound") as sound:
+            self.click("Simulate", finish_intro=False)
+            with patch("pygame.time.get_ticks", return_value=1000):
+                self.screen.draw(self.surface)
+            # A Back key rebound to a combat control must still allow cancellation.
+            with patch("ui.navigation.screen.queries.get_keybind", return_value=pygame.K_w):
+                dispatch_global_keys(self.screen, pygame.event.Event(pygame.KEYDOWN, key=pygame.K_w))
+            self.assertEqual(self.screen.mode, "setup")
+            self.assertEqual(self.screen.rosters, rosters)
+            self.assertIsNone(self.screen.preview_intro_stage)
+            self.assertIsNone(self.screen.preview_intro_started)
+            self.assertEqual(self.controller.set_tactical_battle_music.call_args.args, (False,))
+            with patch("pygame.time.get_ticks", return_value=9000):
+                self.screen.update()
+                self.screen.draw(self.surface)
+            self.assertEqual([call.args[0] for call in sound.call_args_list], ["open_music"])
+            self.click("Simulate", finish_intro=False)
+            with patch("pygame.time.get_ticks", return_value=10000):
+                self.screen.draw(self.surface)
+            with patch("pygame.time.get_ticks", return_value=20000):
+                self.screen.update()
+                self.screen.draw(self.surface)
+                self.screen.update()
+            self.assertIsNone(self.screen.preview_intro_stage)
+            self.assertEqual([call.args[0] for call in sound.call_args_list],
+                             ["open_music", "open_music", "cancel_orders", "open_music"])
+            self.assertTrue(self.screen.simulation.paused)
 
     def test_preview_freezes_deployment_and_only_preview_can_start_combat(self):
         self.fill_armies()
