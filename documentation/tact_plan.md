@@ -37,7 +37,7 @@
 
     maybe something like 10 units for infantry related units
 
-    5 units for tank related
+    5 units for tank and artillery related
 
     for a unit you control, if you die, then you stop playing for that battle, but if at least one of the units in your division survives you get to keep playing
 
