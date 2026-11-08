@@ -118,19 +118,24 @@ class HelpPopupTests(unittest.TestCase):
         with mock.patch.object(message_box.ui_elements, "play_ui_sound") as sound:
             self.assertTrue(self.click(popup, self.rail_row(popup, "category", 1).center))
             self.assertEqual(popup.topics[popup.topic_index], (1, 0))
-            sound.assert_called_once_with("click")
+            sound.assert_called_once_with("select_category")
 
-            # The open category keeps the topic the player chose in it.
+            # Clicking the open category closes it, leaving no topic selected.
             sound.reset_mock()
             self.assertTrue(self.click(popup, self.rail_row(popup, "category", 1).center))
-            self.assertEqual(popup.topics[popup.topic_index], (1, 0))
-            sound.assert_not_called()
+            self.assertIsNone(popup.topic_index)
+            self.assertFalse([index for _rect, kind, index in popup.rail_rows if kind == "topic"])
+            sound.assert_called_once_with("select_category")
+        self.assertIsNone(_NavigationIntroPopup.last_topic_index)
+        popup.draw(pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT)))
 
         self.click(popup, self.rail_row(popup, "category", 0).center)
         # Only the open category lists its topics.
         self.assertEqual({index for _rect, kind, index in popup.rail_rows if kind == "topic"}, {0, 1})
-        self.click(popup, self.rail_row(popup, "topic", 1).center)
+        with mock.patch.object(message_box.ui_elements, "play_ui_sound") as sound:
+            self.click(popup, self.rail_row(popup, "topic", 1).center)
         self.assertEqual(popup.topic_index, 1)
+        sound.assert_called_once_with("select_sub_category")
 
     def test_next_continues_into_the_next_category(self):
         popup = self.popup()
@@ -138,6 +143,15 @@ class HelpPopupTests(unittest.TestCase):
         self.click(popup, popup.next_rect.center)
         self.assertEqual(popup.topics[popup.topic_index], (1, 0))
         self.assertEqual({index for _rect, kind, index in popup.rail_rows if kind == "topic"}, {2})
+
+    def test_with_every_category_closed_next_starts_at_the_first_topic(self):
+        popup = self.popup()
+        popup.select_topic(None)
+        self.assertEqual(popup._page_buttons_enabled(), (False, True))
+        self.click(popup, popup.prev_rect.center)
+        self.assertIsNone(popup.topic_index)
+        self.click(popup, popup.next_rect.center)
+        self.assertEqual(popup.topic_index, 0)
 
     def test_help_button_resumes_the_last_topic_and_a_fresh_game_starts_at_the_first(self):
         with mock.patch.object(message_box, "load_tutorial", return_value=artificial_content()):
@@ -150,6 +164,11 @@ class HelpPopupTests(unittest.TestCase):
 
             message_box.show_navigation_intro(self.map_stub)
             self.assertEqual(self.map_stub.navigation_intro_popup.topic_index, 0)
+
+            # A player who closed every category gets them closed again.
+            self.map_stub.navigation_intro_popup.select_topic(None)
+            message_box.show_navigation_intro(self.map_stub, resume=True)
+            self.assertIsNone(self.map_stub.navigation_intro_popup.topic_index)
 
     def test_long_topics_scroll_with_the_wheel_and_scrollbar(self):
         long_text = " ".join(["word"] * 4000)

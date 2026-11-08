@@ -277,7 +277,8 @@ class _NavigationIntroPopup:
     player can still see the map and HUD behind it, and clicks outside the
     panel continue to use the normal map controls.
 
-    The category list on the left opens one category at a time. Previous and
+    The category list on the left opens one category at a time. Clicking the
+    open category closes it, which leaves no topic selected. Previous and
     Next step through every topic in order, across categories. Content comes
     from TUTORIAL_PATH. Each topic is drawn onto one cached surface when it is
     selected, so frames only blit it.
@@ -331,6 +332,7 @@ class _NavigationIntroPopup:
     MISSING_ICON_COLOR = (75, 85, 100)
     DISABLED_TEXT_COLOR = (145, 145, 145)
     CHECKBOX_LABEL = "Don't show this popup when starting a game"
+    NO_TOPIC_TEXT = "Select a category on the left to see its topics."
     BLOCK_RENDERERS = {
         "text": "_text_block",
         "steps": "_steps_block",
@@ -338,6 +340,7 @@ class _NavigationIntroPopup:
         "key_box": "_key_box_block",
     }
     #: The Help button reopens the topic viewed last in this session.
+    #: None means the player closed every category.
     last_topic_index = 0
 
     def __init__(self, map_screen, topic_index=0):
@@ -363,6 +366,7 @@ class _NavigationIntroPopup:
         self._prepared_topics = {}
         self._prepare_chrome()
         self.topic_index = None
+        self.prepared = None
         self.select_topic(topic_index)
 
     # -- prepared surfaces ---------------------------------------------- #
@@ -541,10 +545,23 @@ class _NavigationIntroPopup:
         self._blit_lines(surface, lines, self.KEY_BOX_TEXT_X, (height - lines_h) // 2)
         return surface
 
+    def _prepare_no_topic(self):
+        """The prompt shown while every category is closed, centered in the topic area."""
+        height = self.HEIGHT - self.HEADER_H - self.SUBTITLE_TOP_GAP - self.SUBTITLE_CONTENT_GAP - self.FOOTER_H
+        width = self._content_width()
+        lines = self._inline_lines(self.NO_TOPIC_TEXT, width, self.SUBTITLE_COLOR)
+        content = pygame.Surface((width, height), pygame.SRCALPHA)
+        self._blit_lines(content, lines, width // 2, (height - self._lines_height(lines)) // 2, centered=True)
+        empty = pygame.Surface((1, 1), pygame.SRCALPHA)
+        return {"title": empty, "subtitle": [], "counter": empty, "content": content}
+
     def _prepare_topic(self, index):
         """Draw one topic's title, subtitle, and content the first time it is selected."""
         prepared = self._prepared_topics.get(index)
         if prepared is not None:
+            return prepared
+        if index is None:
+            prepared = self._prepared_topics[None] = self._prepare_no_topic()
             return prepared
         category_index, topic_index = self.topics[index]
         category = self.categories[category_index]
@@ -574,9 +591,10 @@ class _NavigationIntroPopup:
     # -- selection, layout, and scrolling ------------------------------- #
 
     def select_topic(self, index):
-        """Show one topic. Returns whether the selection changed."""
-        index = max(0, min(index, len(self.topics) - 1))
-        if index == self.topic_index:
+        """Show one topic, or none when index is None. Returns whether the selection changed."""
+        if index is not None:
+            index = max(0, min(index, len(self.topics) - 1))
+        if self.prepared is not None and index == self.topic_index:
             return False
         self.topic_index = type(self).last_topic_index = index
         self.prepared = self._prepare_topic(index)
@@ -586,8 +604,23 @@ class _NavigationIntroPopup:
         return True
 
     def change_page(self, direction):
-        if self.select_topic(self.topic_index + direction):
+        if self.topic_index is None:
+            # With every category closed, Next starts at the first topic.
+            target = 0 if direction > 0 else None
+        else:
+            target = self.topic_index + direction
+        if target is not None and self.select_topic(target):
             ui_elements.play_ui_sound("click")
+
+    def _open_category(self):
+        """The category whose topics are listed, or None when every category is closed."""
+        return None if self.topic_index is None else self.topics[self.topic_index][0]
+
+    def _page_buttons_enabled(self):
+        """Whether Previous and Next can move from the current selection."""
+        if self.topic_index is None:
+            return False, bool(self.topics)
+        return self.topic_index > 0, self.topic_index < len(self.topics) - 1
 
     def _layout(self):
         x, y = self.rect.topleft
@@ -601,7 +634,7 @@ class _NavigationIntroPopup:
         self.column_center_x = x + self.RAIL_W + (self.WIDTH - self.RAIL_W) // 2
 
         # Only the open category lists its topics.
-        open_category = self.topics[self.topic_index][0]
+        open_category = self._open_category()
         self.rail_rows = []
         row_y = self.rail_rect.y + self.RAIL_TOP_GAP
         for category_index, category in enumerate(self.categories):
@@ -658,14 +691,19 @@ class _NavigationIntroPopup:
         self._layout()
 
     def _click_rail(self, pos):
-        """Open a category at its first topic, or show a topic. Returns whether a row was hit."""
+        """Open a category at its first topic, close the open category, or show a topic.
+
+        Returns whether a row was hit.
+        """
         for rect, kind, index in self.rail_rows:
             if rect.collidepoint(pos):
-                if kind == "category" and index == self.topics[self.topic_index][0]:
-                    return True  # The open category keeps its current topic.
-                target = self.first_topic[index] if kind == "category" else index
+                if kind == "category":
+                    target = None if index == self._open_category() else self.first_topic[index]
+                else:
+                    target = index
                 if self.select_topic(target):
-                    ui_elements.play_ui_sound("click")
+                    ui_elements.play_ui_sound(
+                        "select_category" if kind == "category" else "select_sub_category")
                 return True
         return False
 
@@ -763,8 +801,9 @@ class _NavigationIntroPopup:
         style = TUTORIAL_PANEL_STYLES["rail"]
         ui_elements.draw_pixel_panel(surface, self.rail_rect, style["color"], self.KEY_BOX_BORDER_COLOR,
                                      recessed=True, gradient_strength=style["gradient_strength"])
-        open_category = self.topics[self.topic_index][0]
+        open_category = self._open_category()
         selected_style = TUTORIAL_PANEL_STYLES["rail_selected"]
+        category_style = TUTORIAL_PANEL_STYLES["rail_selected_category"]
         clip = surface.get_clip()
         surface.set_clip(clip.clip(self.rail_rect))
         try:
@@ -772,9 +811,9 @@ class _NavigationIntroPopup:
                 if kind == "category":
                     icon, label, open_label = self.category_labels[index]
                     if index == open_category:
-                        ui_elements.draw_pixel_panel(surface, rect.inflate(-4, 0), selected_style["color"],
+                        ui_elements.draw_pixel_panel(surface, rect.inflate(-4, 0), category_style["color"],
                                                      self.BORDER_COLOR, border_width=1,
-                                                     gradient_strength=selected_style["gradient_strength"])
+                                                     gradient_strength=category_style["gradient_strength"])
                     x = rect.x + self.RAIL_LABEL_X
                     if icon is not None:
                         surface.blit(icon, icon.get_rect(center=(x + self.RAIL_ICON_SIZE // 2, rect.centery)))
@@ -826,9 +865,10 @@ class _NavigationIntroPopup:
 
         counter = self.prepared["counter"]
         surface.blit(counter, counter.get_rect(midright=(self.prev_rect.x - 12, self.prev_rect.centery)))
+        prev_enabled, next_enabled = self._page_buttons_enabled()
         for rect, label, enabled in (
-                (self.prev_rect, "<", self.topic_index > 0),
-                (self.next_rect, ">", self.topic_index < len(self.topics) - 1)):
+                (self.prev_rect, "<", prev_enabled),
+                (self.next_rect, ">", next_enabled)):
             ui_elements.draw_pixel_button(surface, rect, self.BORDER_COLOR, disabled=not enabled)
             button = self.arrow_labels[(label, enabled)]
             surface.blit(button, button.get_rect(center=rect.center))
@@ -867,7 +907,8 @@ def show_navigation_intro(map_screen, *, resume=False):
     """Show the Help window over the active map and HUD.
 
     A fresh game starts at the first topic. With resume, the window opens at
-    the topic viewed last in this session.
+    the topic viewed last in this session, or with every category closed if
+    the player closed them.
     """
     topic_index = _NavigationIntroPopup.last_topic_index if resume else 0
     map_screen.navigation_intro_popup = _NavigationIntroPopup(map_screen, topic_index)

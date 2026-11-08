@@ -185,9 +185,10 @@ SLIDER_STYLES = {
 TUTORIAL_PANEL_STYLES = {
     "main": {"color": (34, 38, 49), "gradient_strength": 0.3},
     "keyboard_navigation": {"color": (25, 31, 43), "gradient_strength": 0.0},
-    # The Help category list and its selected topic row.
+    # The Help category list, its selected topic row, and its open category row.
     "rail": {"color": (25, 31, 43), "gradient_strength": 0.0},
-    "rail_selected": {"color": (52, 74, 104), "gradient_strength": 0.3},
+    "rail_selected": {"color": (42, 64, 94), "gradient_strength": 0.3},
+    "rail_selected_category": {"color": (82, 112, 150), "gradient_strength": 0.3},
 }
 
 # The main style applies to both the army editor and the custom emblem editor.
