@@ -98,7 +98,9 @@ as does the configured Back key. In a tactical encounter it opens the retreat ma
 
 Preview uses the same friendly and enemy roster panels as editing.
 Preview cards use the base game's unit art and symbols for health, attack, and defense.
-The rosters can be scrolled, but units cannot be added, removed, reordered, or reassigned to player control.
+The rosters can be scrolled. Drag friendly cards to change the friendly army's deployment order, the same way as in
+editing; the leftmost card deploys in the front rank. The enemy army's order is fixed.
+Units cannot be added, removed, or reassigned to player control.
 Nationality and starting HP are read-only in preview; gear buttons are absent.
 Editing buttons, **Random**, **Simulate**, and the **Year** slider are absent.
 
@@ -213,6 +215,7 @@ When hostile artillery is the only hostile land force on the tile, the player wi
 no preview opens, campaign combat skips the tile, and that artillery is destroyed. The player's side is untouched,
 and the tile is then captured as after any campaign combat.
 Tactical play has no editing view and no route for adding, removing, randomly generating, or replacing units.
+Preview can still reorder the friendly army, which sets where each division deploys; each unit's result still returns to that unit.
 
 **Retreat** opens the map with the tiles the unit can fall back to marked: neighboring tiles it may enter
 that are not hostile land and hold no hostile units, the same rule the rule-based AI uses to retreat. Choose a marked tile to give the unit a move order there and return to the map.

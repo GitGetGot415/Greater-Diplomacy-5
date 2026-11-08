@@ -678,14 +678,15 @@ class CustomBattleScreenTests(unittest.TestCase):
                    return_value=self.screen.preview_intro_started + math.ceil(duration * 1000)):
             self.screen.update()
 
-    def enter_campaign(self):
+    def enter_campaign(self, ally_types=()):
         from tests.combat_fixtures import StubBattleMap
         map_screen = StubBattleMap()
         for name, enemy in (("Fixture A", "Fixture B"), ("Fixture B", "Fixture A")):
             map_screen.add_nation(name, at_war_with=[enemy])
         player = queries.create_unit_dict("Fixture II", "Fixture A", self.library)
+        allies = [queries.create_unit_dict(name, "Fixture A", self.library) for name in ally_types]
         enemy = queries.create_unit_dict("Fixture I", "Fixture B", self.library)
-        province = map_screen.add_province("p1", "Fixture A", units=[player, enemy])
+        province = map_screen.add_province("p1", "Fixture A", units=[player, *allies, enemy])
         province["_turn_start_owner"] = "Fixture A"
         map_screen.player_unit = player
         map_screen.tactical_mode = True
@@ -694,9 +695,26 @@ class CustomBattleScreenTests(unittest.TestCase):
         map_screen.update_country_centers = Mock()
         custom = self.screen.rosters
         with patch("data.queries.get_unit_library", return_value=self.library):
-            self.screen._enter_campaign(map_screen, province, [player], [enemy])
+            self.screen._enter_campaign(map_screen, province, [player, *allies], [enemy])
         self.finish_intro()
         return map_screen, province, custom
+
+    def test_tactical_preview_reorder_keeps_each_result_on_its_own_campaign_unit(self):
+        map_screen, province, _custom = self.enter_campaign(ally_types=["Fixture III"])
+        player, ally, enemy = province["units"]
+        self.drag_card(self.screen.card_rect(0, 1).center, self.screen.card_rect(0, 0).center)
+        self.assertEqual(self.screen.campaign.units, [ally, player, enemy])
+        self.assertEqual(self.screen.controlled_index, 1)
+        self.assertEqual(self.screen.simulation.controlled.data["type"], player["type"])
+        self.click("Start")
+        simulation = self.screen.simulation
+        simulation.divisions[0][0].data["health"] /= 2  # The ally, now in the front rank.
+        for fighter in simulation.divisions[2]:
+            fighter.data["health"] = 0
+        simulation.winner = 0
+        self.screen.update()
+        self.assertEqual((ally["health"], player["health"]), (ally["max_health"] / 2, player["max_health"]))
+        self.assertEqual(province["units"], [player, ally])
 
     def test_tactical_encounter_opens_preview_controlling_the_players_unit(self):
         self.fill_armies()
@@ -1198,22 +1216,41 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.assertFalse(self.screen.held_keys)
         self.assertNotIn("Start", [button.text for button in self.screen.elements])
 
-    def test_roster_preview_allows_scrolling_without_selection_or_reordering(self):
+    def test_roster_preview_reorders_only_the_friendly_army_and_redeploys_it(self):
         self.fill_armies()
+        self.screen.add_unit(0, "Fixture III")
+        self.screen.add_unit(1, "Fixture II")
         for _ in range(10):
             self.screen.add_unit(0, "Fixture I")
+        self.screen.selected[0] = 1
         self.click("Control")
         self.screen.roster_0_scroll = 0
         self.click("Simulate")
         self.screen.draw(self.surface)
-        rosters = copy.deepcopy(self.screen.rosters)
         selected = list(self.screen.selected)
-        controlled = self.screen.controlled_index
-        self.drag_card(self.screen.card_rect(0, 0).center, self.screen.card_rect(0, 1).center)
-        self.assertEqual(self.screen.rosters, rosters)
+        enemy = list(self.screen.rosters[1])
+        before = self.screen.simulation
+        start, end = self.screen.card_rect(0, 1).center, self.screen.card_rect(0, 0).center
+        self.screen.handle_events([
+            pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=start),
+            pygame.event.Event(pygame.MOUSEMOTION, pos=end, rel=(end[0] - start[0], 0), buttons=(1, 0, 0))])
+        self.screen.draw(self.surface)  # The dragged card has no gear button in preview.
+        self.screen.handle_events([pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=end)])
+        self.assertEqual(self.roster_types(0)[:2], ["Fixture III", "Fixture II"])
+        self.assertEqual(self.screen.controlled_index, 0)
         self.assertEqual(self.screen.selected, selected)
-        self.assertEqual(self.screen.controlled_index, controlled)
         self.assertIsNone(self.screen.drag)
+        # The paused battle deploys again: the leftmost card now stands in the front rank.
+        simulation = self.screen.simulation
+        self.assertIsNot(simulation, before)
+        self.assertTrue(simulation.paused)
+        front, second = simulation.divisions[:2]
+        self.assertEqual(front[0].data["type"], "Fixture III")
+        self.assertGreater(front[0].x, second[0].x)
+        self.assertIs(simulation.controlled, front[0])
+        self.drag_card(self.screen.card_rect(1, 0).center, self.screen.card_rect(1, 1).center)
+        self.assertEqual(self.screen.rosters[1], enemy)
+        rosters = copy.deepcopy(self.screen.rosters)
         with patch("pygame.mouse.get_pos", return_value=self.screen.panes[0].center):
             self.screen.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=-1)])
         self.assertLess(self.screen.roster_0_scroll, 0)

@@ -192,7 +192,10 @@ def draw_player_arrow(surface, center, angle, stretch=0.0, scale=1.0):
 
 
 class CampaignBattle:
-    """The tactical-mode encounter a battle belongs to. The player's unit is friendly entry 0."""
+    """The tactical-mode encounter a battle belongs to. The player's unit starts as friendly entry 0.
+
+    Reordering the friendly army in preview reorders ``units`` the same way.
+    """
 
     def __init__(self, map_screen, province, units, custom_rosters):
         self.map_screen = map_screen
@@ -597,9 +600,7 @@ class CustomBattleScreen(Screen):
         if self.mode not in {"setup", "result"} or not all(self.rosters):
             return
         self.cancel_active_drags()
-        self.simulation = combat.BattleSimulation(self.library, *self.rosters,
-                                                  controlled_index=self.controlled_index)
-        self.simulation.paused = True
+        self._build_simulation()
         self.clear_controls()
         self.mode = "preview"
         # Start the clock on the first draw so entry always includes a black frame.
@@ -611,6 +612,12 @@ class CustomBattleScreen(Screen):
         self.status_key = None
         self._refresh_status()
         self.refresh_ui()
+
+    def _build_simulation(self):
+        """Deploy the armies, paused, as preview shows them."""
+        self.simulation = combat.BattleSimulation(self.library, *self.rosters,
+                                                  controlled_index=self.controlled_index)
+        self.simulation.paused = True
 
     def start_battle(self):
         if self.mode != "preview" or self.preview_intro_stage is not None:
@@ -828,10 +835,31 @@ class CustomBattleScreen(Screen):
                     return True
         return False
 
+    def _move_roster_entry(self, side, index, destination):
+        """Move one roster entry. The leftmost card deploys in the front rank."""
+        unit = self.rosters[side].pop(index)
+        self.rosters[side].insert(destination, unit)
+        self.group[side] = []
+        if side == 0 and self.controlled_index is not None:
+            if self.controlled_index == index:
+                self.controlled_index = destination
+            elif index < self.controlled_index <= destination:
+                self.controlled_index -= 1
+            elif destination <= self.controlled_index < index:
+                self.controlled_index += 1
+        if self.mode == "setup":
+            self.selected[side] = destination
+            return
+        # Preview: campaign units follow their roster entries (friendly ones come first),
+        # and the paused battle deploys again in the new order.
+        if self.campaign is not None:
+            self.campaign.units.insert(destination, self.campaign.units.pop(index))
+        self._build_simulation()
+
     def _roster_events(self, event):
         if self.mode == "setup" and (self._marquee_events(event) or self._health_bar_events(event)):
             return True
-        if self.drag is not None and self.mode == "setup":
+        if self.drag is not None:
             side, index, origin, active = self.drag
             if event.type == pygame.MOUSEMOTION:
                 if math.dist(event.pos, origin) >= DRAG_THRESHOLD:
@@ -842,18 +870,7 @@ class CustomBattleScreen(Screen):
                     offset = getattr(self, f"roster_{side}_scroll")
                     destination = int((event.pos[0] - self.panes[side].x - offset)
                                       // (CARD_SIZE[0] + CARD_GAP))
-                    destination = min(len(self.rosters[side]) - 1, max(0, destination))
-                    unit = self.rosters[side].pop(index)
-                    self.rosters[side].insert(destination, unit)
-                    self.group[side] = []
-                    if side == 0 and self.controlled_index is not None:
-                        if self.controlled_index == index:
-                            self.controlled_index = destination
-                        elif index < self.controlled_index <= destination:
-                            self.controlled_index -= 1
-                        elif destination <= self.controlled_index < index:
-                            self.controlled_index += 1
-                    self.selected[side] = destination
+                    self._move_roster_entry(side, index, min(len(self.rosters[side]) - 1, max(0, destination)))
                 self.drag = None
                 self.refresh_ui()
                 return True
@@ -867,12 +884,15 @@ class CustomBattleScreen(Screen):
                        or self.is_content_dragging(options["attr"]))
             if not engaged:
                 continue
-            if (self.mode == "setup" and event.type == pygame.MOUSEBUTTONDOWN
+            # Editing reorders both armies; preview reorders only the friendly army.
+            reorderable = self.mode == "setup" or (self.mode == "preview" and side == 0)
+            if (reorderable and event.type == pygame.MOUSEBUTTONDOWN
                     and event.button == 1 and pane.collidepoint(event.pos)):
                 for index in range(len(self.rosters[side])):
                     if self.card_rect(side, index).collidepoint(event.pos):
-                        self.selected[side] = index
-                        self.group[side] = []
+                        if self.mode == "setup":
+                            self.selected[side] = index
+                            self.group[side] = []
                         self.drag = [side, index, event.pos, False]
                         self.refresh_ui()
                         return True
@@ -1123,9 +1143,10 @@ class CustomBattleScreen(Screen):
             card = self.card_surfaces[self._card_key(side, self.rosters[side][index])]
             rect = card.get_rect(center=pygame.mouse.get_pos())
             surface.blit(card, rect)
-            button = self.unit_buttons[side, index]
-            self._position_edit_button(button, rect)
-            button.draw(surface)
+            if self.mode == "setup":
+                button = self.unit_buttons[side, index]
+                self._position_edit_button(button, rect)
+                button.draw(surface)
             if side == 0 and self.controlled_index == index:
                 draw_player_arrow(surface, (rect.centerx, rect.y + 28), 0)
         if self.marquee is not None:
