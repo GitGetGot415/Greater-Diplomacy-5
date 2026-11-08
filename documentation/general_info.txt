@@ -26,6 +26,10 @@ one unit at its selected library level. Cancel closes the picker and keeps added
 Select a roster card and choose Remove to remove that unit. Drag cards within an
 army to change deployment order. Scroll long rosters with the wheel, scrollbar,
 or by dragging the roster background. Each army supports up to 64 units.
+Randomly Generate replaces both armies with independently chosen groups of three
+to five units. The Year slider limits generation to the highest available level
+of each land-unit family at or before the selected year, including any additional
+research requirements. Manual unit selection remains unrestricted by the slider.
 Start runs both armies automatically on an open grass battlefield.
 Tanks and vehicles use rectangles, artillery uses thin rectangles, infantry and
 militia use circles, and cavalry uses ovals. Health bars show remaining strength.

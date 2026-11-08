@@ -2,6 +2,7 @@
 
 import copy
 import math
+import random
 from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
@@ -32,6 +33,68 @@ def fixture_library():
         "Fixture Ship I": dict(unit_stats(), naval_unit=True),
         "Fixture Plane I": unit_stats(air_role="fighter", air_range_px=100),
     }
+
+
+def dated_fixture_content():
+    tree = {
+        "cars": {"years": [1900, 1912, 1920]},
+        "tanks": {"years": [1916]},
+        "infantry_type": {"years": [1890, 1910, 1918]},
+        "trucks": {"years": [1914]},
+        "ships": {"years": [1800]},
+        "planes": {"years": [1900]},
+    }
+
+    def stats(family, tier, research, requirements=None, **extra):
+        result = unit_stats(family, tier=tier, **extra)
+        result["metadata"].update(research=research,
+                                  requirements=[research] if requirements is None else requirements)
+        return result
+
+    library = {
+        **{f"Car {tier}": stats("Fixture Car", tier, {"tech": "cars", "level": tier})
+           for tier in (3, 1, 2)},
+        "Tank 1": stats("Fixture Tank", 1, {"tech": "tanks", "level": 1}),
+        **{f"Foot {year}": stats("Infantry Type", year, {"tech": "infantry_type", "year": year})
+           for year in (1918, 1890, 1910)},
+        "Motorized 1910": stats("Motorized Infantry Type", 1910,
+                                {"tech": "motorized_infantry", "year": 1910},
+                                [{"tech": "trucks", "level": 1},
+                                 {"tech": "infantry_type", "minimum_year": 1910}]),
+        "Ship 1": dict(stats("Fixture Ship", 1, {"tech": "ships", "level": 1}), naval_unit=True),
+        "Plane 1": stats("Fixture Plane", 1, {"tech": "planes", "level": 1}, air_role="fighter"),
+    }
+    return library, tree
+
+
+class RandomBattleTests(unittest.TestCase):
+    def setUp(self):
+        self.library, self.tree = dated_fixture_content()
+        self.enterContext(patch("data.queries.get_tech_tree", return_value=self.tree))
+
+    def test_latest_eligible_family_tiers_exclude_future_units_and_additional_gates(self):
+        self.assertEqual(set(combat.land_unit_types_for_year(self.library, 1913)),
+                         {"Car 2", "Foot 1910"})
+        self.assertEqual(set(combat.land_unit_types_for_year(self.library, 1916)),
+                         {"Car 2", "Foot 1910", "Motorized 1910", "Tank 1"})
+
+    def test_year_is_inclusive_and_advances_levels_without_keeping_obsolete_tiers(self):
+        self.assertEqual(set(combat.land_unit_types_for_year(self.library, 1912)),
+                         {"Car 2", "Foot 1910"})
+        self.assertEqual(set(combat.land_unit_types_for_year(self.library, 1920)),
+                         {"Car 3", "Foot 1918", "Motorized 1910", "Tank 1"})
+        self.assertEqual(combat.land_unit_types_for_year(self.library, 1799), [])
+
+    def test_random_armies_have_independent_three_to_five_unit_counts_and_valid_types(self):
+        candidates = combat.land_unit_types_for_year(self.library, 1913)
+        rng = random.Random(7)
+        with patch.object(rng, "randint", side_effect=[3, 5]) as counts:
+            friendly, enemy = combat.random_armies(candidates, rng=rng)
+        self.assertEqual((len(friendly), len(enemy)), (3, 5))
+        self.assertEqual([call.args for call in counts.call_args_list], [(3, 5), (3, 5)])
+        self.assertTrue(set(friendly + enemy) <= set(candidates))
+        with self.assertRaises(ValueError):
+            combat.random_armies([])
 
 
 class BattleSimulationTests(unittest.TestCase):
@@ -138,6 +201,45 @@ class CustomBattleScreenTests(unittest.TestCase):
     def fill_armies(self):
         self.screen.add_unit(0, "Fixture II")
         self.screen.add_unit(1, "Fixture I")
+
+    def test_year_slider_and_generate_button_replace_both_armies(self):
+        library, tree = dated_fixture_content()
+        with patch("data.queries.get_unit_library", return_value=library), \
+                patch("data.queries.get_tech_tree", return_value=tree):
+            self.screen.on_enter(SimpleNamespace(), None)
+            self.screen.add_unit(0, "Car 1")
+            slider = self.screen.year_slider
+            x = slider.rect.x + round(slider.rect.width * (1913 - c.START_YEAR)
+                                      / (c.END_YEAR - c.START_YEAR))
+            with patch("pygame.mouse.get_pressed", return_value=(True, False, False)):
+                self.screen.handle_events([
+                    pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=slider.handle_rect.center),
+                    pygame.event.Event(pygame.MOUSEMOTION, pos=(x, slider.rect.centery),
+                                       rel=(10, 0), buttons=(1, 0, 0)),
+                    pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=(x, slider.rect.centery))])
+            self.assertEqual(self.screen.generation_year, 1913)
+            self.assertIs(self.screen.year_slider, slider)
+            self.assertEqual(self.screen.rosters[0], ["Car 1"])
+            with patch("map_logic.custom_battle.random.randint", side_effect=[3, 5]):
+                self.click("Randomly Generate")
+            self.assertEqual(tuple(map(len, self.screen.rosters)), (3, 5))
+            self.assertTrue(set(sum(self.screen.rosters, [])) <= {"Car 2", "Foot 1910"})
+            self.assertEqual(self.screen.selected, [None, None])
+            self.assertEqual(self.screen.mode, "setup")
+            self.screen.draw(self.surface)
+
+    def test_generation_with_no_eligible_units_preserves_existing_rosters(self):
+        library, tree = dated_fixture_content()
+        with patch("data.queries.get_unit_library", return_value=library), \
+                patch("data.queries.get_tech_tree", return_value=tree):
+            self.screen.on_enter(SimpleNamespace(), None)
+            self.screen.update_generation_year(0)
+            self.screen.add_unit(0, "Car 1")
+            self.assertTrue(self.screen.generate_button.disabled)
+            self.click("Randomly Generate")
+            self.assertEqual(self.screen.rosters[0], ["Car 1"])
+            self.screen.generate_armies()
+            self.assertEqual(self.screen.rosters[0], ["Car 1"])
 
     def drag_card(self, start, end):
         self.screen.handle_events([

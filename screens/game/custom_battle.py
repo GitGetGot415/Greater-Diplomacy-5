@@ -6,13 +6,14 @@ import pygame
 
 import data.constants as c
 from data import queries
+from data.io import starting_defaults
 from map_logic import custom_battle as combat
 from ui.dialogs import pickers
 from ui.navigation.screen import Screen
 from ui.rendering.font_manager import fonts
 from ui.widgets import ui_elements
 from ui.widgets.text_utils import fit_text, wrap_text
-from ui.widgets.ui_elements import Button
+from ui.widgets.ui_elements import Button, Slider
 
 
 PANEL_X = 60
@@ -32,6 +33,9 @@ GRASS_COLOR = (72, 115, 57)
 OUTLINE_COLOR = (22, 30, 22)
 MAX_FRAME_SECONDS = 0.25
 DRAG_THRESHOLD = 6
+GENERATION_BUTTON_POSITION = (60, 625)
+GENERATION_SLIDER_POSITION = (820, 640)
+GENERATION_SLIDER_WIDTH = 400
 
 
 def draw_unit_shape(surface, shape, center, angle, color, *, scale=1.0):
@@ -64,6 +68,8 @@ class CustomBattleScreen(Screen):
         super().__init__()
         self.mode = "setup"
         self.library = {}
+        self.generation_year = starting_defaults.get_starting_value("random_setup", "start_year")
+        self.random_candidates = []
         self.rosters = [[], []]
         self.selected = [None, None]
         self.card_surfaces = {}
@@ -97,6 +103,7 @@ class CustomBattleScreen(Screen):
         self.card_surfaces.clear()
         self.simulation = None
         self.cancel_active_drags()
+        self.random_candidates = combat.land_unit_types_for_year(self.library, self.generation_year)
         self.refresh_ui()
 
     def get_title(self):
@@ -140,6 +147,16 @@ class CustomBattleScreen(Screen):
             start = Button("centered", 625, (220, 50), "green", "Start", self.start_battle)
             start.apply_state(enabled=all(self.rosters), color="green")
             self.elements.append(start)
+            self.generate_button = Button(
+                *GENERATION_BUTTON_POSITION, (230, 50), "purple", "Randomly Generate",
+                self.generate_armies, font_size=20)
+            self.generate_button.apply_state(enabled=bool(self.random_candidates), color="purple")
+            self.year_slider = Slider(
+                *GENERATION_SLIDER_POSITION, GENERATION_SLIDER_WIDTH,
+                f"Year: {self.generation_year}", self.generation_year - c.START_YEAR,
+                self.update_generation_year, visual_max=c.END_YEAR - c.START_YEAR,
+                allowed_max=c.END_YEAR - c.START_YEAR)
+            self.elements.extend((self.generate_button, self.year_slider))
         elif self.mode == "battle":
             self.pause_button = Button(c.SCREEN_WIDTH - 150, 20, (130, 40), "yellow",
                                        "Resume" if self.simulation.paused else "Pause", self.toggle_pause)
@@ -148,6 +165,25 @@ class CustomBattleScreen(Screen):
             self.elements.extend((
                 Button("centered", 370, (220, 50), "green", "Run Again", self.start_battle),
                 Button("centered", 440, (220, 50), "blue", "Edit Armies", self.return_to_setup)))
+
+    def update_generation_year(self, value):
+        year = max(c.START_YEAR, min(c.END_YEAR, c.START_YEAR + round(value)))
+        if year != self.generation_year:
+            self.generation_year = year
+            self.random_candidates = combat.land_unit_types_for_year(self.library, year)
+            self.generate_button.apply_state(enabled=bool(self.random_candidates), color="purple")
+        # Keep the current slider alive while dragging instead of rebuilding controls.
+        self.year_slider.text = f"Year: {self.generation_year}"
+
+    def generate_armies(self):
+        if self.mode != "setup" or not self.random_candidates:
+            return
+        self.cancel_active_drags()
+        self.rosters = combat.random_armies(self.random_candidates)
+        self.selected = [None, None]
+        for side in (0, 1):
+            setattr(self, f"roster_{side}_scroll", 0)
+        self.refresh_ui()
 
     def open_picker(self, side):
         self.cancel_active_drags()
@@ -217,6 +253,9 @@ class CustomBattleScreen(Screen):
     def cancel_active_drags(self):
         super().cancel_active_drags()
         self.drag = None
+        for element in self.elements:
+            if isinstance(element, Slider):
+                element.dragging = False
         for side in (0, 1):
             setattr(self, f"roster_{side}_dragging", False)
 

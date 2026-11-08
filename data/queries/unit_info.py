@@ -568,6 +568,26 @@ def get_unit_tier(unit_name, unit_library=None, *, context=None):
     return queries.get_unit_metadata(unit_name, unit_library, context=context)["tier_order"]
 
 
+def get_latest_units_for_year(unit_library, year, *, context=None):
+    """Return each family's highest tier whose research is available by this year."""
+    if context is None and isinstance(unit_library, ActiveLibrary):
+        context = unit_library
+    tree = queries.get_tech_tree(context)
+    # A date ceiling includes research from the selected year. Scenario starting
+    # research has separate starting-kit rules and intentionally different cutoffs.
+    research = {tech: sum(date <= year for date in info.get("years", []))
+                for tech, info in tree.items()}
+    latest = {}
+    for name in unit_library:
+        if not queries.is_unit_unlocked(name, research, unit_library, context=context):
+            continue
+        metadata = queries.get_unit_metadata(name, unit_library, context=context)
+        family, tier = metadata["family"], metadata["tier_order"]
+        if family not in latest or tier > latest[family][0]:
+            latest[family] = (tier, name)
+    return [name for tier, name in latest.values()]
+
+
 _UNIT_RESEARCH_INDEX_CACHE = None
 
 

@@ -1,6 +1,7 @@
 """Standalone, automatic land battles. No campaign state or resource spending."""
 
 import math
+import random
 from dataclasses import dataclass, field
 
 import data.constants as c
@@ -19,12 +20,30 @@ UNIT_RADIUS = 12.0
 SPAWN_ROWS = 8
 SPAWN_GAP = 30.0
 SPAWN_MARGIN = 70.0
+RANDOM_ARMY_MIN_UNITS = 3
+RANDOM_ARMY_MAX_UNITS = 5
 
 
 def land_unit_types(library):
     """Keep library identifiers, including levels, and exclude ships and aircraft."""
     return [name for name, stats in library.items()
             if not stats.get("naval_unit") and not stats.get("air_role")]
+
+
+def land_unit_types_for_year(library, year):
+    """Use shared research requirements, then restrict generated armies to land."""
+    land = set(land_unit_types(library))
+    return [name for name in queries.get_latest_units_for_year(library, year) if name in land]
+
+
+def random_armies(candidates, *, rng=None):
+    """Independently choose each army's size and types; repeated units are allowed."""
+    if not candidates:
+        raise ValueError("No land units are available for the selected year.")
+    rng = random if rng is None else rng
+    return [[rng.choice(candidates)
+             for _ in range(rng.randint(RANDOM_ARMY_MIN_UNITS, RANDOM_ARMY_MAX_UNITS))]
+            for side in (0, 1)]
 
 
 def unit_shape(name, library):
