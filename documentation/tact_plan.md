@@ -10,7 +10,7 @@
 
 ## Projectiles
 
-    Projectiles should be much faster and able to travel further
+    Projectiles should be much faster and able to travel further (apply this to all units except artillery related ones, like artillery, railgun, railroad guns, landkeruzers)
 
     Artillery projectiles can look like they go in an arch, so even if a unit intersects with it it won't get hit until the shell falls back down, also the shell deals an AOE effect
 
