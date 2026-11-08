@@ -40,7 +40,8 @@ CARD_BAR_FLAG_GAP = 6
 CARD_BAR_FLAG_SIZE = (24, 16)
 PREVIEW_STATS_TOP = 108
 HEALTH_BAR_FULL_COLOR = (105, 215, 85)
-HEALTH_BAR_EMPTY_COLOR = (215, 60, 50)  # The fill blends from full to this color as health falls.
+HEALTH_BAR_HALF_COLOR = (235, 205, 60)  # Reached at half health.
+HEALTH_BAR_EMPTY_COLOR = (215, 60, 50)  # Reached at zero health; the fill blends between the three colors.
 HEALTH_BAR_SHADE = 30  # Brightness step between the light, middle, and dark bands of the fill.
 HEALTH_BAR_BANDS = 3
 PANEL_BOTTOM_SPACE = 32  # Below the cards: scrollbar row and margin.
@@ -746,8 +747,11 @@ class CustomBattleScreen(Screen):
         pygame.draw.rect(card, OUTLINE_COLOR, bar)
         ratio = max(0.0, min(1.0, unit["health"] / unit["max_health"]))
         fill = pygame.Rect(bar.x + 1, bar.y + 1, round((bar.width - 2) * ratio), bar.height - 2)
-        base = [round(empty + (full - empty) * ratio)
-                for empty, full in zip(HEALTH_BAR_EMPTY_COLOR, HEALTH_BAR_FULL_COLOR)]
+        if ratio >= 0.5:
+            low, high, blend = HEALTH_BAR_HALF_COLOR, HEALTH_BAR_FULL_COLOR, (ratio - 0.5) * 2
+        else:
+            low, high, blend = HEALTH_BAR_EMPTY_COLOR, HEALTH_BAR_HALF_COLOR, ratio * 2
+        base = [round(a + (b - a) * blend) for a, b in zip(low, high)]
         # Light, middle, and dark bands; a checkerboard of the neighboring shade softens each edge.
         shades = [tuple(max(0, min(255, channel + HEALTH_BAR_SHADE * (1 - band)))
                         for channel in base) for band in range(HEALTH_BAR_BANDS)]
