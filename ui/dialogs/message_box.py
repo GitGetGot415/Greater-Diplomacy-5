@@ -294,7 +294,7 @@ class _NavigationIntroPopup:
     RAIL_ICON_GAP = 8
     CATEGORY_ROW_H = 28
     TOPIC_ROW_H = 22
-    TOPIC_INDENT = 36
+    TOPIC_INDENT = 50
     CONTENT_SIDE_PAD = 24
     SUBTITLE_TOP_GAP = 8
     SUBTITLE_LINE_GAP = 2
@@ -771,6 +771,10 @@ class _NavigationIntroPopup:
             for rect, kind, index in self.rail_rows:
                 if kind == "category":
                     icon, label, open_label = self.category_labels[index]
+                    if index == open_category:
+                        ui_elements.draw_pixel_panel(surface, rect.inflate(-4, 0), selected_style["color"],
+                                                     self.BORDER_COLOR, border_width=1,
+                                                     gradient_strength=selected_style["gradient_strength"])
                     x = rect.x + self.RAIL_LABEL_X
                     if icon is not None:
                         surface.blit(icon, icon.get_rect(center=(x + self.RAIL_ICON_SIZE // 2, rect.centery)))
