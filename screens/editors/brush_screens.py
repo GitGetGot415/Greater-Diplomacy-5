@@ -92,7 +92,7 @@ class Convoy_Converter_Screen(EditorOverlayScreen):
 # ==========================================
 
 class Resource_Brush_Screen(EditorOverlayScreen):
-    RESOURCE_TYPES = ["Iron", "Coal", "Oil", "Wheat", "None"]
+    RESOURCE_TYPES = [*c.NATURAL_RESOURCE_OUTPUTS, "None"]
     PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_SPECIAL
     PANEL_STYLE = EDITOR_PANEL_STYLES["resource_brush"]
     PANEL_TITLE = "Resource Brush"
@@ -254,7 +254,7 @@ class Clear_Map_Screen(EditorOverlayScreen):
         "all resources on (x) countries territory", "all (x) units", "all (x) resources",
         "all (x) units from country (x)", "all (x) resources on (x) countries territory",
     ]
-    RESOURCE_TYPES = ["Iron", "Coal", "Oil", "Wheat"]
+    RESOURCE_TYPES = list(c.NATURAL_RESOURCE_OUTPUTS)
 
     def __init__(self, map_screen):
         super().__init__(map_screen, pygame.Rect(0, 0, 600, 420))

@@ -353,7 +353,7 @@
                             "type": "steps",
                             "items": [
                                 {"icon": "core", "heading": "Land", "text": "Every tile you own adds income. Tiles you have a core on give more than tiles you do not."},
-                                {"icon": "resource", "heading": "Natural resources", "text": "Iron adds materials, Coal and Oil add fuel, and Wheat adds manpower. The Resources map view shows where they are."},
+                                {"icon": "resource", "heading": "Natural resources", "text": "Iron adds materials, Coal and Oil add fuel, and Wheat and Fish add manpower. The Resources map view shows where they are."},
                                 {"icon": "industry", "heading": "Buildings", "text": "Factories and Recruitment Buildings add income from their province."},
                                 {"icon": "research", "heading": "Research and policies", "text": "Some technologies and Politics policies raise income."}
                             ]

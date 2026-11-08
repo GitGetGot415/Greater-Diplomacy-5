@@ -378,7 +378,7 @@ def tile_value(prov):
     resources = prov.get("resources")
     if isinstance(resources, dict):
         total = sum(int(resources.get(key, 0) or 0)
-                    for key in ("Iron", "Coal", "Oil", "Wheat"))
+                    for key in c.NATURAL_RESOURCE_OUTPUTS)
         value += total * c.DEAL_VALUE_RESOURCE_UNIT
     return value
 

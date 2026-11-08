@@ -1250,6 +1250,7 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
                                     if res_type == "Coal": c_col = (50, 50, 50)
                                     if res_type == "Oil": c_col = (30, 30, 30)
                                     if res_type == "Wheat": c_col = (220, 200, 60)
+                                    if res_type == "Fish": c_col = (90, 150, 210)
                                     w_scaled = int(15 * map_screen.camera.zoom)
                                     h_scaled = int(15 * map_screen.camera.zoom * (map_screen.camera.tilt_factor if c.APPLY_TILT_TO_OVERLAYS else 1.0))
                                     icons.append((None, res_type, c_col, w_scaled, h_scaled))

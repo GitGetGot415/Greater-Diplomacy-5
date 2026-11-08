@@ -543,9 +543,8 @@ def calculate_all_economies(map_data, nation_data, *, context=None):
             res = province.get("resources", {})
             if isinstance(res, dict):
                 refining_mult = econ_data[owner]["resource_mult"]
-                bd["materials"]["resources"] += int(res.get("Iron", 0)) * (1.0 if is_core else c.NON_CORE_MULTIPLIERS["materials"]) * refining_mult
-                bd["fuel"]["resources"] += (int(res.get("Coal", 0)) + int(res.get("Oil", 0))) * (1.0 if is_core else c.NON_CORE_MULTIPLIERS["fuel"]) * refining_mult
-                bd["manpower"]["resources"] += int(res.get("Wheat", 0)) * (1.0 if is_core else c.NON_CORE_MULTIPLIERS["manpower"]) * refining_mult
+                for deposit, econ_res in c.NATURAL_RESOURCE_OUTPUTS.items():
+                    bd[econ_res]["resources"] += int(res.get(deposit, 0)) * (1.0 if is_core else c.NON_CORE_MULTIPLIERS[econ_res]) * refining_mult
 
             # Buildings
             owner_research = nation_data[owner].get("research", {})

@@ -81,6 +81,20 @@ class OutputBonusTests(unittest.TestCase):
         return {"owner": "A", "cores": ["A"] if core else [],
                 "buildings": list(self.library), "units": [], "resources": {"Iron": 23, "Oil": 29}}
 
+    def test_each_natural_resource_adds_only_its_economy_resource(self):
+        # Deposits that share an economy resource, such as Wheat and Fish, are
+        # reskins: the same amount must pay the same income.
+        for deposit, econ_res in c.NATURAL_RESOURCE_OUTPUTS.items():
+            with self.subTest(deposit=deposit):
+                province = {"owner": "A", "cores": ["A"], "buildings": [], "units": [],
+                            "resources": {deposit: 37}}
+                country = {"research": {}, **dict.fromkeys(c.ECON_RESOURCE_KEYS, 0)}
+                game = map_double(map_data={1: province}, nation_data={"A": country},
+                                  tactical_mode=False, player_country="A")
+                breakdown = queries.calculate_all_economies(game.map_data, game.nation_data)["A"]["breakdown"]
+                self.assertEqual({res: breakdown[res]["resources"] for res in c.ECON_RESOURCE_KEYS},
+                                 {res: 37 if res == econ_res else 0 for res in c.ECON_RESOURCE_KEYS})
+
     def test_family_bonus_compounds_per_level_and_leaves_other_outputs_and_workshops_unchanged(self):
         research = {"first": 2, "second": 1}
         self.assertEqual(self.output("Factory Lvl 1", research),

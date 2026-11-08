@@ -62,6 +62,18 @@ RESOURCE_REFINING_BONUS_PER_LVL = 0.1 # +10% natural resource income per level
 ECON_RESOURCE_KEYS = ("manpower", "materials", "fuel")
 TRADE_RESOURCE_KEYS = ("materials", "fuel")
 
+# Natural resource deposit names (province "resources" keys) and the economy
+# resource each one adds to. Coal and Oil both add fuel, and Wheat and Fish both
+# add manpower: each pair differs only in name and icon. The order here is the
+# order of the editor pickers and the random map generator's choices.
+NATURAL_RESOURCE_OUTPUTS = {
+    "Iron": "materials",
+    "Coal": "fuel",
+    "Oil": "fuel",
+    "Wheat": "manpower",
+    "Fish": "manpower",
+}
+
 COUNTRY_BASE_YIELDS = {
     "manpower": 200,
     "materials": 100,
@@ -634,7 +646,7 @@ DEAL_NAMES_SHOWN = 3
 
 DEAL_VALUE_TILE_BASE = 250.0        # a bare province with nothing on it
 DEAL_VALUE_BUILDING = 120.0         # per building standing on it
-DEAL_VALUE_RESOURCE_UNIT = 40.0     # per point of Iron/Coal/Oil/Wheat
+DEAL_VALUE_RESOURCE_UNIT = 40.0     # per point of any NATURAL_RESOURCE_OUTPUTS deposit
 
 # A nation's own core land is worth far more to it than land it merely holds,
 # and land the receiver already has a claim on is cheaper to ask for -- which is
