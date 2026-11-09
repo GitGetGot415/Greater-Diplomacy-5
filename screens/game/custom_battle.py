@@ -63,6 +63,9 @@ TEAM_COLORS = ((85, 170, 245), (235, 100, 90))
 # Actual battle fills the whole screen. The mouse wheel steps through these scales, starting at 1.0.
 ZOOM_LEVELS = (0.2, 0.3, 0.4, 0.5, 0.6, 0.75, 1.0, 1.25, 1.5, 2.0)
 DEFAULT_ZOOM_INDEX = ZOOM_LEVELS.index(1.0)
+# Actual battle plays music at this share of its volume at the default zoom and closer.
+# Zooming out lowers it further, in proportion to the zoom.
+BATTLE_MUSIC_VOLUME = 0.5
 AIM_CAMERA_OFFSET = 0.6  # Share of the pointer's distance from the view center, in screen pixels.
 OVERVIEW_ZOOM = 0.6
 OVERVIEW_SYMBOL_SIZE = 16
@@ -376,8 +379,7 @@ class CustomBattleScreen(Screen):
             return
         if self.campaign is not None:
             self._end_campaign()
-        if self.controller is not None:
-            self.controller.set_tactical_battle_music(False)
+        self.stop_tactical_music()
         self.done = False
         self.next_state = None
         self.mode = "setup"
@@ -746,6 +748,18 @@ class CustomBattleScreen(Screen):
         if self.controller is not None:
             self.controller.set_tactical_battle_music(True, tanks=self.simulation.enemy_has_tanks())
 
+    def stop_tactical_music(self):
+        """Return to normal playlist music at full volume."""
+        if self.controller is not None:
+            self.controller.set_tactical_battle_music(False)
+            self.controller.set_music_volume_scale(1.0)
+
+    def update_battle_music_volume(self):
+        """Lower music in actual battle: BATTLE_MUSIC_VOLUME, then quieter the further the view zooms out."""
+        if self.controller is not None and self.mode == "battle":
+            zoom_share = min(1.0, self.zoom / ZOOM_LEVELS[DEFAULT_ZOOM_INDEX])
+            self.controller.set_music_volume_scale(BATTLE_MUSIC_VOLUME * zoom_share)
+
     def _build_simulation(self):
         """Deploy the armies, paused, as preview shows them."""
         self.simulation = combat.BattleSimulation(self.library, *self.rosters,
@@ -770,6 +784,7 @@ class CustomBattleScreen(Screen):
         self.clear_controls()
         self.simulation.paused = False
         self.mode = "battle"
+        self.update_battle_music_volume()
         self.last_tick = pygame.time.get_ticks()
         controlled = self.simulation.controlled
         if controlled is not None:
@@ -826,6 +841,7 @@ class CustomBattleScreen(Screen):
         if self.simulation is not None:
             self._cache_terrain_art()
         self._move_camera(anchor[0] - pos[0] / self.zoom, anchor[1] - pos[1] / self.zoom)
+        self.update_battle_music_volume()
 
     def to_field(self, pos):
         """A screen position in battlefield coordinates."""
@@ -843,8 +859,7 @@ class CustomBattleScreen(Screen):
     def return_to_setup(self):
         self.cancel_active_drags()
         self.clear_controls()
-        if self.controller is not None:
-            self.controller.set_tactical_battle_music(False)
+        self.stop_tactical_music()
         self.mode = "setup"
         self.preview_intro_started = None
         self.preview_intro_stage = None
@@ -1156,8 +1171,7 @@ class CustomBattleScreen(Screen):
         self._refresh_status()
         if self.simulation.winner is not None:
             self.clear_controls()
-            if self.controller is not None:
-                self.controller.set_tactical_battle_music(False)
+            self.stop_tactical_music()
             self.mode = "result"
             self._apply_campaign_result()
             self.refresh_ui()

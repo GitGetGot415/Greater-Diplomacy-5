@@ -117,6 +117,9 @@ Friendly tanks do not count.
 The music begins in preview and continues through actual battle without restarting
 at Start. Editing uses normal playlist music. Leaving preview or actual battle,
 including reaching the result view, stops the tactical music and uses normal playlist selection.
+Actual battle, including while paused, plays music at half volume (BATTLE_MUSIC_VOLUME in
+screens/game/custom_battle.py) at the default zoom and closer. Zooming out lowers it in proportion
+to the zoom; for example, zoom 0.5 plays at a quarter. Preview and the result view use full volume.
 See MUSIC PLAYBACK in [general_info.txt](general_info.txt) for selection and persistence.
 
 **Start** is available only in preview. Choosing **Start** opens actual battle with the prepared forces.

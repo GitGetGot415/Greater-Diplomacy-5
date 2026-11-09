@@ -32,6 +32,7 @@ class WebAudioTests(unittest.TestCase):
         controller = object.__new__(game_main.Controller)
         controller.track_start_times = {}
         controller.track_volumes = {}
+        controller.music_volume_scale = 1.0
         controller.music_pitch = 0.5
         controller.music_volume = 0.7
         controller.music = None

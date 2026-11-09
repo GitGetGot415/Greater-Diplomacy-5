@@ -348,6 +348,8 @@ class Controller:
         # Each album's volumes.json sets these per track, in the same format as assets/sounds/volumes.json.
         self.track_start_times = {}
         self.track_volumes = {}
+        # Screens can lower music for a moment, such as actual tactical combat. Never saved.
+        self.music_volume_scale = 1.0
 
         self.load_music_data()
         # Browsers block audio until it starts from within a genuine user gesture
@@ -439,6 +441,7 @@ class Controller:
         next_state = self.states[next_state_name]
         if previous_state is self.states.get("CUSTOM_BATTLE") and next_state is not previous_state:
             self.set_tactical_battle_music(False)
+            self.set_music_volume_scale(1.0)
         next_state.on_enter(self, previous_state)
         previous_state.done = False
         self.active_state = next_state
@@ -644,8 +647,16 @@ class Controller:
         return next((stem + ext for ext in extensions if os.path.exists(stem + ext)), None)
 
     def track_volume(self, track_path):
-        """The music volume setting times the track's volumes.json multiplier."""
-        return self.music_volume * self.track_volumes.get(track_path, 1.0)
+        """The music volume setting times the track's volumes.json multiplier and the screen's volume scale."""
+        return self.music_volume * self.track_volumes.get(track_path, 1.0) * self.music_volume_scale
+
+    def set_music_volume_scale(self, scale):
+        """Scale music for the current screen and apply it to the playing song at once."""
+        if scale == self.music_volume_scale:
+            return
+        self.music_volume_scale = scale
+        if self.music is not None:
+            self.music.set_volume(self.track_volume(self.now_playing))
 
     def play_specific_song(self, track_path):
         try:

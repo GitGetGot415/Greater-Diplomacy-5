@@ -1462,7 +1462,7 @@ class CustomBattleScreenTests(unittest.TestCase):
         }
         self.enterContext(patch("data.queries.get_country_data", return_value=self.countries))
         self.screen = battle_screen.CustomBattleScreen()
-        self.controller = SimpleNamespace(set_tactical_battle_music=Mock())
+        self.controller = SimpleNamespace(set_tactical_battle_music=Mock(), set_music_volume_scale=Mock())
         with patch("data.queries.get_unit_library", return_value=self.library):
             self.screen.on_enter(self.controller, None)
 
@@ -2270,6 +2270,32 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.click("Retreat")
         self.assertEqual(self.screen.mode, "setup")
         self.assertEqual(self.screen.rosters, rosters)
+
+    def test_actual_battle_lowers_music_and_zooming_out_lowers_it_further(self):
+        scale = self.controller.set_music_volume_scale
+        self.fill_armies()
+        self.click("Simulate")
+        # Preview keeps full music volume.
+        self.assertTrue(all(call.args == (1.0,) for call in scale.call_args_list))
+        self.click("Start")
+        default_zoom = battle_screen.ZOOM_LEVELS[battle_screen.DEFAULT_ZOOM_INDEX]
+        expected = lambda: battle_screen.BATTLE_MUSIC_VOLUME * min(1.0, self.screen.zoom / default_zoom)
+        self.assertAlmostEqual(scale.call_args.args[0], expected())
+        center = self.screen.view_rect().center
+        quieter = scale.call_args.args[0]
+        for _ in battle_screen.ZOOM_LEVELS:
+            self.screen.zoom_by(-1, center)
+            self.assertAlmostEqual(scale.call_args.args[0], expected())
+            self.assertLessEqual(scale.call_args.args[0], quieter)
+            quieter = scale.call_args.args[0]
+        self.assertLess(quieter, battle_screen.BATTLE_MUSIC_VOLUME)
+        for _ in battle_screen.ZOOM_LEVELS:
+            self.screen.zoom_by(1, center)
+            self.assertAlmostEqual(scale.call_args.args[0], expected())
+        # Zooming in past the default zoom never makes battle music louder than BATTLE_MUSIC_VOLUME.
+        self.assertEqual(scale.call_args.args[0], battle_screen.BATTLE_MUSIC_VOLUME)
+        self.click("Exit")
+        self.assertEqual(scale.call_args.args, (1.0,))
 
     def test_music_override_spans_preview_and_actual_and_ends_on_exit_or_result(self):
         music = self.controller.set_tactical_battle_music

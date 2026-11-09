@@ -99,6 +99,7 @@ class TacticalMusicTests(unittest.TestCase):
         controller.music_pitch_timeline = main.c.MUSIC_PITCH_TIMELINE_STATIC
         controller.track_start_times = {}
         controller.track_volumes = {}
+        controller.music_volume_scale = 1.0
         self.original_music = self.playback()
         controller.music = self.original_music
         self.played = []
@@ -138,6 +139,17 @@ class TacticalMusicTests(unittest.TestCase):
         self.assertIsNone(controller._tactical_song_setting)
         controller.set_tactical_battle_music(False)
         self.assertEqual(self.played, ["battle.ogg", "battle.ogg", "other.ogg"])
+
+    def test_volume_scale_applies_to_the_playing_song_and_later_songs(self):
+        controller = self.controller
+        controller.track_volumes = {"other.ogg": 0.5}
+        controller.set_music_volume_scale(0.25)
+        self.original_music.set_volume.assert_called_once_with(0.5 * 0.25)
+        self.assertAlmostEqual(controller.track_volume("other.ogg"), 0.5 * 0.5 * 0.25)
+        controller.set_music_volume_scale(0.25)
+        self.original_music.set_volume.assert_called_once()
+        controller.set_music_volume_scale(1.0)
+        self.assertEqual(self.original_music.set_volume.call_args.args, (0.5,))
 
     def test_tank_battles_pick_random_tank_songs_without_repeating(self):
         controller = self.controller
@@ -264,6 +276,7 @@ class AlbumVolumesTests(unittest.TestCase):
             json.dump({"one.mp3": {"volume": 0.5, "offset": 2}, "two.mp3": 3}, stream)
         controller = object.__new__(main.Controller)
         controller.music_volume = 0.8
+        controller.music_volume_scale = 1.0
         with patch.object(main.c, "MUSIC_DIR", music_dir),                 patch.object(main.queries, "get_active_albums", return_value=[]),                 patch.object(main.queries, "get_shuffle_disabled_tracks", return_value=[]),                 patch.object(main.queries, "get_starting_song", return_value=None):
             controller.load_music_data()
         track = lambda name: os.path.join(album, name).replace("\\", "/")
