@@ -508,8 +508,8 @@ Desktop startup music begins after the first rendered frame is displayed.
 Browser startup music waits for the first mouse click or key press.
 Clear Starting removes the fixed starting song. It does not restore a distribution default.
 Tactical Songs opens a subscreen with two song lists for tactical battle preview and actual combat.
-A battle where either side has a tank plays a random song from the Any Tanks list.
-Any other battle plays a random song from the Infantry Only list.
+A battle where the enemy has a tank plays a random song from the Enemy Tanks list.
+Any other battle plays a random song from the No Enemy Tanks list. Friendly tanks do not count.
 A unit counts as a tank when its battlefield shape is in TANK_SHAPES in map_logic/custom_battle.py.
 Add Song picks any song from any album. X removes a song. Reset to Default restores both lists.
 The lists are global preferences stored as tactical_infantry_songs and tactical_tank_songs in settings_config.json.

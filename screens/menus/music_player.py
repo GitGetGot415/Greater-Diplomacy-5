@@ -84,7 +84,7 @@ MUSIC_TIMELINE_HELP_BUTTON_Y = (
     + (MUSIC_TIMELINE_BUTTON_SIZE[1] - c.SIZES["scenario_setting_info"][1]) // 2
 )
 # Tactical Songs subscreen. Each (setting name, label) song list gets one scrolling column.
-TACTICAL_SONG_LISTS = (("tactical_infantry_songs", "Infantry Only"), ("tactical_tank_songs", "Any Tanks"))
+TACTICAL_SONG_LISTS = (("tactical_infantry_songs", "No Enemy Tanks"), ("tactical_tank_songs", "Enemy Tanks"))
 TACTICAL_ROW_SIZE = (360, 30)
 TACTICAL_PAD = 20
 TACTICAL_COLUMN_GAP = 40
@@ -832,8 +832,8 @@ class Music_Player(ScrollPanes, Screen):
 class TacticalSongsScreen(ModalScreen):
     """Subscreen of the music player that edits the song lists tactical battles pick from.
 
-    A battle with any tank picks a random tank song. Any other battle picks a
-    random infantry song. See Controller.set_tactical_battle_music in main.py.
+    A battle where the enemy has any tank picks a random tank song. Any other
+    battle picks a random infantry song. See Controller.set_tactical_battle_music in main.py.
     """
 
     PANEL_SIZE = TACTICAL_PANEL_SIZE

@@ -742,9 +742,9 @@ class CustomBattleScreen(Screen):
         self.refresh_ui()
 
     def start_tactical_music(self):
-        """Play the tactical songs for the prepared battle: tank songs when either side has a tank."""
+        """Play the tactical songs for the prepared battle: tank songs when the enemy has a tank."""
         if self.controller is not None:
-            self.controller.set_tactical_battle_music(True, tanks=self.simulation.has_tanks())
+            self.controller.set_tactical_battle_music(True, tanks=self.simulation.enemy_has_tanks())
 
     def _build_simulation(self):
         """Deploy the armies, paused, as preview shows them."""

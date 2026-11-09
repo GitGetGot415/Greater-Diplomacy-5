@@ -147,15 +147,16 @@ class BattleSimulationTests(unittest.TestCase):
         self.assertEqual(self.library, before)
         self.assertEqual(roster, ["Fixture I", "Fixture II", "Fixture III"])
 
-    def test_has_tanks_when_either_side_deploys_a_tank_shape(self):
-        """Tactical battle music picks the tank songs from this rule."""
+    def test_enemy_has_tanks_counts_only_enemy_tank_shapes(self):
+        """Tactical battle music picks the tank songs from this rule. Friendly tanks do not count."""
         self.library["Fixture Armor I"] = unit_stats("Fixture Armor")
-        self.assertFalse(combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture II"]).has_tanks())
+        self.assertFalse(combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture II"]).enemy_has_tanks())
         for shape in combat.TANK_SHAPES:
             with self.subTest(shape=shape), patch.dict(combat.FAMILY_SHAPES, {"Fixture Armor": shape}):
-                for friendly, enemy in ((["Fixture I", "Fixture Armor I"], ["Fixture I"]),
-                                        (["Fixture I"], ["Fixture Armor I"])):
-                    self.assertTrue(combat.BattleSimulation(self.library, friendly, enemy).has_tanks())
+                self.assertFalse(combat.BattleSimulation(
+                    self.library, ["Fixture I", "Fixture Armor I"], ["Fixture I"]).enemy_has_tanks())
+                self.assertTrue(combat.BattleSimulation(
+                    self.library, ["Fixture I"], ["Fixture I", "Fixture Armor I"]).enemy_has_tanks())
 
     def test_automatic_battle_reaches_win_and_loss(self):
         # Fixture I cannot damage this armored Fixture II, so the result never depends on lucky shots.
@@ -2276,7 +2277,7 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.fill_armies()
         music.assert_not_called()
         self.click("Simulate")
-        tanks = self.screen.simulation.has_tanks()
+        tanks = self.screen.simulation.enemy_has_tanks()
         music.assert_called_once_with(True, tanks=tanks)
         self.click("Start")
         self.click("Pause")

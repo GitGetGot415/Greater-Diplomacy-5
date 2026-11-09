@@ -113,7 +113,7 @@ SETTINGS_FIELDS = (
     _field("openrouter_model", "openrouter_model"),
     _field("checkerboard_gradient_strength", "checkerboard_gradient_strength", coerce=_coerce_checkerboard_gradient),
     _field("checkerboard_scroll_speed", "checkerboard_scroll_speed", coerce=_coerce_checkerboard_speed),
-    # Songs for tactical battles without tanks, and for tactical battles with any tank.
+    # Songs for tactical battles without enemy tanks, and for tactical battles with any enemy tank.
     _field("tactical_infantry_songs", "tactical_infantry_songs", coerce=_coerce_song_list),
     _field("tactical_tank_songs", "tactical_tank_songs", coerce=_coerce_song_list),
 )

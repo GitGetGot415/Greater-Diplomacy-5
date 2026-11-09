@@ -562,8 +562,9 @@ class Controller:
     def set_tactical_battle_music(self, active, tanks=False):
         """Switch between tactical battle songs and normal playlist selection.
 
-        A battle with any tank uses the tank songs. Any other battle uses the
-        infantry songs. An empty song list keeps normal playlist selection.
+        A battle where the enemy has any tank uses the tank songs. Any other
+        battle uses the infantry songs. Friendly tanks do not count.
+        An empty song list keeps normal playlist selection.
         """
         setting = None
         if active:
