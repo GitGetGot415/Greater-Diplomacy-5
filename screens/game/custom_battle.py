@@ -105,7 +105,7 @@ ROUNDED_SHAPES = frozenset(("armored_car", "motorized"))
 UNARMED_SHAPES = frozenset(("motorized", "mechanized", "ifv"))  # Drawn without the gun line.
 ROUNDED_CORNER_RADIUS = 6
 SPRITE_ANGLE_STEP = 4  # Degrees between the cached rotations of each battlefield shape.
-INFANTRY_GUN_SIDE_OFFSET = 0.25  # Share of body height toward the unit's right shoulder.
+INFANTRY_GUN_SIDE_OFFSET = 0.0  # Share of body height toward the unit's right shoulder. 0.25 was the original value it was set to.
 # Each family selects a chassis and a weapon image independently.
 BATTLE_ART_FAMILIES = {
     "Armored Car": ("Armored Car", "Armored Car"),
