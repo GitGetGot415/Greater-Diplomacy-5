@@ -440,6 +440,13 @@ The web build converts MP3 effects to OGG. Keep the original MP3 filenames in vo
 the sound loader resolves the converted files while preserving their volume and offset keys.
 The Pygame sound loader reports each failed effect and continues loading other effects.
 
+Battle firing effects use separate rifle and tank voice pools. Rifle variants share one pool; rifle volleys
+cannot take the tank pool. When a pool is full, the newest shot replaces that pool's oldest sound tail.
+Shots never wait in a playback queue. ui/widgets/ui_elements.py owns BATTLE_SFX_VOICE_LIMITS.
+SoLoud guarantees active mixing slots for these bounded pools while leaving a slot for music.
+Pygame provides extra channels and reuses battle-owned channels without force-stealing reserved music channels.
+File volume multipliers, start offsets, and the player's SFX volume and pitch still apply.
+
 Select Category.wav plays when a control selects a browsing group or country scope.
 This includes research and construction tabs, art styles, editor country lists, message contacts, and folders.
 Select Sub-Category.wav plays when a control selects an item within a group.

@@ -3,7 +3,7 @@ import math
 import os
 import subprocess
 import sys
-from collections import OrderedDict
+from collections import OrderedDict, deque
 from functools import lru_cache
 
 import numpy as np
@@ -67,6 +67,18 @@ sound_volume_multipliers = {}
 sound_start_offsets = {}
 global_sfx_volume = starting_defaults.get_starting_value("settings_config.json", "sfx_volume")
 global_sfx_pitch = starting_defaults.get_starting_value("settings_config.json", "sfx_pitch")
+
+# Bound guaranteed battle voices so gunfire cannot exhaust the native mixer.
+# Rifles share one pool across variants; tanks retain their own quieter voices.
+BATTLE_SFX_GROUPS = {
+    "rifle_shot_1": "rifle", "rifle_shot_2": "rifle", "rifle_shot_3": "rifle",
+    "heavy_gunshot": "tank",
+}
+BATTLE_SFX_VOICE_LIMITS = {"rifle": 8, "tank": 4}
+BATTLE_SFX_OTHER_CHANNELS = 4  # Room for music and ordinary UI effects on Pygame.
+_soloud_battle_engine = None
+_soloud_battle_voices = {group: deque() for group in BATTLE_SFX_VOICE_LIMITS}
+_pygame_battle_voices = {group: deque() for group in BATTLE_SFX_VOICE_LIMITS}
 
 # pygame.mixer has no playback-rate control.  UI sounds are short, so keeping a
 # few resampled PCM copies gives the web build the same pitch response as the
@@ -399,6 +411,8 @@ def load_music_ui_sounds(sound_factory, *, soloud=False):
     """Load named control effects when the audio backend starts."""
     sounds = music_ui_sounds if soloud else pygame_music_ui_sounds
     sounds.clear()
+    for voices in (_soloud_battle_voices if soloud else _pygame_battle_voices).values():
+        voices.clear()
     for kind, path in MUSIC_UI_SOUND_PATHS.items():
         if soloud:
             sound = sound_factory()
@@ -426,6 +440,52 @@ def load_pygame_ui_sounds():
     load_music_ui_sounds(_load_pygame_ui_sound)
 
 
+def _soloud_battle_slot(group):
+    """Reclaim the oldest effect in this group, leaving a native slot for music."""
+    global _soloud_battle_engine
+    if _soloud_battle_engine is not soloud_engine:
+        for voices in _soloud_battle_voices.values():
+            voices.clear()
+        _soloud_battle_engine = soloud_engine
+    budget = max(0, soloud_engine.get_max_active_voice_count() - 1)
+    tank_limit = min(BATTLE_SFX_VOICE_LIMITS["tank"], budget)
+    limit = tank_limit if group == "tank" else min(BATTLE_SFX_VOICE_LIMITS["rifle"], budget - tank_limit)
+    voices = _soloud_battle_voices[group]
+    live = [handle for handle in voices if soloud_engine.is_valid_voice_handle(handle)]
+    voices.clear()
+    voices.extend(live)
+    if limit == 0:
+        return None
+    while len(voices) >= limit:
+        soloud_engine.stop(voices.popleft())
+    return voices
+
+
+def _play_pygame_battle_sound(group, sound):
+    """Reuse only battle-owned channels; never force-steal the music channel."""
+    minimum = sum(BATTLE_SFX_VOICE_LIMITS.values()) + BATTLE_SFX_OTHER_CHANNELS
+    if pygame.mixer.get_num_channels() < minimum:
+        pygame.mixer.set_num_channels(minimum)
+    for voices in _pygame_battle_voices.values():
+        live = [(channel, source) for channel, source in voices
+                if channel.get_busy() and channel.get_sound() is source]
+        voices.clear()
+        voices.extend(live)
+    voices = _pygame_battle_voices[group]
+    if len(voices) >= BATTLE_SFX_VOICE_LIMITS[group]:
+        channel, _source = voices.popleft()
+    else:
+        channel = pygame.mixer.find_channel()
+        if channel is None and voices:
+            channel, _source = voices.popleft()
+        if channel is None and group == "tank" and _pygame_battle_voices["rifle"]:
+            channel, _source = _pygame_battle_voices["rifle"].popleft()
+    if channel is not None:
+        channel.set_volume(1.0)
+        channel.play(sound)
+        voices.append((channel, sound))
+
+
 def play_ui_sound(kind="click"):
     """Plays a UI sfx through whichever audio backend is active.
 
@@ -437,6 +497,7 @@ def play_ui_sound(kind="click"):
     volume = _ui_sound_volume(kind)
     if volume <= 0:
         return
+    battle_group = BATTLE_SFX_GROUPS.get(kind)
 
     if c.USE_SOLOUD:
         sound = (click_sound if kind == "click" else slider_sound if kind == "slider"
@@ -445,27 +506,39 @@ def play_ui_sound(kind="click"):
             offset = sound_start_offsets.get(_ui_sound_filename(kind), 0.0)
             if offset and offset >= sound.get_length():
                 return
+            voices = _soloud_battle_slot(battle_group) if battle_group is not None else None
+            if battle_group is not None and voices is None:
+                return
             # Seek a new paused voice at normal speed before it can emit audio.
-            handle = soloud_engine.play(sound, aPaused=1) if offset else soloud_engine.play(sound)
+            paused = bool(offset or battle_group is not None)
+            handle = soloud_engine.play(sound, aPaused=1) if paused else soloud_engine.play(sound)
             if offset and soloud_engine.seek(handle, offset) != 0:
                 soloud_engine.stop(handle)
                 return
             soloud_engine.set_volume(handle, volume)
             # Centres the speed variance directly on a 0.5 pitch input
             soloud_engine.set_relative_play_speed(handle, 0.5 + global_sfx_pitch)
-            if offset:
+            if battle_group is not None:
+                soloud_engine.set_inaudible_behavior(handle, True, False)
+                voices.append(handle)
+            if paused:
                 soloud_engine.set_pause(handle, False)
     else:
         sound = _pygame_sound_at_pitch(kind, max(1.0, volume))
         if sound:
             sound.set_volume(min(1.0, volume))
-            sound.play()
+            if battle_group is None:
+                sound.play()
+            else:
+                _play_pygame_battle_sound(battle_group, sound)
 
 def set_pygame_ui_sounds(click, slider):
     """Sets pygame UI sound sources and invalidates their pitch variants."""
     global pygame_click_sound, pygame_slider_sound
     pygame_click_sound = click
     pygame_slider_sound = slider
+    for voices in _pygame_battle_voices.values():
+        voices.clear()
     for cache in _pygame_sfx_pitch_cache.values():
         cache.clear()
 

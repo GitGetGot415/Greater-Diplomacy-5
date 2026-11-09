@@ -135,6 +135,8 @@ Tank shells are bright orange and thicker than other units' yellow shots.
 Each regular shot plays a random Rifle Shot 1, Rifle Shot 2, or Rifle Shot 3 sound.
 Each orange tank shot plays Heavy Gunshot. Both armies and player-controlled units use the same sound mapping.
 Firing sounds use the existing sound-effect volume and pitch settings and play when a projectile is fired.
+Rifle and tank firing sounds have separate voice pools so rifle volleys cannot suppress quieter tank shots.
+When a pool is full, the newest shot replaces the oldest sound tail in that pool.
 
 #### Sub-units
 

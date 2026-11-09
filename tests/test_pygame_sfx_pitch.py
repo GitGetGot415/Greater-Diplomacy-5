@@ -1,5 +1,9 @@
 import json
+import os
+import subprocess
+import sys
 import unittest
+from collections import deque
 from unittest.mock import Mock, mock_open, patch
 
 
@@ -16,6 +20,11 @@ class PygameSfxPitchTests(unittest.TestCase):
             pygame.mixer.init(frequency=44100, size=-16, channels=2)
 
     def setUp(self):
+        self.enterContext(patch.object(ui_elements, "_soloud_battle_engine", None))
+        self.enterContext(patch.object(ui_elements, "_soloud_battle_voices",
+                                      {group: deque() for group in ui_elements.BATTLE_SFX_VOICE_LIMITS}))
+        self.enterContext(patch.object(ui_elements, "_pygame_battle_voices",
+                                      {group: deque() for group in ui_elements.BATTLE_SFX_VOICE_LIMITS}))
         self.old_click_sound = ui_elements.pygame_click_sound
         self.old_slider_sound = ui_elements.pygame_slider_sound
         self.old_pitch = ui_elements.global_sfx_pitch
@@ -221,6 +230,135 @@ class PygameSfxPitchTests(unittest.TestCase):
             ui_elements.sound_volume_multipliers["Select Sub-Category.wav"] = 0
             ui_elements.play_ui_sound("select_sub_category")
             sound.play.assert_not_called()
+
+    def test_rifle_bursts_cannot_replace_tank_voices_and_both_pools_are_bounded(self):
+        engine = Mock()
+        engine.get_max_active_voice_count.return_value = 32
+        engine.is_valid_voice_handle.return_value = True
+        engine.play.side_effect = range(1000, 2000)
+        rifle, tank = Mock(), Mock()
+        ui_elements.sound_volume_multipliers.update({"Rifle Shot 1.mp3": 1.0, "Heavy Gunshot.mp3": 0.5})
+        ui_elements.global_sfx_volume = 1.0
+        with patch.object(ui_elements.c, "USE_SOLOUD", True), patch.object(ui_elements, "soloud_engine", engine), patch.dict(
+                ui_elements.music_ui_sounds, rifle_shot_1=rifle, heavy_gunshot=tank):
+            for _ in range(100):
+                ui_elements.play_ui_sound("rifle_shot_1")
+            ui_elements.play_ui_sound("heavy_gunshot")
+            tank_handle = ui_elements._soloud_battle_voices["tank"][0]
+            for _ in range(100):
+                ui_elements.play_ui_sound("rifle_shot_1")
+            self.assertNotIn(tank_handle, [call.args[0] for call in engine.stop.call_args_list])
+            engine.set_volume.assert_any_call(tank_handle, 0.5)
+            engine.set_inaudible_behavior.assert_any_call(tank_handle, True, False)
+            for _ in range(20):
+                ui_elements.play_ui_sound("heavy_gunshot")
+            for group, voices in ui_elements._soloud_battle_voices.items():
+                self.assertEqual(len(voices), ui_elements.BATTLE_SFX_VOICE_LIMITS[group])
+            self.assertIn(tank_handle, [call.args[0] for call in engine.stop.call_args_list])
+
+    def test_battle_voice_budget_leaves_room_for_music_on_a_small_native_mixer(self):
+        engine = Mock()
+        engine.get_max_active_voice_count.return_value = 2
+        engine.is_valid_voice_handle.return_value = True
+        engine.play.side_effect = range(10)
+        ui_elements.global_sfx_volume = 1
+        ui_elements.sound_volume_multipliers["Heavy Gunshot.mp3"] = 1
+        with patch.object(ui_elements.c, "USE_SOLOUD", True), patch.object(ui_elements, "soloud_engine", engine), patch.dict(
+                ui_elements.music_ui_sounds, heavy_gunshot=Mock()):
+            for _ in range(10):
+                ui_elements.play_ui_sound("heavy_gunshot")
+            self.assertEqual(len(ui_elements._soloud_battle_voices["tank"]), 1)
+            self.assertEqual(engine.stop.call_count, 9)
+
+    def test_pygame_tank_can_reclaim_a_rifle_channel_but_rifles_cannot_take_tank_channels(self):
+        rifle, tank = Mock(), Mock()
+        rifle_channel, tank_channel = Mock(), Mock()
+        rifle_channel.get_sound.return_value = rifle
+        tank_channel.get_sound.return_value = tank
+        ui_elements._pygame_battle_voices["rifle"].append((rifle_channel, rifle))
+        ui_elements._pygame_battle_voices["tank"].append((tank_channel, tank))
+        with patch.object(pygame.mixer, "get_num_channels", return_value=32), patch.object(
+                pygame.mixer, "find_channel", return_value=None):
+            ui_elements._play_pygame_battle_sound("rifle", rifle)
+            tank_channel.play.assert_not_called()
+            ui_elements._pygame_battle_voices["tank"].clear()
+            ui_elements._play_pygame_battle_sound("tank", tank)
+            rifle_channel.play.assert_called_with(tank)
+            self.assertTrue(all(source is tank for _channel, source in ui_elements._pygame_battle_voices["tank"]))
+            self.assertEqual(len(ui_elements._pygame_battle_voices["rifle"]), 0)
+
+
+@unittest.skipUnless(os.environ.get("GD5_RUN_NATIVE_AUDIO_TESTS") == "1", "native audio integration is opt-in")
+class NativeBattleSfxTests(unittest.TestCase):
+    def test_quieter_tanks_remain_audible_during_rifle_bursts_and_pygame_keeps_music_reserved(self):
+        script = r"""
+import ctypes
+import os
+if os.name == 'nt':
+    ctypes.windll.kernel32.SetErrorMode(0x0001 | 0x0002 | 0x8000)
+os.environ['SDL_AUDIODRIVER'] = 'dummy'
+from soloud import Soloud, Wav, Soloud_mixSigned16
+from ui.widgets import ui_elements as ui
+import pygame
+import numpy as np
+
+engine = Soloud()
+assert engine.init(aBackend=Soloud.NULLDRIVER, aSamplerate=44100, aBufferSize=512) == 0
+rifle, tank = Wav(), Wav()
+try:
+    silence = (ctypes.c_short * 44100)()
+    tone = (ctypes.c_short * 44100)(*([10000] * 44100))
+    assert rifle.load_raw_wave16(silence, len(silence)) == 0
+    assert tank.load_raw_wave16(tone, len(tone)) == 0
+    ui.c.USE_SOLOUD = True
+    ui.soloud_engine = engine
+    ui.music_ui_sounds.update(rifle_shot_1=rifle, heavy_gunshot=tank)
+    ui.global_sfx_volume = 1
+    ui.global_sfx_pitch = 0.5
+    ui.sound_volume_multipliers.update({'Rifle Shot 1.mp3': 1.0, 'Heavy Gunshot.mp3': 0.5})
+    for _ in range(80):
+        ui.play_ui_sound('rifle_shot_1')
+    ui.play_ui_sound('heavy_gunshot')
+    for _ in range(80):
+        ui.play_ui_sound('rifle_shot_1')
+    output = (ctypes.c_short * 1024)()
+    for _ in range(4):
+        Soloud_mixSigned16(engine.objhandle, output, 512)
+    assert max(abs(sample) for sample in output) > 0, 'quieter tank was excluded from the mix'
+    for group, voices in ui._soloud_battle_voices.items():
+        assert len(voices) <= ui.BATTLE_SFX_VOICE_LIMITS[group]
+finally:
+    engine.deinit()
+    rifle.destroy()
+    tank.destroy()
+    engine.destroy()
+
+pygame.mixer.init(frequency=44100, size=-16, channels=2)
+try:
+    ui.c.USE_SOLOUD = False
+    samples = np.full((44100 * 2, 2), 1000, dtype=np.int16)
+    music = pygame.sndarray.make_sound(samples)
+    rifle = pygame.sndarray.make_sound(samples)
+    tank = pygame.sndarray.make_sound(samples)
+    pygame.mixer.set_reserved(1)
+    music_channel = pygame.mixer.Channel(0)
+    music_channel.play(music, loops=-1)
+    ui.pygame_music_ui_sounds.update(rifle_shot_1=rifle, heavy_gunshot=tank)
+    for _ in range(80):
+        ui.play_ui_sound('rifle_shot_1')
+    ui.play_ui_sound('heavy_gunshot')
+    for _ in range(80):
+        ui.play_ui_sound('rifle_shot_1')
+    assert music_channel.get_sound() is music, 'gunfire replaced synthesized music'
+    tank_voices = ui._pygame_battle_voices['tank']
+    assert any(channel.get_sound() is tank for channel, _source in tank_voices), 'rifles replaced the tank channel'
+finally:
+    pygame.mixer.quit()
+"""
+        result = subprocess.run([sys.executable, "-X", "faulthandler", "-c", script],
+                                cwd=os.path.dirname(os.path.dirname(__file__)),
+                                capture_output=True, text=True, timeout=30)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
 
 if __name__ == "__main__":
