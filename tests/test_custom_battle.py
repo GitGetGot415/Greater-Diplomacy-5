@@ -146,6 +146,8 @@ class BattleSimulationTests(unittest.TestCase):
         self.assertEqual(roster, ["Fixture I", "Fixture II", "Fixture III"])
 
     def test_automatic_battle_reaches_win_and_loss(self):
+        # Fixture I cannot damage this armored Fixture II, so the result never depends on lucky shots.
+        self.library["Fixture II"]["defense"] = self.library["Fixture I"]["attack"]
         for friendly, enemy, expected in (("Fixture II", "Fixture I", 0),
                                           ("Fixture I", "Fixture II", 1)):
             with self.subTest(friendly=friendly):
@@ -541,13 +543,9 @@ class BattleSimulationTests(unittest.TestCase):
             self.assertTrue(combat.AI_WANDER_PERIOD[0] <= period <= combat.AI_WANDER_PERIOD[1])
 
     def ready_division(self, simulation, index):
-        """Remove the random temperament from one division so a test can measure its movement.
-
-        A bounding division starts at the beginning of a move, so it keeps moving for BOUND_MOVE seconds.
-        """
+        """Remove the random temperament from one division so a test can measure its movement."""
         for fighter in simulation.divisions[index]:
             fighter.start_delay, fighter.pace, fighter.wander, fighter.hold = 0.0, 1.0, 0.0, combat.AI_HOLD_RANGE[0]
-            fighter.bound_phase = 0.0
         return simulation.divisions[index]
 
     def test_ai_sub_units_wait_out_their_start_delay(self):
@@ -591,14 +589,14 @@ class BattleSimulationTests(unittest.TestCase):
         # The enemy straight ahead, on the division's own course.
         return simulation, unit, (unit.x, unit.y), SimpleNamespace(x=unit.x + 2000, y=unit.y), enemy
 
-    def test_infantry_advances_in_bounds_and_halts_to_fire_between_them(self):
+    def test_infantry_keeps_advancing_without_halting_until_in_position(self):
         simulation, unit, center, objective, _enemy = self.course_setup("infantry")
         far = combat.WEAPON_RANGE * 2
-        unit.bound_phase = 0.0
-        simulation.elapsed = combat.BOUND_MOVE / 2
-        self.assertGreater(simulation._ai_course(unit, far, 0.0, center, objective)[0], 0)
-        simulation.elapsed = combat.BOUND_MOVE + combat.BOUND_HALT / 2
-        self.assertEqual(simulation._ai_course(unit, far, 0.3, center, objective), (0.0, 0.3))
+        for second in range(10):
+            simulation.elapsed = float(second)
+            self.assertEqual(simulation._ai_course(unit, far, 0.0, center, objective)[0], unit.pace)
+        in_position = combat.WEAPON_RANGE * unit.hold
+        self.assertEqual(simulation._ai_course(unit, in_position, 0.3, center, objective), (0.0, 0.3))
 
     def test_tanks_swing_out_to_one_side_of_the_objective(self):
         simulation, unit, center, objective, _enemy = self.course_setup("tank")

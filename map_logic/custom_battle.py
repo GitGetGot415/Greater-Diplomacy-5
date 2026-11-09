@@ -30,11 +30,9 @@ COHESION_SLACK = 60.0
 COHESION_THROTTLE = 0.4  # Share of its pace while it waits.
 # How AI sub-units of each battlefield shape fight. Shapes not listed advance and hold.
 BEHAVIORS = {
-    "infantry": "bound", "cavalry": "charge", "armored_car": "skirmish",
+    "cavalry": "charge", "armored_car": "skirmish",
     "light_tank": "flank", "tank": "flank", "heavy_tank": "flank",
 }
-BOUND_MOVE = 3.0  # Bounding infantry advances for this many seconds...
-BOUND_HALT = 2.0  # ...then halts to fire for this many, and repeats.
 FLANK_OFFSET = 300.0  # Flanking tanks head this far to one side of their division's objective.
 CHARGE_CLOSE = 0.25  # Cavalry charges in to this share of weapon range, then withdraws to its hold distance.
 SKIRMISH_HOLD = 0.9  # Armored cars stop at this share of weapon range...
@@ -300,7 +298,6 @@ class Fighter:
     wander: float = 0.0  # Radians.
     wander_period: float = 6.0
     wander_phase: float = 0.0
-    bound_phase: float = 0.0  # Seconds into its move-and-halt cycle when the battle starts.
     flank: int = 1  # Which side its division swings out to when flanking: 1 or -1.
     # AI only: state while fighting.
     withdrawing: bool = False  # A charging sub-unit pulling back before it charges again.
@@ -470,7 +467,7 @@ class BattleSimulation:
                 hold=rng.uniform(*AI_HOLD_RANGE), pace=rng.uniform(*AI_PACE),
                 start_delay=rng.uniform(*AI_START_DELAY), wander=rng.uniform(0.0, AI_WANDER_ANGLE),
                 wander_period=rng.uniform(*AI_WANDER_PERIOD), wander_phase=rng.uniform(0.0, math.tau),
-                bound_phase=rng.uniform(0.0, BOUND_MOVE + BOUND_HALT), flank=flank))
+                flank=flank))
         self.divisions.append(members)
         self._division_health.append(full)
         self._division_targets.append(None)
@@ -625,9 +622,7 @@ class BattleSimulation:
         if distance <= WEAPON_RANGE * hold:
             # In position: face the enemy it shoots at, so a firing cone covers it.
             return 0.0, toward
-        if self.elapsed < fighter.start_delay or (
-                behavior == "bound"
-                and (self.elapsed + fighter.bound_phase) % (BOUND_MOVE + BOUND_HALT) >= BOUND_MOVE):
+        if self.elapsed < fighter.start_delay:
             return 0.0, toward
         (goal_x, goal_y), (course_x, course_y) = self.advance_point(
             fighter, center, objective, fighter.flank * FLANK_OFFSET if behavior == "flank" else 0.0)
