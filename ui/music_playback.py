@@ -115,11 +115,18 @@ class SoLoudPlayback:
         self.speed = speed
         self.paused = False
         self._load()
-        self.handle = engine.play(stream)
+        self._start_voice()
         if start_time > 0:
             engine.seek(self.handle, start_time)
-        engine.set_volume(self.handle, volume)
         engine.set_relative_play_speed(self.handle, speed)
+        engine.set_pause(self.handle, False)
+
+    def _start_voice(self):
+        # Protect music before unpausing: bursts of louder effects must not
+        # virtualize or steal the voice, including the replacement made by seek.
+        self.handle = self.engine.play(self.stream, aPaused=1)
+        self.engine.set_protect_voice(self.handle, True)
+        self.engine.set_volume(self.handle, self.volume)
 
     def _load(self):
         # WavStream.load() passes the path through fopen() via the C runtime,
@@ -166,8 +173,7 @@ class SoLoudPlayback:
         # mStreamPosition ends up correct.
         self.engine.stop(self.handle)
         self._load()
-        self.handle = self.engine.play(self.stream, aPaused=1)
-        self.engine.set_volume(self.handle, self.volume)
+        self._start_voice()
         # Seek from position 0 BEFORE setting speed — the seek skip
         # loop internally uses getAudio() which consumes samples at
         # the current play speed. At 1.5x it would overshoot; at

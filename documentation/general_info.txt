@@ -492,6 +492,10 @@ Platform builds and browser checks remain separate verification steps.
 MUSIC PLAYBACK
 ==============
 
+SoLoud music voices are protected from sound-effect voice limits. Protection applies when a song starts and
+when seeking replaces its voice, so overlapping effects cannot displace music. Pygame streaming music uses
+its separate music channel; desktop BeepBox and UltraBox playback reserve their mixer channel for music.
+
 Desktop startup music begins after the first rendered frame is displayed.
 Browser startup music waits for the first mouse click or key press.
 Clear Starting removes the fixed starting song. It does not restore a distribution default.

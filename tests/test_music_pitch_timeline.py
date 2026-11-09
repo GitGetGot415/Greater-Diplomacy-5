@@ -1,6 +1,6 @@
 import unittest
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, call, patch
 
 import data.constants as c
 from screens.menus.music_player import Music_Player
@@ -43,6 +43,9 @@ class FakeSoloud:
     def set_volume(self, _handle, _volume):
         pass
 
+    def set_protect_voice(self, _handle, _protected):
+        pass
+
     def seek(self, _handle, position):
         self.seeks.append(position)
         self.source_position = position
@@ -68,6 +71,44 @@ def soloud_playback(soloud, speed, length=480):
 
 
 class MusicPitchTimelineTests(unittest.TestCase):
+    def test_soloud_music_voice_is_protected_before_playback_starts(self):
+        engine = Mock()
+        engine.play.return_value = 11
+        stream = Mock()
+        with patch.object(SoLoudPlayback, "_load"):
+            playback = SoLoudPlayback(engine, stream, "fixture.ogg", 12, 0.2, 0.8)
+        engine.play.assert_called_once_with(stream, aPaused=1)
+        engine.set_protect_voice.assert_called_once_with(playback.handle, True)
+        self.assertLess(engine.mock_calls.index(call.set_protect_voice(11, True)),
+                        engine.mock_calls.index(call.set_pause(11, False)))
+        engine.seek.assert_called_once_with(11, 12)
+        engine.set_volume.assert_called_once_with(11, 0.2)
+        engine.set_relative_play_speed.assert_called_once_with(11, 0.8)
+
+    def test_soloud_seek_protects_the_replacement_voice_and_preserves_pause_state(self):
+        for paused in (False, True):
+            with self.subTest(paused=paused):
+                engine = Mock()
+                engine.play.side_effect = [11, 22]
+                stream = Mock()
+                with patch.object(SoLoudPlayback, "_load"):
+                    playback = SoLoudPlayback(engine, stream, "fixture.ogg", 0, 0.2, 0.8)
+                    playback.pause(paused)
+                    engine.reset_mock()
+                    playback.seek(24)
+                engine.stop.assert_called_once_with(11)
+                engine.play.assert_called_once_with(stream, aPaused=1)
+                engine.set_protect_voice.assert_called_once_with(22, True)
+                engine.seek.assert_called_once_with(22, 24)
+                engine.set_volume.assert_called_once_with(22, 0.2)
+                engine.set_relative_play_speed.assert_called_once_with(22, 0.8)
+                self.assertEqual(playback.paused, paused)
+                if paused:
+                    engine.set_pause.assert_not_called()
+                else:
+                    self.assertLess(engine.mock_calls.index(call.set_protect_voice(22, True)),
+                                    engine.mock_calls.index(call.set_pause(22, False)))
+
     def test_beepbox_speed_change_preserves_musical_progress(self):
         stream = FakeBeepBoxStream(position=240, speed=1.0)
         controller = SimpleNamespace(
