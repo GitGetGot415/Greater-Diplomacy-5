@@ -54,12 +54,14 @@ Reordering preserves those choices, and replaying uses the configured starting H
 New units start at full health. The two sides initially use the first two playable
 countries by display name, or the same country when only one is available.
 
-Editing cards show the unit name, symbols for health, full tactical attack, and defense
+Editing cards show the unit name, symbols for health, deployed tactical attack, and defense
 (including zero defense), and a health bar along the bottom with the nationality's flag to its right.
 The bar is shaded in dithered bands and blends from green to yellow at half health to red at zero.
 Drag along the bar to set that unit's starting HP; on a card in a selected group, it sets the whole group.
 Preview cards omit the unit name. They show a larger icon, a health bar
 with the nationality's flag to its right, and the same stat symbols.
+Attack accounts for how many sub-units the division deploys and those sub-units' health under the tactical
+wound setting. The attack stat is before target defense, hit rounding, range falloff, and tactical pacing.
 Nationality selects the preview art's country variant where available; army sides
 still determine friend and foe.
 
@@ -149,7 +151,7 @@ bring fewer. `SUBUNIT_COUNTS` in
 A wounded division brings fewer sub-units: with fraction `f` of full health and `N` sub-units at full health,
 it brings `ceil(f × N)` sub-units that share its health equally. For example, with 10 sub-units at full health,
 70% brings 7 at full health, 63% brings 7 at 90%, and 60% brings 6 at full health.
-Sub-units also divide the division's damage. Each hit is worked out with the sub-unit's full attack against the
+Sub-units also divide the division's damage. Each hit is worked out with the sub-unit's wound-adjusted attack against the
 target's full defense, then the damage that gets through is divided by the division's sub-unit count at full health.
 A full division therefore hits about as hard as one unsplit unit, and the full stats still decide who can hurt whom.
 
@@ -157,8 +159,11 @@ A full division therefore hits about as hard as one unsplit unit, and the full s
 
 Each hit is reduced by the target's full defense stat, down to zero damage.
 Tactical defense stays constant as health falls; campaign combat scales defense with health.
-Each surviving tactical sub-unit also keeps its full attack strength as health falls, for shooting, melee, and ramming.
-Losing sub-units reduces a division's total firepower, but wounds do not weaken the surviving sub-units' attacks.
+`TACTICAL_DAMAGE_AT_ZERO_HEALTH` near the top of `map_logic/custom_battle.py` controls attack lost to wounds.
+Set the multiplier to `0.0` for attack directly proportional to a sub-unit's remaining HP, or `1.0` for no wound penalty.
+Values between zero and one interpolate linearly between that attack floor and full attack at full HP.
+Restart after editing the value. Shooting, melee, and ramming use the same setting, before defense and rounding.
+Destroyed sub-units never attack. Losing sub-units also reduces a division's total firepower.
 After defense and sub-unit damage sharing, positive damage rounds up before the tactical pacing multiplier applies.
 The multiplier slows even small hits without making previously vulnerable targets immune.
 Shooting, melee, and ramming use the same damage calculation and target capability rules.
@@ -213,7 +218,8 @@ fight, its cruising speed, a short delay before it first moves, and a gentle wea
 Once it has stopped, a sub-unit faces the enemy it shoots at so its firing cone covers it.
 
 Each sub-unit chooses whom to shoot from the enemies close to its nearest one. A wounded enemy counts as nearer than
-it is, clear firing lines take priority over obstructed targets, and an enemy it could not damage even at full health is passed over.
+its actual distance, and clear firing lines take priority over obstructed targets.
+Target selection favors enemies the shooting sub-unit can damage at its current health.
 
 AI sub-units also fight according to their type:
 
@@ -364,5 +370,5 @@ Research dates come from [research_template.json](../data/json/research_template
 Read those sources for current tuning values.
 
 The prototype converts movement and range to battlefield pixels and shares target capability rules with campaign combat.
-Tactical attacks disable health scaling; campaign combat retains health-scaled attack.
+Tactical attacks use their own configurable health floor; campaign combat retains its existing health-scaled attack.
 The shared campaign combat rules remain documented in [non_llm_ai.txt](non_llm_ai.txt).

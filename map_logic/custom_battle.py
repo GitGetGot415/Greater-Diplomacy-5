@@ -18,6 +18,9 @@ FIXED_STEP = 1.0 / 30.0
 MOVE_PIXELS_PER_SPEED = 35.0
 FIRE_INTERVAL = 2.0
 DAMAGE_SCALE = 0.5  # Applied after defense and rounding, so low-damage hits also slow down.
+# Attack at zero HP: 0.0 = directly proportional to HP; 1.0 = wounds do not reduce attack.
+# Values between 0 and 1 interpolate linearly. Applies to each surviving sub-unit.
+TACTICAL_DAMAGE_AT_ZERO_HEALTH = 1.0
 WEAPON_RANGE = 1500.0
 PROJECTILE_SPEED = 1000.0
 ENGAGEMENT_RANGE = 600.0  # Preferred distances do not grow with maximum projectile reach.
@@ -303,6 +306,22 @@ def firing_cone(shape):
     return None if cone is None else math.radians(cone)
 
 
+def division_deployment(unit, shape):
+    """Spawn count and individual stats for a positive-health division, shared with roster previews."""
+    size = SUBUNIT_COUNTS[shape]
+    # The small allowance keeps float error from adding a sub-unit: 0.7 * 10 is 7.000000000000001.
+    count = max(1, math.ceil(unit["health"] / unit["max_health"] * size - 1e-9))
+    return count, dict(unit, max_health=unit["max_health"] / size, health=unit["health"] / count)
+
+
+def division_attack(unit, library):
+    """Total deployed attack before target defense, rounding, and tactical pacing."""
+    shape = unit_shape(unit["type"], library)
+    count, subunit = division_deployment(unit, shape)
+    multiplier = combat_rules.effective_damage_multiplier(subunit, health_floor=TACTICAL_DAMAGE_AT_ZERO_HEALTH)
+    return unit["attack"] * multiplier * count / SUBUNIT_COUNTS[shape]
+
+
 def _wrap(angle):
     """The same angle between -pi and pi."""
     return (angle + math.pi) % math.tau - math.pi
@@ -467,7 +486,7 @@ class BattleSimulation:
     _division_targets: list = field(init=False, default_factory=list)  # The enemy each division advances on.
     _division_retarget: list = field(init=False, default_factory=list)  # Seconds until each chooses again.
     _rng: object = field(init=False, default=None)
-    _hurts: dict = field(init=False, default_factory=dict)  # (shooter type, target type) -> can it do damage.
+    _full_attacks: dict = field(init=False, default_factory=dict)  # Full-health attack per shooter/target type pair.
     _accumulator: float = field(init=False, default=0.0)
     _throttle: float = field(init=False, default=0.0)
     _turn: float = field(init=False, default=0.0)
@@ -520,8 +539,7 @@ class BattleSimulation:
         """
         full = data["max_health"]
         size = SUBUNIT_COUNTS[shape]
-        # The small allowance keeps float error from adding a sub-unit: 0.7 * 10 is 7.000000000000001.
-        count = max(1, math.ceil(data["health"] / full * size - 1e-9))
+        count, subunit = division_deployment(data, shape)
         facing = math.pi if side else 0.0
         division = len(self.divisions)
         # Spread target searches across ticks instead of running them all at once.
@@ -532,7 +550,7 @@ class BattleSimulation:
         for number in range(count):
             slot = (number - (count - 1) / 2) * SUBUNIT_SPACING
             members.append(Fighter(
-                dict(data, max_health=full / size, health=data["health"] / count), side,
+                dict(subunit), side,
                 x, ARENA_SIZE[1] / 2 + slot, shape, division=division, attack_share=1 / size,
                 angle=facing, aim=facing,
                 index=len(self.fighters) + number,
@@ -614,15 +632,16 @@ class BattleSimulation:
 
     @staticmethod
     def _attack(source, target):
-        """Living tactical sub-units keep full attack; shared target restrictions still apply."""
-        return sum(shot[1] for shot in combat_rules.damage_shots([source], [target], scale_health=False))
+        """Use tactical wound scaling with shared target restrictions."""
+        return sum(shot[1] for shot in combat_rules.damage_shots(
+            [source], [target], health_floor=TACTICAL_DAMAGE_AT_ZERO_HEALTH))
 
     @classmethod
     def damage_amount(cls, source, target, attack_share, multiplier=1.0):
         """Tactical pacing follows full defense and division sharing for every attack kind.
 
         Round before pacing so even the smallest positive hits take longer than before.
-        Each surviving sub-unit keeps its attack strength as health falls.
+        Wound scaling follows TACTICAL_DAMAGE_AT_ZERO_HEALTH for each surviving sub-unit.
         """
         loss = max(0.0, cls._attack(source, target) - target["defense"]) * attack_share
         return math.ceil(loss) * DAMAGE_SCALE * multiplier
@@ -673,11 +692,13 @@ class BattleSimulation:
         return (objective.x - dy * sideways, objective.y + dx * sideways), (dx, dy)
 
     def _can_hurt(self, shooter, target):
-        """Whether a sub-unit can damage this target type; cached per type pair."""
+        """Cache full attack per type pair, then account for the shooter's current wounds."""
         key = (shooter.data["type"], target.data["type"])
-        if key not in self._hurts:
-            self._hurts[key] = self._attack(shooter.data, target.data) > target.data["defense"]
-        return self._hurts[key]
+        if key not in self._full_attacks:
+            full = dict(shooter.data, health=shooter.data["max_health"])
+            self._full_attacks[key] = self._attack(full, target.data)
+        multiplier = combat_rules.health_damage_multiplier(shooter.data, health_floor=TACTICAL_DAMAGE_AT_ZERO_HEALTH)
+        return self._full_attacks[key] * multiplier > target.data["defense"]
 
     def _choose_target(self, fighter, enemies):
         """The enemy to shoot: the nearest, unless one close to it is wounded and this sub-unit can hurt it.

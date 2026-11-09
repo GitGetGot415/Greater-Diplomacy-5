@@ -737,16 +737,20 @@ def build_battle(sides, nation_data, width=None, full_rank_for=None, terrain=Non
                   shares, profiles, air_combat)
 
 
-def health_damage_multiplier(unit, nation_data=None):
+def health_damage_multiplier(unit, nation_data=None, *, health_floor=None):
     """Scale attack linearly from the scenario health floor to full attack.
 
     World-owned country mappings supply their own scenario settings.
-    Standalone callers retain the constant-based compatibility behavior."""
+    Standalone callers retain the constant-based compatibility behavior.
+    Tactical combat can supply its own zero-health attack multiplier.
+    """
     max_hp = unit.get("max_health") or c.DEFAULT_UNIT_HP
     frac = max(0.0, min(1.0, unit.get("health", 0) / max_hp))
-    floor = c.DAMAGE_AT_ZERO_HEALTH
-    if nation_data is not None and hasattr(nation_data, "world"):
-        floor = value(nation_data.world, "damage_at_zero_health", c.DEFAULT_DAMAGE_AT_ZERO_HEALTH)
+    floor = health_floor
+    if floor is None:
+        floor = c.DAMAGE_AT_ZERO_HEALTH
+        if nation_data is not None and hasattr(nation_data, "world"):
+            floor = value(nation_data.world, "damage_at_zero_health", c.DEFAULT_DAMAGE_AT_ZERO_HEALTH)
     return floor + (1.0 - floor) * frac
 
 
@@ -763,7 +767,7 @@ def health_defense_multiplier(unit, nation_data=None):
     return floor + (1.0 - floor) * frac
 
 
-def effective_damage_multiplier(unit, nation_data=None, *, scale_health=True):
+def effective_damage_multiplier(unit, nation_data=None, *, scale_health=True, health_floor=None):
     """Scale damage by health, politics, and conscription.
 
     Combat resolution and unit panels must use the same product.
@@ -771,14 +775,15 @@ def effective_damage_multiplier(unit, nation_data=None, *, scale_health=True):
     Pass `nation_data` to apply each unit owner's politics and conscription.
     Omit it when comparing raw unit types for production or research.
     Health scaling still applies without country data, unless `scale_health`
-    is disabled for tactical sub-units. Other damage restrictions still apply.
+    is disabled. `health_floor` overrides the campaign's zero-health multiplier
+    for tactical sub-units. Other damage restrictions still apply.
     """
 
     if queries.unit_is_air_drop_recovering(unit):
         return 0.0
     national = (queries.get_country_damage_multiplier(unit.get("owner"), nation_data)
                 if nation_data else 1.0)
-    health = health_damage_multiplier(unit, nation_data) if scale_health else 1.0
+    health = health_damage_multiplier(unit, nation_data, health_floor=health_floor) if scale_health else 1.0
     return health * national
 
 
@@ -823,13 +828,13 @@ def exchange(battle, nation_data=None, *, with_sources=False):
 
 
 def damage_shots(units, targets, shares=None, nation_data=None, attack_field="attack", profiles=None,
-                 air_to_air=False, *, with_sources=False, scale_health=True):
+                 air_to_air=False, *, with_sources=False, scale_health=True, health_floor=None):
     """Pool equally affected targets while preserving the shared damage divisor.
 
     Tank immunity and fighter bonuses require source/target attribution. A mixed
     stack still divides its volley across the original front, even when one
     target is immune; that damage is not redirected to its neighbors.
-    Tactical sub-units disable health scaling while keeping these target rules.
+    Tactical sub-units supply their own health floor while keeping these target rules.
     """
     groups = {}
     for target in targets:
@@ -843,7 +848,7 @@ def damage_shots(units, targets, shares=None, nation_data=None, attack_field="at
                      (profiles or {}).get(id(unit), unit).get("attack", c.DEFAULT_UNIT_ATK))
                      / (shares or {}).get(id(unit), 1)
                      * effective_damage_multiplier((profiles or {}).get(id(unit), unit), nation_data,
-                                                   scale_health=scale_health) * multiplier)
+                                                   scale_health=scale_health, health_floor=health_floor) * multiplier)
                      for unit, multiplier in zip(units, multipliers)]
         attack = sum(contributions)
         shot = (group, attack * len(group) / len(targets))

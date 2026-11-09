@@ -127,6 +127,7 @@ class BattleSimulationTests(unittest.TestCase):
     def setUp(self):
         self.library = fixture_library()
         self.enterContext(single_subunits())
+        self.enterContext(patch.object(combat, "TACTICAL_DAMAGE_AT_ZERO_HEALTH", 1.0))
 
     def test_catalog_and_constructor_reject_air_sea_artillery_unknown_and_empty_rosters(self):
         self.assertEqual(set(combat.land_unit_types(self.library)), {"Fixture I", "Fixture II", "Fixture III"})
@@ -240,6 +241,55 @@ class BattleSimulationTests(unittest.TestCase):
         for capability in (0.0, 2.0):
             with patch("data.queries.unit_target_damage_multiplier", return_value=capability):
                 self.assertEqual(simulation._attack(wounded, target.data), wounded["attack"] * capability)
+
+    def test_tactical_health_floor_supports_proportional_partial_and_constant_attack(self):
+        simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"])
+        source, target = simulation.fighters
+        source.data.update(attack=80, max_health=100)
+        target.data["defense"] = 0
+        for floor, health, expected in ((0, 0, 0), (0, 25, 0.25), (0, 100, 1),
+                                         (0.5, 0, 0.5), (0.5, 25, 0.625), (0.5, 100, 1),
+                                         (1, 0, 1), (1, 25, 1), (1, 100, 1)):
+            with self.subTest(floor=floor, health=health), \
+                    patch.object(combat, "TACTICAL_DAMAGE_AT_ZERO_HEALTH", floor), \
+                    patch.object(c, "DAMAGE_AT_ZERO_HEALTH", 0.9):
+                source.data["health"] = health
+                self.assertAlmostEqual(simulation._attack(source.data, target.data), 80 * expected)
+                for attack_kind in (1.0, combat.MELEE_DAMAGE, combat.RAM_DAMAGE):
+                    self.assertAlmostEqual(simulation.damage_amount(source.data, target.data, 0.5, attack_kind),
+                                           math.ceil(80 * expected * 0.5) * combat.DAMAGE_SCALE * attack_kind)
+
+    def test_ai_damage_capability_cache_tracks_current_wounds(self):
+        simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"])
+        source, target = simulation.fighters
+        source.data.update(attack=40, max_health=100, health=25)
+        target.data["defense"] = 20
+        with patch.object(combat, "TACTICAL_DAMAGE_AT_ZERO_HEALTH", 0):
+            self.assertFalse(simulation._can_hurt(source, target))
+            source.data["health"] = 100
+            self.assertTrue(simulation._can_hurt(source, target))
+            source.data["health"] = 25
+            self.assertFalse(simulation._can_hurt(source, target))
+        self.assertTrue(simulation._can_hurt(source, target))
+
+    def test_displayed_division_attack_matches_sum_of_deployed_subunits(self):
+        unit = queries.create_unit_dict("Fixture I", "First Country", self.library)
+        unit["attack"] = 100
+        self.library["Fixture I"]["attack"] = 100
+        for size in (1, 3, 10):
+            for health in (1, 63, 70, 100):
+                for floor in (0, 0.5, 1):
+                    with self.subTest(size=size, health=health, floor=floor), \
+                            patch.dict(combat.SUBUNIT_COUNTS, {"infantry": size}), \
+                            patch.object(combat, "TACTICAL_DAMAGE_AT_ZERO_HEALTH", floor):
+                        unit["health"] = health
+                        simulation = combat.BattleSimulation(self.library, [unit], ["Fixture I"])
+                        target = simulation.divisions[1][0]
+                        attack = sum(simulation._attack(fighter.data, target.data) * fighter.attack_share
+                                     for fighter in simulation.divisions[0])
+                        self.assertAlmostEqual(combat.division_attack(unit, self.library), attack)
+                        if size == 10 and health == 63:
+                            self.assertAlmostEqual(attack, {0: 63, 0.5: 66.5, 1: 70}[floor])
 
     def test_shots_fired_when_wounded_keep_full_damage_after_shooter_dies(self):
         simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"])
@@ -821,6 +871,7 @@ class CloseCombatTests(unittest.TestCase):
     def setUp(self):
         self.library = fixture_library()
         self.enterContext(single_subunits())
+        self.enterContext(patch.object(combat, "TACTICAL_DAMAGE_AT_ZERO_HEALTH", 1.0))
 
     def encounter(self, *, controlled=None, shapes=("infantry", "infantry"), gap=None):
         simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"],
@@ -1131,6 +1182,7 @@ class TacticalTerrainTests(unittest.TestCase):
     def setUp(self):
         self.library = fixture_library()
         self.enterContext(single_subunits())
+        self.enterContext(patch.object(combat, "TACTICAL_DAMAGE_AT_ZERO_HEALTH", 1.0))
 
     def field(self, *features):
         return battle_terrain.Battlefield("plains", combat.ARENA_SIZE, combat.UNIT_RADIUS, features)
@@ -1392,6 +1444,7 @@ class CustomBattleScreenTests(unittest.TestCase):
     def setUp(self):
         self.library = fixture_library()
         self.enterContext(single_subunits())
+        self.enterContext(patch.object(combat, "TACTICAL_DAMAGE_AT_ZERO_HEALTH", 1.0))
         self.countries = {
             "Fixture A": {"name": "First Country", "is_playable": True, "flag_data": "DEFAULT"},
             "Fixture B": {"name": "Second Country", "is_playable": True, "flag_data": "DEFAULT"},
@@ -1533,19 +1586,26 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.click("Remove")
         self.assertFalse(self.screen.set_unit_options(0, [unit], health_percent=50))
 
-    def test_setup_and_preview_cards_show_full_attack_for_wounded_units(self):
+    def test_setup_and_preview_cards_include_spawn_count_and_wound_setting(self):
+        self.library["Fixture II"]["attack"] = 100
         self.fill_armies()
         unit = self.screen.rosters[0][0]
-        self.screen.set_unit_options(0, [unit], health_percent=20)
-        for mode in ("setup", "preview"):
-            if mode == "preview":
-                self.click("Simulate")
-            with self.subTest(mode=mode), patch.object(battle_screen.ui_elements, "draw_wrapped_icon_row") as row:
-                self.screen.card_surfaces.clear()
-                self.screen._cache_card(0, unit)
-                entries = row.call_args.args[2]
-                self.assertIn((c.ICON_ATTACK, queries.format_number(unit["attack"])), entries)
-                self.assertIn((c.ICON_HEALTH, queries.format_number(unit["health"])), entries)
+        for floor, attack in ((0, 63), (0.5, 66.5), (1, 70)):
+            with patch.dict(combat.SUBUNIT_COUNTS, {"infantry": 10}), \
+                    patch.object(combat, "TACTICAL_DAMAGE_AT_ZERO_HEALTH", floor):
+                self.screen.set_unit_options(0, [unit], health_percent=63)
+                for mode in ("setup", "preview"):
+                    if mode == "preview":
+                        self.click("Simulate")
+                        self.assertEqual(len(self.screen.simulation.divisions[0]), 7)
+                    with self.subTest(mode=mode, floor=floor), \
+                            patch.object(battle_screen.ui_elements, "draw_wrapped_icon_row") as row:
+                        self.screen.card_surfaces.clear()
+                        self.screen._cache_card(0, unit)
+                        entries = row.call_args.args[2]
+                        self.assertIn((c.ICON_ATTACK, queries.format_number(attack)), entries)
+                        self.assertIn((c.ICON_HEALTH, queries.format_number(unit["health"])), entries)
+                self.screen.return_to_setup()
 
     def test_dragging_a_card_health_bar_sets_starting_hp_for_the_card_or_its_group(self):
         self.fill_armies()

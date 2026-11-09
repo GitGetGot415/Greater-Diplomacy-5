@@ -11,7 +11,6 @@ from data import queries
 from data.io import starting_defaults
 from map_logic import custom_battle as combat
 from map_logic import battle_terrain
-from map_logic.system32 import combat_rules
 from ui.dialogs import pickers
 from ui.navigation import screen_runner
 from ui.navigation.modal_screen import ModalScreen
@@ -1265,7 +1264,7 @@ class CustomBattleScreen(Screen):
                     card.blit(text, text.get_rect(midtop=(width // 2, 52 + line_number * line_height)))
                 self._draw_health_bar(card, unit, EDIT_BAR_TOP)
                 stats_top = CARD_STATS_TOP
-            attack = unit["attack"] * combat_rules.effective_damage_multiplier(unit, scale_health=False)
+            attack = combat.division_attack(unit, self.library)
             entries = [(icon, queries.format_number(value)) for icon, value in (
                 (c.ICON_HEALTH, unit["health"]), (c.ICON_ATTACK, attack), (c.ICON_DEFENSE, unit["defense"]))]
             ui_elements.draw_wrapped_icon_row(
