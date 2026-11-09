@@ -31,6 +31,7 @@ class WebAudioTests(unittest.TestCase):
     def test_controller_uses_browser_decoder_only_for_unconverted_web_mp3(self):
         controller = object.__new__(game_main.Controller)
         controller.track_start_times = {}
+        controller.track_volumes = {}
         controller.music_pitch = 0.5
         controller.music_volume = 0.7
         controller.music = None

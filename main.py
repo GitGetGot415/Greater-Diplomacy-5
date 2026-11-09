@@ -9,7 +9,6 @@
 # non-interactive scripts (main.py), which hangs instead of resuming. Harmless
 # comment for desktop Python.
 
-import json
 import random
 
 import asyncio
@@ -346,7 +345,9 @@ class Controller:
         self.starting_song = None
         # The settings name of the tactical song list that is playing, or None.
         self._tactical_song_setting = None
-        self.track_start_times = {} # Keeps track of offsets specified in start_times.json
+        # Each album's volumes.json sets these per track, in the same format as assets/sounds/volumes.json.
+        self.track_start_times = {}
+        self.track_volumes = {}
 
         self.load_music_data()
         # Browsers block audio until it starts from within a genuine user gesture
@@ -446,7 +447,8 @@ class Controller:
         import beepbox_audio
         # Scan the hard drive to find whatever is actually there!
         synced_albums = {}
-        self.track_start_times = {} # Clear start times whenever we scan
+        self.track_start_times = {}
+        self.track_volumes = {}
         # Web uses the bundled BeepBox and UltraBox synths. Desktop needs the
         # packaged V8 runtime. QuickJS can parse a song but cannot keep dense
         # tracks synthesized fast enough for real-time playback.
@@ -464,15 +466,16 @@ class Controller:
                 if os.path.isdir(album_dir):
                     synced_albums[item] = []
 
-                    # Check for start_times.json
-                    album_start_times = {}
-                    start_times_path = os.path.join(album_dir, "start_times.json")
-                    if os.path.exists(start_times_path):
-                        try:
-                            with open(start_times_path, "r") as f:
-                                album_start_times = json.load(f)
-                        except Exception as e:
-                            print(f"Error loading start_times.json for {item}: {e}")
+                    album_volumes, album_offsets = {}, {}
+                    try:
+                        album_volumes, album_offsets = ui_elements.read_volumes_file(
+                            os.path.join(album_dir, "volumes.json"))
+                    except ValueError as error:
+                        # One album's invalid file must not stop the other albums from loading.
+                        print(error)
+                    # A key can match a track with the same name and another extension,
+                    # such as a BeepBox song's audio counterpart or a web build's converted MP3.
+                    volume_keys_by_stem = {os.path.splitext(name)[0]: name for name in album_volumes}
 
                     files = os.listdir(album_dir)
                     beepbox_stems = {
@@ -494,12 +497,11 @@ class Controller:
                         if track_path is not None:
                             synced_albums[item].append(track_path)
 
-                            # Map the start time if defined for either audio or JSON tracks.
-                            file_stem = os.path.splitext(file)[0]
-                            if file in album_start_times:
-                                self.track_start_times[track_path] = float(album_start_times[file])
-                            elif file_stem in album_start_times:
-                                self.track_start_times[track_path] = float(album_start_times[file_stem])
+                            key = (file if file in album_volumes
+                                   else volume_keys_by_stem.get(os.path.splitext(file)[0]))
+                            if key is not None:
+                                self.track_volumes[track_path] = album_volumes[key]
+                                self.track_start_times[track_path] = album_offsets[key]
 
         self.all_albums = synced_albums
 
@@ -641,10 +643,15 @@ class Controller:
         stem = os.path.splitext(song_path)[0]
         return next((stem + ext for ext in extensions if os.path.exists(stem + ext)), None)
 
+    def track_volume(self, track_path):
+        """The music volume setting times the track's volumes.json multiplier."""
+        return self.music_volume * self.track_volumes.get(track_path, 1.0)
+
     def play_specific_song(self, track_path):
         try:
-            # Fetch the defined start time, default to 0.0 if not listed
+            # The album's volumes.json offset, or the start of the track.
             start_time = self.track_start_times.get(track_path, 0.0)
+            volume = self.track_volume(track_path)
 
             import beepbox_audio
             speed = 0.5 + self.music_pitch
@@ -657,7 +664,7 @@ class Controller:
                     beepbox_audio.WebBeepBoxStream if IS_WEB
                     else beepbox_audio.BeepBoxStream
                 )
-                # start_times.json is authored in the source track's seconds.
+                # volumes.json offsets are authored in the source track's seconds.
                 # BeepBox's stream position is elapsed playback seconds, which
                 # differs when the user elected the static source-time timeline.
                 beepbox_start_time = start_time
@@ -665,21 +672,21 @@ class Controller:
                     beepbox_start_time /= speed
                 self.music = music_playback.BeepBoxPlayback(stream_type(
                     track_path,
-                    volume=self.music_volume,
+                    volume=volume,
                     speed=speed,
                     start_time=beepbox_start_time,
                 ))
             elif (IS_WEB and track_path.lower().endswith('.mp3')
                   and music_playback.pygame_audio_path(track_path) == track_path):
                 self.music = music_playback.WebMP3Playback(
-                    track_path, start_time, self.music_volume)
+                    track_path, start_time, volume)
             elif c.USE_SOLOUD:
                 self.music = music_playback.SoLoudPlayback(
                     self.soloud, self.music_stream, track_path,
-                    start_time, self.music_volume, speed)
+                    start_time, volume, speed)
             else:
                 self.music = music_playback.PygamePlayback(
-                    track_path, start_time, self.music_volume)
+                    track_path, start_time, volume)
 
             self.now_playing = track_path
         except Exception as e:

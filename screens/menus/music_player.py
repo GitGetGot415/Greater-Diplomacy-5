@@ -584,7 +584,7 @@ class Music_Player(ScrollPanes, Screen):
     def set_music_volume(self, val):
         self.controller.music_volume = val
         if self.controller.music is not None:
-            self.controller.music.set_volume(val)
+            self.controller.music.set_volume(self.controller.track_volume(self.controller.now_playing))
         self.save_audio_settings()
 
     def set_music_pitch(self, val):

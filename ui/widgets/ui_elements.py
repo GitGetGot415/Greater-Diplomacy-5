@@ -356,8 +356,13 @@ def parse_pos(val, limit, size):
             return base
     return val
 
-def load_sound_volumes(path=SOUND_VOLUMES_PATH):
-    """Read per-file SFX volume multipliers and start offsets at startup."""
+def read_volumes_file(path):
+    """Read a volumes.json file. Return ({filename: volume}, {filename: offset}).
+
+    Sound effects and music albums share this format. A number sets the volume
+    multiplier. An object can set "volume" and "offset"; missing values use 1.0
+    and 0.0. A missing file has no settings.
+    """
     try:
         with open(path, encoding="utf-8") as source:
             values = json.load(source)
@@ -366,14 +371,14 @@ def load_sound_volumes(path=SOUND_VOLUMES_PATH):
     except json.JSONDecodeError as error:
         raise ValueError(f"Fix invalid JSON in {path}: {error}") from error
     if not isinstance(values, dict):
-        raise ValueError(f"{path} must contain sound filenames and sound settings.")
+        raise ValueError(f"{path} must contain filenames and volume settings.")
     multipliers = {}
     offsets = {}
     for filename, value in values.items():
         if isinstance(value, dict):
             unknown = value.keys() - {"volume", "offset"}
             if unknown:
-                raise ValueError(f"{path}: {filename} has unknown sound settings: {', '.join(sorted(unknown))}.")
+                raise ValueError(f"{path}: {filename} has unknown volume settings: {', '.join(sorted(unknown))}.")
             volume, offset = value.get("volume", 1.0), value.get("offset", 0.0)
         else:
             volume, offset = value, 0.0
@@ -383,6 +388,12 @@ def load_sound_volumes(path=SOUND_VOLUMES_PATH):
                 raise ValueError(f"{path}: {filename} {name} must be a finite number of zero or greater.")
         multipliers[filename] = volume
         offsets[filename] = offset
+    return multipliers, offsets
+
+
+def load_sound_volumes(path=SOUND_VOLUMES_PATH):
+    """Read per-file SFX volume multipliers and start offsets at startup."""
+    multipliers, offsets = read_volumes_file(path)
     sound_volume_multipliers.clear()
     sound_volume_multipliers.update(multipliers)
     sound_start_offsets.clear()

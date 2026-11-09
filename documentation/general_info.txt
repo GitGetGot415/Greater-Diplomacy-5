@@ -433,7 +433,8 @@ A number sets the volume multiplier. For example, 1.0 uses the original level.
 An object can set both values, for example: "Info.mp3": {"volume": 1.0, "offset": 0.25}.
 The offset is in seconds from the start of the source sound, before the pitch setting applies.
 
-The sound effects volume setting multiplies the configured volume. This file does not control music.
+The sound effects volume setting multiplies the configured volume. This file does not control music;
+each music album has its own volumes.json. See MUSIC PLAYBACK.
 Both values must be finite numbers of zero or greater. Missing volume and offset values use 1.0 and 0.0.
 An offset at or past the sound length plays no sound. Restart the game after changes.
 The web build converts MP3 effects to OGG. Keep the original MP3 filenames in volumes.json;
@@ -525,6 +526,12 @@ The song list groups songs by album with album name dividers.
 
 beepbox_audio.py owns BeepBox and UltraBox JSON recognition, sample loading, and playback.
 Put song JSON files in an album folder under assets/music/.
+An album folder can have a volumes.json that sets each song's volume and start offset by filename.
+It uses the same format and rules as assets/sounds/volumes.json, for example:
+"Song.mp3": {"volume": 0.5, "offset": 3.2}. The music volume setting multiplies the song's volume.
+A key also matches a song with the same name and another extension, such as a BeepBox song's
+audio counterpart or a web build's converted MP3. An invalid file is reported and its album plays with no settings.
+The game reads these files when it scans the music library, at startup and after album or song changes.
 The "+ New Album" tile in the music screen asks for a name and makes an empty album folder.
 Every album shows a delete button, except the albums named in UNDELETABLE_ALBUMS in data/constants.py.
 Add the name of each album that ships with the game to that list.

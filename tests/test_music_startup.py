@@ -1,6 +1,9 @@
 """Check startup music timing against frame presentation and browser input."""
 
 import asyncio
+import json
+import os
+import tempfile
 import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
@@ -95,6 +98,7 @@ class TacticalMusicTests(unittest.TestCase):
         controller.music_pitch = 0.5
         controller.music_pitch_timeline = main.c.MUSIC_PITCH_TIMELINE_STATIC
         controller.track_start_times = {}
+        controller.track_volumes = {}
         self.original_music = self.playback()
         controller.music = self.original_music
         self.played = []
@@ -239,6 +243,48 @@ class TacticalMusicTests(unittest.TestCase):
         self.assertEqual(synth.call_count, 1)
         self.assertEqual(sum(call.args[0] == "battle.ogg" for call in playback.call_args_list), 1)
 
+
+class AlbumVolumesTests(unittest.TestCase):
+    """An album's volumes.json uses the format of assets/sounds/volumes.json."""
+
+    @classmethod
+    def setUpClass(cls):
+        with patch("screens.menus.menu.Menu.check_version"):
+            app_harness.boot()
+
+    def test_album_volumes_set_each_tracks_volume_and_offset(self):
+        import main
+        music_dir = self.enterContext(tempfile.TemporaryDirectory())
+        album = os.path.join(music_dir, "Fixture")
+        os.mkdir(album)
+        for name in ("one.mp3", "two.ogg", "three.wav"):
+            open(os.path.join(album, name), "wb").close()
+        with open(os.path.join(album, "volumes.json"), "w", encoding="utf-8") as stream:
+            # "two.mp3" names two.ogg by its other extension.
+            json.dump({"one.mp3": {"volume": 0.5, "offset": 2}, "two.mp3": 3}, stream)
+        controller = object.__new__(main.Controller)
+        controller.music_volume = 0.8
+        with patch.object(main.c, "MUSIC_DIR", music_dir),                 patch.object(main.queries, "get_active_albums", return_value=[]),                 patch.object(main.queries, "get_shuffle_disabled_tracks", return_value=[]),                 patch.object(main.queries, "get_starting_song", return_value=None):
+            controller.load_music_data()
+        track = lambda name: os.path.join(album, name).replace("\\", "/")
+        self.assertEqual(controller.track_start_times, {track("one.mp3"): 2, track("two.ogg"): 0.0})
+        self.assertAlmostEqual(controller.track_volume(track("one.mp3")), 0.4)
+        self.assertAlmostEqual(controller.track_volume(track("two.ogg")), 2.4)
+        self.assertAlmostEqual(controller.track_volume(track("three.wav")), 0.8)
+
+    def test_invalid_album_volumes_leave_the_album_playable_without_settings(self):
+        import main
+        music_dir = self.enterContext(tempfile.TemporaryDirectory())
+        album = os.path.join(music_dir, "Fixture")
+        os.mkdir(album)
+        open(os.path.join(album, "one.mp3"), "wb").close()
+        with open(os.path.join(album, "volumes.json"), "w", encoding="utf-8") as stream:
+            json.dump({"one.mp3": -1}, stream)
+        controller = object.__new__(main.Controller)
+        with patch.object(main.c, "MUSIC_DIR", music_dir),                 patch.object(main.queries, "get_active_albums", return_value=[]),                 patch.object(main.queries, "get_shuffle_disabled_tracks", return_value=[]),                 patch.object(main.queries, "get_starting_song", return_value=None),                 patch("builtins.print"):
+            controller.load_music_data()
+        self.assertEqual(controller.all_albums["Fixture"], [os.path.join(album, "one.mp3").replace("\\", "/")])
+        self.assertEqual((controller.track_volumes, controller.track_start_times), ({}, {}))
 
 if __name__ == "__main__":
     unittest.main()
