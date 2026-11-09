@@ -143,6 +143,13 @@ def process_bombardments(context):
 def process_pinning(context):
     """Rule: Units being attacked from a tile must defend the tile they're on, unless moving to friendly territory."""
     world_state = world_for(context)
+    tactical_edges = set()
+    # Flat processor fixtures may omit the optional tactical session.
+    if getattr(session_for(context), "tactical_mode", False):
+        for pair in combat_rules.find_meeting_pairs(world_state.map_data, world_state.nation_data):
+            prov1, prov2, units1, units2 = combat_rules.meeting_sides(world_state.id_to_province, pair)
+            if custom_battle.tactical_meeting_side(context, prov1, prov2, units1, units2) is not None:
+                tactical_edges.add(pair)
     incoming_attacks = {}
     for province in world_state.map_data.values():
         for unit in province.get("units", []):
@@ -178,6 +185,7 @@ def process_pinning(context):
         hostile_attackers = [
             info for info in attackers_info
             if queries.are_at_war(tile_owner, queries.get_unit_combat_owner(info[0]), world_state.nation_data)
+            and tuple(sorted((info[1], dest_id))) not in tactical_edges
         ]
 
         if not hostile_attackers: continue
@@ -296,6 +304,29 @@ def process_pinning(context):
                         # Pinned! Cannot attack outwards. Must defend.
                         order["path"] = []
 
+def defer_tactical_meeting(context, prov1, prov2, units1, units2, *, mid_movement=False):
+    """Hold tactical opponents at the destination; return other movers for ordinary crossing combat."""
+    winner = custom_battle.tactical_meeting_side(context, prov1, prov2, units1, units2)
+    if winner is None:
+        return None
+    sides = units1, units2
+    destination = (prov1, prov2)[1 - winner]
+    player = session_for(context).player_unit
+    country = queries.get_unit_combat_owner(player)
+    flag = "_skip_remaining_steps" if mid_movement else "_combat_locked"
+    deferred = {id(player)}
+    for opponent in sides[1 - winner]:
+        if not queries.are_at_war(country, queries.get_unit_combat_owner(opponent), world_for(context).nation_data):
+            continue
+        opponent[flag] = True
+        deferred.add(id(opponent))
+        # Mid-step movers normally sit outside province lists. Put held defenders
+        # back now so arrivals stop here and cannot capture the tile before combat.
+        if not any(other is opponent for other in destination["units"]):
+            destination["units"].append(opponent)
+    return tuple([unit for unit in side if id(unit) not in deferred] for side in sides)
+
+
 def resolve_meeting_engagement(prov1, prov2, units1, units2, nation_data):
     """Fights one meeting engagement: units1 (crossing into prov2) against
     units2 (crossing into prov1). Removes the dead from their provinces and
@@ -382,7 +413,7 @@ def resolve_meeting_engagement(prov1, prov2, units1, units2, nation_data):
     return MeetingResult(surviving_units1, surviving_units2, fought)
 
 def process_meeting_engagements(context):
-    """Rule: If 2 units move into each other, let them engage in combat in between the tiles."""
+    """Resolve hostile crossings, or defer a tactical crossing to its destination tile."""
     world_state = world_for(context)
     # Which tiles swapped garrisons is decided by combat_rules, the same rule
     # the prediction bubbles are drawn from. The sides are read per pair, as we
@@ -390,6 +421,11 @@ def process_meeting_engagements(context):
     # the next engagement its province takes part in.
     for pair in combat_rules.find_meeting_pairs(world_state.map_data, world_state.nation_data):
         prov1, prov2, units1, units2 = combat_rules.meeting_sides(world_state.id_to_province, pair)
+        remaining = defer_tactical_meeting(context, prov1, prov2, units1, units2)
+        if remaining is not None:
+            units1, units2 = remaining
+        if not units1 or not units2:
+            continue
         resolve_meeting_engagement(prov1, prov2, units1, units2, world_state.nation_data)
 
 def process_combat(context):

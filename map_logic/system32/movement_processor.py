@@ -217,6 +217,12 @@ def _resolve_step_swaps(context, moving_units, step, get_eff_speed):
         units1 = [m for m in by_origin.get(origin, []) if m["order"]["path"][0] == dest]
         units2 = [m for m in by_origin.get(dest, []) if m["order"]["path"][0] == origin]
 
+        remaining = combat_processor.defer_tactical_meeting(
+            context, prov1, prov2, units1, units2, mid_movement=True)
+        if remaining is not None:
+            units1, units2 = remaining
+        if not units1 or not units2:
+            continue
         result = combat_processor.resolve_meeting_engagement(
             prov1, prov2, units1, units2, world_state.nation_data)
         survivors = result.survivors1 + result.survivors2

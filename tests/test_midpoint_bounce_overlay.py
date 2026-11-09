@@ -2,6 +2,7 @@
 
 import unittest
 from types import SimpleNamespace
+from unittest.mock import patch
 
 
 from ui.rendering import overlay_renderer
@@ -98,6 +99,25 @@ class BouncePreviewTests(unittest.TestCase):
 
         self.assertTrue(outcome[0]["overrun"])
         self.assertEqual((outcome[0]["origin_id"], outcome[0]["target_id"]), (2, 1))
+
+    def test_tactical_crossing_preview_follows_the_player_in_both_directions(self):
+        library = {"Fixture Infantry I": {"naval_unit": False, "bombard_range": 0}}
+        for player_side in (1, 2):
+            with self.subTest(player_side=player_side), \
+                    patch("data.queries.get_unit_library", return_value=library), \
+                    patch.object(overlay_renderer, "estimated_combat_outcome") as forecast:
+                self.screen.viewing_ai_moves = True
+                self.screen.tactical_mode = True
+                for province in self.screen.map_data.values():
+                    province["units"][0]["type"] = "Fixture Infantry I"
+                self.screen.player_unit = self.screen.map_data[player_side]["units"][0]
+                outcome = overlay_renderer.midpoint_bounce_outcomes(self.screen)
+                self.assertTrue(outcome[0]["overrun"])
+                self.assertEqual((outcome[0]["origin_id"], outcome[0]["target_id"]),
+                                 (player_side, 3 - player_side))
+                forecast.assert_not_called()
+                self.screen.viewing_ai_moves = False
+                self.assertEqual(overlay_renderer.midpoint_bounce_outcomes(self.screen), [])
 
     def test_army_group_zoom_hides_bounce_and_overrun_previews(self):
         self.screen.viewing_ai_moves = True

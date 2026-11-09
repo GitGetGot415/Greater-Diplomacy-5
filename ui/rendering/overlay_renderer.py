@@ -3,6 +3,7 @@ import math
 import numpy as np
 import data.constants as c
 from data import queries
+from map_logic import custom_battle
 from ui.rendering import map_utils, symbol_loader
 from ui.rendering.font_manager import fonts
 from map_logic.system32 import combat_rules
@@ -702,7 +703,8 @@ def midpoint_bounce_outcomes(map_screen):
     side is completely destroyed by that first exchange, the stronger side
     does not actually bounce; it keeps moving into the other province. Slower
     fights still use the ordinary bounce marker because both sides survive the
-    first exchange and are stopped there for the turn.
+    first exchange and are stopped there for the turn. Tactical crossings show
+    the player's advance instead; the resulting tile battle is still undecided.
     """
     if not strategic_detail_markers_are_visible(map_screen):
         return []
@@ -718,6 +720,11 @@ def midpoint_bounce_outcomes(map_screen):
             map_screen.map_data, map_screen.nation_data, visible_to):
         prov_a, prov_b, side_a, side_b = combat_rules.meeting_sides(
             map_screen.id_to_province, pair, visible_to)
+        tactical_side = custom_battle.tactical_meeting_side(map_screen, prov_a, prov_b, side_a, side_b)
+        if tactical_side is not None:
+            origin, target = ((prov_a, prov_b) if tactical_side == 0 else (prov_b, prov_a))
+            outcomes.append({"pair": pair, "origin_id": origin["id"], "target_id": target["id"], "overrun": True})
+            continue
         estimate = estimated_combat_outcome(
             [side_a, side_b], map_screen.nation_data,
             grounded_sides={index for index, province in enumerate((prov_a, prov_b))

@@ -321,6 +321,13 @@ The tactical division cannot be an artillery-type unit: choosing a tile or stack
 stack holding only artillery offers no division.
 The flow is **campaign encounter → preview → actual battle → campaign**.
 
+If the tactical division and hostile land forces attempt to cross the same border in opposite directions,
+the tactical division wins the movement clash. Its opponents stay on the destination tile and the tactical
+division enters that tile, where the encounter takes place. This applies at turn start and on later movement steps.
+The crossing deals no automatic combat damage and does not award victory in the tactical battle.
+The map's crossing preview points toward the tactical division's destination when both orders are visible.
+Other clashes keep the normal movement and combat rules; tournament and real-time modes do not use this exception.
+
 After each turn resolves, once per turn, the game opens preview at once when the player's land unit shares a tile
 with hostile land units that can fight a tactical battle. Preview starts with that unit controlled. The friendly army is that unit followed by friendly
 land units on the tile, and the enemy army is the hostile land units there, each up to the army size limit.

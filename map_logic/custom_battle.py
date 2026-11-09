@@ -223,6 +223,31 @@ def tactical_encounter(context, province):
     return campaign_forces(unit, province, world_for(context).nation_data, queries.get_unit_library(context))
 
 
+def tactical_meeting_side(context, prov1, prov2, units1, units2):
+    """The tactical player's movement side, when a hostile crossing can become a tile encounter."""
+    session = session_for(context)
+    # Standalone rule tests can omit session fields. Multiplayer has no tactical encounters.
+    if (not getattr(session, "tactical_mode", False)
+            or getattr(session, "multiplayer_mode", False)
+            or getattr(session, "realtime_multiplayer", False)):
+        return None
+    unit = getattr(session, "player_unit", None)
+    if unit is None:
+        return None
+    for index, (side, opponents) in enumerate(((units1, units2), (units2, units1))):
+        if any(other is unit for other in side):
+            destination = (prov1, prov2)[1 - index]
+            if unit.get("speed", 1) <= 0 or not queries.can_land_units_enter(
+                    queries.get_unit_combat_owner(unit), destination, world_for(context).nation_data):
+                return None
+            # Only hostile land forces, including artillery sitting the battle out,
+            # can start the existing tactical encounter flow.
+            forces = campaign_forces(unit, {"units": [unit, *opponents]},
+                                     world_for(context).nation_data, queries.get_unit_library(context))
+            return index if forces is not None else None
+    return None
+
+
 def campaign_roster(units, library):
     """Battle roster entries for campaign units, keeping each unit's fraction of health."""
     roster = []
