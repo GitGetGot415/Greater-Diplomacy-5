@@ -492,8 +492,9 @@ Platform builds and browser checks remain separate verification steps.
 MUSIC PLAYBACK
 ==============
 
-SoLoud music voices are protected from sound-effect voice limits. Protection applies when a song starts and
-when seeking replaces its voice, so overlapping effects cannot displace music. Pygame streaming music uses
+SoLoud music voices use protection against voice replacement and must-tick behavior to reserve an active mixing
+slot. Protection alone does not prevent music from becoming temporarily silent under many overlapping effects.
+Both settings apply when a song starts and when seeking replaces its voice. Pygame streaming music uses
 its separate music channel; desktop BeepBox and UltraBox playback reserve their mixer channel for music.
 
 Desktop startup music begins after the first rendered frame is displayed.

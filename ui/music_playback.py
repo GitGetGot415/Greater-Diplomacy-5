@@ -122,10 +122,12 @@ class SoLoudPlayback:
         engine.set_pause(self.handle, False)
 
     def _start_voice(self):
-        # Protect music before unpausing: bursts of louder effects must not
-        # virtualize or steal the voice, including the replacement made by seek.
+        # Protection prevents voice stealing; must-tick also reserves an active
+        # mixing slot. Protection alone still lets loud effects virtualize music.
+        # Apply both before unpausing, including the replacement made by seek.
         self.handle = self.engine.play(self.stream, aPaused=1)
         self.engine.set_protect_voice(self.handle, True)
+        self.engine.set_inaudible_behavior(self.handle, True, False)
         self.engine.set_volume(self.handle, self.volume)
 
     def _load(self):

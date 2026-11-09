@@ -1,3 +1,6 @@
+import os
+import subprocess
+import sys
 import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock, call, patch
@@ -46,6 +49,9 @@ class FakeSoloud:
     def set_protect_voice(self, _handle, _protected):
         pass
 
+    def set_inaudible_behavior(self, _handle, _must_tick, _kill):
+        pass
+
     def seek(self, _handle, position):
         self.seeks.append(position)
         self.source_position = position
@@ -79,7 +85,10 @@ class MusicPitchTimelineTests(unittest.TestCase):
             playback = SoLoudPlayback(engine, stream, "fixture.ogg", 12, 0.2, 0.8)
         engine.play.assert_called_once_with(stream, aPaused=1)
         engine.set_protect_voice.assert_called_once_with(playback.handle, True)
+        engine.set_inaudible_behavior.assert_called_once_with(playback.handle, True, False)
         self.assertLess(engine.mock_calls.index(call.set_protect_voice(11, True)),
+                        engine.mock_calls.index(call.set_pause(11, False)))
+        self.assertLess(engine.mock_calls.index(call.set_inaudible_behavior(11, True, False)),
                         engine.mock_calls.index(call.set_pause(11, False)))
         engine.seek.assert_called_once_with(11, 12)
         engine.set_volume.assert_called_once_with(11, 0.2)
@@ -99,6 +108,7 @@ class MusicPitchTimelineTests(unittest.TestCase):
                 engine.stop.assert_called_once_with(11)
                 engine.play.assert_called_once_with(stream, aPaused=1)
                 engine.set_protect_voice.assert_called_once_with(22, True)
+                engine.set_inaudible_behavior.assert_called_once_with(22, True, False)
                 engine.seek.assert_called_once_with(22, 24)
                 engine.set_volume.assert_called_once_with(22, 0.2)
                 engine.set_relative_play_speed.assert_called_once_with(22, 0.8)
@@ -108,6 +118,61 @@ class MusicPitchTimelineTests(unittest.TestCase):
                 else:
                     self.assertLess(engine.mock_calls.index(call.set_protect_voice(22, True)),
                                     engine.mock_calls.index(call.set_pause(22, False)))
+                    self.assertLess(engine.mock_calls.index(call.set_inaudible_behavior(22, True, False)),
+                                    engine.mock_calls.index(call.set_pause(22, False)))
+
+    @unittest.skipUnless(os.environ.get("GD5_RUN_NATIVE_AUDIO_TESTS") == "1", "native audio integration is opt-in")
+    def test_native_music_remains_audible_when_effects_exceed_active_voice_limit(self):
+        # Isolate the native engine and use NULLDRIVER: no audio device or real
+        # song is needed. Silent effects with high volume still occupy mix slots.
+        script = r"""
+import ctypes
+import os
+from pathlib import Path
+import tempfile
+import wave
+if os.name == 'nt':
+    ctypes.windll.kernel32.SetErrorMode(0x0001 | 0x0002 | 0x8000)
+from soloud import Soloud, Wav, WavStream, Soloud_mixSigned16
+from ui.music_playback import SoLoudPlayback
+
+engine = Soloud()
+assert engine.init(aBackend=Soloud.NULLDRIVER, aSamplerate=44100, aBufferSize=512) == 0
+stream, effect = WavStream(), Wav()
+try:
+    assert engine.set_max_active_voice_count(4) == 0
+    silence = (ctypes.c_short * 44100)()
+    assert effect.load_raw_wave16(silence, len(silence)) == 0
+    output = (ctypes.c_short * 1024)()
+    def music_peak():
+        for _ in range(4):
+            Soloud_mixSigned16(engine.objhandle, output, 512)
+        return max(abs(sample) for sample in output)
+    with tempfile.TemporaryDirectory() as directory:
+        track = Path(directory) / 'fixture.wav'
+        with wave.open(str(track), 'wb') as writer:
+            writer.setparams((1, 2, 44100, 0, 'NONE', 'not compressed'))
+            writer.writeframes(bytes((ctypes.c_short * 44100)(*([10000] * 44100))))
+        playback = SoLoudPlayback(engine, stream, str(track), 0, 0.1, 1)
+        baseline = music_peak()
+        assert baseline > 0
+        for _ in range(engine.get_max_active_voice_count() * 2):
+            engine.play(effect, aVolume=1)
+        assert engine.is_valid_voice_handle(playback.handle)
+        assert music_peak() == baseline, 'music stopped mixing under overlapping effects'
+        playback.seek(0.25)
+        assert music_peak() == baseline, 'seeking lost the reserved music mixing slot'
+        playback.stop()
+finally:
+    engine.deinit()
+    stream.destroy()
+    effect.destroy()
+    engine.destroy()
+"""
+        result = subprocess.run([sys.executable, "-X", "faulthandler", "-c", script],
+                                cwd=os.path.dirname(os.path.dirname(__file__)),
+                                capture_output=True, text=True, timeout=30)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_beepbox_speed_change_preserves_musical_progress(self):
         stream = FakeBeepBoxStream(position=240, speed=1.0)
