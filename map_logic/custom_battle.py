@@ -55,7 +55,7 @@ TARGET_CELL = 256.0
 RANK_GAP = 40.0  # Between ranks, front to back.
 SUBUNIT_SPACING = 50.0  # Between neighboring sub-units along a division's line.
 # Distance between the two armies' front ranks at deployment, centered on the battlefield.
-SPAWN_FRONT_GAP = 2000.0
+SPAWN_FRONT_GAP = 1500.0
 SPAWN_MARGIN = 100.0  # Between the battlefield edge and the last rank of the largest army.
 # The battlefield is wide enough for two full armies behind their front ranks.
 ARENA_SIZE = (SPAWN_FRONT_GAP + 2 * (SPAWN_MARGIN + (c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE - 1) * RANK_GAP), 1100.0)
