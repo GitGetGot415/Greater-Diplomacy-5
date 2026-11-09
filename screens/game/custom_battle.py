@@ -64,7 +64,7 @@ TEAM_COLORS = ((85, 170, 245), (235, 100, 90))
 # Actual battle fills the whole screen. The mouse wheel steps through these scales, starting at 1.0.
 ZOOM_LEVELS = (0.2, 0.3, 0.4, 0.5, 0.6, 0.75, 1.0, 1.25, 1.5, 2.0)
 DEFAULT_ZOOM_INDEX = ZOOM_LEVELS.index(1.0)
-AIM_CAMERA_OFFSET = 0.35  # Share of the pointer's distance from the view center, in screen pixels.
+AIM_CAMERA_OFFSET = 0.6  # Share of the pointer's distance from the view center, in screen pixels.
 OVERVIEW_ZOOM = 0.6
 OVERVIEW_SYMBOL_SIZE = 16
 MIN_PLAYER_INDICATOR_SCALE = 0.85
