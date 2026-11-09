@@ -614,15 +614,15 @@ class BattleSimulation:
 
     @staticmethod
     def _attack(source, target):
-        """Shared health scaling and target capability rules own attack strength."""
-        return sum(shot[1] for shot in combat_rules.damage_shots([source], [target]))
+        """Living tactical sub-units keep full attack; shared target restrictions still apply."""
+        return sum(shot[1] for shot in combat_rules.damage_shots([source], [target], scale_health=False))
 
     @classmethod
     def damage_amount(cls, source, target, attack_share, multiplier=1.0):
         """Tactical pacing follows full defense and division sharing for every attack kind.
 
         Round before pacing so even the smallest positive hits take longer than before.
-        The existing minimum hit prevents weakening armies from approaching zero forever.
+        Each surviving sub-unit keeps its attack strength as health falls.
         """
         loss = max(0.0, cls._attack(source, target) - target["defense"]) * attack_share
         return math.ceil(loss) * DAMAGE_SCALE * multiplier
@@ -673,11 +673,10 @@ class BattleSimulation:
         return (objective.x - dy * sideways, objective.y + dx * sideways), (dx, dy)
 
     def _can_hurt(self, shooter, target):
-        """Whether a shooter at full health could do any damage to this kind of target; cached per type pair."""
+        """Whether a sub-unit can damage this target type; cached per type pair."""
         key = (shooter.data["type"], target.data["type"])
         if key not in self._hurts:
-            full = dict(shooter.data, health=shooter.data["max_health"])
-            self._hurts[key] = self._attack(full, target.data) > target.data["defense"]
+            self._hurts[key] = self._attack(shooter.data, target.data) > target.data["defense"]
         return self._hurts[key]
 
     def _choose_target(self, fighter, enemies):

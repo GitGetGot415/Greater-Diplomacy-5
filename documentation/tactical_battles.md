@@ -54,7 +54,7 @@ Reordering preserves those choices, and replaying uses the configured starting H
 New units start at full health. The two sides initially use the first two playable
 countries by display name, or the same country when only one is available.
 
-Editing cards show the unit name, symbols for health, health-adjusted attack, and defense
+Editing cards show the unit name, symbols for health, full tactical attack, and defense
 (including zero defense), and a health bar along the bottom with the nationality's flag to its right.
 The bar is shaded in dithered bands and blends from green to yellow at half health to red at zero.
 Drag along the bar to set that unit's starting HP; on a card in a selected group, it sets the whole group.
@@ -157,10 +157,12 @@ A full division therefore hits about as hard as one unsplit unit, and the full s
 
 Each hit is reduced by the target's full defense stat, down to zero damage.
 Tactical defense stays constant as health falls; campaign combat scales defense with health.
+Each surviving tactical sub-unit also keeps its full attack strength as health falls, for shooting, melee, and ramming.
+Losing sub-units reduces a division's total firepower, but wounds do not weaken the surviving sub-units' attacks.
 After defense and sub-unit damage sharing, positive damage rounds up before the tactical pacing multiplier applies.
 The multiplier slows even small hits without making previously vulnerable targets immune.
 Shooting, melee, and ramming use the same damage calculation and target capability rules.
-A shot's damage uses the shooter's strength when it fired and the rules for the unit it actually hits.
+A shot retains the shooter's attack statistics when fired and uses the rules for the unit it actually hits.
 A shot already in flight still lands after its shooter is destroyed.
 
 Every sub-unit has the same long weapon range. Shots fly fast in a straight line and hit the first enemy they cross.
@@ -361,5 +363,6 @@ Unit statistics and capabilities come from [unit_data.json](../data/json/unit_da
 Research dates come from [research_template.json](../data/json/research_template.json) through the shared [unit queries](../data/queries/unit_info.py).
 Read those sources for current tuning values.
 
-The prototype converts movement and range to battlefield pixels and uses shared health-scaled attack.
+The prototype converts movement and range to battlefield pixels and shares target capability rules with campaign combat.
+Tactical attacks disable health scaling; campaign combat retains health-scaled attack.
 The shared campaign combat rules remain documented in [non_llm_ai.txt](non_llm_ai.txt).

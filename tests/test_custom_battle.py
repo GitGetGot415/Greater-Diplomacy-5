@@ -222,6 +222,39 @@ class BattleSimulationTests(unittest.TestCase):
         simulation.advance(combat.FIXED_STEP)
         self.assertEqual(target.data["health"], 100 - 2 * 10 * combat.DAMAGE_SCALE)
 
+    def test_tactical_attack_ignores_wounds_while_campaign_attack_still_scales(self):
+        simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"])
+        source, target = simulation.fighters
+        healthy = dict(source.data, health=100, max_health=100, attack=40)
+        wounded = dict(healthy, health=1)
+        target.data["defense"] = 10
+        before = copy.deepcopy(wounded)
+        with patch.object(c, "DAMAGE_AT_ZERO_HEALTH", 0):
+            for multiplier in (1.0, combat.MELEE_DAMAGE, combat.RAM_DAMAGE):
+                self.assertEqual(simulation.damage_amount(wounded, target.data, 1, multiplier),
+                                 simulation.damage_amount(healthy, target.data, 1, multiplier))
+            full_campaign = sum(shot[1] for shot in combat.combat_rules.damage_shots([healthy], [target.data]))
+            wounded_campaign = sum(shot[1] for shot in combat.combat_rules.damage_shots([wounded], [target.data]))
+            self.assertLess(wounded_campaign, full_campaign)
+        self.assertEqual(wounded, before)
+        for capability in (0.0, 2.0):
+            with patch("data.queries.unit_target_damage_multiplier", return_value=capability):
+                self.assertEqual(simulation._attack(wounded, target.data), wounded["attack"] * capability)
+
+    def test_shots_fired_when_wounded_keep_full_damage_after_shooter_dies(self):
+        simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"])
+        hold_still(simulation)
+        source, target = simulation.fighters
+        source.data["health"] = 1
+        target.data["defense"] = 10
+        snapshot = dict(source.data)
+        simulation.projectiles = [combat.Projectile(source, snapshot, target.x - 5, target.y, 300, 0, 1)]
+        source.data["health"] = 0
+        simulation.advance(combat.FIXED_STEP)
+        expected = simulation.damage_amount(dict(snapshot, health=snapshot["max_health"]), target.data, 1)
+        self.assertGreater(expected, 0)
+        self.assertEqual(target.data["health"], target.data["max_health"] - expected)
+
     def test_shot_damage_uses_the_unit_hit_and_lands_after_the_shooter_dies(self):
         simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I", "Fixture I"])
         hold_still(simulation)
@@ -848,6 +881,35 @@ class CloseCombatTests(unittest.TestCase):
         self.assertEqual(results[0], results[1])
         self.assertEqual(results[0][2], 0)
 
+    def test_wounded_player_and_ai_melee_keep_full_damage(self):
+        for controlled in (None, 0):
+            with self.subTest(controlled=controlled):
+                simulation = self.encounter(controlled=controlled)
+                hold_still(simulation)
+                source, target = simulation.fighters
+                source.data["health"] = 1
+                source.cooldown = 0
+                target.data["defense"] = 10
+                simulation.set_player_input(fire=True)
+                simulation.advance(combat.FIXED_STEP)
+                expected = simulation.damage_amount(dict(source.data, health=source.data["max_health"]),
+                                                     target.data, source.attack_share, combat.MELEE_DAMAGE)
+                self.assertGreater(expected, 0)
+                self.assertEqual(target.data["health"], target.data["max_health"] - expected)
+
+    def test_ram_impact_damage_does_not_fall_with_attacker_health(self):
+        losses = []
+        for health in (100, 1):
+            simulation = self.encounter(shapes=("tank", "infantry"), gap=combat.UNIT_RADIUS * 2 + 2)
+            source, target = simulation.fighters
+            source.data["health"] = health
+            target.data["defense"] = 10
+            hits = self.move_contact(simulation, [(source, combat.RAM_REFERENCE_SPEED * combat.FIXED_STEP, 0),
+                                                   (target, 0, 0)])
+            losses.append(sum(loss for victim, loss in hits if victim is target))
+        self.assertGreater(losses[0], 0)
+        self.assertEqual(losses[0], losses[1])
+
     def test_a_nearer_enemy_behind_the_player_does_not_block_a_melee_target_in_front(self):
         simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"] * 2,
                                              controlled_index=0, seed=2)
@@ -1470,6 +1532,20 @@ class CustomBattleScreenTests(unittest.TestCase):
                 self.assertEqual(unit, before)
         self.click("Remove")
         self.assertFalse(self.screen.set_unit_options(0, [unit], health_percent=50))
+
+    def test_setup_and_preview_cards_show_full_attack_for_wounded_units(self):
+        self.fill_armies()
+        unit = self.screen.rosters[0][0]
+        self.screen.set_unit_options(0, [unit], health_percent=20)
+        for mode in ("setup", "preview"):
+            if mode == "preview":
+                self.click("Simulate")
+            with self.subTest(mode=mode), patch.object(battle_screen.ui_elements, "draw_wrapped_icon_row") as row:
+                self.screen.card_surfaces.clear()
+                self.screen._cache_card(0, unit)
+                entries = row.call_args.args[2]
+                self.assertIn((c.ICON_ATTACK, queries.format_number(unit["attack"])), entries)
+                self.assertIn((c.ICON_HEALTH, queries.format_number(unit["health"])), entries)
 
     def test_dragging_a_card_health_bar_sets_starting_hp_for_the_card_or_its_group(self):
         self.fill_armies()
