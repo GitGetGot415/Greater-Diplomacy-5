@@ -1,6 +1,7 @@
 """Edit Battle, read-only Preview Battle, and optional player-controlled combat."""
 
 import math
+import os
 import random
 
 import pygame
@@ -104,6 +105,12 @@ ROUNDED_SHAPES = frozenset(("armored_car", "motorized"))
 UNARMED_SHAPES = frozenset(("motorized", "mechanized", "ifv"))  # Drawn without the gun line.
 ROUNDED_CORNER_RADIUS = 6
 SPRITE_ANGLE_STEP = 4  # Degrees between the cached rotations of each battlefield shape.
+VEHICLE_ART_FAMILIES = {
+    "Armored Car": "Armored Car", "WW1 Armored Car": "Armored Car",
+    "Light Tank": "Light", "Medium Tank": "Medium", "Heavy Tank": "Heavy",
+    "Main Battle Tank": "MBT", "Super Heavy Tank": "Super Heavy",
+}
+VEHICLE_ART_DIR = os.path.join(c.ASSETS_ROOT_DIR, "battles")
 DEAD_COLOR = (53, 65, 44)
 BATTLE_HEALTH_COLOR = (105, 215, 85)
 SHOT_COLOR = (250, 232, 150)
@@ -119,6 +126,36 @@ CONTROL_KEYS = frozenset((pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d))
 
 _BODY_SPRITES = {}
 _ROTATED_SPRITES = {}
+_VEHICLE_ART = {}
+
+
+def _load_vehicle_art(artwork):
+    """Load both layers once, before the battlefield starts drawing."""
+    if artwork not in _VEHICLE_ART:
+        chassis, turret = (pygame.image.load(os.path.join(VEHICLE_ART_DIR, part, artwork + ".png"))
+                           .convert_alpha() for part in ("chassis", "turret"))
+        # The turret's round housing occupies a square at the left of the image.
+        # Pad the barrel side symmetrically so rotation keeps that housing on the hull center.
+        pivot = turret.get_height() // 2
+        centered = pygame.Surface((2 * (turret.get_width() - pivot), turret.get_height()), pygame.SRCALPHA)
+        centered.blit(turret, (centered.get_width() // 2 - pivot, 0))
+        _VEHICLE_ART[artwork] = chassis, centered
+    return _VEHICLE_ART[artwork]
+
+
+def _vehicle_sprite(artwork, shape, part, color, scale):
+    key = (artwork, shape, part, tuple(color), scale)
+    if key not in _BODY_SPRITES:
+        chassis, turret = _VEHICLE_ART[artwork]
+        width, height = UNIT_SHAPE_SIZES[shape]
+        source = turret if part == "turret" else chassis
+        if part == "turret":
+            factor = width * scale / chassis.get_width()
+            size = tuple(max(1, round(side * factor)) for side in source.get_size())
+        else:
+            size = (max(1, round(width * scale)), max(1, round(height * scale)))
+        _BODY_SPRITES[key] = pygame.transform.scale(symbol_loader.colorize_red_image(source, color), size)
+    return _BODY_SPRITES[key]
 
 
 def _unit_sprite(shape, color, scale, barrel):
@@ -148,19 +185,29 @@ def clear_rotated_sprites():
     _ROTATED_SPRITES.clear()
 
 
-def draw_unit_shape(surface, shape, center, angle, color, *, scale=1.0, aim=None):
-    """Draw the same geometric silhouettes in setup cards and on the field.
-
-    With ``aim``, the gun line is drawn along ``aim`` instead of the hull ``angle``.
-    """
+def _draw_rotated_sprite(surface, sprite, key, center, angle):
     step = round(math.degrees(angle) / SPRITE_ANGLE_STEP) % (360 // SPRITE_ANGLE_STEP)
-    key = (shape, tuple(color), scale, aim is None, step)
+    key = (*key, step)
     rotated = _ROTATED_SPRITES.get(key)
     if rotated is None:
-        rotated = pygame.transform.rotate(_unit_sprite(shape, color, scale, aim is None),
-                                          -step * SPRITE_ANGLE_STEP)
+        rotated = pygame.transform.rotate(sprite, -step * SPRITE_ANGLE_STEP)
         _ROTATED_SPRITES[key] = rotated
     surface.blit(rotated, rotated.get_rect(center=center))
+
+
+def draw_unit_shape(surface, shape, center, angle, color, *, scale=1.0, aim=None, artwork=None):
+    """Draw vehicle artwork or geometric silhouettes in setup cards and on the field.
+
+    With ``aim``, the turret or gun line follows ``aim`` independently of the hull.
+    """
+    if artwork is not None:
+        for part, heading in (("chassis", angle), ("turret", angle if aim is None else aim)):
+            sprite = _vehicle_sprite(artwork, shape, part, color, scale)
+            key = (artwork, shape, part, tuple(color), scale)
+            _draw_rotated_sprite(surface, sprite, key, center, heading)
+        return
+    key = (shape, tuple(color), scale, aim is None)
+    _draw_rotated_sprite(surface, _unit_sprite(shape, color, scale, aim is None), key, center, angle)
     if aim is not None and shape not in UNARMED_SHAPES:
         # Same reach as the sprite's own gun line at full scale: half the body plus the sprite's margin.
         length = (UNIT_SHAPE_SIZES[shape][0] / 2 + 9) * scale
@@ -391,6 +438,13 @@ class CustomBattleScreen(Screen):
     def refresh_ui(self):
         self.unit_buttons = {}
         self.elements = []
+        self.vehicle_artwork = {}
+        for name in dict.fromkeys(unit["type"] for roster in self.rosters for unit in roster):
+            family = queries.get_unit_metadata(name, self.library)["family"]
+            artwork = VEHICLE_ART_FAMILIES.get(family)
+            self.vehicle_artwork[name] = artwork
+            if artwork is not None:
+                _load_vehicle_art(artwork)
         if self.mode == "setup" or (self.mode in {"battle", "result"} and self.campaign is None):
             self.elements.append(Button(20, 20, "small", "red", "Exit", self.leave,
                                         sound_kind="back"))
@@ -1096,7 +1150,8 @@ class CustomBattleScreen(Screen):
                 stats_top = PREVIEW_STATS_TOP
             else:
                 draw_unit_shape(card, combat.unit_shape(name, self.library), (width // 2, 28),
-                                0 if side == 0 else math.pi, TEAM_COLORS[side], scale=1.4)
+                                0 if side == 0 else math.pi, TEAM_COLORS[side], scale=1.4,
+                                artwork=self.vehicle_artwork[name])
                 label = queries.get_unit_display_name(name, self.library)
                 line_height = font.get_height()
                 for line_number, line in enumerate(wrap_text(label, font, width - 16)[:3]):
@@ -1224,10 +1279,10 @@ class CustomBattleScreen(Screen):
                 continue
             if not fighter.alive:
                 draw_unit_shape(surface, fighter.shape, center, fighter.angle, DEAD_COLOR,
-                                scale=zoom, aim=fighter.aim)
+                                scale=zoom, aim=fighter.aim, artwork=self.vehicle_artwork[fighter.data["type"]])
                 continue
             draw_unit_shape(surface, fighter.shape, center, fighter.angle, TEAM_COLORS[fighter.side],
-                            scale=zoom, aim=fighter.aim)
+                            scale=zoom, aim=fighter.aim, artwork=self.vehicle_artwork[fighter.data["type"]])
             bar = pygame.Rect(center[0] - bar_size[0] // 2, center[1] - round(23 * zoom), *bar_size)
             pygame.draw.rect(surface, OUTLINE_COLOR, bar)
             ratio = fighter.data["health"] / fighter.data["max_health"]

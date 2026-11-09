@@ -124,7 +124,9 @@ The two armies deploy facing each other around the middle of the battlefield, th
 Each division deploys as one vertical line of its sub-units, centered top to bottom, in its own rank.
 Sub-units keep the same spacing along a line, so a division with fewer sub-units makes a shorter line.
 Roster order runs front to back, and the battlefield is wide enough for two full armies.
-Tanks and vehicles use rectangles, infantry and militia use circles, and cavalry uses ovals.
+Armored cars, light tanks, medium tanks, heavy tanks, main battle tanks, and super heavy tanks use the chassis
+and turret images in `assets/battles`. The chassis follows the hull heading, and the turret follows the gun's aim.
+Other tanks and vehicles use rectangles, infantry and militia use circles, and cavalry uses ovals.
 Health bars show remaining strength, with the unit's nationality flag beside each bar, and projectiles show shots in flight.
 
 #### Sub-units
