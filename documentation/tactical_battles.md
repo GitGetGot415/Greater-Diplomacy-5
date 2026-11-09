@@ -283,7 +283,9 @@ When no unit is controlled, both armies fight automatically.
 
 Actual battle fills the whole screen; the title, status line, and buttons sit on top of the battlefield.
 The battlefield has a faint checkerboard that moves only with the view.
-It is larger than the screen. While a sub-unit is controlled, the view follows it.
+It is larger than the screen. While a sub-unit is controlled, the view follows the unit with an offset toward the
+mouse pointer, showing more ground in the aiming direction. Moving the pointer farther from the view center
+increases the offset. The offset keeps the unit visible and respects the battlefield edges at every zoom level.
 Otherwise, drag the battlefield with the left mouse button to move the view.
 The mouse wheel zooms in and out around the pointer through fixed steps. Zoomed out past the battlefield's
 edges, the whole battlefield is centered on a dark surround.

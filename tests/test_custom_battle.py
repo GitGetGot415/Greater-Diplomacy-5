@@ -2263,7 +2263,8 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.click("Exit")
         self.click("Control")
         self.click("Simulate")
-        self.click("Start")
+        with patch("pygame.mouse.get_pos", return_value=view.center):
+            self.click("Start")
         player = self.screen.simulation.controlled
         camera = self.screen.camera
         self.assertEqual(self.screen.to_field(view.center),
@@ -2275,6 +2276,57 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.assertEqual(self.screen.camera, camera)
         self.assertTrue(self.screen.firing)
         self.screen.draw(self.surface)
+
+    def test_controlled_camera_offsets_toward_aim_at_each_zoom_without_drifting(self):
+        self.fill_armies()
+        self.click("Control")
+        self.click("Simulate")
+        self.click("Start")
+        simulation = self.screen.simulation
+        player = simulation.controlled
+        player.x, player.y = (side / 2 for side in combat.ARENA_SIZE)
+        view = self.screen.view_rect()
+        for zoom_index in (battle_screen.DEFAULT_ZOOM_INDEX, battle_screen.DEFAULT_ZOOM_INDEX + 1):
+            self.screen.zoom_index = zoom_index
+            for dx, dy in ((0, 0), (200, 0), (-200, 0), (0, 100), (0, -100),
+                           (200, 100), (-200, 100), (200, -100), (-200, -100)):
+                pointer = view.centerx + dx, view.centery + dy
+                with self.subTest(zoom=self.screen.zoom, direction=(dx, dy)), \
+                        patch("pygame.mouse.get_pos", return_value=pointer), patch.object(simulation, "advance"):
+                    self.screen.update()
+                    expected = (player.x + dx * battle_screen.AIM_CAMERA_OFFSET / self.screen.zoom,
+                                player.y + dy * battle_screen.AIM_CAMERA_OFFSET / self.screen.zoom)
+                    for actual, wanted in zip(self.screen.to_field(view.center), expected):
+                        self.assertAlmostEqual(actual, wanted)
+                    self.assertEqual(simulation._aim_point, self.screen.to_field(pointer))
+                    camera = self.screen.camera[:]
+                    for _ in range(5):
+                        self.screen.update()
+                    self.assertEqual(self.screen.camera, camera)
+
+    def test_controlled_camera_respects_edges_and_stops_following_after_death(self):
+        self.fill_armies()
+        self.click("Control")
+        self.click("Simulate")
+        self.click("Start")
+        simulation = self.screen.simulation
+        player = simulation.controlled
+        view = self.screen.view_rect()
+        width, height = combat.ARENA_SIZE
+        with patch.object(simulation, "advance"):
+            for position, pointer, expected in (
+                    ((combat.UNIT_RADIUS, combat.UNIT_RADIUS), view.topleft, [0, 0]),
+                    ((width - combat.UNIT_RADIUS, height - combat.UNIT_RADIUS), view.bottomright,
+                     [width - view.width, height - view.height])):
+                player.x, player.y = position
+                with patch("pygame.mouse.get_pos", return_value=pointer):
+                    self.screen.update()
+                self.assertEqual(self.screen.camera, expected)
+            player.data["health"] = 0
+            camera = self.screen.camera[:]
+            with patch("pygame.mouse.get_pos", return_value=view.topleft):
+                self.screen.update()
+            self.assertEqual(self.screen.camera, camera)
 
     def test_edit_battle_forecasts_the_normal_game_only_when_the_armies_change(self):
         self.screen.add_unit(0, "Fixture II")

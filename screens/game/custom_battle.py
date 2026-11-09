@@ -64,6 +64,7 @@ TEAM_COLORS = ((85, 170, 245), (235, 100, 90))
 # Actual battle fills the whole screen. The mouse wheel steps through these scales, starting at 1.0.
 ZOOM_LEVELS = (0.2, 0.3, 0.4, 0.5, 0.6, 0.75, 1.0, 1.25, 1.5, 2.0)
 DEFAULT_ZOOM_INDEX = ZOOM_LEVELS.index(1.0)
+AIM_CAMERA_OFFSET = 0.35  # Share of the pointer's distance from the view center, in screen pixels.
 OVERVIEW_ZOOM = 0.6
 OVERVIEW_SYMBOL_SIZE = 16
 MIN_PLAYER_INDICATOR_SCALE = 0.85
@@ -769,7 +770,7 @@ class CustomBattleScreen(Screen):
         self.last_tick = pygame.time.get_ticks()
         controlled = self.simulation.controlled
         if controlled is not None:
-            self._center_camera(controlled.x, controlled.y)
+            self._follow_controlled_camera(controlled, pygame.mouse.get_pos())
         else:
             self._center_camera(combat.ARENA_SIZE[0] / 2, combat.ARENA_SIZE[1] / 2)
         self.refresh_ui()
@@ -796,6 +797,15 @@ class CustomBattleScreen(Screen):
     def _center_camera(self, x, y):
         width, height = self._view_span()
         self._move_camera(x - width / 2, y - height / 2)
+
+    def _follow_controlled_camera(self, fighter, pointer):
+        """Show more ground toward the pointer while keeping the controlled unit visible."""
+        view = self.view_rect()
+        # Use the view center, so moving the camera cannot amplify its own offset.
+        dx = max(-view.width / 2, min(view.width / 2, pointer[0] - view.centerx))
+        dy = max(-view.height / 2, min(view.height / 2, pointer[1] - view.centery))
+        self._center_camera(fighter.x + dx * AIM_CAMERA_OFFSET / self.zoom,
+                            fighter.y + dy * AIM_CAMERA_OFFSET / self.zoom)
 
     def _move_camera(self, left, top):
         """Keep the view inside the battlefield, or center the battlefield when it is smaller than the view."""
@@ -1122,16 +1132,21 @@ class CustomBattleScreen(Screen):
         dt = min(MAX_FRAME_SECONDS, max(0, now - self.last_tick) / 1000.0)
         self.last_tick = now
         driving = self._driving()
+        pointer = pygame.mouse.get_pos()
+        controlled = self.simulation.controlled
+        if controlled is not None and controlled.alive:
+            # Convert the pointer to a firing target only after applying its camera offset.
+            self._follow_controlled_camera(controlled, pointer)
         self.simulation.set_player_input(
             throttle=int(pygame.K_w in self.held_keys) - int(pygame.K_s in self.held_keys),
             turn=int(pygame.K_d in self.held_keys) - int(pygame.K_a in self.held_keys),
-            fire=self.firing, aim_point=self.to_field(pygame.mouse.get_pos()) if driving else None)
+            fire=self.firing, aim_point=self.to_field(pointer) if driving else None)
         self.simulation.advance(dt)
         if self.terrain_art_key != (id(self.simulation.battlefield), self.simulation.battlefield.revision, self.zoom):
             self._cache_terrain_art()
         controlled = self.simulation.controlled
         if controlled is not None and controlled.alive:
-            self._center_camera(controlled.x, controlled.y)
+            self._follow_controlled_camera(controlled, pointer)
         elif self.held_keys or self.firing:
             # The controlled sub-unit is gone: the player spectates, so drop held input and leave the camera free.
             self.clear_controls()
