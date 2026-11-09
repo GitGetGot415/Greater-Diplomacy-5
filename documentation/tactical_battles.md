@@ -127,8 +127,10 @@ Roster order runs front to back, and the battlefield is wide enough for two full
 Armored cars, light tanks, medium tanks, heavy tanks, main battle tanks, and super heavy tanks use the chassis
 and turret images in `assets/battles`. The chassis follows the hull heading, and the turret follows the gun's aim.
 Infantry, cavalry, and militia use their chassis images from the same folder and share `turret/Infantry Gun.png`
-for their aimed weapon. Other tanks and vehicles use rectangles.
+for their aimed weapon. Motorized infantry, mechanized infantry, and infantry fighting vehicles use their chassis
+images without a separate weapon layer. Other tanks and vehicles use rectangles.
 Health bars show remaining strength, with the unit's nationality flag beside each bar, and projectiles show shots in flight.
+Tank shells are bright orange and thicker than other units' yellow shots.
 
 #### Sub-units
 

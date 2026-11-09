@@ -115,11 +115,18 @@ BATTLE_ART_FAMILIES = {
     "Infantry Type": ("Infantry", "Infantry Gun"),
     "Cavalry": ("Cavalry", "Infantry Gun"),
     "Militia": ("Militia", "Infantry Gun"),
+    "Motorized Infantry Type": ("Motorized Infantry", None),
+    "Mechanized Infantry Type": ("Mechanized Infantry", None),
+    "Infantry Fighting Vehicle Type": ("IFV", None),
 }
 BATTLE_ART_DIR = os.path.join(c.ASSETS_ROOT_DIR, "battles")
 DEAD_COLOR = (53, 65, 44)
 BATTLE_HEALTH_COLOR = (105, 215, 85)
 SHOT_COLOR = (250, 232, 150)
+SHOT_WIDTH = 2
+TANK_SHOT_COLOR = (255, 110, 0)
+TANK_SHOT_WIDTH = 5
+TANK_SHOT_SHAPES = frozenset(("tank", "light_tank", "heavy_tank"))
 SHOT_TAIL = 8  # Pixels behind a shot's head.
 RANGE_COLOR = (255, 225, 95)
 AIM_LINE_COLOR = (255, 245, 200)
@@ -136,15 +143,17 @@ _BATTLE_ART = {}
 
 
 def _load_battle_art(artwork):
-    """Load both layers once, before the battlefield starts drawing."""
+    """Load the chassis and optional weapon once, before the battlefield starts drawing."""
     if artwork not in _BATTLE_ART:
-        chassis, turret = (pygame.image.load(os.path.join(BATTLE_ART_DIR, part, name + ".png"))
-                           .convert_alpha() for part, name in zip(("chassis", "turret"), artwork))
-        # Weapons point right, with their base in the leftmost square of the image.
-        # Pad the barrel side symmetrically so rotation keeps the base on the body center.
-        pivot = turret.get_height() // 2
-        centered = pygame.Surface((2 * (turret.get_width() - pivot), turret.get_height()), pygame.SRCALPHA)
-        centered.blit(turret, (centered.get_width() // 2 - pivot, 0))
+        chassis = pygame.image.load(os.path.join(BATTLE_ART_DIR, "chassis", artwork[0] + ".png")).convert_alpha()
+        centered = None
+        if artwork[1] is not None:
+            turret = pygame.image.load(os.path.join(BATTLE_ART_DIR, "turret", artwork[1] + ".png")).convert_alpha()
+            # Weapons point right, with their base in the leftmost square of the image.
+            # Pad the barrel side symmetrically so rotation keeps the base on the body center.
+            pivot = turret.get_height() // 2
+            centered = pygame.Surface((2 * (turret.get_width() - pivot), turret.get_height()), pygame.SRCALPHA)
+            centered.blit(turret, (centered.get_width() // 2 - pivot, 0))
         _BATTLE_ART[artwork] = chassis, centered
     return _BATTLE_ART[artwork]
 
@@ -208,6 +217,8 @@ def draw_unit_shape(surface, shape, center, angle, color, *, scale=1.0, aim=None
     """
     if artwork is not None:
         for part, heading in (("chassis", angle), ("turret", angle if aim is None else aim)):
+            if part == "turret" and artwork[1] is None:
+                continue
             sprite = _battle_sprite(artwork, shape, part, color, scale)
             key = (artwork, shape, part, tuple(color), scale)
             _draw_rotated_sprite(surface, sprite, key, center, heading)
@@ -1298,14 +1309,17 @@ class CustomBattleScreen(Screen):
                                  bar.centery - flag_size[1] // 2, size=flag_size)
         if controlled is not None and controlled.alive:
             self._draw_controls(surface, controlled, self.to_screen(controlled.x, controlled.y))
-        line_width = max(1, round(2 * zoom))
+        line_width = max(1, round(SHOT_WIDTH * zoom))
+        tank_line_width = max(2, round(TANK_SHOT_WIDTH * zoom))
         for shot in self.simulation.projectiles:
             head = self.to_screen(shot.x, shot.y)
             if not visible.collidepoint(head):
                 continue
             tail_length = SHOT_TAIL * zoom / (math.hypot(shot.vx, shot.vy) or 1.0)
             tail = (round(head[0] - shot.vx * tail_length), round(head[1] - shot.vy * tail_length))
-            pygame.draw.line(surface, SHOT_COLOR, tail, head, line_width)
+            tank_shell = shot.source.shape in TANK_SHOT_SHAPES
+            pygame.draw.line(surface, TANK_SHOT_COLOR if tank_shell else SHOT_COLOR, tail, head,
+                             tank_line_width if tank_shell else line_width)
 
     def draw_background(self, surface):
         """Actual battle replaces the moving checkerboard with the battlefield across the whole screen."""
