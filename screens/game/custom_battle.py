@@ -94,7 +94,7 @@ PLAYER_COLOR = (255, 225, 95)
 # Body (width, height) in pixels at scale 1.0, before the barrel line.
 UNIT_SHAPE_SIZES = {
     "tank": (28, 19),
-    "infantry": (21, 21), "cavalry": (30, 17),
+    "infantry": (15, 15), "cavalry": (22, 12),
     "light_tank": (24, 16),
     "armored_car": (24, 16),  # Same size as the light tank, drawn with rounded edges.
     "heavy_tank": (33, 22),
@@ -105,6 +105,7 @@ ROUNDED_SHAPES = frozenset(("armored_car", "motorized"))
 UNARMED_SHAPES = frozenset(("motorized", "mechanized", "ifv"))  # Drawn without the gun line.
 ROUNDED_CORNER_RADIUS = 6
 SPRITE_ANGLE_STEP = 4  # Degrees between the cached rotations of each battlefield shape.
+INFANTRY_GUN_SIDE_OFFSET = 0.25  # Share of body height toward the unit's right shoulder.
 # Each family selects a chassis and a weapon image independently.
 BATTLE_ART_FAMILIES = {
     "Armored Car": ("Armored Car", "Armored Car"),
@@ -221,7 +222,13 @@ def draw_unit_shape(surface, shape, center, angle, color, *, scale=1.0, aim=None
                 continue
             sprite = _battle_sprite(artwork, shape, part, color, scale)
             key = (artwork, shape, part, tuple(color), scale)
-            _draw_rotated_sprite(surface, sprite, key, center, heading)
+            part_center = center
+            if part == "turret" and artwork[1] == "Infantry Gun":
+                # The shoulder follows the body while the weapon turns independently to aim.
+                offset = UNIT_SHAPE_SIZES[shape][1] * INFANTRY_GUN_SIDE_OFFSET * scale
+                part_center = (center[0] - math.sin(angle) * offset,
+                               center[1] + math.cos(angle) * offset)
+            _draw_rotated_sprite(surface, sprite, key, part_center, heading)
         return
     key = (shape, tuple(color), scale, aim is None)
     _draw_rotated_sprite(surface, _unit_sprite(shape, color, scale, aim is None), key, center, angle)
