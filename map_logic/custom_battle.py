@@ -15,8 +15,8 @@ from map_logic.system32 import combat_forecast, combat_rules
 FIXED_STEP = 1.0 / 30.0
 MOVE_PIXELS_PER_SPEED = 35.0
 FIRE_INTERVAL = 2.0
-WEAPON_RANGE = 1000.0
-PROJECTILE_SPEED = 1000.0
+WEAPON_RANGE = 500.0
+PROJECTILE_SPEED = 500.0
 UNIT_RADIUS = 12.0
 SHOT_SPREAD = math.radians(1.5)  # Every shot leaves up to this far off its aim, either way, so range costs hits.
 # Each AI sub-unit draws its own temperament from these (low, high) ranges at deployment.
@@ -55,7 +55,7 @@ TARGET_CELL = 256.0
 RANK_GAP = 40.0  # Between ranks, front to back.
 SUBUNIT_SPACING = 50.0  # Between neighboring sub-units along a division's line.
 # Distance between the two armies' front ranks at deployment, centered on the battlefield.
-SPAWN_FRONT_GAP = 1500.0
+SPAWN_FRONT_GAP = 1000.0
 SPAWN_MARGIN = 100.0  # Between the battlefield edge and the last rank of the largest army.
 # The battlefield is wide enough for two full armies behind their front ranks.
 ARENA_SIZE = (SPAWN_FRONT_GAP + 2 * (SPAWN_MARGIN + (c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE - 1) * RANK_GAP), 1100.0)
