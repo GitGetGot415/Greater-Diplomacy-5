@@ -10,6 +10,7 @@ import data.constants as c
 from data import queries
 from data.io import starting_defaults
 from map_logic import custom_battle as combat
+from map_logic import battle_terrain
 from map_logic.system32 import combat_rules
 from ui.dialogs import pickers
 from ui.navigation import screen_runner
@@ -60,9 +61,8 @@ ROSTER_WIDTH = 900
 SCROLLBAR_HEIGHT = 14
 BUTTON_WIDTH = 170
 TEAM_COLORS = ((85, 170, 245), (235, 100, 90))
-GRASS_COLOR = (72, 115, 57)
 # Actual battle fills the whole screen. The mouse wheel steps through these scales, starting at 1.0.
-ZOOM_LEVELS = (0.4, 0.5, 0.6, 0.75, 1.0, 1.25, 1.5, 2.0)
+ZOOM_LEVELS = (0.2, 0.3, 0.4, 0.5, 0.6, 0.75, 1.0, 1.25, 1.5, 2.0)
 DEFAULT_ZOOM_INDEX = ZOOM_LEVELS.index(1.0)
 OVERVIEW_ZOOM = 0.6
 OVERVIEW_SYMBOL_SIZE = 16
@@ -75,7 +75,24 @@ EDGE_INDICATOR_SIZE = 10
 EDGE_INDICATOR_SPACING = 80
 EDGE_INDICATOR_LABEL_STEP = 25  # Battlefield distance, rounded to keep moving labels readable.
 GRASS_TILE = 64  # Battlefield pixels per square of the battlefield's faint checkerboard.
-GRASS_CHECK_COLOR = (76, 119, 61)  # The lighter squares; the darker ones are GRASS_COLOR.
+TERRAIN_BUTTON_POSITION = (180, 20)
+TERRAIN_BUTTON_SIZE = (220, 40)
+TERRAIN_COLORS = {
+    "plains": (126, 163, 88), "hills": (177, 155, 64), "desert": (194, 124, 58),
+    "forest": (65, 115, 57), "jungle": (35, 76, 47), "mountain": (119, 88, 64),
+    "swamp": (160, 104, 132),
+}
+FEATURE_COLORS = {
+    "tree": ((22, 40, 25), (34, 70, 36), (52, 100, 43), (75, 124, 51)),
+    "rock": ((39, 32, 30), (70, 58, 49), (107, 88, 68), (146, 121, 91)),
+    "chasm": ((72, 47, 36), (40, 30, 30), (20, 22, 27)),
+    "marsh": ((106, 81, 100), (76, 91, 83), (56, 73, 78)),
+}
+FEATURE_PIXEL_STEP = 4
+FEATURE_OUTLINE_POINTS = 24
+HILL_CONTOUR_HEIGHT = 25.0
+HILL_CONTOUR_SHADE = 25
+HILL_BASE_SHADE = -30
 OFF_FIELD_COLOR = (24, 30, 22)  # Outside the battlefield when zoomed out past its edges.
 OUTLINE_COLOR = (22, 30, 22)
 MAX_FRAME_SECONDS = 0.25
@@ -137,7 +154,7 @@ SHOT_COLOR = (250, 232, 150)
 SHOT_WIDTH = 2
 TANK_SHOT_COLOR = (255, 110, 0)
 TANK_SHOT_WIDTH = 5
-TANK_SHOT_SHAPES = frozenset(("tank", "light_tank", "heavy_tank"))
+TANK_SHOT_SHAPES = combat.TANK_SHAPES
 RIFLE_SHOT_SOUNDS = ("rifle_shot_1", "rifle_shot_2", "rifle_shot_3")
 SHOT_TAIL = 8  # Pixels behind a shot's head.
 RANGE_COLOR = (255, 225, 95)
@@ -301,6 +318,11 @@ class CustomBattleScreen(Screen):
         self.country_data = {}
         self.nationalities = []
         self.generation_year = starting_defaults.get_starting_value("random_setup", "start_year")
+        self.terrain = starting_defaults.get_starting_value("random_setup", "custom_battle_terrain")
+        self.terrain_art = []
+        self.terrain_art_key = None
+        self.terrain_sprites = {}
+        self.battle_seed = None
         self.random_candidates = []
         self.rosters = [[], []]
         self.selected = [None, None]
@@ -545,6 +567,9 @@ class CustomBattleScreen(Screen):
                 self.update_generation_year, visual_max=c.END_YEAR - c.START_YEAR,
                 allowed_max=c.END_YEAR - c.START_YEAR)
             self.elements.extend((self.generate_button, self.year_slider))
+            self.elements.append(Button(*TERRAIN_BUTTON_POSITION, TERRAIN_BUTTON_SIZE, "grey",
+                                        battle_terrain.TERRAIN_NAMES[self.terrain], self.choose_terrain,
+                                        font_size=20))
         elif self.mode == "battle":
             self.pause_button = Button(c.SCREEN_WIDTH - 150, 20, (130, 40), "yellow",
                                        "Resume" if self.simulation.paused else "Pause", self.toggle_pause)
@@ -615,6 +640,20 @@ class CustomBattleScreen(Screen):
             queries.unit_picker_items(self.unit_names, self.library),
             lambda name: self.add_unit(side, name), close_on_select=False,
             is_enabled=lambda item: len(self.rosters[side]) < c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE)
+
+    def choose_terrain(self):
+        if self.mode != "setup" or self.campaign is not None:
+            return
+        self.cancel_active_drags()
+        pickers.open_listbox_selector(self, "Battle Terrain", "",
+                                     [(label, key) for key, label in battle_terrain.TERRAIN_NAMES.items()],
+                                     self.set_terrain)
+
+    def set_terrain(self, terrain):
+        if self.mode != "setup" or self.campaign is not None or terrain not in battle_terrain.TERRAIN_NAMES:
+            return
+        self.terrain = terrain
+        self.refresh_ui()
 
     def add_unit(self, side, name):
         if self.mode != "setup" or name not in self.unit_names:
@@ -689,6 +728,7 @@ class CustomBattleScreen(Screen):
         if self.mode not in {"setup", "result"} or not all(self.rosters):
             return
         self.cancel_active_drags()
+        self.battle_seed = random.getrandbits(64)
         self._build_simulation()
         self.clear_controls()
         self.mode = "preview"
@@ -706,8 +746,12 @@ class CustomBattleScreen(Screen):
         """Deploy the armies, paused, as preview shows them."""
         self.simulation = combat.BattleSimulation(self.library, *self.rosters,
                                                   controlled_index=self.controlled_index,
+                                                  seed=self.battle_seed,
+                                                  terrain=self.campaign.province["terrain"] if self.campaign else self.terrain,
                                                   on_shot=self._play_shot_sound)
         self.simulation.paused = True
+        self.terrain_sprites.clear()
+        self._cache_terrain_art()
 
     @staticmethod
     def _play_shot_sound(fighter):
@@ -766,6 +810,8 @@ class CustomBattleScreen(Screen):
         anchor = self.to_field(pos)
         self.zoom_index = index
         clear_rotated_sprites()
+        if self.simulation is not None:
+            self._cache_terrain_art()
         self._move_camera(anchor[0] - pos[0] / self.zoom, anchor[1] - pos[1] / self.zoom)
 
     def to_field(self, pos):
@@ -1081,6 +1127,8 @@ class CustomBattleScreen(Screen):
             turn=int(pygame.K_d in self.held_keys) - int(pygame.K_a in self.held_keys),
             fire=self.firing, aim_point=self.to_field(pygame.mouse.get_pos()) if driving else None)
         self.simulation.advance(dt)
+        if self.terrain_art_key != (id(self.simulation.battlefield), self.simulation.battlefield.revision, self.zoom):
+            self._cache_terrain_art()
         controlled = self.simulation.controlled
         if controlled is not None and controlled.alive:
             self._center_camera(controlled.x, controlled.y)
@@ -1289,7 +1337,9 @@ class CustomBattleScreen(Screen):
         left, top = self.to_screen(0, 0)
         right, bottom = self.to_screen(width, height)
         field = pygame.Rect(left, top, right - left, bottom - top)
-        surface.fill(GRASS_COLOR, field)
+        color = TERRAIN_COLORS[self.simulation.battlefield.terrain]
+        check_color = tuple(min(255, channel + 4) for channel in color)
+        surface.fill(color, field)
         span_width, span_height = self._view_span()
         columns = range(max(0, int(self.camera[0] // GRASS_TILE)),
                         min(math.ceil(width / GRASS_TILE), math.ceil((self.camera[0] + span_width) / GRASS_TILE)))
@@ -1305,11 +1355,53 @@ class CustomBattleScreen(Screen):
             for column in columns:
                 if (row + column) % 2:
                     x0, x1 = edges_x[column]
-                    surface.fill(GRASS_CHECK_COLOR, (x0, y0, x1 - x0, y1 - y0))
+                    surface.fill(check_color, (x0, y0, x1 - x0, y1 - y0))
         pygame.draw.rect(surface, OUTLINE_COLOR, field.inflate(6, 6), 3)
+
+    def _cache_terrain_art(self):
+        """Cache stepped terrain artwork at geometry/zoom changes; drawing only places surfaces."""
+        field = self.simulation.battlefield
+        self.terrain_art_key = id(field), field.revision, self.zoom
+        self.terrain_art = []
+        for feature in sorted(field.features, key=lambda feature: feature.kind == "tree"):
+            if feature.destroyed:
+                continue
+            radius = max(2, round(feature.radius * self.zoom))
+            key = feature.kind, radius, feature.height if feature.kind == "hill" else 0
+            if key not in self.terrain_sprites:
+                art = pygame.Surface((radius * 2 + 2, radius * 2 + 2), pygame.SRCALPHA)
+                if feature.kind == "hill":
+                    # Each contour represents the same height, so taller mounds
+                    # have more bands. Mountain mounds keep their brown palette.
+                    bands = [(1.0 - band * HILL_CONTOUR_HEIGHT / feature.height,
+                              tuple(max(0, min(255, channel + HILL_BASE_SHADE + band * HILL_CONTOUR_SHADE))
+                                    for channel in TERRAIN_COLORS[field.terrain]))
+                             for band in range(math.ceil(feature.height / HILL_CONTOUR_HEIGHT))]
+                else:
+                    colors = FEATURE_COLORS[feature.kind]
+                    bands = [(1.0 - band / (len(colors) + 1), color) for band, color in enumerate(colors)]
+                for fraction, color in bands:
+                    size = radius * fraction
+                    points = []
+                    step = max(1, round(FEATURE_PIXEL_STEP * self.zoom))
+                    for index in range(FEATURE_OUTLINE_POINTS):
+                        angle = math.tau * index / FEATURE_OUTLINE_POINTS
+                        points.append((radius + round(math.cos(angle) * size / step) * step,
+                                       radius + round(math.sin(angle) * size / step) * step))
+                    pygame.draw.polygon(art, color, points)
+                self.terrain_sprites[key] = art
+            self.terrain_art.append((feature, self.terrain_sprites[key]))
+
+    def _draw_terrain(self, surface):
+        visible = surface.get_rect()
+        for feature, art in self.terrain_art:
+            rect = art.get_rect(center=self.to_screen(feature.x, feature.y))
+            if rect.colliderect(visible):
+                surface.blit(art, rect)
 
     def _draw_battle(self, surface):
         self._draw_grass(surface)
+        self._draw_terrain(surface)
         zoom = self.zoom
         # Shapes partly on screen still draw; the widest shape fits inside this margin.
         margin = math.ceil(140 * zoom)

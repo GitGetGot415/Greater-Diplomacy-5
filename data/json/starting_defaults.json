@@ -131,6 +131,7 @@
         "gradient_dithering": false
     },
     "random_setup": {
+        "custom_battle_terrain": "plains",
         "start_year": 1800,
         "num_countries": 20,
         "island_filter": 5,

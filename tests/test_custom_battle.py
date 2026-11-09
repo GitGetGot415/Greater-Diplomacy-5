@@ -12,6 +12,7 @@ import pygame
 import data.constants as c
 from data import queries
 from map_logic import custom_battle as combat
+from map_logic import battle_terrain
 from screens.game import custom_battle as battle_screen
 from ui.rendering.font_manager import fonts
 from ui.widgets.ui_elements import Slider
@@ -610,7 +611,7 @@ class BattleSimulationTests(unittest.TestCase):
         for second in range(10):
             simulation.elapsed = float(second)
             self.assertEqual(simulation._ai_course(unit, far, 0.0, center, objective)[0], unit.pace)
-        in_position = combat.WEAPON_RANGE * unit.hold
+        in_position = combat.ENGAGEMENT_RANGE * unit.hold
         self.assertEqual(simulation._ai_course(unit, in_position, 0.3, center, objective), (0.0, 0.3))
 
     def test_tanks_swing_out_to_one_side_of_the_objective(self):
@@ -627,23 +628,23 @@ class BattleSimulationTests(unittest.TestCase):
     def test_cavalry_charges_in_close_then_withdraws_and_charges_again(self):
         simulation, unit, center, objective, _enemy = self.course_setup("cavalry")
         toward = 0.0
-        inside_hold = combat.WEAPON_RANGE * (unit.hold + combat.CHARGE_CLOSE) / 2
+        inside_hold = combat.ENGAGEMENT_RANGE * (unit.hold + combat.CHARGE_CLOSE) / 2
         # It keeps charging inside the distance where other units would hold.
         self.assertEqual(simulation._ai_course(unit, inside_hold, toward, center, objective)[0], unit.pace)
-        close = combat.WEAPON_RANGE * combat.CHARGE_CLOSE
+        close = combat.ENGAGEMENT_RANGE * combat.CHARGE_CLOSE
         self.assertEqual(simulation._ai_course(unit, close, toward, center, objective), (unit.pace, math.pi))
         self.assertTrue(unit.withdrawing)
         self.assertEqual(simulation._ai_course(unit, inside_hold, toward, center, objective), (unit.pace, math.pi))
-        back = combat.WEAPON_RANGE * unit.hold
+        back = combat.ENGAGEMENT_RANGE * unit.hold
         self.assertEqual(simulation._ai_course(unit, back, toward, center, objective)[1] % math.tau, 0.0)
         self.assertFalse(unit.withdrawing)
 
     def test_armored_cars_keep_long_range_and_back_away_from_close_enemies(self):
         simulation, unit, center, objective, _enemy = self.course_setup("armored_car")
         toward = 0.0
-        too_close = combat.WEAPON_RANGE * combat.SKIRMISH_BACK_OFF * 0.9
+        too_close = combat.ENGAGEMENT_RANGE * combat.SKIRMISH_BACK_OFF * 0.9
         self.assertEqual(simulation._ai_course(unit, too_close, toward, center, objective), (-unit.pace, toward))
-        in_position = combat.WEAPON_RANGE * (combat.SKIRMISH_BACK_OFF + combat.SKIRMISH_HOLD) / 2
+        in_position = combat.ENGAGEMENT_RANGE * (combat.SKIRMISH_BACK_OFF + combat.SKIRMISH_HOLD) / 2
         self.assertEqual(simulation._ai_course(unit, in_position, toward, center, objective), (0.0, toward))
         self.assertGreater(simulation._ai_course(unit, combat.WEAPON_RANGE, toward, center, objective)[0], 0)
 
@@ -651,9 +652,9 @@ class BattleSimulationTests(unittest.TestCase):
         simulation, unit, center, objective, _enemy = self.course_setup("infantry")
         toward = 0.0
         unit.data["health"] = unit.data["max_health"] * combat.FALL_BACK_HEALTH * 0.9
-        self.assertEqual(simulation._ai_course(unit, combat.WEAPON_RANGE * 0.5, toward, center, objective),
+        self.assertEqual(simulation._ai_course(unit, combat.WITHDRAW_RANGE * 0.5, toward, center, objective),
                          (unit.pace, math.pi))
-        self.assertEqual(simulation._ai_course(unit, combat.WEAPON_RANGE, toward, center, objective), (0.0, toward))
+        self.assertEqual(simulation._ai_course(unit, combat.WITHDRAW_RANGE, toward, center, objective), (0.0, toward))
         unit.data["health"] = unit.data["max_health"]
         unit.dodge, unit.dodge_heading = combat.DODGE_SECONDS, -math.pi / 2
         self.assertEqual(simulation._ai_course(unit, combat.WEAPON_RANGE * 0.5, toward, center, objective),
@@ -930,14 +931,14 @@ class CloseCombatTests(unittest.TestCase):
         self.assertFalse(unit.melee_committed)
 
     def test_flank_is_completed_even_after_entering_weapon_hold_range(self):
-        simulation = self.encounter(shapes=("tank", "infantry"), gap=combat.WEAPON_RANGE / 2)
+        simulation = self.encounter(shapes=("tank", "infantry"), gap=combat.ENGAGEMENT_RANGE / 2)
         unit, target = simulation.fighters
         unit.hold, unit.pace = 0.9, 1.0
         throttle, _heading = simulation._ai_course(unit, target.x - unit.x, 0, (unit.x, unit.y), target)
         self.assertGreater(throttle, 0)
         self.assertFalse(unit.flank_complete)
         unit.x, unit.y = unit.flank_goal
-        simulation._ai_course(unit, combat.WEAPON_RANGE / 2, 0, (unit.x, unit.y), target)
+        simulation._ai_course(unit, combat.ENGAGEMENT_RANGE / 2, 0, (unit.x, unit.y), target)
         self.assertTrue(unit.flank_complete)
 
     def test_both_armies_advance_together_and_divisions_get_different_lanes(self):
@@ -952,7 +953,7 @@ class CloseCombatTests(unittest.TestCase):
         for shape in combat.MOBILITY:
             for situation in ("advance", "hold", "flank", "withdraw", "melee", "ram"):
                 with self.subTest(shape=shape, situation=situation):
-                    gap = combat.WEAPON_RANGE * (2 if situation in ("advance", "flank") else 0.7)
+                    gap = combat.ENGAGEMENT_RANGE * (2 if situation in ("advance", "flank") else 0.7)
                     simulation = self.encounter(shapes=(shape, shape), gap=gap)
                     first, second = simulation.fighters
                     for unit in simulation.fighters:
@@ -972,7 +973,7 @@ class CloseCombatTests(unittest.TestCase):
                     self.assertAlmostEqual(abs(first.turn_rate), abs(second.turn_rate))
 
     def test_infantry_on_both_sides_holds_at_its_preferred_firing_distance(self):
-        simulation = self.encounter(gap=combat.WEAPON_RANGE * 0.7)
+        simulation = self.encounter(gap=combat.ENGAGEMENT_RANGE * 0.7)
         first, second = simulation.fighters
         for unit, target in ((first, second), (second, first)):
             unit.hold, unit.pace = 0.8, 1.0
@@ -989,7 +990,7 @@ class CloseCombatTests(unittest.TestCase):
         self.assertIsNotNone(simulation.winner)
 
     def test_reversing_vehicle_retreat_keeps_the_hull_facing_the_enemy(self):
-        simulation = self.encounter(shapes=("tank", "infantry"), gap=combat.WEAPON_RANGE / 2)
+        simulation = self.encounter(shapes=("tank", "infantry"), gap=combat.WITHDRAW_RANGE / 2)
         unit, target = simulation.fighters
         unit.data["health"] = unit.data["max_health"] * combat.FALL_BACK_HEALTH / 2
         throttle, heading = simulation._ai_course(unit, target.x - unit.x, 0, (unit.x, unit.y), target)
@@ -1062,6 +1063,261 @@ class CloseCombatTests(unittest.TestCase):
         second.data["defense"] = first.data["attack"] * 2
         damage = self.move_contact(simulation, [(first, combat.RAM_REFERENCE_SPEED * combat.FIXED_STEP, 0), (second, 0, 0)])
         self.assertTrue(all(loss == 0 for target, loss in damage))
+
+
+class TacticalTerrainTests(unittest.TestCase):
+    def setUp(self):
+        self.library = fixture_library()
+        self.enterContext(single_subunits())
+
+    def field(self, *features):
+        return battle_terrain.Battlefield("plains", combat.ARENA_SIZE, combat.UNIT_RADIUS, features)
+
+    def encounter(self, *features, controlled=None):
+        simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"],
+                                             seed=4, controlled_index=controlled, battlefield=self.field(*features))
+        first, second = simulation.fighters
+        first.x, first.y, second.x, second.y = 1000, 500, 1400, 500
+        return simulation
+
+    def test_each_terrain_repeats_with_seed_and_keeps_deployment_and_routes_clear(self):
+        for terrain in battle_terrain.TERRAIN_NAMES:
+            with self.subTest(terrain=terrain):
+                first = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"], terrain=terrain, seed=4)
+                second = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"], terrain=terrain, seed=4)
+                describe = lambda field: [(f.kind, f.x, f.y, f.radius, f.height) for f in field.features]
+                self.assertEqual(describe(first.battlefield), describe(second.battlefield))
+                self.assertTrue(all(first.battlefield.walkable((unit.x, unit.y)) for unit in first.fighters))
+                start, end = [(unit.x, unit.y) for unit in first.fighters]
+                path = first.battlefield.route(start, end)
+                self.assertTrue(path)
+                for point in path:
+                    self.assertTrue(first.battlefield.clear_path(start, point))
+                    start = point
+                self.assertEqual(path[-1], end)
+                if terrain in {"plains", "desert"}:
+                    self.assertEqual(first.battlefield.features, [])
+                else:
+                    self.assertTrue(first.battlefield.features)
+
+    def test_ground_hazards_block_motion_but_allow_shots_and_paths_go_around(self):
+        for kind in ("chasm", "marsh"):
+            with self.subTest(kind=kind):
+                field = self.field(battle_terrain.Feature(kind, 1200, 500, 80))
+                start, end = (1000, 500), (1400, 500)
+                self.assertFalse(field.clear_path(start, end))
+                self.assertIsNone(field.firing_blocker(start, end))
+                self.assertNotEqual(field.move(start, end), end)
+                route = field.route(start, end)
+                self.assertTrue(route)
+                for point in route:
+                    self.assertTrue(field.clear_path(start, point))
+                    start = point
+
+    def test_destination_inside_obstacle_routes_to_open_ground(self):
+        field = self.field(battle_terrain.Feature("rock", 1200, 500, 80, 150))
+        start = (1000, 500)
+        route = field.route(start, (1200, 500))
+        self.assertTrue(route)
+        self.assertTrue(field.walkable(route[-1]))
+        for point in route:
+            self.assertTrue(field.clear_path(start, point))
+            start = point
+
+    def test_tank_flank_uses_reachable_replacement_for_obstructed_destination(self):
+        simulation = self.encounter(battle_terrain.Feature("rock", 1200, 500, 80, 150))
+        unit, target = simulation.fighters
+        unit.shape, unit.target, unit.flank_goal, unit.pace, unit.start_delay = "tank", target, (1200, 500), 1, 0
+        simulation._terrain_course(unit, 1, 0, (unit.x, unit.y), target)
+        self.assertNotEqual(unit.flank_goal, (1200, 500))
+        self.assertTrue(simulation.battlefield.walkable(unit.flank_goal))
+        unit.x, unit.y = unit.flank_goal
+        simulation._ai_course(unit, math.dist((unit.x, unit.y), (target.x, target.y)),
+                               0, (unit.x, unit.y), target)
+        self.assertTrue(unit.flank_complete)
+
+    def test_hill_blocks_low_shots_and_climbing_the_crest_opens_fire(self):
+        field = self.field(battle_terrain.Feature("hill", 1200, 500, 150, 100))
+        self.assertTrue(field.clear_path((1000, 500), (1400, 500)))
+        self.assertIsNotNone(field.firing_blocker((1000, 500), (1400, 500)))
+        self.assertIsNone(field.firing_blocker((1200, 500), (1400, 500)))
+        self.assertIsNone(field.firing_blocker((1000, 500), (1200, 500)))
+
+    def test_only_tank_shells_remove_trees_and_the_clearing_shot_stops(self):
+        for shape in ("infantry", *combat.TANK_SHAPES):
+            with self.subTest(shape=shape):
+                tree = battle_terrain.Feature("tree", 1200, 500, 20, 100)
+                simulation = self.encounter(tree)
+                hold_still(simulation)
+                source, target = simulation.fighters
+                source.shape = shape
+                before = target.data["health"]
+                simulation.projectiles = [combat.Projectile(
+                    source, dict(source.data), source.x, source.y, 18000, 0, 1)]
+                simulation.advance(combat.FIXED_STEP)
+                self.assertEqual(target.data["health"], before)
+                self.assertEqual(simulation.projectiles, [])
+                self.assertEqual(tree.destroyed, shape in combat.TANK_SHAPES)
+                self.assertEqual(simulation.battlefield.revision, int(tree.destroyed))
+                self.assertEqual(simulation.battlefield.firing_blocker((1000, 500), (1400, 500)) is None,
+                                 tree.destroyed)
+
+    def test_first_unit_hit_takes_precedence_over_terrain_further_along_the_shot(self):
+        tree = battle_terrain.Feature("tree", 1500, 500, 20, 100)
+        simulation = self.encounter(tree)
+        hold_still(simulation)
+        source, target = simulation.fighters
+        source.shape = "tank"
+        simulation.projectiles = [combat.Projectile(source, dict(source.data), 1000, 500, 18000, 0, 1)]
+        simulation.advance(combat.FIXED_STEP)
+        self.assertLess(target.data["health"], target.data["max_health"])
+        self.assertFalse(tree.destroyed)
+
+    def test_tree_removal_invalidates_navigation_and_opens_a_direct_route(self):
+        tree = battle_terrain.Feature("tree", 1200, 500, 20, 100)
+        field = self.field(tree)
+        start, end = (1000, 500), (1400, 500)
+        self.assertGreater(len(field.route(start, end)), 1)
+        field.destroy_tree(tree)
+        self.assertEqual(field.route(start, end), [end])
+        field.destroy_tree(tree)
+        self.assertEqual(field.revision, 1)
+
+    def test_ground_collision_applies_to_player_motion_and_contact_displacement(self):
+        for controlled in (None, 0):
+            with self.subTest(controlled=controlled):
+                simulation = self.encounter(battle_terrain.Feature("rock", 1100, 500, 45, 150),
+                                             controlled=controlled)
+                source, target = simulation.fighters
+                living = simulation.fighters
+                crowds = [combat._Grid([unit], combat.GRID_CELL) for unit in living]
+                simulation._resolve_contacts(living, crowds, [(source, 300, 0), (target, 0, 0)], combat.FIXED_STEP)
+                self.assertLess(source.x, 1100)
+                self.assertTrue(simulation.battlefield.walkable((source.x, source.y)))
+
+    def test_ranged_falloff_counts_partial_impact_distance_after_defense(self):
+        simulation = self.encounter()
+        hold_still(simulation)
+        source, target = simulation.fighters
+        target.data["defense"] = 10
+        traveled = combat.FALLOFF_START + 200
+        simulation.projectiles = [combat.Projectile(
+            source, dict(source.data), target.x - combat.UNIT_RADIUS - 5, target.y, 300, 0, 1,
+            distance=traveled)]
+        source.x -= 300  # Shooter movement cannot change a shot's traveled distance.
+        simulation.advance(combat.FIXED_STEP)
+        expected = simulation.damage_amount(source.data, target.data, source.attack_share,
+                                             simulation.ranged_multiplier(traveled + 5))
+        self.assertAlmostEqual(target.data["health"], target.data["max_health"] - expected)
+        self.assertEqual(simulation.ranged_multiplier(0), 1)
+        self.assertAlmostEqual(simulation.ranged_multiplier(combat.WEAPON_RANGE * 2), combat.MIN_RANGED_DAMAGE)
+        self.assertEqual(simulation.damage_amount(source.data, dict(target.data, defense=10000), 1,
+                                                  simulation.ranged_multiplier(combat.WEAPON_RANGE)), 0)
+
+    def test_expiring_projectile_cannot_hit_beyond_its_remaining_reach(self):
+        simulation = self.encounter()
+        hold_still(simulation)
+        source, target = simulation.fighters
+        simulation.projectiles = [combat.Projectile(
+            source, dict(source.data), target.x - combat.UNIT_RADIUS - 10, target.y, 1000, 0, 0.001)]
+        simulation.advance(combat.FIXED_STEP)
+        self.assertEqual(target.data["health"], target.data["max_health"])
+        self.assertEqual(simulation.projectiles, [])
+
+    def test_ai_does_not_dodge_a_projectile_stopped_by_cover(self):
+        for covered in (False, True):
+            with self.subTest(covered=covered):
+                features = [battle_terrain.Feature("rock", 1200, 500, 50, 150)] if covered else []
+                simulation = self.encounter(*features)
+                source, target = simulation.fighters
+                target.data["speed"] = combat.DODGE_MIN_SPEED
+                target.cooldown = combat.FIRE_INTERVAL
+                simulation.projectiles = [combat.Projectile(source, dict(source.data), 1000, 500, 1250, 0, 1)]
+                crowds = [combat._Grid([unit], combat.GRID_CELL) for unit in simulation.fighters]
+                simulation._dodge_incoming(crowds)
+                self.assertEqual(target.dodge > 0, not covered)
+
+    def test_projectiles_hit_raised_ground_before_units_behind_the_crest(self):
+        simulation = self.encounter(battle_terrain.Feature("hill", 1200, 500, 150, 100))
+        hold_still(simulation)
+        source, target = simulation.fighters
+        simulation.projectiles = [combat.Projectile(source, dict(source.data), 1000, 500, 18000, 0, 1)]
+        simulation.advance(combat.FIXED_STEP)
+        self.assertEqual(target.data["health"], target.data["max_health"])
+        self.assertEqual(simulation.projectiles, [])
+
+    def test_ram_approach_rejects_intervening_bodies(self):
+        simulation = combat.BattleSimulation(self.library, ["Fixture I"] * 2, ["Fixture I"], seed=2)
+        unit, friend, target = simulation.fighters
+        unit.x, unit.y, unit.shape, unit.pace = 1000, 500, "tank", 1
+        friend.x, friend.y = 1100, 500
+        target.x, target.y = 1200, 500
+        self.assertIsNone(simulation._ram_point(unit, target))
+        friend.y += combat.UNIT_RADIUS * 3
+        self.assertIsNotNone(simulation._ram_point(unit, target))
+
+    def test_blocked_units_seek_reachable_firing_positions_on_both_sides(self):
+        simulation = self.encounter(battle_terrain.Feature("rock", 1200, 500, 60, 150))
+        for unit, target in (simulation.fighters, list(reversed(simulation.fighters))):
+            unit.hold, unit.pace, unit.start_delay = 0.8, 1, 0
+            unit.target = target
+            position = simulation._firing_position(unit, target)
+            self.assertTrue(simulation._firing_lane(unit, target, position))
+            self.assertTrue(simulation.battlefield.route((unit.x, unit.y), position))
+            course = simulation._ai_course(unit, 400, 0, (unit.x, unit.y), target)
+            self.assertGreater(course[0], 0)
+
+    def test_increased_weapon_reach_does_not_move_preferred_positions(self):
+        simulation = self.encounter()
+        unit, target = simulation.fighters
+        unit.hold, unit.target = 0.8, target
+        distance = combat.ENGAGEMENT_RANGE * unit.hold
+        with patch.object(combat, "WEAPON_RANGE", combat.WEAPON_RANGE * 3):
+            self.assertEqual(simulation._ai_course(unit, distance, 0, (unit.x, unit.y), target), (0, 0))
+
+    def test_rams_reject_blocked_approaches_and_targets_that_cannot_be_caught(self):
+        simulation = self.encounter(battle_terrain.Feature("chasm", 1100, 500, 30))
+        unit, target = simulation.fighters
+        unit.shape, unit.pace = "tank", 1
+        target.x = 1200
+        self.assertIsNone(simulation._ram_point(unit, target))
+        simulation.battlefield = self.field()
+        self.assertIsNotNone(simulation._ram_point(unit, target))
+        target.vx = unit.max_speed * 2
+        self.assertIsNone(simulation._ram_point(unit, target))
+        target.x = unit.x + combat.MELEE_COMMIT_RANGE + 1
+        target.vx = unit.max_speed - combat.RAM_MIN_SPEED / 2
+        self.assertIsNone(simulation._ram_point(unit, target))
+
+    def test_ram_selection_can_pass_over_a_nearer_unsuitable_target(self):
+        simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture III", "Fixture I"], seed=2)
+        unit, armored, vulnerable = simulation.fighters
+        unit.x, unit.y, unit.shape, unit.pace = 1000, 500, "tank", 1
+        armored.x, armored.y, armored.shape = 1100, 540, "tank"
+        armored.data["attack"] = 0  # Does not add a second damaging threat.
+        vulnerable.x, vulnerable.y, vulnerable.data["health"] = 1120, 500, 20
+        vulnerable.cooldown = 0
+        sides = [[unit], [armored, vulnerable]]
+        simulation._prepare_close_combat(sides, [combat._Grid(side, combat.GRID_CELL) for side in sides])
+        self.assertTrue(unit.ram_committed)
+        self.assertIs(unit.target, vulnerable)
+
+    def test_cover_excludes_blocked_supporting_fire_from_ram_risk(self):
+        simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"] * 3, seed=2)
+        unit, target, *support = simulation.fighters
+        unit.x, unit.y, unit.shape, unit.pace = 1000, 500, "tank", 1
+        target.x, target.y, target.data["health"] = 1120, 500, 20
+        target.cooldown = 0
+        for index, enemy in enumerate(support):
+            enemy.x, enemy.y = 1700, 490 + index * 20
+        sides = [[unit], [target, *support]]
+        crowds = [combat._Grid(side, combat.GRID_CELL) for side in sides]
+        simulation.battlefield = self.field(battle_terrain.Feature("rock", 1450, 500, 90, 150))
+        simulation._prepare_close_combat(sides, crowds)
+        self.assertTrue(unit.ram_committed)
+        simulation.battlefield = self.field()
+        simulation._prepare_close_combat(sides, crowds)
+        self.assertFalse(unit.ram_committed)
 
 
 class CustomBattleScreenTests(unittest.TestCase):
@@ -1314,6 +1570,39 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.screen.finish_retreat()
         self.assertIsNone(self.screen.campaign)
         self.assertIs(self.screen.rosters, custom)
+
+    def test_terrain_picker_applies_only_to_custom_setup_and_survives_campaign_visits(self):
+        with patch("screens.game.custom_battle.pickers.open_listbox_selector") as picker:
+            terrain_button = next(button for button in self.screen.elements
+                                  if button.callback == self.screen.choose_terrain)
+            terrain_button.callback()
+            picker.assert_called_once()
+            picker.call_args.args[4]("jungle")
+        self.assertEqual(self.screen.terrain, "jungle")
+        self.fill_armies()
+        self.click("Simulate")
+        self.assertEqual(self.screen.simulation.battlefield.terrain, "jungle")
+        self.screen.set_terrain("desert")
+        self.assertEqual(self.screen.terrain, "jungle")
+        self.screen.return_to_setup()
+        _map, province, _custom = self.enter_campaign()
+        self.assertEqual(self.screen.simulation.battlefield.terrain, province["terrain"])
+        self.screen.set_terrain("desert")
+        self.assertEqual(self.screen.terrain, "jungle")
+        self.screen.finish_retreat()
+        with patch("data.queries.get_unit_library", return_value=self.library):
+            self.screen.on_enter(self.controller, None)
+        self.assertEqual(self.screen.terrain, "jungle")
+
+    def test_preview_reordering_preserves_the_generated_battlefield(self):
+        self.screen.set_terrain("mountain")
+        self.fill_armies()
+        self.screen.add_unit(0, "Fixture II")
+        self.click("Simulate")
+        before = [(f.kind, f.x, f.y, f.radius, f.height) for f in self.screen.simulation.battlefield.features]
+        self.drag_card(self.screen.card_rect(0, 1).center, self.screen.card_rect(0, 0).center)
+        after = [(f.kind, f.x, f.y, f.radius, f.height) for f in self.screen.simulation.battlefield.features]
+        self.assertEqual(before, after)
 
     def test_tactical_result_continues_to_map_and_spectates_only_after_death(self):
         for dies in (False, True):

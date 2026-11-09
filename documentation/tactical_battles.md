@@ -25,6 +25,8 @@ Playing tactical mode uses preview and actual battle, with participants supplied
 ### Editing: Edit Battle
 
 Choose **Custom Battle** to open editing.
+The terrain button opens **Battle Terrain**. Choose Plains, Hills, Desert, Forest, Jungle, Mountains, or Swamp.
+The choice belongs to this custom-battle setup; campaign encounters use the province's terrain.
 **Add Friendly** and **Add Enemy** open the searchable land-unit picker. Each selection adds one unit at the chosen library level.
 Artillery-type units (everything that can bombard: artillery, railroad guns, Landkreuzers, and the Railgun)
 take no part in tactical battles, so the picker and **Random** never offer them.
@@ -118,7 +120,7 @@ In a custom battle, **Retreat** returns to editing while preserving the army set
 
 ### Actual: Actual Battle
 
-Actual battle is the fighting on the grass battlefield.
+Actual battle is the fighting on the terrain battlefield.
 The two armies deploy facing each other around the middle of the battlefield, their front ranks a fixed distance apart
 (`SPAWN_FRONT_GAP` in [map_logic/custom_battle.py](../map_logic/custom_battle.py)) whatever their size.
 Each division deploys as one vertical line of its sub-units, centered top to bottom, in its own rank.
@@ -164,6 +166,32 @@ A shot already in flight still lands after its shooter is destroyed.
 Every sub-unit has the same long weapon range. Shots fly fast in a straight line and hit the first enemy they cross.
 Each shot, the player's included, leaves at a small random angle off where the gun points. The same small error
 carries a shot further off target over a longer distance, so long-range shots miss more often than close ones.
+Shots also lose damage gradually after their full-damage distance, down to a positive minimum multiplier.
+Falloff uses the distance the projectile actually travels to impact and applies after defense and sub-unit damage sharing.
+Falloff does not affect melee or ramming. Preferred fighting, cavalry charge, skirmishing, and withdrawal distances
+are separate from maximum weapon range. Read tactical tuning in `map_logic/custom_battle.py`.
+
+#### Terrain
+
+Plains have a light green background and no obstacles. Desert follows the same rules with an orange background.
+Hills have a yellow background and occasional traversable mounds. Additional contour bands indicate higher mounds.
+Raised ground intercepts shots through a crest;
+climbing toward the crest opens firing lines. Units and guns use the ground height at their position.
+Mountains have a brown background, more mounds, impassable rocks, and occasional chasms.
+Chasms block ground movement but allow shots across.
+Forests have a green background and tree patches. Jungle has a dark green background and denser tree patches.
+Trees block ground movement and intercept shots. Ordinary shots leave trees intact; tank shells remove a tree
+and stop at that tree. Later shots and ground units can use the opening.
+Swamps have a pink background, trees, and impassable marsh areas. Marsh areas allow shots across like chasms.
+
+The generated battlefield keeps deployment areas clear and ground routes connected. Terrain generation and
+navigation belong to `map_logic/battle_terrain.py`; the screen draws cached artwork from those same features.
+AI units use ground routes around obstacles and seek accessible firing positions when terrain blocks their shots.
+Tanks can fire to clear obstructing trees. Formations can loosen while following routes around terrain.
+Friendly support must have an unobstructed ground approach, and terrain-blocked enemy fire does not count as
+an immediate close-combat threat. Both armies use the same terrain, navigation, and combat rules.
+
+#### Unit behavior
 
 Infantry-type, cavalry, and troop-carrier sub-units fire only inside a cone in front of the hull.
 Tanks and armored cars aim all the way around. Every gun turns toward its aim at its own speed,
@@ -183,7 +211,7 @@ fight, its cruising speed, a short delay before it first moves, and a gentle wea
 Once it has stopped, a sub-unit faces the enemy it shoots at so its firing cone covers it.
 
 Each sub-unit chooses whom to shoot from the enemies close to its nearest one. A wounded enemy counts as nearer than
-it is, and an enemy it could not damage even at full health is passed over.
+it is, clear firing lines take priority over obstructed targets, and an enemy it could not damage even at full health is passed over.
 
 AI sub-units also fight according to their type:
 
@@ -196,7 +224,9 @@ AI sub-units also fight according to their type:
 
 Two reactions come before the type's behavior. A sub-unit below a set share of its health falls back while healthier
 allies can cover the withdrawal. The last wounded troops keep fighting so depleted armies cannot both withdraw
-indefinitely. Vehicles reverse while facing the enemy; infantry and cavalry turn away to withdraw.
+indefinitely. Wounded units seek nearby cover when available and stop withdrawing once terrain protects them
+from their target. Without cover, units withdraw to their separate withdrawal distance.
+Vehicles reverse while facing the enemy in an open withdrawal; infantry and cavalry turn away to withdraw.
 A fast AI sub-unit (library speed at least `DODGE_MIN_SPEED`)
 sidesteps briefly, at right angles to a shot's path and away from it, when it is hit and survives, and also when an
 enemy shot is about to pass close to it while it is not about to fire (its weapon is reloading or its target is out
@@ -218,7 +248,10 @@ Infantry contact separates bodies without impact damage. Friendly contact never 
 A pair must separate beyond contact distance before another ram can deal damage. Sustained pushing cannot repeat
 the impact. Knockback decays quickly and never disables steering or firing.
 AI vehicles attempt a ram only with enough speed, a mass advantage, adequate health, and a safe approach against
-a nearby wounded or reloading enemy. The player can attempt any impact under the same contact and damage rules.
+a nearby wounded or reloading enemy. The AI considers suitable nearby targets rather than only the nearest body.
+The AI predicts an interception and checks clear ground, intervening units, available run-up,
+closing speed, and whether the target can be caught before committing. Terrain cover can make a close approach safer, while
+rocks, trees, marshes, and chasms can prevent a ram. The player can attempt any impact under the same contact and damage rules.
 
 #### Control
 
@@ -266,7 +299,8 @@ The custom battle is won when the enemy army is destroyed and lost when the frie
 Mutual destruction counts as a loss. If the controlled sub-unit is destroyed while friendly units remain, those friendly units continue fighting under AI control.
 The status line counts the divisions on each side that still have a sub-unit.
 
-**Run Again** opens preview with fresh armies from the same setup.
+**Run Again** opens preview with fresh armies and a fresh battlefield from the same setup.
+Reordering the friendly army during preview preserves that preview's generated terrain.
 **Edit Armies** returns to editing. **Exit** from actual battle or the result view also returns to editing.
 **Exit** from editing returns to the main menu. These routes back to editing belong to the custom-battle prototype.
 
