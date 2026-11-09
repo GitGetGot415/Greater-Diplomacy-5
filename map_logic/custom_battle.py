@@ -15,6 +15,7 @@ from map_logic.system32 import combat_forecast, combat_rules
 FIXED_STEP = 1.0 / 30.0
 MOVE_PIXELS_PER_SPEED = 35.0
 FIRE_INTERVAL = 2.0
+DAMAGE_SCALE = 0.5  # Applied after defense and rounding, so low-damage hits also slow down.
 WEAPON_RANGE = 500.0
 PROJECTILE_SPEED = 500.0
 UNIT_RADIUS = 12.0
@@ -38,7 +39,7 @@ CHARGE_CLOSE = 0.25  # Cavalry charges in to this share of weapon range, then wi
 SKIRMISH_HOLD = 0.9  # Armored cars stop at this share of weapon range...
 SKIRMISH_BACK_OFF = 0.6  # ...and back away from an enemy closer than this share.
 # Reacting to the fight.
-FALL_BACK_HEALTH = 0.3  # Below this share of its health, a sub-unit falls back out of enemy range.
+FALL_BACK_HEALTH = 0.45  # Leave enough health to disengage under fire.
 DODGE_MIN_SPEED = 3  # Library speed a sub-unit needs before it sidesteps at all; slower units keep aiming.
 DODGE_SECONDS = 0.6  # A sub-unit that is hit, or sees a shot coming, sidesteps for this long.
 DODGE_LOOKAHEAD = 0.6  # Seconds ahead a sub-unit that is not about to fire watches incoming shots.
@@ -59,6 +60,34 @@ SPAWN_FRONT_GAP = 1000.0
 SPAWN_MARGIN = 100.0  # Between the battlefield edge and the last rank of the largest army.
 # The battlefield is wide enough for two full armies behind their front ranks.
 ARENA_SIZE = (SPAWN_FRONT_GAP + 2 * (SPAWN_MARGIN + (c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE - 1) * RANK_GAP), 1100.0)
+APPROACH_LANE_GAP = 70.0
+FLANK_ARRIVAL_DISTANCE = 45.0
+DEFENSIVE_SHAPES = frozenset(("infantry", "motorized", "mechanized", "ifv"))
+MELEE_SHAPES = frozenset(("infantry", "cavalry"))
+MELEE_REACH = UNIT_RADIUS * 2 + 6
+MELEE_INTERVAL = 1.0
+MELEE_DAMAGE = 0.7  # Faster attacks give greater sustained damage, replacing gunfire.
+MELEE_ARC = math.radians(60)  # Either side of the gun's aim; also applies to manual fire.
+MELEE_APPROACH_RANGE = 160.0
+MELEE_COMMIT_RANGE = 60.0
+MELEE_MIN_HEALTH = 0.55
+MELEE_WOUNDED_TARGET = 0.6
+MELEE_SUPPORT_RATIO = 1.5
+RAM_APPROACH_RANGE = 160.0
+RAM_MIN_HEALTH = 0.65
+RAM_MASS_ADVANTAGE = 2.0
+CONTACT_RELEASE_DISTANCE = UNIT_RADIUS * 3
+RAM_MIN_SPEED = 60.0
+RAM_REFERENCE_SPEED = 120.0
+RAM_MAX_STRENGTH = 1.5
+RAM_DAMAGE = 0.6
+KNOCKBACK_MAX_SPEED = 100.0
+KNOCKBACK_SECONDS = 0.25
+# Relative contact mass is independent of health, price, and campaign defense.
+CONTACT_MASS = {
+    "infantry": 1.0, "cavalry": 2.0, "armored_car": 4.0, "motorized": 4.0,
+    "light_tank": 6.0, "mechanized": 6.0, "ifv": 7.0, "tank": 9.0, "heavy_tank": 14.0,
+}
 RANDOM_ARMY_MIN_UNITS = 3
 RANDOM_ARMY_MAX_UNITS = 5
 RANDOM_UNIT_AGE_LIMIT = 5
@@ -282,10 +311,21 @@ class Fighter:
     division: int = 0  # Index into BattleSimulation.divisions.
     attack_share: float = 1.0  # The share of its division's damage each hit carries: 1 / its full sub-unit count.
     cooldown: float = 0.0
+    reload_interval: float = FIRE_INTERVAL
     angle: float = 0.0  # Hull heading: movement follows it.
     aim: float = 0.0  # Gun heading: shots follow it.
     speed: float = 0.0  # Signed forward speed in pixels per second.
     turn_rate: float = 0.0  # Radians per second.
+    index: int = 0
+    lane: float = 0.0
+    flank_goal: object = None
+    flank_complete: bool = False
+    defensive: bool = False
+    melee_committed: bool = False
+    ram_committed: bool = False
+    melee_targets: tuple = ()
+    push_vx: float = 0.0
+    push_vy: float = 0.0
     vx: float = 0.0
     vy: float = 0.0
     target: object = None  # AI only: the enemy it shoots at, its nearest.
@@ -409,6 +449,9 @@ class BattleSimulation:
     _turn: float = field(init=False, default=0.0)
     _fire: bool = field(init=False, default=False)
     _aim_point: object = field(init=False, default=None)
+    _advancing_sides: list = field(init=False, default_factory=lambda: [False, False])
+    _healthy_sides: list = field(init=False, default_factory=lambda: [True, True])
+    _contacts: set = field(init=False, default_factory=set)  # Rearm a ram only after the pair separates.
 
     def __post_init__(self):
         if self.controlled_index is not None and (
@@ -436,6 +479,10 @@ class BattleSimulation:
                         raise ValueError("Starting HP must be above zero and no greater than the unit's maximum HP.")
                     data["health"] = entry["health"]
                 members = self._deploy_division(data, side, x, unit_shape(name, self.library))
+                lane = (index - (len(roster) - 1) / 2) * APPROACH_LANE_GAP
+                for fighter in members:
+                    fighter.lane = lane
+                    fighter.defensive = bool(side and fighter.shape in DEFENSIVE_SHAPES)
                 if side == 0 and index == self.controlled_index:
                     self.controlled = members[len(members) // 2]  # The middle of the line.
 
@@ -463,6 +510,7 @@ class BattleSimulation:
                 dict(data, max_health=full / size, health=data["health"] / count), side,
                 x, ARENA_SIZE[1] / 2 + slot, shape, division=division, attack_share=1 / size,
                 angle=facing, aim=facing,
+                index=len(self.fighters) + number,
                 retarget=(len(self.fighters) + number) % stagger * FIXED_STEP, slot=slot,
                 hold=rng.uniform(*AI_HOLD_RANGE), pace=rng.uniform(*AI_PACE),
                 start_delay=rng.uniform(*AI_START_DELAY), wander=rng.uniform(0.0, AI_WANDER_ANGLE),
@@ -544,14 +592,32 @@ class BattleSimulation:
         """Shared health scaling and target capability rules own attack strength."""
         return sum(shot[1] for shot in combat_rules.damage_shots([source], [target]))
 
+    @classmethod
+    def damage_amount(cls, source, target, attack_share, multiplier=1.0):
+        """Tactical pacing follows full defense and division sharing for every attack kind.
+
+        Round before pacing so even the smallest positive hits take longer than before.
+        The existing minimum hit prevents weakening armies from approaching zero forever.
+        """
+        loss = max(0.0, cls._attack(source, target) - target["defense"]) * attack_share
+        return math.ceil(loss) * DAMAGE_SCALE * multiplier
+
+    def _queue_attack(self, fighter, shots):
+        """Shooting and close attacks share one reload and the same manual fire control."""
+        eligible = [target for target in fighter.melee_targets
+                    if abs(_wrap(math.atan2(target.y - fighter.y, target.x - fighter.x) - fighter.aim)) <= MELEE_ARC]
+        target = min(eligible, key=lambda enemy: math.hypot(enemy.x - fighter.x, enemy.y - fighter.y), default=None)
+        shots.append((fighter, target))
+        fighter.reload_interval = MELEE_INTERVAL if target is not None else FIRE_INTERVAL
+        fighter.cooldown = fighter.reload_interval
+
     def _drive_player(self, fighter, dt, shots):
         self._steer(fighter, self._turn, dt)
         self._accelerate(fighter, self._throttle, dt)
         aim = self._aim_point
         self._slew_aim(fighter, fighter.aim if aim is None else math.atan2(aim[1] - fighter.y, aim[0] - fighter.x), dt)
         if self._fire and fighter.cooldown <= 0:
-            shots.append(fighter)
-            fighter.cooldown = FIRE_INTERVAL
+            self._queue_attack(fighter, shots)
 
     @staticmethod
     def advance_point(fighter, center, objective, offset=0.0):
@@ -601,16 +667,29 @@ class BattleSimulation:
         Otherwise its shape's behavior decides (BEHAVIORS).
         """
         away = toward + math.pi
-        if fighter.data["health"] < fighter.data["max_health"] * FALL_BACK_HEALTH:
-            # Badly hurt: fall back out of the enemy's reach, then turn to face it again.
+        if (fighter.data["health"] < fighter.data["max_health"] * FALL_BACK_HEALTH
+                and self._healthy_sides[fighter.side]):
+            # Retreat while healthier allies cover the withdrawal. The last wounded
+            # troops keep fighting, so two depleted armies do not both flee forever.
+            fighter.melee_committed = False
+            fighter.ram_committed = False
+            if fighter.shape not in MELEE_SHAPES:
+                return (-fighter.pace, toward) if distance < WEAPON_RANGE else (0.0, toward)
             return (fighter.pace, away) if distance < WEAPON_RANGE else (0.0, toward)
+        if fighter.ram_committed and (distance <= MELEE_COMMIT_RANGE or fighter.dodge <= 0):
+            return fighter.pace, toward
+        if fighter.melee_committed:
+            if distance <= MELEE_COMMIT_RANGE:
+                return (fighter.pace if distance > MELEE_REACH else 0.0), toward
+            if fighter.dodge <= 0:
+                return fighter.pace, toward
         if fighter.dodge > 0:
             return fighter.pace, fighter.dodge_heading
         behavior = BEHAVIORS.get(fighter.shape)
         hold = fighter.hold
         if behavior == "skirmish":
             if distance < WEAPON_RANGE * SKIRMISH_BACK_OFF:
-                return fighter.pace, away
+                return -fighter.pace, toward
             hold = SKIRMISH_HOLD
         elif behavior == "charge":
             if fighter.withdrawing and distance < WEAPON_RANGE * fighter.hold:
@@ -619,13 +698,27 @@ class BattleSimulation:
             if fighter.withdrawing:
                 return fighter.pace, away
             hold = CHARGE_CLOSE
-        if distance <= WEAPON_RANGE * hold:
+        flanking = behavior == "flank" and not fighter.flank_complete
+        if distance <= WEAPON_RANGE * hold and not flanking:
             # In position: face the enemy it shoots at, so a firing cone covers it.
             return 0.0, toward
         if self.elapsed < fighter.start_delay:
             return 0.0, toward
         (goal_x, goal_y), (course_x, course_y) = self.advance_point(
-            fighter, center, objective, fighter.flank * FLANK_OFFSET if behavior == "flank" else 0.0)
+            fighter, center, objective, fighter.lane)
+        if flanking:
+            if fighter.flank_goal is None:
+                forward = -1.0 if fighter.side else 1.0
+                fighter.flank_goal = (
+                    max(UNIT_RADIUS, min(ARENA_SIZE[0] - UNIT_RADIUS,
+                                        objective.x - forward * WEAPON_RANGE * hold)),
+                    max(UNIT_RADIUS, min(ARENA_SIZE[1] - UNIT_RADIUS,
+                                        objective.y + fighter.slot + fighter.lane + fighter.flank * FLANK_OFFSET)))
+            goal_x, goal_y = fighter.flank_goal
+            if math.hypot(goal_x - fighter.x, goal_y - fighter.y) <= FLANK_ARRIVAL_DISTANCE:
+                fighter.flank_complete = True
+                return 0.0, toward
+        goal_y = max(UNIT_RADIUS, min(ARENA_SIZE[1] - UNIT_RADIUS, goal_y))
         weave = fighter.wander * math.sin(math.tau * self.elapsed / fighter.wander_period + fighter.wander_phase)
         throttle = fighter.pace
         # A sub-unit well ahead of its division slows down to let the division catch up; charging cavalry does not.
@@ -638,14 +731,21 @@ class BattleSimulation:
         fighter.retarget -= dt
         if fighter.retarget <= 0:
             fighter.retarget += RETARGET_SECONDS
-            fighter.target = None
+            if not (fighter.melee_committed or fighter.ram_committed):
+                fighter.target = None
         if fighter.target is None or not fighter.target.alive:
             fighter.target = self._choose_target(fighter, enemies)
         fighter.dodge = max(0.0, fighter.dodge - dt)
         target = fighter.target
         dx, dy = target.x - fighter.x, target.y - fighter.y
         distance = math.hypot(dx, dy)
+        # Defenders hold their deployment line while healthy opponents approach.
+        # A fleeing or immobile opponent must not leave two armies waiting forever.
+        defend = (fighter.defensive and not (fighter.melee_committed or fighter.ram_committed) and distance > WEAPON_RANGE
+                  and self._advancing_sides[1 - fighter.side])
         throttle, heading = self._ai_course(fighter, distance, math.atan2(dy, dx), center, objective)
+        if defend:
+            throttle, heading = 0.0, math.atan2(dy, dx)
         turning = _wrap(heading - fighter.angle)
         # Turn toward the heading before driving hard along it.
         throttle *= max(0.0, math.cos(turning))
@@ -660,8 +760,7 @@ class BattleSimulation:
         if (fighter.cooldown <= 0 and distance <= WEAPON_RANGE
                 and abs(_wrap(desired - fighter.aim)) <= AIM_TOLERANCE
                 and self._attack(fighter.data, target.data) > 0):
-            shots.append(fighter)
-            fighter.cooldown = FIRE_INTERVAL
+            self._queue_attack(fighter, shots)
 
     def _fire_shot(self, fighter):
         # The shot leaves slightly off the aim, so the same error misses more often at long range.
@@ -697,7 +796,9 @@ class BattleSimulation:
             for unit in crowds[1 - shot.source.side].within(
                     min(shot.x, end_x) - DODGE_DANGER, min(shot.y, end_y) - DODGE_DANGER,
                     max(shot.x, end_x) + DODGE_DANGER, max(shot.y, end_y) + DODGE_DANGER):
-                if not self._can_dodge(unit) or unit.dodge > 0 or self._ready_to_fire(unit):
+                if (not self._can_dodge(unit) or unit.dodge > 0 or self._ready_to_fire(unit)
+                        or ((unit.melee_committed or unit.ram_committed) and unit.target is not None
+                            and math.hypot(unit.x - unit.target.x, unit.y - unit.target.y) <= MELEE_COMMIT_RANGE)):
                     continue
                 along = ((unit.x - shot.x) * shot.vx + (unit.y - shot.y) * shot.vy) / speed
                 across = ((unit.y - shot.y) * shot.vx - (unit.x - shot.x) * shot.vy) / speed
@@ -725,19 +826,158 @@ class BattleSimulation:
             objectives[index] = center, objective
         return objectives
 
+    def _prepare_close_combat(self, sides, crowds):
+        """Find contact attacks for both controllers; only AI chooses whether to close in."""
+        for side, units in enumerate(sides):
+            for unit in units:
+                unit.melee_targets = ()
+                approach = MELEE_APPROACH_RANGE if unit.shape in MELEE_SHAPES else RAM_APPROACH_RANGE
+                nearby = [enemy for enemy in crowds[1 - side].around(unit.x, unit.y, approach)
+                          if math.hypot(enemy.x - unit.x, enemy.y - unit.y) <= approach]
+                if unit.shape in MELEE_SHAPES:
+                    contacts = [enemy for enemy in nearby
+                                if math.hypot(enemy.x - unit.x, enemy.y - unit.y) <= MELEE_REACH
+                                and self._can_hurt(unit, enemy)]
+                    unit.melee_targets = tuple(contacts)
+                if unit is self.controlled:
+                    continue
+                target = unit.target
+                if target is None or not target.alive or not (unit.melee_committed or unit.ram_committed):
+                    target = min(nearby, key=lambda enemy: math.hypot(enemy.x - unit.x, enemy.y - unit.y), default=None)
+                friends = [friend for friend in crowds[side].around(unit.x, unit.y, MELEE_APPROACH_RANGE)
+                           if math.hypot(friend.x - unit.x, friend.y - unit.y) <= MELEE_APPROACH_RANGE]
+                threats = sum(1 for enemy in crowds[1 - side].around(unit.x, unit.y, WEAPON_RANGE)
+                              if math.hypot(enemy.x - unit.x, enemy.y - unit.y) <= WEAPON_RANGE
+                              and self._can_hurt(enemy, unit))
+                if unit.shape not in MELEE_SHAPES:
+                    unit.melee_committed = False
+                    safe = (target is not None and unit.max_speed >= RAM_MIN_SPEED
+                            and unit.data["health"] >= unit.data["max_health"] * RAM_MIN_HEALTH
+                            and math.hypot(target.x - unit.x, target.y - unit.y) <= RAM_APPROACH_RANGE
+                            and CONTACT_MASS[unit.shape] >= CONTACT_MASS[target.shape] * RAM_MASS_ADVANTAGE
+                            and self._can_hurt(unit, target) and threats <= len(friends)
+                            and tuple(sorted((unit.index, target.index))) not in self._contacts)
+                    opportunity = safe and (unit.ram_committed or (
+                        math.hypot(target.x - unit.x, target.y - unit.y) > MELEE_COMMIT_RANGE
+                        and (target.cooldown > FIRE_INTERVAL / 2 or target.data["health"] <=
+                             target.data["max_health"] * MELEE_WOUNDED_TARGET)))
+                    unit.ram_committed = bool(opportunity)
+                    if opportunity:
+                        unit.target = target
+                    continue
+                unit.ram_committed = False
+                safe = (target is not None and target.shape in MELEE_SHAPES
+                        and unit.data["health"] >= unit.data["max_health"] * MELEE_MIN_HEALTH
+                        and math.hypot(target.x - unit.x, target.y - unit.y) <= MELEE_APPROACH_RANGE
+                        and self._can_hurt(unit, target)
+                        and threats <= len(friends) * MELEE_SUPPORT_RATIO)
+                opportunity = safe and (
+                    unit.melee_committed
+                    or target.data["health"] <= target.data["max_health"] * MELEE_WOUNDED_TARGET
+                    or len(friends) >= len(nearby) * MELEE_SUPPORT_RATIO
+                    or (len(nearby) == 1 and target.cooldown > FIRE_INTERVAL / 2))
+                unit.melee_committed = bool(opportunity)
+                if opportunity:
+                    unit.target = target
+
+    @staticmethod
+    def _set_contact_velocity(unit, vx, vy):
+        """Inelastic contact stops closing motion; remaining sideways motion decays quickly."""
+        forward = vx * math.cos(unit.angle) + vy * math.sin(unit.angle)
+        unit.speed = max(-unit.max_speed, min(unit.max_speed, forward))
+        unit.push_vx = max(-KNOCKBACK_MAX_SPEED, min(KNOCKBACK_MAX_SPEED, vx - unit.speed * math.cos(unit.angle)))
+        unit.push_vy = max(-KNOCKBACK_MAX_SPEED, min(KNOCKBACK_MAX_SPEED, vy - unit.speed * math.sin(unit.angle)))
+
+    def _resolve_contacts(self, living, crowds, movements, dt):
+        """Resolve each swept body pair once, with no bounce and one ram per approach.
+
+        Relative motion catches head-on crossings between ticks. Contact mass decides
+        which body yields, while the normal closing speed rejects glancing impacts.
+        Friendly contact separates bodies but never causes damage.
+        """
+        positions = {unit.index: [unit.x + mx, unit.y + my] for unit, mx, my in movements}
+        velocities = {unit.index: (mx / dt, my / dt) for unit, mx, my in movements}
+        max_move = max((math.hypot(mx, my) for _, mx, my in movements), default=0.0)
+        retained = set()
+        for pair in self._contacts:
+            first, second = (self.fighters[index] for index in pair)
+            if first.alive and second.alive and math.hypot(first.x - second.x, first.y - second.y) <= CONTACT_RELEASE_DISTANCE:
+                retained.add(pair)
+        damage = []
+        diameter = UNIT_RADIUS * 2
+        for unit in living:
+            vx, vy = velocities[unit.index]
+            reach = math.hypot(vx, vy) * dt + max_move + diameter
+            for crowd in crowds:
+                for other in crowd.around(unit.x, unit.y, reach):
+                    if other.index <= unit.index:
+                        continue
+                    ovx, ovy = velocities[other.index]
+                    fraction = self._collision_fraction(
+                        unit.x, unit.y, unit.x + (vx - ovx) * dt, unit.y + (vy - ovy) * dt,
+                        other, radius=diameter)
+                    if fraction is None:
+                        continue
+                    dx = other.x - unit.x + (ovx - vx) * dt * fraction
+                    dy = other.y - unit.y + (ovy - vy) * dt * fraction
+                    length = math.hypot(dx, dy)
+                    nx, ny = (dx / length, dy / length) if length > 1e-9 else (1.0, 0.0)
+                    first_mass, second_mass = CONTACT_MASS[unit.shape], CONTACT_MASS[other.shape]
+                    total = first_mass + second_mass
+                    first_pos, second_pos = positions[unit.index], positions[other.index]
+                    overlap = max(0.0, diameter - ((second_pos[0] - first_pos[0]) * nx
+                                                   + (second_pos[1] - first_pos[1]) * ny))
+                    first_pos[0] -= nx * overlap * second_mass / total
+                    first_pos[1] -= ny * overlap * second_mass / total
+                    second_pos[0] += nx * overlap * first_mass / total
+                    second_pos[1] += ny * overlap * first_mass / total
+                    closing = max(0.0, (vx - ovx) * nx + (vy - ovy) * ny)
+                    pair = (unit.index, other.index)
+                    if pair not in retained and unit.side != other.side and closing >= RAM_MIN_SPEED:
+                        for source, target, speed, mass, target_mass in (
+                                (unit, other, vx * nx + vy * ny, first_mass, second_mass),
+                                (other, unit, -ovx * nx - ovy * ny, second_mass, first_mass)):
+                            if source.shape in MELEE_SHAPES or speed < RAM_MIN_SPEED:
+                                continue
+                            strength = min(RAM_MAX_STRENGTH, closing / RAM_REFERENCE_SPEED) * min(1.0, mass / target_mass)
+                            damage.append((target, self.damage_amount(source.data, target.data, source.attack_share,
+                                                                      RAM_DAMAGE * strength)))
+                    retained.add(pair)
+                    if closing > 0:
+                        impulse = closing / (1 / first_mass + 1 / second_mass)
+                        vx, vy = vx - nx * impulse / first_mass, vy - ny * impulse / first_mass
+                        ovx, ovy = ovx + nx * impulse / second_mass, ovy + ny * impulse / second_mass
+                        velocities[unit.index], velocities[other.index] = (vx, vy), (ovx, ovy)
+                        self._set_contact_velocity(unit, vx, vy)
+                        self._set_contact_velocity(other, ovx, ovy)
+        self._contacts = retained
+        for unit in living:
+            x, y = positions[unit.index]
+            x = max(UNIT_RADIUS, min(ARENA_SIZE[0] - UNIT_RADIUS, x))
+            y = max(UNIT_RADIUS, min(ARENA_SIZE[1] - UNIT_RADIUS, y))
+            unit.vx, unit.vy = (x - unit.x) / dt, (y - unit.y) / dt
+            unit.x, unit.y = x, y
+        return damage
+
     def _step(self, dt):
         self.elapsed += dt
         living = [fighter for fighter in self.fighters if fighter.alive]
         sides = [[fighter for fighter in living if fighter.side == side] for side in (0, 1)]
         crowds = [_Grid(side, GRID_CELL) for side in sides]
         targets = [_Grid(side, TARGET_CELL) for side in sides]
+        self._advancing_sides = [any(unit.max_speed > 0 and unit.data["health"] >=
+                                     unit.data["max_health"] * FALL_BACK_HEALTH for unit in side) for side in sides]
+        self._healthy_sides = [any(unit.data["health"] >= unit.data["max_health"] * FALL_BACK_HEALTH
+                                  for unit in side) for side in sides]
         objectives = self._division_objectives(targets, dt)
+        self._prepare_close_combat(sides, crowds)
         self._dodge_incoming(crowds)
         # All movement and fire decisions use the same pre-step positions.
         movements = []
         shots = []
         for fighter in living:
             if not sides[1 - fighter.side]:
+                movements.append((fighter, 0.0, 0.0))
                 continue
             fighter.cooldown = max(0.0, fighter.cooldown - dt)
             player_controlled = fighter is self.controlled
@@ -746,26 +986,20 @@ class BattleSimulation:
             else:
                 self._drive_ai(fighter, targets[1 - fighter.side], dt, shots, *objectives[fighter.division])
             move = fighter.speed * dt
-            mx, my = math.cos(fighter.angle) * move, math.sin(fighter.angle) * move
-            # A small separation keeps accompanying units visible on an empty field.
-            for other in (() if player_controlled else crowds[fighter.side].around(
-                    fighter.x, fighter.y, UNIT_RADIUS * 2)):
-                if other is fighter:
-                    continue
-                sx, sy = fighter.x - other.x, fighter.y - other.y
-                gap = math.hypot(sx, sy)
-                if 0 < gap < UNIT_RADIUS * 2:
-                    push = min(UNIT_RADIUS * 2 - gap, fighter.max_speed * dt) / 2
-                    mx += sx / gap * push
-                    my += sy / gap * push
+            mx = math.cos(fighter.angle) * move + fighter.push_vx * dt
+            my = math.sin(fighter.angle) * move + fighter.push_vy * dt
+            decay = max(0.0, 1.0 - dt / KNOCKBACK_SECONDS)
+            fighter.push_vx *= decay
+            fighter.push_vy *= decay
             movements.append((fighter, mx, my))
-        for fighter in shots:
-            self._fire_shot(fighter)
-        for fighter, mx, my in movements:
-            x = min(ARENA_SIZE[0] - UNIT_RADIUS, max(UNIT_RADIUS, fighter.x + mx))
-            y = min(ARENA_SIZE[1] - UNIT_RADIUS, max(UNIT_RADIUS, fighter.y + my))
-            fighter.vx, fighter.vy = (x - fighter.x) / dt, (y - fighter.y) / dt
-            fighter.x, fighter.y = x, y
+        close_hits = []
+        for fighter, melee_target in shots:
+            if melee_target is None:
+                self._fire_shot(fighter)
+            else:
+                close_hits.append((melee_target, self.damage_amount(
+                    fighter.data, melee_target.data, fighter.attack_share, MELEE_DAMAGE)))
+        close_hits.extend(self._resolve_contacts(living, crowds, movements, dt))
 
         # Accumulate impacts first so units destroyed together can both land their shots.
         hittable = [_Grid(side, GRID_CELL) for side in sides]
@@ -791,28 +1025,35 @@ class BattleSimulation:
         self.projectiles = remaining
         for shot, target in hits:
             # Attack is measured against the unit actually hit, so its capability rules apply.
-            attack = self._attack(shot.source_data, target.data)
             # Tactical defense blocks a flat amount per hit, even when wounded.
             # Campaign combat instead scales defense with remaining health.
             # A sub-unit's hit carries its share of its division's damage, so a full division hits as hard as
             # one unsplit unit while the full attack against full defense still decides who can hurt whom.
-            loss = max(0.0, attack - target.data["defense"]) * shot.source.attack_share
-            # Whole health points keep equal, weakening armies from approaching
-            # zero forever when the shared health-scaled attack has no floor.
-            target.data["health"] = max(0.0, target.data["health"] - math.ceil(loss))
+            loss = self.damage_amount(shot.source_data, target.data, shot.source.attack_share)
+            close_hits.append((target, loss))
             if loss > 0 and target.alive and self._can_dodge(target):
                 self._start_dodge(target, shot)
+        for target, loss in close_hits:
+            target.data["health"] = max(0.0, target.data["health"] - loss)
         alive_sides = {fighter.side for fighter in self.fighters if fighter.alive}
         if len(alive_sides) < 2:
             # Mutual destruction is a loss for the friendly army; there is no draw screen.
             self.winner = 0 if 0 in alive_sides else 1
 
     @staticmethod
-    def _collision_fraction(x, y, nx, ny, target):
-        """Swept collision prevents fast shells from skipping small unit shapes."""
+    def _collision_fraction(x, y, nx, ny, target, radius=UNIT_RADIUS):
+        """First swept contact prevents fast shells and bodies from skipping their targets."""
         dx, dy = nx - x, ny - y
         length_squared = dx * dx + dy * dy
-        fraction = max(0.0, min(1.0, ((target.x - x) * dx + (target.y - y) * dy)
-                                / length_squared)) if length_squared else 0.0
-        distance = math.hypot(target.x - (x + fraction * dx), target.y - (y + fraction * dy))
-        return fraction if distance <= UNIT_RADIUS else None
+        ox, oy = x - target.x, y - target.y
+        outside = ox * ox + oy * oy - radius * radius
+        if outside <= 0:
+            return 0.0
+        if length_squared == 0:
+            return None
+        along = ox * dx + oy * dy
+        discriminant = along * along - length_squared * outside
+        if discriminant < 0:
+            return None
+        fraction = (-along - math.sqrt(discriminant)) / length_squared
+        return fraction if 0 <= fraction <= 1 else None

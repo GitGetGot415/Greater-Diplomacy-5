@@ -150,6 +150,9 @@ A full division therefore hits about as hard as one unsplit unit, and the full s
 
 Each hit is reduced by the target's full defense stat, down to zero damage.
 Tactical defense stays constant as health falls; campaign combat scales defense with health.
+After defense and sub-unit damage sharing, positive damage rounds up before the tactical pacing multiplier applies.
+The multiplier slows even small hits without making previously vulnerable targets immune.
+Shooting, melee, and ramming use the same damage calculation and target capability rules.
 A shot's damage uses the shooter's strength when it fired and the rules for the unit it actually hits.
 A shot already in flight still lands after its shooter is destroyed.
 
@@ -164,7 +167,10 @@ turning gradually. These rules apply to AI sub-units and the controlled sub-unit
 
 AI sub-units move as loose divisions. Each division advances on the enemy nearest its center, and each of its
 sub-units heads for a point beside that enemy matching its own place in the division's line, so a division arrives
-spread out in its deployment order. A sub-unit that gets well ahead of its division slows down until the division
+spread out in its deployment order. Divisions use separate approach lanes instead of all aiming for the same line.
+Enemy infantry and troop carriers hold their deployment line while healthy mobile opponents approach from beyond
+weapon range. Defenders pursue when the remaining opponents cannot make that approach.
+A sub-unit that gets well ahead of its division slows down until the division
 catches up. Each sub-unit also has its own temperament, drawn at deployment: how close it comes before it stops to
 fight, its cruising speed, a short delay before it first moves, and a gentle weave from side to side while advancing.
 Once it has stopped, a sub-unit faces the enemy it shoots at so its firing cone covers it.
@@ -176,17 +182,36 @@ AI sub-units also fight according to their type:
 
 | Type | Behavior |
 | --- | --- |
-| Tanks | Flank: the division swings out to one side of the enemy it advances on and approaches at an angle. |
+| Tanks | Flank: reach a position beside the enemy before settling into firing range. Entering range alone does not end the flank. |
 | Cavalry | Charge in close, withdraw to its usual distance, then charge again. Charging cavalry does not wait for its division. |
-| Armored cars | Skirmish: stop at long range and back away from any enemy that comes close. |
-| Infantry, militia, and troop carriers | Advance steadily and hold, with no special behavior. |
+| Armored cars | Skirmish: stop at long range and reverse away from close enemies while facing them. |
+| Infantry, militia, and troop carriers | Advance steadily and hold, or defend the deployment line. |
 
-Two reactions come before the type's behavior. A sub-unit below a set share of its health falls back until it is out
-of the enemy's range, then turns to face it again. A fast AI sub-unit (library speed at least `DODGE_MIN_SPEED`)
+Two reactions come before the type's behavior. A sub-unit below a set share of its health falls back while healthier
+allies can cover the withdrawal. The last wounded troops keep fighting so depleted armies cannot both withdraw
+indefinitely. Vehicles reverse while facing the enemy; infantry and cavalry turn away to withdraw.
+A fast AI sub-unit (library speed at least `DODGE_MIN_SPEED`)
 sidesteps briefly, at right angles to a shot's path and away from it, when it is hit and survives, and also when an
 enemy shot is about to pass close to it while it is not about to fire (its weapon is reloading or its target is out
 of range). Slower sub-units never sidestep: they would spend the time turning away instead of aiming. Sub-units still
 move only along their hull, so a sidestep starts with a turn. The player's sub-unit never reacts on its own.
+
+Infantry and cavalry can attack an enemy within melee reach and their aim arc. A melee attack replaces a shot,
+uses the same reload, and deals less damage per attack with a shorter interval. Holding fire automatically chooses
+melee when a legal target is close enough. Melee does not bypass defense or damage capabilities.
+AI infantry and cavalry close only against nearby vulnerable or reloading opponents, or with supporting troops.
+The AI checks opposing fire within weapon range before closing. During the final approach, committed troops stop
+sidestepping; earlier in the approach, dodging remains available. Troops abandon the approach when support or health
+no longer permits the attack.
+
+Vehicles can ram enemies with a fast impact. Closing speed along the contact direction determines impact strength, so stationary contact
+and sideways brushing do not deal ram damage. Contact mass determines how much each body moves and slows down.
+Heavier bodies displace lighter bodies more; similar head-on vehicles stop rather than bounce apart.
+Infantry contact separates bodies without impact damage. Friendly contact never deals damage.
+A pair must separate beyond contact distance before another ram can deal damage. Sustained pushing cannot repeat
+the impact. Knockback decays quickly and never disables steering or firing.
+AI vehicles attempt a ram only with enough speed, a mass advantage, adequate health, and a safe approach against
+a nearby wounded or reloading enemy. The player can attempt any impact under the same contact and damage rules.
 
 #### Control
 
@@ -197,7 +222,7 @@ move only along their hull, so a sidestep starts with a turn. The player's sub-u
 | A | Turn left. |
 | D | Turn right. |
 | Mouse | Aim. The gun turns toward the pointer, inside the firing cone if the unit has one. |
-| Left mouse | Fire along the gun. |
+| Left mouse | Fire along the gun, or attack a nearby enemy in melee. |
 | Mouse wheel | Zoom in or out. |
 
 Movement follows the hull's facing direction. A and D rotate the hull rather than moving it sideways, and turning
@@ -208,6 +233,7 @@ Only the controlled sub-unit shows its range and firing cone (a circle for units
 and a line along its gun. Its yellow ring has an arrow along the hull that
 lengthens with speed and points back while reversing. A second ring fills while the weapon reloads.
 Other sub-units show none of these.
+The player's heading, selection, and reload indicators keep a readable minimum size when zooming out.
 
 Control covers the middle sub-unit of the controlled division's line. The division's other sub-units fight automatically.
 If the controlled sub-unit is destroyed, the player controls no unit for the rest of the battle and spectates it.
@@ -221,6 +247,10 @@ It is larger than the screen. While a sub-unit is controlled, the view follows i
 Otherwise, drag the battlefield with the left mouse button to move the view.
 The mouse wheel zooms in and out around the pointer through fixed steps. Zoomed out past the battlefield's
 edges, the whole battlefield is centered on a dark surround.
+At distant zoom levels, simple team and unit-type silhouettes replace detailed artwork, and health bars keep a
+minimum readable size. Zoom changes presentation without changing weapon reach or collision size.
+While the player controls a living sub-unit, arrows mark off-screen enemy divisions and show the nearest distance
+in battlefield units. Divisions in the same direction share an arrow with a division count.
 
 **Pause** freezes combat, and **Resume** continues it. The configured Back key toggles pause during actual battle.
 Losing window focus also pauses combat. Pausing or leaving combat clears held movement and fire controls.
@@ -271,6 +301,8 @@ Tactical battles in multiplayer remain unavailable.
 [screens/game/custom_battle.py](../screens/game/custom_battle.py) owns the three views, roster controls, navigation, the camera, and keyboard and mouse input.
 [screens/game/tactical_retreat.py](../screens/game/tactical_retreat.py) owns the retreat map. `Map.open_tactical_battle` starts an encounter.
 [map_logic/custom_battle.py](../map_logic/custom_battle.py) owns unit generation, sub-units, deployment, movement, aiming, projectiles, cooldowns, and results.
+The same simulation handles custom battles and campaign encounters. Contact state, AI commitments, and reload
+intervals exist only during the encounter; campaign results still use the surviving health fraction of each division.
 Its `SUBUNIT_COUNTS`, `MOBILITY`, and `AIM` tables set sub-unit counts, acceleration and turning, and firing cones and gun speeds for each battlefield shape.
 `WEAPON_RANGE`, `PROJECTILE_SPEED`, `RANK_GAP`, `SUBUNIT_SPACING`, and `SPAWN_FRONT_GAP` set range, shot speed, and deployment.
 `is_artillery` decides which units sit tactical battles out.
@@ -279,11 +311,12 @@ Its `SUBUNIT_COUNTS`, `MOBILITY`, and `AIM` tables set sub-unit counts, accelera
 behavior; `FLANK_OFFSET`, `CHARGE_CLOSE`, `SKIRMISH_*`, `FALL_BACK_HEALTH`, `DODGE_*`, and
 `TARGET_*` tune the behaviors, reactions, and target choice. `BattleSimulation(seed=...)`
 fixes the random temperaments and shot spread so a battle can be replayed; the game leaves it unset, so every battle differs.
+`DAMAGE_SCALE`, `MELEE_*`, `RAM_*`, `CONTACT_MASS`, and `KNOCKBACK_*` own tactical pacing and close combat.
+`APPROACH_LANE_GAP` and `FLANK_ARRIVAL_DISTANCE` tune the approach lanes and flank completion.
 
 Unit statistics and capabilities come from [unit_data.json](../data/json/unit_data.json).
 Research dates come from [research_template.json](../data/json/research_template.json) through the shared [unit queries](../data/queries/unit_info.py).
 Read those sources for current tuning values.
 
 The prototype converts movement and range to battlefield pixels and uses shared health-scaled attack.
-Positive damage rounds up to whole health points so weakening armies can finish a battle.
 The shared campaign combat rules remain documented in [non_llm_ai.txt](non_llm_ai.txt).

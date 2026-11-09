@@ -64,6 +64,16 @@ GRASS_COLOR = (72, 115, 57)
 # Actual battle fills the whole screen. The mouse wheel steps through these scales, starting at 1.0.
 ZOOM_LEVELS = (0.4, 0.5, 0.6, 0.75, 1.0, 1.25, 1.5, 2.0)
 DEFAULT_ZOOM_INDEX = ZOOM_LEVELS.index(1.0)
+OVERVIEW_ZOOM = 0.6
+OVERVIEW_SYMBOL_SIZE = 16
+MIN_PLAYER_INDICATOR_SCALE = 0.85
+MIN_HEALTH_BAR_WIDTH = 22
+MIN_HEALTH_BAR_HEIGHT = 3
+EDGE_INDICATOR_INSET = 48
+EDGE_INDICATOR_TOP = 100
+EDGE_INDICATOR_SIZE = 10
+EDGE_INDICATOR_SPACING = 80
+EDGE_INDICATOR_LABEL_STEP = 25  # Battlefield distance, rounded to keep moving labels readable.
 GRASS_TILE = 64  # Battlefield pixels per square of the battlefield's faint checkerboard.
 GRASS_CHECK_COLOR = (76, 119, 61)  # The lighter squares; the darker ones are GRASS_COLOR.
 OFF_FIELD_COLOR = (24, 30, 22)  # Outside the battlefield when zoomed out past its edges.
@@ -1248,13 +1258,14 @@ class CustomBattleScreen(Screen):
             pygame.draw.lines(surface, RANGE_COLOR, True, [center, *edge])
         end = (center[0] + math.cos(fighter.aim) * reach, center[1] + math.sin(fighter.aim) * reach)
         pygame.draw.line(surface, AIM_LINE_COLOR, center, end, 1)
-        pygame.draw.circle(surface, PLAYER_COLOR, center, PLAYER_RING_RADIUS * zoom, 2)
+        indicator_scale = max(MIN_PLAYER_INDICATOR_SCALE, zoom)
+        pygame.draw.circle(surface, PLAYER_COLOR, center, PLAYER_RING_RADIUS * indicator_scale, 2)
         draw_player_arrow(surface, center, fighter.angle,
-                          fighter.speed / fighter.max_speed if fighter.max_speed else 0.0, scale=zoom)
+                          fighter.speed / fighter.max_speed if fighter.max_speed else 0.0, scale=indicator_scale)
         if fighter.cooldown > 0:
             # The ring fills clockwise from the top as the weapon reloads.
-            loaded = 1.0 - fighter.cooldown / combat.FIRE_INTERVAL
-            radius = RELOAD_RING_RADIUS * zoom
+            loaded = max(0.0, min(1.0, 1.0 - fighter.cooldown / fighter.reload_interval))
+            radius = RELOAD_RING_RADIUS * indicator_scale
             steps = max(2, math.ceil(math.tau * loaded / CONE_ARC_STEP))
             ring = [(center[0] + math.cos(-math.pi / 2 + math.tau * loaded * step / steps) * radius,
                      center[1] + math.sin(-math.pi / 2 + math.tau * loaded * step / steps) * radius)
@@ -1294,7 +1305,7 @@ class CustomBattleScreen(Screen):
         # Shapes partly on screen still draw; the widest shape fits inside this margin.
         margin = math.ceil(140 * zoom)
         visible = self.view_rect().inflate(margin, margin)
-        bar_size = (max(2, round(28 * zoom)), max(1, round(4 * zoom)))
+        bar_size = (max(MIN_HEALTH_BAR_WIDTH, round(28 * zoom)), max(MIN_HEALTH_BAR_HEIGHT, round(4 * zoom)))
         flag_size = tuple(max(2, round(side * zoom)) for side in BATTLE_FLAG_SIZE)
         controlled = self.simulation.controlled
         for fighter in self.simulation.fighters:
@@ -1305,15 +1316,19 @@ class CustomBattleScreen(Screen):
                 draw_unit_shape(surface, fighter.shape, center, fighter.angle, DEAD_COLOR,
                                 scale=zoom, aim=fighter.aim, artwork=self.battle_artwork[fighter.data["type"]])
                 continue
+            overview = zoom <= OVERVIEW_ZOOM
+            scale = OVERVIEW_SYMBOL_SIZE / max(UNIT_SHAPE_SIZES[fighter.shape]) if overview else zoom
             draw_unit_shape(surface, fighter.shape, center, fighter.angle, TEAM_COLORS[fighter.side],
-                            scale=zoom, aim=fighter.aim, artwork=self.battle_artwork[fighter.data["type"]])
-            bar = pygame.Rect(center[0] - bar_size[0] // 2, center[1] - round(23 * zoom), *bar_size)
+                            scale=scale, aim=fighter.aim,
+                            artwork=None if overview else self.battle_artwork[fighter.data["type"]])
+            bar = pygame.Rect(center[0] - bar_size[0] // 2, center[1] - round(23 * scale), *bar_size)
             pygame.draw.rect(surface, OUTLINE_COLOR, bar)
             ratio = fighter.data["health"] / fighter.data["max_health"]
             pygame.draw.rect(surface, BATTLE_HEALTH_COLOR, (bar.x, bar.y, round(bar.width * ratio), bar.height))
-            flag_icons.draw_flag(surface, fighter.data["owner"], self.country_data,
-                                 bar.right + round(BATTLE_FLAG_GAP * zoom),
-                                 bar.centery - flag_size[1] // 2, size=flag_size)
+            if not overview:
+                flag_icons.draw_flag(surface, fighter.data["owner"], self.country_data,
+                                     bar.right + round(BATTLE_FLAG_GAP * zoom),
+                                     bar.centery - flag_size[1] // 2, size=flag_size)
         if controlled is not None and controlled.alive:
             self._draw_controls(surface, controlled, self.to_screen(controlled.x, controlled.y))
         line_width = max(1, round(SHOT_WIDTH * zoom))
@@ -1327,6 +1342,59 @@ class CustomBattleScreen(Screen):
             tank_shell = shot.source.shape in TANK_SHOT_SHAPES
             pygame.draw.line(surface, TANK_SHOT_COLOR if tank_shell else SHOT_COLOR, tail, head,
                              tank_line_width if tank_shell else line_width)
+        if controlled is not None and controlled.alive:
+            self._draw_edge_indicators(surface, controlled)
+
+    def _draw_edge_indicators(self, surface, controlled):
+        """Group off-screen divisions by direction; show the nearest distance in each group."""
+        bounds = self.view_rect().inflate(-EDGE_INDICATOR_INSET * 2, -EDGE_INDICATOR_INSET * 2)
+        bounds.top = max(bounds.top, EDGE_INDICATOR_TOP)
+        origin = pygame.Vector2(self.to_screen(controlled.x, controlled.y))
+        origin.x = max(bounds.left, min(bounds.right - 1, origin.x))
+        origin.y = max(bounds.top, min(bounds.bottom - 1, origin.y))
+        view = self.view_rect()
+        indicators = {}
+        for division in self.simulation.divisions:
+            enemies = [unit for unit in division if unit.alive and unit.side != controlled.side]
+            if not enemies or any(view.collidepoint(self.to_screen(unit.x, unit.y)) for unit in enemies):
+                continue
+            enemy = min(enemies, key=lambda unit: math.hypot(unit.x - controlled.x, unit.y - controlled.y))
+            direction = pygame.Vector2(self.to_screen(enemy.x, enemy.y)) - origin
+            if direction.length_squared() == 0:
+                continue
+            direction.normalize_ip()
+            horizontal = math.inf
+            vertical = math.inf
+            if direction.x:
+                horizontal = ((bounds.right - 1 - origin.x) if direction.x > 0 else bounds.left - origin.x) / direction.x
+            if direction.y:
+                vertical = ((bounds.bottom - 1 - origin.y) if direction.y > 0 else bounds.top - origin.y) / direction.y
+            point = origin + direction * min(horizontal, vertical)
+            edge = ("right" if direction.x > 0 else "left") if horizontal <= vertical else ("bottom" if direction.y > 0 else "top")
+            along = point.y if horizontal <= vertical else point.x
+            key = edge, round(along / EDGE_INDICATOR_SPACING)
+            distance = math.hypot(enemy.x - controlled.x, enemy.y - controlled.y)
+            count = 1
+            if key in indicators:
+                previous = indicators[key]
+                count += previous[3]
+                if previous[2] < distance:
+                    point, direction, distance = previous[:3]
+            indicators[key] = point, direction, distance, count
+        for point, direction, distance, count in indicators.values():
+            sideways = pygame.Vector2(-direction.y, direction.x)
+            size = EDGE_INDICATOR_SIZE
+            points = [point, point - direction * size * 2 + sideways * size,
+                      point - direction * size * 2 - sideways * size]
+            pygame.draw.polygon(surface, OUTLINE_COLOR, points)
+            color = TEAM_COLORS[1 - controlled.side]
+            pygame.draw.polygon(surface, color, points, 2)
+            distance_label = str(round(distance / EDGE_INDICATOR_LABEL_STEP) * EDGE_INDICATOR_LABEL_STEP)
+            caption = f"{count}x {distance_label}" if count > 1 else distance_label
+            label = fonts.get("small").render(caption, True, color)
+            label_rect = label.get_rect(center=point - direction * size * 3)
+            label_rect.clamp_ip(view)
+            surface.blit(label, label_rect)
 
     def draw_background(self, surface):
         """Actual battle replaces the moving checkerboard with the battlefield across the whole screen."""
