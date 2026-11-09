@@ -138,6 +138,7 @@ SHOT_WIDTH = 2
 TANK_SHOT_COLOR = (255, 110, 0)
 TANK_SHOT_WIDTH = 5
 TANK_SHOT_SHAPES = frozenset(("tank", "light_tank", "heavy_tank"))
+RIFLE_SHOT_SOUNDS = ("rifle_shot_1", "rifle_shot_2", "rifle_shot_3")
 SHOT_TAIL = 8  # Pixels behind a shot's head.
 RANGE_COLOR = (255, 225, 95)
 AIM_LINE_COLOR = (255, 245, 200)
@@ -704,8 +705,16 @@ class CustomBattleScreen(Screen):
     def _build_simulation(self):
         """Deploy the armies, paused, as preview shows them."""
         self.simulation = combat.BattleSimulation(self.library, *self.rosters,
-                                                  controlled_index=self.controlled_index)
+                                                  controlled_index=self.controlled_index,
+                                                  on_shot=self._play_shot_sound)
         self.simulation.paused = True
+
+    @staticmethod
+    def _play_shot_sound(fighter):
+        # Match the projectile's color classification and keep audio randomness
+        # separate from the seeded simulation's aiming and movement decisions.
+        kind = "heavy_gunshot" if fighter.shape in TANK_SHOT_SHAPES else random.choice(RIFLE_SHOT_SOUNDS)
+        ui_elements.play_ui_sound(kind)
 
     def start_battle(self):
         if self.mode != "preview" or self.preview_intro_stage is not None:

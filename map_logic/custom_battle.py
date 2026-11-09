@@ -430,6 +430,7 @@ class BattleSimulation:
     enemy: list
     controlled_index: object = None
     seed: object = None
+    on_shot: object = None  # Optional presentation callback; headless battles remain silent.
     controlled: object = field(init=False, default=None)
     fighters: list = field(init=False, default_factory=list)
     divisions: list = field(init=False, default_factory=list)  # Sub-unit lists, friendly roster then enemy roster.
@@ -758,6 +759,8 @@ class BattleSimulation:
         self.projectiles.append(Projectile(
             fighter, dict(fighter.data), fighter.x, fighter.y, math.cos(angle) * PROJECTILE_SPEED,
             math.sin(angle) * PROJECTILE_SPEED, (WEAPON_RANGE + UNIT_RADIUS * 2) / PROJECTILE_SPEED))
+        if self.on_shot is not None:
+            self.on_shot(fighter)
 
     def _can_dodge(self, unit):
         """Only fast AI sub-units sidestep; for slower ones the time spent turning away costs more aim than it saves."""

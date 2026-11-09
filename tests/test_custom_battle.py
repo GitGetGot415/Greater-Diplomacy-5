@@ -331,6 +331,22 @@ class BattleSimulationTests(unittest.TestCase):
             simulation.advance(combat.FIRE_INTERVAL / 2 + 2 * combat.FIXED_STEP)
             self.assertEqual(projectiles.call_count, 2)
 
+    def test_shot_callback_runs_once_per_player_or_ai_projectile_and_stays_silent_during_reload_and_pause(self):
+        fired = Mock()
+        simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"],
+                                             controlled_index=0, seed=2, on_shot=fired)
+        player, enemy = simulation.fighters
+        player.data["speed"] = enemy.data["speed"] = 0
+        enemy.x, enemy.y = player.x + combat.WEAPON_RANGE / 2, player.y
+        simulation.set_player_input(fire=True)
+        simulation.advance(combat.FIXED_STEP)
+        self.assertEqual([call.args[0] for call in fired.call_args_list], [player, enemy])
+        simulation.advance(combat.FIRE_INTERVAL / 2)
+        self.assertEqual(fired.call_count, 2)
+        simulation.paused = True
+        simulation.advance(combat.FIRE_INTERVAL * 2)
+        self.assertEqual(fired.call_count, 2)
+
     def test_manual_shots_can_miss_and_hit_without_homing(self):
         simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"], controlled_index=0)
         player, target = simulation.fighters
@@ -784,6 +800,7 @@ class CloseCombatTests(unittest.TestCase):
 
     def test_manual_melee_replaces_projectiles_and_shares_reload_with_shooting(self):
         simulation = self.encounter(controlled=0)
+        simulation.on_shot = Mock()
         hold_still(simulation)
         player, target = simulation.fighters
         player.cooldown = 0
@@ -791,6 +808,7 @@ class CloseCombatTests(unittest.TestCase):
         with patch.object(simulation, "_fire_shot", wraps=simulation._fire_shot) as fire:
             simulation.advance(combat.FIXED_STEP)
             self.assertEqual(fire.call_count, 0)
+            simulation.on_shot.assert_not_called()
             self.assertEqual(target.data["health"], 100 - 40 * combat.DAMAGE_SCALE * combat.MELEE_DAMAGE)
             self.assertEqual(player.cooldown, combat.MELEE_INTERVAL)
             health = target.data["health"]
@@ -800,6 +818,7 @@ class CloseCombatTests(unittest.TestCase):
             self.assertEqual(target.data["health"], health)
             simulation.advance(combat.MELEE_INTERVAL / 2 + combat.FIXED_STEP)
             self.assertEqual(fire.call_count, 1)
+            simulation.on_shot.assert_called_once_with(player)
 
     def test_manual_melee_requires_fire_and_aim_and_does_not_bypass_defense(self):
         for firing, aim, defense, damages in ((False, 0, 0, False), (True, math.pi, 0, False),
@@ -1081,6 +1100,32 @@ class CustomBattleScreenTests(unittest.TestCase):
     def fill_armies(self):
         self.screen.add_unit(0, "Fixture II")
         self.screen.add_unit(1, "Fixture I")
+
+    def test_regular_firing_uses_all_three_rifle_variants_on_both_sides(self):
+        self.fill_armies()
+        self.click("Simulate")
+        self.click("Start")
+        for side in (0, 1):
+            source = self.screen.simulation.divisions[side][0]
+            with patch.object(battle_screen.random, "choice", side_effect=battle_screen.RIFLE_SHOT_SOUNDS), patch(
+                    "ui.widgets.ui_elements.play_ui_sound") as sound:
+                for _ in battle_screen.RIFLE_SHOT_SOUNDS:
+                    self.screen.simulation._fire_shot(source)
+            self.assertEqual([call.args[0] for call in sound.call_args_list],
+                             ["rifle_shot_1", "rifle_shot_2", "rifle_shot_3"])
+
+    def test_orange_projectiles_use_heavy_gunshot_for_every_tank_shape_on_both_sides(self):
+        self.fill_armies()
+        self.click("Simulate")
+        self.click("Start")
+        for source in self.screen.simulation.fighters:
+            for shape in battle_screen.TANK_SHOT_SHAPES:
+                with self.subTest(side=source.side, shape=shape), patch(
+                        "ui.widgets.ui_elements.play_ui_sound") as sound, patch.object(battle_screen.random, "choice") as choice:
+                    source.shape = shape
+                    self.screen.simulation._fire_shot(source)
+                    sound.assert_called_once_with("heavy_gunshot")
+                    choice.assert_not_called()
 
     def win_battle(self):
         """End actual battle with a friendly win, without relying on random aim and movement."""

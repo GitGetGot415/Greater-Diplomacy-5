@@ -57,6 +57,10 @@ MUSIC_UI_SOUND_PATHS = {
     "select_unit_filter": "assets/sounds/Select Unit Filter.wav",
     "select_mode": "assets/sounds/Select Mode.wav",
     "select_view": "assets/sounds/Select View.wav",
+    "rifle_shot_1": "assets/sounds/Rifle Shot 1.mp3",
+    "rifle_shot_2": "assets/sounds/Rifle Shot 2.mp3",
+    "rifle_shot_3": "assets/sounds/Rifle Shot 3.mp3",
+    "heavy_gunshot": "assets/sounds/Heavy Gunshot.mp3",
 }
 SOUND_VOLUMES_PATH = "assets/sounds/volumes.json"
 sound_volume_multipliers = {}
