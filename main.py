@@ -344,7 +344,8 @@ class Controller:
         self.now_playing = "None"
         self._failed_music_tracks = set()
         self.starting_song = None
-        self._tactical_music_active = False
+        # The settings name of the tactical song list that is playing, or None.
+        self._tactical_song_setting = None
         self.track_start_times = {} # Keeps track of offsets specified in start_times.json
 
         self.load_music_data()
@@ -535,11 +536,6 @@ class Controller:
             else:
                 self.starting_song = None
 
-        if self.tactical_battle_song and self.tactical_battle_song not in all_tracks:
-            replacement = os.path.splitext(self.tactical_battle_song.replace("\\", "/"))[0] + ".json"
-            self.tactical_battle_song = replacement if replacement in all_tracks else ""
-            self.save_tactical_battle_song()
-
     def save_active_albums(self):
         queries.save_cached_json("active_albums", self.active_albums)
 
@@ -563,17 +559,36 @@ class Controller:
     def save_starting_song(self):
         queries.save_cached_json("starting_song", {"track": self.starting_song})
 
-    def save_tactical_battle_song(self):
-        queries.save_global_settings(self)
+    def set_tactical_battle_music(self, active, tanks=False):
+        """Switch between tactical battle songs and normal playlist selection.
 
-    def set_tactical_battle_music(self, active):
-        """Switch between battle music and normal playlist selection."""
-        if active and not self.tactical_battle_song:
+        A battle with any tank uses the tank songs. Any other battle uses the
+        infantry songs. An empty song list keeps normal playlist selection.
+        """
+        setting = None
+        if active:
+            setting = "tactical_tank_songs" if tanks else "tactical_infantry_songs"
+            if not getattr(self, setting):
+                setting = None
+        if self._tactical_song_setting == setting:
             return
-        if self._tactical_music_active == active:
-            return
-        self._tactical_music_active = active
+        self._tactical_song_setting = setting
         self.play_random_song()
+
+    def tactical_song_candidates(self):
+        """Playable songs of the active tactical song list.
+
+        Tactical songs ignore active albums and shuffle exclusions. A missing
+        file fails once when played and is skipped afterward.
+        """
+        songs = getattr(self, self._tactical_song_setting) if self._tactical_song_setting else []
+        candidates = []
+        for track in songs:
+            if track in self._failed_music_tracks and track.lower().endswith(".json"):
+                track = self._beepbox_audio_fallback(track)
+            if track and track not in self._failed_music_tracks and track not in candidates:
+                candidates.append(track)
+        return candidates
 
     def play_startup_song(self):
         """Plays the pinned starting song if one is set, else falls back to random."""
@@ -594,14 +609,7 @@ class Controller:
                 self.playlist.extend(self.all_albums[album])
 
     def play_random_song(self):
-        if self._tactical_music_active:
-            track = self.tactical_battle_song
-            if track in self._failed_music_tracks and track.lower().endswith(".json"):
-                track = self._beepbox_audio_fallback(track)
-            if track and track not in self._failed_music_tracks:
-                self.play_specific_song(track)
-                return
-        available_tracks = [
+        available_tracks = self.tactical_song_candidates() or [
             track for track in self.playlist
             if (track not in self._failed_music_tracks
                 and not self.is_shuffle_disabled(track))

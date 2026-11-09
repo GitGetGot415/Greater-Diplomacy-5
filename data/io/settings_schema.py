@@ -56,6 +56,13 @@ def _coerce_checkerboard_speed(value):
     return max(0.0, min(float(value), c.MAX_CHECKERBOARD_SCROLL_SPEED))
 
 
+def _coerce_song_list(value):
+    """Keep the song paths of a saved tactical song list, with forward slashes."""
+    if not isinstance(value, list):
+        return []
+    return [song.replace("\\", "/") for song in value if isinstance(song, str) and song]
+
+
 # Keep positional compatibility for older callers. JSON settings use named keys.
 SETTINGS_FIELDS = (
     _field("sfx_volume", "sfx_volume"),
@@ -106,7 +113,9 @@ SETTINGS_FIELDS = (
     _field("openrouter_model", "openrouter_model"),
     _field("checkerboard_gradient_strength", "checkerboard_gradient_strength", coerce=_coerce_checkerboard_gradient),
     _field("checkerboard_scroll_speed", "checkerboard_scroll_speed", coerce=_coerce_checkerboard_speed),
-    _field("tactical_battle_song", "tactical_battle_song"),
+    # Songs for tactical battles without tanks, and for tactical battles with any tank.
+    _field("tactical_infantry_songs", "tactical_infantry_songs", coerce=_coerce_song_list),
+    _field("tactical_tank_songs", "tactical_tank_songs", coerce=_coerce_song_list),
 )
 
 SETTINGS_ORDER = tuple(field.name for field in SETTINGS_FIELDS)

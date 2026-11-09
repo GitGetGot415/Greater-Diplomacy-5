@@ -4,6 +4,8 @@ from data import queries
 from data.io import settings_schema
 from ui.widgets import ui_elements
 from ui.navigation.screen import Screen, ScreenLayer
+from ui.navigation.modal_screen import ModalScreen
+from ui.navigation.screen_runner import _run_pygame_sub_screen
 from ui.bars import ui_bars
 from ui.background_styles import MUSIC_PANEL_STYLES
 from ui.widgets.scroll_panes import ScrollPanes
@@ -64,8 +66,8 @@ MUSIC_STARTING_SONG_Y = 390
 MUSIC_PIN_BUTTON_SIZE = (MUSIC_RIGHT_CONTROL_W, 32)
 MUSIC_PIN_LABEL_GAP = 28
 MUSIC_PIN_BUTTON_GAP = 8
-MUSIC_TACTICAL_SONG_Y = (MUSIC_STARTING_SONG_Y + MUSIC_PIN_LABEL_GAP
-                         + 2 * (MUSIC_PIN_BUTTON_SIZE[1] + MUSIC_PIN_BUTTON_GAP) + 24)
+MUSIC_TACTICAL_SONGS_BUTTON_Y = (MUSIC_STARTING_SONG_Y + MUSIC_PIN_LABEL_GAP
+                                 + 2 * (MUSIC_PIN_BUTTON_SIZE[1] + MUSIC_PIN_BUTTON_GAP) + 24)
 MUSIC_PROGRESS_X = MUSIC_LEFT_PANE_W + 20
 MUSIC_PROGRESS_Y = 155
 MUSIC_PROGRESS_SIZE = (400, 15)
@@ -81,6 +83,23 @@ MUSIC_TIMELINE_HELP_BUTTON_Y = (
     MUSIC_TIMELINE_BUTTON_Y
     + (MUSIC_TIMELINE_BUTTON_SIZE[1] - c.SIZES["scenario_setting_info"][1]) // 2
 )
+# Tactical Songs subscreen. Each (setting name, label) song list gets one scrolling column.
+TACTICAL_SONG_LISTS = (("tactical_infantry_songs", "Infantry Only"), ("tactical_tank_songs", "Any Tanks"))
+TACTICAL_ROW_SIZE = (360, 30)
+TACTICAL_PAD = 20
+TACTICAL_COLUMN_GAP = 40
+TACTICAL_SCROLLBAR_GAP = 6
+TACTICAL_COLUMN_W = TACTICAL_ROW_SIZE[0] + TACTICAL_SCROLLBAR_GAP + MUSIC_SCROLLBAR_WIDTH
+TACTICAL_PANEL_SIZE = (2 * TACTICAL_PAD + len(TACTICAL_SONG_LISTS) * TACTICAL_COLUMN_W
+                       + (len(TACTICAL_SONG_LISTS) - 1) * TACTICAL_COLUMN_GAP, 600)
+# Offsets from the panel's top edge.
+TACTICAL_LABEL_Y = 72
+TACTICAL_LIST_TOP = 104
+# Offsets from the panel's bottom edge.
+TACTICAL_LIST_BOTTOM_GAP = 80
+TACTICAL_RESET_SIZE = (200, 40)
+TACTICAL_RESET_BOTTOM_GAP = 20
+
 
 class MusicScrubber:
     """A dedicated interactive UI slider specifically for scrubbing music playback."""
@@ -454,24 +473,20 @@ class Music_Player(ScrollPanes, Screen):
         reset_y = 300
         self.elements.append(Button(slider_x, reset_y, "medium", "red", "Reset to Default", self.reset_audio_defaults))
 
-        # Pinned songs are independent of active albums and shuffle exclusions.
-        for label_y, draw_method, set_text, set_action, clear_text, clear_action, selected in (
-                (MUSIC_STARTING_SONG_Y, "draw_starting_song_label", "Set as Starting Song",
-                 self.set_starting_song, "Clear Starting Song", self.reset_starting_song,
-                 self.controller.starting_song),
-                (MUSIC_TACTICAL_SONG_Y, "draw_tactical_song_label", "Set Tactical Song",
-                 self.set_tactical_song, "Clear Tactical Song", self.reset_tactical_song,
-                 self.controller.tactical_battle_song)):
-            self.elements.append(ScreenLayer(self, draw_method))
-            set_y = label_y + MUSIC_PIN_LABEL_GAP
-            set_button = Button(slider_x, set_y, MUSIC_PIN_BUTTON_SIZE, "blue", set_text,
-                                set_action, font_size=18)
-            set_button.apply_state(enabled=bool(self.controller.now_playing)
-                                   and self.controller.now_playing != "None", color="blue")
-            clear_button = Button(slider_x, set_y + MUSIC_PIN_BUTTON_SIZE[1] + MUSIC_PIN_BUTTON_GAP,
-                                  MUSIC_PIN_BUTTON_SIZE, "red", clear_text, clear_action, font_size=18)
-            clear_button.apply_state(enabled=bool(selected), color="red")
-            self.elements.extend((set_button, clear_button))
+        # The starting song is independent of active albums and shuffle exclusions.
+        self.elements.append(ScreenLayer(self, "draw_starting_song_label"))
+        set_y = MUSIC_STARTING_SONG_Y + MUSIC_PIN_LABEL_GAP
+        set_button = Button(slider_x, set_y, MUSIC_PIN_BUTTON_SIZE, "blue", "Set as Starting Song",
+                            self.set_starting_song, font_size=18)
+        set_button.apply_state(enabled=bool(self.controller.now_playing)
+                               and self.controller.now_playing != "None", color="blue")
+        clear_button = Button(slider_x, set_y + MUSIC_PIN_BUTTON_SIZE[1] + MUSIC_PIN_BUTTON_GAP,
+                              MUSIC_PIN_BUTTON_SIZE, "red", "Clear Starting Song",
+                              self.reset_starting_song, font_size=18)
+        clear_button.apply_state(enabled=bool(self.controller.starting_song), color="red")
+        self.elements.extend((set_button, clear_button))
+        self.elements.append(Button(slider_x, MUSIC_TACTICAL_SONGS_BUTTON_Y, MUSIC_PIN_BUTTON_SIZE,
+                                    "blue", "Tactical Songs", self.open_tactical_songs, font_size=18))
 
     def is_paused(self):
         music = self.controller.music
@@ -637,16 +652,8 @@ class Music_Player(ScrollPanes, Screen):
         self.controller.save_starting_song()
         self.refresh_ui()
 
-    def set_tactical_song(self):
-        if self.controller.now_playing and self.controller.now_playing != "None":
-            self.controller.tactical_battle_song = self.controller.now_playing
-            self.controller.save_tactical_battle_song()
-            self.refresh_ui()
-
-    def reset_tactical_song(self):
-        self.controller.tactical_battle_song = ""
-        self.controller.save_tactical_battle_song()
-        self.refresh_ui()
+    def open_tactical_songs(self):
+        _run_pygame_sub_screen(self, TacticalSongsScreen(self))
 
     # --- PLAYLIST ACTIONS ---
     def album_display_order(self):
@@ -791,20 +798,12 @@ class Music_Player(ScrollPanes, Screen):
 
     def draw_starting_song_label(self, surface):
         """Fixed HUD label showing which track, if any, starts on boot."""
-        self._draw_pinned_song_label(surface, "Starting Song", self.controller.starting_song,
-                                     MUSIC_STARTING_SONG_Y, "None (Random)")
-
-    def draw_tactical_song_label(self, surface):
-        self._draw_pinned_song_label(surface, "Tactical Song", self.controller.tactical_battle_song,
-                                     MUSIC_TACTICAL_SONG_Y, "None (Playlist)")
-
-    @staticmethod
-    def _draw_pinned_song_label(surface, caption, track, y, empty_label):
         font = fonts.get("normal")
-        name = os.path.basename(track) if track else empty_label
-        label = fit_text(f"{caption}: {name}", font, MUSIC_RIGHT_CONTROL_W)
+        track = self.controller.starting_song
+        name = os.path.basename(track) if track else "None (Random)"
+        label = fit_text(f"Starting Song: {name}", font, MUSIC_RIGHT_CONTROL_W)
         surface.blit(font.render(label, True, c.COLOR_GOLD_HIGHLIGHT),
-                     (MUSIC_RIGHT_CONTROL_X, y))
+                     (MUSIC_RIGHT_CONTROL_X, MUSIC_STARTING_SONG_Y))
 
     def draw_elements(self, surface):
         """Two independent scrolling panes, each cropped to its own rect."""
@@ -828,3 +827,119 @@ class Music_Player(ScrollPanes, Screen):
                                  c.SCREEN_HEIGHT - 120, width=MUSIC_SCROLLBAR_WIDTH)
         self.draw_pane_scrollbar(surface, "track", MUSIC_RIGHT_PANE_X - MUSIC_SCROLLBAR_WIDTH - 5, 200,
                                  c.SCREEN_HEIGHT - 200, width=MUSIC_SCROLLBAR_WIDTH)
+
+
+class TacticalSongsScreen(ModalScreen):
+    """Subscreen of the music player that edits the song lists tactical battles pick from.
+
+    A battle with any tank picks a random tank song. Any other battle picks a
+    random infantry song. See Controller.set_tactical_battle_music in main.py.
+    """
+
+    PANEL_SIZE = TACTICAL_PANEL_SIZE
+
+    def __init__(self, player):
+        super().__init__(player, "Tactical Songs")
+        self.player = player
+        self.controller = player.controller
+        for setting, _label in TACTICAL_SONG_LISTS:
+            setattr(self, f"_scroll_{setting}", 0)
+        self.refresh_ui()
+
+    def column_x(self, index):
+        return self.panel_rect.x + TACTICAL_PAD + index * (TACTICAL_COLUMN_W + TACTICAL_COLUMN_GAP)
+
+    def list_rect(self, index):
+        top = self.panel_rect.y + TACTICAL_LIST_TOP
+        return pygame.Rect(self.column_x(index), top, TACTICAL_ROW_SIZE[0],
+                           self.panel_rect.bottom - TACTICAL_LIST_BOTTOM_GAP - top)
+
+    def pane_rects(self):
+        return {setting: self.list_rect(index) for index, (setting, _label) in enumerate(TACTICAL_SONG_LISTS)}
+
+    def refresh_ui(self):
+        self.elements = [Button(self.panel_rect.x + 20, self.panel_rect.y + 20, "small", "red",
+                                "Back", self.exit_screen, sound_kind="back")]
+        for index, (setting, _label) in enumerate(TACTICAL_SONG_LISTS):
+            rect = self.list_rect(index)
+            setattr(self, f"_content_{setting}", rect)
+            songs = getattr(self.controller, setting)
+            # The row after the last song adds a song.
+            for row, y in self.pane_rows(setting, len(songs) + 1, rect.y, rect.height, row_h=song_y):
+                if row == len(songs):
+                    self.add_pane_row(setting, Button(
+                        rect.x, y, TACTICAL_ROW_SIZE, "blue", ADD_SONG_LABEL,
+                        lambda s=setting: self.start_add_song(s), sound_kind=None))
+                    continue
+                song_button = Button(rect.x, y, TACTICAL_ROW_SIZE, "grey",
+                                     os.path.basename(songs[row]), None)
+                song_button.fit_text = True
+                song_button.fit_single_line = True
+                song_button.apply_state(enabled=False)
+                self.add_pane_row(setting, song_button)
+                self.add_pane_row(setting, Button(
+                    song_button.rect.right - SONG_DELETE_BUTTON_SIZE[0], y, SONG_DELETE_BUTTON_SIZE,
+                    "red", "X", lambda s=setting, r=row: self.remove_song(s, r), font_preset="tiny"))
+        self.elements.append(Button(
+            self.panel_rect.centerx - TACTICAL_RESET_SIZE[0] // 2,
+            self.panel_rect.bottom - TACTICAL_RESET_BOTTOM_GAP - TACTICAL_RESET_SIZE[1],
+            TACTICAL_RESET_SIZE, "red", "Reset to Default", self.reset_defaults))
+
+    def start_add_song(self, setting):
+        items = [(f"{os.path.basename(track)} ({album})", track)
+                 for album in self.player.album_display_order()
+                 for track in self.controller.all_albums[album]]
+        if not items:
+            dialogs.show_info("Add Song", "There are no songs to add.")
+            return
+        ui_elements.play_ui_sound("click")
+        pickers.open_listbox_selector(
+            self, "Add Song", "Which song should play?", items,
+            lambda track, s=setting: self.add_song(s, track),
+            is_enabled=lambda item, s=setting: item[1] not in getattr(self.controller, s))
+
+    def add_song(self, setting, track):
+        songs = getattr(self.controller, setting)
+        if track not in songs:
+            songs.append(track)
+            self.save()
+
+    def remove_song(self, setting, index):
+        del getattr(self.controller, setting)[index]
+        self.save()
+
+    def reset_defaults(self):
+        defaults = settings_schema.defaults()
+        for setting, _label in TACTICAL_SONG_LISTS:
+            setattr(self.controller, setting, defaults[setting])
+        self.save()
+
+    def save(self):
+        queries.save_global_settings(self.controller)
+        self.refresh_ui()
+        # A shorter list can leave its pane scrolled past the new end.
+        clamped = False
+        for setting, _label in TACTICAL_SONG_LISTS:
+            if self.pane_scroll(setting) < self.pane_scroll_limit(setting):
+                setattr(self, f"_scroll_{setting}", self.pane_scroll_limit(setting))
+                clamped = True
+        if clamped:
+            self.refresh_ui()
+
+    def additional_events(self, event):
+        self.route_pane_scroll(event)
+
+    def draw_body(self, surface):
+        font = fonts.get("normal")
+        for index, (_setting, label) in enumerate(TACTICAL_SONG_LISTS):
+            surface.blit(font.render(label, True, c.COLOR_GOLD_HIGHLIGHT),
+                         (self.column_x(index), self.panel_rect.y + TACTICAL_LABEL_Y))
+
+    def draw_elements(self, surface):
+        self.draw_panes(surface)
+
+    def draw_foreground(self, surface):
+        for index, (setting, _label) in enumerate(TACTICAL_SONG_LISTS):
+            rect = self.list_rect(index)
+            self.draw_pane_scrollbar(surface, setting, rect.right + TACTICAL_SCROLLBAR_GAP, rect.y,
+                                     rect.height, width=MUSIC_SCROLLBAR_WIDTH)

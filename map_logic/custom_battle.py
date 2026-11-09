@@ -555,6 +555,10 @@ class BattleSimulation:
                 if side == 0 and index == self.controlled_index:
                     self.controlled = members[len(members) // 2]  # The middle of the line.
 
+    def has_tanks(self):
+        """Whether either side deployed a tank. Tactical battle music uses this."""
+        return any(fighter.shape in TANK_SHAPES for fighter in self.fighters)
+
     def _deploy_division(self, data, side, x, shape):
         """Split one division into sub-units standing in a vertical line at ``x``, centered top to bottom.
 

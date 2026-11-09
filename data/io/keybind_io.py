@@ -28,7 +28,7 @@ def save_settings(keybind_dict, sfx_volume, music_volume, num_players=None, ai_m
                   openrouter_api_key=None, openrouter_model=None,
                   checkerboard_gradient_strength=None,
                   checkerboard_scroll_speed=None,
-                  tactical_battle_song=None,
+                  tactical_infantry_songs=None, tactical_tank_songs=None,
                   **legacy_settings):
     """Convert key codes to names and save settings as JSON.
 

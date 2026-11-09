@@ -138,7 +138,7 @@ class AlbumTileTests(unittest.TestCase):
             is_shuffle_disabled=lambda path: False,
             sfx_volume=0.5, sfx_pitch=0.5, music_volume=0.5, music_pitch=0.5,
             music_pitch_timeline=c.MUSIC_PITCH_TIMELINE_STATIC,
-            starting_song=None, tactical_battle_song="", music=None,
+            starting_song=None, music=None,
             load_music_data=mock.Mock(),
         )
         player = object.__new__(Music_Player)
@@ -191,20 +191,18 @@ class AlbumTileTests(unittest.TestCase):
         player.controller.save_starting_song.assert_called_once_with()
         self.assertTrue(clear_button().disabled)
 
-    def test_tactical_song_buttons_save_and_clear_the_current_track(self):
+    def test_tactical_songs_button_opens_the_subscreen(self):
         player = self.make_player([])
-        player.controller.now_playing = "fixture-current.ogg"
-        player.controller.save_tactical_battle_song = mock.Mock()
+        player.controller.tactical_infantry_songs = []
+        player.controller.tactical_tank_songs = []
         player.refresh_ui()
-        for action, expected in ((player.set_tactical_song, "fixture-current.ogg"),
-                                 (player.reset_tactical_song, "")):
-            button = next(element for element in player.elements
-                          if isinstance(element, music_player.Button) and element.callback == action)
-            player.handle_events([
-                pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=button.rect.center),
-                pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=button.rect.center)])
-            self.assertEqual(player.controller.tactical_battle_song, expected)
-        self.assertEqual(player.controller.save_tactical_battle_song.call_count, 2)
+        button = next(element for element in player.elements
+                      if isinstance(element, music_player.Button)
+                      and element.callback == player.open_tactical_songs)
+        with mock.patch.object(music_player, "_run_pygame_sub_screen") as run:
+            click(player, button)
+        self.assertIsInstance(run.call_args.args[1], music_player.TacticalSongsScreen)
+
 
     def test_new_album_tile_is_last_even_when_pinned_by_order(self):
         player = self.make_player(["Alpha", "Zulu"])
@@ -395,6 +393,80 @@ class AlbumTileTests(unittest.TestCase):
             player.delete_album("Mine")
         delete.assert_not_called()
         show_error.assert_called_once()
+
+
+def click(screen, button):
+    # Scrolling rows check the pointer position before they accept a click.
+    with mock.patch("pygame.mouse.get_pos", return_value=button.rect.center):
+        screen.handle_events([
+            pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=button.rect.center),
+            pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=button.rect.center)])
+
+
+class TacticalSongsScreenTests(unittest.TestCase):
+    def setUp(self):
+        pygame.font.init()
+        controller = SimpleNamespace(
+            all_albums={"Fixture B": ["assets/music/Fixture B/three.ogg"],
+                        "Fixture A": ["assets/music/Fixture A/one.ogg", "assets/music/Fixture A/two.ogg"]},
+            tactical_infantry_songs=["assets/music/Fixture A/one.ogg"],
+            tactical_tank_songs=["assets/music/Fixture A/two.ogg", "assets/music/Fixture B/three.ogg"],
+        )
+        player = object.__new__(Music_Player)
+        player.controller = controller
+        self.controller = controller
+        self.save = self.enterContext(mock.patch.object(music_player.queries, "save_global_settings"))
+        self.screen = music_player.TacticalSongsScreen(player)
+
+    def button(self, callback_name, *args):
+        """Find a button by the action its callback calls. Labels are editable UI text."""
+        bound = getattr(self.screen, callback_name)
+        direct = [element for element in self.screen.elements
+                  if isinstance(element, music_player.Button) and element.callback == bound]
+        if direct and not args:
+            return direct[0]
+        actions = {name: mock.Mock() for name in ("start_add_song", "remove_song", "reset_defaults")}
+        with mock.patch.multiple(self.screen, **actions):
+            for element in self.screen.elements:
+                if (not isinstance(element, music_player.Button) or element.disabled
+                        or element.callback in (None, self.screen.exit_screen)):
+                    continue
+                for action in actions.values():
+                    action.reset_mock()
+                element.callback()
+                action = actions[callback_name]
+                if action.called and action.call_args.args == args:
+                    return element
+        raise AssertionError(f"No {callback_name}{args} button")
+
+    def test_add_song_picks_any_album_song_not_already_in_the_list(self):
+        with mock.patch.object(music_player.pickers, "open_listbox_selector") as picker,                 mock.patch.object(music_player.ui_elements, "play_ui_sound"):
+            click(self.screen, self.button("start_add_song", "tactical_infantry_songs"))
+        items, on_pick = picker.call_args.args[3], picker.call_args.args[4]
+        is_enabled = picker.call_args.kwargs["is_enabled"]
+        self.assertEqual(sorted(track for _label, track in items),
+                         sorted(track for tracks in self.controller.all_albums.values() for track in tracks))
+        self.assertEqual([is_enabled(item) for item in items],
+                         [item[1] not in self.controller.tactical_infantry_songs for item in items])
+        on_pick("assets/music/Fixture B/three.ogg")
+        self.assertEqual(self.controller.tactical_infantry_songs,
+                         ["assets/music/Fixture A/one.ogg", "assets/music/Fixture B/three.ogg"])
+        self.assertEqual(self.controller.tactical_tank_songs,
+                         ["assets/music/Fixture A/two.ogg", "assets/music/Fixture B/three.ogg"])
+        self.save.assert_called_once_with(self.controller)
+
+    def test_remove_button_removes_only_its_song(self):
+        click(self.screen, self.button("remove_song", "tactical_tank_songs", 0))
+        self.assertEqual(self.controller.tactical_tank_songs, ["assets/music/Fixture B/three.ogg"])
+        self.assertEqual(self.controller.tactical_infantry_songs, ["assets/music/Fixture A/one.ogg"])
+        self.save.assert_called_once_with(self.controller)
+
+    def test_reset_restores_both_lists_to_their_defaults(self):
+        click(self.screen, self.button("reset_defaults"))
+        defaults = music_player.settings_schema.defaults()
+        for setting, _label in music_player.TACTICAL_SONG_LISTS:
+            self.assertEqual(getattr(self.controller, setting), defaults[setting])
+        self.save.assert_called_once_with(self.controller)
 
 
 if __name__ == "__main__":

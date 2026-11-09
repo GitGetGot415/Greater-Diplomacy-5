@@ -115,7 +115,12 @@
         "openrouter_model": "inclusionai/ling-3.0-tiny:free",
         "checkerboard_gradient_strength": 0.0,
         "checkerboard_scroll_speed": 16,
-        "tactical_battle_song": ""
+        "tactical_infantry_songs": [
+            "assets/music/Greater Diplomacy 5/Devotion.json"
+        ],
+        "tactical_tank_songs": [
+            "assets/music/Greater Diplomacy 5/Dschungel.json"
+        ]
     },
     "active_albums.json": [],
     "shuffle_disabled_tracks.json": [],

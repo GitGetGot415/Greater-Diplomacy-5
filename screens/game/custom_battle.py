@@ -372,7 +372,7 @@ class CustomBattleScreen(Screen):
             self.choosing_retreat = False
             self.done = False
             self.next_state = None
-            self.controller.set_tactical_battle_music(True)
+            self.start_tactical_music()
             return
         if self.campaign is not None:
             self._end_campaign()
@@ -736,11 +736,15 @@ class CustomBattleScreen(Screen):
         self.preview_intro_started = None
         self.preview_intro_stage = 0
         ui_elements.play_ui_sound("open_music")
-        if self.controller is not None:
-            self.controller.set_tactical_battle_music(True)
+        self.start_tactical_music()
         self.status_key = None
         self._refresh_status()
         self.refresh_ui()
+
+    def start_tactical_music(self):
+        """Play the tactical songs for the prepared battle: tank songs when either side has a tank."""
+        if self.controller is not None:
+            self.controller.set_tactical_battle_music(True, tanks=self.simulation.has_tanks())
 
     def _build_simulation(self):
         """Deploy the armies, paused, as preview shows them."""

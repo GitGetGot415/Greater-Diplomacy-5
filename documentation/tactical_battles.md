@@ -111,10 +111,11 @@ Editing buttons, **Random**, **Simulate**, and the **Year** slider are absent.
 Preview shows the units involved in the encounter. It shows no battlefield.
 Combat time stays still, units do not move, and no shots are fired.
 
-The Music screen can assign a tactical battle song. The song begins in preview
-and continues through actual battle without restarting at Start. Editing uses
-normal playlist music. Leaving preview or actual battle, including reaching the
-result view, stops the tactical song and uses normal playlist selection.
+The Music screen's Tactical Songs lists choose battle music. A battle where either
+side has a tank plays the tank songs; any other battle plays the infantry songs.
+The music begins in preview and continues through actual battle without restarting
+at Start. Editing uses normal playlist music. Leaving preview or actual battle,
+including reaching the result view, stops the tactical music and uses normal playlist selection.
 See MUSIC PLAYBACK in [general_info.txt](general_info.txt) for selection and persistence.
 
 **Start** is available only in preview. Choosing **Start** opens actual battle with the prepared forces.

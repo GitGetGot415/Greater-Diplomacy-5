@@ -84,8 +84,9 @@ class TacticalMusicTests(unittest.TestCase):
         import main
         self.controller = object.__new__(main.Controller)
         controller = self.controller
-        controller.tactical_battle_song = "battle.ogg"
-        controller._tactical_music_active = False
+        controller.tactical_infantry_songs = ["battle.ogg"]
+        controller.tactical_tank_songs = ["tank-one.ogg", "tank-two.ogg"]
+        controller._tactical_song_setting = None
         controller._failed_music_tracks = set()
         controller.shuffle_disabled_tracks = {"battle.ogg"}
         controller.playlist = ["playlist.ogg", "other.ogg"]
@@ -130,12 +131,30 @@ class TacticalMusicTests(unittest.TestCase):
         self.original_music.source_position.assert_not_called()
         self.assertEqual(controller.playlist, ["playlist.ogg", "other.ogg"])
         self.assertEqual(controller.shuffle_disabled_tracks, {"battle.ogg"})
-        self.assertFalse(controller._tactical_music_active)
+        self.assertIsNone(controller._tactical_song_setting)
         controller.set_tactical_battle_music(False)
         self.assertEqual(self.played, ["battle.ogg", "battle.ogg", "other.ogg"])
 
+    def test_tank_battles_pick_random_tank_songs_without_repeating(self):
+        controller = self.controller
+        with patch("main.random.choice", side_effect=lambda tracks: tracks[0]) as choice:
+            controller.set_tactical_battle_music(True, tanks=True)
+            controller.play_random_song()
+        self.assertEqual(self.played, ["tank-one.ogg", "tank-two.ogg"])
+        # The second pick excludes the song that just played.
+        self.assertEqual(choice.call_args.args[0], ["tank-two.ogg"])
+        # A battle without tanks switches to the infantry songs.
+        controller.set_tactical_battle_music(True)
+        self.assertEqual(self.played, ["tank-one.ogg", "tank-two.ogg", "battle.ogg"])
+
+    def test_empty_tank_list_keeps_normal_music(self):
+        self.controller.tactical_tank_songs = []
+        self.controller.set_tactical_battle_music(True, tanks=True)
+        self.play.assert_not_called()
+        self.assertIsNone(self.controller._tactical_song_setting)
+
     def test_no_selection_does_not_interrupt_normal_music(self):
-        self.controller.tactical_battle_song = ""
+        self.controller.tactical_infantry_songs = []
         self.controller.set_tactical_battle_music(True)
         self.controller.set_tactical_battle_music(False)
         self.play.assert_not_called()
@@ -167,7 +186,7 @@ class TacticalMusicTests(unittest.TestCase):
         self.assertEqual(self.controller.now_playing, "None")
 
     def test_failed_beepbox_song_repeats_its_working_audio_fallback(self):
-        self.controller.tactical_battle_song = "battle.json"
+        self.controller.tactical_infantry_songs = ["battle.json"]
         self.controller._failed_music_tracks.add("battle.json")
         with patch.object(self.controller, "_beepbox_audio_fallback", return_value="battle.ogg"):
             self.controller.set_tactical_battle_music(True)
@@ -200,7 +219,7 @@ class TacticalMusicTests(unittest.TestCase):
     def test_failed_synth_and_audio_counterpart_return_to_playlist_without_recursion(self):
         import main
         import beepbox_audio
-        self.controller.tactical_battle_song = "battle.json"
+        self.controller.tactical_infantry_songs = ["battle.json"]
         self.play.side_effect = lambda path: main.Controller.play_specific_song(self.controller, path)
 
         def backend(path, *_args):

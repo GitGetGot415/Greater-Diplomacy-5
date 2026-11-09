@@ -41,7 +41,7 @@ GOLDEN_ORDER = (
     "openrouter_api_key", "openrouter_model",
     "checkerboard_gradient_strength",
     "checkerboard_scroll_speed",
-    "tactical_battle_song",
+    "tactical_infantry_songs", "tactical_tank_songs",
 )
 
 GOLDEN_JSON_KEYS = set(GOLDEN_ORDER)
@@ -68,18 +68,23 @@ class SchemaContractTests(unittest.TestCase):
 
 
 class RoundTripTests(unittest.TestCase):
-    def test_tactical_song_round_trip_and_older_settings_default(self):
-        values = settings_schema.defaults()
-        values["tactical_battle_song"] = "assets/music/Fixture/battle.ogg"
-        saved = settings_schema.to_json_dict(values)
-        self.assertEqual(settings_schema.from_json_dict(saved)["tactical_battle_song"],
-                         values["tactical_battle_song"])
-        saved.pop("tactical_battle_song")
-        self.assertEqual(settings_schema.from_json_dict(saved)["tactical_battle_song"],
-                         settings_schema.defaults()["tactical_battle_song"])
-        older_tuple = settings_schema.to_tuple(values, {})[:-1]
-        self.assertEqual(settings_schema.from_tuple(older_tuple)["tactical_battle_song"],
-                         settings_schema.defaults()["tactical_battle_song"])
+    def test_tactical_song_lists_round_trip_and_older_settings_default(self):
+        for name in ("tactical_infantry_songs", "tactical_tank_songs"):
+            with self.subTest(setting=name):
+                values = settings_schema.defaults()
+                values[name] = ["assets/music/Fixture/one.ogg", "assets/music/Fixture/two.json"]
+                saved = settings_schema.to_json_dict(values)
+                self.assertEqual(settings_schema.from_json_dict(saved)[name], values[name])
+                saved.pop(name)
+                self.assertEqual(settings_schema.from_json_dict(saved)[name],
+                                 settings_schema.defaults()[name])
+
+    def test_malformed_tactical_song_lists_keep_only_song_paths(self):
+        saved = {"tactical_infantry_songs": ["assets\\music\\Fixture\\one.ogg", 3, "", None],
+                 "tactical_tank_songs": "assets/music/Fixture/not-a-list.ogg"}
+        loaded = settings_schema.from_json_dict(saved)
+        self.assertEqual(loaded["tactical_infantry_songs"], ["assets/music/Fixture/one.ogg"])
+        self.assertEqual(loaded["tactical_tank_songs"], [])
 
     def sample(self):
         values = settings_schema.defaults()
