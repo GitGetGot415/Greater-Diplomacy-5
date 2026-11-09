@@ -64,7 +64,7 @@ TEAM_COLORS = ((85, 170, 245), (235, 100, 90))
 ZOOM_LEVELS = (0.2, 0.3, 0.4, 0.5, 0.6, 0.75, 1.0, 1.25, 1.5, 2.0)
 DEFAULT_ZOOM_INDEX = ZOOM_LEVELS.index(1.0)
 # Actual battle plays music at this share of its volume at the default zoom and closer.
-# Zooming out lowers it further, in proportion to the zoom.
+# Zooming out lowers music and battle sound effects in proportion to the zoom.
 BATTLE_MUSIC_VOLUME = 0.5
 AIM_CAMERA_OFFSET = 0.6  # Share of the pointer's distance from the view center, in screen pixels.
 OVERVIEW_ZOOM = 0.6
@@ -754,11 +754,14 @@ class CustomBattleScreen(Screen):
             self.controller.set_tactical_battle_music(False)
             self.controller.set_music_volume_scale(1.0)
 
+    def zoom_volume_share(self):
+        """Full volume at the default zoom and closer; zooming out lowers it in proportion to the zoom."""
+        return min(1.0, self.zoom / ZOOM_LEVELS[DEFAULT_ZOOM_INDEX])
+
     def update_battle_music_volume(self):
         """Lower music in actual battle: BATTLE_MUSIC_VOLUME, then quieter the further the view zooms out."""
         if self.controller is not None and self.mode == "battle":
-            zoom_share = min(1.0, self.zoom / ZOOM_LEVELS[DEFAULT_ZOOM_INDEX])
-            self.controller.set_music_volume_scale(BATTLE_MUSIC_VOLUME * zoom_share)
+            self.controller.set_music_volume_scale(BATTLE_MUSIC_VOLUME * self.zoom_volume_share())
 
     def _build_simulation(self):
         """Deploy the armies, paused, as preview shows them."""
@@ -771,12 +774,11 @@ class CustomBattleScreen(Screen):
         self.terrain_sprites.clear()
         self._cache_terrain_art()
 
-    @staticmethod
-    def _play_shot_sound(fighter):
+    def _play_shot_sound(self, fighter):
         # Match the projectile's color classification and keep audio randomness
         # separate from the seeded simulation's aiming and movement decisions.
         kind = "heavy_gunshot" if fighter.shape in TANK_SHOT_SHAPES else random.choice(RIFLE_SHOT_SOUNDS)
-        ui_elements.play_ui_sound(kind)
+        ui_elements.play_ui_sound(kind, volume_scale=self.zoom_volume_share())
 
     def start_battle(self):
         if self.mode != "preview" or self.preview_intro_stage is not None:

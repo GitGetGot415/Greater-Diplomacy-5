@@ -1506,7 +1506,7 @@ class CustomBattleScreenTests(unittest.TestCase):
                         "ui.widgets.ui_elements.play_ui_sound") as sound, patch.object(battle_screen.random, "choice") as choice:
                     source.shape = shape
                     self.screen.simulation._fire_shot(source)
-                    sound.assert_called_once_with("heavy_gunshot")
+                    self.assertEqual(sound.call_args.args, ("heavy_gunshot",))
                     choice.assert_not_called()
 
     def win_battle(self):
@@ -2296,6 +2296,20 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.assertEqual(scale.call_args.args[0], battle_screen.BATTLE_MUSIC_VOLUME)
         self.click("Exit")
         self.assertEqual(scale.call_args.args, (1.0,))
+
+    def test_zooming_out_lowers_shot_sounds(self):
+        self.fill_armies()
+        self.click("Simulate")
+        self.click("Start")
+        source = self.screen.simulation.divisions[0][0]
+        center = self.screen.view_rect().center
+        default_zoom = battle_screen.ZOOM_LEVELS[battle_screen.DEFAULT_ZOOM_INDEX]
+        for steps in (2, -len(battle_screen.ZOOM_LEVELS)):
+            self.screen.zoom_by(steps, center)
+            with self.subTest(zoom=self.screen.zoom), patch("ui.widgets.ui_elements.play_ui_sound") as sound:
+                self.screen.simulation._fire_shot(source)
+                self.assertAlmostEqual(sound.call_args.kwargs["volume_scale"],
+                                       min(1.0, self.screen.zoom / default_zoom))
 
     def test_music_override_spans_preview_and_actual_and_ends_on_exit_or_result(self):
         music = self.controller.set_tactical_battle_music

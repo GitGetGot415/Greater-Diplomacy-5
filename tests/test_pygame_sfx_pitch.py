@@ -231,6 +231,21 @@ class PygameSfxPitchTests(unittest.TestCase):
             ui_elements.play_ui_sound("select_sub_category")
             sound.play.assert_not_called()
 
+    def test_volume_scale_lowers_one_play_on_both_backends(self):
+        ui_elements.sound_volume_multipliers["Select Sub-Category.wav"] = 1
+        ui_elements.global_sfx_volume = 0.5
+        engine = Mock()
+        sound = Mock()
+        with patch.object(ui_elements.c, "USE_SOLOUD", True), \
+                patch.object(ui_elements, "soloud_engine", engine), \
+                patch.dict(ui_elements.music_ui_sounds, select_sub_category=sound):
+            ui_elements.play_ui_sound("select_sub_category", volume_scale=0.25)
+            engine.set_volume.assert_called_once_with(engine.play.return_value, 0.125)
+        with patch.object(ui_elements.c, "USE_SOLOUD", False), \
+                patch.object(ui_elements, "_pygame_sound_at_pitch", return_value=sound):
+            ui_elements.play_ui_sound("select_sub_category", volume_scale=0.25)
+            sound.set_volume.assert_called_once_with(0.125)
+
     def test_rifle_bursts_cannot_replace_tank_voices_and_both_pools_are_bounded(self):
         engine = Mock()
         engine.get_max_active_voice_count.return_value = 32

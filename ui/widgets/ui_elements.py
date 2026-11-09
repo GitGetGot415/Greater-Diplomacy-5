@@ -497,15 +497,16 @@ def _play_pygame_battle_sound(group, sound):
         voices.append((channel, sound))
 
 
-def play_ui_sound(kind="click"):
+def play_ui_sound(kind="click", volume_scale=1.0):
     """Plays a UI sfx through whichever audio backend is active.
 
     Single entry point for every click/slider blip in the game, so the SoLoud
     vs. pygame.mixer branch and the volume/pitch maths live in exactly one place.
+    ``volume_scale`` lowers one play, such as a battle shot seen from a zoomed-out view.
     """
     if global_sfx_volume <= 0:
         return
-    volume = _ui_sound_volume(kind)
+    volume = _ui_sound_volume(kind) * volume_scale
     if volume <= 0:
         return
     battle_group = BATTLE_SFX_GROUPS.get(kind)

@@ -522,7 +522,8 @@ A song that fails to play, such as a deleted file, is skipped. The song stays in
 Leaving preview or combat, including reaching the result view, stops the tactical
 song and uses normal playlist selection. Previous songs, playback positions, and
 paused states are not restored. See documentation/tactical_battles.md for the views.
-Actual tactical combat lowers music volume and lowers it further when zoomed out; tactical_battles.md explains the rule.
+Actual tactical combat lowers music volume and lowers it further when zoomed out. Zooming out also lowers
+shot sound effects. tactical_battles.md explains the rule.
 This volume scale is never saved and returns to full when combat ends.
 The song list groups songs by album with album name dividers.
 

@@ -120,6 +120,8 @@ including reaching the result view, stops the tactical music and uses normal pla
 Actual battle, including while paused, plays music at half volume (BATTLE_MUSIC_VOLUME in
 screens/game/custom_battle.py) at the default zoom and closer. Zooming out lowers it in proportion
 to the zoom; for example, zoom 0.5 plays at a quarter. Preview and the result view use full volume.
+Shot sound effects follow the same zoom rule without the halving: full volume at the default zoom
+and closer, half volume at zoom 0.5. Interface sounds such as button clicks are not lowered.
 See MUSIC PLAYBACK in [general_info.txt](general_info.txt) for selection and persistence.
 
 **Start** is available only in preview. Choosing **Start** opens actual battle with the prepared forces.
