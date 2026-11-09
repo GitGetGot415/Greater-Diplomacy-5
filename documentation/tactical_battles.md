@@ -126,7 +126,8 @@ Sub-units keep the same spacing along a line, so a division with fewer sub-units
 Roster order runs front to back, and the battlefield is wide enough for two full armies.
 Armored cars, light tanks, medium tanks, heavy tanks, main battle tanks, and super heavy tanks use the chassis
 and turret images in `assets/battles`. The chassis follows the hull heading, and the turret follows the gun's aim.
-Other tanks and vehicles use rectangles, infantry and militia use circles, and cavalry uses ovals.
+Infantry, cavalry, and militia use their chassis images from the same folder and share `turret/Infantry Gun.png`
+for their aimed weapon. Other tanks and vehicles use rectangles.
 Health bars show remaining strength, with the unit's nationality flag beside each bar, and projectiles show shots in flight.
 
 #### Sub-units
