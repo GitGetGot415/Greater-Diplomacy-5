@@ -403,6 +403,10 @@ Keep tuning data in its source files:
 
 ### AI and Diplomacy
 
+- **AI-controlled units on every side of a tactical battle must use the same decision rules.**
+  Never give friendly or enemy units a unique combat behavior because of their side.
+  Base tactical decisions on unit capabilities, health, position, support, threats, and the same temperament rules.
+  Side identity selects allies, enemies, and deployment orientation; it must not select a different AI policy.
 - Every action available to the rule-based AI must also be available to human players under the same game rules and conditions.
   Do not give AI exclusive actions or bypass human gameplay restrictions.
 - **AI countries, rule-based and LLM, follow the same rules as human players, including diplomatic timing.**

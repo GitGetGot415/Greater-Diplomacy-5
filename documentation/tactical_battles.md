@@ -168,8 +168,10 @@ turning gradually. These rules apply to AI sub-units and the controlled sub-unit
 AI sub-units move as loose divisions. Each division advances on the enemy nearest its center, and each of its
 sub-units heads for a point beside that enemy matching its own place in the division's line, so a division arrives
 spread out in its deployment order. Divisions use separate approach lanes instead of all aiming for the same line.
-Enemy infantry and troop carriers hold their deployment line while healthy mobile opponents approach from beyond
-weapon range. Defenders pursue when the remaining opponents cannot make that approach.
+Friendly and enemy AI units use the same decision rules. Both sides advance into their preferred firing positions
+and hold according to unit behavior and the battle situation. No side receives a unique combat behavior because
+of its friendly or enemy status. Unit capabilities, health, position, support, threats, and individual temperaments
+can produce different decisions under those shared rules.
 A sub-unit that gets well ahead of its division slows down until the division
 catches up. Each sub-unit also has its own temperament, drawn at deployment: how close it comes before it stops to
 fight, its cruising speed, a short delay before it first moves, and a gentle weave from side to side while advancing.
@@ -185,7 +187,7 @@ AI sub-units also fight according to their type:
 | Tanks | Flank: reach a position beside the enemy before settling into firing range. Entering range alone does not end the flank. |
 | Cavalry | Charge in close, withdraw to its usual distance, then charge again. Charging cavalry does not wait for its division. |
 | Armored cars | Skirmish: stop at long range and reverse away from close enemies while facing them. |
-| Infantry, militia, and troop carriers | Advance steadily and hold, or defend the deployment line. |
+| Infantry, militia, and troop carriers | Advance steadily and hold at their preferred firing distance. |
 
 Two reactions come before the type's behavior. A sub-unit below a set share of its health falls back while healthier
 allies can cover the withdrawal. The last wounded troops keep fighting so depleted armies cannot both withdraw

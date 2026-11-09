@@ -62,7 +62,6 @@ SPAWN_MARGIN = 100.0  # Between the battlefield edge and the last rank of the la
 ARENA_SIZE = (SPAWN_FRONT_GAP + 2 * (SPAWN_MARGIN + (c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE - 1) * RANK_GAP), 1100.0)
 APPROACH_LANE_GAP = 70.0
 FLANK_ARRIVAL_DISTANCE = 45.0
-DEFENSIVE_SHAPES = frozenset(("infantry", "motorized", "mechanized", "ifv"))
 MELEE_SHAPES = frozenset(("infantry", "cavalry"))
 MELEE_REACH = UNIT_RADIUS * 2 + 6
 MELEE_INTERVAL = 1.0
@@ -320,7 +319,6 @@ class Fighter:
     lane: float = 0.0
     flank_goal: object = None
     flank_complete: bool = False
-    defensive: bool = False
     melee_committed: bool = False
     ram_committed: bool = False
     melee_targets: tuple = ()
@@ -449,7 +447,6 @@ class BattleSimulation:
     _turn: float = field(init=False, default=0.0)
     _fire: bool = field(init=False, default=False)
     _aim_point: object = field(init=False, default=None)
-    _advancing_sides: list = field(init=False, default_factory=lambda: [False, False])
     _healthy_sides: list = field(init=False, default_factory=lambda: [True, True])
     _contacts: set = field(init=False, default_factory=set)  # Rearm a ram only after the pair separates.
 
@@ -482,7 +479,6 @@ class BattleSimulation:
                 lane = (index - (len(roster) - 1) / 2) * APPROACH_LANE_GAP
                 for fighter in members:
                     fighter.lane = lane
-                    fighter.defensive = bool(side and fighter.shape in DEFENSIVE_SHAPES)
                 if side == 0 and index == self.controlled_index:
                     self.controlled = members[len(members) // 2]  # The middle of the line.
 
@@ -739,13 +735,7 @@ class BattleSimulation:
         target = fighter.target
         dx, dy = target.x - fighter.x, target.y - fighter.y
         distance = math.hypot(dx, dy)
-        # Defenders hold their deployment line while healthy opponents approach.
-        # A fleeing or immobile opponent must not leave two armies waiting forever.
-        defend = (fighter.defensive and not (fighter.melee_committed or fighter.ram_committed) and distance > WEAPON_RANGE
-                  and self._advancing_sides[1 - fighter.side])
         throttle, heading = self._ai_course(fighter, distance, math.atan2(dy, dx), center, objective)
-        if defend:
-            throttle, heading = 0.0, math.atan2(dy, dx)
         turning = _wrap(heading - fighter.angle)
         # Turn toward the heading before driving hard along it.
         throttle *= max(0.0, math.cos(turning))
@@ -965,8 +955,6 @@ class BattleSimulation:
         sides = [[fighter for fighter in living if fighter.side == side] for side in (0, 1)]
         crowds = [_Grid(side, GRID_CELL) for side in sides]
         targets = [_Grid(side, TARGET_CELL) for side in sides]
-        self._advancing_sides = [any(unit.max_speed > 0 and unit.data["health"] >=
-                                     unit.data["max_health"] * FALL_BACK_HEALTH for unit in side) for side in sides]
         self._healthy_sides = [any(unit.data["health"] >= unit.data["max_health"] * FALL_BACK_HEALTH
                                   for unit in side) for side in sides]
         objectives = self._division_objectives(targets, dt)

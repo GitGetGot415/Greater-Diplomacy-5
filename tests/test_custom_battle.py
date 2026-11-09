@@ -780,7 +780,6 @@ class CloseCombatTests(unittest.TestCase):
             unit.x, unit.y = 1000 + index * (combat.MELEE_REACH - 2 if gap is None else gap), 500
             unit.angle = unit.aim = index * math.pi
             unit.wander = unit.start_delay = 0
-            unit.defensive = False
         return simulation
 
     def test_manual_melee_replaces_projectiles_and_shares_reload_with_shooting(self):
@@ -922,13 +921,46 @@ class CloseCombatTests(unittest.TestCase):
         simulation._ai_course(unit, combat.WEAPON_RANGE / 2, 0, (unit.x, unit.y), target)
         self.assertTrue(unit.flank_complete)
 
-    def test_defenders_hold_while_the_other_side_approaches_and_divisions_get_different_lanes(self):
+    def test_both_armies_advance_together_and_divisions_get_different_lanes(self):
         simulation = combat.BattleSimulation(self.library, ["Fixture I"] * 3, ["Fixture I"] * 3, seed=3)
         starts = [(unit.x, unit.y) for unit in simulation.fighters]
         simulation.advance(2)
         self.assertTrue(any(unit.x > start[0] for unit, start in zip(simulation.fighters[:3], starts[:3])))
-        self.assertEqual([(unit.x, unit.y) for unit in simulation.fighters[3:]], starts[3:])
+        self.assertTrue(any(unit.x < start[0] for unit, start in zip(simulation.fighters[3:], starts[3:])))
         self.assertEqual(len({division[0].lane for division in simulation.divisions[:3]}), 3)
+
+    def test_ai_movement_uses_the_same_rules_on_both_sides_for_every_shape(self):
+        for shape in combat.MOBILITY:
+            for situation in ("advance", "hold", "flank", "withdraw", "melee", "ram"):
+                with self.subTest(shape=shape, situation=situation):
+                    gap = combat.WEAPON_RANGE * (2 if situation in ("advance", "flank") else 0.7)
+                    simulation = self.encounter(shapes=(shape, shape), gap=gap)
+                    first, second = simulation.fighters
+                    for unit in simulation.fighters:
+                        unit.hold, unit.pace = 0.8, 1.0
+                        unit.cooldown, unit.retarget = 1000, 1000
+                        unit.flank = 1
+                        unit.flank_complete = situation != "flank"
+                        unit.melee_committed = situation == "melee"
+                        unit.ram_committed = situation == "ram"
+                        if situation == "withdraw":
+                            unit.data["health"] = unit.data["max_health"] * combat.FALL_BACK_HEALTH / 2
+                    for unit, target in ((first, second), (second, first)):
+                        unit.target = target
+                        simulation._drive_ai(unit, combat._Grid([target], combat.TARGET_CELL), combat.FIXED_STEP,
+                                             [], (unit.x, unit.y), target)
+                    self.assertAlmostEqual(first.speed, second.speed)
+                    self.assertAlmostEqual(abs(first.turn_rate), abs(second.turn_rate))
+
+    def test_infantry_on_both_sides_holds_at_its_preferred_firing_distance(self):
+        simulation = self.encounter(gap=combat.WEAPON_RANGE * 0.7)
+        first, second = simulation.fighters
+        for unit, target in ((first, second), (second, first)):
+            unit.hold, unit.pace = 0.8, 1.0
+            unit.cooldown = 1000
+            simulation._drive_ai(unit, combat._Grid([target], combat.TARGET_CELL), combat.FIXED_STEP,
+                                 [], (unit.x, unit.y), target)
+            self.assertEqual(unit.speed, 0)
 
     def test_depleted_armies_keep_fighting_instead_of_both_retreating_forever(self):
         simulation = self.encounter(gap=combat.WEAPON_RANGE / 2)
