@@ -126,8 +126,7 @@ See MUSIC PLAYBACK in [general_info.txt](general_info.txt) for selection and per
 
 Preview and actual battle have **Settings** and **Music** buttons. Each opens its screen over the battle,
 and Back returns to the same preview or battle with its simulation unchanged; combat time does not pass
-while either screen is open. Opening either screen stops the tactical music like any other leaving of
-the battle screen, and returning starts the tactical songs again from the current Tactical Songs lists.
+while either screen is open. The tactical song keeps playing through both screens and after Back.
 
 **Start** is available only in preview. Choosing **Start** opens actual battle with the prepared forces.
 In a custom battle, **Retreat** returns to editing while preserving the army setup.

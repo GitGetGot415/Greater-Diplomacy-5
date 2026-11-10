@@ -386,13 +386,11 @@ class CustomBattleScreen(Screen):
             self.start_tactical_music()
             return
         if self.viewing_overlay:
-            # Back from Settings or Music: the controller stopped the tactical songs on leaving, so resume
-            # them (with any song list changes) at the battle's volume, and keep the same mode and simulation.
+            # Back from Settings or Music: the tactical song kept playing, so keep it and the same mode and
+            # simulation. Only the clock restarts, so no combat time passes while the screen was open.
             self.viewing_overlay = False
             self.done = False
             self.next_state = None
-            self.start_tactical_music()
-            self.update_battle_music_volume()
             self.last_tick = pygame.time.get_ticks()
             return
         if self.campaign is not None:

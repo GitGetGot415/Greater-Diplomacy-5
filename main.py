@@ -442,7 +442,9 @@ class Controller:
         if next_state_name == "MAP" and not previous_state.prepare_map(self):
             return
         next_state = self.states[next_state_name]
-        if previous_state is self.states.get("CUSTOM_BATTLE") and next_state is not previous_state:
+        # Settings and Music opened over a battle keep its song playing; every other exit ends the tactical music.
+        if (previous_state is self.states.get("CUSTOM_BATTLE") and next_state is not previous_state
+                and not previous_state.viewing_overlay):
             self.set_tactical_battle_music(False)
             self.set_music_volume_scale(1.0)
         next_state.on_enter(self, previous_state)
