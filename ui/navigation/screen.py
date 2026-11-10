@@ -228,6 +228,9 @@ class Screen:
             self.back_state = "REALTIME_LOBBY"
         elif previous == app.states["REALTIME_REMOTE_LOBBY"]:
             self.back_state = "REALTIME_REMOTE_LOBBY"
+        elif previous == app.states["CUSTOM_BATTLE"]:
+            # Opened from a tactical battle preview or a running battle; return to that same view.
+            self.back_state = "CUSTOM_BATTLE"
         # Returning from a Settings sub-screen (e.g. Unit Art, Keybinds)
         # isn't a fresh entry into Settings -- it must not overwrite the
         # MAP/MENU back_state Settings already picked up when it was

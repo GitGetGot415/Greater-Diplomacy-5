@@ -124,6 +124,11 @@ Shot sound effects follow the same zoom rule without the halving: full volume at
 and closer, half volume at zoom 0.5. Interface sounds such as button clicks are not lowered.
 See MUSIC PLAYBACK in [general_info.txt](general_info.txt) for selection and persistence.
 
+Preview and actual battle have **Settings** and **Music** buttons. Each opens its screen over the battle,
+and Back returns to the same preview or battle with its simulation unchanged; combat time does not pass
+while either screen is open. Opening either screen stops the tactical music like any other leaving of
+the battle screen, and returning starts the tactical songs again from the current Tactical Songs lists.
+
 **Start** is available only in preview. Choosing **Start** opens actual battle with the prepared forces.
 In a custom battle, **Retreat** returns to editing while preserving the army setup.
 

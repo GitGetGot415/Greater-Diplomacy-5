@@ -111,6 +111,12 @@ PREVIEW_START_POSITION = ("centered", 625)
 PREVIEW_START_SIZE = (220, 50)
 PREVIEW_RETREAT_SIZE = (160, 50)
 PREVIEW_RETREAT_GAP = 20  # Between Start and Retreat.
+# Settings and Music open over a preview or a running battle, along the top right edge.
+OVERLAY_BUTTON_SIZE = (110, 40)
+OVERLAY_BUTTON_GAP = 10
+OVERLAY_BUTTON_TOP = 20
+SCREEN_EDGE_MARGIN = 20
+PAUSE_BUTTON_SIZE = (130, 40)
 # Preview entry animation: edit these durations in seconds, then restart the game.
 # Slide durations must be positive; the hold can be zero.
 PREVIEW_SLIDE_IN_SECONDS = 0.2
@@ -334,6 +340,7 @@ class CustomBattleScreen(Screen):
         self.group = [[], []]
         self.campaign = None  # A CampaignBattle while a tactical-mode encounter is shown.
         self.choosing_retreat = False
+        self.viewing_overlay = False  # Settings or Music is open over a preview or a running battle.
         self.bar_drag = None  # (side, index) of the card whose health bar is being dragged
         self.marquee = None  # [side, start position, current position] while dragging a square
         self.controlled_index = None
@@ -377,6 +384,16 @@ class CustomBattleScreen(Screen):
             self.done = False
             self.next_state = None
             self.start_tactical_music()
+            return
+        if self.viewing_overlay:
+            # Back from Settings or Music: the controller stopped the tactical songs on leaving, so resume
+            # them (with any song list changes) at the battle's volume, and keep the same mode and simulation.
+            self.viewing_overlay = False
+            self.done = False
+            self.next_state = None
+            self.start_tactical_music()
+            self.update_battle_music_volume()
+            self.last_tick = pygame.time.get_ticks()
             return
         if self.campaign is not None:
             self._end_campaign()
@@ -448,6 +465,15 @@ class CustomBattleScreen(Screen):
         self.choosing_retreat = True
         self.go_to("TACTICAL_RETREAT")
 
+    def open_overlay(self, state):
+        """Open Settings or Music over the preview or the running battle; Back returns to the same view."""
+        if self.mode not in {"preview", "battle"} or self.preview_intro_stage is not None:
+            return
+        self.cancel_active_drags()
+        self.clear_controls()
+        self.viewing_overlay = True
+        self.go_to(state)
+
     def finish_retreat(self):
         """The retreat order is given: the encounter is over."""
         self._end_campaign()
@@ -508,6 +534,18 @@ class CustomBattleScreen(Screen):
         if self.mode == "setup" or (self.mode in {"battle", "result"} and self.campaign is None):
             self.elements.append(Button(20, 20, "small", "red", "Exit", self.leave,
                                         sound_kind="back"))
+        if self.mode in {"preview", "battle"}:
+            # In battle the Pause button owns the right edge; Settings and Music sit to its left.
+            right = c.SCREEN_WIDTH - SCREEN_EDGE_MARGIN
+            if self.mode == "battle":
+                right -= PAUSE_BUTTON_SIZE[0] + OVERLAY_BUTTON_GAP
+            for label, state, sound in (("Music", "MUSIC_PLAYER", "open_music"),
+                                        ("Settings", "SETTINGS", "open_settings")):
+                right -= OVERLAY_BUTTON_SIZE[0]
+                self.elements.append(Button(right, OVERLAY_BUTTON_TOP, OVERLAY_BUTTON_SIZE, "pink", label,
+                                            lambda state=state: self.open_overlay(state),
+                                            font_size=20, sound_kind=sound))
+                right -= OVERLAY_BUTTON_GAP
         if self.mode in {"setup", "preview"}:
             self.roster_labels = []
             for side, top in enumerate(PANEL_TOPS):
@@ -574,7 +612,8 @@ class CustomBattleScreen(Screen):
                                         battle_terrain.TERRAIN_NAMES[self.terrain], self.choose_terrain,
                                         font_size=20))
         elif self.mode == "battle":
-            self.pause_button = Button(c.SCREEN_WIDTH - 150, 20, (130, 40), "yellow",
+            self.pause_button = Button(c.SCREEN_WIDTH - SCREEN_EDGE_MARGIN - PAUSE_BUTTON_SIZE[0], OVERLAY_BUTTON_TOP,
+                                       PAUSE_BUTTON_SIZE, "yellow",
                                        "Resume" if self.simulation.paused else "Pause", self.toggle_pause)
             self.elements.append(self.pause_button)
         elif self.campaign is not None:
