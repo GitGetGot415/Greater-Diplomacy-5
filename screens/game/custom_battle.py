@@ -112,7 +112,8 @@ PREVIEW_START_SIZE = (220, 50)
 PREVIEW_RETREAT_SIZE = (160, 50)
 PREVIEW_RETREAT_GAP = 20  # Between Start and Retreat.
 # Settings and Music open over a preview or a running battle, along the top right edge.
-OVERLAY_BUTTON_SIZE = (110, 40)
+OVERLAY_BUTTON_SIZE = (40, 40)
+OVERLAY_ICON_SIZE = (28, 28)
 OVERLAY_BUTTON_GAP = 10
 OVERLAY_BUTTON_TOP = 20
 SCREEN_EDGE_MARGIN = 20
@@ -537,12 +538,13 @@ class CustomBattleScreen(Screen):
             right = c.SCREEN_WIDTH - SCREEN_EDGE_MARGIN
             if self.mode == "battle":
                 right -= PAUSE_BUTTON_SIZE[0] + OVERLAY_BUTTON_GAP
-            for label, state, sound in (("Music", "MUSIC_PLAYER", "open_music"),
-                                        ("Settings", "SETTINGS", "open_settings")):
+            for symbol, state, color, sound in (("Music", "MUSIC_PLAYER", "blue", "open_music"),
+                                                ("Gear", "SETTINGS", "grey", "open_settings")):
                 right -= OVERLAY_BUTTON_SIZE[0]
-                self.elements.append(Button(right, OVERLAY_BUTTON_TOP, OVERLAY_BUTTON_SIZE, "pink", label,
+                icon = symbol_loader.get_symbol(symbol, zoom=1, fit_size=OVERLAY_ICON_SIZE)
+                self.elements.append(Button(right, OVERLAY_BUTTON_TOP, OVERLAY_BUTTON_SIZE, color, "",
                                             lambda state=state: self.open_overlay(state),
-                                            font_size=20, sound_kind=sound))
+                                            image=icon, show_text=False, sound_kind=sound))
                 right -= OVERLAY_BUTTON_GAP
         if self.mode in {"setup", "preview"}:
             self.roster_labels = []

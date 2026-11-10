@@ -124,7 +124,7 @@ Shot sound effects follow the same zoom rule without the halving: full volume at
 and closer, half volume at zoom 0.5. Interface sounds such as button clicks are not lowered.
 See MUSIC PLAYBACK in [general_info.txt](general_info.txt) for selection and persistence.
 
-Preview and actual battle have **Settings** and **Music** buttons. Each opens its screen over the battle,
+Preview and actual battle have square gear (Settings) and music (Music) icon buttons. Each opens its screen over the battle,
 and Back returns to the same preview or battle with its simulation unchanged; combat time does not pass
 while either screen is open. The tactical song keeps playing through both screens and after Back.
 
