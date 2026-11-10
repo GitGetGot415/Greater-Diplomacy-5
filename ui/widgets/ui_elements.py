@@ -18,7 +18,7 @@ import data.constants as c
 from data import queries
 from data.io import starting_defaults
 from ui.background_styles import SLIDER_STYLES, TEXT_INPUT_STYLES
-from ui import music_playback
+from ui import browser_sound_effects, music_playback
 from ui.rendering.font_manager import fonts
 from ui.rendering import symbol_loader
 from ui.widgets.text_utils import wrap_text
@@ -451,6 +451,12 @@ def load_pygame_ui_sounds():
     load_music_ui_sounds(_load_pygame_ui_sound)
 
 
+def load_browser_ui_sounds():
+    """Give every effect to the browser, which then plays all UI sounds."""
+    browser_sound_effects.load({
+        "click": c.SOUND_CLICK_PATH, "slider": c.SOUND_SLIDER_PATH, **MUSIC_UI_SOUND_PATHS})
+
+
 def _soloud_battle_slot(group):
     """Reclaim the oldest effect in this group, leaving a native slot for music."""
     global _soloud_battle_engine
@@ -511,7 +517,12 @@ def play_ui_sound(kind="click", volume_scale=1.0):
         return
     battle_group = BATTLE_SFX_GROUPS.get(kind)
 
-    if c.USE_SOLOUD:
+    if browser_sound_effects.active:
+        browser_sound_effects.play(
+            kind, volume, 0.5 + global_sfx_pitch,
+            sound_start_offsets.get(_ui_sound_filename(kind), 0.0),
+            battle_group, BATTLE_SFX_VOICE_LIMITS.get(battle_group, 0))
+    elif c.USE_SOLOUD:
         sound = (click_sound if kind == "click" else slider_sound if kind == "slider"
                  else music_ui_sounds.get(kind))
         if sound and soloud_engine:

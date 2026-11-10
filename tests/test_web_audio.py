@@ -23,7 +23,7 @@ import data.constants as c
 from data import platform as game_platform, queries
 from compilation_scripts import html_compilation
 from tests.web_fixtures import GarblingWindow
-from ui import music_playback
+from ui import browser_sound_effects, music_playback
 from ui.widgets import ui_elements
 
 
@@ -217,6 +217,109 @@ class WebMP3BridgeTests(unittest.TestCase):
         self.assertEqual(self.context.eval('player.error'), 'bad MP3')
         self.context.eval("player.audio.error = {message:'decode failed'}; player.audio.events.error()")
         self.assertEqual(self.context.eval('player.error'), 'decode failed')
+
+
+class BrowserSoundEffectRoutingTests(unittest.TestCase):
+    def test_active_browser_effects_replace_the_mixer_and_keep_play_settings(self):
+        mixer_sound = Mock()
+        with patch.object(browser_sound_effects, "active", True), \
+                patch.object(browser_sound_effects, "play") as play, \
+                patch.object(ui_elements, "pygame_click_sound", mixer_sound), \
+                patch.object(ui_elements, "global_sfx_volume", 0.5), \
+                patch.object(ui_elements, "global_sfx_pitch", 0.75), \
+                patch.object(ui_elements.c, "SOUND_CLICK_PATH", "sounds/Click.wav"), \
+                patch.dict(ui_elements.sound_volume_multipliers, {"Click.wav": 3.0}, clear=True), \
+                patch.dict(ui_elements.sound_start_offsets, {"Click.wav": 0.2}, clear=True), \
+                patch.dict(ui_elements.BATTLE_SFX_GROUPS, {"shot": "rifle"}, clear=True), \
+                patch.dict(ui_elements.BATTLE_SFX_VOICE_LIMITS, {"rifle": 3}, clear=True), \
+                patch.dict(ui_elements.MUSIC_UI_SOUND_PATHS, {"shot": "sounds/Shot.wav"}, clear=True):
+            ui_elements.play_ui_sound("click")
+            ui_elements.play_ui_sound("shot", volume_scale=0.5)
+            with patch.object(ui_elements, "global_sfx_volume", 0):
+                ui_elements.play_ui_sound("click")
+        # A file multiplier above 1 reaches the browser unclipped.
+        self.assertEqual(play.call_args_list, [
+            call("click", 1.5, 1.25, 0.2, None, 0),
+            call("shot", 0.25, 1.25, 0.0, "rifle", 3),
+        ])
+        mixer_sound.play.assert_not_called()
+
+    def test_load_sends_converted_paths_and_turns_the_browser_path_on(self):
+        load = Mock()
+        window = SimpleNamespace(eval=Mock())
+        # setattr avoids the name mangling of a double underscore inside a class.
+        setattr(window, "__gd5_sfx_load", load)
+        with patch.object(browser_platform, "window", window, create=True), \
+                patch.object(browser_sound_effects, "active", False), \
+                patch.object(music_playback, "pygame_audio_path", return_value="sounds/Info.ogg"):
+            browser_sound_effects.load({"info": "sounds/Info.mp3"})
+            self.assertTrue(browser_sound_effects.active)
+        window.eval.assert_called_once_with(browser_sound_effects._BRIDGE)
+        load.assert_called_once_with(
+            "info", json.dumps(os.path.abspath("sounds/Info.ogg")))
+
+
+@unittest.skipUnless(importlib.util.find_spec('quickjs'), 'QuickJS is not installed')
+class BrowserSoundEffectBridgeTests(unittest.TestCase):
+    def setUp(self):
+        import quickjs
+
+        self.context = quickjs.Context()
+        self.context.eval(r"""
+            globalThis.window = globalThis;
+            globalThis.console = {log(message) { logged.push(message); }};
+            globalThis.logged = [];
+            globalThis.started = [];
+            globalThis.stopped = [];
+            globalThis.FS = {readFile(path) {
+                if (path === '/missing.wav') throw new Error('no file');
+                return new Uint8Array([1, 2]);
+            }};
+            globalThis.AudioContext = class {
+                constructor() { this.state = 'suspended'; this.destination = {}; }
+                resume() { this.state = 'running'; }
+                decodeAudioData(data, done, failed) {
+                    if (this.failDecode) failed('bad data'); else done({duration: 2});
+                }
+                createGain() { return {gain: {value: 1}, connect() {}}; }
+                createBufferSource() {
+                    const source = {playbackRate: {value: 1}, connect(node) { this.gain = node; },
+                        start(when, offset) { started.push({source: this, offset: offset}); },
+                        stop() { stopped.push(this); if (this.onended) this.onended(); }};
+                    return source;
+                }
+            };
+        """)
+        self.context.eval(browser_sound_effects._BRIDGE)
+        self.context.eval("__gd5_sfx_load('click', JSON.stringify('/click.wav'))")
+
+    def test_play_applies_volume_speed_and_offset_and_resumes_the_context(self):
+        self.context.eval("__gd5_sfx_play('click', 1.5, 1.25, 0.5, '', 0)")
+        self.assertEqual(self.context.eval("started.length"), 1)
+        self.assertEqual(self.context.eval("started[0].offset"), 0.5)
+        self.assertEqual(self.context.eval("started[0].source.playbackRate.value"), 1.25)
+        self.assertEqual(self.context.eval("started[0].source.gain.gain.value"), 1.5)
+        self.assertEqual(self.context.eval("__gd5_sfx.context.state"), "running")
+
+    def test_unloaded_sounds_and_offsets_past_the_end_stay_silent(self):
+        self.context.eval("__gd5_sfx_load('gone', JSON.stringify('/missing.wav'))")
+        self.context.eval("__gd5_sfx.context.failDecode = true")
+        self.context.eval("__gd5_sfx_load('bad', JSON.stringify('/bad.wav'))")
+        for kind, offset in (("gone", 0), ("bad", 0), ("click", 2)):
+            self.context.eval(f"__gd5_sfx_play('{kind}', 1, 1, {offset}, '', 0)")
+        self.assertEqual(self.context.eval("started.length"), 0)
+        self.assertEqual(self.context.eval("logged.length"), 2)
+
+    def test_a_full_battle_group_stops_its_oldest_voice(self):
+        for _ in range(3):
+            self.context.eval("__gd5_sfx_play('click', 1, 1, 0, 'rifle', 2)")
+        self.context.eval("__gd5_sfx_play('click', 1, 1, 0, 'tank', 2)")
+        self.assertEqual(self.context.eval("stopped.length"), 1)
+        self.assertTrue(self.context.eval("stopped[0] === started[0].source"))
+        self.assertEqual(self.context.eval("__gd5_sfx.voices.rifle.length"), 2)
+        # A voice that ends by itself frees its place.
+        self.context.eval("started[1].source.onended()")
+        self.assertEqual(self.context.eval("__gd5_sfx.voices.rifle.length"), 1)
 
 
 class MusicPersistenceTests(unittest.TestCase):

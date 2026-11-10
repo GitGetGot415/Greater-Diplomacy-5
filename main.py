@@ -607,10 +607,13 @@ class Controller:
     def init_web_audio(self):
         """Deferred pygame.mixer bootstrap for web -- see the IS_WEB guard in __init__."""
         if is_android_browser():
+            # The large buffer keeps mixer music free of gaps but delays every
+            # mixer sound, so the browser plays the effects: ui/browser_sound_effects.py.
             pygame.mixer.init(buffer=ANDROID_MIXER_BUFFER_FRAMES)
+            ui_elements.load_browser_ui_sounds()
         else:
             pygame.mixer.init()
-        ui_elements.load_pygame_ui_sounds()
+            ui_elements.load_pygame_ui_sounds()
 
     def build_playlist(self):
         self.playlist = []

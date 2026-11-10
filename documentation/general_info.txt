@@ -549,7 +549,10 @@ Desktop startup music begins after the first rendered frame is displayed.
 Browser startup music waits for the first mouse click or key press.
 The browser mixes audio on the page's main thread, between game frames. A frame longer than one audio buffer leaves a gap in the sound.
 On Android, the mixer uses ANDROID_MIXER_BUFFER_FRAMES from data/platform.py and the BeepBox and UltraBox synths use their larger buffer.
-The larger buffers hide slower frames and delay each sound effect by about the buffer length.
+The larger mixer buffer hides slower frames and delays each mixer sound by about the buffer length.
+On Android, sound effects therefore skip the mixer. ui/browser_sound_effects.py plays them through the browser's Web Audio API,
+which mixes on the browser's own audio thread and sets pitch, volume, and start offset for each play.
+play_ui_sound in ui/widgets/ui_elements.py remains the one entry point for effects on every platform.
 Clear Starting removes the fixed starting song. It does not restore a distribution default.
 Tactical Songs opens a subscreen with two song lists for tactical battle preview and actual combat.
 A battle where the enemy has a tank plays a random song from the Enemy Tanks list.
