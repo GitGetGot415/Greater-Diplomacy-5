@@ -8,6 +8,7 @@ from data.io.starting_defaults import PREFERENCE_FILES, STARTING_DEFAULTS_PATH, 
 SOURCE_PACKAGES = ("data", "ui", "screens", "map_logic")
 SOURCE_FILES = ("main.py", "mod_loader.py", "beepbox_audio.py")
 DESKTOP_SOURCE_FILES = SOURCE_FILES + ("soloud.py",)
+WINDOWS_DIST_DIR = "dist/windows"
 WEB_SOURCE_FILES = SOURCE_FILES + ("libdragoman.so",)
 # Android runs the web distribution. Keep its native wrapper out of desktop/web archives.
 ANDROID_PROJECT_DIR = "compilation_scripts/android"
@@ -78,7 +79,7 @@ RUNTIME_JSON_DEFAULTS = {name: value for name, value in read_starting_defaults()
 
 def windows_arguments():
     """Return explicit PyInstaller arguments, preserving native dependencies."""
-    args = ["--clean", "--onefile"]
+    args = ["--clean", "--onefile", "--distpath", WINDOWS_DIST_DIR]
     for package in NATIVE_PACKAGES:
         args.extend(("--collect-all", package))
     for module in HIDDEN_IMPORTS:

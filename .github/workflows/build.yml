@@ -50,17 +50,17 @@ jobs:
           # PyInstaller --onefile embeds package data inside main.exe rather
           # than leaving a loose DLL beside it. Inspect that archive directly.
           if ! python -m PyInstaller.utils.cliutils.archive_viewer \
-              -l -b dist/main.exe | grep -Eiq 'dragoman\.(dll|dylib|so)'; then
+              -l -b dist/windows/main.exe | grep -Eiq 'dragoman\.(dll|dylib|so)'; then
             echo "::error title=No translation layer in the build::main.exe does not contain a dragoman shared library, so Translate would fail for everyone who downloads this. Check --collect-all dragoman."
             exit 1
           fi
-          echo "translation layer found inside dist/main.exe"
+          echo "translation layer found inside dist/windows/main.exe"
 
       - name: Upload Windows build
         uses: actions/upload-artifact@v4
         with:
           name: gd5-windows
-          path: dist/*.zip
+          path: dist/windows/*.zip
           if-no-files-found: error
 
   # The browser target, which nothing here built before.

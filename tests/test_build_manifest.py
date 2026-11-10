@@ -8,6 +8,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import zipfile
 from unittest.mock import patch
 
 from compilation_scripts import build_manifest as manifest, build_support as support
@@ -236,6 +237,51 @@ class BuildManifestTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             support.verified_build_path(ROOT, ".")
         self.assertEqual(support.verified_build_path(ROOT, "dist"), str(Path(ROOT, "dist").resolve()))
+
+    def test_windows_build_preserves_other_platform_outputs(self):
+        # Import the entry point only for this integration of cleanup, compiler, and ZIP staging.
+        from compilation_scripts import windows_compilation
+
+        original_directory = os.getcwd()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            # Use temporary fixture paths, never the checkout's distribution directories.
+            output = root / "packages/windows"
+            output.mkdir(parents=True)
+            (output / "obsolete.dat").write_bytes(b"old Windows output")
+            android = root / "packages/android/game.apk"
+            android.parent.mkdir()
+            android.write_bytes(b"keep Android output")
+            unrelated = root / "packages/other.dat"
+            unrelated.write_bytes(b"keep other output")
+            source = root / "runtime.py"
+            source.write_text("# fixture\n", encoding="utf-8")
+
+            def compile_fixture(command):
+                destination = root / command[command.index("--distpath") + 1]
+                destination.mkdir(parents=True, exist_ok=True)
+                (destination / "main.exe").write_bytes(b"compiled Windows executable")
+                return subprocess.CompletedProcess(command, 0)
+
+            try:
+                with patch.object(windows_compilation, "REPO_ROOT", str(root)), \
+                        patch.object(manifest, "WINDOWS_DIST_DIR", "packages/windows"), \
+                        patch.object(windows_compilation.subprocess, "run", side_effect=compile_fixture), \
+                        patch.object(windows_compilation, "distributed_files", return_value=[
+                            (source, Path("runtime.py"))]), \
+                        patch.object(windows_compilation, "reset_runtime_files"):
+                    windows_compilation.main()
+                self.assertEqual(android.read_bytes(), b"keep Android output")
+                self.assertEqual(unrelated.read_bytes(), b"keep other output")
+                self.assertFalse((output / "obsolete.dat").exists())
+                self.assertEqual((output / "main.exe").read_bytes(), b"compiled Windows executable")
+                archives = list(output.glob("*.zip"))
+                self.assertEqual(len(archives), 1)
+                with zipfile.ZipFile(archives[0]) as archive:
+                    self.assertEqual(set(archive.namelist()), {"main.exe", "runtime.py"})
+                    self.assertEqual(archive.read("main.exe"), b"compiled Windows executable")
+            finally:
+                os.chdir(original_directory)
 
 
 if __name__ == "__main__":

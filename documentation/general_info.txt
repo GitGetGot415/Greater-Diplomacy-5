@@ -474,6 +474,8 @@ Both modules are safe to import without game or native audio initialization.
 Platform entry points retain their packaging tools and native archive procedures.
 
 Windows retains explicit PyInstaller hidden imports.
+Windows builds clean only dist/windows/ and write the executable, loose runtime files, and release ZIP there.
+Other platform outputs under dist/, including Android APKs, are preserved by Windows compilation.
 macOS retains explicit py2app packages, the tkinter recipe workaround, and the ditto archive procedure.
 Desktop packages retain loose source copies for the existing source-replacement loader.
 Web retains libdragoman.so, the HTML template, and staged audio conversion.

@@ -16,9 +16,9 @@ from compilation_scripts.build_support import reset_runtime_files, distributed_f
 
 def main():
     os.chdir(REPO_ROOT)
-    dist_dir = verified_build_path(REPO_ROOT, "dist")
+    dist_dir = verified_build_path(REPO_ROOT, manifest.WINDOWS_DIST_DIR)
     if os.path.exists(dist_dir):
-        print("Cleaning dist folder...")
+        print(f"Cleaning Windows output folder: {dist_dir}...")
         shutil.rmtree(dist_dir)
 
     # 1. Run pyinstaller
