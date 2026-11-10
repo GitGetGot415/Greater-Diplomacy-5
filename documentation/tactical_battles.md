@@ -203,9 +203,12 @@ Each tree has a trunk of size 1, 2, or 3 and a random foliage size no larger tha
 any trunk, foliage 2 needs trunk 2 or 3, and foliage 3 needs trunk 3. The `Trunk` and `Foliage` images in
 `assets/battles/terrain` draw them. The trunk is the tree's hitbox. `TREE_TRUNK_RADII` in
 [map_logic/battle_terrain.py](../map_logic/battle_terrain.py) sets each size's radius, and the trunk image is
-scaled to that radius. Foliage only draws: it is partly transparent (`FOLIAGE_ALPHA` in
-[screens/game/custom_battle.py](../screens/game/custom_battle.py)) and covers units and shots, so they show
-faintly beneath it, while health bars, flags, and the player's controls stay on top.
+scaled to that radius. Trunks never overlap: at least `TREE_TRUNK_GAP` of open ground separates neighboring
+trunks, and a tree that would crowd another is not planted.
+Foliage only draws, covering units and shots, while health bars, flags, and the player's controls stay on top.
+Foliage is opaque until a living sub-unit's outline overlaps it. That foliage then turns partly transparent
+(`FOLIAGE_ALPHA` in [screens/game/custom_battle.py](../screens/game/custom_battle.py)), so the sub-unit and
+trunk show faintly beneath it.
 Trunks block ground movement and intercept shots. Ordinary shots leave trees intact; tank shells remove a tree,
 foliage included, and stop at that tree. Later shots and ground units can use the opening.
 Swamps have a pink background, trees, and impassable marsh areas. Marsh areas allow shots across like chasms.

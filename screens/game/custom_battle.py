@@ -85,7 +85,9 @@ TERRAIN_COLORS = {
     "forest": (65, 115, 57), "jungle": (35, 76, 47), "mountain": (119, 88, 64),
     "swamp": (160, 104, 132),
 }
-FOLIAGE_ALPHA = 200  # Out of 255: leaves mostly hide the units and trunk beneath them, which still show faintly.
+# Out of 255. Foliage is opaque until a living sub-unit stands beneath it; then the leaves still
+# mostly hide that sub-unit and the trunk, which show faintly.
+FOLIAGE_ALPHA = 200
 FEATURE_COLORS = {
     "rock": ((39, 32, 30), (70, 58, 49), (107, 88, 68), (146, 121, 91)),
     "chasm": ((72, 47, 36), (40, 30, 30), (20, 22, 27)),
@@ -340,7 +342,9 @@ class CustomBattleScreen(Screen):
         self.generation_year = starting_defaults.get_starting_value("random_setup", "start_year")
         self.terrain = starting_defaults.get_starting_value("random_setup", "custom_battle_terrain")
         self.terrain_art = []
-        self.canopy_art = []  # Foliage, drawn above units.
+        self.canopy_art = []  # (tree, opaque foliage, see-through foliage, reach), drawn above units.
+        self.canopy_cells = {}  # Canopy indices by battlefield cell, for finding foliage over sub-units.
+        self.canopy_cell = 1.0
         self.terrain_art_key = None
         self.terrain_sprites = {}
         self.battle_seed = None
@@ -1445,19 +1449,19 @@ class CustomBattleScreen(Screen):
                     surface.fill(check_color, (x0, y0, x1 - x0, y1 - y0))
         pygame.draw.rect(surface, OUTLINE_COLOR, field.inflate(6, 6), 3)
 
-    def _tree_sprite(self, part, size, width=None):
+    def _tree_sprite(self, part, size, width=None, see_through=False):
         """A tree image at the current zoom: a trunk scaled to its hitbox width, or foliage at its own size.
 
-        Foliage is partly transparent so the units and trunk beneath it still show faintly.
+        See-through foliage uses FOLIAGE_ALPHA so the sub-units and trunk beneath it show faintly.
         """
         source = _tree_art(part, size)
         width = source.get_width() if width is None else width
         pixels = max(2, round(width * self.zoom))
-        key = part, size, pixels
+        key = part, size, pixels, see_through
         if key not in self.terrain_sprites:
             height = max(2, round(source.get_height() * pixels / source.get_width()))
             sprite = pygame.transform.scale(source, (pixels, height))
-            if part == "Foliage":
+            if see_through:
                 sprite.set_alpha(FOLIAGE_ALPHA)
             self.terrain_sprites[key] = sprite
         return self.terrain_sprites[key]
@@ -1471,12 +1475,16 @@ class CustomBattleScreen(Screen):
         self.terrain_art_key = id(field), field.revision, self.zoom
         self.terrain_art = []
         self.canopy_art = []
+        self.canopy_cells = {}
         for feature in sorted(field.features, key=lambda feature: feature.kind == "tree"):
             if feature.destroyed:
                 continue
             if feature.kind == "tree":
                 self.terrain_art.append((feature, self._tree_sprite("Trunk", feature.trunk, feature.radius * 2)))
-                self.canopy_art.append((feature, self._tree_sprite("Foliage", feature.foliage)))
+                # Foliage covers a sub-unit once their outlines overlap. Images use one pixel per battlefield unit.
+                reach = _tree_art("Foliage", feature.foliage).get_width() / 2 + combat.UNIT_RADIUS
+                self.canopy_art.append((feature, self._tree_sprite("Foliage", feature.foliage),
+                                        self._tree_sprite("Foliage", feature.foliage, see_through=True), reach))
                 continue
             radius = max(2, round(feature.radius * self.zoom))
             key = feature.kind, radius, feature.height if feature.kind == "hill" else 0
@@ -1503,17 +1511,48 @@ class CustomBattleScreen(Screen):
                     pygame.draw.polygon(art, color, points)
                 self.terrain_sprites[key] = art
             self.terrain_art.append((feature, self.terrain_sprites[key]))
+        # A cell as wide as the longest reach means a sub-unit's cell and its neighbors hold every canopy over it.
+        self.canopy_cell = max((reach for *_art, reach in self.canopy_art), default=1.0)
+        for index, (feature, *_rest) in enumerate(self.canopy_art):
+            self.canopy_cells.setdefault(
+                (int(feature.x // self.canopy_cell), int(feature.y // self.canopy_cell)), []).append(index)
 
-    def _draw_terrain(self, surface, placed):
+    def covering_canopies(self):
+        """Indices into canopy_art of the foliage that overlaps a living sub-unit."""
+        covering = set()
+        cell = self.canopy_cell
+        for fighter in self.simulation.fighters:
+            if not fighter.alive:
+                continue
+            column, row = int(fighter.x // cell), int(fighter.y // cell)
+            for dx in (-1, 0, 1):
+                for dy in (-1, 0, 1):
+                    for index in self.canopy_cells.get((column + dx, row + dy), ()):
+                        feature, _opaque, _see_through, reach = self.canopy_art[index]
+                        if math.hypot(fighter.x - feature.x, fighter.y - feature.y) < reach:
+                            covering.add(index)
+        return covering
+
+    def _draw_terrain(self, surface):
         visible = surface.get_rect()
-        for feature, art in placed:
+        for feature, art in self.terrain_art:
+            rect = art.get_rect(center=self.to_screen(feature.x, feature.y))
+            if rect.colliderect(visible):
+                surface.blit(art, rect)
+
+    def _draw_canopy(self, surface):
+        """Foliage stays opaque unless a living sub-unit is beneath it; then it turns see-through."""
+        visible = surface.get_rect()
+        covering = self.covering_canopies()
+        for index, (feature, opaque, see_through, _reach) in enumerate(self.canopy_art):
+            art = see_through if index in covering else opaque
             rect = art.get_rect(center=self.to_screen(feature.x, feature.y))
             if rect.colliderect(visible):
                 surface.blit(art, rect)
 
     def _draw_battle(self, surface):
         self._draw_grass(surface)
-        self._draw_terrain(surface, self.terrain_art)
+        self._draw_terrain(surface)
         zoom = self.zoom
         # Shapes partly on screen still draw; the widest shape fits inside this margin.
         margin = math.ceil(140 * zoom)
@@ -1547,7 +1586,7 @@ class CustomBattleScreen(Screen):
             tank_shell = shot.source.shape in TANK_SHOT_SHAPES
             pygame.draw.line(surface, TANK_SHOT_COLOR if tank_shell else SHOT_COLOR, tail, head,
                              tank_line_width if tank_shell else line_width)
-        self._draw_terrain(surface, self.canopy_art)
+        self._draw_canopy(surface)
         for fighter, center, scale in labeled:
             bar = pygame.Rect(center[0] - bar_size[0] // 2, center[1] - round(23 * scale), *bar_size)
             pygame.draw.rect(surface, OUTLINE_COLOR, bar)

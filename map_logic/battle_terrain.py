@@ -24,6 +24,7 @@ TREE_HEIGHT = 100.0
 # Trunk sizes 1, 2, and 3. A trunk is the tree's hitbox: each radius is half the width of its
 # Trunk image in assets/battles/terrain, and the battle screen scales that image to this radius.
 TREE_TRUNK_RADII = {1: 8.5, 2: 13.0, 3: 18.0}
+TREE_TRUNK_GAP = 20.0  # Least open ground between neighboring trunks' edges; a crowded tree is not planted.
 PATCH_RADIUS = 155.0
 HILL_RADIUS = (140.0, 230.0)
 HILL_HEIGHT = (65.0, 125.0)
@@ -117,15 +118,17 @@ class Battlefield:
             for _ in range(trees):
                 angle, distance = rng.uniform(0, math.tau), PATCH_RADIUS * math.sqrt(rng.random())
                 point = center[0] + math.cos(angle) * distance, center[1] + math.sin(angle) * distance
-                # Do not plant trees in a rock, marsh, or chasm.
-                if any(feature.kind in BLOCKS_MOVEMENT and feature.kind != "tree"
-                       and math.dist(point, (feature.x, feature.y)) < feature.radius + max(TREE_TRUNK_RADII.values())
-                       for feature in field.features):
-                    continue
                 trunk = rng.randint(1, len(TREE_TRUNK_RADII))
                 # Foliage 1 fits any trunk; larger foliage needs a trunk at least as large.
-                place("tree", TREE_TRUNK_RADII[trunk], TREE_HEIGHT, point,
-                      trunk=trunk, foliage=rng.randint(1, trunk))
+                foliage = rng.randint(1, trunk)
+                radius = TREE_TRUNK_RADII[trunk]
+                # Do not plant trees in a rock, marsh, or chasm, or within TREE_TRUNK_GAP of another trunk.
+                if any(feature.kind in BLOCKS_MOVEMENT
+                       and math.dist(point, (feature.x, feature.y))
+                       < feature.radius + radius + (TREE_TRUNK_GAP if feature.kind == "tree" else 0.0)
+                       for feature in field.features):
+                    continue
+                place("tree", radius, TREE_HEIGHT, point, trunk=trunk, foliage=foliage)
         field._index_features()
         field._connect_ground()
         return field
