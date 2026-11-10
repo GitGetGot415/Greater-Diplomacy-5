@@ -135,7 +135,7 @@ The two armies deploy facing each other around the middle of the battlefield, th
 Each division deploys as one vertical line of its sub-units, centered top to bottom, in its own rank.
 Sub-units keep the same spacing along a line, so a division with fewer sub-units makes a shorter line.
 Roster order runs front to back, and the battlefield is wide enough for two full armies.
-Armored cars, light tanks, medium tanks, heavy tanks, main battle tanks, and super heavy tanks use the chassis
+Armored cars, WW1 tanks, light tanks, medium tanks, heavy tanks, main battle tanks, and super heavy tanks use the chassis
 and turret images in `assets/battles`. The chassis follows the hull heading, and the turret follows the gun's aim.
 Infantry, cavalry, and militia use their chassis images from the same folder and share `turret/Infantry Gun.png`
 for their aimed weapon. These troops use smaller sprites, with the gun offset toward the right shoulder as the body turns.

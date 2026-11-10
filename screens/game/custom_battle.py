@@ -140,6 +140,7 @@ INFANTRY_GUN_SIDE_OFFSET = 0.0  # Share of body height toward the unit's right s
 BATTLE_ART_FAMILIES = {
     "Armored Car": ("Armored Car", "Armored Car"),
     "WW1 Armored Car": ("Armored Car", "Armored Car"),
+    "WW1 Tank": ("WW1", "WW1"),
     "Light Tank": ("Light", "Light"), "Medium Tank": ("Medium", "Medium"),
     "Heavy Tank": ("Heavy", "Heavy"), "Main Battle Tank": ("MBT", "MBT"),
     "Super Heavy Tank": ("Super Heavy", "Super Heavy"),
