@@ -655,7 +655,7 @@ class NavigationIntroPopupTests(unittest.TestCase):
         pygame.display.set_mode((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
         self.addCleanup(setattr, message_box._NavigationIntroPopup, "last_topic_index",
                         message_box._NavigationIntroPopup.last_topic_index)
-        map_stub = type("MapStub", (), {"navigation_intro_popup": None})()
+        map_stub = type("MapStub", (), {"navigation_intro_popup": None, "tactical_mode": False})()
         popup = message_box._NavigationIntroPopup(map_stub)
         surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
         map_stub.navigation_intro_popup = popup

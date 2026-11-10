@@ -1,5 +1,6 @@
 """The Help window reads checked content, and its category list opens topics."""
 import ast
+import copy
 import re
 import tempfile
 import unittest
@@ -57,6 +58,21 @@ class HelpContentTests(unittest.TestCase):
             with self.subTest(field=field), self.assertRaisesRegex(ValueError, field):
                 message_box.validate_tutorial(content)
 
+    def test_mode_fields_accept_only_supported_modes_and_name_invalid_fields(self):
+        for level in ("category", "topic"):
+            for mode in ("strategic", "tactical", None, "", "both", [], True):
+                with self.subTest(level=level, mode=mode):
+                    content = artificial_content()
+                    category = content["categories"][0]
+                    entry = category if level == "category" else category["topics"][0]
+                    entry["mode"] = mode
+                    if mode in ("strategic", "tactical"):
+                        self.assertIs(message_box.validate_tutorial(content), content)
+                    else:
+                        field = "categories[0]" + (".topics[0]" if level == "topic" else "") + ".mode"
+                        with self.assertRaisesRegex(ValueError, re.escape(field)):
+                            message_box.validate_tutorial(content)
+
     def test_unreadable_file_names_its_path(self):
         with tempfile.TemporaryDirectory() as directory:
             path = str(Path(directory, "tutorial.json"))
@@ -100,7 +116,7 @@ class HelpPopupTests(unittest.TestCase):
         pygame.display.set_mode((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
         self.addCleanup(setattr, _NavigationIntroPopup, "last_topic_index",
                         _NavigationIntroPopup.last_topic_index)
-        self.map_stub = SimpleNamespace(navigation_intro_popup=None)
+        self.map_stub = SimpleNamespace(navigation_intro_popup=None, tactical_mode=False)
 
     def popup(self, content=None):
         with mock.patch.object(message_box, "load_tutorial", return_value=content or artificial_content()):
@@ -147,16 +163,116 @@ class HelpPopupTests(unittest.TestCase):
     def test_every_shipped_category_and_topic_can_be_opened(self):
         """Category additions must remain reachable through the real Help navigation."""
         content = message_box.load_tutorial(SHIPPED_PATH)
+        for tactical in (False, True):
+            self.map_stub.tactical_mode = tactical
+            popup = self.popup(content)
+            for category_index, category in enumerate(popup.categories):
+                with self.subTest(tactical=tactical, category=category["title"]):
+                    popup.select_topic(None)
+                    self.assertTrue(self.click(popup, self.rail_row(popup, "category", category_index).center))
+                    self.assertEqual(popup.topics[popup.topic_index], (category_index, 0))
+                    for topic_index in range(len(category["topics"])):
+                        index = popup.first_topic[category_index] + topic_index
+                        self.assertTrue(self.click(popup, self.rail_row(popup, "topic", index).center))
+                        self.assertEqual(popup.topics[popup.topic_index], (category_index, topic_index))
+
+    def test_shipped_categories_follow_the_requested_mode_restrictions(self):
+        strategic_only = {"Aircraft", "Production", "Economy", "Research", "Diplomacy", "Units & Orders", "Combat"}
+        content = message_box.load_tutorial(SHIPPED_PATH)
+        for tactical in (False, True):
+            with self.subTest(tactical=tactical):
+                self.map_stub.tactical_mode = tactical
+                titles = {category["title"] for category in self.popup(content).categories}
+                self.assertEqual("Tactical Mode" in titles, tactical)
+                if tactical:
+                    self.assertTrue(titles.isdisjoint(strategic_only))
+                else:
+                    self.assertLessEqual(strategic_only, titles)
+
+    def test_categories_and_topics_filter_without_mutating_cached_content(self):
+        content = artificial_content()
+        first, second = content["categories"]
+        first["topics"][0]["mode"] = "strategic"
+        first["topics"][1]["mode"] = "tactical"
+        first["topics"].append({"title": "Shared", "blocks": [{"type": "text", "text": "Both modes"}]})
+        second["mode"] = "strategic"
+        content["categories"].append({
+            "title": "Conflicting restrictions", "mode": "strategic", "topics": [
+                {"title": "Hidden", "mode": "tactical", "blocks": [{"type": "text", "text": "Hidden"}]}]})
+        original = copy.deepcopy(content)
+        for tactical in (False, True):
+            with self.subTest(tactical=tactical):
+                self.map_stub.tactical_mode = tactical
+                popup = self.popup(content)
+                self.assertEqual([topic["title"] for topic in popup.categories[0]["topics"]],
+                                 ["Two" if tactical else "One", "Shared"])
+                self.assertEqual([category["title"] for category in popup.categories],
+                                 ["First"] if tactical else ["First", "Second"])
+        self.assertEqual(content, original)
+
+    def test_previous_next_and_resume_use_visible_topics_and_stable_source_indices(self):
+        content = artificial_content()
+        content["categories"][0]["topics"][0]["mode"] = "tactical"
+        content["categories"][1]["mode"] = "strategic"
+        with mock.patch.object(message_box, "load_tutorial", return_value=content):
+            message_box.show_navigation_intro(self.map_stub)
+            popup = self.map_stub.navigation_intro_popup
+            self.assertEqual(popup.topics[popup.topic_index], (0, 0))  # Shared "Two", source index 1.
+            self.assertEqual(_NavigationIntroPopup.last_topic_index, 1)
+            self.click(popup, popup.next_rect.center)
+            self.assertEqual(popup.topics[popup.topic_index], (1, 0))
+            self.click(popup, popup.prev_rect.center)
+            self.assertEqual(_NavigationIntroPopup.last_topic_index, 1)
+
+            self.map_stub.tactical_mode = True
+            message_box.show_navigation_intro(self.map_stub, resume=True)
+            popup = self.map_stub.navigation_intro_popup
+            self.assertEqual(popup.topics[popup.topic_index], (0, 1))  # Same source topic, new visible index.
+
+            self.map_stub.tactical_mode = False
+            message_box.show_navigation_intro(self.map_stub)
+            self.map_stub.navigation_intro_popup.select_topic(1)  # Strategic-only source topic 2.
+            self.map_stub.tactical_mode = True
+            message_box.show_navigation_intro(self.map_stub, resume=True)
+            popup = self.map_stub.navigation_intro_popup
+            self.assertEqual(popup.topic_index, 0)  # Hidden remembered topic falls back to visible content.
+            self.assertEqual(popup._page_buttons_enabled(), (False, True))
+            self.click(popup, popup.next_rect.center)
+            self.assertEqual(popup._page_buttons_enabled(), (True, False))
+
+    def test_open_help_refreshes_on_mode_changes_without_rebuilding_each_frame(self):
+        content = artificial_content()
+        content["categories"][0]["mode"] = "strategic"
+        content["categories"][1]["mode"] = "tactical"
+        with mock.patch.object(message_box, "load_tutorial", return_value=content):
+            popup = _NavigationIntroPopup(self.map_stub)
+            surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
+            with mock.patch.object(popup, "_prepare_categories", wraps=popup._prepare_categories) as prepare:
+                popup.draw(surface)
+                prepare.assert_not_called()
+                self.map_stub.tactical_mode = True
+                popup.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_ESCAPE))
+                self.assertEqual([category["title"] for category in popup.categories], ["Second"])
+                self.assertEqual(popup.topic_index, 0)
+                popup.draw(surface)
+                prepare.assert_called_once()
+                self.map_stub.tactical_mode = False
+                popup.draw(surface)
+                self.assertEqual([category["title"] for category in popup.categories], ["First"])
+                self.assertEqual(prepare.call_count, 2)
+
+    def test_all_hidden_content_leaves_a_safe_empty_help_window(self):
+        content = artificial_content()
+        for category in content["categories"]:
+            category["mode"] = "tactical"
         popup = self.popup(content)
-        for category_index, category in enumerate(content["categories"]):
-            with self.subTest(category=category["title"]):
-                popup.select_topic(None)
-                self.assertTrue(self.click(popup, self.rail_row(popup, "category", category_index).center))
-                self.assertEqual(popup.topics[popup.topic_index], (category_index, 0))
-                for topic_index in range(len(category["topics"])):
-                    index = popup.first_topic[category_index] + topic_index
-                    self.assertTrue(self.click(popup, self.rail_row(popup, "topic", index).center))
-                    self.assertEqual(popup.topics[popup.topic_index], (category_index, topic_index))
+        self.assertEqual(popup.categories, [])
+        self.assertEqual(popup.topics, ())
+        self.assertIsNone(popup.topic_index)
+        self.assertEqual(popup._page_buttons_enabled(), (False, False))
+        self.click(popup, popup.next_rect.center)
+        self.assertIsNone(popup.topic_index)
+        popup.draw(pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT)))
 
     def test_with_every_category_closed_next_starts_at_the_first_topic(self):
         popup = self.popup()

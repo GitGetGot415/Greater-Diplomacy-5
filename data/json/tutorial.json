@@ -110,6 +110,7 @@
         },
         {
             "title": "Units & Orders",
+            "mode": "strategic",
             "icon": "unit",
             "topics": [
                 {
@@ -182,6 +183,7 @@
         },
         {
             "title": "Combat",
+            "mode": "strategic",
             "icon": "battle",
             "topics": [
                 {
@@ -220,6 +222,7 @@
         },
         {
             "title": "Tactical Mode",
+            "mode": "tactical",
             "icon": "unit",
             "topics": [
                 {
@@ -244,7 +247,7 @@
                         {
                             "type": "steps",
                             "items": [
-                                {"heading": "Normal movement", "text": "Your division follows the normal tile access, speed, and pinning rules. See Combat > Battles for pinning, including attacks after a friendly first step and checks on later movement steps."},
+                                {"heading": "Normal movement", "text": "Your division follows the normal tile access and speed rules. An incoming enemy from another tile pins your attack route, regardless of tile ownership. A friendly first step does not avoid pinning if the route attacks later in the same turn. Pinning is checked on every movement step. A route that stays non-hostile this turn can withdraw."},
                                 {"heading": "Head-on crossings", "text": "Your division enters the enemy's tile only when no other incoming attack pins your division. Otherwise your division stays to defend. Crossing priority does not win the battle."},
                                 {"heading": "Battle first", "text": "Ground encounters involving your division wait for the tactical battle, without an automatic charge or ground-combat calculation first. Captures and capture bounces wait for the result too."},
                                 {"heading": "Preview", "text": "Review the forces and reorder your friendly divisions before Start. Campaign tactical play has no editing view for adding or replacing units."},
@@ -274,6 +277,7 @@
         {
             "title": "Aircraft",
             "icon": "air",
+            "mode": "strategic",
             "topics": [
                 {
                     "title": "Aircraft",
@@ -313,6 +317,7 @@
         },
         {
             "title": "Production",
+            "mode": "strategic",
             "icon": "industry",
             "topics": [
                 {
@@ -381,6 +386,7 @@
         },
         {
             "title": "Economy",
+            "mode": "strategic",
             "icon": "economy(the_economy_of_a_country_to_be_unusually_specific)",
             "topics": [
                 {
@@ -433,6 +439,7 @@
         },
         {
             "title": "Research",
+            "mode": "strategic",
             "icon": "research",
             "topics": [
                 {
@@ -471,6 +478,7 @@
         },
         {
             "title": "Diplomacy",
+            "mode": "strategic",
             "icon": "relations",
             "topics": [
                 {

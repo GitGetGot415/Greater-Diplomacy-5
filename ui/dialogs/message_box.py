@@ -193,6 +193,7 @@ TUTORIAL_PATH = "data/json/tutorial.json"
 _ICON_MARKER = re.compile(r"\[icon:([a-z_]+)(?::([1-9][0-9]*))?\]")
 _TEXT_BLOCK_ALIGNMENTS = ("left", "center")
 _STEP_COLUMN_COUNTS = (1, 2)
+_TUTORIAL_MODES = ("strategic", "tactical")
 
 
 def _require(value, kind, where):
@@ -234,6 +235,11 @@ def _validate_tutorial_block(block, where):
         raise ValueError(f"{where}.type must be text, steps, mouse_buttons, or key_box.")
 
 
+def _validate_tutorial_mode(entry, where):
+    if "mode" in entry and entry["mode"] not in _TUTORIAL_MODES:
+        raise ValueError(f"{where}.mode must be strategic or tactical; omit mode to show both.")
+
+
 def validate_tutorial(content):
     """Check the Help content shape. Errors name the field to correct."""
     _require(content, dict, "The file")
@@ -241,12 +247,14 @@ def validate_tutorial(content):
         where = f"categories[{category_index}]"
         _require(category, dict, where)
         _require(category.get("title"), str, f"{where}.title")
+        _validate_tutorial_mode(category, where)
         if "icon" in category:
             _require(category["icon"], str, f"{where}.icon")
         for topic_index, topic in enumerate(_require(category.get("topics"), list, f"{where}.topics")):
             topic_where = f"{where}.topics[{topic_index}]"
             _require(topic, dict, topic_where)
             _require(topic.get("title"), str, f"{topic_where}.title")
+            _validate_tutorial_mode(topic, topic_where)
             if not isinstance(topic.get("subtitle", ""), str):
                 raise ValueError(f"{topic_where}.subtitle must be a str.")
             for block_index, block in enumerate(_require(topic.get("blocks"), list, f"{topic_where}.blocks")):
@@ -344,19 +352,13 @@ class _NavigationIntroPopup:
         "mouse_buttons": "_mouse_buttons_block",
         "key_box": "_key_box_block",
     }
-    #: The Help button reopens the topic viewed last in this session.
+    #: The Help button reopens the topic viewed last in this session. This is
+    #: the source-file index so filtering cannot make it refer to another topic.
     #: None means the player closed every category.
     last_topic_index = 0
 
     def __init__(self, map_screen, topic_index=0):
         self.map_screen = map_screen
-        self.categories = load_tutorial()["categories"]
-        self.topics = tuple((category_index, topic_index)
-                            for category_index, category in enumerate(self.categories)
-                            for topic_index in range(len(category["topics"])))
-        self.first_topic = {}
-        for index, (category_index, _topic_index) in enumerate(self.topics):
-            self.first_topic.setdefault(category_index, index)
         self.rect = pygame.Rect(0, 0, self.WIDTH, self.HEIGHT)
         self.rect.center = (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2 + self.INITIAL_CENTER_Y_OFFSET)
         self.dont_show_again = False
@@ -369,12 +371,52 @@ class _NavigationIntroPopup:
         self.label_font = fonts.get("small")
         self.body_font = fonts.get("tiny")
         self._prepared_topics = {}
-        self._prepare_chrome()
         self.topic_index = None
         self.prepared = None
-        self.select_topic(topic_index)
+        self._prepare_categories(topic_index)
 
     # -- prepared surfaces ---------------------------------------------- #
+
+    def _prepare_categories(self, source_topic_index):
+        """Filter cached content when Help opens or the map's play mode changes."""
+        self._tactical_mode = self.map_screen.tactical_mode
+        mode = "tactical" if self._tactical_mode else "strategic"
+        self.categories = []
+        self._source_topic_indices = []
+        source_offset = 0
+        for category in load_tutorial()["categories"]:
+            topics = []
+            for index, topic in enumerate(category["topics"]):
+                if category.get("mode", mode) == mode and topic.get("mode", mode) == mode:
+                    topics.append(topic)
+                    self._source_topic_indices.append(source_offset + index)
+            source_offset += len(category["topics"])
+            if topics:
+                self.categories.append(dict(category, topics=topics))
+        self.topics = tuple((category_index, topic_index)
+                            for category_index, category in enumerate(self.categories)
+                            for topic_index in range(len(category["topics"])))
+        self.first_topic = {}
+        for index, (category_index, _topic_index) in enumerate(self.topics):
+            self.first_topic.setdefault(category_index, index)
+        self._prepared_topics.clear()
+        self._prepare_chrome()
+        if source_topic_index is None or not self.topics:
+            selected = None
+        else:
+            try:
+                selected = self._source_topic_indices.index(source_topic_index)
+            except ValueError:
+                # The previously selected topic is hidden in the current mode.
+                selected = 0
+        self.prepared = None
+        self.select_topic(selected)
+
+    def _refresh_mode(self):
+        if self._tactical_mode != self.map_screen.tactical_mode:
+            source_index = (None if self.topic_index is None
+                            else self._source_topic_indices[self.topic_index])
+            self._prepare_categories(source_index)
 
     def _column_width(self):
         """Width of the topic column, between the category list and the right edge."""
@@ -597,11 +639,14 @@ class _NavigationIntroPopup:
 
     def select_topic(self, index):
         """Show one topic, or none when index is None. Returns whether the selection changed."""
-        if index is not None:
+        if index is not None and self.topics:
             index = max(0, min(index, len(self.topics) - 1))
+        else:
+            index = None
         if self.prepared is not None and index == self.topic_index:
             return False
-        self.topic_index = type(self).last_topic_index = index
+        self.topic_index = index
+        type(self).last_topic_index = None if index is None else self._source_topic_indices[index]
         self.prepared = self._prepare_topic(index)
         self.scroll_y = 0
         self._scroll_drag_offset = None
@@ -716,6 +761,7 @@ class _NavigationIntroPopup:
 
     def handle_event(self, event):
         """Handle popup-local input; True prevents that event reaching the map."""
+        self._refresh_mode()
         if event.type == pygame.KEYDOWN:
             # Escape is handled globally by the map.  In particular, it closes
             # the province menu before this popup receives the same event; do
@@ -836,6 +882,7 @@ class _NavigationIntroPopup:
             surface.set_clip(clip)
 
     def draw(self, surface):
+        self._refresh_mode()
         style = TUTORIAL_PANEL_STYLES["main"]
         ui_elements.draw_pixel_panel(surface, self.rect, style["color"], self.BORDER_COLOR,
                                      gradient_strength=style["gradient_strength"])

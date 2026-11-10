@@ -762,6 +762,16 @@ The file contains a list of categories. Each category has a title, an optional i
 Each topic has a title, an optional subtitle, and a list of blocks. Blocks stack from top to bottom.
 Icon names come from ui_elements.UI_ICONS, which main.py fills at startup.
 
+Categories and topics accept an optional "mode" field:
+- "mode": "strategic" shows the category or topic only when tactical_mode is false.
+- "mode": "tactical" shows the category or topic only when tactical_mode is true.
+- Omit "mode" to show the category or topic in both modes.
+A topic must match both its own restriction and its category's restriction.
+Categories with no visible topics are hidden. Previous, Next, topic counts, and the category list
+use only visible content. Filtering leaves the cached source content unchanged.
+Help refreshes its cached presentation when the map's tactical_mode flag changes.
+Reopening Help keeps the last topic when that topic is visible; a hidden topic falls back to the first visible topic.
+
 Block types:
 - text: a paragraph. Set "align" to "center" to center its lines. The default is "left".
 - steps: items with a heading and text. An item with an "icon" shows that icon; other items show their number.
@@ -770,7 +780,7 @@ Block types:
 - key_box: a recessed strip with a heading and text, for keyboard controls.
 
 A topic taller than its area scrolls with the mouse wheel and a scrollbar.
-The category list shows every category, with the open category's topics below it. Keep it within the list's height.
+The category list shows every visible category, with the open category's visible topics below it. Keep it within the list's height.
 tests/test_help_tutorial.py checks the list height, icon names, and mouse images of the shipped file.
 
 Text in text blocks, step items, mouse captions, and key boxes can contain image markers.

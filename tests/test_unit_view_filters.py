@@ -793,7 +793,7 @@ class UnitViewControlTests(unittest.TestCase):
         self.addCleanup(setattr, _NavigationIntroPopup, "last_topic_index",
                         _NavigationIntroPopup.last_topic_index)
         with patch.dict(message_box.ui_elements.UI_ICONS, icons):
-            popup = _NavigationIntroPopup(SimpleNamespace())
+            popup = _NavigationIntroPopup(SimpleNamespace(tactical_mode=False))
             topic, text = self._help_topic_with_inline_icons(popup)
             self.assertLessEqual(set(icons), set(re.findall(r"\[icon:([a-z_]+)", text)))
             popup.select_topic(topic)
@@ -806,7 +806,7 @@ class UnitViewControlTests(unittest.TestCase):
         icon.fill((17, 83, 121))
         note = "[icon:air:32] first\nChanged [icon:naval:12] repeated [icon:air] end"
         with patch.dict(message_box.ui_elements.UI_ICONS, {"air": icon, "naval": icon}):
-            popup = _NavigationIntroPopup(SimpleNamespace())
+            popup = _NavigationIntroPopup(SimpleNamespace(tactical_mode=False))
             parts = popup._inline_parts(note, (225, 225, 225))
         groups = [image for text, image in parts if image is not None]
         self.assertEqual(len(groups), 3)
@@ -815,7 +815,7 @@ class UnitViewControlTests(unittest.TestCase):
 
     def test_tutorial_without_markers_keeps_plain_text(self):
         note = "Air and Naval can appear without images."
-        popup = _NavigationIntroPopup(SimpleNamespace())
+        popup = _NavigationIntroPopup(SimpleNamespace(tactical_mode=False))
         self.assertEqual(popup._inline_parts(note, (225, 225, 225)), [(note, None)])
 
 if __name__ == "__main__":
