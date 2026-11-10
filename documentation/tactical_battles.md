@@ -1,6 +1,6 @@
 # Tactical battles
 
-This guide owns the tactical battle terminology, custom-battle controls, and intended tactical-mode flow.
+This guide owns the shared battlefield mechanics, tactical battle terminology, and custom-battle controls.
 AI means artificial intelligence.
 
 ## Current status
@@ -8,7 +8,7 @@ AI means artificial intelligence.
 The playable land-combat prototype is available through **Custom Battle** in the main menu.
 Custom battles run separately from the campaign. They spend no resources, change no campaign units, and are not saved, exported, or used in multiplayer.
 
-Campaign tactical mode uses the same preview and actual battle. See [Tactical-mode flow](#tactical-mode-flow).
+Campaign tactical mode uses the same preview and actual battle. Its division rules are in [tactical_mode.md](tactical_mode.md).
 The existing campaign battle editor for front-line and reserve orders has its own rules in [non_llm_ai.txt](non_llm_ai.txt).
 
 ## The three views
@@ -323,58 +323,13 @@ Reordering the friendly army during preview preserves that preview's generated t
 
 ## Tactical-mode flow
 
-During campaign tactical play, the player commands one land division while the parent country remains AI-controlled.
-The tactical division cannot be an artillery-type unit: choosing a tile or stack leaves artillery out, and a tile or
-stack holding only artillery offers no division.
-The flow is **campaign encounter → preview → actual battle → campaign**.
-
-If the tactical division and hostile land forces attempt to cross the same border in opposite directions,
-the tactical division wins the movement clash only when no incoming hostile unit from another tile pins the division.
-Otherwise the tactical division stays on its current tile and fights the arriving enemies there.
-When crossing priority applies, its opponents stay on the destination tile and the tactical
-division enters that tile, where the encounter takes place. This applies at turn start and on later movement steps.
-The crossing deals no automatic combat damage and does not award victory in the tactical battle.
-The map's crossing preview points toward the tactical division's destination when both orders are visible
-and the shared pinning check allows the crossing. A pinned crossing has no advance marker.
-Other clashes keep the normal movement and combat rules; tournament and real-time modes do not use this exception.
-See Movement and pinning in [non_llm_ai.txt](non_llm_ai.txt) for the shared movement-step and withdrawal rules.
-
-After each turn resolves, once per turn, the game opens preview at once when the player's land unit shares a tile
-with hostile land units that can fight a tactical battle. Preview starts with that unit controlled. The friendly army is that unit followed by friendly
-land units on the tile, and the enemy army is the hostile land units there, each up to the army size limit.
-Each unit enters with its current health. An eligible ground encounter involving the tactical division is
-recognized before any automatic charge-survival projection or ground-combat calculation, whether the division
-attacks or defends. Even an apparently doomed attacker reaches the tactical battle alive.
-Ground combat, capture ranking, and capture bounces wait for the tactical result. Convoys caught on land unload
-without an automatic combat calculation. Simultaneous hostile arrivals stop on their shared tile before either
-unit takes another movement step. Naval and air units do not take part in the tactical battle;
-grounded aircraft and warships caught in land combat retain their destruction rules.
-Separate air missions and bombardments retain their own resolution rules.
-Artillery-type units on the tile sit the battle out. When it ends, the losing side's artillery on the tile is destroyed
-and the winning side's artillery is untouched; mutual destruction counts as a friendly loss.
-When hostile artillery is the only hostile land force on the tile, the player wins at once without a battle:
-no preview opens, campaign combat skips the tile, and that artillery is destroyed. The player's side is untouched,
-and the tile is then captured as after any campaign combat.
-Tactical play has no editing view and no route for adding, removing, randomly generating, or replacing units.
-Preview can still reorder the friendly army, which sets where each division deploys; each unit's result still returns to that unit.
-
-**Retreat** opens the map with the tiles the unit can fall back to marked: neighboring tiles it may enter
-that are not hostile land and hold no hostile units, the same rule the rule-based AI uses to retreat. Choose a marked tile to give the unit a move order there and return to the map.
-The mouse wheel zooms and the pan buttons move the map. **Back** returns to the preview. **Retreat** is available even when no tile is marked, so the player can look and go back.
-
-Actual battle has no **Exit** button in tactical play. When it ends, **Continue** returns to the map.
-If every sub-unit of the controlled division was destroyed, even in a won battle, the division is removed, tactical mode ends,
-and the game continues in spectator mode. While any of its sub-units survives, the player keeps the division,
-even when the controlled sub-unit was destroyed and the player spectated the rest of the battle.
-When the battle ends, every unit that took part keeps its sub-units' remaining share of its full health in the campaign, and destroyed units, friendly or enemy, are removed from the tile.
-The tile is then captured as after any campaign combat: if only enemies remain, they take it. Everything else waits for the next turn.
-The tactical division has no resource-management costs, including repair costs, and does not charge the parent country for those actions.
-Tactical battles in multiplayer remain unavailable.
+Campaign division control, movement, pinning, encounters, artillery, retreat, and battle results
+have their own guide: [Tactical mode](tactical_mode.md).
 
 ## Rules and implementation owners
 
 [screens/game/custom_battle.py](../screens/game/custom_battle.py) owns the three views, roster controls, navigation, the camera, and keyboard and mouse input.
-[screens/game/tactical_retreat.py](../screens/game/tactical_retreat.py) owns the retreat map. `Map.open_tactical_battle` starts an encounter.
+Campaign encounter and retreat owners are listed in [tactical_mode.md](tactical_mode.md#state-and-implementation-owners).
 [map_logic/custom_battle.py](../map_logic/custom_battle.py) owns unit generation, sub-units, deployment, movement, aiming, projectiles, cooldowns, and results.
 The same simulation handles custom battles and campaign encounters. Contact state, AI commitments, and reload
 intervals exist only during the encounter; campaign results still use the surviving health fraction of each division.

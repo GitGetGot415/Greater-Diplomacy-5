@@ -144,6 +144,20 @@ class HelpPopupTests(unittest.TestCase):
         self.assertEqual(popup.topics[popup.topic_index], (1, 0))
         self.assertEqual({index for _rect, kind, index in popup.rail_rows if kind == "topic"}, {2})
 
+    def test_every_shipped_category_and_topic_can_be_opened(self):
+        """Category additions must remain reachable through the real Help navigation."""
+        content = message_box.load_tutorial(SHIPPED_PATH)
+        popup = self.popup(content)
+        for category_index, category in enumerate(content["categories"]):
+            with self.subTest(category=category["title"]):
+                popup.select_topic(None)
+                self.assertTrue(self.click(popup, self.rail_row(popup, "category", category_index).center))
+                self.assertEqual(popup.topics[popup.topic_index], (category_index, 0))
+                for topic_index in range(len(category["topics"])):
+                    index = popup.first_topic[category_index] + topic_index
+                    self.assertTrue(self.click(popup, self.rail_row(popup, "topic", index).center))
+                    self.assertEqual(popup.topics[popup.topic_index], (category_index, topic_index))
+
     def test_with_every_category_closed_next_starts_at_the_first_topic(self):
         popup = self.popup()
         popup.select_topic(None)

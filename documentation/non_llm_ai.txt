@@ -446,14 +446,13 @@ Pinning cancels the offensive route. Recheck pinning from the units' current pos
 Hostile units arriving on the same tile stop before another step, including simultaneous arrivals.
 
 Opposing moves on the same edge use meeting-engagement resolution. An incoming attack from another
-tile takes precedence over that crossing. In tactical play, crossing priority applies only when the
-player's division is not pinned by another incoming attack. See documentation/tactical_battles.md.
+tile takes precedence over that crossing. Campaign tactical crossing and encounter rules are documented
+separately in documentation/tactical_mode.md.
 
 Before ordinary campaign movement, a charge predicted to lose every attacker in the first exchange
 resolves immediately. The attackers deal their return damage, are removed, and cannot pin defenders.
-Eligible tactical encounters bypass this calculation in both directions; those battles resolve on
-the tactical battlefield. The intentional automatic defeat of unsupported hostile artillery remains
-documented in documentation/tactical_battles.md.
+The tactical encounter exception and intentional automatic defeat of hostile artillery are documented
+in documentation/tactical_mode.md.
 
 DISBANDING AND FUEL
 ------------------

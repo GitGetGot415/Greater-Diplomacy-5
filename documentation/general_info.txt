@@ -11,7 +11,8 @@ documentation/llm_ai.txt: model settings, legal choices, prompts, letters, budge
 documentation/other/llm_benchmark_notes.txt: historical model performance measurements.
 documentation/diplo_stuff.txt: diplomacy controls, rules, and message timing.
 documentation/air_stuff.txt: aircraft controls and rules.
-documentation/tactical_battles.md: tactical battle terminology, custom battles, controls, and the tactical-mode flow.
+documentation/tactical_battles.md: shared battlefield mechanics, tactical battle terminology, and custom-battle controls.
+documentation/tactical_mode.md: campaign tactical division control, movement, pinning, encounters, retreat, and results.
 data/migrations/MIGRATIONS.md: compatibility with older GD5 data, and how older saves and moves convert.
 documentation/other/ai_responses_gd4_reference.txt: archived Greater Diplomacy 4 response text.
 documentation/other/recommended-relay-defaults.txt: relay setup defaults.
@@ -22,7 +23,8 @@ CUSTOM BATTLES
 ==============
 
 See documentation/tactical_battles.md for the custom-battle prototype, the editing,
-preview, and actual battle views, and the campaign tactical-mode flow.
+preview, and actual battle views.
+Campaign tactical rules have their own guide in documentation/tactical_mode.md.
 
 TOURNAMENT FILE STORAGE
 =======================
@@ -707,28 +709,14 @@ SPECTATOR PERMISSION SETTINGS
 The switches in data/constants.py are SPECTATOR_CAN_EDIT_PRODUCTION, SPECTATOR_CAN_EDIT_RESEARCH, and SPECTATOR_CAN_EDIT_APPEARANCE.
 All default to True. False permits viewing without the corresponding editing ability.
 
-RESEARCH AND TACTICAL CONTEXT
-----------------------------
+RESEARCH AND EDITOR CONTEXT
+---------------------------
 
 map_screen.viewing_research_country passes the selected country to the research screen.
 map_screen.viewing_research_mode passes View or Edit. This temporary display choice is not saved.
 editing_country serves the same purpose for the identity editor.
 
-queries.get_active_ai_nations removes the human-country exclusion while tactical_mode is active.
-map_screen.player_unit can remain after independence ends tactical mode.
-Check tactical_mode instead of inferring the mode from that attribute.
-diplomatic_popups.spawn_popups_for_player marks suppressed host messages as shown during tactical play.
-This prevents old host messages from appearing after independence.
-Tactical play has no resource pool. The tactical division moves without fuel.
-unit_actions.repair_costs makes its repairs free, so neither the player nor the host country pays.
-Tactical mode hides the resource strip and disables the Economy button.
-Declare Independence starts the new country with c.TACTICAL_INDEPENDENCE_STOCKPILE.
-
-Tactical mode opens the Tactical Orders screen (TACTICAL_ORDERS) instead of Orders.
-map_input.orders_state names the screen for every route into Orders, including battle panels.
-Tactical Orders commands only the tactical division. It lists the other units on the opened tile as read-only rows.
-It has no selection, batch, army, or clear-all controls.
-Both screens share unit rows, unit commands, and map targeting through ui/panels/unit_commands.py.
+Tactical session state, Orders, resources, and independence context are documented in documentation/tactical_mode.md.
 
 DERIVED ARMY ENTRIES
 -------------------
