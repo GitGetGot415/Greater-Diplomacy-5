@@ -4,7 +4,7 @@ Map gestures use the shared camera; completed taps and holds use the normal
 screen handlers. No game orders or world state are changed here.
 """
 
-from math import dist
+from math import ceil, cos, dist, sin, tau
 
 import pygame
 
@@ -14,6 +14,10 @@ from data.platform import detect_control_mode
 
 HOLD_MILLISECONDS = 500
 DRAG_THRESHOLD_PIXELS = 8
+HOLD_INDICATOR_RADIUS = 12
+HOLD_INDICATOR_OFFSET = (24, -32)
+HOLD_INDICATOR_SEGMENTS = 48
+HOLD_INDICATOR_BACKGROUND = (28, 28, 36)
 FINGER_EVENTS = (pygame.FINGERDOWN, pygame.FINGERMOTION, pygame.FINGERUP)
 MOUSE_EVENTS = (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP,
                 pygame.MOUSEMOTION, pygame.MOUSEWHEEL)
@@ -46,6 +50,40 @@ class TouchInput:
         self.gesture = None
         self.pinch_distance = None
         self.blocked = bool(self.pointers)
+
+    def hold_progress(self):
+        """Return the release action's progress, or None outside a stationary hold."""
+        if (self.gesture is None or self.gesture["dragging"] or self.blocked
+                or self.pinch_distance is not None or len(self.pointers) != 1):
+            return None
+        return max(0.0, min(1.0, (pygame.time.get_ticks() - self.gesture["time"])
+                            / HOLD_MILLISECONDS))
+
+    def draw(self, surface, owner, mode):
+        """Draw hold feedback above the active screen without performing the action."""
+        progress = self.hold_progress()
+        if progress is None or owner is not self.owner or mode != self.mode:
+            return
+        radius = HOLD_INDICATOR_RADIUS
+        x, y = self.gesture["start"]
+        center = (max(radius, min(surface.get_width() - radius - 1,
+                                  x + HOLD_INDICATOR_OFFSET[0])),
+                  max(radius, min(surface.get_height() - radius - 1,
+                                  y + HOLD_INDICATOR_OFFSET[1])))
+        pygame.draw.circle(surface, HOLD_INDICATOR_BACKGROUND, center, radius)
+        fill_radius = radius - 2
+        if progress == 1.0:
+            pygame.draw.circle(surface, c.COLOR_SUCCESS_GREEN, center, fill_radius)
+        elif progress > 0:
+            # Screen y increases downward: starting at the top and increasing
+            # the angle below fills the circular sector clockwise.
+            points = [center]
+            for step in range(ceil(progress * HOLD_INDICATOR_SEGMENTS) + 1):
+                angle = tau * min(progress, step / HOLD_INDICATOR_SEGMENTS)
+                points.append((center[0] + round(sin(angle) * fill_radius),
+                               center[1] - round(cos(angle) * fill_radius)))
+            pygame.draw.polygon(surface, c.COLOR_SUCCESS_GREEN, points)
+        pygame.draw.circle(surface, c.UI_TEXT_LIGHT, center, radius, 1)
 
     @staticmethod
     def _mouse(event_type, pos, button=1, **values):
@@ -143,6 +181,7 @@ class TouchInput:
             return []
         self.pointers[pointer] = position
         if kind == pygame.FINGERUP:
+            progress = self.hold_progress()
             del self.pointers[pointer]
             if self.pinch_distance is not None or self.blocked:
                 # Lifting either finger ends a pinch. The remaining finger
@@ -159,7 +198,7 @@ class TouchInput:
                         [self._mouse(pygame.MOUSEBUTTONUP, position)])
             if dist(gesture["start"], position) >= DRAG_THRESHOLD_PIXELS:
                 return []
-            button = 3 if pygame.time.get_ticks() - gesture["time"] >= HOLD_MILLISECONDS else 1
+            button = 3 if progress == 1.0 else 1
             return [self._mouse(pygame.MOUSEBUTTONDOWN, position, button),
                     self._mouse(pygame.MOUSEBUTTONUP, position, button)]
 

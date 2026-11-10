@@ -69,6 +69,58 @@ class TouchGestureTests(unittest.TestCase):
         self.assertEqual(self.send(), [])
         self.assertEqual([event.button for event in self.release()], [3, 3])
 
+    def test_hold_progress_matches_release_readiness_for_touch_and_mouse(self):
+        for down, up in ((finger(pygame.FINGERDOWN, (500, 300)),
+                          finger(pygame.FINGERUP, (500, 300))),
+                         (mouse(pygame.MOUSEBUTTONDOWN), mouse(pygame.MOUSEBUTTONUP))):
+            with self.subTest(input=pygame.event.event_name(down.type)):
+                self.now = 0
+                self.assertIsNone(self.touch.hold_progress())
+                self.send(down)
+                self.assertEqual(self.touch.hold_progress(), 0.0)
+                self.now = HOLD_MILLISECONDS // 2
+                self.assertEqual(self.touch.hold_progress(), 0.5)
+                self.now = HOLD_MILLISECONDS - 1
+                self.assertLess(self.touch.hold_progress(), 1.0)
+                self.assertEqual([event.button for event in self.send(up)], [1, 1])
+                self.assertIsNone(self.touch.hold_progress())
+
+                self.send(down)
+                self.now += HOLD_MILLISECONDS
+                self.assertEqual(self.touch.hold_progress(), 1.0)
+                self.now += HOLD_MILLISECONDS
+                self.assertEqual(self.touch.hold_progress(), 1.0)
+                self.assertEqual(self.send(), [])
+                self.assertEqual([event.button for event in self.send(up)], [3, 3])
+                self.assertIsNone(self.touch.hold_progress())
+
+    def test_drag_and_pinch_cancel_hold_progress(self):
+        self.press()
+        self.now = HOLD_MILLISECONDS
+        self.assertEqual(self.touch.hold_progress(), 1.0)
+        self.send(finger(pygame.FINGERMOTION, (540, 330)))
+        self.assertIsNone(self.touch.hold_progress())
+        self.assertEqual(self.release((540, 330)), [])
+
+        self.press()
+        self.send(finger(pygame.FINGERDOWN, (600, 300), 2))
+        self.assertIsNone(self.touch.hold_progress())
+
+    def test_canceled_holds_clear_progress_before_the_next_screen(self):
+        for cancellation in ("focus", "screen", "mode"):
+            with self.subTest(cancellation=cancellation):
+                self.press()
+                self.now += HOLD_MILLISECONDS // 2
+                self.assertEqual(self.touch.hold_progress(), 0.5)
+                if cancellation == "focus":
+                    self.send(pygame.event.Event(pygame.WINDOWFOCUSLOST))
+                elif cancellation == "screen":
+                    self.send(owner=Screen())
+                else:
+                    self.send(mode="DESKTOP")
+                self.assertIsNone(self.touch.hold_progress())
+                self.assertEqual(self.release(), [])
+
     def test_map_drag_pans_at_live_zoom_without_clicking_or_box_selecting(self):
         self.map.camera.zoom = 2
         self.map.camera.tilt_factor = 0.5

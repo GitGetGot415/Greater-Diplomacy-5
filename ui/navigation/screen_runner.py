@@ -167,6 +167,7 @@ def _run_screen_standalone(screen, on_done, tk_parent, surface):
                 screen.handle_events(events)
                 screen.update()
                 screen.draw(surface)
+                touch_input.draw(surface, screen, c.CONTROL_MODE)
                 pygame.display.flip()
                 clock.tick(c.TARGET_FPS)
     finally:

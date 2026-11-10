@@ -504,6 +504,7 @@ Auto resolves once at startup: Android and iOS use Mobile; other systems use Des
 Browser builds inspect the browser's device information, including iPadOS desktop identification.
 Mobile applies the same gestures to touch and the left mouse button, including mouse-only emulator input.
 Tap to select. Hold still, then release to use a right-click action, including ordering selected units to a destination.
+During a hold, a small circle fills clockwise. Release after the circle fills to perform the action; dragging or pinching cancels the hold.
 Drag one finger over the map to pan. Pinch or spread two fingers over the map to zoom around their midpoint.
 Drag within a scrollable panel to scroll its content. Map gestures also work in Orders and Tactical Orders.
 With a mouse in Mobile mode, click to select, hold and release for a right-click action, and left-drag to pan or scroll.

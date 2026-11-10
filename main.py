@@ -877,6 +877,10 @@ class Controller:
                 fps_surface = self.fps_font.render(f"FPS: {int(self.clock.get_fps())}", True, (255, 255, 255))
                 self.screen.blit(fps_surface, (c.SCREEN_WIDTH - 75, 10))
 
+            overlay_modal = modal_stack.active()
+            overlay_owner = (self.active_state if overlay_modal is None
+                             else getattr(overlay_modal, "screen", overlay_modal))
+            self.touch_input.draw(self.screen, overlay_owner, self.control_mode)
             pygame.display.flip()
             if startup_music_pending:
                 startup_music_pending = False
