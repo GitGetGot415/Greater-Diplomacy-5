@@ -83,6 +83,7 @@ def _import_project_modules():
     the enclosing class statement first executes.
     """
     global IS_WEB, restore_persisted_dir, platform, pygame
+    global ANDROID_MIXER_BUFFER_FRAMES, is_android_browser
     global Messages_Screen, dispatch_global_keys, synthesize_keybind_mouse_events, keyboard_input_is_captured, fonts, ui_elements, ui_bars, c, queries
     global music_playback
     global Load_Game, Map, Menu, New_Game, Settings, Credits, Music_Player, View_Assets, Mods, Unit_Art, Keybinds, Mouse_Settings, Edit_Portrait, default_keybinds
@@ -104,7 +105,7 @@ def _import_project_modules():
     # only; nothing on disk is touched.
     mod_loader.install()
 
-    from data.platform import IS_WEB, restore_persisted_dir
+    from data.platform import ANDROID_MIXER_BUFFER_FRAMES, IS_WEB, is_android_browser, restore_persisted_dir
 
     # py2app / PyInstaller bundle fix: set working directory.
     #
@@ -605,7 +606,10 @@ class Controller:
 
     def init_web_audio(self):
         """Deferred pygame.mixer bootstrap for web -- see the IS_WEB guard in __init__."""
-        pygame.mixer.init()
+        if is_android_browser():
+            pygame.mixer.init(buffer=ANDROID_MIXER_BUFFER_FRAMES)
+        else:
+            pygame.mixer.init()
         ui_elements.load_pygame_ui_sounds()
 
     def build_playlist(self):

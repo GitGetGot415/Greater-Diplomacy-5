@@ -547,6 +547,9 @@ its separate music channel; desktop BeepBox and UltraBox playback reserve their 
 
 Desktop startup music begins after the first rendered frame is displayed.
 Browser startup music waits for the first mouse click or key press.
+The browser mixes audio on the page's main thread, between game frames. A frame longer than one audio buffer leaves a gap in the sound.
+On Android, the mixer uses ANDROID_MIXER_BUFFER_FRAMES from data/platform.py and the BeepBox and UltraBox synths use their larger buffer.
+The larger buffers hide slower frames and delay each sound effect by about the buffer length.
 Clear Starting removes the fixed starting song. It does not restore a distribution default.
 Tactical Songs opens a subscreen with two song lists for tactical battle preview and actual combat.
 A battle where the enemy has a tank plays a random song from the Enemy Tanks list.

@@ -12,7 +12,7 @@ import time
 from urllib.parse import unquote, urlsplit
 
 import data.constants as c
-from data.platform import browser_js_source
+from data.platform import browser_js_source, is_android_browser
 
 
 SAMPLE_RATE = 44100
@@ -612,7 +612,8 @@ class WebBeepBoxStream:
             setattr(self._window, "__gd5_music_bridge_ready", True)
 
         getattr(self._window, "__gd5_beepbox_load")(
-            song_json, self.speed, max(0.0, float(start_time)), self.volume
+            song_json, self.speed, max(0.0, float(start_time)), self.volume,
+            is_android_browser(),
         )
 
     @property
@@ -838,7 +839,7 @@ window.__gd5_beepbox_finished = function() {
     return !!synth && !synth.playing && !window.__gd5_beepbox_pause_requested &&
         !window.__gd5_beepbox_loading && !window.__gd5_beepbox_failure;
 };
-window.__gd5_beepbox_load = function(songJson, speed, startTime, volume) {
+window.__gd5_beepbox_load = function(songJson, speed, startTime, volume, slowDevice) {
     const previous = window.__gd5_beepbox_synth;
     if (previous) {
         previous.pause();
@@ -851,6 +852,9 @@ window.__gd5_beepbox_load = function(songJson, speed, startTime, volume) {
     const song = new engine.Song();
     song.fromJsonObject(data);
     const synth = new engine.Synth(song);
+    // The vendor synth then uses a 4096-frame audio buffer in place of 2048
+    // frames, so a slow game frame is less likely to leave a gap in the song.
+    synth.anticipatePoorPerformance = !!slowDevice;
     window.__gd5_beepbox_synth = synth;
     window.__gd5_beepbox_pause_requested = false;
     window.__gd5_beepbox_speed = speed;

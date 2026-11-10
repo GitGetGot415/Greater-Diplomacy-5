@@ -49,6 +49,22 @@ def browser_js_source(source):
     return _NON_ASCII.sub(_js_unicode_escape, source)
 
 
+# The browser calls the mixer and the song synths on the page's main thread,
+# between game frames. A frame that takes longer than one audio buffer leaves a
+# gap in the sound. Phones draw frames slowly, so Android uses a larger buffer:
+# 4096 frames is about 0.09 seconds, which also delays each sound effect by
+# that much. The pygame default of 512 frames is about 0.01 seconds.
+ANDROID_MIXER_BUFFER_FRAMES = 4096
+
+
+def is_android_browser():
+    """Whether the web build runs on Android: the APK's WebView or a phone browser."""
+    if not IS_WEB:
+        return False
+    import platform  # stdlib `platform`, patched by pygbag with `.window` on web
+    return "Android" in str(platform.window.navigator.userAgent)
+
+
 class LoadingSteps:
     """Keep a loading iterator's work total with the iterator, including nested loads."""
 
