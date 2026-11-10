@@ -85,8 +85,8 @@ TERRAIN_COLORS = {
     "forest": (65, 115, 57), "jungle": (35, 76, 47), "mountain": (119, 88, 64),
     "swamp": (160, 104, 132),
 }
+FOLIAGE_ALPHA = 200  # Out of 255: leaves mostly hide the units and trunk beneath them, which still show faintly.
 FEATURE_COLORS = {
-    "tree": ((22, 40, 25), (34, 70, 36), (52, 100, 43), (75, 124, 51)),
     "rock": ((39, 32, 30), (70, 58, 49), (107, 88, 68), (146, 121, 91)),
     "chasm": ((72, 47, 36), (40, 30, 30), (20, 22, 27)),
     "marsh": ((106, 81, 100), (76, 91, 83), (56, 73, 78)),
@@ -159,6 +159,7 @@ BATTLE_ART_FAMILIES = {
     "Infantry Fighting Vehicle Type": ("IFV", None),
 }
 BATTLE_ART_DIR = os.path.join(c.ASSETS_ROOT_DIR, "battles")
+TERRAIN_ART_DIR = os.path.join(BATTLE_ART_DIR, "terrain")  # "Trunk N.png" and "Foliage N.png" draw trees.
 DEAD_COLOR = (53, 65, 44)
 BATTLE_HEALTH_COLOR = (105, 215, 85)
 SHOT_COLOR = (250, 232, 150)
@@ -180,6 +181,14 @@ CONTROL_KEYS = frozenset((pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d))
 _BODY_SPRITES = {}
 _ROTATED_SPRITES = {}
 _BATTLE_ART = {}
+_TREE_ART = {}
+
+
+def _tree_art(part, size):
+    """The unscaled "Trunk" or "Foliage" image of one size, loaded once."""
+    if (part, size) not in _TREE_ART:
+        _TREE_ART[part, size] = pygame.image.load(os.path.join(TERRAIN_ART_DIR, f"{part} {size}.png")).convert_alpha()
+    return _TREE_ART[part, size]
 
 
 def _load_battle_art(artwork):
@@ -331,6 +340,7 @@ class CustomBattleScreen(Screen):
         self.generation_year = starting_defaults.get_starting_value("random_setup", "start_year")
         self.terrain = starting_defaults.get_starting_value("random_setup", "custom_battle_terrain")
         self.terrain_art = []
+        self.canopy_art = []  # Foliage, drawn above units.
         self.terrain_art_key = None
         self.terrain_sprites = {}
         self.battle_seed = None
@@ -1435,13 +1445,38 @@ class CustomBattleScreen(Screen):
                     surface.fill(check_color, (x0, y0, x1 - x0, y1 - y0))
         pygame.draw.rect(surface, OUTLINE_COLOR, field.inflate(6, 6), 3)
 
+    def _tree_sprite(self, part, size, width=None):
+        """A tree image at the current zoom: a trunk scaled to its hitbox width, or foliage at its own size.
+
+        Foliage is partly transparent so the units and trunk beneath it still show faintly.
+        """
+        source = _tree_art(part, size)
+        width = source.get_width() if width is None else width
+        pixels = max(2, round(width * self.zoom))
+        key = part, size, pixels
+        if key not in self.terrain_sprites:
+            height = max(2, round(source.get_height() * pixels / source.get_width()))
+            sprite = pygame.transform.scale(source, (pixels, height))
+            if part == "Foliage":
+                sprite.set_alpha(FOLIAGE_ALPHA)
+            self.terrain_sprites[key] = sprite
+        return self.terrain_sprites[key]
+
     def _cache_terrain_art(self):
-        """Cache stepped terrain artwork at geometry/zoom changes; drawing only places surfaces."""
+        """Cache terrain artwork at geometry/zoom changes; drawing only places surfaces.
+
+        Ground features and tree trunks draw beneath units. Foliage draws above them as the canopy.
+        """
         field = self.simulation.battlefield
         self.terrain_art_key = id(field), field.revision, self.zoom
         self.terrain_art = []
+        self.canopy_art = []
         for feature in sorted(field.features, key=lambda feature: feature.kind == "tree"):
             if feature.destroyed:
+                continue
+            if feature.kind == "tree":
+                self.terrain_art.append((feature, self._tree_sprite("Trunk", feature.trunk, feature.radius * 2)))
+                self.canopy_art.append((feature, self._tree_sprite("Foliage", feature.foliage)))
                 continue
             radius = max(2, round(feature.radius * self.zoom))
             key = feature.kind, radius, feature.height if feature.kind == "hill" else 0
@@ -1469,16 +1504,16 @@ class CustomBattleScreen(Screen):
                 self.terrain_sprites[key] = art
             self.terrain_art.append((feature, self.terrain_sprites[key]))
 
-    def _draw_terrain(self, surface):
+    def _draw_terrain(self, surface, placed):
         visible = surface.get_rect()
-        for feature, art in self.terrain_art:
+        for feature, art in placed:
             rect = art.get_rect(center=self.to_screen(feature.x, feature.y))
             if rect.colliderect(visible):
                 surface.blit(art, rect)
 
     def _draw_battle(self, surface):
         self._draw_grass(surface)
-        self._draw_terrain(surface)
+        self._draw_terrain(surface, self.terrain_art)
         zoom = self.zoom
         # Shapes partly on screen still draw; the widest shape fits inside this margin.
         margin = math.ceil(140 * zoom)
@@ -1486,6 +1521,8 @@ class CustomBattleScreen(Screen):
         bar_size = (max(MIN_HEALTH_BAR_WIDTH, round(28 * zoom)), max(MIN_HEALTH_BAR_HEIGHT, round(4 * zoom)))
         flag_size = tuple(max(2, round(side * zoom)) for side in BATTLE_FLAG_SIZE)
         controlled = self.simulation.controlled
+        overview = zoom <= OVERVIEW_ZOOM
+        labeled = []  # Living sub-units whose health bars and flags draw above the foliage.
         for fighter in self.simulation.fighters:
             center = self.to_screen(fighter.x, fighter.y)
             if not visible.collidepoint(center):
@@ -1494,21 +1531,11 @@ class CustomBattleScreen(Screen):
                 draw_unit_shape(surface, fighter.shape, center, fighter.angle, DEAD_COLOR,
                                 scale=zoom, aim=fighter.aim, artwork=self.battle_artwork[fighter.data["type"]])
                 continue
-            overview = zoom <= OVERVIEW_ZOOM
             scale = OVERVIEW_SYMBOL_SIZE / max(UNIT_SHAPE_SIZES[fighter.shape]) if overview else zoom
             draw_unit_shape(surface, fighter.shape, center, fighter.angle, TEAM_COLORS[fighter.side],
                             scale=scale, aim=fighter.aim,
                             artwork=None if overview else self.battle_artwork[fighter.data["type"]])
-            bar = pygame.Rect(center[0] - bar_size[0] // 2, center[1] - round(23 * scale), *bar_size)
-            pygame.draw.rect(surface, OUTLINE_COLOR, bar)
-            ratio = fighter.data["health"] / fighter.data["max_health"]
-            pygame.draw.rect(surface, BATTLE_HEALTH_COLOR, (bar.x, bar.y, round(bar.width * ratio), bar.height))
-            if not overview:
-                flag_icons.draw_flag(surface, fighter.data["owner"], self.country_data,
-                                     bar.right + round(BATTLE_FLAG_GAP * zoom),
-                                     bar.centery - flag_size[1] // 2, size=flag_size)
-        if controlled is not None and controlled.alive:
-            self._draw_controls(surface, controlled, self.to_screen(controlled.x, controlled.y))
+            labeled.append((fighter, center, scale))
         line_width = max(1, round(SHOT_WIDTH * zoom))
         tank_line_width = max(2, round(TANK_SHOT_WIDTH * zoom))
         for shot in self.simulation.projectiles:
@@ -1520,7 +1547,18 @@ class CustomBattleScreen(Screen):
             tank_shell = shot.source.shape in TANK_SHOT_SHAPES
             pygame.draw.line(surface, TANK_SHOT_COLOR if tank_shell else SHOT_COLOR, tail, head,
                              tank_line_width if tank_shell else line_width)
+        self._draw_terrain(surface, self.canopy_art)
+        for fighter, center, scale in labeled:
+            bar = pygame.Rect(center[0] - bar_size[0] // 2, center[1] - round(23 * scale), *bar_size)
+            pygame.draw.rect(surface, OUTLINE_COLOR, bar)
+            ratio = fighter.data["health"] / fighter.data["max_health"]
+            pygame.draw.rect(surface, BATTLE_HEALTH_COLOR, (bar.x, bar.y, round(bar.width * ratio), bar.height))
+            if not overview:
+                flag_icons.draw_flag(surface, fighter.data["owner"], self.country_data,
+                                     bar.right + round(BATTLE_FLAG_GAP * zoom),
+                                     bar.centery - flag_size[1] // 2, size=flag_size)
         if controlled is not None and controlled.alive:
+            self._draw_controls(surface, controlled, self.to_screen(controlled.x, controlled.y))
             self._draw_edge_indicators(surface, controlled)
 
     def _draw_edge_indicators(self, surface, controlled):

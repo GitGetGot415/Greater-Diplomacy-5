@@ -21,7 +21,9 @@ GROUND_SAMPLE = 12.0
 BODY_HEIGHT = 36.0
 WEAPON_HEIGHT = BODY_HEIGHT / 2
 TREE_HEIGHT = 100.0
-TREE_RADIUS = (9.0, 15.0)
+# Trunk sizes 1, 2, and 3. A trunk is the tree's hitbox: each radius is half the width of its
+# Trunk image in assets/battles/terrain, and the battle screen scales that image to this radius.
+TREE_TRUNK_RADII = {1: 8.5, 2: 13.0, 3: 18.0}
 PATCH_RADIUS = 155.0
 HILL_RADIUS = (140.0, 230.0)
 HILL_HEIGHT = (65.0, 125.0)
@@ -66,6 +68,9 @@ class Feature:
     radius: float
     height: float = 0.0
     destroyed: bool = False
+    # Trees only: the Trunk and Foliage image sizes. Foliage is drawn and never blocks anything.
+    trunk: int = 1
+    foliage: int = 1
 
 
 class Battlefield:
@@ -92,13 +97,13 @@ class Battlefield:
         left = (size[0] - front_gap) / 2 + DEPLOYMENT_CLEARANCE
         right = size[0] - left
 
-        def place(kind, radius, height=0.0, center=None):
+        def place(kind, radius, height=0.0, center=None, **tree):
             x, y = center or (rng.uniform(left + radius, right - radius),
                               rng.uniform(EDGE_CLEARANCE + radius, size[1] - EDGE_CLEARANCE - radius))
             if not (left + radius <= x <= right - radius
                     and EDGE_CLEARANCE + radius <= y <= size[1] - EDGE_CLEARANCE - radius):
                 return
-            field.features.append(Feature(kind, x, y, radius, height))
+            field.features.append(Feature(kind, x, y, radius, height, **tree))
 
         for _ in range(hills):
             place("hill", rng.uniform(*HILL_RADIUS), rng.uniform(*HILL_HEIGHT))
@@ -114,10 +119,13 @@ class Battlefield:
                 point = center[0] + math.cos(angle) * distance, center[1] + math.sin(angle) * distance
                 # Do not plant trees in a rock, marsh, or chasm.
                 if any(feature.kind in BLOCKS_MOVEMENT and feature.kind != "tree"
-                       and math.dist(point, (feature.x, feature.y)) < feature.radius + TREE_RADIUS[1]
+                       and math.dist(point, (feature.x, feature.y)) < feature.radius + max(TREE_TRUNK_RADII.values())
                        for feature in field.features):
                     continue
-                place("tree", rng.uniform(*TREE_RADIUS), TREE_HEIGHT, point)
+                trunk = rng.randint(1, len(TREE_TRUNK_RADII))
+                # Foliage 1 fits any trunk; larger foliage needs a trunk at least as large.
+                place("tree", TREE_TRUNK_RADII[trunk], TREE_HEIGHT, point,
+                      trunk=trunk, foliage=rng.randint(1, trunk))
         field._index_features()
         field._connect_ground()
         return field

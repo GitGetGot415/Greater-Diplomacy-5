@@ -199,8 +199,15 @@ climbing toward the crest opens firing lines. Units and guns use the ground heig
 Mountains have a brown background, more mounds, impassable rocks, and occasional chasms.
 Chasms block ground movement but allow shots across.
 Forests have a green background and tree patches. Jungle has a dark green background and denser tree patches.
-Trees block ground movement and intercept shots. Ordinary shots leave trees intact; tank shells remove a tree
-and stop at that tree. Later shots and ground units can use the opening.
+Each tree has a trunk of size 1, 2, or 3 and a random foliage size no larger than its trunk: foliage 1 fits
+any trunk, foliage 2 needs trunk 2 or 3, and foliage 3 needs trunk 3. The `Trunk` and `Foliage` images in
+`assets/battles/terrain` draw them. The trunk is the tree's hitbox. `TREE_TRUNK_RADII` in
+[map_logic/battle_terrain.py](../map_logic/battle_terrain.py) sets each size's radius, and the trunk image is
+scaled to that radius. Foliage only draws: it is partly transparent (`FOLIAGE_ALPHA` in
+[screens/game/custom_battle.py](../screens/game/custom_battle.py)) and covers units and shots, so they show
+faintly beneath it, while health bars, flags, and the player's controls stay on top.
+Trunks block ground movement and intercept shots. Ordinary shots leave trees intact; tank shells remove a tree,
+foliage included, and stop at that tree. Later shots and ground units can use the opening.
 Swamps have a pink background, trees, and impassable marsh areas. Marsh areas allow shots across like chasms.
 
 The generated battlefield keeps deployment areas clear and ground routes connected. Terrain generation and

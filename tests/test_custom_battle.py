@@ -2,6 +2,7 @@
 
 import copy
 import math
+import os
 import random
 from types import SimpleNamespace
 import unittest
@@ -1296,6 +1297,19 @@ class TacticalTerrainTests(unittest.TestCase):
                     self.assertEqual(first.battlefield.features, [])
                 else:
                     self.assertTrue(first.battlefield.features)
+
+    def test_tree_trunks_set_the_hitbox_and_foliage_never_outgrows_its_trunk(self):
+        trees = [feature for seed in range(5) for feature in battle_terrain.Battlefield.generate(
+            "jungle", combat.ARENA_SIZE, combat.UNIT_RADIUS, combat.SPAWN_FRONT_GAP, seed).features
+                 if feature.kind == "tree"]
+        self.assertEqual({tree.trunk for tree in trees}, set(battle_terrain.TREE_TRUNK_RADII))
+        for tree in trees:
+            self.assertEqual(tree.radius, battle_terrain.TREE_TRUNK_RADII[tree.trunk])
+            self.assertTrue(1 <= tree.foliage <= tree.trunk)
+        # Every trunk and foliage size the generator can choose has an image to draw it.
+        for size in battle_terrain.TREE_TRUNK_RADII:
+            for part in ("Trunk", "Foliage"):
+                self.assertTrue(os.path.isfile(os.path.join(battle_screen.TERRAIN_ART_DIR, f"{part} {size}.png")))
 
     def test_ground_hazards_block_motion_but_allow_shots_and_paths_go_around(self):
         for kind in ("chasm", "marsh"):
