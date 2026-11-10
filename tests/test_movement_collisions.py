@@ -1,11 +1,10 @@
 """Two ways units used to slip past a hostile unit without ever fighting it.
 
-process_movement resolves a turn's movement one step at a time, and keeps
-every mover out of province["units"] while its path is still being walked --
-that's what lets two units on the same step move "simultaneously" without
-either one blocking the other. It has one deliberate exception,
+process_movement resolves a turn's movement one step at a time, and detaches
+active movers from province["units"] while each simultaneous step is taken.
+Finished movers remain visible to later arrivals. Its turn-start counterpart,
 combat_rules.find_meeting_pairs, which fights a direct tile swap before any
-movement starts. But that check only ever looked at a unit's very first step,
+movement starts, only looks at a unit's very first step,
 and the step loop used to re-strip *every* mover before each later step, even
 one that had already finished moving. Together those left two real gaps:
 
@@ -254,6 +253,252 @@ class TacticalSwapTests(unittest.TestCase):
                                  {id(player), id(opponent), id(fourth)})
                 self.assertEqual((player["health"], opponent["health"]), (1000, 1000))
                 self.assertEqual((third["health"], fourth["health"]), (900, 900))
+
+    def resolve_without_automatic_combat(self, screen):
+        """An eligible tactical engagement must reach preview without even a damage probe."""
+        with patch.object(combat_processor.combat_rules, "build_battle",
+                          side_effect=AssertionError("automatic tactical combat")):
+            combat_processor.process_pinning(screen)
+            combat_processor.process_meeting_engagements(screen)
+            movement_processor.process_movement(screen)
+            combat_processor.process_combat(screen)
+            combat_processor.check_for_post_combat_captures(screen)
+
+    def test_doomed_attacks_in_either_direction_wait_for_the_tactical_battle(self):
+        for player_attacks in (False, True):
+            with self.subTest(player_attacks=player_attacks):
+                screen = self.screen()
+                player = self.mover("A", ["p2"] if player_attacks else [],
+                                    health=1 if player_attacks else 1000,
+                                    attack=0 if player_attacks else 100000, defense=0)
+                opponent = self.mover("B", [] if player_attacks else ["p1"],
+                                      health=1000 if player_attacks else 1,
+                                      attack=100000 if player_attacks else 0, defense=0)
+                screen.player_unit = player
+                p1 = screen.add_province("p1", "A", units=[player])
+                p2 = screen.add_province("p2", "B", units=[opponent])
+                before = player["health"], opponent["health"]
+
+                self.resolve_without_automatic_combat(screen)
+
+                destination = p2 if player_attacks else p1
+                self.assertEqual((player["health"], opponent["health"]), before)
+                self.assertEqual({id(unit) for unit in destination["units"]}, {id(player), id(opponent)})
+                self.assertIsNotNone(custom_battle.tactical_encounter(screen, destination))
+
+    def test_another_incoming_attack_overrides_tactical_crossing_priority(self):
+        for reverse_order in (False, True):
+            with self.subTest(reverse_order=reverse_order):
+                screen = self.screen()
+                player = self.mover("A", ["p2"], attack=100000, defense=0)
+                head_on = self.mover("B", ["p1"], health=1, attack=0, defense=0)
+                flanker = self.mover("B", ["p1"], health=1, attack=0, defense=0)
+                screen.player_unit = player
+                origin = screen.add_province("p1", "A", units=[player])
+                destination = screen.add_province("p2", "B", units=[head_on])
+                screen.add_province("p3", "B", units=[flanker])
+                if reverse_order:
+                    screen.map_data = dict(reversed(list(screen.map_data.items())))
+
+                self.assertIsNone(custom_battle.tactical_meeting_side(
+                    screen, origin, destination, [player], [head_on]))
+                self.resolve_without_automatic_combat(screen)
+
+                self.assertEqual({id(unit) for unit in origin["units"]},
+                                 {id(player), id(head_on), id(flanker)})
+                self.assertEqual(player["order"]["path"], [])
+                self.assertEqual((head_on["health"], flanker["health"]), (1, 1))
+
+    def test_returning_to_own_land_still_pins_a_hostile_division(self):
+        screen = self.screen()
+        player = self.mover("A", ["p2"])
+        opponent = self.mover("B", ["p1"])
+        screen.player_unit = player
+        origin = screen.add_province("p1", "B", units=[player])
+        screen.add_province("p2", "B")
+        screen.add_province("p3", "B", units=[opponent])
+
+        self.resolve_without_automatic_combat(screen)
+
+        self.assertEqual({id(unit) for unit in origin["units"]}, {id(player), id(opponent)})
+
+    def test_a_friendly_first_step_does_not_hide_an_attack_this_turn(self):
+        for mode in ("ordinary", "tactical", "tournament", "realtime"):
+            with self.subTest(mode=mode):
+                screen = self.screen()
+                screen.tactical_mode = mode == "tactical"
+                screen.multiplayer_mode = mode == "tournament"
+                screen.realtime_multiplayer = mode == "realtime"
+                player = self.mover("A", ["p2", "p3"], speed=2)
+                opponent = self.mover("B", ["p1"])
+                screen.player_unit = player
+                origin = screen.add_province("p1", "A", units=[player])
+                screen.add_province("p2", "A")
+                screen.add_province("p3", "B")
+                screen.add_province("p4", "B", units=[opponent])
+
+                movement_processor.process_movement(screen)
+
+                self.assertEqual({id(unit) for unit in origin["units"]}, {id(player), id(opponent)})
+                self.assertEqual(player["order"]["path"], [])
+
+    def test_an_attack_queued_for_a_later_turn_does_not_block_withdrawal(self):
+        screen = self.screen()
+        player = self.mover("A", ["p2", "p3"], speed=1)
+        opponent = self.mover("B", ["p1"])
+        screen.player_unit = player
+        screen.add_province("p1", "A", units=[player])
+        withdrawal = screen.add_province("p2", "A")
+        screen.add_province("p3", "B")
+        screen.add_province("p4", "B", units=[opponent])
+
+        self.resolve_without_automatic_combat(screen)
+
+        self.assertEqual(withdrawal["units"], [player])
+        self.assertEqual(player["order"]["path"], ["p3"])
+
+    def test_later_step_incoming_attack_pins_the_current_position(self):
+        for mode in ("ordinary", "tactical", "tournament", "realtime"):
+            with self.subTest(mode=mode):
+                screen = self.screen()
+                screen.tactical_mode = mode == "tactical"
+                screen.multiplayer_mode = mode == "tournament"
+                screen.realtime_multiplayer = mode == "realtime"
+                player = self.mover("A", ["p2", "p3"], speed=2)
+                opponent = self.mover("B", ["p5", "p2"], speed=2)
+                screen.player_unit = player
+                screen.add_province("p1", "A", units=[player])
+                encounter = screen.add_province("p2", "A")
+                screen.add_province("p3", "B")
+                screen.add_province("p4", "B", units=[opponent])
+                screen.add_province("p5", "B")
+
+                movement_processor.process_movement(screen)
+
+                self.assertEqual({id(unit) for unit in encounter["units"]}, {id(player), id(opponent)})
+                self.assertEqual(player["order"]["path"], [])
+
+    def test_later_step_flanker_overrides_a_head_on_tactical_crossing(self):
+        screen = self.screen()
+        player = self.mover("A", ["p2", "p3"], speed=2)
+        head_on = self.mover("B", ["p3", "p2"], speed=2)
+        flanker = self.mover("B", ["p5", "p2"], speed=2)
+        screen.player_unit = player
+        screen.add_province("p1", "A", units=[player])
+        encounter = screen.add_province("p2", "A")
+        screen.add_province("p3", "B")
+        screen.add_province("p4", "B", units=[head_on])
+        screen.add_province("p5", "B")
+        screen.add_province("p6", "B", units=[flanker])
+
+        self.resolve_without_automatic_combat(screen)
+
+        self.assertEqual({id(unit) for unit in encounter["units"]},
+                         {id(player), id(head_on), id(flanker)})
+
+    def test_simultaneous_arrivals_stop_before_either_unit_can_leave(self):
+        screen = self.screen()
+        player = self.mover("A", ["p2", "p3"], speed=2)
+        opponent = self.mover("B", ["p2", "p1"], speed=2)
+        screen.player_unit = player
+        screen.add_province("p1", "A", units=[player])
+        encounter = screen.add_province("p2", "Unclaimed")
+        screen.add_province("p3", "B")
+        screen.add_province("p4", "B", units=[opponent])
+
+        self.resolve_without_automatic_combat(screen)
+
+        self.assertEqual({id(unit) for unit in encounter["units"]}, {id(player), id(opponent)})
+        self.assertEqual((player["health"], opponent["health"]), (1000, 1000))
+
+    def test_convoy_landing_reaches_a_tactical_battle_without_a_charge_probe(self):
+        screen = self.screen()
+        player = self.mover("A", [], attack=100000, defense=0)
+        opponent = self.mover("B", ["p1"], health=1, attack=0, defense=0)
+        # An explicit artificial transport retains the landed division's stats.
+        opponent.update(type="Convoy (Fixture Infantry I)", naval_unit=True,
+                        original_type="Fixture Infantry I", original_speed=1,
+                        original_max_health=1, original_attack=0, original_defense=0)
+        screen.player_unit = player
+        encounter = screen.add_province("p1", "A", units=[player])
+        screen.add_province("p2", "B", units=[opponent], terrain="ocean")
+
+        self.resolve_without_automatic_combat(screen)
+
+        self.assertEqual({id(unit) for unit in encounter["units"]}, {id(player), id(opponent)})
+        self.assertEqual(opponent["type"], "Fixture Infantry I")
+        self.assertEqual(opponent["health"], 1)
+
+    def test_a_convoy_already_on_land_unloads_before_any_automatic_battle_calculation(self):
+        screen = self.screen()
+        player = self.mover("A", [])
+        opponent = self.mover("B", [], health=1, attack=0, defense=0)
+        opponent.update(type="Convoy (Fixture Infantry I)", naval_unit=True,
+                        original_type="Fixture Infantry I", original_speed=1,
+                        original_max_health=1, original_attack=0, original_defense=0)
+        screen.player_unit = player
+        screen.add_province("p1", "A", units=[player, opponent])
+
+        self.resolve_without_automatic_combat(screen)
+
+        self.assertEqual(opponent["type"], "Fixture Infantry I")
+        self.assertEqual(opponent["health"], 1)
+
+    def test_a_friendly_first_step_cannot_hide_an_attack_when_already_fighting(self):
+        screen = self.screen()
+        player = self.mover("A", ["p2", "p3"], speed=2)
+        opponent = self.mover("B", [])
+        screen.player_unit = player
+        encounter = screen.add_province("p1", "A", units=[player, opponent])
+        screen.add_province("p2", "A")
+        screen.add_province("p3", "B")
+
+        self.resolve_without_automatic_combat(screen)
+
+        self.assertEqual({id(unit) for unit in encounter["units"]}, {id(player), id(opponent)})
+        self.assertEqual(player["order"]["path"], [])
+
+    def test_an_exhausted_later_step_attacker_cannot_override_crossing_priority(self):
+        screen = self.screen()
+        player = self.mover("A", ["p2", "p3"], speed=2)
+        opponent = self.mover("B", ["p3", "p2"], speed=2)
+        exhausted = self.mover("B", ["p5", "p2"], speed=1)
+        screen.player_unit = player
+        screen.add_province("p1", "A", units=[player])
+        screen.add_province("p2", "A")
+        encounter = screen.add_province("p3", "B")
+        screen.add_province("p4", "B", units=[opponent])
+        rest = screen.add_province("p5", "B")
+        screen.add_province("p6", "B", units=[exhausted])
+
+        self.resolve_without_automatic_combat(screen)
+
+        self.assertEqual({id(unit) for unit in encounter["units"]}, {id(player), id(opponent)})
+        self.assertEqual(rest["units"], [exhausted])
+        self.assertEqual(exhausted["order"]["path"], ["p2"])
+
+    def test_tactical_deferral_preserves_aircraft_warship_and_neutral_exposure_rules(self):
+        self.library.update({
+            "Fixture Ship I": {"naval_unit": True, "bombard_range": 0},
+            "Fixture Plane I": {"naval_unit": False, "air_role": "fighter", "bombard_range": 0},
+        })
+        screen = self.screen()
+        screen.add_nation("C")
+        player = self.mover("A", [])
+        opponent = self.mover("B", [])
+        ship = self.mover("A", [])
+        plane = self.mover("B", [])
+        neutral = self.mover("C", [])
+        ship["type"] = neutral["type"] = "Fixture Ship I"
+        plane["type"] = "Fixture Plane I"
+        screen.player_unit = player
+        encounter = screen.add_province("p1", "A", units=[player, opponent, ship, plane, neutral])
+
+        self.resolve_without_automatic_combat(screen)
+
+        self.assertEqual({id(unit) for unit in encounter["units"]}, {id(player), id(opponent), id(neutral)})
+        self.assertEqual((ship["health"], plane["health"]), (0, 0))
+        self.assertEqual((player["health"], opponent["health"], neutral["health"]), (1000, 1000, 1000))
 
 
 class FinishedMoverVisibilityTests(unittest.TestCase):

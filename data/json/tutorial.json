@@ -192,6 +192,8 @@
                             "type": "steps",
                             "items": [
                                 {"heading": "Front and reserve", "text": "Each turn, the front units of both sides fight. Terrain decides how many units fit in the front. The rest wait in reserve and take no damage."},
+                                {"heading": "Pinning", "text": "An incoming enemy from another tile cancels your attack route, even when the enemy is returning to its own land. Pinning is checked at every movement step. A friendly first step does not avoid pinning if the route attacks later in the same turn. A route that stays non-hostile this turn can withdraw."},
+                                {"heading": "Tactical encounters", "text": "Ground encounters involving your tactical division wait for the tactical battle, without an automatic charge or ground-combat calculation first. In a head-on crossing, your division enters the enemy's tile only when no other incoming attack pins your division. Otherwise your division stays to defend. Hostile artillery alone is still defeated automatically."},
                                 {"heading": "Leaving a battle", "text": "Units fighting in a battle stop their moves. They can only leave by one tile per turn, into land that is not hostile."},
                                 {"heading": "Find battles", "text": "In Units view, battles show as bubbles. Click a bubble to open Orders for that tile."},
                                 {"heading": "Manage Battle", "text": "In Orders, Manage Battle lets you choose which enemy each unit faces and which units wait in reserve. Without units there, the button reads View Battle."},

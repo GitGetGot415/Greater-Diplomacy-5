@@ -14,7 +14,7 @@ from data.queries.unit_info import (
     unit_is_air_drop_recovering,
 )
 from data.queries.combat_state import get_unit_combat_owner, is_hostile_territory
-from data.queries.diplomacy import get_enemies
+from data.queries.diplomacy import are_at_war, get_enemies
 from data.queries.movement_access import can_convoy_enter, can_land_units_enter, can_ships_enter
 from data.queries.air import (
     air_drop_target_is_legal,
@@ -87,6 +87,64 @@ def can_unit_move_step(unit, current_province, destination, nation_data, *, cont
     if is_naval_unit(unit_type, context=context):
         return can_ships_enter(combat_owner, destination, nation_data)
     return can_land_units_enter(combat_owner, destination, nation_data)
+
+
+def ground_move_records(context, records=None, *, step=0):
+    """Living units able to take this movement step, paired with their current tiles."""
+    if records is None:
+        records = ((unit, province) for province in world_for(context).map_data.values()
+                   for unit in province.get("units", []))
+    return [(unit, province) for unit, province in records
+            if unit.get("health", 0) > 0 and unit.get("speed", 1) > step
+            and not unit.get("_combat_locked") and not unit.get("_skip_remaining_steps")
+            and isinstance(unit.get("order"), dict) and unit["order"].get("type") == "MOVE"
+            and unit["order"].get("path")
+            and not (is_air_unit(unit, context=context)
+                     and not air_unit_can_move_on_ground(unit, context=context))]
+
+
+def move_route_enters_combat(context, unit, *, step=0):
+    """Whether this turn's remaining route attacks land or a currently occupied enemy tile.
+
+    A friendly first step cannot disguise an attack later in the same turn.
+    Steps queued for a later turn do not prevent a withdrawal this turn.
+    """
+    world = world_for(context)
+    side = get_unit_combat_owner(unit)
+    path = unit.get("order", {}).get("path", [])
+    for province_id in path[:max(0, unit.get("speed", 1) - step)]:
+        province = world.id_to_province.get(province_id)
+        if province and (is_hostile_territory(side, province.get("owner", "Unclaimed"), world.nation_data)
+                         or any(other.get("health", 0) > 0 and are_at_war(
+                             side, get_unit_combat_owner(other), world.nation_data)
+                             for other in province.get("units", []))):
+            return True
+    return False
+
+
+def find_movement_pins(context, records=None, *, step=0):
+    """Return unit identities pinned by this step's incoming hostile movers.
+
+    Read all intentions before canceling any, so iteration order cannot change
+    the result. Hostility belongs to units, regardless of who owns their tiles.
+    Opposite moves on the same edge are left to meeting-engagement resolution;
+    an attack from any other tile pins an offensive route before that crossing.
+    """
+    records = ground_move_records(context, records, step=step)
+    incoming = collections.defaultdict(list)
+    for unit, province in records:
+        incoming[unit["order"]["path"][0]].append((unit, province["id"]))
+    nation_data = world_for(context).nation_data
+    pinned = set()
+    for unit, province in records:
+        destination = unit["order"]["path"][0]
+        attacked_elsewhere = any(
+            origin != destination and are_at_war(
+                get_unit_combat_owner(unit), get_unit_combat_owner(attacker), nation_data)
+            for attacker, origin in incoming.get(province["id"], ()))
+        if attacked_elsewhere and move_route_enters_combat(context, unit, step=step):
+            pinned.add(id(unit))
+    return pinned
 
 
 def find_unit_move_path(unit, start_province, destination_id, id_to_province, nation_data, *, context=None):

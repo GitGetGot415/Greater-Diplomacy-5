@@ -431,6 +431,30 @@ Bombardment is free and receives no return fire.
 It is outside the lane system and can hit reserves.
 A bombarding unit can still fight on its own tile.
 
+Movement and pinning
+--------------------
+
+Movement resolves in simultaneous steps. Before each step, an incoming hostile unit from another tile
+pins a unit whose remaining route attacks during this turn. Hostility is checked between the units,
+regardless of who owns the attacked tile. A division returning to its own land can therefore pin an
+enemy division standing there. Units without movement remaining cannot supply an incoming pin.
+
+The attack check covers the route within the unit's remaining speed, including hostile territory or
+currently occupied enemy tiles after a friendly first step. A route that stays non-hostile this turn
+can withdraw; an attack queued for a later turn does not prevent that withdrawal.
+Pinning cancels the offensive route. Recheck pinning from the units' current positions on later steps.
+Hostile units arriving on the same tile stop before another step, including simultaneous arrivals.
+
+Opposing moves on the same edge use meeting-engagement resolution. An incoming attack from another
+tile takes precedence over that crossing. In tactical play, crossing priority applies only when the
+player's division is not pinned by another incoming attack. See documentation/tactical_battles.md.
+
+Before ordinary campaign movement, a charge predicted to lose every attacker in the first exchange
+resolves immediately. The attackers deal their return damage, are removed, and cannot pin defenders.
+Eligible tactical encounters bypass this calculation in both directions; those battles resolve on
+the tactical battlefield. The intentional automatic defeat of unsupported hostile artillery remains
+documented in documentation/tactical_battles.md.
+
 DISBANDING AND FUEL
 ------------------
 

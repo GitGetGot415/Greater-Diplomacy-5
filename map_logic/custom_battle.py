@@ -190,7 +190,14 @@ def campaign_forces(player_unit, province, nation_data, library):
     """
     land = set(land_unit_types(library))
     sides = _campaign_sides(player_unit, province, nation_data)
-    friendly, enemy = ([unit for unit in side if unit.get("type") in land][:c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE]
+    # Convoys caught on land unload before fighting. Recognize their divisions
+    # without first building or simulating an automatic campaign battle.
+    def land_type(unit):
+        if unit.get("type", "").startswith("Convoy (") and not queries.is_water_province(province):
+            return unit.get("original_type")
+        return unit.get("type")
+
+    friendly, enemy = ([unit for unit in side if land_type(unit) in land][:c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE]
                        for side in sides)
     if not friendly or friendly[0] is not player_unit or not (enemy or _artillery(sides[1], library)):
         return None
@@ -217,13 +224,16 @@ def tactical_encounter(context, province):
     """
     session = session_for(context)
     # Lightweight test doubles carry no tactical state.
+    if (getattr(session, "multiplayer_mode", False)
+            or getattr(session, "realtime_multiplayer", False)):
+        return None
     unit = getattr(session, "tactical_mode", False) and getattr(session, "player_unit", None)
     if not unit or not any(other is unit for other in province.get("units", [])):
         return None
     return campaign_forces(unit, province, world_for(context).nation_data, queries.get_unit_library(context))
 
 
-def tactical_meeting_side(context, prov1, prov2, units1, units2):
+def tactical_meeting_side(context, prov1, prov2, units1, units2, *, pinned_units=None):
     """The tactical player's movement side, when a hostile crossing can become a tile encounter."""
     session = session_for(context)
     # Standalone rule tests can omit session fields. Multiplayer has no tactical encounters.
@@ -239,6 +249,12 @@ def tactical_meeting_side(context, prov1, prov2, units1, units2):
             destination = (prov1, prov2)[1 - index]
             if unit.get("speed", 1) <= 0 or not queries.can_land_units_enter(
                     queries.get_unit_combat_owner(unit), destination, world_for(context).nation_data):
+                return None
+            # A separate incoming attack takes precedence over the player's
+            # head-on crossing. Movement applies this same rule at every step.
+            if pinned_units is None:
+                pinned_units = queries.find_movement_pins(context)
+            if id(unit) in pinned_units:
                 return None
             # Only hostile land forces, including artillery sitting the battle out,
             # can start the existing tactical encounter flow.

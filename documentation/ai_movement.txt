@@ -89,6 +89,9 @@ For units with legal bombardment orders, the AI prefers an in-range bombardment 
 
 Before a charge, the AI estimates the first lane exchange.
 It skips a hostile occupied tile if every proposed attacker would be destroyed in that exchange.
+These are planning estimates. Actual ground encounters involving the tactical division bypass automatic
+charge-survival calculations and resolve in the tactical battle. Shared step-by-step pinning and
+withdrawal rules are documented under Movement and pinning in documentation/non_llm_ai.txt.
 
 ai_movement._rotate_damaged_units rotates damaged AI units.
 

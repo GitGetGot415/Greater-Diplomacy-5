@@ -675,8 +675,8 @@ def draw_bombardment_arrow(surface, map_screen, start_province, target_id,
                              max(2, int(3 * cam.zoom)))
 
 
-def midpoint_bounce_pairs(map_screen):
-    """Return hostile head-on movement pairs whose orders are knowable here.
+def _midpoint_meetings(map_screen):
+    """Return unpinned hostile crossings whose orders are knowable here.
 
     During the AI-move viewing phase all orders are deliberately rendered, so
     the marker must use the full board just like the movement arrows do. During
@@ -692,8 +692,25 @@ def midpoint_bounce_pairs(map_screen):
                   or player in ("Spectator", "Editor")
                   or map_screen.is_editor)
     visible_to = None if full_board else {player}
-    return combat_rules.find_meeting_pairs(
-        map_screen.map_data, map_screen.nation_data, visible_to)
+    records = [(unit, province) for province in map_screen.map_data.values()
+               for unit in province.get("units", [])
+               if visible_to is None or unit.get("owner") in visible_to]
+    pinned = queries.find_movement_pins(map_screen, records)
+    meetings = []
+    for pair in combat_rules.find_meeting_pairs(
+            map_screen.map_data, map_screen.nation_data, visible_to):
+        prov_a, prov_b, side_a, side_b = combat_rules.meeting_sides(
+            map_screen.id_to_province, pair, visible_to)
+        side_a = [unit for unit in side_a if id(unit) not in pinned]
+        side_b = [unit for unit in side_b if id(unit) not in pinned]
+        if side_a and side_b:
+            meetings.append((pair, prov_a, prov_b, side_a, side_b, pinned))
+    return meetings
+
+
+def midpoint_bounce_pairs(map_screen):
+    """Return hostile crossings that survive the shared pinning check."""
+    return [meeting[0] for meeting in _midpoint_meetings(map_screen)]
 
 
 def midpoint_bounce_outcomes(map_screen):
@@ -706,21 +723,10 @@ def midpoint_bounce_outcomes(map_screen):
     first exchange and are stopped there for the turn. Tactical crossings show
     the player's advance instead; the resulting tile battle is still undecided.
     """
-    if not strategic_detail_markers_are_visible(map_screen):
-        return []
-
-    player = map_screen.player_country
-    full_board = (map_screen.viewing_ai_moves
-                  or player in ("Spectator", "Editor")
-                  or map_screen.is_editor)
-    visible_to = None if full_board else {player}
-
     outcomes = []
-    for pair in combat_rules.find_meeting_pairs(
-            map_screen.map_data, map_screen.nation_data, visible_to):
-        prov_a, prov_b, side_a, side_b = combat_rules.meeting_sides(
-            map_screen.id_to_province, pair, visible_to)
-        tactical_side = custom_battle.tactical_meeting_side(map_screen, prov_a, prov_b, side_a, side_b)
+    for pair, prov_a, prov_b, side_a, side_b, pinned in _midpoint_meetings(map_screen):
+        tactical_side = custom_battle.tactical_meeting_side(
+            map_screen, prov_a, prov_b, side_a, side_b, pinned_units=pinned)
         if tactical_side is not None:
             origin, target = ((prov_a, prov_b) if tactical_side == 0 else (prov_b, prov_a))
             outcomes.append({"pair": pair, "origin_id": origin["id"], "target_id": target["id"], "overrun": True})

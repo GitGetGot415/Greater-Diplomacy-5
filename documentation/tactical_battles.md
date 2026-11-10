@@ -329,17 +329,27 @@ stack holding only artillery offers no division.
 The flow is **campaign encounter → preview → actual battle → campaign**.
 
 If the tactical division and hostile land forces attempt to cross the same border in opposite directions,
-the tactical division wins the movement clash. Its opponents stay on the destination tile and the tactical
+the tactical division wins the movement clash only when no incoming hostile unit from another tile pins the division.
+Otherwise the tactical division stays on its current tile and fights the arriving enemies there.
+When crossing priority applies, its opponents stay on the destination tile and the tactical
 division enters that tile, where the encounter takes place. This applies at turn start and on later movement steps.
 The crossing deals no automatic combat damage and does not award victory in the tactical battle.
-The map's crossing preview points toward the tactical division's destination when both orders are visible.
+The map's crossing preview points toward the tactical division's destination when both orders are visible
+and the shared pinning check allows the crossing. A pinned crossing has no advance marker.
 Other clashes keep the normal movement and combat rules; tournament and real-time modes do not use this exception.
+See Movement and pinning in [non_llm_ai.txt](non_llm_ai.txt) for the shared movement-step and withdrawal rules.
 
 After each turn resolves, once per turn, the game opens preview at once when the player's land unit shares a tile
 with hostile land units that can fight a tactical battle. Preview starts with that unit controlled. The friendly army is that unit followed by friendly
 land units on the tile, and the enemy army is the hostile land units there, each up to the army size limit.
-Each unit enters with its current health. Campaign combat deals no damage on that tile during turn resolution,
-so the battle is where the damage happens. Naval and air units do not take part.
+Each unit enters with its current health. An eligible ground encounter involving the tactical division is
+recognized before any automatic charge-survival projection or ground-combat calculation, whether the division
+attacks or defends. Even an apparently doomed attacker reaches the tactical battle alive.
+Ground combat, capture ranking, and capture bounces wait for the tactical result. Convoys caught on land unload
+without an automatic combat calculation. Simultaneous hostile arrivals stop on their shared tile before either
+unit takes another movement step. Naval and air units do not take part in the tactical battle;
+grounded aircraft and warships caught in land combat retain their destruction rules.
+Separate air missions and bombardments retain their own resolution rules.
 Artillery-type units on the tile sit the battle out. When it ends, the losing side's artillery on the tile is destroyed
 and the winning side's artillery is untouched; mutual destruction counts as a friendly loss.
 When hostile artillery is the only hostile land force on the tile, the player wins at once without a battle:

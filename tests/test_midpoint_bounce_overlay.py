@@ -133,6 +133,20 @@ class BouncePreviewTests(unittest.TestCase):
             for x in range(surface.get_width())
             for y in range(surface.get_height())))
 
+    def test_another_attacker_removes_the_tactical_crossing_preview_without_a_forecast(self):
+        library = {"Fixture Infantry I": {"naval_unit": False, "bombard_range": 0}}
+        self.screen.viewing_ai_moves = True
+        self.screen.tactical_mode = True
+        self.screen.map_data[3] = province(3, [moving_unit("B", 1)])
+        for tile in self.screen.map_data.values():
+            tile["units"][0]["type"] = "Fixture Infantry I"
+        self.screen.player_unit = self.screen.map_data[1]["units"][0]
+        with patch("data.queries.get_unit_library", return_value=library), \
+                patch.object(overlay_renderer, "estimated_combat_outcome") as forecast:
+            self.assertEqual(overlay_renderer.midpoint_bounce_pairs(self.screen), [])
+            self.assertEqual(overlay_renderer.midpoint_bounce_outcomes(self.screen), [])
+            forecast.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

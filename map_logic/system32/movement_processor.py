@@ -165,15 +165,15 @@ def process_conversions(context):
                     # Reset back to a blank move order so they can be selected again
                     unit["order"] = {"type": "MOVE", "path": []}
 
-def _resolve_step_swaps(context, moving_units, step, get_eff_speed):
+def _resolve_step_swaps(context, moving_units, step, get_eff_speed, pinned_units):
     """Fights same-step tile swaps that combat_rules.find_meeting_pairs can't see.
 
     That check only compares turn-start positions against a unit's very first
     step, so two hostile units that only become adjacent partway through the
     turn (e.g. a 2-speed unit catching up to one that moved last step) could
-    otherwise step straight through each other unfought -- moving units sit
-    outside every province["units"] list while their path is still being
-    walked, so the ordinary "defenders present" check never sees them either.
+    otherwise step straight through each other unfought. Active movers are
+    detached together before taking the step, so the ordinary destination
+    defender check alone cannot detect two opponents exchanging tiles.
 
     Re-runs the same swap check for the units about to take this step, and
     resolves any hits with the shared combat_processor.resolve_meeting_engagement.
@@ -218,7 +218,7 @@ def _resolve_step_swaps(context, moving_units, step, get_eff_speed):
         units2 = [m for m in by_origin.get(dest, []) if m["order"]["path"][0] == origin]
 
         remaining = combat_processor.defer_tactical_meeting(
-            context, prov1, prov2, units1, units2, mid_movement=True)
+            context, prov1, prov2, units1, units2, mid_movement=True, pinned_units=pinned_units)
         if remaining is not None:
             units1, units2 = remaining
         if not units1 or not units2:
@@ -277,6 +277,9 @@ def process_movement(context):
                 unit["_current_province_id"] = province["id"]
                 unit["_skip_remaining_steps"] = False
                 moving_units.append(unit)
+                # Keep the complete step-start positions available to pinning.
+                # Active movers are detached together just before taking a step.
+                units_to_keep.append(unit)
             else:
                 units_to_keep.append(unit)
         province["units"] = units_to_keep
@@ -292,11 +295,28 @@ def process_movement(context):
     max_speed = max(get_eff_speed(u) for u in moving_units)
 
     for step in range(max_speed):
-        moving_units = _resolve_step_swaps(context, moving_units, step, get_eff_speed)
+        records = [(unit, world_state.id_to_province[unit["_current_province_id"]])
+                   for unit in moving_units]
+        pinned = queries.find_movement_pins(context, records, step=step)
+        for unit in moving_units:
+            if id(unit) in pinned:
+                unit["order"]["path"] = []
+                unit["_skip_remaining_steps"] = True
+
+        moving_units = _resolve_step_swaps(context, moving_units, step, get_eff_speed, pinned)
+
+        # Moving units take this step simultaneously. Finished, pinned, and
+        # combat-held units stay visible as defenders throughout later steps.
+        active_ids = {id(unit) for unit, _province in
+                      queries.ground_move_records(context, (
+                          (unit, world_state.id_to_province[unit["_current_province_id"]])
+                          for unit in moving_units), step=step)}
+        for province in world_state.map_data.values():
+            province["units"] = [unit for unit in province.get("units", []) if id(unit) not in active_ids]
 
         for unit in moving_units:
             # Explicitly check if this individual unit has run out of moves or is skipping
-            if unit.get("_skip_remaining_steps", False) or step >= get_eff_speed(unit):
+            if id(unit) not in active_ids:
                 continue
 
             order = unit.get("order")
@@ -321,7 +341,7 @@ def process_movement(context):
                 in_combat = queries.is_nation_in_combat_here(combat_owner, curr_prov, world_state.nation_data)
 
                 if in_combat:
-                    if step > 0 or queries.is_hostile_territory(combat_owner, dest_owner, world_state.nation_data):
+                    if step > 0 or queries.move_route_enters_combat(context, unit, step=step):
                         # Stop advancing for this turn, but DO NOT wipe the queue!
                         unit["_skip_remaining_steps"] = True
                         continue
@@ -404,27 +424,18 @@ def process_movement(context):
             else:
                 order["path"] = []
 
-        # Sync units back to provinces so units moving later in the same sub-step "see" each other
+        # Commit the simultaneous arrivals before checking contact. Two enemies
+        # entering the same tile must stop even when both had another step.
         for unit in moving_units:
             prov = world_state.id_to_province.get(unit["_current_province_id"])
             if not any(u is unit for u in prov["units"]):
                 prov["units"].append(unit)
 
-        if step < max_speed - 1:
-            # Only pull out units with another step still coming. A unit that
-            # finished this turn (ran out of path, hit a defender, or used up
-            # its speed) stays in its province from here on, so it behaves as
-            # a normal obstacle to everyone else's later steps -- exactly like
-            # a unit that never moved at all, instead of being invisible to
-            # collision checks for the rest of the turn.
-            still_moving_ids = {
-                id(m) for m in moving_units
-                if not m.get("_skip_remaining_steps", False)
-                and m.get("order", {}).get("path")
-                and (step + 1) < get_eff_speed(m)
-            }
-            for province in world_state.map_data.values():
-                province["units"] = [u for u in province["units"] if id(u) not in still_moving_ids]
+        for unit in moving_units:
+            province = world_state.id_to_province[unit["_current_province_id"]]
+            if queries.is_nation_in_combat_here(
+                    queries.get_unit_combat_owner(unit), province, world_state.nation_data):
+                unit["_skip_remaining_steps"] = True
 
     # Clean up the temporary tracking flag so it doesn't pollute the save files!
     for unit in moving_units:

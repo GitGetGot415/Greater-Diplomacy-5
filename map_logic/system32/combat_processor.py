@@ -141,29 +141,16 @@ def process_bombardments(context):
         unit["order"] = {"type": "MOVE", "path": []}
 
 def process_pinning(context):
-    """Rule: Units being attacked from a tile must defend the tile they're on, unless moving to friendly territory."""
+    """Resolve doomed ordinary charges, then pin this turn's offensive routes."""
     world_state = world_for(context)
-    tactical_edges = set()
-    # Flat processor fixtures may omit the optional tactical session.
-    if getattr(session_for(context), "tactical_mode", False):
-        for pair in combat_rules.find_meeting_pairs(world_state.map_data, world_state.nation_data):
-            prov1, prov2, units1, units2 = combat_rules.meeting_sides(world_state.id_to_province, pair)
-            if custom_battle.tactical_meeting_side(context, prov1, prov2, units1, units2) is not None:
-                tactical_edges.add(pair)
     incoming_attacks = {}
-    for province in world_state.map_data.values():
-        for unit in province.get("units", []):
-            if queries.is_air_unit(unit, context=context) and not queries.air_unit_can_move_on_ground(unit, context=context):
-                continue
-            order = unit.get("order")
-            if order and order.get("type") == "MOVE" and order.get("path"):
-                dest_id = order["path"][0]
-                dest_prov = world_state.id_to_province.get(dest_id)
-                if dest_prov and queries.is_hostile_territory(
-                        queries.get_unit_combat_owner(unit), dest_prov.get("owner", "Unclaimed"),
-                        world_state.nation_data):
-                    # Track the origin province ID (province["id"]) along with the unit
-                    incoming_attacks.setdefault(dest_id, []).append((unit, province["id"]))
+    for unit, province in queries.ground_move_records(context):
+        dest_id = unit["order"]["path"][0]
+        dest_prov = world_state.id_to_province.get(dest_id)
+        if dest_prov and queries.is_hostile_territory(
+                queries.get_unit_combat_owner(unit), dest_prov.get("owner", "Unclaimed"),
+                world_state.nation_data):
+            incoming_attacks.setdefault(dest_id, []).append((unit, province["id"]))
 
     # --- NEW: RESOLVE SUICIDE CHARGES ---
     # If incoming attackers are so weak they'd die instantly, resolve the combat NOW
@@ -175,6 +162,13 @@ def process_pinning(context):
         defenders = dest_prov.get("units", [])
         if not defenders: continue
 
+        # Recognize the encounter before preparing aircraft, building a battle,
+        # or projecting damage. Tactical combat, including a seemingly doomed
+        # attack in either direction, must be fought on the battlefield.
+        if custom_battle.tactical_encounter(context, {
+                "units": [*defenders, *(unit for unit, _ in attackers_info)]}) is not None:
+            continue
+
         tile_owner = dest_prov.get("owner", "Unclaimed")
         if tile_owner in c.UNPLAYABLE_NATIONS: continue
 
@@ -185,7 +179,6 @@ def process_pinning(context):
         hostile_attackers = [
             info for info in attackers_info
             if queries.are_at_war(tile_owner, queries.get_unit_combat_owner(info[0]), world_state.nation_data)
-            and tuple(sorted((info[1], dest_id))) not in tactical_edges
         ]
 
         if not hostile_attackers: continue
@@ -276,37 +269,18 @@ def process_pinning(context):
             # 3. Cleanup dead defenders in the destination province (just in case they died to scratch damage)
             dest_prov["units"] = [u for u in dest_prov["units"] if u.get("health", 0) > 0]
 
-    # --- STANDARD PINNING LOGIC ---
-    for province in world_state.map_data.values():
-        for unit in province.get("units", []):
-            if queries.is_air_unit(unit, context=context) and not queries.air_unit_can_move_on_ground(unit, context=context):
-                continue
-            order = unit.get("order")
-            if order and order.get("type") == "MOVE" and order.get("path"):
-                dest_id = order["path"][0]
-                dest_prov = world_state.id_to_province.get(dest_id)
+    # Use the same simultaneous pinning rule that later movement steps and
+    # crossing previews use. Doomed ordinary attackers have already been removed.
+    records = queries.ground_move_records(context)
+    pinned = queries.find_movement_pins(context, records)
+    for unit, _province in records:
+        if id(unit) in pinned:
+            unit["order"]["path"] = []
 
-                # If moving to hostile territory, check if we are pinned by an incoming attack
-                if dest_prov and queries.is_hostile_territory(
-                        queries.get_unit_combat_owner(unit), dest_prov.get("owner", "Unclaimed"),
-                        world_state.nation_data):
-                    attackers = incoming_attacks.get(province["id"], [])
-
-                    # ONLY pin if the attacker is hostile AND NOT coming from the tile we are moving to.
-                    hostile_attackers = [
-                        a for a, origin_id in attackers
-                        if queries.are_at_war(queries.get_unit_combat_owner(unit),
-                                              queries.get_unit_combat_owner(a), world_state.nation_data)
-                        and origin_id != dest_id
-                    ]
-
-                    if hostile_attackers:
-                        # Pinned! Cannot attack outwards. Must defend.
-                        order["path"] = []
-
-def defer_tactical_meeting(context, prov1, prov2, units1, units2, *, mid_movement=False):
+def defer_tactical_meeting(context, prov1, prov2, units1, units2, *, mid_movement=False, pinned_units=None):
     """Hold tactical opponents at the destination; return other movers for ordinary crossing combat."""
-    winner = custom_battle.tactical_meeting_side(context, prov1, prov2, units1, units2)
+    winner = custom_battle.tactical_meeting_side(
+        context, prov1, prov2, units1, units2, pinned_units=pinned_units)
     if winner is None:
         return None
     sides = units1, units2
@@ -457,6 +431,28 @@ def process_combat(context):
         is_land = not queries.is_water_province(province)
         unit_events.set_locations(province, units)
 
+        # No automatic battle calculation precedes an eligible tactical fight.
+        # Cancel only the routes of actual belligerents, preserving bystanders.
+        if custom_battle.tactical_encounter(context, province) is not None:
+            # Aircraft and warships cannot join the tactical battlefield. Keep
+            # their existing ground-exposure rules without simulating the armies.
+            queries.prepare_aircraft_for_ground_combat(
+                units, world_state.nation_data, on_land=is_land, context=context)
+            province["units"] = [unit for unit in units if unit.get("health", 0) > 0]
+            units = province["units"]
+            for unit in units:
+                if queries.is_nation_in_combat_here(
+                        queries.get_unit_combat_owner(unit), province, world_state.nation_data):
+                    if is_land and unit.get("type", "").startswith("Convoy"):
+                        queries.revert_transport(unit, context=context)
+                    if is_land and queries.is_warship(unit.get("type", ""), context=context):
+                        unit["health"] = 0
+                    order = unit.get("order")
+                    if isinstance(order, dict) and "path" in order:
+                        order["path"] = []
+            province["units"] = [unit for unit in units if unit.get("health", 0) > 0]
+            continue
+
         queries.prepare_aircraft_for_ground_combat(units, world_state.nation_data, on_land=is_land, context=context)
 
         battle = combat_rules.build_battle(
@@ -472,18 +468,15 @@ def process_combat(context):
         # Every volley is measured before any of it lands, so the fight is
         # simultaneous: a nation wiped out this turn still fires this turn, and
         # nobody's share depends on who happened to be resolved first.
-        # A tactical player's fight deals its damage in the tactical battle instead,
-        # so the tile's units reach that battle undamaged by this turn's combat.
-        if custom_battle.tactical_encounter(context, province) is None:
-            for targets, total_atk, sources in combat_rules.exchange(
-                    battle, world_state.nation_data, with_sources=True):
-                apply_group_damage(
-                    total_atk,
-                    targets,
-                    lambda unit, province=province: queries.get_fort_defense_bonus(
-                        province, unit, world_state.nation_data, combat_active=True),
-                    sources=sources, tile=province["id"],
-                    nation_data=world_state.nation_data)
+        for targets, total_atk, sources in combat_rules.exchange(
+                battle, world_state.nation_data, with_sources=True):
+            apply_group_damage(
+                total_atk,
+                targets,
+                lambda unit, province=province: queries.get_fort_defense_bonus(
+                    province, unit, world_state.nation_data, combat_active=True),
+                sources=sources, tile=province["id"],
+                nation_data=world_state.nation_data)
 
         # Remove dead units (HP <= 0) BEFORE checking if we should wipe paths
         surviving_units = [u for u in units if u.get("health", 0) > 0]
@@ -520,6 +513,9 @@ def check_for_post_combat_captures(context):
     world_state = world_for(context)
     for province in world_state.map_data.values():
         if queries.is_water_province(province):
+            continue
+        # Ownership and capture bounces wait for the tactical result too.
+        if custom_battle.tactical_encounter(context, province) is not None:
             continue
 
         units = [unit for unit in province.get("units", []) if not queries.is_air_unit(unit, context=context)]
