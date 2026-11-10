@@ -102,7 +102,8 @@ class BuildManifestTests(unittest.TestCase):
 
     def test_build_entry_points_are_import_safe(self):
         original = os.getcwd()
-        for module in ("html_compilation", "windows_compilation", "macos_compilation", "setup"):
+        for module in ("html_compilation", "windows_compilation", "macos_compilation", "setup",
+                       "android_tools", "android_compilation", "test_android_build"):
             with patch("subprocess.run", side_effect=AssertionError("process during import")):
                 importlib.import_module("compilation_scripts." + module)
             self.assertEqual(os.getcwd(), original)

@@ -1,0 +1,28 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace = providers.gradleProperty('gd5ApplicationId').get()
+    compileSdk {
+        version = release(37) { minorApiLevel = 0 }
+    }
+    defaultConfig {
+        applicationId = namespace
+        minSdk = 26
+        targetSdk = 37
+        // Local debug APKs replace each other; the game version remains GAME_VERSION.
+        versionCode = 1
+        versionName = providers.gradleProperty('gd5VersionName').get()
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    buildFeatures { buildConfig = true }
+    androidResources { noCompress += ['bin', 'apk', 'wasm'] }
+}
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.12.1'
+}

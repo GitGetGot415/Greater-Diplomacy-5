@@ -486,6 +486,34 @@ On Windows, closing the launcher stops the server's entire process tree, includi
 Running the launcher again replaces its previous server for the same checkout. Other programs using port 8000 are left running.
 Servers started by older launchers must be stopped once manually because those processes have no owned Windows job.
 After source changes, rebuild the browser package to refresh the staged game code.
+
+Android wraps the web distribution in a landscape WebView. Gameplay uses the same browser code and save storage.
+The initial Android target retains desktop controls. Complete touch controls and native file import/export are not implemented.
+Multiplayer and LLM support have the same restrictions as the browser build.
+Internet access is required for Pygbag's runtime downloads; the APK is not a fully offline distribution.
+Install Android Studio and complete its SDK setup. In SDK Manager, install Android SDK Platform 37.0,
+Android SDK Build-Tools 36.0.0, Android SDK Platform-Tools, and Android Emulator.
+Create a virtual phone or tablet in Device Manager, including its system image.
+Use the project's Python environment and install build tools with python -m pip install pygbag==0.9.3 imageio-ffmpeg.
+Run android_compilation.bat on Windows or android_compilation.command on macOS, in compilation_scripts/.
+The build launcher rebuilds the web game, stages the Android project, and runs the pinned Gradle wrapper.
+The first build downloads Gradle and Android build dependencies. Later builds reuse the downloads.
+The build reads GAME_VERSION for Android's version name and writes dist/android/GD5 Android.apk.
+This APK is signed with the local debug key for installation and testing. Store publication requires release signing.
+Run test_android_build.bat or test_android_build.command to install and launch the APK.
+Use --build with the test launcher to rebuild the web game and APK before testing in one operation.
+The test launcher uses a connected device or starts the only configured virtual device.
+With several devices, select --serial SERIAL or --avd NAME. Run adb devices or emulator -list-avds to find names.
+An Android phone must have USB debugging enabled and authorize the computer.
+APK updates preserve app data when the application ID and signing key match. Uninstalling the app removes its local saves.
+The test launcher writes build/android/logs/game.log. Press Ctrl+C to stop logging; the app and emulator stay open.
+Use --no-logs to return immediately after launch or --apk PATH to test a particular APK.
+Use android_compilation.py --skip-web-build only for wrapper changes; game changes require the normal full build.
+The scripts detect standard Windows/macOS SDK and Android Studio Java locations.
+For nonstandard installations, set ANDROID_HOME to the SDK directory and JAVA_HOME to a JDK 17 or newer.
+The generated Android project and Gradle cache live under build/android/.
+On macOS, if downloaded launchers are not executable, run chmod +x compilation_scripts/*android*.command once.
+
 Native and web audio filters retain their separate replacement rules.
 On web, text that Python sends to JavaScript must be ASCII. pygbag delivers each UTF-8 byte of any other character as a separate character.
 Pass JavaScript source through browser_js_source in data/platform.py before platform.window.eval. Send data as json.dumps output, which escapes non-ASCII characters.

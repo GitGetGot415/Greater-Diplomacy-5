@@ -9,6 +9,17 @@ SOURCE_PACKAGES = ("data", "ui", "screens", "map_logic")
 SOURCE_FILES = ("main.py", "mod_loader.py", "beepbox_audio.py")
 DESKTOP_SOURCE_FILES = SOURCE_FILES + ("soloud.py",)
 WEB_SOURCE_FILES = SOURCE_FILES + ("libdragoman.so",)
+# Android runs the web distribution. Keep its native wrapper out of desktop/web archives.
+ANDROID_PROJECT_DIR = "compilation_scripts/android"
+ANDROID_PROJECT_FILES = (
+    "settings.gradle", "build.gradle", "gradle.properties", "gradlew", "gradlew.bat",
+    "gradle/wrapper/gradle-wrapper.jar", "gradle/wrapper/gradle-wrapper.properties",
+    "app/build.gradle", "app/src/main/AndroidManifest.xml",
+    "app/src/main/java/org/greaterdiplomacy/gd5/MainActivity.java",
+)
+ANDROID_APPLICATION_ID = "org.greaterdiplomacy.gd5"
+ANDROID_APK = "dist/android/GD5 Android.apk"
+ANDROID_ICON = "assets/icon/icon.png"
 DATA_DIRS = ("assets", "base_maps", "scenarios")
 EMPTY_DIRS = ("saves", "tournament_saves", "mods")
 WEB_EXCLUDED_SUBPACKAGES = ()

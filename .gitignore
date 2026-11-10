@@ -50,3 +50,7 @@ temp
 
 # Maps written by the Translate screen -- generated, not source.
 translated/
+
+# Android Studio may index the wrapper template as well as the staged project.
+/compilation_scripts/android/.gradle/
+/compilation_scripts/android/local.properties

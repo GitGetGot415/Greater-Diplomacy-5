@@ -132,6 +132,43 @@ def mac_data_files(root):
     return list(grouped.items())
 
 
+def stage_android_project(root, web_output, destination):
+    """Refresh the wrapper and web assets, retaining Gradle's incremental build cache."""
+    root, web_output = Path(root).resolve(), Path(web_output).resolve()
+    destination = Path(verified_build_path(root, destination))
+    if not (web_output / "index.html").is_file():
+        raise FileNotFoundError("No web build found. Run html_compilation.py first.")
+    for relative in manifest.ANDROID_PROJECT_FILES:
+        target = destination / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(root / manifest.ANDROID_PROJECT_DIR / relative, target)
+    # ZIP extraction on macOS does not always retain the wrapper's executable bit.
+    (destination / "gradlew").chmod(0o755)
+    assets = Path(verified_build_path(root, destination / "app/src/main/assets/www"))
+    if assets.exists():
+        shutil.rmtree(assets)
+    shutil.copytree(web_output, assets)
+    # AAPT expands .gz assets and drops their suffix, even with noCompress.
+    # Keep the gzip bytes Pygbag expects and change only the Android copy's URL.
+    index_path = assets / "index.html"
+    index = index_path.read_text(encoding="utf-8")
+    for archive in assets.glob("*.tar.gz"):
+        bundled = archive.with_name(archive.name + ".bin")
+        archive.rename(bundled)
+        index = index.replace(archive.name, bundled.name)
+    index_path.write_text(index, encoding="utf-8")
+    mismatches = png_signature_mismatches(assets)
+    icon = root / manifest.ANDROID_ICON
+    with icon.open("rb") as stream:
+        if stream.read(8) != b"\x89PNG\r\n\x1a\n":
+            mismatches.append(str(icon))
+    if mismatches:
+        raise ValueError("Android PNG files have invalid signatures: " + ", ".join(mismatches))
+    icon_target = destination / "app/src/main/res/drawable/icon.png"
+    icon_target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(icon, icon_target)
+
+
 def png_signature_mismatches(root):
     """Return staged PNG paths whose content has another file format."""
     mismatches = []
