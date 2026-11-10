@@ -22,6 +22,26 @@ def _map(loop_map):
 
 
 class MapCameraBoundsTests(unittest.TestCase):
+    def test_touch_zoom_uses_finger_midpoint_and_existing_limits(self):
+        camera = MapCamera(min_zoom=2)
+        camera.pos = pygame.Vector2(100, 50)
+        camera.target_pos = pygame.Vector2(camera.pos)
+        self_map = _map(False)
+        self_map.min_zoom = 2
+        anchor = (400, 300)
+        before = pygame.Vector2(anchor[0] / camera.zoom + camera.pos.x,
+                                (anchor[1] - self_map.top_ui_height) / camera.zoom + camera.pos.y)
+        camera.zoom_at(2, anchor, self_map)
+        with patch("ui.camera.camera_handler.pygame.mouse.get_pos", return_value=(0, 0)):
+            camera.update(self_map, 720)
+        after = pygame.Vector2(anchor[0] / camera.zoom + camera.pos.x,
+                               (anchor[1] - self_map.top_ui_height) / camera.zoom + camera.pos.y)
+        self.assertLess(before.distance_to(after), 0.02)
+        camera.zoom_at(1e10, anchor, self_map)
+        self.assertEqual(camera.target_zoom, c.MAX_CAMERA_ZOOM)
+        camera.zoom_at(1e-10, anchor, self_map)
+        self.assertEqual(camera.target_zoom, self_map.min_zoom)
+
     def test_normal_zoom_keeps_the_world_point_under_the_cursor(self):
         camera = MapCamera(min_zoom=2)
         camera.zoom = 2

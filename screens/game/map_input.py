@@ -118,7 +118,12 @@ def _select_map_province(map_screen, position, navigate=True):
 
 
 def mouse_button_has_action(button_number, action):
-    """Read one enabled Mouse Settings action from the live runtime mapping."""
+    """Resolve a mouse binding, or a canonical action from a completed touch."""
+    if not isinstance(button_number, int):
+        event = button_number
+        button_number = event.button
+        if getattr(event, "mobile_touch", False):
+            return action in {1: ("select_units",), 3: ("issue_orders",)}.get(button_number, ())
     button = next((name for number, name, _label in c.MOUSE_BUTTONS
                    if number == button_number), None)
     return bool(button and c.MOUSE_BUTTON_ACTIONS[button].get(action, False))
@@ -177,8 +182,8 @@ def _handle_map_unit_selection(map_screen, event, on_ui):
         return False
 
     if (event.type == pygame.MOUSEBUTTONDOWN and (
-            mouse_button_has_action(event.button, "select_units")
-            or mouse_button_has_action(event.button, "box_select_units"))):
+            mouse_button_has_action(event, "select_units")
+            or mouse_button_has_action(event, "box_select_units"))):
         clicked_stack = next((stack for stack in reversed(
             map_screen.unit_stack_hitboxes)
             if stack["rect"].collidepoint(event.pos)), None)
@@ -189,8 +194,8 @@ def _handle_map_unit_selection(map_screen, event, on_ui):
             "additive": bool(pygame.key.get_mods() & pygame.KMOD_SHIFT),
             "stack": clicked_stack,
             "button": event.button,
-            "select_units": mouse_button_has_action(event.button, "select_units"),
-            "box_select_units": mouse_button_has_action(event.button, "box_select_units"),
+            "select_units": mouse_button_has_action(event, "select_units"),
+            "box_select_units": mouse_button_has_action(event, "box_select_units"),
         }
         return True
 
@@ -234,11 +239,11 @@ def _handle_map_unit_selection(map_screen, event, on_ui):
         return True
 
     if (event.type == pygame.MOUSEBUTTONDOWN
-            and mouse_button_has_action(event.button, "issue_orders")):
+            and mouse_button_has_action(event, "issue_orders")):
         return True
 
     if (event.type == pygame.MOUSEBUTTONUP
-            and mouse_button_has_action(event.button, "issue_orders")):
+            and mouse_button_has_action(event, "issue_orders")):
         destination = queries.get_clicked_province(event.pos, map_screen)
         if destination and map_screen.selected_unit_records():
             map_screen.issue_selected_move_orders(
@@ -250,6 +255,9 @@ def _handle_map_unit_selection(map_screen, event, on_ui):
 
 def _handle_blocking_state(map_screen, event, mx, my):
     """Screens that take over the map. Returns True when one of them is showing."""
+    if (getattr(event, "mobile_drag", False)
+            and (map_screen.show_player_ready_screen or map_screen.show_exit_confirmation)):
+        return True
     # --- HOTSEAT MULTIPLAYER HIJACK ---
     if map_screen.show_player_ready_screen:
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -285,7 +293,8 @@ def _handle_blocking_state(map_screen, event, mx, my):
         if (turn_progress.threads_panel_available(map_screen)
                 and llm_threads_panel.handle_event(map_screen, event)):
             return True
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+        if (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
+                and not getattr(event, "mobile_drag", False)):
             if hasattr(map_screen, 'force_skip_btn_rect') and map_screen.force_skip_btn_rect.collidepoint(mx, my):
                 map_screen.force_skip_llm = True
 
@@ -306,7 +315,8 @@ def _handle_blocking_state(map_screen, event, mx, my):
 def _handle_flag_button(map_screen, event, event_pos):
     flag_rect = flag_renderer.flag_button_rect(map_screen)
     if flag_rect and flag_rect.collidepoint(event_pos):
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+        if (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
+                and not getattr(event, "mobile_drag", False)):
             country_summary.open_country_summary(map_screen, flag_renderer.summary_country(map_screen))
             return True
         if event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP,
@@ -396,6 +406,10 @@ def _handle_panel_scrolling(map_screen, event, mx, my):
 
 def _handle_camera(map_screen, event, on_ui):
     """Camera controls. Always allowed, so you can move while editing."""
+    if getattr(event, "mobile_touch", False):
+        # Finger drags reach the camera directly. A completed tap must not
+        # begin a physical-mouse pan under a customized Mouse Settings binding.
+        return False
     if event.type == pygame.MOUSEWHEEL:
         map_screen.camera.handle_input(event, map_screen, False)
         if map_screen.selected_province and not map_screen.selection_mode:
@@ -411,7 +425,7 @@ def _handle_camera(map_screen, event, on_ui):
     map_screen.camera.handle_input(event, map_screen, on_ui, pan_buttons=pan_buttons)
     return bool(event.type == pygame.MOUSEBUTTONUP
                 and map_screen.camera.finish_pan_drag(event.button)
-                and mouse_button_has_action(event.button, "issue_orders"))
+                and mouse_button_has_action(event, "issue_orders"))
 
 
 def _update_map_hover(map_screen, on_ui, mx, my):

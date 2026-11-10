@@ -36,7 +36,8 @@ class _YesNoModal(_BaseModal):
                     self._finish(True)
                 elif event.key in (pygame.K_ESCAPE, pygame.K_n, _back_key()):
                     self._finish(False)
-            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            elif (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
+                  and not getattr(event, "mobile_drag", False)):
                 if self.yes_rect.collidepoint(event.pos):
                     self._finish(True)
                 elif self.no_rect.collidepoint(event.pos):

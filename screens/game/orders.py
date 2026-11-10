@@ -199,8 +199,8 @@ class Orders_Screen(UnitCommandControls, Screen):
         # stack toggles it; an actual left-drag box-selects stacks, matching
         # the map screen and HOI4's primary selection gesture.
         if (event.type == pygame.MOUSEBUTTONDOWN and not on_ui
-                and (map_input.mouse_button_has_action(event.button, "select_units")
-                     or map_input.mouse_button_has_action(event.button, "box_select_units"))):
+                and (map_input.mouse_button_has_action(event, "select_units")
+                     or map_input.mouse_button_has_action(event, "box_select_units"))):
             clicked_stack = next((stack for stack in reversed(
                 self.map_screen.unit_stack_hitboxes)
                 if stack["rect"].collidepoint(event.pos)), None)
@@ -212,9 +212,9 @@ class Orders_Screen(UnitCommandControls, Screen):
                 "stack": clicked_stack,
                 "button": event.button,
                 "select_units": map_input.mouse_button_has_action(
-                    event.button, "select_units"),
+                    event, "select_units"),
                 "box_select_units": map_input.mouse_button_has_action(
-                    event.button, "box_select_units"),
+                    event, "box_select_units"),
             }
             return True
 

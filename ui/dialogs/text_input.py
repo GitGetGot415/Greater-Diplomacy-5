@@ -61,7 +61,8 @@ class _TextInputModal(_BaseModal):
                     if new_text != self.text:
                         self.text = new_text
                         self.error_text = ""
-            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            elif (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
+                  and not getattr(event, "mobile_drag", False)):
                 if self.clear_rect.collidepoint(event.pos):
                     self.text = ""
                     self.error_text = ""

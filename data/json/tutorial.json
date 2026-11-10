@@ -14,7 +14,7 @@
                                 {"icon": "terrain", "heading": "Look around", "text": "Use the map view buttons to see terrain, countries, and resources. See Map & Controls."},
                                 {"icon": "research", "heading": "Start research", "text": "Open R&D on the left bar and start a few technologies. See Research."},
                                 {"icon": "industry", "heading": "Build something", "text": "Click one of your provinces and press Production to queue buildings or units. See Production."},
-                                {"icon": "unit", "heading": "Move units", "text": "In Units view, left-click a unit stack, then right-click a tile to send it there. See Units & Orders."},
+                                {"icon": "unit", "heading": "Move units", "text": "In Units view, left-click a unit stack, then right-click a tile to send it there. With Mobile controls, tap the stack, then hold and release on the destination. See Units & Orders."},
                                 {"icon": "clock", "heading": "End the turn", "text": "Press Next Turn. Every country's orders resolve at the same time."}
                             ]
                         }
@@ -76,7 +76,7 @@
                         {
                             "type": "text",
                             "align": "center",
-                            "text": "Customize mouse gestures in Settings > Mouse Settings."
+                            "text": "Customize mouse gestures in Settings > Mouse Settings. Settings > Controls selects Auto, Mobile, or Desktop. Mobile controls: tap to select; hold still for half a second, then release for a right-click action; drag the map with one finger to pan; pinch or spread two fingers to zoom. Drag a scrollable panel to scroll its content. Physical mouse and keyboard controls still work."
                         }
                     ]
                 },
@@ -119,8 +119,8 @@
                         {
                             "type": "steps",
                             "items": [
-                                {"heading": "Select", "text": "In Units view, left-click a unit stack. Shift-click adds more stacks, and dragging draws a selection box. Orders opens for the selected units."},
-                                {"heading": "Move", "text": "Right-click a tile to send the selected units there. Hold Shift while right-clicking to add a waypoint."},
+                                {"heading": "Select", "text": "In Units view, left-click a unit stack. Shift-click adds more stacks, and dragging draws a selection box. With Mobile controls, tap a stack. Orders opens for the selected units."},
+                                {"heading": "Move", "text": "Right-click a tile to send the selected units there. With Mobile controls, hold and release on the destination. Hold Shift while right-clicking to add a waypoint."},
                                 {"heading": "Speed", "text": "A unit's speed is how many tiles it can move each turn. Longer moves continue over the next turns."},
                                 {"heading": "Where land units can go", "text": "Your land, land of your faction members, land where you have military access, unclaimed land, and land of countries you are at war with."},
                                 {"heading": "Change orders", "text": "A new move order replaces the old one. Clear ALL Orders in Orders cancels the orders of the units shown there."}
@@ -168,12 +168,12 @@
                         {
                             "type": "steps",
                             "items": [
-                                {"heading": "Select units", "text": "Left-click stacks or drag in Units view. In Orders, right-click a unit row to add or remove it without changing the other selected units."},
+                                {"heading": "Select units", "text": "Left-click stacks or drag in Units view. In Orders, right-click a unit row to add or remove it without changing the other selected units. With Mobile controls, tap stacks and hold and release on rows for their right-click action."},
                                 {"heading": "Unassigned", "text": "Select units outside armies with this first, dark grey card. It has no emblem or editing controls. It hides when all units are assigned or Settings > Show Unassigned is OFF. Unassigned units keep their map icons."},
                                 {"heading": "Create an army", "text": "In Orders, click + Create Army in the Army tray. (Located on the right side of the screen)"},
                                 {"heading": "Personalize", "text": "Click a card to select the units in said army. Pressing the E button edits its name and emblem."},
                                 {"heading": "Target areas", "text": "Press T on an army card, select its target tiles, and confirm. The army fills uncovered tiles first, then balances its units. Units that have no orders given will automatically be ordered to fill in the target area next turn."},
-                                {"heading": "Need to Assign more units?", "text": "With units selected, right-click an army card."}
+                                {"heading": "Need to Assign more units?", "text": "With units selected, right-click an army card. With Mobile controls, hold and release on the army card."}
                             ]
                         }
                     ]

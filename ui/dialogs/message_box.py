@@ -134,6 +134,10 @@ class _MessageModal(_BaseModal):
         finally:
             surface.set_clip(clip)
 
+    def cancel_pointer_input(self):
+        self.ok_button.is_pressed = False
+        self._scroll_drag_offset = None
+
     def handle_events(self, events):
         for event in events:
             if self._resolved:
@@ -159,7 +163,8 @@ class _MessageModal(_BaseModal):
                     else:
                         self._scroll_drag_offset = 0
                         self._drag_scrollbar(event.pos[1])
-                elif self.content_rect.collidepoint(event.pos) and self.handle_content_click(event.pos):
+                elif (not getattr(event, "mobile_drag", False)
+                      and self.content_rect.collidepoint(event.pos) and self.handle_content_click(event.pos)):
                     return
 
     def handle_content_click(self, pos):

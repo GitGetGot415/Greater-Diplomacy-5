@@ -176,7 +176,7 @@ class Tactical_Orders_Screen(UnitCommandControls, Screen):
         # click on empty map returns to that province's menu. There is no box
         # selection: the division is the only unit a tactical player commands.
         if (event.type == pygame.MOUSEBUTTONDOWN and not on_ui
-                and map_input.mouse_button_has_action(event.button, "select_units")):
+                and map_input.mouse_button_has_action(event, "select_units")):
             stack = next((stack for stack in reversed(self.map_screen.unit_stack_hitboxes)
                           if stack["rect"].collidepoint(event.pos)), None)
             self._map_click = (event.pos, event.button, stack)

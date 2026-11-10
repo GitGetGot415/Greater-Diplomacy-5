@@ -42,6 +42,7 @@ GOLDEN_ORDER = (
     "checkerboard_gradient_strength",
     "checkerboard_scroll_speed",
     "tactical_infantry_songs", "tactical_tank_songs",
+    "control_mode",
 )
 
 GOLDEN_JSON_KEYS = set(GOLDEN_ORDER)
@@ -68,6 +69,14 @@ class SchemaContractTests(unittest.TestCase):
 
 
 class RoundTripTests(unittest.TestCase):
+    def test_control_mode_round_trip_and_older_settings_default(self):
+        for mode in c.CONTROL_MODES:
+            saved = settings_schema.to_json_dict({"control_mode": mode})
+            self.assertEqual(settings_schema.from_json_dict(saved)["control_mode"], mode)
+        for saved in ({}, {"control_mode": "UNKNOWN"}, {"control_mode": None}):
+            self.assertEqual(settings_schema.from_json_dict(saved)["control_mode"],
+                             settings_schema.defaults()["control_mode"])
+
     def test_tactical_song_lists_round_trip_and_older_settings_default(self):
         for name in ("tactical_infantry_songs", "tactical_tank_songs"):
             with self.subTest(setting=name):

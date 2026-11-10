@@ -228,6 +228,8 @@ function show_infobox() {
          * ratio here with !important overrides that inline style regardless of the race.
          */
         canvas.emscripten {
+            /* The game owns touch panning and pinch zoom inside its canvas. */
+            touch-action: none;
             border: 0px none;
             background-color: transparent;
             /* canvas is a replaced element, so width/height:auto + aspect-ratio would

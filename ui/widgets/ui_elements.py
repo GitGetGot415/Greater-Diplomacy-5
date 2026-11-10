@@ -910,6 +910,8 @@ class Button:
         if not self.visible or self.disabled: return
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if getattr(event, "mobile_drag", False):
+                return
             if self.rect.collidepoint(event.pos) and (self.click_guard is None or self.click_guard()):
                 self.is_pressed = True
 
@@ -1107,7 +1109,7 @@ class Slider:
             self.dragging = False
 
         elif event.type == pygame.MOUSEMOTION and self.dragging:
-            if not pygame.mouse.get_pressed()[0]:
+            if not (getattr(event, "mobile_touch", False) or pygame.mouse.get_pressed()[0]):
                 # The button-up event was missed (e.g. a focus hiccup) -- don't
                 # let the handle keep free-following the cursor forever.
                 self.dragging = False

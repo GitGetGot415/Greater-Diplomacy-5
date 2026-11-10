@@ -2444,7 +2444,8 @@ class Map(StateAccess, Screen):
     def additional_events(self, event):
         # Intercept inputs if the game has crashed
         if self.thread_error:
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
+                    and not getattr(event, "mobile_drag", False)):
                 btn_rect = pygame.Rect(c.SCREEN_WIDTH - 240, c.SCREEN_HEIGHT - 80, 220, 60)
                 if btn_rect.collidepoint(event.pos):
                     if pickers.copy_to_clipboard(self.thread_error):
@@ -2464,6 +2465,30 @@ class Map(StateAccess, Screen):
                    for element in self.elements):
                 return
         map_input.handle_map_events(self, event)
+
+    def touch_map_at(self, position):
+        if (self.thread_error or self.show_player_ready_screen or self.show_exit_confirmation
+                or self.is_saving or self.ai_is_thinking
+                or map_input._map_position_is_on_ui(self, position)
+                or army_panel.blocks_map_touch(self, position)):
+            return None
+        if diplomatic_popups.map_message_popups_visible(self):
+            popups = self.diplomatic_popups + ([self.navigation_intro_popup]
+                      if self.navigation_intro_popup is not None else [])
+            if any(popup.rect.collidepoint(position) for popup in popups):
+                return None
+        if any(element.visible and element.rect.collidepoint(position)
+               for element in self.elements if isinstance(element, Button)):
+            return None
+        return self
+
+    def cancel_pointer_input(self):
+        super().cancel_pointer_input()
+        for popup in self.diplomatic_popups:
+            popup.is_dragging = False
+        if self.navigation_intro_popup is not None:
+            self.navigation_intro_popup.is_dragging = False
+            self.navigation_intro_popup._scroll_drag_offset = None
 
     def handle_events(self, events):
         """Route the live navigation guide before HUD buttons and map input."""

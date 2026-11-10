@@ -29,6 +29,7 @@ def save_settings(keybind_dict, sfx_volume, music_volume, num_players=None, ai_m
                   checkerboard_gradient_strength=None,
                   checkerboard_scroll_speed=None,
                   tactical_infantry_songs=None, tactical_tank_songs=None,
+                  control_mode=None,
                   **legacy_settings):
     """Convert key codes to names and save settings as JSON.
 

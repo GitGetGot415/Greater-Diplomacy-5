@@ -82,6 +82,7 @@
         "ai_turn_budget_seconds": 0,
         "unit_art_style": "classic",
         "map_navigation_mode": "CLASSIC",
+        "control_mode": "AUTO",
         "orders_key_changes_screen": true,
         "economy_key_changes_screen": true,
         "battle_display_mode": "FULL",

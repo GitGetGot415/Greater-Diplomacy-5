@@ -22,6 +22,7 @@ from ui.widgets.text_utils import fit_text, wrap_text
 from ui.rendering import symbol_loader
 from ui.rendering import overlay_renderer
 from ui.panels import map_top_right_layout
+from ui.panels import army_panel
 from screens.game import map_input
 from screens.game import battle_screen
 from ui.navigation.modal_screen import ModalScreen
@@ -1046,6 +1047,24 @@ class UnitCommandControls:
     def text_input_active(self):
         return self.renaming_unit_index is not None or super().text_input_active
 
+    def touch_map_at(self, position):
+        map_screen = self.map_screen
+        if (map_screen is None or self.panel_rect.collidepoint(position)
+                or (self.battle_screen is not None
+                    and self.battle_screen.panel_rect.collidepoint(position))
+                or map_input.map_ui_bar_at_position(map_screen, position)
+                or army_panel.blocks_map_touch(map_screen, position, orders_screen=self)):
+            return None
+        if any(element.visible and element.rect.collidepoint(position)
+               for element in self.elements if isinstance(element, Button)):
+            return None
+        return map_screen
+
+    def cancel_pointer_input(self):
+        super().cancel_pointer_input()
+        if self.map_screen is not None:
+            self.map_screen.cancel_pointer_input()
+
     def handle_events(self, events):
         for event in events:
             # Opening a combat bubble consumes its release even if the new
@@ -1090,7 +1109,8 @@ class UnitCommandControls:
                     self.rename_text, _ = process_text_input(event, self.rename_text, max_length=c.UNIT_NAME_MAX_LENGTH)
                 return
 
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
+                    and not getattr(event, "mobile_drag", False)):
                 # Guarded to the visible panel so a cancel box scrolled behind
                 # the panel's edge (clipped, no longer drawn) can't fire.
                 panel_rect = self._cancel_box_region()
@@ -1150,6 +1170,10 @@ class UnitCommandControls:
         event_pos = getattr(event, "pos", (mx, my))
         on_ui = (panel_rect.collidepoint(event_pos)
                  or map_input.map_ui_bar_at_position(self.map_screen, event_pos))
+        if getattr(event, "mobile_drag", False):
+            # Scroll helpers have already armed their drag. Do not interpret
+            # the initial drag press as a click on a map-targeting control.
+            return
 
         # Exclude Orders turns a map-pan binding into main-map-only panning,
         # leaving that button free for the normal Orders move gesture.
@@ -1157,11 +1181,12 @@ class UnitCommandControls:
         # ``camera`` is optional only for lightweight Orders test doubles;
         # every playable map supplies it.
         camera = self.map_screen.camera
-        if camera is not None and not (event.type == pygame.MOUSEWHEEL and on_ui):
+        if (camera is not None and not getattr(event, "mobile_touch", False)
+                and not (event.type == pygame.MOUSEWHEEL and on_ui)):
             camera.handle_input(event, self.map_screen, on_ui, pan_buttons=pan_buttons)
             if (event.type == pygame.MOUSEBUTTONUP
                     and camera.finish_pan_drag(event.button)
-                    and map_input.mouse_button_has_action(event.button, "issue_orders")):
+                    and map_input.mouse_button_has_action(event, "issue_orders")):
                 return
 
         if camera is not None and event.type in (
@@ -1196,7 +1221,7 @@ class UnitCommandControls:
         # a right-click cannot fall through to full-range air repositioning.
         if (event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP)
                 and self.bombarding_unit_index is not None
-                and map_input.mouse_button_has_action(event.button, "issue_orders")):
+                and map_input.mouse_button_has_action(event, "issue_orders")):
             self.map_screen.unit_selection_drag = None
             if event.type == pygame.MOUSEBUTTONUP and not on_ui:
                 destination = queries.get_clicked_province(event.pos, self.map_screen)
@@ -1213,11 +1238,11 @@ class UnitCommandControls:
             return
 
         if (event.type == pygame.MOUSEBUTTONDOWN
-                and map_input.mouse_button_has_action(event.button, "issue_orders")):
+                and map_input.mouse_button_has_action(event, "issue_orders")):
             return
 
         if (event.type == pygame.MOUSEBUTTONUP
-                and map_input.mouse_button_has_action(event.button, "issue_orders")):
+                and map_input.mouse_button_has_action(event, "issue_orders")):
             if not on_ui and not self.read_only:
                 destination = queries.get_clicked_province(event.pos, self.map_screen)
                 if destination and self.map_screen.selected_unit_records():

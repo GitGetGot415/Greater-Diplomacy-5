@@ -21,6 +21,7 @@ import data.constants as c
 from ui.navigation.screen import (dispatch_global_keys, synthesize_keybind_mouse_events,
                        keyboard_input_is_captured)
 from ui.navigation import modal_stack
+from ui.navigation.touch_input import TouchInput
 from ui.bars import ui_bars
 from ui.panels import turn_progress
 from data.platform import IS_WEB, run_background
@@ -149,11 +150,13 @@ def _run_screen_standalone(screen, on_done, tk_parent, surface):
     """No main loop is pumping frames here, so resolve with our own blocking loop."""
     screen.done = False
     clock = pygame.time.Clock()
+    touch_input = TouchInput()
 
     try:
         with tk_hidden(tk_parent):
             while not screen.done:
                 events = pygame.event.get()
+                events = touch_input.process_events(events, screen, c.CONTROL_MODE)
                 events = synthesize_keybind_mouse_events(
                     events, allow_keydown=not keyboard_input_is_captured(screen))
                 for event in events:

@@ -657,6 +657,17 @@ def _orders_can_use_selection(map_screen, orders_screen):
             and bool(map_screen.selected_map_unit_ids()))
 
 
+def blocks_map_touch(map_screen, position, orders_screen=None):
+    """Keep map gestures out of the army tray and its editors."""
+    if map_screen.army_editor_state or map_screen.army_custom_symbol_state:
+        return True
+    if not _visible(map_screen, orders_screen):
+        return False
+    tray, armies = _layout(map_screen, show_create=orders_screen is not None,
+                            orders_screen=orders_screen)
+    return bool(armies or orders_screen is not None) and tray.collidepoint(position)
+
+
 def handle_event(map_screen, event, orders_screen=None):
     """Consume army-card input before it can select a province underneath."""
     if _handle_custom_symbol_event(map_screen, event):
@@ -680,6 +691,12 @@ def handle_event(map_screen, event, orders_screen=None):
         map_screen.army_panel_scroll_y = max(
             map_screen.army_panel_min_scroll,
             min(0, map_screen.army_panel_scroll_y + event.y * 28))
+        return True
+    if getattr(event, "mobile_touch", False) and map_screen.handle_content_drag(
+            event, attr="army_panel_scroll_y", limit_attr="army_panel_min_scroll",
+            rect_attr="army_panel_rect", drag_attr="army_panel_drag_state", refresh=False):
+        return True
+    if getattr(event, "mobile_drag", False) and tray.collidepoint(event.pos):
         return True
     if event.type != pygame.MOUSEBUTTONDOWN:
         return False

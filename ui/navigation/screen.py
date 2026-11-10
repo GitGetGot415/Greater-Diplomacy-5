@@ -246,6 +246,19 @@ class Screen:
     def additional_events(self, event):
         pass
 
+    def touch_map_at(self, position):
+        """Return a map only where this screen exposes an interactive map workspace."""
+        return None
+
+    def cancel_pointer_input(self):
+        """Release UI drag state when touch loses focus or its screen changes."""
+        self.cancel_active_drags()
+        self._cancel_pressed_elements()
+        self.is_dragging_scrollbar = False
+        for element in self.elements:
+            if hasattr(element, "dragging"):
+                element.dragging = False
+
     def go_to(self, state):
         """Hands the state machine off to another screen and closes this one."""
         self.next_state = state

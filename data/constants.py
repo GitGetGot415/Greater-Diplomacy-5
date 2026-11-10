@@ -319,6 +319,10 @@ CHECKERBOARD_WATER = get_starting_value("settings_config.json", "checkerboard_wa
 DEFAULT_MAP_NAVIGATION_MODE = get_starting_value("settings_config.json", "map_navigation_mode")
 MAP_NAVIGATION_MODE = DEFAULT_MAP_NAVIGATION_MODE
 
+CONTROL_MODES = ("AUTO", "MOBILE", "DESKTOP")
+DEFAULT_CONTROL_MODE = get_starting_value("settings_config.json", "control_mode")
+CONTROL_MODE = DEFAULT_CONTROL_MODE
+
 # How active battles are presented in the map's Units view.  COMPACT preserves
 # the original presentation, hiding units beneath an opaque combat bubble;
 # FULL leaves the units visible beneath a translucent bubble.
@@ -2309,6 +2313,7 @@ RUNTIME_SETTINGS = {
     "checkerboard_scroll_speed": "CHECKERBOARD_SCROLL_SPEED",
     "unit_art_style": "UNIT_ART_STYLE",
     "map_navigation_mode": "MAP_NAVIGATION_MODE",
+    "control_mode": "CONTROL_MODE",
     "battle_display_mode": "BATTLE_DISPLAY_MODE",
     "army_group_animations": "ARMY_GROUP_ANIMATIONS",
     "show_unclaimed": "SHOW_UNCLAIMED",

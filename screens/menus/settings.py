@@ -41,6 +41,7 @@ SETTINGS_CHECKERBOARD_SPEED_Y = SETTINGS_CHECKERBOARD_GRADIENT_Y + SETTINGS_SLID
 SETTINGS_PLAYER_SLIDER_Y = SETTINGS_CHECKERBOARD_SPEED_Y + SETTINGS_SLIDER_GAP_Y
 SETTINGS_FPS_SLIDER_Y = SETTINGS_PLAYER_SLIDER_Y + SETTINGS_SLIDER_GAP_Y
 SETTINGS_AI_THREAD_SLIDER_POS = (60, 400)
+SETTINGS_CONTROL_POS = (60, 335)
 SETTINGS_SLIDER_WIDTH = 200
 SETTINGS_RESET_Y = 650
 SETTINGS_UNIT_ART_GAP_X = 20
@@ -166,6 +167,8 @@ def render_settings_buttons(settings_screen):
 
     settings_screen.elements = [
         ui_elements.make_back_button(settings_screen.save_and_go_back, pos=SETTINGS_BACK_POS),
+        Button(*SETTINGS_CONTROL_POS, SETTINGS_OPTION_SIZE, "purple",
+               f"Controls: {settings_screen.control_mode.title()}", settings_screen.cycle_control_mode),
         Button(keybind_x, SETTINGS_FULLSCREEN_Y, SETTINGS_OPTION_SIZE, "blue", "Toggle Fullscreen", settings_screen.toggle_full),
         make_toggle_button(keybind_x, SETTINGS_CHECKERBOARD_WATER_Y, SETTINGS_OPTION_SIZE, "Checkerboard Water",
                            settings_screen.checkerboard_water, settings_screen.toggle_checkerboard_water),
@@ -373,6 +376,7 @@ class Settings(Screen):
         self.show_fps = self.controller.show_fps
         self.checkerboard_water = self.controller.checkerboard_water
         self.map_navigation_mode = self.controller.map_navigation_mode
+        self.control_mode = self.controller.control_mode
         self.battle_display_mode = self.controller.battle_display_mode
         self.army_group_animations = self.controller.army_group_animations
 
@@ -468,6 +472,15 @@ class Settings(Screen):
         self.map_navigation_mode = "PREEMPTIVE" if self.map_navigation_mode == "CLASSIC" else "CLASSIC"
         self.controller.map_navigation_mode = self.map_navigation_mode
         c.apply_runtime_settings({"map_navigation_mode": self.map_navigation_mode})
+        queries.save_global_settings(self.controller)
+        self.refresh_ui()
+
+    def cycle_control_mode(self):
+        self.control_mode = c.CONTROL_MODES[(c.CONTROL_MODES.index(self.control_mode) + 1)
+                                            % len(c.CONTROL_MODES)]
+        self.controller.control_mode = self.control_mode
+        c.apply_runtime_settings({"control_mode": self.control_mode})
+        self.controller.touch_input.cancel()
         queries.save_global_settings(self.controller)
         self.refresh_ui()
 
@@ -574,7 +587,7 @@ class Settings(Screen):
         names = (
             "target_fps", "ai_threads", "num_players", "show_fps",
             "checkerboard_water", "checkerboard_gradient_strength", "checkerboard_scroll_speed",
-            "show_intro_popup", "show_unclaimed", "map_navigation_mode",
+            "show_intro_popup", "show_unclaimed", "map_navigation_mode", "control_mode",
             "battle_display_mode", "army_group_animations", "mouse_button_actions",
         )
         for name in names:

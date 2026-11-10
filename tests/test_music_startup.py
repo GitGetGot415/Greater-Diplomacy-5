@@ -29,6 +29,7 @@ class StartupMusicTests(unittest.TestCase):
             draw=Mock(side_effect=lambda _surface: trace.append("draw")))
         controller = SimpleNamespace(
             clock=Mock(), target_fps=60, music=None,
+            touch_input=main.TouchInput(), control_mode=main.c.DEFAULT_CONTROL_MODE,
             now_playing=now_playing, _web_audio_unlocked=False, keybinds={},
             init_web_audio=Mock(), _shutdown_audio=Mock(), active_state=state,
             screen=object(), show_fps=False,
@@ -65,6 +66,13 @@ class StartupMusicTests(unittest.TestCase):
         controller.play_startup_song.assert_not_called()
         gesture = pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(10, 10))
         controller, _trace = self.run_frames([[], [gesture], [gesture]], web=True)
+        controller.init_web_audio.assert_called_once_with()
+        controller.play_startup_song.assert_called_once_with()
+
+    def test_finger_down_unlocks_browser_audio_before_a_tap_is_completed(self):
+        gesture = pygame.event.Event(pygame.FINGERDOWN, touch_id=1, finger_id=1,
+                                      x=0.5, y=0.5)
+        controller, _trace = self.run_frames([[gesture]], web=True)
         controller.init_web_audio.assert_called_once_with()
         controller.play_startup_song.assert_called_once_with()
 

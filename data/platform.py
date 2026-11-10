@@ -66,6 +66,21 @@ def is_android_browser():
     return "Android" in str(platform.window.navigator.userAgent)
 
 
+def detect_control_mode():
+    """Choose startup controls; an explicit player preference overrides this guess."""
+    if IS_WEB:
+        import platform  # pygbag supplies the browser window only on web.
+        navigator = platform.window.navigator
+        agent = str(navigator.userAgent)
+        # iPadOS can identify as macOS when requesting desktop websites.
+        ipad_desktop = (str(navigator.platform) == "MacIntel"
+                        and int(navigator.maxTouchPoints) > 1)
+        return ("MOBILE" if ipad_desktop or any(
+            name in agent for name in ("Android", "iPhone", "iPad", "iPod")) else "DESKTOP")
+    return ("MOBILE" if sys.platform in ("android", "ios")
+            or hasattr(sys, "getandroidapilevel") else "DESKTOP")
+
+
 class LoadingSteps:
     """Keep a loading iterator's work total with the iterator, including nested loads."""
 

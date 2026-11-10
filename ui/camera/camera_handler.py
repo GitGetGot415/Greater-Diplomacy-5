@@ -44,6 +44,7 @@ class MapCamera:
         self._pan_drag_moved = False
         self._finished_pan_drags = {}
         self._last_keyboard_pan_tick = None
+        self._touch_zoom_anchor = None
         # currently set to instant, but can be adjusted for smoother transitions
 
     def cancel_middle_drag(self):
@@ -83,6 +84,18 @@ class MapCamera:
         self.pos.y -= ((current_pos[1] - previous_pos[1])
                        / (self.zoom * self.tilt_factor))
         self.target_pos = pygame.Vector2(self.pos)
+
+    def pan_by(self, current_pos, previous_pos):
+        """Pan a touch gesture without depending on physical mouse bindings."""
+        self.focus_animation = False
+        self._pan_from_drag(current_pos, previous_pos)
+
+    def zoom_at(self, factor, anchor, self_map):
+        """Zoom around an explicit touch position using the ordinary camera limits."""
+        self.focus_animation = False
+        self._touch_zoom_anchor = anchor
+        self.target_zoom = max(self_map.min_zoom, min(
+            self.target_zoom * factor, c.MAX_CAMERA_ZOOM))
 
     def _pan_with_arrow_keys(self, left, right, up, down, screen_distance):
         """Move the camera target by a screen-space keyboard distance."""
@@ -149,6 +162,7 @@ class MapCamera:
             # Any manual zoom takes control away from the automatic country
             # framing animation, restoring the ordinary cursor-anchored zoom.
             self.focus_animation = False
+            self._touch_zoom_anchor = None
             zoom_change = event.y * (0.1 * self.target_zoom)
             max_zoom = c.MAX_CAMERA_ZOOM
             self.target_zoom = max(self_map.min_zoom, min(self.target_zoom + zoom_change, max_zoom))
@@ -225,7 +239,7 @@ class MapCamera:
             if self.focus_animation:
                 self.zoom += (self.target_zoom - self.zoom) * self.lerp_speed
             else:
-                mx, my = pygame.mouse.get_pos()
+                mx, my = self._touch_zoom_anchor or pygame.mouse.get_pos()
                 world_x = (mx / self.zoom) + self.pos.x
                 if self_map.loop_map:
                     world_x %= self_map.map_w
@@ -241,6 +255,8 @@ class MapCamera:
                 self.target_pos = pygame.Vector2(self.pos)
 
         # 2. Smooth Pan
+        if abs(self.zoom - self.target_zoom) <= 0.001:
+            self._touch_zoom_anchor = None
         if self.pos.distance_to(self.target_pos) > 0.1:
             if self_map.loop_map:
                 dx = ((self.target_pos.x - self.pos.x + self_map.map_w / 2)
@@ -308,6 +324,7 @@ def center_camera_on_province(camera_obj, province_center, screen_width, screen_
     which pushes the province rendering to the right on screen -- used to keep the
     selected unit clear of the orders panel that occupies the left side of the screen.
     """
+    camera_obj._touch_zoom_anchor = None
     cx, cy = province_center
     tx = cx - (screen_width / camera_obj.zoom / 2) - (x_offset / camera_obj.zoom)
     ty = cy - ((screen_height - total_ui_h) / (camera_obj.zoom * getattr(camera_obj, 'tilt_factor', 1.0)) / 2)
@@ -319,6 +336,7 @@ def center_camera_on_province(camera_obj, province_center, screen_width, screen_
 def focus_camera_on_position(camera_obj, world_position, screen_width, screen_height,
                              total_ui_h, target_zoom, animate=False):
     """Focus a camera on a world point, optionally easing pan and zoom together."""
+    camera_obj._touch_zoom_anchor = None
     cx, cy = world_position
     tilt_factor = getattr(camera_obj, "tilt_factor", 1.0)
     target_pos = pygame.Vector2(

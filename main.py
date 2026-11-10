@@ -85,7 +85,7 @@ def _import_project_modules():
     global IS_WEB, restore_persisted_dir, platform, pygame
     global ANDROID_MIXER_BUFFER_FRAMES, is_android_browser
     global Messages_Screen, dispatch_global_keys, synthesize_keybind_mouse_events, keyboard_input_is_captured, fonts, ui_elements, ui_bars, c, queries
-    global music_playback
+    global music_playback, TouchInput
     global Load_Game, Map, Menu, New_Game, Settings, Credits, Music_Player, View_Assets, Mods, Unit_Art, Keybinds, Mouse_Settings, Edit_Portrait, default_keybinds
     global Translate, Translation_Menu, Greater_Diplomacy_4_Translation, Greater_Diplomacy_Hex_Translation
     global Orders_Screen, Tactical_Orders_Screen, keybind_io, settings_schema, symbol_loader, modal_stack, screen_runner
@@ -164,6 +164,7 @@ def _import_project_modules():
     from data.io import keybind_io, settings_schema
     from ui.rendering import symbol_loader
     from ui.navigation import modal_stack, screen_runner
+    from ui.navigation.touch_input import TouchInput
     from screens.game.research import Research_Screen
     from screens.game.economy import Economy_Screen
     from screens.editors.edit_country import Edit_Country_Screen
@@ -332,6 +333,7 @@ class Controller:
         settings = loaded_data.values
         settings_schema.apply_to_controller(self, settings)
         c.apply_runtime_settings(settings)
+        self.touch_input = TouchInput()
 
         # 3. Apply volume to global sounds on boot
         ui_elements.global_sfx_volume = self.sfx_volume
@@ -793,7 +795,7 @@ class Controller:
 
             if IS_WEB and not self._web_audio_unlocked:
                 for event in events:
-                    if event.type in (pygame.MOUSEBUTTONDOWN, pygame.KEYDOWN):
+                    if event.type in (pygame.MOUSEBUTTONDOWN, pygame.FINGERDOWN, pygame.KEYDOWN):
                         self._web_audio_unlocked = True
                         self.init_web_audio()
                         self.play_startup_song()
@@ -823,6 +825,7 @@ class Controller:
             # top -- gated on *that* screen's listening_for, same as modal_stack.push
             # resolves the real screen out of a _ScreenModal wrapper.
             listening_screen = self.active_state if top_modal is None else getattr(top_modal, "screen", top_modal)
+            events = self.touch_input.process_events(events, listening_screen, self.control_mode)
             events = synthesize_keybind_mouse_events(
                 events, self.keybinds,
                 allow_keydown=not keyboard_input_is_captured(listening_screen),

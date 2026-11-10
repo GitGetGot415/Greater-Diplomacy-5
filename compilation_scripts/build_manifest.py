@@ -64,6 +64,7 @@ HIDDEN_IMPORTS = (
     "ui.background_styles",
     "ui.music_playback",
     "ui.widgets.content_browser",
+    "ui.navigation.touch_input",
 )
 RUNTIME_PACKAGES = (
     "screens", "screens.menus", "screens.setup", "screens.multiplayer",

@@ -63,6 +63,10 @@ def _coerce_song_list(value):
     return [song.replace("\\", "/") for song in value if isinstance(song, str) and song]
 
 
+def _coerce_control_mode(value):
+    return value if value in c.CONTROL_MODES else c.DEFAULT_CONTROL_MODE
+
+
 # Keep positional compatibility for older callers. JSON settings use named keys.
 SETTINGS_FIELDS = (
     _field("sfx_volume", "sfx_volume"),
@@ -116,6 +120,7 @@ SETTINGS_FIELDS = (
     # Songs for tactical battles without enemy tanks, and for tactical battles with any enemy tank.
     _field("tactical_infantry_songs", "tactical_infantry_songs", coerce=_coerce_song_list),
     _field("tactical_tank_songs", "tactical_tank_songs", coerce=_coerce_song_list),
+    _field("control_mode", "control_mode", coerce=_coerce_control_mode),
 )
 
 SETTINGS_ORDER = tuple(field.name for field in SETTINGS_FIELDS)
