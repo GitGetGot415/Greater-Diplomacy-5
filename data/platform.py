@@ -14,6 +14,7 @@ import json
 import shutil
 
 import asyncio
+from itertools import count
 import os
 import re
 import sys
@@ -117,6 +118,50 @@ def run_background(fn, *args, **kwargs):
         fn(*args, **kwargs)
     else:
         threading.Thread(target=fn, args=args, kwargs=kwargs, daemon=True).start()
+
+
+_browser_fetch_ids = count()
+
+
+async def browser_fetch_text(url, *, headers=None, timeout=3):
+    """Fetch text without blocking the web game, returning HTTP status and body.
+
+    Browser networking also serves Android's WebView. Keep each request's result
+    separate, and abort unfinished requests on timeout or task cancellation.
+    """
+    import platform  # pygbag supplies platform.window only in the browser.
+
+    key = json.dumps(f"__gd5_fetch_{next(_browser_fetch_ids)}")
+    platform.window.eval(browser_js_source(f"""
+        (() => {{
+            const state = window[{key}] = {{
+                result: null, controller: new AbortController()
+            }};
+            fetch({json.dumps(url)}, {{
+                headers: {json.dumps(headers or {})},
+                cache: 'no-store', credentials: 'omit',
+                signal: state.controller.signal
+            }}).then(async response => {{
+                const text = await response.text();
+                state.result = JSON.stringify({{status: response.status, text}});
+            }}).catch(error => {{
+                state.result = JSON.stringify({{error: String(error)}});
+            }});
+        }})();
+    """))
+    try:
+        async with asyncio.timeout(timeout):
+            while True:
+                result_json = platform.window.eval(f"window[{key}].result")
+                if result_json:
+                    result = json.loads(result_json)
+                    if "error" in result:
+                        raise OSError(result["error"])
+                    return result["status"], result["text"]
+                await asyncio.sleep(0.1)
+    finally:
+        platform.window.eval(
+            f"window[{key}].controller.abort(); delete window[{key}];")
 
 
 _download_js_defined = False

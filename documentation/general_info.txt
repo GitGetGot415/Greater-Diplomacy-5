@@ -489,6 +489,7 @@ Missing conversion tools or a failed audio conversion stop the build rather than
 Build the browser package with compilation_scripts/html_compilation.py before testing.
 The test_web_build.bat and test_web_build.sh launchers use the same Python helper.
 The launcher serves dist/web/package/ directly with Python's HTTP server and opens the browser after HTTP succeeds.
+The web bootstrap keeps dependency wheel downloads on Pygbag's public repository. Pygbag's localhost CDN proxy is not part of the static test server.
 The test launcher does not repack the game. Startup failure stops the wait.
 On Windows, closing the launcher stops the server's entire process tree, including child Python processes.
 Running the launcher again replaces its previous server for the same checkout. Other programs using port 8000 are left running.
@@ -496,6 +497,8 @@ Servers started by older launchers must be stopped once manually because those p
 After source changes, rebuild the browser package to refresh the staged game code.
 
 Android wraps the web distribution in a landscape WebView. Gameplay uses the same browser code and save storage.
+Desktop, web, and Android check the public repository's version.txt at startup and when Refresh is selected.
+Web and Android use asynchronous browser requests. All platforms compare the released version with GAME_VERSION and show the same update status.
 The initial Android target retains desktop controls. Complete touch controls and native file import/export are not implemented.
 Multiplayer and LLM support have the same restrictions as the browser build.
 Internet access is required for Pygbag's runtime downloads; the APK is not a fully offline distribution.

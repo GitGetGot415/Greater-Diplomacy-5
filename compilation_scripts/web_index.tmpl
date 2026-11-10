@@ -19,6 +19,13 @@ import asyncio
 import platform
 import json
 from pathlib import Path
+from aio.pep0723 import Config as PackageConfig
+
+# Pygbag initializes package repositories before running this bootstrap and
+# redirects their wheel URLs to /cdn/ on localhost. Static hosts do not provide
+# Pygbag's CDN proxy, so use the runtime's public repository for wheel downloads.
+for repository in PackageConfig.pkg_repolist:
+    repository["-CDN-"] = PackageConfig.PKG_BASE_DEFAULT
 
 # do not rename
 async def custom_site():

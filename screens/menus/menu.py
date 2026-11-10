@@ -16,13 +16,16 @@ import data.constants as c
 from data import queries
 from data.migrations import version_number
 from ui.dialogs import pickers
-from data.platform import IS_WEB
+from data.platform import IS_WEB, browser_fetch_text, run_background
 from ui.rendering.font_manager import fonts
 
 from ui.dialogs.character_select_screen import CHARACTERS_DIR
 from ui import dialogs
 
 # --- Dynamic Menu Text & Links ---
+MENU_VERSION_API_URL = "https://api.github.com/repos/GitGetGot415/Greater-Diplomacy-5/contents/version.txt"
+MENU_VERSION_ACCEPT = "application/vnd.github.v3.raw"
+
 # The first item will be placed at the bottom, and subsequent items will stack upwards.
 MENU_BOTTOM_TEXTS = [
     {"main_text": "Discord - ", "link_text": "https://discord.gg/f5Jugz9SKa", "url": "https://discord.gg/f5Jugz9SKa/"},
@@ -505,7 +508,7 @@ class Menu(Screen):
             })
             current_y += MENU_BOTTOM_TEXT_STEP_Y
 
-        self.version_status = "Checking version..." if not IS_WEB else "Version check unavailable"
+        self.version_status = ""
         self.version_color = (150, 150, 150) # Grey
 
         # Add refresh button in bottom right, above the text status
@@ -590,12 +593,7 @@ class Menu(Screen):
         self._version_draw_pos = (0, 0)
         self._position_center_buttons(0.0)
 
-        # Start version check in background so it doesn't freeze the menu.
-        # Skipped entirely on web: no real OS threads under Pyodide, and the
-        # blocking urllib call it makes has no browser-safe path either, so
-        # there's nothing useful to do here even synchronously.
-        if not IS_WEB:
-            threading.Thread(target=self.check_version, daemon=True).start()
+        self.trigger_version_check()
 
     def _position_center_buttons(self, progress):
         """Move the panel and all center buttons with the same vertical offset."""
@@ -683,24 +681,59 @@ class Menu(Screen):
             self.hildehrand_image = plain
 
     def trigger_version_check(self):
-        if IS_WEB:
-            return
         if self.version_status != "Checking version...":
             self.version_status = "Checking version..."
             self.version_color = (150, 150, 150)
-            threading.Thread(target=self.check_version, daemon=True).start()
+            if IS_WEB:
+                run_background(self.check_version_web)
+            else:
+                threading.Thread(target=self.check_version, daemon=True).start()
+
+    def _set_version_status(self, fetched_version):
+        fetched_version = fetched_version.strip()
+        current_number = version_number(c.GAME_VERSION)
+        fetched_number = version_number(fetched_version)
+        if not current_number or not fetched_number:
+            raise ValueError("Invalid game version")
+        if current_number == fetched_number:
+            self.version_status = f"Version: {c.GAME_VERSION} (Up to date)"
+            self.version_color = c.COLOR_SUCCESS_GREEN
+        elif current_number > fetched_number:
+            self.version_status = f"Dev version: {c.GAME_VERSION} (Current: {fetched_version})"
+            self.version_color = (100, 160, 255)
+        else:
+            self.version_status = f"Outdated! Latest: {fetched_version} (Current: {c.GAME_VERSION})"
+            self.version_color = (255, 100, 100)
+
+    async def check_version_web(self):
+        try:
+            # Let the browser own TLS and User-Agent. Only Accept is needed,
+            # which also avoids a CORS preflight for custom request headers.
+            status, text = await browser_fetch_text(
+                MENU_VERSION_API_URL, headers={"Accept": MENU_VERSION_ACCEPT})
+            if status in (403, 429):
+                status, text = await browser_fetch_text(
+                    f"{c.VERSION_CHECK_URL}?t={int(time.time())}")
+            if status != 200:
+                raise OSError(f"Version check returned HTTP {status}")
+            self._set_version_status(text)
+        except OSError:
+            self.version_status = f"Version: {c.GAME_VERSION} (Offline)"
+            self.version_color = (255, 200, 100)
+        except ValueError:
+            self.version_status = f"Version: {c.GAME_VERSION} (Error checking)"
+            self.version_color = (255, 100, 100)
 
     def check_version(self):
         try:
             # We use the GitHub API directly instead of the raw content URL because 
             # raw.githubusercontent.com aggressively caches files for 5 minutes via Fastly CDN,
             # and ignores query parameters. The API serves the exact real-time content.
-            api_url = "https://api.github.com/repos/GitGetGot415/Greater-Diplomacy-5/contents/version.txt"
             req = urllib.request.Request(
-                api_url, 
+                MENU_VERSION_API_URL,
                 headers={
                     'User-Agent': 'Greater-Diplomacy-5-Game',
-                    'Accept': 'application/vnd.github.v3.raw',
+                    'Accept': MENU_VERSION_ACCEPT,
                     'Cache-Control': 'no-cache'
                 }
             )
@@ -722,21 +755,7 @@ class Menu(Screen):
                 else:
                     raise e
 
-            fetched_version = response.read().decode('utf-8').strip()
-            
-            current_number = version_number(c.GAME_VERSION)
-            fetched_number = version_number(fetched_version)
-            if not current_number or not fetched_number:
-                raise ValueError("Invalid game version")
-            if current_number == fetched_number:
-                self.version_status = f"Version: {c.GAME_VERSION} (Up to date)"
-                self.version_color = c.COLOR_SUCCESS_GREEN # Green
-            elif current_number > fetched_number:
-                self.version_status = f"Dev version: {c.GAME_VERSION} (Current: {fetched_version})"
-                self.version_color = (100, 160, 255) # Blue
-            else:
-                self.version_status = f"Outdated! Latest: {fetched_version} (Current: {c.GAME_VERSION})"
-                self.version_color = (255, 100, 100) # Red
+            self._set_version_status(response.read().decode('utf-8'))
 
             # FORCE TEXT:
             # self.version_status = "Version: v30 (Up to date)"

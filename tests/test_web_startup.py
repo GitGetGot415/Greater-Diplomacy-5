@@ -1,12 +1,14 @@
 """Browser startup must not require native audio or tournament encryption."""
 
 import asyncio
-from contextlib import redirect_stderr
+import ast
+from contextlib import redirect_stderr, redirect_stdout
 import io
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
+from types import ModuleType, SimpleNamespace
 import unittest
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -15,6 +17,32 @@ from compilation_scripts import test_web_build
 
 
 class WebStartupTests(unittest.TestCase):
+    def test_web_bootstrap_uses_remote_wheels_after_localhost_rewrite(self):
+        template = Path(__file__).resolve().parent.parent / "compilation_scripts/web_index.tmpl"
+        python_source = template.read_text(encoding="utf-8").split("#<!--", 1)[1].split("# BEGIN BLOCK", 1)[0]
+        bootstrap = ast.parse(python_source)
+        # Run the real setup before custom_site starts unpacking the game.
+        setup = []
+        for node in bootstrap.body:
+            if isinstance(node, ast.AsyncFunctionDef):
+                break
+            setup.append(node)
+
+        repository = {"-CDN-": "http://localhost:8000/cdn/", "numpy": "cp312/numpy.whl"}
+        config = SimpleNamespace(
+            PKG_BASE_DEFAULT="https://wheels.example/", pkg_repolist=[repository])
+        aio = ModuleType("aio")
+        pep0723 = ModuleType("aio.pep0723")
+        pep0723.Config = config
+        aio.pep0723 = pep0723
+        with patch.dict(sys.modules, {"aio": aio, "aio.pep0723": pep0723}), \
+                redirect_stdout(io.StringIO()):
+            exec(compile(ast.Module(body=setup, type_ignores=[]), str(template), "exec"), {})
+
+        self.assertIs(config.pkg_repolist[0], repository)
+        self.assertEqual(repository["-CDN-"], config.PKG_BASE_DEFAULT)
+        self.assertEqual(repository["numpy"], "cp312/numpy.whl")
+
     def test_startup_imports_without_native_only_dependencies(self):
         probe = r'''
 import importlib.abc
