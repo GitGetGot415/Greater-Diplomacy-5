@@ -85,10 +85,10 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
 
-      - name: Install pygbag
+      - name: Install web build tools
         run: |
           python -m pip install --upgrade pip
-          pip install pygbag
+          pip install pygbag imageio-ffmpeg
 
       # The committed module must be the one requirements.txt asks for.
       #
@@ -116,12 +116,12 @@ jobs:
           echo "libdragoman.so matches open-dragoman $ver"
 
       - name: Build with pygbag
-        run: python -m pygbag --build main.py
+        run: python compilation_scripts/html_compilation.py
 
       - name: The archive carries the translation layer
         run: |
           set -e
-          archive=$(ls build/web/*.apk | head -1)
+          archive=$(ls dist/web/package/*.apk | head -1)
           test -n "$archive" || { echo "pygbag produced no archive"; exit 1; }
           echo "checking $archive"
           # pygbag's .apk is a zip; the side module has to be inside it or the
@@ -134,7 +134,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: gd5-web
-          path: build/web
+          path: dist/web
           if-no-files-found: error
 
   build-macos:
@@ -205,13 +205,13 @@ jobs:
         shell: bash
         run: |
           set -e
-          found=$(find dist -iname "libdragoman*" 2>/dev/null | head -3 || true)
+          found=$(find dist/macos -iname "libdragoman*" 2>/dev/null | head -3 || true)
           if [ -z "$found" ]; then
-            echo "::error title=No translation layer in the build::dist/ contains \
+            echo "::error title=No translation layer in the build::dist/macos/ contains \
             no libdragoman library, so Translate would fail for everyone who \
             downloads this. Check --collect-all dragoman (PyInstaller) or the \
             'dragoman' entry in compilation_scripts/setup.py (py2app)."
-            find dist -maxdepth 3 -type d | head -20
+            find dist/macos -maxdepth 3 -type d | head -20
             exit 1
           fi
           echo "translation layer found in:"
@@ -221,5 +221,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: gd5-macos
-          path: dist/*.zip
+          path: dist/macos/*.zip
           if-no-files-found: error

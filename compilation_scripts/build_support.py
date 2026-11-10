@@ -132,6 +132,23 @@ def mac_data_files(root):
     return list(grouped.items())
 
 
+def export_web_build(root, web_output, archive, archive_name):
+    """Export runnable files and their ZIP without including the ZIP in the runtime."""
+    root, web_output, archive = Path(root).resolve(), Path(web_output).resolve(), Path(archive)
+    if not (web_output / "index.html").is_file():
+        raise FileNotFoundError(f"Web build produced no index.html in {web_output}")
+    if not archive.is_file():
+        raise FileNotFoundError(f"Web build produced no release archive at {archive}")
+    destination = Path(verified_build_path(root, manifest.WEB_DIST_DIR))
+    content = Path(verified_build_path(root, manifest.WEB_CONTENT_DIR))
+    if destination.exists():
+        shutil.rmtree(destination)
+    shutil.copytree(web_output, content)
+    exported_archive = destination / archive_name
+    shutil.copy2(archive, exported_archive)
+    return content, exported_archive
+
+
 def stage_android_project(root, web_output, destination):
     """Refresh the wrapper and web assets, retaining Gradle's incremental build cache."""
     root, web_output = Path(root).resolve(), Path(web_output).resolve()

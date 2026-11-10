@@ -1,4 +1,4 @@
-"""Run pygbag's test server and open the browser once HTTP is ready."""
+"""Serve the exported web distribution and open the browser once HTTP is ready."""
 
 from pathlib import Path
 import os
@@ -16,7 +16,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if __name__ == "__main__" and str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from compilation_scripts import web_server_process
+from compilation_scripts import build_manifest as manifest, web_server_process
 
 SERVER_HOST = "localhost"
 SERVER_PORT = 8000
@@ -33,11 +33,11 @@ def wait_for_server(process, url, timeout=STARTUP_TIMEOUT_SECONDS):
                 if response.status == 200:
                     return
         except (URLError, OSError):
-            pass  # Packing and CDN caching finish before pygbag serves HTTP.
+            pass  # The server has not opened its listener yet.
         if time.monotonic() >= deadline:
-            raise TimeoutError("The web server did not start. Check the pygbag output above.")
+            raise TimeoutError("The web server did not start. Check the server output above.")
         time.sleep(0.25)
-    raise RuntimeError(f"Pygbag exited before the web server was ready (exit {process.returncode}).")
+    raise RuntimeError(f"Web server exited before HTTP was ready (exit {process.returncode}).")
 
 
 def ensure_server_port_available(replaced_server=False):
@@ -45,7 +45,7 @@ def ensure_server_port_available(replaced_server=False):
     deadline = time.monotonic() + (SERVER_RELEASE_TIMEOUT_SECONDS if replaced_server else 0)
     while True:
         # Test for a listener. A plain bind also rejects TIME_WAIT connections,
-        # even though pygbag's HTTPServer can reuse the released address.
+        # even though Python's HTTPServer can reuse the released address.
         with socket.socket() as probe:
             probe.settimeout(0.2)
             if probe.connect_ex((SERVER_HOST, SERVER_PORT)) != 0:
@@ -56,7 +56,8 @@ def ensure_server_port_available(replaced_server=False):
 
 
 def main():
-    if not (REPO_ROOT / "web_stage/build/web/index.html").is_file():
+    web_output = REPO_ROOT / manifest.WEB_CONTENT_DIR
+    if not (web_output / "index.html").is_file():
         print("No web build found. Run compilation_scripts/html_compilation.py first.")
         return 1
 
@@ -74,11 +75,8 @@ def main():
         return 1
 
     command = [
-        sys.executable, "-m", "pygbag",
-        "--app_name", "Greater Diplomacy 5",
-        "--disable-sound-format-error", "--ume_block", "0",
-        # Match the build template, including the canvas aspect ratio.
-        "--template", "compilation_scripts/web_index.tmpl", "web_stage",
+        sys.executable, "-m", "http.server", str(SERVER_PORT),
+        "--bind", SERVER_HOST, "--directory", str(web_output),
     ]
     print("Preparing the web test server. The browser opens when HTTP is ready.", flush=True)
     process = None

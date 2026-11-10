@@ -283,6 +283,84 @@ class BuildManifestTests(unittest.TestCase):
             finally:
                 os.chdir(original_directory)
 
+    def test_macos_build_preserves_other_platform_outputs_and_caches(self):
+        # Exercise the entry point with a temporary compiler/ditto fixture, not macOS tools.
+        from compilation_scripts import macos_compilation
+
+        original_directory = os.getcwd()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            output, work = root / "packages/macos", root / "work/macos"
+            for folder in (output, work):
+                folder.mkdir(parents=True)
+                (folder / "obsolete.dat").write_bytes(b"old macOS output")
+            siblings = (root / "packages/android/game.apk", root / "packages/windows/game.exe",
+                        root / "packages/web/index.html", root / "work/android/cache.dat")
+            for sibling in siblings:
+                sibling.parent.mkdir(parents=True, exist_ok=True)
+                sibling.write_bytes(b"keep")
+
+            def run_fixture(command):
+                if command[0] == "ditto":
+                    self.assertEqual(Path(command[-2]), output / "package")
+                    self.assertTrue((output / "package/main.app/Contents/MacOS/main").is_file())
+                    Path(command[-1]).write_bytes(b"macOS archive")
+                else:
+                    self.assertEqual(Path(command[command.index("--dist-dir") + 1]), output)
+                    self.assertEqual(Path(command[command.index("--bdist-base") + 1]), work)
+                    app = output / "main.app/Contents/MacOS/main"
+                    app.parent.mkdir(parents=True)
+                    app.write_bytes(b"macOS executable")
+                    work.mkdir(parents=True)
+                return subprocess.CompletedProcess(command, 0)
+
+            try:
+                with patch.object(macos_compilation, "REPO_ROOT", str(root)), \
+                        patch.object(manifest, "MACOS_DIST_DIR", "packages/macos"), \
+                        patch.object(manifest, "MACOS_BUILD_DIR", "work/macos"), \
+                        patch.object(macos_compilation.subprocess, "run", side_effect=run_fixture), \
+                        patch.object(macos_compilation, "reset_runtime_files"):
+                    macos_compilation.main()
+                for sibling in siblings:
+                    self.assertEqual(sibling.read_bytes(), b"keep")
+                self.assertFalse((output / "obsolete.dat").exists())
+                self.assertFalse((work / "obsolete.dat").exists())
+                self.assertEqual(len(list(output.glob("*.zip"))), 1)
+                self.assertTrue((output / "package/README.txt").is_file())
+            finally:
+                os.chdir(original_directory)
+
+    def test_web_export_preserves_siblings_and_separates_archive_from_runtime(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            source = root / "browser-output"
+            source.mkdir()
+            (source / "index.html").write_text("game", encoding="utf-8")
+            (source / "game.apk").write_bytes(b"game bundle")
+            archive = root / "release.zip"
+            archive.write_bytes(b"web archive")
+            output = root / "packages/web"
+            output.mkdir(parents=True)
+            (output / "obsolete.dat").write_bytes(b"old")
+            siblings = [root / "packages" / name / "keep.dat" for name in ("windows", "macos", "android")]
+            for sibling in siblings:
+                sibling.parent.mkdir()
+                sibling.write_bytes(b"keep")
+            with patch.object(manifest, "WEB_DIST_DIR", "packages/web"), \
+                    patch.object(manifest, "WEB_CONTENT_DIR", "packages/web/package"):
+                content, release = support.export_web_build(root, source, archive, "GD5 WEB fixture.zip")
+                self.assertEqual((content / "index.html").read_text(), "game")
+                self.assertEqual((content / "game.apk").read_bytes(), b"game bundle")
+                self.assertEqual(release.read_bytes(), b"web archive")
+                self.assertEqual(list(content.glob("*.zip")), [])
+                self.assertFalse((output / "obsolete.dat").exists())
+                # A failed rebuild must leave the previous exported package available.
+                with self.assertRaises(FileNotFoundError):
+                    support.export_web_build(root, source, root / "missing.zip", "new.zip")
+                self.assertEqual(release.read_bytes(), b"web archive")
+            for sibling in siblings:
+                self.assertEqual(sibling.read_bytes(), b"keep")
+
 
 if __name__ == "__main__":
     unittest.main()

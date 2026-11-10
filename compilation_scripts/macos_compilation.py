@@ -12,6 +12,7 @@ if __name__ == "__main__" and REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
 import data.constants as c
+from compilation_scripts import build_manifest as manifest
 from compilation_scripts.build_support import reset_runtime_files, verified_build_path
 
 def remove_dir_safely(dir_path, retries=5, delay=0.2):
@@ -30,8 +31,8 @@ def remove_dir_safely(dir_path, retries=5, delay=0.2):
 
 def main():
     os.chdir(REPO_ROOT)
-    build_dir = verified_build_path(REPO_ROOT, "build")
-    dist_dir = verified_build_path(REPO_ROOT, "dist")
+    build_dir = verified_build_path(REPO_ROOT, manifest.MACOS_BUILD_DIR)
+    dist_dir = verified_build_path(REPO_ROOT, manifest.MACOS_DIST_DIR)
 
     # 1. Clean old build
     if os.path.exists(build_dir):
@@ -46,12 +47,13 @@ def main():
     print("Running py2app...")
     # setup.py lives alongside this script in compilation_scripts/, but py2app resolves
     # its DATA_FILES (assets, base_maps, etc.) relative to the CWD it's invoked from --
-    # which main() sets to REPO_ROOT, so this still lands dist/build
-    # at the project root exactly like before.
+    # which main() sets to REPO_ROOT. Keep temporary and exported files in
+    # their platform directories so other builds remain available.
     # Keep using the interpreter that started this wrapper.  In particular,
     # invoking this file with venv/bin/python must not silently switch to a
     # system ``python3`` without py2app or the BeepBox runtime installed.
-    cmd = [sys.executable, "compilation_scripts/setup.py", "py2app"]
+    cmd = [sys.executable, "compilation_scripts/setup.py", "py2app",
+           "--dist-dir", dist_dir, "--bdist-base", build_dir]
     # setup.py includes the air resolver, unit event recorder, and Unit events screen.
     # It also includes the scenario Unit Stats Editor.
 
@@ -125,7 +127,7 @@ def main():
 
     print("\nCompilation and zipping finished successfully.")
     print("To test the application, you can run the following command in terminal:")
-    print("    ./dist/package/main.app/Contents/MacOS/main\n")
+    print(f"    ./{manifest.MACOS_DIST_DIR}/package/main.app/Contents/MacOS/main\n")
 
 if __name__ == "__main__":
     main()

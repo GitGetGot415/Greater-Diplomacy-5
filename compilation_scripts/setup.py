@@ -32,6 +32,8 @@ def configure_py2app_tk_recipe():
 
 APP = ['main.py']
 OPTIONS = {
+    'dist_dir': manifest.MACOS_DIST_DIR,
+    'bdist_base': manifest.MACOS_BUILD_DIR,
     'packages': list(manifest.RUNTIME_PACKAGES + manifest.NATIVE_PACKAGES),
     'includes': list(manifest.MAC_INCLUDES),
     'excludes': ['PyInstaller', 'PySide6', 'PyQt6', 'PyQt5'],

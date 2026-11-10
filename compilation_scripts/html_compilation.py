@@ -12,7 +12,7 @@ if __name__ == "__main__" and REPO_ROOT not in sys.path:
 
 import data.constants as c
 from compilation_scripts import build_manifest as manifest
-from compilation_scripts.build_support import include_asset, is_git_ignored, stage_release, verified_build_path
+from compilation_scripts.build_support import export_web_build, include_asset, is_git_ignored, stage_release, verified_build_path
 
 # Build-time only tools (not needed to run the game itself, so not in requirements.txt,
 # same convention as PyInstaller/py2app for the other two platform builds):
@@ -121,17 +121,10 @@ def main():
     build_web_dir = os.path.join(STAGE_DIR, "build", "web")
     print(f"pygbag build finished. Output in {build_web_dir}/")
 
-    # 4. Rename pygbag's own web.zip to match the "GD5 <PLATFORM> <version>.zip" convention
-    zip_name = f"GD5 WEB {c.GAME_VERSION}"
+    # 4. Export only this platform's distribution, retaining the versioned ZIP name.
     src_zip = os.path.join(STAGE_DIR, "build", "web.zip")
-    dst_zip = os.path.join(STAGE_DIR, "build", f"{zip_name}.zip")
-    if os.path.exists(src_zip):
-        if os.path.exists(dst_zip):
-            os.remove(dst_zip)
-        shutil.move(src_zip, dst_zip)
-        print(f"Zip ready at {dst_zip}. Upload it directly to itch.io, or unzip {build_web_dir}/ and serve it from any static host.")
-    else:
-        print(f"Warning: expected pygbag archive not found at {src_zip}; check {build_web_dir}/ directly.")
+    content_dir, dst_zip = export_web_build(REPO_ROOT, build_web_dir, src_zip, f"GD5 WEB {c.GAME_VERSION}.zip")
+    print(f"Zip ready at {dst_zip}. Upload it directly to itch.io, or serve {content_dir}/ from any static host.")
 
 
 if __name__ == "__main__":

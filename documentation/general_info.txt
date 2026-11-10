@@ -474,16 +474,22 @@ Both modules are safe to import without game or native audio initialization.
 Platform entry points retain their packaging tools and native archive procedures.
 
 Windows retains explicit PyInstaller hidden imports.
+All distributions export under dist/, with separate windows/, macos/, web/, and android/ folders.
 Windows builds clean only dist/windows/ and write the executable, loose runtime files, and release ZIP there.
-Other platform outputs under dist/, including Android APKs, are preserved by Windows compilation.
 macOS retains explicit py2app packages, the tkinter recipe workaround, and the ditto archive procedure.
+macOS builds clean only build/macos/ and dist/macos/. The release ZIP is in dist/macos/;
+the unpacked app and its README are in dist/macos/package/.
+Web builds export the release ZIP to dist/web/ and runnable files to dist/web/package/.
+web_stage/ remains temporary build material. The exported web package contains no source staging folder or build cache.
+Each build preserves other platforms' distribution folders. macOS cleanup also preserves other platforms' build caches.
 Desktop packages retain loose source copies for the existing source-replacement loader.
 Web retains libdragoman.so, the HTML template, and staged audio conversion.
 MP3 music and effects require imageio-ffmpeg at build time. Install it with python -m pip install imageio-ffmpeg.
 Missing conversion tools or a failed audio conversion stop the build rather than packaging silent MP3 files.
 Build the browser package with compilation_scripts/html_compilation.py before testing.
 The test_web_build.bat and test_web_build.sh launchers use the same Python helper.
-The browser opens after pygbag serves HTTP successfully. Startup failure stops the wait.
+The launcher serves dist/web/package/ directly with Python's HTTP server and opens the browser after HTTP succeeds.
+The test launcher does not repack the game. Startup failure stops the wait.
 On Windows, closing the launcher stops the server's entire process tree, including child Python processes.
 Running the launcher again replaces its previous server for the same checkout. Other programs using port 8000 are left running.
 Servers started by older launchers must be stopped once manually because those processes have no owned Windows job.
@@ -499,6 +505,7 @@ Create a virtual phone or tablet in Device Manager, including its system image.
 Use the project's Python environment and install build tools with python -m pip install pygbag==0.9.3 imageio-ffmpeg.
 Run android_compilation.bat on Windows or android_compilation.command on macOS, in compilation_scripts/.
 The build launcher rebuilds the web game, stages the Android project, and runs the pinned Gradle wrapper.
+Android staging reads dist/web/package/, keeping the web release ZIP out of the APK.
 The first build downloads Gradle and Android build dependencies. Later builds reuse the downloads.
 The build reads GAME_VERSION for Android's version name and writes dist/android/GD5 Android.apk.
 This APK is signed with the local debug key for installation and testing. Store publication requires release signing.

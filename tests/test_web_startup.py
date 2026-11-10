@@ -3,8 +3,10 @@
 import asyncio
 from contextlib import redirect_stderr
 import io
+from pathlib import Path
 import subprocess
 import sys
+import tempfile
 import unittest
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -64,7 +66,7 @@ main._import_project_modules()
             test_web_build.wait_for_server(process, "http://localhost:12345/")
         self.assertEqual(request.call_count, 2)
 
-    def test_launcher_stops_waiting_when_pygbag_exits(self):
+    def test_launcher_stops_waiting_when_server_exits(self):
         process = Mock(returncode=1)
         process.poll.return_value = 1
         with patch.object(test_web_build, "urlopen") as request:
@@ -78,6 +80,41 @@ main._import_project_modules()
         with patch.object(test_web_build, "urlopen", side_effect=ConnectionRefusedError()):
             with self.assertRaises(TimeoutError):
                 test_web_build.wait_for_server(process, "http://localhost:12345/", timeout=0)
+
+    def test_launcher_serves_exported_package_without_repacking(self):
+        launched = []
+
+        class FixtureServer:
+            def __init__(self, command, cwd):
+                launched.append(command)
+
+            def wait(self):
+                return 0
+
+            def poll(self):
+                return 0
+
+            def close(self):
+                pass
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            content = root / "export/web/package"
+            content.mkdir(parents=True)
+            (content / "index.html").write_text("game", encoding="utf-8")
+            with patch.object(test_web_build, "REPO_ROOT", root), \
+                    patch.object(test_web_build.manifest, "WEB_CONTENT_DIR", "export/web/package"), \
+                    patch.object(test_web_build, "ensure_server_port_available"), \
+                    patch.object(test_web_build, "wait_for_server"), \
+                    patch.object(test_web_build.webbrowser, "open"), \
+                    patch.object(test_web_build.web_server_process, "stop_previous_server", return_value=False), \
+                    patch.object(test_web_build.web_server_process, "WindowsServerProcess", FixtureServer), \
+                    patch.object(test_web_build.subprocess, "Popen", FixtureServer):
+                self.assertEqual(test_web_build.main(), 0)
+            self.assertEqual(len(launched), 1)
+            command = launched[0]
+            self.assertEqual(command[command.index("-m") + 1], "http.server")
+            self.assertEqual(Path(command[command.index("--directory") + 1]), content)
 
 
 if __name__ == "__main__":

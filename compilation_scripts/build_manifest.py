@@ -9,6 +9,10 @@ SOURCE_PACKAGES = ("data", "ui", "screens", "map_logic")
 SOURCE_FILES = ("main.py", "mod_loader.py", "beepbox_audio.py")
 DESKTOP_SOURCE_FILES = SOURCE_FILES + ("soloud.py",)
 WINDOWS_DIST_DIR = "dist/windows"
+MACOS_DIST_DIR = "dist/macos"
+MACOS_BUILD_DIR = "build/macos"
+WEB_DIST_DIR = "dist/web"
+WEB_CONTENT_DIR = WEB_DIST_DIR + "/package"
 WEB_SOURCE_FILES = SOURCE_FILES + ("libdragoman.so",)
 # Android runs the web distribution. Keep its native wrapper out of desktop/web archives.
 ANDROID_PROJECT_DIR = "compilation_scripts/android"

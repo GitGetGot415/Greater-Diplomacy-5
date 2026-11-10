@@ -31,7 +31,7 @@ def build_apk(skip_web_build=False):
     if not skip_web_build:
         subprocess.run([sys.executable, str(REPO_ROOT / "compilation_scripts/html_compilation.py")],
                        cwd=REPO_ROOT, check=True)
-    stage_android_project(REPO_ROOT, REPO_ROOT / "web_stage/build/web", android_tools.PROJECT_DIR)
+    stage_android_project(REPO_ROOT, REPO_ROOT / manifest.WEB_CONTENT_DIR, android_tools.PROJECT_DIR)
 
     # Defer game/content imports so --help and missing-tool errors work without pygame.
     from data.constants import GAME_VERSION

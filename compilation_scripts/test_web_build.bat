@@ -1,6 +1,6 @@
 @echo off
 title GD5 Web Build Server
-:: This script lives in compilation_scripts/, but web_stage/ and venv/ are both at
+:: This script lives in compilation_scripts/, but dist/ and venv/ are both at
 :: the project root, so hop up one level from this script's own directory.
 cd /d "%~dp0.."
 
