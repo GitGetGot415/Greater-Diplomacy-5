@@ -125,8 +125,8 @@ and closer, half volume at zoom 0.5. Interface sounds such as button clicks are 
 See MUSIC PLAYBACK in [general_info.txt](general_info.txt) for selection and persistence.
 
 Preview and actual battle have square gear (Settings) and music (Music) icon buttons. Each opens its screen over the battle,
-and Back returns to the same preview or battle with its simulation unchanged; combat time does not pass
-while either screen is open. The tactical song keeps playing through both screens and after Back.
+and Back returns to the same preview or battle with its simulation unchanged. Opening either screen
+during actual battle pauses it, and it stays paused after Back until **Resume** is chosen. The tactical song keeps playing through both screens and after Back.
 
 **Start** is available only in preview. Choosing **Start** opens actual battle with the prepared forces.
 In a custom battle, **Retreat** returns to editing while preserving the army setup.

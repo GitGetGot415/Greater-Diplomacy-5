@@ -393,6 +393,7 @@ class CustomBattleScreen(Screen):
             self.done = False
             self.next_state = None
             self.last_tick = pygame.time.get_ticks()
+            self.refresh_ui()  # The Pause button must read Resume if opening the screen paused the battle.
             return
         if self.campaign is not None:
             self._end_campaign()
@@ -470,6 +471,8 @@ class CustomBattleScreen(Screen):
             return
         self.cancel_active_drags()
         self.clear_controls()
+        if self.mode == "battle":
+            self.simulation.paused = True  # Stays paused after Back until the player chooses Resume.
         self.viewing_overlay = True
         self.go_to(state)
 
