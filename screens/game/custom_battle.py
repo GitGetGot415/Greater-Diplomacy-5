@@ -88,6 +88,8 @@ TERRAIN_COLORS = {
 # Out of 255. Foliage is opaque until a living sub-unit stands beneath it; then the leaves still
 # mostly hide that sub-unit and the trunk, which show faintly.
 FOLIAGE_ALPHA = 200
+FOLIAGE_GREEN_VARIATION = 14  # Most a tree's shade can lighten or darken the foliage's green channel.
+FOLIAGE_SHADE_STEPS = 7  # Shades snap to this many steps, so trees share a few cached sprites.
 FEATURE_COLORS = {
     "rock": ((39, 32, 30), (70, 58, 49), (107, 88, 68), (146, 121, 91)),
     "chasm": ((72, 47, 36), (40, 30, 30), (20, 22, 27)),
@@ -1449,18 +1451,24 @@ class CustomBattleScreen(Screen):
                     surface.fill(check_color, (x0, y0, x1 - x0, y1 - y0))
         pygame.draw.rect(surface, OUTLINE_COLOR, field.inflate(6, 6), 3)
 
-    def _tree_sprite(self, part, size, width=None, see_through=False):
+    def _tree_sprite(self, part, size, width=None, see_through=False, shade=0.0):
         """A tree image at the current zoom: a trunk scaled to its hitbox width, or foliage at its own size.
 
-        See-through foliage uses FOLIAGE_ALPHA so the sub-units and trunk beneath it show faintly.
+        ``shade`` (-1 to 1) lightens or darkens the green slightly. See-through foliage uses
+        FOLIAGE_ALPHA so the sub-units and trunk beneath it show faintly.
         """
         source = _tree_art(part, size)
         width = source.get_width() if width is None else width
         pixels = max(2, round(width * self.zoom))
-        key = part, size, pixels, see_through
+        step = round((shade + 1) / 2 * (FOLIAGE_SHADE_STEPS - 1))
+        key = part, size, pixels, see_through, step
         if key not in self.terrain_sprites:
             height = max(2, round(source.get_height() * pixels / source.get_width()))
             sprite = pygame.transform.scale(source, (pixels, height))
+            # Only the green channel changes, so every tree keeps a shade of the image's own green.
+            green = round((step / (FOLIAGE_SHADE_STEPS - 1) * 2 - 1) * FOLIAGE_GREEN_VARIATION)
+            if green:
+                sprite.fill((0, abs(green), 0), special_flags=pygame.BLEND_RGB_ADD if green > 0 else pygame.BLEND_RGB_SUB)
             if see_through:
                 sprite.set_alpha(FOLIAGE_ALPHA)
             self.terrain_sprites[key] = sprite
@@ -1483,8 +1491,9 @@ class CustomBattleScreen(Screen):
                 self.terrain_art.append((feature, self._tree_sprite("Trunk", feature.trunk, feature.radius * 2)))
                 # Foliage covers a sub-unit once their outlines overlap. Images use one pixel per battlefield unit.
                 reach = _tree_art("Foliage", feature.foliage).get_width() / 2 + combat.UNIT_RADIUS
-                self.canopy_art.append((feature, self._tree_sprite("Foliage", feature.foliage),
-                                        self._tree_sprite("Foliage", feature.foliage, see_through=True), reach))
+                self.canopy_art.append((feature, self._tree_sprite("Foliage", feature.foliage, shade=feature.shade),
+                                        self._tree_sprite("Foliage", feature.foliage, see_through=True,
+                                                          shade=feature.shade), reach))
                 continue
             radius = max(2, round(feature.radius * self.zoom))
             key = feature.kind, radius, feature.height if feature.kind == "hill" else 0

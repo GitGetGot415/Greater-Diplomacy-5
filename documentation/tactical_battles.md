@@ -198,7 +198,8 @@ Raised ground intercepts shots through a crest;
 climbing toward the crest opens firing lines. Units and guns use the ground height at their position.
 Mountains have a brown background, more mounds, impassable rocks, and occasional chasms.
 Chasms block ground movement but allow shots across.
-Forests have a green background and tree patches. Jungle has a dark green background and denser tree patches.
+Forests have a green background and tree patches. Jungle has a dark green background, denser tree patches,
+and a few marsh areas, fewer than swamps have.
 Each tree has a trunk of size 1, 2, or 3 and a random foliage size no larger than its trunk: foliage 1 fits
 any trunk, foliage 2 needs trunk 2 or 3, and foliage 3 needs trunk 3. The `Trunk` and `Foliage` images in
 `assets/battles/terrain` draw them. The trunk is the tree's hitbox. `TREE_TRUNK_RADII` in
@@ -206,6 +207,7 @@ any trunk, foliage 2 needs trunk 2 or 3, and foliage 3 needs trunk 3. The `Trunk
 scaled to that radius. Trunks never overlap: at least `TREE_TRUNK_GAP` of open ground separates neighboring
 trunks, and a tree that would crowd another is not planted.
 Foliage only draws, covering units and shots, while health bars, flags, and the player's controls stay on top.
+Each tree's foliage is a slightly lighter or darker green (`FOLIAGE_GREEN_VARIATION` and `FOLIAGE_SHADE_STEPS`).
 Foliage is opaque until a living sub-unit's outline overlaps it. That foliage then turns partly transparent
 (`FOLIAGE_ALPHA` in [screens/game/custom_battle.py](../screens/game/custom_battle.py)), so the sub-unit and
 trunk show faintly beneath it.

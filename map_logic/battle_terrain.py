@@ -36,10 +36,12 @@ MAX_CACHED_ROUTES = 2048
 # Hills, tree patches, trees per patch, rocks, and impassable water/gaps.
 TERRAIN_RECIPES = {
     "plains": (0, 0, 0, 0, 0), "desert": (0, 0, 0, 0, 0),
-    "hills": (6, 0, 0, 0, 0), "forest": (0, 12, 7, 0, 0),
-    "jungle": (0, 22, 11, 0, 0), "mountain": (13, 0, 0, 7, 4),
-    "swamp": (0, 10, 7, 0, 7),
+    "hills": (6, 0, 0, 0, 0), "forest": (0, 18, 14, 0, 0),
+    "jungle": (0, 30, 22, 0, 3), "mountain": (13, 0, 0, 7, 4),
+    "swamp": (0, 16, 12, 0, 7),
 }
+# What the impassable water/gaps of each recipe are. Both stop movement and let shots across.
+GAP_KINDS = {"mountain": "chasm", "jungle": "marsh", "swamp": "marsh"}
 BLOCKS_MOVEMENT = frozenset(("tree", "rock", "chasm", "marsh"))
 
 
@@ -72,6 +74,7 @@ class Feature:
     # Trees only: the Trunk and Foliage image sizes. Foliage is drawn and never blocks anything.
     trunk: int = 1
     foliage: int = 1
+    shade: float = 0.0  # Trees only, drawing only: -1 darkest to 1 lightest variation of the foliage's green.
 
 
 class Battlefield:
@@ -111,7 +114,7 @@ class Battlefield:
         for _ in range(rocks):
             place("rock", rng.uniform(*HAZARD_RADIUS), ROCK_HEIGHT)
         for _ in range(gaps):
-            place("marsh" if terrain == "swamp" else "chasm", rng.uniform(*HAZARD_RADIUS))
+            place(GAP_KINDS[terrain], rng.uniform(*HAZARD_RADIUS))
         for _ in range(patches):
             center = (rng.uniform(left + PATCH_RADIUS, right - PATCH_RADIUS),
                       rng.uniform(EDGE_CLEARANCE + PATCH_RADIUS, size[1] - EDGE_CLEARANCE - PATCH_RADIUS))
@@ -128,7 +131,7 @@ class Battlefield:
                        < feature.radius + radius + (TREE_TRUNK_GAP if feature.kind == "tree" else 0.0)
                        for feature in field.features):
                     continue
-                place("tree", radius, TREE_HEIGHT, point, trunk=trunk, foliage=foliage)
+                place("tree", radius, TREE_HEIGHT, point, trunk=trunk, foliage=foliage, shade=rng.uniform(-1.0, 1.0))
         field._index_features()
         field._connect_ground()
         return field

@@ -1306,6 +1306,7 @@ class TacticalTerrainTests(unittest.TestCase):
         for tree in trees:
             self.assertEqual(tree.radius, battle_terrain.TREE_TRUNK_RADII[tree.trunk])
             self.assertTrue(1 <= tree.foliage <= tree.trunk)
+            self.assertTrue(-1.0 <= tree.shade <= 1.0)
         # Trunks never overlap or crowd each other: open ground of at least TREE_TRUNK_GAP separates them.
         for seed in range(5):
             field = battle_terrain.Battlefield.generate(
