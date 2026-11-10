@@ -506,6 +506,9 @@ Use the project's Python environment and install build tools with python -m pip 
 Run android_compilation.bat on Windows or android_compilation.command on macOS, in compilation_scripts/.
 The build launcher rebuilds the web game, stages the Android project, and runs the pinned Gradle wrapper.
 Android staging reads dist/web/package/, keeping the web release ZIP out of the APK.
+Android includes only the gzip game bundle; the duplicate ZIP-format Pygbag .apk stays in the web distribution.
+Each Android build cleans the wrapper's app outputs before packaging so incremental APK updates do not retain unused archive space.
+Gradle downloads and dependency caches remain available between builds.
 The first build downloads Gradle and Android build dependencies. Later builds reuse the downloads.
 The build reads GAME_VERSION for Android's version name and writes dist/android/GD5 Android.apk.
 This APK is signed with the local debug key for installation and testing. Store publication requires release signing.

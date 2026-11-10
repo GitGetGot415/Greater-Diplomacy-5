@@ -25,6 +25,8 @@ ANDROID_PROJECT_FILES = (
 ANDROID_APPLICATION_ID = "org.greaterdiplomacy.gd5"
 ANDROID_APK = "dist/android/GD5 Android.apk"
 ANDROID_ICON = "assets/icon/icon.png"
+# Android loads the gzip game bundle. Pygbag's ZIP-format .apk is only for web hosting.
+ANDROID_WEB_EXCLUDED_PATTERNS = ("*.apk",)
 DATA_DIRS = ("assets", "base_maps", "scenarios")
 EMPTY_DIRS = ("saves", "tournament_saves", "mods")
 WEB_EXCLUDED_SUBPACKAGES = ()

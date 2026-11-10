@@ -38,7 +38,9 @@ def build_apk(skip_web_build=False):
 
     wrapper = android_tools.PROJECT_DIR / ("gradlew.bat" if os.name == "nt" else "gradlew")
     print(f"Building Android APK with {java}...", flush=True)
-    subprocess.run([str(wrapper), "--no-daemon", "--console=plain", ":app:assembleDebug",
+    # Recreate the APK so incremental ZIP updates cannot leave unused space behind.
+    # This cleans only the wrapper's app outputs; downloaded Gradle dependencies remain cached.
+    subprocess.run([str(wrapper), "--no-daemon", "--console=plain", ":app:clean", ":app:assembleDebug",
                     f"-Pgd5ApplicationId={manifest.ANDROID_APPLICATION_ID}",
                     f"-Pgd5VersionName={GAME_VERSION}"],
                    cwd=android_tools.PROJECT_DIR, env=environment, check=True)

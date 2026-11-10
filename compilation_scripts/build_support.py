@@ -164,7 +164,8 @@ def stage_android_project(root, web_output, destination):
     assets = Path(verified_build_path(root, destination / "app/src/main/assets/www"))
     if assets.exists():
         shutil.rmtree(assets)
-    shutil.copytree(web_output, assets)
+    shutil.copytree(web_output, assets,
+                    ignore=shutil.ignore_patterns(*manifest.ANDROID_WEB_EXCLUDED_PATTERNS))
     # AAPT expands .gz assets and drops their suffix, even with noCompress.
     # Keep the gzip bytes Pygbag expects and change only the Android copy's URL.
     index_path = assets / "index.html"

@@ -28,10 +28,12 @@ class AndroidPackagingTests(unittest.TestCase):
             web.mkdir()
             (web / "index.html").write_text("current game: game.tar.gz")
             (web / "game.tar.gz").write_bytes(b"game archive")
+            (web / "game.apk").write_bytes(b"redundant web ZIP archive")
             destination = root / "wrapper-output"
             build_support.stage_android_project(root, web, destination)
             assets = destination / "app/src/main/assets/www"
             (assets / "removed-asset.dat").write_bytes(b"old")
+            (assets / "game.apk").write_bytes(b"left over from an older Android build")
             (destination / "compile-cache.dat").write_bytes(b"keep")
             (web / "index.html").write_text("updated game: game.tar.gz")
             build_support.stage_android_project(root, web, destination)
@@ -39,6 +41,8 @@ class AndroidPackagingTests(unittest.TestCase):
             self.assertEqual((assets / "game.tar.gz.bin").read_bytes(), b"game archive")
             self.assertEqual((web / "index.html").read_text(), "updated game: game.tar.gz")
             self.assertEqual((web / "game.tar.gz").read_bytes(), b"game archive")
+            self.assertFalse((assets / "game.apk").exists())
+            self.assertEqual((web / "game.apk").read_bytes(), b"redundant web ZIP archive")
             self.assertFalse((assets / "removed-asset.dat").exists())
             self.assertEqual((destination / "compile-cache.dat").read_bytes(), b"keep")
             self.assertTrue((destination / "app/src/main/res/drawable/icon.png").is_file())
