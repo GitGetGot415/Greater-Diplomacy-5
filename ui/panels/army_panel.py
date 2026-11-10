@@ -668,6 +668,28 @@ def blocks_map_touch(map_screen, position, orders_screen=None):
     return bool(armies or orders_screen is not None) and tray.collidepoint(position)
 
 
+def _assignment_target_at(map_screen, position, tray, armies, orders_screen):
+    if (orders_screen is None or not tray.collidepoint(position)
+            or not _orders_can_use_selection(map_screen, orders_screen)):
+        return None
+    return next((army for index, army in enumerate(armies)
+                 if army["id"] != c.UNASSIGNED_ARMY_ID
+                 and map_top_right_layout.card_rect(tray, index,
+                         map_screen.army_panel_scroll_y).collidepoint(position)), None)
+
+
+def has_secondary_action_at(map_screen, position, orders_screen=None):
+    """Whether a hold on this card can assign selected units to a different army."""
+    if (map_screen is None or map_screen.army_editor_state
+            or map_screen.army_custom_symbol_state or not _visible(map_screen, orders_screen)):
+        return False
+    tray, armies = _layout(map_screen, show_create=orders_screen is not None,
+                            orders_screen=orders_screen)
+    target = _assignment_target_at(map_screen, position, tray, armies, orders_screen)
+    return bool(target is not None and any(unit_id not in target["unit_ids"]
+                for unit_id in map_screen.selected_map_unit_ids()))
+
+
 def handle_event(map_screen, event, orders_screen=None):
     """Consume army-card input before it can select a province underneath."""
     if _handle_custom_symbol_event(map_screen, event):
@@ -704,14 +726,10 @@ def handle_event(map_screen, event, orders_screen=None):
         if orders_screen is None or not tray.collidepoint(event.pos):
             return False
         map_screen._army_tray_right_click_active = True
-        for index, army in enumerate(armies):
-            rect = map_top_right_layout.card_rect(tray, index, map_screen.army_panel_scroll_y)
-            if rect.colliderect(tray) and rect.collidepoint(event.pos):
-                if (army["id"] != c.UNASSIGNED_ARMY_ID
-                        and _orders_can_use_selection(map_screen, orders_screen)):
-                    map_screen.assign_selection_to_army(army["id"])
-                    orders_screen.refresh_ui()
-                return True
+        target = _assignment_target_at(map_screen, event.pos, tray, armies, orders_screen)
+        if target is not None:
+            map_screen.assign_selection_to_army(target["id"])
+            orders_screen.refresh_ui()
         return True
     if event.button != 1:
         return False

@@ -1065,6 +1065,22 @@ class UnitCommandControls:
         if self.map_screen is not None:
             self.map_screen.cancel_pointer_input()
 
+    def _secondary_input_blocked(self):
+        return (self.map_screen is None or bool(self.map_screen.army_editor_state
+                                               or self.map_screen.army_custom_symbol_state))
+
+    def has_secondary_action_at(self, position):
+        if self._secondary_input_blocked():
+            return False
+        if army_panel.has_secondary_action_at(self.map_screen, position, orders_screen=self):
+            return True
+        # Armed targeting already accepts an ordinary click at the destination.
+        if self.read_only or self.bombarding_unit_index is not None:
+            return False
+        return (self.touch_map_at(position) is self.map_screen
+                and map_input.has_secondary_map_action(self.map_screen, position,
+                                                       allow_relations=False))
+
     def handle_events(self, events):
         for event in events:
             # Opening a combat bubble consumes its release even if the new

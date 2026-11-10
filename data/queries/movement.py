@@ -1,6 +1,7 @@
 """Unit move steps, path-finding, and air move orders."""
 
 import collections
+import data.constants as c
 from data.state_access import world_for
 from data.queries.geometry import is_water_province
 from data.queries.unit_info import (
@@ -24,6 +25,36 @@ from data.queries.air import (
     available_air_missions,
 )
 from data import queries
+
+
+def plan_unit_move_orders(context, records, destination, append=False):
+    """Prepare the same selected-unit routes for execution and input availability."""
+    choices = []
+    for unit, origin in records:
+        is_aircraft = queries.is_air_unit(unit, context=context)
+        air_mission = queries.air_unit_mission(unit) if is_aircraft else None
+        if air_mission in queries.AIR_INTERCEPTION_PRIORITIES:
+            raise ValueError("Choose Move or Strike, or cancel the aircraft's defense mission, before moving.")
+        order = unit.get("order", {})
+        if isinstance(order, dict) and order.get("type") in c.ORDERS_BLOCKING_MOVEMENT:
+            raise ValueError("Cannot move units with a blocking order.")
+        if is_aircraft and (not queries.air_unit_can_move_on_ground(unit, context=context)
+                or air_mission == "STRIKE"
+                or (air_mission != "MOVE" and queries.air_move_is_strike(context, unit, destination))):
+            choices.append((unit, origin, queries.air_move_order(context, unit, origin, destination)))
+            continue
+        old_path = (list(order.get("path", [])) if append and isinstance(order, dict)
+                    and order.get("type") == "MOVE" else [])
+        start = context.id_to_province.get(old_path[-1]) if old_path else origin
+        if start is None:
+            raise ValueError("A selected unit has an invalid queued route.")
+        segment = queries.find_unit_move_path(
+            unit, start, destination["id"], context.id_to_province, context.nation_data, context=context)
+        if segment is None:
+            raise ValueError("No legal route exists for every selected unit.")
+        path = old_path + segment
+        choices.append((unit, origin, {"type": "MOVE", "path": path} if path else None))
+    return choices
 
 
 def can_unit_move_step(unit, current_province, destination, nation_data, *, context=None):

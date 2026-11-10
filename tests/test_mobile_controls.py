@@ -6,13 +6,18 @@ from unittest import mock
 
 import pygame
 
-from data import constants as c, platform as game_platform
+from data import constants as c, platform as game_platform, queries
 from data.io import settings_schema
+from map_logic.actions import unit_actions
 from screens.game import map_input
+from screens.game.map import Map
+from screens.game.orders import Orders_Screen, _OrdersRowHitbox
+from tests.stub_map_screen import map_double
 from ui.camera.camera_handler import MapCamera
 from ui.navigation.screen import Screen
 from ui.navigation.touch_input import TouchInput, HOLD_MILLISECONDS
 from ui.widgets.ui_elements import Button, Slider
+from ui.panels import army_panel, map_top_right_layout
 
 
 def finger(kind, position, number=1):
@@ -37,6 +42,7 @@ class TouchGestureTests(unittest.TestCase):
         pygame.init()
         pygame.display.set_mode((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
         self.owner = Screen()
+        self.owner.has_secondary_action_at = lambda pos: True
         self.map = SimpleNamespace(camera=MapCamera(1), min_zoom=1)
         self.owner.touch_map_at = lambda pos: self.map
         with mock.patch("ui.navigation.touch_input.detect_control_mode", return_value="MOBILE"):
@@ -68,6 +74,39 @@ class TouchGestureTests(unittest.TestCase):
         self.now = HOLD_MILLISECONDS + 1
         self.assertEqual(self.send(), [])
         self.assertEqual([event.button for event in self.release()], [3, 3])
+
+    def test_long_hold_on_ordinary_button_is_a_click_without_progress(self):
+        self.owner.touch_map_at = lambda pos: None
+        del self.owner.has_secondary_action_at  # Ordinary screens opt out by default.
+        callback = mock.Mock()
+        self.owner.elements = [Button(450, 275, (100, 50), "blue", "Music", callback,
+                                      sound_kind="open_music")]
+        for down, up in ((finger(pygame.FINGERDOWN, (500, 300)),
+                          finger(pygame.FINGERUP, (500, 300))),
+                         (mouse(pygame.MOUSEBUTTONDOWN), mouse(pygame.MOUSEBUTTONUP))):
+            with self.subTest(input=pygame.event.event_name(down.type)):
+                callback.reset_mock()
+                self.owner.handle_events(self.send(down))
+                self.now += HOLD_MILLISECONDS * 2
+                self.assertIsNone(self.touch.hold_progress())
+                events = self.send(up)
+                self.assertEqual([event.button for event in events], [1, 1])
+                with mock.patch("ui.widgets.ui_elements.play_ui_sound") as sound:
+                    self.owner.handle_events(events)
+                callback.assert_called_once_with()
+                sound.assert_called_once_with("open_music")
+
+    def test_secondary_availability_is_cached_for_progress_and_rechecked_on_release(self):
+        available = self.owner.has_secondary_action_at = mock.Mock(return_value=True)
+        self.press()
+        available.assert_called_once_with((500, 300))
+        self.now += HOLD_MILLISECONDS
+        for _ in range(5):
+            self.assertEqual(self.touch.hold_progress(), 1.0)
+        available.assert_called_once()
+        available.return_value = False
+        self.assertEqual(self.release(), [])
+        self.assertEqual(available.call_count, 2)
 
     def test_hold_progress_matches_release_readiness_for_touch_and_mouse(self):
         for down, up in ((finger(pygame.FINGERDOWN, (500, 300)),
@@ -354,6 +393,148 @@ class TouchGestureTests(unittest.TestCase):
             for event in events:
                 map_input._handle_map_unit_selection(game, event, True)
             game.issue_selected_move_orders.assert_not_called()
+
+
+class SecondaryActionAvailabilityTests(unittest.TestCase):
+    def setUp(self):
+        pygame.init()
+        pygame.display.set_mode((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
+        self.unit = {"owner": "A", "type": "Fixture", "unit_id": "selected"}
+        self.origin = {"id": 1, "owner": "A", "units": [self.unit], "neighbors": [2]}
+        self.destination = {"id": 2, "owner": "A", "units": [], "neighbors": [1]}
+        self.game = map_double(
+            player_country="A", nation_data={"A": {"armies": []}},
+            map_data={"one": self.origin, "two": self.destination},
+            id_to_province={1: self.origin, 2: self.destination},
+            selected_province=self.origin, secondary_mode="UNITS", is_refreshing=False,
+            selected_unit_records=lambda: [(self.unit, self.origin)],
+            selected_map_unit_ids=lambda: ["selected"], can_select_map_units=mock.Mock(return_value=True))
+        self.game.can_issue_selected_move_orders = lambda destination, append=False: Map.can_issue_selected_move_orders(
+            self.game, destination, append)
+        self.enterContext(mock.patch.object(queries, "is_air_unit", return_value=False))
+        self.path = self.enterContext(mock.patch.object(queries, "find_unit_move_path", return_value=[2]))
+        self.enterContext(mock.patch.object(queries, "can_unit_move_step", return_value=True))
+
+    def test_move_availability_uses_legal_routes_without_changing_orders(self):
+        self.assertTrue(self.game.can_issue_selected_move_orders(self.destination))
+        self.assertNotIn("order", self.unit)
+        self.assertEqual(self.game.nation_data, {"A": {"armies": []}})
+        self.path.return_value = None
+        self.assertFalse(self.game.can_issue_selected_move_orders(self.destination))
+        self.assertNotIn("order", self.unit)
+
+    def test_move_availability_rejects_noop_blocked_and_uncommandable_units(self):
+        self.unit["order"] = {"type": "MOVE", "path": [2]}
+        self.assertFalse(self.game.can_issue_selected_move_orders(self.destination))
+        self.unit["order"] = {"type": "DISBAND", "turns_left": 1}
+        self.assertFalse(self.game.can_issue_selected_move_orders(self.destination))
+        self.unit.pop("order")
+        self.game.can_select_map_units.return_value = False
+        self.assertFalse(self.game.can_issue_selected_move_orders(self.destination))
+        self.game.can_select_map_units.return_value = True
+        self.game.tactical_mode = True
+        self.game.player_unit = {"owner": "A", "unit_id": "other"}
+        self.assertFalse(self.game.can_issue_selected_move_orders(self.destination))
+
+    def test_map_hint_requires_a_valid_destination_and_selection(self):
+        with mock.patch.object(queries, "get_clicked_province", return_value=self.destination) as hit:
+            self.assertTrue(map_input.has_secondary_map_action(self.game, (600, 350)))
+            self.game.selected_unit_records = lambda: []
+            self.assertFalse(map_input.has_secondary_map_action(self.game, (600, 350)))
+            self.game.selected_unit_records = lambda: [(self.unit, self.origin)]
+            hit.return_value = None
+            self.assertFalse(map_input.has_secondary_map_action(self.game, (600, 350)))
+
+    def test_map_controls_block_secondary_actions_behind_the_ui(self):
+        self.game.touch_map_at = mock.Mock(return_value=None)
+        with mock.patch.object(map_input, "has_secondary_map_action") as available:
+            self.assertFalse(Map.has_secondary_action_at(self.game, (600, 350)))
+        available.assert_not_called()
+
+    def test_relations_hold_only_offers_a_different_viewpoint(self):
+        self.game.map_mode = "RELATIONS"
+        self.game.selected_unit_records = lambda: []
+        self.game.nation_data["B"] = {}
+        foreign = {"id": 3, "owner": "B", "units": []}
+        with (mock.patch.object(queries, "get_clicked_province", return_value=foreign) as hit,
+              mock.patch.object(map_input.refresh_map, "shown_relations_viewpoint", return_value=None) as shown):
+            self.assertTrue(map_input.has_secondary_map_action(self.game, (600, 350)))
+            shown.return_value = "B"
+            self.assertFalse(map_input.has_secondary_map_action(self.game, (600, 350)))
+            hit.return_value = self.destination
+            self.assertTrue(map_input.has_secondary_map_action(self.game, (600, 350)))
+            shown.return_value = None
+            self.assertFalse(map_input.has_secondary_map_action(self.game, (600, 350)))
+            hit.return_value = foreign
+            self.assertFalse(map_input.has_secondary_map_action(self.game, (600, 350),
+                                                                allow_relations=False))
+
+    def test_editor_paint_holds_require_an_owner_to_pick_or_a_core_to_remove(self):
+        self.game.is_editor = True
+        self.game.editor_selection_tool = "PAINT"
+        self.game.editor_mode = "NATION"
+        self.game.brush_nation = "B"
+        with mock.patch.object(queries, "get_clicked_province", return_value=self.destination):
+            self.assertTrue(map_input.has_secondary_map_action(self.game, (600, 350)))
+            self.game.brush_nation = "A"
+            self.assertFalse(map_input.has_secondary_map_action(self.game, (600, 350)))
+            self.game.editor_mode = "CORE"
+            self.destination["cores"] = ["A"]
+            self.assertTrue(map_input.has_secondary_map_action(self.game, (600, 350)))
+            self.destination["cores"] = []
+            self.assertFalse(map_input.has_secondary_map_action(self.game, (600, 350)))
+
+    def test_unit_roster_hold_requires_an_enabled_secondary_callback(self):
+        row = _OrdersRowHitbox(pygame.Rect(10, 10, 100, 40), mock.Mock(), mock.Mock(),
+                               secondary_guard=mock.Mock(return_value=True))
+        screen = object.__new__(Orders_Screen)
+        screen.map_screen = self.game
+        screen.elements = [row]
+        screen.panel_rect = pygame.Rect(0, 0, 450, 650)
+        screen.battle_screen = None
+        screen.bombarding_unit_index = None
+        screen.read_only = False
+        self.assertTrue(screen.has_secondary_action_at((20, 20)))
+        row.secondary_guard.return_value = False
+        self.assertFalse(screen.has_secondary_action_at((20, 20)))
+        row.secondary_guard.return_value = True
+        row.click_guard = lambda: False
+        self.assertFalse(screen.has_secondary_action_at((20, 20)))
+        row.click_guard = None
+        row.disabled = True
+        self.assertFalse(screen.has_secondary_action_at((20, 20)))
+        row.disabled = False
+        self.game.army_editor_state = {"open": True}
+        self.assertFalse(screen.has_secondary_action_at((20, 20)))
+
+    def test_army_hint_only_offers_a_real_reassignment_and_uses_existing_callback(self):
+        self.game.army_panel_visible_in_orders = True
+        self.game.handle_content_drag = lambda *_args, **_kwargs: False
+        self.game.assign_selection_to_army = mock.Mock()
+        orders = SimpleNamespace(read_only=False, battle_screen=None, refresh_ui=mock.Mock())
+        tray = pygame.Rect(900, 150, 320, 250)
+        armies = [{"id": c.UNASSIGNED_ARMY_ID, "unit_ids": ["selected"]},
+                  {"id": "target", "unit_ids": ["other"]}]
+        card = map_top_right_layout.card_rect(tray, 1, 0)
+        with mock.patch.object(army_panel, "_layout", return_value=(tray, armies)):
+            available = lambda: army_panel.has_secondary_action_at(self.game, card.center, orders)
+            self.assertTrue(available())
+            orders.read_only = True
+            self.assertFalse(available())
+            orders.read_only = False
+            self.game.can_select_map_units.return_value = False
+            self.assertFalse(available())
+            self.game.can_select_map_units.return_value = True
+            armies[1]["unit_ids"].append("selected")
+            self.assertFalse(available())
+            armies[1]["unit_ids"].remove("selected")
+            for event in (pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=3, pos=card.center),
+                          pygame.event.Event(pygame.MOUSEBUTTONUP, button=3, pos=card.center)):
+                army_panel.handle_event(self.game, event, orders_screen=orders)
+            self.game.assign_selection_to_army.assert_called_once_with("target")
+            orders.refresh_ui.assert_called_once_with()
+            unassigned = map_top_right_layout.card_rect(tray, 0, 0)
+            self.assertFalse(army_panel.has_secondary_action_at(self.game, unassigned.center, orders))
 
 
 class ControlModeTests(unittest.TestCase):

@@ -250,6 +250,10 @@ class Screen:
         """Return a map only where this screen exposes an interactive map workspace."""
         return None
 
+    def has_secondary_action_at(self, position):
+        """Whether holding here offers an action distinct from an ordinary click."""
+        return False
+
     def cancel_pointer_input(self):
         """Release UI drag state when touch loses focus or its screen changes."""
         self.cancel_active_drags()

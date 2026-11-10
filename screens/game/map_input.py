@@ -482,6 +482,34 @@ def _interactive_province(map_screen, pos):
     return province
 
 
+def has_secondary_map_action(map_screen, position, *, allow_relations=True):
+    """Evaluate a hold at an input boundary; rendering uses the cached result."""
+    if (map_screen.selection_mode or map_screen.is_refreshing
+            or map_screen._ignore_right_until_release):
+        return False
+    province = _interactive_province(map_screen, position)
+    if map_screen.is_editor:
+        # Paint already handles a synthetic right press. Other brush modes
+        # require the physical right button to stay pressed while painting.
+        if (province is None or province.get("owner") in c.WATER_NATIONS
+                or map_screen.editor_selection_tool != "PAINT"):
+            return False
+        if map_screen.editor_mode == "NATION":
+            return province.get("owner", "Unclaimed") != map_screen.brush_nation
+        if map_screen.editor_mode == "CORE":
+            return any(map_screen.brush_nation in target.get("cores", [])
+                       for target in queries.get_editor_paint_region(
+                           province, map_screen.id_to_province, "CORE"))
+        return False
+    if (allow_relations and map_screen.map_mode == "RELATIONS"
+            and not map_screen.selected_unit_records()):
+        return (refresh_map.relations_viewpoint_for(map_screen, province)
+                != refresh_map.shown_relations_viewpoint(map_screen))
+    return (map_screen.secondary_mode == "UNITS"
+            and map_screen.can_issue_selected_move_orders(
+                province, append=bool(pygame.key.get_mods() & pygame.KMOD_SHIFT)))
+
+
 def _handle_relations_viewpoint_click(map_screen, event, on_ui):
     """Right-click a country in the Relations view to see the map as it sees everyone.
 

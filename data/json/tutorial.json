@@ -76,7 +76,7 @@
                         {
                             "type": "text",
                             "align": "center",
-                            "text": "Customize mouse gestures in Settings > Mouse Settings. Settings > Controls selects Auto, Mobile, or Desktop. Mobile controls: tap to select; hold still for half a second until the circle fills clockwise, then release for a right-click action; drag the map with one finger to pan; pinch or spread two fingers to zoom. Drag a scrollable panel to scroll its content. In Mobile mode, the left mouse button uses the same tap, hold, and drag gestures. The mouse wheel, other mouse buttons, and keyboard controls still work."
+                            "text": "Customize mouse gestures in Settings > Mouse Settings. Settings > Controls selects Auto, Mobile, or Desktop. Mobile controls: tap to select; where a secondary action is available, hold until the circle fills clockwise, then release to perform the action. Ordinary buttons have no circle and still activate when held and released. Drag the map with one finger to pan; pinch or spread two fingers to zoom. Drag a scrollable panel to scroll its content. In Mobile mode, the left mouse button uses the same tap, hold, and drag gestures. The mouse wheel, other mouse buttons, and keyboard controls still work."
                         }
                     ]
                 },

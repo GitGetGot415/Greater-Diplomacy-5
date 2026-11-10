@@ -53,7 +53,8 @@ class TouchInput:
 
     def hold_progress(self):
         """Return the release action's progress, or None outside a stationary hold."""
-        if (self.gesture is None or self.gesture["dragging"] or self.blocked
+        if (self.gesture is None or not self.gesture["secondary"]
+                or self.gesture["dragging"] or self.blocked
                 or self.pinch_distance is not None or len(self.pointers) != 1):
             return None
         return max(0.0, min(1.0, (pygame.time.get_ticks() - self.gesture["time"])
@@ -155,6 +156,11 @@ class TouchInput:
                    and dist(event.pos, self._finger_position(finger)) < DRAG_THRESHOLD_PIXELS
                    for finger in finger_events)
 
+    def _has_secondary_action(self, position):
+        # Basic dialogs need only ordinary clicks and do not implement this hook.
+        available = getattr(self.owner, "has_secondary_action_at", None)
+        return bool(available and available(position))
+
     def _pointer(self, kind, pointer, position):
         if kind == pygame.FINGERDOWN:
             self.pointers[pointer] = position
@@ -165,7 +171,8 @@ class TouchInput:
                 map_screen = hit_map(position) if hit_map else None
                 self.gesture = {"start": position, "last": position,
                                 "time": pygame.time.get_ticks(), "map": map_screen,
-                                "dragging": False}
+                                "dragging": False,
+                                "secondary": self._has_secondary_action(position)}
             elif (len(self.pointers) == 2 and MOUSE_POINTER not in self.pointers
                   and self.gesture and self.gesture["map"] is not None):
                 hit_map = self.owner.touch_map_at(position)
@@ -198,7 +205,13 @@ class TouchInput:
                         [self._mouse(pygame.MOUSEBUTTONUP, position)])
             if dist(gesture["start"], position) >= DRAG_THRESHOLD_PIXELS:
                 return []
-            button = 3 if progress == 1.0 else 1
+            button = 1
+            if progress == 1.0:
+                # A menu, selection, or permission may have changed during the
+                # hold. Cancel a stale secondary action instead of clicking through.
+                if not self._has_secondary_action(position):
+                    return []
+                button = 3
             return [self._mouse(pygame.MOUSEBUTTONDOWN, position, button),
                     self._mouse(pygame.MOUSEBUTTONUP, position, button)]
 

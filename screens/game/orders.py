@@ -54,11 +54,12 @@ class _OrdersRowHitbox(Button):
     the sound. Orders_Screen.additional_draw draws the row.
     """
 
-    def __init__(self, rect, callback, secondary_callback=None):
+    def __init__(self, rect, callback, secondary_callback=None, secondary_guard=None):
         super().__init__(rect.x, rect.y, "tiny_square", "grey", "", callback,
                          show_text=False, sound_kind=None)
         self.rect = pygame.Rect(rect)
         self.secondary_callback = secondary_callback
+        self.secondary_guard = secondary_guard
 
     def draw(self, surface):
         pass
@@ -174,6 +175,25 @@ class Orders_Screen(UnitCommandControls, Screen):
             return
         super().handle_back_key()
 
+    def _secondary_row_at(self, position):
+        return next((element for element in self.elements
+                     if isinstance(element, _OrdersRowHitbox)
+                     and element.secondary_callback is not None
+                     and element.visible and element.rect.collidepoint(position)), None)
+
+    @staticmethod
+    def _secondary_row_enabled(row):
+        return (not row.disabled and (row.click_guard is None or row.click_guard())
+                and (row.secondary_guard is None or row.secondary_guard()))
+
+    def has_secondary_action_at(self, position):
+        if self._secondary_input_blocked():
+            return False
+        row = self._secondary_row_at(position)
+        if row is not None:
+            return self._secondary_row_enabled(row)
+        return super().has_secondary_action_at(position)
+
     def _handle_panel_event(self, event):
         if army_panel.handle_event(self.map_screen, event, orders_screen=self):
             return True
@@ -182,14 +202,9 @@ class Orders_Screen(UnitCommandControls, Screen):
         # membership in the map-wide selection. Right-clicks elsewhere
         # retain their normal map movement-order behavior.
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
-            row_hitbox = next((element for element in self.elements
-                               if isinstance(element, _OrdersRowHitbox)
-                               and element.secondary_callback is not None
-                               and element.visible
-                               and element.rect.collidepoint(event.pos)), None)
+            row_hitbox = self._secondary_row_at(event.pos)
             if row_hitbox is not None:
-                if (row_hitbox.click_guard is None
-                        or row_hitbox.click_guard()):
+                if self._secondary_row_enabled(row_hitbox):
                     row_hitbox.secondary_callback()
                 return True
         return False
@@ -779,7 +794,8 @@ class Orders_Screen(UnitCommandControls, Screen):
                 self.toggle_selected_unit(selected_unit, selected_province),
                 lambda selected_unit=unit, selected_province=province:
                 self.toggle_selected_unit(selected_unit, selected_province,
-                                          additive=True))
+                                          additive=True),
+                lambda selected_unit=unit: not self._command_blocked_silent(selected_unit))
             hitbox.is_scrollable = True
             hitbox.click_guard = row_guard
             self.elements.append(hitbox)

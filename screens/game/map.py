@@ -2490,6 +2490,10 @@ class Map(StateAccess, Screen):
             self.navigation_intro_popup.is_dragging = False
             self.navigation_intro_popup._scroll_drag_offset = None
 
+    def has_secondary_action_at(self, position):
+        return (self.touch_map_at(position) is self
+                and map_input.has_secondary_map_action(self, position))
+
     def handle_events(self, events):
         """Route the live navigation guide before HUD buttons and map input."""
         for event in events:
@@ -2610,47 +2614,30 @@ class Map(StateAccess, Screen):
         records = self.selected_unit_records()
         if not records:
             return False
-        planned = []
-        for unit, origin in records:
-            is_aircraft = queries.is_air_unit(unit, context=self)
-            air_mission = queries.air_unit_mission(unit) if is_aircraft else None
-            if air_mission in queries.AIR_INTERCEPTION_PRIORITIES:
-                self.show_feedback("Choose Move or Strike, or cancel the aircraft's defense mission, before moving.")
-                return False
-            order = unit.get("order", {})
-            if isinstance(order, dict) and order.get("type") in c.ORDERS_BLOCKING_MOVEMENT:
-                self.show_feedback("Cannot move units with a blocking order.")
-                return False
-            if is_aircraft and (not queries.air_unit_can_move_on_ground(unit, context=self)
-                    or air_mission == "STRIKE"
-                    or (air_mission != "MOVE" and queries.air_move_is_strike(self, unit, destination))):
-                try:
-                    air_order = queries.air_move_order(self, unit, origin, destination)
-                except ValueError as exc:
-                    self.show_feedback(str(exc))
-                    return False
-                planned.append((unit, origin, air_order))
-                continue
-            old_path = (list(order.get("path", [])) if append and isinstance(order, dict)
-                        and order.get("type") == "MOVE" else [])
-            start = self.id_to_province.get(old_path[-1]) if old_path else origin
-            if start is None:
-                self.show_feedback("A selected unit has an invalid queued route.")
-                return False
-            segment = queries.find_unit_move_path(
-                unit, start, destination["id"], self.id_to_province, self.nation_data, context=self)
-            if segment is None:
-                self.show_feedback("No legal route exists for every selected unit.")
-                return False
-            planned.append((unit, origin, old_path + segment))
-
-        choices = [(unit, origin, path if isinstance(path, dict) else
-                    {"type": "MOVE", "path": path} if path else None)
-                   for unit, origin, path in planned]
+        try:
+            choices = queries.plan_unit_move_orders(self, records, destination, append)
+        except ValueError as exc:
+            self.show_feedback(str(exc))
+            return False
         unit_actions.apply_batch(self, self.player_country, choices)
         self.invalidate_map_presentation_cache()
-        self.show_feedback(f"{len(planned)} unit{'s' if len(planned) != 1 else ''} routed to province {destination['id']}")
+        self.show_feedback(f"{len(choices)} unit{'s' if len(choices) != 1 else ''} routed to province {destination['id']}")
         return True
+
+    def can_issue_selected_move_orders(self, destination, append=False):
+        """Preview meaningful movement without changing orders, resources, or feedback."""
+        if not self.can_select_map_units() or not destination:
+            return False
+        try:
+            choices = queries.plan_unit_move_orders(self, self.selected_unit_records(), destination, append)
+            prepared = []
+            for unit, origin, order in choices:
+                if not unit_actions.unit_permission(self, self.player_country, unit):
+                    return False
+                prepared.append(unit_actions.prepare_action(self, self.player_country, origin, unit, order))
+        except ValueError:
+            return False
+        return any(result.changed for result in prepared)
 
     def selected_map_unit_ids(self):
         """Persistent IDs for the currently commandable selection."""
