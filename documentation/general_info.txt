@@ -502,10 +502,12 @@ Web and Android use asynchronous browser requests. All platforms compare the rel
 Settings > Controls selects Auto, Mobile, or Desktop. The selection is a global preference.
 Auto resolves once at startup: Android and iOS use Mobile; other systems use Desktop.
 Browser builds inspect the browser's device information, including iPadOS desktop identification.
-Mobile enables touch gestures while retaining physical mouse and keyboard controls.
+Mobile applies the same gestures to touch and the left mouse button, including mouse-only emulator input.
 Tap to select. Hold still, then release to use a right-click action, including ordering selected units to a destination.
 Drag one finger over the map to pan. Pinch or spread two fingers over the map to zoom around their midpoint.
 Drag within a scrollable panel to scroll its content. Map gestures also work in Orders and Tactical Orders.
+With a mouse in Mobile mode, click to select, hold and release for a right-click action, and left-drag to pan or scroll.
+The mouse wheel, other mouse buttons, and keyboard controls retain their existing actions.
 Changing controls discards unfinished touch gestures. Desktop keeps the existing mouse behavior.
 Native Android file import/export and touch controls for direct tactical battle movement are not implemented.
 Multiplayer and LLM support have the same restrictions as the browser build.

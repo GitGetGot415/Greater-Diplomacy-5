@@ -1,4 +1,4 @@
-"""Translate finger gestures once, before screens receive ordinary input.
+"""Translate mobile pointer gestures once, before screens receive ordinary input.
 
 Map gestures use the shared camera; completed taps and holds use the normal
 screen handlers. No game orders or world state are changed here.
@@ -17,6 +17,12 @@ DRAG_THRESHOLD_PIXELS = 8
 FINGER_EVENTS = (pygame.FINGERDOWN, pygame.FINGERMOTION, pygame.FINGERUP)
 MOUSE_EVENTS = (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP,
                 pygame.MOUSEMOTION, pygame.MOUSEWHEEL)
+MOUSE_POINTER = "mouse"
+MOUSE_GESTURE_EVENTS = {
+    pygame.MOUSEBUTTONDOWN: pygame.FINGERDOWN,
+    pygame.MOUSEBUTTONUP: pygame.FINGERUP,
+    pygame.MOUSEMOTION: pygame.FINGERMOTION,
+}
 
 
 class TouchInput:
@@ -25,7 +31,7 @@ class TouchInput:
         self.automatic_mode = detect_control_mode()
         self.owner = None
         self.mode = None
-        self.fingers = {}
+        self.pointers = {}
         self.gesture = None
         self.pinch_distance = None
         self.blocked = False
@@ -39,7 +45,7 @@ class TouchInput:
                 cancel()
         self.gesture = None
         self.pinch_distance = None
-        self.blocked = bool(self.fingers)
+        self.blocked = bool(self.pointers)
 
     @staticmethod
     def _mouse(event_type, pos, button=1, **values):
@@ -53,38 +59,68 @@ class TouchInput:
             self.cancel()
             self.owner, self.mode = owner, mode
         mobile = (self.automatic_mode if mode == "AUTO" else mode) == "MOBILE"
+        # SDL can publish the compatibility mouse event before the finger
+        # event in the same pump. Only discard mouse input when its matching
+        # finger stream exists; some emulators supply mouse events alone.
+        finger_events = [event for event in events if event.type in FINGER_EVENTS]
+        finger_stream = (bool(finger_events)
+                         or any(pointer != MOUSE_POINTER for pointer in self.pointers))
         result = []
         for event in events:
             if (event.type == pygame.WINDOWFOCUSLOST
                     or (event.type == pygame.ACTIVEEVENT and not event.gain)):
                 self.cancel()
-                self.fingers.clear()
+                self.pointers.clear()
                 self.blocked = False
                 result.append(event)
             elif event.type in FINGER_EVENTS:
+                pointer = (event.touch_id, event.finger_id)
                 if mobile:
-                    result.extend(self._finger(event))
+                    result.extend(self._pointer(event.type, pointer, self._finger_position(event)))
                 elif event.type == pygame.FINGERUP:
-                    self.fingers.pop((event.touch_id, event.finger_id), None)
-                    if not self.fingers:
+                    self.pointers.pop(pointer, None)
+                    if not self.pointers:
                         self.blocked = False
             elif (mobile and event.type in MOUSE_EVENTS
-                  and getattr(event, "touch", False)):
+                  and ((getattr(event, "touch", False) and finger_stream)
+                       or self._matches_finger(event, finger_events))):
                 # SDL still updates its pointer state, but the corresponding
                 # compatibility click must not activate the screen a second time.
                 continue
+            elif (mobile and event.type in MOUSE_GESTURE_EVENTS
+                  and (event.type == pygame.MOUSEMOTION or event.button == 1)):
+                if event.type == pygame.MOUSEMOTION and MOUSE_POINTER not in self.pointers:
+                    result.append(event)  # Ordinary mouse hover remains immediate.
+                else:
+                    result.extend(self._pointer(MOUSE_GESTURE_EVENTS[event.type],
+                                                MOUSE_POINTER, event.pos))
             else:
+                if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                    self.pointers.pop(MOUSE_POINTER, None)
+                    if not self.pointers:
+                        self.blocked = False
                 result.append(event)
         return result
 
-    def _finger(self, event):
+    @staticmethod
+    def _finger_position(event):
         surface = pygame.display.get_surface()
         width, height = surface.get_size() if surface else (c.SCREEN_WIDTH, c.SCREEN_HEIGHT)
-        position = (round(event.x * width), round(event.y * height))
-        finger = (event.touch_id, event.finger_id)
-        if event.type == pygame.FINGERDOWN:
-            self.fingers[finger] = position
-            if len(self.fingers) == 1 and not self.blocked:
+        return (round(event.x * width), round(event.y * height))
+
+    def _matches_finger(self, event, finger_events):
+        """Some web runtimes omit the touch marker on a duplicate mouse event."""
+        kind = MOUSE_GESTURE_EVENTS.get(event.type)
+        if kind is None or (event.type != pygame.MOUSEMOTION and event.button != 1):
+            return False
+        return any(finger.type == kind
+                   and dist(event.pos, self._finger_position(finger)) < DRAG_THRESHOLD_PIXELS
+                   for finger in finger_events)
+
+    def _pointer(self, kind, pointer, position):
+        if kind == pygame.FINGERDOWN:
+            self.pointers[pointer] = position
+            if len(self.pointers) == 1 and not self.blocked:
                 # Only map workspaces opt in. Menus, overlays and list panels
                 # retain their existing primary-button drag handling.
                 hit_map = getattr(self.owner, "touch_map_at", None)
@@ -92,26 +128,27 @@ class TouchInput:
                 self.gesture = {"start": position, "last": position,
                                 "time": pygame.time.get_ticks(), "map": map_screen,
                                 "dragging": False}
-            elif len(self.fingers) == 2 and self.gesture and self.gesture["map"] is not None:
+            elif (len(self.pointers) == 2 and MOUSE_POINTER not in self.pointers
+                  and self.gesture and self.gesture["map"] is not None):
                 hit_map = self.owner.touch_map_at(position)
                 if hit_map is self.gesture["map"]:
-                    self.pinch_distance = dist(*self.fingers.values())
+                    self.pinch_distance = dist(*self.pointers.values())
                 else:
                     self.cancel()
             else:
                 self.cancel()
             return []
 
-        if finger not in self.fingers:
+        if pointer not in self.pointers:
             return []
-        self.fingers[finger] = position
-        if event.type == pygame.FINGERUP:
-            del self.fingers[finger]
+        self.pointers[pointer] = position
+        if kind == pygame.FINGERUP:
+            del self.pointers[pointer]
             if self.pinch_distance is not None or self.blocked:
                 # Lifting either finger ends a pinch. The remaining finger
                 # cannot turn into a new tap or movement order.
                 self.cancel()
-                self.blocked = bool(self.fingers)
+                self.blocked = bool(self.pointers)
                 return []
             gesture = self.gesture
             self.gesture = None
@@ -130,7 +167,7 @@ class TouchInput:
             return []
         gesture = self.gesture
         if self.pinch_distance is not None:
-            first, second = self.fingers.values()
+            first, second = self.pointers.values()
             distance = dist(first, second)
             if distance > 0 and self.pinch_distance > 0:
                 midpoint = ((first[0] + second[0]) / 2, (first[1] + second[1]) / 2)

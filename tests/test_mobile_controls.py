@@ -21,6 +21,17 @@ def finger(kind, position, number=1):
                               y=position[1] / c.SCREEN_HEIGHT, dx=0, dy=0)
 
 
+def mouse(kind, position=(500, 300), *, touch=False):
+    values = {"pos": position}
+    if touch is not None:
+        values["touch"] = touch
+    if kind == pygame.MOUSEMOTION:
+        values.update(buttons=(1, 0, 0), rel=(0, 0))
+    else:
+        values["button"] = 1
+    return pygame.event.Event(kind, values)
+
+
 class TouchGestureTests(unittest.TestCase):
     def setUp(self):
         pygame.init()
@@ -207,6 +218,65 @@ class TouchGestureTests(unittest.TestCase):
             self.send(finger(pygame.FINGERDOWN, (500, 300)), mode="AUTO")
             self.assertEqual(len(self.send(finger(pygame.FINGERUP, (500, 300)), mode="AUTO")), 2)
 
+    def test_mobile_mouse_input_uses_taps_holds_and_map_dragging(self):
+        for touch in (False, True, None):
+            with self.subTest(touch=touch):
+                self.assertEqual(self.send(mouse(pygame.MOUSEBUTTONDOWN, touch=touch)), [])
+                self.assertEqual([event.button for event in self.send(
+                    mouse(pygame.MOUSEBUTTONUP, touch=touch))], [1, 1])
+                self.send(mouse(pygame.MOUSEBUTTONDOWN, touch=touch))
+                self.now += HOLD_MILLISECONDS + 1
+                self.assertEqual([event.button for event in self.send(
+                    mouse(pygame.MOUSEBUTTONUP, touch=touch))], [3, 3])
+                self.map.camera.pos = pygame.Vector2()
+                self.send(mouse(pygame.MOUSEBUTTONDOWN, touch=touch))
+                self.assertEqual(self.send(mouse(pygame.MOUSEMOTION, (540, 330), touch=touch)), [])
+                self.assertEqual(self.map.camera.pos, pygame.Vector2(-40, -30))
+                self.assertEqual(self.send(mouse(pygame.MOUSEBUTTONUP, (540, 330), touch=touch)), [])
+
+    def test_compatibility_mouse_before_or_after_finger_does_not_duplicate_tap(self):
+        for mouse_first, touch in ((True, True), (False, True), (True, False),
+                                    (False, False), (True, None), (False, None)):
+            with self.subTest(mouse_first=mouse_first, touch=touch):
+                down = [mouse(pygame.MOUSEBUTTONDOWN, touch=touch),
+                        finger(pygame.FINGERDOWN, (500, 300))]
+                up = [mouse(pygame.MOUSEBUTTONUP, touch=touch),
+                      finger(pygame.FINGERUP, (500, 300))]
+                if not mouse_first:
+                    down.reverse()
+                    up.reverse()
+                self.assertEqual(self.send(*down), [])
+                self.assertEqual(len(self.touch.pointers), 1)
+                self.assertEqual([event.button for event in self.send(*up)], [1, 1])
+                self.assertFalse(self.touch.pointers)
+
+    def test_compatibility_mouse_motion_does_not_double_the_finger_pan(self):
+        self.send(mouse(pygame.MOUSEBUTTONDOWN), finger(pygame.FINGERDOWN, (500, 300)))
+        self.send(mouse(pygame.MOUSEMOTION, (540, 330)),
+                  finger(pygame.FINGERMOTION, (540, 330)))
+        self.assertEqual(self.map.camera.pos, pygame.Vector2(-40, -30))
+        self.assertEqual(self.send(mouse(pygame.MOUSEBUTTONUP, (540, 330)),
+                                   finger(pygame.FINGERUP, (540, 330))), [])
+
+    def test_auto_on_desktop_preserves_primary_mouse_and_mobile_overrides_it(self):
+        self.touch.automatic_mode = "DESKTOP"
+        event = mouse(pygame.MOUSEBUTTONDOWN)
+        self.assertEqual(self.send(event, mode="AUTO"), [event])
+        self.assertEqual(self.send(event, mode="MOBILE"), [])
+        self.send(mouse(pygame.MOUSEMOTION, (540, 330)), mode="MOBILE")
+        self.assertEqual(self.map.camera.pos, pygame.Vector2(-40, -30))
+
+    def test_mouse_mode_change_consumes_old_gesture_and_next_mobile_click_works(self):
+        self.send(mouse(pygame.MOUSEBUTTONDOWN))
+        self.send(mouse(pygame.MOUSEBUTTONUP), mode="DESKTOP")
+        self.assertEqual(self.send(mouse(pygame.MOUSEBUTTONDOWN)), [])
+        self.assertEqual([event.button for event in self.send(mouse(pygame.MOUSEBUTTONUP))], [1, 1])
+
+    def test_mobile_mouse_hover_and_wheel_remain_immediate(self):
+        motion = pygame.event.Event(pygame.MOUSEMOTION, pos=(500, 300), buttons=(0, 0, 0), rel=(1, 1))
+        wheel = pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=1)
+        self.assertEqual(self.send(motion, wheel), [motion, wheel])
+
     def test_secondary_touch_uses_existing_order_handler_and_permission_guard(self):
         self.press()
         self.now = HOLD_MILLISECONDS + 1
@@ -309,3 +379,20 @@ class MobileWorkspaceTests(unittest.TestCase):
             pan.assert_called_once_with((640, 380), (600, 350))
             order.assert_not_called()
             self.assertIsNone(self.map.selected_province)
+
+    def test_mobile_mouse_drag_works_in_map_and_both_order_screens(self):
+        from tests import app_harness
+        with (app_harness.patch_map(self.map, selected_province=None,
+                navigation_intro_popup=None, diplomatic_popups=[], show_player_ready_screen=False,
+                show_exit_confirmation=False, is_saving=False, ai_is_thinking=False),
+              mock.patch.object(self.map.camera, "pan_by") as pan):
+            for owner in (self.map, self.controller.states["ORDERS"],
+                          self.controller.states["TACTICAL_ORDERS"]):
+                with self.subTest(screen=type(owner).__name__):
+                    touch = TouchInput()
+                    pan.reset_mock()
+                    for event in (mouse(pygame.MOUSEBUTTONDOWN, (600, 350)),
+                                  mouse(pygame.MOUSEMOTION, (640, 380)),
+                                  mouse(pygame.MOUSEBUTTONUP, (640, 380))):
+                        owner.handle_events(touch.process_events([event], owner, "MOBILE"))
+                    pan.assert_called_once_with((640, 380), (600, 350))
