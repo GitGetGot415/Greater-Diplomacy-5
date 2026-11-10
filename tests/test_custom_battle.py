@@ -332,6 +332,47 @@ class BattleSimulationTests(unittest.TestCase):
                          [[second.data]])
         self.assertEqual((first.data["health"], second.data["health"]), (100, 100 - 30 * combat.DAMAGE_SCALE))
 
+    def plains_simulation(self, friendly, enemy):
+        return combat.BattleSimulation(self.library, friendly, enemy, seed=1, battlefield=battle_terrain.Battlefield(
+            "plains", combat.ARENA_SIZE, combat.UNIT_RADIUS, ()))
+
+    def test_shots_hit_the_first_ally_or_enemy_they_cross_but_never_their_shooter(self):
+        simulation = self.plains_simulation(["Fixture I", "Fixture I"], ["Fixture I"])
+        hold_still(simulation)
+        shooter, ally, enemy = simulation.fighters
+        shooter.x, shooter.y = 1000, 500
+        ally.x, ally.y = 1020, 500
+        enemy.x, enemy.y = 1100, 500
+        simulation.projectiles = [combat.Projectile(shooter, dict(shooter.data), shooter.x, shooter.y, 300, 0, 1)]
+        simulation.advance(combat.FIXED_STEP)
+        loss = combat.BattleSimulation.damage_amount(shooter.data, ally.data, shooter.attack_share)
+        self.assertGreater(loss, 0)
+        self.assertEqual([unit.data["health"] for unit in simulation.fighters],
+                         [shooter.data["max_health"], ally.data["max_health"] - loss, enemy.data["max_health"]])
+
+    def test_ai_holds_fire_and_sidesteps_while_an_ally_blocks_its_shot(self):
+        simulation = self.plains_simulation(["Fixture I", "Fixture I"], ["Fixture I"])
+        shooter, ally, enemy = simulation.fighters
+        shooter.x, shooter.y = 1000, 500
+        ally.x, ally.y = 1100, 505  # Just below the firing line.
+        enemy.x, enemy.y = 1400, 500
+        shooter.angle = shooter.aim = 0.0
+        simulation._sides = [[shooter, ally], [enemy]]
+
+        def drive():
+            shooter.cooldown, shooter.dodge, shooter.target, shooter.retarget = 0, 0, enemy, 1000
+            shots = []
+            simulation._drive_ai(shooter, combat._Grid([enemy], combat.TARGET_CELL), combat.FIXED_STEP,
+                                 shots, (shooter.x, shooter.y), enemy)
+            return shots
+
+        self.assertEqual(drive(), [])
+        self.assertEqual(shooter.dodge, combat.LINE_SHIFT_SECONDS)
+        self.assertLess(math.sin(shooter.dodge_heading), 0)  # Upward, away from the ally.
+        ally.y = 500 + combat.UNIT_RADIUS * 4
+        self.assertEqual(drive(), [(shooter, None)])
+        self.assertEqual(shooter.dodge, 0)
+
     def test_simultaneous_destruction_is_a_loss_and_finished_battle_stays_finished(self):
         simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"])
         hold_still(simulation)
@@ -773,8 +814,8 @@ class BattleSimulationTests(unittest.TestCase):
         speed = combat.PROJECTILE_SPEED
         lookahead = speed * combat.DODGE_LOOKAHEAD
 
-        def watch(start_dx, start_dy, velocity=-speed, *, controlled=None, ready=False, friendly_shot=False,
-                  unit_speed=combat.DODGE_MIN_SPEED):
+        def watch(start_dx, start_dy, velocity=-speed, *, controlled=None, ready=False, own_shot=False,
+                  ally_shot=False, unit_speed=combat.DODGE_MIN_SPEED):
             simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"],
                                                  controlled_index=controlled)
             hold_still(simulation)  # Both reloading, so neither is about to fire.
@@ -783,7 +824,9 @@ class BattleSimulationTests(unittest.TestCase):
             shooter.x = unit.x + combat.WEAPON_RANGE / 2
             if ready:
                 unit.cooldown, unit.target = 0, shooter
-            source = unit if friendly_shot else shooter
+            source = unit if own_shot else shooter
+            if ally_shot:
+                source = combat.Fighter(dict(unit.data), unit.side, unit.x - 100, unit.y, unit.shape)
             simulation.projectiles = [combat.Projectile(
                 source, dict(source.data), unit.x + start_dx, unit.y + start_dy, velocity, 0, 1)]
             crowds = [combat._Grid([f for f in simulation.fighters if f.side == side], combat.GRID_CELL)
@@ -796,13 +839,15 @@ class BattleSimulationTests(unittest.TestCase):
         self.assertEqual(unit.dodge, combat.DODGE_SECONDS)
         self.assertAlmostEqual(math.cos(unit.dodge_heading), 0)
         self.assertLess(math.sin(unit.dodge_heading), 0)
+        # Shots hurt allies too, so an ally's shot is dodged like an enemy's.
+        self.assertEqual(watch(lookahead / 2, 0, ally_shot=True).dodge, combat.DODGE_SECONDS)
         for label, case in (
                 ("passing wide", dict(start_dx=lookahead / 2, start_dy=combat.DODGE_DANGER * 2)),
                 ("moving away", dict(start_dx=-lookahead / 2, start_dy=0)),
                 ("still far off", dict(start_dx=lookahead + 100, start_dy=0)),
                 ("about to fire", dict(start_dx=lookahead / 2, start_dy=0, ready=True)),
                 ("player's unit", dict(start_dx=lookahead / 2, start_dy=0, controlled=0)),
-                ("its own side's shot", dict(start_dx=lookahead / 2, start_dy=0, friendly_shot=True)),
+                ("its own shot", dict(start_dx=lookahead / 2, start_dy=0, own_shot=True)),
                 ("too slow", dict(start_dx=lookahead / 2, start_dy=0, unit_speed=combat.DODGE_MIN_SPEED - 1))):
             with self.subTest(label):
                 self.assertEqual(watch(**case).dodge, 0)
@@ -1143,16 +1188,43 @@ class CloseCombatTests(unittest.TestCase):
         target.x = attacker.x + combat.UNIT_RADIUS * 2 + 2
         self.assertTrue(self.move_contact(simulation, [(attacker, speed * combat.FIXED_STEP, 0), (target, 0, 0)]))
 
-    def test_stationary_glancing_and_friendly_contacts_never_deal_ram_damage(self):
-        for delta, friendly in (((0, 0), False), ((0, 10), False),
-                                 ((combat.RAM_REFERENCE_SPEED * combat.FIXED_STEP, 0), True)):
-            with self.subTest(delta=delta, friendly=friendly):
+    def test_stationary_and_glancing_contacts_never_deal_ram_damage(self):
+        for delta in ((0, 0), (0, 10)):
+            with self.subTest(delta=delta):
                 simulation = self.encounter(shapes=("tank", "infantry"), gap=combat.UNIT_RADIUS * 2)
                 attacker, target = simulation.fighters
-                if friendly:
-                    target.side = attacker.side
                 damage = self.move_contact(simulation, [(attacker, *delta), (target, 0, 0)])
                 self.assertEqual(damage, [])
+
+    def test_fast_contact_with_an_ally_deals_ram_damage_like_an_enemy(self):
+        simulation = self.encounter(shapes=("tank", "infantry"), gap=combat.UNIT_RADIUS * 2 + 2)
+        attacker, ally = simulation.fighters
+        ally.side = attacker.side
+        damage = self.move_contact(simulation, [(attacker, combat.RAM_REFERENCE_SPEED * combat.FIXED_STEP, 0),
+                                                (ally, 0, 0)])
+        self.assertEqual(len(damage), 1)
+        self.assertIs(damage[0][0], ally)
+        self.assertGreater(damage[0][1], 0)
+
+    def test_ai_vehicles_brake_before_ramming_an_ally_in_their_path(self):
+        simulation = self.encounter(shapes=("tank", "tank"), gap=combat.UNIT_RADIUS * 2 + 2)
+        unit, ally = simulation.fighters
+        ally.side = unit.side
+        unit.angle = 0.0
+        simulation._sides = [[unit, ally], []]
+        braked = simulation._ally_safe_throttle(unit, 1.0)
+        self.assertLess(braked * unit.max_speed, combat.RAM_MIN_SPEED)
+        self.assertGreaterEqual(braked, 0)
+        # Backing away, passing beside, or following an ally that drives off keeps full throttle.
+        self.assertEqual(simulation._ally_safe_throttle(unit, -1.0), -1.0)
+        ally.y += combat.UNIT_RADIUS * 3
+        self.assertEqual(simulation._ally_safe_throttle(unit, 1.0), 1.0)
+        ally.y, ally.vx = unit.y, unit.max_speed
+        self.assertEqual(simulation._ally_safe_throttle(unit, 1.0), 1.0)
+        # Infantry and cavalry never deal ram damage, so they keep their throttle.
+        unit.shape = "infantry"
+        ally.vx = 0.0
+        self.assertEqual(simulation._ally_safe_throttle(unit, 1.0), 1.0)
 
     def test_ram_damage_reaches_campaign_results_through_normal_simulation(self):
         simulation = self.encounter(shapes=("tank", "infantry"), gap=combat.UNIT_RADIUS * 2 + 2)

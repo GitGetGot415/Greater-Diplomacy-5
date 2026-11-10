@@ -91,6 +91,9 @@ RAM_MAX_STRENGTH = 1.5
 RAM_DAMAGE = 0.6
 KNOCKBACK_MAX_SPEED = 100.0
 KNOCKBACK_SECONDS = 0.25
+# Shots and rams hurt allies too, so AI sub-units keep out of each other's way.
+LINE_SHIFT_SECONDS = 0.6  # A loaded AI sub-unit whose shot would cross an ally sidesteps this long.
+ALLY_BUMP_SPEED = RAM_MIN_SPEED * 0.5  # AI vehicles brake so they close on an ally no faster than this.
 TANK_SHAPES = frozenset(("tank", "light_tank", "heavy_tank"))
 NAVIGATION_SECONDS = 0.8
 WAYPOINT_REACH = 25.0
@@ -432,7 +435,7 @@ class Fighter:
 
 @dataclass
 class Projectile:
-    """A shot in flight. It hits the first enemy it crosses."""
+    """A shot in flight. It hits the first sub-unit it crosses on either side, other than its shooter."""
 
     source: Fighter
     source_data: dict  # The shooter as it fired, so a shot still lands after the shooter dies.
@@ -447,7 +450,7 @@ class Projectile:
 
 
 class _Grid:
-    """Buckets one army's living sub-units by cell so nearby lookups skip the rest of the field."""
+    """Buckets living sub-units by cell so nearby lookups skip the rest of the field."""
 
     def __init__(self, fighters, cell):
         self.cell = cell
@@ -534,6 +537,7 @@ class BattleSimulation:
     _fire: bool = field(init=False, default=False)
     _aim_point: object = field(init=False, default=None)
     _healthy_sides: list = field(init=False, default_factory=lambda: [True, True])
+    _sides: list = field(init=False, default_factory=lambda: [[], []])  # Each side's living sub-units this tick.
     _contacts: set = field(init=False, default_factory=set)  # Rearm a ram only after the pair separates.
 
     def __post_init__(self):
@@ -702,6 +706,67 @@ class BattleSimulation:
         return hit is None or (clear_trees and fighter.shape in TANK_SHAPES
                                and hit[1] is not None and hit[1].kind == "tree")
 
+    @staticmethod
+    def _lead_point(target, start):
+        """Where ``target`` will be when a shot from ``start`` arrives, if it keeps moving the same way."""
+        flight = math.dist(start, (target.x, target.y)) / PROJECTILE_SPEED
+        return target.x + target.vx * flight, target.y + target.vy * flight
+
+    def _ally_in_line(self, fighter, target, start=None):
+        """The nearest ally a shot from ``start`` at ``target`` could hit first, or None.
+
+        The shot follows the gun's lead on ``target``. Each ally is checked where it will be when the
+        shot passes, so allies walking into the line count. The danger zone widens with distance by
+        the aim tolerance and shot spread, since AI shots can leave that far off the lead.
+        """
+        start = (fighter.x, fighter.y) if start is None else start
+        lead_x, lead_y = self._lead_point(target, start)
+        dx, dy = lead_x - start[0], lead_y - start[1]
+        distance = math.hypot(dx, dy)
+        if not distance:
+            return None
+        ux, uy = dx / distance, dy / distance
+        spread = math.tan(SHOT_SPREAD + AIM_TOLERANCE)
+        best, best_along = None, distance
+        for ally in self._sides[fighter.side]:
+            if ally is fighter:
+                continue
+            ox, oy = ally.x - start[0], ally.y - start[1]
+            flight = max(0.0, ox * ux + oy * uy) / PROJECTILE_SPEED
+            ox, oy = ox + ally.vx * flight, oy + ally.vy * flight
+            along = ox * ux + oy * uy
+            if 0 < along < best_along and abs(oy * ux - ox * uy) <= UNIT_RADIUS + along * spread:
+                best, best_along = ally, along
+        return best
+
+    def _clear_shot(self, fighter, target, start=None):
+        """A firing lane through terrain that crosses no ally on the way to ``target``."""
+        return self._firing_lane(fighter, target, start) and self._ally_in_line(fighter, target, start) is None
+
+    def _ally_safe_throttle(self, fighter, throttle):
+        """Limit an AI vehicle's throttle so it cannot reach an ally in its path fast enough to ram it.
+
+        Infantry and cavalry never deal ram damage, so their contact needs no braking.
+        """
+        if not throttle or fighter.shape in MELEE_SHAPES or fighter.max_speed <= 0:
+            return throttle
+        direction = 1.0 if throttle > 0 else -1.0
+        hx, hy = math.cos(fighter.angle) * direction, math.sin(fighter.angle) * direction
+        acceleration = fighter.max_speed / MOBILITY[fighter.shape][0]
+        limit = abs(throttle) * fighter.max_speed
+        for ally in self._sides[fighter.side]:
+            if ally is fighter:
+                continue
+            ox, oy = ally.x - fighter.x, ally.y - fighter.y
+            along = ox * hx + oy * hy
+            if along <= 0 or abs(oy * hx - ox * hy) > UNIT_RADIUS * 2:
+                continue
+            # Brake in time to arrive no faster than ALLY_BUMP_SPEED; the ally's own motion opens or closes the gap.
+            gap = max(0.0, along - UNIT_RADIUS * 2)
+            allowed = math.sqrt(ALLY_BUMP_SPEED ** 2 + 2 * acceleration * gap)
+            limit = min(limit, ally.vx * hx + ally.vy * hy + allowed)
+        return direction * max(0.0, limit) / fighter.max_speed
+
     def _queue_attack(self, fighter, shots):
         """Shooting and close attacks share one reload and the same manual fire control."""
         eligible = [target for target in fighter.melee_targets
@@ -749,6 +814,7 @@ class BattleSimulation:
         """The enemy to shoot: the nearest, unless one close to it is wounded and this sub-unit can hurt it.
 
         A wounded enemy counts as nearer, and enemies this sub-unit cannot damage are passed over.
+        Enemies behind terrain or allies come after those with a clear shot.
         """
         nearest = enemies.nearest(fighter.x, fighter.y)
         best, best_score = None, math.inf
@@ -757,7 +823,7 @@ class BattleSimulation:
                 continue
             wounds = 1.0 - enemy.data["health"] / enemy.data["max_health"]
             score = math.hypot(enemy.x - fighter.x, enemy.y - fighter.y) * (1.0 - TARGET_WOUNDED_PULL * wounds)
-            if not self._firing_lane(fighter, enemy):
+            if not self._clear_shot(fighter, enemy):
                 score += WEAPON_RANGE
             if score < best_score:
                 best, best_score = enemy, score
@@ -858,7 +924,7 @@ class BattleSimulation:
         candidates.sort(key=lambda point: math.dist(start, point)
                         + abs(math.dist(point, (target.x, target.y)) - preferred) * FIRING_DISTANCE_WEIGHT)
         for point in candidates:
-            if (self.battlefield.walkable(point) and self._firing_lane(fighter, target, point)
+            if (self.battlefield.walkable(point) and self._clear_shot(fighter, target, point)
                     and self.battlefield.route(start, point)):
                 return point
         return target.x, target.y
@@ -944,23 +1010,31 @@ class BattleSimulation:
         target = fighter.target
         dx, dy = target.x - fighter.x, target.y - fighter.y
         distance = math.hypot(dx, dy)
+        if (fighter.dodge <= 0 and fighter.cooldown <= 0 and distance <= WEAPON_RANGE
+                and not (fighter.melee_committed or fighter.ram_committed)
+                and self._firing_lane(fighter, target)):
+            ally = self._ally_in_line(fighter, target)
+            if ally is not None:
+                # Step out from behind the ally, away from its side of the firing line.
+                self._sidestep(fighter, ally.x, ally.y, dx, dy, LINE_SHIFT_SECONDS)
+                fighter.navigate_at = 0.0  # Follow the sidestep now instead of the old route.
         throttle, heading = self._ai_course(fighter, distance, math.atan2(dy, dx), center, objective)
         if self.battlefield.features:
             throttle, heading = self._terrain_course(fighter, throttle, heading, center, objective)
         turning = _wrap(heading - fighter.angle)
         # Turn toward the heading before driving hard along it.
         throttle *= max(0.0, math.cos(turning))
+        throttle = self._ally_safe_throttle(fighter, throttle)
         _seconds, degrees, seconds = MOBILITY[fighter.shape]
         # Ease off the turn before the hull lines up, since the turn rate cannot stop at once.
         self._steer(fighter, max(-1.0, min(1.0, turning / (math.radians(degrees) * seconds))), dt)
         self._accelerate(fighter, throttle, dt)
-        flight = distance / PROJECTILE_SPEED
-        lead_x, lead_y = target.x + target.vx * flight, target.y + target.vy * flight
+        lead_x, lead_y = self._lead_point(target, (fighter.x, fighter.y))
         desired = math.atan2(lead_y - fighter.y, lead_x - fighter.x)
         self._slew_aim(fighter, desired, dt)
         if (fighter.cooldown <= 0 and distance <= WEAPON_RANGE
                 and abs(_wrap(desired - fighter.aim)) <= AIM_TOLERANCE
-                and self._attack(fighter.data, target.data) > 0 and self._firing_lane(fighter, target)):
+                and self._attack(fighter.data, target.data) > 0 and self._clear_shot(fighter, target)):
             self._queue_attack(fighter, shots)
 
     def _fire_shot(self, fighter):
@@ -985,23 +1059,33 @@ class BattleSimulation:
         """Only fast AI sub-units sidestep; for slower ones the time spent turning away costs more aim than it saves."""
         return unit is not self.controlled and unit.data["speed"] >= DODGE_MIN_SPEED
 
-    def _start_dodge(self, unit, shot):
-        """Sidestep at right angles to a shot's path, away from it (to a random side when it is dead on)."""
-        # How far the unit sits to the left of the shot's path; negative is to the right.
-        offset = ((unit.y - shot.y) * shot.vx - (unit.x - shot.x) * shot.vy) / math.hypot(shot.vx, shot.vy)
+    def _sidestep(self, unit, x, y, vx, vy, seconds):
+        """Sidestep at right angles to a path through (x, y) along (vx, vy), away from it (a random side when dead on)."""
+        # How far the unit sits to the left of the path; negative is to the right.
+        offset = ((unit.y - y) * vx - (unit.x - x) * vy) / math.hypot(vx, vy)
         side = (1 if offset > 0 else -1) if abs(offset) > 1e-9 else self._rng.choice((-1, 1))
-        unit.dodge = DODGE_SECONDS
-        unit.dodge_heading = math.atan2(shot.vy, shot.vx) + side * math.pi / 2
+        unit.dodge = seconds
+        unit.dodge_heading = math.atan2(vy, vx) + side * math.pi / 2
+
+    def _start_dodge(self, unit, shot):
+        """Sidestep at right angles to a shot's path, away from it."""
+        self._sidestep(unit, shot.x, shot.y, shot.vx, shot.vy, DODGE_SECONDS)
 
     def _ready_to_fire(self, unit):
-        """Whether an AI sub-unit is about to shoot: loaded, with its target in range. It then holds rather than dodging."""
+        """Whether an AI sub-unit is about to shoot: loaded, with a clear shot at its target in range.
+
+        It then holds rather than dodging.
+        """
         target = unit.target
         return (unit.cooldown <= 0 and target is not None and target.alive
                 and math.hypot(target.x - unit.x, target.y - unit.y) <= WEAPON_RANGE
-                and self._firing_lane(unit, target))
+                and self._clear_shot(unit, target))
 
     def _dodge_incoming(self, crowds):
-        """AI sub-units that are not about to fire sidestep enemy shots whose paths will pass close to them."""
+        """AI sub-units that are not about to fire sidestep other sub-units' shots whose paths will pass close to them.
+
+        Shots hurt allies too, so an ally's shot is dodged like an enemy's.
+        """
         for shot in self.projectiles:
             speed = math.hypot(shot.vx, shot.vy)
             lookahead = min(DODGE_LOOKAHEAD, shot.remaining)
@@ -1012,10 +1096,11 @@ class BattleSimulation:
             if blocked is not None:
                 reach *= blocked[0]
                 end_x, end_y = shot.x + shot.vx / speed * reach, shot.y + shot.vy / speed * reach
-            for unit in crowds[1 - shot.source.side].within(
-                    min(shot.x, end_x) - DODGE_DANGER, min(shot.y, end_y) - DODGE_DANGER,
-                    max(shot.x, end_x) + DODGE_DANGER, max(shot.y, end_y) + DODGE_DANGER):
-                if (not self._can_dodge(unit) or unit.dodge > 0 or self._ready_to_fire(unit)
+            nearby = (unit for crowd in crowds for unit in crowd.within(
+                min(shot.x, end_x) - DODGE_DANGER, min(shot.y, end_y) - DODGE_DANGER,
+                max(shot.x, end_x) + DODGE_DANGER, max(shot.y, end_y) + DODGE_DANGER))
+            for unit in nearby:
+                if (unit is shot.source or not self._can_dodge(unit) or unit.dodge > 0 or self._ready_to_fire(unit)
                         or ((unit.melee_committed or unit.ram_committed) and unit.target is not None
                             and math.hypot(unit.x - unit.target.x, unit.y - unit.target.y) <= MELEE_COMMIT_RANGE)):
                     continue
@@ -1164,7 +1249,7 @@ class BattleSimulation:
 
         Relative motion catches head-on crossings between ticks. Contact mass decides
         which body yields, while the normal closing speed rejects glancing impacts.
-        Friendly contact separates bodies but never causes damage.
+        Contact between allies follows the same damage rules as contact between enemies.
         """
         positions = {unit.index: list(self.battlefield.move((unit.x, unit.y), (unit.x + mx, unit.y + my)))
                      for unit, mx, my in movements}
@@ -1206,7 +1291,7 @@ class BattleSimulation:
                     second_pos[1] += ny * overlap * first_mass / total
                     closing = max(0.0, (vx - ovx) * nx + (vy - ovy) * ny)
                     pair = (unit.index, other.index)
-                    if pair not in retained and unit.side != other.side and closing >= RAM_MIN_SPEED:
+                    if pair not in retained and closing >= RAM_MIN_SPEED:
                         for source, target, speed, mass, target_mass in (
                                 (unit, other, vx * nx + vy * ny, first_mass, second_mass),
                                 (other, unit, -ovx * nx - ovy * ny, second_mass, first_mass)):
@@ -1241,6 +1326,7 @@ class BattleSimulation:
         targets = [_Grid(side, TARGET_CELL) for side in sides]
         self._healthy_sides = [any(unit.data["health"] >= unit.data["max_health"] * FALL_BACK_HEALTH
                                   for unit in side) for side in sides]
+        self._sides = sides
         objectives = self._division_objectives(targets, dt)
         self._prepare_close_combat(sides, crowds)
         self._dodge_incoming(crowds)
@@ -1274,11 +1360,11 @@ class BattleSimulation:
         close_hits.extend(self._resolve_contacts(living, crowds, movements, dt))
 
         # Accumulate impacts first so units destroyed together can both land their shots.
-        hittable = [_Grid(side, GRID_CELL) for side in sides]
+        # A shot can hit any sub-unit but its shooter, so allies in its path take friendly fire.
+        hittable = _Grid(living, GRID_CELL)
         hits = []
         remaining = []
         for shot in self.projectiles:
-            enemies = hittable[1 - shot.source.side]
             flight = min(dt, shot.remaining)
             if flight <= 0:
                 continue
@@ -1287,8 +1373,10 @@ class BattleSimulation:
             traveled = math.hypot(shot.vx, shot.vy) * flight
             terrain_hit = self.battlefield.first_hit((shot.x, shot.y), (nx, ny), shot.height, next_height)
             collisions = []
-            for target in enemies.within(min(shot.x, nx) - UNIT_RADIUS, min(shot.y, ny) - UNIT_RADIUS,
-                                         max(shot.x, nx) + UNIT_RADIUS, max(shot.y, ny) + UNIT_RADIUS):
+            for target in hittable.within(min(shot.x, nx) - UNIT_RADIUS, min(shot.y, ny) - UNIT_RADIUS,
+                                          max(shot.x, nx) + UNIT_RADIUS, max(shot.y, ny) + UNIT_RADIUS):
+                if target is shot.source:
+                    continue
                 fraction = self._collision_fraction(shot.x, shot.y, nx, ny, target)
                 ground = self.battlefield.elevation((target.x, target.y))
                 impact_height = shot.height + (next_height - shot.height) * (fraction or 0.0)

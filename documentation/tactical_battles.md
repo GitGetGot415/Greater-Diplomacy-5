@@ -181,7 +181,8 @@ Shooting, melee, and ramming use the same damage calculation and target capabili
 A shot retains the shooter's attack statistics when fired and uses the rules for the unit it actually hits.
 A shot already in flight still lands after its shooter is destroyed.
 
-Every sub-unit has the same long weapon range. Shots fly fast in a straight line and hit the first enemy they cross.
+Every sub-unit has the same long weapon range. Shots fly fast in a straight line and hit the first sub-unit they cross,
+ally or enemy. Only the shooter is safe from its own shot. Friendly fire uses the same damage rules as hits on enemies.
 Each shot, the player's included, leaves at a small random angle off where the gun points. The same small error
 carries a shot further off target over a longer distance, so long-range shots miss more often than close ones.
 Shots also lose damage gradually after their full-damage distance, down to a positive minimum multiplier.
@@ -229,7 +230,7 @@ fight, its cruising speed, a short delay before it first moves, and a gentle wea
 Once it has stopped, a sub-unit faces the enemy it shoots at so its firing cone covers it.
 
 Each sub-unit chooses whom to shoot from the enemies close to its nearest one. A wounded enemy counts as nearer than
-its actual distance, and clear firing lines take priority over obstructed targets.
+its actual distance, and clear firing lines take priority over targets behind terrain or allies.
 Target selection favors enemies the shooting sub-unit can damage at its current health.
 
 AI sub-units also fight according to their type:
@@ -247,9 +248,9 @@ indefinitely. Wounded units seek nearby cover when available and stop withdrawin
 from their target. Without cover, units withdraw to their separate withdrawal distance.
 Vehicles reverse while facing the enemy in an open withdrawal; infantry and cavalry turn away to withdraw.
 A fast AI sub-unit (library speed at least `DODGE_MIN_SPEED`)
-sidesteps briefly, at right angles to a shot's path and away from it, when it is hit and survives, and also when an
-enemy shot is about to pass close to it while it is not about to fire (its weapon is reloading or its target is out
-of range). Slower sub-units never sidestep: they would spend the time turning away instead of aiming. Sub-units still
+sidesteps briefly, at right angles to a shot's path and away from it, when it is hit and survives, and also when
+another sub-unit's shot, an ally's included, is about to pass close to it while it is not about to fire (its weapon
+is reloading, its target is out of range, or an ally stands in its firing line). Slower sub-units never sidestep: they would spend the time turning away instead of aiming. Sub-units still
 move only along their hull, so a sidestep starts with a turn. The player's sub-unit never reacts on its own.
 
 Infantry and cavalry can attack an enemy within melee reach and their aim arc. A melee attack replaces a shot,
@@ -263,7 +264,8 @@ no longer permits the attack.
 Vehicles can ram enemies with a fast impact. Closing speed along the contact direction determines impact strength, so stationary contact
 and sideways brushing do not deal ram damage. Contact mass determines how much each body moves and slows down.
 Heavier bodies displace lighter bodies more; similar head-on vehicles stop rather than bounce apart.
-Infantry contact separates bodies without impact damage. Friendly contact never deals damage.
+Infantry contact separates bodies without impact damage. Contact between allies uses the same impact rules,
+so a vehicle that drives into an ally too fast damages it.
 A pair must separate beyond contact distance before another ram can deal damage. Sustained pushing cannot repeat
 the impact. Knockback decays quickly and never disables steering or firing.
 AI vehicles attempt a ram only with enough speed, a mass advantage, adequate health, and a safe approach against
@@ -271,6 +273,13 @@ a nearby wounded or reloading enemy. The AI considers suitable nearby targets ra
 The AI predicts an interception and checks clear ground, intervening units, available run-up,
 closing speed, and whether the target can be caught before committing. Terrain cover can make a close approach safer, while
 rocks, trees, marshes, and chasms can prevent a ram. The player can attempt any impact under the same contact and damage rules.
+
+Shots and rams hurt allies, so AI sub-units keep out of each other's way. An AI sub-unit holds fire while an ally
+could take its shot. It checks the line along its lead on the target, widened by the aim tolerance and shot spread,
+with each ally where it will be when the shot passes. A loaded AI sub-unit blocked only by an ally sidesteps away
+from that ally, whatever its speed, until the line clears. Firing positions chosen around terrain also avoid allies.
+AI vehicles brake so they never reach an ally in their path faster than a harmless bump.
+The player's sub-unit gets no such help: its shots and rams can hurt allies.
 
 #### Control
 
@@ -347,6 +356,7 @@ behavior; `FLANK_OFFSET`, `CHARGE_CLOSE`, `SKIRMISH_*`, `FALL_BACK_HEALTH`, `DOD
 fixes the random temperaments and shot spread so a battle can be replayed; the game leaves it unset, so every battle differs.
 `DAMAGE_SCALE`, `MELEE_*`, `RAM_*`, `CONTACT_MASS`, and `KNOCKBACK_*` own tactical pacing and close combat.
 `APPROACH_LANE_GAP` and `FLANK_ARRIVAL_DISTANCE` tune the approach lanes and flank completion.
+`LINE_SHIFT_SECONDS` and `ALLY_BUMP_SPEED` tune how AI sub-units keep out of their allies' way.
 
 Unit statistics and capabilities come from [unit_data.json](../data/json/unit_data.json).
 Research dates come from [research_template.json](../data/json/research_template.json) through the shared [unit queries](../data/queries/unit_info.py).
