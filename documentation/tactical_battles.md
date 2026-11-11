@@ -319,6 +319,10 @@ and a line along its gun. Its yellow ring has an arrow along the hull that
 lengthens with speed and points back while reversing. A second ring fills while the weapon reloads.
 Other sub-units show none of these.
 The player's heading, selection, and reload indicators keep a readable minimum size when zooming out.
+A controlled unit also has a stats box showing signed forward speed in battlefield pixels per second,
+body angle in degrees, and whether the gun is ready or how many seconds remain before reloading finishes.
+Negative speed means reversing. The body angle runs clockwise from zero pointing right.
+The stats stay visible while paused and disappear when the controlled sub-unit is destroyed.
 
 Control covers the middle sub-unit of the controlled division's line. The division's other sub-units fight automatically.
 If the controlled sub-unit is destroyed, the player controls no unit for the rest of the battle and spectates it.

@@ -2567,6 +2567,40 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.click("Pause")
         self.assertFalse(self.screen.firing)
 
+    def test_controlled_stats_follow_live_values_cache_unchanged_values_and_clear_after_death(self):
+        self.fill_armies()
+        self.click("Control")
+        self.click("Simulate")
+        self.assertIsNone(self.screen.controlled_stats_surface)
+        self.click("Start")
+        simulation = self.screen.simulation
+        player = simulation.controlled
+        player.speed, player.angle, player.cooldown = -50, math.radians(450), 1.21
+        with patch.object(simulation, "advance"):
+            self.screen.update()
+            self.assertEqual(self.screen.controlled_stats_key, (-50, 90, 13))
+            cached = self.screen.controlled_stats_surface
+            self.screen.update()
+            self.assertIs(self.screen.controlled_stats_surface, cached)
+            self.click("Pause")
+            self.screen.update()
+            self.assertIs(self.screen.controlled_stats_surface, cached)
+            player.cooldown = 0
+            self.screen.update()
+            self.assertEqual(self.screen.controlled_stats_key[-1], 0)
+            self.assertIsNot(self.screen.controlled_stats_surface, cached)
+            player.data["health"] = 0
+            self.screen.update()
+            self.assertIsNone(self.screen.controlled_stats_surface)
+            self.assertIsNone(self.screen.controlled_stats_key)
+
+    def test_uncontrolled_battle_has_no_controlled_stats(self):
+        self.fill_armies()
+        self.click("Simulate")
+        self.click("Start")
+        self.screen.update()
+        self.assertIsNone(self.screen.controlled_stats_surface)
+
     def test_player_keys_move_left_mouse_fires_and_pause_clears_held_input(self):
         self.fill_armies()
         self.click("Control")

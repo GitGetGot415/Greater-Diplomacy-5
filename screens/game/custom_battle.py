@@ -180,6 +180,13 @@ CONE_ARC_STEP = math.radians(3)  # Spacing of the points that draw the cone's cu
 PLAYER_RING_RADIUS = 18
 RELOAD_RING_RADIUS = 22
 RELOAD_COLOR = (255, 245, 200)
+CONTROL_STATS_SIZE = (244, 112)
+CONTROL_STATS_INSET = 8
+CONTROL_STATS_TEXT_PADDING = 8
+CONTROL_STATS_ROW_HEIGHT = 26
+CONTROL_STATS_COLOR = (46, 56, 72)
+CONTROL_STATS_BORDER = (13, 17, 24)
+CONTROL_STATS_TEXT_BACKGROUND = (0, 0, 0)
 ARROW_STRETCH = 26  # Extra arrow length at top speed.
 CONTROL_KEYS = frozenset((pygame.K_w, pygame.K_s, pygame.K_a, pygame.K_d))
 
@@ -377,6 +384,8 @@ class CustomBattleScreen(Screen):
         self.preview_intro_stage = None
         self.status_key = None
         self.status_surfaces = []
+        self.controlled_stats_key = None
+        self.controlled_stats_surface = None
         self.forecast_key = None  # The armies the forecast line was calculated for.
         self.forecast_surface = None
         for side, top in enumerate(PANEL_TOPS):
@@ -844,6 +853,7 @@ class CustomBattleScreen(Screen):
         self.clear_controls()
         self.simulation.paused = False
         self.mode = "battle"
+        self._refresh_controlled_stats()
         self.zoom_by(0, pygame.mouse.get_pos())
         self.update_battle_music_volume()
         self.last_tick = pygame.time.get_ticks()
@@ -1204,6 +1214,33 @@ class CustomBattleScreen(Screen):
                                     for text in (f"Friendly: {counts[0]}", f"Enemy: {counts[1]}",
                                                  f"{int(self.simulation.elapsed)}s")]
 
+    def _refresh_controlled_stats(self):
+        """Cache the controlled unit's readout only when its displayed values change."""
+        controlled = self.simulation.controlled if self.simulation is not None else None
+        if self.mode != "battle" or controlled is None or not controlled.alive:
+            self.controlled_stats_key = None
+            self.controlled_stats_surface = None
+            return
+        # Speed is signed along the hull. Round the countdown up so an unfinished reload never reads zero.
+        key = (round(controlled.speed, 1) or 0.0, round(math.degrees(controlled.angle)) % 360,
+               math.ceil(max(0.0, controlled.cooldown) * 10))
+        if key == self.controlled_stats_key:
+            return
+        self.controlled_stats_key = key
+        speed, angle, reload_tenths = key
+        reload_status = f"{reload_tenths / 10:.1f}s" if reload_tenths else "Ready"
+        lines = (f"Speed: {speed:.1f} px/s", f"Angle: {angle}\N{DEGREE SIGN}", f"Reload: {reload_status}")
+        panel = pygame.Surface(CONTROL_STATS_SIZE)
+        ui_elements.draw_pixel_panel(panel, panel.get_rect(), CONTROL_STATS_COLOR, CONTROL_STATS_BORDER)
+        text_rect = panel.get_rect().inflate(-2 * CONTROL_STATS_INSET, -2 * CONTROL_STATS_INSET)
+        ui_elements.draw_pixel_panel(panel, text_rect, CONTROL_STATS_TEXT_BACKGROUND,
+                                     CONTROL_STATS_BORDER, gradient_strength=0.0, recessed=True)
+        for row, text in enumerate(lines):
+            image = fonts.get("normal").render(text, True, c.UI_TEXT_BRIGHT)
+            panel.blit(image, (text_rect.x + CONTROL_STATS_TEXT_PADDING,
+                               text_rect.y + CONTROL_STATS_TEXT_PADDING + row * CONTROL_STATS_ROW_HEIGHT))
+        self.controlled_stats_surface = panel
+
     def update(self):
         if self.preview_intro_stage is not None:
             self._update_preview_intro()
@@ -1239,6 +1276,7 @@ class CustomBattleScreen(Screen):
             self.mode = "result"
             self._apply_campaign_result()
             self.refresh_ui()
+        self._refresh_controlled_stats()
 
     def _update_preview_intro(self):
         if self.preview_intro_started is None:
@@ -1651,6 +1689,12 @@ class CustomBattleScreen(Screen):
             return
         for image, center in zip(self.status_surfaces, ((220, 103), (1060, 103), (640, 103))):
             surface.blit(image, image.get_rect(center=center))
+        controlled = self.simulation.controlled
+        if (self.mode == "battle" and controlled is not None and controlled.alive
+                and self.controlled_stats_surface is not None):
+            panel = self.controlled_stats_surface
+            surface.blit(panel, panel.get_rect(bottomleft=(SCREEN_EDGE_MARGIN,
+                                                          surface.get_height() - SCREEN_EDGE_MARGIN)))
         if self.mode == "battle" and self.simulation.paused:
             rect = pygame.Rect(0, 0, 210, 70)
             rect.center = self.view_rect().center
