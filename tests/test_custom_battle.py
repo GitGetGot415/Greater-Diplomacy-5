@@ -1298,14 +1298,15 @@ class TacticalTerrainTests(unittest.TestCase):
                 else:
                     self.assertTrue(first.battlefield.features)
 
-    def test_tree_trunks_set_the_hitbox_and_foliage_never_outgrows_its_trunk(self):
+    def test_tree_trunks_set_the_hitbox_and_foliage_fits_its_trunk_size(self):
         trees = [feature for seed in range(5) for feature in battle_terrain.Battlefield.generate(
             "jungle", combat.ARENA_SIZE, combat.UNIT_RADIUS, combat.SPAWN_FRONT_GAP, seed).features
                  if feature.kind == "tree"]
         self.assertEqual({tree.trunk for tree in trees}, set(battle_terrain.TREE_TRUNK_RADII))
         for tree in trees:
             self.assertEqual(tree.radius, battle_terrain.TREE_TRUNK_RADII[tree.trunk])
-            self.assertTrue(1 <= tree.foliage <= tree.trunk)
+            smallest, largest = battle_terrain.TREE_FOLIAGE_RADII[tree.trunk]
+            self.assertTrue(smallest <= tree.foliage_radius <= largest)
             self.assertTrue(-1.0 <= tree.shade <= 1.0)
         # Trunks never overlap or crowd each other: open ground of at least TREE_TRUNK_GAP separates them.
         for seed in range(5):
@@ -1316,10 +1317,9 @@ class TacticalTerrainTests(unittest.TestCase):
                 for other in planted[index + 1:]:
                     self.assertGreaterEqual(math.dist((tree.x, tree.y), (other.x, other.y)),
                                             tree.radius + other.radius + battle_terrain.TREE_TRUNK_GAP)
-        # Every trunk and foliage size the generator can choose has an image to draw it.
+        # Every trunk size the generator can choose has an image to draw it. Foliage is drawn without images.
         for size in battle_terrain.TREE_TRUNK_RADII:
-            for part in ("Trunk", "Foliage"):
-                self.assertTrue(os.path.isfile(os.path.join(battle_screen.TERRAIN_ART_DIR, f"{part} {size}.png")))
+            self.assertTrue(os.path.isfile(os.path.join(battle_screen.TERRAIN_ART_DIR, f"Trunk {size}.png")))
 
     def test_ground_hazards_block_motion_but_allow_shots_and_paths_go_around(self):
         for kind in ("chasm", "marsh"):
@@ -1580,7 +1580,8 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.screen.add_unit(1, "Fixture I")
 
     def test_foliage_turns_see_through_only_over_a_living_sub_unit(self):
-        trees = [battle_terrain.Feature("tree", x, 500, battle_terrain.TREE_TRUNK_RADII[1], 100, trunk=1, foliage=1)
+        trees = [battle_terrain.Feature("tree", x, 500, battle_terrain.TREE_TRUNK_RADII[1], 100, trunk=1,
+                                         foliage_radius=40)
                  for x in (1000, 1400)]
         self.screen.simulation = combat.BattleSimulation(
             self.library, ["Fixture I"], ["Fixture I"], seed=1,

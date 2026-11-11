@@ -25,6 +25,8 @@ TREE_HEIGHT = 100.0
 # Trunk image in assets/battles/terrain, and the battle screen scales that image to this radius.
 TREE_TRUNK_RADII = {1: 8.5, 2: 13.0, 3: 18.0}
 TREE_TRUNK_GAP = 20.0  # Least open ground between neighboring trunks' edges; a crowded tree is not planted.
+# (smallest, largest) foliage radius for each trunk size, so larger trunks carry larger foliage.
+TREE_FOLIAGE_RADII = {1: (24.0, 40.0), 2: (32.0, 55.0), 3: (40.0, 86.0)}
 PATCH_RADIUS = 155.0
 HILL_RADIUS = (140.0, 230.0)
 HILL_HEIGHT = (65.0, 125.0)
@@ -71,9 +73,9 @@ class Feature:
     radius: float
     height: float = 0.0
     destroyed: bool = False
-    # Trees only: the Trunk and Foliage image sizes. Foliage is drawn and never blocks anything.
+    # Trees only: the Trunk image size and the foliage circle's radius. Foliage is drawn and never blocks anything.
     trunk: int = 1
-    foliage: int = 1
+    foliage_radius: float = 0.0
     shade: float = 0.0  # Trees only, drawing only: -1 darkest to 1 lightest variation of the foliage's green.
 
 
@@ -122,8 +124,7 @@ class Battlefield:
                 angle, distance = rng.uniform(0, math.tau), PATCH_RADIUS * math.sqrt(rng.random())
                 point = center[0] + math.cos(angle) * distance, center[1] + math.sin(angle) * distance
                 trunk = rng.randint(1, len(TREE_TRUNK_RADII))
-                # Foliage 1 fits any trunk; larger foliage needs a trunk at least as large.
-                foliage = rng.randint(1, trunk)
+                foliage = rng.uniform(*TREE_FOLIAGE_RADII[trunk])
                 radius = TREE_TRUNK_RADII[trunk]
                 # Do not plant trees in a rock, marsh, or chasm, or within TREE_TRUNK_GAP of another trunk.
                 if any(feature.kind in BLOCKS_MOVEMENT
@@ -131,7 +132,7 @@ class Battlefield:
                        < feature.radius + radius + (TREE_TRUNK_GAP if feature.kind == "tree" else 0.0)
                        for feature in field.features):
                     continue
-                place("tree", radius, TREE_HEIGHT, point, trunk=trunk, foliage=foliage, shade=rng.uniform(-1.0, 1.0))
+                place("tree", radius, TREE_HEIGHT, point, trunk=trunk, foliage_radius=foliage, shade=rng.uniform(-1.0, 1.0))
         field._index_features()
         field._connect_ground()
         return field
