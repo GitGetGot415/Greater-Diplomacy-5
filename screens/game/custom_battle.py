@@ -1272,6 +1272,7 @@ class CustomBattleScreen(Screen):
         if self.marquee is not None:
             if event.type == pygame.MOUSEMOTION:
                 self.marquee[2] = event.pos
+                self._select_group(self.marquee[0], self.marquee[1], event.pos)
                 return True
             if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 side, origin, _current = self.marquee
@@ -1305,8 +1306,12 @@ class CustomBattleScreen(Screen):
             picked = [index for index in range(len(self.rosters[side]))
                       if self.card_rect(side, index).colliderect(area)]
         # One card is an ordinary selection, so Remove and Control keep working.
-        self.selected[side] = picked[0] if len(picked) == 1 else None
-        self.group[side] = picked if len(picked) > 1 else []
+        selected = picked[0] if len(picked) == 1 else None
+        group = picked if len(picked) > 1 else []
+        if self.selected[side] == selected and self.group[side] == group:
+            return
+        self.selected[side] = selected
+        self.group[side] = group
         self.refresh_ui()
 
     def _set_bar_health(self, side, index, x):
@@ -1720,12 +1725,12 @@ class CustomBattleScreen(Screen):
             self.card_surfaces[key] = card
         return self.card_surfaces[key]
 
-    def _draw_roster_card(self, surface, rect, side, unit, *, hovered=False, pressed=False):
+    def _draw_roster_card(self, surface, rect, side, unit, *, hovered=False, pressed=False, selected=False):
         if self._roster_reorderable(side):
             color = c.UI_COLORS["blue" if side == 0 else "red"][0]
             if side == 0 and self.controlled_index is not None and unit is self.rosters[0][self.controlled_index]:
                 color = tuple(min(255, channel + CONTROLLED_CARD_BRIGHTNESS) for channel in color)
-            ui_elements.draw_pixel_button(surface, rect, color, hovered=hovered, pressed=pressed)
+            ui_elements.draw_pixel_button(surface, rect, color, hovered=hovered, pressed=pressed, selected=selected)
         surface.blit(self.card_surfaces[self._card_key(side, unit)], rect)
 
     def _draw_rosters(self, surface):
@@ -1745,13 +1750,11 @@ class CustomBattleScreen(Screen):
                 pressed = self.drag is not None and self.drag[:2] == [side, index]
                 selected = self.selected[side] == index or index in self.group[side]
                 hovered = self.panes[side].collidepoint(pointer) and rect.collidepoint(pointer) and (self.drag is None or pressed)
-                self._draw_roster_card(surface, rect, side, unit, hovered=hovered or (self.mode == "setup" and selected), pressed=pressed)
+                self._draw_roster_card(surface, rect, side, unit, hovered=hovered or (self.mode == "setup" and selected), pressed=pressed, selected=selected)
                 if self.mode == "setup":
                     button = self.unit_buttons[side, index]
                     self._position_edit_button(button, rect)
                     button.draw(surface)
-                if selected:
-                    pygame.draw.rect(surface, TEAM_COLORS[side], rect, 2)
                 if side == 0 and self.controlled_index == index:
                     draw_player_arrow(surface, (rect.centerx, rect.y + 28), 0)
             surface.set_clip(old_clip)

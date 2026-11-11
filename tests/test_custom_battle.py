@@ -2571,8 +2571,9 @@ class CustomBattleScreenTests(unittest.TestCase):
         end = (self.screen.card_rect(0, 1).right - 1, self.screen.panes[0].centery)
         self.screen.handle_events([
             pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=start),
-            pygame.event.Event(pygame.MOUSEMOTION, pos=end, rel=(0, 0), buttons=(1, 0, 0)),
-            pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=end)])
+            pygame.event.Event(pygame.MOUSEMOTION, pos=end, rel=(0, 0), buttons=(1, 0, 0))])
+        self.assertEqual(self.screen.group[0], [0, 1])
+        self.screen.handle_events([pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=end)])
         self.assertEqual(self.screen.group[0], [0, 1])
         self.assertEqual(self.screen.roster_0_scroll, 0)
         with patch("ui.navigation.screen_runner._run_pygame_sub_screen") as opened:

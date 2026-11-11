@@ -50,7 +50,7 @@ Each change applies immediately; canceling a picker keeps the current value.
 
 To edit several units at once, press in empty space of a roster panel (not on the card
 area, a button, or the scrollbar) and drag a square over the cards. All touched cards of
-that army are selected and stay highlighted until the selection is cleared. The gear button on any selected card opens **Group Settings**
+that army are selected as the square moves. Every selected card has a gold outline, regardless of the mouse position, until the selection is cleared. The gear button on any selected card opens **Group Settings**
 for all of them. A field shows **Mixed** when the selected units differ. Selecting one
 card is an ordinary selection. Clicking empty space outside the cards or entering preview clears both armies' selections.
 Card settings and other controls keep the selection available for their actions. Reordering, removing, or generating armies clears the group.
