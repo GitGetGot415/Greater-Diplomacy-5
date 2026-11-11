@@ -213,6 +213,26 @@ def compact_save_nation_data(save_dict, map_data):
     return save_dict
 
 
+def saved_tactical_player_unit_id(context):
+    """Identify the live tactical division without saving a second copy of the unit."""
+    session = session_for(context)
+    # History-only test doubles can omit player session state.
+    if not getattr(session, "tactical_mode", False):
+        return None
+    if (session.is_editor or session.selection_mode or session.multiplayer_mode
+            or session.realtime_multiplayer or session.player_unit is None):
+        return None
+    unit = session.player_unit
+    if unit.get("health", 0) <= 0 or unit.get("owner") != session.player_country:
+        return None
+    world = world_for(context)
+    if not any(other is unit for province in world.map_data.values()
+               for other in queries.units_with_air_cargo(province.get("units", []))):
+        return None
+    queries.ensure_unit_ids(world.map_data)
+    return unit["unit_id"]
+
+
 def build_save_dict(context, *, include_provinces=True, compact_nations=False, include_local_preferences=False):
     """Standardize save state; only disk saves opt into country compaction.
 
@@ -248,6 +268,7 @@ def build_save_dict(context, *, include_provinces=True, compact_nations=False, i
         "player_country": session_state.player_country,
         "active_players": session_state.active_players,
         "current_player_index": session_state.current_player_index,
+        "tactical_player_unit_id": saved_tactical_player_unit_id(context),
         "scenario_settings": scenario_settings,
         "scenario_metadata": normalized_scenario_metadata(world_state.scenario_metadata),
         "script_variables": world_state.script_variables,
@@ -282,6 +303,7 @@ def player_snapshot_projection(context, snapshot, country_id):
     """Filter a network save before transmission, including raw map geometry."""
     world_state = world_for(context)
     result = copy.deepcopy(snapshot)
+    result.pop("tactical_player_unit_id", None)
     from map_logic.system32 import unit_events
     report = unit_events.normalize_log(result.get("unit_event_log"),
                                       result.get("date", {}).get("total_turns", 0))

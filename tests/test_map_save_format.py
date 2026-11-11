@@ -17,6 +17,133 @@ from tests.stub_map_screen import map_double, sample_map_screen
 
 
 class MapSaveFormatTests(unittest.TestCase):
+    def tactical_context(self):
+        context = sample_map_screen()
+        player = {"unit_id": "controlled-division", "type": "Fixture Infantry I",
+                  "owner": "Avaria", "health": 70, "max_health": 100,
+                  "speed": 2, "attack": 10, "defense": 3, "custom_name": "Controlled division",
+                  "order": {"type": "MOVE", "path": []}}
+        other = dict(player, unit_id="other-division", custom_name="Other division")
+        province = next(iter(context.map_data.values()))
+        province.update(units=[other, player], buildings=[], unit_queue=[])
+        context.tactical_mode, context.player_unit = True, player
+        return context, province, player
+
+    def test_tactical_control_survives_disk_load_as_the_same_live_division(self):
+        from map_logic.actions import unit_actions
+        context, _province, player = self.tactical_context()
+        metadata = queries.build_save_dict(context, include_provinces=False)
+        self.assertEqual(metadata["tactical_player_unit_id"], player["unit_id"])
+        with tempfile.TemporaryDirectory() as directory, \
+                mock.patch.object(queries, "get_country_data", return_value={}), \
+                mock.patch.object(queries, "get_settings", return_value={}):
+            with open(os.path.join(directory, "meta.json"), "w", encoding="utf-8") as handle:
+                json.dump(metadata, handle)
+            with open(os.path.join(directory, "map_data.json"), "w", encoding="utf-8") as handle:
+                json.dump(queries.build_map_data_save(context), handle)
+            shutil.copyfile(os.path.join(c.BACKGROUNDS_DIR, "Province.png"), os.path.join(directory, "id_map.png"))
+            loaded = load_map.load_backend_state(directory, skip_initial_income=True)
+            units = next(iter(loaded.map_data.values()))["units"]
+            self.assertTrue(loaded.tactical_mode)
+            self.assertIs(loaded.player_unit, units[1])
+            self.assertEqual(loaded.player_unit["unit_id"], player["unit_id"])
+            self.assertTrue(unit_actions.unit_permission(loaded, "Avaria", units[1]))
+            self.assertFalse(unit_actions.unit_permission(loaded, "Avaria", units[0]))
+            self.assertEqual(queries.build_save_dict(loaded)["tactical_player_unit_id"], player["unit_id"])
+            # A historical selection takes its own control reference, rather than the latest save's.
+            from map_logic.system32.turn_processor import snapshot_history
+            context.time_manager.get_date_string = lambda: "Fixture date"
+            snapshot_history(context)
+            history_io.write(directory, context.history)
+            metadata["tactical_player_unit_id"] = "other-division"
+            with open(os.path.join(directory, "meta.json"), "w", encoding="utf-8") as handle:
+                json.dump(metadata, handle)
+            historical = load_map.load_backend_state(
+                directory, history_turn=context.time_manager.total_turns, skip_initial_income=True)
+            historical_units = next(iter(historical.map_data.values()))["units"]
+            self.assertTrue(historical.tactical_mode)
+            self.assertIs(historical.player_unit, historical_units[1])
+            metadata.pop("tactical_player_unit_id")
+            with open(os.path.join(directory, "meta.json"), "w", encoding="utf-8") as handle:
+                json.dump(metadata, handle)
+            older = load_map.load_backend_state(directory, skip_initial_income=True)
+            self.assertFalse(older.tactical_mode)
+            self.assertIsNone(older.player_unit)
+            self.assertEqual(older.player_country, "Avaria")
+
+    def test_tactical_load_clears_stale_control_and_rejects_missing_dead_or_foreign_units(self):
+        for problem in ("missing", "dead", "foreign"):
+            with self.subTest(problem=problem):
+                context, province, player = self.tactical_context()
+                metadata = queries.build_save_dict(context)
+                if problem == "missing":
+                    province["units"].remove(player)
+                elif problem == "dead":
+                    player["health"] = 0
+                else:
+                    player["owner"] = "Other country"
+                load_map._restore_tactical_player(context, metadata)
+                self.assertFalse(context.tactical_mode)
+                self.assertIsNone(context.player_unit)
+                self.assertEqual(context.player_country, "Spectator")
+                self.assertEqual(context.active_players, ["Spectator"])
+        context, _province, _player = self.tactical_context()
+        load_map._restore_tactical_player(context, {})
+        self.assertFalse(context.tactical_mode)
+        self.assertIsNone(context.player_unit)
+        self.assertEqual(context.player_country, "Avaria")
+
+    def test_tactical_metadata_cannot_enable_control_in_editors_scenarios_or_multiplayer(self):
+        for mode in ("is_editor", "selection_mode", "multiplayer_mode", "realtime_multiplayer"):
+            with self.subTest(mode=mode):
+                context, _province, player = self.tactical_context()
+                metadata = queries.build_save_dict(context)
+                setattr(context, mode, True)
+                self.assertIsNone(queries.build_save_dict(context)["tactical_player_unit_id"])
+                load_map._restore_tactical_player(context, metadata)
+                self.assertFalse(context.tactical_mode)
+                self.assertIsNone(context.player_unit)
+                self.assertEqual(context.player_country, "Avaria")
+
+    def test_tactical_control_does_not_follow_a_leftover_player_reference_after_independence(self):
+        context, _province, _player = self.tactical_context()
+        context.tactical_mode = False
+        self.assertIsNone(queries.build_save_dict(context)["tactical_player_unit_id"])
+
+    def test_realtime_player_projection_omits_tactical_control(self):
+        context, _province, player = self.tactical_context()
+        context.scenario_settings["fog_of_war"] = False
+        snapshot = queries.build_save_dict(context)
+        projected = queries.player_snapshot_projection(context, snapshot, "Avaria")
+        self.assertNotIn("tactical_player_unit_id", projected)
+        self.assertEqual(snapshot["tactical_player_unit_id"], player["unit_id"])
+
+    def test_selected_history_uses_its_tactical_division_reference(self):
+        from map_logic.system32.turn_processor import snapshot_history
+        context, _province, player = self.tactical_context()
+        context.time_manager.get_date_string = lambda: "Fixture date"
+        snapshot_history(context)
+        turn = str(context.time_manager.total_turns)
+        self.assertEqual(context.history[turn]["tactical_player_unit_id"], player["unit_id"])
+        metadata = queries.build_save_dict(context)
+        metadata["tactical_player_unit_id"] = None
+        load_map._apply_history_snapshot(metadata, context.history, turn)
+        load_map._restore_tactical_player(context, metadata)
+        self.assertIs(context.player_unit, player)
+        self.assertTrue(context.tactical_mode)
+        # Older snapshots do not inherit a later turn's tactical selection.
+        context.history[turn].pop("tactical_player_unit_id")
+        load_map._apply_history_snapshot(metadata, context.history, turn)
+        load_map._restore_tactical_player(context, metadata)
+        self.assertIsNone(context.player_unit)
+        self.assertFalse(context.tactical_mode)
+        context.tactical_mode = False
+        snapshot_history(context)
+        load_map._apply_history_snapshot(metadata, context.history, turn)
+        load_map._restore_tactical_player(context, metadata)
+        self.assertIsNone(context.player_unit)
+        self.assertFalse(context.tactical_mode)
+
     def test_conversation_colors_normalize_only_at_the_save_boundary(self):
         raw = {"A": [1, 2, 3], "B": [True, 2, 3], "C": [-1, 2, 3],
                "D": [256, 2, 3], "E": [1, 2], "F": "123", "": [1, 2, 3]}

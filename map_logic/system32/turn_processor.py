@@ -166,6 +166,7 @@ def snapshot_history(context):
         "month": world_state.time_manager.month_index,
         "year": world_state.time_manager.year,
         "nation_data": nation_snap,
+        "tactical_player_unit_id": queries.saved_tactical_player_unit_id(context),
         "factions": copy_history_value(world_state.factions) if hasattr(world_state, "factions")
                     else faction_records.canonical_records(world_state.nation_data),
         "provinces": {}

@@ -440,8 +440,9 @@ regardless of who owns the attacked tile. A division returning to its own land c
 enemy division standing there. Units without movement remaining cannot supply an incoming pin.
 
 The attack check covers the route within the unit's remaining speed, including hostile territory or
-currently occupied enemy tiles after a friendly first step. A route that stays non-hostile this turn
-can withdraw; an attack queued for a later turn does not prevent that withdrawal.
+enemy-occupied tiles outside friendly territory after a friendly first step. A route that stays in
+friendly territory can withdraw even when enemies are fighting on the destination tile. The arriving
+unit joins that tile's combat. An attack queued for a later turn does not prevent withdrawal this turn.
 Pinning cancels the offensive route. Recheck pinning from the units' current positions on later steps.
 Hostile units arriving on the same tile stop before another step, including simultaneous arrivals.
 

@@ -28,6 +28,8 @@ Normal tile access, speed, and pinning rules apply to the tactical division.
 See Movement and pinning in [non_llm_ai.txt](non_llm_ai.txt) for the shared movement-step and withdrawal rules.
 Those rules check incoming hostile units regardless of tile ownership and consider attack steps after a friendly
 first step within the same turn. Pinning is checked again from the current positions on each movement step.
+A route that stays in friendly territory this turn can withdraw even when the destination holds enemies.
+The division joins combat on arrival; fighting on friendly land does not make the withdrawal an attack route.
 
 If the tactical division and hostile land forces attempt to cross the same border in opposite directions,
 the tactical division wins the movement clash only when no incoming hostile unit from another tile pins the division.
@@ -92,11 +94,19 @@ was destroyed and the player spectated the rest of the battle.
 Every surviving participating unit keeps its sub-units' remaining share of its full health in the campaign.
 Winning a tactical battle leaves zero enemy units on the tile. The entire defeated side is destroyed and removed,
 including divisions beyond the deployment limit, artillery, and any other enemy units that did not deploy.
+Incoming enemies that moved onto the tile are included in the defeat; those units do not return to their origin tiles.
 The same rule clears the player's side after a defeat. Winning reserves and neutral bystanders are preserved;
 volunteer units belong to the side of their host country. Automatic victories against hostile artillery also clear
 all enemy units from the tile. Unit rosters, capture checks, and battle-marker caches refresh after the result.
 The tile is then captured as after any campaign combat: if only enemies remain, those enemies take the tile.
 Everything else waits for the next turn.
+
+Saving during tactical play records the controlled division's persistent unit ID in `tactical_player_unit_id`.
+Loading binds control to that same living division on the loaded map and leaves the host country AI-controlled.
+The save stores no duplicate unit. If the saved division is missing, dead, or no longer belongs to the player,
+the game opens in spectator mode. Editors, new scenarios, tournament games, and real-time games do not restore
+tactical control. Older saves without the reference keep their existing country-control behavior.
+New history snapshots record the reference too, so selecting a recorded turn restores that turn's tactical control.
 
 ## State and implementation owners
 

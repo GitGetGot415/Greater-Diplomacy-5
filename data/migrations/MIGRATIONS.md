@@ -96,6 +96,13 @@ Give the new meaning a new name. Or save the data that is necessary to read the 
 Each save stores the stage years of the research tree that wrote it.
 The loader compares these years with the active tree, so research converts without a version number.
 
+`tactical_player_unit_id` is an optional reference to the controlled tactical division's existing `unit_id`.
+The save builder and new history snapshots write the reference, or null outside tactical play.
+After loading and repairing units, the loader binds tactical control to the matching live unit.
+A selected history turn uses its own reference when recorded. Older saves and snapshots need no conversion:
+an absent reference preserves the older country-control behavior. Tournament moves do not grant tactical control,
+and real-time player projections omit the reference. See [Tactical Mode](../../documentation/tactical_mode.md).
+
 ## Current Conversion Rules
 
 These rules convert formats from released versions up to v46.

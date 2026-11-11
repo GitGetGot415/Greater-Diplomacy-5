@@ -15,6 +15,7 @@ from data.queries.unit_info import (
 )
 from data.queries.combat_state import get_unit_combat_owner, is_hostile_territory
 from data.queries.diplomacy import are_at_war, get_enemies
+from data.queries.factions import friendly_nations_view
 from data.queries.movement_access import can_convoy_enter, can_land_units_enter, can_ships_enter
 from data.queries.air import (
     air_drop_target_is_legal,
@@ -104,20 +105,26 @@ def ground_move_records(context, records=None, *, step=0):
 
 
 def move_route_enters_combat(context, unit, *, step=0):
-    """Whether this turn's remaining route attacks land or a currently occupied enemy tile.
+    """Whether this turn's remaining route attacks outside friendly territory.
 
     A friendly first step cannot disguise an attack later in the same turn.
     Steps queued for a later turn do not prevent a withdrawal this turn.
+    Fighting on friendly land does not turn a withdrawal into an offensive route.
     """
     world = world_for(context)
     side = get_unit_combat_owner(unit)
+    friendly = friendly_nations_view(side, world.nation_data)
     path = unit.get("order", {}).get("path", [])
     for province_id in path[:max(0, unit.get("speed", 1) - step)]:
         province = world.id_to_province.get(province_id)
-        if province and (is_hostile_territory(side, province.get("owner", "Unclaimed"), world.nation_data)
-                         or any(other.get("health", 0) > 0 and are_at_war(
-                             side, get_unit_combat_owner(other), world.nation_data)
-                             for other in province.get("units", []))):
+        if province is None:
+            continue
+        owner = province.get("owner", "Unclaimed")
+        if is_hostile_territory(side, owner, world.nation_data):
+            return True
+        if owner not in friendly and any(other.get("health", 0) > 0 and are_at_war(
+                side, get_unit_combat_owner(other), world.nation_data)
+                for other in province.get("units", [])):
             return True
     return False
 

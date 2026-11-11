@@ -2123,6 +2123,48 @@ class CustomBattleScreenTests(unittest.TestCase):
                 self.screen.update()
                 self.assertEqual(province["units"], once)
 
+    def test_incoming_units_are_removed_from_the_campaign_after_a_tactical_victory(self):
+        from map_logic.system32 import combat_processor, movement_processor
+        from tests.combat_fixtures import StubBattleMap
+        for reverse_order in (False, True):
+            with self.subTest(reverse_order=reverse_order), patch(
+                    "data.queries.get_unit_library", return_value=self.library):
+                world = StubBattleMap()
+                world.add_nation("Fixture A", at_war_with=["Fixture B"])
+                world.add_nation("Fixture B", at_war_with=["Fixture A"])
+                player = queries.create_unit_dict("Fixture II", "Fixture A", self.library)
+                attackers = [queries.create_unit_dict("Fixture I", "Fixture B", self.library) for _ in range(2)]
+                province = world.add_province("p1", "Fixture A", units=[player])
+                for index, attacker in enumerate(attackers, 2):
+                    attacker["order"] = {"type": "MOVE", "path": ["p1"]}
+                    world.add_province(f"p{index}", "Fixture B", units=[attacker])
+                world.player_unit, world.tactical_mode = player, True
+                world.invalidate_map_presentation_cache = Mock()
+                world.refresh_map_layers, world.update_country_centers = Mock(), Mock()
+                if reverse_order:
+                    world.map_data = dict(reversed(list(world.map_data.items())))
+                combat_processor.process_pinning(world)
+                combat_processor.process_meeting_engagements(world)
+                movement_processor.process_movement(world)
+                combat_processor.process_combat(world)
+                friendly, enemy = combat.campaign_forces(player, province, world.nation_data, self.library)
+                self.assertEqual({id(unit) for unit in enemy}, {id(unit) for unit in attackers})
+                self.screen._enter_campaign(world, province, friendly, enemy)
+                self.finish_intro()
+                self.click("Start")
+                for fighter in self.screen.simulation.fighters:
+                    if fighter.side == 1:
+                        fighter.data["health"] = 0
+                self.screen.simulation.winner = 0
+                self.screen.update()
+                self.assertTrue(all(attacker["health"] == 0 for attacker in attackers))
+                self.assertEqual([unit for tile in world.map_data.values() for unit in tile["units"]], [player])
+                # A later turn must not bring the defeated attackers back.
+                movement_processor.process_movement(world)
+                combat_processor.process_combat(world)
+                self.assertIsNone(combat.tactical_encounter(world, province))
+                self.assertEqual([unit for tile in world.map_data.values() for unit in tile["units"]], [player])
+
     def test_map_offers_one_tactical_preview_per_turn_for_a_fighting_land_unit(self):
         from screens.game.map import Map
         nations = {"Fixture A": {"at_war_with": ["Fixture B"]}, "Fixture B": {"at_war_with": ["Fixture A"]}}

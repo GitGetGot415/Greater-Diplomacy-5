@@ -342,6 +342,32 @@ class TacticalSwapTests(unittest.TestCase):
                 self.assertEqual({id(unit) for unit in origin["units"]}, {id(player), id(opponent)})
                 self.assertEqual(player["order"]["path"], [])
 
+    def test_friendly_withdrawal_is_not_pinned_by_an_incoming_attack(self):
+        for mode in ("ordinary", "tactical", "tournament", "realtime"):
+            for destination_fighting in (False, True):
+                with self.subTest(mode=mode, destination_fighting=destination_fighting):
+                    screen = self.screen()
+                    screen.tactical_mode = mode == "tactical"
+                    screen.multiplayer_mode = mode == "tournament"
+                    screen.realtime_multiplayer = mode == "realtime"
+                    player = self.mover("A", ["p2"])
+                    attacker = self.mover("B", ["p1"])
+                    screen.player_unit = player
+                    origin = screen.add_province("p1", "A", units=[player, self.mover("B", [])])
+                    destination = screen.add_province("p2", "A", units=(
+                        [self.mover("B", [])] if destination_fighting else []))
+                    screen.add_province("p3", "B", units=[attacker])
+
+                    combat_processor.process_pinning(screen)
+                    combat_processor.process_meeting_engagements(screen)
+                    movement_processor.process_movement(screen)
+                    combat_processor.process_combat(screen)
+
+                    self.assertTrue(any(unit is player for unit in destination["units"]))
+                    self.assertTrue(any(unit is attacker for unit in origin["units"]))
+                    self.assertFalse(any(unit is player for unit in origin["units"]))
+                    self.assertEqual(player["order"]["path"], [])
+
     def test_an_attack_queued_for_a_later_turn_does_not_block_withdrawal(self):
         screen = self.screen()
         player = self.mover("A", ["p2", "p3"], speed=1)

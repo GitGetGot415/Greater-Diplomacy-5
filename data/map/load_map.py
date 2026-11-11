@@ -142,6 +142,7 @@ def _apply_history_snapshot(save_meta, history, history_turn):
         save_meta["factions"] = copy.deepcopy(snap["factions"])
     else:
         save_meta.pop("factions", None)
+    save_meta["tactical_player_unit_id"] = snap.get("tactical_player_unit_id")
 
     if "date" not in save_meta:
         save_meta["date"] = {}
@@ -172,6 +173,8 @@ def _clear_loaded_world(context):
     replace_mapping(world_state, "scenario_metadata", {})
     session_state.conversation_colors = {}
     session_state.editor_scenario_name = ""
+    session_state.tactical_mode = False
+    session_state.player_unit = None
 
 
 def _store_scenario_settings(context, scenario_settings):
@@ -393,6 +396,31 @@ def _restore_session_properties(context, save_meta):
         session_state.selection_mode = False
 
 
+def _restore_tactical_player(context, save_meta):
+    """Bind saved tactical control to the repaired map's live unit identity."""
+    session = session_for(context)
+    session.tactical_mode = False
+    session.player_unit = None
+    if (session.is_editor or session.selection_mode or session.multiplayer_mode
+            or session.realtime_multiplayer):
+        return
+    unit_id = (save_meta or {}).get("tactical_player_unit_id")
+    # Older saves did not record tactical control. Never guess a division.
+    if not isinstance(unit_id, str) or not unit_id:
+        return
+    for province in world_for(context).map_data.values():
+        for unit in queries.units_with_air_cargo(province.get("units", [])):
+            if (unit.get("unit_id") == unit_id and unit.get("health", 0) > 0
+                    and unit.get("owner") == session.player_country):
+                session.player_unit = unit
+                session.tactical_mode = True
+                return
+    # A removed division ends tactical control, as when the division dies in play.
+    session.player_country = "Spectator"
+    session.active_players = ["Spectator"]
+    session.current_player_index = 0
+
+
 def _unit_base_type(unit, context):
     """Resolves a stored unit's real type down to its turn-editor base type,
     unwrapping Convoy/Truck transports the same way sync_units_to_data does."""
@@ -601,6 +629,7 @@ def _load_map_asset_steps(context, load_path, scenario_settings=None, *, load_pr
     # provinces.  Repair both ends together after every map load, including
     # legacy maps which need persistent unit IDs generated for the first time.
     queries.normalize_armies(world_state.nation_data, world_state.map_data)
+    _restore_tactical_player(context, save_meta)
 
     # --- FORCE TIME-APPROPRIATE RESEARCH ---
     # Only when actually starting a fresh game from a scenario (selection_mode) --
