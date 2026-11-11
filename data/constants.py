@@ -1025,7 +1025,7 @@ DEFAULT_UNIT_SPD = 1
 
 # Most divisions per army in a tactical battle. The battlefield size (ARENA_SIZE in
 # map_logic/custom_battle.py) is derived from it so two full armies fit.
-CUSTOM_BATTLE_MAX_UNITS_PER_SIDE = 64
+CUSTOM_BATTLE_MAX_UNITS_PER_SIDE = 16
 
 #: The roman numeral alphabet, largest first. Both directions of the conversion
 #: read it, so they cannot disagree about which symbols exist: data/queries/unit_info.py's

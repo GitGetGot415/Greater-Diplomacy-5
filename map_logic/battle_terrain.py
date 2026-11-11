@@ -95,19 +95,28 @@ class Battlefield:
         self._index_features()
 
     @classmethod
-    def generate(cls, terrain, size, body_radius, front_gap, seed=None):
+    def generate(cls, terrain, size, body_radius, front_gap, seed=None, *, deployment_half_height=None):
         # Terrain randomness does not consume AI temperament or shot-spread draws.
         rng = random.Random(seed)
         field = cls(terrain, size, body_radius)
         hills, patches, trees, rocks, gaps = TERRAIN_RECIPES[terrain]
         left = (size[0] - front_gap) / 2 + DEPLOYMENT_CLEARANCE
         right = size[0] - left
+        # Callers without formation geometry retain clear deployment columns.
+        tree_left = left if deployment_half_height is None else EDGE_CLEARANCE
+        tree_right = size[0] - tree_left
 
         def place(kind, radius, height=0.0, center=None, **tree):
-            x, y = center or (rng.uniform(left + radius, right - radius),
+            min_x, max_x = (tree_left, tree_right) if kind == "tree" else (left, right)
+            x, y = center or (rng.uniform(min_x + radius, max_x - radius),
                               rng.uniform(EDGE_CLEARANCE + radius, size[1] - EDGE_CLEARANCE - radius))
-            if not (left + radius <= x <= right - radius
+            if not (min_x + radius <= x <= max_x - radius
                     and EDGE_CLEARANCE + radius <= y <= size[1] - EDGE_CLEARANCE - radius):
+                return
+            # Trees may grow beside the armies, leaving their centered ranks clear.
+            if (kind == "tree" and deployment_half_height is not None
+                    and abs(y - size[1] / 2) < deployment_half_height + body_radius + DEPLOYMENT_CLEARANCE + radius
+                    and (x - radius < left or x + radius > right)):
                 return
             field.features.append(Feature(kind, x, y, radius, height, **tree))
 
@@ -118,7 +127,7 @@ class Battlefield:
         for _ in range(gaps):
             place(GAP_KINDS[terrain], rng.uniform(*HAZARD_RADIUS))
         for _ in range(patches):
-            center = (rng.uniform(left + PATCH_RADIUS, right - PATCH_RADIUS),
+            center = (rng.uniform(tree_left + PATCH_RADIUS, tree_right - PATCH_RADIUS),
                       rng.uniform(EDGE_CLEARANCE + PATCH_RADIUS, size[1] - EDGE_CLEARANCE - PATCH_RADIUS))
             for _ in range(trees):
                 angle, distance = rng.uniform(0, math.tau), PATCH_RADIUS * math.sqrt(rng.random())

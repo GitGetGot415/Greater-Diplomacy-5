@@ -1298,6 +1298,24 @@ class TacticalTerrainTests(unittest.TestCase):
                 else:
                     self.assertTrue(first.battlefield.features)
 
+    def test_tree_patches_spread_beyond_the_front_gap_and_keep_full_armies_clear(self):
+        width, height = combat.ARENA_SIZE
+        front = (width - combat.SPAWN_FRONT_GAP) / 2
+        roster = ["Fixture I"] * c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE
+        with patch.dict(combat.SUBUNIT_COUNTS, {"infantry": 10}):
+            for terrain in ("forest", "jungle", "swamp"):
+                for seed in (0, 4, 19):
+                    with self.subTest(terrain=terrain, seed=seed):
+                        simulation = combat.BattleSimulation(
+                            self.library, roster, roster, terrain=terrain, seed=seed)
+                        field = simulation.battlefield
+                        trees = [feature for feature in field.features if feature.kind == "tree"]
+                        self.assertTrue(any(tree.x < front for tree in trees))
+                        self.assertTrue(any(tree.x > width - front for tree in trees))
+                        self.assertTrue(any(tree.y < height / 4 for tree in trees))
+                        self.assertTrue(any(tree.y > height * 3 / 4 for tree in trees))
+                        self.assertTrue(all(field.walkable((unit.x, unit.y)) for unit in simulation.fighters))
+
     def test_tree_trunks_set_the_hitbox_and_foliage_fits_its_trunk_size(self):
         trees = [feature for seed in range(5) for feature in battle_terrain.Battlefield.generate(
             "jungle", combat.ARENA_SIZE, combat.UNIT_RADIUS, combat.SPAWN_FRONT_GAP, seed).features
@@ -1962,6 +1980,18 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.assertEqual(roster[1]["health"] / roster[1]["max_health"], 0.5)
         self.assertIsNone(combat.campaign_forces(player, {"units": [player, ally]}, nations, self.library))
         self.assertIsNone(combat.campaign_forces(player, {"units": [player, ship]}, nations, self.library))
+
+    def test_campaign_forces_limit_both_armies_and_keep_the_player_first(self):
+        nations = {"Fixture A": {"at_war_with": ["Fixture B"]}, "Fixture B": {"at_war_with": ["Fixture A"]}}
+        player = queries.create_unit_dict("Fixture II", "Fixture A", self.library)
+        cap = c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE
+        allies = [queries.create_unit_dict("Fixture I", "Fixture A", self.library) for _ in range(cap + 1)]
+        enemies = [queries.create_unit_dict("Fixture I", "Fixture B", self.library) for _ in range(cap + 1)]
+        province = {"units": [*allies, *enemies, player]}
+        friendly, enemy = combat.campaign_forces(player, province, nations, self.library)
+        self.assertEqual(friendly, [player, *allies[:cap - 1]])
+        self.assertEqual(enemy, enemies[:cap])
+        self.assertEqual(province["units"], [*allies, *enemies, player])
 
     def test_map_offers_one_tactical_preview_per_turn_for_a_fighting_land_unit(self):
         from screens.game.map import Map

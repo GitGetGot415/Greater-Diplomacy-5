@@ -67,8 +67,9 @@ SUBUNIT_SPACING = 50.0  # Between neighboring sub-units along a division's line.
 # Distance between the two armies' front ranks at deployment, centered on the battlefield.
 SPAWN_FRONT_GAP = 2000.0
 SPAWN_MARGIN = 100.0  # Between the battlefield edge and the last rank of the largest army.
-# The battlefield is wide enough for two full armies behind their front ranks.
-ARENA_SIZE = (SPAWN_FRONT_GAP + 2 * (SPAWN_MARGIN + (c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE - 1) * RANK_GAP), 1800.0)
+# The square battlefield fits two full armies behind their front ranks.
+ARENA_SIDE = SPAWN_FRONT_GAP + 2 * (SPAWN_MARGIN + (c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE - 1) * RANK_GAP)
+ARENA_SIZE = (ARENA_SIDE, ARENA_SIDE)
 APPROACH_LANE_GAP = 70.0
 FLANK_ARRIVAL_DISTANCE = 45.0
 MELEE_SHAPES = frozenset(("infantry", "cavalry"))
@@ -547,7 +548,8 @@ class BattleSimulation:
         self._rng = random.Random(self.seed)
         if self.battlefield is None:
             self.battlefield = battle_terrain.Battlefield.generate(
-                self.terrain, ARENA_SIZE, UNIT_RADIUS, SPAWN_FRONT_GAP, self.seed)
+                self.terrain, ARENA_SIZE, UNIT_RADIUS, SPAWN_FRONT_GAP, self.seed,
+                deployment_half_height=(max(SUBUNIT_COUNTS.values()) - 1) * SUBUNIT_SPACING / 2)
         allowed = set(land_unit_types(self.library))
         for side, roster in enumerate((self.friendly, self.enemy)):
             if not roster or len(roster) > c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE:

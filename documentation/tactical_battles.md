@@ -36,7 +36,8 @@ Select a roster card and choose **Remove** to remove that entry.
 Drag cards within an army to change deployment order: the leftmost card deploys in the front rank, closest to the
 enemy, and each card to its right deploys one rank further back.
 Scroll long rosters with the wheel, scrollbar, or by dragging the roster background.
-Each army has a size limit. Both armies need at least one unit before **Simulate** becomes available.
+`CUSTOM_BATTLE_MAX_UNITS_PER_SIDE` in [data/constants.py](../data/constants.py) limits each army's divisions
+in custom battles and campaign tactical encounters. Both armies need at least one unit before **Simulate** becomes available.
 
 The gray gear button opens **Unit Settings** for that roster entry.
 **Nationality** chooses a country from the base country library. **Starting HP** is a slider that sets
@@ -138,7 +139,7 @@ The two armies deploy facing each other around the middle of the battlefield, th
 (`SPAWN_FRONT_GAP` in [map_logic/custom_battle.py](../map_logic/custom_battle.py)) whatever their size.
 Each division deploys as one vertical line of its sub-units, centered top to bottom, in its own rank.
 Sub-units keep the same spacing along a line, so a division with fewer sub-units makes a shorter line.
-Roster order runs front to back, and the battlefield is wide enough for two full armies.
+Roster order runs front to back. The battlefield is square, with each side long enough to fit two full armies.
 Armored cars, WW1 tanks, light tanks, medium tanks, heavy tanks, main battle tanks, and super heavy tanks use the chassis
 and turret images in `assets/battles`. The chassis follows the hull heading, and the turret follows the gun's aim.
 Infantry, cavalry, and militia use their chassis images from the same folder and share `turret/Infantry Gun.png`
@@ -215,7 +216,8 @@ Trunks block ground movement and intercept shots. Ordinary shots leave trees int
 foliage included, and stop at that tree. Later shots and ground units can use the opening.
 Swamps have a pink background, trees, and impassable marsh areas. Marsh areas allow shots across like chasms.
 
-The generated battlefield keeps deployment areas clear and ground routes connected. Terrain generation and
+Tree patches can grow across the battlefield, including beside and behind the armies, while deployment areas stay clear.
+The generated battlefield keeps ground routes connected. Terrain generation and
 navigation belong to `map_logic/battle_terrain.py`; the screen draws cached artwork from those same features.
 AI units use ground routes around obstacles and seek accessible firing positions when terrain blocks their shots.
 Tanks can fire to clear obstructing trees. Formations can loosen while following routes around terrain.
