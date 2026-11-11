@@ -15,7 +15,7 @@ from map_logic.system32 import combat_forecast, combat_rules
 # These values translate campaign statistics into a real-time battlefield.
 # They do not change campaign combat or add persistent unit statistics.
 FIXED_STEP = 1.0 / 30.0 # 33 milliseconds per step, or 30 simulation steps per second
-MOVE_PIXELS_PER_SPEED = 50.0
+MOVE_PIXELS_PER_SPEED = 60.0
 FIRE_INTERVAL = 2.0
 DAMAGE_SCALE = 0.5  # Applied after defense and rounding, so low-damage hits also slow down.
 # Attack at zero HP: 0.0 = directly proportional to HP; 1.0 = wounds do not reduce attack.
@@ -74,22 +74,22 @@ APPROACH_LANE_GAP = 70.0
 FLANK_ARRIVAL_DISTANCE = 45.0
 FOOT_SHAPES = frozenset(("infantry", "cavalry"))  # Turn away to withdraw; vehicles reverse.
 RAM_MIN_UNIT_SPEED = 2.0  # Library movement speed required to deal impact damage.
-RAM_SUPPORT_RANGE = 160.0
-RAM_COMMIT_RANGE = 60.0
-RAM_WOUNDED_TARGET = 0.6
-RAM_APPROACH_RANGE = 280.0
-RAM_MIN_HEALTH = 0.65
-RAM_MASS_ADVANTAGE = 2.0
-CONTACT_RELEASE_DISTANCE = UNIT_RADIUS * 3
-RAM_MIN_SPEED = 60.0
-RAM_REFERENCE_SPEED = 120.0
-RAM_MAX_STRENGTH = 1.5
-RAM_DAMAGE = 1.2
-KNOCKBACK_MAX_SPEED = 100.0
-KNOCKBACK_SECONDS = 0.25
+RAM_SUPPORT_RANGE = 160.0   # Radius used to count friendly support, including the attacker itself
+RAM_COMMIT_RANGE = 60.0 # Inside this distance, committed attackers stop dodging and finish the approach
+RAM_WOUNDED_TARGET = 0.6 # At this % of health or lower, the AI will consider ramming this target
+RAM_APPROACH_RANGE = 280.0 # Maximum distance at which the AI considers a ram target
+RAM_MIN_HEALTH = 0.65 # The rammer needs this much HP to begin or continue a deliberate ram
+RAM_MASS_ADVANTAGE = 2.0 # The AI attacker needs at least this much compared to the target’s mass
+CONTACT_RELEASE_DISTANCE = UNIT_RADIUS * 3 # The two units must separate beyond this center-to-center distance before their next collision can deal ram damage
+RAM_MIN_SPEED = 60.0 # Must go this fast for a ram to deal damage
+RAM_MAX_STRENGTH = 1.5 # Caps the speed-strength multiplier
+RAM_DAMAGE = 1.0 # Damage multiplier for how much Ramming does compared to a bullet shot
+RAM_REFERENCE_SPEED = 120.0 # Damage multiplier applies at this speed
+KNOCKBACK_MAX_SPEED = 100.0 # Caps each horizontal and vertical component of extra collision push
+KNOCKBACK_SECONDS = 0.25 # Controls how quickly extra push fades. Larger values make the push persist longer
 # Shots and rams hurt allies too, so AI sub-units keep out of each other's way.
 LINE_SHIFT_SECONDS = 0.6  # A loaded AI sub-unit whose shot would cross an ally sidesteps this long.
-ALLY_BUMP_SPEED = RAM_MIN_SPEED * 0.5  # AI ram-capable units brake before hitting allies.
+ALLY_BUMP_SPEED = RAM_MIN_SPEED * 0.5  # Speed allowance used by AI braking to approach allies without damaging them
 TANK_SHAPES = frozenset(("tank", "light_tank", "heavy_tank"))
 NAVIGATION_SECONDS = 0.8
 WAYPOINT_REACH = 25.0
