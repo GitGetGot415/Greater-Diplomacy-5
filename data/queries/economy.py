@@ -8,7 +8,8 @@ from data.state_access import session_for, world_for
 from map_logic import politics
 from data.queries.content import uses_default_building_stats
 from data.queries.geometry import is_water_province
-from data.queries.unit_info import get_base_item_name, is_naval_unit, units_with_air_cargo
+from data.queries.unit_info import (base_item_name_from_text, get_base_item_name, is_naval_unit,
+                                   units_with_air_cargo)
 from data import queries
 
 
@@ -315,7 +316,7 @@ def get_building_cost(b_name, nation, map_data, bldg_lib):
     reflects both the recipes.py default and any Construction Turns Editor override.
     """
     stats = bldg_lib.get(b_name, {}).copy()
-    if b_name == "Basic Factory":
+    if b_name in DYNAMIC_COST_BUILDINGS:
         count = get_factory_count(nation, map_data)
         x = c.BASIC_FACTORY_BASE_COST_X + (c.BASIC_FACTORY_COST_MULTIPLIER * count)
         stats["cost_materials"] = x * 2
@@ -451,31 +452,67 @@ def get_building_output_modifiers(research, building_library=None, *, context=No
 #: Building costs and outputs that Edit Unit / Building Stats and the map editor change.
 BUILDING_STAT_FIELDS = tuple(f"{kind}_{resource}" for kind in ("cost", "prod") for resource in c.ECON_RESOURCE_KEYS)
 
+#: Buildings whose costs get_building_cost calculates. Their stored costs are not used or edited.
+DYNAMIC_COST_BUILDINGS = frozenset({"Basic Factory"})
+
+
+def get_building_level(name):
+    """Return the numbered level of a building, or one for an unnumbered building."""
+    _family, separator, level = name.rpartition(" Lvl ")
+    try:
+        return max(1, int(level)) if separator else 1
+    except ValueError:
+        return 1
+
+
+def _whole(value):
+    return int(value) if float(value).is_integer() else value
+
 
 def get_building_stat_defaults(building_library=None, groups=None):
-    """Read editable costs and outputs in library order. groups limits the building groups."""
+    """Read each building family's level 1 values and per-level increases, as recipes.py builds them.
+
+    Families keep library order. groups limits the building groups.
+    A family with more than one level also has a <field>_per_level increase for each field.
+    """
     if building_library is None:
         # The live library can omit buildings disabled in the previous game.
         with open(c.BUILDING_DATA_PATH, encoding="utf-8") as handle:
             building_library = json.load(handle)
-    return {name: {key: stats.get(key, 0) for key in BUILDING_STAT_FIELDS}
-            for name, stats in building_library.items()
-            if groups is None or stats.get("group") in groups}
+    families = {}
+    for name, stats in building_library.items():
+        if groups is None or stats.get("group") in groups:
+            families.setdefault(base_item_name_from_text(name), []).append((get_building_level(name), stats))
+    defaults = {}
+    for family, members in families.items():
+        members.sort(key=lambda member: member[0])
+        (first_level, first), (last_level, last) = members[0], members[-1]
+        fields = {}
+        for key in BUILDING_STAT_FIELDS:
+            if family in DYNAMIC_COST_BUILDINGS and key.startswith("cost_"):
+                continue
+            step = ((last.get(key, 0) - first.get(key, 0)) / (last_level - first_level)
+                    if last_level > first_level else 0)
+            fields[key] = _whole(first.get(key, 0) - (first_level - 1) * step)
+            if last_level > first_level:
+                fields[f"{key}_per_level"] = _whole(step)
+        defaults[family] = fields
+    return defaults
 
 
 def get_building_stat_overrides(raw, defaults):
-    """Keep valid cost and output changes. Missing or malformed fields use library defaults."""
+    """Keep valid level 1 values and increases. Missing or malformed fields use library defaults."""
     if not isinstance(raw, dict):
         return {}
     overrides = {}
-    for name, fields in defaults.items():
-        values = raw.get(name)
+    for family, fields in defaults.items():
+        values = raw.get(family)
         if not isinstance(values, dict):
             continue
         changed = {key: values[key] for key, default in fields.items()
                    if type(values.get(key)) is int and values[key] >= 0 and values[key] != default}
         if changed:
-            overrides[name] = changed
+            overrides[family] = changed
     return overrides
 
 
@@ -487,10 +524,25 @@ def get_active_building_stat_overrides(settings, defaults):
 
 
 def apply_building_stat_overrides(building_library, settings):
-    """Apply scenario costs and outputs to a freshly loaded building library."""
+    """Apply scenario costs and outputs to a freshly loaded building library.
+
+    A changed field uses value = level 1 value + (level - 1) x increase for every level of the family.
+    Unchanged fields keep their library values.
+    """
     defaults = get_building_stat_defaults(building_library)
-    for name, changed in get_active_building_stat_overrides(settings, defaults).items():
-        building_library[name].update(changed)
+    overrides = get_active_building_stat_overrides(settings, defaults)
+    for name, stats in building_library.items():
+        family = base_item_name_from_text(name)
+        changed = overrides.get(family)
+        if not changed:
+            continue
+        level = get_building_level(name)
+        for key in BUILDING_STAT_FIELDS:
+            step_key = f"{key}_per_level"
+            if key in changed or step_key in changed:
+                start = changed.get(key, defaults[family][key])
+                step = changed.get(step_key, defaults[family].get(step_key, 0))
+                stats[key] = max(0, round(start + (level - 1) * step))
 
 
 def get_building_output(building_name, research, building_library=None, *, context=None, multipliers=None, modifiers=None):

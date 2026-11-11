@@ -23,6 +23,14 @@ from ui.navigation import screen_runner
 #: Marks the Use Defaults row at the top of the Buildings category.
 USE_DEFAULTS_ROW = "use_defaults"
 
+#: Building row kinds: level 1 values, then the increase for each later level.
+LEVEL_ONE_ROW, PER_LEVEL_ROW = "level_one", "per_level"
+
+
+def _number_text(value):
+    """Show whole numbers without a decimal point or exponent."""
+    return str(int(value)) if float(value).is_integer() else f"{value:.2f}".rstrip("0")
+
 
 class UnitStatsEditorScreen(ModalScreen):
     TITLE = "Unit / Building Stats Editor"
@@ -100,17 +108,25 @@ class UnitStatsEditorScreen(ModalScreen):
         overrides = queries.get_building_stat_overrides(
             (self.target_settings or {}).get(self.BUILDING_SETTING), self.building_defaults)
         self.building_values = {
-            name: {key: str(overrides.get(name, {}).get(key, default)) for key, default in fields.items()}
-            for name, fields in self.building_defaults.items()
+            family: {key: _number_text(overrides.get(family, {}).get(key, default))
+                     for key, default in fields.items()}
+            for family, fields in self.building_defaults.items()
         }
+        groups = {queries.base_item_name_from_text(name): stats.get("group")
+                  for name, stats in building_library.items()}
         rows = [(USE_DEFAULTS_ROW, None)] if self.HAS_USE_DEFAULTS else []
         group = None
-        for name in self.building_defaults:
-            if group is not None and building_library[name].get("group") != group:
-                rows.append((None, str(building_library[name].get("group", "")).title()))
-            group = building_library[name].get("group")
-            rows.append((name, None))
+        for family, fields in self.building_defaults.items():
+            if group is not None and groups[family] != group:
+                rows.append((None, str(groups[family] or "").title()))
+            group = groups[family]
+            rows.append((family, LEVEL_ONE_ROW))
+            if any(key.endswith("_per_level") for key in fields):
+                rows.append((family, PER_LEVEL_ROW))
         self.rows["buildings"] = rows
+        self.leveled_families = {family for family, kind in rows if kind == PER_LEVEL_ROW}
+        # Both rows of one family share a stripe.
+        self.building_stripes = {family: index % 2 == 0 for index, family in enumerate(self.building_defaults)}
 
     def toggle_use_defaults(self):
         self.sync_entries()
@@ -142,17 +158,21 @@ class UnitStatsEditorScreen(ModalScreen):
 
     def _read_building_stats(self):
         draft = {}
-        for name, fields in self.building_values.items():
-            draft[name] = {}
+        for family, fields in self.building_values.items():
+            draft[family] = {}
             for key, text in fields.items():
+                default = self.building_defaults[family][key]
+                if text == _number_text(default):
+                    # Library data that is not linear can give a fractional default increase.
+                    continue
                 try:
                     value = int(text)
                 except ValueError:
                     value = None
                 if value is None or value < 0:
-                    dialogs.show_warning("Invalid Building Stat", f"{name}: enter a whole number of at least 0.")
+                    dialogs.show_warning("Invalid Building Stat", f"{family}: enter a whole number of at least 0.")
                     return None
-                draft[name][key] = value
+                draft[family][key] = value
         return queries.get_building_stat_overrides(draft, self.building_defaults)
 
     def save_all(self):
@@ -188,8 +208,8 @@ class UnitStatsEditorScreen(ModalScreen):
             if "range" in self.rows:
                 self.values = {family: {key: f"{value:g}" for key, value in fields.items()}
                                for family, fields in self.defaults.items()}
-            self.building_values = {name: {key: str(value) for key, value in fields.items()}
-                                    for name, fields in self.building_defaults.items()}
+            self.building_values = {family: {key: _number_text(value) for key, value in fields.items()}
+                                    for family, fields in self.building_defaults.items()}
             # Remove fields before saving so old text cannot replace reset values.
             self.elements = []
             if self.use_defaults and self.target_settings is not None:
@@ -248,6 +268,11 @@ class UnitStatsEditorScreen(ModalScreen):
                                     p.right - self.STEP_RIGHT_OFF - self.FIELD_WIDTH, y + 10, self.FIELD_WIDTH)
                 continue
             for field_index, field_key in enumerate(queries.BUILDING_STAT_FIELDS):
+                if key == PER_LEVEL_ROW:
+                    field_key = f"{field_key}_per_level"
+                # Families with calculated costs have no cost fields.
+                if field_key not in self.building_defaults[name]:
+                    continue
                 self._add_field(self.building_values[name], self.building_defaults[name], field_key,
                                 self.building_field_x(field_index), y + (self.ROW_HEIGHT - 28) // 2,
                                 self.BUILDING_FIELD_WIDTH, locked=self.use_defaults)
@@ -263,7 +288,7 @@ class UnitStatsEditorScreen(ModalScreen):
     def _add_field(self, values, defaults, key, x, y, width, locked=False):
         """A locked field shows the default value and leaves the draft unchanged."""
         if locked:
-            field = TextField(x, y, width, 28, f"{defaults[key]:g}", numeric=True)
+            field = TextField(x, y, width, 28, _number_text(defaults[key]), numeric=True)
             field.disabled = True
         else:
             field = TextField(x, y, width, 28, values[key], numeric=True)
@@ -286,7 +311,7 @@ class UnitStatsEditorScreen(ModalScreen):
                 self.label(surface, text, (x, header_y))
             return
         small = fonts.get("small")
-        self.label(surface, "Building", (p.x + self.PAD, header_y))
+        self.label(surface, "Building Family", (p.x + self.PAD, header_y))
         resources = len(c.ECON_RESOURCE_KEYS)
         for group_index, group in enumerate(("Cost", "Income")):
             left = self.building_field_x(group_index * resources)
@@ -318,20 +343,30 @@ class UnitStatsEditorScreen(ModalScreen):
                                  (p.right - self.PAD - self.ROW_LABEL_INSET, rect.centery))
                 surface.blit(label, rect)
                 continue
-            if index % 2 == 0:
+            striped = (self.building_stripes[name] if self.active_category == "buildings"
+                       else index % 2 == 0)
+            if striped:
                 ui_elements.draw_pixel_background(
                     surface, pygame.Rect(p.x + self.PAD, y, p.width - 2 * self.PAD, self.ROW_HEIGHT),
                     EDITOR_PANEL_STYLES["unit_stats_row"])
             icon_x = p.x + self.PAD + self.ROW_LABEL_INSET
+            label_x = icon_x + self.ROW_ICON_SIZE[0] + self.ROW_ICON_GAP
+            if key == PER_LEVEL_ROW:
+                label = small.render("+ per level", True, c.UI_TEXT_DIM)
+                surface.blit(label, label.get_rect(midleft=(label_x, y + self.ROW_HEIGHT // 2)))
+                continue
             icons = self.icons if self.active_category == "range" else self.building_icons
             icon = icons.get(queries.get_base_item_name(name))
             if icon is not None:
                 center = (icon_x + self.ROW_ICON_SIZE[0] // 2, y + self.ROW_HEIGHT // 2)
                 surface.blit(icon, icon.get_rect(center=center))
-            label_x = icon_x + self.ROW_ICON_SIZE[0] + self.ROW_ICON_GAP
-            if self.active_category == "buildings":
-                label = font.render(name, True, c.UI_TEXT_LIGHT)
-                surface.blit(label, label.get_rect(midleft=(label_x, y + self.ROW_HEIGHT // 2)))
+            if key == LEVEL_ONE_ROW:
+                if name in self.leveled_families:
+                    surface.blit(font.render(name, True, c.UI_TEXT_LIGHT), (label_x, y + 4))
+                    surface.blit(small.render("Level 1", True, c.UI_TEXT_DIM), (label_x, y + 29))
+                else:
+                    label = font.render(name, True, c.UI_TEXT_LIGHT)
+                    surface.blit(label, label.get_rect(midleft=(label_x, y + self.ROW_HEIGHT // 2)))
                 continue
             surface.blit(font.render(name, True, c.UI_TEXT_LIGHT), (label_x, y + 4))
             default = self.defaults[name]
@@ -347,7 +382,7 @@ class UnitStatsEditorScreen(ModalScreen):
 
 
 class MapFactoryStatsScreen(UnitStatsEditorScreen):
-    """Edit one map's default factory costs and income in the map editor.
+    """Edit one map's default factory costs and income, by level 1 value and increase, in the map editor.
 
     New games on the map use these values while Use Defaults is on.
     Factories the map does not change use data/json/building_data.json.

@@ -106,11 +106,16 @@ Starting ranges must be positive. The increase can be zero.
 The existing mission rules still convert aircraft range into strike, patrol, relocation, and air drop reach.
 See documentation/air_stuff.txt for those rules.
 
-The Buildings category lists every building in the complete building library, in library order.
+The Buildings category lists each building family in the complete building library, in library order.
 Its first row is the Use Defaults toggle, which scrolls with the building rows.
 Labeled dividers separate the building groups.
-Each building has cost fields and income fields for manpower, materials, and fuel.
-Values must be whole numbers of at least zero.
+Each family has cost fields and income fields for manpower, materials, and fuel.
+A family with more than one level has a Level 1 row and a + per level row, as data/generators/recipes.py defines them.
+Value = level 1 value + (level - 1) * increase.
+The editor reads each family's level 1 value and its increase from the first and last levels in the library.
+A single-level family has only the Level 1 row.
+Families whose costs the game calculates, such as Basic Factory, have no cost fields.
+Values and increases must be whole numbers of at least zero.
 
 Use Defaults is on by default. While it is on, the building fields are locked and show the building library values.
 New games then use the map's default building stats.
@@ -129,7 +134,7 @@ Map default building stats
 --------------------------
 
 In the map editor, Economy opens the Starting Economy Editor. Its Factory Stats button edits the map's factory costs and income.
-Factory Stats lists the industry buildings. Save the map to write the values to meta.json.
+Factory Stats lists the industry building families with the same rows. Save the map to write the values to meta.json.
 Factories that the map does not change use data/json/building_data.json.
 New games on the map use these values while Use Defaults is on.
 
@@ -140,9 +145,12 @@ Scenario settings store these fields:
 - use_default_building_stats: the Use Defaults toggle. A missing field means on.
 - unit_range_overrides: the player's changed range fields, keyed by unit family.
   Supported fields are bombard_range, air_range_start, and air_range_per_level.
-- building_stat_overrides: the player's changed building fields, keyed by building name.
-- map_building_stat_overrides: the map's changed building fields, keyed by building name.
-Building fields are cost_ and prod_ followed by manpower, materials, or fuel.
+- building_stat_overrides: the player's changed building fields, keyed by building family.
+- map_building_stat_overrides: the map's changed building fields, keyed by building family.
+Building fields are cost_ and prod_ followed by manpower, materials, or fuel. They store level 1 values.
+The same names with _per_level store increases, such as prod_materials_per_level.
+A changed field or increase recalculates that field for every level of the family.
+Unchanged fields keep their library values, so nonlinear library data stays exact until it is edited.
 
 The map owns map_building_stat_overrides. A new game copies the field from the map's meta.json.
 The player's scenario_settings.json never stores the field.
