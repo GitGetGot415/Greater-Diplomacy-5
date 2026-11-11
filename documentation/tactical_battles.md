@@ -28,6 +28,7 @@ Choose **Custom Battle** to open editing.
 The terrain button opens **Battle Terrain**. Choose Plains, Hills, Desert, Forest, Jungle, Mountains, or Swamp.
 The choice belongs to this custom-battle setup; campaign encounters use the province's terrain.
 **Add Friendly** and **Add Enemy** open the searchable land-unit picker. Each selection adds one unit at the chosen library level.
+The roster behind the picker updates after each selection to show the added unit.
 Artillery-type units (everything that can bombard: artillery, railroad guns, Landkreuzers, and the Railgun)
 take no part in tactical battles, so the picker and **Random** never offer them.
 **Cancel** closes the picker and keeps units already added.

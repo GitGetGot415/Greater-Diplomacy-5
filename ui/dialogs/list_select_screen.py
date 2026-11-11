@@ -12,7 +12,7 @@ from ui.widgets.ui_elements import process_text_input
 class ListSelectScreen(ModalScreen):
     """In-engine stand-in for a tkinter listbox picker.
 
-    Freezes whatever was on screen behind a dimmed modal panel and shows a
+    Caches the screen behind a dimmed modal panel and shows a
     scrollable, clickable list of rows -- the pygame equivalent of the old
     "pick one item from a list" native dialogs.
     """
@@ -28,13 +28,14 @@ class ListSelectScreen(ModalScreen):
     SEARCH_MAX_CHARS = 40
 
     def __init__(self, game_state, title, prompt, items, on_confirm, *, is_enabled=None,
-                 close_on_select=True):
+                 close_on_select=True, background_draw=None):
         super().__init__(game_state, title)
         self.prompt = prompt
         self.items = list(items)
         self.on_confirm = on_confirm
         self.is_enabled = is_enabled
         self.close_on_select = close_on_select
+        self.background_draw = background_draw
         self.search_text = ""
         self.visible_items = self.items
         self.refresh_ui()
@@ -45,6 +46,9 @@ class ListSelectScreen(ModalScreen):
         self.on_confirm(item[1] if isinstance(item, tuple) else item)
         if self.close_on_select:
             self.exit_screen()
+        elif self.background_draw is not None and self.background is not None:
+            # Refresh only after a selection; frames keep using the cached background.
+            self.background_draw(self.background)
 
     def set_items(self, items):
         """Replace picker rows after a successful action without closing the picker."""

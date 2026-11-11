@@ -761,7 +761,7 @@ class CustomBattleScreen(Screen):
         pickers.open_listbox_selector(
             self, "Add Friendly Units" if side == 0 else "Add Enemy Units", "",
             queries.unit_picker_items(self.unit_names, self.library),
-            lambda name: self.add_unit(side, name), close_on_select=False,
+            lambda name: self.add_unit(side, name), close_on_select=False, background_draw=self.draw,
             is_enabled=lambda item: len(self.rosters[side]) < c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE)
 
     def choose_terrain(self):
