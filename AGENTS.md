@@ -145,6 +145,7 @@ Success in one does not prove compatibility with the other.
   Stop, pause, resume, restart, clear, and delete have different meanings.
   A request to stop something and continue normal operation does not ask for preserving and restoring its previous state.
   Do not add snapshots, saved positions, restoration, or extra preferences unless the request or an existing rule requires them.
+- Prefer keeping a command, statement, or data-table entry on one line, even when the line is long. Do not split it across multiple lines merely to meet a line-length preference.
 
 Example: An object spawns every five seconds.
 If the screen is at its object cap, skip that spawn.
