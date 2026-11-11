@@ -52,8 +52,8 @@ To edit several units at once, press in empty space of a roster panel (not on th
 area, a button, or the scrollbar) and drag a square over the cards. All touched cards of
 that army are selected and stay highlighted until the selection is cleared. The gear button on any selected card opens **Group Settings**
 for all of them. A field shows **Mixed** when the selected units differ. Selecting one
-card is an ordinary selection. Clicking empty panel space, reordering, removing, or
-generating armies clears the group.
+card is an ordinary selection. Clicking empty space outside the cards or entering preview clears both armies' selections.
+Card settings and other controls keep the selection available for their actions. Reordering, removing, or generating armies clears the group.
 Units of the same type can have different nationalities and starting health.
 Reordering preserves those choices, and replaying uses the configured starting HP.
 New units start at full health. The two sides initially use the first two playable

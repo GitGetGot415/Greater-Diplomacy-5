@@ -872,6 +872,7 @@ class CustomBattleScreen(Screen):
         if self.mode not in {"setup", "result"} or not all(self.rosters):
             return
         self.cancel_active_drags()
+        self._clear_roster_selection()
         self.battle_seed = random.getrandbits(64)
         self._build_simulation()
         self.clear_controls()
@@ -1246,6 +1247,26 @@ class CustomBattleScreen(Screen):
         track = getattr(self, f"roster_{side}_track", None)
         return bool(track and track.collidepoint(pos))
 
+    def _clear_roster_selection(self):
+        self.selected = [None, None]
+        self.group = [[], []]
+
+    def _deselect_background(self, event):
+        if (event.type != pygame.MOUSEBUTTONDOWN or event.button != 1
+                or self.drag is not None or self.marquee is not None or self.bar_drag is not None
+                or not (any(index is not None for index in self.selected) or any(self.group))):
+            return
+        # Controls must keep their selected unit or group available to their callbacks.
+        if any(element.visible and element.rect.collidepoint(event.pos) for element in self.elements):
+            return
+        for side, pane in enumerate(self.panes):
+            if self._on_scrollbar(side, event.pos):
+                return
+            if pane.collidepoint(event.pos) and any(self.card_rect(side, index).collidepoint(event.pos) for index in range(len(self.rosters[side]))):
+                return
+        self._clear_roster_selection()
+        self.refresh_ui()
+
     def _marquee_events(self, event):
         """Drag a selection square from empty panel space; roster background drags still scroll."""
         if self.marquee is not None:
@@ -1348,6 +1369,7 @@ class CustomBattleScreen(Screen):
         return self.mode == "setup" or (self.mode == "preview" and side == 0)
 
     def _roster_events(self, event):
+        self._deselect_background(event)
         if self.mode == "setup" and (self._marquee_events(event) or self._health_bar_events(event)):
             return True
         if self.drag is not None:

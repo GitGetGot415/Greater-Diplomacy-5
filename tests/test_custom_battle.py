@@ -2591,6 +2591,44 @@ class CustomBattleScreenTests(unittest.TestCase):
             pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=start)])
         self.assertEqual(self.screen.group[0], [])
 
+    def test_background_clicks_clear_both_roster_selections_without_releasing_control(self):
+        self.fill_armies()
+        self.screen.add_unit(0, "Fixture I")
+        self.screen.roster_0_scroll = 0
+        self.screen.controlled_index = 0
+        self.screen.draw(self.surface)
+        first = self.screen.card_rect(0, 0)
+        second = self.screen.card_rect(0, 1)
+        for point in ((first.right + (second.left - first.right) // 2, first.centery),
+                      (c.SCREEN_WIDTH - 2, c.SCREEN_HEIGHT - 2)):
+            with self.subTest(point=point):
+                self.screen.selected = [None, 0]
+                self.screen.group = [[0, 1], []]
+                self.screen.handle_events([
+                    pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=point),
+                    pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=point)])
+                self.assertEqual(self.screen.selected, [None, None])
+                self.assertEqual(self.screen.group, [[], []])
+                self.assertEqual(self.screen.controlled_index, 0)
+
+    def test_preview_clears_single_and_group_selections_without_releasing_control(self):
+        self.fill_armies()
+        self.screen.add_unit(0, "Fixture I")
+        self.screen.selected[0] = 0
+        self.screen.refresh_ui()
+        self.click("Control")
+        self.screen.selected = [None, 0]
+        self.screen.group = [[0, 1], []]
+        self.click("Simulate")
+        self.assertEqual(self.screen.selected, [None, None])
+        self.assertEqual(self.screen.group, [[], []])
+        self.assertEqual(self.screen.controlled_index, 0)
+        self.assertIsNotNone(self.screen.simulation.controlled)
+        self.click("Retreat")
+        self.assertEqual(self.screen.selected, [None, None])
+        self.assertEqual(self.screen.group, [[], []])
+        self.assertEqual(self.screen.controlled_index, 0)
+
     def test_gear_clicks_respect_roster_clipping_and_do_not_intercept_unit_drops(self):
         self.fill_armies()
         for _ in range(8):
