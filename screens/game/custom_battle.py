@@ -379,6 +379,12 @@ class CustomBattleScreen(Screen):
         self.terrain_art = []
         self.canopy_art = []  # (tree, transparent foliage surface), drawn above units.
         self.terrain_art_key = None
+        self.visibility_key = None
+        self.visibility_outline = ()
+        self.visibility_blockers = ()
+        self.visibility_mask_key = None
+        self.visibility_mask = None
+        self.visible_fighters = set()
         self.terrain_sprites = {}
         self.battle_seed = None
         self.random_candidates = []
@@ -1038,6 +1044,7 @@ class CustomBattleScreen(Screen):
         else:
             self._center_camera(combat.ARENA_SIZE[0] / 2, combat.ARENA_SIZE[1] / 2)
         self.refresh_ui()
+        self._refresh_visibility()
 
     def clear_controls(self):
         self.held_keys.clear()
@@ -1145,6 +1152,7 @@ class CustomBattleScreen(Screen):
             self._cache_terrain_art()
         self._move_camera(anchor[0] - pos[0] / self.zoom, anchor[1] - pos[1] / self.zoom)
         self.update_battle_music_volume()
+        self._refresh_visibility()
 
     def to_field(self, pos):
         """A screen position in battlefield coordinates."""
@@ -1535,6 +1543,32 @@ class CustomBattleScreen(Screen):
             self._apply_campaign_result()
             self.refresh_ui()
         self._refresh_controlled_stats()
+        self._refresh_visibility()
+
+    def _refresh_visibility(self):
+        """Cache sight geometry on observer/terrain changes and project it on camera changes."""
+        controlled = self.simulation.controlled if self.simulation is not None else None
+        if self.mode != "battle" or controlled is None or not controlled.alive:
+            self.visibility_key = self.visibility_mask_key = None
+            self.visibility_mask = None
+            self.visible_fighters.clear()
+            return
+        field = self.simulation.battlefield
+        origin = controlled.x, controlled.y
+        key = field, field.revision, origin, combat.WEAPON_RANGE
+        if key != self.visibility_key:
+            self.visibility_key = key
+            self.visibility_blockers = field.sight_blockers(origin, combat.WEAPON_RANGE)
+            self.visibility_outline = battle_terrain.sight_polygon(origin, combat.WEAPON_RANGE, self.visibility_blockers)
+        self.visible_fighters = {id(fighter) for fighter in self.simulation.fighters if fighter is controlled or battle_terrain.point_in_sight(origin, (fighter.x, fighter.y), combat.WEAPON_RANGE, self.visibility_blockers)}
+        size = self.view_rect().size
+        mask_key = key, tuple(self.camera), self.zoom, size
+        if mask_key != self.visibility_mask_key:
+            self.visibility_mask_key = mask_key
+            if self.visibility_mask is None or self.visibility_mask.get_size() != size:
+                self.visibility_mask = pygame.Surface(size, pygame.SRCALPHA)
+            self.visibility_mask.fill((0, 0, 0, 255))
+            pygame.draw.polygon(self.visibility_mask, (0, 0, 0, 0), [self.to_screen(x, y) for x, y in self.visibility_outline])
 
     def _update_preview_intro(self):
         if self.preview_intro_started is None:
@@ -1843,8 +1877,11 @@ class CustomBattleScreen(Screen):
         flag_size = tuple(max(2, round(side * zoom)) for side in BATTLE_FLAG_SIZE)
         controlled = self.simulation.controlled
         overview = zoom <= OVERVIEW_ZOOM
+        limited_sight = self.mode == "battle" and controlled is not None and controlled.alive and self.visibility_mask is not None
         labeled = []  # Living sub-units whose health bars and flags draw above the foliage.
         for fighter in self.simulation.fighters:
+            if limited_sight and id(fighter) not in self.visible_fighters:
+                continue
             center = self.to_screen(fighter.x, fighter.y)
             if not visible.collidepoint(center):
                 continue
@@ -1895,6 +1932,10 @@ class CustomBattleScreen(Screen):
         if controlled is not None and controlled.alive:
             self._draw_controls(surface, controlled, self.to_screen(controlled.x, controlled.y))
             self._draw_edge_indicators(surface, controlled)
+        if limited_sight:
+            # Cover terrain, bodies, labels, effects, and aiming guides together.
+            # Screen controls and battle readouts are drawn above this world mask.
+            surface.blit(self.visibility_mask, (0, 0))
 
     def _draw_edge_indicators(self, surface, controlled):
         """Group off-screen divisions by direction; show the nearest distance in each group."""
@@ -1906,7 +1947,7 @@ class CustomBattleScreen(Screen):
         view = self.view_rect()
         indicators = {}
         for division in self.simulation.divisions:
-            enemies = [unit for unit in division if unit.alive and unit.side != controlled.side]
+            enemies = [unit for unit in division if unit.alive and unit.side != controlled.side and id(unit) in self.visible_fighters]
             if not enemies or any(view.collidepoint(self.to_screen(unit.x, unit.y)) for unit in enemies):
                 continue
             enemy = min(enemies, key=lambda unit: math.hypot(unit.x - controlled.x, unit.y - controlled.y))

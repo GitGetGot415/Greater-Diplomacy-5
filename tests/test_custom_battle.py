@@ -1450,6 +1450,43 @@ class TacticalTerrainTests(unittest.TestCase):
         self.assertIsNone(field.firing_blocker((1200, 500), (1400, 500)))
         self.assertIsNone(field.firing_blocker((1000, 500), (1200, 500)))
 
+    def test_sight_is_circular_and_trunks_block_it_without_their_foliage_blocking(self):
+        origin, radius = (1000, 500), 500
+        tree = battle_terrain.Feature("tree", 1200, 500, 10, 100, foliage_radius=100)
+        field = self.field(tree)
+        blockers = field.sight_blockers(origin, radius)
+        self.assertFalse(battle_terrain.point_in_sight(origin, (1400, 500), radius, blockers))
+        self.assertTrue(battle_terrain.point_in_sight(origin, (1180, 500), radius, blockers))
+        self.assertTrue(battle_terrain.point_in_sight(origin, (1400, 550), radius, blockers))
+        self.assertTrue(battle_terrain.point_in_sight(origin, (1000, 1000), radius, blockers))
+        self.assertFalse(battle_terrain.point_in_sight(origin, (1000, 1001), radius, blockers))
+        field.destroy_tree(tree)
+        self.assertTrue(battle_terrain.point_in_sight(origin, (1400, 500), radius, field.sight_blockers(origin, radius)))
+
+    def test_hills_and_mountain_rocks_hide_ground_beyond_them_but_a_crest_opens_sight(self):
+        for kind in ("hill", "rock"):
+            with self.subTest(kind=kind):
+                field = self.field(battle_terrain.Feature(kind, 1200, 500, 150, 100))
+                origin, target, radius = (1000, 500), (1400, 500), 500
+                self.assertFalse(battle_terrain.point_in_sight(origin, target, radius, field.sight_blockers(origin, radius)))
+                if kind == "hill":
+                    origin = (1200, 500)
+                    self.assertTrue(battle_terrain.point_in_sight(origin, target, radius, field.sight_blockers(origin, radius)))
+        field = self.field(battle_terrain.Feature("marsh", 1200, 500, 80), battle_terrain.Feature("chasm", 1300, 500, 80))
+        self.assertTrue(battle_terrain.point_in_sight((1000, 500), (1400, 500), 500, field.sight_blockers((1000, 500), 500)))
+
+    def test_sight_outline_catches_narrow_trunks_between_rays_and_across_angle_zero(self):
+        origin, radius = (0, 0), 100
+        with patch.object(battle_terrain, "SIGHT_RAYS", 4):
+            for center in ((50, 1), (50, -1), (50, 0)):
+                with self.subTest(center=center):
+                    outline = battle_terrain.sight_polygon(origin, radius, ((center, 0.25),))
+                    self.assertGreater(len(outline), 4)
+                    self.assertLess(min(math.dist(origin, point) for point in outline), math.dist(origin, center))
+                    self.assertTrue(all(math.dist(origin, point) <= radius + 1e-9 for point in outline))
+        outline = battle_terrain.sight_polygon(origin, radius, ())
+        self.assertTrue(all(math.isclose(math.dist(origin, point), radius) for point in outline))
+
     def test_trees_survive_repeated_bullet_and_shell_hits_and_keep_blocking_shots(self):
         for shape in ("infantry", "armored_car", "ifv", *combat.TANK_SHAPES):
             with self.subTest(shape=shape):
@@ -3209,6 +3246,57 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.screen.draw(self.surface)
         self.click("Pause")
         self.assertTrue(self.screen.simulation.paused)
+
+    def test_controlled_sight_updates_when_enemies_move_and_terrain_changes(self):
+        self.fill_armies()
+        self.click("Control")
+        self.click("Simulate")
+        self.click("Start")
+        simulation = self.screen.simulation
+        player, enemy = simulation.fighters
+        player.x, player.y = 1000, 500
+        enemy.x, enemy.y = 1400, 500
+        tree = battle_terrain.Feature("tree", 1200, 500, 20, 100)
+        field = battle_terrain.Battlefield("forest", combat.ARENA_SIZE, combat.UNIT_RADIUS, [tree])
+        simulation.battlefield = field
+        self.screen._refresh_visibility()
+        self.assertIn(id(player), self.screen.visible_fighters)
+        self.assertNotIn(id(enemy), self.screen.visible_fighters)
+        with patch.object(field, "sight_blockers", side_effect=AssertionError("unchanged sight geometry")):
+            enemy.y = 700
+            self.screen._refresh_visibility()
+            self.assertIn(id(enemy), self.screen.visible_fighters)
+            enemy.x = player.x + combat.WEAPON_RANGE + 1
+            self.screen._refresh_visibility()
+            self.assertNotIn(id(enemy), self.screen.visible_fighters)
+        enemy.x, enemy.y = 1400, 500
+        field.destroy_tree(tree)
+        self.screen._refresh_visibility()
+        self.assertIn(id(enemy), self.screen.visible_fighters)
+        player.data["health"] = 0
+        self.screen._refresh_visibility()
+        self.assertIsNone(self.screen.visibility_key)
+        self.assertIsNone(self.screen.visibility_mask)
+
+    def test_sight_geometry_is_cached_across_drawing_and_camera_changes(self):
+        self.fill_armies()
+        self.click("Control")
+        self.click("Simulate")
+        self.click("Start")
+        field = self.screen.simulation.battlefield
+        self.screen._refresh_visibility()
+        key = self.screen.visibility_mask_key
+        with patch.object(field, "sight_blockers", side_effect=AssertionError("unchanged sight geometry")), patch.object(battle_terrain, "sight_polygon", side_effect=AssertionError("uncached sight outline")):
+            self.screen._refresh_visibility()
+            self.assertEqual(key, self.screen.visibility_mask_key)
+            self.screen._move_camera(self.screen.camera[0] + 10, self.screen.camera[1] + 10)
+            self.screen._refresh_visibility()
+            self.assertNotEqual(key, self.screen.visibility_mask_key)
+            self.screen.zoom_by(-1, self.screen.view_rect().center)
+            self.screen.draw(self.surface)
+        self.screen.mode = "result"
+        self.screen._refresh_visibility()
+        self.assertIsNone(self.screen.visibility_mask)
 
     def test_losing_the_controlled_sub_unit_spectates_but_keeps_a_surviving_division(self):
         with patch.dict(combat.SUBUNIT_COUNTS, {"infantry": 10}):

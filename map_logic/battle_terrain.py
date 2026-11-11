@@ -7,6 +7,7 @@ pygame dependency; drawing reads the same features used by the simulation.
 import heapq
 import math
 import random
+from bisect import bisect_left, bisect_right
 from collections import deque
 from dataclasses import dataclass
 
@@ -34,6 +35,8 @@ ROCK_HEIGHT = 200.0
 DEPLOYMENT_CLEARANCE = 100.0
 EDGE_CLEARANCE = 80.0
 MAX_CACHED_ROUTES = 2048
+SIGHT_RAYS = 720
+SIGHT_EDGE_EPSILON = 1e-6  # Cast on both sides of a tangent so even narrow trunks cast a complete shadow.
 # Placement attempts: hills, trees, rocks, and impassable water/gaps.
 TERRAIN_RECIPES = {
     "plains": (0, 16, 0, 0), "desert": (0, 0, 0, 0),
@@ -62,6 +65,40 @@ def circle_contact(start, end, center, radius):
         return None
     fraction = (-along - math.sqrt(discriminant)) / length
     return fraction if 0 <= fraction <= 1 else None
+
+
+def point_in_sight(origin, point, radius, blockers):
+    """Sight uses a circular range and the opaque circles at the observer's eye height."""
+    return math.dist(origin, point) <= radius and not any(circle_contact(origin, point, center, size) is not None for center, size in blockers)
+
+
+def sight_polygon(origin, radius, blockers):
+    """Cast a circular sight outline, with extra rays along each obstacle's tangents."""
+    angles = {math.tau * index / SIGHT_RAYS for index in range(SIGHT_RAYS)}
+    arcs = []
+    for center, size in blockers:
+        distance = math.dist(origin, center)
+        if distance <= size:
+            return (origin, origin, origin)
+        angle = math.atan2(center[1] - origin[1], center[0] - origin[0]) % math.tau
+        half = math.asin(size / distance)
+        low, high = angle - half, angle + half
+        for edge in (low, high):
+            angles.update((edge + offset) % math.tau for offset in (-SIGHT_EDGE_EPSILON, 0.0, SIGHT_EDGE_EPSILON))
+        arcs.append((low, high, center, size))
+    angles = sorted(angles)
+    ends = [(origin[0] + math.cos(angle) * radius, origin[1] + math.sin(angle) * radius) for angle in angles]
+    fractions = [1.0] * len(angles)
+    for low, high, center, size in arcs:
+        # Only rays inside this circle's angular span can hit it. Split spans
+        # crossing zero instead of testing every ray against every tree.
+        spans = ((0.0, high), (low + math.tau, math.tau)) if low < 0 else ((low, math.tau), (0.0, high - math.tau)) if high >= math.tau else ((low, high),)
+        for start, end in spans:
+            for index in range(bisect_left(angles, start), bisect_right(angles, end)):
+                fraction = circle_contact(origin, ends[index], center, size)
+                if fraction is not None:
+                    fractions[index] = min(fractions[index], fraction)
+    return tuple((origin[0] + (end[0] - origin[0]) * fraction, origin[1] + (end[1] - origin[1]) * fraction) for end, fraction in zip(ends, fractions))
 
 
 @dataclass(eq=False)
@@ -172,6 +209,28 @@ class Battlefield:
 
     def elevation(self, point):
         return self._ground(point, (feature for feature in self.nearby(point, point) if feature.kind == "hill"))
+
+    def sight_blockers(self, origin, radius):
+        """Opaque silhouettes at weapon height: trunks, rocks, and raised ground.
+
+        Hills are conical, so their contour at eye height is a smaller circle.
+        An observer on high ground can see over terrain below that height.
+        Foliage and ground gaps do not block sight, just as they pass shots.
+        """
+        eye = self.elevation(origin) + WEAPON_HEIGHT
+        blockers = []
+        for feature in self.nearby(origin, origin, radius):
+            size = feature.radius
+            if feature.kind == "hill":
+                if feature.height <= eye:
+                    continue
+                size *= 1.0 - eye / feature.height
+            elif feature.kind not in {"tree", "rock"} or self.elevation((feature.x, feature.y)) + feature.height < eye:
+                continue
+            center = feature.x, feature.y
+            if math.dist(origin, center) - size < radius:
+                blockers.append((center, size))
+        return tuple(blockers)
 
     def walkable(self, point, padding=None):
         radius = self.body_radius if padding is None else padding
