@@ -40,7 +40,7 @@ ai_evaluation.py, ai_diplomacy.py
 OPENROUTER SETTINGS
 -------------------
 
-Select OpenRouter in Settings > AI to enter an OpenRouter API key and model ID.
+Select OpenRouter in Settings > LLM AI to enter an OpenRouter API key and model ID.
 The model field accepts other OpenRouter models.
 Each provider's model field has a Default button.
 Default sets that provider's model to its value in data/json/starting_defaults.json.
@@ -52,7 +52,7 @@ Its URL setting is ollama_base_url.
 IMMERSION LEVELS
 ----------------
 
-Select an immersion level in Settings > AI.
+Select an immersion level in Settings > LLM AI.
 The ? button for LLM AI explains the model's role and these levels.
 Its text is SETTINGS_AI_INFO_TEXT in screens/menus/settings.py. Update it when a level changes.
 

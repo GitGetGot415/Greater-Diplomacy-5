@@ -488,11 +488,11 @@ Builds copy these values into their preference files. They exclude the developer
 The game uses these defaults when a preference file is missing.
 Existing preference files and saved games keep their saved values. Missing preference fields use the configured defaults.
 For an installed copy, use game controls or edit the matching preference file to change existing choices.
-Settings groups preferences into Game & Interface, Display & Appearance, Controls, AI, and Files.
+Settings groups preferences into Game & Interface, Display & Appearance, Controls, LLM AI, and Default Paths.
 Each category's reset reads its defaults from this file and affects only that category.
-The AI reset restores the LLM mode, immersion level, and maximum threads. Provider keys, URLs, and model names stay; each model has its own Default button.
+The LLM AI reset restores the LLM mode, immersion level, and maximum threads. Provider keys, URLs, and model names stay; each model has its own Default button.
 The Controls reset also restores keybinds and mouse gestures. Unit Art and audio retain their own controls.
-The Files reset restores all three directory preferences. Game & Interface keeps the player count when opened from a live map.
+The Default Paths reset restores all three directory preferences. Game & Interface keeps the player count when opened from a live map.
 The Scenario Settings reset preserves the separate editors' settings.
 Keep every keyboard action in settings_config.json's keybinds object, using pygame key names or null for an unassigned action.
 Random setup clamps configured values to the available countries, maps, and slider limits.

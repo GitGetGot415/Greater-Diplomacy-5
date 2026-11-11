@@ -368,7 +368,7 @@ class SettingsCategoryTests(unittest.TestCase):
 
     def test_category_clicks_replace_controls_and_clear_text_focus(self):
         self.controller.ai_mode = self.screen.ai_mode = "GEMINI"
-        self.click("AI")
+        self.click("LLM AI")
         field = self.screen.ai_fields["MOD"]
         field.active = True
         field.on_change("player-model")
@@ -378,7 +378,7 @@ class SettingsCategoryTests(unittest.TestCase):
         self.assertEqual(self.screen.ai_fields, {})
         self.assertFalse(any(item.text.startswith("LLM AI:") for item in self.screen.elements))
         self.assertIsNotNone(self.screen.fps_slider)
-        self.click("AI")
+        self.click("LLM AI")
         self.assertEqual(self.screen.ai_fields["MOD"].text, "player-model")
         self.screen.save_and_go_back(execute_exit=False)
         self.assertEqual(self.save.call_args.args[1]["gemini_model"], "player-model")
@@ -432,6 +432,17 @@ class SettingsCategoryTests(unittest.TestCase):
         self.assertFalse(self.screen.player_slider.visible)
         self.screen.reset_category_defaults()
         self.assertEqual(self.controller.num_players, 7)
+
+    def test_controls_help_opens_the_shared_info_popup(self):
+        self.screen.set_sub_state("CONTROLS")
+        with mock.patch.object(self.settings.dialogs, "show_info") as show_info:
+            help_button = next(item for item in self.screen.elements if item.text == "?")
+            help_button.callback()
+        self.assertIsNone(help_button.sound_kind)
+        title, body = show_info.call_args.args
+        self.assertEqual(title, "Controls")
+        for mode in ("Auto", "Mobile", "Desktop"):
+            self.assertIn(mode, body)
 
     def test_display_rebuild_keeps_the_fps_slider_value(self):
         self.screen.set_sub_state("DISPLAY")

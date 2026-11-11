@@ -14,7 +14,7 @@ from screens.menus.keybinds import default_keybinds
 
 
 # All categories share one fixed frame; changing a category only rebuilds its controls.
-SETTINGS_CATEGORIES = (("GAME", "Game & Interface"), ("DISPLAY", "Display & Appearance"), ("CONTROLS", "Controls"), ("AI", "AI"), ("FILES", "Files"))
+SETTINGS_CATEGORIES = (("GAME", "Game & Interface"), ("DISPLAY", "Display & Appearance"), ("CONTROLS", "Controls"), ("AI", "LLM AI"), ("FILES", "Default Paths"))
 SETTINGS_MARGIN = 32
 SETTINGS_PANEL_TOP = 100
 SETTINGS_PANEL_HEIGHT = 568
@@ -32,6 +32,8 @@ SETTINGS_ROW_GAP = 52
 SETTINGS_NAV_SIZE = (SETTINGS_NAV_WIDTH - 24, 44)
 SETTINGS_NAV_GAP = 58
 SETTINGS_OPTION_SIZE = (c.SIZES["setting_option"][0], 32)
+SETTINGS_LINK_SIZE = (180, 110)
+SETTINGS_LINK_GAP = 20
 SETTINGS_SLIDER_WIDTH = 300
 SETTINGS_BACK_POS = (SETTINGS_MARGIN, 28)
 SETTINGS_RESET_Y = SETTINGS_PANEL_TOP + SETTINGS_PANEL_HEIGHT - 64
@@ -106,6 +108,10 @@ SETTINGS_INFO_ROWS = (
      "Shows the Help window when a fresh game begins. Its categories cover the "
      "basics, from map controls to production, research, and diplomacy. "
      "The Help button on the map reopens it."),
+    ("control_mode", "Controls",
+     "Auto chooses Mobile controls on Android and iOS and Desktop controls on other systems at startup. "
+     "Mobile supports tap to select, hold and release for a right-click action, drag to pan, and pinch to zoom. "
+     "Desktop uses the existing mouse and keyboard controls. Changing controls cancels unfinished touch gestures."),
     ("map_navigation_mode", "Map Navigation",
      "Classic: clicking a tile always opens the plain province menu, and the "
      "Resources/Blank/Units/Economy ui view buttons only switch "
@@ -168,16 +174,17 @@ def render_settings_buttons(settings_screen):
         screen.checkerboard_gradient_slider = Slider(SETTINGS_X, screen.fps_slider.rect.y + 78, SETTINGS_SLIDER_WIDTH, f"Checkerboard Gradient: {screen.controller.checkerboard_gradient_strength:.2f}", screen.controller.checkerboard_gradient_strength, screen.set_checkerboard_gradient, visual_max=c.MAX_CHECKERBOARD_GRADIENT_STRENGTH, allowed_max=c.MAX_CHECKERBOARD_GRADIENT_STRENGTH)
         screen.checkerboard_speed_slider = Slider(SETTINGS_X, screen.checkerboard_gradient_slider.rect.y + 78, SETTINGS_SLIDER_WIDTH, f"Checkerboard Speed: {screen.controller.checkerboard_scroll_speed:g}", screen.controller.checkerboard_scroll_speed, screen.set_checkerboard_speed, visual_max=c.MAX_CHECKERBOARD_SCROLL_SPEED, allowed_max=c.MAX_CHECKERBOARD_SCROLL_SPEED)
         screen.elements.extend([screen.fps_slider, screen.checkerboard_gradient_slider, screen.checkerboard_speed_slider])
-        screen.elements.append(Button(SETTINGS_SECOND_X, SETTINGS_FIRST_Y + 4 * SETTINGS_ROW_GAP, SETTINGS_OPTION_SIZE, "blue", "Unit Art", screen.open_unit_art))
+        screen.elements.append(Button(SETTINGS_SECOND_X, SETTINGS_FIRST_Y + 4 * SETTINGS_ROW_GAP, SETTINGS_LINK_SIZE, "blue", "Unit Art", screen.open_unit_art, image=ui_bars.get_ui_image("Brush.png")))
 
     elif screen.sub_state == "CONTROLS":
         screen.elements.append(Button(SETTINGS_X, SETTINGS_FIRST_Y, SETTINGS_OPTION_SIZE, "purple", f"Controls: {screen.control_mode.title()}", screen.cycle_control_mode))
+        screen.add_setting_info("control_mode", SETTINGS_FIRST_Y)
         y = SETTINGS_FIRST_Y + SETTINGS_ROW_GAP
         screen.elements.append(Button(SETTINGS_X, y, SETTINGS_OPTION_SIZE, "purple", f"Map Navigation: {screen.map_navigation_mode.title()}", screen.toggle_map_navigation_mode))
         screen.add_setting_info("map_navigation_mode", y)
         screen.elements.extend([
-            Button(SETTINGS_X, y + SETTINGS_ROW_GAP, SETTINGS_OPTION_SIZE, "purple", "Keybinds", screen.open_keybinds, image=ui_bars.get_ui_image("Keybind.png", scale=0.5)),
-            Button(SETTINGS_X, y + 2 * SETTINGS_ROW_GAP, SETTINGS_OPTION_SIZE, "purple", "Mouse Settings", screen.open_mouse_settings),
+            Button(SETTINGS_X, y + SETTINGS_ROW_GAP, SETTINGS_LINK_SIZE, "purple", "Keybinds", screen.open_keybinds, image=ui_bars.get_ui_image("Keybind.png"), layout="vertical"),
+            Button(SETTINGS_X + SETTINGS_LINK_SIZE[0] + SETTINGS_LINK_GAP, y + SETTINGS_ROW_GAP, SETTINGS_LINK_SIZE, "purple", "Mouse Settings", screen.open_mouse_settings, image=ui_bars.get_ui_image("Blank.png", scale=0.6, directory=f"{c.ASSETS_ROOT_DIR}/mouse"), layout="vertical"),
         ])
 
     elif screen.sub_state == "AI":
