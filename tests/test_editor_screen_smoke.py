@@ -152,13 +152,16 @@ class EditorScreenSmokeTests(unittest.TestCase):
         from ui.widgets.ui_elements import Slider, TextField
         settings = {}
         screen = UnitStatsEditorScreen(settings=settings, persist=False)
-        screen.select_category("conversions")
-        self.assertFalse(any(isinstance(el, TextField) for el in screen.elements))
+        screen.select_category("other")
+        conversions = screen.turn_tabs["conversion"]
+        # Conversions use sliders only. Their text fields would belong to administrative actions.
+        self.assertFalse(any(isinstance(el, TextField) and getattr(el, "entry_ref", None) is conversions["values"]
+                             for el in screen.elements))
         sliders = [el for el in screen.elements if isinstance(el, Slider)]
         self.assertEqual(len(sliders), len(queries.CONVERSION_ACTIONS))
         maximum = c.MAX_CONVERSION_TURNS
         span = maximum - c.MIN_CONVERSION_TURNS
-        for name, slider in zip(screen.turn_tab["names"], sliders):
+        for name, slider in zip(conversions["names"], sliders):
             for expected in range(c.MIN_CONVERSION_TURNS, maximum + 1):
                 # Stop between ticks to verify snapping through mouse input.
                 fraction = min(1, (expected - c.MIN_CONVERSION_TURNS) / span + .02)
@@ -171,11 +174,11 @@ class EditorScreenSmokeTests(unittest.TestCase):
                             pos=(slider.rect.left + round(slider.rect.width * fraction), slider.rect.centery)),
                         pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=slider.handle_rect.center),
                     ])
-                    self.assertEqual(screen.turn_tab["values"][name], str(expected))
+                    self.assertEqual(conversions["values"][name], str(expected))
         self.assertEqual(settings, {})
         screen.select_category("units")
-        screen.select_category("conversions")
-        self.assertTrue(all(value == str(maximum) for value in screen.turn_tab["values"].values()))
+        screen.select_category("other")
+        self.assertTrue(all(value == str(maximum) for value in conversions["values"].values()))
         with mock.patch.object(queries, "save_scenario_settings") as save, \
                 mock.patch("ui.dialogs.show_success"):
             screen.save_all()
@@ -211,12 +214,13 @@ class EditorScreenSmokeTests(unittest.TestCase):
         from data import queries
         settings = {}
         screen = UnitStatsEditorScreen(settings=settings, persist=False)
-        screen.select_category("administrative")
+        screen.select_category("other")
         name = queries.ADMINISTRATIVE_ACTIONS["CORE"][0]
-        duration = screen.turn_tab["defaults"][name] + 3
+        duration = screen.turn_tabs["administrative"]["defaults"][name] + 3
         field = next(el for el in screen.elements if getattr(el, "entry_key", None) == name)
         field.text = str(duration)
-        screen.toggle_disabled(name)
+        toggle = screen.elements[screen.elements.index(field) + 1]
+        toggle.callback()
         self.assertEqual(settings, {})  # An abandoned modal has no side effects.
         with mock.patch.object(queries, "save_scenario_settings") as save, \
                 mock.patch("ui.dialogs.show_success"):

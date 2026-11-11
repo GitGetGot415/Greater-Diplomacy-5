@@ -92,15 +92,16 @@ UNIT AND BUILDING STAT SETTINGS
 ===============================
 
 Select Edit Unit / Building Stats in Scenario Settings.
-The editor has Units, Buildings, Range, Administrative, and Conversions categories.
+The editor has Units, Buildings, Range, and Other categories.
 The Units, Buildings, and Range categories show a unit or building image before each family name.
 Images follow Settings > Unit Art and use the first library entry for each family.
 Administrative actions and conversions have no images.
 Images are prepared when the editor opens. Scrolling and drawing reuse them.
 
-The Units and Administrative categories list each unit family and administrative action with a turns field and an ON/OFF button.
+The Units category lists each unit family with a turns field and an ON/OFF button.
 The Buildings category has the same turns field and ON/OFF button on each family's first row.
-The Conversions category has turn sliders. See CONSTRUCTION TURN SETTINGS.
+The Other category lists each administrative action with a turns field and an ON/OFF button.
+After a Conversions divider, it lists the conversion turn sliders. See CONSTRUCTION TURN SETTINGS.
 Every category reads the complete libraries, so disabled families remain available in this editor.
 
 The Range category lists bombardment families and aircraft families from the complete unit library.
@@ -184,7 +185,7 @@ CONSTRUCTION TURN SETTINGS
 Edit Unit / Building Stats in Scenario Settings edits construction turns and enabled families.
 See UNIT AND BUILDING STAT SETTINGS for the editor.
 
-The Conversions category has sliders for Truck / Ship Conversion and Air Drop Recovery.
+The Other category has conversion sliders for Truck / Ship Conversion and Air Drop Recovery.
 Each slider accepts whole turns from 1 to 9. These actions remain enabled.
 The truck and ship directions use the same duration.
 See documentation/air_stuff.txt for recovery timing and restrictions.

@@ -29,12 +29,10 @@ USE_DEFAULTS_ROW = "use_defaults"
 #: Building row kinds: level 1 values, then the increase for each later level.
 LEVEL_ONE_ROW, PER_LEVEL_ROW = "level_one", "per_level"
 
-#: The settings prefix of each category's construction turns and disabled list.
-TURN_CATEGORIES = {"units": "unit", "buildings": "building",
-                   "administrative": "administrative", "conversions": "conversion"}
-
-#: Categories whose rows are only a turn count, an ON/OFF button, or a conversion slider.
-TURN_ONLY_CATEGORIES = ("units", "administrative", "conversions")
+#: Categories whose rows are only turn counts, ON/OFF buttons, or conversion sliders,
+#: with the settings prefix of each construction turn group they list, in row order.
+#: A labeled divider comes before each group after the first.
+TURN_ONLY_CATEGORIES = {"units": ("unit",), "other": ("administrative", "conversion")}
 
 
 def _number_text(value):
@@ -77,9 +75,6 @@ class UnitStatsEditorScreen(ModalScreen):
     PANEL_SIZE = (900, 640)
     PAD = 20
     ROW_HEIGHT = 54
-    #: Administrative rows have no images. Conversion rows hold a labeled slider.
-    CATEGORY_ROW_HEIGHTS = {"administrative": 34, "conversions": 64}
-    TAB_SIZE = (160, 40)
     TAB_GAP = 10
     TAB_Y_OFF = 56
     NOTE_Y_OFF = 102
@@ -100,7 +95,8 @@ class UnitStatsEditorScreen(ModalScreen):
     TURN_HINT_GAP = 15
     CONVERSION_SLIDER_WIDTH = 240
     CONVERSION_SLIDER_RIGHT_OFF = 40
-    CONVERSION_SLIDER_Y_OFF = 32
+    # The slider draws its turn count above the track.
+    CONVERSION_SLIDER_Y_OFF = 27
     CONVERSION_HINT_GAP = 30
     # Building rows: turns, three cost fields, three income fields, then the ON/OFF button.
     BUILDING_FIELD_WIDTH = 64
@@ -113,8 +109,7 @@ class UnitStatsEditorScreen(ModalScreen):
     DIVIDER_LABEL_GAP = 12
 
     #: (key, tab label) for each category, in tab order.
-    CATEGORIES = (("units", "Units"), ("buildings", "Buildings"), ("range", "Range"),
-                  ("administrative", "Administrative"), ("conversions", "Conversions"))
+    CATEGORIES = (("units", "Units"), ("buildings", "Buildings"), ("range", "Range"), ("other", "Other"))
     #: The scenario settings key that holds the edited building stats.
     BUILDING_SETTING = "building_stat_overrides"
     #: Show Use Defaults as the first Buildings row.
@@ -172,11 +167,17 @@ class UnitStatsEditorScreen(ModalScreen):
         conversions = settings.get("conversion_turn_overrides")
         self.turn_tabs["conversion"] = self._build_turn_tab(
             queries.get_conversion_library(), conversions if isinstance(conversions, dict) else {},
-            [], "time", "Conversion")
+            [], "time", "Conversions")
         for action, (name, _constant) in queries.CONVERSION_ACTIONS.items():
             self.turn_tabs["conversion"]["values"][name] = str(queries.get_conversion_turns(action, settings))
-        for category in TURN_ONLY_CATEGORIES:
-            self.rows[category] = [(name, None) for name in self.turn_tabs[TURN_CATEGORIES[category]]["names"]]
+        # A row is (name, turn group), or (None, divider label).
+        for category, groups in TURN_ONLY_CATEGORIES.items():
+            rows = []
+            for group in groups:
+                if rows:
+                    rows.append((None, self.turn_tabs[group]["label"]))
+                rows.extend((name, group) for name in self.turn_tabs[group]["names"])
+            self.rows[category] = rows
 
     @staticmethod
     def _build_turn_tab(library, overrides, disabled_list, turn_key, label):
@@ -223,22 +224,14 @@ class UnitStatsEditorScreen(ModalScreen):
     #                               EDITING                              #
     # ------------------------------------------------------------------ #
 
-    @property
-    def turn_tab(self):
-        """The construction turns and disabled families shown in the active category."""
-        return self.turn_tabs[TURN_CATEGORIES[self.active_category]]
-
-    @property
-    def row_height(self):
-        return self.CATEGORY_ROW_HEIGHTS.get(self.active_category, self.ROW_HEIGHT)
-
     def toggle_use_defaults(self):
         self.sync_entries()
         self.use_defaults = not self.use_defaults
         self.refresh_ui()
 
-    def toggle_disabled(self, name):
-        disabled = self.turn_tab["disabled_set"]
+    def toggle_disabled(self, group, name):
+        """Enable or disable one family or action of a construction turn group."""
+        disabled = self.turn_tabs[group]["disabled_set"]
         if name in disabled:
             disabled.discard(name)
         else:
@@ -400,16 +393,17 @@ class UnitStatsEditorScreen(ModalScreen):
         self.sync_entries()
         p = self.panel_rect
         self.elements = []
+        tab_w = c.SIZES["browser_tool"][0]
         for index, (key, label) in enumerate(self.CATEGORIES):
-            tab = Button(p.x + self.PAD + index * (self.TAB_SIZE[0] + self.TAB_GAP), p.y + self.TAB_Y_OFF,
-                         self.TAB_SIZE, "green" if key == self.active_category else "light_blue", label,
+            tab = Button(p.x + self.PAD + index * (tab_w + self.TAB_GAP), p.y + self.TAB_Y_OFF, "browser_tool",
+                         "green" if key == self.active_category else "light_blue", label,
                          lambda k=key: self.select_category(k), sound_kind="select_category")
             tab.is_selected = key == self.active_category
             self.elements.append(tab)
 
         category = self.active_category
         rows = self.rows[category]
-        row_height = self.row_height
+        row_height = self.ROW_HEIGHT
         self.scroll_content_rect = pygame.Rect(
             p.x + self.PAD, self.list_top, p.width - 2 * self.PAD, self.list_view_h)
         self._row_layout = list(self.layout_list_rows(
@@ -435,17 +429,17 @@ class UnitStatsEditorScreen(ModalScreen):
                     self._add_field(self.values[name], self.defaults[name], "air_range_per_level",
                                     p.right - self.STEP_RIGHT_OFF - self.FIELD_WIDTH, field_y, self.FIELD_WIDTH)
                 continue
-            if category == "conversions":
-                values = self.turn_tab["values"]
+            if category == "buildings":
+                self._add_building_fields(name, key, y)
+                continue
+            if key == "conversion":
+                values = self.turn_tabs[key]["values"]
                 self.add_list_row(_ConversionTurnSlider(
                     self.conversion_slider_x, y + self.CONVERSION_SLIDER_Y_OFF,
                     self.CONVERSION_SLIDER_WIDTH, int(values[name]),
                     lambda value, row=name, target=values: target.__setitem__(row, str(value))))
                 continue
-            if category == "buildings":
-                self._add_building_fields(name, key, y)
-                continue
-            self._add_turn_controls(name, self.turn_field_x, self.TURN_FIELD_WIDTH, y)
+            self._add_turn_controls(key, name, self.turn_field_x, self.TURN_FIELD_WIDTH, y)
 
         button_y = p.bottom - 52
         self.elements.extend([
@@ -456,7 +450,7 @@ class UnitStatsEditorScreen(ModalScreen):
         ])
 
     def _add_building_fields(self, name, key, row_y):
-        field_y = row_y + (self.row_height - self.FIELD_HEIGHT) // 2
+        field_y = row_y + (self.ROW_HEIGHT - self.FIELD_HEIGHT) // 2
         for field_index, field_key in enumerate(queries.BUILDING_STAT_FIELDS):
             if key == PER_LEVEL_ROW:
                 field_key = f"{field_key}_per_level"
@@ -468,19 +462,19 @@ class UnitStatsEditorScreen(ModalScreen):
                             self.BUILDING_FIELD_WIDTH, locked=self.use_defaults)
         # Use Defaults locks only building stats. Turns and enabled families stay editable.
         if self.HAS_SCENARIO_RULES and key == LEVEL_ONE_ROW:
-            self._add_turn_controls(name, self.building_turns_x, self.BUILDING_FIELD_WIDTH, row_y)
+            self._add_turn_controls("building", name, self.building_turns_x, self.BUILDING_FIELD_WIDTH, row_y)
 
-    def _add_turn_controls(self, name, x, width, row_y):
-        """Add one family's turns field and ON/OFF button from the active category."""
-        tab = self.turn_tab
-        field = TextField(x, row_y + (self.row_height - self.FIELD_HEIGHT) // 2, width, self.FIELD_HEIGHT,
+    def _add_turn_controls(self, group, name, x, width, row_y):
+        """Add the turns field and ON/OFF button of one family or action in a construction turn group."""
+        tab = self.turn_tabs[group]
+        field = TextField(x, row_y + (self.ROW_HEIGHT - self.FIELD_HEIGHT) // 2, width, self.FIELD_HEIGHT,
                           tab["values"][name], numeric=True)
         field.entry_ref = tab["values"]
         field.entry_key = name
         self.add_list_row(field)
         self.add_list_row(make_on_off_button(
-            self.check_x, row_y + (self.row_height - self.CHECK_SIZE) // 2,
-            name not in tab["disabled_set"], lambda row=name: self.toggle_disabled(row)))
+            self.check_x, row_y + (self.ROW_HEIGHT - self.CHECK_SIZE) // 2,
+            name not in tab["disabled_set"], lambda row=name: self.toggle_disabled(group, row)))
 
     def _add_field(self, values, defaults, key, x, y, width, locked=False):
         """A locked field shows the default value and leaves the draft unchanged."""
@@ -522,14 +516,12 @@ class UnitStatsEditorScreen(ModalScreen):
         if category == "buildings":
             self._draw_building_headers(surface, header_y)
             return
-        tab = self.turn_tab
-        self.label(surface, tab["label"], (p.x + self.PAD, header_y))
-        if category == "conversions":
-            self._header(surface, "Turns", self.conversion_slider_x + self.CONVERSION_SLIDER_WIDTH // 2, header_y)
-        else:
-            self._header(surface, "Turns", self.turn_field_x + self.TURN_FIELD_WIDTH // 2, header_y)
-            self._header(surface, "Enabled", self.check_x + self.CHECK_SIZE // 2, header_y)
-        if not tab["names"]:
+        # The first group names the column. Later groups have their own dividers.
+        first_group = TURN_ONLY_CATEGORIES[category][0]
+        self.label(surface, self.turn_tabs[first_group]["label"], (p.x + self.PAD, header_y))
+        self._header(surface, "Turns", self.turn_field_x + self.TURN_FIELD_WIDTH // 2, header_y)
+        self._header(surface, "Enabled", self.check_x + self.CHECK_SIZE // 2, header_y)
+        if not self.rows[category]:
             message = fonts.get("normal").render("Nothing to edit.", True, c.UI_TEXT_LIGHT)
             surface.blit(message, message.get_rect(center=(p.centerx, self.list_top + self.list_view_h // 2)))
 
@@ -560,20 +552,12 @@ class UnitStatsEditorScreen(ModalScreen):
             if name == USE_DEFAULTS_ROW:
                 continue
             if name is None:
-                label = font.render(key, True, c.UI_TEXT_DIM)
-                rect = label.get_rect(center=(p.centerx, y + self.ROW_HEIGHT // 2))
-                pygame.draw.line(surface, c.UI_TEXT_DIM,
-                                 (p.x + self.PAD + self.ROW_LABEL_INSET, rect.centery),
-                                 (rect.left - self.DIVIDER_LABEL_GAP, rect.centery))
-                pygame.draw.line(surface, c.UI_TEXT_DIM,
-                                 (rect.right + self.DIVIDER_LABEL_GAP, rect.centery),
-                                 (p.right - self.PAD - self.ROW_LABEL_INSET, rect.centery))
-                surface.blit(label, rect)
+                self._draw_divider(surface, key, y)
                 continue
             striped = (self.building_stripes[name] if self.active_category == "buildings"
                        else index % 2 == 0)
             if striped:
-                self._draw_stripe(surface, y, self.ROW_HEIGHT)
+                self._draw_stripe(surface, y)
             icon_x = p.x + self.PAD + self.ROW_LABEL_INSET
             label_x = icon_x + self.ROW_ICON_SIZE[0] + self.ROW_ICON_GAP
             if key == PER_LEVEL_ROW:
@@ -581,7 +565,7 @@ class UnitStatsEditorScreen(ModalScreen):
                 surface.blit(label, label.get_rect(midleft=(label_x, y + self.ROW_HEIGHT // 2)))
                 continue
             icons = self.icons if self.active_category == "range" else self.building_icons
-            self._draw_icon(surface, icons.get(queries.get_base_item_name(name)), icon_x, y, self.ROW_HEIGHT)
+            self._draw_icon(surface, icons.get(queries.get_base_item_name(name)), icon_x, y)
             if key == LEVEL_ONE_ROW:
                 if name in self.leveled_families:
                     surface.blit(font.render(name, True, c.UI_TEXT_LIGHT), (label_x, y + 4))
@@ -600,37 +584,52 @@ class UnitStatsEditorScreen(ModalScreen):
             surface.blit(small.render(hint, True, c.UI_TEXT_DIM), (label_x, y + 29))
 
     def _draw_turn_rows(self, surface):
-        """Draw the stripe, image, name, and default hint behind each turn row."""
+        """Draw the divider, stripe, image, name, and default hint behind each turn row."""
         p = self.panel_rect
         font, small = fonts.get("normal"), fonts.get("small")
-        tab = self.turn_tab
-        row_height = self.row_height
-        if self.active_category == "conversions":
-            hint_right = self.conversion_slider_x - self.CONVERSION_HINT_GAP
-        else:
-            hint_right = self.turn_field_x - self.TURN_HINT_GAP
+        rows = self.rows[self.active_category]
         for index, y in self._row_layout:
-            name = tab["names"][index]
+            name, group = rows[index]
+            if name is None:
+                self._draw_divider(surface, group, y)
+                continue
             if index % 2 == 0:
-                self._draw_stripe(surface, y, row_height)
+                self._draw_stripe(surface, y)
             label_x = p.x + self.PAD + self.ROW_LABEL_INSET
-            if self.active_category == "units":
-                self._draw_icon(surface, self.icons.get(name), label_x, y, row_height)
+            if group == "unit":
+                self._draw_icon(surface, self.icons.get(name), label_x, y)
                 label_x += self.ROW_ICON_SIZE[0] + self.ROW_ICON_GAP
             label = font.render(name, True, c.UI_TEXT_LIGHT)
-            surface.blit(label, label.get_rect(midleft=(label_x, y + row_height // 2)))
-            hint = small.render(f"default: {tab['defaults'][name]}", True, c.UI_TEXT_DIM)
-            surface.blit(hint, hint.get_rect(midright=(hint_right, y + row_height // 2)))
+            surface.blit(label, label.get_rect(midleft=(label_x, y + self.ROW_HEIGHT // 2)))
+            if group == "conversion":
+                hint_right = self.conversion_slider_x - self.CONVERSION_HINT_GAP
+            else:
+                hint_right = self.turn_field_x - self.TURN_HINT_GAP
+            hint = small.render(f"default: {self.turn_tabs[group]['defaults'][name]}", True, c.UI_TEXT_DIM)
+            surface.blit(hint, hint.get_rect(midright=(hint_right, y + self.ROW_HEIGHT // 2)))
 
-    def _draw_stripe(self, surface, y, row_height):
+    def _draw_divider(self, surface, text, y):
+        """Draw a centered group label between two lines across the row."""
+        p = self.panel_rect
+        label = fonts.get("normal").render(text, True, c.UI_TEXT_DIM)
+        rect = label.get_rect(center=(p.centerx, y + self.ROW_HEIGHT // 2))
+        pygame.draw.line(surface, c.UI_TEXT_DIM,
+                         (p.x + self.PAD + self.ROW_LABEL_INSET, rect.centery),
+                         (rect.left - self.DIVIDER_LABEL_GAP, rect.centery))
+        pygame.draw.line(surface, c.UI_TEXT_DIM,
+                         (rect.right + self.DIVIDER_LABEL_GAP, rect.centery),
+                         (p.right - self.PAD - self.ROW_LABEL_INSET, rect.centery))
+        surface.blit(label, rect)
+
+    def _draw_stripe(self, surface, y):
         p = self.panel_rect
         ui_elements.draw_pixel_background(
-            surface, pygame.Rect(p.x + self.PAD, y, p.width - 2 * self.PAD, row_height),
+            surface, pygame.Rect(p.x + self.PAD, y, p.width - 2 * self.PAD, self.ROW_HEIGHT),
             EDITOR_PANEL_STYLES["unit_stats_row"])
 
-    def _draw_icon(self, surface, icon, icon_x, y, row_height):
+    def _draw_icon(self, surface, icon, icon_x, y):
         if icon is not None:
-            center = (icon_x + self.ROW_ICON_SIZE[0] // 2, y + row_height // 2)
+            center = (icon_x + self.ROW_ICON_SIZE[0] // 2, y + self.ROW_HEIGHT // 2)
             surface.blit(icon, icon.get_rect(center=center))
 
     def draw_foreground(self, surface):
