@@ -14,18 +14,18 @@ from map_logic.system32 import combat_forecast, combat_rules
 
 # These values translate campaign statistics into a real-time battlefield.
 # They do not change campaign combat or add persistent unit statistics.
-FIXED_STEP = 1.0 / 30.0
-MOVE_PIXELS_PER_SPEED = 35.0
+FIXED_STEP = 1.0 / 30.0 # 33 milliseconds per step, or 30 simulation steps per second
+MOVE_PIXELS_PER_SPEED = 50.0
 FIRE_INTERVAL = 2.0
 DAMAGE_SCALE = 0.5  # Applied after defense and rounding, so low-damage hits also slow down.
 # Attack at zero HP: 0.0 = directly proportional to HP; 1.0 = wounds do not reduce attack.
 # Values between 0 and 1 interpolate linearly. Applies to each surviving sub-unit.
 TACTICAL_DAMAGE_AT_ZERO_HEALTH = 1.0
-WEAPON_RANGE = 1000.0
+WEAPON_RANGE = 600.0
 PROJECTILE_SPEED = 1000.0
-ENGAGEMENT_RANGE = 600.0  # Preferred distances do not grow with maximum projectile reach.
-WITHDRAW_RANGE = 900.0
-FALLOFF_START = 500.0
+ENGAGEMENT_RANGE = 300.0  # Preferred distances do not grow with maximum projectile reach.
+WITHDRAW_RANGE = 500.0
+FALLOFF_START = 400.0
 MIN_RANGED_DAMAGE = 0.45
 UNIT_RADIUS = 12.0
 SHOT_SPREAD = math.radians(1.5)  # Every shot leaves up to this far off its aim, either way, so range costs hits.

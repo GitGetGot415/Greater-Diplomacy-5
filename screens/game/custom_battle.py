@@ -66,9 +66,9 @@ DEFAULT_ZOOM_INDEX = ZOOM_LEVELS.index(1.0)
 # Actual battle plays music at this share of its volume at the default zoom and closer.
 # Zooming out lowers music and battle sound effects in proportion to the zoom.
 BATTLE_MUSIC_VOLUME = 0.5
-AIM_CAMERA_OFFSET = 0.9  # Share of the pointer's distance from the view center, in screen pixels.
+AIM_CAMERA_OFFSET = 1.0  # Share of the pointer's distance from the view center, in screen pixels.
 OVERVIEW_ZOOM = 0.6
-CONTROLLED_MIN_ZOOM = 1.0  # Minimum zoom while controlling a living unit; choose a value from ZOOM_LEVELS.
+CONTROLLED_MIN_ZOOM = 2.0 # Minimum zoom while controlling a living unit; choose a value from ZOOM_LEVELS.
 OVERVIEW_SYMBOL_SIZE = 16
 MIN_PLAYER_INDICATOR_SCALE = 0.85
 MIN_HEALTH_BAR_WIDTH = 22
