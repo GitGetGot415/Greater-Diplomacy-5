@@ -39,9 +39,9 @@ SIGHT_RAYS = 720
 SIGHT_EDGE_EPSILON = 1e-6  # Cast on both sides of a tangent so even narrow trunks cast a complete shadow.
 # Placement attempts: hills, trees, rocks, and impassable water/gaps.
 TERRAIN_RECIPES = {
-    "plains": (0, 16, 0, 0), "desert": (0, 0, 0, 0),
-    "hills": (24, 0, 0, 0), "forest": (0, 400, 0, 0),
-    "jungle": (0, 800, 0, 32), "mountain": (32, 0, 16, 8),
+    "plains": (0, 20, 0, 0), "desert": (0, 0, 0, 0),
+    "hills": (24, 0, 0, 0), "forest": (0, 200, 0, 0),
+    "jungle": (0, 400, 0, 32), "mountain": (32, 0, 16, 8),
     "swamp": (0, 192, 0, 64),
 }
 # What the impassable water/gaps of each recipe are. Both stop movement and let shots across.

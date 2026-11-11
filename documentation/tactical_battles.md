@@ -145,7 +145,7 @@ The two armies deploy facing each other around the middle of the battlefield, th
 (`SPAWN_FRONT_GAP` in [map_logic/custom_battle.py](../map_logic/custom_battle.py)) whatever their size.
 Each division deploys as one vertical line of its sub-units, centered top to bottom, in its own rank.
 Sub-units keep the same spacing along a line, so a division with fewer sub-units makes a shorter line.
-Roster order runs front to back. The battlefield is square, with each side long enough to fit two full armies.
+Roster order runs front to back. The battlefield is twice as wide as it is tall (height:width = 1:2), with enough width to fit two full armies.
 Armored cars, WW1 tanks, light tanks, medium tanks, heavy tanks, main battle tanks, and super heavy tanks use the chassis
 and turret images in `assets/battles`. The chassis follows the hull heading, and the turret follows the gun's aim.
 Infantry, cavalry, and militia use their chassis images from the same folder and share `turret/Infantry Gun.png`

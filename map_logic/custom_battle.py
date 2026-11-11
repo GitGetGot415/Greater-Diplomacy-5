@@ -69,9 +69,9 @@ SUBUNIT_SPACING = 60.0  # Between neighboring sub-units along a division's line.
 # Distance between the two armies' front ranks at deployment, centered on the battlefield.
 SPAWN_FRONT_GAP = 2000.0
 SPAWN_MARGIN = 100.0  # Between the battlefield edge and the last rank of the largest army.
-# The square battlefield fits two full armies behind their front ranks.
-ARENA_SIDE = SPAWN_FRONT_GAP + 2 * (SPAWN_MARGIN + (c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE - 1) * RANK_GAP)
-ARENA_SIZE = (ARENA_SIDE, ARENA_SIDE)
+# The battlefield is twice as wide as it is tall, with room for two full armies behind their front ranks.
+ARENA_WIDTH = SPAWN_FRONT_GAP + 2 * (SPAWN_MARGIN + (c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE - 1) * RANK_GAP)
+ARENA_SIZE = (ARENA_WIDTH, ARENA_WIDTH / 2)
 APPROACH_LANE_GAP = 70.0
 FLANK_ARRIVAL_DISTANCE = 45.0
 FOOT_SHAPES = frozenset(("infantry", "cavalry"))  # Turn away to withdraw; vehicles reverse.
