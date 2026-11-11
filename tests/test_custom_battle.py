@@ -1307,6 +1307,13 @@ class TacticalTerrainTests(unittest.TestCase):
         return simulation
 
     def test_each_terrain_repeats_with_seed_and_keeps_deployment_and_routes_clear(self):
+        recipes = {
+            "plains": (0, 5, 0, 0), "desert": (0, 0, 0, 0),
+            "hills": (2, 0, 0, 0), "forest": (0, 12, 0, 0),
+            "jungle": (0, 16, 0, 2), "mountain": (3, 0, 2, 1),
+            "swamp": (0, 10, 0, 3),
+        }
+        self.enterContext(patch.dict(battle_terrain.TERRAIN_RECIPES, recipes, clear=True))
         for terrain in battle_terrain.TERRAIN_NAMES:
             with self.subTest(terrain=terrain):
                 first = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"], terrain=terrain, seed=4)
@@ -1321,7 +1328,7 @@ class TacticalTerrainTests(unittest.TestCase):
                     self.assertTrue(first.battlefield.clear_path(start, point))
                     start = point
                 self.assertEqual(path[-1], end)
-                if terrain in {"plains", "desert"}:
+                if not any(recipes[terrain]):
                     self.assertEqual(first.battlefield.features, [])
                 else:
                     self.assertTrue(first.battlefield.features)

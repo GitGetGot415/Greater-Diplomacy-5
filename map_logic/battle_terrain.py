@@ -36,7 +36,7 @@ EDGE_CLEARANCE = 80.0
 MAX_CACHED_ROUTES = 2048
 # Placement attempts: hills, trees, rocks, and impassable water/gaps.
 TERRAIN_RECIPES = {
-    "plains": (0, 0, 0, 0), "desert": (0, 0, 0, 0),
+    "plains": (0, 16, 0, 0), "desert": (0, 0, 0, 0),
     "hills": (6, 0, 0, 0), "forest": (0, 252, 0, 0),
     "jungle": (0, 660, 0, 15), "mountain": (13, 0, 7, 4),
     "swamp": (0, 192, 0, 35),

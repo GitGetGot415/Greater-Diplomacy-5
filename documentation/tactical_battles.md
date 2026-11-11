@@ -218,7 +218,8 @@ are separate from maximum weapon range. Read tactical tuning in `map_logic/custo
 
 #### Terrain
 
-Plains have a light green background and no obstacles. Desert follows the same rules with an orange background.
+Plains have a light green background and a few scattered trees that block movement and intercept shots.
+Deserts have an orange background and no obstacles.
 Hills have a yellow background and occasional traversable mounds. Additional contour bands indicate higher mounds.
 Raised ground intercepts shots through a crest;
 climbing toward the crest opens firing lines. Units and guns use the ground height at their position.
