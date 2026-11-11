@@ -9,8 +9,8 @@ Shared battlefield controls, combat mechanics, and custom battles are documented
 ## Your division
 
 The player commands one land division while the parent country remains AI-controlled.
-The tactical division cannot be an artillery-type unit: choosing a tile or stack leaves artillery out,
-and a tile or stack holding only artillery offers no division.
+Choosing a tile or stack offers only land units eligible for tactical battles, excluding aircraft, ships, and artillery.
+A tile or stack holding only ineligible units offers no division and does not spawn a replacement.
 Tactical battles in tournament and real-time multiplayer remain unavailable.
 
 Tactical Orders commands only the tactical division. Other units on the opened tile are read-only.
@@ -104,7 +104,7 @@ Everything else waits for the next turn.
 
 Saving during tactical play records the controlled division's persistent unit ID in `tactical_player_unit_id`.
 Loading binds control to that same living division on the loaded map and leaves the host country AI-controlled.
-The save stores no duplicate unit. If the saved division is missing, dead, or no longer belongs to the player,
+The save stores no duplicate unit. If the saved division is missing, dead, ineligible for tactical battles, or no longer belongs to the player,
 the game opens in spectator mode. Editors, new scenarios, tournament games, and real-time games do not restore
 tactical control. Older saves without the reference keep their existing country-control behavior.
 New history snapshots record the reference too, so selecting a recorded turn restores that turn's tactical control.

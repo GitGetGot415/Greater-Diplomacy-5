@@ -19,6 +19,9 @@ from tests.stub_map_screen import map_double, sample_map_screen
 class MapSaveFormatTests(unittest.TestCase):
     def tactical_context(self):
         context = sample_map_screen()
+        library = {"Fixture Infantry I": {"health": 100, "speed": 2, "attack": 10, "defense": 3,
+                                          "naval_unit": False, "air_role": None, "bombard_range": 0}}
+        self.enterContext(mock.patch.object(queries, "get_unit_library", return_value=library))
         player = {"unit_id": "controlled-division", "type": "Fixture Infantry I",
                   "owner": "Avaria", "health": 70, "max_health": 100,
                   "speed": 2, "attack": 10, "defense": 3, "custom_name": "Controlled division",
@@ -105,10 +108,34 @@ class MapSaveFormatTests(unittest.TestCase):
                 self.assertIsNone(context.player_unit)
                 self.assertEqual(context.player_country, "Avaria")
 
+    def test_tactical_load_rejects_air_sea_artillery_and_unknown_types_without_removing_units(self):
+        for stats in ({"naval_unit": True}, {"air_role": "fighter"}, {"bombard_range": 2}, None):
+            with self.subTest(stats=stats):
+                context, province, player = self.tactical_context()
+                metadata = queries.build_save_dict(context)
+                player["type"] = "Fixture Ineligible I"
+                library = queries.get_unit_library(context)
+                if stats is not None:
+                    library[player["type"]] = stats
+                load_map._restore_tactical_player(context, metadata)
+                self.assertFalse(context.tactical_mode)
+                self.assertIsNone(context.player_unit)
+                self.assertEqual(context.player_country, "Spectator")
+                self.assertTrue(any(unit is player for unit in province["units"]))
+
     def test_tactical_control_does_not_follow_a_leftover_player_reference_after_independence(self):
         context, _province, _player = self.tactical_context()
         context.tactical_mode = False
         self.assertIsNone(queries.build_save_dict(context)["tactical_player_unit_id"])
+
+    def test_tactical_load_keeps_control_of_an_eligible_division_in_a_convoy(self):
+        context, _province, player = self.tactical_context()
+        metadata = queries.build_save_dict(context)
+        player["original_type"] = player["type"]
+        player["type"] = f"Convoy ({player['type']})"
+        load_map._restore_tactical_player(context, metadata)
+        self.assertTrue(context.tactical_mode)
+        self.assertIs(context.player_unit, player)
 
     def test_realtime_player_projection_omits_tactical_control(self):
         context, _province, player = self.tactical_context()

@@ -22,6 +22,7 @@ from map_logic.system32 import unit_events, movement_processor, economy_processo
 from map_logic.diplomacy import (diplomacy_events, diplomacy_lifecycle, faction_records,
                                  faction_leadership)
 from map_logic.territory import ownership
+from map_logic import custom_battle
 
 # Each yield in _load_map_asset_steps starts one stage. Keep these totals with that pipeline.
 MAP_ASSET_LOADING_STAGES = 10
@@ -421,14 +422,17 @@ def _restore_tactical_player(context, save_meta):
     # Older saves did not record tactical control. Never guess a division.
     if not isinstance(unit_id, str) or not unit_id:
         return
+    eligible_types = set(custom_battle.land_unit_types(queries.get_unit_library(context)))
     for province in world_for(context).map_data.values():
         for unit in queries.units_with_air_cargo(province.get("units", [])):
+            # A land division aboard a convoy keeps tactical control while transported.
             if (unit.get("unit_id") == unit_id and unit.get("health", 0) > 0
-                    and unit.get("owner") == session.player_country):
+                    and unit.get("owner") == session.player_country
+                    and unit.get("original_type", unit.get("type")) in eligible_types):
                 session.player_unit = unit
                 session.tactical_mode = True
                 return
-    # A removed division ends tactical control, as when the division dies in play.
+    # A missing or ineligible division ends tactical control, as when the division dies in play.
     session.player_country = "Spectator"
     session.active_players = ["Spectator"]
     session.current_player_index = 0

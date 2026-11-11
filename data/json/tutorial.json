@@ -232,7 +232,7 @@
                         {
                             "type": "steps",
                             "items": [
-                                {"heading": "Choose a division", "text": "Artillery cannot be your tactical division. A stack containing only artillery offers no division to control."},
+                                {"heading": "Choose a division", "text": "Choose a land division. Aircraft, ships, and artillery cannot be your tactical division. A stack containing only ineligible units offers no division to control."},
                                 {"heading": "Tactical Orders", "text": "Give orders only to your division. Other units on the opened tile are read-only and stay under AI control."},
                                 {"heading": "Resources", "text": "Tactical play has no resource pool. Your division moves without fuel, and repairs are free for both you and the parent country."},
                                 {"heading": "Battle control", "text": "During a tactical battle, you directly control one sub-unit of your division. The other sub-units fight automatically. You see only within a circle around your controlled sub-unit; everything outside sight is black. Tree trunks, hills, and mountain rocks block sight behind them."}

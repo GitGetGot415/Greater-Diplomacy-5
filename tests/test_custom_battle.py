@@ -1669,6 +1669,59 @@ class TacticalTerrainTests(unittest.TestCase):
         self.assertFalse(unit.ram_committed)
 
 
+class TacticalSelectionTests(unittest.TestCase):
+    def setUp(self):
+        from screens.setup import player_setup
+        self.setup = player_setup
+        self.library = fixture_library()
+        self.units = [queries.create_unit_dict(name, "Fixture A", self.library) for name in self.library]
+        self.map = SimpleNamespace(show_feedback=Mock(), pending_unit=None, pending_selection=None,
+                                   selected_province=None, active_players=[], tactical_mode=True)
+        self.province = {"owner": "Fixture A", "units": self.units}
+        self.enterContext(patch.object(queries, "get_unit_library", return_value=self.library))
+        self.enterContext(patch.object(player_setup.ui_elements, "play_ui_sound"))
+        self.picker = self.enterContext(patch.object(player_setup.pickers, "open_listbox_selector"))
+
+    def test_tile_and_stack_pickers_offer_only_battle_eligible_land_units(self):
+        for candidates in (None, self.units):
+            with self.subTest(stack=candidates is not None):
+                self.setup.select_tactical_unit(self.map, self.province, candidate_units=candidates)
+                labels, callback = self.picker.call_args.args[-2:]
+                self.assertEqual(labels, [f"{i + 1}. {name}" for i, name in enumerate(combat.land_unit_types(self.library))])
+                for label, unit in zip(labels, self.units[:3]):
+                    callback(label)
+                    self.assertIs(self.map.pending_unit, unit)
+
+    def test_ineligible_tiles_and_clicked_stacks_never_select_or_spawn_a_division(self):
+        invalid = [*self.units[3:], {"type": "Missing", "owner": "Fixture A"}]
+        for units in ([unit] for unit in invalid):
+            for stack in (False, True):
+                with self.subTest(unit=units[0]["type"], stack=stack):
+                    province = {"owner": "Fixture A", "units": self.units if stack else units}
+                    before = list(province["units"])
+                    self.setup.select_tactical_unit(self.map, province, candidate_units=units if stack else None)
+                    self.assertIsNone(self.map.pending_unit)
+                    self.assertIsNone(self.map.pending_selection)
+                    self.assertEqual(province["units"], before)
+        self.picker.assert_not_called()
+
+    def test_mixed_tile_automatically_selects_its_only_eligible_division(self):
+        foot = self.units[0]
+        self.province["units"] = [*self.units[3:], foot]
+        self.setup.select_tactical_unit(self.map, self.province)
+        self.assertIs(self.map.pending_unit, foot)
+        self.picker.assert_not_called()
+
+    def test_confirmation_rechecks_tactical_eligibility_before_granting_control(self):
+        for unit in self.units[3:]:
+            with self.subTest(unit=unit["type"]):
+                self.map.pending_unit = unit
+                self.map.pending_selection = "Fixture A"
+                self.setup.confirm_player_country(self.map)
+                self.assertEqual(self.map.active_players, [])
+                self.assertFalse(hasattr(self.map, "player_unit"))
+
+
 class CustomBattleScreenTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
