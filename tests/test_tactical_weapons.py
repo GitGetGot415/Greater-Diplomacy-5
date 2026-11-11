@@ -535,6 +535,28 @@ class TacticalTouchTests(unittest.TestCase):
         self.assertEqual(self.screen.touch_weapon_mode, "Secondary")
         self.assertEqual(len(self.screen.touch_pointers), 1)
 
+    def test_death_removes_weapon_selector_from_input_and_pause_does_not_restore_it(self):
+        self.screen.add_unit(0, "Fixture I")
+        touch = self.start_controlled()
+        simulation = self.screen.simulation
+        self.screen._select_touch_weapon("Both")
+        buttons = list(self.screen.touch_weapon_buttons)
+        self.assertEqual(len(buttons), 3)
+        with patch.object(simulation, "advance", side_effect=lambda dt: simulation.controlled.data.update(health=0)):
+            self.screen.update()
+        self.assertTrue(any(fighter.alive and fighter.side == 0 for fighter in simulation.fighters))
+        self.assertEqual(self.screen.mode, "battle")
+        self.assertFalse(self.screen.touch_weapon_buttons)
+        self.assertTrue(all(button not in self.screen.elements for button in buttons))
+        for button in buttons:
+            self.send(touch, pygame.FINGERDOWN, button.rect.center)
+            self.send(touch, pygame.FINGERUP, button.rect.center)
+        self.assertEqual(self.screen.touch_weapon_mode, "Both")
+        self.screen.toggle_pause()
+        self.assertFalse(self.screen.touch_weapon_buttons)
+        self.screen.toggle_pause()
+        self.assertFalse(self.screen.touch_weapon_buttons)
+
     def test_focus_loss_clears_both_thumbs_and_fire(self):
         touch = self.start_controlled()
         for finger, role in enumerate(("drive", "aim"), start=1):

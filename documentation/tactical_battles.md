@@ -361,6 +361,7 @@ The aim pad aims and fires while held outside its dead zone. Releasing the aim p
 pad releases movement and steering. A weapon selector offers Primary, Secondary, and Both for units with two guns.
 The selection remains active until changed, and each gun still follows its own cooldown. Single-weapon units need no selector.
 Both pads can be held together, and the selector can be used while a drive finger remains held.
+Both pads and the weapon selector disappear when the controlled sub-unit is destroyed.
 The shared touch-input layer suppresses duplicate mouse events and clears held controls on focus loss or screen changes.
 
 Only the controlled sub-unit shows its range and firing cone (a circle for units that aim all the way around)

@@ -693,7 +693,7 @@ class CustomBattleScreen(Screen):
                                         font_size=20))
         elif self.mode == "battle":
             self.touch_weapon_buttons = []
-            if self.touch_mode and self.simulation.controlled is not None and self.simulation.controlled.weapon(1) is not None:
+            if self.touch_mode and self.simulation.controlled is not None and self.simulation.controlled.alive and self.simulation.controlled.weapon(1) is not None:
                 width, height = TOUCH_WEAPON_SIZE
                 left = c.SCREEN_WIDTH - TOUCH_PAD_MARGIN - (width * 3 + TOUCH_WEAPON_GAP * 2)
                 top = self._touch_pad_rect("aim").top - height - TOUCH_WEAPON_GAP
@@ -1541,6 +1541,9 @@ class CustomBattleScreen(Screen):
         elif self.held_keys or self.firing or self.secondary_firing or self.touch_pointers:
             # The controlled sub-unit is gone: the player spectates, so drop held input and leave the camera free.
             self.clear_controls()
+        if self.touch_weapon_buttons and (controlled is None or not controlled.alive):
+            self.elements = [element for element in self.elements if element not in self.touch_weapon_buttons]
+            self.touch_weapon_buttons.clear()
         self._refresh_status()
         if self.simulation.winner is not None:
             self.clear_controls()
