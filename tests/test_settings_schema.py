@@ -27,7 +27,7 @@ GOLDEN_ORDER = (
     "gemini_api_key", "chatgpt_api_key", "claude_api_key", "ollama_base_url",
     "gemini_model", "chatgpt_model", "claude_model", "ollama_model",
     "ai_immersion_level", "music_pitch", "sfx_pitch", "target_fps",
-    "ai_threads", "show_fps", "show_intro_popup", "saves_dir",
+    "ai_threads", "show_fps", "show_strategic_intro_popup", "saves_dir",
     "custom_scenarios_dir", "ocean_light_color", "ocean_dark_color",
     "tournament_saves_dir", "checkerboard_water",
     "deepseek_api_key", "kimi_api_key", "deepseek_model", "kimi_model",
@@ -43,6 +43,7 @@ GOLDEN_ORDER = (
     "checkerboard_scroll_speed",
     "tactical_infantry_songs", "tactical_tank_songs",
     "control_mode",
+    "show_tactical_intro_popup",
 )
 
 GOLDEN_JSON_KEYS = set(GOLDEN_ORDER)
@@ -69,6 +70,87 @@ class SchemaContractTests(unittest.TestCase):
 
 
 class RoundTripTests(unittest.TestCase):
+    def test_tutorial_preferences_round_trip_independently(self):
+        for strategic in (False, True):
+            for tactical in (False, True):
+                with self.subTest(strategic=strategic, tactical=tactical):
+                    choices = {"show_strategic_intro_popup": strategic, "show_tactical_intro_popup": tactical}
+                    saved = settings_schema.to_json_dict(choices)
+                    loaded = settings_schema.from_json_dict(saved)
+                    self.assertEqual({key: loaded[key] for key in choices}, choices)
+                    self.assertEqual(settings_schema.from_tuple(settings_schema.to_tuple(loaded, {})), loaded)
+                    self.assertNotIn("show_intro_popup", saved)
+                    self.assertEqual(settings_schema.read_setting(loaded, settings_schema.intro_popup_setting(False)), strategic)
+                    self.assertEqual(settings_schema.read_setting(loaded, settings_schema.intro_popup_setting(True)), tactical)
+
+    def test_older_tutorial_preference_supplies_both_modes_without_overriding_current_choices(self):
+        for enabled in (False, True):
+            for current in ({}, {"show_strategic_intro_popup": not enabled}, {"show_tactical_intro_popup": not enabled}):
+                with self.subTest(enabled=enabled, current=current):
+                    legacy = dict(current, show_intro_popup=enabled, future_setting="preserved")
+                    expected = dict(show_strategic_intro_popup=enabled, show_tactical_intro_popup=enabled)
+                    expected.update(current)
+                    loaded = settings_schema.from_json_dict(legacy)
+                    migrated = migrations.migrate_setting_names(dict(legacy))
+                    for name, value in expected.items():
+                        self.assertEqual(loaded[name], value)
+                        self.assertEqual(migrated[name], value)
+                    self.assertNotIn("show_intro_popup", migrated)
+                    self.assertEqual(migrated["future_setting"], "preserved")
+                    self.assertEqual(migrations.migrate_setting_names(dict(migrated)), migrated)
+                    self.assertEqual(settings_schema.from_json_dict(settings_schema.to_json_dict(legacy)), loaded)
+
+    def test_older_tutorial_tuple_preserves_both_startup_choices(self):
+        for enabled in (False, True):
+            values = settings_schema.defaults()
+            values["show_strategic_intro_popup"] = enabled
+            legacy = settings_schema.to_tuple(values, {})[:-1]
+            loaded = settings_schema.from_tuple(legacy)
+            self.assertEqual(loaded["show_strategic_intro_popup"], enabled)
+            self.assertEqual(loaded["show_tactical_intro_popup"], enabled)
+
+    def test_writer_accepts_the_older_tutorial_keyword(self):
+        from data import queries
+        from data.io import keybind_io
+        with mock.patch.object(queries, "save_cached_json") as save:
+            keybind_io.save_settings({}, 0.4, 0.6, show_intro_popup=False, show_tactical_intro_popup=True)
+        saved = save.call_args.args[1]
+        self.assertFalse(saved["show_strategic_intro_popup"])
+        self.assertTrue(saved["show_tactical_intro_popup"])
+        self.assertNotIn("show_intro_popup", saved)
+
+    def test_writer_preserves_the_older_tutorial_positional_argument(self):
+        from data import queries
+        from data.io import keybind_io
+        legacy = list(settings_schema.to_tuple(settings_schema.defaults(), {}))
+        legacy[GOLDEN_ORDER.index("show_strategic_intro_popup") + 1] = False
+        with mock.patch.object(queries, "save_cached_json") as save:
+            keybind_io.save_settings(*legacy[:-1])
+        self.assertFalse(save.call_args.args[1]["show_strategic_intro_popup"])
+        self.assertFalse(save.call_args.args[1]["show_tactical_intro_popup"])
+
+    def test_older_tutorial_settings_load_and_save_independent_choices_on_disk(self):
+        import json
+        import tempfile
+        from pathlib import Path
+        from types import SimpleNamespace
+        from data import queries
+        from data.io import keybind_io
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary, "settings.json")
+            path.write_text(json.dumps({"show_intro_popup": False}), encoding="utf-8")
+            entry = {"path": str(path), "data": None}
+            with mock.patch.dict(queries._JSON_CACHE, {"settings": entry}), mock.patch.object(keybind_io, "CONFIG_PATH", str(path)):
+                loaded = keybind_io.load_settings_result({}).values
+                self.assertFalse(loaded["show_strategic_intro_popup"])
+                self.assertFalse(loaded["show_tactical_intro_popup"])
+                controller = SimpleNamespace(**loaded, keybinds={})
+                controller.show_tactical_intro_popup = True
+                queries.save_global_settings(controller)
+                entry["data"] = None
+                self.assertEqual(keybind_io.load_settings_result({}).values, settings_schema.from_controller(controller))
+                self.assertNotIn("show_intro_popup", json.loads(path.read_text(encoding="utf-8")))
+
     def test_control_mode_round_trip_and_older_settings_default(self):
         for mode in c.CONTROL_MODES:
             saved = settings_schema.to_json_dict({"control_mode": mode})
@@ -297,10 +379,12 @@ class SaveSignatureTests(unittest.TestCase):
         import inspect
         from data.io import keybind_io
 
-        params = [name for name, param in inspect.signature(keybind_io.save_settings).parameters.items()
-                  if param.kind != inspect.Parameter.VAR_KEYWORD]
+        signature = inspect.signature(keybind_io.save_settings)
+        params = ["show_strategic_intro_popup" if name == "show_intro_popup" else name
+                  for name, param in signature.parameters.items() if param.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD]
         self.assertEqual(params[0], "keybind_dict")
         self.assertEqual(tuple(params[1:]), settings_schema.SETTINGS_ORDER)
+        self.assertTrue(set(settings_schema.SETTINGS_ORDER).issubset(signature.parameters))
 
     def test_from_controller_supplies_every_parameter(self):
         controller = ControllerTests.Fake()
@@ -365,6 +449,33 @@ class SettingsCategoryTests(unittest.TestCase):
         button = next(element for element in self.screen.elements if element.text == label)
         for kind in (self.pygame.MOUSEBUTTONDOWN, self.pygame.MOUSEBUTTONUP):
             self.screen.handle_events([self.pygame.event.Event(kind, button=1, pos=button.rect.center)])
+
+    def test_tutorial_controls_save_independent_choices_and_reset_both(self):
+        for tactical_mode, label in ((False, "Show Strategic Tutorial"), (True, "Show Tactical Tutorial")):
+            with self.subTest(tactical_mode=tactical_mode):
+                name = settings_schema.intro_popup_setting(tactical_mode)
+                other = settings_schema.intro_popup_setting(not tactical_mode)
+                before = getattr(self.controller, name)
+                other_before = getattr(self.controller, other)
+                self.click(f"{label}: {'ON' if before else 'OFF'}")
+                saved = self.save.call_args.args[1]
+                self.assertEqual(saved[name], not before)
+                self.assertEqual(saved[other], other_before)
+                self.assertEqual(getattr(self.screen, name), not before)
+                self.assertEqual(getattr(self.controller, name), not before)
+        self.screen.reset_category_defaults()
+        for name in ("show_strategic_intro_popup", "show_tactical_intro_popup"):
+            self.assertEqual(getattr(self.controller, name), settings_schema.defaults()[name])
+
+    def test_settings_refresh_reads_both_tutorial_opt_outs(self):
+        from types import SimpleNamespace
+        app = SimpleNamespace(states={name: object() for name in ("MAP", "REALTIME_LOBBY", "REALTIME_REMOTE_LOBBY", "CUSTOM_BATTLE", "MENU")})
+        saved = {"show_strategic_intro_popup": False, "show_tactical_intro_popup": True}
+        with mock.patch.object(self.settings.queries, "get_settings", return_value=saved):
+            self.screen.on_enter(app, app.states["MENU"])
+        for name, enabled in saved.items():
+            self.assertEqual(getattr(self.screen, name), enabled)
+            self.assertEqual(getattr(self.controller, name), enabled)
 
     def test_category_clicks_replace_controls_and_clear_text_focus(self):
         self.controller.ai_mode = self.screen.ai_mode = "GEMINI"
@@ -765,7 +876,8 @@ class NavigationIntroPopupTests(unittest.TestCase):
         self.addCleanup(setattr, message_box._NavigationIntroPopup, "last_topic_index",
                         message_box._NavigationIntroPopup.last_topic_index)
         map_stub = type("MapStub", (), {"navigation_intro_popup": None, "tactical_mode": False})()
-        popup = message_box._NavigationIntroPopup(map_stub)
+        with mock.patch.object(message_box.queries, "get_settings", return_value={}):
+            popup = message_box._NavigationIntroPopup(map_stub)
         surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
         map_stub.navigation_intro_popup = popup
         # Unit selection and map panning pass through the panel while active.
@@ -795,7 +907,7 @@ class NavigationIntroPopupTests(unittest.TestCase):
              mock.patch.object(message_box.queries, "save_cached_json") as save:
             popup.handle_event(pygame.event.Event(
                 pygame.MOUSEBUTTONDOWN, pos=popup.checkbox_rect.center, button=1))
-        save.assert_called_once_with("settings", {"show_intro_popup": False})
+        save.assert_called_once_with("settings", {"show_strategic_intro_popup": False})
 
         with mock.patch.object(message_box.ui_elements, "play_ui_sound") as sound:
             popup.handle_event(pygame.event.Event(
@@ -922,7 +1034,8 @@ class KeybindIoTests(unittest.TestCase):
         self.assertTrue(settings_schema.defaults()["army_group_animations"])
 
     def test_intro_popup_defaults_to_enabled(self):
-        self.assertTrue(settings_schema.defaults()["show_intro_popup"])
+        self.assertTrue(settings_schema.defaults()["show_strategic_intro_popup"])
+        self.assertTrue(settings_schema.defaults()["show_tactical_intro_popup"])
 
 
 if __name__ == "__main__":

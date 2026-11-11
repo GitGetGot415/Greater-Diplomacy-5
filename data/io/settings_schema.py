@@ -87,7 +87,7 @@ SETTINGS_FIELDS = (
     _field("target_fps", "target_fps"),
     _field("ai_threads", "ai_threads"),
     _field("show_fps", "show_fps"),
-    _field("show_intro_popup", "show_intro_popup"),
+    _field("show_strategic_intro_popup", "show_strategic_intro_popup"),
     _field("saves_dir", "saves_dir"),
     _field("custom_scenarios_dir", "custom_scenarios_dir"),
     _field("ocean_light_color", "ocean_light_color", coerce=tuple),
@@ -121,6 +121,7 @@ SETTINGS_FIELDS = (
     _field("tactical_infantry_songs", "tactical_infantry_songs", coerce=_coerce_song_list),
     _field("tactical_tank_songs", "tactical_tank_songs", coerce=_coerce_song_list),
     _field("control_mode", "control_mode", coerce=_coerce_control_mode),
+    _field("show_tactical_intro_popup", "show_tactical_intro_popup"),
 )
 
 SETTINGS_ORDER = tuple(field.name for field in SETTINGS_FIELDS)
@@ -129,6 +130,11 @@ SETTINGS_ORDER = tuple(field.name for field in SETTINGS_FIELDS)
 TUPLE_LENGTH = len(SETTINGS_FIELDS) + 1
 
 _FIELDS_BY_NAME = {field.name: field for field in SETTINGS_FIELDS}
+
+
+def intro_popup_setting(tactical_mode):
+    """Return the startup tutorial preference for the current play mode."""
+    return "show_tactical_intro_popup" if tactical_mode else "show_strategic_intro_popup"
 
 
 def read_setting(saved, name, default=None):
@@ -177,6 +183,9 @@ def from_tuple(sequence):
     for index, field in enumerate(SETTINGS_FIELDS, start=1):
         if index < len(sequence):
             values[field.name] = sequence[index]
+    if SETTINGS_ORDER.index("show_strategic_intro_popup") + 1 < len(sequence) <= SETTINGS_ORDER.index("show_tactical_intro_popup") + 1:
+        # Before the split, the strategic slot controlled both tutorials.
+        values["show_tactical_intro_popup"] = values["show_strategic_intro_popup"]
     return _filled_values(values)
 
 

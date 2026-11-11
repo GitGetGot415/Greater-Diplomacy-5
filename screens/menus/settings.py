@@ -104,9 +104,12 @@ SETTINGS_INFO_ROWS = (
     ("show_unclaimed", "Show Unassigned",
      "Shows the Unassigned army card for your units outside army groups. "
      "Enabled by default. The card stays hidden when all units are assigned."),
-    ("show_intro_popup", "Show Tutorial Popup",
-     "Shows the Help window when a fresh game begins. Its categories cover the "
+    ("show_strategic_intro_popup", "Show Strategic Tutorial",
+     "Shows the Help window when a fresh strategic game begins. Its categories cover the "
      "basics, from map controls to production, research, and diplomacy. "
+     "The Help button on the map reopens it."),
+    ("show_tactical_intro_popup", "Show Tactical Tutorial",
+     "Shows the Help window when a fresh tactical game begins. "
      "The Help button on the map reopens it."),
     ("control_mode", "Controls",
      "Auto chooses Mobile controls on Android and iOS and Desktop controls on other systems at startup. "
@@ -147,7 +150,8 @@ def render_settings_buttons(settings_screen):
 
     if screen.sub_state == "GAME":
         rows = (
-            ("show_intro_popup", "Show Tutorial Popup", screen.show_intro_popup, screen.toggle_intro_popup),
+            ("show_strategic_intro_popup", "Show Strategic Tutorial", screen.show_strategic_intro_popup, lambda: screen.toggle_intro_popup(False)),
+            ("show_tactical_intro_popup", "Show Tactical Tutorial", screen.show_tactical_intro_popup, lambda: screen.toggle_intro_popup(True)),
             ("show_unclaimed", "Show Unassigned", screen.show_unclaimed, screen.toggle_show_unclaimed),
             ("army_group_animations", "Army Group Animations", screen.army_group_animations, screen.toggle_army_group_animations),
         )
@@ -155,7 +159,7 @@ def render_settings_buttons(settings_screen):
             y = SETTINGS_FIRST_Y + index * SETTINGS_ROW_GAP
             screen.elements.append(make_toggle_button(SETTINGS_X, y, SETTINGS_OPTION_SIZE, label, enabled, callback, font_preset="small"))
             screen.add_setting_info(key, y)
-        y = SETTINGS_FIRST_Y + 3 * SETTINGS_ROW_GAP
+        y = SETTINGS_FIRST_Y + len(rows) * SETTINGS_ROW_GAP
         screen.elements.append(Button(SETTINGS_X, y, SETTINGS_OPTION_SIZE, "purple", f"Battle Display: {screen.battle_display_mode.title()}", screen.toggle_battle_display_mode))
         screen.add_setting_info("battle_display_mode", y)
         screen.player_slider = Slider(SETTINGS_X, y + 92, SETTINGS_SLIDER_WIDTH, f"Players: {screen.num_players}", (screen.num_players - 1) / 7.0, screen.set_players)
@@ -253,7 +257,7 @@ class Settings(Screen):
 
     # Category resets retain credentials, models, URLs, audio, and Unit Art.
     CATEGORY_RESET_FIELDS = {
-        "GAME": ("num_players", "show_intro_popup", "show_unclaimed", "battle_display_mode", "army_group_animations"),
+        "GAME": ("num_players", "show_strategic_intro_popup", "show_tactical_intro_popup", "show_unclaimed", "battle_display_mode", "army_group_animations"),
         "DISPLAY": ("target_fps", "show_fps", "checkerboard_water", "checkerboard_gradient_strength", "checkerboard_scroll_speed", "ocean_light_color", "ocean_dark_color"),
         "CONTROLS": ("map_navigation_mode", "control_mode", "mouse_button_actions", "orders_key_changes_screen", "economy_key_changes_screen"),
         "AI": ("ai_mode", "ai_immersion_level", "ai_threads"),
@@ -286,7 +290,8 @@ class Settings(Screen):
         for attr in self.editable_attrs():
             setattr(self, f"{attr}_text", getattr(self.controller, attr))
 
-        self.show_intro_popup = self.controller.show_intro_popup
+        self.show_strategic_intro_popup = self.controller.show_strategic_intro_popup
+        self.show_tactical_intro_popup = self.controller.show_tactical_intro_popup
         self.show_unclaimed = self.controller.show_unclaimed
 
         self.ai_threads = self.controller.ai_threads
@@ -427,10 +432,12 @@ class Settings(Screen):
     def open_mouse_settings(self):
         self.go_to("MOUSE_SETTINGS")
 
-    def toggle_intro_popup(self):
-        """Persists whether a new game should explain map controls."""
-        self.show_intro_popup = not self.show_intro_popup
-        self.controller.show_intro_popup = self.show_intro_popup
+    def toggle_intro_popup(self, tactical_mode):
+        """Persist the startup tutorial preference for one play mode."""
+        name = settings_schema.intro_popup_setting(tactical_mode)
+        enabled = not getattr(self, name)
+        setattr(self, name, enabled)
+        setattr(self.controller, name, enabled)
         queries.save_global_settings(self.controller)
         self.refresh_ui()
 
@@ -489,12 +496,15 @@ class Settings(Screen):
         self.refresh_ui()
 
     def refresh_ui(self):
-        # The fresh-game tutorial can change this setting while Settings is
-        # closed, so re-read its cached persisted value whenever this screen
+        # Either tutorial can change its preference while Settings is
+        # closed, so re-read the cached persisted values whenever this screen
         # rebuilds rather than showing a stale controller value.
-        self.show_intro_popup = queries.get_settings().get(
-            "show_intro_popup", self.controller.show_intro_popup)
-        self.controller.show_intro_popup = self.show_intro_popup
+        saved = queries.get_settings()
+        for tactical_mode in (False, True):
+            name = settings_schema.intro_popup_setting(tactical_mode)
+            enabled = settings_schema.read_setting(saved, name, getattr(self.controller, name))
+            setattr(self, name, enabled)
+            setattr(self.controller, name, enabled)
         render_settings_buttons(self)
 
     def toggle_ai_enabled(self):
@@ -511,7 +521,7 @@ class Settings(Screen):
         names = (
             "target_fps", "ai_threads", "num_players", "show_fps",
             "checkerboard_water", "checkerboard_gradient_strength", "checkerboard_scroll_speed",
-            "show_intro_popup", "show_unclaimed", "map_navigation_mode", "control_mode",
+            "show_strategic_intro_popup", "show_tactical_intro_popup", "show_unclaimed", "map_navigation_mode", "control_mode",
             "battle_display_mode", "army_group_animations", "mouse_button_actions",
         )
         self._reset_fields(names + tuple(self.COLOR_FIELDS))

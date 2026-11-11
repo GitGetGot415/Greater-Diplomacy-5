@@ -92,7 +92,7 @@ class StartingDefaultsTests(unittest.TestCase):
 
     def test_schema_defaults_and_partial_legacy_settings_read_distribution_values(self):
         config = self.defaults["settings_config.json"]
-        config.update(num_players=3, sfx_pitch=0.27, music_pitch=0.83, show_intro_popup=False,
+        config.update(num_players=3, sfx_pitch=0.27, music_pitch=0.83, show_strategic_intro_popup=False, show_tactical_intro_popup=True,
                       target_fps=37, ocean_light_color=[4, 5, 6])
         self.assertEqual(set(config) - {"keybinds"}, {f.json_key for f in settings_schema.SETTINGS_FIELDS})
         expected = settings_schema.defaults()
@@ -139,7 +139,7 @@ class StartingDefaultsTests(unittest.TestCase):
         import data.constants as c
         from screens.menus.settings import Settings
         self.defaults["settings_config.json"].update(target_fps=39, show_fps=True,
-                                                    checkerboard_water=True, show_intro_popup=False)
+                                                    checkerboard_water=True, show_strategic_intro_popup=False, show_tactical_intro_popup=True)
         screen = object.__new__(Settings)
         screen.controller = SimpleNamespace(**settings_schema.defaults(), keybinds={})
         screen.controller.gemini_api_key = "player-key"
@@ -154,7 +154,8 @@ class StartingDefaultsTests(unittest.TestCase):
         self.assertEqual(screen.controller.target_fps, 39)
         self.assertEqual(screen.target_fps, 39)
         self.assertTrue(screen.controller.show_fps)
-        self.assertFalse(screen.controller.show_intro_popup)
+        self.assertFalse(screen.controller.show_strategic_intro_popup)
+        self.assertTrue(screen.controller.show_tactical_intro_popup)
         self.assertEqual(apply.call_args.args[0]["checkerboard_water"], True)
         self.assertEqual(screen.controller.gemini_api_key, "player-key")
         self.assertEqual(screen.controller.music_volume, 0.21)

@@ -5,6 +5,8 @@ Current settings fields and defaults stay in data/io/settings_schema.py.
 
 
 SETTING_ALIASES = {
+    "show_strategic_intro_popup": ("show_intro_popup",),
+    "show_tactical_intro_popup": ("show_intro_popup",),
     "gemini_api_key": ("api_key",),
     "ollama_base_url": ("ollama_api_key",),
     "music_pitch": ("music_speed",),
@@ -15,7 +17,7 @@ SETTING_ALIASES = {
 
 
 LEGACY_SETTINGS_KEYWORD_NAMES = frozenset(
-    alias for key in ("ollama_base_url", "openrouter_api_key", "openrouter_model")
+    alias for key in ("ollama_base_url", "openrouter_api_key", "openrouter_model", "show_strategic_intro_popup")
     for alias in SETTING_ALIASES[key])
 
 
@@ -46,7 +48,11 @@ def migrate_setting_names(saved):
     for name, aliases in SETTING_ALIASES.items():
         for old_key in aliases:
             if old_key in saved:
-                saved.setdefault(name, saved.pop(old_key))
+                saved.setdefault(name, saved[old_key])
+    # One older preference can supply both mode-specific tutorial preferences.
+    for aliases in SETTING_ALIASES.values():
+        for old_key in aliases:
+            saved.pop(old_key, None)
     if "ai_mode" in saved:
         saved["ai_mode"] = normalize_ai_mode(saved["ai_mode"])
     return saved

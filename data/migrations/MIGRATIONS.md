@@ -57,6 +57,7 @@ Other modules own related data:
 - Keep GD4 conversion rules in `map_logic/imports/gd4_translation.py`.
 - Keep Greater Diplomacy Hex Edition conversion rules in `map_logic/imports/gdhex_translation.py`.
 - Keep current settings fields, coercion, and serialization in `data/io/settings_schema.py`. Missing-setting defaults come from `data/json/starting_defaults.json`.
+  The older `show_intro_popup` preference supplies both `show_strategic_intro_popup` and `show_tactical_intro_popup` when either current key is absent. Current mode-specific preferences take priority.
 - Keep editable distribution preferences in `data/json/starting_defaults.json`. See `documentation/general_info.txt`, SETTINGS LOADING.
 - Keep current gameplay rules and validation in their shared rule modules.
 - Keep saved-file access, compression formats, and storage synchronization in their input and output modules.

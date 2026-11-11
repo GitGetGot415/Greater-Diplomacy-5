@@ -65,7 +65,8 @@
         "target_fps": 60,
         "ai_threads": 4,
         "show_fps": false,
-        "show_intro_popup": true,
+        "show_strategic_intro_popup": true,
+        "show_tactical_intro_popup": true,
         "saves_dir": "saves",
         "custom_scenarios_dir": "scenarios/map_editor",
         "ocean_light_color": [

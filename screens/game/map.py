@@ -3136,7 +3136,7 @@ class Map(StateAccess, Screen):
 
         if self.show_navigation_intro_when_ready and is_playing:
             self.show_navigation_intro_when_ready = False
-            if settings_schema.read_setting(queries.get_settings(), "show_intro_popup"):
+            if settings_schema.read_setting(queries.get_settings(), settings_schema.intro_popup_setting(self.tactical_mode)):
                 dialogs.show_navigation_intro(self)
 
         if self.show_player_ready_screen:

@@ -5,6 +5,7 @@ import re
 
 import pygame
 from data import queries
+from data.io import settings_schema
 from ui.background_styles import TUTORIAL_PANEL_STYLES
 from ui.dialogs.base import _BaseModal, _back_key, _lighten, open_modal
 from ui.bars import ui_bars
@@ -361,7 +362,6 @@ class _NavigationIntroPopup:
         self.map_screen = map_screen
         self.rect = pygame.Rect(0, 0, self.WIDTH, self.HEIGHT)
         self.rect.center = (c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2 + self.INITIAL_CENTER_Y_OFFSET)
-        self.dont_show_again = False
         self.is_dragging = False
         self.drag_offset = (0, 0)
         self.scroll_y = 0
@@ -380,6 +380,7 @@ class _NavigationIntroPopup:
     def _prepare_categories(self, source_topic_index):
         """Filter cached content when Help opens or the map's play mode changes."""
         self._tactical_mode = self.map_screen.tactical_mode
+        self.dont_show_again = not settings_schema.read_setting(queries.get_settings(), settings_schema.intro_popup_setting(self._tactical_mode))
         mode = "tactical" if self._tactical_mode else "strategic"
         self.categories = []
         self._source_topic_indices = []
@@ -725,7 +726,7 @@ class _NavigationIntroPopup:
 
     def _persist_checkbox(self):
         settings = dict(queries.get_settings() or {})
-        settings["show_intro_popup"] = not self.dont_show_again
+        settings[settings_schema.intro_popup_setting(self._tactical_mode)] = not self.dont_show_again
         queries.save_cached_json("settings", settings)
 
     def dismiss(self):

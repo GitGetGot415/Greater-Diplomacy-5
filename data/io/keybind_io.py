@@ -30,6 +30,8 @@ def save_settings(keybind_dict, sfx_volume, music_volume, num_players=None, ai_m
                   checkerboard_scroll_speed=None,
                   tactical_infantry_songs=None, tactical_tank_songs=None,
                   control_mode=None,
+                  show_tactical_intro_popup=None,
+                  *, show_strategic_intro_popup=None,
                   **legacy_settings):
     """Convert key codes to names and save settings as JSON.
 
@@ -44,6 +46,8 @@ def save_settings(keybind_dict, sfx_volume, music_volume, num_players=None, ai_m
         raise TypeError(f"Unknown settings arguments: {', '.join(sorted(unexpected))}")
     values = {name: value for name, value in locals().items()
               if name in settings_schema.SETTINGS_ORDER and value is not None}
+    if show_intro_popup is not None:
+        values["show_intro_popup"] = show_intro_popup
     values.update(legacy_settings)
 
     # ``None`` is an intentional, persistent "unassigned" binding.  Omitting

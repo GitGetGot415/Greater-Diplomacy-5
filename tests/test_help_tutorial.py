@@ -117,6 +117,9 @@ class HelpPopupTests(unittest.TestCase):
         self.addCleanup(setattr, _NavigationIntroPopup, "last_topic_index",
                         _NavigationIntroPopup.last_topic_index)
         self.map_stub = SimpleNamespace(navigation_intro_popup=None, tactical_mode=False)
+        settings = mock.patch.object(message_box.queries, "get_settings", return_value={})
+        self.saved_settings = settings.start()
+        self.addCleanup(settings.stop)
 
     def popup(self, content=None):
         with mock.patch.object(message_box, "load_tutorial", return_value=content or artificial_content()):
@@ -128,6 +131,37 @@ class HelpPopupTests(unittest.TestCase):
     def rail_row(self, popup, kind, index):
         return next(rect for rect, row_kind, row_index in popup.rail_rows
                     if row_kind == kind and row_index == index)
+
+    def test_checkbox_only_changes_the_current_modes_startup_preference(self):
+        for tactical_mode in (False, True):
+            with self.subTest(tactical_mode=tactical_mode):
+                self.map_stub.tactical_mode = tactical_mode
+                name = message_box.settings_schema.intro_popup_setting(tactical_mode)
+                other = message_box.settings_schema.intro_popup_setting(not tactical_mode)
+                saved = {name: True, other: True, "keybinds": {"BACK": None}}
+                self.saved_settings.return_value = saved
+                popup = self.popup()
+                self.assertFalse(popup.dont_show_again)
+                with mock.patch.object(message_box.queries, "save_cached_json") as save:
+                    self.click(popup, popup.checkbox_rect.center)
+                expected = dict(saved, **{name: False})
+                save.assert_called_once_with("settings", expected)
+                self.saved_settings.return_value = expected
+                reopened = self.popup()
+                self.assertTrue(reopened.dont_show_again)
+                with mock.patch.object(message_box.queries, "save_cached_json") as save:
+                    self.click(reopened, reopened.checkbox_rect.center)
+                save.assert_called_once_with("settings", saved)
+
+    def test_checkbox_uses_the_new_modes_preference_after_a_mode_change(self):
+        self.saved_settings.return_value = {"show_strategic_intro_popup": False, "show_tactical_intro_popup": True}
+        popup = self.popup()
+        self.assertTrue(popup.dont_show_again)
+        self.map_stub.tactical_mode = True
+        with mock.patch.object(message_box.queries, "save_cached_json") as save:
+            self.click(popup, popup.checkbox_rect.center)
+        self.assertTrue(popup.dont_show_again)
+        save.assert_called_once_with("settings", {"show_strategic_intro_popup": False, "show_tactical_intro_popup": False})
 
     def test_category_rows_open_their_first_topic_and_topic_rows_select_topics(self):
         popup = self.popup()
