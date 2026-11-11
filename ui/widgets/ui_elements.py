@@ -312,9 +312,9 @@ def draw_pixel_panel(surface, rect, color, border_color=(20, 20, 20), *, gradien
 
 
 def _button_style(rect, color, hover_color, pressed_color, selected, disabled, pressed, border_color=None,
-                  hover_blocked=False):
+                  hover_blocked=False, hovered=None):
     """Resolve shared button colors, outline width, and pressed state."""
-    hovered = not hover_blocked and rect.collidepoint(pygame.mouse.get_pos())
+    hovered = not hover_blocked and (rect.collidepoint(pygame.mouse.get_pos()) if hovered is None else hovered)
     if pressed is None:
         pressed = pygame.mouse.get_pressed()[0]
     depressed = not disabled and pressed and hovered
@@ -336,10 +336,10 @@ def _button_style(rect, color, hover_color, pressed_color, selected, disabled, p
 
 def draw_pixel_button(surface, rect, color, *, hover_color=None, pressed_color=None,
                       selected=False, disabled=False, pressed=None,
-                      border_color=None, gradient_strength=1.0):
+                      border_color=None, gradient_strength=1.0, hovered=None):
     """Draw button states. Callers retain their existing labels and input handlers."""
     current_color, outline, width, depressed = _button_style(
-        rect, color, hover_color, pressed_color, selected, disabled, pressed, border_color)
+        rect, color, hover_color, pressed_color, selected, disabled, pressed, border_color, hovered=hovered)
     draw_pixel_panel(surface, rect, current_color, outline,
                      border_width=width, recessed=depressed, gradient_strength=gradient_strength)
 

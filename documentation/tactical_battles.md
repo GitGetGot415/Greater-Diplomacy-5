@@ -50,7 +50,7 @@ Each change applies immediately; canceling a picker keeps the current value.
 
 To edit several units at once, press in empty space of a roster panel (not on the card
 area, a button, or the scrollbar) and drag a square over the cards. All touched cards of
-that army are selected, and the gear button on any selected card opens **Group Settings**
+that army are selected and stay highlighted until the selection is cleared. The gear button on any selected card opens **Group Settings**
 for all of them. A field shows **Mixed** when the selected units differ. Selecting one
 card is an ordinary selection. Clicking empty panel space, reordering, removing, or
 generating armies clears the group.
@@ -65,6 +65,8 @@ The bar is shaded in dithered bands and blends from green to yellow at half heal
 Drag along the bar to set that unit's starting HP; on a card in a selected group, it sets the whole group.
 Preview cards omit the unit name. They show a larger icon, a health bar
 with the nationality's flag to its right, and the same stat symbols.
+Movable roster cards use button styling, brighten on hover, and appear pressed while held or dragged.
+Both armies' cards are movable while editing; only friendly cards have button styling in preview.
 Attack accounts for how many sub-units the division deploys and those sub-units' health under the tactical
 wound setting. The attack stat is before target defense, hit rounding, range falloff, and tactical pacing.
 Nationality selects the preview art's country variant where available; army sides

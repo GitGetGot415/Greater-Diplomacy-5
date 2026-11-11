@@ -1342,6 +1342,10 @@ class CustomBattleScreen(Screen):
             self.campaign.units.insert(destination, self.campaign.units.pop(index))
         self._build_simulation()
 
+    def _roster_reorderable(self, side):
+        """Editing reorders both armies; preview reorders only the friendly army."""
+        return self.mode == "setup" or (self.mode == "preview" and side == 0)
+
     def _roster_events(self, event):
         if self.mode == "setup" and (self._marquee_events(event) or self._health_bar_events(event)):
             return True
@@ -1370,9 +1374,7 @@ class CustomBattleScreen(Screen):
                        or self.is_content_dragging(options["attr"]))
             if not engaged:
                 continue
-            # Editing reorders both armies; preview reorders only the friendly army.
-            reorderable = self.mode == "setup" or (self.mode == "preview" and side == 0)
-            if (reorderable and event.type == pygame.MOUSEBUTTONDOWN
+            if (self._roster_reorderable(side) and event.type == pygame.MOUSEBUTTONDOWN
                     and event.button == 1 and pane.collidepoint(event.pos)):
                 for index in range(len(self.rosters[side])):
                     if self.card_rect(side, index).collidepoint(event.pos):
@@ -1662,8 +1664,9 @@ class CustomBattleScreen(Screen):
         key = self._card_key(side, unit)
         if key not in self.card_surfaces:
             width, height = CARD_SIZE
-            card = pygame.Surface(CARD_SIZE)
-            ui_elements.draw_pixel_panel(card, card.get_rect(), (46, 51, 65), (15, 19, 27))
+            card = pygame.Surface(CARD_SIZE, pygame.SRCALPHA)
+            if not self._roster_reorderable(side):
+                ui_elements.draw_pixel_panel(card, card.get_rect(), (46, 51, 65), (15, 19, 27))
             name = unit["type"]
             font = fonts.get("tiny")
             if self.mode == "preview":
@@ -1694,7 +1697,13 @@ class CustomBattleScreen(Screen):
             self.card_surfaces[key] = card
         return self.card_surfaces[key]
 
+    def _draw_roster_card(self, surface, rect, side, unit, *, hovered=False, pressed=False):
+        if self._roster_reorderable(side):
+            ui_elements.draw_pixel_button(surface, rect, c.UI_COLORS["blue" if side == 0 else "red"][0], hovered=hovered, pressed=pressed)
+        surface.blit(self.card_surfaces[self._card_key(side, unit)], rect)
+
     def _draw_rosters(self, surface):
+        pointer = pygame.mouse.get_pos()
         for side, top in enumerate(PANEL_TOPS):
             panel = pygame.Rect(PANEL_X, top, PANEL_WIDTH, PANEL_HEIGHT)
             ui_elements.draw_pixel_panel(surface, panel, (39, 44, 58), (15, 19, 27))
@@ -1707,12 +1716,15 @@ class CustomBattleScreen(Screen):
                     continue
                 if self.drag is not None and self.drag[0] == side and self.drag[1] == index and self.drag[3]:
                     continue
-                surface.blit(self.card_surfaces[self._card_key(side, unit)], rect)
+                pressed = self.drag is not None and self.drag[:2] == [side, index]
+                selected = self.selected[side] == index or index in self.group[side]
+                hovered = self.panes[side].collidepoint(pointer) and rect.collidepoint(pointer) and (self.drag is None or pressed)
+                self._draw_roster_card(surface, rect, side, unit, hovered=hovered or (self.mode == "setup" and selected), pressed=pressed)
                 if self.mode == "setup":
                     button = self.unit_buttons[side, index]
                     self._position_edit_button(button, rect)
                     button.draw(surface)
-                if self.selected[side] == index or index in self.group[side]:
+                if selected:
                     pygame.draw.rect(surface, TEAM_COLORS[side], rect, 2)
                 if side == 0 and self.controlled_index == index:
                     draw_player_arrow(surface, (rect.centerx, rect.y + 28), 0)
@@ -1723,7 +1735,7 @@ class CustomBattleScreen(Screen):
             side, index, origin, active = self.drag
             card = self.card_surfaces[self._card_key(side, self.rosters[side][index])]
             rect = card.get_rect(center=pygame.mouse.get_pos())
-            surface.blit(card, rect)
+            self._draw_roster_card(surface, rect, side, self.rosters[side][index], hovered=True, pressed=True)
             if self.mode == "setup":
                 button = self.unit_buttons[side, index]
                 self._position_edit_button(button, rect)

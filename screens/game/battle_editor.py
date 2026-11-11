@@ -11,7 +11,7 @@ from screens.game.battle_screen import (
 )
 from ui.navigation.screen import Screen
 from ui.widgets.scroll_panes import ScrollPanes
-from ui.widgets.ui_elements import Button, draw_pixel_panel, draw_wrapped_icon_row, make_info_button
+from ui.widgets.ui_elements import Button, draw_pixel_button, draw_pixel_panel, draw_wrapped_icon_row, make_info_button
 from ui.widgets import flag_icons
 from ui.widgets.text_utils import fit_text
 from ui.rendering.font_manager import fonts
@@ -213,6 +213,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
         self.elements = []
         self.row_paint = {}
         self.card_surfaces = {}
+        self.card_button_colors = {}
         self.slot_surfaces = {}
         self.slot_rects = {}
         self.disabled_slot_surfaces = {}
@@ -239,6 +240,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
                           (AUTOMATION_W - 2 * GAP, AUTOMATION_BUTTON_H), "red", "Organize",
                           self.confirm_organize, font_preset="button_small")
         organize.disabled = not self.can_edit_now()
+        self.cards_editable = not organize.disabled
         help_button = make_info_button(0, 0, self.show_help)
         help_button.rect.topright = (c.SCREEN_WIDTH - MARGIN,
                                      GAP + (AUTOMATION_BUTTON_H - help_button.rect.height) // 2)
@@ -415,8 +417,11 @@ class BattleEditorScreen(ScrollPanes, Screen):
             frontline=pane in (PANE_FRONT, PANE_ENEMY),
             held=unit.get('combat_stance') == 'RESERVE', controllable=mine)
         style = MESSAGE_PANEL_STYLES['composer' if mine else 'contacts']
-        draw_pixel_panel(surface, surface.get_rect(), color, PANEL_BORDER,
-                         gradient_strength=style['gradient_strength'])
+        if self.cards_editable and mine and pane in EDITABLE_PANES:
+            self.card_button_colors[pane, id(unit)] = color
+        else:
+            draw_pixel_panel(surface, surface.get_rect(), color, PANEL_BORDER,
+                             gradient_strength=style['gradient_strength'])
         row = self.overview.combat_row_data[id(unit)]
         font = fonts.get('small')
         x = flag_icons.draw_flag_centered(surface, unit.get('owner'), self.map_screen.nation_data,
@@ -507,6 +512,7 @@ class BattleEditorScreen(ScrollPanes, Screen):
 
     def _paint_cards(self, pane):
         def paint(surface):
+            pointer = pygame.mouse.get_pos()
             for rect in self.slot_rects.get(pane, ()):
                 surface.blit(self.slot_surfaces[pane], rect)
             for rect in self.disabled_slots.get(pane, ()):
@@ -516,6 +522,9 @@ class BattleEditorScreen(ScrollPanes, Screen):
                 # follows the pointer in draw_foreground.
                 card = (self.slot_surfaces[pane] if unit is self.drag_unit
                         else self.card_surfaces[pane, id(unit)])
+                if unit is not self.drag_unit and (pane, id(unit)) in self.card_button_colors:
+                    hovered = self.drag_unit is None and self.regions[pane].collidepoint(pointer) and rect.collidepoint(pointer)
+                    draw_pixel_button(surface, rect, self.card_button_colors[pane, id(unit)], hovered=hovered, pressed=False)
                 surface.blit(card, rect)
         return paint
 
@@ -719,7 +728,9 @@ class BattleEditorScreen(ScrollPanes, Screen):
                         rect, unit = row
                         self.drag_unit, self.drag_start = unit, event.pos
                         self.drag_stamp = self._source_stamp()
-                        self.drag_surface = self.card_surfaces[pane, id(unit)]
+                        self.drag_surface = pygame.Surface(rect.size, pygame.SRCALPHA)
+                        draw_pixel_button(self.drag_surface, self.drag_surface.get_rect(), self.card_button_colors[pane, id(unit)], hovered=True, pressed=True)
+                        self.drag_surface.blit(self.card_surfaces[pane, id(unit)], (0, 0))
                         self.drag_rect = rect.copy()
                         break
                 if self.drag_unit is not None:
