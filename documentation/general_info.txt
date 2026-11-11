@@ -134,7 +134,7 @@ Use Defaults does not affect construction turns, enabled families, or unit range
 Select Save All Changes to apply the draft of every category. Back discards the draft.
 Use Defaults is part of the draft.
 An invalid range or building stat blocks the whole save, including construction turns.
-Reset to Defaults restores and saves every category after confirmation.
+Reset to Defaults restores and saves every category after confirmation. The editor stays open and shows the defaults.
 The Edit Unit / Building Stats button shows ! when construction turns or enabled families differ from defaults,
 when saved ranges differ from defaults, or when Use Defaults is off and saved building stats differ from defaults.
 The main Scenario Settings reset keeps the settings of Edit Unit / Building Stats.

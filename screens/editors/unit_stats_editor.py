@@ -308,12 +308,17 @@ class UnitStatsEditorScreen(ModalScreen):
         return changes
 
     def save_all(self):
+        if self._save():
+            self.exit_screen()
+
+    def _save(self):
+        """Write the draft of every category. Return False when an invalid value blocks the save."""
         self.sync_entries()
         changes = {}
         if self.HAS_SCENARIO_RULES:
             ranges = self._read_ranges()
             if ranges is None:
-                return
+                return False
             changes["unit_range_overrides"] = ranges
         if self.HAS_USE_DEFAULTS:
             changes["use_default_building_stats"] = self.use_defaults
@@ -321,7 +326,7 @@ class UnitStatsEditorScreen(ModalScreen):
         if not self.use_defaults:
             buildings = self._read_building_stats()
             if buildings is None:
-                return
+                return False
             changes[self.BUILDING_SETTING] = buildings
         # Turn text cannot block a save, so a rejected range or stat leaves the turns unsaved too.
         if self.HAS_SCENARIO_RULES:
@@ -331,7 +336,7 @@ class UnitStatsEditorScreen(ModalScreen):
         if self.persist:
             queries.save_scenario_settings(self.target_settings if self.target_settings is not None else changes)
         self.after_save()
-        self.exit_screen()
+        return True
 
     def after_save(self):
         dialogs.show_success("Saved", "Successfully saved unit and building stats to scenario settings.")
@@ -353,7 +358,9 @@ class UnitStatsEditorScreen(ModalScreen):
             if self.use_defaults and self.target_settings is not None:
                 # save_all skips locked building fields, so clear the saved values here.
                 self.target_settings[self.BUILDING_SETTING] = {}
-            self.save_all()
+            # Stay in the editor and show the reset values.
+            if self._save():
+                self.refresh_ui()
 
         dialogs.ask_yes_no("Confirm Reset", self.RESET_MESSAGE, on_confirm)
 

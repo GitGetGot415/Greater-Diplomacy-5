@@ -245,9 +245,15 @@ class UnitRangeEditorTests(unittest.TestCase):
                     mock.patch("ui.dialogs.show_success"), \
                     mock.patch.object(queries, "save_scenario_settings") as save:
                 screen.reset_to_defaults()
+            # A confirmed reset saves but keeps the editor open with the reset values.
+            self.assertFalse(screen.done)
             if answer:
                 save.assert_called_once_with(settings)
                 self.assertEqual(settings["unit_range_overrides"], {})
+                field = next(element for element in screen.elements
+                             if getattr(element, "entry_ref", None) is screen.values["Fixture Wing"]
+                             and element.entry_key == "air_range_start")
+                self.assertEqual(field.text, f"{self.defaults['Fixture Wing']['air_range_start']:g}")
             else:
                 save.assert_not_called()
                 self.assertTrue(settings["unit_range_overrides"])
