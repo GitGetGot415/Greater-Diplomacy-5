@@ -165,7 +165,7 @@ def process_conversions(context):
                     # Reset back to a blank move order so they can be selected again
                     unit["order"] = {"type": "MOVE", "path": []}
 
-def _resolve_step_swaps(context, moving_units, step, get_eff_speed, pinned_units):
+def _resolve_step_swaps(context, moving_units, step, get_eff_speed, pinned_units, *, eligible_ids=None):
     """Fights same-step tile swaps that combat_rules.find_meeting_pairs can't see.
 
     That check only compares turn-start positions against a unit's very first
@@ -183,6 +183,9 @@ def _resolve_step_swaps(context, moving_units, step, get_eff_speed, pinned_units
     eligible = [
         u for u in moving_units
         if not u.get("_skip_remaining_steps", False)
+        and not u.get("_combat_locked") and u.get("health", 0) > 0
+        and id(u) not in pinned_units
+        and (eligible_ids is None or id(u) in eligible_ids)
         and u.get("order", {}).get("path")
         and step < get_eff_speed(u)
     ]
@@ -245,6 +248,127 @@ def _resolve_step_swaps(context, moving_units, step, get_eff_speed, pinned_units
         return moving_units
     return [u for u in moving_units if id(u) not in dead_ids]
 
+def _move_step(context, moving_units, step, active_ids):
+    """Apply and commit one batch of simultaneous arrivals using the normal movement rules."""
+    world_state = world_for(context)
+    for province in world_state.map_data.values():
+        province["units"] = [unit for unit in province.get("units", []) if id(unit) not in active_ids]
+
+    for unit in moving_units:
+        # Explicitly check if this individual unit has run out of moves or is skipping
+        if id(unit) not in active_ids:
+            continue
+
+        order = unit.get("order")
+        if not order or not order.get("path"): continue
+
+        target_id = order["path"][0]
+        target_prov = world_state.id_to_province.get(target_id)
+        if not target_prov: continue
+        if ((queries.is_air_unit(unit, context=context) or queries.is_air_transport(unit, context=context))
+                and not queries.is_water_province(target_prov)
+                and not queries.air_unit_can_land(unit, target_prov, world_state.nation_data)):
+            order["path"] = []
+            continue
+
+        combat_owner = queries.get_unit_combat_owner(unit)
+        player_data = world_state.nation_data.get(combat_owner, {})
+        dest_owner = target_prov.get("owner", "Unclaimed")
+
+        # --- Combat Lock (Execution Check) ---
+        curr_prov = world_state.id_to_province.get(unit["_current_province_id"])
+        if curr_prov and not queries.can_unit_leave_current_combat(context, unit, curr_prov, step=step):
+            # Stop advancing for this turn, but DO NOT wipe the queue!
+            unit["_skip_remaining_steps"] = True
+            continue
+        # ------------------------------------------
+
+        # --- SHIP RULES EVALUATION ---
+        dest_is_water = queries.is_water_province(target_prov)
+        u_type = unit.get("type", "")
+        is_convoy = u_type.startswith("Convoy")
+
+        # --- Convoy Land Movement Check ---
+        if is_convoy and curr_prov:
+            if not queries.can_convoy_enter(curr_prov, target_prov):
+                order["path"] = []
+                continue
+        # ---------------------------------------
+
+        if is_convoy:
+            is_naval = True
+        else:
+            stats = context.cached_unit_library.get(u_type, {})
+            is_naval = stats.get("naval_unit", False)
+
+        if is_naval and not is_convoy and not queries.can_ships_enter(combat_owner, target_prov, world_state.nation_data):
+            # Ships cannot enter hostile/unclaimed land
+            order["path"] = []
+            continue
+        # ---------------------------------
+
+        # Check for existing defenders before moving
+        # We look for units belonging to anyone NOT the mover and NOT an ally
+        defenders = [u for u in target_prov.get("units", [])
+                     if queries.are_at_war(combat_owner, queries.get_unit_combat_owner(u),
+                                           world_state.nation_data)]
+
+        if is_naval and not is_convoy:
+            can_enter = True # Naval rules already handled above
+        elif is_convoy and dest_is_water:
+            can_enter = True
+        else:
+            can_enter = queries.can_land_units_enter(combat_owner, target_prov, world_state.nation_data)
+
+        if can_enter:
+            unit["_previous_province_id"] = unit["_current_province_id"]
+            unit["_current_province_id"] = target_id
+            order["path"].pop(0)
+
+            # Both lane orders are decisions about one tile's fight. Marching
+            # somewhere else makes them meaningless at best and misleading at
+            # worst, so neither follows the army across the map -- being
+            # ignored where it does not apply is not the same as being right.
+            # A stale RESERVE in particular used to sit on a unit forever and
+            # quietly keep it out of every battle it ever stood in.
+            unit.pop("lane_target", None)
+            unit.pop("combat_stance", None)
+
+            # --- INSTANT CONVERT FOR CONVOYS UPON LANDING ---
+            if is_convoy and not dest_is_water:
+                queries.revert_transport(unit, context=context)
+                if queries.is_air_unit(unit, context=context):
+                    # Aircraft unload at the landing boundary, then must use
+                    # flight orders (or a new ground route for missiles).
+                    order["path"] = []
+            # ------------------------------------------------------------
+
+            # Only conquer if there are NO defenders from an enemy nation
+            if not defenders:
+                if dest_owner == "Unclaimed" or dest_owner in player_data.get("at_war_with", []):
+                    # Prevent capturing water tiles via movement
+                    if not queries.is_water_province(target_prov) and not queries.is_air_unit(unit, context=context):
+                        capturer = combat_owner
+                        # faction core transfer stuff
+                        true_owner = queries.get_faction_core_transfer_target(capturer, target_prov, world_state.nation_data)
+                        ownership.conquer_province(context, target_prov, true_owner)
+
+            # Stop if an enemy was present
+            if defenders:
+                # Stop advancing for this turn, but DO NOT wipe the queue!
+                unit["_skip_remaining_steps"] = True
+        else:
+            order["path"] = []
+
+    # Commit the simultaneous arrivals before checking contact. Two enemies
+    # entering the same tile must stop even when both had another step.
+    for unit in moving_units:
+        if unit.get("health", 0) <= 0:
+            continue
+        prov = world_state.id_to_province.get(unit["_current_province_id"])
+        if not any(u is unit for u in prov["units"]):
+            prov["units"].append(unit)
+
 def process_movement(context):
     world_state = world_for(context)
     moving_units = []
@@ -295,146 +419,48 @@ def process_movement(context):
     max_speed = max(get_eff_speed(u) for u in moving_units)
 
     for step in range(max_speed):
-        records = [(unit, world_state.id_to_province[unit["_current_province_id"]])
-                   for unit in moving_units]
-        pinned = queries.find_movement_pins(context, records, step=step)
-        for unit in moving_units:
-            if id(unit) in pinned:
-                unit["order"]["path"] = []
-                unit["_skip_remaining_steps"] = True
-
-        moving_units = _resolve_step_swaps(context, moving_units, step, get_eff_speed, pinned)
+        pinned = queries.find_movement_pins(context, ((unit, world_state.id_to_province[unit["_current_province_id"]]) for unit in moving_units), step=step)
+        while True:
+            moving_units = _resolve_step_swaps(context, moving_units, step, get_eff_speed, pinned)
+            remaining_pins = queries.find_movement_pins(context, ((unit, world_state.id_to_province[unit["_current_province_id"]]) for unit in moving_units), step=step)
+            if remaining_pins == pinned:
+                break
+            # Crossings can destroy or hold an incoming attacker. Reconsider its
+            # intended pin before moving anyone or consuming a movement step.
+            pinned = remaining_pins
 
         # Moving units take this step simultaneously. Finished, pinned, and
         # combat-held units stay visible as defenders throughout later steps.
         active_ids = {id(unit) for unit, _province in
                       queries.ground_move_records(context, (
                           (unit, world_state.id_to_province[unit["_current_province_id"]])
-                          for unit in moving_units), step=step)}
-        for province in world_state.map_data.values():
-            province["units"] = [unit for unit in province.get("units", []) if id(unit) not in active_ids]
+                          for unit in moving_units), step=step) if id(unit) not in pinned}
+        _move_step(context, moving_units, step, active_ids)
 
+        released = set()
         for unit in moving_units:
-            # Explicitly check if this individual unit has run out of moves or is skipping
-            if id(unit) not in active_ids:
+            if id(unit) not in pinned:
                 continue
-
-            order = unit.get("order")
-            if not order or not order.get("path"): continue
-
-            target_id = order["path"][0]
-            target_prov = world_state.id_to_province.get(target_id)
-            if not target_prov: continue
-            if ((queries.is_air_unit(unit, context=context) or queries.is_air_transport(unit, context=context))
-                    and not queries.is_water_province(target_prov)
-                    and not queries.air_unit_can_land(unit, target_prov, world_state.nation_data)):
-                order["path"] = []
-                continue
-
-            combat_owner = queries.get_unit_combat_owner(unit)
-            player_data = world_state.nation_data.get(combat_owner, {})
-            dest_owner = target_prov.get("owner", "Unclaimed")
-
-            # --- Combat Lock (Execution Check) ---
-            curr_prov = world_state.id_to_province.get(unit["_current_province_id"])
-            if curr_prov:
-                in_combat = queries.is_nation_in_combat_here(combat_owner, curr_prov, world_state.nation_data)
-
-                if in_combat:
-                    if step > 0 or queries.move_route_enters_combat(context, unit, step=step):
-                        # Stop advancing for this turn, but DO NOT wipe the queue!
-                        unit["_skip_remaining_steps"] = True
-                        continue
-            # ------------------------------------------
-
-            # --- SHIP RULES EVALUATION ---
-            dest_is_water = queries.is_water_province(target_prov)
-            u_type = unit.get("type", "")
-            is_convoy = u_type.startswith("Convoy")
-
-            # --- Convoy Land Movement Check ---
-            if is_convoy and curr_prov:
-                if not queries.can_convoy_enter(curr_prov, target_prov):
-                    order["path"] = []
-                    continue
-            # ---------------------------------------
-
-            if is_convoy:
-                is_naval = True
+            province = world_state.id_to_province[unit["_current_province_id"]]
+            if queries.is_nation_in_combat_here(queries.get_unit_combat_owner(unit), province, world_state.nation_data):
+                unit["order"]["path"] = []
+                unit["_skip_remaining_steps"] = True
             else:
-                stats = context.cached_unit_library.get(u_type, {})
-                is_naval = stats.get("naval_unit", False)
+                released.add(id(unit))
 
-            if is_naval and not is_convoy and not queries.can_ships_enter(combat_owner, target_prov, world_state.nation_data):
-                # Ships cannot enter hostile/unclaimed land
-                order["path"] = []
-                continue
-            # ---------------------------------
-
-            # Check for existing defenders before moving
-            # We look for units belonging to anyone NOT the mover and NOT an ally
-            defenders = [u for u in target_prov.get("units", [])
-                         if queries.are_at_war(combat_owner, queries.get_unit_combat_owner(u),
-                                               world_state.nation_data)]
-
-            if is_naval and not is_convoy:
-                can_enter = True # Naval rules already handled above
-            elif is_convoy and dest_is_water:
-                can_enter = True
-            else:
-                can_enter = queries.can_land_units_enter(combat_owner, target_prov, world_state.nation_data)
-
-            if can_enter:
-                unit["_previous_province_id"] = unit["_current_province_id"]
-                unit["_current_province_id"] = target_id
-                order["path"].pop(0)
-
-                # Both lane orders are decisions about one tile's fight. Marching
-                # somewhere else makes them meaningless at best and misleading at
-                # worst, so neither follows the army across the map -- being
-                # ignored where it does not apply is not the same as being right.
-                # A stale RESERVE in particular used to sit on a unit forever and
-                # quietly keep it out of every battle it ever stood in.
-                unit.pop("lane_target", None)
-                unit.pop("combat_stance", None)
-
-                # --- INSTANT CONVERT FOR CONVOYS UPON LANDING ---
-                if is_convoy and not dest_is_water:
-                    queries.revert_transport(unit, context=context)
-                    if queries.is_air_unit(unit, context=context):
-                        # Aircraft unload at the landing boundary, then must use
-                        # flight orders (or a new ground route for missiles).
-                        order["path"] = []
-                # ------------------------------------------------------------
-
-                # Only conquer if there are NO defenders from an enemy nation
-                if not defenders:
-                    if dest_owner == "Unclaimed" or dest_owner in player_data.get("at_war_with", []):
-                        # Prevent capturing water tiles via movement
-                        if not queries.is_water_province(target_prov) and not queries.is_air_unit(unit, context=context):
-                            capturer = combat_owner
-                            # faction core transfer stuff
-                            true_owner = queries.get_faction_core_transfer_target(capturer, target_prov, world_state.nation_data)
-                            ownership.conquer_province(context, target_prov, true_owner)
-
-                # Stop if an enemy was present
-                if defenders:
-                    # Stop advancing for this turn, but DO NOT wipe the queue!
-                    unit["_skip_remaining_steps"] = True
-            else:
-                order["path"] = []
-
-        # Commit the simultaneous arrivals before checking contact. Two enemies
-        # entering the same tile must stop even when both had another step.
-        for unit in moving_units:
-            prov = world_state.id_to_province.get(unit["_current_province_id"])
-            if not any(u is unit for u in prov["units"]):
-                prov["units"].append(unit)
+        if released:
+            # A failed arrival costs the defender no movement. Use the same
+            # crossing and movement rules for the released units on this step.
+            moving_units = _resolve_step_swaps(context, moving_units, step, get_eff_speed, set(), eligible_ids=released)
+            active_ids = {id(unit) for unit, _province in queries.ground_move_records(context, ((unit, world_state.id_to_province[unit["_current_province_id"]]) for unit in moving_units), step=step) if id(unit) in released}
+            _move_step(context, moving_units, step, active_ids)
 
         for unit in moving_units:
             province = world_state.id_to_province[unit["_current_province_id"]]
             if queries.is_nation_in_combat_here(
                     queries.get_unit_combat_owner(unit), province, world_state.nation_data):
+                if id(unit) in pinned:
+                    unit["order"]["path"] = []
                 unit["_skip_remaining_steps"] = True
 
     # Clean up the temporary tracking flag so it doesn't pollute the save files!

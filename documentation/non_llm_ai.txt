@@ -435,7 +435,7 @@ Movement and pinning
 --------------------
 
 Movement resolves in simultaneous steps. Before each step, an incoming hostile unit from another tile
-pins a unit whose remaining route attacks during this turn. Hostility is checked between the units,
+provisionally holds a unit whose remaining route attacks during this turn. Hostility is checked between the units,
 regardless of who owns the attacked tile. A division returning to its own land can therefore pin an
 enemy division standing there. Units without movement remaining cannot supply an incoming pin.
 
@@ -443,7 +443,11 @@ The attack check covers the route within the unit's remaining speed, including h
 enemy-occupied tiles outside friendly territory after a friendly first step. A route that stays in
 friendly territory can withdraw even when enemies are fighting on the destination tile. The arriving
 unit joins that tile's combat. An attack queued for a later turn does not prevent withdrawal this turn.
-Pinning cancels the offensive route. Recheck pinning from the units' current positions on later steps.
+The offensive route is canceled only when a living hostile unit actually arrives and engages the defender.
+An attacker killed in a crossing or stopped before arrival cannot cancel the route or cost the defender movement.
+If the attacker arrives and then dies in combat, the pin still counts. These rules apply to human and AI divisions,
+including the tactical division and divisions in either multiplayer mode.
+Recheck pinning from the units' current positions on later steps.
 Hostile units arriving on the same tile stop before another step, including simultaneous arrivals.
 
 Opposing moves on the same edge use meeting-engagement resolution. An incoming attack from another

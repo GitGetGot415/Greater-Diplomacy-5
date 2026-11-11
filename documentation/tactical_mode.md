@@ -34,6 +34,7 @@ The division joins combat on arrival; fighting on friendly land does not make th
 If the tactical division and hostile land forces attempt to cross the same border in opposite directions,
 the tactical division wins the movement clash only when no incoming hostile unit from another tile pins the division.
 Otherwise the tactical division stays on its current tile and fights the arriving enemies there.
+If the incoming attacker dies or is stopped before arriving, the division continues its original route with no movement lost to the failed pin.
 When crossing priority applies, the opponents stay on the destination tile and the tactical division enters that tile,
 where the encounter takes place. This applies at turn start and on later movement steps.
 The crossing deals no automatic combat damage and does not award victory in the tactical battle.

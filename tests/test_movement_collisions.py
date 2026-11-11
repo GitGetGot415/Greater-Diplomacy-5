@@ -309,6 +309,156 @@ class TacticalSwapTests(unittest.TestCase):
                 self.assertEqual(player["order"]["path"], [])
                 self.assertEqual((head_on["health"], flanker["health"]), (1, 1))
 
+    def test_an_attacker_killed_in_a_crossing_cannot_cancel_another_divisions_route(self):
+        for mode in ("ordinary", "tactical", "tournament", "realtime"):
+            for later_step in (False, True):
+                for reverse_order in (False, True):
+                    with self.subTest(mode=mode, later_step=later_step, reverse_order=reverse_order):
+                        screen = self.screen()
+                        screen.tactical_mode = mode == "tactical"
+                        screen.multiplayer_mode = mode == "tournament"
+                        screen.realtime_multiplayer = mode == "realtime"
+                        screen.add_nation("C", at_war_with=["B"])
+                        screen.nation_data["B"]["at_war_with"].append("C")
+                        player = self.mover("A", ["p1", "p2", "p4"] if later_step else ["p2", "p4"], speed=3 if later_step else 2, attack=0, defense=0)
+                        attacker = self.mover("B", ["p3", "p1"] if later_step else ["p1"], speed=2, health=1, attack=0, defense=0)
+                        interceptor = self.mover("C", ["p1", "p3"] if later_step else ["p3"], speed=2, attack=100000, defense=0)
+                        screen.player_unit = player
+                        origin = screen.add_province("p1", "B", units=[] if later_step else [player, interceptor])
+                        screen.add_province("p2", "B")
+                        screen.add_province("p3", "B", units=[] if later_step else [attacker])
+                        destination = screen.add_province("p4", "B")
+                        if later_step:
+                            screen.add_province("p0", "A", units=[player])
+                            screen.add_province("p5", "B", units=[attacker])
+                            screen.add_province("p6", "C", units=[interceptor])
+                        if reverse_order:
+                            screen.map_data = dict(reversed(list(screen.map_data.items())))
+
+                        combat_processor.process_pinning(screen)
+                        self.assertTrue(player["order"]["path"], "An intention alone must not erase the route.")
+                        combat_processor.process_meeting_engagements(screen)
+                        movement_processor.process_movement(screen)
+
+                        self.assertEqual(attacker["health"], 0)
+                        self.assertEqual(player["health"], player["max_health"])
+                        self.assertTrue(any(unit is player for unit in destination["units"]))
+                        self.assertFalse(any(unit is player for unit in origin["units"]))
+                        self.assertEqual(player["order"]["path"], [])
+                        self.assertTrue(all(unit is not attacker for province in screen.map_data.values() for unit in province["units"]))
+                        self.assertNotIn("_skip_remaining_steps", player)
+
+    def test_an_attacker_stopped_at_its_origin_does_not_cost_the_defender_movement(self):
+        for mode in ("ordinary", "tactical", "tournament", "realtime"):
+            for reverse_order in (False, True):
+                with self.subTest(mode=mode, reverse_order=reverse_order):
+                    screen = self.screen()
+                    screen.tactical_mode = mode == "tactical"
+                    screen.multiplayer_mode = mode == "tournament"
+                    screen.realtime_multiplayer = mode == "realtime"
+                    screen.add_nation("C", at_war_with=["B"])
+                    screen.nation_data["B"]["at_war_with"].append("C")
+                    player = self.mover("A", ["p2", "p4"], speed=2, attack=0, defense=0)
+                    attacker = self.mover("B", ["p1"], attack=0, defense=0)
+                    opponent = self.mover("C", [], attack=0, defense=0)
+                    screen.player_unit = player
+                    screen.add_province("p1", "A", units=[player])
+                    screen.add_province("p2", "B")
+                    origin = screen.add_province("p3", "B", units=[attacker, opponent])
+                    destination = screen.add_province("p4", "B")
+                    if reverse_order:
+                        screen.map_data = dict(reversed(list(screen.map_data.items())))
+
+                    combat_processor.process_pinning(screen)
+                    combat_processor.process_meeting_engagements(screen)
+                    movement_processor.process_movement(screen)
+
+                    self.assertTrue(any(unit is player for unit in destination["units"]))
+                    self.assertEqual({id(unit) for unit in origin["units"]}, {id(attacker), id(opponent)})
+                    self.assertEqual(player["order"]["path"], [])
+                    self.assertEqual(attacker["order"]["path"], ["p1"])
+
+    def test_an_actual_arrival_cancels_the_route_even_if_combat_kills_the_attacker(self):
+        for mode in ("ordinary", "tactical", "tournament", "realtime"):
+            with self.subTest(mode=mode):
+                screen = self.screen()
+                screen.tactical_mode = mode == "tactical"
+                screen.multiplayer_mode = mode == "tournament"
+                screen.realtime_multiplayer = mode == "realtime"
+                player = self.mover("A", ["p2"], attack=100000, defense=0)
+                attacker = self.mover("B", ["p1"], health=1, attack=0, defense=0)
+                screen.player_unit = player
+                origin = screen.add_province("p1", "B", units=[player])
+                screen.add_province("p2", "B")
+                screen.add_province("p3", "B", units=[attacker])
+
+                combat_processor.process_pinning(screen)
+                self.assertEqual(player["order"]["path"], ["p2"])
+                combat_processor.process_meeting_engagements(screen)
+                movement_processor.process_movement(screen)
+                combat_processor.process_combat(screen)
+
+                self.assertTrue(any(unit is player for unit in origin["units"]))
+                self.assertEqual(player["order"]["path"], [])
+                if mode == "tactical":
+                    self.assertEqual(attacker["health"], 1)
+                    self.assertIsNotNone(custom_battle.tactical_encounter(screen, origin))
+                else:
+                    self.assertEqual(attacker["health"], 0)
+
+    def test_an_attacker_refused_entry_does_not_cost_the_defender_movement(self):
+        for mode in ("ordinary", "tactical", "tournament", "realtime"):
+            for reverse_order in (False, True):
+                with self.subTest(mode=mode, reverse_order=reverse_order):
+                    screen = self.screen()
+                    screen.tactical_mode = mode == "tactical"
+                    screen.multiplayer_mode = mode == "tournament"
+                    screen.realtime_multiplayer = mode == "realtime"
+                    player = self.mover("A", ["p2", "p4"], speed=2, attack=0, defense=0)
+                    attacker = self.mover("B", ["p1"], attack=0, defense=0)
+                    screen.player_unit = player
+                    screen.add_province("p1", "A", units=[player])
+                    screen.add_province("p2", "B")
+                    origin = screen.add_province("p3", "B", units=[attacker])
+                    destination = screen.add_province("p4", "B")
+                    if reverse_order:
+                        screen.map_data = dict(reversed(list(screen.map_data.items())))
+                    can_enter = movement_processor.queries.can_land_units_enter
+                    with patch("data.queries.can_land_units_enter", side_effect=lambda owner, province, nations: False if owner == "B" and province["id"] == "p1" else can_enter(owner, province, nations)):
+                        combat_processor.process_pinning(screen)
+                        combat_processor.process_meeting_engagements(screen)
+                        movement_processor.process_movement(screen)
+
+                    self.assertTrue(any(unit is player for unit in destination["units"]))
+                    self.assertEqual(origin["units"], [attacker])
+                    self.assertEqual(player["health"], player["max_health"])
+                    self.assertEqual(player["order"]["path"], [])
+
+    def test_an_attacker_held_in_combat_cannot_override_a_tactical_crossing(self):
+        for reverse_order in (False, True):
+            with self.subTest(reverse_order=reverse_order):
+                screen = self.screen()
+                screen.add_nation("C", at_war_with=["B"])
+                screen.nation_data["B"]["at_war_with"].append("C")
+                player = self.mover("A", ["p2"], attack=0, defense=0)
+                head_on = self.mover("B", ["p1"], attack=0, defense=0)
+                flanker = self.mover("B", ["p1"], attack=0, defense=0)
+                opponent = self.mover("C", [], attack=0, defense=0)
+                screen.player_unit = player
+                screen.add_province("p1", "A", units=[player])
+                destination = screen.add_province("p2", "B", units=[head_on])
+                screen.add_province("p3", "B", units=[flanker, opponent])
+                if reverse_order:
+                    screen.map_data = dict(reversed(list(screen.map_data.items())))
+
+                combat_processor.process_pinning(screen)
+                combat_processor.process_meeting_engagements(screen)
+                movement_processor.process_movement(screen)
+                combat_processor.process_combat(screen)
+
+                self.assertEqual({id(unit) for unit in destination["units"]}, {id(player), id(head_on)})
+                self.assertTrue(any(unit is flanker for unit in screen.id_to_province["p3"]["units"]))
+
     def test_returning_to_own_land_still_pins_a_hostile_division(self):
         screen = self.screen()
         player = self.mover("A", ["p2"])

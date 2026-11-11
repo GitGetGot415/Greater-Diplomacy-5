@@ -141,7 +141,7 @@ def process_bombardments(context):
         unit["order"] = {"type": "MOVE", "path": []}
 
 def process_pinning(context):
-    """Resolve doomed ordinary charges, then pin this turn's offensive routes."""
+    """Resolve doomed ordinary charges before movement confirms incoming pins."""
     world_state = world_for(context)
     incoming_attacks = {}
     for unit, province in queries.ground_move_records(context):
@@ -269,13 +269,8 @@ def process_pinning(context):
             # 3. Cleanup dead defenders in the destination province (just in case they died to scratch damage)
             dest_prov["units"] = [u for u in dest_prov["units"] if u.get("health", 0) > 0]
 
-    # Use the same simultaneous pinning rule that later movement steps and
-    # crossing previews use. Doomed ordinary attackers have already been removed.
-    records = queries.ground_move_records(context)
-    pinned = queries.find_movement_pins(context, records)
-    for unit, _province in records:
-        if id(unit) in pinned:
-            unit["order"]["path"] = []
+    # Movement keeps offensive routes until an incoming enemy actually arrives.
+    # A surviving charge can still die or be stopped in a crossing before then.
 
 def defer_tactical_meeting(context, prov1, prov2, units1, units2, *, mid_movement=False, pinned_units=None):
     """Hold tactical opponents at the destination; return other movers for ordinary crossing combat."""
@@ -395,7 +390,11 @@ def process_meeting_engagements(context):
     # the next engagement its province takes part in.
     for pair in combat_rules.find_meeting_pairs(world_state.map_data, world_state.nation_data):
         prov1, prov2, units1, units2 = combat_rules.meeting_sides(world_state.id_to_province, pair)
-        remaining = defer_tactical_meeting(context, prov1, prov2, units1, units2)
+        pinned = queries.find_movement_pins(context)
+        eligible = {id(unit) for unit, _province in queries.ground_move_records(context)} - pinned
+        units1 = [unit for unit in units1 if id(unit) in eligible]
+        units2 = [unit for unit in units2 if id(unit) in eligible]
+        remaining = defer_tactical_meeting(context, prov1, prov2, units1, units2, pinned_units=pinned)
         if remaining is not None:
             units1, units2 = remaining
         if not units1 or not units2:

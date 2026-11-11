@@ -129,17 +129,26 @@ def move_route_enters_combat(context, unit, *, step=0):
     return False
 
 
+def can_unit_leave_current_combat(context, unit, province, *, step=0):
+    """Allow a first-step friendly withdrawal, but never an advance out of combat."""
+    return (not queries.is_nation_in_combat_here(get_unit_combat_owner(unit), province, world_for(context).nation_data)
+            or (step == 0 and not move_route_enters_combat(context, unit, step=step)))
+
+
 def find_movement_pins(context, records=None, *, step=0):
-    """Return unit identities pinned by this step's incoming hostile movers.
+    """Return provisional pins from this step's incoming hostile movers.
 
     Read all intentions before canceling any, so iteration order cannot change
     the result. Hostility belongs to units, regardless of who owns their tiles.
     Opposite moves on the same edge are left to meeting-engagement resolution;
     an attack from any other tile pins an offensive route before that crossing.
+    Execution cancels a route only after a living hostile unit actually arrives.
     """
     records = ground_move_records(context, records, step=step)
     incoming = collections.defaultdict(list)
     for unit, province in records:
+        if not can_unit_leave_current_combat(context, unit, province, step=step):
+            continue
         incoming[unit["order"]["path"][0]].append((unit, province["id"]))
     nation_data = world_for(context).nation_data
     pinned = set()
