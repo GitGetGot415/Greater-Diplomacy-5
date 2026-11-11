@@ -31,8 +31,16 @@ LEVEL_ONE_ROW, PER_LEVEL_ROW = "level_one", "per_level"
 
 #: Categories whose rows are only turn counts, ON/OFF buttons, or conversion sliders,
 #: with the settings prefix of each construction turn group they list, in row order.
-#: A labeled divider comes before each group after the first.
 TURN_ONLY_CATEGORIES = {"units": ("unit",), "other": ("administrative", "conversion")}
+
+#: The column label above each of those categories.
+TURN_CATEGORY_HEADERS = {"units": "Unit Type", "other": "Action"}
+
+#: The divider label that starts each construction turn group. Units are one group, so they have none.
+TURN_GROUP_DIVIDERS = {"administrative": "Administrative", "conversion": "Conversions"}
+
+#: The divider label that starts each Range group, by the range field of its families.
+RANGE_GROUPS = (("bombard_range", "Bombardment"), ("air_range_start", "Aircraft"))
 
 
 def _number_text(value):
@@ -146,41 +154,41 @@ class UnitStatsEditorScreen(ModalScreen):
         }
         families = sorted(self.defaults.items(), key=lambda item: item[0].lower())
         rows = []
-        for key in ("bombard_range", "air_range_start"):
+        for key, label in RANGE_GROUPS:
             group = [(family, key) for family, fields in families if key in fields]
-            if rows and group:
-                rows.append((None, "Aircraft"))
-            rows.extend(group)
+            if group:
+                rows.append((None, label))
+                rows.extend(group)
         self.rows["range"] = rows
 
     def _load_turns(self, unit_library, building_library):
         settings = self.target_settings or {}
         self.turn_tabs = {}
-        for key, library, time_key, label in (
-                ("unit", unit_library, "production_time", "Unit Type"),
-                ("building", building_library, "time", "Building Type"),
-                ("administrative", queries.get_administrative_library(), "time", "Administrative Action")):
+        for key, library, time_key in (
+                ("unit", unit_library, "production_time"),
+                ("building", building_library, "time"),
+                ("administrative", queries.get_administrative_library(), "time")):
             self.turn_tabs[key] = self._build_turn_tab(
                 library, settings.get(f"{key}_turn_overrides", {}), settings.get(f"{key}_disabled", []),
-                time_key, label)
+                time_key)
         # Manually edited scenario files can contain a malformed override block.
         conversions = settings.get("conversion_turn_overrides")
         self.turn_tabs["conversion"] = self._build_turn_tab(
             queries.get_conversion_library(), conversions if isinstance(conversions, dict) else {},
-            [], "time", "Conversions")
+            [], "time")
         for action, (name, _constant) in queries.CONVERSION_ACTIONS.items():
             self.turn_tabs["conversion"]["values"][name] = str(queries.get_conversion_turns(action, settings))
         # A row is (name, turn group), or (None, divider label).
         for category, groups in TURN_ONLY_CATEGORIES.items():
             rows = []
             for group in groups:
-                if rows:
-                    rows.append((None, self.turn_tabs[group]["label"]))
+                if group in TURN_GROUP_DIVIDERS:
+                    rows.append((None, TURN_GROUP_DIVIDERS[group]))
                 rows.extend((name, group) for name in self.turn_tabs[group]["names"])
             self.rows[category] = rows
 
     @staticmethod
-    def _build_turn_tab(library, overrides, disabled_list, turn_key, label):
+    def _build_turn_tab(library, overrides, disabled_list, turn_key):
         """Collapse a library to its base types, each with a default and a current turn count.
 
         Variants of one base type ("Infantry Type 1936/1939/...") always shared a
@@ -190,7 +198,7 @@ class UnitStatsEditorScreen(ModalScreen):
         for name in library:
             base_types.setdefault(queries.get_base_item_name(name), []).append(name)
         defaults = {btype: library[names[0]].get(turn_key, 0) for btype, names in base_types.items()}
-        return {"label": label, "names": sorted(base_types, key=str.lower), "defaults": defaults,
+        return {"names": sorted(base_types, key=str.lower), "defaults": defaults,
                 "values": {btype: str(overrides.get(btype, default)) for btype, default in defaults.items()},
                 "disabled_set": set(disabled_list)}
 
@@ -208,8 +216,9 @@ class UnitStatsEditorScreen(ModalScreen):
                   for name, stats in building_library.items()}
         rows = [(USE_DEFAULTS_ROW, None)] if self.HAS_USE_DEFAULTS else []
         group = None
-        for family, fields in self.building_defaults.items():
-            if group is not None and groups[family] != group:
+        for index, (family, fields) in enumerate(self.building_defaults.items()):
+            # A labeled divider starts each group, including the first.
+            if index == 0 or groups[family] != group:
                 rows.append((None, str(groups[family] or "").title()))
             group = groups[family]
             rows.append((family, LEVEL_ONE_ROW))
@@ -516,12 +525,10 @@ class UnitStatsEditorScreen(ModalScreen):
         if category == "buildings":
             self._draw_building_headers(surface, header_y)
             return
-        # The first group names the column. Later groups have their own dividers.
-        first_group = TURN_ONLY_CATEGORIES[category][0]
-        self.label(surface, self.turn_tabs[first_group]["label"], (p.x + self.PAD, header_y))
+        self.label(surface, TURN_CATEGORY_HEADERS[category], (p.x + self.PAD, header_y))
         self._header(surface, "Turns", self.turn_field_x + self.TURN_FIELD_WIDTH // 2, header_y)
         self._header(surface, "Enabled", self.check_x + self.CHECK_SIZE // 2, header_y)
-        if not self.rows[category]:
+        if not any(name is not None for name, _group in self.rows[category]):
             message = fonts.get("normal").render("Nothing to edit.", True, c.UI_TEXT_LIGHT)
             surface.blit(message, message.get_rect(center=(p.centerx, self.list_top + self.list_view_h // 2)))
 

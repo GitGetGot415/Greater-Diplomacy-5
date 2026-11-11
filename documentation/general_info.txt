@@ -100,13 +100,13 @@ Images are prepared when the editor opens. Scrolling and drawing reuse them.
 
 The Units category lists each unit family with a turns field and an ON/OFF button.
 The Buildings category has the same turns field and ON/OFF button on each family's first row.
-The Other category lists each administrative action with a turns field and an ON/OFF button.
-After a Conversions divider, it lists the conversion turn sliders. See CONSTRUCTION TURN SETTINGS.
+The Other category has an Administrative group and a Conversions group. A labeled divider starts each group.
+Each administrative action has a turns field and an ON/OFF button. Conversions have turn sliders. See CONSTRUCTION TURN SETTINGS.
 Every category reads the complete libraries, so disabled families remain available in this editor.
 
 The Range category lists bombardment families and aircraft families from the complete unit library.
 Bombardment families appear first. Aircraft families follow. Each group uses alphabetical order.
-A labeled divider separates the two groups.
+Bombardment and Aircraft dividers start the two groups.
 
 Bombardment range uses whole tiles. Each family has one range field.
 Aircraft range uses whole map pixels. Each family has a starting range and an increase for each level.
@@ -117,7 +117,7 @@ See documentation/air_stuff.txt for those rules.
 
 The Buildings category lists each building family in the complete building library, in library order.
 Its first row is the Use Defaults toggle, which scrolls with the building rows.
-Labeled dividers separate the building groups.
+A labeled divider starts each building group, after the Use Defaults row.
 Each family has cost fields and income fields for manpower, materials, and fuel.
 A family with more than one level has a Level 1 row and a + per level row, as data/generators/recipes.py defines them.
 Value = level 1 value + (level - 1) * increase.
