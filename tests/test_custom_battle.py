@@ -1685,12 +1685,82 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.assertEqual(list(self.screen.kill_feed), [(source, target, "shot")])
         self.screen.update()
         self.assertEqual(self.screen.mode, "result")
-        with patch("data.queries.get_condensed_unit_name", side_effect=AssertionError("uncached kill feed")):
+        with patch.object(self.screen, "_refresh_kill_feed", side_effect=AssertionError("uncached kill feed")):
             self.screen.draw(self.surface)
         self.assertEqual(len(self.screen.kill_feed), 1)
         self.click("Run Again")
         self.assertFalse(self.screen.kill_feed)
         self.assertIsNotNone(self.screen.kill_feed_surface)
+
+    def test_kill_feed_keeps_history_and_scrolls_without_battlefield_input(self):
+        from ui.navigation.touch_input import TouchInput
+        self.fill_armies()
+        self.screen.controlled_index = 0
+        self.click("Simulate")
+        self.click("Start")
+        screen = self.screen
+        source, target = screen.simulation.fighters
+        for index in range(battle_screen.KILL_FEED_VISIBLE_ROWS + 3):
+            victim = copy.copy(target)
+            victim.data = dict(target.data, unit_id=f"victim-{index}")
+            screen._record_kill(source, victim, "shot")
+        self.assertEqual(len(screen.kill_feed), battle_screen.KILL_FEED_VISIBLE_ROWS + 3)
+        zoom, camera = screen.zoom_index, list(screen.camera)
+        with patch("pygame.mouse.get_pos", return_value=screen.kill_feed_content.center):
+            screen.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=-2)])
+        self.assertEqual(screen.kill_feed_scroll, -2 * battle_screen.KILL_FEED_ROW_HEIGHT)
+        self.assertEqual(screen.zoom_index, zoom)
+        self.assertEqual(screen.camera, camera)
+        previous_entry = screen.kill_feed[2]
+        screen._record_kill(source, target, "ram")
+        self.assertIs(screen.kill_feed[3], previous_entry)
+        self.assertEqual(screen.kill_feed_scroll, -3 * battle_screen.KILL_FEED_ROW_HEIGHT)
+
+        # Dragging the content down moves toward newer kills and never fires the controlled gun.
+        point = screen.kill_feed_content.center
+        before = screen.kill_feed_scroll
+        screen.handle_events([
+            pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=point),
+            pygame.event.Event(pygame.MOUSEMOTION, pos=(point[0], point[1] + 20),
+                               rel=(0, 20), buttons=(1, 0, 0)),
+            pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=(point[0], point[1] + 20))])
+        self.assertEqual(screen.kill_feed_scroll, before + 20)
+        self.assertFalse(screen.firing)
+        self.assertIsNone(screen.pan_drag)
+        self.assertFalse(screen.is_content_dragging("kill_feed_scroll"))
+
+        # The shared scrollbar can reach the oldest kill and releases outside the feed.
+        track = screen.kill_feed_track.copy()
+        screen.handle_events([
+            pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(track.centerx, track.bottom - 1)),
+            pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=(300, 300))])
+        self.assertEqual(screen.kill_feed_scroll, screen.kill_feed_limit)
+        self.assertFalse(screen.kill_feed_dragging)
+
+        # Mobile drags use the same content direction.
+        touch = TouchInput()
+        before = screen.kill_feed_scroll
+        for kind, y in ((pygame.FINGERDOWN, point[1]), (pygame.FINGERMOTION, point[1] + 20),
+                        (pygame.FINGERUP, point[1] + 20)):
+            event = pygame.event.Event(kind, touch_id=1, finger_id=1,
+                                       x=point[0] / c.SCREEN_WIDTH, y=y / c.SCREEN_HEIGHT)
+            screen.handle_events(touch.process_events([event], screen, "MOBILE"))
+        self.assertGreater(screen.kill_feed_scroll, before)
+        self.assertFalse(screen.firing)
+        self.assertEqual(screen.zoom_index, zoom)
+        self.assertEqual(screen.camera, camera)
+
+        # Result mode still permits feed scrolling; the wheel outside still zooms the battlefield.
+        screen.simulation.winner = 0
+        screen.update()
+        self.assertEqual(screen.mode, "result")
+        with patch("pygame.mouse.get_pos", return_value=screen.kill_feed_content.center):
+            screen.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=100)])
+        self.assertEqual(screen.kill_feed_scroll, 0)
+        self.assertEqual(screen.zoom_index, zoom)
+        with patch("pygame.mouse.get_pos", return_value=(300, 300)):
+            screen.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=1)])
+        self.assertEqual(screen.zoom_index, zoom + 1)
 
     def test_regular_firing_uses_all_three_rifle_variants_on_both_sides(self):
         self.fill_armies()

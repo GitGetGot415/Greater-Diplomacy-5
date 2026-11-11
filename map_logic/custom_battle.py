@@ -17,7 +17,7 @@ from map_logic.system32 import combat_forecast, combat_rules
 FIXED_STEP = 1.0 / 30.0 # 33 milliseconds per step, or 30 simulation steps per second
 MOVE_PIXELS_PER_SPEED = 60.0
 FIRE_INTERVAL = c.TACTICAL_WEAPONS["rifle"]["reload"]
-DAMAGE_SCALE = 0.5  # Applied after defense and rounding, so low-damage hits also slow down.
+DAMAGE_SCALE = 1.0  # Applied after defense and rounding, so low-damage hits also slow down.
 # Attack at zero HP: 0.0 = directly proportional to HP; 1.0 = wounds do not reduce attack.
 # Values between 0 and 1 interpolate linearly. Applies to each surviving sub-unit.
 TACTICAL_DAMAGE_AT_ZERO_HEALTH = 1.0

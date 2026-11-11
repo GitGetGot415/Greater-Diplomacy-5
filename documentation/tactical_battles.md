@@ -395,8 +395,11 @@ Losing window focus also pauses combat. Pausing or leaving combat clears held mo
 The custom battle is won when the enemy army is destroyed and lost when the friendly army is destroyed.
 Mutual destruction counts as a loss. If the controlled sub-unit is destroyed while friendly units remain, those friendly units continue fighting under AI control.
 The status line counts the divisions on each side that still have a sub-unit.
-The kill feed shows recent sub-unit deaths, newest first, with each killer and victim represented by a flag,
-unit icon, and condensed unit name. Team colors identify friendly fire; RAM identifies a ramming kill.
+The kill feed keeps the battle's sub-unit deaths, newest first, with each killer and victim represented by a flag
+and the normal unit artwork for its nationality and selected art style. Unit names are omitted.
+Team colors identify friendly fire; RAM identifies a ramming kill. Scroll with the mouse wheel, scrollbar,
+or by dragging the feed to read older kills. Feed scrolling does not zoom or pan the battlefield.
+New kills keep older entries in view when the feed has been scrolled away from the newest entry.
 The hit that reduces the victim to zero health receives the kill, including shots whose shooter has already died.
 The feed panel is visible from the start, including when empty, and remains visible while paused and after combat ends.
 Starting another battle clears the entries and keeps the empty panel visible.

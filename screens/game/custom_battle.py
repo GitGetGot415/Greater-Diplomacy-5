@@ -4,6 +4,7 @@ import math
 import os
 import random
 from collections import deque
+from itertools import islice
 
 import pygame
 
@@ -127,13 +128,18 @@ PAUSE_BUTTON_SIZE = (130, 40)
 BATTLE_STATUS_SIDE_OFFSET = 170
 BATTLE_STATUS_Y = 103
 KILL_FEED_TOP = OVERLAY_BUTTON_TOP + OVERLAY_BUTTON_SIZE[1] + 10
-KILL_FEED_WIDTH = 360
-KILL_FEED_MAX_ROWS = 6
+KILL_FEED_VISIBLE_ROWS = 6
 KILL_FEED_ROW_HEIGHT = 26
 KILL_FEED_INSET = 8
-KILL_FEED_ICON_SIZE = (20, 20)
+KILL_FEED_ICON_SIZE = (40, 22)
 KILL_FEED_FLAG_SIZE = (18, 12)
 KILL_FEED_CAUSE_WIDTH = 36
+KILL_FEED_SCROLLBAR_WIDTH = 10
+KILL_FEED_SCROLLBAR_GAP = 4
+KILL_FEED_ACTOR_WIDTH = KILL_FEED_FLAG_SIZE[0] + 6 + KILL_FEED_ICON_SIZE[0]
+KILL_FEED_WIDTH = (2 * KILL_FEED_ACTOR_WIDTH + KILL_FEED_CAUSE_WIDTH + 2 * KILL_FEED_INSET
+                   + KILL_FEED_SCROLLBAR_WIDTH + KILL_FEED_SCROLLBAR_GAP)
+KILL_FEED_HEIGHT = KILL_FEED_VISIBLE_ROWS * KILL_FEED_ROW_HEIGHT + 2 * KILL_FEED_INSET
 # Preview entry animation: edit these durations in seconds, then restart the game.
 # Slide durations must be positive; the hold can be zero.
 PREVIEW_SLIDE_IN_SECONDS = 0.2
@@ -406,8 +412,15 @@ class CustomBattleScreen(Screen):
         self.preview_intro_stage = None
         self.status_key = None
         self.status_surfaces = []
-        self.kill_feed = deque(maxlen=KILL_FEED_MAX_ROWS)
+        self.kill_feed = deque()
         self.kill_feed_surface = None
+        self.kill_feed_scroll = self.kill_feed_limit = 0
+        self.kill_feed_dragging = False
+        self.kill_feed_track = self.kill_feed_handle = None
+        self.kill_feed_rect = pygame.Rect(c.SCREEN_WIDTH - SCREEN_EDGE_MARGIN - KILL_FEED_WIDTH,
+                                          KILL_FEED_TOP, KILL_FEED_WIDTH, KILL_FEED_HEIGHT)
+        self.kill_feed_content = self.kill_feed_rect.inflate(-2 * KILL_FEED_INSET, -2 * KILL_FEED_INSET)
+        self.kill_feed_content.width -= KILL_FEED_SCROLLBAR_WIDTH + KILL_FEED_SCROLLBAR_GAP
         self.controlled_stats_key = None
         self.controlled_stats_surface = None
         self.forecast_key = None  # The armies the forecast line was calculated for.
@@ -875,6 +888,8 @@ class CustomBattleScreen(Screen):
     def _build_simulation(self):
         """Deploy the armies, paused, as preview shows them."""
         self.kill_feed.clear()
+        self.kill_feed_scroll = 0
+        self.kill_feed_dragging = False
         self._refresh_kill_feed()
         self.simulation = combat.BattleSimulation(self.library, *self.rosters,
                                                   controlled_index=self.controlled_index,
@@ -889,31 +904,42 @@ class CustomBattleScreen(Screen):
 
     def _record_kill(self, source, target, cause):
         """Update the recent kills when a battlefield sub-unit dies."""
+        if self.kill_feed_scroll < 0:
+            self.kill_feed_scroll -= KILL_FEED_ROW_HEIGHT
         self.kill_feed.appendleft((source, target, cause))
         self._refresh_kill_feed()
 
+    @staticmethod
+    def _kill_feed_scroll_options():
+        return dict(attr="kill_feed_scroll", limit_attr="kill_feed_limit", track_attr="kill_feed_track",
+                    handle_attr="kill_feed_handle", drag_attr="kill_feed_dragging",
+                    content_rect_attr="kill_feed_content")
+
     def _refresh_kill_feed(self):
         """Cache the fixed-size panel, including when no kills have occurred."""
-        height = KILL_FEED_MAX_ROWS * KILL_FEED_ROW_HEIGHT + KILL_FEED_INSET * 2
-        panel = pygame.Surface((KILL_FEED_WIDTH, height), pygame.SRCALPHA)
+        view_height = self.kill_feed_content.height
+        self.kill_feed_limit = min(0, view_height - len(self.kill_feed) * KILL_FEED_ROW_HEIGHT)
+        self.kill_feed_scroll = max(self.kill_feed_limit, min(0, self.kill_feed_scroll))
+        panel = pygame.Surface((KILL_FEED_WIDTH, KILL_FEED_HEIGHT), pygame.SRCALPHA)
         ui_elements.draw_pixel_panel(panel, panel.get_rect(), CONTROL_STATS_COLOR, CONTROL_STATS_BORDER)
-        actor_width = (KILL_FEED_WIDTH - KILL_FEED_INSET * 2 - KILL_FEED_CAUSE_WIDTH) // 2
+        content = self.kill_feed_content.move(-self.kill_feed_rect.x, -self.kill_feed_rect.y)
+        panel.set_clip(content)
+        actor_width = KILL_FEED_ACTOR_WIDTH
         font = fonts.get("tiny")
-        for row, (killer, victim, kind) in enumerate(self.kill_feed):
-            top = KILL_FEED_INSET + row * KILL_FEED_ROW_HEIGHT
+        first = -self.kill_feed_scroll // KILL_FEED_ROW_HEIGHT
+        visible = islice(self.kill_feed, first, first + KILL_FEED_VISIBLE_ROWS + 1)
+        for row, (killer, victim, kind) in enumerate(visible, first):
+            top = KILL_FEED_INSET + row * KILL_FEED_ROW_HEIGHT + self.kill_feed_scroll
             for index, fighter in enumerate((killer, victim)):
                 x = KILL_FEED_INSET + index * (actor_width + KILL_FEED_CAUSE_WIDTH)
                 x = flag_icons.draw_flag_centered(panel, fighter.data["owner"], self.country_data,
                                                   x, top, KILL_FEED_ROW_HEIGHT, KILL_FEED_FLAG_SIZE)
                 center = (x + KILL_FEED_ICON_SIZE[0] // 2, top + KILL_FEED_ROW_HEIGHT // 2)
-                width, body_height = UNIT_SHAPE_SIZES[fighter.shape]
-                draw_unit_shape(panel, fighter.shape, center, 0, TEAM_COLORS[fighter.side],
-                                scale=KILL_FEED_ICON_SIZE[0] / (max(width, body_height) * 1.5))
-                x += KILL_FEED_ICON_SIZE[0] + 4
-                label = queries.get_condensed_unit_name(fighter.data["type"], self.library)
-                right = KILL_FEED_INSET + index * (actor_width + KILL_FEED_CAUSE_WIDTH) + actor_width
-                text = font.render(fit_text(label, font, right - x), True, TEAM_COLORS[fighter.side])
-                panel.blit(text, text.get_rect(midleft=(x, center[1])))
+                artwork = symbol_loader.get_symbol(fighter.data["type"], zoom=1,
+                                                    color=TEAM_COLORS[fighter.side], country=fighter.data["owner"],
+                                                    fit_size=KILL_FEED_ICON_SIZE)
+                if artwork is not None:
+                    panel.blit(artwork, artwork.get_rect(center=center))
             center = (KILL_FEED_INSET + actor_width + KILL_FEED_CAUSE_WIDTH // 2,
                       top + KILL_FEED_ROW_HEIGHT // 2)
             if kind == "ram":
@@ -925,7 +951,36 @@ class CustomBattleScreen(Screen):
                 pygame.draw.polygon(panel, c.UI_TEXT_BRIGHT,
                                     [(center[0] + 8, center[1]), (center[0] + 2, center[1] - 4),
                                      (center[0] + 2, center[1] + 4)])
+        panel.set_clip(None)
+        self.draw_list_scrollbar(panel, KILL_FEED_WIDTH - KILL_FEED_INSET - KILL_FEED_SCROLLBAR_WIDTH,
+                                 KILL_FEED_INSET, view_height, width=KILL_FEED_SCROLLBAR_WIDTH,
+                                 **self._kill_feed_scroll_options())
+        for name in ("kill_feed_track", "kill_feed_handle"):
+            rect = getattr(self, name)
+            if rect is not None:
+                rect.move_ip(self.kill_feed_rect.topleft)
         self.kill_feed_surface = panel
+
+    def _kill_feed_events(self, event):
+        """Scroll the feed without steering, firing, panning, or zooming the battlefield."""
+        if event.type not in {pygame.MOUSEWHEEL, pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION}:
+            return False
+        position = getattr(event, "pos", pygame.mouse.get_pos())
+        engaged = (self.kill_feed_rect.collidepoint(position) or self.kill_feed_dragging
+                   or self.is_content_dragging("kill_feed_scroll"))
+        if not engaged:
+            return False
+        if event.type == pygame.MOUSEBUTTONUP:
+            if event.button == 1:
+                self.firing = False
+                self.pan_drag = None
+            elif event.button == 3:
+                self.secondary_firing = False
+        before = self.kill_feed_scroll
+        self.handle_list_scroll(event, speed=KILL_FEED_ROW_HEIGHT, **self._kill_feed_scroll_options())
+        if before != self.kill_feed_scroll:
+            self._refresh_kill_feed()
+        return True
 
     def _play_shot_sound(self, fighter):
         # Keep audio randomness separate from the seeded simulation's aiming and movement decisions.
@@ -969,6 +1024,7 @@ class CustomBattleScreen(Screen):
         self.firing = False
         self.secondary_firing = False
         self.touch_pointers.clear()
+        self.kill_feed_dragging = False
         if self.simulation is not None:
             self.simulation.set_player_input()
 
@@ -1316,6 +1372,8 @@ class CustomBattleScreen(Screen):
                 continue
             if event.type == pygame.KEYDOWN and event.key in CONTROL_KEYS and self._driving():
                 self.held_keys.add(event.key)
+                continue
+            if self.mode in {"battle", "result"} and self._kill_feed_events(event):
                 continue
             if self.mode in {"battle", "result"} and self._battlefield_mouse(event):
                 continue
@@ -1889,7 +1947,7 @@ class CustomBattleScreen(Screen):
                 (center_x + BATTLE_STATUS_SIDE_OFFSET, BATTLE_STATUS_Y), (center_x, BATTLE_STATUS_Y))):
             surface.blit(image, image.get_rect(center=center))
         if self.kill_feed_surface is not None:
-            surface.blit(self.kill_feed_surface, (c.SCREEN_WIDTH - SCREEN_EDGE_MARGIN - KILL_FEED_WIDTH, KILL_FEED_TOP))
+            surface.blit(self.kill_feed_surface, self.kill_feed_rect)
         controlled = self.simulation.controlled
         if self.touch_mode and self.mode == "battle" and controlled is not None and controlled.alive:
             for role in ("drive", "aim"):
