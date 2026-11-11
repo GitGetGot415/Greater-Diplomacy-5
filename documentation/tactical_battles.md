@@ -81,6 +81,7 @@ The mouse wheel over the slider adjusts the year one year at a time. Manual sele
 Select a friendly roster card and choose **Control** to command that unit during actual battle.
 **Release Control** restores an entirely automatic battle.
 A yellow arrow identifies the controlled unit. Reordering preserves the chosen entry; removing that entry or generating new armies clears control.
+The controlled unit's roster button uses a slightly lighter blue than other friendly roster buttons in editing and preview.
 
 When both armies have units, a line below the rosters forecasts how the same fight would end in the normal game:
 which army wins and in how many turns, that both armies are destroyed, or that there is no clear winner.

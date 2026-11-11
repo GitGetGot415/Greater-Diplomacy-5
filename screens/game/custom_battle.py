@@ -32,6 +32,7 @@ PANEL_WIDTH = 1160
 PANEL_TOPS = (365, 120)  # Friendly and enemy rosters retain their separate areas.
 CARD_SIZE = (158, 148)
 CARD_GAP = 12
+CONTROLLED_CARD_BRIGHTNESS = 100
 PREVIEW_CARD_ICON_SIZE = (96, 60)
 PREVIEW_ICON_CENTER_Y = 40
 # Health bar rows: preview puts the bar under the icon; editing puts it at the card bottom.
@@ -1699,7 +1700,10 @@ class CustomBattleScreen(Screen):
 
     def _draw_roster_card(self, surface, rect, side, unit, *, hovered=False, pressed=False):
         if self._roster_reorderable(side):
-            ui_elements.draw_pixel_button(surface, rect, c.UI_COLORS["blue" if side == 0 else "red"][0], hovered=hovered, pressed=pressed)
+            color = c.UI_COLORS["blue" if side == 0 else "red"][0]
+            if side == 0 and self.controlled_index is not None and unit is self.rosters[0][self.controlled_index]:
+                color = tuple(min(255, channel + CONTROLLED_CARD_BRIGHTNESS) for channel in color)
+            ui_elements.draw_pixel_button(surface, rect, color, hovered=hovered, pressed=pressed)
         surface.blit(self.card_surfaces[self._card_key(side, unit)], rect)
 
     def _draw_rosters(self, surface):
