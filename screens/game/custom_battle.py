@@ -72,12 +72,8 @@ DEFAULT_ZOOM_INDEX = ZOOM_LEVELS.index(1.0)
 BATTLE_MUSIC_VOLUME = 0.5
 BATTLE_SFX_VOLUME = 0.5
 AIM_CAMERA_OFFSET = 1.0  # Share of the pointer's distance from the view center, in screen pixels.
-OVERVIEW_ZOOM = 0.6
 CONTROLLED_MIN_ZOOM = 0.15 # Minimum zoom while controlling a living unit; choose a value from ZOOM_LEVELS.
-OVERVIEW_SYMBOL_SIZE = 16
 MIN_PLAYER_INDICATOR_SCALE = 0.85
-MIN_HEALTH_BAR_WIDTH = 22
-MIN_HEALTH_BAR_HEIGHT = 3
 EDGE_INDICATOR_INSET = 48
 EDGE_INDICATOR_TOP = 100
 EDGE_INDICATOR_SIZE = 10
@@ -1881,10 +1877,9 @@ class CustomBattleScreen(Screen):
         # Shapes partly on screen still draw; the widest shape fits inside this margin.
         margin = math.ceil(140 * zoom)
         visible = self.view_rect().inflate(margin, margin)
-        bar_size = (max(MIN_HEALTH_BAR_WIDTH, round(28 * zoom)), max(MIN_HEALTH_BAR_HEIGHT, round(4 * zoom)))
+        bar_size = (round(28 * zoom), round(4 * zoom))
         flag_size = tuple(max(2, round(side * zoom)) for side in BATTLE_FLAG_SIZE)
         controlled = self.simulation.controlled
-        overview = zoom <= OVERVIEW_ZOOM
         limited_sight = self.mode == "battle" and controlled is not None and controlled.alive and self.visibility_mask is not None
         labeled = []  # Living sub-units whose health bars and flags draw above the foliage.
         for fighter in self.simulation.fighters:
@@ -1897,12 +1892,12 @@ class CustomBattleScreen(Screen):
                 draw_unit_shape(surface, fighter.shape, center, fighter.angle, DEAD_COLOR,
                                 scale=zoom, aim=fighter.aim, artwork=self.battle_artwork[fighter.data["type"]])
                 continue
-            scale = OVERVIEW_SYMBOL_SIZE / max(UNIT_SHAPE_SIZES[fighter.shape]) if overview else zoom
+            scale = zoom
             draw_unit_shape(surface, fighter.shape, center, fighter.angle, TEAM_COLORS[fighter.side],
                             scale=scale, aim=fighter.aim,
-                            artwork=None if overview else self.battle_artwork[fighter.data["type"]],
+                            artwork=self.battle_artwork[fighter.data["type"]],
                             recoil=4 * fighter.recoil / c.TACTICAL_MUZZLE_SECONDS)
-            if fighter.muzzle > 0 and not overview:
+            if fighter.muzzle > 0:
                 shell = fighter.weapon(fighter.fired_weapon)["shell"]
                 length = UNIT_SHAPE_SIZES[fighter.shape][0] / 2
                 tip = (round(center[0] + math.cos(fighter.aim) * length * scale),
@@ -1933,10 +1928,9 @@ class CustomBattleScreen(Screen):
             pygame.draw.rect(surface, OUTLINE_COLOR, bar)
             ratio = fighter.data["health"] / fighter.data["max_health"]
             pygame.draw.rect(surface, BATTLE_HEALTH_COLOR, (bar.x, bar.y, round(bar.width * ratio), bar.height))
-            if not overview:
-                flag_icons.draw_flag(surface, fighter.data["owner"], self.country_data,
-                                     bar.right + round(BATTLE_FLAG_GAP * zoom),
-                                     bar.centery - flag_size[1] // 2, size=flag_size)
+            flag_icons.draw_flag(surface, fighter.data["owner"], self.country_data,
+                                 bar.right + round(BATTLE_FLAG_GAP * zoom),
+                                 bar.centery - flag_size[1] // 2, size=flag_size)
         if controlled is not None and controlled.alive:
             self._draw_controls(surface, controlled, self.to_screen(controlled.x, controlled.y))
             self._draw_edge_indicators(surface, controlled)

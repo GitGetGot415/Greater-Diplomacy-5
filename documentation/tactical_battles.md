@@ -390,8 +390,8 @@ increases the offset. The offset keeps the unit visible and respects the battlef
 Otherwise, drag the battlefield with the left mouse button to move the view.
 The mouse wheel zooms in and out around the pointer through fixed steps. Zoomed out past the battlefield's
 edges, the whole battlefield is centered on a dark surround.
-At distant zoom levels, simple team and unit-type silhouettes replace detailed artwork, and health bars keep a
-minimum readable size. Zoom changes presentation without changing weapon reach or collision size.
+Units keep their detailed artwork, flags, and muzzle flashes at every zoom level, scaled with the battlefield.
+Health bars shrink with the units when zooming out. Zoom changes presentation without changing weapon reach or collision size.
 While controlling a living sub-unit, zooming out stops at `CONTROLLED_MIN_ZOOM` in `screens/game/custom_battle.py`,
 including while paused. Set the limit to one of that file's `ZOOM_LEVELS` values.
 Spectating allows the full zoom range again.
