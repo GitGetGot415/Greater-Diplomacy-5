@@ -27,6 +27,11 @@ AI means artificial intelligence. UI means user interface.
   Rename it only when the user explicitly requests a different name.
 - **Keep Edit Construction Turns and Edit Unit / Building Stats as separate screens. Never merge them.**
   These Scenario Settings buttons open `screens/editors/turn_editor.py` and `screens/editors/unit_stats_editor.py`.
+- **Never change the values of units or buildings under any circumstances unless the user explicitly asks for that change.**
+  This covers every unit and building value in [Tuning Data](#tuning-data), such as costs, income, stats, production times, ranges, and research years.
+  It applies to `data/json/unit_data.json`, `data/json/building_data.json`, `data/generators/recipes.py`, and the unit and building constants in `data/constants.py`.
+  Do not change these values to make a test pass, to balance gameplay, or as part of a refactor or another feature.
+  This rule covers the game's source data. It does not stop editors from letting players change values in their own scenarios.
 - Do not run tests unless absolutely nessecary.
 - Never reference Git-ignored files or directories in tests.
 - Never generate an image under any circumstances without explicit user approval.
