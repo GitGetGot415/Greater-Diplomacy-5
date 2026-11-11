@@ -667,7 +667,11 @@ class _EventEditScreen(_ModalScreen):
         self.trigger_type = event_data.get("trigger_type", "AI Only")
 
         self.countries = sorted(queries.get_living_nations(map_ref.map_data))
-        self.unit_types = list(queries.get_unit_library(map_ref).keys())
+        # The default library lists every unit. The world's active library omits disabled families,
+        # which the Spawn Unit picker lists as disabled.
+        self.unit_library = queries.get_unit_library()
+        self.unit_types = list(self.unit_library)
+        self.enabled_unit_types = set(queries.get_unit_library(map_ref))
 
         p = self.panel_rect
         self.list_x = p.x + self.PAD
@@ -928,11 +932,14 @@ class _EventEditScreen(_ModalScreen):
             # unit_type doubles as the Set Variable operation, so a row switched over
             # from that can arrive holding "Add"/"Set"; snap it back to a real unit.
             if row.unit_type not in self.unit_types and self.unit_types:
-                row.unit_type = self.unit_types[0]
+                row.unit_type = next((name for name in self.unit_types if name in self.enabled_unit_types),
+                                     self.unit_types[0])
             els.append(self.combo(x, y + 2, 250, row.unit_type,
-                                  queries.unit_picker_items(self.unit_types, context=self.map_ref), "Unit Type",
-                                  lambda v: self._set(row, "unit_type", v),
-                                  display_value=queries.get_unit_display_name(row.unit_type, context=self.map_ref)))
+                                  queries.unit_picker_items(self.unit_types, self.unit_library, context=self.map_ref),
+                                  "Unit Type", lambda v: self._set(row, "unit_type", v),
+                                  display_value=queries.get_unit_display_name(row.unit_type, self.unit_library,
+                                                                              context=self.map_ref),
+                                  is_enabled=lambda item: item[1] in self.enabled_unit_types))
             x += 256
             message_field()
             flag_toggle("Must Control")

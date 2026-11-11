@@ -150,7 +150,7 @@ Values that the map does not change use the library values.
 New games on the map use a category's map defaults while that category's Use Defaults is on.
 
 The map editor applies the map's defaults. Units of a family that the map disables cannot be placed.
-The unit brush still lists them, disabled.
+The unit brush and the Spawn Unit action of scripted events still list them, disabled.
 Disabling a unit family that has units on the map asks for confirmation first.
 The question lists each province that holds those units, by province number, owner, and map position.
 Save All Changes then deletes those units, including carried aircraft. Back keeps them.

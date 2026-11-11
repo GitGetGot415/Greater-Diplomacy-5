@@ -87,20 +87,25 @@ class ModalScreen(ScrollPanes, Screen):
         return self._sized(Button(x, y, preset, color, text, callback,
                                   font_preset="button_small", sound_kind=sound_kind), width)
 
-    def combo(self, x, y, width, value, options, title, on_pick, color="light_blue", *, display_value=None):
-        """A combobox: shows the current value, opens the shared modal list picker."""
+    def combo(self, x, y, width, value, options, title, on_pick, color="light_blue", *, display_value=None,
+              is_enabled=None):
+        """A combobox: shows the current value, opens the shared modal list picker.
+
+        `is_enabled` lists an option as disabled when it returns False, as the list picker does.
+        """
         visible = value if display_value is None else display_value
         label = text_utils.truncate_chars(str(visible) if str(visible) else "-", max(4, (width - 14) // 9))
         return self.button(x, y, width, color, label,
-                           lambda: self._choose(title, options, on_pick))
+                           lambda: self._choose(title, options, on_pick, is_enabled))
 
-    def _choose(self, title, options, on_pick):
+    def _choose(self, title, options, on_pick, is_enabled=None):
 
         options = list(options)
         if not options:
             dialogs.show_warning("Nothing to pick", f"There are no {title.lower()} to choose from.")
             return
-        pickers.open_listbox_selector(self.map_screen, title, f"Select {title}:", options, on_pick)
+        pickers.open_listbox_selector(self.map_screen, title, f"Select {title}:", options, on_pick,
+                                      is_enabled=is_enabled)
         self.refresh_ui()
 
     def toggle(self, x, y, width, checked, text, callback):

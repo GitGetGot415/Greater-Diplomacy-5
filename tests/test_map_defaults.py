@@ -197,6 +197,21 @@ class MapEditorUnitDefaultsTests(unittest.TestCase):
         self.assertFalse(any(is_enabled(item) for item in disabled))
         self.assertTrue(is_enabled("None"))
         self.assertTrue(any(is_enabled(item) for item in items if isinstance(item, tuple)))
+        # The Spawn Unit picker of a scripted event lists disabled units as disabled too.
+        from screens.editors import scripted_events_editor
+        from ui.widgets import text_utils
+        enabled = next(name for name in queries.get_unit_library(game))
+        game.nation_data["A"]["scripted_events"] = [{"actions": [{"type": "Spawn Unit", "unit_type": enabled}]}]
+        with mock.patch("ui.navigation.modal_screen.host_map_screen", return_value=game):
+            event_screen = scripted_events_editor._EventEditScreen(game, game, "A", 0)
+        label = text_utils.truncate_chars(queries.get_unit_display_name(enabled, context=game), 26)
+        combo = next(element for element in event_screen.elements if getattr(element, "text", "") == label)
+        with mock.patch("ui.dialogs.pickers.open_listbox_selector") as picker:
+            combo.callback()
+        items, is_enabled = picker.call_args.args[3], picker.call_args.kwargs["is_enabled"]
+        self.assertFalse(any(is_enabled(item) for item in items if item[1] in names))
+        self.assertEqual(len([item for item in items if item[1] in names]), len(names))
+        self.assertTrue(is_enabled(next(item for item in items if item[1] == enabled)))
         # A brush picked before the family was disabled places nothing.
         game.brush_unit = names[0]
         province = game.id_to_province[8]
