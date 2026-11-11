@@ -842,9 +842,13 @@ class CustomBattleScreen(Screen):
         self._cache_terrain_art()
 
     def _play_shot_sound(self, fighter):
-        # Match the projectile's color classification and keep audio randomness
-        # separate from the seeded simulation's aiming and movement decisions.
-        kind = random.choice(TANK_SHOT_SOUNDS if fighter.shape in TANK_SHOT_SHAPES else RIFLE_SHOT_SOUNDS)
+        # Keep audio randomness separate from the seeded simulation's aiming and movement decisions.
+        if fighter.shape in TANK_SHOT_SHAPES:
+            kind = random.choice(TANK_SHOT_SOUNDS)
+        elif fighter is self.simulation.controlled:
+            kind = "heavy_gunshot"
+        else:
+            kind = random.choice(RIFLE_SHOT_SOUNDS)
         ui_elements.play_ui_sound(kind, volume_scale=self.zoom_volume_share())
 
     def start_battle(self):

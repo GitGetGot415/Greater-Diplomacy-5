@@ -1655,6 +1655,27 @@ class CustomBattleScreenTests(unittest.TestCase):
             self.assertEqual([call.args[0] for call in sound.call_args_list],
                              ["rifle_shot_1", "rifle_shot_2", "rifle_shot_3"])
 
+    def test_only_controlled_non_tank_shots_use_heavy_gunshot(self):
+        self.fill_armies()
+        self.screen.add_unit(0, "Fixture I")
+        self.click("Control")
+        self.click("Simulate")
+        self.click("Start")
+        simulation = self.screen.simulation
+        for source in simulation.fighters:
+            for shape in combat.MOBILITY.keys() - battle_screen.TANK_SHOT_SHAPES:
+                with self.subTest(side=source.side, controlled=source is simulation.controlled, shape=shape), patch(
+                        "ui.widgets.ui_elements.play_ui_sound") as sound, patch.object(
+                            battle_screen.random, "choice", return_value="rifle_shot_2") as choice:
+                    source.shape = shape
+                    simulation._fire_shot(source)
+                    expected = "heavy_gunshot" if source is simulation.controlled else "rifle_shot_2"
+                    sound.assert_called_once_with(expected, volume_scale=self.screen.zoom_volume_share())
+                    if source is simulation.controlled:
+                        choice.assert_not_called()
+                    else:
+                        choice.assert_called_once_with(battle_screen.RIFLE_SHOT_SOUNDS)
+
     def test_orange_projectiles_use_all_three_tank_variants_for_every_tank_shape_on_both_sides(self):
         self.fill_armies()
         self.click("Control")

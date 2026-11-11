@@ -148,9 +148,10 @@ Motorized infantry, mechanized infantry, and infantry fighting vehicles use thei
 images without a separate weapon layer. Other tanks and vehicles use rectangles.
 Health bars show remaining strength, with the unit's nationality flag beside each bar, and projectiles show shots in flight.
 Tank shells are bright orange and thicker than other units' yellow shots.
-Each regular shot plays a random Rifle Shot 1, Rifle Shot 2, or Rifle Shot 3 sound.
+Regular shots from AI units play a random Rifle Shot 1, Rifle Shot 2, or Rifle Shot 3 sound.
+Regular shots from the player-controlled sub-unit play Heavy Gunshot instead.
 Each orange tank shot plays a random Tank Shot 1, Tank Shot 2, or Tank Shot 3 sound.
-Both armies and player-controlled units use the same sound mapping.
+Tank sounds apply to both armies and player-controlled tanks.
 Firing sounds use the existing sound-effect volume and pitch settings and play when a projectile is fired.
 Rifle and tank firing sounds have separate voice pools so rifle volleys cannot suppress quieter tank shots.
 When a pool is full, the newest shot replaces the oldest sound tail in that pool.
