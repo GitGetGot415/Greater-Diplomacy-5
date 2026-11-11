@@ -1178,7 +1178,7 @@ def draw_text_input_background(surface, rect, active=False, *, style_name=None,
 
 def draw_text_box(surface, rect, text, active=False, font=None, placeholder=None,
                   pad_x=10, show_caret=True, *, bg_color=None, border_color=None,
-                  gradient_strength=None):
+                  gradient_strength=None, text_color=(255, 255, 255)):
     """Draws one single-line text entry box: fill, border, text, caret.
 
     Nine screens carried their own copy of these four steps, between them using
@@ -1199,7 +1199,7 @@ def draw_text_box(surface, rect, text, active=False, font=None, placeholder=None
     if not text and placeholder:
         text_surf = font.render(placeholder, True, c.UI_TEXT_MUTED)
     else:
-        text_surf = font.render(text + ("|" if active and show_caret else ""), True, (255, 255, 255))
+        text_surf = font.render(text + ("|" if active and show_caret else ""), True, text_color)
 
     old_clip = surface.get_clip()
     inner = rect.inflate(-6, -4)
@@ -1223,7 +1223,8 @@ class TextField:
     (if given) and unfocuses; Escape just unfocuses. Screens that need Tab-like
     behaviour between fields should defocus other fields themselves on click.
     on_change receives the new text after each edit, for a screen that applies
-    the value while the player types.
+    the value while the player types. A disabled field shows muted text and
+    ignores input.
     """
     def __init__(self, x, y, width, height, initial_text="", numeric=False,
                 max_length=None, on_submit=None, label=None, on_change=None, pad_x=8, font_preset="normal"):
@@ -1238,6 +1239,7 @@ class TextField:
         self.font_preset = font_preset
         self.active = False
         self.visible = True
+        self.disabled = False
         self.click_guard = None
 
     def _valid_char(self, ch):
@@ -1250,7 +1252,8 @@ class TextField:
             return
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            if self.rect.collidepoint(event.pos) and (self.click_guard is None or self.click_guard()):
+            if (not self.disabled and self.rect.collidepoint(event.pos)
+                    and (self.click_guard is None or self.click_guard())):
                 self.active = True
             else:
                 self.active = False
@@ -1282,7 +1285,8 @@ class TextField:
             surface.blit(label_surf, label_surf.get_rect(midright=(self.rect.x - 10, self.rect.centery)))
 
         draw_text_box(surface, self.rect, self.text, active=self.active,
-                      font=fonts.get(self.font_preset), pad_x=self.pad_x)
+                      font=fonts.get(self.font_preset), pad_x=self.pad_x,
+                      text_color=c.UI_TEXT_MUTED if self.disabled else (255, 255, 255))
 
 def _clipboard_text():
     """Returns OS clipboard text, or an empty string when it is unavailable."""

@@ -251,7 +251,8 @@ class UnitRangeEditorTests(unittest.TestCase):
         screen.settings = {"unit_range_overrides": {"Fixture Gun": {"bombard_range": 4}}}
         screen._session_bound = True
         screen.refresh_ui()
-        button = next(element for element in screen.elements if getattr(element, "text", "") == "Edit Unit Stats")
+        button = next(element for element in screen.elements
+                      if getattr(element, "text", "") == "Edit Unit / Building Stats")
         self.assertEqual(button.notification_text, "!")
         with mock.patch("screens.editors.unit_stats_editor.open_unit_stats_editor") as open_editor:
             button.callback()
@@ -259,7 +260,8 @@ class UnitRangeEditorTests(unittest.TestCase):
         self.assertFalse(open_editor.call_args.kwargs["persist"])
         screen.settings["unit_range_overrides"] = {}
         open_editor.call_args.kwargs["on_done"](None)
-        button = next(element for element in screen.elements if getattr(element, "text", "") == "Edit Unit Stats")
+        button = next(element for element in screen.elements
+                      if getattr(element, "text", "") == "Edit Unit / Building Stats")
         self.assertFalse(button.notification_text)
 
 

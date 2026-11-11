@@ -1,0 +1,271 @@
+"""Building cost and income settings: Use Defaults, map defaults, editors, loading, and lobbies."""
+import copy
+import json
+from pathlib import Path
+import tempfile
+import unittest
+from unittest import mock
+
+from data import queries
+import data.constants as c
+from data.map import load_map
+from data.multiplayer.realtime.session import MapRealtimeDriver
+from data.runtime_rules import RuntimeRules
+from data.state_access import BackendState
+from tests import app_harness
+from tests.air_fixtures import world
+
+
+def building_library():
+    """Use artificial buildings with explicit costs and outputs in two groups."""
+    base = {"time": 2, "req": None, "cost_materials": 100, "cost_manpower": 10, "cost_fuel": 1,
+            "prod_materials": 50, "prod_manpower": 0, "prod_fuel": 5}
+    return {
+        "Fixture Factory Lvl 1": dict(base, group="industry"),
+        "Fixture Factory Lvl 2": dict(base, group="industry", req="Fixture Factory Lvl 1",
+                                      cost_materials=200, prod_materials=80),
+        "Fixture Fort Lvl 1": dict(base, group="fortification", prod_materials=0, prod_fuel=0),
+    }
+
+
+def rebuilt_buildings(settings):
+    runtime = RuntimeRules()
+    runtime.rebuild(settings, {"unit_library": {}, "building_library": building_library(), "tech_tree": {}})
+    return runtime.libraries["building_library"]
+
+
+MAP_STATS = {"Fixture Factory Lvl 1": {"prod_materials": 70, "cost_fuel": 3}}
+PLAYER_STATS = {"Fixture Factory Lvl 1": {"prod_materials": 90}, "Fixture Fort Lvl 1": {"cost_materials": 400}}
+
+
+class BuildingStatRulesTests(unittest.TestCase):
+    def setUp(self):
+        self.defaults = queries.get_building_stat_defaults(building_library())
+
+    def test_defaults_follow_library_order_and_group_filter(self):
+        self.assertEqual(list(self.defaults), list(building_library()))
+        self.assertEqual(set(self.defaults["Fixture Fort Lvl 1"]), set(queries.BUILDING_STAT_FIELDS))
+        industry = queries.get_building_stat_defaults(building_library(), ("industry",))
+        self.assertEqual(list(industry), ["Fixture Factory Lvl 1", "Fixture Factory Lvl 2"])
+
+    def test_overrides_keep_only_valid_changes(self):
+        raw = {"Fixture Factory Lvl 1": {"prod_materials": 60, "cost_materials": 100, "prod_fuel": -1,
+                                         "cost_fuel": 1.5, "cost_manpower": "8", "time": 9},
+               "Fixture Fort Lvl 1": {"cost_materials": 0},
+               "Unknown Building": {"cost_materials": 5},
+               "Fixture Factory Lvl 2": "bad"}
+        self.assertEqual(queries.get_building_stat_overrides(raw, self.defaults), {
+            "Fixture Factory Lvl 1": {"prod_materials": 60},
+            "Fixture Fort Lvl 1": {"cost_materials": 0}})
+        for invalid in (None, [], "bad", 5):
+            self.assertEqual(queries.get_building_stat_overrides(invalid, self.defaults), {})
+
+    def test_use_defaults_selects_map_stats_and_ignores_player_stats(self):
+        settings = {"map_building_stat_overrides": MAP_STATS, "building_stat_overrides": PLAYER_STATS}
+        for flag in (True, None):
+            with self.subTest(flag=flag):
+                case = dict(settings) if flag is None else dict(settings, use_default_building_stats=flag)
+                library = rebuilt_buildings(case)
+                self.assertEqual(library["Fixture Factory Lvl 1"]["prod_materials"], 70)
+                self.assertEqual(library["Fixture Factory Lvl 1"]["cost_fuel"], 3)
+                self.assertEqual(library["Fixture Fort Lvl 1"], building_library()["Fixture Fort Lvl 1"])
+        library = rebuilt_buildings(dict(settings, use_default_building_stats=False))
+        self.assertEqual(library["Fixture Factory Lvl 1"]["prod_materials"], 90)
+        self.assertEqual(library["Fixture Factory Lvl 1"]["cost_fuel"], 1)
+        self.assertEqual(library["Fixture Fort Lvl 1"]["cost_materials"], 400)
+        self.assertEqual(rebuilt_buildings({}), building_library())
+
+    def test_unit_ranges_apply_whatever_use_defaults(self):
+        units = {"Fixture Gun I": {"bombard_range": 1, "bombard_attack": 5}}
+        ranges = {"unit_range_overrides": {"Fixture Gun": {"bombard_range": 3}}}
+        for flag in (True, False):
+            runtime = RuntimeRules()
+            runtime.rebuild(dict(ranges, use_default_building_stats=flag),
+                            {"unit_library": copy.deepcopy(units), "building_library": {}, "tech_tree": {}})
+            self.assertEqual(runtime.libraries["unit_library"]["Fixture Gun I"]["bombard_range"], 3)
+
+    def test_production_and_income_read_applied_stats(self):
+        library = rebuilt_buildings({"use_default_building_stats": False, "building_stat_overrides": PLAYER_STATS})
+        output = queries.get_building_output("Fixture Factory Lvl 1", {}, library)
+        self.assertEqual(output["materials"], 90)
+
+    def test_badge_reports_player_building_changes_only_without_use_defaults(self):
+        with mock.patch.object(queries, "get_building_stat_defaults", return_value=self.defaults), \
+                mock.patch.object(queries, "get_unit_range_defaults", return_value={}):
+            custom = {"use_default_building_stats": False}
+            self.assertTrue(queries.scenario_has_unit_stat_customizations(
+                dict(custom, building_stat_overrides=PLAYER_STATS)))
+            self.assertFalse(queries.scenario_has_unit_stat_customizations(
+                dict(custom, building_stat_overrides={"Fixture Fort Lvl 1": {"cost_materials": 100}})))
+            self.assertFalse(queries.scenario_has_unit_stat_customizations(
+                {"building_stat_overrides": PLAYER_STATS}))
+            self.assertFalse(queries.scenario_has_unit_stat_customizations(
+                dict(custom, map_building_stat_overrides=MAP_STATS)))
+        ranges = {"Fixture Gun": {"bombard_range": 3}}
+        with mock.patch.object(queries, "get_unit_range_defaults", return_value={"Fixture Gun": {"bombard_range": 1}}):
+            self.assertTrue(queries.scenario_has_unit_stat_customizations({"unit_range_overrides": ranges}))
+
+
+class BuildingStatPersistenceTests(unittest.TestCase):
+    def test_global_settings_file_keeps_player_values_but_not_map_values(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory, "scenario_settings.json")
+            path.write_text(json.dumps({"use_default_building_stats": False}), encoding="utf-8")
+            entry = {"path": str(path), "data": None, "default": "scenario_settings.json"}
+            with mock.patch.dict(queries._JSON_CACHE, {"scenario_settings": entry}):
+                loaded = queries.get_scenario_settings()
+                queries.save_scenario_settings(dict(loaded, building_stat_overrides=PLAYER_STATS,
+                                                    map_building_stat_overrides=MAP_STATS))
+            written = json.loads(path.read_text(encoding="utf-8"))
+        self.assertEqual(written["building_stat_overrides"], PLAYER_STATS)
+        self.assertNotIn("map_building_stat_overrides", written)
+
+    def load_settings(self, player_settings, meta, *, new_game):
+        context = BackendState()
+        context.session.selection_mode = new_game
+        context.world.scenario_settings = copy.deepcopy(player_settings)
+        load_map._apply_saved_scenario_settings(context, copy.deepcopy(meta))
+        return context.world.scenario_settings
+
+    def test_new_games_take_map_stats_from_the_map_only(self):
+        player = {"use_default_building_stats": True, "building_stat_overrides": PLAYER_STATS,
+                  "map_building_stat_overrides": {"Fixture Fort Lvl 1": {"cost_materials": 1}}}
+        meta = {"scenario_settings": {"map_building_stat_overrides": MAP_STATS,
+                                      "building_stat_overrides": {"Fixture Fort Lvl 1": {"cost_fuel": 9}}}}
+        settings = self.load_settings(player, meta, new_game=True)
+        self.assertEqual(settings["map_building_stat_overrides"], MAP_STATS)
+        self.assertEqual(settings["building_stat_overrides"], PLAYER_STATS)
+        for older_meta in ({"scenario_settings": {}}, {}):
+            settings = self.load_settings(player, older_meta, new_game=True)
+            self.assertNotIn("map_building_stat_overrides", settings)
+        # A save in progress keeps the settings it was created with.
+        settings = self.load_settings(player, meta, new_game=False)
+        self.assertEqual(settings, meta["scenario_settings"] | {
+            "force_time_appropriate_research": c.DEFAULT_FORCE_TIME_APPROPRIATE_RESEARCH})
+
+    def test_lobby_rules_keep_the_loaded_map_stats(self):
+        game = world()
+        game.scenario_settings = {"map_building_stat_overrides": MAP_STATS}
+        driver = MapRealtimeDriver(game)
+        lobby = {"use_default_building_stats": False, "building_stat_overrides": PLAYER_STATS,
+                 "map_building_stat_overrides": {"Fixture Fort Lvl 1": {"cost_materials": 1}}}
+        driver.configure_scenario_settings(lobby)
+        self.assertEqual(game.scenario_settings["map_building_stat_overrides"], MAP_STATS)
+        self.assertEqual(game.scenario_settings["building_stat_overrides"], PLAYER_STATS)
+        self.assertEqual(driver.snapshot()["scenario_settings"]["map_building_stat_overrides"], MAP_STATS)
+
+
+class BuildingStatEditorTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.controller, cls.surface = app_harness.boot()
+
+    def setUp(self):
+        directory = self.enterContext(tempfile.TemporaryDirectory())
+        path = Path(directory, "buildings.json")
+        path.write_text(json.dumps(building_library()), encoding="utf-8")
+        self.enterContext(mock.patch.object(c, "BUILDING_DATA_PATH", str(path)))
+
+    def fields(self, screen, name):
+        return {element.entry_key: element for element in screen.elements
+                if getattr(element, "entry_ref", None) is screen.building_values.get(name)}
+
+    def test_use_defaults_locks_fields_and_keeps_saved_player_stats(self):
+        from screens.editors.unit_stats_editor import UnitStatsEditorScreen
+        settings = {"building_stat_overrides": copy.deepcopy(PLAYER_STATS)}
+        screen = UnitStatsEditorScreen(settings=settings, persist=False)
+        screen.select_category("buildings")
+        locked = [element for element in screen.elements if getattr(element, "disabled", False)]
+        self.assertTrue(locked)
+        self.assertFalse(self.fields(screen, "Fixture Factory Lvl 1"))
+        screen.draw(self.surface)
+        with mock.patch("ui.dialogs.show_success"):
+            screen.save_all()
+        self.assertIs(settings["use_default_building_stats"], True)
+        self.assertEqual(settings["building_stat_overrides"], PLAYER_STATS)
+
+    def use_defaults_toggle(self, screen):
+        return next((element for element in screen.elements
+                     if str(getattr(element, "text", "")).startswith("Use Defaults")), None)
+
+    def test_use_defaults_is_a_scrolling_buildings_row_that_locks_only_buildings(self):
+        from screens.editors.unit_stats_editor import UnitStatsEditorScreen
+        screen = UnitStatsEditorScreen(settings={}, persist=False)
+        self.assertIsNone(self.use_defaults_toggle(screen))
+        ranges = [element for element in screen.elements if getattr(element, "entry_ref", None) is not None]
+        self.assertTrue(ranges)
+        self.assertFalse(any(getattr(element, "disabled", False) for element in ranges))
+        screen.select_category("buildings")
+        toggle = self.use_defaults_toggle(screen)
+        self.assertTrue(toggle.is_scrollable)
+        top = toggle.rect.y
+        screen.scroll_y = -10
+        screen.refresh_ui()
+        self.assertEqual(self.use_defaults_toggle(screen).rect.y, top - 10)
+        screen.scroll_y = 0
+        screen.refresh_ui()
+        self.use_defaults_toggle(screen).callback()
+        self.assertFalse(screen.use_defaults)
+        self.assertTrue(self.fields(screen, "Fixture Factory Lvl 1"))
+
+    def test_reset_with_use_defaults_clears_saved_player_building_stats(self):
+        from screens.editors.unit_stats_editor import UnitStatsEditorScreen
+        settings = {"building_stat_overrides": copy.deepcopy(PLAYER_STATS)}
+        screen = UnitStatsEditorScreen(settings=settings, persist=False)
+        with mock.patch("ui.dialogs.ask_yes_no", side_effect=lambda _t, _m, cb: cb(True)),                 mock.patch("ui.dialogs.show_success"):
+            screen.reset_to_defaults()
+        self.assertEqual(settings["building_stat_overrides"], {})
+        self.assertEqual(settings["unit_range_overrides"], {})
+
+    def test_turning_use_defaults_off_saves_edited_building_stats(self):
+        from screens.editors.unit_stats_editor import UnitStatsEditorScreen
+        settings = {}
+        screen = UnitStatsEditorScreen(settings=settings, persist=False)
+        screen.select_category("buildings")
+        screen.toggle_use_defaults()
+        self.fields(screen, "Fixture Factory Lvl 2")["prod_materials"].text = "99"
+        screen.select_category("range")
+        screen.select_category("buildings")
+        self.assertEqual(self.fields(screen, "Fixture Factory Lvl 2")["prod_materials"].text, "99")
+        with mock.patch("ui.dialogs.show_success"):
+            screen.save_all()
+        self.assertIs(settings["use_default_building_stats"], False)
+        self.assertEqual(settings["building_stat_overrides"], {"Fixture Factory Lvl 2": {"prod_materials": 99}})
+
+    def test_invalid_building_stat_blocks_the_whole_save(self):
+        from screens.editors.unit_stats_editor import UnitStatsEditorScreen
+        settings = {"use_default_building_stats": False}
+        screen = UnitStatsEditorScreen(settings=settings, persist=False)
+        screen.select_category("buildings")
+        self.fields(screen, "Fixture Fort Lvl 1")["cost_fuel"].text = "-"
+        with mock.patch("ui.dialogs.show_warning") as warning:
+            screen.save_all()
+        warning.assert_called_once()
+        self.assertEqual(settings, {"use_default_building_stats": False})
+
+    def test_map_editor_factory_stats_edit_only_the_map_defaults(self):
+        from screens.editors.unit_stats_editor import MapFactoryStatsScreen
+        map_screen = mock.Mock()
+        map_screen.scenario_settings = {"building_stat_overrides": PLAYER_STATS}
+        with mock.patch("ui.navigation.modal_screen.host_map_screen", return_value=map_screen):
+            screen = MapFactoryStatsScreen(map_screen)
+        self.assertEqual(list(screen.building_values), ["Fixture Factory Lvl 1", "Fixture Factory Lvl 2"])
+        self.fields(screen, "Fixture Factory Lvl 1")["cost_materials"].text = "150"
+        with mock.patch("screens.editors.unit_stats_editor.rebuild") as rebuild, \
+                mock.patch.object(queries, "save_scenario_settings") as save:
+            screen.save_all()
+        save.assert_not_called()
+        rebuild.assert_called_once_with(map_screen)
+        self.assertEqual(map_screen.scenario_settings, {
+            "building_stat_overrides": PLAYER_STATS,
+            "map_building_stat_overrides": {"Fixture Factory Lvl 1": {"cost_materials": 150}}})
+        with mock.patch("ui.navigation.modal_screen.host_map_screen", return_value=map_screen):
+            screen = MapFactoryStatsScreen(map_screen)
+        with mock.patch("ui.dialogs.ask_yes_no", side_effect=lambda _t, _m, cb: cb(True)), \
+                mock.patch("screens.editors.unit_stats_editor.rebuild"):
+            screen.reset_to_defaults()
+        self.assertEqual(map_screen.scenario_settings["map_building_stat_overrides"], {})
+
+
+if __name__ == "__main__":
+    unittest.main()

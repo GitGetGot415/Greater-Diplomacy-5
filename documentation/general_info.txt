@@ -88,10 +88,12 @@ Input adapters read supported fields and complete missing defaults.
 See data/migrations/MIGRATIONS.md for the input adapters.
 These controls do not change real-time multiplayer or local game modes.
 
-UNIT RANGE SETTINGS
-===================
+UNIT AND BUILDING STAT SETTINGS
+===============================
 
-Select Edit Unit Stats in Scenario Settings.
+Select Edit Unit / Building Stats in Scenario Settings.
+The editor has a Range category and a Buildings category.
+
 The Range category lists bombardment families and aircraft families from the complete unit library.
 Bombardment families appear first. Aircraft families follow. Each group uses alphabetical order.
 A labeled divider separates the two groups.
@@ -104,22 +106,58 @@ Starting ranges must be positive. The increase can be zero.
 The existing mission rules still convert aircraft range into strike, patrol, relocation, and air drop reach.
 See documentation/air_stuff.txt for those rules.
 
+The Buildings category lists every building in the complete building library, in library order.
+Its first row is the Use Defaults toggle, which scrolls with the building rows.
+Labeled dividers separate the building groups.
+Each building has cost fields and income fields for manpower, materials, and fuel.
+Values must be whole numbers of at least zero.
+
+Use Defaults is on by default. While it is on, the building fields are locked and show the building library values.
+New games then use the map's default building stats.
+Turn Use Defaults off to edit the building fields. New games then use the player's building stats instead.
+The player's saved building stats stay in the settings while Use Defaults is on, but they are not used.
+Use Defaults does not affect unit ranges.
+
 Select Save All Changes to apply the draft. Back discards the draft.
-Reset to Defaults restores and saves the library ranges after confirmation.
-The Edit Unit Stats button shows ! when saved ranges differ from defaults.
+Use Defaults is part of the draft.
+Reset to Defaults restores and saves the library ranges and building stats after confirmation.
+The Edit Unit / Building Stats button shows ! when saved ranges differ from defaults,
+or when Use Defaults is off and saved building stats differ from defaults.
 The main Scenario Settings reset keeps these separate editor settings, as it does for construction turns.
 
-Scenario settings store changed fields in unit_range_overrides, keyed by unit family.
-Supported fields are bombard_range, air_range_start, and air_range_per_level.
-data/queries/unit_info.py validates and applies these fields when the map loads.
+Map default building stats
+--------------------------
+
+In the map editor, Economy opens the Starting Economy Editor. Its Factory Stats button edits the map's factory costs and income.
+Factory Stats lists the industry buildings. Save the map to write the values to meta.json.
+Factories that the map does not change use data/json/building_data.json.
+New games on the map use these values while Use Defaults is on.
+
+Stored settings
+---------------
+
+Scenario settings store these fields:
+- use_default_building_stats: the Use Defaults toggle. A missing field means on.
+- unit_range_overrides: the player's changed range fields, keyed by unit family.
+  Supported fields are bombard_range, air_range_start, and air_range_per_level.
+- building_stat_overrides: the player's changed building fields, keyed by building name.
+- map_building_stat_overrides: the map's changed building fields, keyed by building name.
+Building fields are cost_ and prod_ followed by manpower, materials, or fuel.
+
+The map owns map_building_stat_overrides. A new game copies the field from the map's meta.json.
+The player's scenario_settings.json never stores the field.
+Real-time lobby rule changes keep the loaded map's value.
+
+data/queries/unit_info.py validates and applies range fields. data/queries/economy.py validates and applies building fields.
+data/runtime_rules.py applies both when it builds a world's libraries.
 Missing or invalid fields use library defaults. Existing saves retain their own scenario settings.
-Current defaults come from data/json/unit_data.json and the shared bombardment rules.
+Current defaults come from data/json/unit_data.json, data/json/building_data.json, and the shared bombardment rules.
 See data/generators/recipes.py and data/constants.py for source tuning.
 
-Combat, AI, command validation, and previews read the same active unit library.
-Saves and both multiplayer systems retain the host's range settings.
-Only scenario setup can change ranges. Player move files and real-time player commands cannot change them.
-Real-time lobby edits update the server's ranges before it sends new snapshots.
+Combat, AI, production, income, command validation, and previews read the same active libraries.
+Saves and both multiplayer systems retain the host's settings.
+Only scenario setup and the map editor can change these settings. Player move files and real-time player commands cannot change them.
+Real-time lobby edits update the server's libraries before it sends new snapshots.
 These settings apply to all local player modes, AI countries, and map editor units.
 
 CONSTRUCTION TURN SETTINGS

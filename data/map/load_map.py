@@ -208,6 +208,7 @@ def _load_procedural_world(context, load_presentation):
     replace_mapping(world_state, "nation_data", copy.deepcopy(country_io.load_all_country_data()))
     _load_default_images(context, scrub_images=load_presentation)
     context.nation_colors = country_io.nation_colors_from(world_state.nation_data)
+    _apply_map_building_stats(context, None)
     rebuild(context)
 
 
@@ -263,6 +264,17 @@ def _load_map_images(context, load_path, load_presentation):
         world_state.map_w, world_state.map_h = struct.unpack(">II", header[16:24])
 
 
+def _apply_map_building_stats(context, map_settings):
+    """A new game takes the map's default building stats, never those in the player's settings."""
+    if not session_for(context).selection_mode:
+        return
+    settings = world_for(context).scenario_settings
+    settings.pop("map_building_stat_overrides", None)
+    stats = (map_settings or {}).get("map_building_stat_overrides")
+    if stats:
+        settings["map_building_stat_overrides"] = copy.deepcopy(stats)
+
+
 def _apply_saved_scenario_settings(context, save_meta):
     world_state = world_for(context)
     session_state = session_for(context)
@@ -285,8 +297,10 @@ def _apply_saved_scenario_settings(context, save_meta):
             if "force_time_appropriate_research" in save_meta["scenario_settings"]:
                 world_state.scenario_settings["force_time_appropriate_research"] = save_meta["scenario_settings"]["force_time_appropriate_research"]
     elif save_meta and not session_state.selection_mode:
-        # Saves from before scenario settings must not inherit new range preferences.
-        world_state.scenario_settings.pop("unit_range_overrides", None)
+        # Saves from before scenario settings must not inherit new range or building preferences.
+        for key in ("unit_range_overrides", "building_stat_overrides", "map_building_stat_overrides"):
+            world_state.scenario_settings.pop(key, None)
+    _apply_map_building_stats(context, (save_meta or {}).get("scenario_settings"))
 
     # Base maps and older scenarios may not have stored this setting yet. Add
     # the effective default to the live settings so an editor save writes it

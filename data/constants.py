@@ -441,6 +441,9 @@ DEFAULT_AI_DISABLED = get_starting_value("scenario_settings.json", "ai_disabled"
 # --- RESEARCH ---
 DEFAULT_FORCE_TIME_APPROPRIATE_RESEARCH = get_starting_value("scenario_settings.json", "force_time_appropriate_research")
 
+# --- BUILDING STATS ---
+DEFAULT_USE_DEFAULT_BUILDING_STATS = get_starting_value("scenario_settings.json", "use_default_building_stats")
+
 # --- BATTLE ROYALE ---
 BATTLE_ROYALE_MODE = get_starting_value("scenario_settings.json", "battle_royale")
 DEFAULT_BATTLE_ROYALE = get_starting_value("scenario_settings.json", "battle_royale")

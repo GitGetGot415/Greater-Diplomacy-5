@@ -134,6 +134,12 @@ def toggle_scenario_flag(scenario_settings, flag_name, default=False):
     return new_value
 
 
+def uses_default_building_stats(settings):
+    """True when building stats stay at the map's values instead of the player's."""
+    return get_scenario_flag("use_default_building_stats",
+                             c.DEFAULT_USE_DEFAULT_BUILDING_STATS, settings or {})
+
+
 def get_scenario_settings(): 
     return _load_cached_json("scenario_settings")
 
@@ -177,6 +183,7 @@ def save_scenario_settings(data):
     # 2. Strip scenario-specific variables before writing to the global file
     safe_data = data.copy()
     safe_data.pop("base_days_per_turn", None)
+    safe_data.pop("map_building_stat_overrides", None)
     
     # 3. Write only the safe data to the JSON on disk
     try:

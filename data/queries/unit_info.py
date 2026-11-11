@@ -9,6 +9,7 @@ from data.state_access import world_for
 from data import migrations
 from data.migrations import normalize_air_category
 from data.runtime_rules import ActiveLibrary, for_world
+from data.queries.content import uses_default_building_stats
 from data import queries
 
 
@@ -69,10 +70,18 @@ def get_unit_range_overrides(settings, defaults):
 
 
 def scenario_has_unit_stat_customizations(settings):
-    """Report effective range changes for the Unit Stats Editor badge."""
-    if not settings or not settings.get("unit_range_overrides"):
+    """Report effective range and building changes for the Edit Unit / Building Stats badge.
+
+    Use Defaults ignores the player's building stats.
+    """
+    if not settings:
         return False
-    return bool(get_unit_range_overrides(settings, queries.get_unit_range_defaults()))
+    if settings.get("unit_range_overrides") and get_unit_range_overrides(
+            settings, queries.get_unit_range_defaults()):
+        return True
+    raw = settings.get("building_stat_overrides")
+    return bool(raw and not uses_default_building_stats(settings)
+                and queries.get_building_stat_overrides(raw, queries.get_building_stat_defaults()))
 
 
 def apply_unit_range_overrides(unit_library, settings, *, context=None):

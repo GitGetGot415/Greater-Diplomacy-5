@@ -14,7 +14,7 @@ from screens.editors import unit_stats_editor
 # LAYOUT
 # ==========================================
 # General scenario rules use the left column. AI rules use the right panel.
-# The footer opens the unit stats and construction turns editors.
+# The footer opens the unit / building stats and construction turns editors.
 
 
 ROW_H = 50
@@ -217,7 +217,7 @@ class Scenario_Settings(Screen):
         self.elements.extend(self.build_ai_section())
 
         unit_editor_btn = Button(UNIT_EDITOR_X, TURN_EDITOR_ROW_Y, "scenario_setting_button", "purple",
-                                 "Edit Unit Stats", self.open_unit_stats_editor, font_preset="button_small")
+                                 "Edit Unit / Building Stats", self.open_unit_stats_editor, font_preset="button_small")
         if queries.scenario_has_unit_stat_customizations(self.settings):
             unit_editor_btn.notification_text = "!"
 

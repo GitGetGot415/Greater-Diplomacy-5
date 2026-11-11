@@ -1,10 +1,12 @@
 """Resources, costs, production output, administrative actions, and economy projections."""
 
 import data.constants as c
+import json
 import pygame
 import random
 from data.state_access import session_for, world_for
 from map_logic import politics
+from data.queries.content import uses_default_building_stats
 from data.queries.geometry import is_water_province
 from data.queries.unit_info import get_base_item_name, is_naval_unit, units_with_air_cargo
 from data import queries
@@ -444,6 +446,51 @@ def get_building_output_modifiers(research, building_library=None, *, context=No
         multipliers[name] = values
         additions[name] = flat
     return modifiers
+
+
+#: Building costs and outputs that Edit Unit / Building Stats and the map editor change.
+BUILDING_STAT_FIELDS = tuple(f"{kind}_{resource}" for kind in ("cost", "prod") for resource in c.ECON_RESOURCE_KEYS)
+
+
+def get_building_stat_defaults(building_library=None, groups=None):
+    """Read editable costs and outputs in library order. groups limits the building groups."""
+    if building_library is None:
+        # The live library can omit buildings disabled in the previous game.
+        with open(c.BUILDING_DATA_PATH, encoding="utf-8") as handle:
+            building_library = json.load(handle)
+    return {name: {key: stats.get(key, 0) for key in BUILDING_STAT_FIELDS}
+            for name, stats in building_library.items()
+            if groups is None or stats.get("group") in groups}
+
+
+def get_building_stat_overrides(raw, defaults):
+    """Keep valid cost and output changes. Missing or malformed fields use library defaults."""
+    if not isinstance(raw, dict):
+        return {}
+    overrides = {}
+    for name, fields in defaults.items():
+        values = raw.get(name)
+        if not isinstance(values, dict):
+            continue
+        changed = {key: values[key] for key, default in fields.items()
+                   if type(values.get(key)) is int and values[key] >= 0 and values[key] != default}
+        if changed:
+            overrides[name] = changed
+    return overrides
+
+
+def get_active_building_stat_overrides(settings, defaults):
+    """Use Defaults applies the map's building stats. Otherwise the player's building stats apply."""
+    key = ("map_building_stat_overrides" if uses_default_building_stats(settings)
+           else "building_stat_overrides")
+    return get_building_stat_overrides((settings or {}).get(key), defaults)
+
+
+def apply_building_stat_overrides(building_library, settings):
+    """Apply scenario costs and outputs to a freshly loaded building library."""
+    defaults = get_building_stat_defaults(building_library)
+    for name, changed in get_active_building_stat_overrides(settings, defaults).items():
+        building_library[name].update(changed)
 
 
 def get_building_output(building_name, research, building_library=None, *, context=None, multipliers=None, modifiers=None):

@@ -770,8 +770,15 @@ class MapRealtimeDriver(PlayerActions):
     calls the normal turn processor.
     """
     def configure_scenario_settings(self, settings):
-        """Apply host lobby ranges before snapshots or player commands use them."""
+        """Apply host lobby rules before snapshots or player commands use them.
+
+        The map's default building stats stay with the loaded map. Lobby rules cannot replace them.
+        """
+        map_stats = self.world.scenario_settings.get("map_building_stat_overrides")
         self.world.scenario_settings = copy.deepcopy(settings)
+        self.world.scenario_settings.pop("map_building_stat_overrides", None)
+        if map_stats:
+            self.world.scenario_settings["map_building_stat_overrides"] = map_stats
         rebuild(self.context)
 
     def start_game(self, countries: list[str]) -> None:

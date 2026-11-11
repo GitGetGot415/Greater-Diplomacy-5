@@ -25,7 +25,7 @@ AI means artificial intelligence. UI means user interface.
   The name `system32` is intentional.
   Do not rename it during cleanup or refactoring.
   Rename it only when the user explicitly requests a different name.
-- **Keep Edit Construction Turns and Edit Unit Stats as separate screens. Never merge them.**
+- **Keep Edit Construction Turns and Edit Unit / Building Stats as separate screens. Never merge them.**
   These Scenario Settings buttons open `screens/editors/turn_editor.py` and `screens/editors/unit_stats_editor.py`.
 - Do not run tests unless absolutely nessecary.
 - Never reference Git-ignored files or directories in tests.

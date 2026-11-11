@@ -35,6 +35,7 @@ class RuntimeRules:
         buildings = active['building_library']
         tree = active['tech_tree']
         queries.apply_unit_range_overrides(units, settings)
+        queries.apply_building_stat_overrides(buildings, settings)
         for library, key, time_key in (
                 (units, 'unit_turn_overrides', 'production_time'),
                 (buildings, 'building_turn_overrides', 'time')):
