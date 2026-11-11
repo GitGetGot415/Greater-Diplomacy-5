@@ -118,11 +118,13 @@ Friendly tanks do not count.
 The music begins in preview and continues through actual battle without restarting
 at Start. Editing uses normal playlist music. Leaving preview or actual battle,
 including reaching the result view, stops the tactical music and uses normal playlist selection.
-Actual battle, including while paused, plays music at half volume (BATTLE_MUSIC_VOLUME in
-screens/game/custom_battle.py) at the default zoom and closer. Zooming out lowers it in proportion
-to the zoom; for example, zoom 0.5 plays at a quarter. Preview and the result view use full volume.
-Shot sound effects follow the same zoom rule without the halving: full volume at the default zoom
-and closer, half volume at zoom 0.5. Interface sounds such as button clicks are not lowered.
+Actual battle, including while paused, lowers music and battlefield sound effects with separate multipliers.
+Edit `BATTLE_MUSIC_VOLUME` and `BATTLE_SFX_VOLUME` together near the top of
+[screens/game/custom_battle.py](../screens/game/custom_battle.py), then restart the game.
+Each multiplier is a share of the normal volume: `0.0` mutes, `0.5` halves, and `1.0` keeps normal volume.
+The SFX multiplier applies to gunfire, flesh hits, and ricochets. Zooming out reduces music and battlefield
+effects further in proportion to the zoom; zooming closer than the default does not increase either multiplier.
+Preview and the result view use normal music volume. Interface sounds such as button clicks are not lowered.
 See MUSIC PLAYBACK in [general_info.txt](general_info.txt) for selection and persistence.
 
 Preview and actual battle have square gear (Settings) and music (Music) icon buttons. Each opens its screen over the battle,

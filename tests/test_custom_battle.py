@@ -1689,7 +1689,7 @@ class CustomBattleScreenTests(unittest.TestCase):
                     source.shape = shape
                     simulation._fire_shot(source)
                     expected = "heavy_gunshot" if source is simulation.controlled else "rifle_shot_2"
-                    sound.assert_called_once_with(expected, volume_scale=self.screen.zoom_volume_share())
+                    sound.assert_called_once_with(expected, volume_scale=battle_screen.BATTLE_SFX_VOLUME * self.screen.zoom_volume_share())
                     if source is simulation.controlled:
                         choice.assert_not_called()
                     else:
@@ -2584,7 +2584,32 @@ class CustomBattleScreenTests(unittest.TestCase):
             with self.subTest(zoom=self.screen.zoom), patch("ui.widgets.ui_elements.play_ui_sound") as sound:
                 self.screen.simulation._fire_shot(source)
                 self.assertAlmostEqual(sound.call_args.kwargs["volume_scale"],
-                                       min(1.0, self.screen.zoom / default_zoom))
+                                       battle_screen.BATTLE_SFX_VOLUME * min(1.0, self.screen.zoom / default_zoom))
+
+    def test_editable_music_and_sfx_multipliers_apply_independently_at_every_zoom(self):
+        self.fill_armies()
+        self.click("Simulate")
+        self.click("Start")
+        source, target = self.screen.simulation.fighters
+        default_zoom = battle_screen.ZOOM_LEVELS[battle_screen.DEFAULT_ZOOM_INDEX]
+        for music, effects in ((0.3, 0.7), (0.0, 1.0), (1.0, 0.0)):
+            with patch.object(battle_screen, "BATTLE_MUSIC_VOLUME", music), patch.object(
+                    battle_screen, "BATTLE_SFX_VOLUME", effects):
+                for index, zoom in enumerate(battle_screen.ZOOM_LEVELS):
+                    with self.subTest(music=music, effects=effects, zoom=zoom), patch(
+                            "ui.widgets.ui_elements.play_ui_sound") as sound:
+                        self.screen.zoom_index = index
+                        share = min(1.0, zoom / default_zoom)
+                        self.screen.update_battle_music_volume()
+                        self.assertAlmostEqual(self.controller.set_music_volume_scale.call_args.args[0], music * share)
+                        self.screen.simulation._fire_shot(source)
+                        target.shape = "infantry"
+                        self.screen._play_hit_sound(target, 1)
+                        target.shape = "tank"
+                        self.screen._play_hit_sound(target, 0)
+                        self.assertEqual(sound.call_count, 3)
+                        for entry in sound.call_args_list:
+                            self.assertAlmostEqual(entry.kwargs["volume_scale"], effects * share)
 
     def test_music_override_spans_preview_and_actual_and_ends_on_exit_or_result(self):
         music = self.controller.set_tactical_battle_music

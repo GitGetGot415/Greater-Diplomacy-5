@@ -63,9 +63,10 @@ TEAM_COLORS = ((85, 170, 245), (235, 100, 90))
 # Actual battle fills the whole screen. The mouse wheel steps through these scales, starting at 1.0.
 ZOOM_LEVELS = (0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.75, 1.0, 1.25, 1.5, 2.0)
 DEFAULT_ZOOM_INDEX = ZOOM_LEVELS.index(1.0)
-# Actual battle plays music at this share of its volume at the default zoom and closer.
-# Zooming out lowers music and battle sound effects in proportion to the zoom.
+# Battle audio multipliers: 0.0 mutes, 0.5 halves, and 1.0 keeps normal volume.
+# Edit these values and restart the game. Zooming out reduces both further.
 BATTLE_MUSIC_VOLUME = 0.5
+BATTLE_SFX_VOLUME = 0.5
 AIM_CAMERA_OFFSET = 1.0  # Share of the pointer's distance from the view center, in screen pixels.
 OVERVIEW_ZOOM = 0.6
 CONTROLLED_MIN_ZOOM = 1.0 # Minimum zoom while controlling a living unit; choose a value from ZOOM_LEVELS.
@@ -848,6 +849,10 @@ class CustomBattleScreen(Screen):
         """Full volume at the default zoom and closer; zooming out lowers it in proportion to the zoom."""
         return min(1.0, self.zoom / ZOOM_LEVELS[DEFAULT_ZOOM_INDEX])
 
+    def battle_sfx_volume_share(self):
+        """Apply the editable battle SFX multiplier before the shared zoom reduction."""
+        return BATTLE_SFX_VOLUME * self.zoom_volume_share()
+
     def update_battle_music_volume(self):
         """Lower music in actual battle: BATTLE_MUSIC_VOLUME, then quieter the further the view zooms out."""
         if self.controller is not None and self.mode == "battle":
@@ -873,7 +878,7 @@ class CustomBattleScreen(Screen):
             kind = "heavy_gunshot"
         else:
             kind = random.choice(RIFLE_SHOT_SOUNDS)
-        ui_elements.play_ui_sound(kind, volume_scale=self.zoom_volume_share())
+        ui_elements.play_ui_sound(kind, volume_scale=self.battle_sfx_volume_share())
 
     def _play_hit_sound(self, target, damage):
         # The simulation supplies HP actually lost, including the remaining-HP limit.
@@ -883,7 +888,7 @@ class CustomBattleScreen(Screen):
             sounds = RICOCHET_SOUNDS
         else:
             return
-        ui_elements.play_ui_sound(random.choice(sounds), volume_scale=self.zoom_volume_share())
+        ui_elements.play_ui_sound(random.choice(sounds), volume_scale=self.battle_sfx_volume_share())
 
     def start_battle(self):
         if self.mode != "preview" or self.preview_intro_stage is not None:
