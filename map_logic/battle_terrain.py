@@ -39,7 +39,7 @@ TERRAIN_RECIPES = {
     "plains": (0, 0, 0, 0), "desert": (0, 0, 0, 0),
     "hills": (6, 0, 0, 0), "forest": (0, 252, 0, 0),
     "jungle": (0, 660, 0, 3), "mountain": (13, 0, 7, 4),
-    "swamp": (0, 192, 0, 7),
+    "swamp": (0, 192, 0, 35),
 }
 # What the impassable water/gaps of each recipe are. Both stop movement and let shots across.
 GAP_KINDS = {"mountain": "chasm", "jungle": "marsh", "swamp": "marsh"}
