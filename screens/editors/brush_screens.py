@@ -88,6 +88,83 @@ class Convoy_Converter_Screen(EditorOverlayScreen):
         self.draw_list_scrollbar(surface, p.right - 15, p.y + 70, self.list_view_h)
 
 # ==========================================
+# UNIT TRANSFER
+# ==========================================
+
+class Unit_Transfer_Screen(EditorOverlayScreen):
+    """Pick units on one tile, then pick the country that receives them."""
+    scroll_anywhere = True
+    PANEL_BG, PANEL_BORDER, PANEL_BORDER_WIDTH = c.PANEL_THEME_CONFIRM
+    PANEL_STYLE = EDITOR_PANEL_STYLES["convoy_converter"]
+    PANEL_TITLE = "Transfer Units"
+
+    def __init__(self, map_screen, province):
+        super().__init__(map_screen, pygame.Rect(0, 0, 560, c.SCREEN_HEIGHT - 160))
+        self.province = province
+        self.selected = set()
+        self.refresh_ui()
+
+    def toggle(self, idx):
+        if idx in self.selected:
+            self.selected.discard(idx)
+        else:
+            self.selected.add(idx)
+        self.refresh_ui()
+
+    def refresh_ui(self):
+        p = self.panel_rect
+        confirm = Button(self.centered_x("medium"), p.bottom - 55, "medium", "green",
+                         "Confirm Units", self.pick_country)
+        confirm.disabled = not self.selected
+        self.elements = [make_back_button(self.exit_screen, style="map"), confirm]
+
+        units = self.province.get("units", [])
+        nation_data = self.map_screen.nation_data
+        row_top = p.y + 70
+        view_h = p.height - 140
+        row_x = p.x + 20
+        row_w = p.width - 40
+        cull_top, cull_bottom = p.y + 60, p.bottom - 70
+        self.scroll_content_rect = pygame.Rect(p.x, cull_top, p.width, cull_bottom - cull_top)
+        for i, y in self.layout_list_rows(len(units), 40, row_top, view_h=view_h,
+                                          cull_top=cull_top, cull_bottom=cull_bottom):
+            unit = units[i]
+            name = queries.get_unit_display_name(unit.get("type", "Unknown"), context=self.map_screen)
+            owner = queries.get_country_display_name(unit.get("owner", "Unclaimed"), nation_data)
+            checked = i in self.selected
+            label = checkbox_label(f"{name} ({owner})", checked)
+            btn = Button(row_x, y, "list_row", toggle_color(checked), label, lambda ii=i: self.toggle(ii))
+            btn.rect.width = row_w
+            self.add_list_row(btn)
+
+        self.list_view_h = view_h
+
+    def pick_country(self):
+        if not self.selected:
+            return
+        units = self.province.get("units", [])
+        chosen = [units[i] for i in sorted(self.selected)]
+
+        def picked(country_id):
+            try:
+                queries.transfer_editor_units(self.map_screen, chosen, country_id)
+            except ValueError as error:
+                dialogs.show_error("Transfer Units", str(error))
+                return
+            name = queries.get_country_display_name(country_id, self.map_screen.nation_data)
+            noun = "unit" if len(chosen) == 1 else "units"
+            self.map_screen.show_feedback(f"Transferred {len(chosen)} {noun} to {name}")
+            self.done = True
+
+        pickers.open_listbox_selector(self.map_screen, "Transfer Units", "Choose the new owner:",
+                                      queries.editor_unit_owner_choices(self.map_screen), picked)
+
+    def draw_content(self, surface):
+        p = self.panel_rect
+        self.draw_panel(surface)
+        self.draw_list_scrollbar(surface, p.right - 15, p.y + 70, self.list_view_h)
+
+# ==========================================
 # RESOURCE BRUSH
 # ==========================================
 
@@ -250,7 +327,8 @@ class Clear_Map_Screen(EditorOverlayScreen):
 
     OPTIONS = [
         "all units", "all buildings", "all resources",
-        "all units from (x) country", "all buildings on (x) countries territory",
+        "all units from (x) country", "all units from (x) country outside its land",
+        "all buildings on (x) countries territory",
         "all resources on (x) countries territory", "all (x) units", "all (x) resources",
         "all (x) units from country (x)", "all (x) resources on (x) countries territory",
     ]
@@ -264,14 +342,15 @@ class Clear_Map_Screen(EditorOverlayScreen):
         self.selected_unit_type = ""
         self.selected_resource_type = ""
 
+        # Unit owners are included so a country with units but no land can still be picked.
         existing_owners = {p.get("owner") for p in map_screen.map_data.values()}
-        self.available_countries = sorted(n for n in existing_owners if n and n not in ["Unclaimed", "The Rot"])
-
         existing_unit_types = set()
         for prov in map_screen.map_data.values():
             for unit in prov.get("units", []):
+                existing_owners.add(unit.get("owner"))
                 if "type" in unit:
                     existing_unit_types.add(unit["type"])
+        self.available_countries = sorted(n for n in existing_owners if n and n not in ["Unclaimed", "The Rot"])
         self.available_unit_types = sorted(existing_unit_types)
 
         self.refresh_ui()
@@ -364,6 +443,10 @@ class Clear_Map_Screen(EditorOverlayScreen):
                             prov_data["units"] = [u for u in prov_data.get("units", []) if u.get("owner") != c_val]
                         else:
                             prov_data["units"] = []
+                    elif opt == "all units from (x) country outside its land":
+                        # Water tiles have no country owner, so ships at sea are kept.
+                        if owner != c_val and owner not in c.WATER_NATIONS:
+                            prov_data["units"] = [u for u in prov_data.get("units", []) if u.get("owner") != c_val]
                     elif opt == "all (x) units":
                         prov_data["units"] = [u for u in prov_data.get("units", []) if u.get("type") != u_val]
                     elif opt == "all (x) units from country (x)":

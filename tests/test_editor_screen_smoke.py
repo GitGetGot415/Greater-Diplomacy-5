@@ -117,6 +117,10 @@ class EditorScreenSmokeTests(unittest.TestCase):
         from screens import editors as editor_screens
         self.exercise(editor_screens.Convoy_Converter_Screen(self.map, self.map.selected_province))
 
+    def test_unit_transfer(self):
+        from screens import editors as editor_screens
+        self.exercise(editor_screens.Unit_Transfer_Screen(self.map, self.map.selected_province))
+
     def test_personality_edit(self):
         """Takes a country as well as the map, unlike its siblings."""
         from screens import editors as editor_screens

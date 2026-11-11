@@ -8,7 +8,7 @@ from unittest import mock
 from data import queries
 from map_logic.diplomacy import faction_records, volunteers
 from screens.editors import menus
-from screens.editors.brush_screens import Bulk_Edit_Screen
+from screens.editors.brush_screens import Bulk_Edit_Screen, Clear_Map_Screen, Unit_Transfer_Screen
 from tests.stub_map_screen import map_double
 
 
@@ -338,6 +338,83 @@ class BulkEditorCallbackTests(unittest.TestCase):
         action.assert_not_called()
         ask.call_args.args[2](True)
         action.assert_called_once_with()
+
+
+class EditorUnitTransferTests(unittest.TestCase):
+    def transfer_fixture(self):
+        game = editor()
+        cargo = {"unit_id": "cargo", "type": "Early", "owner": "A", "order": {"type": "MOVE", "path": [2]}}
+        moved = {"unit_id": "moved", "type": "Early", "owner": "A", "order": {"type": "MOVE", "path": [2]},
+                 "air_cargo": [cargo]}
+        kept = {"unit_id": "kept", "type": "Early", "owner": "A", "order": {"type": "MOVE", "path": [2]}}
+        game.map_data["a"]["units"] = [moved, kept]
+        game.nation_data["A"]["armies"] = [{"id": "army", "name": "First", "unit_ids": ["moved", "kept"]}]
+        return game, moved, kept, cargo
+
+    def test_transfer_changes_owner_with_cargo_clears_orders_and_rosters(self):
+        game, moved, kept, cargo = self.transfer_fixture()
+        queries.transfer_editor_units(game, [moved], "B")
+        self.assertEqual((moved["owner"], cargo["owner"], kept["owner"]), ("B", "B", "A"))
+        self.assertEqual(moved["order"], {})
+        self.assertEqual(kept["order"], {"type": "MOVE", "path": [2]})
+        self.assertEqual(game.nation_data["A"]["armies"][0]["unit_ids"], ["kept"])
+        game.queue_editor_visual_refresh.assert_called_once_with()
+
+    def test_transfer_rejects_missing_and_unplayable_countries(self):
+        for country_id in ("Missing", "Unclaimed"):
+            with self.subTest(country=country_id):
+                game, moved, _kept, _cargo = self.transfer_fixture()
+                game.nation_data.setdefault("Unclaimed", {})
+                with self.assertRaises(ValueError):
+                    queries.transfer_editor_units(game, [moved], country_id)
+                self.assertEqual(moved["owner"], "A")
+
+    def test_owner_choices_return_only_playable_country_ids(self):
+        game = editor()
+        game.nation_data["Unclaimed"] = {}
+        self.assertEqual({value for _label, value in queries.editor_unit_owner_choices(game)}, {"A", "B"})
+
+    def test_screen_transfers_only_selected_units_after_country_pick(self):
+        game, moved, kept, _cargo = self.transfer_fixture()
+        screen = object.__new__(Unit_Transfer_Screen)
+        screen.map_screen, screen.province, screen.done = game, game.map_data["a"], False
+        screen.selected = {0}
+        with mock.patch("screens.editors.brush_screens.pickers.open_listbox_selector") as picker:
+            screen.pick_country()
+        self.assertEqual(moved["owner"], "A")
+        picker.call_args.args[4]("B")
+        self.assertEqual((moved["owner"], kept["owner"]), ("B", "A"))
+        self.assertTrue(screen.done)
+
+    def test_screen_without_selection_does_not_open_country_picker(self):
+        game, *_ = self.transfer_fixture()
+        screen = object.__new__(Unit_Transfer_Screen)
+        screen.map_screen, screen.province, screen.selected = game, game.map_data["a"], set()
+        with mock.patch("screens.editors.brush_screens.pickers.open_listbox_selector") as picker:
+            screen.pick_country()
+        picker.assert_not_called()
+
+
+class ClearUnitsOutsideLandTests(unittest.TestCase):
+    def test_clears_country_units_only_on_other_land(self):
+        game = editor()
+        game.map_data["sea"] = {"id": 4, "owner": "Ocean", "units": []}
+        home, abroad, other, ship = ({"owner": "A", "type": "home"}, {"owner": "A", "type": "abroad"},
+                                     {"owner": "B", "type": "other"}, {"owner": "A", "type": "ship"})
+        game.map_data["a"]["units"] = [home]
+        game.map_data["b"]["units"] = [abroad, other]
+        game.map_data["sea"]["units"] = [ship]
+        screen = object.__new__(Clear_Map_Screen)
+        screen.map_screen, screen.done = game, False
+        screen.selected_option = "all units from (x) country outside its land"
+        screen.selected_country = "A"
+        screen.selected_unit_type = screen.selected_resource_type = ""
+        with mock.patch("ui.dialogs.ask_yes_no") as ask:
+            screen.confirm_clear()
+        ask.call_args.args[2](True)
+        self.assertEqual(game.map_data["a"]["units"], [home])
+        self.assertEqual(game.map_data["b"]["units"], [other])
+        self.assertEqual(game.map_data["sea"]["units"], [ship])
 
 
 if __name__ == "__main__":

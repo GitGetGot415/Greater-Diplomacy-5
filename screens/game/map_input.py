@@ -15,7 +15,7 @@ from ui.bars import flag_renderer, ui_bars
 from ui.panels import sidebar_info, diplomatic_popups, llm_threads_panel, turn_progress
 from ui.information import tooltip
 from map_logic.ai import ai_handler
-from screens.editors.menus import open_convoy_converter
+from screens.editors.menus import open_convoy_converter, open_unit_transfer
 from screens.game import country_summary
 
 
@@ -671,6 +671,9 @@ def _place_unit_with_brush(map_screen, province):
         return False
     if map_screen.brush_unit == "Convoy":
         open_convoy_converter(map_screen, province)
+        return False
+    if map_screen.brush_unit == "Transfer":
+        open_unit_transfer(map_screen, province)
         return False
     if map_screen.brush_unit == "----------":
         return False

@@ -350,7 +350,7 @@ def open_map_research_editor(map_screen):
 
 def select_unit_brush(map_screen):
     """Opens a selection window for unit types and sets mode to UNIT."""
-    items = ["None", "Convoy", "----------"] + queries.unit_picker_items(
+    items = ["None", "Convoy", "Transfer", "----------"] + queries.unit_picker_items(
         queries.get_unit_library(map_screen), context=map_screen)
     _select_brush(map_screen, "UNIT", "brush_unit", items,
                   "Select Unit", "Select Unit to Place:")
@@ -363,6 +363,14 @@ def open_convoy_converter(map_screen, province):
         return
 
     _launch_editor_screen(map_screen, "Convoy_Converter_Screen", province)
+
+def open_unit_transfer(map_screen, province):
+    """Opens a native screen to give selected units on a tile to another country."""
+    if not province.get("units"):
+        map_screen.show_feedback("No units on tile to transfer!")
+        return
+
+    _launch_editor_screen(map_screen, "Unit_Transfer_Screen", province)
 
 def select_resource_brush(map_screen):
     """Opens a native screen for picking a resource type and amount to paint."""

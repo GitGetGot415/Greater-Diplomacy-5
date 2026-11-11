@@ -226,6 +226,31 @@ def set_editor_units(context, mode, value):
     return len(changes), skipped
 
 
+def editor_unit_owner_choices(context):
+    """Return (label, ID) picker rows for every country that can own placed units."""
+    nation_data = world_for(context).nation_data
+    country_ids = sorted((country_id for country_id in nation_data
+                          if country_id not in c.UNPLAYABLE_NATIONS),
+                         key=lambda country_id: queries.get_country_display_name(
+                             country_id, nation_data).lower())
+    return queries.country_picker_items(country_ids, nation_data)
+
+
+def transfer_editor_units(context, units, country_id):
+    """Give placed units and their air cargo to another country.
+
+    Orders are cleared because the previous owner planned them.
+    """
+    world_state = world_for(context)
+    if country_id not in world_state.nation_data or country_id in c.UNPLAYABLE_NATIONS:
+        raise ValueError("Select a country that can own units.")
+    for unit in units:
+        queries.set_unit_owner(unit, country_id)
+        unit["order"] = {}
+    queries.normalize_armies(world_state.nation_data, world_state.map_data)
+    context.queue_editor_visual_refresh()
+
+
 def reset_editor_diplomacy(context):
     """Clear live diplomatic setup. Preserve territory, cores, and historical messages."""
     if not can_bulk_edit_map(context):
