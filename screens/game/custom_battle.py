@@ -926,7 +926,8 @@ class CustomBattleScreen(Screen):
         panel.set_clip(content)
         actor_width = KILL_FEED_ACTOR_WIDTH
         font = fonts.get("tiny")
-        first = -self.kill_feed_scroll // KILL_FEED_ROW_HEIGHT
+        # Scrollbar positions can be fractional; deque slicing needs an integer row index.
+        first = math.floor(-self.kill_feed_scroll / KILL_FEED_ROW_HEIGHT)
         visible = islice(self.kill_feed, first, first + KILL_FEED_VISIBLE_ROWS + 1)
         for row, (killer, victim, kind) in enumerate(visible, first):
             top = KILL_FEED_INSET + row * KILL_FEED_ROW_HEIGHT + self.kill_feed_scroll

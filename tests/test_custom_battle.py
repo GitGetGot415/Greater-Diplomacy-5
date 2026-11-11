@@ -1762,6 +1762,46 @@ class CustomBattleScreenTests(unittest.TestCase):
             screen.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=1)])
         self.assertEqual(screen.zoom_index, zoom + 1)
 
+    def test_kill_feed_scrollbar_handle_can_drag_between_rows_in_battle_and_results(self):
+        self.fill_armies()
+        self.screen.controlled_index = 0
+        self.click("Simulate")
+        self.click("Start")
+        screen = self.screen
+        source, target = screen.simulation.fighters
+        for _ in range(battle_screen.KILL_FEED_VISIBLE_ROWS + 4):
+            screen._record_kill(source, target, "shot")
+        zoom, camera = screen.zoom_index, list(screen.camera)
+        for mode in ("battle", "result"):
+            with self.subTest(mode=mode):
+                screen.mode = mode
+                screen.simulation.winner = 0 if mode == "result" else None
+                screen.kill_feed_scroll = 0
+                screen._refresh_kill_feed()
+                screen.refresh_ui()
+                handle, track = screen.kill_feed_handle.copy(), screen.kill_feed_track.copy()
+                point = (track.centerx, track.centery + 1)
+                screen.handle_events([
+                    pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=handle.center),
+                    pygame.event.Event(pygame.MOUSEMOTION, pos=point,
+                                       rel=(0, point[1] - handle.centery), buttons=(1, 0, 0))])
+                self.assertLess(screen.kill_feed_scroll, 0)
+                self.assertGreater(screen.kill_feed_scroll, screen.kill_feed_limit)
+                # A kill arriving mid-drag must also render from the scrollbar's offset.
+                screen._record_kill(source, target, "ram")
+                bottom = (track.centerx, track.bottom + 20)
+                screen.handle_events([
+                    pygame.event.Event(pygame.MOUSEMOTION, pos=bottom,
+                                       rel=(0, bottom[1] - point[1]), buttons=(1, 0, 0)),
+                    pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=bottom)])
+                self.assertEqual(screen.kill_feed_scroll, screen.kill_feed_limit)
+                self.assertFalse(screen.kill_feed_dragging)
+                self.assertFalse(screen.is_content_dragging("kill_feed_scroll"))
+                self.assertFalse(screen.firing)
+                self.assertIsNone(screen.pan_drag)
+                self.assertEqual(screen.zoom_index, zoom)
+                self.assertEqual(screen.camera, camera)
+
     def test_regular_firing_uses_all_three_rifle_variants_on_both_sides(self):
         self.fill_armies()
         self.click("Simulate")
