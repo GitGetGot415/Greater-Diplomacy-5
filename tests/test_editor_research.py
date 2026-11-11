@@ -162,7 +162,7 @@ class LevelRequirementTests(unittest.TestCase):
         tree = {"basic_factory": {"max_lvl": 1}, "other": {
             "max_lvl": 3, "level_reqs": {"2": {"basic_factory": 1}}}}
         runtime = RuntimeRules()
-        runtime.rebuild({"building_disabled": ["Basic Factory"]}, {
+        runtime.rebuild({"building_disabled": ["Basic Factory"], "use_default_buildings": False}, {
             "unit_library": {}, "building_library": {"Basic Factory": {}}, "tech_tree": tree})
         active = runtime.libraries["tech_tree"]
         self.assertNotIn("basic_factory", active)

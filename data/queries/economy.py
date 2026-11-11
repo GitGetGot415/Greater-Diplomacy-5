@@ -6,7 +6,7 @@ import pygame
 import random
 from data.state_access import session_for, world_for
 from map_logic import politics
-from data.queries.content import uses_default_building_stats
+from data.queries.content import get_category_setting
 from data.queries.geometry import is_water_province
 from data.queries.unit_info import (base_item_name_from_text, get_base_item_name, is_naval_unit,
                                    units_with_air_cargo)
@@ -111,7 +111,7 @@ def get_administrative_library():
 def get_administrative_turns(order_type, scenario_settings=None):
     name, constant = ADMINISTRATIVE_ACTIONS[order_type]
     default = getattr(c, constant)
-    raw = (scenario_settings or {}).get("administrative_turn_overrides", {}).get(name, default)
+    raw = get_category_setting(scenario_settings, "administrative_turn_overrides", {}).get(name, default)
     try:
         return max(1, int(raw))
     except (TypeError, ValueError):
@@ -127,7 +127,7 @@ CONVERSION_ACTIONS = {
 def get_conversion_turns(action, scenario_settings=None):
     """Read a scenario timer within the editor's limits. Older saves use defaults."""
     name, constant = CONVERSION_ACTIONS[action]
-    overrides = (scenario_settings or {}).get("conversion_turn_overrides", {})
+    overrides = get_category_setting(scenario_settings, "conversion_turn_overrides", {})
     raw = overrides.get(name) if isinstance(overrides, dict) else None
     # Settings can come from older saves or manually edited scenario files.
     if type(raw) is not int:
@@ -160,7 +160,7 @@ def is_administrative_action_enabled(order_type, scenario_settings=None):
     name, _constant = ADMINISTRATIVE_ACTIONS[order_type]
     default = c.DISABLE_CORES if scenario_settings is None else c.DEFAULT_DISABLE_CORES
     return (not queries.get_scenario_flag("disable_cores", default, settings)
-            and name not in settings.get("administrative_disabled", []))
+            and name not in get_category_setting(settings, "administrative_disabled", []))
 
 
 def nation_has_any_core(nation, map_data):
@@ -515,21 +515,15 @@ def get_building_stat_overrides(raw, defaults):
     return overrides
 
 
-def get_active_building_stat_overrides(settings, defaults):
-    """Use Defaults applies the map's building stats. Otherwise the player's building stats apply."""
-    key = ("map_building_stat_overrides" if uses_default_building_stats(settings)
-           else "building_stat_overrides")
-    return get_building_stat_overrides((settings or {}).get(key), defaults)
-
-
 def apply_building_stat_overrides(building_library, settings):
     """Apply scenario costs and outputs to a freshly loaded building library.
 
+    `settings` holds the values that apply. See queries.effective_scenario_settings.
     A changed field uses value = level 1 value + (level - 1) x increase for every level of the family.
     Unchanged fields keep their library values.
     """
     defaults = get_building_stat_defaults(building_library)
-    overrides = get_active_building_stat_overrides(settings, defaults)
+    overrides = get_building_stat_overrides((settings or {}).get("building_stat_overrides"), defaults)
     for name, stats in building_library.items():
         family = base_item_name_from_text(name)
         changed = overrides.get(family)

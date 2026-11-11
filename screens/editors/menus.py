@@ -116,7 +116,7 @@ def prepare_editor_save(context, on_ready):
                                           title="Save Scenario", directory=True, allow_copy=True)
 
 
-def _select_brush(map_screen, mode, attr, items, title, prompt, feedback_label="Brush"):
+def _select_brush(map_screen, mode, attr, items, title, prompt, feedback_label="Brush", is_enabled=None):
     """Opens a listbox, stores the pick on `attr` and arms the matching editor mode."""
     def cb(val):
         setattr(map_screen, attr, val)
@@ -126,7 +126,7 @@ def _select_brush(map_screen, mode, attr, items, title, prompt, feedback_label="
         if mode == "UNIT":
             display = queries.get_unit_display_name(val, context=map_screen)
         map_screen.show_feedback(f"{feedback_label}: {display}")
-    pickers.open_listbox_selector(map_screen, title, prompt, items, cb)
+    pickers.open_listbox_selector(map_screen, title, prompt, items, cb, is_enabled=is_enabled)
 
 def _paintable_nations(map_screen):
     """The nation list every nation-painting brush offers, sorted accent-insensitively."""
@@ -349,11 +349,18 @@ def open_map_research_editor(map_screen):
     _launch_editor_screen(map_screen, "Research_List_Screen", needs_countries=True)
 
 def select_unit_brush(map_screen):
-    """Opens a selection window for unit types and sets mode to UNIT."""
+    """Opens a selection window for unit types and sets mode to UNIT.
+
+    Units of families that the map's defaults disable stay in the list, disabled.
+    """
+    # The default library lists every unit. The map's active library omits disabled families.
+    complete_library = queries.get_unit_library()
+    active_library = queries.get_unit_library(map_screen)
     items = ["None", "Convoy", "Transfer", "----------"] + queries.unit_picker_items(
-        queries.get_unit_library(map_screen), context=map_screen)
+        complete_library, complete_library, context=map_screen)
     _select_brush(map_screen, "UNIT", "brush_unit", items,
-                  "Select Unit", "Select Unit to Place:")
+                  "Select Unit", "Select Unit to Place:",
+                  is_enabled=lambda item: not isinstance(item, tuple) or item[1] in active_library)
 
 def open_convoy_converter(map_screen, province):
     """Opens a native screen to select which units on a tile should be converted to convoys/trucks."""

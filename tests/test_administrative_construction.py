@@ -14,7 +14,8 @@ from tests.stub_map_screen import map_double, sample_map_screen
 
 class AdministrativeConstructionTests(unittest.TestCase):
     def setUp(self):
-        self.settings = {"administrative_turn_overrides": {}, "administrative_disabled": []}
+        # The Other category applies the player's values while its Use Defaults is off.
+        self.settings = {"administrative_turn_overrides": {}, "administrative_disabled": [], "use_default_other": False}
         self.province = {"id": 1, "json_key": "home", "owner": "A", "cores": ["B"],
                          "is_coastal": True, "building_queue": [], "units": []}
         self.world = map_double(scenario_settings=self.settings,

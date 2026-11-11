@@ -682,7 +682,12 @@ def _place_unit_with_brush(map_screen, province):
     if owner in c.UNPLAYABLE_NATIONS:
         map_screen.show_feedback("Cannot place units in unowned territory!")
         return False
-    new_unit = queries.create_unit_dict(map_screen.brush_unit, owner, queries.get_unit_library(map_screen))
+    unit_library = queries.get_unit_library(map_screen)
+    # The map's defaults can disable the brush's family after it was picked.
+    if map_screen.brush_unit not in unit_library:
+        map_screen.show_feedback("This unit's family is disabled in the map's defaults.")
+        return False
+    new_unit = queries.create_unit_dict(map_screen.brush_unit, owner, unit_library)
     if queries.is_air_unit(new_unit, context=map_screen) and queries.is_water_province(province):
         map_screen.show_feedback("Aircraft need a land base.")
         return False

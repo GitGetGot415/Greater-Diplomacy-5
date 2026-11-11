@@ -2,7 +2,8 @@
 
 Construction turns, enabled families, unit ranges, and building stats share one Save All Changes.
 Default turn rows store no override. Conversions use whole-turn sliders and remain enabled.
-The map editor reuses the building rows to edit a map's default building stats.
+In Scenario Settings, each category has a Use Defaults row. While it is on, the category uses the map's defaults.
+The map editor uses the same categories to edit the map's defaults.
 """
 import json
 
@@ -23,8 +24,15 @@ from ui.widgets.ui_elements import (Button, Slider, TextField, make_back_button,
 from ui.navigation import screen_runner
 
 
-#: Marks the Use Defaults row at the top of the Buildings category.
+#: Marks the Use Defaults row at the top of each category.
 USE_DEFAULTS_ROW = "use_defaults"
+
+#: The category that owns each construction turn group, and so its Use Defaults row.
+TURN_GROUP_CATEGORIES = {"unit": "units", "building": "buildings",
+                         "administrative": "other", "conversion": "other"}
+
+#: The most provinces that the warning for disabling a unit family lists by name.
+MAX_WARNING_PROVINCES = 10
 
 #: Building row kinds: level 1 values, then the increase for each later level.
 LEVEL_ONE_ROW, PER_LEVEL_ROW = "level_one", "per_level"
@@ -116,29 +124,28 @@ class UnitStatsEditorScreen(ModalScreen):
     ROW_LABEL_INSET = 8
     DIVIDER_LABEL_GAP = 12
 
-    #: (key, tab label) for each category, in tab order.
+    #: (key, tab label) for each category, in tab order. The keys match queries.EDITOR_CATEGORY_SETTINGS.
     CATEGORIES = (("units", "Units"), ("buildings", "Buildings"), ("range", "Range"), ("other", "Other"))
-    #: The scenario settings key that holds the edited building stats.
-    BUILDING_SETTING = "building_stat_overrides"
-    #: Show Use Defaults as the first Buildings row.
+    #: Show a Use Defaults row at the top of each category.
     HAS_USE_DEFAULTS = True
-    #: Edit construction turns, enabled families, and unit ranges.
-    HAS_SCENARIO_RULES = True
     RESET_MESSAGE = "Reset everything in this editor to defaults for this scenario?"
 
     def __init__(self, settings=None, persist=True, game_state=None):
         super().__init__(game_state, self.TITLE)
         self.target_settings = settings if settings is not None else queries.get_scenario_settings()
         self.persist = persist
-        self.use_defaults = self.HAS_USE_DEFAULTS and queries.uses_default_building_stats(self.target_settings)
+        self.use_defaults = {key: self.HAS_USE_DEFAULTS and queries.uses_map_defaults(self.target_settings, key)
+                             for key, _label in self.CATEGORIES}
         self.rows = {}
         building_library = _read_library(c.BUILDING_DATA_PATH)
-        if self.HAS_SCENARIO_RULES:
-            unit_library = _read_library(c.UNIT_DATA_PATH)
-            self.icons = symbol_loader.get_family_symbols(unit_library, self.ROW_ICON_SIZE)
-            self._load_ranges(unit_library)
-            self._load_turns(unit_library, building_library)
+        unit_library = _read_library(c.UNIT_DATA_PATH)
+        self.icons = symbol_loader.get_family_symbols(unit_library, self.ROW_ICON_SIZE)
+        self._load_ranges(unit_library)
+        self._load_turns(unit_library, building_library)
         self._load_buildings(building_library)
+        if self.HAS_USE_DEFAULTS:
+            for rows in self.rows.values():
+                rows.insert(0, (USE_DEFAULTS_ROW, None))
         self.active_category = self.CATEGORIES[0][0]
         self.list_top = self.panel_rect.y + self.LIST_TOP_OFF
         self.list_view_h = self.panel_rect.bottom - 66 - self.list_top
@@ -206,7 +213,7 @@ class UnitStatsEditorScreen(ModalScreen):
         self.building_defaults = queries.get_building_stat_defaults(building_library)
         self.building_icons = symbol_loader.get_family_symbols(building_library, self.ROW_ICON_SIZE)
         overrides = queries.get_building_stat_overrides(
-            (self.target_settings or {}).get(self.BUILDING_SETTING), self.building_defaults)
+            (self.target_settings or {}).get("building_stat_overrides"), self.building_defaults)
         self.building_values = {
             family: {key: _number_text(overrides.get(family, {}).get(key, default))
                      for key, default in fields.items()}
@@ -214,7 +221,7 @@ class UnitStatsEditorScreen(ModalScreen):
         }
         groups = {queries.base_item_name_from_text(name): stats.get("group")
                   for name, stats in building_library.items()}
-        rows = [(USE_DEFAULTS_ROW, None)] if self.HAS_USE_DEFAULTS else []
+        rows = []
         group = None
         for index, (family, fields) in enumerate(self.building_defaults.items()):
             # A labeled divider starts each group, including the first.
@@ -233,9 +240,9 @@ class UnitStatsEditorScreen(ModalScreen):
     #                               EDITING                              #
     # ------------------------------------------------------------------ #
 
-    def toggle_use_defaults(self):
+    def toggle_use_defaults(self, category):
         self.sync_entries()
-        self.use_defaults = not self.use_defaults
+        self.use_defaults[category] = not self.use_defaults[category]
         self.refresh_ui()
 
     def toggle_disabled(self, group, name):
@@ -290,9 +297,14 @@ class UnitStatsEditorScreen(ModalScreen):
         return queries.get_building_stat_overrides(draft, self.building_defaults)
 
     def _read_turns(self):
-        """Return the construction settings. Turn text that is not a whole number keeps the default."""
+        """Return the construction settings of unlocked categories.
+
+        Turn text that is not a whole number keeps the default.
+        """
         changes = {}
         for key, tab in self.turn_tabs.items():
+            if self.use_defaults[TURN_GROUP_CATEGORIES[key]]:
+                continue
             overrides = {}
             for name in tab["names"]:
                 try:
@@ -317,22 +329,21 @@ class UnitStatsEditorScreen(ModalScreen):
         """Write the draft of every category. Return False when an invalid value blocks the save."""
         self.sync_entries()
         changes = {}
-        if self.HAS_SCENARIO_RULES:
+        if self.HAS_USE_DEFAULTS:
+            changes.update({queries.USE_MAP_DEFAULTS_KEYS[key]: value for key, value in self.use_defaults.items()})
+        # Use Defaults keeps the player's saved values of its category unchanged and unused.
+        if not self.use_defaults["range"]:
             ranges = self._read_ranges()
             if ranges is None:
                 return False
             changes["unit_range_overrides"] = ranges
-        if self.HAS_USE_DEFAULTS:
-            changes["use_default_building_stats"] = self.use_defaults
-        # Use Defaults keeps the player's saved building stats unchanged and unused.
-        if not self.use_defaults:
+        if not self.use_defaults["buildings"]:
             buildings = self._read_building_stats()
             if buildings is None:
                 return False
-            changes[self.BUILDING_SETTING] = buildings
+            changes["building_stat_overrides"] = buildings
         # Turn text cannot block a save, so a rejected range or stat leaves the turns unsaved too.
-        if self.HAS_SCENARIO_RULES:
-            changes.update(self._read_turns())
+        changes.update(self._read_turns())
         if self.target_settings is not None:
             self.target_settings.update(changes)
         if self.persist:
@@ -347,19 +358,22 @@ class UnitStatsEditorScreen(ModalScreen):
         def on_confirm(ok):
             if not ok:
                 return
-            if self.HAS_SCENARIO_RULES:
-                self.values = {family: {key: f"{value:g}" for key, value in fields.items()}
-                               for family, fields in self.defaults.items()}
-                for tab in self.turn_tabs.values():
-                    tab["disabled_set"].clear()
-                    tab["values"] = {name: str(default) for name, default in tab["defaults"].items()}
+            self.values = {family: {key: f"{value:g}" for key, value in fields.items()}
+                           for family, fields in self.defaults.items()}
+            for tab in self.turn_tabs.values():
+                tab["disabled_set"].clear()
+                tab["values"] = {name: str(default) for name, default in tab["defaults"].items()}
             self.building_values = {family: {key: _number_text(value) for key, value in fields.items()}
                                     for family, fields in self.building_defaults.items()}
             # Remove fields before saving so old text cannot replace reset values.
             self.elements = []
-            if self.use_defaults and self.target_settings is not None:
-                # save_all skips locked building fields, so clear the saved values here.
-                self.target_settings[self.BUILDING_SETTING] = {}
+            if self.HAS_USE_DEFAULTS:
+                self.use_defaults = {key: queries.uses_map_defaults({}, key) for key in self.use_defaults}
+            if self.target_settings is not None:
+                # _save skips locked categories, so clear their saved values here.
+                for keys in queries.EDITOR_CATEGORY_SETTINGS.values():
+                    for key in keys:
+                        self.target_settings.pop(key, None)
             # Stay in the editor and show the reset values.
             if self._save():
                 self.refresh_ui()
@@ -411,6 +425,7 @@ class UnitStatsEditorScreen(ModalScreen):
             self.elements.append(tab)
 
         category = self.active_category
+        locked = self.use_defaults[category]
         rows = self.rows[category]
         row_height = self.ROW_HEIGHT
         self.scroll_content_rect = pygame.Rect(
@@ -427,26 +442,32 @@ class UnitStatsEditorScreen(ModalScreen):
                 toggle_h = c.SIZES["scenario_setting_button"][1]
                 self.add_list_row(make_toggle_button(
                     p.x + self.PAD + self.ROW_LABEL_INSET, y + (row_height - toggle_h) // 2,
-                    "scenario_setting_button", "Use Defaults", self.use_defaults,
-                    self.toggle_use_defaults, font_preset="button_small"))
+                    "scenario_setting_button", "Use Defaults", locked,
+                    lambda k=category: self.toggle_use_defaults(k), font_preset="button_small"))
                 continue
             if category == "range":
                 field_y = y + self.RANGE_FIELD_Y_OFF
                 self._add_field(self.values[name], self.defaults[name], key,
-                                p.right - self.START_RIGHT_OFF - self.FIELD_WIDTH, field_y, self.FIELD_WIDTH)
+                                p.right - self.START_RIGHT_OFF - self.FIELD_WIDTH, field_y, self.FIELD_WIDTH,
+                                locked=locked)
                 if key == "air_range_start":
                     self._add_field(self.values[name], self.defaults[name], "air_range_per_level",
-                                    p.right - self.STEP_RIGHT_OFF - self.FIELD_WIDTH, field_y, self.FIELD_WIDTH)
+                                    p.right - self.STEP_RIGHT_OFF - self.FIELD_WIDTH, field_y, self.FIELD_WIDTH,
+                                    locked=locked)
                 continue
             if category == "buildings":
                 self._add_building_fields(name, key, y)
                 continue
             if key == "conversion":
-                values = self.turn_tabs[key]["values"]
-                self.add_list_row(_ConversionTurnSlider(
-                    self.conversion_slider_x, y + self.CONVERSION_SLIDER_Y_OFF,
-                    self.CONVERSION_SLIDER_WIDTH, int(values[name]),
-                    lambda value, row=name, target=values: target.__setitem__(row, str(value))))
+                tab = self.turn_tabs[key]
+                values = tab["values"]
+                slider = _ConversionTurnSlider(
+                    self.conversion_slider_x, y + self.CONVERSION_SLIDER_Y_OFF, self.CONVERSION_SLIDER_WIDTH,
+                    tab["defaults"][name] if locked else int(values[name]),
+                    lambda value, row=name, target=values: target.__setitem__(row, str(value)))
+                # A locked slider shows the default turns and ignores input.
+                slider.disabled = locked
+                self.add_list_row(slider)
                 continue
             self._add_turn_controls(key, name, self.turn_field_x, self.TURN_FIELD_WIDTH, y)
 
@@ -468,22 +489,25 @@ class UnitStatsEditorScreen(ModalScreen):
                 continue
             self._add_field(self.building_values[name], self.building_defaults[name], field_key,
                             self.building_field_x(field_index), field_y,
-                            self.BUILDING_FIELD_WIDTH, locked=self.use_defaults)
-        # Use Defaults locks only building stats. Turns and enabled families stay editable.
-        if self.HAS_SCENARIO_RULES and key == LEVEL_ONE_ROW:
+                            self.BUILDING_FIELD_WIDTH, locked=self.use_defaults["buildings"])
+        if key == LEVEL_ONE_ROW:
             self._add_turn_controls("building", name, self.building_turns_x, self.BUILDING_FIELD_WIDTH, row_y)
 
     def _add_turn_controls(self, group, name, x, width, row_y):
-        """Add the turns field and ON/OFF button of one family or action in a construction turn group."""
+        """Add the turns field and ON/OFF button of one family or action in a construction turn group.
+
+        A locked category shows the default turns and an enabled button that ignore input.
+        """
         tab = self.turn_tabs[group]
-        field = TextField(x, row_y + (self.ROW_HEIGHT - self.FIELD_HEIGHT) // 2, width, self.FIELD_HEIGHT,
-                          tab["values"][name], numeric=True)
-        field.entry_ref = tab["values"]
-        field.entry_key = name
-        self.add_list_row(field)
-        self.add_list_row(make_on_off_button(
+        locked = self.use_defaults[TURN_GROUP_CATEGORIES[group]]
+        field_y = row_y + (self.ROW_HEIGHT - self.FIELD_HEIGHT) // 2
+        self._add_field(tab["values"], tab["defaults"], name, x, field_y, width, locked=locked)
+        toggle = make_on_off_button(
             self.check_x, row_y + (self.ROW_HEIGHT - self.CHECK_SIZE) // 2,
-            name not in tab["disabled_set"], lambda row=name: self.toggle_disabled(group, row)))
+            locked or name not in tab["disabled_set"], lambda row=name: self.toggle_disabled(group, row))
+        if locked:
+            toggle.apply_state(enabled=False)
+        self.add_list_row(toggle)
 
     def _add_field(self, values, defaults, key, x, y, width, locked=False):
         """A locked field shows the default value and leaves the draft unchanged."""
@@ -528,7 +552,7 @@ class UnitStatsEditorScreen(ModalScreen):
         self.label(surface, TURN_CATEGORY_HEADERS[category], (p.x + self.PAD, header_y))
         self._header(surface, "Turns", self.turn_field_x + self.TURN_FIELD_WIDTH // 2, header_y)
         self._header(surface, "Enabled", self.check_x + self.CHECK_SIZE // 2, header_y)
-        if not any(name is not None for name, _group in self.rows[category]):
+        if not any(name not in (None, USE_DEFAULTS_ROW) for name, _group in self.rows[category]):
             message = fonts.get("normal").render("Nothing to edit.", True, c.UI_TEXT_LIGHT)
             surface.blit(message, message.get_rect(center=(p.centerx, self.list_top + self.list_view_h // 2)))
 
@@ -543,9 +567,8 @@ class UnitStatsEditorScreen(ModalScreen):
         for index, field_key in enumerate(queries.BUILDING_STAT_FIELDS):
             self._header(surface, field_key.split("_", 1)[1].title(),
                          self.building_field_x(index) + self.BUILDING_FIELD_WIDTH // 2, header_y)
-        if self.HAS_SCENARIO_RULES:
-            self._header(surface, "Turns", self.building_turns_x + self.BUILDING_FIELD_WIDTH // 2, header_y)
-            self._header(surface, "Enabled", self.check_x + self.CHECK_SIZE // 2, header_y)
+        self._header(surface, "Turns", self.building_turns_x + self.BUILDING_FIELD_WIDTH // 2, header_y)
+        self._header(surface, "Enabled", self.check_x + self.CHECK_SIZE // 2, header_y)
 
     def draw_scroll_backdrop(self, surface):
         if self.active_category in TURN_ONLY_CATEGORIES:
@@ -597,6 +620,8 @@ class UnitStatsEditorScreen(ModalScreen):
         rows = self.rows[self.active_category]
         for index, y in self._row_layout:
             name, group = rows[index]
+            if name == USE_DEFAULTS_ROW:
+                continue
             if name is None:
                 self._draw_divider(surface, group, y)
                 continue
@@ -643,25 +668,73 @@ class UnitStatsEditorScreen(ModalScreen):
         self.draw_list_scrollbar(surface, self.panel_rect.right - 26, self.list_top, self.list_view_h)
 
 
-class MapBuildingStatsScreen(UnitStatsEditorScreen):
-    """Edit one map's default building costs and income, by level 1 value and increase, in the map editor.
+class MapUnitBuildingStatsScreen(UnitStatsEditorScreen):
+    """Edit one map's defaults for every category in the map editor.
 
-    New games on the map use these values while Use Defaults is on.
-    Buildings the map does not change use data/json/building_data.json.
+    The values go to the map's map_defaults block, which uses the same setting names as scenario settings.
+    New games on the map use a category's defaults while that category's Use Defaults is on.
+    The map editor applies the map's defaults, so saving deletes units of disabled families from the map.
     """
-    TITLE = "Building Stats"
-    CATEGORIES = (("buildings", "Buildings"),)
-    BUILDING_SETTING = "map_building_stat_overrides"
+    TITLE = "Unit / Building Stats"
     HAS_USE_DEFAULTS = False
-    HAS_SCENARIO_RULES = False
-    RESET_MESSAGE = "Reset this map's building stats to the building library defaults?"
+    RESET_MESSAGE = "Reset this map's unit and building defaults to the library values?"
 
     def __init__(self, map_screen):
-        super().__init__(settings=map_screen.scenario_settings, persist=False, game_state=map_screen)
+        defaults = map_screen.scenario_settings.get(queries.MAP_DEFAULTS_KEY)
+        # A new block joins the map only when it is saved, so Back leaves the map unchanged.
+        super().__init__(settings=defaults if isinstance(defaults, dict) else {},
+                         persist=False, game_state=map_screen)
+
+    def toggle_disabled(self, group, name):
+        """Ask before disabling a unit family that has units on the map."""
+        units = []
+        if group == "unit" and name not in self.turn_tabs[group]["disabled_set"]:
+            units = queries.find_units_of_families(self.map_screen.map_data, {name})
+        if not units:
+            super().toggle_disabled(group, name)
+            return
+
+        def on_confirm(ok):
+            if ok:
+                UnitStatsEditorScreen.toggle_disabled(self, group, name)
+
+        dialogs.ask_yes_no("Disable Unit", self._disable_warning(name, units), on_confirm)
+
+    def _disable_warning(self, family, units):
+        """List the provinces that hold the units which disabling `family` deletes."""
+        provinces, counts = {}, {}
+        for province, _unit in units:
+            provinces[province["id"]] = province
+            counts[province["id"]] = counts.get(province["id"], 0) + 1
+        lines = [f"Disabling {family} deletes {_unit_count(len(units))} from the map when you save:"]
+        for province_id, count in list(counts.items())[:MAX_WARNING_PROVINCES]:
+            province = provinces[province_id]
+            owner = queries.get_country_display_name(province.get("owner", "None"), self.map_screen.nation_data)
+            x, y = province.get("center") or (0, 0)
+            lines.append(f"Province {province['id']} ({owner}) at {round(x)}, {round(y)}: {_unit_count(count)}")
+        hidden = len(counts) - MAX_WARNING_PROVINCES
+        if hidden > 0:
+            lines.append(f"...and {hidden} more {'province' if hidden == 1 else 'provinces'}.")
+        lines.append("Disable it anyway?")
+        return "\n".join(lines)
 
     def after_save(self):
+        self.map_screen.scenario_settings[queries.MAP_DEFAULTS_KEY] = self.target_settings
+        disabled = set(self.target_settings.get("unit_disabled", []))
+        removed = len(queries.find_units_of_families(self.map_screen.map_data, disabled))
+        for province in self.map_screen.map_data.values():
+            queries.remove_units_of_families(province, disabled)
         rebuild(self.map_screen)
-        self.map_screen.show_feedback("Building stats updated. Save the map to write them to disk.")
+        if removed:
+            self.map_screen.refresh_all_maps()
+        message = "Unit and building defaults updated."
+        if removed:
+            message += f" Deleted {_unit_count(removed)} of disabled families."
+        self.map_screen.show_feedback(message + " Save the map to write them to disk.")
+
+
+def _unit_count(count):
+    return f"{count} {'unit' if count == 1 else 'units'}"
 
 
 def open_unit_stats_editor(on_done=None, settings=None, persist=True):

@@ -104,6 +104,13 @@ The Other category has an Administrative group and a Conversions group. A labele
 Each administrative action has a turns field and an ON/OFF button. Conversions have turn sliders. See CONSTRUCTION TURN SETTINGS.
 Every category reads the complete libraries, so disabled families remain available in this editor.
 
+Each category starts with a Use Defaults row, which scrolls with the category's rows.
+Use Defaults is on by default. While it is on, the category's fields, ON/OFF buttons, and sliders are locked and show the library values.
+New games then use the map's defaults for that category. See Map defaults.
+Turn Use Defaults off to edit the category. New games then use the player's values for that category instead.
+The player's saved values stay in the settings while Use Defaults is on, but they are not used.
+Each category's Use Defaults affects only that category.
+
 The Range category lists bombardment families and aircraft families from the complete unit library.
 Bombardment families appear first. Aircraft families follow. Each group uses alphabetical order.
 Bombardment and Aircraft dividers start the two groups.
@@ -116,7 +123,6 @@ The existing mission rules still convert aircraft range into strike, patrol, rel
 See documentation/air_stuff.txt for those rules.
 
 The Buildings category lists each building family in the complete building library, in library order.
-Its first row is the Use Defaults toggle, which scrolls with the building rows.
 A labeled divider starts each building group, after the Use Defaults row.
 Each family has cost fields and income fields for manpower, materials, and fuel.
 A family with more than one level has a Level 1 row and a + per level row, as data/generators/recipes.py defines them.
@@ -126,49 +132,54 @@ A single-level family has only the Level 1 row.
 Families whose costs the game calculates, such as Basic Factory, have no cost fields.
 Values and increases must be whole numbers of at least zero.
 
-Use Defaults is on by default. While it is on, the building cost and income fields are locked and show the building library values.
-New games then use the map's default building stats.
-Turn Use Defaults off to edit the building fields. New games then use the player's building stats instead.
-The player's saved building stats stay in the settings while Use Defaults is on, but they are not used.
-Use Defaults does not affect construction turns, enabled families, or unit ranges.
-
 Select Save All Changes to apply the draft of every category. Back discards the draft.
 Use Defaults is part of the draft.
 An invalid range or building stat blocks the whole save, including construction turns.
-Reset to Defaults restores and saves every category after confirmation. The editor stays open and shows the defaults.
-The Edit Unit / Building Stats button shows ! when construction turns or enabled families differ from defaults,
-when saved ranges differ from defaults, or when Use Defaults is off and saved building stats differ from defaults.
+Reset to Defaults restores and saves every category after confirmation and turns every Use Defaults back on.
+The editor stays open and shows the defaults.
+The Edit Unit / Building Stats button shows ! when a category with Use Defaults off has saved values that differ from defaults.
 The main Scenario Settings reset keeps the settings of Edit Unit / Building Stats.
 
-Map default building stats
---------------------------
+Map defaults
+------------
 
-In the map editor, Economy opens the Starting Economy Editor. Its Building Stats button edits the map's building costs and income.
-Building Stats lists every building family with the same rows as the Buildings category, without Use Defaults.
+In the map editor, Economy opens the Starting Economy Editor. Its Unit / Building Stats button edits the map's defaults.
+Unit / Building Stats has the same categories and rows as the scenario editor, without Use Defaults.
 Save the map to write the values to meta.json.
-Buildings that the map does not change use data/json/building_data.json.
-New games on the map use these values while Use Defaults is on.
+Values that the map does not change use the library values.
+New games on the map use a category's map defaults while that category's Use Defaults is on.
+
+The map editor applies the map's defaults. Units of a family that the map disables cannot be placed.
+The unit brush still lists them, disabled.
+Disabling a unit family that has units on the map asks for confirmation first.
+The question lists each province that holds those units, by province number, owner, and map position.
+Save All Changes then deletes those units, including carried aircraft. Back keeps them.
 
 Stored settings
 ---------------
 
 Scenario settings store these fields:
-- use_default_building_stats: the Use Defaults toggle. A missing field means on.
-- unit_range_overrides: the player's changed range fields, keyed by unit family.
+- use_default_units, use_default_buildings, use_default_range, and use_default_other: each category's Use Defaults.
+  A missing field means on. Older saves and settings files keep their values. See data/migrations/MIGRATIONS.md.
+- unit_turn_overrides and unit_disabled: the Units category.
+- building_turn_overrides, building_disabled, and building_stat_overrides: the Buildings category.
+- unit_range_overrides: the Range category. Changed range fields are keyed by unit family.
   Supported fields are bombard_range, air_range_start, and air_range_per_level.
-- building_stat_overrides: the player's changed building fields, keyed by building family.
-- map_building_stat_overrides: the map's changed building fields, keyed by building family.
+- administrative_turn_overrides, administrative_disabled, and conversion_turn_overrides: the Other category.
+- map_defaults: the map's values, with the same field names as the player's values.
+building_stat_overrides holds changed building fields, keyed by building family.
 Building fields are cost_ and prod_ followed by manpower, materials, or fuel. They store level 1 values.
 The same names with _per_level store increases, such as prod_materials_per_level.
 A changed field or increase recalculates that field for every level of the family.
 Unchanged fields keep their library values, so nonlinear library data stays exact until it is edited.
 
-The map owns map_building_stat_overrides. A new game copies the field from the map's meta.json.
+The map owns map_defaults. A new game copies the field from the map's meta.json.
 The player's scenario_settings.json never stores the field.
 Real-time lobby rule changes keep the loaded map's value.
 
+data/queries/content.py decides whether each field uses the map's value or the player's value.
 data/queries/unit_info.py validates and applies range fields. data/queries/economy.py validates and applies building fields.
-data/runtime_rules.py applies both when it builds a world's libraries.
+data/runtime_rules.py applies the values that apply when it builds a world's libraries.
 Missing or invalid fields use library defaults. Existing saves retain their own scenario settings.
 Current defaults come from data/json/unit_data.json, data/json/building_data.json, and the shared bombardment rules.
 See data/generators/recipes.py and data/constants.py for source tuning.

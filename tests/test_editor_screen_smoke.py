@@ -153,6 +153,7 @@ class EditorScreenSmokeTests(unittest.TestCase):
         settings = {}
         screen = UnitStatsEditorScreen(settings=settings, persist=False)
         screen.select_category("other")
+        screen.toggle_use_defaults("other")
         conversions = screen.turn_tabs["conversion"]
         # Conversions use sliders only. Their text fields would belong to administrative actions.
         self.assertFalse(any(isinstance(el, TextField) and getattr(el, "entry_ref", None) is conversions["values"]
@@ -191,7 +192,7 @@ class EditorScreenSmokeTests(unittest.TestCase):
         with mock.patch("ui.dialogs.ask_yes_no", side_effect=lambda _title, _text, cb: cb(True)), \
                 mock.patch("ui.dialogs.show_success"):
             reopened.reset_to_defaults()
-        self.assertEqual(settings["conversion_turn_overrides"], {})
+        self.assertFalse(settings.get("conversion_turn_overrides"))
         self.assertFalse(queries.scenario_has_construction_customizations(settings))
 
     def test_conversion_editor_repairs_malformed_override_blocks(self):
@@ -201,6 +202,7 @@ class EditorScreenSmokeTests(unittest.TestCase):
             with self.subTest(value=value):
                 settings = {"conversion_turn_overrides": value}
                 screen = UnitStatsEditorScreen(settings=settings, persist=False)
+                screen.toggle_use_defaults("other")
                 self.assertEqual(settings["conversion_turn_overrides"], value)
                 for action, (name, _constant) in queries.CONVERSION_ACTIONS.items():
                     self.assertEqual(screen.turn_tabs["conversion"]["values"][name],
@@ -215,6 +217,7 @@ class EditorScreenSmokeTests(unittest.TestCase):
         settings = {}
         screen = UnitStatsEditorScreen(settings=settings, persist=False)
         screen.select_category("other")
+        screen.toggle_use_defaults("other")
         name = queries.ADMINISTRATIVE_ACTIONS["CORE"][0]
         duration = screen.turn_tabs["administrative"]["defaults"][name] + 3
         field = next(el for el in screen.elements if getattr(el, "entry_key", None) == name)

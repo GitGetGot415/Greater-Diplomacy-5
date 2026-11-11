@@ -106,8 +106,10 @@ class UnitRangeRulesTests(unittest.TestCase):
             for settings in ({}, {"unit_range_overrides": self.defaults},
                              {"unit_range_overrides": {"Fixture Wing": {"air_range_start": -1}}}):
                 self.assertFalse(queries.scenario_has_unit_stat_customizations(settings))
-            self.assertTrue(queries.scenario_has_unit_stat_customizations(
-                {"unit_range_overrides": {"Fixture Gun": {"bombard_range": 2}}}))
+            changed = {"unit_range_overrides": {"Fixture Gun": {"bombard_range": 2}}}
+            self.assertTrue(queries.scenario_has_unit_stat_customizations(dict(changed, use_default_range=False)))
+            # While Range uses the map's defaults, the player's ranges are unused.
+            self.assertFalse(queries.scenario_has_unit_stat_customizations(changed))
 
     def test_air_range_changes_agree_in_ai_both_hosts_and_resolution(self):
         game = world()
@@ -178,9 +180,12 @@ class UnitRangeEditorTests(unittest.TestCase):
         self.enterContext(mock.patch.object(queries, "get_unit_range_defaults", return_value=self.defaults))
 
     def editor(self, settings=None, persist=False):
+        """Open the Range category with its Use Defaults off in the draft, so its fields are editable."""
         from screens.editors.unit_stats_editor import UnitStatsEditorScreen
         screen = UnitStatsEditorScreen(settings=settings if settings is not None else {}, persist=persist)
         screen.select_category("range")
+        if screen.use_defaults["range"]:
+            screen.toggle_use_defaults("range")
         return screen
 
     def test_fields_save_to_draft_only_and_back_discards(self):
@@ -226,7 +231,7 @@ class UnitRangeEditorTests(unittest.TestCase):
         defaults = {f"Fixture Wing {index:02}": {"air_range_start": 40, "air_range_per_level": 5}
                     for index in range(30)}
         with mock.patch.object(queries, "get_unit_range_defaults", return_value=defaults):
-            screen = UnitStatsEditorScreen(settings={}, persist=False)
+            screen = UnitStatsEditorScreen(settings={"use_default_range": False}, persist=False)
             screen.select_category("range")
             field = next(element for element in screen.elements if getattr(element, "entry_key", None))
             field.text = "88"
@@ -249,11 +254,9 @@ class UnitRangeEditorTests(unittest.TestCase):
             self.assertFalse(screen.done)
             if answer:
                 save.assert_called_once_with(settings)
-                self.assertEqual(settings["unit_range_overrides"], {})
-                field = next(element for element in screen.elements
-                             if getattr(element, "entry_ref", None) is screen.values["Fixture Wing"]
-                             and element.entry_key == "air_range_start")
-                self.assertEqual(field.text, f"{self.defaults['Fixture Wing']['air_range_start']:g}")
+                self.assertFalse(settings.get("unit_range_overrides"))
+                self.assertEqual(screen.values["Fixture Wing"]["air_range_start"],
+                                 f"{self.defaults['Fixture Wing']['air_range_start']:g}")
             else:
                 save.assert_not_called()
                 self.assertTrue(settings["unit_range_overrides"])
@@ -261,7 +264,7 @@ class UnitRangeEditorTests(unittest.TestCase):
     def test_scenario_button_refreshes_badge_and_uses_lobby_settings(self):
         from screens.setup.scenario_settings import Scenario_Settings
         screen = Scenario_Settings()
-        screen.settings = {"unit_range_overrides": {"Fixture Gun": {"bombard_range": 4}}}
+        screen.settings = {"unit_range_overrides": {"Fixture Gun": {"bombard_range": 4}}, "use_default_range": False}
         screen._session_bound = True
         screen.refresh_ui()
         button = next(element for element in screen.elements
@@ -277,7 +280,7 @@ class UnitRangeEditorTests(unittest.TestCase):
                       if getattr(element, "text", "") == "Edit Unit / Building Stats")
         self.assertFalse(button.notification_text)
         # The same button opens construction turns, so their changes also show the badge.
-        screen.settings["unit_disabled"] = ["Fixture Gun"]
+        screen.settings.update(unit_disabled=["Fixture Gun"], use_default_units=False)
         screen.refresh_ui()
         button = next(element for element in screen.elements
                       if getattr(element, "text", "") == "Edit Unit / Building Stats")
@@ -296,7 +299,7 @@ class UnitRangePersistenceTests(unittest.TestCase):
         self.enterContext(mock.patch.object(c, "UNIT_DATA_PATH", str(self.library_path)))
         self.enterContext(mock.patch.dict(queries._JSON_CACHE, {
             "unit_library": {"path": str(self.library_path), "data": None}}))
-        self.settings = {"unit_range_overrides": {
+        self.settings = {"use_default_range": False, "unit_range_overrides": {
             "Fixture Wing": {"air_range_start": 120, "air_range_per_level": 8},
             "Fixture Gun": {"bombard_range": 4}}}
 

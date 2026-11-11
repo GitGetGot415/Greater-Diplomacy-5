@@ -7,7 +7,7 @@ import json
 import os
 import pygame
 from data.state_access import world_for
-from data.migrations import normalize_cached_json_names
+from data.migrations import convert_scenario_settings, normalize_cached_json_names
 from data.runtime_rules import rebuild, ActiveLibrary, for_world
 from data.io import settings_schema, starting_defaults
 from data import queries
@@ -134,10 +134,53 @@ def toggle_scenario_flag(scenario_settings, flag_name, default=False):
     return new_value
 
 
-def uses_default_building_stats(settings):
-    """True when building stats stay at the map's values instead of the player's."""
-    return get_scenario_flag("use_default_building_stats",
-                             c.DEFAULT_USE_DEFAULT_BUILDING_STATS, settings or {})
+#: The scenario settings that each Unit / Building Stats category owns.
+EDITOR_CATEGORY_SETTINGS = {
+    "units": ("unit_turn_overrides", "unit_disabled"),
+    "buildings": ("building_stat_overrides", "building_turn_overrides", "building_disabled"),
+    "range": ("unit_range_overrides",),
+    "other": ("administrative_turn_overrides", "administrative_disabled", "conversion_turn_overrides"),
+}
+
+#: The Use Defaults setting of each category. On, the category uses the map's defaults.
+USE_MAP_DEFAULTS_KEYS = {category: f"use_default_{category}" for category in EDITOR_CATEGORY_SETTINGS}
+
+#: The map-owned block of default values, with the same setting names as the player's settings.
+MAP_DEFAULTS_KEY = "map_defaults"
+
+_SETTING_CATEGORIES = {key: category for category, keys in EDITOR_CATEGORY_SETTINGS.items() for key in keys}
+
+
+def uses_map_defaults(settings, category):
+    """True when a category uses the map's defaults instead of the player's values."""
+    key = USE_MAP_DEFAULTS_KEYS[category]
+    return get_scenario_flag(key, starting_defaults.get_starting_value("scenario_settings.json", key),
+                             settings or {})
+
+
+def get_category_setting(settings, key, default, *, map_editor=False):
+    """Return the value of one editor setting that applies: the map's default or the player's value.
+
+    The map editor always edits and shows the map's own defaults.
+    A value that the map does not set uses `default`, which means the library value.
+    """
+    settings = settings or {}
+    if map_editor or uses_map_defaults(settings, _SETTING_CATEGORIES[key]):
+        settings = settings.get(MAP_DEFAULTS_KEY)
+        if not isinstance(settings, dict):
+            return default
+    return settings.get(key, default)
+
+
+def effective_scenario_settings(settings, *, map_editor=False):
+    """Return a copy of settings whose editor settings hold the values that apply."""
+    effective = dict(settings or {})
+    for key in _SETTING_CATEGORIES:
+        effective.pop(key, None)
+        value = get_category_setting(settings, key, None, map_editor=map_editor)
+        if value is not None:
+            effective[key] = value
+    return effective
 
 
 def get_scenario_settings(): 
@@ -163,17 +206,21 @@ def get_days_per_turn(scenario_settings):
         return c.DEFAULT_DAYS_PER_TURN
 
 
-def scenario_has_construction_customizations(settings):
-    """True if construction turns or enabled families differ from their defaults.
+#: Editor settings that scenario_has_unit_stat_customizations checks against library values.
+_STAT_SETTINGS = ("unit_range_overrides", "building_stat_overrides")
 
+
+def scenario_has_construction_customizations(settings):
+    """True if the player's construction turns or enabled families differ from their defaults.
+
+    A category that uses the map's defaults does not count.
     The Edit Unit / Building Stats badge in Scenario Settings uses this with
     scenario_has_unit_stat_customizations."""
     if not settings:
         return False
-    return bool(settings.get("unit_turn_overrides") or settings.get("building_turn_overrides")
-                or settings.get("unit_disabled") or settings.get("building_disabled")
-                or settings.get("administrative_turn_overrides") or settings.get("administrative_disabled")
-                or settings.get("conversion_turn_overrides"))
+    return any(settings.get(key) for category, keys in EDITOR_CATEGORY_SETTINGS.items()
+               if not uses_map_defaults(settings, category)
+               for key in keys if key not in _STAT_SETTINGS)
 
 
 def save_scenario_settings(data):
@@ -185,7 +232,7 @@ def save_scenario_settings(data):
     # 2. Strip scenario-specific variables before writing to the global file
     safe_data = data.copy()
     safe_data.pop("base_days_per_turn", None)
-    safe_data.pop("map_building_stat_overrides", None)
+    safe_data.pop(MAP_DEFAULTS_KEY, None)
     
     # 3. Write only the safe data to the JSON on disk
     try:
@@ -227,6 +274,9 @@ def _load_cached_json(cache_key, *, reload=False):
             cache_obj["data"] = starting_defaults.get_starting_default(default_file) if default_file else {}
 
         normalize_cached_json_names(cache_key, cache_obj["data"])
+        if cache_key == "scenario_settings":
+            # The player's file can predate the Use Defaults settings, as saves can.
+            convert_scenario_settings(cache_obj["data"])
         if reload and isinstance(previous_data, dict):
             previous_data.clear()
             previous_data.update(cache_obj["data"])

@@ -4,7 +4,6 @@ from data.state_access import world_for, session_for, replace_mapping
 import pygame
 import json
 import os
-import re
 import copy
 from map_logic.system32.time_handler import TimeHandler
 from data.io import country_io
@@ -208,7 +207,7 @@ def _load_procedural_world(context, load_presentation):
     replace_mapping(world_state, "nation_data", copy.deepcopy(country_io.load_all_country_data()))
     _load_default_images(context, scrub_images=load_presentation)
     context.nation_colors = country_io.nation_colors_from(world_state.nation_data)
-    _apply_map_building_stats(context, None)
+    _apply_map_defaults(context, None)
     rebuild(context)
 
 
@@ -264,15 +263,15 @@ def _load_map_images(context, load_path, load_presentation):
         world_state.map_w, world_state.map_h = struct.unpack(">II", header[16:24])
 
 
-def _apply_map_building_stats(context, map_settings):
-    """A new game takes the map's default building stats, never those in the player's settings."""
+def _apply_map_defaults(context, map_settings):
+    """A new game takes the map's defaults, never a copy in the player's settings."""
     if not session_for(context).selection_mode:
         return
     settings = world_for(context).scenario_settings
-    settings.pop("map_building_stat_overrides", None)
-    stats = (map_settings or {}).get("map_building_stat_overrides")
-    if stats:
-        settings["map_building_stat_overrides"] = copy.deepcopy(stats)
+    settings.pop(queries.MAP_DEFAULTS_KEY, None)
+    defaults = (map_settings or {}).get(queries.MAP_DEFAULTS_KEY)
+    if isinstance(defaults, dict) and defaults:
+        settings[queries.MAP_DEFAULTS_KEY] = copy.deepcopy(defaults)
 
 
 def _apply_saved_scenario_settings(context, save_meta):
@@ -298,9 +297,9 @@ def _apply_saved_scenario_settings(context, save_meta):
                 world_state.scenario_settings["force_time_appropriate_research"] = save_meta["scenario_settings"]["force_time_appropriate_research"]
     elif save_meta and not session_state.selection_mode:
         # Saves from before scenario settings must not inherit new range or building preferences.
-        for key in ("unit_range_overrides", "building_stat_overrides", "map_building_stat_overrides"):
+        for key in ("unit_range_overrides", "building_stat_overrides", queries.MAP_DEFAULTS_KEY):
             world_state.scenario_settings.pop(key, None)
-    _apply_map_building_stats(context, (save_meta or {}).get("scenario_settings"))
+    _apply_map_defaults(context, (save_meta or {}).get("scenario_settings"))
 
     # Base maps and older scenarios may not have stored this setting yet. Add
     # the effective default to the live settings so an editor save writes it
@@ -435,17 +434,6 @@ def _restore_tactical_player(context, save_meta):
     session.current_player_index = 0
 
 
-def _unit_base_type(unit, context):
-    """Resolves a stored unit's real type down to its turn-editor base type,
-    unwrapping Convoy/Truck transports the same way sync_units_to_data does."""
-    u_type = unit.get("original_type") or unit.get("type", "")
-    if u_type.startswith("Convoy (") or u_type.startswith("Truck ("):
-        match = re.search(r'\((.*?)\)', u_type)
-        if match:
-            u_type = match.group(1).strip()
-    return queries.get_base_item_name(u_type, context=context)
-
-
 def _load_provinces(context, raw_map_data, save_meta, disabled_units):
     world_state = world_for(context)
     # --- 5. Province Processing ---
@@ -472,12 +460,7 @@ def _load_provinces(context, raw_map_data, save_meta, disabled_units):
 
         v["cores"] = v.get("cores", [])
         # Remove disabled units from provinces and transport cargo.
-        for unit in v.get("units", []):
-            cargo = unit.get("air_cargo")
-            if isinstance(cargo, list):
-                unit["air_cargo"] = [carried for carried in cargo
-                                     if _unit_base_type(carried, context) not in disabled_units]
-        v["units"] = [u for u in v.get("units", []) if _unit_base_type(u, context) not in disabled_units]
+        queries.remove_units_of_families(v, disabled_units)
         _repair_province(v, bldg_lib)
 
         v["json_key"], v["map_color"] = k, color_tuple
@@ -579,7 +562,9 @@ def _load_map_asset_steps(context, load_path, scenario_settings=None, *, load_pr
     unit_lib = runtime.libraries["unit_library"]
     tech_tree = runtime.libraries["tech_tree"]
     disabled_tech_keys = runtime.disabled_tech_keys
-    disabled_units = set(world_state.scenario_settings.get("unit_disabled", []))
+    # The map editor applies the map's own defaults. See queries.get_category_setting.
+    disabled_units = set(queries.get_category_setting(
+        world_state.scenario_settings, "unit_disabled", [], map_editor=session_state.is_editor))
 
     replace_mapping(world_state, "history", history)
 

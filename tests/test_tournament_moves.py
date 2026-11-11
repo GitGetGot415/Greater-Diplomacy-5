@@ -720,7 +720,8 @@ class TournamentMoveTests(unittest.TestCase):
                 host = Host()
                 host.map_data = {"home": {"id": 1, "json_key": "P1", "owner": "Leader", "units": []}}
                 host.scenario_settings = {"administrative_turn_overrides": {setting: 7},
-                                          "administrative_disabled": [setting] if disabled else []}
+                                          "administrative_disabled": [setting] if disabled else [],
+                                          "use_default_other": False}
                 cost = queries.get_core_cost("Leader", host.map_data, host.scenario_settings)
                 for resource in c.ECON_RESOURCE_KEYS:
                     host.nation_data["Leader"][resource] = cost[f"cost_{resource}"]

@@ -1,4 +1,6 @@
-"""Unit instances: stats refresh, owner changes, health loss, bombardment, and view filters."""
+"""Unit instances: stats refresh, owner changes, health loss, bombardment, view filters, and settings families."""
+
+import re
 
 import data.constants as c
 from data.queries.unit_info import (
@@ -15,6 +17,36 @@ from data.queries.unit_info import (
     units_with_air_cargo,
 )
 from data import queries
+
+
+def get_stored_unit_family(unit):
+    """Return the settings family of a stored unit. A Convoy or Truck uses the unit it carries.
+
+    This reads the complete default library. A world's active library omits disabled families,
+    and a name alone gives the wrong family for stage names such as "Flintlock Infantry I".
+    """
+    unit_type = unit.get("original_type") or unit.get("type", "")
+    if unit_type.startswith("Convoy (") or unit_type.startswith("Truck ("):
+        match = re.search(r'\((.*?)\)', unit_type)
+        if match:
+            unit_type = match.group(1).strip()
+    return queries.get_base_item_name(unit_type)
+
+
+def find_units_of_families(map_data, families):
+    """Return (province, unit) for each unit and carried aircraft whose settings family is in `families`."""
+    return [(province, unit) for province in map_data.values()
+            for unit in units_with_air_cargo(province.get("units", []))
+            if get_stored_unit_family(unit) in families]
+
+
+def remove_units_of_families(province, families):
+    """Remove a province's units and carried aircraft whose settings family is in `families`."""
+    for unit in province.get("units", []):
+        cargo = unit.get("air_cargo")
+        if isinstance(cargo, list):
+            unit["air_cargo"] = [carried for carried in cargo if get_stored_unit_family(carried) not in families]
+    province["units"] = [unit for unit in province.get("units", []) if get_stored_unit_family(unit) not in families]
 
 
 def held_volunteer_units(nation_data):

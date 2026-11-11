@@ -275,7 +275,7 @@ class NavalContentTests(unittest.TestCase):
                 self.assertEqual(queries.is_unit_unlocked(name + " I", existing["research"], self.library), name + " I" == base)
 
     def test_scenario_disables_use_the_ship_metadata_and_prune_dependencies(self):
-        self.context.world.scenario_settings["unit_disabled"] = list(SHIPS)
+        self.context.world.scenario_settings.update(unit_disabled=list(SHIPS), use_default_units=False)
         library = queries.get_unit_library(self.context)
         tree = queries.get_tech_tree(self.context)
         for name, tech in SHIPS.items():

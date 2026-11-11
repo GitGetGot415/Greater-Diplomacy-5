@@ -29,6 +29,29 @@ MOVE_FIELDS = ("game_version", "tournament_session", "tournament_turn", "researc
                "player_intents", "factions")
 
 
+#: Released scenario settings of each Unit / Building Stats category, by its Use Defaults setting.
+#: Releases had no Use Defaults settings, so these values always applied.
+RELEASED_CATEGORY_SETTINGS = {
+    "use_default_units": ("unit_turn_overrides", "unit_disabled"),
+    "use_default_buildings": ("building_turn_overrides", "building_disabled"),
+    "use_default_range": ("unit_range_overrides",),
+    "use_default_other": ("administrative_turn_overrides", "administrative_disabled", "conversion_turn_overrides"),
+}
+
+
+def convert_scenario_settings(settings):
+    """Keep the player's values in older scenario settings, which have no Use Defaults settings.
+
+    A missing Use Defaults setting means the map's defaults, so a category with older values turns it off.
+    Current settings always hold every Use Defaults setting. This rule does nothing to them.
+    """
+    if not isinstance(settings, dict):
+        return
+    for flag, keys in RELEASED_CATEGORY_SETTINGS.items():
+        if flag not in settings and any(settings.get(key) for key in keys):
+            settings[flag] = False
+
+
 def convert_save(save_meta, map_data):
     """Convert meta.json and map_data.json in place.
 
@@ -37,6 +60,7 @@ def convert_save(save_meta, map_data):
     """
     expect(save_meta, dict, "meta")
     expect(map_data, dict, "map_data")
+    convert_scenario_settings(save_meta.get("scenario_settings"))
     aliases = {**LEGACY_UNIT_NAMES, **equipment_stage_aliases()}
     _nations(container(save_meta, "nation_data", dict, "meta", repair=True), aliases)
     for key, province in list(map_data.items()):

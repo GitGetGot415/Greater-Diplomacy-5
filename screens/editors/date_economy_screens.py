@@ -8,7 +8,7 @@ from ui.navigation.screen import EditorFormScreen, NationListOverlayScreen
 from ui.widgets.ui_elements import Button, TextField
 from ui import dialogs
 from ui.navigation.screen_runner import _run_pygame_sub_screen
-from screens.editors.unit_stats_editor import MapBuildingStatsScreen
+from screens.editors.unit_stats_editor import MapUnitBuildingStatsScreen
 
 
 class Editor_Metadata_Screen(EditorFormScreen):
@@ -141,7 +141,7 @@ class Starting_Economy_Edit_Screen(EditorFormScreen):
     def get_panel_title(self):
         return queries.get_country_display_name(self.country_id, self.map_screen.nation_data) + " Economy"
 
-BUILDING_STATS_BUTTON_SIZE = (150, 40)
+STATS_BUTTON_SIZE = (150, 40)
 
 
 class Starting_Economy_List_Screen(NationListOverlayScreen):
@@ -154,12 +154,12 @@ class Starting_Economy_List_Screen(NationListOverlayScreen):
         p = self.panel_rect
         return [
             Button(p.right - 120, p.y + 20, "small", "red", "Reset All", self.reset_all),
-            Button(p.x + 20, p.y + 20, BUILDING_STATS_BUTTON_SIZE, "purple", "Building Stats",
-                   self.open_building_stats),
+            Button(p.x + 20, p.y + 20, STATS_BUTTON_SIZE, "purple", "Unit / Building Stats",
+                   self.open_unit_building_stats, font_preset="small"),
         ]
 
-    def open_building_stats(self):
-        _run_pygame_sub_screen(self.map_screen, MapBuildingStatsScreen(self.map_screen))
+    def open_unit_building_stats(self):
+        _run_pygame_sub_screen(self.map_screen, MapUnitBuildingStatsScreen(self.map_screen))
 
     def country_button(self, country_id, x, y):
         is_modified = any(self.map_screen.nation_data.get(country_id, {}).get(res, 0) != 0

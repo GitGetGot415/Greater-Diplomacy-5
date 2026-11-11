@@ -9,7 +9,7 @@ from data.state_access import world_for
 from data import migrations
 from data.migrations import normalize_air_category
 from data.runtime_rules import ActiveLibrary, for_world
-from data.queries.content import uses_default_building_stats
+from data.queries.content import uses_map_defaults
 from data import queries
 
 
@@ -70,22 +70,25 @@ def get_unit_range_overrides(settings, defaults):
 
 
 def scenario_has_unit_stat_customizations(settings):
-    """Report effective range and building changes for the Edit Unit / Building Stats badge.
+    """Report the player's range and building stat changes for the Edit Unit / Building Stats badge.
 
-    Use Defaults ignores the player's building stats.
+    A category that uses the map's defaults ignores the player's values, so they do not count.
     """
     if not settings:
         return False
-    if settings.get("unit_range_overrides") and get_unit_range_overrides(
-            settings, queries.get_unit_range_defaults()):
+    if (settings.get("unit_range_overrides") and not uses_map_defaults(settings, "range")
+            and get_unit_range_overrides(settings, queries.get_unit_range_defaults())):
         return True
     raw = settings.get("building_stat_overrides")
-    return bool(raw and not uses_default_building_stats(settings)
+    return bool(raw and not uses_map_defaults(settings, "buildings")
                 and queries.get_building_stat_overrides(raw, queries.get_building_stat_defaults()))
 
 
 def apply_unit_range_overrides(unit_library, settings, *, context=None):
-    """Apply scenario ranges to a freshly loaded library before units are restored."""
+    """Apply scenario ranges to a freshly loaded library before units are restored.
+
+    `settings` holds the values that apply. See queries.effective_scenario_settings.
+    """
     defaults = queries.get_unit_range_defaults(unit_library)
     overrides = get_unit_range_overrides(settings, defaults)
     for name, stats in unit_library.items():

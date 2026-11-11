@@ -80,7 +80,8 @@ class RuntimeOwnerTests(unittest.TestCase):
     def test_world_libraries_indexes_and_draft_copies_are_independent(self):
         first, second = game(), game()
         library = queries.get_unit_library(first)
-        first.scenario_settings["unit_range_overrides"] = {"Fixture": {"bombard_range": 3}}
+        first.scenario_settings.update(unit_range_overrides={"Fixture": {"bombard_range": 3}},
+                                       use_default_range=False)
         defaults = {key: copy.deepcopy(value) for key, value in second.world.runtime_rules.libraries.items()}
         first.world.runtime_rules.rebuild(first.scenario_settings, defaults)
         self.assertIs(queries.get_unit_library(first), library)

@@ -32,6 +32,7 @@ class ConversionTurnsTests(unittest.TestCase):
     def set_turns(self, action, turns):
         name = queries.CONVERSION_ACTIONS[action][0]
         self.game.scenario_settings.setdefault("conversion_turn_overrides", {})[name] = turns
+        self.game.scenario_settings["use_default_other"] = False
 
     def test_legacy_defaults_malformed_values_and_limits(self):
         for action, (name, constant) in queries.CONVERSION_ACTIONS.items():

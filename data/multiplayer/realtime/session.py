@@ -772,13 +772,13 @@ class MapRealtimeDriver(PlayerActions):
     def configure_scenario_settings(self, settings):
         """Apply host lobby rules before snapshots or player commands use them.
 
-        The map's default building stats stay with the loaded map. Lobby rules cannot replace them.
+        The map's defaults stay with the loaded map. Lobby rules cannot replace them.
         """
-        map_stats = self.world.scenario_settings.get("map_building_stat_overrides")
+        map_defaults = self.world.scenario_settings.get(queries.MAP_DEFAULTS_KEY)
         self.world.scenario_settings = copy.deepcopy(settings)
-        self.world.scenario_settings.pop("map_building_stat_overrides", None)
-        if map_stats:
-            self.world.scenario_settings["map_building_stat_overrides"] = map_stats
+        self.world.scenario_settings.pop(queries.MAP_DEFAULTS_KEY, None)
+        if map_defaults:
+            self.world.scenario_settings[queries.MAP_DEFAULTS_KEY] = map_defaults
         rebuild(self.context)
 
     def start_game(self, countries: list[str]) -> None:

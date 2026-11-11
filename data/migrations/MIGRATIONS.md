@@ -123,6 +123,9 @@ They also keep support for older save formats that v46 accepted.
 - Release requests without `release_type` use Integrated.
 - Older `ACCEPT_` and `REJECT_` entries move from `pending_diplomacy` to `diplo_responses`.
 - Completed real-time saves without `offline_view` open as spectator replays.
+- Scenario settings without a category's Use Defaults setting, such as `use_default_units`, keep using that category's saved values.
+  `convert_scenario_settings` turns the setting off when the category has values, such as `unit_turn_overrides` or `unit_disabled`.
+  Releases had no Use Defaults settings, so those values always applied. The rule runs on saves and on the player's `data/json/scenario_settings.json`.
 - Older infantry, vehicle infantry, cavalry, militia, and artillery identifiers become named equipment stages.
 - Unnumbered named equipment stages become level I, including vehicle infantry and heavy artillery.
 - Units select the latest stage at or before their older equipment year.

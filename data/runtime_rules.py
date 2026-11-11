@@ -24,9 +24,15 @@ class RuntimeRules:
     indexes: dict = field(default_factory=dict)
     revision: int = 0
 
-    def rebuild(self, settings, defaults):
-        """Replace derived content in place. Saved settings remain authoritative."""
+    def rebuild(self, settings, defaults, *, map_editor=False):
+        """Replace derived content in place. Saved settings remain authoritative.
+
+        Each Unit / Building Stats category uses the map's defaults or the player's values.
+        The map editor always uses the map's defaults.
+        """
         from data import queries
+
+        settings = queries.effective_scenario_settings(settings, map_editor=map_editor)
 
         # Each world owns its copy. Pickle copies this JSON data faster than deepcopy.
         active = {name: pickle.loads(pickle.dumps(dict(library), pickle.HIGHEST_PROTOCOL))
@@ -85,8 +91,14 @@ def for_world(context):
     if not runtime.libraries:
         runtime.rebuild(getattr(world, "scenario_settings", {}), {
             name: queries._load_cached_json(name)
-            for name in ('unit_library', 'building_library', 'tech_tree')})
+            for name in ('unit_library', 'building_library', 'tech_tree')}, map_editor=_is_map_editor(context))
     return runtime
+
+
+def _is_map_editor(context):
+    from data.state_access import session_for
+    # Flat backend contexts and test doubles have no editor flag. They are never the map editor.
+    return getattr(session_for(context), "is_editor", False)
 
 
 def rebuild(context, *, reload_defaults=False):
@@ -97,7 +109,7 @@ def rebuild(context, *, reload_defaults=False):
     runtime = for_world(context)
     defaults = {name: queries._load_cached_json(name, reload=reload_defaults)
                 for name in ('unit_library', 'building_library', 'tech_tree')}
-    runtime.rebuild(world_for(context).scenario_settings, defaults)
+    runtime.rebuild(world_for(context).scenario_settings, defaults, map_editor=_is_map_editor(context))
     return runtime
 
 
