@@ -133,9 +133,10 @@ The main Scenario Settings reset keeps these separate editor settings, as it doe
 Map default building stats
 --------------------------
 
-In the map editor, Economy opens the Starting Economy Editor. Its Factory Stats button edits the map's factory costs and income.
-Factory Stats lists the industry building families with the same rows. Save the map to write the values to meta.json.
-Factories that the map does not change use data/json/building_data.json.
+In the map editor, Economy opens the Starting Economy Editor. Its Building Stats button edits the map's building costs and income.
+Building Stats lists every building family with the same rows as the Buildings category, without Use Defaults.
+Save the map to write the values to meta.json.
+Buildings that the map does not change use data/json/building_data.json.
 New games on the map use these values while Use Defaults is on.
 
 Stored settings

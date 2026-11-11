@@ -469,10 +469,10 @@ def _whole(value):
     return int(value) if float(value).is_integer() else value
 
 
-def get_building_stat_defaults(building_library=None, groups=None):
+def get_building_stat_defaults(building_library=None):
     """Read each building family's level 1 values and per-level increases, as recipes.py builds them.
 
-    Families keep library order. groups limits the building groups.
+    Families keep library order.
     A family with more than one level also has a <field>_per_level increase for each field.
     """
     if building_library is None:
@@ -481,8 +481,7 @@ def get_building_stat_defaults(building_library=None, groups=None):
             building_library = json.load(handle)
     families = {}
     for name, stats in building_library.items():
-        if groups is None or stats.get("group") in groups:
-            families.setdefault(base_item_name_from_text(name), []).append((get_building_level(name), stats))
+        families.setdefault(base_item_name_from_text(name), []).append((get_building_level(name), stats))
     defaults = {}
     for family, members in families.items():
         members.sort(key=lambda member: member[0])

@@ -1,6 +1,6 @@
 """Edit scenario unit ranges and building stats in a draft, separate from the active game library.
 
-The map editor reuses the building rows to edit a map's default factory stats.
+The map editor reuses the building rows to edit a map's default building stats.
 """
 import json
 
@@ -57,8 +57,6 @@ class UnitStatsEditorScreen(ModalScreen):
 
     #: (key, tab label) for each category, in tab order.
     CATEGORIES = (("range", "Range"), ("buildings", "Buildings"))
-    #: Building groups in the Buildings category, or None for every building.
-    BUILDING_GROUPS = None
     #: The scenario settings key that holds the edited building stats.
     BUILDING_SETTING = "building_stat_overrides"
     #: Show Use Defaults as the first Buildings row.
@@ -103,7 +101,7 @@ class UnitStatsEditorScreen(ModalScreen):
     def _load_buildings(self):
         with open(c.BUILDING_DATA_PATH, encoding="utf-8") as handle:
             building_library = json.load(handle)
-        self.building_defaults = queries.get_building_stat_defaults(building_library, self.BUILDING_GROUPS)
+        self.building_defaults = queries.get_building_stat_defaults(building_library)
         self.building_icons = symbol_loader.get_family_symbols(building_library, self.ROW_ICON_SIZE)
         overrides = queries.get_building_stat_overrides(
             (self.target_settings or {}).get(self.BUILDING_SETTING), self.building_defaults)
@@ -381,25 +379,24 @@ class UnitStatsEditorScreen(ModalScreen):
         self.draw_list_scrollbar(surface, self.panel_rect.right - 26, self.list_top, self.list_view_h)
 
 
-class MapFactoryStatsScreen(UnitStatsEditorScreen):
-    """Edit one map's default factory costs and income, by level 1 value and increase, in the map editor.
+class MapBuildingStatsScreen(UnitStatsEditorScreen):
+    """Edit one map's default building costs and income, by level 1 value and increase, in the map editor.
 
     New games on the map use these values while Use Defaults is on.
-    Factories the map does not change use data/json/building_data.json.
+    Buildings the map does not change use data/json/building_data.json.
     """
-    TITLE = "Factory Stats"
-    CATEGORIES = (("buildings", "Factories"),)
-    BUILDING_GROUPS = ("industry",)
+    TITLE = "Building Stats"
+    CATEGORIES = (("buildings", "Buildings"),)
     BUILDING_SETTING = "map_building_stat_overrides"
     HAS_USE_DEFAULTS = False
-    RESET_MESSAGE = "Reset this map's factory stats to the building library defaults?"
+    RESET_MESSAGE = "Reset this map's building stats to the building library defaults?"
 
     def __init__(self, map_screen):
         super().__init__(settings=map_screen.scenario_settings, persist=False, game_state=map_screen)
 
     def after_save(self):
         rebuild(self.map_screen)
-        self.map_screen.show_feedback("Factory stats updated. Save the map to write them to disk.")
+        self.map_screen.show_feedback("Building stats updated. Save the map to write them to disk.")
 
 
 def open_unit_stats_editor(on_done=None, settings=None, persist=True):

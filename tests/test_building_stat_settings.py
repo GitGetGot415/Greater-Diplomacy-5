@@ -53,8 +53,6 @@ class BuildingStatRulesTests(unittest.TestCase):
         self.assertEqual((factory["cost_fuel"], factory["cost_fuel_per_level"]), (1, 0))
         # A single-level family has no increases.
         self.assertEqual(set(self.defaults["Fixture Fort"]), set(queries.BUILDING_STAT_FIELDS))
-        industry = queries.get_building_stat_defaults(building_library(), ("industry",))
-        self.assertEqual(list(industry), ["Fixture Factory"])
 
     def test_families_with_calculated_costs_have_no_cost_fields(self):
         with mock.patch.object(economy, "DYNAMIC_COST_BUILDINGS", frozenset({"Fixture Fort"})):
@@ -294,14 +292,17 @@ class BuildingStatEditorTests(unittest.TestCase):
         warning.assert_called_once()
         self.assertEqual(settings, {"use_default_building_stats": False})
 
-    def test_map_editor_factory_stats_edit_only_the_map_defaults(self):
-        from screens.editors.unit_stats_editor import MapFactoryStatsScreen
+    def test_map_editor_building_stats_edit_only_the_map_defaults(self):
+        from screens.editors.unit_stats_editor import MapBuildingStatsScreen
         map_screen = mock.Mock()
         map_screen.scenario_settings = {"building_stat_overrides": PLAYER_STATS}
         with mock.patch("ui.navigation.modal_screen.host_map_screen", return_value=map_screen):
-            screen = MapFactoryStatsScreen(map_screen)
-        self.assertEqual(list(screen.building_values), ["Fixture Factory"])
+            screen = MapBuildingStatsScreen(map_screen)
+        self.assertEqual(list(screen.building_values), ["Fixture Factory", "Fixture Fort"])
+        self.assertIsNone(next((element for element in screen.elements
+                                if str(getattr(element, "text", "")).startswith("Use Defaults")), None))
         self.fields(screen, "Fixture Factory")["cost_materials_per_level"].text = "150"
+        self.fields(screen, "Fixture Fort")["cost_materials"].text = "700"
         with mock.patch("screens.editors.unit_stats_editor.rebuild") as rebuild, \
                 mock.patch.object(queries, "save_scenario_settings") as save:
             screen.save_all()
@@ -309,9 +310,10 @@ class BuildingStatEditorTests(unittest.TestCase):
         rebuild.assert_called_once_with(map_screen)
         self.assertEqual(map_screen.scenario_settings, {
             "building_stat_overrides": PLAYER_STATS,
-            "map_building_stat_overrides": {"Fixture Factory": {"cost_materials_per_level": 150}}})
+            "map_building_stat_overrides": {"Fixture Factory": {"cost_materials_per_level": 150},
+                                            "Fixture Fort": {"cost_materials": 700}}})
         with mock.patch("ui.navigation.modal_screen.host_map_screen", return_value=map_screen):
-            screen = MapFactoryStatsScreen(map_screen)
+            screen = MapBuildingStatsScreen(map_screen)
         with mock.patch("ui.dialogs.ask_yes_no", side_effect=lambda _t, _m, cb: cb(True)), \
                 mock.patch("screens.editors.unit_stats_editor.rebuild"):
             screen.reset_to_defaults()
