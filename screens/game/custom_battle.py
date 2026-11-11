@@ -61,7 +61,7 @@ SCROLLBAR_HEIGHT = 14
 BUTTON_WIDTH = 170
 TEAM_COLORS = ((85, 170, 245), (235, 100, 90))
 # Actual battle fills the whole screen. The mouse wheel steps through these scales, starting at 1.0.
-ZOOM_LEVELS = (0.2, 0.3, 0.4, 0.5, 0.6, 0.75, 1.0, 1.25, 1.5, 2.0)
+ZOOM_LEVELS = (0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.75, 1.0, 1.25, 1.5, 2.0)
 DEFAULT_ZOOM_INDEX = ZOOM_LEVELS.index(1.0)
 # Actual battle plays music at this share of its volume at the default zoom and closer.
 # Zooming out lowers music and battle sound effects in proportion to the zoom.
@@ -133,15 +133,15 @@ PREVIEW_BAR_BORDER = (13, 17, 24)
 PREVIEW_BAR_GRADIENT_STRENGTH = 0.5
 PLAYER_COLOR = (255, 225, 95)
 # Body (width, height) in pixels at scale 1.0, before the barrel line.
-UNIT_SHAPE_SIZES = {
-    "tank": (28, 19),
-    "infantry": (15, 15), "cavalry": (22, 12),
-    "light_tank": (24, 16),
-    "armored_car": (24, 16),  # Same size as the light tank, drawn with rounded edges.
-    "heavy_tank": (33, 22),
-    # Troop carriers match a vehicle's hull but carry no gun: armored car, light tank, medium tank.
-    "motorized": (24, 16), "mechanized": (24, 16), "ifv": (28, 19),
-}
+UNIT_SHAPE_SIZES = {shape: body[:2] for shape, body in c.TACTICAL_BODIES.items()}
+TOUCH_PAD_SIZE = 120
+TOUCH_PAD_MARGIN = 24
+TOUCH_PAD_BOTTOM = 176
+TOUCH_DEAD_ZONE = 0.18
+TOUCH_AIM_DISTANCE = 600.0
+TOUCH_WEAPON_SIZE = (94, 38)
+TOUCH_WEAPON_GAP = 6
+TOUCH_WEAPON_MODES = ("Primary", "Secondary", "Both")
 ROUNDED_SHAPES = frozenset(("armored_car", "motorized"))
 UNARMED_SHAPES = frozenset(("motorized", "mechanized", "ifv"))  # Drawn without the gun line.
 ROUNDED_CORNER_RADIUS = 6
@@ -170,7 +170,6 @@ SHOT_COLOR = (250, 232, 150)
 SHOT_WIDTH = 2
 TANK_SHOT_COLOR = (255, 110, 0)
 TANK_SHOT_WIDTH = 5
-TANK_SHOT_SHAPES = combat.TANK_SHAPES
 RIFLE_SHOT_SOUNDS = ("rifle_shot_1", "rifle_shot_2", "rifle_shot_3")
 TANK_SHOT_SOUNDS = ("tank_shot_1", "tank_shot_2", "tank_shot_3")
 SHOT_TAIL = 8  # Pixels behind a shot's head.
@@ -180,7 +179,7 @@ CONE_ARC_STEP = math.radians(3)  # Spacing of the points that draw the cone's cu
 PLAYER_RING_RADIUS = 18
 RELOAD_RING_RADIUS = 22
 RELOAD_COLOR = (255, 245, 200)
-CONTROL_STATS_SIZE = (244, 112)
+CONTROL_STATS_SIZE = (244, 138)  # Fixed space for both weapon cooldowns.
 CONTROL_STATS_INSET = 8
 CONTROL_STATS_TEXT_PADDING = 8
 CONTROL_STATS_ROW_HEIGHT = 26
@@ -271,7 +270,7 @@ def _draw_rotated_sprite(surface, sprite, key, center, angle):
     surface.blit(rotated, rotated.get_rect(center=center))
 
 
-def draw_unit_shape(surface, shape, center, angle, color, *, scale=1.0, aim=None, artwork=None):
+def draw_unit_shape(surface, shape, center, angle, color, *, scale=1.0, aim=None, artwork=None, recoil=0.0):
     """Draw battle artwork or geometric silhouettes in setup cards and on the field.
 
     With ``aim``, the turret or gun line follows ``aim`` independently of the hull.
@@ -288,13 +287,16 @@ def draw_unit_shape(surface, shape, center, angle, color, *, scale=1.0, aim=None
                 offset = UNIT_SHAPE_SIZES[shape][1] * INFANTRY_GUN_SIDE_OFFSET * scale
                 part_center = (center[0] - math.sin(angle) * offset,
                                center[1] + math.cos(angle) * offset)
+            if part == "turret" and recoil:
+                part_center = (part_center[0] - math.cos(heading) * recoil * scale,
+                               part_center[1] - math.sin(heading) * recoil * scale)
             _draw_rotated_sprite(surface, sprite, key, part_center, heading)
         return
     key = (shape, tuple(color), scale, aim is None)
     _draw_rotated_sprite(surface, _unit_sprite(shape, color, scale, aim is None), key, center, angle)
     if aim is not None and shape not in UNARMED_SHAPES:
         # Same reach as the sprite's own gun line at full scale: half the body plus the sprite's margin.
-        length = (UNIT_SHAPE_SIZES[shape][0] / 2 + 9) * scale
+        length = (UNIT_SHAPE_SIZES[shape][0] / 2 + 9 - recoil) * scale
         pygame.draw.line(surface, OUTLINE_COLOR, center,
                          (center[0] + math.cos(aim) * length, center[1] + math.sin(aim) * length),
                          max(1, round(3 * scale)))
@@ -369,6 +371,11 @@ class CustomBattleScreen(Screen):
         self.controlled_index = None
         self.held_keys = set()
         self.firing = False  # Left mouse held on the battlefield while controlling a sub-unit.
+        self.secondary_firing = False
+        self.touch_mode = False
+        self.touch_pointers = {}  # pointer -> (drive/aim, last position)
+        self.touch_weapon_mode = "Primary"
+        self.touch_weapon_buttons = []
         self.camera = [0.0, 0.0]  # Battlefield coordinates at the screen's top-left corner.
         self.zoom_index = DEFAULT_ZOOM_INDEX
         self.pan_drag = None  # Last pointer position while dragging the battlefield.
@@ -643,6 +650,19 @@ class CustomBattleScreen(Screen):
                                        PAUSE_BUTTON_SIZE, "yellow",
                                        "Resume" if self.simulation.paused else "Pause", self.toggle_pause)
             self.elements.append(self.pause_button)
+            self.touch_weapon_buttons = []
+            if self.touch_mode and self.simulation.controlled is not None and self.simulation.controlled.weapon(1) is not None:
+                width, height = TOUCH_WEAPON_SIZE
+                left = c.SCREEN_WIDTH - TOUCH_PAD_MARGIN - (width * 3 + TOUCH_WEAPON_GAP * 2)
+                top = self._touch_pad_rect("aim").top - height - TOUCH_WEAPON_GAP
+                for index, mode in enumerate(TOUCH_WEAPON_MODES):
+                    button = Button(left + index * (width + TOUCH_WEAPON_GAP), top, TOUCH_WEAPON_SIZE,
+                                    "yellow" if mode == self.touch_weapon_mode else "grey", mode,
+                                    lambda mode=mode: self._select_touch_weapon(mode), font_size=16)
+                    button.apply_state(enabled=self._driving(),
+                                       color="yellow" if mode == self.touch_weapon_mode else "grey")
+                    self.touch_weapon_buttons.append(button)
+                    self.elements.append(button)
         elif self.campaign is not None:
             self.elements.append(Button("centered", 370, (220, 50), "green", "Continue",
                                         self.continue_campaign))
@@ -843,7 +863,7 @@ class CustomBattleScreen(Screen):
 
     def _play_shot_sound(self, fighter):
         # Keep audio randomness separate from the seeded simulation's aiming and movement decisions.
-        if fighter.shape in TANK_SHOT_SHAPES:
+        if fighter.weapon(fighter.fired_weapon)["shell"]:
             kind = random.choice(TANK_SHOT_SOUNDS)
         elif fighter is self.simulation.controlled:
             kind = "heavy_gunshot"
@@ -871,8 +891,61 @@ class CustomBattleScreen(Screen):
     def clear_controls(self):
         self.held_keys.clear()
         self.firing = False
+        self.secondary_firing = False
+        self.touch_pointers.clear()
         if self.simulation is not None:
             self.simulation.set_player_input()
+
+    def cancel_pointer_input(self):
+        super().cancel_pointer_input()
+        self.clear_controls()
+
+    def set_touch_mode(self, enabled):
+        if self.touch_mode != enabled:
+            self.touch_mode = enabled
+            self.clear_controls()
+            if self.mode == "battle":
+                self.refresh_ui()
+
+    @staticmethod
+    def _touch_pad_rect(role):
+        left = (TOUCH_PAD_MARGIN if role == "drive" else c.SCREEN_WIDTH - TOUCH_PAD_MARGIN - TOUCH_PAD_SIZE)
+        return pygame.Rect(left, c.SCREEN_HEIGHT - TOUCH_PAD_BOTTOM - TOUCH_PAD_SIZE,
+                           TOUCH_PAD_SIZE, TOUCH_PAD_SIZE)
+
+    def _select_touch_weapon(self, mode):
+        if self._driving() and self.simulation.controlled.weapon(1) is not None:
+            self.touch_weapon_mode = mode
+            for button in self.touch_weapon_buttons:
+                button.apply_state(enabled=True, color="yellow" if button.text == mode else "grey")
+
+    def handle_touch_pointer(self, kind, pointer, position):
+        if pointer in self.touch_pointers:
+            role, _ = self.touch_pointers[pointer]
+            if kind == pygame.FINGERUP or not self._driving():
+                del self.touch_pointers[pointer]
+            else:
+                self.touch_pointers[pointer] = role, position
+            return True
+        if kind != pygame.FINGERDOWN or not self.touch_mode or not self._driving():
+            return False
+        for role in ("drive", "aim"):
+            if (self._touch_pad_rect(role).collidepoint(position)
+                    and all(active != role for active, _ in self.touch_pointers.values())):
+                self.touch_pointers[pointer] = role, position
+                return True
+        return False
+
+    def _touch_axes(self, role):
+        center = self._touch_pad_rect(role).center
+        position = next((pos for active, pos in self.touch_pointers.values() if active == role), center)
+        vector = pygame.Vector2(position) - center
+        vector /= TOUCH_PAD_SIZE / 2
+        if vector.length() <= TOUCH_DEAD_ZONE:
+            return pygame.Vector2()
+        if vector.length() > 1:
+            vector.scale_to_length(1)
+        return vector
 
     @staticmethod
     def view_rect():
@@ -1181,28 +1254,34 @@ class CustomBattleScreen(Screen):
                 element.handle_event(event)
 
     def _battlefield_mouse(self, event):
-        """The wheel zooms. Left mouse fires while controlling a sub-unit; otherwise dragging the battlefield pans the view.
+        """The wheel zooms; left/right mouse fire primary/secondary weapons while controlling a sub-unit.
 
-        The battlefield follows the pointer while dragged.
+        While spectating, a left drag makes the battlefield follow the pointer.
         """
         if event.type == pygame.MOUSEWHEEL:
             self.zoom_by(1 if event.y > 0 else -1 if event.y < 0 else 0, pygame.mouse.get_pos())
             return True
-        if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-            self.firing = False
-            self.pan_drag = None
+        if event.type == pygame.MOUSEBUTTONUP and event.button in (1, 3):
+            if event.button == 1:
+                self.firing = False
+                self.pan_drag = None
+            else:
+                self.secondary_firing = False
             return False  # Buttons still need the release.
         if event.type == pygame.MOUSEMOTION and self.pan_drag is not None:
             self._move_camera(self.camera[0] - (event.pos[0] - self.pan_drag[0]) / self.zoom,
                               self.camera[1] - (event.pos[1] - self.pan_drag[1]) / self.zoom)
             self.pan_drag = event.pos
             return True
-        if (event.type != pygame.MOUSEBUTTONDOWN or event.button != 1
+        if (event.type != pygame.MOUSEBUTTONDOWN or event.button not in (1, 3)
                 or any(element.rect.collidepoint(event.pos) for element in self.elements)):
             return False
         if self._driving():
-            self.firing = True
-        elif self.simulation.controlled is None or not self.simulation.controlled.alive:
+            if event.button == 1:
+                self.firing = True
+            else:
+                self.secondary_firing = True
+        elif event.button == 1 and (self.simulation.controlled is None or not self.simulation.controlled.alive):
             self.pan_drag = event.pos
         return True
 
@@ -1228,12 +1307,17 @@ class CustomBattleScreen(Screen):
         # Speed is signed along the hull. Round the countdown up so an unfinished reload never reads zero.
         key = (round(controlled.speed, 1) or 0.0, round(math.degrees(controlled.angle)) % 360,
                math.ceil(max(0.0, controlled.cooldown) * 10))
+        if controlled.weapon(1) is not None:
+            key += (math.ceil(max(0.0, controlled.secondary_cooldown) * 10),)
         if key == self.controlled_stats_key:
             return
         self.controlled_stats_key = key
-        speed, angle, reload_tenths = key
+        speed, angle, reload_tenths = key[:3]
         reload_status = f"{reload_tenths / 10:.1f}s" if reload_tenths else "Ready"
         lines = (f"Speed: {speed:.1f} px/s", f"Angle: {angle}\N{DEGREE SIGN}", f"Reload: {reload_status}")
+        if controlled.weapon(1) is not None:
+            secondary = f"{key[3] / 10:.1f}s" if key[3] else "Ready"
+            lines = (*lines[:2], f"Primary: {reload_status}", f"Secondary: {secondary}")
         panel = pygame.Surface(CONTROL_STATS_SIZE)
         ui_elements.draw_pixel_panel(panel, panel.get_rect(), CONTROL_STATS_COLOR, CONTROL_STATS_BORDER)
         text_rect = panel.get_rect().inflate(-2 * CONTROL_STATS_INSET, -2 * CONTROL_STATS_INSET)
@@ -1257,20 +1341,35 @@ class CustomBattleScreen(Screen):
         driving = self._driving()
         pointer = pygame.mouse.get_pos()
         controlled = self.simulation.controlled
+        aim_point = None
+        throttle = int(pygame.K_w in self.held_keys) - int(pygame.K_s in self.held_keys)
+        turn = int(pygame.K_d in self.held_keys) - int(pygame.K_a in self.held_keys)
+        primary, secondary = self.firing, self.secondary_firing
+        if self.touch_mode and controlled is not None and controlled.alive:
+            drive, aim = self._touch_axes("drive"), self._touch_axes("aim")
+            throttle, turn = -drive.y, drive.x
+            pointer = (c.SCREEN_WIDTH / 2 + aim.x * TOUCH_PAD_SIZE,
+                       c.SCREEN_HEIGHT / 2 + aim.y * TOUCH_PAD_SIZE)
+            if aim.length_squared():
+                aim_point = (controlled.x + aim.x * TOUCH_AIM_DISTANCE,
+                             controlled.y + aim.y * TOUCH_AIM_DISTANCE)
+            weapon_mode = self.touch_weapon_mode if controlled.weapon(1) is not None else "Primary"
+            primary = bool(aim.length_squared()) and weapon_mode in {"Primary", "Both"}
+            secondary = bool(aim.length_squared()) and weapon_mode in {"Secondary", "Both"}
         if controlled is not None and controlled.alive:
             # Convert the pointer to a firing target only after applying its camera offset.
             self._follow_controlled_camera(controlled, pointer)
         self.simulation.set_player_input(
-            throttle=int(pygame.K_w in self.held_keys) - int(pygame.K_s in self.held_keys),
-            turn=int(pygame.K_d in self.held_keys) - int(pygame.K_a in self.held_keys),
-            fire=self.firing, aim_point=self.to_field(pointer) if driving else None)
+            throttle=throttle if driving else 0.0, turn=turn if driving else 0.0,
+            fire=primary if driving else False, secondary_fire=secondary if driving else False,
+            aim_point=(aim_point if self.touch_mode else self.to_field(pointer)) if driving else None)
         self.simulation.advance(dt)
         if self.terrain_art_key != (id(self.simulation.battlefield), self.simulation.battlefield.revision, self.zoom):
             self._cache_terrain_art()
         controlled = self.simulation.controlled
         if controlled is not None and controlled.alive:
             self._follow_controlled_camera(controlled, pointer)
-        elif self.held_keys or self.firing:
+        elif self.held_keys or self.firing or self.secondary_firing or self.touch_pointers:
             # The controlled sub-unit is gone: the player spectates, so drop held input and leave the camera free.
             self.clear_controls()
         self._refresh_status()
@@ -1454,18 +1553,20 @@ class CustomBattleScreen(Screen):
         end = (center[0] + math.cos(fighter.aim) * reach, center[1] + math.sin(fighter.aim) * reach)
         pygame.draw.line(surface, AIM_LINE_COLOR, center, end, 1)
         indicator_scale = max(MIN_PLAYER_INDICATOR_SCALE, zoom)
-        pygame.draw.circle(surface, PLAYER_COLOR, center, PLAYER_RING_RADIUS * indicator_scale, 2)
+        pygame.draw.circle(surface, PLAYER_COLOR, center, max(PLAYER_RING_RADIUS, fighter.radius + 4) * indicator_scale, 2)
         draw_player_arrow(surface, center, fighter.angle,
                           fighter.speed / fighter.max_speed if fighter.max_speed else 0.0, scale=indicator_scale)
-        if fighter.cooldown > 0:
+        for slot in (0, 1):
+            if fighter.weapon(slot) is None or fighter.weapon_cooldown(slot) <= 0:
+                continue
             # The ring fills clockwise from the top as the weapon reloads.
-            loaded = max(0.0, min(1.0, 1.0 - fighter.cooldown / combat.FIRE_INTERVAL))
-            radius = RELOAD_RING_RADIUS * indicator_scale
+            loaded = max(0.0, min(1.0, 1.0 - fighter.weapon_cooldown(slot) / fighter.reload_duration(slot)))
+            radius = (max(RELOAD_RING_RADIUS, fighter.radius + 8) + slot * 5) * indicator_scale
             steps = max(2, math.ceil(math.tau * loaded / CONE_ARC_STEP))
             ring = [(center[0] + math.cos(-math.pi / 2 + math.tau * loaded * step / steps) * radius,
                      center[1] + math.sin(-math.pi / 2 + math.tau * loaded * step / steps) * radius)
                     for step in range(steps + 1)]
-            pygame.draw.lines(surface, RELOAD_COLOR, False, ring, 2)
+            pygame.draw.lines(surface, RELOAD_COLOR if not slot else PLAYER_COLOR, False, ring, 2)
 
     def _draw_grass(self, surface):
         """The battlefield and its faint, fixed checkerboard; anything past its edges is dark."""
@@ -1599,7 +1700,16 @@ class CustomBattleScreen(Screen):
             scale = OVERVIEW_SYMBOL_SIZE / max(UNIT_SHAPE_SIZES[fighter.shape]) if overview else zoom
             draw_unit_shape(surface, fighter.shape, center, fighter.angle, TEAM_COLORS[fighter.side],
                             scale=scale, aim=fighter.aim,
-                            artwork=None if overview else self.battle_artwork[fighter.data["type"]])
+                            artwork=None if overview else self.battle_artwork[fighter.data["type"]],
+                            recoil=4 * fighter.recoil / c.TACTICAL_MUZZLE_SECONDS)
+            if fighter.muzzle > 0 and not overview:
+                shell = fighter.weapon(fighter.fired_weapon)["shell"]
+                length = UNIT_SHAPE_SIZES[fighter.shape][0] / 2
+                tip = (round(center[0] + math.cos(fighter.aim) * length * scale),
+                       round(center[1] + math.sin(fighter.aim) * length * scale))
+                flash = max(2, round((5 if shell else 2) * scale))
+                pygame.draw.rect(surface, TANK_SHOT_COLOR if shell else SHOT_COLOR,
+                                 (tip[0] - flash, tip[1] - flash, flash * 2, flash * 2))
             labeled.append((fighter, center, scale))
         line_width = max(1, round(SHOT_WIDTH * zoom))
         tank_line_width = max(2, round(TANK_SHOT_WIDTH * zoom))
@@ -1609,9 +1719,14 @@ class CustomBattleScreen(Screen):
                 continue
             tail_length = SHOT_TAIL * zoom / (math.hypot(shot.vx, shot.vy) or 1.0)
             tail = (round(head[0] - shot.vx * tail_length), round(head[1] - shot.vy * tail_length))
-            tank_shell = shot.source.shape in TANK_SHOT_SHAPES
+            tank_shell = shot.weapon_data["shell"]
             pygame.draw.line(surface, TANK_SHOT_COLOR if tank_shell else SHOT_COLOR, tail, head,
                              tank_line_width if tank_shell else line_width)
+        for x, y, remaining, shell in self.simulation.impacts:
+            point = self.to_screen(x, y)
+            size = max(1, round((7 if shell else 3) * zoom * remaining / c.TACTICAL_IMPACT_SECONDS))
+            pygame.draw.rect(surface, TANK_SHOT_COLOR if shell else SHOT_COLOR,
+                             (point[0] - size, point[1] - size, size * 2, size * 2), max(1, round(zoom)))
         self._draw_canopy(surface)
         for fighter, center, scale in labeled:
             bar = pygame.Rect(center[0] - bar_size[0] // 2, center[1] - round(23 * scale), *bar_size)
@@ -1694,6 +1809,16 @@ class CustomBattleScreen(Screen):
         for image, center in zip(self.status_surfaces, ((220, 103), (1060, 103), (640, 103))):
             surface.blit(image, image.get_rect(center=center))
         controlled = self.simulation.controlled
+        if self.touch_mode and self.mode == "battle" and controlled is not None and controlled.alive:
+            for role in ("drive", "aim"):
+                rect = self._touch_pad_rect(role)
+                ui_elements.draw_pixel_panel(surface, rect, CONTROL_STATS_COLOR, CONTROL_STATS_BORDER, recessed=True)
+                axes = self._touch_axes(role)
+                knob = pygame.Rect(0, 0, 28, 28)
+                knob.center = (rect.centerx + axes.x * (rect.width / 2 - knob.width / 2),
+                               rect.centery + axes.y * (rect.height / 2 - knob.height / 2))
+                ui_elements.draw_pixel_panel(surface, knob, TEAM_COLORS[0] if role == "drive" else PLAYER_COLOR,
+                                             CONTROL_STATS_BORDER)
         if (self.mode == "battle" and controlled is not None and controlled.alive
                 and self.controlled_stats_surface is not None):
             panel = self.controlled_stats_surface

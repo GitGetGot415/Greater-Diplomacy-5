@@ -88,7 +88,7 @@ class Battlefield:
         self.features = list(features)
         self.revision = 0
         self._buckets = {}
-        self._navigation = None
+        self._navigation = {}
         self._routes = {}
         self._sight = {}
         self._index_features()
@@ -150,7 +150,7 @@ class Battlefield:
                 for cy in range(int((feature.y - feature.radius) // FEATURE_CELL),
                                 int((feature.y + feature.radius) // FEATURE_CELL) + 1):
                     self._buckets.setdefault((cx, cy), []).append(feature)
-        self._navigation = None
+        self._navigation.clear()
         self._routes.clear()
         self._sight.clear()
 
@@ -189,14 +189,15 @@ class Battlefield:
                                                                feature.radius + radius) is not None
             for feature in self.nearby(start, end, radius))
 
-    def move(self, start, end):
+    def move(self, start, end, padding=None):
         """Sweep ground movement, then slide along an open axis without crossing terrain."""
-        end = (max(self.body_radius, min(self.size[0] - self.body_radius, end[0])),
-               max(self.body_radius, min(self.size[1] - self.body_radius, end[1])))
-        if self.clear_path(start, end):
+        radius = self.body_radius if padding is None else padding
+        end = (max(radius, min(self.size[0] - radius, end[0])),
+               max(radius, min(self.size[1] - radius, end[1])))
+        if self.clear_path(start, end, radius):
             return end
         candidates = ((end[0], start[1]), (start[0], end[1]))
-        return max((point for point in candidates if self.clear_path(start, point)),
+        return max((point for point in candidates if self.clear_path(start, point, radius)),
                    key=lambda point: math.dist(start, point), default=start)
 
     def first_hit(self, start, end, z0, z1):
@@ -241,26 +242,27 @@ class Battlefield:
             self.revision += 1
             self._index_features()
 
-    def _grid(self):
-        if self._navigation is None:
+    def _grid(self, padding=None):
+        radius = self.body_radius if padding is None else padding
+        if radius not in self._navigation:
             # Extra clearance keeps every edge between neighboring centers safe.
-            clearance = self.body_radius + NAV_CELL * math.sqrt(2) / 2
-            self._navigation = {(x, y) for x in range(math.ceil(self.size[0] / NAV_CELL))
-                                for y in range(math.ceil(self.size[1] / NAV_CELL))
-                                if self.walkable(self.cell_center((x, y)), clearance)}
-        return self._navigation
+            clearance = radius + NAV_CELL * math.sqrt(2) / 2
+            self._navigation[radius] = {(x, y) for x in range(math.ceil(self.size[0] / NAV_CELL))
+                                       for y in range(math.ceil(self.size[1] / NAV_CELL))
+                                       if self.walkable(self.cell_center((x, y)), clearance)}
+        return self._navigation[radius]
 
     @staticmethod
     def cell_center(cell):
         return ((cell[0] + 0.5) * NAV_CELL, (cell[1] + 0.5) * NAV_CELL)
 
-    def _nearest_cell(self, point, require_path=False):
-        grid = self._grid()
+    def _nearest_cell(self, point, require_path=False, padding=None):
+        grid = self._grid(padding)
         cell = int(point[0] // NAV_CELL), int(point[1] // NAV_CELL)
         if cell in grid:
             return cell
         for candidate in sorted(grid, key=lambda key: math.dist(point, self.cell_center(key))):
-            if not require_path or self.clear_path(point, self.cell_center(candidate)):
+            if not require_path or self.clear_path(point, self.cell_center(candidate), padding):
                 return candidate
         return None
 
@@ -297,16 +299,18 @@ class Battlefield:
             self.features.remove(blocker)
             self._index_features()
 
-    def route(self, start, goal):
+    def route(self, start, goal, padding=None):
         """Cached A* over static ground; each fighter follows its own resulting waypoints."""
-        if self.clear_path(start, goal):
+        radius = self.body_radius if padding is None else padding
+        if self.clear_path(start, goal, radius):
             return [goal]
-        first, last = self._nearest_cell(start, require_path=True), self._nearest_cell(goal)
+        first = self._nearest_cell(start, require_path=True, padding=radius)
+        last = self._nearest_cell(goal, padding=radius)
         if first is None or last is None:
             return []
-        key = first, last
+        key = radius, first, last
         if key not in self._routes:
-            grid = self._grid()
+            grid = self._grid(radius)
             queue, costs, previous = [(0, first)], {first: 0}, {}
             while queue:
                 _, current = heapq.heappop(queue)
@@ -326,10 +330,10 @@ class Battlefield:
                 self._routes[key] = ()
         cells = self._routes[key]
         points = [self.cell_center(cell) for cell in cells]
-        if points and self.clear_path(points[-1], goal):
+        if points and self.clear_path(points[-1], goal, radius):
             points.append(goal)
         # Skip safe intermediate cells, but never cut across blocked corners.
         for index in range(len(points) - 1, -1, -1):
-            if self.clear_path(start, points[index]):
+            if self.clear_path(start, points[index], radius):
                 return points[index:]
         return []

@@ -154,7 +154,8 @@ class UnitProgressionTests(unittest.TestCase):
                   "production_time": 4}
         stages = [(1800, "Fixture First Stage", 120, 17, 3, 2, 41, 11, 5, 6, None),
                   (1810, "Fixture Second Stage", 90, 31, 8, 1, 23, 19, 0, 4, None)]
-        with patch.dict(recipes.EQUIPMENT_STAGES, {"infantry_type": stages}):
+        with (patch.dict(recipes.EQUIPMENT_STAGES, {"infantry_type": stages}),
+              patch.dict(recipes.EQUIPMENT_TACTICAL_WEAPONS, {"infantry_type": [("rifle", None)] * len(stages)})):
             entries = recipes.equipment_family("Infantry Type", "infantry_type").entries()
         for stage, profile, (name, entry) in zip(stages, (first, second), entries):
             year, label = stage[:2]
@@ -175,7 +176,8 @@ class UnitProgressionTests(unittest.TestCase):
         stages = [(recipes.INFANTRY_VARIANT_FIRST_YEAR - 1, "Fixture Earlier Infantry", *values),
                   (recipes.INFANTRY_VARIANT_FIRST_YEAR, "Fixture Infantry", *values)]
         original = list(stages)
-        with patch.dict(recipes.EQUIPMENT_STAGES, {"infantry_type": stages}):
+        with (patch.dict(recipes.EQUIPMENT_STAGES, {"infantry_type": stages}),
+              patch.dict(recipes.EQUIPMENT_TACTICAL_WEAPONS, {"infantry_type": [("rifle", None)] * len(stages)})):
             foot = recipes.equipment_family("Infantry Type", "infantry_type").entries()[0][1]
             self.assertEqual(foot["cost_fuel"], 0)
             self.assertEqual(queries.get_unit_upkeep(foot)["fuel"], 0)
@@ -226,7 +228,8 @@ class UnitProgressionTests(unittest.TestCase):
                    (3, 2, {"health": 7, "attack": 4, "cost_materials": 3})),
                   (1912, "Next Infantry", 150, 40, 3, 1, 60, 50, 6, 2, None,
                    (1, 1, {}))]
-        with patch.dict(recipes.EQUIPMENT_STAGES, {"infantry_type": stages}):
+        with (patch.dict(recipes.EQUIPMENT_STAGES, {"infantry_type": stages}),
+              patch.dict(recipes.EQUIPMENT_TACTICAL_WEAPONS, {"infantry_type": [("rifle", None)] * len(stages)})):
             entries = recipes.equipment_family("Infantry Type", "infantry_type").entries()
             research = recipes.extend_infantry_research("infantry_type", {})
             vehicles = recipes.equipment_family("Motorized Infantry Type", "infantry_type").entries()
@@ -251,7 +254,8 @@ class UnitProgressionTests(unittest.TestCase):
             stages = [(1800, "Fixture Equipment", 123, 13, 4, 3, 41, 19, 7, 4, 17,
                        (3, 2, {"health": 7, "attack": 3, "cost_materials": 5, "bombard_attack": 4})),
                       (1810, "Next Equipment", 150, 29, 6, 2, 67, 23, 9, 5, 31, (1, 1, {}))]
-            with self.subTest(tech=tech), patch.dict(recipes.EQUIPMENT_STAGES, {tech: stages}):
+            with (self.subTest(tech=tech), patch.dict(recipes.EQUIPMENT_STAGES, {tech: stages}),
+                  patch.dict(recipes.EQUIPMENT_TACTICAL_WEAPONS, {tech: [("rifle", None)] * len(stages)})):
                 expanded = recipes.expanded_equipment_stages(tech)
                 expected_names = ["Fixture Equipment I", "Fixture Equipment II",
                                   "Fixture Equipment III", "Next Equipment I"]

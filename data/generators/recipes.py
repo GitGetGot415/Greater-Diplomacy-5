@@ -281,6 +281,31 @@ EQUIPMENT_STAGES = {
 }
 
 
+# Weapon assignments follow equipment stages, so changing a stage's research
+# year does not silently change its weapon. Each tuple is (primary, support).
+EQUIPMENT_TACTICAL_WEAPONS = {
+    "infantry_type": [
+        ("musket", None), ("musket", None), ("rifle_musket", None),
+        ("breech_rifle", None), ("breech_rifle", None),
+        ("magazine_rifle", None), ("magazine_rifle", None),
+        ("magazine_rifle", None), ("magazine_rifle", None),
+        ("magazine_rifle", "support_mg"), ("semi_auto_rifle", "support_mg"),
+        ("semi_auto_rifle", "support_mg"), ("assault_rifle", "support_mg"),
+        ("assault_rifle", "support_mg"), ("assault_rifle", "support_mg"),
+        ("assault_rifle", "support_mg"), ("assault_rifle", "support_mg"),
+        ("assault_rifle", "support_mg"),
+    ],
+    "cavalry": [("musket", None), ("rifle_musket", None), ("breech_rifle", None),
+                ("magazine_rifle", None), ("magazine_rifle", None),
+                ("magazine_rifle", None), ("semi_auto_rifle", None)],
+    "militia": [("musket", None), ("rifle_musket", None), ("breech_rifle", None),
+                ("magazine_rifle", None), ("magazine_rifle", "support_mg"),
+                ("semi_auto_rifle", "support_mg"), ("assault_rifle", "support_mg"),
+                ("assault_rifle", "support_mg"), ("assault_rifle", "support_mg"),
+                ("assault_rifle", "support_mg")],
+}
+
+
 class EquipmentFamily(UnitFamily):
     """Give equipment stages names while retaining their shared family metadata."""
 
@@ -298,6 +323,16 @@ class EquipmentFamily(UnitFamily):
             entry["metadata"]["display_name"] = name
             entry["metadata"]["tier_label"] = label
             entry["metadata"]["tier_kind"] = "stage"
+            track = "infantry_type" if self.prefix in INFANTRY_VARIANT_RULES else self.research_key
+            if track in EQUIPMENT_TACTICAL_WEAPONS:
+                if len(EQUIPMENT_TACTICAL_WEAPONS[track]) != len(EQUIPMENT_STAGES[track]):
+                    raise ValueError(f"{track}: define one tactical weapon assignment for each equipment stage.")
+                stage_index = max(index for index, stage in enumerate(EQUIPMENT_STAGES[track])
+                                  if stage[0] <= entry["metadata"]["tier_order"])
+                primary, support = EQUIPMENT_TACTICAL_WEAPONS[track][stage_index]
+                entry["metadata"]["tactical_primary"] = primary
+                if support is not None and self.prefix in {"Infantry Type", "Militia"}:
+                    entry["metadata"]["tactical_support"] = support
             result.append((name, entry))
         return result
 

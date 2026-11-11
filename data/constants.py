@@ -23,6 +23,59 @@ UNPLAYABLE_NATIONS = ["None", "Unclaimed", "The Rot", "Ocean", "Lakes", "Spectat
 SCREEN_WIDTH = 1280
 SCREEN_HEIGHT = 720
 
+# Tactical weapon pacing is independent of campaign attack and defense. Damage
+# multipliers apply after the shared target restrictions and tactical defense.
+# interval is between shots; reload follows the last round in a magazine/burst.
+TACTICAL_WEAPONS = {
+    "rifle": dict(label="Rifle", interval=2.0, rounds=1, reload=2.0, speed=1000.0,
+                  spread=1.5, damage=1.0, penetration=0.0, shell=False, soft_only=False),
+    "musket": dict(label="Musket", interval=6.0, rounds=1, reload=6.0, speed=850.0,
+                   spread=2.8, damage=2.2, penetration=0.0, shell=False, soft_only=False),
+    "rifle_musket": dict(label="Rifle-musket", interval=5.0, rounds=1, reload=5.0, speed=950.0,
+                         spread=1.8, damage=2.0, penetration=0.0, shell=False, soft_only=False),
+    "breech_rifle": dict(label="Breech-loading rifle", interval=3.0, rounds=1, reload=3.0,
+                         speed=1100.0, spread=1.5, damage=1.4, penetration=0.0, shell=False, soft_only=False),
+    "magazine_rifle": dict(label="Magazine rifle", interval=0.9, rounds=5, reload=3.0,
+                           speed=1250.0, spread=1.2, damage=0.75, penetration=0.0, shell=False, soft_only=False),
+    "semi_auto_rifle": dict(label="Semi-automatic rifle", interval=0.5, rounds=8, reload=2.5,
+                            speed=1300.0, spread=1.2, damage=0.5, penetration=0.0, shell=False, soft_only=False),
+    "assault_rifle": dict(label="Assault rifle", interval=0.12, rounds=3, reload=1.1,
+                          speed=1350.0, spread=1.8, damage=0.28, penetration=0.0, shell=False, soft_only=False),
+    "support_mg": dict(label="Support machine gun", interval=0.12, rounds=6, reload=1.8,
+                       speed=1350.0, spread=2.4, damage=0.28, penetration=0.0, shell=False, soft_only=True),
+    "vehicle_mg": dict(label="Machine gun", interval=0.12, rounds=8, reload=2.0,
+                       speed=1350.0, spread=2.8, damage=0.08, penetration=0.0, shell=False, soft_only=True),
+    "light_cannon": dict(label="Light cannon", interval=4.5, rounds=1, reload=4.5,
+                         speed=1900.0, spread=1.0, damage=1.8, penetration=2.0, shell=True, soft_only=False),
+    "cannon": dict(label="Cannon", interval=6.0, rounds=1, reload=6.0,
+                   speed=2300.0, spread=0.8, damage=2.5, penetration=3.0, shell=True, soft_only=False),
+    "heavy_cannon": dict(label="Heavy cannon", interval=8.0, rounds=1, reload=8.0,
+                         speed=2500.0, spread=0.8, damage=3.4, penetration=4.0, shell=True, soft_only=False),
+    "autocannon": dict(label="Autocannon", interval=0.3, rounds=3, reload=2.8,
+                       speed=1800.0, spread=1.5, damage=0.5, penetration=1.0, shell=True, soft_only=False),
+}
+TACTICAL_VEHICLE_WEAPONS = {
+    "armored_car": ("light_cannon", "vehicle_mg"),
+    "light_tank": ("light_cannon", "vehicle_mg"),
+    "tank": ("cannon", "vehicle_mg"),
+    "heavy_tank": ("heavy_cannon", "vehicle_mg"),
+    "ifv": ("autocannon", "vehicle_mg"),
+}
+# Body width, height, collision radius, and resistance to a passing shell.
+# The renderer and all simulation clearance checks read the same dimensions.
+TACTICAL_BODIES = {
+    "infantry": (15, 15, 8.0, 1.0), "cavalry": (22, 16, 11.0, 1.0),
+    "motorized": (30, 20, 15.0, 1.5), "mechanized": (34, 24, 17.0, 2.0),
+    "ifv": (38, 26, 19.0, 2.5), "armored_car": (30, 20, 15.0, 2.0),
+    "light_tank": (34, 24, 17.0, 3.0), "tank": (40, 28, 20.0, 4.0),
+    "heavy_tank": (48, 34, 24.0, 5.0),
+}
+TACTICAL_PENETRATION_DAMAGE_RETAINED = 0.6
+TACTICAL_MOVING_SPREAD = 1.5  # Extra degrees at full movement speed.
+TACTICAL_TURNING_SPREAD = 1.0  # Extra degrees at full hull turn speed.
+TACTICAL_MUZZLE_SECONDS = 0.12
+TACTICAL_IMPACT_SECONDS = 0.18
+
 # Keybind actions which synthesize the matching physical mouse-button event.
 # The keybind screen owns their player-facing labels and layout; this mapping
 # is shared input behavior, so it belongs with the other global constants.

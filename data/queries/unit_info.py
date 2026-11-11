@@ -224,6 +224,9 @@ def get_unit_metadata(unit_name, unit_library=None, *, context=None):
         raise ValueError(f"Unit {unit_name}: metadata.recruitment.industry must be industry, basic_factory, or none.")
     if not isinstance(recruitment.get("coastal"), bool):
         raise ValueError(f"Unit {unit_name}: metadata.recruitment.coastal must be boolean.")
+    for field in ("tactical_primary", "tactical_support"):
+        if field in metadata and (not isinstance(metadata[field], str) or metadata[field] not in c.TACTICAL_WEAPONS):
+            raise ValueError(f"Unit {unit_name}: metadata.{field} must name a weapon in TACTICAL_WEAPONS.")
     if len(_VALIDATED_METADATA) >= _VALIDATED_METADATA_LIMIT:
         _VALIDATED_METADATA.clear()
     _VALIDATED_METADATA[id(metadata)] = metadata

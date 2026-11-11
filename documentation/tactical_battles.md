@@ -147,11 +147,13 @@ for their aimed weapon. These troops use smaller sprites, with the gun offset to
 Motorized infantry, mechanized infantry, and infantry fighting vehicles use their chassis
 images without a separate weapon layer. Other tanks and vehicles use rectangles.
 Health bars show remaining strength, with the unit's nationality flag beside each bar, and projectiles show shots in flight.
-Tank shells are bright orange and thicker than other units' yellow shots.
+Cannon and autocannon shells are bright orange and thicker than rifle and machine-gun shots.
+Muzzle flashes, cannon recoil, and brief impact flashes distinguish firing and impacts.
 Regular shots from AI units play a random Rifle Shot 1, Rifle Shot 2, or Rifle Shot 3 sound.
 Regular shots from the player-controlled sub-unit play Heavy Gunshot instead.
-Each orange tank shot plays a random Tank Shot 1, Tank Shot 2, or Tank Shot 3 sound.
-Tank sounds apply to both armies and player-controlled tanks.
+Each shell plays a random Tank Shot 1, Tank Shot 2, or Tank Shot 3 sound.
+The weapon determines the sound: a vehicle's machine gun uses regular firing sounds.
+Both armies and player-controlled units follow the same sound rules.
 Firing sounds use the existing sound-effect volume and pitch settings and play when a projectile is fired.
 Rifle and tank firing sounds have separate voice pools so rifle volleys cannot suppress quieter tank shots.
 When a pool is full, the newest shot replaces the oldest sound tail in that pool.
@@ -167,7 +169,8 @@ it brings `ceil(f × N)` sub-units that share its health equally. For example, w
 70% brings 7 at full health, 63% brings 7 at 90%, and 60% brings 6 at full health.
 Sub-units also divide the division's damage. Each hit is worked out with the sub-unit's wound-adjusted attack against the
 target's full defense, then the damage that gets through is divided by the division's sub-unit count at full health.
-A full division therefore hits about as hard as one unsplit unit, and the full stats still decide who can hurt whom.
+Weapon profiles multiply the damage after defense and sharing. The full stats still decide who can hurt whom;
+weapon timing and damage multipliers determine how that attack becomes sustained fire.
 
 #### Combat
 
@@ -180,13 +183,28 @@ Restart after editing the value. Shooting and ramming use the same setting, befo
 Destroyed sub-units never attack. Losing sub-units also reduces a division's total firepower.
 After defense and sub-unit damage sharing, positive damage rounds up before the tactical pacing multiplier applies.
 The multiplier slows even small hits without making previously vulnerable targets immune.
-Shooting and ramming use the same damage calculation and target capability rules.
-A shot retains the shooter's attack statistics when fired and uses the rules for the unit it actually hits.
+Shooting and ramming share the base damage calculation and target capability rules.
+Weapon damage multipliers apply only to shooting; ramming retains its separate impact multiplier.
+Machine guns cannot damage armored battlefield shapes, even when the vehicle carrying the gun can.
+A shot retains the shooter's attack statistics and weapon profile when fired and uses the rules for the unit it actually hits.
 A shot already in flight still lands after its shooter is destroyed.
 
-Every sub-unit has the same long weapon range. Shots fly fast in a straight line and hit the first sub-unit they cross,
-ally or enemy. Only the shooter is safe from its own shot. Friendly fire uses the same damage rules as hits on enemies.
-Each shot, the player's included, leaves at a small random angle off where the gun points. The same small error
+Every sub-unit has the same maximum weapon range. Weapon profiles set projectile speed, spread, damage contribution,
+shot interval, magazine or burst length, and the reload after the final round. Early firearms fire individual shots;
+later equipment uses magazines, faster individual shots, or bursts. Equipment stages select profiles in the generated unit metadata.
+An infantry or militia division with support-weapon metadata and more than one deployed sub-unit assigns one sub-unit
+the support weapon. The remaining sub-units keep their primary firearms. The middle sub-unit remains player-controlled.
+Tanks and armored cars have independent main guns and machine guns. Infantry fighting vehicles have autocannons
+and machine guns. Both guns follow the same turret aim, but each gun has its own cooldown and burst or magazine state.
+The machine gun remains available while the main gun reloads.
+
+Shots fly in a straight line. Rifle and machine-gun shots stop at the first body they cross, ally or enemy.
+Shells have a penetration budget. Each crossed body consumes that body's penetration resistance and reduces the shell's
+remaining damage. A body that consumes the remaining budget stops the shell. A shell can hit each body only once,
+including across simulation ticks. Terrain still intercepts shells. Only the shooter is safe from its own shot.
+Friendly fire uses the same damage rules as hits on enemies.
+Each shot, the player's included, leaves at a random angle within its weapon's spread. Movement and hull rotation
+increase spread. The same small error
 carries a shot further off target over a longer distance, so long-range shots miss more often than close ones.
 Shots also lose damage gradually after their full-damage distance, down to a positive minimum multiplier.
 Falloff uses the distance the projectile actually travels to impact and applies after defense and sub-unit damage sharing.
@@ -212,7 +230,7 @@ Foliage only draws, covering units and shots, while health bars, flags, and the 
 Each tree's foliage is a slightly lighter or darker shade of `FOLIAGE_COLOR` (up to `FOLIAGE_GREEN_VARIATION`).
 All foliage is partly transparent (`FOLIAGE_ALPHA` in
 [screens/game/custom_battle.py](../screens/game/custom_battle.py)), so units and trunks show faintly beneath it.
-Trunks block ground movement and intercept shots. Ordinary shots leave trees intact; tank shells remove a tree,
+Trunks block ground movement and intercept shots. Ordinary shots leave trees intact; cannon and autocannon shells remove a tree,
 foliage included, and stop at that tree. Later shots and ground units can use the opening.
 Swamps have a pink background, trees, and impassable marsh areas. Marsh areas allow shots across like chasms.
 
@@ -222,6 +240,8 @@ The same spacing rule applies between trees, hills, mountain rocks, chasms, and 
 Spacing uses tree trunks and the full radius of other features; foliage can overlap. Crowded placements are skipped.
 The generated battlefield keeps ground routes connected. Terrain generation and
 navigation belong to `map_logic/battle_terrain.py`; the screen draws cached artwork from those same features.
+Battlefield shapes have different body sizes. Projectile hits, body contacts, movement, navigation, and terrain clearance
+use each body's collision radius. Navigation caches distinguish different radii and invalidate when trees are removed.
 AI units use ground routes around obstacles and seek accessible firing positions when terrain blocks their shots.
 Tanks can fire to clear obstructing trees. Formations can loosen while following routes around terrain.
 Friendly support must have an unobstructed ground approach, and terrain-blocked enemy fire does not count as
@@ -246,9 +266,10 @@ catches up. Each sub-unit also has its own temperament, drawn at deployment: how
 fight, its cruising speed, a short delay before it first moves, and a gentle weave from side to side while advancing.
 Once it has stopped, a sub-unit faces the enemy it shoots at so its firing cone covers it.
 
-Each sub-unit chooses whom to shoot from the enemies close to its nearest one. A wounded enemy counts as nearer than
+Each weapon chooses whom to shoot from the enemies close to the sub-unit's nearest enemy. A wounded enemy counts as nearer than
 its actual distance, and clear firing lines take priority over targets behind terrain or allies.
-Target selection favors enemies the shooting sub-unit can damage at its current health.
+Target selection favors enemies the weapon can damage at the shooter's current health. Cannons favor nearby armored
+threats; machine guns choose vulnerable targets. While the main gun reloads, the turret can aim the machine gun at its target.
 
 AI sub-units also fight according to their type:
 
@@ -294,8 +315,9 @@ Units abandon the approach when support or health no longer permits the ram.
 
 Shots hurt allies, so AI sub-units keep out of each other's way. An AI sub-unit holds fire while an ally
 could take its shot. It checks the line along its lead on the target, widened by the aim tolerance and shot spread,
-with each ally where it will be when the shot passes. A loaded AI sub-unit blocked only by an ally sidesteps away
-from that ally, whatever its speed, until the line clears. Firing positions chosen around terrain also avoid allies.
+with each ally where it will be when the shot passes. Penetrating guns also check allies beyond the intended target,
+up to the shell's maximum reach, unless intervening terrain stops the shot. A loaded AI sub-unit blocked only by an
+ally sidesteps away from that ally, whatever its speed, until the line clears. Firing positions chosen around terrain also avoid allies.
 Ram-capable AI units brake so they never reach an ally in their path faster than a harmless bump.
 The player's sub-unit gets no such help: its shots can hurt allies.
 
@@ -308,12 +330,21 @@ The player's sub-unit gets no such help: its shots can hurt allies.
 | A | Turn left. |
 | D | Turn right. |
 | Mouse | Aim. The gun turns toward the pointer, inside the firing cone if the unit has one. |
-| Left mouse | Fire along the gun. |
+| Left mouse | Fire the primary weapon along the gun. |
+| Right mouse | Fire the secondary weapon, when equipped. Hold both buttons to use both weapons. |
 | Mouse wheel | Zoom in or out. |
 
 Movement follows the hull's facing direction. A and D rotate the hull rather than moving it sideways, and turning
 the hull carries the firing cone with it.
-Firing uses a reload time shared with AI units. Holding the left mouse button fires again only after reloading.
+Human and AI units use the same weapon timing. Holding a fire control fires again only when that weapon is ready.
+The primary and secondary weapons have separate reload readouts and progress rings.
+
+Mobile controls use independent drive and aim pads. The drive pad controls forward/reverse throttle and hull steering.
+The aim pad aims and fires while held outside its dead zone. Releasing the aim pad stops firing; releasing the drive
+pad releases throttle and steering. A weapon selector offers Primary, Secondary, and Both for units with two guns.
+The selection remains active until changed, and each gun still follows its own cooldown. Single-weapon units need no selector.
+Both pads can be held together, and the selector can be used while a drive finger remains held.
+The shared touch-input layer suppresses duplicate mouse events and clears held controls on focus loss or screen changes.
 
 Only the controlled sub-unit shows its range and firing cone (a circle for units that aim all the way around)
 and a line along its gun. Its yellow ring has an arrow along the hull that
@@ -366,15 +397,23 @@ have their own guide: [Tactical mode](tactical_mode.md).
 
 ## Rules and implementation owners
 
-[screens/game/custom_battle.py](../screens/game/custom_battle.py) owns the three views, roster controls, navigation, the camera, and keyboard and mouse input.
+[screens/game/custom_battle.py](../screens/game/custom_battle.py) owns the three views, roster controls, navigation, the camera, and desktop and mobile battle controls.
+[ui/navigation/touch_input.py](../ui/navigation/touch_input.py) routes continuous touch pointers separately from ordinary tap and drag gestures.
 Campaign encounter and retreat owners are listed in [tactical_mode.md](tactical_mode.md#state-and-implementation-owners).
 [map_logic/custom_battle.py](../map_logic/custom_battle.py) owns unit generation, sub-units, deployment, movement, aiming, projectiles, cooldowns, and results.
 The same simulation handles custom battles and campaign encounters. Contact state, AI commitments, and gun cooldowns
 exist only during the encounter; campaign results still use the surviving health fraction of each division.
 Its `SUBUNIT_COUNTS`, `MOBILITY`, and `AIM` tables set sub-unit counts, acceleration and turning, and firing cones and gun speeds for each battlefield shape.
-`WEAPON_RANGE`, `PROJECTILE_SPEED`, `RANK_GAP`, `SUBUNIT_SPACING`, and `SPAWN_FRONT_GAP` set range, shot speed, and deployment.
+`WEAPON_RANGE`, `RANK_GAP`, `SUBUNIT_SPACING`, and `SPAWN_FRONT_GAP` set range and deployment.
+`TACTICAL_WEAPONS`, `TACTICAL_VEHICLE_WEAPONS`, and `TACTICAL_BODIES` in [data/constants.py](../data/constants.py)
+own weapon profiles, vehicle loadouts, body dimensions, collision radii, and penetration resistance.
+`EQUIPMENT_TACTICAL_WEAPONS` in [data/generators/recipes.py](../data/generators/recipes.py) assigns each equipment stage
+a primary weapon and optional support weapon, emitted as `metadata.tactical_primary` and `metadata.tactical_support`.
+The active library supplies those assignments when a battle deploys. Content without optional weapon metadata uses
+the standard rifle profile for nonvehicle shapes. Gun state exists only inside the encounter and is never saved or exported.
+No save conversion is needed: campaign saves, selected historical turns, and older moves keep their existing unit records.
 `is_artillery` decides which units sit tactical battles out.
-`SHOT_SPREAD` sets how far shots can stray. The `AI_*` ranges set the temperaments, and `COHESION_SLACK` and
+Each weapon's `spread` and the movement and turning spread constants set how far shots can stray. The `AI_*` ranges set the temperaments, and `COHESION_SLACK` and
 `COHESION_THROTTLE` set how far ahead a sub-unit may get and how much it slows. `BEHAVIORS` assigns each shape its
 behavior; `FLANK_OFFSET`, `CHARGE_CLOSE`, `SKIRMISH_*`, `FALL_BACK_HEALTH`, `DODGE_*`, and
 `TARGET_*` tune the behaviors, reactions, and target choice. `BattleSimulation(seed=...)`

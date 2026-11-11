@@ -345,7 +345,7 @@ class BattleSimulationTests(unittest.TestCase):
         ally.x, ally.y = 1020, 500
         enemy.x, enemy.y = 1100, 500
         simulation.projectiles = [combat.Projectile(shooter, dict(shooter.data), shooter.x, shooter.y, 300, 0, 1)]
-        simulation.advance(combat.FIXED_STEP)
+        simulation.advance((ally.x - shooter.x) / 300)
         loss = combat.BattleSimulation.damage_amount(shooter.data, ally.data, shooter.attack_share)
         self.assertGreater(loss, 0)
         self.assertEqual([unit.data["health"] for unit in simulation.fighters],
@@ -371,7 +371,7 @@ class BattleSimulationTests(unittest.TestCase):
         self.assertEqual(shooter.dodge, combat.LINE_SHIFT_SECONDS)
         self.assertLess(math.sin(shooter.dodge_heading), 0)  # Upward, away from the ally.
         ally.y = 500 + combat.UNIT_RADIUS * 4
-        self.assertEqual(drive(), [shooter])
+        self.assertEqual(drive(), [(shooter, 0)])
         self.assertEqual(shooter.dodge, 0)
 
     def test_simultaneous_destruction_is_a_loss_and_finished_battle_stays_finished(self):
@@ -996,7 +996,7 @@ class CloseCombatTests(unittest.TestCase):
                                 (source, direction * combat.RAM_REFERENCE_SPEED * combat.FIXED_STEP, 0),
                                 (target, 0, 0)])
                             loss = sum(loss for victim, loss in hits if victim is target)
-                            self.assertEqual(loss > 0, speed >= combat.RAM_MIN_UNIT_SPEED)
+                            self.assertEqual(loss > 0, not allied and speed >= combat.RAM_MIN_UNIT_SPEED)
 
     def test_ram_damage_speed_and_mass_multipliers_apply_after_bullet_damage(self):
         for closing in (combat.RAM_MIN_SPEED, combat.RAM_REFERENCE_SPEED,
@@ -1226,7 +1226,7 @@ class CloseCombatTests(unittest.TestCase):
                 self.assertGreaterEqual(braked, 0)
                 # Backing away, passing beside, or following a departing ally keeps full throttle.
                 self.assertEqual(simulation._ally_safe_throttle(unit, -1.0), -1.0)
-                ally.y += combat.UNIT_RADIUS * 3
+                ally.y += unit.radius + ally.radius + 10
                 self.assertEqual(simulation._ally_safe_throttle(unit, 1.0), 1.0)
                 ally.y, ally.vx = unit.y, unit.max_speed
                 self.assertEqual(simulation._ally_safe_throttle(unit, 1.0), 1.0)
@@ -1273,7 +1273,7 @@ class CloseCombatTests(unittest.TestCase):
         damage = self.move_contact(simulation, [(first, 100, 0), (second, -100, 0)])
         self.assertAlmostEqual(first.speed, 0)
         self.assertAlmostEqual(second.speed, 0)
-        self.assertAlmostEqual(second.x - first.x, combat.UNIT_RADIUS * 2)
+        self.assertAlmostEqual(second.x - first.x, first.radius + second.radius)
         self.assertEqual(len(damage), 2)
 
     def test_units_below_speed_cutoff_separate_without_ram_damage_and_rams_respect_armor(self):
@@ -1282,7 +1282,7 @@ class CloseCombatTests(unittest.TestCase):
         for unit in simulation.fighters:
             unit.data["speed"] = combat.RAM_MIN_UNIT_SPEED - 1
         self.assertEqual(self.move_contact(simulation, [(first, 5, 0), (second, -5, 0)]), [])
-        self.assertAlmostEqual(second.x - first.x, combat.UNIT_RADIUS * 2)
+        self.assertAlmostEqual(second.x - first.x, first.radius + second.radius)
         simulation = self.encounter(shapes=("tank", "heavy_tank"), gap=combat.UNIT_RADIUS * 2)
         first, second = simulation.fighters
         second.data["defense"] = first.data["attack"] * 2
@@ -1451,13 +1451,14 @@ class TacticalTerrainTests(unittest.TestCase):
                 self.assertEqual(simulation.battlefield.firing_blocker((1000, 500), (1400, 500)) is None,
                                  tree.destroyed)
 
-    def test_first_unit_hit_takes_precedence_over_terrain_further_along_the_shot(self):
+    def test_nonpenetrating_shot_hits_a_unit_before_terrain_further_along_the_shot(self):
         tree = battle_terrain.Feature("tree", 1500, 500, 20, 100)
         simulation = self.encounter(tree)
         hold_still(simulation)
         source, target = simulation.fighters
         source.shape = "tank"
-        simulation.projectiles = [combat.Projectile(source, dict(source.data), 1000, 500, 18000, 0, 1)]
+        simulation.projectiles = [combat.Projectile(source, dict(source.data), 1000, 500, 18000, 0, 1,
+                                                  penetration=0)]
         simulation.advance(combat.FIXED_STEP)
         self.assertLess(target.data["health"], target.data["max_health"])
         self.assertFalse(tree.destroyed)
@@ -1542,7 +1543,7 @@ class TacticalTerrainTests(unittest.TestCase):
         friend.x, friend.y = 1100, 500
         target.x, target.y = 1200, 500
         self.assertIsNone(simulation._ram_point(unit, target))
-        friend.y += combat.UNIT_RADIUS * 3
+        friend.y += unit.radius + friend.radius + 10
         self.assertIsNotNone(simulation._ram_point(unit, target))
 
     def test_blocked_units_seek_reachable_firing_positions_on_both_sides(self):
@@ -1582,8 +1583,10 @@ class TacticalTerrainTests(unittest.TestCase):
         simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture III", "Fixture I"], seed=2)
         unit, armored, vulnerable = simulation.fighters
         unit.x, unit.y, unit.shape, unit.pace = 1000, 500, "tank", 1
-        armored.x, armored.y, armored.shape = 1100, 540, "tank"
+        armored.x, armored.shape = 1100, "tank"
+        armored.y = unit.y + unit.radius + armored.radius + 10
         armored.data["attack"] = 0  # Does not add a second damaging threat.
+        armored.data["defense"] = unit.data["attack"] * 2
         vulnerable.x, vulnerable.y, vulnerable.data["health"] = 1120, 500, 20
         vulnerable.cooldown = 0
         sides = [[unit], [armored, vulnerable]]
@@ -1661,7 +1664,7 @@ class CustomBattleScreenTests(unittest.TestCase):
             self.assertEqual([call.args[0] for call in sound.call_args_list],
                              ["rifle_shot_1", "rifle_shot_2", "rifle_shot_3"])
 
-    def test_only_controlled_non_tank_shots_use_heavy_gunshot(self):
+    def test_only_controlled_nonshell_shots_use_heavy_gunshot(self):
         self.fill_armies()
         self.screen.add_unit(0, "Fixture I")
         self.click("Control")
@@ -1669,7 +1672,10 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.click("Start")
         simulation = self.screen.simulation
         for source in simulation.fighters:
-            for shape in combat.MOBILITY.keys() - battle_screen.TANK_SHOT_SHAPES:
+            for shape in combat.MOBILITY:
+                source.shape = shape
+                if source.weapon()["shell"]:
+                    continue
                 with self.subTest(side=source.side, controlled=source is simulation.controlled, shape=shape), patch(
                         "ui.widgets.ui_elements.play_ui_sound") as sound, patch.object(
                             battle_screen.random, "choice", return_value="rifle_shot_2") as choice:
@@ -1682,13 +1688,16 @@ class CustomBattleScreenTests(unittest.TestCase):
                     else:
                         choice.assert_called_once_with(battle_screen.RIFLE_SHOT_SOUNDS)
 
-    def test_orange_projectiles_use_all_three_tank_variants_for_every_tank_shape_on_both_sides(self):
+    def test_shells_use_all_three_tank_sounds_for_each_equipped_shape_on_both_sides(self):
         self.fill_armies()
         self.click("Control")
         self.click("Simulate")
         self.click("Start")
         for source in self.screen.simulation.fighters:
-            for shape in battle_screen.TANK_SHOT_SHAPES:
+            for shape in combat.MOBILITY:
+                source.shape = shape
+                if not source.weapon()["shell"]:
+                    continue
                 with self.subTest(side=source.side, shape=shape), patch(
                         "ui.widgets.ui_elements.play_ui_sound") as sound, patch.object(
                             battle_screen.random, "choice", side_effect=battle_screen.TANK_SHOT_SOUNDS) as choice:

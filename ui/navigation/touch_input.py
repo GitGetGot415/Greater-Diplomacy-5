@@ -39,6 +39,8 @@ class TouchInput:
         self.gesture = None
         self.pinch_distance = None
         self.blocked = False
+        self.direct_pointers = set()  # Continuous screen controls, separate from tap/pinch gestures.
+        self.canceled_direct = set()
 
     def cancel(self):
         """Discard an unfinished gesture without generating a click on release."""
@@ -49,6 +51,8 @@ class TouchInput:
                 cancel()
         self.gesture = None
         self.pinch_distance = None
+        self.canceled_direct.update(self.direct_pointers)
+        self.direct_pointers.clear()
         self.blocked = bool(self.pointers)
 
     def hold_progress(self):
@@ -98,18 +102,25 @@ class TouchInput:
             self.cancel()
             self.owner, self.mode = owner, mode
         mobile = (self.automatic_mode if mode == "AUTO" else mode) == "MOBILE"
+        # Screens may opt into continuous controls; ordinary dialogs remain
+        # compatible without implementing the optional pointer hooks.
+        configure = getattr(owner, "set_touch_mode", None)
+        if configure is not None:
+            configure(mobile)
         # SDL can publish the compatibility mouse event before the finger
         # event in the same pump. Only discard mouse input when its matching
         # finger stream exists; some emulators supply mouse events alone.
         finger_events = [event for event in events if event.type in FINGER_EVENTS]
         finger_stream = (bool(finger_events)
-                         or any(pointer != MOUSE_POINTER for pointer in self.pointers))
+                         or any(pointer != MOUSE_POINTER for pointer in self.pointers)
+                         or bool(self.direct_pointers) or bool(self.canceled_direct))
         result = []
         for event in events:
             if (event.type == pygame.WINDOWFOCUSLOST
                     or (event.type == pygame.ACTIVEEVENT and not event.gain)):
                 self.cancel()
                 self.pointers.clear()
+                self.canceled_direct.clear()
                 self.blocked = False
                 result.append(event)
             elif event.type in FINGER_EVENTS:
@@ -118,6 +129,7 @@ class TouchInput:
                     result.extend(self._pointer(event.type, pointer, self._finger_position(event)))
                 elif event.type == pygame.FINGERUP:
                     self.pointers.pop(pointer, None)
+                    self.canceled_direct.discard(pointer)
                     if not self.pointers:
                         self.blocked = False
             elif (mobile and event.type in MOUSE_EVENTS
@@ -128,7 +140,8 @@ class TouchInput:
                 continue
             elif (mobile and event.type in MOUSE_GESTURE_EVENTS
                   and (event.type == pygame.MOUSEMOTION or event.button == 1)):
-                if event.type == pygame.MOUSEMOTION and MOUSE_POINTER not in self.pointers:
+                if (event.type == pygame.MOUSEMOTION and MOUSE_POINTER not in self.pointers
+                        and MOUSE_POINTER not in self.direct_pointers):
                     result.append(event)  # Ordinary mouse hover remains immediate.
                 else:
                     result.extend(self._pointer(MOUSE_GESTURE_EVENTS[event.type],
@@ -136,6 +149,7 @@ class TouchInput:
             else:
                 if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                     self.pointers.pop(MOUSE_POINTER, None)
+                    self.canceled_direct.discard(MOUSE_POINTER)
                     if not self.pointers:
                         self.blocked = False
                 result.append(event)
@@ -162,6 +176,20 @@ class TouchInput:
         return bool(available and available(position))
 
     def _pointer(self, kind, pointer, position):
+        if pointer in self.canceled_direct:
+            if kind == pygame.FINGERUP:
+                self.canceled_direct.discard(pointer)
+            return []
+        direct = getattr(self.owner, "handle_touch_pointer", None)
+        if pointer in self.direct_pointers:
+            if direct is not None:
+                direct(kind, pointer, position)
+            if kind == pygame.FINGERUP:
+                self.direct_pointers.discard(pointer)
+            return []
+        if kind == pygame.FINGERDOWN and direct is not None and direct(kind, pointer, position):
+            self.direct_pointers.add(pointer)
+            return []
         if kind == pygame.FINGERDOWN:
             self.pointers[pointer] = position
             if len(self.pointers) == 1 and not self.blocked:
