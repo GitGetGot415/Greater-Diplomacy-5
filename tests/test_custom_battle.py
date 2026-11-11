@@ -1330,14 +1330,14 @@ class TacticalTerrainTests(unittest.TestCase):
                     self.assertTrue(all(counts.values()))
                     self.assertLess(max(counts.values()), 2 * len(field.features) / len(counts))
 
-    def test_tree_trunks_set_the_hitbox_and_foliage_fits_its_trunk_size(self):
+    def test_tree_trunks_set_the_hitbox_and_foliage_uses_a_shared_size_range(self):
         trees = [feature for seed in range(5) for feature in battle_terrain.Battlefield.generate(
             "jungle", combat.ARENA_SIZE, combat.UNIT_RADIUS, combat.SPAWN_FRONT_GAP, seed).features
                  if feature.kind == "tree"]
         self.assertEqual({tree.trunk for tree in trees}, set(battle_terrain.TREE_TRUNK_RADII))
         for tree in trees:
             self.assertEqual(tree.radius, battle_terrain.TREE_TRUNK_RADII[tree.trunk])
-            smallest, largest = battle_terrain.TREE_FOLIAGE_RADII[tree.trunk]
+            smallest, largest = battle_terrain.TREE_FOLIAGE_RADII
             self.assertTrue(smallest <= tree.foliage_radius <= largest)
             self.assertTrue(-1.0 <= tree.shade <= 1.0)
         # Every trunk size the generator can choose has an image to draw it. Foliage is drawn without images.

@@ -204,8 +204,8 @@ and a few marsh areas, fewer than swamps have.
 Each tree has a trunk of size 1, 2, or 3, drawn by the `Trunk` images in `assets/battles/terrain`.
 The trunk is the tree's hitbox. `TREE_TRUNK_RADII` in [map_logic/battle_terrain.py](../map_logic/battle_terrain.py)
 sets each size's radius, and the trunk image is scaled to that radius.
-Foliage is a green circle drawn without an image. Its radius is random within its trunk size's range in
-`TREE_FOLIAGE_RADII`, so larger trunks carry larger foliage.
+Foliage is a green circle drawn without an image. Each tree's foliage radius is chosen uniformly at random
+from `TREE_FOLIAGE_RADII`, independently of trunk size.
 Foliage only draws, covering units and shots, while health bars, flags, and the player's controls stay on top.
 Each tree's foliage is a slightly lighter or darker shade of `FOLIAGE_COLOR` (up to `FOLIAGE_GREEN_VARIATION`).
 Foliage is opaque until a living sub-unit's outline overlaps it. That foliage then turns partly transparent

@@ -25,8 +25,8 @@ TREE_HEIGHT = 100.0
 # Trunk image in assets/battles/terrain, and the battle screen scales that image to this radius.
 TREE_TRUNK_RADII = {1: 8.5, 2: 13.0, 3: 18.0}
 TERRAIN_FEATURE_GAP = 20.0  # Least open ground between terrain features' edges; crowded placements are skipped.
-# (smallest, largest) foliage radius for each trunk size, so larger trunks carry larger foliage.
-TREE_FOLIAGE_RADII = {1: (24.0, 40.0), 2: (32.0, 55.0), 3: (40.0, 86.0)}
+# (smallest, largest) foliage radius, chosen independently of trunk size.
+TREE_FOLIAGE_RADII = (20.0, 80.0)
 HILL_RADIUS = (140.0, 230.0)
 HILL_HEIGHT = (65.0, 125.0)
 HAZARD_RADIUS = (65.0, 120.0)
@@ -131,7 +131,7 @@ class Battlefield:
             place(GAP_KINDS[terrain], rng.uniform(*HAZARD_RADIUS))
         for _ in range(trees):
             trunk = rng.randint(1, len(TREE_TRUNK_RADII))
-            foliage = rng.uniform(*TREE_FOLIAGE_RADII[trunk])
+            foliage = rng.uniform(*TREE_FOLIAGE_RADII)
             radius = TREE_TRUNK_RADII[trunk]
             point = (rng.uniform(tree_left + radius, tree_right - radius),
                      rng.uniform(EDGE_CLEARANCE + radius, size[1] - EDGE_CLEARANCE - radius))
