@@ -61,6 +61,9 @@ MUSIC_UI_SOUND_PATHS = {
     "rifle_shot_2": "assets/sounds/Rifle Shot 2.mp3",
     "rifle_shot_3": "assets/sounds/Rifle Shot 3.mp3",
     "heavy_gunshot": "assets/sounds/Heavy Gunshot.mp3",
+    "tank_shot_1": "assets/sounds/Tank Shot 1.mp3",
+    "tank_shot_2": "assets/sounds/Tank Shot 2.mp3",
+    "tank_shot_3": "assets/sounds/Tank Shot 3.mp3",
 }
 SOUND_VOLUMES_PATH = "assets/sounds/volumes.json"
 sound_volume_multipliers = {}
@@ -73,6 +76,7 @@ global_sfx_pitch = starting_defaults.get_starting_value("settings_config.json", 
 BATTLE_SFX_GROUPS = {
     "rifle_shot_1": "rifle", "rifle_shot_2": "rifle", "rifle_shot_3": "rifle",
     "heavy_gunshot": "tank",
+    "tank_shot_1": "tank", "tank_shot_2": "tank", "tank_shot_3": "tank",
 }
 BATTLE_SFX_VOICE_LIMITS = {"rifle": 8, "tank": 4}
 BATTLE_SFX_OTHER_CHANNELS = 4  # Room for music and ordinary UI effects on Pygame.

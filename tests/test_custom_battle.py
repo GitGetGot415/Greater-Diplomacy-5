@@ -1655,18 +1655,23 @@ class CustomBattleScreenTests(unittest.TestCase):
             self.assertEqual([call.args[0] for call in sound.call_args_list],
                              ["rifle_shot_1", "rifle_shot_2", "rifle_shot_3"])
 
-    def test_orange_projectiles_use_heavy_gunshot_for_every_tank_shape_on_both_sides(self):
+    def test_orange_projectiles_use_all_three_tank_variants_for_every_tank_shape_on_both_sides(self):
         self.fill_armies()
+        self.click("Control")
         self.click("Simulate")
         self.click("Start")
         for source in self.screen.simulation.fighters:
             for shape in battle_screen.TANK_SHOT_SHAPES:
                 with self.subTest(side=source.side, shape=shape), patch(
-                        "ui.widgets.ui_elements.play_ui_sound") as sound, patch.object(battle_screen.random, "choice") as choice:
+                        "ui.widgets.ui_elements.play_ui_sound") as sound, patch.object(
+                            battle_screen.random, "choice", side_effect=battle_screen.TANK_SHOT_SOUNDS) as choice:
                     source.shape = shape
-                    self.screen.simulation._fire_shot(source)
-                    self.assertEqual(sound.call_args.args, ("heavy_gunshot",))
-                    choice.assert_not_called()
+                    for _ in battle_screen.TANK_SHOT_SOUNDS:
+                        self.screen.simulation._fire_shot(source)
+                    self.assertEqual([call.args[0] for call in sound.call_args_list],
+                                     list(battle_screen.TANK_SHOT_SOUNDS))
+                    self.assertTrue(all(call.args == (battle_screen.TANK_SHOT_SOUNDS,)
+                                        for call in choice.call_args_list))
 
     def win_battle(self):
         """End actual battle with a friendly win, without relying on random aim and movement."""

@@ -172,6 +172,7 @@ TANK_SHOT_COLOR = (255, 110, 0)
 TANK_SHOT_WIDTH = 5
 TANK_SHOT_SHAPES = combat.TANK_SHAPES
 RIFLE_SHOT_SOUNDS = ("rifle_shot_1", "rifle_shot_2", "rifle_shot_3")
+TANK_SHOT_SOUNDS = ("tank_shot_1", "tank_shot_2", "tank_shot_3")
 SHOT_TAIL = 8  # Pixels behind a shot's head.
 RANGE_COLOR = (255, 225, 95)
 AIM_LINE_COLOR = (255, 245, 200)
@@ -834,7 +835,7 @@ class CustomBattleScreen(Screen):
     def _play_shot_sound(self, fighter):
         # Match the projectile's color classification and keep audio randomness
         # separate from the seeded simulation's aiming and movement decisions.
-        kind = "heavy_gunshot" if fighter.shape in TANK_SHOT_SHAPES else random.choice(RIFLE_SHOT_SOUNDS)
+        kind = random.choice(TANK_SHOT_SOUNDS if fighter.shape in TANK_SHOT_SHAPES else RIFLE_SHOT_SOUNDS)
         ui_elements.play_ui_sound(kind, volume_scale=self.zoom_volume_share())
 
     def start_battle(self):
