@@ -1255,7 +1255,7 @@ class CustomBattleScreen(Screen):
             if event.type == pygame.KEYDOWN and event.key in CONTROL_KEYS and self._driving():
                 self.held_keys.add(event.key)
                 continue
-            if self.mode == "battle" and self._battlefield_mouse(event):
+            if self.mode in {"battle", "result"} and self._battlefield_mouse(event):
                 continue
             if (self.mode == "setup" and event.type == pygame.MOUSEWHEEL
                     and self.year_slider.rect.inflate(20, 40).collidepoint(pygame.mouse.get_pos())):
@@ -1270,7 +1270,7 @@ class CustomBattleScreen(Screen):
     def _battlefield_mouse(self, event):
         """The wheel zooms; left/right mouse fire primary/secondary weapons while controlling a sub-unit.
 
-        While spectating, a left drag makes the battlefield follow the pointer.
+        While spectating or viewing results, a left drag makes the battlefield follow the pointer.
         """
         if event.type == pygame.MOUSEWHEEL:
             self.zoom_by(1 if event.y > 0 else -1 if event.y < 0 else 0, pygame.mouse.get_pos())
@@ -1295,7 +1295,8 @@ class CustomBattleScreen(Screen):
                 self.firing = True
             else:
                 self.secondary_firing = True
-        elif event.button == 1 and (self.simulation.controlled is None or not self.simulation.controlled.alive):
+        elif event.button == 1 and (self.mode == "result" or self.simulation.controlled is None
+                                   or not self.simulation.controlled.alive):
             self.pan_drag = event.pos
         return True
 
@@ -1807,8 +1808,8 @@ class CustomBattleScreen(Screen):
             surface.blit(label, label_rect)
 
     def draw_background(self, surface):
-        """Actual battle replaces the moving checkerboard with the battlefield across the whole screen."""
-        if self.mode == "battle":
+        """Keep the battlefield behind combat and the finished battle's result controls."""
+        if self.mode in {"battle", "result"}:
             self._draw_battle(surface)
         else:
             super().draw_background(surface)

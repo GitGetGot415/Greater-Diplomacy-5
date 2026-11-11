@@ -389,6 +389,10 @@ Losing window focus also pauses combat. Pausing or leaving combat clears held mo
 The custom battle is won when the enemy army is destroyed and lost when the friendly army is destroyed.
 Mutual destruction counts as a loss. If the controlled sub-unit is destroyed while friendly units remain, those friendly units continue fighting under AI control.
 The status line counts the divisions on each side that still have a sub-unit.
+When combat ends, the final battlefield stays visible with the win or loss message and the usual result controls.
+The battle stops advancing. Use the mouse wheel to zoom and drag the battlefield to look around, including
+when the controlled sub-unit survived. Result buttons remain available. Campaign encounters use
+the same result view, with **Continue** returning to the map.
 
 **Run Again** opens preview with fresh armies and a fresh battlefield from the same setup.
 Reordering the friendly army during preview preserves that preview's generated terrain.

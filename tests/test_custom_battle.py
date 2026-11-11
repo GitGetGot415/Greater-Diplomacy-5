@@ -1968,6 +1968,10 @@ class CustomBattleScreenTests(unittest.TestCase):
                 self.screen.simulation.winner = 1 if dies else 0
                 self.screen.update()
                 self.assertEqual(self.screen.mode, "result")
+                self.assertFalse(self.screen.done)
+                self.assertIsNone(self.screen.next_state)
+                self.screen.draw(self.surface)
+                self.check_result_navigation()
                 # The result is written back as soon as the battle ends.
                 if dies:
                     self.assertEqual(province["units"], [enemy])
@@ -2308,12 +2312,29 @@ class CustomBattleScreenTests(unittest.TestCase):
 
     def test_winner_screen_restart_and_edit_armies(self):
         self.fill_armies()
+        self.click("Control")
         self.click("Simulate")
         self.click("Start")
         self.win_battle()
         self.screen.update()
         self.assertEqual(self.screen.mode, "result")
         self.assertEqual(self.screen.simulation.winner, 0)
+        self.assertFalse(self.screen.done)
+        self.assertIsNone(self.screen.next_state)
+        simulation = self.screen.simulation
+        camera, zoom = list(self.screen.camera), self.screen.zoom_index
+        final_state = [(fighter.x, fighter.y, fighter.data["health"]) for fighter in simulation.fighters]
+        self.screen.handle_events([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_w),
+                                   pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(100, 200))])
+        with patch.object(simulation, "advance", wraps=simulation.advance) as advance:
+            self.screen.update()
+        advance.assert_not_called()
+        self.assertFalse(self.screen.held_keys)
+        self.assertFalse(self.screen.firing)
+        self.assertEqual(self.screen.camera, camera)
+        self.assertEqual(self.screen.zoom_index, zoom)
+        self.assertEqual([(fighter.x, fighter.y, fighter.data["health"]) for fighter in simulation.fighters], final_state)
+        self.check_result_navigation()
         self.screen.draw(self.surface)
         self.click("Run Again")
         self.assertEqual(self.screen.mode, "preview")
@@ -2323,6 +2344,41 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.screen.update()
         self.click("Edit Armies")
         self.assertEqual(self.screen.mode, "setup")
+
+    def check_result_navigation(self):
+        simulation = self.screen.simulation
+        final_state = [(fighter.x, fighter.y, fighter.data["health"]) for fighter in simulation.fighters]
+        elapsed = simulation.elapsed
+        self.screen._center_camera(combat.ARENA_SIZE[0] / 2, combat.ARENA_SIZE[1] / 2)
+        pointer = (100, 200)  # Empty battlefield space, outside result buttons.
+        with patch("pygame.mouse.get_pos", return_value=pointer):
+            initial_zoom = self.screen.zoom_index
+            self.screen.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=-1)])
+            self.assertEqual(self.screen.zoom_index, initial_zoom - 1)
+            self.screen.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=1)])
+            self.assertEqual(self.screen.zoom_index, initial_zoom)
+        start = list(self.screen.camera)
+        self.screen.handle_events([
+            pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=pointer),
+            pygame.event.Event(pygame.MOUSEMOTION, pos=(pointer[0] + 50, pointer[1] - 30),
+                               rel=(50, -30), buttons=(1, 0, 0)),
+            pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=(pointer[0] + 50, pointer[1] - 30))])
+        self.assertAlmostEqual(self.screen.camera[0], start[0] - 50 / self.screen.zoom)
+        self.assertAlmostEqual(self.screen.camera[1], start[1] + 30 / self.screen.zoom)
+        self.assertIsNone(self.screen.pan_drag)
+        self.assertFalse(self.screen.firing)
+        self.assertFalse(self.screen.secondary_firing)
+        inspected_camera = list(self.screen.camera)
+        with patch.object(simulation, "advance", wraps=simulation.advance) as advance:
+            self.screen.update()
+        advance.assert_not_called()
+        self.assertEqual(self.screen.camera, inspected_camera)
+        self.assertEqual(simulation.elapsed, elapsed)
+        self.assertEqual([(fighter.x, fighter.y, fighter.data["health"]) for fighter in simulation.fighters], final_state)
+        with patch("pygame.mouse.get_pos", return_value=pointer):
+            self.screen.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=-1)
+                                       for _ in battle_screen.ZOOM_LEVELS])
+        self.assertEqual(self.screen.zoom_index, 0)
 
     def test_preview_intro_times_cues_once_and_blocks_start_until_finished(self):
         self.fill_armies()
