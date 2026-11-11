@@ -153,6 +153,8 @@ class TacticalWeaponTests(unittest.TestCase):
         source, first, second = simulation.fighters
         source.shape = "tank"
         second.x = 1800
+        hits = []
+        simulation.on_hit = lambda target, damage: hits.append((target, damage))
         simulation.projectiles = [combat.Projectile(source, dict(source.data), first.x - first.radius - 1,
                                                    first.y, 300, 0, 2)]
         simulation.advance(combat.FIXED_STEP)
@@ -160,6 +162,9 @@ class TacticalWeaponTests(unittest.TestCase):
         self.assertLess(health, first.data["max_health"])
         simulation.advance(combat.FIXED_STEP)
         self.assertEqual(first.data["health"], health)
+        self.assertEqual(len(hits), 1)
+        self.assertIs(hits[0][0], first)
+        self.assertEqual(hits[0][1], first.data["max_health"] - health)
 
     def test_armor_stops_a_shell_and_machine_gun_cannot_borrow_cannon_damage(self):
         simulation = self.encounter(targets=2)
@@ -285,6 +290,129 @@ class TacticalWeaponTests(unittest.TestCase):
                 self.assertTrue(field.clear_path(start, point, 18))
                 start = point
             self.assertEqual(field.move((100, 100), (0, 100), 18), (18, 100))
+
+
+class TacticalHitSoundTests(unittest.TestCase):
+    setUpClass = classmethod(battle_fixtures.CustomBattleScreenTests.setUpClass.__func__)
+    setUp = battle_fixtures.CustomBattleScreenTests.setUp
+    fill_armies = battle_fixtures.CustomBattleScreenTests.fill_armies
+    click = battle_fixtures.CustomBattleScreenTests.click
+
+    def start_battle(self):
+        self.fill_armies()
+        self.click("Simulate")
+        self.click("Start")
+        simulation = self.screen.simulation
+        for index, fighter in enumerate(simulation.fighters):
+            fighter.x, fighter.y = 1000 + index * 100, 500
+            fighter.data.update(speed=0, health=1000, max_health=1000)
+            fighter.cooldown = fighter.secondary_cooldown = 1000
+        return simulation
+
+    def test_unarmored_hits_use_each_flesh_variant_on_both_sides_with_zoom_scaling(self):
+        simulation = self.start_battle()
+        self.screen.zoom_index = 0
+        for target in simulation.fighters:
+            for shape in combat.SOFT_TARGET_SHAPES:
+                target.shape = shape
+                with self.subTest(side=target.side, shape=shape), patch.object(
+                        battle_screen.random, "choice", side_effect=battle_screen.FLESH_HIT_SOUNDS) as choice, patch(
+                        "ui.widgets.ui_elements.play_ui_sound") as sound:
+                    for _ in battle_screen.FLESH_HIT_SOUNDS:
+                        self.screen._play_hit_sound(target, 5)
+                    self.assertEqual([entry.args[0] for entry in sound.call_args_list],
+                                     list(battle_screen.FLESH_HIT_SOUNDS))
+                    self.assertTrue(all(entry.kwargs["volume_scale"] == self.screen.zoom_volume_share()
+                                        for entry in sound.call_args_list))
+                    self.assertTrue(all(entry.args == (battle_screen.FLESH_HIT_SOUNDS,)
+                                        for entry in choice.call_args_list))
+
+    def test_armored_ricochets_include_zero_and_exactly_one_percent_but_not_larger_hits(self):
+        simulation = self.start_battle()
+        for target in simulation.fighters:
+            for shape in combat.MOBILITY.keys() - combat.SOFT_TARGET_SHAPES:
+                target.shape = shape
+                for damage, ricochet in ((0, True), (5, True), (10, True), (10.001, False), (20, False)):
+                    with self.subTest(side=target.side, shape=shape, damage=damage), patch.object(
+                            battle_screen.random, "choice", return_value=battle_screen.RICOCHET_SOUNDS[0]) as choice, patch(
+                            "ui.widgets.ui_elements.play_ui_sound") as sound:
+                        self.screen._play_hit_sound(target, damage)
+                        if ricochet:
+                            choice.assert_called_once_with(battle_screen.RICOCHET_SOUNDS)
+                            sound.assert_called_once_with(battle_screen.RICOCHET_SOUNDS[0],
+                                                          volume_scale=self.screen.zoom_volume_share())
+                        else:
+                            choice.assert_not_called()
+                            sound.assert_not_called()
+
+    def test_projectile_impact_sound_uses_actual_hp_lost_including_remaining_hp_limit(self):
+        simulation = self.start_battle()
+        source, target = simulation.fighters
+        target.shape = "tank"
+        target.data["health"] = 1
+        simulation.projectiles = [combat.Projectile(source, dict(source.data),
+                                                   target.x - target.radius - 1, target.y, 300, 0, 1)]
+        with patch.object(simulation, "weapon_damage", return_value=11), patch.object(
+                self.screen, "_play_hit_sound", wraps=self.screen._play_hit_sound) as hit, patch(
+                "screens.game.custom_battle.random.choice", return_value=battle_screen.RICOCHET_SOUNDS[0]), patch(
+                "ui.widgets.ui_elements.play_ui_sound") as sound:
+            simulation.on_hit = hit
+            simulation.advance(combat.FIXED_STEP)
+        hit.assert_called_once_with(target, 1)
+        sound.assert_called_once_with(battle_screen.RICOCHET_SOUNDS[0], volume_scale=self.screen.zoom_volume_share())
+        self.assertEqual(target.data["health"], 0)
+
+    def test_each_simultaneous_hit_uses_its_actual_hp_loss(self):
+        simulation = self.start_battle()
+        source, target = simulation.fighters
+        target.shape = "tank"
+        target.data["health"] = 15
+        simulation.projectiles = [combat.Projectile(source, dict(source.data),
+                                                   target.x - target.radius - 1, target.y, 300, 0, 1)
+                                  for _ in range(2)]
+        with patch.object(simulation, "weapon_damage", return_value=11), patch.object(
+                self.screen, "_play_hit_sound", wraps=self.screen._play_hit_sound) as hit, patch(
+                "screens.game.custom_battle.random.choice", return_value=battle_screen.RICOCHET_SOUNDS[0]), patch(
+                "ui.widgets.ui_elements.play_ui_sound") as sound:
+            simulation.on_hit = hit
+            simulation.advance(combat.FIXED_STEP)
+        self.assertEqual([entry.args[1] for entry in hit.call_args_list], [11, 4])
+        sound.assert_called_once_with(battle_screen.RICOCHET_SOUNDS[0], volume_scale=self.screen.zoom_volume_share())
+
+    def check_projectile_sound(self, hit_kind):
+        simulation = self.start_battle()
+        source, target = simulation.fighters
+        if hit_kind == "terrain":
+            simulation.battlefield = battle_terrain.Battlefield("plains", combat.ARENA_SIZE, 8,
+                [battle_terrain.Feature("rock", 1050, 500, 10, 100)])
+        simulation.projectiles = [combat.Projectile(source, dict(source.data), source.x,
+            source.y + (100 if hit_kind == "miss" else 0), 6000, 0, 1)]
+        with patch.object(battle_screen.random, "choice", return_value=battle_screen.FLESH_HIT_SOUNDS[0]), patch(
+                "ui.widgets.ui_elements.play_ui_sound") as sound:
+            simulation.advance(combat.FIXED_STEP)
+        if hit_kind == "body":
+            sound.assert_called_once_with(battle_screen.FLESH_HIT_SOUNDS[0],
+                                          volume_scale=self.screen.zoom_volume_share())
+        else:
+            sound.assert_not_called()
+
+    def test_projectile_body_hit_plays_exactly_one_hit_sound(self):
+        self.check_projectile_sound("body")
+
+    def test_projectile_miss_does_not_play_a_hit_sound(self):
+        self.check_projectile_sound("miss")
+
+    def test_projectile_terrain_hit_does_not_play_a_body_hit_sound(self):
+        self.check_projectile_sound("terrain")
+
+    def test_ram_damage_does_not_trigger_projectile_hit_sounds(self):
+        simulation = self.start_battle()
+        target = simulation.fighters[1]
+        with patch.object(simulation, "_resolve_contacts", return_value=[(target, 5)]), patch(
+                "ui.widgets.ui_elements.play_ui_sound") as sound:
+            simulation.advance(combat.FIXED_STEP)
+        self.assertEqual(target.data["health"], 995)
+        sound.assert_not_called()
 
 
 class TacticalTouchTests(unittest.TestCase):

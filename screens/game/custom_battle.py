@@ -172,6 +172,9 @@ TANK_SHOT_COLOR = (255, 110, 0)
 TANK_SHOT_WIDTH = 5
 RIFLE_SHOT_SOUNDS = ("rifle_shot_1", "rifle_shot_2", "rifle_shot_3")
 TANK_SHOT_SOUNDS = ("tank_shot_1", "tank_shot_2", "tank_shot_3")
+FLESH_HIT_SOUNDS = ("flesh_wound_1", "flesh_wound_2", "flesh_wound_3")
+RICOCHET_SOUNDS = ("bullet_ricochet_1", "bullet_ricochet_2", "bullet_ricochet_3", "bullet_ricochet_4")
+RICOCHET_MAX_HEALTH_SHARE = 0.01
 SHOT_TAIL = 8  # Pixels behind a shot's head.
 RANGE_COLOR = (255, 225, 95)
 AIM_LINE_COLOR = (255, 245, 200)
@@ -856,7 +859,8 @@ class CustomBattleScreen(Screen):
                                                   controlled_index=self.controlled_index,
                                                   seed=self.battle_seed,
                                                   terrain=self.campaign.province["terrain"] if self.campaign else self.terrain,
-                                                  on_shot=self._play_shot_sound)
+                                                  on_shot=self._play_shot_sound,
+                                                  on_hit=self._play_hit_sound)
         self.simulation.paused = True
         self.terrain_sprites.clear()
         self._cache_terrain_art()
@@ -870,6 +874,16 @@ class CustomBattleScreen(Screen):
         else:
             kind = random.choice(RIFLE_SHOT_SOUNDS)
         ui_elements.play_ui_sound(kind, volume_scale=self.zoom_volume_share())
+
+    def _play_hit_sound(self, target, damage):
+        # The simulation supplies HP actually lost, including the remaining-HP limit.
+        if target.shape in combat.SOFT_TARGET_SHAPES:
+            sounds = FLESH_HIT_SOUNDS
+        elif damage <= target.data["max_health"] * RICOCHET_MAX_HEALTH_SHARE:
+            sounds = RICOCHET_SOUNDS
+        else:
+            return
+        ui_elements.play_ui_sound(random.choice(sounds), volume_scale=self.zoom_volume_share())
 
     def start_battle(self):
         if self.mode != "preview" or self.preview_intro_stage is not None:

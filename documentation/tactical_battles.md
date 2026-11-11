@@ -154,6 +154,11 @@ Regular shots from the player-controlled sub-unit play Heavy Gunshot instead.
 Each shell plays a random Tank Shot 1, Tank Shot 2, or Tank Shot 3 sound.
 The weapon determines the sound: a vehicle's machine gun uses regular firing sounds.
 Both armies and player-controlled units follow the same sound rules.
+Projectile hits on unarmored bodies play a random Flesh Wound 1, 2, or 3 sound.
+Armored bodies play a random Bullet Ricochet sound when the HP actually lost to the hit is at most one percent
+of the struck sub-unit's maximum HP, including hits that deal no damage. Remaining HP limits the loss used
+for this comparison. Larger armored hits add no impact sound. Terrain hits and rams do not use these sounds.
+Impact sounds use the same zoom scaling as gunfire and share the bounded rifle sound pool.
 Firing sounds use the existing sound-effect volume and pitch settings and play when a projectile is fired.
 Rifle and tank firing sounds have separate voice pools so rifle volleys cannot suppress quieter tank shots.
 When a pool is full, the newest shot replaces the oldest sound tail in that pool.

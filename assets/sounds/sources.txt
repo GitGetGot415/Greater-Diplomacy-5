@@ -1,16 +1,24 @@
 https://pixabay.com/sound-effects/technology-cd-rom-reading-cd-70282/
 https://pixabay.com/sound-effects/technology-cd-whirring-in-drive-26799/
-Send Message        https://pixabay.com/sound-effects/technology-new-notification-040-493469/
-Delete Message      https://pixabay.com/sound-effects/film-special-effects-ui-sounds-pack-3-7-359721/
-New Contact         https://pixabay.com/sound-effects/film-special-effects-infographic-pop-2-197871/
 
-Gunshot             https://pixabay.com/sound-effects/film-special-effects-gunfire-single-shot-colt-peacemaker-94951/
-Heavy Gunshot       https://pixabay.com/sound-effects/horror-gunshot-511311/
+Send Message            https://pixabay.com/sound-effects/technology-new-notification-040-493469/
+Delete Message          https://pixabay.com/sound-effects/film-special-effects-ui-sounds-pack-3-7-359721/
+New Contact             https://pixabay.com/sound-effects/film-special-effects-infographic-pop-2-197871/
 
-Rifle Shot 1        https://pixabay.com/sound-effects/film-special-effects-riffle-shot-1-530811/
-Rifle Shot 2        https://pixabay.com/sound-effects/film-special-effects-riffle-shot-2-530812/
-Rifle Shot 3        https://pixabay.com/sound-effects/film-special-effects-riffle-shot-3-530814/
+Gunshot                 https://pixabay.com/sound-effects/film-special-effects-gunfire-single-shot-colt-peacemaker-94951/
+Heavy Gunshot           https://pixabay.com/sound-effects/horror-gunshot-511311/
 
-Tank Shot 1+2+3     https://pixabay.com/sound-effects/film-special-effects-053893-tank-shots-86181/
+Rifle Shot 1            https://pixabay.com/sound-effects/film-special-effects-riffle-shot-1-530811/
+Rifle Shot 2            https://pixabay.com/sound-effects/film-special-effects-riffle-shot-2-530812/
+Rifle Shot 3            https://pixabay.com/sound-effects/film-special-effects-riffle-shot-3-530814/
+
+Tank Shot 1+2+3         https://pixabay.com/sound-effects/film-special-effects-053893-tank-shots-86181/
+
+Flesh Wound             https://pixabay.com/sound-effects/film-special-effects-hurt-sound-435314/
+Bullet Ricochet 1+2+3+4 https://pixabay.com/sound-effects/film-special-effects-bullet-ricochet-108110/
+
+Flesh Wound 1           https://pixabay.com/sound-effects/film-special-effects-bulletimpact1-442717/
+Flesh Wound 2           https://pixabay.com/sound-effects/film-special-effects-bulletimpact2-442718/
+Flesh Wound 3           https://pixabay.com/sound-effects/film-special-effects-bulletimpact3-442719/
 
 https://github.com/PenguinMod/PenguinMod-ObjectLibraries/tree/main/files/sounds

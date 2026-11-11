@@ -64,6 +64,13 @@ MUSIC_UI_SOUND_PATHS = {
     "tank_shot_1": "assets/sounds/Tank Shot 1.mp3",
     "tank_shot_2": "assets/sounds/Tank Shot 2.mp3",
     "tank_shot_3": "assets/sounds/Tank Shot 3.mp3",
+    "flesh_wound_1": "assets/sounds/Flesh Wound 1.mp3",
+    "flesh_wound_2": "assets/sounds/Flesh Wound 2.mp3",
+    "flesh_wound_3": "assets/sounds/Flesh Wound 3.mp3",
+    "bullet_ricochet_1": "assets/sounds/Bullet Ricochet 1.mp3",
+    "bullet_ricochet_2": "assets/sounds/Bullet Ricochet 2.mp3",
+    "bullet_ricochet_3": "assets/sounds/Bullet Ricochet 3.mp3",
+    "bullet_ricochet_4": "assets/sounds/Bullet Ricochet 4.mp3",
 }
 SOUND_VOLUMES_PATH = "assets/sounds/volumes.json"
 sound_volume_multipliers = {}
@@ -73,10 +80,14 @@ global_sfx_pitch = starting_defaults.get_starting_value("settings_config.json", 
 
 # Bound guaranteed battle voices so gunfire cannot exhaust the native mixer.
 # Rifles share one pool across variants; tanks retain their own quieter voices.
+# Body impacts share the rifle pool, keeping repeated hits bounded on every backend.
 BATTLE_SFX_GROUPS = {
     "rifle_shot_1": "rifle", "rifle_shot_2": "rifle", "rifle_shot_3": "rifle",
     "heavy_gunshot": "tank",
     "tank_shot_1": "tank", "tank_shot_2": "tank", "tank_shot_3": "tank",
+    "flesh_wound_1": "rifle", "flesh_wound_2": "rifle", "flesh_wound_3": "rifle",
+    "bullet_ricochet_1": "rifle", "bullet_ricochet_2": "rifle",
+    "bullet_ricochet_3": "rifle", "bullet_ricochet_4": "rifle",
 }
 BATTLE_SFX_VOICE_LIMITS = {"rifle": 8, "tank": 4}
 BATTLE_SFX_OTHER_CHANNELS = 4  # Room for music and ordinary UI effects on Pygame.

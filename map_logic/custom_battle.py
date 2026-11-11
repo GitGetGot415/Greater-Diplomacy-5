@@ -562,6 +562,7 @@ class BattleSimulation:
     terrain: str = field(default_factory=lambda: starting_defaults.get_starting_value(
         "random_setup", "custom_battle_terrain"))
     battlefield: object = None  # Optional explicit geometry for headless encounters and fixtures.
+    on_hit: object = None  # Optional presentation callback: struck body and HP actually lost.
     controlled: object = field(init=False, default=None)
     fighters: list = field(init=False, default_factory=list)
     divisions: list = field(init=False, default_factory=list)  # Sub-unit lists, friendly roster then enemy roster.
@@ -1438,7 +1439,7 @@ class BattleSimulation:
             movements.append((fighter, mx, my))
         for fighter, slot in shots:
             self._fire_shot(fighter, slot)
-        close_hits = self._resolve_contacts(living, crowds, movements, dt)
+        close_hits = [(target, loss, False) for target, loss in self._resolve_contacts(living, crowds, movements, dt)]
 
         # Accumulate impacts first so units destroyed together can both land their shots.
         # A shot can hit any sub-unit but its shooter, so allies in its path take friendly fire.
@@ -1474,7 +1475,7 @@ class BattleSimulation:
                 loss = self.weapon_damage(shot.source_data, target.data, shot.source.attack_share,
                                           shot.weapon_data, target.shape,
                                           shot.power * self.ranged_multiplier(distance))
-                close_hits.append((target, loss))
+                close_hits.append((target, loss, True))
                 shot.hit_units.add(target.index)
                 self.impacts.append((shot.x + (nx - shot.x) * fraction,
                                      shot.y + (ny - shot.y) * fraction,
@@ -1506,8 +1507,11 @@ class BattleSimulation:
                 if shot.remaining > 0:
                     remaining.append(shot)
         self.projectiles = remaining
-        for target, loss in close_hits:
-            target.data["health"] = max(0.0, target.data["health"] - loss)
+        for target, loss, projectile_hit in close_hits:
+            previous_health = target.data["health"]
+            target.data["health"] = max(0.0, previous_health - loss)
+            if projectile_hit and self.on_hit is not None:
+                self.on_hit(target, previous_health - target.data["health"])
         alive_sides = {fighter.side for fighter in self.fighters if fighter.alive}
         if len(alive_sides) < 2:
             # Mutual destruction is a loss for the friendly army; there is no draw screen.
