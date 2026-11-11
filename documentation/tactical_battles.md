@@ -203,8 +203,7 @@ Forests have a green background and scattered trees. Jungle has a dark green bac
 and a few marsh areas, fewer than swamps have.
 Each tree has a trunk of size 1, 2, or 3, drawn by the `Trunk` images in `assets/battles/terrain`.
 The trunk is the tree's hitbox. `TREE_TRUNK_RADII` in [map_logic/battle_terrain.py](../map_logic/battle_terrain.py)
-sets each size's radius, and the trunk image is scaled to that radius. Trunks never overlap: at least
-`TREE_TRUNK_GAP` of open ground separates neighboring trunks, and a tree that would crowd another is not planted.
+sets each size's radius, and the trunk image is scaled to that radius.
 Foliage is a green circle drawn without an image. Its radius is random within its trunk size's range in
 `TREE_FOLIAGE_RADII`, so larger trunks carry larger foliage.
 Foliage only draws, covering units and shots, while health bars, flags, and the player's controls stay on top.
@@ -217,6 +216,9 @@ foliage included, and stop at that tree. Later shots and ground units can use th
 Swamps have a pink background, trees, and impassable marsh areas. Marsh areas allow shots across like chasms.
 
 Trees are placed individually across the battlefield, including beside and behind the armies, while deployment areas stay clear.
+All generated terrain features keep at least `TERRAIN_FEATURE_GAP` of open ground between their edges.
+The same spacing rule applies between trees, hills, mountain rocks, chasms, and marshes, including different feature types.
+Spacing uses tree trunks and the full radius of other features; foliage can overlap. Crowded placements are skipped.
 The generated battlefield keeps ground routes connected. Terrain generation and
 navigation belong to `map_logic/battle_terrain.py`; the screen draws cached artwork from those same features.
 AI units use ground routes around obstacles and seek accessible firing positions when terrain blocks their shots.

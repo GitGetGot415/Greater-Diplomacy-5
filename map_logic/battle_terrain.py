@@ -24,7 +24,7 @@ TREE_HEIGHT = 100.0
 # Trunk sizes 1, 2, and 3. A trunk is the tree's hitbox: each radius is half the width of its
 # Trunk image in assets/battles/terrain, and the battle screen scales that image to this radius.
 TREE_TRUNK_RADII = {1: 8.5, 2: 13.0, 3: 18.0}
-TREE_TRUNK_GAP = 20.0  # Least open ground between neighboring trunks' edges; a crowded tree is not planted.
+TERRAIN_FEATURE_GAP = 20.0  # Least open ground between terrain features' edges; crowded placements are skipped.
 # (smallest, largest) foliage radius for each trunk size, so larger trunks carry larger foliage.
 TREE_FOLIAGE_RADII = {1: (24.0, 40.0), 2: (32.0, 55.0), 3: (40.0, 86.0)}
 HILL_RADIUS = (140.0, 230.0)
@@ -34,7 +34,7 @@ ROCK_HEIGHT = 200.0
 DEPLOYMENT_CLEARANCE = 100.0
 EDGE_CLEARANCE = 80.0
 MAX_CACHED_ROUTES = 2048
-# Hills, tree placement attempts, rocks, and impassable water/gaps.
+# Placement attempts: hills, trees, rocks, and impassable water/gaps.
 TERRAIN_RECIPES = {
     "plains": (0, 0, 0, 0), "desert": (0, 0, 0, 0),
     "hills": (6, 0, 0, 0), "forest": (0, 252, 0, 0),
@@ -117,6 +117,10 @@ class Battlefield:
                     and abs(y - size[1] / 2) < deployment_half_height + body_radius + DEPLOYMENT_CLEARANCE + radius
                     and (x - radius < left or x + radius > right)):
                 return
+            # Use full mound and hazard radii, and trunk radii rather than foliage for trees.
+            if any(math.dist((x, y), (feature.x, feature.y))
+                   < feature.radius + radius + TERRAIN_FEATURE_GAP for feature in field.features):
+                return
             field.features.append(Feature(kind, x, y, radius, height, **tree))
 
         for _ in range(hills):
@@ -131,12 +135,6 @@ class Battlefield:
             radius = TREE_TRUNK_RADII[trunk]
             point = (rng.uniform(tree_left + radius, tree_right - radius),
                      rng.uniform(EDGE_CLEARANCE + radius, size[1] - EDGE_CLEARANCE - radius))
-            # Do not plant trees in a rock, marsh, or chasm, or within TREE_TRUNK_GAP of another trunk.
-            if any(feature.kind in BLOCKS_MOVEMENT
-                   and math.dist(point, (feature.x, feature.y))
-                   < feature.radius + radius + (TREE_TRUNK_GAP if feature.kind == "tree" else 0.0)
-                   for feature in field.features):
-                continue
             place("tree", radius, TREE_HEIGHT, point, trunk=trunk, foliage_radius=foliage, shade=rng.uniform(-1.0, 1.0))
         field._index_features()
         field._connect_ground()

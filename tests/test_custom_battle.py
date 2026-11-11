@@ -1340,18 +1340,26 @@ class TacticalTerrainTests(unittest.TestCase):
             smallest, largest = battle_terrain.TREE_FOLIAGE_RADII[tree.trunk]
             self.assertTrue(smallest <= tree.foliage_radius <= largest)
             self.assertTrue(-1.0 <= tree.shade <= 1.0)
-        # Trunks never overlap or crowd each other: open ground of at least TREE_TRUNK_GAP separates them.
-        for seed in range(5):
-            field = battle_terrain.Battlefield.generate(
-                "jungle", combat.ARENA_SIZE, combat.UNIT_RADIUS, combat.SPAWN_FRONT_GAP, seed)
-            planted = [feature for feature in field.features if feature.kind == "tree"]
-            for index, tree in enumerate(planted):
-                for other in planted[index + 1:]:
-                    self.assertGreaterEqual(math.dist((tree.x, tree.y), (other.x, other.y)),
-                                            tree.radius + other.radius + battle_terrain.TREE_TRUNK_GAP)
         # Every trunk size the generator can choose has an image to draw it. Foliage is drawn without images.
         for size in battle_terrain.TREE_TRUNK_RADII:
             self.assertTrue(os.path.isfile(os.path.join(battle_screen.TERRAIN_ART_DIR, f"Trunk {size}.png")))
+
+    def test_generated_terrain_keeps_gap_between_same_and_different_feature_types(self):
+        recipes = {terrain: (10, 50, 10, 10) for terrain in ("mountain", "swamp")}
+        with patch.dict(battle_terrain.TERRAIN_RECIPES, recipes), \
+                patch.object(battle_terrain, "HILL_RADIUS", (80, 100)), \
+                patch.object(battle_terrain, "HAZARD_RADIUS", (40, 60)):
+            for terrain in recipes:
+                for seed in (0, 4, 19):
+                    with self.subTest(terrain=terrain, seed=seed):
+                        field = battle_terrain.Battlefield.generate(
+                            terrain, (2000, 2000), 12, 1600, seed, deployment_half_height=75)
+                        expected = {"tree", "hill", "rock", battle_terrain.GAP_KINDS[terrain]}
+                        self.assertEqual({feature.kind for feature in field.features}, expected)
+                        for index, feature in enumerate(field.features):
+                            for other in field.features[index + 1:]:
+                                self.assertGreaterEqual(math.dist((feature.x, feature.y), (other.x, other.y)),
+                                                        feature.radius + other.radius + battle_terrain.TERRAIN_FEATURE_GAP)
 
     def test_ground_hazards_block_motion_but_allow_shots_and_paths_go_around(self):
         for kind in ("chasm", "marsh"):
