@@ -225,6 +225,7 @@ class BuildingStatEditorTests(unittest.TestCase):
     def test_use_defaults_is_a_scrolling_buildings_row_that_locks_only_buildings(self):
         from screens.editors.unit_stats_editor import UnitStatsEditorScreen
         screen = UnitStatsEditorScreen(settings={}, persist=False)
+        screen.select_category("range")
         self.assertIsNone(self.use_defaults_toggle(screen))
         ranges = [element for element in screen.elements if getattr(element, "entry_ref", None) is not None]
         self.assertTrue(ranges)
@@ -292,6 +293,47 @@ class BuildingStatEditorTests(unittest.TestCase):
         warning.assert_called_once()
         self.assertEqual(settings, {"use_default_building_stats": False})
 
+    def turn_controls(self, screen, family):
+        """Return the family's turns field and ON/OFF button in the Buildings category."""
+        values = screen.turn_tabs["building"]["values"]
+        field = next(element for element in screen.elements
+                     if getattr(element, "entry_ref", None) is values and element.entry_key == family)
+        index = screen.elements.index(field)
+        return field, screen.elements[index + 1]
+
+    def test_buildings_rows_edit_turns_and_enabled_while_use_defaults_locks_stats(self):
+        from screens.editors.unit_stats_editor import UnitStatsEditorScreen
+        settings = {}
+        screen = UnitStatsEditorScreen(settings=settings, persist=False)
+        screen.select_category("buildings")
+        self.assertFalse(self.fields(screen, "Fixture Factory"))
+        default = screen.turn_tabs["building"]["defaults"]["Fixture Factory"]
+        field, toggle = self.turn_controls(screen, "Fixture Factory")
+        self.assertFalse(getattr(field, "disabled", False))
+        field.text = str(default + 2)
+        toggle.callback()
+        self.assertEqual(settings, {})
+        with mock.patch("ui.dialogs.show_success"):
+            screen.save_all()
+        self.assertEqual(settings["building_turn_overrides"], {"Fixture Factory": default + 2})
+        self.assertEqual(settings["building_disabled"], ["Fixture Factory"])
+        self.assertIs(settings["use_default_building_stats"], True)
+        self.assertNotIn("building_stat_overrides", settings)
+
+    def test_invalid_building_stat_blocks_turn_changes_too(self):
+        from screens.editors.unit_stats_editor import UnitStatsEditorScreen
+        settings = {"use_default_building_stats": False}
+        screen = UnitStatsEditorScreen(settings=settings, persist=False)
+        screen.select_category("buildings")
+        field, toggle = self.turn_controls(screen, "Fixture Fort")
+        field.text = str(screen.turn_tabs["building"]["defaults"]["Fixture Fort"] + 1)
+        toggle.callback()
+        self.fields(screen, "Fixture Fort")["cost_fuel"].text = "-"
+        with mock.patch("ui.dialogs.show_warning") as warning:
+            screen.save_all()
+        warning.assert_called_once()
+        self.assertEqual(settings, {"use_default_building_stats": False})
+
     def test_map_editor_building_stats_edit_only_the_map_defaults(self):
         from screens.editors.unit_stats_editor import MapBuildingStatsScreen
         map_screen = mock.Mock()
@@ -301,6 +343,8 @@ class BuildingStatEditorTests(unittest.TestCase):
         self.assertEqual(list(screen.building_values), ["Fixture Factory", "Fixture Fort"])
         self.assertIsNone(next((element for element in screen.elements
                                 if str(getattr(element, "text", "")).startswith("Use Defaults")), None))
+        # The map does not own construction turns or enabled families.
+        self.assertFalse(any(getattr(element, "text", "") in ("ON", "OFF") for element in screen.elements))
         self.fields(screen, "Fixture Factory")["cost_materials_per_level"].text = "150"
         self.fields(screen, "Fixture Fort")["cost_materials"].text = "700"
         with mock.patch("screens.editors.unit_stats_editor.rebuild") as rebuild, \

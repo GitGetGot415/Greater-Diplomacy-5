@@ -284,9 +284,9 @@ def _apply_saved_scenario_settings(context, save_meta):
         if not session_state.selection_mode:
             # Scenario settings -- including unit/building disables -- only ever
             # apply when starting a NEW scenario. A save already in progress
-            # keeps exactly what was baked in at creation, full stop; the Turn
-            # Editor's current state (whatever it's since been changed to) must
-            # never reach back into an already-played save.
+            # keeps exactly what was baked in at creation, full stop; the Unit /
+            # Building Stats editor's current state (whatever it's since been
+            # changed to) must never reach back into an already-played save.
             replace_mapping(world_state, "scenario_settings", save_meta["scenario_settings"])
         else:
             # Inject built-in scenario constants that shouldn't be wiped by the user's UI settings

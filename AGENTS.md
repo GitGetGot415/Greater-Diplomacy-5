@@ -25,8 +25,8 @@ AI means artificial intelligence. UI means user interface.
   The name `system32` is intentional.
   Do not rename it during cleanup or refactoring.
   Rename it only when the user explicitly requests a different name.
-- **Keep Edit Construction Turns and Edit Unit / Building Stats as separate screens. Never merge them.**
-  These Scenario Settings buttons open `screens/editors/turn_editor.py` and `screens/editors/unit_stats_editor.py`.
+- **Keep construction turns, enabled families, unit ranges, and building stats in the one Edit Unit / Building Stats screen. Do not split them into separate screens unless the user asks.**
+  This Scenario Settings button opens `screens/editors/unit_stats_editor.py`.
 - **Never change the values of units or buildings under any circumstances unless the user explicitly asks for that change.**
   This covers every unit and building value in [Tuning Data](#tuning-data), such as costs, income, stats, production times, ranges, and research years.
   It applies to `data/json/unit_data.json`, `data/json/building_data.json`, `data/generators/recipes.py`, and the unit and building constants in `data/constants.py`.

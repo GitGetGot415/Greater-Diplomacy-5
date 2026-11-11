@@ -313,7 +313,7 @@ def get_building_cost(b_name, nation, map_data, bldg_lib):
     """Dynamically scales the building cost, bypassing the JSON for Basic Factories.
 
     Time is left untouched -- it comes straight from bldg_lib, so it already
-    reflects both the recipes.py default and any Construction Turns Editor override.
+    reflects both the recipes.py default and any construction turns override from Edit Unit / Building Stats.
     """
     stats = bldg_lib.get(b_name, {}).copy()
     if b_name in DYNAMIC_COST_BUILDINGS:

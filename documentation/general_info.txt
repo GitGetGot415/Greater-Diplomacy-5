@@ -92,12 +92,20 @@ UNIT AND BUILDING STAT SETTINGS
 ===============================
 
 Select Edit Unit / Building Stats in Scenario Settings.
-The editor has a Range category and a Buildings category.
+The editor has Units, Buildings, Range, Administrative, and Conversions categories.
+The Units, Buildings, and Range categories show a unit or building image before each family name.
+Images follow Settings > Unit Art and use the first library entry for each family.
+Administrative actions and conversions have no images.
+Images are prepared when the editor opens. Scrolling and drawing reuse them.
+
+The Units and Administrative categories list each unit family and administrative action with a turns field and an ON/OFF button.
+The Buildings category has the same turns field and ON/OFF button on each family's first row.
+The Conversions category has turn sliders. See CONSTRUCTION TURN SETTINGS.
+Every category reads the complete libraries, so disabled families remain available in this editor.
 
 The Range category lists bombardment families and aircraft families from the complete unit library.
 Bombardment families appear first. Aircraft families follow. Each group uses alphabetical order.
 A labeled divider separates the two groups.
-Disabled families remain available in this editor.
 
 Bombardment range uses whole tiles. Each family has one range field.
 Aircraft range uses whole map pixels. Each family has a starting range and an increase for each level.
@@ -117,18 +125,19 @@ A single-level family has only the Level 1 row.
 Families whose costs the game calculates, such as Basic Factory, have no cost fields.
 Values and increases must be whole numbers of at least zero.
 
-Use Defaults is on by default. While it is on, the building fields are locked and show the building library values.
+Use Defaults is on by default. While it is on, the building cost and income fields are locked and show the building library values.
 New games then use the map's default building stats.
 Turn Use Defaults off to edit the building fields. New games then use the player's building stats instead.
 The player's saved building stats stay in the settings while Use Defaults is on, but they are not used.
-Use Defaults does not affect unit ranges.
+Use Defaults does not affect construction turns, enabled families, or unit ranges.
 
-Select Save All Changes to apply the draft. Back discards the draft.
+Select Save All Changes to apply the draft of every category. Back discards the draft.
 Use Defaults is part of the draft.
-Reset to Defaults restores and saves the library ranges and building stats after confirmation.
-The Edit Unit / Building Stats button shows ! when saved ranges differ from defaults,
-or when Use Defaults is off and saved building stats differ from defaults.
-The main Scenario Settings reset keeps these separate editor settings, as it does for construction turns.
+An invalid range or building stat blocks the whole save, including construction turns.
+Reset to Defaults restores and saves every category after confirmation.
+The Edit Unit / Building Stats button shows ! when construction turns or enabled families differ from defaults,
+when saved ranges differ from defaults, or when Use Defaults is off and saved building stats differ from defaults.
+The main Scenario Settings reset keeps the settings of Edit Unit / Building Stats.
 
 Map default building stats
 --------------------------
@@ -172,11 +181,8 @@ These settings apply to all local player modes, AI countries, and map editor uni
 CONSTRUCTION TURN SETTINGS
 ==========================
 
-Open the Construction Turns Editor from Scenario Settings.
-Both scenario editors show a unit or building image before each family name.
-Images follow Settings > Unit Art and use the first library entry for each family.
-Administrative actions and conversions have no images.
-Images are prepared when the editor opens. Scrolling and drawing reuse them.
+Edit Unit / Building Stats in Scenario Settings edits construction turns and enabled families.
+See UNIT AND BUILDING STAT SETTINGS for the editor.
 
 The Conversions category has sliders for Truck / Ship Conversion and Air Drop Recovery.
 Each slider accepts whole turns from 1 to 9. These actions remain enabled.

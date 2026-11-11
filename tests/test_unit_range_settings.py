@@ -179,10 +179,16 @@ class UnitRangeEditorTests(unittest.TestCase):
 
     def editor(self, settings=None, persist=False):
         from screens.editors.unit_stats_editor import UnitStatsEditorScreen
-        return UnitStatsEditorScreen(settings=settings if settings is not None else {}, persist=persist)
+        screen = UnitStatsEditorScreen(settings=settings if settings is not None else {}, persist=persist)
+        screen.select_category("range")
+        return screen
 
     def test_fields_save_to_draft_only_and_back_discards(self):
-        settings = {"unit_turn_overrides": {"Fixture Gun": 7}}
+        # Save All also writes construction turns, so use a real unit family for the kept turn change.
+        turn_tab = self.editor().turn_tabs["unit"]
+        family = turn_tab["names"][0]
+        turn_overrides = {family: turn_tab["defaults"][family] + 1}
+        settings = {"unit_turn_overrides": dict(turn_overrides)}
         screen = self.editor(settings)
         field = next(element for element in screen.elements
                      if getattr(element, "entry_key", None) == "bombard_range")
@@ -202,7 +208,7 @@ class UnitRangeEditorTests(unittest.TestCase):
             screen.save_all()
         save.assert_not_called()
         self.assertEqual(settings["unit_range_overrides"], {"Fixture Gun": {"bombard_range": 4}})
-        self.assertEqual(settings["unit_turn_overrides"], {"Fixture Gun": 7})
+        self.assertEqual(settings["unit_turn_overrides"], turn_overrides)
 
     def test_save_rejects_invalid_input_without_partial_changes(self):
         settings = {}
@@ -221,6 +227,7 @@ class UnitRangeEditorTests(unittest.TestCase):
                     for index in range(30)}
         with mock.patch.object(queries, "get_unit_range_defaults", return_value=defaults):
             screen = UnitStatsEditorScreen(settings={}, persist=False)
+            screen.select_category("range")
             field = next(element for element in screen.elements if getattr(element, "entry_key", None))
             field.text = "88"
             screen.scroll_y = screen.max_scroll
@@ -263,6 +270,12 @@ class UnitRangeEditorTests(unittest.TestCase):
         button = next(element for element in screen.elements
                       if getattr(element, "text", "") == "Edit Unit / Building Stats")
         self.assertFalse(button.notification_text)
+        # The same button opens construction turns, so their changes also show the badge.
+        screen.settings["unit_disabled"] = ["Fixture Gun"]
+        screen.refresh_ui()
+        button = next(element for element in screen.elements
+                      if getattr(element, "text", "") == "Edit Unit / Building Stats")
+        self.assertEqual(button.notification_text, "!")
 
 
 class UnitRangePersistenceTests(unittest.TestCase):

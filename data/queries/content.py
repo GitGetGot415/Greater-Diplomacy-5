@@ -164,8 +164,10 @@ def get_days_per_turn(scenario_settings):
 
 
 def scenario_has_construction_customizations(settings):
-    """True if the Construction Turns Editor has anything set away from its
-    defaults, for the badge on its entry-point button in Scenario Settings."""
+    """True if construction turns or enabled families differ from their defaults.
+
+    The Edit Unit / Building Stats badge in Scenario Settings uses this with
+    scenario_has_unit_stat_customizations."""
     if not settings:
         return False
     return bool(settings.get("unit_turn_overrides") or settings.get("building_turn_overrides")

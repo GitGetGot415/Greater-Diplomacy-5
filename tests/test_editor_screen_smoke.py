@@ -138,28 +138,27 @@ class EditorScreenSmokeTests(unittest.TestCase):
         from screens.editors.historical_leaders_editor import Historical_Leaders_Editor
         self.exercise(Historical_Leaders_Editor())
 
-    def test_turn_editor(self):
-        from screens.editors.turn_editor import TurnEditorScreen
-        screen = TurnEditorScreen()
-        self.exercise(screen)
-        screen.select_tab("administrative")
-        self.exercise(screen)
-        screen.select_tab("conversion")
-        self.exercise(screen)
+    def test_unit_stats_editor_categories(self):
+        from screens.editors.unit_stats_editor import UnitStatsEditorScreen
+        screen = UnitStatsEditorScreen(settings={}, persist=False)
+        for key, _label in screen.CATEGORIES:
+            with self.subTest(category=key):
+                screen.select_category(key)
+                self.exercise(screen)
 
     def test_conversion_sliders_snap_save_cancel_and_reset(self):
-        from screens.editors.turn_editor import TurnEditorScreen
+        from screens.editors.unit_stats_editor import UnitStatsEditorScreen
         from data import constants as c, queries
         from ui.widgets.ui_elements import Slider, TextField
         settings = {}
-        screen = TurnEditorScreen(settings=settings, persist=False)
-        screen.select_tab("conversion")
+        screen = UnitStatsEditorScreen(settings=settings, persist=False)
+        screen.select_category("conversions")
         self.assertFalse(any(isinstance(el, TextField) for el in screen.elements))
         sliders = [el for el in screen.elements if isinstance(el, Slider)]
         self.assertEqual(len(sliders), len(queries.CONVERSION_ACTIONS))
         maximum = c.MAX_CONVERSION_TURNS
         span = maximum - c.MIN_CONVERSION_TURNS
-        for name, slider in zip(screen.tab["names"], sliders):
+        for name, slider in zip(screen.turn_tab["names"], sliders):
             for expected in range(c.MIN_CONVERSION_TURNS, maximum + 1):
                 # Stop between ticks to verify snapping through mouse input.
                 fraction = min(1, (expected - c.MIN_CONVERSION_TURNS) / span + .02)
@@ -172,11 +171,11 @@ class EditorScreenSmokeTests(unittest.TestCase):
                             pos=(slider.rect.left + round(slider.rect.width * fraction), slider.rect.centery)),
                         pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=slider.handle_rect.center),
                     ])
-                    self.assertEqual(screen.tab["values"][name], str(expected))
+                    self.assertEqual(screen.turn_tab["values"][name], str(expected))
         self.assertEqual(settings, {})
-        screen.select_tab("unit")
-        screen.select_tab("conversion")
-        self.assertTrue(all(value == str(maximum) for value in screen.tab["values"].values()))
+        screen.select_category("units")
+        screen.select_category("conversions")
+        self.assertTrue(all(value == str(maximum) for value in screen.turn_tab["values"].values()))
         with mock.patch.object(queries, "save_scenario_settings") as save, \
                 mock.patch("ui.dialogs.show_success"):
             screen.save_all()
@@ -185,7 +184,7 @@ class EditorScreenSmokeTests(unittest.TestCase):
         for action in queries.CONVERSION_ACTIONS:
             self.assertEqual(queries.get_conversion_turns(action, settings), maximum)
         self.assertTrue(queries.scenario_has_construction_customizations(settings))
-        reopened = TurnEditorScreen(settings=settings, persist=False)
+        reopened = UnitStatsEditorScreen(settings=settings, persist=False)
         with mock.patch("ui.dialogs.ask_yes_no", side_effect=lambda _title, _text, cb: cb(True)), \
                 mock.patch("ui.dialogs.show_success"):
             reopened.reset_to_defaults()
@@ -193,26 +192,28 @@ class EditorScreenSmokeTests(unittest.TestCase):
         self.assertFalse(queries.scenario_has_construction_customizations(settings))
 
     def test_conversion_editor_repairs_malformed_override_blocks(self):
-        from screens.editors.turn_editor import TurnEditorScreen
+        from screens.editors.unit_stats_editor import UnitStatsEditorScreen
         from data import queries
         for value in (None, [], "invalid"):
             with self.subTest(value=value):
                 settings = {"conversion_turn_overrides": value}
-                screen = TurnEditorScreen(settings=settings, persist=False)
+                screen = UnitStatsEditorScreen(settings=settings, persist=False)
                 self.assertEqual(settings["conversion_turn_overrides"], value)
-                self.assertEqual(screen.tabs["conversion"]["overrides"], {})
                 for action, (name, _constant) in queries.CONVERSION_ACTIONS.items():
-                    self.assertEqual(screen.tabs["conversion"]["values"][name],
+                    self.assertEqual(screen.turn_tabs["conversion"]["values"][name],
                                      str(queries.get_conversion_turns(action)))
+                with mock.patch("ui.dialogs.show_success"):
+                    screen.save_all()
+                self.assertEqual(settings["conversion_turn_overrides"], {})
 
     def test_administrative_editor_saves_all_tabs_and_cancels_cleanly(self):
-        from screens.editors.turn_editor import TurnEditorScreen
+        from screens.editors.unit_stats_editor import UnitStatsEditorScreen
         from data import queries
         settings = {}
-        screen = TurnEditorScreen(settings=settings, persist=False)
-        screen.select_tab("administrative")
+        screen = UnitStatsEditorScreen(settings=settings, persist=False)
+        screen.select_category("administrative")
         name = queries.ADMINISTRATIVE_ACTIONS["CORE"][0]
-        duration = screen.tab["defaults"][name] + 3
+        duration = screen.turn_tab["defaults"][name] + 3
         field = next(el for el in screen.elements if getattr(el, "entry_key", None) == name)
         field.text = str(duration)
         screen.toggle_disabled(name)
@@ -224,8 +225,8 @@ class EditorScreenSmokeTests(unittest.TestCase):
         self.assertEqual(settings["administrative_turn_overrides"][name], duration)
         self.assertIn(name, settings["administrative_disabled"])
         self.assertTrue(queries.scenario_has_construction_customizations(settings))
-        reopened = TurnEditorScreen(settings=settings, persist=False)
-        self.assertEqual(reopened.tabs["administrative"]["values"][name], str(duration))
+        reopened = UnitStatsEditorScreen(settings=settings, persist=False)
+        self.assertEqual(reopened.turn_tabs["administrative"]["values"][name], str(duration))
         with mock.patch("ui.dialogs.ask_yes_no", side_effect=lambda _title, _text, cb: cb(True)), \
                 mock.patch("ui.dialogs.show_success"):
             reopened.reset_to_defaults()

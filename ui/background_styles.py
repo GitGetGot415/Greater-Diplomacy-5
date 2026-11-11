@@ -145,8 +145,6 @@ EDITOR_PANEL_STYLES = {
     "scripted_event_lists": {"color": (26, 26, 34), "gradient_strength": DEFAULT_GRADIENT_EDITOR_PANELS},
     "unit_stats": {"color": c.MODAL_BG, "gradient_strength": DEFAULT_GRADIENT_EDITOR_PANELS},
     "unit_stats_row": {"color": (44, 44, 56), "gradient_strength": 0.0},
-    "construction_turns": {"color": c.MODAL_BG, "gradient_strength": DEFAULT_GRADIENT_EDITOR_PANELS},
-    "construction_turns_row": {"color": (44, 44, 56), "gradient_strength": 0.0},
     "historical_leader_card": {"color": (35, 45, 35), "gradient_strength": DEFAULT_GRADIENT_EDITOR_PANELS},
 }
 

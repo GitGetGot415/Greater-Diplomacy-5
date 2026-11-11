@@ -6,7 +6,6 @@ from data import queries
 from data.io import starting_defaults
 from ui import dialogs
 from ui.rendering.font_manager import fonts
-from screens.editors import turn_editor
 from screens.editors import unit_stats_editor
 
 
@@ -14,7 +13,7 @@ from screens.editors import unit_stats_editor
 # LAYOUT
 # ==========================================
 # General scenario rules use the left column. AI rules use the right panel.
-# The footer opens the unit / building stats and construction turns editors.
+# The footer opens the Unit / Building Stats editor.
 
 
 ROW_H = 50
@@ -53,10 +52,7 @@ TRUCE_ROW_Y = LEFT_TOP_Y + 9 * ROW_H
 DAMAGE_FLOOR_ROW_Y = LEFT_TOP_Y + 10 * ROW_H
 DEFENSE_FLOOR_ROW_Y = LEFT_TOP_Y + 11 * ROW_H
 RESET_ROW_Y = 615
-TURN_EDITOR_ROW_Y = 675
-EDITOR_BUTTON_GAP = 20
-TURN_EDITOR_X = (c.SCREEN_WIDTH - c.SIZES["scenario_setting_button"][0]) // 2
-UNIT_EDITOR_X = TURN_EDITOR_X + c.SIZES["scenario_setting_button"][0] + EDITOR_BUTTON_GAP
+STATS_EDITOR_ROW_Y = 675
 
 # ==========================================
 # TOGGLES
@@ -216,20 +212,16 @@ class Scenario_Settings(Screen):
 
         self.elements.extend(self.build_ai_section())
 
-        unit_editor_btn = Button(UNIT_EDITOR_X, TURN_EDITOR_ROW_Y, "scenario_setting_button", "purple",
-                                 "Edit Unit / Building Stats", self.open_unit_stats_editor, font_preset="button_small")
-        if queries.scenario_has_unit_stat_customizations(self.settings):
-            unit_editor_btn.notification_text = "!"
-
-        turn_editor_btn = Button(TURN_EDITOR_X, TURN_EDITOR_ROW_Y, "scenario_setting_button", "purple",
-                                 "Edit Construction Turns", self.open_turn_editor, font_preset="button_small")
-        if queries.scenario_has_construction_customizations(self.settings):
-            turn_editor_btn.notification_text = "!"
+        stats_editor_btn = Button("centered", STATS_EDITOR_ROW_Y, "scenario_setting_button", "purple",
+                                  "Edit Unit / Building Stats", self.open_unit_stats_editor, font_preset="button_small")
+        if (queries.scenario_has_unit_stat_customizations(self.settings)
+                or queries.scenario_has_construction_customizations(self.settings)):
+            stats_editor_btn.notification_text = "!"
 
         self.elements.extend([
             Button("centered", RESET_ROW_Y, "scenario_setting_button", "grey", "Reset to Defaults",
                    self.reset_defaults, font_preset="button_small"),
-            unit_editor_btn, turn_editor_btn,
+            stats_editor_btn,
         ])
 
     def build_fog_slider(self):
@@ -332,16 +324,9 @@ class Scenario_Settings(Screen):
     def toggle_ai_disabled(self):
         self.toggle("ai_disabled", c.DEFAULT_AI_DISABLED)
 
-    def open_turn_editor(self):
-        try:
-            # Refresh the badge from the shared settings after the modal closes;
-            # unsaved edits stay inside the editor draft.
-            turn_editor.open_turn_editor(on_done=lambda screen: self.refresh_ui(), settings=self.settings,
-                             persist=not self._session_bound)
-        except ImportError as e:
-            print(f"Error importing turn editor: {e}")
-
     def open_unit_stats_editor(self):
+        # Refresh the badge from the shared settings after the modal closes;
+        # unsaved edits stay inside the editor draft.
         unit_stats_editor.open_unit_stats_editor(on_done=lambda screen: self.refresh_ui(), settings=self.settings,
                                persist=not self._session_bound)
 
