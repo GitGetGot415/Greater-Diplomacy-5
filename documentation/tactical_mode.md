@@ -46,7 +46,8 @@ The flow is **campaign encounter → preview → actual battle → campaign**.
 After each turn resolves, once per turn, the game opens preview when the player's land unit shares a tile
 with hostile land units that can fight a tactical battle. Preview starts with the player's division controlled.
 The friendly army is that division followed by friendly land units on the tile, and the enemy army is the hostile
-land units there, each up to the army size limit. Each unit enters with its current health.
+land units there, each up to the deployment limit. Each deployed unit enters with its current health.
+The limit controls battlefield deployment; units beyond the limit still belong to their side's final result.
 
 An eligible ground encounter involving the tactical division is recognized before any automatic charge-survival
 projection or ground-combat calculation, whether the division attacks or defends.
@@ -88,8 +89,12 @@ tactical mode ends, and the game continues in spectator mode.
 While any of the division's sub-units survives, the player keeps the division, even when the controlled sub-unit
 was destroyed and the player spectated the rest of the battle.
 
-Every participating unit keeps its sub-units' remaining share of its full health in the campaign.
-Destroyed units, friendly or enemy, are removed from the tile.
+Every surviving participating unit keeps its sub-units' remaining share of its full health in the campaign.
+Winning a tactical battle leaves zero enemy units on the tile. The entire defeated side is destroyed and removed,
+including divisions beyond the deployment limit, artillery, and any other enemy units that did not deploy.
+The same rule clears the player's side after a defeat. Winning reserves and neutral bystanders are preserved;
+volunteer units belong to the side of their host country. Automatic victories against hostile artillery also clear
+all enemy units from the tile. Unit rosters, capture checks, and battle-marker caches refresh after the result.
 The tile is then captured as after any campaign combat: if only enemies remain, those enemies take the tile.
 Everything else waits for the next turn.
 

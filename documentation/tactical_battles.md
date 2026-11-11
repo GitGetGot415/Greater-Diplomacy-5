@@ -37,7 +37,9 @@ Drag cards within an army to change deployment order: the leftmost card deploys 
 enemy, and each card to its right deploys one rank further back.
 Scroll long rosters with the wheel, scrollbar, or by dragging the roster background.
 `CUSTOM_BATTLE_MAX_UNITS_PER_SIDE` in [data/constants.py](../data/constants.py) limits each army's divisions
-in custom battles and campaign tactical encounters. Both armies need at least one unit before **Simulate** becomes available.
+in custom battles and the deployed divisions in campaign tactical encounters. Campaign results clear the entire
+defeated side from the tile, including units beyond that deployment limit; see [tactical_mode.md](tactical_mode.md#battle-results-and-loss-of-control).
+Both armies need at least one unit before **Simulate** becomes available.
 
 The gray gear button opens **Unit Settings** for that roster entry.
 **Nationality** chooses a country from the base country library. **Starting HP** is a slider that sets

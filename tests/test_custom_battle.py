@@ -2072,6 +2072,57 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.assertEqual(enemy, enemies[:cap])
         self.assertEqual(province["units"], [*allies, *enemies, player])
 
+    def test_tactical_result_clears_the_defeated_side_beyond_the_deployment_limit(self):
+        from tests.combat_fixtures import StubBattleMap
+        for winner in (0, 1):
+            with self.subTest(winner=winner), patch.object(c, "CUSTOM_BATTLE_MAX_UNITS_PER_SIDE", 2), patch(
+                    "data.queries.get_unit_library", return_value=self.library):
+                world = StubBattleMap()
+                world.add_nation("Fixture A", at_war_with=["Fixture B", "Fixture C"])
+                world.add_nation("Fixture B", at_war_with=["Fixture A"])
+                world.add_nation("Fixture C", at_war_with=["Fixture A"])
+                world.add_nation("Neutral")
+                player = queries.create_unit_dict("Fixture II", "Fixture A", self.library)
+                friends = [player, *[queries.create_unit_dict("Fixture I", "Fixture A", self.library)
+                                     for _ in range(3)]]
+                enemies = [queries.create_unit_dict("Fixture I", "Fixture B", self.library) for _ in range(3)]
+                enemies.append(queries.create_unit_dict("Fixture I", "Fixture C", self.library))
+                volunteer = queries.create_unit_dict("Fixture I", "Neutral", self.library)
+                volunteer["volunteer_host"] = "Fixture C"
+                enemies.append(volunteer)
+                for kind in ("Fixture Gun I", "Fixture Plane I", "Fixture Ship I"):
+                    enemies.append(queries.create_unit_dict(kind, "Fixture C", self.library))
+                neutral = queries.create_unit_dict("Fixture I", "Neutral", self.library)
+                neutral_before = copy.deepcopy(neutral)
+                province = world.add_province("p1", "Fixture B", units=[*friends, *enemies, neutral])
+                world.player_unit, world.tactical_mode = player, True
+                world.invalidate_map_presentation_cache = Mock()
+                world.refresh_map_layers, world.update_country_centers = Mock(), Mock()
+                friendly, enemy = combat.campaign_forces(player, province, world.nation_data, self.library)
+                self.assertEqual(len(friendly), 2)
+                self.assertEqual(len(enemy), 2)
+                self.screen._enter_campaign(world, province, friendly, enemy)
+                self.finish_intro()
+                self.click("Start")
+                simulation = self.screen.simulation
+                for fighter in simulation.fighters:
+                    if fighter.side != winner:
+                        fighter.data["health"] = 0
+                simulation.winner = winner
+                self.screen.update()
+                defeated, survivors = (enemies, friends) if winner == 0 else (friends, enemies)
+                self.assertTrue(all(unit["health"] == 0 for unit in defeated))
+                self.assertEqual(province["units"], [*survivors, neutral])
+                self.assertTrue(all(unit["health"] == unit["max_health"] for unit in survivors))
+                self.assertEqual(neutral, neutral_before)
+                self.assertFalse(queries.is_province_in_active_combat(province, world.nation_data))
+                self.assertEqual(province["owner"], "Fixture A" if winner == 0 else "Fixture B")
+                self.assertIsNone(combat.campaign_forces(player, province, world.nation_data, self.library))
+                world.invalidate_map_presentation_cache.assert_called()
+                once = copy.deepcopy(province["units"])
+                self.screen.update()
+                self.assertEqual(province["units"], once)
+
     def test_map_offers_one_tactical_preview_per_turn_for_a_fighting_land_unit(self):
         from screens.game.map import Map
         nations = {"Fixture A": {"at_war_with": ["Fixture B"]}, "Fixture B": {"at_war_with": ["Fixture A"]}}
@@ -2099,7 +2150,11 @@ class CustomBattleScreenTests(unittest.TestCase):
         nations = {"Fixture A": {"at_war_with": ["Fixture B"]}, "Fixture B": {"at_war_with": ["Fixture A"]}}
         player = queries.create_unit_dict("Fixture II", "Fixture A", self.library)
         gun = queries.create_unit_dict("Fixture Gun I", "Fixture B", self.library)
-        province = {"id": 1, "units": [player, gun]}
+        plane = queries.create_unit_dict("Fixture Plane I", "Fixture B", self.library)
+        ship = queries.create_unit_dict("Fixture Ship I", "Fixture B", self.library)
+        neutral = queries.create_unit_dict("Fixture I", "Neutral", self.library)
+        nations["Neutral"] = {"at_war_with": []}
+        province = {"id": 1, "units": [player, gun, plane, ship, neutral]}
         fake = SimpleNamespace(
             tactical_mode=True, player_unit=player, multiplayer_mode=False, realtime_multiplayer=False,
             _tactical_battle_turn=None, time_manager=SimpleNamespace(total_turns=4),
@@ -2109,7 +2164,9 @@ class CustomBattleScreenTests(unittest.TestCase):
             Map.open_tactical_battle(fake)
         fake.go_to.assert_not_called()
         self.assertIsNone(fake.tactical_battle_request)
-        self.assertEqual(province["units"], [player])
+        self.assertEqual(province["units"], [player, neutral])
+        self.assertTrue(all(unit["health"] == 0 for unit in (gun, plane, ship)))
+        self.assertFalse(queries.is_province_in_active_combat(province, nations))
         self.assertEqual(player["health"], player["max_health"])
         settle.assert_called_once_with(fake, province)
 

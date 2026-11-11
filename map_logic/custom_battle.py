@@ -165,7 +165,7 @@ def land_unit_types(library):
     return [name for name, stats in library.items() if _is_land(stats) and not is_artillery(name, library)]
 
 
-def _campaign_sides(player_unit, province, nation_data):
+def campaign_sides(player_unit, province, nation_data):
     """Every living unit on the tile on the player's side (player's unit first) and on the enemy side."""
     country = queries.get_unit_combat_owner(player_unit)
     enemies = queries.get_enemies(country, nation_data)
@@ -191,7 +191,7 @@ def campaign_forces(player_unit, province, nation_data, library):
     without a battle (win_against_artillery). Each list holds at most one army's units.
     """
     land = set(land_unit_types(library))
-    sides = _campaign_sides(player_unit, province, nation_data)
+    sides = campaign_sides(player_unit, province, nation_data)
     # Convoys caught on land unload before fighting. Recognize their divisions
     # without first building or simulating an automatic campaign battle.
     def land_type(unit):
@@ -208,14 +208,19 @@ def campaign_forces(player_unit, province, nation_data, library):
 
 def campaign_artillery(player_unit, province, nation_data, library):
     """The land artillery-type units (friendly, enemy) on a tactical player's tile, which sit the battle out."""
-    return tuple(_artillery(side, library) for side in _campaign_sides(player_unit, province, nation_data))
+    return tuple(_artillery(side, library) for side in campaign_sides(player_unit, province, nation_data))
+
+
+def _remove_defeated_units(province, units):
+    """Clear defeated units, including reserves that never deployed, before refreshing campaign combat."""
+    for unit in units:
+        unit["health"] = 0
+    province["units"] = [unit for unit in province["units"] if unit.get("health", 0) > 0]
 
 
 def win_against_artillery(player_unit, province, nation_data, library):
     """Hostile artillery alone cannot fight a tactical battle: the player wins at once and that artillery is destroyed."""
-    for unit in campaign_artillery(player_unit, province, nation_data, library)[1]:
-        unit["health"] = 0
-    province["units"] = [unit for unit in province["units"] if unit.get("health", 0) > 0]
+    _remove_defeated_units(province, campaign_sides(player_unit, province, nation_data)[1])
 
 
 def tactical_encounter(context, province):
@@ -276,18 +281,19 @@ def campaign_roster(units, library):
     return roster
 
 
-def apply_campaign_result(simulation, units, province, artillery):
+def apply_campaign_result(simulation, units, province, artillery, *, side_units=None):
     """Write a finished battle back: each unit keeps its division's fraction of health and the dead are removed.
 
     ``units`` are the campaign units in roster order, friendly army then enemy army.
     ``artillery`` is (friendly, enemy) from campaign_artillery. The losing side's artillery is
-    destroyed; the winning side's is untouched.
+    destroyed; the winning side's is untouched. Campaign callers supply ``side_units`` from
+    campaign_sides so the defeat also clears units beyond the deployment limit and other
+    nonparticipants on the defeated side. Neutral units and winning reserves are untouched.
     """
     for index, unit in enumerate(units):
         unit["health"] = simulation.division_health_fraction(index) * unit["max_health"]
-    for unit in artillery[1 - simulation.winner]:
-        unit["health"] = 0
-    province["units"] = [unit for unit in province["units"] if unit.get("health", 0) > 0]
+    defeated = (artillery if side_units is None else side_units)[1 - simulation.winner]
+    _remove_defeated_units(province, defeated)
 
 
 def normal_game_forecast(friendly, enemy):
