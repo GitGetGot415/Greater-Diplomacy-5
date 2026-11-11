@@ -208,9 +208,8 @@ Foliage is a green circle drawn without an image. Each tree's foliage radius is 
 from `TREE_FOLIAGE_RADII`, independently of trunk size.
 Foliage only draws, covering units and shots, while health bars, flags, and the player's controls stay on top.
 Each tree's foliage is a slightly lighter or darker shade of `FOLIAGE_COLOR` (up to `FOLIAGE_GREEN_VARIATION`).
-Foliage is opaque until a living sub-unit's outline overlaps it. That foliage then turns partly transparent
-(`FOLIAGE_ALPHA` in [screens/game/custom_battle.py](../screens/game/custom_battle.py)), so the sub-unit and
-trunk show faintly beneath it.
+All foliage is partly transparent (`FOLIAGE_ALPHA` in
+[screens/game/custom_battle.py](../screens/game/custom_battle.py)), so units and trunks show faintly beneath it.
 Trunks block ground movement and intercept shots. Ordinary shots leave trees intact; tank shells remove a tree,
 foliage included, and stop at that tree. Later shots and ground units can use the opening.
 Swamps have a pink background, trees, and impassable marsh areas. Marsh areas allow shots across like chasms.

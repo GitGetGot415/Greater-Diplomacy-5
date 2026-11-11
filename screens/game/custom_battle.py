@@ -85,8 +85,7 @@ TERRAIN_COLORS = {
     "forest": (65, 115, 57), "jungle": (35, 76, 47), "mountain": (119, 88, 64),
     "swamp": (160, 104, 132),
 }
-# Out of 255. Foliage is opaque until a living sub-unit stands beneath it; then the leaves still
-# mostly hide that sub-unit and the trunk, which show faintly.
+# Out of 255. All foliage is partly transparent, so units and trunks show faintly beneath it.
 FOLIAGE_ALPHA = 200
 FOLIAGE_COLOR = (25, 128, 0)  # Each tree's foliage is a circle of this green, lightened or darkened slightly.
 FOLIAGE_GREEN_VARIATION = 14  # Most a tree's shade can lighten or darken the foliage's green channel.
@@ -344,9 +343,7 @@ class CustomBattleScreen(Screen):
         self.generation_year = starting_defaults.get_starting_value("random_setup", "start_year")
         self.terrain = starting_defaults.get_starting_value("random_setup", "custom_battle_terrain")
         self.terrain_art = []
-        self.canopy_art = []  # (tree, foliage color, foliage radius on screen, reach), drawn above units.
-        self.canopy_cells = {}  # Canopy indices by battlefield cell, for finding foliage over sub-units.
-        self.canopy_cell = 1.0
+        self.canopy_art = []  # (tree, transparent foliage surface), drawn above units.
         self.terrain_art_key = None
         self.terrain_sprites = {}
         self.battle_seed = None
@@ -1480,7 +1477,6 @@ class CustomBattleScreen(Screen):
         self.terrain_art_key = id(field), field.revision, self.zoom
         self.terrain_art = []
         self.canopy_art = []
-        self.canopy_cells = {}
         for feature in sorted(field.features, key=lambda feature: feature.kind == "tree"):
             if feature.destroyed:
                 continue
@@ -1489,9 +1485,8 @@ class CustomBattleScreen(Screen):
                 # Only the green channel varies, so every tree stays a shade of FOLIAGE_COLOR.
                 red, green, blue = FOLIAGE_COLOR
                 color = red, max(0, min(255, green + round(feature.shade * FOLIAGE_GREEN_VARIATION))), blue
-                # Foliage covers a sub-unit once their outlines overlap.
-                reach = feature.foliage_radius + combat.UNIT_RADIUS
-                self.canopy_art.append((feature, color, max(1, round(feature.foliage_radius * self.zoom)), reach))
+                radius = max(1, round(feature.foliage_radius * self.zoom))
+                self.canopy_art.append((feature, self._see_through_foliage(radius, color)))
                 continue
             radius = max(2, round(feature.radius * self.zoom))
             key = feature.kind, radius, feature.height if feature.kind == "hill" else 0
@@ -1518,28 +1513,6 @@ class CustomBattleScreen(Screen):
                     pygame.draw.polygon(art, color, points)
                 self.terrain_sprites[key] = art
             self.terrain_art.append((feature, self.terrain_sprites[key]))
-        # A cell as wide as the longest reach means a sub-unit's cell and its neighbors hold every canopy over it.
-        self.canopy_cell = max((reach for *_art, reach in self.canopy_art), default=1.0)
-        for index, (feature, *_rest) in enumerate(self.canopy_art):
-            self.canopy_cells.setdefault(
-                (int(feature.x // self.canopy_cell), int(feature.y // self.canopy_cell)), []).append(index)
-
-    def covering_canopies(self):
-        """Indices into canopy_art of the foliage that overlaps a living sub-unit."""
-        covering = set()
-        cell = self.canopy_cell
-        for fighter in self.simulation.fighters:
-            if not fighter.alive:
-                continue
-            column, row = int(fighter.x // cell), int(fighter.y // cell)
-            for dx in (-1, 0, 1):
-                for dy in (-1, 0, 1):
-                    for index in self.canopy_cells.get((column + dx, row + dy), ()):
-                        feature, _color, _radius, reach = self.canopy_art[index]
-                        if math.hypot(fighter.x - feature.x, fighter.y - feature.y) < reach:
-                            covering.add(index)
-        return covering
-
     def _draw_terrain(self, surface):
         visible = surface.get_rect()
         for feature, art in self.terrain_art:
@@ -1548,18 +1521,12 @@ class CustomBattleScreen(Screen):
                 surface.blit(art, rect)
 
     def _draw_canopy(self, surface):
-        """Foliage circles stay opaque unless a living sub-unit is beneath them; then they turn see-through."""
+        """Draw every tree's cached, partly transparent foliage above units."""
         visible = surface.get_rect()
-        covering = self.covering_canopies()
-        for index, (feature, color, radius, _reach) in enumerate(self.canopy_art):
-            center = self.to_screen(feature.x, feature.y)
-            if not visible.colliderect((center[0] - radius, center[1] - radius, radius * 2 + 1, radius * 2 + 1)):
-                continue
-            if index in covering:
-                art = self._see_through_foliage(radius, color)
-                surface.blit(art, art.get_rect(center=center))
-            else:
-                pygame.draw.circle(surface, color, center, radius)
+        for feature, art in self.canopy_art:
+            rect = art.get_rect(center=self.to_screen(feature.x, feature.y))
+            if rect.colliderect(visible):
+                surface.blit(art, rect)
 
     def _draw_battle(self, surface):
         self._draw_grass(surface)

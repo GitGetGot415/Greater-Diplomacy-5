@@ -1619,24 +1619,6 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.screen.add_unit(0, "Fixture II")
         self.screen.add_unit(1, "Fixture I")
 
-    def test_foliage_turns_see_through_only_over_a_living_sub_unit(self):
-        trees = [battle_terrain.Feature("tree", x, 500, battle_terrain.TREE_TRUNK_RADII[1], 100, trunk=1,
-                                         foliage_radius=40)
-                 for x in (1000, 1400)]
-        self.screen.simulation = combat.BattleSimulation(
-            self.library, ["Fixture I"], ["Fixture I"], seed=1,
-            battlefield=battle_terrain.Battlefield("forest", combat.ARENA_SIZE, combat.UNIT_RADIUS, trees))
-        self.screen._cache_terrain_art()
-        friendly, enemy = self.screen.simulation.fighters
-        reach = self.screen.canopy_art[0][3]
-        friendly.x, friendly.y = 1000 + reach - 1, 500  # The body's edge reaches under the first tree's foliage.
-        enemy.x, enemy.y = 1400 + reach + 1, 500  # Just clear of the second tree's foliage.
-        self.assertEqual(self.screen.covering_canopies(), {0})
-        friendly.data["health"] = 0  # A destroyed sub-unit hides nothing.
-        self.assertEqual(self.screen.covering_canopies(), set())
-        enemy.x = 1400
-        self.assertEqual(self.screen.covering_canopies(), {1})
-
     def test_regular_firing_uses_all_three_rifle_variants_on_both_sides(self):
         self.fill_armies()
         self.click("Simulate")
