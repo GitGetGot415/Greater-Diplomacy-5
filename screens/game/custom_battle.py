@@ -88,8 +88,9 @@ TERRAIN_BUTTON_POSITION = (180, 20)
 TERRAIN_BUTTON_SIZE = (220, 40)
 TERRAIN_COLORS = {
     "plains": (126, 163, 88), "hills": (177, 155, 64), "desert": (194, 124, 58),
-    "forest": (35, 76, 47), "jungle": (30, 60, 40), "mountain": (119, 88, 64),
+    "forest": (80, 140, 80), "jungle": (35, 76, 47), "mountain": (119, 88, 64),
     "swamp": (160, 104, 132),
+    # not used due to color conflicting with canopy leaves: (65, 115, 57)
 }
 # Out of 255. All foliage is partly transparent, so units and trunks show faintly beneath it.
 FOLIAGE_ALPHA = 200
