@@ -34,6 +34,7 @@ take no part in tactical battles, so the picker and **Random** never offer them.
 **Cancel** closes the picker and keeps units already added.
 
 Select a roster card and choose **Remove** to remove that entry.
+Each army's **Clear All** button removes every unit in that army. Clearing the friendly army also releases control of its selected unit.
 Drag cards within an army to change deployment order: the leftmost card deploys in the front rank, closest to the
 enemy, and each card to its right deploys one rank further back.
 Scroll long rosters with the wheel, scrollbar, or by dragging the roster background.

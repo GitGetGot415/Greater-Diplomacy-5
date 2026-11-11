@@ -61,6 +61,8 @@ ROSTER_INSET = 20
 ROSTER_WIDTH = 900
 SCROLLBAR_HEIGHT = 14
 BUTTON_WIDTH = 170
+CLEAR_ALL_OFFSET_Y = 20
+CLEAR_ALL_HEIGHT = 32
 TEAM_COLORS = ((85, 170, 245), (235, 100, 90))
 # Actual battle fills the whole screen. The mouse wheel steps through these scales, starting at 1.0.
 ZOOM_LEVELS = (0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.75, 1.0, 1.25, 1.5, 2.0)
@@ -640,6 +642,8 @@ class CustomBattleScreen(Screen):
                 if self.mode == "preview":
                     continue
                 x = PANEL_X + PANEL_WIDTH - BUTTON_WIDTH - ROSTER_INSET
+                clear = Button(x, top + CLEAR_ALL_OFFSET_Y, (BUTTON_WIDTH, CLEAR_ALL_HEIGHT), "red", "Clear All", lambda side=side: self.clear_army(side), font_size=18)
+                clear.apply_state(enabled=bool(roster), color="red")
                 add = Button(x, top + 70, (BUTTON_WIDTH, 42), "blue" if side == 0 else "red",
                              "Add Friendly" if side == 0 else "Add Enemy",
                              lambda side=side: self.open_picker(side), font_size=20)
@@ -648,7 +652,7 @@ class CustomBattleScreen(Screen):
                 remove = Button(x, top + 128, (BUTTON_WIDTH, 42), "grey", "Remove",
                                 lambda side=side: self.remove_unit(side), font_size=20)
                 remove.apply_state(enabled=self.selected[side] is not None, color="red")
-                self.elements.extend((add, remove))
+                self.elements.extend((clear, add, remove))
                 if side == 0:
                     controlling = self.controlled_index is not None and self.controlled_index == self.selected[0]
                     control = Button(x, top + 178, (BUTTON_WIDTH, 32), "yellow",
@@ -838,6 +842,18 @@ class CustomBattleScreen(Screen):
             elif self.controlled_index > index:
                 self.controlled_index -= 1
         self.selected[side] = None
+        self.refresh_ui()
+
+    def clear_army(self, side):
+        if self.mode != "setup" or side not in (0, 1):
+            return
+        self.cancel_active_drags()
+        self.rosters[side].clear()
+        self.selected[side] = None
+        self.group[side] = []
+        if side == 0:
+            self.controlled_index = None
+        setattr(self, f"roster_{side}_scroll", 0)
         self.refresh_ui()
 
     def toggle_control(self):
