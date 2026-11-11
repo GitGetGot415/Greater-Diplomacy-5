@@ -129,8 +129,8 @@ effects further in proportion to the zoom; zooming closer than the default does 
 Preview and the result view use normal music volume. Interface sounds such as button clicks are not lowered.
 See MUSIC PLAYBACK in [general_info.txt](general_info.txt) for selection and persistence.
 
-Preview and actual battle have square gear (Settings) and music (Music) icon buttons. Each opens its screen over the battle,
-and Back returns to the same preview or battle with its simulation unchanged. Opening either screen
+Preview, actual battle, and results have square gear (Settings) and music (Music) icon buttons. Each opens its screen over the battle,
+and Back returns to the same view with its simulation unchanged. Opening either screen
 during actual battle pauses it, and it stays paused after Back until **Resume** is chosen. The tactical song keeps playing through both screens and after Back.
 
 **Start** is available only in preview. Choosing **Start** opens actual battle with the prepared forces.
@@ -390,6 +390,7 @@ While the player controls a living sub-unit, arrows mark off-screen enemy divisi
 in battlefield units. Divisions in the same direction share an arrow with a division count.
 
 **Pause** freezes combat, and **Resume** continues it. The configured Back key toggles pause during actual battle.
+The Pause button remains visible but disabled after combat ends; Settings and Music remain available.
 Losing window focus also pauses combat. Pausing or leaving combat clears held movement and fire controls.
 
 The custom battle is won when the enemy army is destroyed and lost when the friendly army is destroyed.

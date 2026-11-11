@@ -386,7 +386,7 @@ class CustomBattleScreen(Screen):
         self.group = [[], []]
         self.campaign = None  # A CampaignBattle while a tactical-mode encounter is shown.
         self.choosing_retreat = False
-        self.viewing_overlay = False  # Settings or Music is open over a preview or a running battle.
+        self.viewing_overlay = False  # Settings or Music is open over preview, battle, or results.
         self.bar_drag = None  # (side, index) of the card whose health bar is being dragged
         self.marquee = None  # [side, start position, current position] while dragging a square
         self.controlled_index = None
@@ -448,8 +448,8 @@ class CustomBattleScreen(Screen):
             self.start_tactical_music()
             return
         if self.viewing_overlay:
-            # Back from Settings or Music: the tactical song kept playing, so keep it and the same mode and
-            # simulation. Only the clock restarts, so no combat time passes while the screen was open.
+            # Back from Settings or Music: preserve the current music, view, and simulation.
+            # Only the clock restarts, so no combat time passes while the screen was open.
             self.viewing_overlay = False
             self.done = False
             self.next_state = None
@@ -527,8 +527,8 @@ class CustomBattleScreen(Screen):
         self.go_to("TACTICAL_RETREAT")
 
     def open_overlay(self, state):
-        """Open Settings or Music over the preview or the running battle; Back returns to the same view."""
-        if self.mode not in {"preview", "battle"} or self.preview_intro_stage is not None:
+        """Open Settings or Music over preview, battle, or results; Back returns to the same view."""
+        if self.mode not in {"preview", "battle", "result"} or self.preview_intro_stage is not None:
             return
         self.cancel_active_drags()
         self.clear_controls()
@@ -598,10 +598,10 @@ class CustomBattleScreen(Screen):
         if self.mode == "setup" or (self.mode in {"battle", "result"} and self.campaign is None):
             self.elements.append(Button(20, 20, "small", "red", "Exit", self.leave,
                                         sound_kind="back"))
-        if self.mode in {"preview", "battle"}:
-            # In battle the Pause button owns the right edge; Settings and Music sit to its left.
+        if self.mode in {"preview", "battle", "result"}:
+            # Battle and results keep the same Pause, Settings, and Music positions.
             right = c.SCREEN_WIDTH - SCREEN_EDGE_MARGIN
-            if self.mode == "battle":
+            if self.mode in {"battle", "result"}:
                 right -= PAUSE_BUTTON_SIZE[0] + OVERLAY_BUTTON_GAP
             for symbol, state, color, sound in (("Music", "MUSIC_PLAYER", "blue", "open_music"),
                                                 ("Gear", "SETTINGS", "grey", "open_settings")):
@@ -611,6 +611,13 @@ class CustomBattleScreen(Screen):
                                             lambda state=state: self.open_overlay(state),
                                             image=icon, show_text=False, sound_kind=sound))
                 right -= OVERLAY_BUTTON_GAP
+        if self.mode in {"battle", "result"}:
+            self.pause_button = Button(c.SCREEN_WIDTH - SCREEN_EDGE_MARGIN - PAUSE_BUTTON_SIZE[0], OVERLAY_BUTTON_TOP,
+                                       PAUSE_BUTTON_SIZE, "yellow",
+                                       "Resume" if self.mode == "battle" and self.simulation.paused else "Pause",
+                                       self.toggle_pause)
+            self.pause_button.apply_state(enabled=self.mode == "battle", color="yellow")
+            self.elements.append(self.pause_button)
         if self.mode in {"setup", "preview"}:
             self.roster_labels = []
             for side, top in enumerate(PANEL_TOPS):
@@ -677,10 +684,6 @@ class CustomBattleScreen(Screen):
                                         battle_terrain.TERRAIN_NAMES[self.terrain], self.choose_terrain,
                                         font_size=20))
         elif self.mode == "battle":
-            self.pause_button = Button(c.SCREEN_WIDTH - SCREEN_EDGE_MARGIN - PAUSE_BUTTON_SIZE[0], OVERLAY_BUTTON_TOP,
-                                       PAUSE_BUTTON_SIZE, "yellow",
-                                       "Resume" if self.simulation.paused else "Pause", self.toggle_pause)
-            self.elements.append(self.pause_button)
             self.touch_weapon_buttons = []
             if self.touch_mode and self.simulation.controlled is not None and self.simulation.controlled.weapon(1) is not None:
                 width, height = TOUCH_WEAPON_SIZE

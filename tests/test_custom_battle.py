@@ -2129,7 +2129,7 @@ class CustomBattleScreenTests(unittest.TestCase):
                 else:
                     self.assertEqual(province["units"], [player])
                     self.assertEqual(player["health"], half)
-                self.assertEqual([b.text for b in self.screen.elements if b.text != ""], ["Continue"])
+                self.assertEqual([b.text for b in self.screen.elements if b.text != ""], ["Pause", "Continue"])
                 with patch("screens.game.custom_battle.player_setup.lose_tactical_unit") as lose:
                     self.click("Continue")
                 self.assertEqual(self.screen.next_state, "MAP")
@@ -2137,6 +2137,42 @@ class CustomBattleScreenTests(unittest.TestCase):
                 self.assertEqual(lose.called, dies)
                 if dies:
                     lose.assert_called_once_with(map_screen, province)
+
+    def test_finished_custom_and_campaign_battles_keep_overlay_controls(self):
+        for campaign in (False, True):
+            with self.subTest(campaign=campaign):
+                if campaign:
+                    self.enter_campaign()
+                else:
+                    self.fill_armies()
+                    self.click("Simulate")
+                self.click("Start")
+                self.win_battle()
+                self.screen.update()
+                simulation, encounter = self.screen.simulation, self.screen.campaign
+                self.assertEqual(self.screen.mode, "result")
+                self.assertTrue(self.screen.pause_button.disabled)
+                paused = simulation.paused
+                self.click("Pause")
+                self.assertEqual(simulation.paused, paused)
+                self.assertEqual(self.screen.mode, "result")
+                self.controller.set_tactical_battle_music.reset_mock()
+                for sound, state in (("open_music", "MUSIC_PLAYER"), ("open_settings", "SETTINGS")):
+                    button = next(button for button in self.screen.elements if button.sound_kind == sound)
+                    self.screen.handle_events([
+                        pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=button.rect.center),
+                        pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=button.rect.center)])
+                    self.assertEqual(self.screen.next_state, state)
+                    self.assertTrue(self.screen.viewing_overlay)
+                    self.screen.on_enter(self.controller, SimpleNamespace())
+                    self.assertEqual(self.screen.mode, "result")
+                    self.assertIs(self.screen.simulation, simulation)
+                    self.assertIs(self.screen.campaign, encounter)
+                    self.assertFalse(self.screen.done)
+                    with patch.object(simulation, "advance", side_effect=AssertionError("finished battle advanced")):
+                        self.screen.update()
+                self.controller.set_tactical_battle_music.assert_not_called()
+                self.assertIn("Continue" if campaign else "Run Again", [button.text for button in self.screen.elements])
 
     def test_the_side_left_standing_takes_the_tile_when_the_battle_ends(self):
         from tests.combat_fixtures import StubBattleMap
