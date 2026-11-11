@@ -241,8 +241,9 @@ Foliage only draws, covering units and shots, while health bars, flags, and the 
 Each tree's foliage is a slightly lighter or darker shade of `FOLIAGE_COLOR` (up to `FOLIAGE_GREEN_VARIATION`).
 All foliage is partly transparent (`FOLIAGE_ALPHA` in
 [screens/game/custom_battle.py](../screens/game/custom_battle.py)), so units and trunks show faintly beneath it.
-Trunks block ground movement and intercept shots. Ordinary shots leave trees intact; cannon and autocannon shells remove a tree,
-foliage included, and stop at that tree. Later shots and ground units can use the opening.
+Trunks block ground movement and intercept shots. Bullets, cannon shells, and autocannon shells stop at trees
+without destroying the trunk or foliage. Trees continue blocking later shots and ground movement.
+AI units seek a clear firing position instead of attempting to shoot trees down.
 Swamps have a pink background, trees, and impassable marsh areas. Marsh areas allow shots across like chasms.
 
 Trees are placed individually across the battlefield, including beside and behind the armies, while deployment areas stay clear.

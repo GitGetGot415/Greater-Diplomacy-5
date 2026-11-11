@@ -244,7 +244,7 @@ class TacticalWeaponTests(unittest.TestCase):
         self.assertLess(target.data["health"], target.data["max_health"])
         self.assertLess(ally.data["health"], ally.data["max_health"])
 
-    def test_terrain_stops_penetration_and_only_shells_clear_trees(self):
+    def test_terrain_stops_penetration_without_destroying_trees(self):
         for slot in (0, 1):
             with self.subTest(slot=slot):
                 simulation = self.encounter(targets=2)
@@ -255,7 +255,7 @@ class TacticalWeaponTests(unittest.TestCase):
                 simulation.projectiles = [combat.Projectile(source, dict(source.data), source.x, source.y,
                                                            18000, 0, 1, weapon_data=dict(source.weapon(slot)))]
                 simulation.advance(combat.FIXED_STEP)
-                self.assertEqual(tree.destroyed, slot == 0)
+                self.assertFalse(tree.destroyed)
                 self.assertEqual(second.data["health"], second.data["max_health"])
 
     def test_both_ai_sides_use_independent_weapons(self):

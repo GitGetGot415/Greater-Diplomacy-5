@@ -1450,8 +1450,8 @@ class TacticalTerrainTests(unittest.TestCase):
         self.assertIsNone(field.firing_blocker((1200, 500), (1400, 500)))
         self.assertIsNone(field.firing_blocker((1000, 500), (1200, 500)))
 
-    def test_only_tank_shells_remove_trees_and_the_clearing_shot_stops(self):
-        for shape in ("infantry", *combat.TANK_SHAPES):
+    def test_trees_survive_repeated_bullet_and_shell_hits_and_keep_blocking_shots(self):
+        for shape in ("infantry", "armored_car", "ifv", *combat.TANK_SHAPES):
             with self.subTest(shape=shape):
                 tree = battle_terrain.Feature("tree", 1200, 500, 20, 100)
                 simulation = self.encounter(tree)
@@ -1459,15 +1459,16 @@ class TacticalTerrainTests(unittest.TestCase):
                 source, target = simulation.fighters
                 source.shape = shape
                 before = target.data["health"]
-                simulation.projectiles = [combat.Projectile(
-                    source, dict(source.data), source.x, source.y, 18000, 0, 1)]
-                simulation.advance(combat.FIXED_STEP)
-                self.assertEqual(target.data["health"], before)
-                self.assertEqual(simulation.projectiles, [])
-                self.assertEqual(tree.destroyed, shape in combat.TANK_SHAPES)
-                self.assertEqual(simulation.battlefield.revision, int(tree.destroyed))
-                self.assertEqual(simulation.battlefield.firing_blocker((1000, 500), (1400, 500)) is None,
-                                 tree.destroyed)
+                for _ in range(2):
+                    simulation.projectiles = [combat.Projectile(
+                        source, dict(source.data), source.x, source.y, 18000, 0, 1)]
+                    simulation.advance(combat.FIXED_STEP)
+                    self.assertEqual(target.data["health"], before)
+                    self.assertEqual(simulation.projectiles, [])
+                    self.assertFalse(tree.destroyed)
+                    self.assertEqual(simulation.battlefield.revision, 0)
+                    self.assertFalse(simulation._firing_lane(source, target))
+                    self.assertFalse(simulation._firing_lane(target, source))
 
     def test_nonpenetrating_shot_hits_a_unit_before_terrain_further_along_the_shot(self):
         tree = battle_terrain.Feature("tree", 1500, 500, 20, 100)

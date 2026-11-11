@@ -766,11 +766,9 @@ class BattleSimulation:
         fraction = max(0.0, min(1.0, (distance - FALLOFF_START) / (WEAPON_RANGE - FALLOFF_START)))
         return 1.0 - fraction * (1.0 - MIN_RANGED_DAMAGE)
 
-    def _firing_lane(self, fighter, target, start=None, clear_trees=True, slot=0):
+    def _firing_lane(self, fighter, target, start=None):
         start = (fighter.x, fighter.y) if start is None else start
-        hit = self.battlefield.firing_blocker(start, (target.x, target.y))
-        return hit is None or (clear_trees and fighter.weapon(slot)["shell"]
-                               and hit[1] is not None and hit[1].kind == "tree")
+        return self.battlefield.firing_blocker(start, (target.x, target.y)) is None
 
     @staticmethod
     def _lead_point(target, start, speed=PROJECTILE_SPEED):
@@ -811,7 +809,7 @@ class BattleSimulation:
 
     def _clear_shot(self, fighter, target, start=None, slot=0):
         """A firing lane through terrain that keeps allies safe, including beyond a shell's target."""
-        return (self._firing_lane(fighter, target, start, slot=slot)
+        return (self._firing_lane(fighter, target, start)
                 and self._ally_in_line(fighter, target, start, slot=slot) is None)
 
     def _ally_safe_throttle(self, fighter, throttle):
@@ -921,7 +919,7 @@ class BattleSimulation:
             # Retreat while healthier allies cover the withdrawal. The last wounded
             # troops keep fighting, so two depleted armies do not both flee forever.
             fighter.ram_committed = False
-            if not self._firing_lane(fighter, fighter.target or objective, clear_trees=False):
+            if not self._firing_lane(fighter, fighter.target or objective):
                 return 0.0, toward
             if fighter.shape not in FOOT_SHAPES:
                 return (-fighter.pace, toward) if distance < WITHDRAW_RANGE else (0.0, toward)
@@ -1011,7 +1009,7 @@ class BattleSimulation:
             point = (fighter.x + math.cos(angle) * FIRING_POSITION_STEP,
                      fighter.y + math.sin(angle) * FIRING_POSITION_STEP)
             if (self.battlefield.walkable(point, fighter.radius)
-                    and not self._firing_lane(fighter, target, point, clear_trees=False)):
+                    and not self._firing_lane(fighter, target, point)):
                 candidates.append(point)
         candidates.sort(key=lambda point: math.dist(start, point)
                         - math.dist(point, (target.x, target.y)) * COVER_DISTANCE_WEIGHT)
@@ -1092,7 +1090,7 @@ class BattleSimulation:
                 if (gun_target is None or fighter.weapon(slot) is None or fighter.weapon_cooldown(slot) > 0
                         or not self._weapon_can_hurt(fighter, gun_target, slot)
                         or math.dist((fighter.x, fighter.y), (gun_target.x, gun_target.y)) > WEAPON_RANGE
-                        or not self._firing_lane(fighter, gun_target, slot=slot)):
+                        or not self._firing_lane(fighter, gun_target)):
                     continue
                 ally = self._ally_in_line(fighter, gun_target, slot=slot)
                 if ally is not None:
@@ -1313,7 +1311,7 @@ class BattleSimulation:
                 threats = sum(1 for enemy in crowds[1 - side].around(unit.x, unit.y, WEAPON_RANGE)
                               if math.hypot(enemy.x - unit.x, enemy.y - unit.y) <= WEAPON_RANGE
                               and any(self._weapon_can_hurt(enemy, unit, slot)
-                                      and self._firing_lane(enemy, unit, clear_trees=False, slot=slot)
+                                      and self._firing_lane(enemy, unit)
                                       for slot in (0, 1)))
                 candidates = sorted(nearby, key=lambda enemy: (
                     not (unit.ram_committed and enemy is unit.target),
@@ -1499,14 +1497,10 @@ class BattleSimulation:
             if stopped:
                 continue
             if terrain_hit is not None:
-                feature = terrain_hit[1]
                 fraction = terrain_hit[0]
                 self.impacts.append((shot.x + (nx - shot.x) * fraction,
                                      shot.y + (ny - shot.y) * fraction,
                                      c.TACTICAL_IMPACT_SECONDS, shot.weapon_data["shell"]))
-                if feature is not None and shot.weapon_data["shell"]:
-                    # A shell spends its impact clearing one tree; it never passes through that tree.
-                    self.battlefield.destroy_tree(feature)
             else:
                 shot.x, shot.y = nx, ny
                 shot.height = next_height
