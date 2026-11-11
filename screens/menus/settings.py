@@ -13,66 +13,46 @@ from map_logic.ai import ai_handler
 from screens.menus.keybinds import default_keybinds
 
 
-# --- Unified Settings UI Layout ---
-# SETTINGS_BOX_X, the provider field column, is set below beside the LLM AI
-# toggle and its info button, which sit to its left.
-SETTINGS_KEY_BOX_Y = c.SCREEN_HEIGHT - 130
-SETTINGS_MOD_BOX_Y = c.SCREEN_HEIGHT - 60
-SETTINGS_BOX_W = 320
-SETTINGS_BOX_H = 40
-
-# --- Settings screen button layout ---
-SETTINGS_RIGHT_COL_X = c.SCREEN_WIDTH - 260
-SETTINGS_CHECKERBOARD_COLOR = (60, 60, 60)
-SETTINGS_BACK_POS = (50, 50)
-SETTINGS_FULLSCREEN_Y = 10
+# All categories share one fixed frame; changing a category only rebuilds its controls.
+SETTINGS_CATEGORIES = (("GAME", "Game & Interface"), ("DISPLAY", "Display & Appearance"), ("CONTROLS", "Controls"), ("AI", "AI"), ("FILES", "Files"))
+SETTINGS_MARGIN = 32
+SETTINGS_PANEL_TOP = 100
+SETTINGS_PANEL_HEIGHT = 568
+SETTINGS_NAV_WIDTH = 240
+SETTINGS_PANEL_GAP = 18
+SETTINGS_CONTENT_X = SETTINGS_MARGIN + SETTINGS_NAV_WIDTH + SETTINGS_PANEL_GAP
+SETTINGS_CONTENT_WIDTH = c.SCREEN_WIDTH - SETTINGS_CONTENT_X - SETTINGS_MARGIN
+SETTINGS_NAV_RECT = (SETTINGS_MARGIN, SETTINGS_PANEL_TOP, SETTINGS_NAV_WIDTH, SETTINGS_PANEL_HEIGHT)
+SETTINGS_CONTENT_RECT = (SETTINGS_CONTENT_X, SETTINGS_PANEL_TOP, SETTINGS_CONTENT_WIDTH, SETTINGS_PANEL_HEIGHT)
+SETTINGS_PADDING = 28
+SETTINGS_X = SETTINGS_CONTENT_X + SETTINGS_PADDING
+SETTINGS_SECOND_X = SETTINGS_X + 458
+SETTINGS_FIRST_Y = SETTINGS_PANEL_TOP + 80
+SETTINGS_ROW_GAP = 52
+SETTINGS_NAV_SIZE = (SETTINGS_NAV_WIDTH - 24, 44)
+SETTINGS_NAV_GAP = 58
 SETTINGS_OPTION_SIZE = (c.SIZES["setting_option"][0], 32)
-SETTINGS_OPTION_GAP_Y = 34
-SETTINGS_CHECKERBOARD_WATER_Y = SETTINGS_FULLSCREEN_Y + SETTINGS_OPTION_GAP_Y
-SETTINGS_FPS_TOGGLE_Y = SETTINGS_CHECKERBOARD_WATER_Y + SETTINGS_OPTION_GAP_Y
-SETTINGS_SHOW_UNCLAIMED_Y = SETTINGS_FPS_TOGGLE_Y + SETTINGS_OPTION_GAP_Y
-SETTINGS_INTRO_POPUP_Y = SETTINGS_SHOW_UNCLAIMED_Y + SETTINGS_OPTION_GAP_Y
-SETTINGS_ARMY_GROUP_ANIMATIONS_Y = SETTINGS_INTRO_POPUP_Y + SETTINGS_OPTION_GAP_Y
-SETTINGS_MAP_NAV_Y = SETTINGS_ARMY_GROUP_ANIMATIONS_Y + SETTINGS_OPTION_GAP_Y
-SETTINGS_BATTLE_DISPLAY_Y = SETTINGS_MAP_NAV_Y + SETTINGS_OPTION_GAP_Y
-SETTINGS_CHECKERBOARD_GRADIENT_Y = SETTINGS_BATTLE_DISPLAY_Y + 65
-SETTINGS_SLIDER_GAP_Y = 55
-SETTINGS_CHECKERBOARD_SPEED_Y = SETTINGS_CHECKERBOARD_GRADIENT_Y + SETTINGS_SLIDER_GAP_Y
-SETTINGS_PLAYER_SLIDER_Y = SETTINGS_CHECKERBOARD_SPEED_Y + SETTINGS_SLIDER_GAP_Y
-SETTINGS_FPS_SLIDER_Y = SETTINGS_PLAYER_SLIDER_Y + SETTINGS_SLIDER_GAP_Y
-SETTINGS_AI_THREAD_SLIDER_POS = (60, 400)
-SETTINGS_CONTROL_POS = (60, 335)
-SETTINGS_SLIDER_WIDTH = 200
-SETTINGS_RESET_Y = 650
-SETTINGS_UNIT_ART_GAP_X = 20
-SETTINGS_UNIT_ART_Y = min(SETTINGS_RESET_Y + SETTINGS_SLIDER_GAP_Y,
-                          c.SCREEN_HEIGHT - c.SIZES["medium"][1] - 10)
-SETTINGS_KEYBINDS_Y = SETTINGS_FPS_SLIDER_Y + 40
-SETTINGS_MOUSE_SETTINGS_Y = SETTINGS_KEYBINDS_Y + 60
-SETTINGS_AI_TOGGLE_POS = (10, c.SCREEN_HEIGHT - 60)
-SETTINGS_AI_PROVIDER_Y = c.SCREEN_HEIGHT - 250
-SETTINGS_AI_PROVIDER_START_X = 10
-SETTINGS_AI_PROVIDER_STEP_X = 110
-SETTINGS_AI_IMMERSION_X = 10
-SETTINGS_AI_IMMERSION_ROWS_Y = (c.SCREEN_HEIGHT - 100, c.SCREEN_HEIGHT - 135,
-                                c.SCREEN_HEIGHT - 170, c.SCREEN_HEIGHT - 205)
-SETTINGS_CLEAR_BTN_GAP_X = 10
-SETTINGS_PATH_EDIT_OFFSET_X = -220
-SETTINGS_PATH_RESET_OFFSET_X = -110
-SETTINGS_PATH_BOX_X = c.SCREEN_WIDTH // 2 - 150
-
-# Info ("?") buttons beside the Fullscreen..Battle Display column -- same
-# small square and left-of-the-setting placement scenario_settings.py uses.
+SETTINGS_SLIDER_WIDTH = 300
+SETTINGS_BACK_POS = (SETTINGS_MARGIN, 28)
+SETTINGS_RESET_Y = SETTINGS_PANEL_TOP + SETTINGS_PANEL_HEIGHT - 64
+SETTINGS_RESET_SIZE = (320, 36)
 SETTINGS_INFO_GAP_X = 10
-SETTINGS_INFO_X = SETTINGS_RIGHT_COL_X - c.SIZES["scenario_setting_info"][0] - SETTINGS_INFO_GAP_X
-# Align the info buttons with the settings buttons.
+SETTINGS_INFO_X = SETTINGS_X + SETTINGS_OPTION_SIZE[0] + SETTINGS_INFO_GAP_X
 SETTINGS_INFO_Y_NUDGE = (SETTINGS_OPTION_SIZE[1] - c.SIZES["scenario_setting_info"][1]) // 2
-
-# The LLM AI toggle's info button sits to its right, and the provider fields
-# start to the right of that.
-SETTINGS_AI_INFO_X = SETTINGS_AI_TOGGLE_POS[0] + c.SIZES["small"][0] + SETTINGS_INFO_GAP_X
-SETTINGS_AI_INFO_Y_NUDGE = (c.SIZES["small"][1] - c.SIZES["scenario_setting_info"][1]) // 2
-SETTINGS_BOX_X = SETTINGS_AI_INFO_X + c.SIZES["scenario_setting_info"][0] + SETTINGS_INFO_GAP_X
+SETTINGS_AI_TOGGLE_Y = SETTINGS_PANEL_TOP + 66
+SETTINGS_AI_PROVIDER_Y = SETTINGS_AI_TOGGLE_Y + 82
+SETTINGS_AI_PROVIDER_STEP_X = 116
+SETTINGS_BOX_X = SETTINGS_X
+SETTINGS_BOX_W = 400
+SETTINGS_BOX_H = 35
+SETTINGS_KEY_BOX_Y = SETTINGS_AI_PROVIDER_Y + 74
+SETTINGS_MOD_BOX_Y = SETTINGS_KEY_BOX_Y + 75
+SETTINGS_AI_IMMERSION_Y = SETTINGS_MOD_BOX_Y + 112
+SETTINGS_AI_THREAD_Y = SETTINGS_AI_IMMERSION_Y + 8
+SETTINGS_CLEAR_BTN_GAP_X = 10
+SETTINGS_PANEL_COLOR = (34, 40, 52)
+SETTINGS_PANEL_BORDER = (90, 110, 140)
+SETTINGS_BACKGROUND_COLOR = (32, 34, 40)
 
 SETTINGS_AI_INFO_TITLE = "LLM AI"
 SETTINGS_AI_INFO_TEXT = (
@@ -109,25 +89,24 @@ SETTINGS_AI_INFO_TEXT = (
     "hosted providers, but more threads can slow a local Ollama model."
 )
 
-# (row Y, tooltip title, tooltip text) for each info button in that column, in
-# the same top-to-bottom order as the buttons themselves.
+# Help follows each setting when its category is rebuilt.
 SETTINGS_INFO_ROWS = (
-    (SETTINGS_FULLSCREEN_Y, "Toggle Fullscreen",
+    ("fullscreen", "Toggle Fullscreen",
      "Switches the game window between fullscreen and windowed mode."),
-    (SETTINGS_CHECKERBOARD_WATER_Y, "Checkerboard Water",
+    ("checkerboard_water", "Checkerboard Water",
      "Shows an opaque blue checkerboard on the ocean, aligned with the sky pattern at the horizon. "
      "The water pattern follows "
      "camera movement, zoom, and tilt. Off by default."),
-    (SETTINGS_FPS_TOGGLE_Y, "Show FPS",
+    ("show_fps", "Show FPS",
      "Displays a live frames-per-second counter on screen."),
-    (SETTINGS_SHOW_UNCLAIMED_Y, "Show Unassigned",
+    ("show_unclaimed", "Show Unassigned",
      "Shows the Unassigned army card for your units outside army groups. "
      "Enabled by default. The card stays hidden when all units are assigned."),
-    (SETTINGS_INTRO_POPUP_Y, "Show Tutorial Popup",
+    ("show_intro_popup", "Show Tutorial Popup",
      "Shows the Help window when a fresh game begins. Its categories cover the "
      "basics, from map controls to production, research, and diplomacy. "
      "The Help button on the map reopens it."),
-    (SETTINGS_MAP_NAV_Y, "Map Navigation",
+    ("map_navigation_mode", "Map Navigation",
      "Classic: clicking a tile always opens the plain province menu, and the "
      "Resources/Blank/Units/Economy ui view buttons only switch "
      "the map's view mode. Orders and Production are reached only through "
@@ -136,178 +115,111 @@ SETTINGS_INFO_ROWS = (
      "straight into the screen the current view mode implies (Orders for "
      "Units, including a fighting tile). "
      "Click to switch between them."),
-    (SETTINGS_BATTLE_DISPLAY_Y, "Battle Display",
+    ("battle_display_mode", "Battle Display",
      "Compact hides units that are currently fighting beneath an opaque combat "
      "bubble. Full keeps those units visible and makes the bubble translucent. "
      "Click to switch between them."),
-    (SETTINGS_ARMY_GROUP_ANIMATIONS_Y, "Army Group Animations",
+    ("army_group_animations", "Army Group Animations",
      "Controls the compression and expansion animation when units become or "
      "leave a strategic army-group marker. Disabling it switches immediately."),
 )
 
 
 def make_option_buttons(options, on_select, current, size="ai_opinion", color="blue", font_preset="small"):
-    """Builds a row/column of mutually exclusive buttons with the active one highlighted.
-
-    Options are (x, y, value, label) tuples. Used for every "pick exactly one
-    of these" cluster (AI provider, immersion level) so the gold selection
-    border and the callback binding are done identically.
-    """
-    built = []
-    for x, y, value, label in options:
-        btn = Button(x, y, size, color, label, lambda v=value: on_select(v), font_preset=font_preset)
-        btn.is_selected = (value == current)
-        built.append(btn)
-    return built
+    """Share selection styling and callback binding for provider and immersion choices."""
+    return [ui_elements.make_choice_button(x, y, size, label, value == current, lambda v=value: on_select(v), idle_color=color, font_preset=font_preset) for x, y, value, label in options]
 
 
 def render_settings_buttons(settings_screen):
-    """Renders the buttons and sliders for the Settings screen."""
-    keybind_x = SETTINGS_RIGHT_COL_X
+    """Build navigation and only the active category's controls."""
+    screen = settings_screen
+    screen.elements = [ui_elements.make_back_button(screen.save_and_go_back, pos=SETTINGS_BACK_POS)]
+    screen.elements.extend(ui_elements.make_choice_button(SETTINGS_MARGIN + 12, SETTINGS_PANEL_TOP + 24 + index * SETTINGS_NAV_GAP, SETTINGS_NAV_SIZE, label, screen.sub_state == category, lambda value=category: screen.set_sub_state(value), idle_color="grey", font_preset="small", sound_kind="select_category") for index, (category, label) in enumerate(SETTINGS_CATEGORIES))
+    screen.ai_fields = {}
+    screen.player_slider = screen.fps_slider = screen.ai_thread_slider = None
+    screen.checkerboard_gradient_slider = screen.checkerboard_speed_slider = None
 
-    settings_screen.elements = [
-        ui_elements.make_back_button(settings_screen.save_and_go_back, pos=SETTINGS_BACK_POS),
-        Button(*SETTINGS_CONTROL_POS, SETTINGS_OPTION_SIZE, "purple",
-               f"Controls: {settings_screen.control_mode.title()}", settings_screen.cycle_control_mode),
-        Button(keybind_x, SETTINGS_FULLSCREEN_Y, SETTINGS_OPTION_SIZE, "blue", "Toggle Fullscreen", settings_screen.toggle_full),
-        make_toggle_button(keybind_x, SETTINGS_CHECKERBOARD_WATER_Y, SETTINGS_OPTION_SIZE, "Checkerboard Water",
-                           settings_screen.checkerboard_water, settings_screen.toggle_checkerboard_water),
-        make_toggle_button(keybind_x, SETTINGS_FPS_TOGGLE_Y, SETTINGS_OPTION_SIZE, "Show FPS",
-                           settings_screen.show_fps, settings_screen.toggle_fps),
-        make_toggle_button(keybind_x, SETTINGS_SHOW_UNCLAIMED_Y, SETTINGS_OPTION_SIZE, "Show Unassigned",
-                           settings_screen.show_unclaimed, settings_screen.toggle_show_unclaimed),
-        make_toggle_button(keybind_x, SETTINGS_INTRO_POPUP_Y, SETTINGS_OPTION_SIZE, "Show Tutorial Popup",
-                           settings_screen.show_intro_popup, settings_screen.toggle_intro_popup),
-        Button(keybind_x, SETTINGS_MAP_NAV_Y, SETTINGS_OPTION_SIZE, "purple",
-               f"Map Navigation: {settings_screen.map_navigation_mode.title()}",
-               settings_screen.toggle_map_navigation_mode),
-        Button(keybind_x, SETTINGS_BATTLE_DISPLAY_Y, SETTINGS_OPTION_SIZE, "purple",
-               f"Battle Display: {settings_screen.battle_display_mode.title()}",
-               settings_screen.toggle_battle_display_mode),
-        make_toggle_button(keybind_x, SETTINGS_ARMY_GROUP_ANIMATIONS_Y, SETTINGS_OPTION_SIZE, "Army Group Animations",
-                           settings_screen.army_group_animations, settings_screen.toggle_army_group_animations,
-                           font_preset="small"),
-    ]
-    settings_screen.elements.extend(
-        make_info_button(SETTINGS_INFO_X, y,
-                         lambda heading=title, body=text: dialogs.show_info(heading, body),
-                         y_offset=SETTINGS_INFO_Y_NUDGE)
-        for y, title, text in SETTINGS_INFO_ROWS
-    )
+    if screen.sub_state == "GAME":
+        rows = (
+            ("show_intro_popup", "Show Tutorial Popup", screen.show_intro_popup, screen.toggle_intro_popup),
+            ("show_unclaimed", "Show Unassigned", screen.show_unclaimed, screen.toggle_show_unclaimed),
+            ("army_group_animations", "Army Group Animations", screen.army_group_animations, screen.toggle_army_group_animations),
+        )
+        for index, (key, label, enabled, callback) in enumerate(rows):
+            y = SETTINGS_FIRST_Y + index * SETTINGS_ROW_GAP
+            screen.elements.append(make_toggle_button(SETTINGS_X, y, SETTINGS_OPTION_SIZE, label, enabled, callback, font_preset="small"))
+            screen.add_setting_info(key, y)
+        y = SETTINGS_FIRST_Y + 3 * SETTINGS_ROW_GAP
+        screen.elements.append(Button(SETTINGS_X, y, SETTINGS_OPTION_SIZE, "purple", f"Battle Display: {screen.battle_display_mode.title()}", screen.toggle_battle_display_mode))
+        screen.add_setting_info("battle_display_mode", y)
+        screen.player_slider = Slider(SETTINGS_X, y + 92, SETTINGS_SLIDER_WIDTH, f"Players: {screen.num_players}", (screen.num_players - 1) / 7.0, screen.set_players)
+        # A live game's participant count cannot be changed from Settings.
+        screen.player_slider.visible = screen.back_state != "MAP"
+        screen.elements.append(screen.player_slider)
 
-    # --- MASTER AI TOGGLE BUTTON ---
-    ai_is_on = settings_screen.ai_mode != "OFF"
-    settings_screen.elements.append(
-        make_toggle_button(*SETTINGS_AI_TOGGLE_POS, "small", "LLM AI", ai_is_on,
-                           settings_screen.toggle_ai_enabled, font_preset="normal")
-    )
-    # Inline text is drawn left-aligned, which suits this long help better than
-    # the centred plain message. Both scroll when they are taller than the window.
-    settings_screen.elements.append(
-        make_info_button(SETTINGS_AI_INFO_X, SETTINGS_AI_TOGGLE_POS[1],
-                         lambda: dialogs.show_info(SETTINGS_AI_INFO_TITLE, SETTINGS_AI_INFO_TEXT,
-                                                   inline_parts=[(SETTINGS_AI_INFO_TEXT, None)]),
-                         y_offset=SETTINGS_AI_INFO_Y_NUDGE)
-    )
-    settings_screen.ai_fields = {}
+    elif screen.sub_state == "DISPLAY":
+        for index, (key, label, callback) in enumerate((("fullscreen", "Toggle Fullscreen", screen.toggle_full), ("show_fps", "Show FPS", screen.toggle_fps), ("checkerboard_water", "Checkerboard Water", screen.toggle_checkerboard_water))):
+            y = SETTINGS_FIRST_Y + index * SETTINGS_ROW_GAP
+            control = Button(SETTINGS_X, y, SETTINGS_OPTION_SIZE, "blue", label, callback) if key == "fullscreen" else make_toggle_button(SETTINGS_X, y, SETTINGS_OPTION_SIZE, label, getattr(screen, key), callback)
+            screen.elements.append(control)
+            screen.add_setting_info(key, y)
+        # Use the same 20..60 scale as set_fps so rebuilding never moves the handle.
+        screen.fps_slider = Slider(SETTINGS_X, SETTINGS_FIRST_Y + 3 * SETTINGS_ROW_GAP + 32, SETTINGS_SLIDER_WIDTH, f"Max FPS: {screen.controller.target_fps}", (screen.controller.target_fps - 20) / 40.0, screen.set_fps)
+        screen.checkerboard_gradient_slider = Slider(SETTINGS_X, screen.fps_slider.rect.y + 78, SETTINGS_SLIDER_WIDTH, f"Checkerboard Gradient: {screen.controller.checkerboard_gradient_strength:.2f}", screen.controller.checkerboard_gradient_strength, screen.set_checkerboard_gradient, visual_max=c.MAX_CHECKERBOARD_GRADIENT_STRENGTH, allowed_max=c.MAX_CHECKERBOARD_GRADIENT_STRENGTH)
+        screen.checkerboard_speed_slider = Slider(SETTINGS_X, screen.checkerboard_gradient_slider.rect.y + 78, SETTINGS_SLIDER_WIDTH, f"Checkerboard Speed: {screen.controller.checkerboard_scroll_speed:g}", screen.controller.checkerboard_scroll_speed, screen.set_checkerboard_speed, visual_max=c.MAX_CHECKERBOARD_SCROLL_SPEED, allowed_max=c.MAX_CHECKERBOARD_SCROLL_SPEED)
+        screen.elements.extend([screen.fps_slider, screen.checkerboard_gradient_slider, screen.checkerboard_speed_slider])
+        screen.elements.append(Button(SETTINGS_SECOND_X, SETTINGS_FIRST_Y + 4 * SETTINGS_ROW_GAP, SETTINGS_OPTION_SIZE, "blue", "Unit Art", screen.open_unit_art))
 
-    # --- Only render the sub-options if AI is currently turned ON ---
-    if ai_is_on:
-        # AI provider picker
-        settings_screen.elements.extend(make_option_buttons([
-            (SETTINGS_AI_PROVIDER_START_X + i * SETTINGS_AI_PROVIDER_STEP_X, SETTINGS_AI_PROVIDER_Y,
-             mode, settings_screen.AI_PROVIDER_LABELS.get(mode, mode))
-            for i, mode in enumerate(settings_screen.ai_modes[1:])
-        ], settings_screen.set_ai_mode, settings_screen.ai_mode))
-
-        # AI immersion level picker
-        # MAJOR sits between FULL and ABSOLUTE: the model drives the countries a
-        # player actually notices, which is great-power diplomacy at a fraction
-        # of what ABSOLUTE costs.
-        settings_screen.elements.extend(make_option_buttons([
-            (SETTINGS_AI_IMMERSION_X, y, level, f"{level} AI")
-            for y, level in zip(SETTINGS_AI_IMMERSION_ROWS_Y, c.AI_IMMERSION_LEVELS)
-        ], settings_screen.set_ai_immersion_level, settings_screen.ai_immersion_level, color="red"))
-
-        # Clear buttons use the same rows as the editable fields. The model row
-        # also has a Default button to the right of its clear button.
-        clear_x = SETTINGS_BOX_X + SETTINGS_BOX_W + SETTINGS_CLEAR_BTN_GAP_X
-        default_x = clear_x + c.SIZES["small_square"][0] + SETTINGS_CLEAR_BTN_GAP_X
-        for box_type, box_y, _label in settings_screen.ai_field_rows():
-            field = TextField(SETTINGS_BOX_X, box_y, SETTINGS_BOX_W, SETTINGS_BOX_H,
-                              settings_screen.get_field(box_type),
-                              max_length=c.MAX_MODEL_NAME_LENGTH if box_type == "MOD" else c.MAX_API_KEY_LENGTH,
-                              on_change=lambda text, b=box_type: settings_screen.set_field(b, text), pad_x=5)
-            settings_screen.ai_fields[box_type] = field
-            settings_screen.elements.extend([
-                field,
-                Button(clear_x, box_y, "small_square", "red", "X",
-                       lambda b=box_type: settings_screen.clear_input(b)),
-            ])
-            if box_type == "MOD":
-                settings_screen.elements.append(
-                    Button(default_x, box_y, "small", "blue", "Default",
-                           settings_screen.reset_model_default))
-
-    # Sliders
-    settings_screen.checkerboard_gradient_slider = Slider(
-        keybind_x, SETTINGS_CHECKERBOARD_GRADIENT_Y, SETTINGS_SLIDER_WIDTH,
-        f"Checkerboard Gradient: {settings_screen.controller.checkerboard_gradient_strength:.2f}",
-        settings_screen.controller.checkerboard_gradient_strength,
-        settings_screen.set_checkerboard_gradient,
-        visual_max=c.MAX_CHECKERBOARD_GRADIENT_STRENGTH,
-        allowed_max=c.MAX_CHECKERBOARD_GRADIENT_STRENGTH)
-    settings_screen.checkerboard_speed_slider = Slider(
-        keybind_x, SETTINGS_CHECKERBOARD_SPEED_Y, SETTINGS_SLIDER_WIDTH,
-        f"Checkerboard Speed: {settings_screen.controller.checkerboard_scroll_speed:g}",
-        settings_screen.controller.checkerboard_scroll_speed, settings_screen.set_checkerboard_speed,
-        visual_max=c.MAX_CHECKERBOARD_SCROLL_SPEED, allowed_max=c.MAX_CHECKERBOARD_SCROLL_SPEED)
-    settings_screen.player_slider = Slider(keybind_x, SETTINGS_PLAYER_SLIDER_Y, SETTINGS_SLIDER_WIDTH,
-                                           f"Players: {settings_screen.num_players}",
-                                           (settings_screen.num_players - 1) / 7.0, settings_screen.set_players)
-    fps_val = (settings_screen.controller.target_fps - 10) / 50.0
-    settings_screen.fps_slider = Slider(keybind_x, SETTINGS_FPS_SLIDER_Y, SETTINGS_SLIDER_WIDTH,
-                                        f"Max FPS: {settings_screen.controller.target_fps}", fps_val, settings_screen.set_fps)
-
-    # Render above the player count
-    thread_val = (settings_screen.ai_threads - 1) / 7.0
-    settings_screen.ai_thread_slider = Slider(*SETTINGS_AI_THREAD_SLIDER_POS, SETTINGS_SLIDER_WIDTH,
-                                              f"Maximum AI Threads: {settings_screen.ai_threads}",
-                                              thread_val, settings_screen.set_ai_threads)
-
-    # Only show the slider if an AI mode is active
-    settings_screen.ai_thread_slider.visible = ai_is_on
-
-    settings_screen.elements.extend([
-        settings_screen.ai_thread_slider,
-        settings_screen.checkerboard_gradient_slider,
-        settings_screen.checkerboard_speed_slider,
-        settings_screen.player_slider,
-        settings_screen.fps_slider,
-        Button(keybind_x, SETTINGS_RESET_Y, "medium", "red", "Reset Defaults", settings_screen.reset_defaults),
-        Button(keybind_x - c.SIZES["medium"][0] - SETTINGS_UNIT_ART_GAP_X, SETTINGS_UNIT_ART_Y, "medium", "blue",
-               "Unit Art", settings_screen.open_unit_art),
-    ])
-
-    # Rebinding itself now lives on its own screen; this just links to it.
-    settings_screen.elements.append(
-        Button(keybind_x, SETTINGS_KEYBINDS_Y, "medium", "purple", "Keybinds",
-               settings_screen.open_keybinds, image=ui_bars.get_ui_image("Keybind.png"))
-    )
-    settings_screen.elements.append(
-        Button(keybind_x, SETTINGS_MOUSE_SETTINGS_Y, "medium", "purple", "Mouse Settings",
-               settings_screen.open_mouse_settings)
-    )
-
-    # Edit/Reset pair for each path and color row, driven off the screen's own table
-    for y, _kind, key, _label in settings_screen.PATH_ROWS:
-        settings_screen.elements.extend([
-            Button(SETTINGS_PATH_BOX_X + SETTINGS_PATH_EDIT_OFFSET_X, y, "small", "blue", "Edit", lambda k=key: settings_screen.edit_setting(k)),
-            Button(SETTINGS_PATH_BOX_X + SETTINGS_PATH_RESET_OFFSET_X, y, "small", "red", "Reset", lambda k=key: settings_screen.reset_setting(k)),
+    elif screen.sub_state == "CONTROLS":
+        screen.elements.append(Button(SETTINGS_X, SETTINGS_FIRST_Y, SETTINGS_OPTION_SIZE, "purple", f"Controls: {screen.control_mode.title()}", screen.cycle_control_mode))
+        y = SETTINGS_FIRST_Y + SETTINGS_ROW_GAP
+        screen.elements.append(Button(SETTINGS_X, y, SETTINGS_OPTION_SIZE, "purple", f"Map Navigation: {screen.map_navigation_mode.title()}", screen.toggle_map_navigation_mode))
+        screen.add_setting_info("map_navigation_mode", y)
+        screen.elements.extend([
+            Button(SETTINGS_X, y + SETTINGS_ROW_GAP, SETTINGS_OPTION_SIZE, "purple", "Keybinds", screen.open_keybinds, image=ui_bars.get_ui_image("Keybind.png", scale=0.5)),
+            Button(SETTINGS_X, y + 2 * SETTINGS_ROW_GAP, SETTINGS_OPTION_SIZE, "purple", "Mouse Settings", screen.open_mouse_settings),
         ])
+
+    elif screen.sub_state == "AI":
+        ai_is_on = screen.ai_mode != "OFF"
+        screen.elements.extend([
+            make_toggle_button(SETTINGS_X, SETTINGS_AI_TOGGLE_Y, SETTINGS_OPTION_SIZE, "LLM AI", ai_is_on, screen.toggle_ai_enabled),
+            # Inline parts keep the existing long explanation left-aligned and scrollable.
+            make_info_button(SETTINGS_INFO_X, SETTINGS_AI_TOGGLE_Y, lambda: dialogs.show_info(SETTINGS_AI_INFO_TITLE, SETTINGS_AI_INFO_TEXT, inline_parts=[(SETTINGS_AI_INFO_TEXT, None)]), y_offset=SETTINGS_INFO_Y_NUDGE),
+        ])
+        if ai_is_on:
+            screen.elements.extend(make_option_buttons([(SETTINGS_X + index * SETTINGS_AI_PROVIDER_STEP_X, SETTINGS_AI_PROVIDER_Y, mode, screen.AI_PROVIDER_LABELS.get(mode, mode)) for index, mode in enumerate(screen.ai_modes[1:])], screen.set_ai_mode, screen.ai_mode))
+            clear_x = SETTINGS_BOX_X + SETTINGS_BOX_W + SETTINGS_CLEAR_BTN_GAP_X
+            default_x = clear_x + c.SIZES["small_square"][0] + SETTINGS_CLEAR_BTN_GAP_X
+            for box_type, box_y, _label in screen.ai_field_rows():
+                field = TextField(SETTINGS_BOX_X, box_y, SETTINGS_BOX_W, SETTINGS_BOX_H, screen.get_field(box_type), max_length=c.MAX_MODEL_NAME_LENGTH if box_type == "MOD" else c.MAX_API_KEY_LENGTH, on_change=lambda text, box=box_type: screen.set_field(box, text), pad_x=5)
+                screen.ai_fields[box_type] = field
+                screen.elements.extend([field, Button(clear_x, box_y, "small_square", "red", "X", lambda box=box_type: screen.clear_input(box))])
+                if box_type == "MOD":
+                    screen.elements.append(Button(default_x, box_y, "small", "blue", "Default", screen.reset_model_default))
+            # MAJOR lets the LLM drive diplomacy for the countries a player notices,
+            # between FULL's human-facing diplomacy and ABSOLUTE's every country.
+            screen.elements.extend(make_option_buttons([(SETTINGS_X + index * SETTINGS_AI_PROVIDER_STEP_X, SETTINGS_AI_IMMERSION_Y, level, f"{level} AI") for index, level in enumerate(c.AI_IMMERSION_LEVELS)], screen.set_ai_immersion_level, screen.ai_immersion_level, size=(108, 32), color="red"))
+            screen.ai_thread_slider = Slider(SETTINGS_SECOND_X + 38, SETTINGS_AI_THREAD_Y, SETTINGS_SLIDER_WIDTH, f"Maximum AI Threads: {screen.ai_threads}", (screen.ai_threads - 1) / 7.0, screen.set_ai_threads)
+            screen.elements.append(screen.ai_thread_slider)
+
+    # Field rows are shared with drawing so labels, controls and swatches agree.
+    for y, kind, key, _label in screen.preference_rows():
+        edit_x = SETTINGS_X + screen.DIR_BOX_W + SETTINGS_CLEAR_BTN_GAP_X if kind == "dir" else SETTINGS_SECOND_X + screen.COLOR_BOX_W + SETTINGS_CLEAR_BTN_GAP_X
+        screen.elements.extend([
+            Button(edit_x, y, "small", "blue", "Edit", lambda name=key: screen.edit_setting(name)),
+            Button(edit_x + c.SIZES["small"][0] + SETTINGS_CLEAR_BTN_GAP_X, y, "small", "red", "Reset", lambda name=key: screen.reset_setting(name)),
+        ])
+    reset_label = dict(SETTINGS_CATEGORIES)[screen.sub_state]
+    screen.elements.append(Button(SETTINGS_X, SETTINGS_RESET_Y, SETTINGS_RESET_SIZE, "red", f"Reset {reset_label} Defaults", screen.reset_category_defaults, font_preset="small"))
+    for element in screen.elements:
+        if isinstance(element, Button):
+            element.fit_text = True
+            element.fit_single_line = True
 
 
 class Settings(Screen):
+    title = "Settings"
     player_slider = None
     fps_slider = None
     ai_thread_slider = None
@@ -332,16 +244,14 @@ class Settings(Screen):
         "ocean_dark_color":  ("OCEAN_DARK_BLUE",  "DEFAULT_OCEAN_DARK_BLUE",  "Select Zoom-Out Water Color"),
     }
 
-    # (y, kind, key, label) for the path/color block in the middle of the screen.
-    # Shared by additional_draw here and by the Edit/Reset button rows in
-    # render_settings_buttons above so the two cannot drift out of alignment.
-    PATH_ROWS = [
-        (60,  "dir",   "saves_dir",            "Saves Path:"),
-        (120, "dir",   "custom_scenarios_dir", "Custom Maps Path:"),
-        (175, "color", "ocean_light_color",    "Zoom-In Water Color:"),
-        (230, "color", "ocean_dark_color",     "Zoom-Out Water Color:"),
-        (285, "dir",   "tournament_saves_dir", "Tournament Saves Path:"),
-    ]
+    # Category resets retain credentials, models, URLs, audio, and Unit Art.
+    CATEGORY_RESET_FIELDS = {
+        "GAME": ("num_players", "show_intro_popup", "show_unclaimed", "battle_display_mode", "army_group_animations"),
+        "DISPLAY": ("target_fps", "show_fps", "checkerboard_water", "checkerboard_gradient_strength", "checkerboard_scroll_speed", "ocean_light_color", "ocean_dark_color"),
+        "CONTROLS": ("map_navigation_mode", "control_mode", "mouse_button_actions", "orders_key_changes_screen", "economy_key_changes_screen"),
+        "AI": ("ai_mode", "ai_immersion_level", "ai_threads"),
+        "FILES": tuple(DIR_FIELDS),
+    }
 
     DIR_BOX_W = 400
     DIR_BOX_H = 35
@@ -350,8 +260,8 @@ class Settings(Screen):
     def __init__(self, controller):
         super().__init__()
         self.controller = controller
-        self.bg_color = (40, 40, 40)
-        self.bg_image_path = c.SETTINGS_BG_FILE
+        self.bg_color = SETTINGS_BACKGROUND_COLOR
+        self.sub_state = "GAME"
         self.back_state = "MENU"
 
         self.sfx_volume = self.controller.sfx_volume
@@ -392,9 +302,17 @@ class Settings(Screen):
         self.refresh_ui()
 
     def draw_background(self, surface):
-        """Show the checkerboard through the settings background's transparent areas."""
-        self.draw_checkerboard_background(surface, SETTINGS_CHECKERBOARD_COLOR)
         super().draw_background(surface)
+        ui_elements.draw_pixel_panel(surface, pygame.Rect(SETTINGS_NAV_RECT), SETTINGS_PANEL_COLOR, SETTINGS_PANEL_BORDER, gradient_strength=0.25)
+        ui_elements.draw_pixel_panel(surface, pygame.Rect(SETTINGS_CONTENT_RECT), SETTINGS_PANEL_COLOR, SETTINGS_PANEL_BORDER, gradient_strength=0.25)
+
+    def set_sub_state(self, state):
+        self.cancel_pointer_input()
+        super().set_sub_state(state)
+
+    def add_setting_info(self, key, y):
+        _key, title, text = next(row for row in SETTINGS_INFO_ROWS if row[0] == key)
+        self.elements.append(make_info_button(SETTINGS_INFO_X, y, lambda: dialogs.show_info(title, text), y_offset=SETTINGS_INFO_Y_NUDGE))
 
     # ------------------------------------------------------------------ #
     #                       AI PROVIDER TEXT FIELDS                      #
@@ -580,7 +498,6 @@ class Settings(Screen):
             self.set_ai_mode("OFF")
 
     def reset_defaults(self):
-        defaults = settings_schema.defaults()
         self.controller.keybinds = default_keybinds()
         # Preserve this control's scope: provider credentials, audio and the
         # other preferences outside this list are not part of this reset.
@@ -590,13 +507,30 @@ class Settings(Screen):
             "show_intro_popup", "show_unclaimed", "map_navigation_mode", "control_mode",
             "battle_display_mode", "army_group_animations", "mouse_button_actions",
         )
+        self._reset_fields(names + tuple(self.COLOR_FIELDS))
+
+    def reset_category_defaults(self):
+        """Reset only this category, preserving API keys, models, URLs and audio."""
+        names = self.CATEGORY_RESET_FIELDS[self.sub_state]
+        if self.sub_state == "GAME" and self.back_state == "MAP":
+            names = tuple(name for name in names if name != "num_players")
+        if self.sub_state == "CONTROLS":
+            self.controller.keybinds = default_keybinds()
+            self.controller.touch_input.cancel()
+        if self.sub_state == "AI":
+            ai_handler.reset_clients()
+        self._reset_fields(names)
+
+    def _reset_fields(self, names):
+        defaults = settings_schema.defaults()
         for name in names:
-            setattr(self.controller, name, defaults[name])
-            if hasattr(self, name):
-                setattr(self, name, defaults[name])
+            if name in self.DIR_FIELDS or name in self.COLOR_FIELDS:
+                self.reset_setting(name, refresh=False)
+            else:
+                setattr(self.controller, name, defaults[name])
+                if hasattr(self, name):
+                    setattr(self, name, defaults[name])
         c.apply_runtime_settings({name: defaults[name] for name in names})
-        for key in self.COLOR_FIELDS:
-            self.reset_setting(key, refresh=False)
         queries.save_global_settings(self.controller)
         self.refresh_ui()
 
@@ -662,9 +596,13 @@ class Settings(Screen):
     #                             RENDERING                              #
     # ------------------------------------------------------------------ #
 
-    @property
-    def dir_box_x(self):
-        return c.SCREEN_WIDTH // 2 - self.DIR_BOX_W // 2 + 50
+    def preference_rows(self):
+        """Return the active category's path or color rows for controls and drawing."""
+        if self.sub_state == "FILES":
+            return [(SETTINGS_FIRST_Y + 35 + index * 108, "dir", key, label) for index, (key, label) in enumerate((("saves_dir", "Saves Path:"), ("custom_scenarios_dir", "Custom Maps Path:"), ("tournament_saves_dir", "Tournament Saves Path:")))]
+        if self.sub_state == "DISPLAY":
+            return [(SETTINGS_FIRST_Y + index * 100, "color", key, label) for index, (key, label) in enumerate((("ocean_light_color", "Zoom-In Water Color:"), ("ocean_dark_color", "Zoom-Out Water Color:")))]
+        return []
 
     def draw_path_box(self, surface, rect, text):
         """Draws one of the screen's read-only path boxes."""
@@ -672,28 +610,23 @@ class Settings(Screen):
 
     def additional_draw(self, surface):
         font = fonts.get("normal")
-        x = self.dir_box_x
-
-        # --- PATH BOXES & WATER COLOR SWATCHES (Middle Top) ---
-        for y, kind, key, label in self.PATH_ROWS:
-            value = getattr(self, key)
-
+        heading = fonts.get("heading2").render(dict(SETTINGS_CATEGORIES)[self.sub_state], True, c.UI_TEXT_LIGHT)
+        surface.blit(heading, (SETTINGS_X, SETTINGS_PANEL_TOP + 22))
+        for y, kind, key, label in self.preference_rows():
+            x = SETTINGS_X if kind == "dir" else SETTINGS_SECOND_X
+            surface.blit(font.render(label, True, c.UI_TEXT_LIGHT), (x, y - 30))
             if kind == "dir":
-                surface.blit(font.render(label, True, (240, 240, 240)), (x, y - 20))
-                self.draw_path_box(surface, pygame.Rect(x, y, self.DIR_BOX_W, self.DIR_BOX_H), value)
+                self.draw_path_box(surface, pygame.Rect(x, y, self.DIR_BOX_W, self.DIR_BOX_H), getattr(self, key))
             else:
-                # Color rows label to the right of the row and show a swatch
-                surface.blit(font.render(label, True, (240, 240, 240)), (x, y + 10))
-                swatch = pygame.Rect(x + self.DIR_BOX_W - self.COLOR_BOX_W, y,
-                                     self.COLOR_BOX_W, self.DIR_BOX_H)
-                pygame.draw.rect(surface, value, swatch)
-                pygame.draw.rect(surface, (150, 150, 150), swatch, 1)
-
-        if self.ai_mode == "OFF":
-            return
-
-        for _box_type, box_y, label in self.ai_field_rows():
-            surface.blit(font.render(label, True, c.UI_TEXT_LIGHT), (SETTINGS_BOX_X, box_y - 25))
+                # Swatches stay flat so the selected color is shown accurately.
+                swatch = pygame.Rect(x, y, self.COLOR_BOX_W, self.DIR_BOX_H)
+                pygame.draw.rect(surface, getattr(self, key), swatch)
+                pygame.draw.rect(surface, SETTINGS_PANEL_BORDER, swatch, 1)
+        if self.sub_state == "AI" and self.ai_mode != "OFF":
+            for _box_type, box_y, label in self.ai_field_rows():
+                surface.blit(font.render(label, True, c.UI_TEXT_LIGHT), (SETTINGS_BOX_X, box_y - 30))
+            for label, y in (("Provider", SETTINGS_AI_PROVIDER_Y), ("Immersion", SETTINGS_AI_IMMERSION_Y)):
+                surface.blit(font.render(label, True, c.UI_TEXT_LIGHT), (SETTINGS_X, y - 30))
 
     def set_players(self, val):
         self.num_players = 1 + int(val * 7)

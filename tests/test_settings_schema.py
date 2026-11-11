@@ -341,6 +341,106 @@ class RuntimeMirrorTests(unittest.TestCase):
         self.assertEqual(c.SCENARIOS_CUSTOM_DIR, before)
 
 
+class SettingsCategoryTests(unittest.TestCase):
+    def setUp(self):
+        import pygame
+        from types import SimpleNamespace
+        from screens.menus import settings
+        pygame.font.init()
+        self.pygame = pygame
+        self.settings = settings
+        self.controller = SimpleNamespace(**settings_schema.defaults(), keybinds={}, touch_input=mock.Mock())
+        for constant in c.RUNTIME_SETTINGS.values():
+            self.addCleanup(setattr, c, constant, getattr(c, constant))
+        settings_cache = mock.patch.object(settings.queries, "get_settings", return_value={})
+        save = mock.patch.object(settings.queries, "save_cached_json")
+        images = mock.patch.object(settings.ui_bars, "get_ui_image", return_value=pygame.Surface((20, 20)))
+        for patch in (settings_cache, save, images):
+            patch.start()
+            self.addCleanup(patch.stop)
+        self.save = settings.queries.save_cached_json
+        self.screen = settings.Settings(self.controller)
+
+    def click(self, label):
+        button = next(element for element in self.screen.elements if element.text == label)
+        for kind in (self.pygame.MOUSEBUTTONDOWN, self.pygame.MOUSEBUTTONUP):
+            self.screen.handle_events([self.pygame.event.Event(kind, button=1, pos=button.rect.center)])
+
+    def test_category_clicks_replace_controls_and_clear_text_focus(self):
+        self.controller.ai_mode = self.screen.ai_mode = "GEMINI"
+        self.click("AI")
+        field = self.screen.ai_fields["MOD"]
+        field.active = True
+        field.on_change("player-model")
+        self.assertTrue(self.screen.text_input_active)
+        self.click("Display & Appearance")
+        self.assertFalse(self.screen.text_input_active)
+        self.assertEqual(self.screen.ai_fields, {})
+        self.assertFalse(any(item.text.startswith("LLM AI:") for item in self.screen.elements))
+        self.assertIsNotNone(self.screen.fps_slider)
+        self.click("AI")
+        self.assertEqual(self.screen.ai_fields["MOD"].text, "player-model")
+        self.screen.save_and_go_back(execute_exit=False)
+        self.assertEqual(self.save.call_args.args[1]["gemini_model"], "player-model")
+
+    def test_child_screens_return_to_the_category_and_original_context(self):
+        from types import SimpleNamespace
+        states = {key: object() for key in ("MAP", "MENU", "REALTIME_LOBBY", "REALTIME_REMOTE_LOBBY", "CUSTOM_BATTLE", "UNIT_ART", "KEYBINDS", "MOUSE_SETTINGS")}
+        app = SimpleNamespace(states=states)
+        for origin in ("MENU", "MAP", "REALTIME_LOBBY", "REALTIME_REMOTE_LOBBY", "CUSTOM_BATTLE"):
+            for category, label, target in (("DISPLAY", "Unit Art", "UNIT_ART"), ("CONTROLS", "Keybinds", "KEYBINDS"), ("CONTROLS", "Mouse Settings", "MOUSE_SETTINGS")):
+                with self.subTest(origin=origin, target=target):
+                    self.screen.on_enter(app, states[origin])
+                    self.screen.set_sub_state(category)
+                    self.click(label)
+                    self.assertEqual(self.screen.next_state, target)
+                    self.screen.done = False
+                    self.screen.on_enter(app, states[target])
+                    self.assertEqual(self.screen.sub_state, category)
+                    self.screen.handle_back_key()
+                    self.assertEqual(self.screen.next_state, origin)
+
+    def test_category_resets_only_its_preferences_and_saves(self):
+        from screens.menus.keybinds import default_keybinds
+        changes = dict(target_fps=41, show_fps=True, num_players=7, ai_threads=3, ai_mode="GEMINI", ai_immersion_level="ABSOLUTE", gemini_api_key="kept-key", gemini_model="kept-model", ollama_base_url="http://fixture", music_volume=0.21, unit_art_style="kept-art", control_mode="DESKTOP", saves_dir="fixture-saves", custom_scenarios_dir="fixture-maps", tournament_saves_dir="fixture-tournaments")
+        reset_changes = {"GAME": ("num_players",), "DISPLAY": ("target_fps", "show_fps"), "CONTROLS": ("control_mode",), "AI": ("ai_threads", "ai_mode", "ai_immersion_level"), "FILES": ("saves_dir", "custom_scenarios_dir", "tournament_saves_dir")}
+        for category, reset_fields in reset_changes.items():
+            with self.subTest(category=category):
+                for key, value in changes.items():
+                    setattr(self.controller, key, value)
+                self.controller.keybinds = {"BACK": self.pygame.K_b}
+                screen = self.settings.Settings(self.controller)
+                screen.set_sub_state(category)
+                before = settings_schema.from_controller(self.controller)
+                with mock.patch.object(self.settings.ai_handler, "reset_clients"):
+                    next(item for item in screen.elements if isinstance(item, self.settings.Button) and item.callback == screen.reset_category_defaults).callback()
+                defaults = settings_schema.defaults()
+                after = settings_schema.from_controller(self.controller)
+                for key in changes:
+                    self.assertEqual(after[key], defaults[key] if key in reset_fields else before[key], key)
+                self.assertEqual(self.controller.keybinds, default_keybinds() if category == "CONTROLS" else {"BACK": self.pygame.K_b})
+                saved = self.save.call_args.args[1]
+                self.assertEqual(settings_schema.from_json_dict(saved), after)
+                for key in reset_fields:
+                    if key in c.RUNTIME_SETTINGS:
+                        self.assertEqual(getattr(c, c.RUNTIME_SETTINGS[key]), after[key])
+
+    def test_game_reset_cannot_change_live_player_count(self):
+        self.controller.num_players = self.screen.num_players = 7
+        self.screen.back_state = "MAP"
+        self.screen.refresh_ui()
+        self.assertFalse(self.screen.player_slider.visible)
+        self.screen.reset_category_defaults()
+        self.assertEqual(self.controller.num_players, 7)
+
+    def test_display_rebuild_keeps_the_fps_slider_value(self):
+        self.screen.set_sub_state("DISPLAY")
+        self.screen.set_fps(0.375)
+        self.screen.refresh_ui()
+        self.assertEqual(self.controller.target_fps, 35)
+        self.assertEqual(self.screen.fps_slider.value, 0.375)
+
+
 class SettingsScreenTests(unittest.TestCase):
     def test_old_ling_url_is_ignored_without_changing_ollama_settings(self):
         old = {"ai_mode": "LING", "ling_base_url": "http://localhost:11434/v1",
@@ -369,7 +469,6 @@ class SettingsScreenTests(unittest.TestCase):
         import pygame
         from types import SimpleNamespace
         from screens.menus.settings import Settings
-        from screens.menus import settings as settings_screen
         from tests import app_harness
         app_harness.boot()          # a display, which the screen's images need
         for mode in ("OFF", "GEMINI"):
@@ -379,13 +478,8 @@ class SettingsScreenTests(unittest.TestCase):
                 with mock.patch("screens.menus.settings.queries.get_settings", return_value={}), \
                         mock.patch("screens.menus.settings.dialogs.show_info") as show_info:
                     screen = Settings(controller)
-                    toggle = next(item for item in screen.elements if item.text.startswith("LLM AI"))
-                    info = next(item for item in screen.elements
-                                if item.text == "?" and item.rect.left > toggle.rect.right
-                                and item.rect.top < toggle.rect.bottom
-                                and item.rect.bottom > toggle.rect.top)
-                    # The provider fields begin to its right, so it never covers them.
-                    self.assertLess(info.rect.right, settings_screen.SETTINGS_BOX_X)
+                    screen.set_sub_state("AI")
+                    info = next(item for item in screen.elements if item.text == "?")
                     info.callback()
                 title, text = show_info.call_args.args
                 self.assertEqual(title, "LLM AI")
@@ -404,6 +498,7 @@ class SettingsScreenTests(unittest.TestCase):
                 mock.patch("map_logic.ai.ai_handler.reset_clients") as reset_clients, \
                 mock.patch("screens.menus.settings.queries.save_global_settings") as save:
             screen = Settings(controller)
+            screen.set_sub_state("AI")
             next(item for item in screen.elements if item.text == "OpenRouter").callback()
             self.assertEqual(controller.ai_mode, "OPENROUTER")
             self.assertEqual(screen.get_field("MOD"), c.DEFAULT_OPENROUTER_MODEL)
@@ -463,6 +558,7 @@ class SettingsScreenTests(unittest.TestCase):
         controller.ai_mode = "OLLAMA"
         with mock.patch("screens.menus.settings.queries.get_settings", return_value={}):
             screen = Settings(controller)
+            screen.set_sub_state("AI")
         screen.set_field("KEY", " http://localhost:12345/api/chat ")
         self.assertEqual(controller.ollama_base_url, "http://localhost:12345/api/chat")
         self.assertNotIn("ollama_api_key", vars(controller))
@@ -486,6 +582,7 @@ class SettingsScreenTests(unittest.TestCase):
                 controller.ai_mode = mode
                 with mock.patch("screens.menus.settings.queries.get_settings", return_value={}):
                     screen = Settings(controller)
+                    screen.set_sub_state("AI")
                     screen.set_field("KEY", "kept-key")
                     screen.set_field("MOD", "player-chosen-model")
                     next(item for item in screen.elements if item.text == "Default").callback()
@@ -493,7 +590,6 @@ class SettingsScreenTests(unittest.TestCase):
                 self.assertEqual(getattr(controller, model_attr), defaults[model_attr])
                 self.assertEqual(screen.get_field("MOD"), defaults[model_attr])
                 self.assertEqual(getattr(controller, screen.field_attr("KEY")), "kept-key")
-
     def test_show_unclaimed_defaults_on_for_older_settings(self):
         self.assertTrue(settings_schema.defaults()["show_unclaimed"])
         self.assertTrue(settings_schema.from_json_dict({"show_fps": False})["show_unclaimed"])
@@ -540,6 +636,7 @@ class SettingsScreenTests(unittest.TestCase):
         with mock.patch.object(queries, "get_settings", return_value={}), \
                 mock.patch.object(queries, "save_cached_json") as save:
             screen = Settings(controller)
+            screen.set_sub_state("DISPLAY")
             slider = screen.checkerboard_speed_slider
             screen.handle_events([pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=slider.handle_rect.center)])
             with mock.patch.object(pygame.mouse, "get_pressed", return_value=(True, False, False)):
@@ -572,6 +669,7 @@ class SettingsScreenTests(unittest.TestCase):
         with mock.patch.object(queries, "get_settings", return_value={}), \
                 mock.patch.object(queries, "save_cached_json") as save:
             screen = Settings(controller)
+            screen.set_sub_state("DISPLAY")
             slider = screen.checkerboard_gradient_slider
             screen.handle_events([pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=slider.handle_rect.center)])
             with mock.patch.object(pygame.mouse, "get_pressed", return_value=(True, False, False)):

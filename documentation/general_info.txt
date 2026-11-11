@@ -94,7 +94,7 @@ UNIT AND BUILDING STAT SETTINGS
 Select Edit Unit / Building Stats in Scenario Settings.
 The editor has Units, Buildings, Range, and Other categories.
 The Units, Buildings, and Range categories show a unit or building image before each family name.
-Images follow Settings > Unit Art and use the first library entry for each family.
+Images follow Settings > Display & Appearance > Unit Art and use the first library entry for each family.
 Administrative actions and conversions have no images.
 Images are prepared when the editor opens. Scrolling and drawing reuse them.
 
@@ -488,7 +488,11 @@ Builds copy these values into their preference files. They exclude the developer
 The game uses these defaults when a preference file is missing.
 Existing preference files and saved games keep their saved values. Missing preference fields use the configured defaults.
 For an installed copy, use game controls or edit the matching preference file to change existing choices.
-Reset controls use this file for the settings each control already covers. The general Settings reset does not clear credentials or reset audio.
+Settings groups preferences into Game & Interface, Display & Appearance, Controls, AI, and Files.
+Each category's reset reads its defaults from this file and affects only that category.
+The AI reset restores the LLM mode, immersion level, and maximum threads. Provider keys, URLs, and model names stay; each model has its own Default button.
+The Controls reset also restores keybinds and mouse gestures. Unit Art and audio retain their own controls.
+The Files reset restores all three directory preferences. Game & Interface keeps the player count when opened from a live map.
 The Scenario Settings reset preserves the separate editors' settings.
 Keep every keyboard action in settings_config.json's keybinds object, using pygame key names or null for an unassigned action.
 Random setup clamps configured values to the available countries, maps, and slider limits.
@@ -566,7 +570,7 @@ After source changes, rebuild the browser package to refresh the staged game cod
 Android wraps the web distribution in a landscape WebView. Gameplay uses the same browser code and save storage.
 Desktop, web, and Android check the public repository's version.txt at startup and when Refresh is selected.
 Web and Android use asynchronous browser requests. All platforms compare the released version with GAME_VERSION and show the same update status.
-Settings > Controls selects Auto, Mobile, or Desktop. The selection is a global preference.
+The Controls button in Settings > Controls selects Auto, Mobile, or Desktop. The selection is a global preference.
 Auto resolves once at startup: Android and iOS use Mobile; other systems use Desktop.
 Browser builds inspect the browser's device information, including iPadOS desktop identification.
 Mobile applies the same gestures to touch and the left mouse button, including mouse-only emulator input.
