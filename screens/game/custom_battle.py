@@ -1509,12 +1509,13 @@ class CustomBattleScreen(Screen):
         pointer = pygame.mouse.get_pos()
         controlled = self.simulation.controlled
         aim_point = None
+        move_direction = None
         throttle = int(pygame.K_w in self.held_keys) - int(pygame.K_s in self.held_keys)
         turn = int(pygame.K_d in self.held_keys) - int(pygame.K_a in self.held_keys)
         primary, secondary = self.firing, self.secondary_firing
         if self.touch_mode and controlled is not None and controlled.alive:
             drive, aim = self._touch_axes("drive"), self._touch_axes("aim")
-            throttle, turn = -drive.y, drive.x
+            move_direction = drive
             pointer = (c.SCREEN_WIDTH / 2 + aim.x * TOUCH_PAD_SIZE,
                        c.SCREEN_HEIGHT / 2 + aim.y * TOUCH_PAD_SIZE)
             if aim.length_squared():
@@ -1529,7 +1530,8 @@ class CustomBattleScreen(Screen):
         self.simulation.set_player_input(
             throttle=throttle if driving else 0.0, turn=turn if driving else 0.0,
             fire=primary if driving else False, secondary_fire=secondary if driving else False,
-            aim_point=(aim_point if self.touch_mode else self.to_field(pointer)) if driving else None)
+            aim_point=(aim_point if self.touch_mode else self.to_field(pointer)) if driving else None,
+            move_direction=move_direction if driving else None)
         self.simulation.advance(dt)
         if self.terrain_art_key != (id(self.simulation.battlefield), self.simulation.battlefield.revision, self.zoom):
             self._cache_terrain_art()

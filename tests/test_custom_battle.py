@@ -426,6 +426,50 @@ class BattleSimulationTests(unittest.TestCase):
         self.assertGreater(player.angle, math.pi / 2)
         self.assertEqual((player.x, player.y), (x, y))
 
+    def test_directional_movement_turns_toward_cardinal_and_diagonal_headings(self):
+        directions = ((1, 0), (0, 1), (-1, 0), (0, -1), (1, 1), (-1, 1), (-1, -1), (1, -1))
+        for shape in ("infantry", "tank"):
+            for dx, dy in directions:
+                with self.subTest(shape=shape, direction=(dx, dy)):
+                    field = battle_terrain.Battlefield("plains", combat.ARENA_SIZE, combat.MAX_UNIT_RADIUS)
+                    simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"], controlled_index=0, battlefield=field)
+                    player, enemy = simulation.fighters
+                    enemy.data["speed"], enemy.cooldown = 0, 1000
+                    player.shape, player.cooldown = shape, 1000
+                    heading = math.atan2(dy, dx)
+                    player.angle = (heading + math.pi) % math.tau
+                    simulation.set_player_input(move_direction=(dx, dy))
+                    simulation.advance(combat.FIXED_STEP)
+                    self.assertEqual(player.speed, 0)
+                    speed_seconds, turn_degrees, turn_seconds = combat.MOBILITY[shape]
+                    self.assertLessEqual(abs(player.turn_rate), math.radians(turn_degrees))
+                    simulation.advance(180 / turn_degrees + 8 * turn_seconds + speed_seconds)
+                    self.assertAlmostEqual(combat._wrap(player.angle - heading), 0, places=2)
+                    self.assertAlmostEqual(player.speed, player.max_speed, places=2)
+                    x, y = player.x, player.y
+                    simulation.advance(combat.FIXED_STEP)
+                    self.assertGreater((player.x - x) * dx + (player.y - y) * dy, 0)
+
+    def test_directional_speed_is_proportional_capped_and_cleared_on_release(self):
+        field = battle_terrain.Battlefield("plains", combat.ARENA_SIZE, combat.MAX_UNIT_RADIUS)
+        simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"], controlled_index=0, battlefield=field)
+        player, enemy = simulation.fighters
+        enemy.data["speed"], enemy.cooldown = 0, 1000
+        player.cooldown = 1000
+        speed_seconds = combat.MOBILITY[player.shape][0]
+        for direction, strength in (((0.5, 0), 0.5), ((2, 0), 1.0), ((0, 0), 0.0)):
+            simulation.set_player_input(move_direction=direction)
+            simulation.advance(2 * speed_seconds)
+            self.assertAlmostEqual(player.speed, strength * player.max_speed)
+            self.assertEqual(player.turn_rate, 0)
+        simulation.set_player_input(move_direction=(0, 1))
+        simulation.advance(combat.FIXED_STEP)
+        simulation.set_player_input()
+        self.assertIsNone(simulation._move_direction)
+        simulation.advance(2 * max(combat.MOBILITY[player.shape][::2]))
+        self.assertEqual(player.speed, 0)
+        self.assertEqual(player.turn_rate, 0)
+
     def test_gun_turns_toward_the_pointer_at_its_own_speed_inside_the_firing_cone(self):
         simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"], controlled_index=0)
         hold_still(simulation)  # The enemy must not close in and destroy the player during the test.

@@ -490,7 +490,7 @@ class TacticalTouchTests(unittest.TestCase):
         with patch.object(self.screen.simulation, "advance"):
             self.screen.update()
         simulation = self.screen.simulation
-        self.assertGreater(simulation._throttle, 0)
+        self.assertEqual(simulation._move_direction, (0.0, -1.0))
         self.assertTrue(simulation._fire)
         self.assertTrue(simulation._secondary_fire)
         self.assertGreater(simulation._aim_point[0], simulation.controlled.x)
@@ -499,7 +499,31 @@ class TacticalTouchTests(unittest.TestCase):
         with patch.object(simulation, "advance"):
             self.screen.update()
         self.assertFalse(simulation._fire)
-        self.assertGreater(simulation._throttle, 0)
+        self.assertEqual(simulation._move_direction, (0.0, -1.0))
+
+    def test_drive_pad_passes_screen_directions_and_releases_in_its_dead_zone(self):
+        touch = self.start_controlled()
+        drive = self.screen._touch_pad_rect("drive")
+        self.send(touch, pygame.FINGERDOWN, drive.center)
+        for dx, dy in ((1, 0), (0, 1), (-1, 0), (0, -1), (1, 1)):
+            with self.subTest(direction=(dx, dy)):
+                position = (drive.centerx + dx * drive.width / 2, drive.centery + dy * drive.height / 2)
+                self.send(touch, pygame.FINGERMOTION, position)
+                with patch.object(self.screen.simulation, "advance"):
+                    self.screen.update()
+                expected = pygame.Vector2(dx, dy).normalize()
+                actual = self.screen.simulation._move_direction
+                self.assertAlmostEqual(actual[0], expected.x)
+                self.assertAlmostEqual(actual[1], expected.y)
+        self.send(touch, pygame.FINGERMOTION, drive.center)
+        with patch.object(self.screen.simulation, "advance"):
+            self.screen.update()
+        self.assertEqual(self.screen.simulation._move_direction, (0.0, 0.0))
+        self.send(touch, pygame.FINGERUP, drive.center)
+        with patch.object(self.screen.simulation, "advance"):
+            self.screen.update()
+        self.assertEqual(self.screen.simulation._move_direction, (0.0, 0.0))
+        self.assertFalse(self.screen.touch_pointers)
 
     def test_selector_works_while_drive_finger_is_held(self):
         touch = self.start_controlled()
@@ -523,6 +547,7 @@ class TacticalTouchTests(unittest.TestCase):
         self.assertTrue(self.screen.simulation.paused)
         self.assertFalse(self.screen.simulation._fire)
         self.assertFalse(self.screen.simulation._secondary_fire)
+        self.assertIsNone(self.screen.simulation._move_direction)
 
     def test_single_weapon_still_fires_after_secondary_was_selected_for_a_vehicle(self):
         touch = self.start_controlled()

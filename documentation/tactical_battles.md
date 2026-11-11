@@ -353,9 +353,12 @@ the hull carries the firing cone with it.
 Human and AI units use the same weapon timing. Holding a fire control fires again only when that weapon is ready.
 The primary and secondary weapons have separate reload readouts and progress rings.
 
-Mobile controls use independent drive and aim pads. The drive pad controls forward/reverse throttle and hull steering.
+Mobile controls use independent drive and aim pads. The drive pad chooses a battlefield direction: up moves north,
+down moves south, right moves east, and left moves west. Diagonal input chooses the matching diagonal direction.
+The hull turns toward the chosen direction using its normal turning limits, then accelerates forward.
+Moving the pad farther from its center requests more speed, capped at the unit's normal top speed.
 The aim pad aims and fires while held outside its dead zone. Releasing the aim pad stops firing; releasing the drive
-pad releases throttle and steering. A weapon selector offers Primary, Secondary, and Both for units with two guns.
+pad releases movement and steering. A weapon selector offers Primary, Secondary, and Both for units with two guns.
 The selection remains active until changed, and each gun still follows its own cooldown. Single-weapon units need no selector.
 Both pads can be held together, and the selector can be used while a drive finger remains held.
 The shared touch-input layer suppresses duplicate mouse events and clears held controls on focus loss or screen changes.

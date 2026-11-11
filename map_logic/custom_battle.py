@@ -586,6 +586,7 @@ class BattleSimulation:
     _accumulator: float = field(init=False, default=0.0)
     _throttle: float = field(init=False, default=0.0)
     _turn: float = field(init=False, default=0.0)
+    _move_direction: object = field(init=False, default=None)  # Optional battlefield direction from the mobile drive pad.
     _fire: bool = field(init=False, default=False)
     _secondary_fire: bool = field(init=False, default=False)
     _aim_point: object = field(init=False, default=None)
@@ -686,13 +687,15 @@ class BattleSimulation:
         return self.controlled is not None and any(
             fighter.alive for fighter in self.divisions[self.controlled.division])
 
-    def set_player_input(self, throttle=0.0, turn=0.0, fire=False, aim_point=None, secondary_fire=False):
+    def set_player_input(self, throttle=0.0, turn=0.0, fire=False, aim_point=None, secondary_fire=False, move_direction=None):
         """Receive held controls and the pointer in field coordinates.
 
         Movement, aiming, and firing still execute on fixed ticks. Without an aim point the gun holds its angle.
+        A move direction replaces throttle and turn with a battlefield heading and proportional speed.
         """
         self._throttle = max(-1.0, min(1.0, throttle))
         self._turn = max(-1.0, min(1.0, turn))
+        self._move_direction = None if move_direction is None else (float(move_direction[0]), float(move_direction[1]))
         self._fire = bool(fire)
         self._secondary_fire = bool(secondary_fire)
         self._aim_point = None if aim_point is None else (float(aim_point[0]), float(aim_point[1]))
@@ -712,6 +715,16 @@ class BattleSimulation:
         seconds = MOBILITY[fighter.shape][0]
         top = fighter.max_speed
         fighter.speed = _approach(fighter.speed, throttle * top, top / seconds * dt)
+
+    @staticmethod
+    def _heading_controls(fighter, throttle, heading):
+        turning = _wrap(heading - fighter.angle)
+        # Turn toward the heading before driving hard along it.
+        throttle *= max(0.0, math.cos(turning))
+        _seconds, degrees, seconds = MOBILITY[fighter.shape]
+        # Ease off the turn before the hull lines up, since the turn rate cannot stop at once.
+        turn = max(-1.0, min(1.0, turning / (math.radians(degrees) * seconds)))
+        return throttle, turn
 
     @staticmethod
     def _steer(fighter, turn, dt):
@@ -847,8 +860,13 @@ class BattleSimulation:
             fighter.primary_rounds, fighter.cooldown, fighter.primary_wait = rounds, wait, wait
 
     def _drive_player(self, fighter, dt, shots):
-        self._steer(fighter, self._turn, dt)
-        self._accelerate(fighter, self._throttle, dt)
+        throttle, turn = self._throttle, self._turn
+        if self._move_direction is not None:
+            dx, dy = self._move_direction
+            strength = min(1.0, math.hypot(dx, dy))
+            throttle, turn = self._heading_controls(fighter, strength, math.atan2(dy, dx)) if strength else (0.0, 0.0)
+        self._steer(fighter, turn, dt)
+        self._accelerate(fighter, throttle, dt)
         aim = self._aim_point
         self._slew_aim(fighter, fighter.aim if aim is None else math.atan2(aim[1] - fighter.y, aim[0] - fighter.x), dt)
         if self._fire and fighter.cooldown <= 0:
@@ -1102,13 +1120,9 @@ class BattleSimulation:
         throttle, heading = self._ai_course(fighter, distance, math.atan2(dy, dx), center, objective)
         if self.battlefield.features:
             throttle, heading = self._terrain_course(fighter, throttle, heading, center, objective)
-        turning = _wrap(heading - fighter.angle)
-        # Turn toward the heading before driving hard along it.
-        throttle *= max(0.0, math.cos(turning))
+        throttle, turn = self._heading_controls(fighter, throttle, heading)
         throttle = self._ally_safe_throttle(fighter, throttle)
-        _seconds, degrees, seconds = MOBILITY[fighter.shape]
-        # Ease off the turn before the hull lines up, since the turn rate cannot stop at once.
-        self._steer(fighter, max(-1.0, min(1.0, turning / (math.radians(degrees) * seconds))), dt)
+        self._steer(fighter, turn, dt)
         self._accelerate(fighter, throttle, dt)
         aim_slot = 0
         if (fighter.cooldown > 0 and fighter.secondary_target is not None
