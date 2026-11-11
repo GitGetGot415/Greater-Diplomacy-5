@@ -407,6 +407,8 @@ Mutual destruction counts as a loss. If the controlled sub-unit is destroyed whi
 The status line counts the divisions on each side that still have a sub-unit.
 The kill feed keeps the battle's sub-unit deaths, newest first, with each killer and victim represented by a flag
 and the normal unit artwork for its nationality and selected art style. Unit names are omitted.
+The controlled sub-unit's icon has a yellow square behind it; other sub-units in the controlled division have an orange square.
+Both highlights apply to killers and victims and remain after the controlled sub-unit dies.
 Team colors identify friendly fire; RAM identifies a ramming kill. Scroll with the mouse wheel, scrollbar,
 or by dragging the feed to read older kills. Feed scrolling does not zoom or pan the battlefield.
 New kills keep older entries in view when the feed has been scrolled away from the newest entry.

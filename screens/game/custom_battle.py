@@ -135,6 +135,7 @@ KILL_FEED_VISIBLE_ROWS = 6
 KILL_FEED_ROW_HEIGHT = 26
 KILL_FEED_INSET = 8
 KILL_FEED_ICON_SIZE = (40, 22)
+KILL_FEED_DIVISION_COLOR = (255, 155, 65)
 KILL_FEED_FLAG_SIZE = (18, 12)
 KILL_FEED_CAUSE_WIDTH = 36
 KILL_FEED_SCROLLBAR_WIDTH = 10
@@ -955,6 +956,7 @@ class CustomBattleScreen(Screen):
         # Scrollbar positions can be fractional; deque slicing needs an integer row index.
         first = math.floor(-self.kill_feed_scroll / KILL_FEED_ROW_HEIGHT)
         visible = islice(self.kill_feed, first, first + KILL_FEED_VISIBLE_ROWS + 1)
+        controlled = self.simulation.controlled if self.simulation is not None else None
         for row, (killer, victim, kind) in enumerate(visible, first):
             top = KILL_FEED_INSET + row * KILL_FEED_ROW_HEIGHT + self.kill_feed_scroll
             for index, fighter in enumerate((killer, victim)):
@@ -962,6 +964,11 @@ class CustomBattleScreen(Screen):
                 x = flag_icons.draw_flag_centered(panel, fighter.data["owner"], self.country_data,
                                                   x, top, KILL_FEED_ROW_HEIGHT, KILL_FEED_FLAG_SIZE)
                 center = (x + KILL_FEED_ICON_SIZE[0] // 2, top + KILL_FEED_ROW_HEIGHT // 2)
+                if controlled is not None and fighter.division == controlled.division:
+                    color = PLAYER_COLOR if fighter is controlled else KILL_FEED_DIVISION_COLOR
+                    highlight = pygame.Rect(0, 0, KILL_FEED_ICON_SIZE[1], KILL_FEED_ICON_SIZE[1])
+                    highlight.center = center
+                    pygame.draw.rect(panel, color, highlight)
                 artwork = symbol_loader.get_symbol(fighter.data["type"], zoom=1,
                                                     color=TEAM_COLORS[fighter.side], country=fighter.data["owner"],
                                                     fit_size=KILL_FEED_ICON_SIZE)
