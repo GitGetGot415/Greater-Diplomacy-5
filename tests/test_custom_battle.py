@@ -1298,7 +1298,7 @@ class TacticalTerrainTests(unittest.TestCase):
                 else:
                     self.assertTrue(first.battlefield.features)
 
-    def test_tree_patches_spread_beyond_the_front_gap_and_keep_full_armies_clear(self):
+    def test_trees_spread_beyond_the_front_gap_and_keep_full_armies_clear(self):
         width, height = combat.ARENA_SIZE
         front = (width - combat.SPAWN_FRONT_GAP) / 2
         roster = ["Fixture I"] * c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE
@@ -1315,6 +1315,20 @@ class TacticalTerrainTests(unittest.TestCase):
                         self.assertTrue(any(tree.y < height / 4 for tree in trees))
                         self.assertTrue(any(tree.y > height * 3 / 4 for tree in trees))
                         self.assertTrue(all(field.walkable((unit.x, unit.y)) for unit in simulation.fighters))
+
+    def test_individual_trees_cover_available_ground_without_dense_clusters(self):
+        width = height = 4000
+        cells = 4
+        with patch.dict(battle_terrain.TERRAIN_RECIPES, {"forest": (0, 256, 0, 0)}):
+            for seed in (0, 4, 19):
+                with self.subTest(seed=seed):
+                    field = battle_terrain.Battlefield.generate(
+                        "forest", (width, height), 12, 3800, seed, deployment_half_height=0)
+                    counts = {(x, y): 0 for x in range(cells) for y in range(cells)}
+                    for tree in field.features:
+                        counts[int(tree.x * cells / width), int(tree.y * cells / height)] += 1
+                    self.assertTrue(all(counts.values()))
+                    self.assertLess(max(counts.values()), 2 * len(field.features) / len(counts))
 
     def test_tree_trunks_set_the_hitbox_and_foliage_fits_its_trunk_size(self):
         trees = [feature for seed in range(5) for feature in battle_terrain.Battlefield.generate(

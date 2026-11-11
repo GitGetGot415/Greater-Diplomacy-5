@@ -27,7 +27,6 @@ TREE_TRUNK_RADII = {1: 8.5, 2: 13.0, 3: 18.0}
 TREE_TRUNK_GAP = 20.0  # Least open ground between neighboring trunks' edges; a crowded tree is not planted.
 # (smallest, largest) foliage radius for each trunk size, so larger trunks carry larger foliage.
 TREE_FOLIAGE_RADII = {1: (24.0, 40.0), 2: (32.0, 55.0), 3: (40.0, 86.0)}
-PATCH_RADIUS = 155.0
 HILL_RADIUS = (140.0, 230.0)
 HILL_HEIGHT = (65.0, 125.0)
 HAZARD_RADIUS = (65.0, 120.0)
@@ -35,12 +34,12 @@ ROCK_HEIGHT = 200.0
 DEPLOYMENT_CLEARANCE = 100.0
 EDGE_CLEARANCE = 80.0
 MAX_CACHED_ROUTES = 2048
-# Hills, tree patches, trees per patch, rocks, and impassable water/gaps.
+# Hills, tree placement attempts, rocks, and impassable water/gaps.
 TERRAIN_RECIPES = {
-    "plains": (0, 0, 0, 0, 0), "desert": (0, 0, 0, 0, 0),
-    "hills": (6, 0, 0, 0, 0), "forest": (0, 18, 14, 0, 0),
-    "jungle": (0, 30, 22, 0, 3), "mountain": (13, 0, 0, 7, 4),
-    "swamp": (0, 16, 12, 0, 7),
+    "plains": (0, 0, 0, 0), "desert": (0, 0, 0, 0),
+    "hills": (6, 0, 0, 0), "forest": (0, 252, 0, 0),
+    "jungle": (0, 660, 0, 3), "mountain": (13, 0, 7, 4),
+    "swamp": (0, 192, 0, 7),
 }
 # What the impassable water/gaps of each recipe are. Both stop movement and let shots across.
 GAP_KINDS = {"mountain": "chasm", "jungle": "marsh", "swamp": "marsh"}
@@ -99,7 +98,7 @@ class Battlefield:
         # Terrain randomness does not consume AI temperament or shot-spread draws.
         rng = random.Random(seed)
         field = cls(terrain, size, body_radius)
-        hills, patches, trees, rocks, gaps = TERRAIN_RECIPES[terrain]
+        hills, trees, rocks, gaps = TERRAIN_RECIPES[terrain]
         left = (size[0] - front_gap) / 2 + DEPLOYMENT_CLEARANCE
         right = size[0] - left
         # Callers without formation geometry retain clear deployment columns.
@@ -126,22 +125,19 @@ class Battlefield:
             place("rock", rng.uniform(*HAZARD_RADIUS), ROCK_HEIGHT)
         for _ in range(gaps):
             place(GAP_KINDS[terrain], rng.uniform(*HAZARD_RADIUS))
-        for _ in range(patches):
-            center = (rng.uniform(tree_left + PATCH_RADIUS, tree_right - PATCH_RADIUS),
-                      rng.uniform(EDGE_CLEARANCE + PATCH_RADIUS, size[1] - EDGE_CLEARANCE - PATCH_RADIUS))
-            for _ in range(trees):
-                angle, distance = rng.uniform(0, math.tau), PATCH_RADIUS * math.sqrt(rng.random())
-                point = center[0] + math.cos(angle) * distance, center[1] + math.sin(angle) * distance
-                trunk = rng.randint(1, len(TREE_TRUNK_RADII))
-                foliage = rng.uniform(*TREE_FOLIAGE_RADII[trunk])
-                radius = TREE_TRUNK_RADII[trunk]
-                # Do not plant trees in a rock, marsh, or chasm, or within TREE_TRUNK_GAP of another trunk.
-                if any(feature.kind in BLOCKS_MOVEMENT
-                       and math.dist(point, (feature.x, feature.y))
-                       < feature.radius + radius + (TREE_TRUNK_GAP if feature.kind == "tree" else 0.0)
-                       for feature in field.features):
-                    continue
-                place("tree", radius, TREE_HEIGHT, point, trunk=trunk, foliage_radius=foliage, shade=rng.uniform(-1.0, 1.0))
+        for _ in range(trees):
+            trunk = rng.randint(1, len(TREE_TRUNK_RADII))
+            foliage = rng.uniform(*TREE_FOLIAGE_RADII[trunk])
+            radius = TREE_TRUNK_RADII[trunk]
+            point = (rng.uniform(tree_left + radius, tree_right - radius),
+                     rng.uniform(EDGE_CLEARANCE + radius, size[1] - EDGE_CLEARANCE - radius))
+            # Do not plant trees in a rock, marsh, or chasm, or within TREE_TRUNK_GAP of another trunk.
+            if any(feature.kind in BLOCKS_MOVEMENT
+                   and math.dist(point, (feature.x, feature.y))
+                   < feature.radius + radius + (TREE_TRUNK_GAP if feature.kind == "tree" else 0.0)
+                   for feature in field.features):
+                continue
+            place("tree", radius, TREE_HEIGHT, point, trunk=trunk, foliage_radius=foliage, shade=rng.uniform(-1.0, 1.0))
         field._index_features()
         field._connect_ground()
         return field

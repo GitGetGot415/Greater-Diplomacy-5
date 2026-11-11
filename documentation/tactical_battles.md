@@ -199,7 +199,7 @@ Raised ground intercepts shots through a crest;
 climbing toward the crest opens firing lines. Units and guns use the ground height at their position.
 Mountains have a brown background, more mounds, impassable rocks, and occasional chasms.
 Chasms block ground movement but allow shots across.
-Forests have a green background and tree patches. Jungle has a dark green background, denser tree patches,
+Forests have a green background and scattered trees. Jungle has a dark green background, more trees,
 and a few marsh areas, fewer than swamps have.
 Each tree has a trunk of size 1, 2, or 3, drawn by the `Trunk` images in `assets/battles/terrain`.
 The trunk is the tree's hitbox. `TREE_TRUNK_RADII` in [map_logic/battle_terrain.py](../map_logic/battle_terrain.py)
@@ -216,7 +216,7 @@ Trunks block ground movement and intercept shots. Ordinary shots leave trees int
 foliage included, and stop at that tree. Later shots and ground units can use the opening.
 Swamps have a pink background, trees, and impassable marsh areas. Marsh areas allow shots across like chasms.
 
-Tree patches can grow across the battlefield, including beside and behind the armies, while deployment areas stay clear.
+Trees are placed individually across the battlefield, including beside and behind the armies, while deployment areas stay clear.
 The generated battlefield keeps ground routes connected. Terrain generation and
 navigation belong to `map_logic/battle_terrain.py`; the screen draws cached artwork from those same features.
 AI units use ground routes around obstacles and seek accessible firing positions when terrain blocks their shots.
