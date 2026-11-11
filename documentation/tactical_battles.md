@@ -334,7 +334,8 @@ The mouse wheel zooms in and out around the pointer through fixed steps. Zoomed 
 edges, the whole battlefield is centered on a dark surround.
 At distant zoom levels, simple team and unit-type silhouettes replace detailed artwork, and health bars keep a
 minimum readable size. Zoom changes presentation without changing weapon reach or collision size.
-While controlling a living sub-unit, zooming out stops at the last detailed-artwork level, including while paused.
+While controlling a living sub-unit, zooming out stops at `CONTROLLED_MIN_ZOOM` in `screens/game/custom_battle.py`,
+including while paused. Set the limit to one of that file's `ZOOM_LEVELS` values.
 Spectating allows the full zoom range again.
 While the player controls a living sub-unit, arrows mark off-screen enemy divisions and show the nearest distance
 in battlefield units. Divisions in the same direction share an arrow with a division count.

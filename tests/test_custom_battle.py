@@ -2684,14 +2684,15 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.screen.refresh_ui()
         self.assertIsNone(self.screen.forecast_surface)
 
-    def test_controlled_zoom_stops_before_overview_and_unlocks_after_death(self):
+    def test_controlled_zoom_uses_configured_minimum_and_unlocks_after_death(self):
+        self.enterContext(patch.object(battle_screen, "CONTROLLED_MIN_ZOOM", battle_screen.ZOOM_LEVELS[1]))
         self.fill_armies()
         self.click("Control")
         self.click("Simulate")
         pointer = self.screen.view_rect().center
         self.screen.zoom_by(-100, pointer)
         self.click("Start")
-        minimum = min(zoom for zoom in battle_screen.ZOOM_LEVELS if zoom > battle_screen.OVERVIEW_ZOOM)
+        minimum = battle_screen.CONTROLLED_MIN_ZOOM
         self.assertEqual(self.screen.zoom, minimum)
         self.screen.zoom_by(1, pointer)
         self.assertGreater(self.screen.zoom, minimum)

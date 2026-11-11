@@ -68,7 +68,7 @@ DEFAULT_ZOOM_INDEX = ZOOM_LEVELS.index(1.0)
 BATTLE_MUSIC_VOLUME = 0.5
 AIM_CAMERA_OFFSET = 0.9  # Share of the pointer's distance from the view center, in screen pixels.
 OVERVIEW_ZOOM = 0.6
-CONTROLLED_MIN_ZOOM_INDEX = next(index for index, zoom in enumerate(ZOOM_LEVELS) if zoom > OVERVIEW_ZOOM)
+CONTROLLED_MIN_ZOOM = 1.0  # Minimum zoom while controlling a living unit; choose a value from ZOOM_LEVELS.
 OVERVIEW_SYMBOL_SIZE = 16
 MIN_PLAYER_INDICATOR_SCALE = 0.85
 MIN_HEALTH_BAR_WIDTH = 22
@@ -894,7 +894,7 @@ class CustomBattleScreen(Screen):
         """Step through ZOOM_LEVELS, keeping the battlefield point under ``pos`` in place."""
         controlling = (self.mode == "battle" and self.simulation is not None
                        and self.simulation.controlled is not None and self.simulation.controlled.alive)
-        minimum = CONTROLLED_MIN_ZOOM_INDEX if controlling else 0
+        minimum = ZOOM_LEVELS.index(CONTROLLED_MIN_ZOOM) if controlling else 0
         index = max(minimum, min(len(ZOOM_LEVELS) - 1, self.zoom_index + steps))
         if index == self.zoom_index:
             return
