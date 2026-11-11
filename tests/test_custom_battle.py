@@ -1196,15 +1196,21 @@ class CloseCombatTests(unittest.TestCase):
                 damage = self.move_contact(simulation, [(attacker, *delta), (target, 0, 0)])
                 self.assertEqual(damage, [])
 
-    def test_fast_contact_with_an_ally_deals_ram_damage_like_an_enemy(self):
-        simulation = self.encounter(shapes=("tank", "infantry"), gap=combat.UNIT_RADIUS * 2 + 2)
-        attacker, ally = simulation.fighters
-        ally.side = attacker.side
-        damage = self.move_contact(simulation, [(attacker, combat.RAM_REFERENCE_SPEED * combat.FIXED_STEP, 0),
-                                                (ally, 0, 0)])
-        self.assertEqual(len(damage), 1)
-        self.assertIs(damage[0][0], ally)
-        self.assertGreater(damage[0][1], 0)
+    def test_fast_contact_with_an_ally_deals_no_ram_damage_but_an_enemy_takes_it(self):
+        for same_side in (True, False):
+            with self.subTest(same_side=same_side):
+                simulation = self.encounter(shapes=("tank", "infantry"), gap=combat.UNIT_RADIUS * 2 + 2)
+                attacker, target = simulation.fighters
+                if same_side:
+                    target.side = attacker.side
+                damage = self.move_contact(simulation, [(attacker, combat.RAM_REFERENCE_SPEED * combat.FIXED_STEP, 0),
+                                                        (target, 0, 0)])
+                if same_side:
+                    self.assertEqual(damage, [])
+                else:
+                    self.assertEqual(len(damage), 1)
+                    self.assertIs(damage[0][0], target)
+                    self.assertGreater(damage[0][1], 0)
 
     def test_ram_capable_ai_units_brake_before_hitting_allies_for_every_shape(self):
         for shape in combat.CONTACT_MASS:

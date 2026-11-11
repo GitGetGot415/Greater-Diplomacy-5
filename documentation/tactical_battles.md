@@ -281,7 +281,7 @@ Heavier bodies displace lighter bodies more; similar head-on vehicles stop rathe
 Ramming uses the same damage as a point-blank bullet, multiplied by `RAM_DAMAGE`, the closing-speed strength
 (capped by `RAM_MAX_STRENGTH`), and the attacker's mass divided by the target's mass (capped at one).
 Ramming still respects defense and target capability rules. Ramming needs no fire input and does not use the gun reload.
-Contact between allies uses the same impact rules, so a ram-capable unit that hits an ally too fast damages the ally.
+Contact between allies uses the same collision and separation rules, but ramming damages only enemies.
 A pair must separate beyond `CONTACT_RELEASE_DISTANCE` before another ram can deal damage. Sustained pushing cannot
 repeat the impact. Knockback decays quickly and never disables steering or firing.
 AI units that meet the movement-speed cutoff attempt a ram only with enough impact speed, a mass advantage, adequate health, and a safe approach against
@@ -292,12 +292,12 @@ rocks, trees, marshes, and chasms can prevent a ram. The player can attempt any 
 During the final approach, committed units stop sidestepping; earlier in the approach, dodging remains available.
 Units abandon the approach when support or health no longer permits the ram.
 
-Shots and rams hurt allies, so AI sub-units keep out of each other's way. An AI sub-unit holds fire while an ally
+Shots hurt allies, so AI sub-units keep out of each other's way. An AI sub-unit holds fire while an ally
 could take its shot. It checks the line along its lead on the target, widened by the aim tolerance and shot spread,
 with each ally where it will be when the shot passes. A loaded AI sub-unit blocked only by an ally sidesteps away
 from that ally, whatever its speed, until the line clears. Firing positions chosen around terrain also avoid allies.
 Ram-capable AI units brake so they never reach an ally in their path faster than a harmless bump.
-The player's sub-unit gets no such help: its shots and rams can hurt allies.
+The player's sub-unit gets no such help: its shots can hurt allies.
 
 #### Control
 

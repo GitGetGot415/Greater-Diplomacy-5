@@ -87,7 +87,7 @@ RAM_DAMAGE = 2.0 # Damage multiplier for how much Ramming does compared to a bul
 RAM_REFERENCE_SPEED = 120.0 # Damage multiplier applies at this speed
 KNOCKBACK_MAX_SPEED = 100.0 # Caps each horizontal and vertical component of extra collision push
 KNOCKBACK_SECONDS = 0.25 # Controls how quickly extra push fades. Larger values make the push persist longer
-# Shots and rams hurt allies too, so AI sub-units keep out of each other's way.
+# Shots hurt allies too, so AI sub-units keep out of each other's way.
 LINE_SHIFT_SECONDS = 0.6  # A loaded AI sub-unit whose shot would cross an ally sidesteps this long.
 ALLY_BUMP_SPEED = RAM_MIN_SPEED * 0.5  # Speed allowance used by AI braking to approach allies without damaging them
 TANK_SHAPES = frozenset(("tank", "light_tank", "heavy_tank"))
@@ -1208,7 +1208,7 @@ class BattleSimulation:
 
         Relative motion catches head-on crossings between ticks. Contact mass decides
         which body yields, while the normal closing speed rejects glancing impacts.
-        Contact between allies follows the same damage rules as contact between enemies.
+        Contact between allies moves the bodies the same way but deals no ram damage.
         """
         positions = {unit.index: list(self.battlefield.move((unit.x, unit.y), (unit.x + mx, unit.y + my)))
                      for unit, mx, my in movements}
@@ -1254,7 +1254,8 @@ class BattleSimulation:
                         for source, target, speed, mass, target_mass in (
                                 (unit, other, vx * nx + vy * ny, first_mass, second_mass),
                                 (other, unit, -ovx * nx - ovy * ny, second_mass, first_mass)):
-                            if not source.can_ram or speed < RAM_MIN_SPEED:
+                            # Rams only hurt enemies; allies still collide and separate.
+                            if not source.can_ram or speed < RAM_MIN_SPEED or source.side == target.side:
                                 continue
                             strength = min(RAM_MAX_STRENGTH, closing / RAM_REFERENCE_SPEED) * min(1.0, mass / target_mass)
                             damage.append((target, self.damage_amount(source.data, target.data, source.attack_share,
