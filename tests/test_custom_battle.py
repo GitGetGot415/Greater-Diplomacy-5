@@ -2534,7 +2534,7 @@ class CustomBattleScreenTests(unittest.TestCase):
             self.screen.update()
         self.assertLess(target.data["health"], target.data["max_health"])
         self.assertEqual(simulation.projectiles, [])
-        self.screen.draw(self.surface)  # Also exercises the melee reload ring at overview zoom.
+        self.screen.draw(self.surface)  # Also exercises the melee reload ring at the control zoom limit.
         self.click("Pause")
         self.assertFalse(self.screen.firing)
 
@@ -2683,6 +2683,28 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.screen.remove_unit(1)
         self.screen.refresh_ui()
         self.assertIsNone(self.screen.forecast_surface)
+
+    def test_controlled_zoom_stops_before_overview_and_unlocks_after_death(self):
+        self.fill_armies()
+        self.click("Control")
+        self.click("Simulate")
+        pointer = self.screen.view_rect().center
+        self.screen.zoom_by(-100, pointer)
+        self.click("Start")
+        minimum = min(zoom for zoom in battle_screen.ZOOM_LEVELS if zoom > battle_screen.OVERVIEW_ZOOM)
+        self.assertEqual(self.screen.zoom, minimum)
+        self.screen.zoom_by(1, pointer)
+        self.assertGreater(self.screen.zoom, minimum)
+        with patch("pygame.mouse.get_pos", return_value=pointer):
+            self.screen.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=-1)
+                                       for _ in battle_screen.ZOOM_LEVELS])
+        self.assertEqual(self.screen.zoom, minimum)
+        self.click("Pause")
+        self.screen.zoom_by(-100, pointer)
+        self.assertEqual(self.screen.zoom, minimum)
+        self.screen.simulation.controlled.data["health"] = 0
+        self.screen.zoom_by(-100, pointer)
+        self.assertEqual(self.screen.zoom, battle_screen.ZOOM_LEVELS[0])
 
     def test_wheel_zooms_around_the_pointer_and_buttons_still_take_clicks(self):
         self.fill_armies()

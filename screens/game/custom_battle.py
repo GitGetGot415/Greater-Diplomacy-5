@@ -66,8 +66,9 @@ DEFAULT_ZOOM_INDEX = ZOOM_LEVELS.index(1.0)
 # Actual battle plays music at this share of its volume at the default zoom and closer.
 # Zooming out lowers music and battle sound effects in proportion to the zoom.
 BATTLE_MUSIC_VOLUME = 0.5
-AIM_CAMERA_OFFSET = 0.8  # Share of the pointer's distance from the view center, in screen pixels.
+AIM_CAMERA_OFFSET = 0.9  # Share of the pointer's distance from the view center, in screen pixels.
 OVERVIEW_ZOOM = 0.6
+CONTROLLED_MIN_ZOOM_INDEX = next(index for index, zoom in enumerate(ZOOM_LEVELS) if zoom > OVERVIEW_ZOOM)
 OVERVIEW_SYMBOL_SIZE = 16
 MIN_PLAYER_INDICATOR_SCALE = 0.85
 MIN_HEALTH_BAR_WIDTH = 22
@@ -842,6 +843,7 @@ class CustomBattleScreen(Screen):
         self.clear_controls()
         self.simulation.paused = False
         self.mode = "battle"
+        self.zoom_by(0, pygame.mouse.get_pos())
         self.update_battle_music_volume()
         self.last_tick = pygame.time.get_ticks()
         controlled = self.simulation.controlled
@@ -890,7 +892,10 @@ class CustomBattleScreen(Screen):
 
     def zoom_by(self, steps, pos):
         """Step through ZOOM_LEVELS, keeping the battlefield point under ``pos`` in place."""
-        index = max(0, min(len(ZOOM_LEVELS) - 1, self.zoom_index + steps))
+        controlling = (self.mode == "battle" and self.simulation is not None
+                       and self.simulation.controlled is not None and self.simulation.controlled.alive)
+        minimum = CONTROLLED_MIN_ZOOM_INDEX if controlling else 0
+        index = max(minimum, min(len(ZOOM_LEVELS) - 1, self.zoom_index + steps))
         if index == self.zoom_index:
             return
         anchor = self.to_field(pos)
