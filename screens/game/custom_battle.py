@@ -3,6 +3,7 @@
 import math
 import os
 import random
+from collections import deque
 
 import pygame
 
@@ -69,7 +70,7 @@ BATTLE_MUSIC_VOLUME = 0.5
 BATTLE_SFX_VOLUME = 0.5
 AIM_CAMERA_OFFSET = 1.0  # Share of the pointer's distance from the view center, in screen pixels.
 OVERVIEW_ZOOM = 0.6
-CONTROLLED_MIN_ZOOM = 1.0 # Minimum zoom while controlling a living unit; choose a value from ZOOM_LEVELS.
+CONTROLLED_MIN_ZOOM = 0.15 # Minimum zoom while controlling a living unit; choose a value from ZOOM_LEVELS.
 OVERVIEW_SYMBOL_SIZE = 16
 MIN_PLAYER_INDICATOR_SCALE = 0.85
 MIN_HEALTH_BAR_WIDTH = 22
@@ -123,6 +124,16 @@ OVERLAY_BUTTON_GAP = 10
 OVERLAY_BUTTON_TOP = 20
 SCREEN_EDGE_MARGIN = 20
 PAUSE_BUTTON_SIZE = (130, 40)
+BATTLE_STATUS_SIDE_OFFSET = 170
+BATTLE_STATUS_Y = 103
+KILL_FEED_TOP = OVERLAY_BUTTON_TOP + OVERLAY_BUTTON_SIZE[1] + 10
+KILL_FEED_WIDTH = 360
+KILL_FEED_MAX_ROWS = 6
+KILL_FEED_ROW_HEIGHT = 26
+KILL_FEED_INSET = 8
+KILL_FEED_ICON_SIZE = (20, 20)
+KILL_FEED_FLAG_SIZE = (18, 12)
+KILL_FEED_CAUSE_WIDTH = 36
 # Preview entry animation: edit these durations in seconds, then restart the game.
 # Slide durations must be positive; the hold can be zero.
 PREVIEW_SLIDE_IN_SECONDS = 0.2
@@ -395,6 +406,8 @@ class CustomBattleScreen(Screen):
         self.preview_intro_stage = None
         self.status_key = None
         self.status_surfaces = []
+        self.kill_feed = deque(maxlen=KILL_FEED_MAX_ROWS)
+        self.kill_feed_surface = None
         self.controlled_stats_key = None
         self.controlled_stats_surface = None
         self.forecast_key = None  # The armies the forecast line was calculated for.
@@ -861,15 +874,58 @@ class CustomBattleScreen(Screen):
 
     def _build_simulation(self):
         """Deploy the armies, paused, as preview shows them."""
+        self.kill_feed.clear()
+        self._refresh_kill_feed()
         self.simulation = combat.BattleSimulation(self.library, *self.rosters,
                                                   controlled_index=self.controlled_index,
                                                   seed=self.battle_seed,
                                                   terrain=self.campaign.province["terrain"] if self.campaign else self.terrain,
                                                   on_shot=self._play_shot_sound,
-                                                  on_hit=self._play_hit_sound)
+                                                  on_hit=self._play_hit_sound,
+                                                  on_kill=self._record_kill)
         self.simulation.paused = True
         self.terrain_sprites.clear()
         self._cache_terrain_art()
+
+    def _record_kill(self, source, target, cause):
+        """Update the recent kills when a battlefield sub-unit dies."""
+        self.kill_feed.appendleft((source, target, cause))
+        self._refresh_kill_feed()
+
+    def _refresh_kill_feed(self):
+        """Cache the fixed-size panel, including when no kills have occurred."""
+        height = KILL_FEED_MAX_ROWS * KILL_FEED_ROW_HEIGHT + KILL_FEED_INSET * 2
+        panel = pygame.Surface((KILL_FEED_WIDTH, height), pygame.SRCALPHA)
+        ui_elements.draw_pixel_panel(panel, panel.get_rect(), CONTROL_STATS_COLOR, CONTROL_STATS_BORDER)
+        actor_width = (KILL_FEED_WIDTH - KILL_FEED_INSET * 2 - KILL_FEED_CAUSE_WIDTH) // 2
+        font = fonts.get("tiny")
+        for row, (killer, victim, kind) in enumerate(self.kill_feed):
+            top = KILL_FEED_INSET + row * KILL_FEED_ROW_HEIGHT
+            for index, fighter in enumerate((killer, victim)):
+                x = KILL_FEED_INSET + index * (actor_width + KILL_FEED_CAUSE_WIDTH)
+                x = flag_icons.draw_flag_centered(panel, fighter.data["owner"], self.country_data,
+                                                  x, top, KILL_FEED_ROW_HEIGHT, KILL_FEED_FLAG_SIZE)
+                center = (x + KILL_FEED_ICON_SIZE[0] // 2, top + KILL_FEED_ROW_HEIGHT // 2)
+                width, body_height = UNIT_SHAPE_SIZES[fighter.shape]
+                draw_unit_shape(panel, fighter.shape, center, 0, TEAM_COLORS[fighter.side],
+                                scale=KILL_FEED_ICON_SIZE[0] / (max(width, body_height) * 1.5))
+                x += KILL_FEED_ICON_SIZE[0] + 4
+                label = queries.get_condensed_unit_name(fighter.data["type"], self.library)
+                right = KILL_FEED_INSET + index * (actor_width + KILL_FEED_CAUSE_WIDTH) + actor_width
+                text = font.render(fit_text(label, font, right - x), True, TEAM_COLORS[fighter.side])
+                panel.blit(text, text.get_rect(midleft=(x, center[1])))
+            center = (KILL_FEED_INSET + actor_width + KILL_FEED_CAUSE_WIDTH // 2,
+                      top + KILL_FEED_ROW_HEIGHT // 2)
+            if kind == "ram":
+                text = font.render("RAM", True, c.UI_TEXT_BRIGHT)
+                panel.blit(text, text.get_rect(center=center))
+            else:
+                # A code-drawn arrow remains readable without relying on font glyphs.
+                pygame.draw.line(panel, c.UI_TEXT_BRIGHT, (center[0] - 8, center[1]), (center[0] + 8, center[1]), 2)
+                pygame.draw.polygon(panel, c.UI_TEXT_BRIGHT,
+                                    [(center[0] + 8, center[1]), (center[0] + 2, center[1] - 4),
+                                     (center[0] + 2, center[1] + 4)])
+        self.kill_feed_surface = panel
 
     def _play_shot_sound(self, fighter):
         # Keep audio randomness separate from the seeded simulation's aiming and movement decisions.
@@ -1827,8 +1883,13 @@ class CustomBattleScreen(Screen):
                 surface.blit(self.forecast_surface,
                              self.forecast_surface.get_rect(center=(c.SCREEN_WIDTH // 2, FORECAST_CENTER_Y)))
             return
-        for image, center in zip(self.status_surfaces, ((220, 103), (1060, 103), (640, 103))):
+        center_x = c.SCREEN_WIDTH // 2
+        for image, center in zip(self.status_surfaces, (
+                (center_x - BATTLE_STATUS_SIDE_OFFSET, BATTLE_STATUS_Y),
+                (center_x + BATTLE_STATUS_SIDE_OFFSET, BATTLE_STATUS_Y), (center_x, BATTLE_STATUS_Y))):
             surface.blit(image, image.get_rect(center=center))
+        if self.kill_feed_surface is not None:
+            surface.blit(self.kill_feed_surface, (c.SCREEN_WIDTH - SCREEN_EDGE_MARGIN - KILL_FEED_WIDTH, KILL_FEED_TOP))
         controlled = self.simulation.controlled
         if self.touch_mode and self.mode == "battle" and controlled is not None and controlled.alive:
             for role in ("drive", "aim"):

@@ -148,6 +148,48 @@ class TacticalWeaponTests(unittest.TestCase):
         self.assertEqual(losses[3], 0)
         self.assertEqual(simulation.projectiles, [])
 
+    def test_shell_spread_scales_base_movement_and_turning_without_affecting_bullets(self):
+        source = self.encounter().controlled
+        source.data["speed"] = 2
+        source.speed = source.max_speed
+        source.turn_rate = math.radians(combat.MOBILITY[source.shape][1])
+        bullet = dict(source.weapon(), spread=4.0)
+        shell = dict(bullet, shell=True)
+        with patch.object(c, "TACTICAL_MOVING_SPREAD", 2.0), patch.object(
+                c, "TACTICAL_TURNING_SPREAD", 3.0), patch.object(c, "TACTICAL_SHELL_SPREAD_MULTIPLIER", 0.25):
+            self.assertAlmostEqual(combat.BattleSimulation._shot_spread(source, bullet), math.radians(9.0))
+            self.assertAlmostEqual(combat.BattleSimulation._shot_spread(source, shell), math.radians(9.0 * 0.25))
+            source.speed = source.turn_rate = 0
+            self.assertAlmostEqual(combat.BattleSimulation._shot_spread(source, shell), math.radians(4.0 * 0.25))
+
+    def test_only_the_lethal_hit_records_a_kill_including_friendly_fire(self):
+        simulation = self.encounter(targets=2)
+        source, target, bystander = simulation.fighters
+        target.side = source.side
+        target.data["health"] = 1
+        kills = []
+        simulation.on_kill = lambda killer, victim, cause: kills.append((killer, victim, cause))
+        simulation.projectiles = [combat.Projectile(source, dict(source.data), source.x, source.y, 18000, 0, 1)
+                                  for _ in range(2)]
+        simulation.advance(combat.FIXED_STEP)
+        self.assertEqual(kills, [(source, target, "shot")])
+        self.assertTrue(bystander.alive)
+        simulation.advance(combat.FIXED_STEP)
+        self.assertEqual(len(kills), 1)
+
+    def test_penetrating_kills_credit_the_shooter_even_after_its_death(self):
+        simulation = self.encounter(targets=2)
+        source, first, second = simulation.fighters
+        source.shape = "tank"
+        first.data["health"] = second.data["health"] = 1
+        shot = combat.Projectile(source, dict(source.data), source.x, source.y, 18000, 0, 1)
+        source.data["health"] = 0
+        kills = []
+        simulation.on_kill = lambda killer, victim, cause: kills.append((killer, victim, cause))
+        simulation.projectiles = [shot]
+        simulation.advance(combat.FIXED_STEP)
+        self.assertEqual(kills, [(source, first, "shot"), (source, second, "shot")])
+
     def test_shell_cannot_damage_the_same_body_again_on_later_ticks(self):
         simulation = self.encounter(targets=2)
         source, first, second = simulation.fighters
@@ -408,7 +450,7 @@ class TacticalHitSoundTests(unittest.TestCase):
     def test_ram_damage_does_not_trigger_projectile_hit_sounds(self):
         simulation = self.start_battle()
         target = simulation.fighters[1]
-        with patch.object(simulation, "_resolve_contacts", return_value=[(target, 5)]), patch(
+        with patch.object(simulation, "_resolve_contacts", return_value=[(target, 5, simulation.fighters[0])]), patch(
                 "ui.widgets.ui_elements.play_ui_sound") as sound:
             simulation.advance(combat.FIXED_STEP)
         self.assertEqual(target.data["health"], 995)

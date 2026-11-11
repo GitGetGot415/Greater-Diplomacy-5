@@ -73,6 +73,7 @@ TACTICAL_BODIES = {
 TACTICAL_PENETRATION_DAMAGE_RETAINED = 0.6
 TACTICAL_MOVING_SPREAD = 1.5  # Extra degrees at full movement speed.
 TACTICAL_TURNING_SPREAD = 1.0  # Extra degrees at full hull turn speed.
+TACTICAL_SHELL_SPREAD_MULTIPLIER = 0.35  # Shell spread, including movement and turning, relative to bullets.
 TACTICAL_MUZZLE_SECONDS = 0.12
 TACTICAL_IMPACT_SECONDS = 0.18
 

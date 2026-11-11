@@ -995,7 +995,7 @@ class CloseCombatTests(unittest.TestCase):
                             hits = self.move_contact(simulation, [
                                 (source, direction * combat.RAM_REFERENCE_SPEED * combat.FIXED_STEP, 0),
                                 (target, 0, 0)])
-                            loss = sum(loss for victim, loss in hits if victim is target)
+                            loss = sum(loss for victim, loss, _source in hits if victim is target)
                             self.assertEqual(loss > 0, not allied and speed >= combat.RAM_MIN_UNIT_SPEED)
 
     def test_ram_damage_speed_and_mass_multipliers_apply_after_bullet_damage(self):
@@ -1013,7 +1013,7 @@ class CloseCombatTests(unittest.TestCase):
                                                              (target, 0, 0)])
                     strength = min(combat.RAM_MAX_STRENGTH, closing / combat.RAM_REFERENCE_SPEED)
                     expected = bullet * combat.RAM_DAMAGE * strength * min(1, mass_ratio)
-                    self.assertAlmostEqual(sum(loss for victim, loss in hits if victim is target), expected)
+                    self.assertAlmostEqual(sum(loss for victim, loss, _source in hits if victim is target), expected)
 
     def test_ram_impact_damage_does_not_fall_with_attacker_health(self):
         losses = []
@@ -1024,7 +1024,7 @@ class CloseCombatTests(unittest.TestCase):
             target.data["defense"] = 10
             hits = self.move_contact(simulation, [(source, combat.RAM_REFERENCE_SPEED * combat.FIXED_STEP, 0),
                                                    (target, 0, 0)])
-            losses.append(sum(loss for victim, loss in hits if victim is target))
+            losses.append(sum(loss for victim, loss, _source in hits if victim is target))
         self.assertGreater(losses[0], 0)
         self.assertEqual(losses[0], losses[1])
 
@@ -1249,6 +1249,17 @@ class CloseCombatTests(unittest.TestCase):
         combat.apply_campaign_result(simulation, units, province, ([], []))
         self.assertEqual(units[1]["health"], target.data["health"])
 
+    def test_ram_kill_credits_the_attacker(self):
+        simulation = self.encounter(shapes=("tank", "infantry"), gap=combat.UNIT_RADIUS * 2 + 2)
+        attacker, target = simulation.fighters
+        attacker.speed = combat.RAM_REFERENCE_SPEED
+        target.data["health"] = 1
+        kills = []
+        simulation.on_kill = lambda source, victim, cause: kills.append((source, victim, cause))
+        with patch.object(simulation, "_drive_ai"):
+            simulation.advance(combat.FIXED_STEP)
+        self.assertEqual(kills, [(attacker, target, "ram")])
+
     def test_player_infantry_and_cavalry_ram_without_firing_or_using_the_gun_reload(self):
         for shape in ("infantry", "cavalry"):
             with self.subTest(shape=shape):
@@ -1287,7 +1298,7 @@ class CloseCombatTests(unittest.TestCase):
         first, second = simulation.fighters
         second.data["defense"] = first.data["attack"] * 2
         damage = self.move_contact(simulation, [(first, combat.RAM_REFERENCE_SPEED * combat.FIXED_STEP, 0), (second, 0, 0)])
-        self.assertTrue(all(loss == 0 for target, loss in damage))
+        self.assertTrue(all(loss == 0 for target, loss, _source in damage))
 
 
 class TacticalTerrainTests(unittest.TestCase):
@@ -1657,6 +1668,29 @@ class CustomBattleScreenTests(unittest.TestCase):
     def fill_armies(self):
         self.screen.add_unit(0, "Fixture II")
         self.screen.add_unit(1, "Fixture I")
+
+    def test_kill_feed_uses_simulation_kills_survives_results_and_clears_on_replay(self):
+        self.fill_armies()
+        self.click("Simulate")
+        self.click("Start")
+        simulation = self.screen.simulation
+        simulation.battlefield = battle_terrain.Battlefield("plains", combat.ARENA_SIZE, combat.MAX_UNIT_RADIUS)
+        source, target = simulation.fighters
+        source.x, target.x = 1000, 1100
+        source.y = target.y = 500
+        source.cooldown = target.cooldown = 1000
+        target.data["health"] = 1
+        simulation.projectiles = [combat.Projectile(source, dict(source.data), source.x, source.y, 18000, 0, 1)]
+        simulation.advance(combat.FIXED_STEP)
+        self.assertEqual(list(self.screen.kill_feed), [(source, target, "shot")])
+        self.screen.update()
+        self.assertEqual(self.screen.mode, "result")
+        with patch("data.queries.get_condensed_unit_name", side_effect=AssertionError("uncached kill feed")):
+            self.screen.draw(self.surface)
+        self.assertEqual(len(self.screen.kill_feed), 1)
+        self.click("Run Again")
+        self.assertFalse(self.screen.kill_feed)
+        self.assertIsNotNone(self.screen.kill_feed_surface)
 
     def test_regular_firing_uses_all_three_rifle_variants_on_both_sides(self):
         self.fill_armies()
@@ -2455,6 +2489,8 @@ class CustomBattleScreenTests(unittest.TestCase):
         simulation = self.screen.simulation
         final_state = [(fighter.x, fighter.y, fighter.data["health"]) for fighter in simulation.fighters]
         elapsed = simulation.elapsed
+        # Each navigation check must start above the minimum, including repeated campaign cases.
+        self.screen.zoom_index = battle_screen.DEFAULT_ZOOM_INDEX
         self.screen._center_camera(combat.ARENA_SIZE[0] / 2, combat.ARENA_SIZE[1] / 2)
         pointer = (100, 200)  # Empty battlefield space, outside result buttons.
         with patch("pygame.mouse.get_pos", return_value=pointer):

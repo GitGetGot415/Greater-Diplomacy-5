@@ -213,7 +213,8 @@ remaining damage. A body that consumes the remaining budget stops the shell. A s
 including across simulation ticks. Terrain still intercepts shells. Only the shooter is safe from its own shot.
 Friendly fire uses the same damage rules as hits on enemies.
 Each shot, the player's included, leaves at a random angle within its weapon's spread. Movement and hull rotation
-increase spread. The same small error
+increase spread. Shell weapons use a smaller spread multiplier, including the movement and turning penalties;
+vehicle machine guns retain normal bullet spread. The same small error
 carries a shot further off target over a longer distance, so long-range shots miss more often than close ones.
 Shots also lose damage gradually after their full-damage distance, down to a positive minimum multiplier.
 Falloff uses the distance the projectile actually travels to impact and applies after defense and sub-unit damage sharing.
@@ -394,6 +395,11 @@ Losing window focus also pauses combat. Pausing or leaving combat clears held mo
 The custom battle is won when the enemy army is destroyed and lost when the friendly army is destroyed.
 Mutual destruction counts as a loss. If the controlled sub-unit is destroyed while friendly units remain, those friendly units continue fighting under AI control.
 The status line counts the divisions on each side that still have a sub-unit.
+The kill feed shows recent sub-unit deaths, newest first, with each killer and victim represented by a flag,
+unit icon, and condensed unit name. Team colors identify friendly fire; RAM identifies a ramming kill.
+The hit that reduces the victim to zero health receives the kill, including shots whose shooter has already died.
+The feed panel is visible from the start, including when empty, and remains visible while paused and after combat ends.
+Starting another battle clears the entries and keeps the empty panel visible.
 When combat ends, the final battlefield stays visible with the win or loss message and the usual result controls.
 The battle stops advancing. Use the mouse wheel to zoom and drag the battlefield to look around, including
 when the controlled sub-unit survived. Result buttons remain available. Campaign encounters use
@@ -427,7 +433,10 @@ The active library supplies those assignments when a battle deploys. Content wit
 the standard rifle profile for nonvehicle shapes. Gun state exists only inside the encounter and is never saved or exported.
 No save conversion is needed: campaign saves, selected historical turns, and older moves keep their existing unit records.
 `is_artillery` decides which units sit tactical battles out.
-Each weapon's `spread` and the movement and turning spread constants set how far shots can stray. The `AI_*` ranges set the temperaments, and `COHESION_SLACK` and
+Each weapon's `spread`, the movement and turning spread constants, and `TACTICAL_SHELL_SPREAD_MULTIPLIER`
+set how far shots can stray. The simulation's `on_kill` callback reports lethal shots and rams without changing
+damage resolution. The screen caches the compact feed when a kill occurs; feed entries are not campaign save data.
+The `AI_*` ranges set the temperaments, and `COHESION_SLACK` and
 `COHESION_THROTTLE` set how far ahead a sub-unit may get and how much it slows. `BEHAVIORS` assigns each shape its
 behavior; `FLANK_OFFSET`, `CHARGE_CLOSE`, `SKIRMISH_*`, `FALL_BACK_HEALTH`, `DODGE_*`, and
 `TARGET_*` tune the behaviors, reactions, and target choice. `BattleSimulation(seed=...)`

@@ -569,6 +569,7 @@ class BattleSimulation:
         "random_setup", "custom_battle_terrain"))
     battlefield: object = None  # Optional explicit geometry for headless encounters and fixtures.
     on_hit: object = None  # Optional presentation callback: struck body and HP actually lost.
+    on_kill: object = None  # Optional presentation callback: source, destroyed sub-unit, and shot/ram.
     controlled: object = field(init=False, default=None)
     fighters: list = field(init=False, default_factory=list)
     divisions: list = field(init=False, default_factory=list)  # Sub-unit lists, friendly roster then enemy roster.
@@ -1134,8 +1135,8 @@ class BattleSimulation:
     def _shot_spread(fighter, weapon):
         movement = abs(fighter.speed) / fighter.max_speed if fighter.max_speed else 0.0
         turning = abs(fighter.turn_rate) / math.radians(MOBILITY[fighter.shape][1])
-        return math.radians(weapon["spread"] + c.TACTICAL_MOVING_SPREAD * movement
-                            + c.TACTICAL_TURNING_SPREAD * turning)
+        spread = weapon["spread"] + c.TACTICAL_MOVING_SPREAD * movement + c.TACTICAL_TURNING_SPREAD * turning
+        return math.radians(spread * (c.TACTICAL_SHELL_SPREAD_MULTIPLIER if weapon["shell"] else 1.0))
 
     def _fire_shot(self, fighter, slot=0):
         # The shot leaves slightly off the aim, so the same error misses more often at long range.
@@ -1388,7 +1389,7 @@ class BattleSimulation:
                                 continue
                             strength = min(RAM_MAX_STRENGTH, closing / RAM_REFERENCE_SPEED) * min(1.0, mass / target_mass)
                             damage.append((target, self.damage_amount(source.data, target.data, source.attack_share,
-                                                                      RAM_DAMAGE * strength)))
+                                                                      RAM_DAMAGE * strength), source))
                     retained.add(pair)
                     if closing > 0:
                         impulse = closing / (1 / first_mass + 1 / second_mass)
@@ -1445,7 +1446,8 @@ class BattleSimulation:
             movements.append((fighter, mx, my))
         for fighter, slot in shots:
             self._fire_shot(fighter, slot)
-        close_hits = [(target, loss, False) for target, loss in self._resolve_contacts(living, crowds, movements, dt)]
+        close_hits = [(target, loss, source, "ram")
+                      for target, loss, source in self._resolve_contacts(living, crowds, movements, dt)]
 
         # Accumulate impacts first so units destroyed together can both land their shots.
         # A shot can hit any sub-unit but its shooter, so allies in its path take friendly fire.
@@ -1481,7 +1483,7 @@ class BattleSimulation:
                 loss = self.weapon_damage(shot.source_data, target.data, shot.source.attack_share,
                                           shot.weapon_data, target.shape,
                                           shot.power * self.ranged_multiplier(distance))
-                close_hits.append((target, loss, True))
+                close_hits.append((target, loss, shot.source, "shot"))
                 shot.hit_units.add(target.index)
                 self.impacts.append((shot.x + (nx - shot.x) * fraction,
                                      shot.y + (ny - shot.y) * fraction,
@@ -1513,11 +1515,13 @@ class BattleSimulation:
                 if shot.remaining > 0:
                     remaining.append(shot)
         self.projectiles = remaining
-        for target, loss, projectile_hit in close_hits:
+        for target, loss, source, cause in close_hits:
             previous_health = target.data["health"]
             target.data["health"] = max(0.0, previous_health - loss)
-            if projectile_hit and self.on_hit is not None:
+            if cause == "shot" and self.on_hit is not None:
                 self.on_hit(target, previous_health - target.data["health"])
+            if previous_health > 0 and not target.alive and self.on_kill is not None:
+                self.on_kill(source, target, cause)
         alive_sides = {fighter.side for fighter in self.fighters if fighter.alive}
         if len(alive_sides) < 2:
             # Mutual destruction is a loss for the friendly army; there is no draw screen.
