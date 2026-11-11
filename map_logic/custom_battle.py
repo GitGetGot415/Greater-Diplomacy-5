@@ -72,16 +72,11 @@ ARENA_SIDE = SPAWN_FRONT_GAP + 2 * (SPAWN_MARGIN + (c.CUSTOM_BATTLE_MAX_UNITS_PE
 ARENA_SIZE = (ARENA_SIDE, ARENA_SIDE)
 APPROACH_LANE_GAP = 70.0
 FLANK_ARRIVAL_DISTANCE = 45.0
-MELEE_SHAPES = frozenset(("infantry", "cavalry"))
-MELEE_REACH = UNIT_RADIUS * 2 + 6
-MELEE_INTERVAL = 1.0
-MELEE_DAMAGE = 0.7  # Faster attacks give greater sustained damage, replacing gunfire.
-MELEE_ARC = math.radians(60)  # Either side of the gun's aim; also applies to manual fire.
-MELEE_APPROACH_RANGE = 160.0
-MELEE_COMMIT_RANGE = 60.0
-MELEE_MIN_HEALTH = 0.55
-MELEE_WOUNDED_TARGET = 0.6
-MELEE_SUPPORT_RATIO = 1.5
+FOOT_SHAPES = frozenset(("infantry", "cavalry"))  # Turn away to withdraw; vehicles reverse.
+RAM_MIN_UNIT_SPEED = 2.0  # Library movement speed required to deal impact damage.
+RAM_SUPPORT_RANGE = 160.0
+RAM_COMMIT_RANGE = 60.0
+RAM_WOUNDED_TARGET = 0.6
 RAM_APPROACH_RANGE = 280.0
 RAM_MIN_HEALTH = 0.65
 RAM_MASS_ADVANTAGE = 2.0
@@ -89,12 +84,12 @@ CONTACT_RELEASE_DISTANCE = UNIT_RADIUS * 3
 RAM_MIN_SPEED = 60.0
 RAM_REFERENCE_SPEED = 120.0
 RAM_MAX_STRENGTH = 1.5
-RAM_DAMAGE = 0.6
+RAM_DAMAGE = 1.2
 KNOCKBACK_MAX_SPEED = 100.0
 KNOCKBACK_SECONDS = 0.25
 # Shots and rams hurt allies too, so AI sub-units keep out of each other's way.
 LINE_SHIFT_SECONDS = 0.6  # A loaded AI sub-unit whose shot would cross an ally sidesteps this long.
-ALLY_BUMP_SPEED = RAM_MIN_SPEED * 0.5  # AI vehicles brake so they close on an ally no faster than this.
+ALLY_BUMP_SPEED = RAM_MIN_SPEED * 0.5  # AI ram-capable units brake before hitting allies.
 TANK_SHAPES = frozenset(("tank", "light_tank", "heavy_tank"))
 NAVIGATION_SECONDS = 0.8
 WAYPOINT_REACH = 25.0
@@ -105,7 +100,7 @@ FIRING_DISTANCE_WEIGHT = 0.25
 COVER_DISTANCE_WEIGHT = 0.1
 # Relative contact mass is independent of health, price, and campaign defense.
 CONTACT_MASS = {
-    "infantry": 1.0, "cavalry": 2.0, "armored_car": 4.0, "motorized": 4.0,
+    "infantry": 1.0, "cavalry": 3.0, "armored_car": 4.0, "motorized": 4.0,
     "light_tank": 6.0, "mechanized": 6.0, "ifv": 7.0, "tank": 9.0, "heavy_tank": 14.0,
 }
 RANDOM_ARMY_MIN_UNITS = 3
@@ -388,7 +383,6 @@ class Fighter:
     division: int = 0  # Index into BattleSimulation.divisions.
     attack_share: float = 1.0  # The share of its division's damage each hit carries: 1 / its full sub-unit count.
     cooldown: float = 0.0
-    reload_interval: float = FIRE_INTERVAL
     angle: float = 0.0  # Hull heading: movement follows it.
     aim: float = 0.0  # Gun heading: shots follow it.
     speed: float = 0.0  # Signed forward speed in pixels per second.
@@ -397,9 +391,7 @@ class Fighter:
     lane: float = 0.0
     flank_goal: object = None
     flank_complete: bool = False
-    melee_committed: bool = False
     ram_committed: bool = False
-    melee_targets: tuple = ()
     push_vx: float = 0.0
     push_vy: float = 0.0
     vx: float = 0.0
@@ -432,6 +424,10 @@ class Fighter:
     @property
     def max_speed(self):
         return max(0, self.data["speed"]) * MOVE_PIXELS_PER_SPEED
+
+    @property
+    def can_ram(self):
+        return self.data["speed"] >= RAM_MIN_UNIT_SPEED
 
 
 @dataclass
@@ -746,11 +742,8 @@ class BattleSimulation:
         return self._firing_lane(fighter, target, start) and self._ally_in_line(fighter, target, start) is None
 
     def _ally_safe_throttle(self, fighter, throttle):
-        """Limit an AI vehicle's throttle so it cannot reach an ally in its path fast enough to ram it.
-
-        Infantry and cavalry never deal ram damage, so their contact needs no braking.
-        """
-        if not throttle or fighter.shape in MELEE_SHAPES or fighter.max_speed <= 0:
+        """Brake ram-capable AI units before they hit allies fast enough to damage them."""
+        if not throttle or not fighter.can_ram:
             return throttle
         direction = 1.0 if throttle > 0 else -1.0
         hx, hy = math.cos(fighter.angle) * direction, math.sin(fighter.angle) * direction
@@ -769,14 +762,10 @@ class BattleSimulation:
             limit = min(limit, ally.vx * hx + ally.vy * hy + allowed)
         return direction * max(0.0, limit) / fighter.max_speed
 
-    def _queue_attack(self, fighter, shots):
-        """Shooting and close attacks share one reload and the same manual fire control."""
-        eligible = [target for target in fighter.melee_targets
-                    if abs(_wrap(math.atan2(target.y - fighter.y, target.x - fighter.x) - fighter.aim)) <= MELEE_ARC]
-        target = min(eligible, key=lambda enemy: math.hypot(enemy.x - fighter.x, enemy.y - fighter.y), default=None)
-        shots.append((fighter, target))
-        fighter.reload_interval = MELEE_INTERVAL if target is not None else FIRE_INTERVAL
-        fighter.cooldown = fighter.reload_interval
+    @staticmethod
+    def _queue_shot(fighter, shots):
+        shots.append(fighter)
+        fighter.cooldown = FIRE_INTERVAL
 
     def _drive_player(self, fighter, dt, shots):
         self._steer(fighter, self._turn, dt)
@@ -784,7 +773,7 @@ class BattleSimulation:
         aim = self._aim_point
         self._slew_aim(fighter, fighter.aim if aim is None else math.atan2(aim[1] - fighter.y, aim[0] - fighter.x), dt)
         if self._fire and fighter.cooldown <= 0:
-            self._queue_attack(fighter, shots)
+            self._queue_shot(fighter, shots)
 
     @staticmethod
     def advance_point(fighter, center, objective, offset=0.0):
@@ -842,23 +831,17 @@ class BattleSimulation:
                 and self._healthy_sides[fighter.side]):
             # Retreat while healthier allies cover the withdrawal. The last wounded
             # troops keep fighting, so two depleted armies do not both flee forever.
-            fighter.melee_committed = False
             fighter.ram_committed = False
             if not self._firing_lane(fighter, fighter.target or objective, clear_trees=False):
                 return 0.0, toward
-            if fighter.shape not in MELEE_SHAPES:
+            if fighter.shape not in FOOT_SHAPES:
                 return (-fighter.pace, toward) if distance < WITHDRAW_RANGE else (0.0, toward)
             return (fighter.pace, away) if distance < WITHDRAW_RANGE else (0.0, toward)
-        if fighter.ram_committed and (distance <= MELEE_COMMIT_RANGE or fighter.dodge <= 0):
+        if fighter.ram_committed and (distance <= RAM_COMMIT_RANGE or fighter.dodge <= 0):
             point = self._ram_point(fighter, fighter.target)
             if point is not None:
                 return fighter.pace, math.atan2(point[1] - fighter.y, point[0] - fighter.x)
             return fighter.pace, toward
-        if fighter.melee_committed:
-            if distance <= MELEE_COMMIT_RANGE:
-                return (fighter.pace if distance > MELEE_REACH else 0.0), toward
-            if fighter.dodge <= 0:
-                return fighter.pace, toward
         if fighter.dodge > 0:
             return fighter.pace, fighter.dodge_heading
         behavior = BEHAVIORS.get(fighter.shape)
@@ -949,7 +932,7 @@ class BattleSimulation:
         """Route the existing behavior around terrain without changing its controller or side."""
         target = fighter.target
         start = fighter.x, fighter.y
-        if fighter.ram_committed and (fighter.dodge <= 0 or math.dist(start, (target.x, target.y)) <= MELEE_COMMIT_RANGE):
+        if fighter.ram_committed and (fighter.dodge <= 0 or math.dist(start, (target.x, target.y)) <= RAM_COMMIT_RANGE):
             return throttle, heading
         if not throttle:
             fighter.route.clear()
@@ -967,7 +950,7 @@ class BattleSimulation:
             flanking = BEHAVIORS.get(fighter.shape) == "flank" and not fighter.flank_complete
             if retreating:
                 fighter.position_goal = self._cover_position(fighter, target)
-            elif (not flanking and fighter.dodge <= 0 and not fighter.melee_committed
+            elif (not flanking and fighter.dodge <= 0 and not fighter.ram_committed
                   and not fighter.withdrawing and throttle > 0):
                 if not self._firing_lane(fighter, target):
                     fighter.position_goal = self._firing_position(fighter, target)
@@ -1004,7 +987,7 @@ class BattleSimulation:
         fighter.retarget -= dt
         if fighter.retarget <= 0:
             fighter.retarget += RETARGET_SECONDS
-            if not (fighter.melee_committed or fighter.ram_committed):
+            if not fighter.ram_committed:
                 fighter.target = None
         if fighter.target is None or not fighter.target.alive:
             fighter.target = self._choose_target(fighter, enemies)
@@ -1013,7 +996,7 @@ class BattleSimulation:
         dx, dy = target.x - fighter.x, target.y - fighter.y
         distance = math.hypot(dx, dy)
         if (fighter.dodge <= 0 and fighter.cooldown <= 0 and distance <= WEAPON_RANGE
-                and not (fighter.melee_committed or fighter.ram_committed)
+                and not fighter.ram_committed
                 and self._firing_lane(fighter, target)):
             ally = self._ally_in_line(fighter, target)
             if ally is not None:
@@ -1037,7 +1020,7 @@ class BattleSimulation:
         if (fighter.cooldown <= 0 and distance <= WEAPON_RANGE
                 and abs(_wrap(desired - fighter.aim)) <= AIM_TOLERANCE
                 and self._attack(fighter.data, target.data) > 0 and self._clear_shot(fighter, target)):
-            self._queue_attack(fighter, shots)
+            self._queue_shot(fighter, shots)
 
     def _fire_shot(self, fighter):
         # The shot leaves slightly off the aim, so the same error misses more often at long range.
@@ -1103,8 +1086,8 @@ class BattleSimulation:
                 max(shot.x, end_x) + DODGE_DANGER, max(shot.y, end_y) + DODGE_DANGER))
             for unit in nearby:
                 if (unit is shot.source or not self._can_dodge(unit) or unit.dodge > 0 or self._ready_to_fire(unit)
-                        or ((unit.melee_committed or unit.ram_committed) and unit.target is not None
-                            and math.hypot(unit.x - unit.target.x, unit.y - unit.target.y) <= MELEE_COMMIT_RANGE)):
+                        or (unit.ram_committed and unit.target is not None
+                            and math.hypot(unit.x - unit.target.x, unit.y - unit.target.y) <= RAM_COMMIT_RANGE)):
                     continue
                 along = ((unit.x - shot.x) * shot.vx + (unit.y - shot.y) * shot.vy) / speed
                 across = ((unit.y - shot.y) * shot.vx - (unit.x - shot.x) * shot.vy) / speed
@@ -1134,7 +1117,7 @@ class BattleSimulation:
 
     def _ram_point(self, unit, target):
         """Predict a reachable impact with enough run-up; a nearby target need not be catchable."""
-        if target is None:
+        if target is None or not unit.can_ram:
             return None
         speed = unit.max_speed * unit.pace
         if speed < RAM_MIN_SPEED:
@@ -1177,66 +1160,40 @@ class BattleSimulation:
                 and CONTACT_MASS[unit.shape] >= CONTACT_MASS[target.shape] * RAM_MASS_ADVANTAGE
                 and self._can_hurt(unit, target) and threats <= support
                 and tuple(sorted((unit.index, target.index))) not in self._contacts
-                and (committed or (distance > MELEE_COMMIT_RANGE
+                and (committed or (distance > RAM_COMMIT_RANGE
                      and (target.cooldown > FIRE_INTERVAL / 2
-                          or target.data["health"] <= target.data["max_health"] * MELEE_WOUNDED_TARGET)))
+                          or target.data["health"] <= target.data["max_health"] * RAM_WOUNDED_TARGET)))
                 and self._ram_point(unit, target) is not None)
 
-    def _prepare_close_combat(self, sides, crowds):
-        """Find contact attacks for both controllers; only AI chooses whether to close in."""
+    def _prepare_rams(self, sides, crowds):
+        """Choose safe ram approaches for eligible AI units on either side."""
         for side, units in enumerate(sides):
             for unit in units:
-                unit.melee_targets = ()
-                approach = MELEE_APPROACH_RANGE if unit.shape in MELEE_SHAPES else RAM_APPROACH_RANGE
-                nearby = [enemy for enemy in crowds[1 - side].around(unit.x, unit.y, approach)
-                          if math.hypot(enemy.x - unit.x, enemy.y - unit.y) <= approach]
-                if unit.shape in MELEE_SHAPES:
-                    contacts = [enemy for enemy in nearby
-                                if math.hypot(enemy.x - unit.x, enemy.y - unit.y) <= MELEE_REACH
-                                and self._can_hurt(unit, enemy)
-                                and self.battlefield.clear_path((unit.x, unit.y), (enemy.x, enemy.y))]
-                    unit.melee_targets = tuple(contacts)
                 if unit is self.controlled:
                     continue
-                if not nearby:
-                    unit.melee_committed = unit.ram_committed = False
+                if not unit.can_ram:
+                    unit.ram_committed = False
                     continue
-                target = unit.target
-                if target is None or not target.alive or not (unit.melee_committed or unit.ram_committed):
-                    target = min(nearby, key=lambda enemy: math.hypot(enemy.x - unit.x, enemy.y - unit.y), default=None)
-                friends = [friend for friend in crowds[side].around(unit.x, unit.y, MELEE_APPROACH_RANGE)
-                           if math.hypot(friend.x - unit.x, friend.y - unit.y) <= MELEE_APPROACH_RANGE
+                nearby = [enemy for enemy in crowds[1 - side].around(unit.x, unit.y, RAM_APPROACH_RANGE)
+                          if math.hypot(enemy.x - unit.x, enemy.y - unit.y) <= RAM_APPROACH_RANGE]
+                if not nearby:
+                    unit.ram_committed = False
+                    continue
+                friends = [friend for friend in crowds[side].around(unit.x, unit.y, RAM_SUPPORT_RANGE)
+                           if math.hypot(friend.x - unit.x, friend.y - unit.y) <= RAM_SUPPORT_RANGE
                            and self.battlefield.clear_path((unit.x, unit.y), (friend.x, friend.y))]
                 threats = sum(1 for enemy in crowds[1 - side].around(unit.x, unit.y, WEAPON_RANGE)
                               if math.hypot(enemy.x - unit.x, enemy.y - unit.y) <= WEAPON_RANGE
                               and self._can_hurt(enemy, unit)
                               and self._firing_lane(enemy, unit, clear_trees=False))
-                if unit.shape not in MELEE_SHAPES:
-                    unit.melee_committed = False
-                    candidates = sorted(nearby, key=lambda enemy: (
-                        not (unit.ram_committed and enemy is unit.target),
-                        math.hypot(enemy.x - unit.x, enemy.y - unit.y)))
-                    opportunity = next((enemy for enemy in candidates
-                                        if self._ram_opportunity(unit, enemy, len(friends), threats)), None)
-                    unit.ram_committed = opportunity is not None
-                    if opportunity is not None:
-                        unit.target = opportunity
-                    continue
-                unit.ram_committed = False
-                safe = (target is not None and target.shape in MELEE_SHAPES
-                        and unit.data["health"] >= unit.data["max_health"] * MELEE_MIN_HEALTH
-                        and math.hypot(target.x - unit.x, target.y - unit.y) <= MELEE_APPROACH_RANGE
-                        and self._can_hurt(unit, target)
-                        and self.battlefield.clear_path((unit.x, unit.y), (target.x, target.y))
-                        and threats <= len(friends) * MELEE_SUPPORT_RATIO)
-                opportunity = safe and (
-                    unit.melee_committed
-                    or target.data["health"] <= target.data["max_health"] * MELEE_WOUNDED_TARGET
-                    or len(friends) >= len(nearby) * MELEE_SUPPORT_RATIO
-                    or (len(nearby) == 1 and target.cooldown > FIRE_INTERVAL / 2))
-                unit.melee_committed = bool(opportunity)
-                if opportunity:
-                    unit.target = target
+                candidates = sorted(nearby, key=lambda enemy: (
+                    not (unit.ram_committed and enemy is unit.target),
+                    math.hypot(enemy.x - unit.x, enemy.y - unit.y)))
+                opportunity = next((enemy for enemy in candidates
+                                    if self._ram_opportunity(unit, enemy, len(friends), threats)), None)
+                unit.ram_committed = opportunity is not None
+                if opportunity is not None:
+                    unit.target = opportunity
 
     @staticmethod
     def _set_contact_velocity(unit, vx, vy):
@@ -1297,7 +1254,7 @@ class BattleSimulation:
                         for source, target, speed, mass, target_mass in (
                                 (unit, other, vx * nx + vy * ny, first_mass, second_mass),
                                 (other, unit, -ovx * nx - ovy * ny, second_mass, first_mass)):
-                            if source.shape in MELEE_SHAPES or speed < RAM_MIN_SPEED:
+                            if not source.can_ram or speed < RAM_MIN_SPEED:
                                 continue
                             strength = min(RAM_MAX_STRENGTH, closing / RAM_REFERENCE_SPEED) * min(1.0, mass / target_mass)
                             damage.append((target, self.damage_amount(source.data, target.data, source.attack_share,
@@ -1330,7 +1287,7 @@ class BattleSimulation:
                                   for unit in side) for side in sides]
         self._sides = sides
         objectives = self._division_objectives(targets, dt)
-        self._prepare_close_combat(sides, crowds)
+        self._prepare_rams(sides, crowds)
         self._dodge_incoming(crowds)
         # All movement and fire decisions use the same pre-step positions.
         movements = []
@@ -1352,14 +1309,9 @@ class BattleSimulation:
             fighter.push_vx *= decay
             fighter.push_vy *= decay
             movements.append((fighter, mx, my))
-        close_hits = []
-        for fighter, melee_target in shots:
-            if melee_target is None:
-                self._fire_shot(fighter)
-            else:
-                close_hits.append((melee_target, self.damage_amount(
-                    fighter.data, melee_target.data, fighter.attack_share, MELEE_DAMAGE)))
-        close_hits.extend(self._resolve_contacts(living, crowds, movements, dt))
+        for fighter in shots:
+            self._fire_shot(fighter)
+        close_hits = self._resolve_contacts(living, crowds, movements, dt)
 
         # Accumulate impacts first so units destroyed together can both land their shots.
         # A shot can hit any sub-unit but its shooter, so allies in its path take friendly fire.

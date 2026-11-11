@@ -243,7 +243,7 @@ class BattleSimulationTests(unittest.TestCase):
         target.data["defense"] = 10
         before = copy.deepcopy(wounded)
         with patch.object(c, "DAMAGE_AT_ZERO_HEALTH", 0):
-            for multiplier in (1.0, combat.MELEE_DAMAGE, combat.RAM_DAMAGE):
+            for multiplier in (1.0, combat.RAM_DAMAGE):
                 self.assertEqual(simulation.damage_amount(wounded, target.data, 1, multiplier),
                                  simulation.damage_amount(healthy, target.data, 1, multiplier))
             full_campaign = sum(shot[1] for shot in combat.combat_rules.damage_shots([healthy], [target.data]))
@@ -267,7 +267,7 @@ class BattleSimulationTests(unittest.TestCase):
                     patch.object(c, "DAMAGE_AT_ZERO_HEALTH", 0.9):
                 source.data["health"] = health
                 self.assertAlmostEqual(simulation._attack(source.data, target.data), 80 * expected)
-                for attack_kind in (1.0, combat.MELEE_DAMAGE, combat.RAM_DAMAGE):
+                for attack_kind in (1.0, combat.RAM_DAMAGE):
                     self.assertAlmostEqual(simulation.damage_amount(source.data, target.data, 0.5, attack_kind),
                                            math.ceil(80 * expected * 0.5) * combat.DAMAGE_SCALE * attack_kind)
 
@@ -371,7 +371,7 @@ class BattleSimulationTests(unittest.TestCase):
         self.assertEqual(shooter.dodge, combat.LINE_SHIFT_SECONDS)
         self.assertLess(math.sin(shooter.dodge_heading), 0)  # Upward, away from the ally.
         ally.y = 500 + combat.UNIT_RADIUS * 4
-        self.assertEqual(drive(), [(shooter, None)])
+        self.assertEqual(drive(), [shooter])
         self.assertEqual(shooter.dodge, 0)
 
     def test_simultaneous_destruction_is_a_loss_and_finished_battle_stays_finished(self):
@@ -935,34 +935,36 @@ class CloseCombatTests(unittest.TestCase):
                                              controlled_index=controlled, seed=3)
         for index, (unit, shape) in enumerate(zip(simulation.fighters, shapes)):
             unit.shape = shape
-            unit.x, unit.y = 1000 + index * (combat.MELEE_REACH - 2 if gap is None else gap), 500
+            unit.x, unit.y = 1000 + index * (combat.UNIT_RADIUS * 2 + 4 if gap is None else gap), 500
             unit.angle = unit.aim = index * math.pi
             unit.wander = unit.start_delay = 0
         return simulation
 
-    def test_manual_melee_replaces_projectiles_and_shares_reload_with_shooting(self):
-        simulation = self.encounter(controlled=0)
-        simulation.on_shot = Mock()
-        hold_still(simulation)
-        player, target = simulation.fighters
-        player.cooldown = 0
-        simulation.set_player_input(fire=True)
-        with patch.object(simulation, "_fire_shot", wraps=simulation._fire_shot) as fire:
-            simulation.advance(combat.FIXED_STEP)
-            self.assertEqual(fire.call_count, 0)
-            simulation.on_shot.assert_not_called()
-            self.assertEqual(target.data["health"], 100 - 40 * combat.DAMAGE_SCALE * combat.MELEE_DAMAGE)
-            self.assertEqual(player.cooldown, combat.MELEE_INTERVAL)
-            health = target.data["health"]
-            target.x += combat.MELEE_REACH * 2
-            simulation.advance(combat.MELEE_INTERVAL / 2)
-            self.assertEqual(fire.call_count, 0)
-            self.assertEqual(target.data["health"], health)
-            simulation.advance(combat.MELEE_INTERVAL / 2 + combat.FIXED_STEP)
-            self.assertEqual(fire.call_count, 1)
-            simulation.on_shot.assert_called_once_with(player)
+    def test_player_and_ai_fire_bullets_at_point_blank_with_normal_reload(self):
+        for controlled in (None, 0):
+            for health in (100, 1):
+                with self.subTest(controlled=controlled, health=health):
+                    simulation = self.encounter(controlled=controlled)
+                    simulation.on_shot = Mock()
+                    hold_still(simulation)
+                    source, target = simulation.fighters
+                    source.cooldown = 0
+                    source.data["health"] = health
+                    target.data["defense"] = 10
+                    expected = simulation.damage_amount(source.data, target.data, source.attack_share)
+                    simulation.set_player_input(fire=True)
+                    with patch.object(simulation, "_fire_shot", wraps=simulation._fire_shot) as fire:
+                        simulation.advance(combat.FIXED_STEP)
+                        self.assertEqual(fire.call_count, 1)
+                        simulation.on_shot.assert_called_once_with(source)
+                        self.assertAlmostEqual(target.data["health"], target.data["max_health"] - expected)
+                        self.assertEqual(source.cooldown, combat.FIRE_INTERVAL)
+                        simulation.advance(combat.FIRE_INTERVAL / 2)
+                        self.assertEqual(fire.call_count, 1)
+                        simulation.advance(combat.FIRE_INTERVAL / 2 + combat.FIXED_STEP)
+                        self.assertEqual(fire.call_count, 2)
 
-    def test_manual_melee_requires_fire_and_aim_and_does_not_bypass_defense(self):
+    def test_point_blank_shooting_requires_fire_and_aim_and_respects_defense(self):
         for firing, aim, defense, damages in ((False, 0, 0, False), (True, math.pi, 0, False),
                                               (True, 0, 100, False), (True, 0, 0, True)):
             with self.subTest(firing=firing, aim=aim, defense=defense):
@@ -976,34 +978,42 @@ class CloseCombatTests(unittest.TestCase):
                 simulation.advance(combat.FIXED_STEP)
                 self.assertEqual(target.data["health"] < 100, damages)
 
-    def test_melee_reach_and_cooldown_apply_to_ai_as_to_player(self):
-        results = []
-        for controlled in (None, 0):
-            simulation = self.encounter(controlled=controlled)
-            player, target = simulation.fighters
-            target.cooldown = 1000
-            player.data["speed"] = target.data["speed"] = 0
-            simulation.set_player_input(fire=True)
-            simulation.advance(combat.FIXED_STEP)
-            results.append((target.data["health"], player.cooldown, len(simulation.projectiles)))
-        self.assertEqual(results[0], results[1])
-        self.assertEqual(results[0][2], 0)
+    def test_ram_eligibility_uses_unit_speed_for_every_shape_and_side_including_allies(self):
+        for shape in combat.CONTACT_MASS:
+            for speed in (combat.RAM_MIN_UNIT_SPEED - 0.01, combat.RAM_MIN_UNIT_SPEED,
+                          combat.RAM_MIN_UNIT_SPEED + 1):
+                for source_side in (0, 1):
+                    for allied in (False, True):
+                        with self.subTest(shape=shape, speed=speed, side=source_side, allied=allied):
+                            simulation = self.encounter(gap=combat.UNIT_RADIUS * 2 + 1)
+                            source, target = simulation.fighters[::1 if source_side == 0 else -1]
+                            source.shape = shape
+                            source.data["speed"] = speed
+                            if allied:
+                                target.side = source.side
+                            direction = 1 if source_side == 0 else -1
+                            hits = self.move_contact(simulation, [
+                                (source, direction * combat.RAM_REFERENCE_SPEED * combat.FIXED_STEP, 0),
+                                (target, 0, 0)])
+                            loss = sum(loss for victim, loss in hits if victim is target)
+                            self.assertEqual(loss > 0, speed >= combat.RAM_MIN_UNIT_SPEED)
 
-    def test_wounded_player_and_ai_melee_keep_full_damage(self):
-        for controlled in (None, 0):
-            with self.subTest(controlled=controlled):
-                simulation = self.encounter(controlled=controlled)
-                hold_still(simulation)
-                source, target = simulation.fighters
-                source.data["health"] = 1
-                source.cooldown = 0
-                target.data["defense"] = 10
-                simulation.set_player_input(fire=True)
-                simulation.advance(combat.FIXED_STEP)
-                expected = simulation.damage_amount(dict(source.data, health=source.data["max_health"]),
-                                                     target.data, source.attack_share, combat.MELEE_DAMAGE)
-                self.assertGreater(expected, 0)
-                self.assertEqual(target.data["health"], target.data["max_health"] - expected)
+    def test_ram_damage_speed_and_mass_multipliers_apply_after_bullet_damage(self):
+        for closing in (combat.RAM_MIN_SPEED, combat.RAM_REFERENCE_SPEED,
+                        combat.RAM_REFERENCE_SPEED * combat.RAM_MAX_STRENGTH * 2):
+            for mass_ratio in (0.5, 1, 2):
+                with self.subTest(closing=closing, mass_ratio=mass_ratio):
+                    simulation = self.encounter(shapes=("cavalry", "infantry"),
+                                                gap=combat.UNIT_RADIUS * 2 + 1)
+                    source, target = simulation.fighters
+                    target.data["defense"] = 10
+                    bullet = simulation.damage_amount(source.data, target.data, source.attack_share)
+                    with patch.dict(combat.CONTACT_MASS, cavalry=mass_ratio, infantry=1):
+                        hits = self.move_contact(simulation, [(source, closing * combat.FIXED_STEP, 0),
+                                                             (target, 0, 0)])
+                    strength = min(combat.RAM_MAX_STRENGTH, closing / combat.RAM_REFERENCE_SPEED)
+                    expected = bullet * combat.RAM_DAMAGE * strength * min(1, mass_ratio)
+                    self.assertAlmostEqual(sum(loss for victim, loss in hits if victim is target), expected)
 
     def test_ram_impact_damage_does_not_fall_with_attacker_health(self):
         losses = []
@@ -1018,59 +1028,48 @@ class CloseCombatTests(unittest.TestCase):
         self.assertGreater(losses[0], 0)
         self.assertEqual(losses[0], losses[1])
 
-    def test_a_nearer_enemy_behind_the_player_does_not_block_a_melee_target_in_front(self):
-        simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"] * 2,
-                                             controlled_index=0, seed=2)
-        hold_still(simulation)
-        player, behind, ahead = simulation.fighters
-        player.x, player.y = 1000, 500
-        behind.x, behind.y = player.x - combat.UNIT_RADIUS * 2, player.y
-        ahead.x, ahead.y = player.x + combat.MELEE_REACH - 1, player.y
-        player.cooldown = 0
-        simulation.set_player_input(fire=True)
-        simulation.advance(combat.FIXED_STEP)
-        self.assertEqual(behind.data["health"], behind.data["max_health"])
-        self.assertLess(ahead.data["health"], ahead.data["max_health"])
-        self.assertEqual(simulation.projectiles, [])
-
-    def test_simultaneous_melee_can_destroy_both_units(self):
+    def test_simultaneous_point_blank_bullets_can_destroy_both_units(self):
         self.library["Fixture I"]["attack"] = 1000
         simulation = self.encounter()
         simulation.advance(combat.FIXED_STEP)
         self.assertTrue(all(not unit.alive for unit in simulation.fighters))
         self.assertEqual(simulation.winner, 1)
 
-    def test_ai_only_commits_to_a_nearby_supported_or_vulnerable_target(self):
-        for gap, target_health, enemies, commits in (
-                (combat.MELEE_APPROACH_RANGE + 10, 20, 1, False),
-                (combat.MELEE_APPROACH_RANGE - 10, 20, 1, True),
-                (combat.MELEE_APPROACH_RANGE - 10, 100, 1, False),
-                (combat.MELEE_APPROACH_RANGE - 10, 20, 3, False)):
-            with self.subTest(gap=gap, target_health=target_health, enemies=enemies):
-                simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"] * enemies, seed=2)
-                unit = simulation.fighters[0]
-                unit.x, unit.y = 1000, 500
-                for enemy in simulation.fighters[1:]:
-                    enemy.x, enemy.y = unit.x + gap, unit.y
-                    enemy.data["health"] = target_health
-                    enemy.cooldown = 0
-                sides = [[fighter for fighter in simulation.fighters if fighter.side == side] for side in (0, 1)]
-                simulation._prepare_close_combat(sides, [combat._Grid(side, combat.GRID_CELL) for side in sides])
-                self.assertEqual(unit.melee_committed, commits)
+    def test_ai_ram_eligibility_uses_speed_for_every_shape_on_both_sides(self):
+        for shape in combat.CONTACT_MASS:
+            target_shape = "tank" if shape == "infantry" else "infantry"
+            for speed in (combat.RAM_MIN_UNIT_SPEED - 0.01, combat.RAM_MIN_UNIT_SPEED):
+                for side in (0, 1):
+                    with self.subTest(shape=shape, speed=speed, side=side):
+                        simulation = self.encounter(gap=120)
+                        unit, target = simulation.fighters[::1 if side == 0 else -1]
+                        unit.shape, unit.pace = shape, 1
+                        unit.data["speed"] = speed
+                        target.shape = target_shape
+                        target.data["health"] = target.data["max_health"] * combat.RAM_WOUNDED_TARGET / 2
+                        target.cooldown = 0
+                        sides = [[fighter for fighter in simulation.fighters if fighter.side == team]
+                                 for team in (0, 1)]
+                        with patch.dict(combat.CONTACT_MASS, {shape: 4, target_shape: 1}):
+                            simulation._prepare_rams(sides, [combat._Grid(team, combat.GRID_CELL) for team in sides])
+                        self.assertEqual(unit.ram_committed, speed >= combat.RAM_MIN_UNIT_SPEED)
+                        if unit.ram_committed:
+                            self.assertIs(unit.target, target)
 
-    def test_melee_commitment_ignores_dodge_only_during_final_approach_and_aborts_when_hurt(self):
-        simulation = self.encounter(gap=combat.MELEE_COMMIT_RANGE - 1)
+    def test_ram_commitment_ignores_dodge_only_during_final_approach_and_aborts_when_hurt(self):
+        simulation = self.encounter(shapes=("tank", "infantry"), gap=combat.RAM_COMMIT_RANGE - 1)
         unit, target = simulation.fighters
-        unit.melee_committed, unit.dodge, unit.dodge_heading = True, 1.0, math.pi / 2
+        unit.ram_committed, unit.dodge, unit.dodge_heading = True, 1.0, math.pi / 2
+        unit.target = target
         center = (unit.x, unit.y)
         throttle, heading = simulation._ai_course(unit, target.x - unit.x, 0, center, target)
         self.assertGreater(throttle, 0)
         self.assertEqual(heading, 0)
-        course = simulation._ai_course(unit, combat.MELEE_COMMIT_RANGE + 1, 0, center, target)
+        course = simulation._ai_course(unit, combat.RAM_COMMIT_RANGE + 1, 0, center, target)
         self.assertEqual(course[1], unit.dodge_heading)
         unit.data["health"] = unit.data["max_health"] * combat.FALL_BACK_HEALTH / 2
-        simulation._ai_course(unit, combat.MELEE_COMMIT_RANGE, 0, center, target)
-        self.assertFalse(unit.melee_committed)
+        simulation._ai_course(unit, combat.RAM_COMMIT_RANGE, 0, center, target)
+        self.assertFalse(unit.ram_committed)
 
     def test_ai_rams_only_with_runup_mass_advantage_and_safe_approach(self):
         for shape, target_shape, health, speed, gap, expected in (
@@ -1085,20 +1084,21 @@ class CloseCombatTests(unittest.TestCase):
                 unit.data["speed"], target.data["health"] = speed, health
                 target.cooldown = 0
                 sides = [[unit], [target]]
-                simulation._prepare_close_combat(sides, [combat._Grid(side, combat.GRID_CELL) for side in sides])
+                simulation._prepare_rams(sides, [combat._Grid(side, combat.GRID_CELL) for side in sides])
                 self.assertEqual(unit.ram_committed, expected)
 
-    def test_distant_supporting_enemy_fire_prevents_an_ai_close_attack(self):
+    def test_distant_supporting_enemy_fire_prevents_an_ai_ram(self):
         simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"] * 3, seed=2)
         unit, target, *support = simulation.fighters
+        unit.shape = "tank"
         unit.x, unit.y = 1000, 500
-        target.x, target.y = unit.x + combat.MELEE_APPROACH_RANGE / 2, unit.y
+        target.x, target.y = unit.x + combat.RAM_SUPPORT_RANGE / 2, unit.y
         target.data["health"] = 20
         for enemy in support:
-            enemy.x, enemy.y = unit.x + (combat.MELEE_APPROACH_RANGE + combat.WEAPON_RANGE) / 2, unit.y
+            enemy.x, enemy.y = unit.x + (combat.RAM_SUPPORT_RANGE + combat.WEAPON_RANGE) / 2, unit.y
         sides = [[unit], [target, *support]]
-        simulation._prepare_close_combat(sides, [combat._Grid(side, combat.GRID_CELL) for side in sides])
-        self.assertFalse(unit.melee_committed)
+        simulation._prepare_rams(sides, [combat._Grid(side, combat.GRID_CELL) for side in sides])
+        self.assertFalse(unit.ram_committed)
 
     def test_flank_is_completed_even_after_entering_weapon_hold_range(self):
         simulation = self.encounter(shapes=("tank", "infantry"), gap=combat.ENGAGEMENT_RANGE / 2)
@@ -1121,7 +1121,7 @@ class CloseCombatTests(unittest.TestCase):
 
     def test_ai_movement_uses_the_same_rules_on_both_sides_for_every_shape(self):
         for shape in combat.MOBILITY:
-            for situation in ("advance", "hold", "flank", "withdraw", "melee", "ram"):
+            for situation in ("advance", "hold", "flank", "withdraw", "ram"):
                 with self.subTest(shape=shape, situation=situation):
                     gap = combat.ENGAGEMENT_RANGE * (2 if situation in ("advance", "flank") else 0.7)
                     simulation = self.encounter(shapes=(shape, shape), gap=gap)
@@ -1131,7 +1131,6 @@ class CloseCombatTests(unittest.TestCase):
                         unit.cooldown, unit.retarget = 1000, 1000
                         unit.flank = 1
                         unit.flank_complete = situation != "flank"
-                        unit.melee_committed = situation == "melee"
                         unit.ram_committed = situation == "ram"
                         if situation == "withdraw":
                             unit.data["health"] = unit.data["max_health"] * combat.FALL_BACK_HEALTH / 2
@@ -1207,25 +1206,28 @@ class CloseCombatTests(unittest.TestCase):
         self.assertIs(damage[0][0], ally)
         self.assertGreater(damage[0][1], 0)
 
-    def test_ai_vehicles_brake_before_ramming_an_ally_in_their_path(self):
-        simulation = self.encounter(shapes=("tank", "tank"), gap=combat.UNIT_RADIUS * 2 + 2)
-        unit, ally = simulation.fighters
-        ally.side = unit.side
-        unit.angle = 0.0
-        simulation._sides = [[unit, ally], []]
-        braked = simulation._ally_safe_throttle(unit, 1.0)
-        self.assertLess(braked * unit.max_speed, combat.RAM_MIN_SPEED)
-        self.assertGreaterEqual(braked, 0)
-        # Backing away, passing beside, or following an ally that drives off keeps full throttle.
-        self.assertEqual(simulation._ally_safe_throttle(unit, -1.0), -1.0)
-        ally.y += combat.UNIT_RADIUS * 3
-        self.assertEqual(simulation._ally_safe_throttle(unit, 1.0), 1.0)
-        ally.y, ally.vx = unit.y, unit.max_speed
-        self.assertEqual(simulation._ally_safe_throttle(unit, 1.0), 1.0)
-        # Infantry and cavalry never deal ram damage, so they keep their throttle.
-        unit.shape = "infantry"
-        ally.vx = 0.0
-        self.assertEqual(simulation._ally_safe_throttle(unit, 1.0), 1.0)
+    def test_ram_capable_ai_units_brake_before_hitting_allies_for_every_shape(self):
+        for shape in combat.CONTACT_MASS:
+            with self.subTest(shape=shape):
+                simulation = self.encounter(shapes=(shape, "infantry"), gap=combat.UNIT_RADIUS * 2 + 2)
+                unit, ally = simulation.fighters
+                ally.side = unit.side
+                unit.angle = 0.0
+                unit.data["speed"] = combat.RAM_MIN_UNIT_SPEED
+                simulation._sides = [[unit, ally], []]
+                braked = simulation._ally_safe_throttle(unit, 1.0)
+                self.assertLess(braked * unit.max_speed, combat.RAM_MIN_SPEED)
+                self.assertGreaterEqual(braked, 0)
+                # Backing away, passing beside, or following a departing ally keeps full throttle.
+                self.assertEqual(simulation._ally_safe_throttle(unit, -1.0), -1.0)
+                ally.y += combat.UNIT_RADIUS * 3
+                self.assertEqual(simulation._ally_safe_throttle(unit, 1.0), 1.0)
+                ally.y, ally.vx = unit.y, unit.max_speed
+                self.assertEqual(simulation._ally_safe_throttle(unit, 1.0), 1.0)
+                # Units below the speed cutoff cannot deal ram damage and need no braking.
+                unit.data["speed"] = combat.RAM_MIN_UNIT_SPEED - 1
+                ally.vx = 0.0
+                self.assertEqual(simulation._ally_safe_throttle(unit, 1.0), 1.0)
 
     def test_ram_damage_reaches_campaign_results_through_normal_simulation(self):
         simulation = self.encounter(shapes=("tank", "infantry"), gap=combat.UNIT_RADIUS * 2 + 2)
@@ -1241,6 +1243,24 @@ class CloseCombatTests(unittest.TestCase):
         combat.apply_campaign_result(simulation, units, province, ([], []))
         self.assertEqual(units[1]["health"], target.data["health"])
 
+    def test_player_infantry_and_cavalry_ram_without_firing_or_using_the_gun_reload(self):
+        for shape in ("infantry", "cavalry"):
+            with self.subTest(shape=shape):
+                simulation = self.encounter(controlled=0, shapes=(shape, "infantry"),
+                                            gap=combat.UNIT_RADIUS * 2 + 2)
+                source, target = simulation.fighters
+                source.data["speed"] = combat.RAM_MIN_UNIT_SPEED
+                source.speed = source.max_speed
+                source.cooldown = combat.FIRE_INTERVAL / 2
+                target.cooldown = 1000
+                simulation.on_shot = Mock()
+                simulation.set_player_input(throttle=1, fire=False)
+                with patch.object(simulation, "_drive_ai"):
+                    simulation.advance(combat.FIXED_STEP)
+                self.assertLess(target.data["health"], target.data["max_health"])
+                self.assertAlmostEqual(source.cooldown, combat.FIRE_INTERVAL / 2 - combat.FIXED_STEP)
+                simulation.on_shot.assert_not_called()
+
     def test_equal_head_on_vehicles_stop_without_bouncing_or_crossing_even_at_high_speed(self):
         simulation = self.encounter(shapes=("tank", "tank"), gap=100)
         first, second = simulation.fighters
@@ -1250,9 +1270,11 @@ class CloseCombatTests(unittest.TestCase):
         self.assertAlmostEqual(second.x - first.x, combat.UNIT_RADIUS * 2)
         self.assertEqual(len(damage), 2)
 
-    def test_infantry_contact_separates_without_impact_damage_and_ram_respects_armor(self):
+    def test_units_below_speed_cutoff_separate_without_ram_damage_and_rams_respect_armor(self):
         simulation = self.encounter(gap=10)
         first, second = simulation.fighters
+        for unit in simulation.fighters:
+            unit.data["speed"] = combat.RAM_MIN_UNIT_SPEED - 1
         self.assertEqual(self.move_contact(simulation, [(first, 5, 0), (second, -5, 0)]), [])
         self.assertAlmostEqual(second.x - first.x, combat.UNIT_RADIUS * 2)
         simulation = self.encounter(shapes=("tank", "heavy_tank"), gap=combat.UNIT_RADIUS * 2)
@@ -1546,7 +1568,7 @@ class TacticalTerrainTests(unittest.TestCase):
         self.assertIsNotNone(simulation._ram_point(unit, target))
         target.vx = unit.max_speed * 2
         self.assertIsNone(simulation._ram_point(unit, target))
-        target.x = unit.x + combat.MELEE_COMMIT_RANGE + 1
+        target.x = unit.x + combat.RAM_COMMIT_RANGE + 1
         target.vx = unit.max_speed - combat.RAM_MIN_SPEED / 2
         self.assertIsNone(simulation._ram_point(unit, target))
 
@@ -1559,7 +1581,7 @@ class TacticalTerrainTests(unittest.TestCase):
         vulnerable.x, vulnerable.y, vulnerable.data["health"] = 1120, 500, 20
         vulnerable.cooldown = 0
         sides = [[unit], [armored, vulnerable]]
-        simulation._prepare_close_combat(sides, [combat._Grid(side, combat.GRID_CELL) for side in sides])
+        simulation._prepare_rams(sides, [combat._Grid(side, combat.GRID_CELL) for side in sides])
         self.assertTrue(unit.ram_committed)
         self.assertIs(unit.target, vulnerable)
 
@@ -1570,14 +1592,15 @@ class TacticalTerrainTests(unittest.TestCase):
         target.x, target.y, target.data["health"] = 1120, 500, 20
         target.cooldown = 0
         for index, enemy in enumerate(support):
-            enemy.x, enemy.y = 1700, 490 + index * 20
+            enemy.x, enemy.y = unit.x + combat.WEAPON_RANGE * 0.8, unit.y - 10 + index * 20
         sides = [[unit], [target, *support]]
         crowds = [combat._Grid(side, combat.GRID_CELL) for side in sides]
-        simulation.battlefield = self.field(battle_terrain.Feature("rock", 1450, 500, 90, 150))
-        simulation._prepare_close_combat(sides, crowds)
+        simulation.battlefield = self.field(battle_terrain.Feature(
+            "rock", unit.x + combat.WEAPON_RANGE * 0.5, unit.y, 60, 150))
+        simulation._prepare_rams(sides, crowds)
         self.assertTrue(unit.ram_committed)
         simulation.battlefield = self.field()
-        simulation._prepare_close_combat(sides, crowds)
+        simulation._prepare_rams(sides, crowds)
         self.assertFalse(unit.ram_committed)
 
 
@@ -2514,8 +2537,9 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.click("Random")
         self.assertIsNone(self.screen.controlled_index)
 
-    def test_left_mouse_attacks_in_melee_and_zoom_does_not_change_combat_coordinates(self):
-        self.fill_armies()
+    def test_left_mouse_fires_at_point_blank_and_zoom_does_not_change_combat_coordinates(self):
+        self.screen.add_unit(0, "Fixture I")
+        self.screen.add_unit(1, "Fixture I")
         self.click("Control")
         self.click("Simulate")
         self.click("Start")
@@ -2523,7 +2547,7 @@ class CustomBattleScreenTests(unittest.TestCase):
         player, target = simulation.fighters
         hold_still(simulation)
         player.cooldown = 0
-        target.x, target.y = player.x + combat.MELEE_REACH - 2, player.y
+        target.x, target.y = player.x + combat.UNIT_RADIUS * 2 + 4, player.y
         before_positions = [(unit.x, unit.y) for unit in simulation.fighters]
         self.screen.zoom_by(-100, self.screen.to_screen(player.x, player.y))
         self.assertEqual([(unit.x, unit.y) for unit in simulation.fighters], before_positions)
@@ -2534,7 +2558,7 @@ class CustomBattleScreenTests(unittest.TestCase):
             self.screen.update()
         self.assertLess(target.data["health"], target.data["max_health"])
         self.assertEqual(simulation.projectiles, [])
-        self.screen.draw(self.surface)  # Also exercises the melee reload ring at the control zoom limit.
+        self.screen.draw(self.surface)  # Also exercises the reload ring at the control zoom limit.
         self.click("Pause")
         self.assertFalse(self.screen.firing)
 
@@ -2653,7 +2677,7 @@ class CustomBattleScreenTests(unittest.TestCase):
             for position, pointer, expected in (
                     ((combat.UNIT_RADIUS, combat.UNIT_RADIUS), view.topleft, [0, 0]),
                     ((width - combat.UNIT_RADIUS, height - combat.UNIT_RADIUS), view.bottomright,
-                     [width - view.width, height - view.height])):
+                     [width - view.width / self.screen.zoom, height - view.height / self.screen.zoom])):
                 player.x, player.y = position
                 with patch("pygame.mouse.get_pos", return_value=pointer):
                     self.screen.update()

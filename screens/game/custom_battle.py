@@ -1416,7 +1416,7 @@ class CustomBattleScreen(Screen):
                           fighter.speed / fighter.max_speed if fighter.max_speed else 0.0, scale=indicator_scale)
         if fighter.cooldown > 0:
             # The ring fills clockwise from the top as the weapon reloads.
-            loaded = max(0.0, min(1.0, 1.0 - fighter.cooldown / fighter.reload_interval))
+            loaded = max(0.0, min(1.0, 1.0 - fighter.cooldown / combat.FIRE_INTERVAL))
             radius = RELOAD_RING_RADIUS * indicator_scale
             steps = max(2, math.ceil(math.tau * loaded / CONE_ARC_STEP))
             ring = [(center[0] + math.cos(-math.pi / 2 + math.tau * loaded * step / steps) * radius,

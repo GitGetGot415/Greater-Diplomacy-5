@@ -174,11 +174,11 @@ Tactical defense stays constant as health falls; campaign combat scales defense 
 `TACTICAL_DAMAGE_AT_ZERO_HEALTH` near the top of `map_logic/custom_battle.py` controls attack lost to wounds.
 Set the multiplier to `0.0` for attack directly proportional to a sub-unit's remaining HP, or `1.0` for no wound penalty.
 Values between zero and one interpolate linearly between that attack floor and full attack at full HP.
-Restart after editing the value. Shooting, melee, and ramming use the same setting, before defense and rounding.
+Restart after editing the value. Shooting and ramming use the same setting, before defense and rounding.
 Destroyed sub-units never attack. Losing sub-units also reduces a division's total firepower.
 After defense and sub-unit damage sharing, positive damage rounds up before the tactical pacing multiplier applies.
 The multiplier slows even small hits without making previously vulnerable targets immune.
-Shooting, melee, and ramming use the same damage calculation and target capability rules.
+Shooting and ramming use the same damage calculation and target capability rules.
 A shot retains the shooter's attack statistics when fired and uses the rules for the unit it actually hits.
 A shot already in flight still lands after its shooter is destroyed.
 
@@ -188,7 +188,7 @@ Each shot, the player's included, leaves at a small random angle off where the g
 carries a shot further off target over a longer distance, so long-range shots miss more often than close ones.
 Shots also lose damage gradually after their full-damage distance, down to a positive minimum multiplier.
 Falloff uses the distance the projectile actually travels to impact and applies after defense and sub-unit damage sharing.
-Falloff does not affect melee or ramming. Preferred fighting, cavalry charge, skirmishing, and withdrawal distances
+Falloff does not affect ramming. Preferred fighting, cavalry charge, skirmishing, and withdrawal distances
 are separate from maximum weapon range. Read tactical tuning in `map_logic/custom_battle.py`.
 
 #### Terrain
@@ -268,32 +268,33 @@ another sub-unit's shot, an ally's included, is about to pass close to it while 
 is reloading, its target is out of range, or an ally stands in its firing line). Slower sub-units never sidestep: they would spend the time turning away instead of aiming. Sub-units still
 move only along their hull, so a sidestep starts with a turn. The player's sub-unit never reacts on its own.
 
-Infantry and cavalry can attack an enemy within melee reach and their aim arc. A melee attack replaces a shot,
-uses the same reload, and deals less damage per attack with a shorter interval. Holding fire automatically chooses
-melee when a legal target is close enough. Melee does not bypass defense or damage capabilities.
-AI infantry and cavalry close only against nearby vulnerable or reloading opponents, or with supporting troops.
-The AI checks opposing fire within weapon range before closing. During the final approach, committed troops stop
-sidestepping; earlier in the approach, dodging remains available. Troops abandon the approach when support or health
-no longer permits the attack.
+Firing always shoots a projectile, including at point-blank range, and uses the normal gun reload.
+There are no melee attacks.
 
-Vehicles can ram enemies with a fast impact. Closing speed along the contact direction determines impact strength, so stationary contact
+Any sub-unit whose library movement speed meets `RAM_MIN_UNIT_SPEED` can ram another unit with a fast impact,
+including infantry and cavalry. Units below that cutoff still collide and separate but cannot deal ram damage.
+Closing speed along the contact direction determines impact strength, so stationary contact
 and sideways brushing do not deal ram damage. Contact mass determines how much each body moves and slows down.
 Heavier bodies displace lighter bodies more; similar head-on vehicles stop rather than bounce apart.
-Infantry contact separates bodies without impact damage. Contact between allies uses the same impact rules,
-so a vehicle that drives into an ally too fast damages it.
-A pair must separate beyond contact distance before another ram can deal damage. Sustained pushing cannot repeat
-the impact. Knockback decays quickly and never disables steering or firing.
-AI vehicles attempt a ram only with enough speed, a mass advantage, adequate health, and a safe approach against
+Ramming uses the same damage as a point-blank bullet, multiplied by `RAM_DAMAGE`, the closing-speed strength
+(capped by `RAM_MAX_STRENGTH`), and the attacker's mass divided by the target's mass (capped at one).
+Ramming still respects defense and target capability rules. Ramming needs no fire input and does not use the gun reload.
+Contact between allies uses the same impact rules, so a ram-capable unit that hits an ally too fast damages the ally.
+A pair must separate beyond `CONTACT_RELEASE_DISTANCE` before another ram can deal damage. Sustained pushing cannot
+repeat the impact. Knockback decays quickly and never disables steering or firing.
+AI units that meet the movement-speed cutoff attempt a ram only with enough impact speed, a mass advantage, adequate health, and a safe approach against
 a nearby wounded or reloading enemy. The AI considers suitable nearby targets rather than only the nearest body.
 The AI predicts an interception and checks clear ground, intervening units, available run-up,
 closing speed, and whether the target can be caught before committing. Terrain cover can make a close approach safer, while
 rocks, trees, marshes, and chasms can prevent a ram. The player can attempt any impact under the same contact and damage rules.
+During the final approach, committed units stop sidestepping; earlier in the approach, dodging remains available.
+Units abandon the approach when support or health no longer permits the ram.
 
 Shots and rams hurt allies, so AI sub-units keep out of each other's way. An AI sub-unit holds fire while an ally
 could take its shot. It checks the line along its lead on the target, widened by the aim tolerance and shot spread,
 with each ally where it will be when the shot passes. A loaded AI sub-unit blocked only by an ally sidesteps away
 from that ally, whatever its speed, until the line clears. Firing positions chosen around terrain also avoid allies.
-AI vehicles brake so they never reach an ally in their path faster than a harmless bump.
+Ram-capable AI units brake so they never reach an ally in their path faster than a harmless bump.
 The player's sub-unit gets no such help: its shots and rams can hurt allies.
 
 #### Control
@@ -305,7 +306,7 @@ The player's sub-unit gets no such help: its shots and rams can hurt allies.
 | A | Turn left. |
 | D | Turn right. |
 | Mouse | Aim. The gun turns toward the pointer, inside the firing cone if the unit has one. |
-| Left mouse | Fire along the gun, or attack a nearby enemy in melee. |
+| Left mouse | Fire along the gun. |
 | Mouse wheel | Zoom in or out. |
 
 Movement follows the hull's facing direction. A and D rotate the hull rather than moving it sideways, and turning
@@ -362,8 +363,8 @@ have their own guide: [Tactical mode](tactical_mode.md).
 [screens/game/custom_battle.py](../screens/game/custom_battle.py) owns the three views, roster controls, navigation, the camera, and keyboard and mouse input.
 Campaign encounter and retreat owners are listed in [tactical_mode.md](tactical_mode.md#state-and-implementation-owners).
 [map_logic/custom_battle.py](../map_logic/custom_battle.py) owns unit generation, sub-units, deployment, movement, aiming, projectiles, cooldowns, and results.
-The same simulation handles custom battles and campaign encounters. Contact state, AI commitments, and reload
-intervals exist only during the encounter; campaign results still use the surviving health fraction of each division.
+The same simulation handles custom battles and campaign encounters. Contact state, AI commitments, and gun cooldowns
+exist only during the encounter; campaign results still use the surviving health fraction of each division.
 Its `SUBUNIT_COUNTS`, `MOBILITY`, and `AIM` tables set sub-unit counts, acceleration and turning, and firing cones and gun speeds for each battlefield shape.
 `WEAPON_RANGE`, `PROJECTILE_SPEED`, `RANK_GAP`, `SUBUNIT_SPACING`, and `SPAWN_FRONT_GAP` set range, shot speed, and deployment.
 `is_artillery` decides which units sit tactical battles out.
@@ -372,7 +373,7 @@ Its `SUBUNIT_COUNTS`, `MOBILITY`, and `AIM` tables set sub-unit counts, accelera
 behavior; `FLANK_OFFSET`, `CHARGE_CLOSE`, `SKIRMISH_*`, `FALL_BACK_HEALTH`, `DODGE_*`, and
 `TARGET_*` tune the behaviors, reactions, and target choice. `BattleSimulation(seed=...)`
 fixes the random temperaments and shot spread so a battle can be replayed; the game leaves it unset, so every battle differs.
-`DAMAGE_SCALE`, `MELEE_*`, `RAM_*`, `CONTACT_MASS`, and `KNOCKBACK_*` own tactical pacing and close combat.
+`DAMAGE_SCALE`, `RAM_*`, `CONTACT_MASS`, and `KNOCKBACK_*` own tactical pacing and contact impacts.
 `APPROACH_LANE_GAP` and `FLANK_ARRIVAL_DISTANCE` tune the approach lanes and flank completion.
 `LINE_SHIFT_SECONDS` and `ALLY_BUMP_SPEED` tune how AI sub-units keep out of their allies' way.
 
