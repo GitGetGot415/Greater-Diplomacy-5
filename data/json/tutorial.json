@@ -266,7 +266,7 @@
                             "items": [
                                 {"heading": "Retreat", "text": "From preview, open Retreat and choose a marked neighboring tile to give your division a retreat move order. Retreat tiles must be legal to enter, outside hostile land, and free of hostile units. Back returns to preview."},
                                 {"heading": "Losing direct control", "text": "If your controlled sub-unit dies, you spectate the rest of the battle with the full battlefield visible. Control does not switch to another sub-unit."},
-                                {"heading": "Keeping your division", "text": "If any sub-unit of your division survives, you keep your campaign division. If the whole division is destroyed, tactical mode ends and the game continues in spectator mode, even if your side won."},
+                                {"heading": "Keeping your division", "text": "If any sub-unit of your division survives a victory, you keep your campaign division with its remaining health. If all your sub-units are destroyed but your side wins, your campaign division survives with 1 HP. After a defeat, your division is removed and the game continues in spectator mode."},
                                 {"heading": "Return to the campaign", "text": "Continue returns to the map. Winning leaves zero enemy units on the tile, including incoming attackers and enemy divisions beyond the deployment limit. The entire defeated side is removed; surviving participating divisions keep their remaining health. Winning reserves and neutral units are preserved, and the tile is captured according to the survivors. New tactical saves restore control of your same division when loaded."}
                             ]
                         }

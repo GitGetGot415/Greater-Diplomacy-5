@@ -648,6 +648,20 @@ class BattleSimulationTests(unittest.TestCase):
         self.assertEqual(province["units"], units[:2])
         self.assertEqual(len(healthy), 10)
 
+    def test_campaign_victory_preserves_only_the_destroyed_player_division_at_one_hp(self):
+        for winner, preserve_player in ((0, True), (1, True), (0, False)):
+            with self.subTest(winner=winner, preserve_player=preserve_player):
+                units = [{"health": 250, "max_health": 250} for _ in range(4)]
+                player = units[1]
+                fractions = (0, 0, 0.5, 0 if winner == 0 else 1)
+                simulation = SimpleNamespace(winner=winner, division_health_fraction=lambda index: fractions[index])
+                province = {"units": list(units)}
+                combat.apply_campaign_result(simulation, units, province, ([], []), side_units=(units[:3], units[3:]), player_unit=player if preserve_player else None)
+                self.assertEqual(player["health"], 1 if winner == 0 and preserve_player else 0)
+                self.assertEqual(any(unit is player for unit in province["units"]), winner == 0 and preserve_player)
+                self.assertFalse(any(unit is units[0] for unit in province["units"]))
+                self.assertEqual(units[2]["health"], 125 if winner == 0 else 0)
+
     def test_artillery_sits_out_campaign_battles_and_only_the_losers_is_destroyed(self):
         nations = {"Fixture A": {"at_war_with": ["Fixture B"]}, "Fixture B": {"at_war_with": ["Fixture A"]}}
         player, foe = (queries.create_unit_dict("Fixture I", owner, self.library) for owner in ("Fixture A", "Fixture B"))
@@ -2314,6 +2328,32 @@ class CustomBattleScreenTests(unittest.TestCase):
                 self.assertEqual(lose.called, dies)
                 if dies:
                     lose.assert_called_once_with(map_screen, province)
+
+    def test_campaign_victory_keeps_a_destroyed_player_division_after_preview_reordering(self):
+        map_screen, province, _custom = self.enter_campaign(ally_types=["Fixture III", "Fixture I"])
+        player, ally, other, enemy = province["units"]
+        self.drag_card(self.screen.card_rect(0, 1).center, self.screen.card_rect(0, 0).center)
+        self.click("Start")
+        simulation = self.screen.simulation
+        self.assertEqual(simulation.controlled.division, 1)
+        for division in simulation.divisions[1:]:
+            for fighter in division:
+                fighter.data["health"] = 0
+        simulation.winner = 0
+        self.screen.update()
+        self.assertFalse(simulation.controlled_division_alive)
+        self.assertEqual(player["health"], 1)
+        self.assertEqual({id(unit) for unit in province["units"]}, {id(player), id(ally)})
+        self.assertEqual(other["health"], 0)
+        self.assertEqual(enemy["health"], 0)
+        self.screen._apply_campaign_result()
+        self.assertEqual(player["health"], 1)
+        with patch("screens.game.custom_battle.player_setup.lose_tactical_unit") as lose:
+            self.click("Continue")
+        lose.assert_not_called()
+        self.assertTrue(map_screen.tactical_mode)
+        self.assertIs(map_screen.player_unit, player)
+        self.assertEqual(self.screen.next_state, "MAP")
 
     def test_finished_custom_and_campaign_battles_keep_overlay_controls(self):
         for campaign in (False, True):

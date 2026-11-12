@@ -579,7 +579,7 @@ class CustomBattleScreen(Screen):
         artillery = combat.campaign_artillery(campaign.unit, campaign.province,
                                               campaign.map_screen.nation_data, self.library)
         sides = combat.campaign_sides(campaign.unit, campaign.province, campaign.map_screen.nation_data)
-        combat.apply_campaign_result(self.simulation, campaign.units, campaign.province, artillery, side_units=sides)
+        combat.apply_campaign_result(self.simulation, campaign.units, campaign.province, artillery, side_units=sides, player_unit=campaign.unit)
         player_setup.settle_tactical_tile(campaign.map_screen, campaign.province)
 
     def continue_campaign(self):
@@ -587,7 +587,7 @@ class CustomBattleScreen(Screen):
         if self.mode != "result" or self.campaign is None:
             return
         campaign = self.campaign
-        died = not self.simulation.controlled_division_alive
+        died = campaign.unit["health"] <= 0
         self._end_campaign()
         if died:
             player_setup.lose_tactical_unit(campaign.map_screen, campaign.province)

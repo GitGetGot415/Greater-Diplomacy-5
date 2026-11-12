@@ -88,9 +88,9 @@ Actual battle has no **Exit** button in tactical play. When the battle ends, **C
 The player directly controls the middle sub-unit of the division's line. The division's other sub-units fight
 automatically. If the controlled sub-unit dies, the player spectates the rest of the battle without switching units.
 
-If every sub-unit of the controlled division was destroyed, even in a won battle, the division is removed,
-tactical mode ends, and the game continues in spectator mode.
-While any of the division's sub-units survives, the player keeps the division, even when the controlled sub-unit
+If every sub-unit of the controlled division was destroyed but the player's side wins, the campaign division survives with 1 HP and tactical mode continues.
+After a defeat, the division is removed, tactical mode ends, and the game continues in spectator mode.
+After a victory, surviving sub-units preserve the division's remaining health, even when the controlled sub-unit
 was destroyed and the player spectated the rest of the battle.
 
 Every surviving participating unit keeps its sub-units' remaining share of its full health in the campaign.

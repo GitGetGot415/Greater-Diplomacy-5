@@ -281,7 +281,7 @@ def campaign_roster(units, library):
     return roster
 
 
-def apply_campaign_result(simulation, units, province, artillery, *, side_units=None):
+def apply_campaign_result(simulation, units, province, artillery, *, side_units=None, player_unit=None):
     """Write a finished battle back: each unit keeps its division's fraction of health and the dead are removed.
 
     ``units`` are the campaign units in roster order, friendly army then enemy army.
@@ -289,9 +289,12 @@ def apply_campaign_result(simulation, units, province, artillery, *, side_units=
     destroyed; the winning side's is untouched. Campaign callers supply ``side_units`` from
     campaign_sides so the defeat also clears units beyond the deployment limit and other
     nonparticipants on the defeated side. Neutral units and winning reserves are untouched.
+    A victory preserves the player's division at 1 HP if all of its sub-units were destroyed.
     """
     for index, unit in enumerate(units):
         unit["health"] = simulation.division_health_fraction(index) * unit["max_health"]
+        if unit is player_unit and simulation.winner == 0 and unit["health"] <= 0:
+            unit["health"] = 1
     defeated = (artillery if side_units is None else side_units)[1 - simulation.winner]
     _remove_defeated_units(province, defeated)
 
@@ -682,7 +685,7 @@ class BattleSimulation:
         """Whether any sub-unit of the controlled division survives.
 
         Losing the controlled sub-unit ends control for the rest of the battle; the player spectates.
-        A tactical player still keeps the division in the campaign while any of its sub-units survives.
+        Campaign survival is determined separately when the finished result is applied.
         """
         return self.controlled is not None and any(
             fighter.alive for fighter in self.divisions[self.controlled.division])
