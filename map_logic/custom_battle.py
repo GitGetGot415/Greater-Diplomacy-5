@@ -21,7 +21,7 @@ DAMAGE_SCALE = 1.0  # Applied after defense and rounding, so low-damage hits als
 # Attack at zero HP: 0.0 = directly proportional to HP; 1.0 = wounds do not reduce attack.
 # Values between 0 and 1 interpolate linearly. Applies to each surviving sub-unit.
 TACTICAL_DAMAGE_AT_ZERO_HEALTH = 1.0
-WEAPON_RANGE = 1200.0
+WEAPON_RANGE = 800.0
 PROJECTILE_SPEED = c.TACTICAL_WEAPONS["rifle"]["speed"]
 ENGAGEMENT_RANGE = 300.0  # Preferred distances do not grow with maximum projectile reach.
 WITHDRAW_RANGE = 500.0
