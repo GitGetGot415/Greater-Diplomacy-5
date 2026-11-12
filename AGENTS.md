@@ -5,6 +5,8 @@ AI means artificial intelligence. UI means user interface.
 
 ## Before Editing
 
+- **Never begin an edit when the user asks a question.** Answer the question and wait for an explicit instruction to make changes. A question about whether something can or should change does not authorize editing.
+
 1. Read the relevant code and tests.
    Find every reader, writer, serializer, label, and duplicate implementation of the affected behavior.
    Do not assume the first match is the only caller.
