@@ -93,12 +93,13 @@ def _battle_preview_orders(game_map, player_country):
 def main():
     import main as game_main
 
-    pygame.init()
-    surface = pygame.display.set_mode((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
+    game_main._import_project_modules()
+    # The controller loads fonts, symbols, and toolbar icons before screens use them.
+    controller = game_main.Controller()
+    surface = controller.screen
     pygame.display.set_caption(
         "GD5 UI Layout Preview -- 1 Normal | 2 Real-time | 3 Packed | "
         "4 Spectator | 5 Tournament Player | 6 Tournament Host | 7 Battle | S Screenshot")
-    game_main._import_project_modules()
     game_map = game_main.Map(load_path="scenarios/historical/1939", is_scenario=True, num_players=1)
     # Pick the country with the largest starting force so every preview mode
     # has real stack art and a selected army to display.
