@@ -1787,6 +1787,18 @@ class TacticalSelectionTests(unittest.TestCase):
         self.assertIs(self.map.pending_unit, foot)
         self.picker.assert_not_called()
 
+    def test_division_on_another_countrys_tile_plays_as_its_own_country(self):
+        # Orders require the unit's own owner, so the tile's owner must not become the player's country.
+        foot = self.units[0]
+        for tile_owner in ("Fixture B", "Unclaimed"):
+            for stack in (False, True):
+                with self.subTest(tile_owner=tile_owner, stack=stack):
+                    self.map.pending_unit = self.map.pending_selection = None
+                    province = {"owner": tile_owner, "units": [foot]}
+                    self.setup.select_tactical_unit(self.map, province, candidate_units=[foot] if stack else None)
+                    self.assertIs(self.map.pending_unit, foot)
+                    self.assertEqual(self.map.pending_selection, foot["owner"])
+
     def test_confirmation_rechecks_tactical_eligibility_before_granting_control(self):
         for unit in self.units[3:]:
             with self.subTest(unit=unit["type"]):

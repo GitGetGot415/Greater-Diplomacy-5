@@ -22,22 +22,21 @@ def select_player_country(map_screen, province):
 
 def select_tactical_unit(map_screen, province, candidate_units=None):
     """Choose a tactical division from a tile or one of its rendered stacks."""
-    owner = province.get("owner", "Unclaimed")
-    if owner in c.UNPLAYABLE_NATIONS:
-        map_screen.show_feedback("Cannot spawn in unplayable territory!")
-        return
-
     units = list(candidate_units) if candidate_units is not None else province.get("units", [])
     # Selection and battle deployment must accept the same unit types.
     eligible_types = set(tactical_battle.land_unit_types(queries.get_unit_library(map_screen)))
-    eligible_units = [unit for unit in units if unit.get("type") in eligible_types]
+    eligible_units = [unit for unit in units if unit.get("type") in eligible_types and unit.get("owner") not in c.UNPLAYABLE_NATIONS]
     if units and not eligible_units:
         map_screen.show_feedback("No eligible land division to control")
         return
     units = eligible_units
 
     if not units:
-        # SPAWN A BLANK UNIT
+        # SPAWN A BLANK UNIT for the tile's owner.
+        owner = province.get("owner", "Unclaimed")
+        if owner in c.UNPLAYABLE_NATIONS:
+            map_screen.show_feedback("Cannot spawn in unplayable territory!")
+            return
         nation_data = map_screen.nation_data.get(owner, {})
         unit_type = queries.get_highest_infantry(nation_data, queries.get_tech_tree(map_screen), queries.get_unit_library(map_screen), allow_fuel_units=False, context=map_screen)
 
@@ -57,21 +56,24 @@ def select_tactical_unit(map_screen, province, candidate_units=None):
         new_unit["custom_name"] = queries.generate_unit_custom_name(new_unit, active_counters, context=map_screen)
         
         province.setdefault("units", []).append(new_unit)
-        _stage_tactical_selection(map_screen, new_unit, owner, province)
+        _stage_tactical_selection(map_screen, new_unit, province)
         
     elif len(units) == 1:
-        _stage_tactical_selection(map_screen, units[0], owner, province)
+        _stage_tactical_selection(map_screen, units[0], province)
     else:
         # MULTIPLE UNITS: let the player pick one from an in-game list
         unit_by_label = {f"{i+1}. {u.get('type')}": u for i, u in enumerate(units)}
 
         def on_select(label):
-            _stage_tactical_selection(map_screen, unit_by_label[label], owner, province)
+            _stage_tactical_selection(map_screen, unit_by_label[label], province)
 
         pickers.open_listbox_selector(map_screen, "Select Tactical Unit", "Select Unit to Control:",
                                       list(unit_by_label.keys()), on_select)
 
-def _stage_tactical_selection(map_screen, unit, owner, province):
+def _stage_tactical_selection(map_screen, unit, province):
+    # The player plays the division's country, not the tile's: a division can
+    # stand on another country's tile, and orders require the unit's own owner.
+    owner = unit["owner"]
     map_screen.pending_selection = owner
     map_screen.pending_unit = unit
     map_screen.selected_province = province
