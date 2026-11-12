@@ -157,7 +157,7 @@ Infantry, cavalry, and militia use their chassis images from the same folder and
 for their aimed weapon. These troops use smaller sprites, with the gun offset toward the right shoulder as the body turns.
 Motorized infantry, mechanized infantry, and infantry fighting vehicles use their chassis
 images without a separate weapon layer. Other tanks and vehicles use rectangles.
-Health bars show remaining strength, with the unit's nationality flag beside each bar, and projectiles show shots in flight.
+Health bars show remaining strength with the same dithered shading and green-to-yellow-to-red color transition as the editor, with the unit's nationality flag beside each bar. Projectiles show shots in flight.
 Cannon and autocannon shells are bright orange and thicker than rifle and machine-gun shots.
 Muzzle flashes, cannon recoil, and brief impact flashes distinguish firing and impacts.
 Regular shots from AI units play a random Rifle Shot 1, Rifle Shot 2, or Rifle Shot 3 sound.

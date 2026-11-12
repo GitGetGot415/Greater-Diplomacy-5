@@ -4,6 +4,7 @@ import math
 import os
 import random
 from collections import deque
+from functools import lru_cache
 from itertools import islice
 
 import pygame
@@ -214,7 +215,6 @@ BATTLE_ART_FAMILIES = {
 BATTLE_ART_DIR = os.path.join(c.ASSETS_ROOT_DIR, "battles")
 TERRAIN_ART_DIR = os.path.join(BATTLE_ART_DIR, "terrain")  # "Trunk N.png" draws each trunk size.
 DEAD_COLOR = (53, 65, 44)
-BATTLE_HEALTH_COLOR = (105, 215, 85)
 SHOT_COLOR = (250, 232, 150)
 SHOT_WIDTH = 2
 TANK_SHOT_COLOR = (255, 110, 0)
@@ -245,6 +245,36 @@ _BODY_SPRITES = {}
 _ROTATED_SPRITES = {}
 _BATTLE_ART = {}
 _TRUNK_ART = {}
+
+
+@lru_cache(maxsize=256)
+def _health_fill_surface(size, color):
+    """Cache dithered health shading by fill dimensions and displayed color."""
+    surface = pygame.Surface(size)
+    # Light, middle, and dark bands; a checkerboard of the neighboring shade softens each edge.
+    shades = [tuple(max(0, min(255, channel + HEALTH_BAR_SHADE * (1 - band))) for channel in color) for band in range(HEALTH_BAR_BANDS)]
+    width, height = size
+    for row in range(height):
+        band = row * HEALTH_BAR_BANDS // height
+        first = band > 0 and (row - 1) * HEALTH_BAR_BANDS // height < band
+        last = band < HEALTH_BAR_BANDS - 1 and (row + 1) * HEALTH_BAR_BANDS // height > band
+        for column in range(width):
+            shade = band
+            if (column + row) % 2 == 0:
+                shade += 1 if last else -1 if first else 0
+            surface.set_at((column, row), shades[shade])
+    return surface
+
+
+def _draw_health_fill(surface, fill, ratio):
+    if fill.width <= 0 or fill.height <= 0:
+        return
+    if ratio >= 0.5:
+        low, high, blend = HEALTH_BAR_HALF_COLOR, HEALTH_BAR_FULL_COLOR, (ratio - 0.5) * 2
+    else:
+        low, high, blend = HEALTH_BAR_EMPTY_COLOR, HEALTH_BAR_HALF_COLOR, ratio * 2
+    color = tuple(round(a + (b - a) * blend) for a, b in zip(low, high))
+    surface.blit(_health_fill_surface(fill.size, color), fill)
 
 
 def _trunk_art(size):
@@ -1730,23 +1760,7 @@ class CustomBattleScreen(Screen):
         pygame.draw.rect(card, OUTLINE_COLOR, bar)
         ratio = max(0.0, min(1.0, unit["health"] / unit["max_health"]))
         fill = pygame.Rect(bar.x + 1, bar.y + 1, round((bar.width - 2) * ratio), bar.height - 2)
-        if ratio >= 0.5:
-            low, high, blend = HEALTH_BAR_HALF_COLOR, HEALTH_BAR_FULL_COLOR, (ratio - 0.5) * 2
-        else:
-            low, high, blend = HEALTH_BAR_EMPTY_COLOR, HEALTH_BAR_HALF_COLOR, ratio * 2
-        base = [round(a + (b - a) * blend) for a, b in zip(low, high)]
-        # Light, middle, and dark bands; a checkerboard of the neighboring shade softens each edge.
-        shades = [tuple(max(0, min(255, channel + HEALTH_BAR_SHADE * (1 - band)))
-                        for channel in base) for band in range(HEALTH_BAR_BANDS)]
-        for row in range(fill.height):
-            band = row * HEALTH_BAR_BANDS // fill.height
-            first = band > 0 and (row - 1) * HEALTH_BAR_BANDS // fill.height < band
-            last = band < HEALTH_BAR_BANDS - 1 and (row + 1) * HEALTH_BAR_BANDS // fill.height > band
-            for column in range(fill.width):
-                shade = band
-                if (column + row) % 2 == 0:
-                    shade += 1 if last else -1 if first else 0
-                card.set_at((fill.x + column, fill.y + row), shades[shade])
+        _draw_health_fill(card, fill, ratio)
         flag_icons.draw_flag(card, unit["owner"], self.country_data, flag_x,
                              bar.centery - CARD_BAR_FLAG_SIZE[1] // 2, size=CARD_BAR_FLAG_SIZE)
 
@@ -2058,8 +2072,8 @@ class CustomBattleScreen(Screen):
         for fighter, center, scale in labeled:
             bar = pygame.Rect(center[0] - bar_size[0] // 2, center[1] - round(23 * scale), *bar_size)
             pygame.draw.rect(surface, OUTLINE_COLOR, bar)
-            ratio = fighter.data["health"] / fighter.data["max_health"]
-            pygame.draw.rect(surface, BATTLE_HEALTH_COLOR, (bar.x, bar.y, round(bar.width * ratio), bar.height))
+            ratio = max(0.0, min(1.0, fighter.data["health"] / fighter.data["max_health"]))
+            _draw_health_fill(surface, pygame.Rect(bar.x, bar.y, round(bar.width * ratio), bar.height), ratio)
             flag_icons.draw_flag(surface, fighter.data["owner"], self.country_data,
                                  bar.right + round(BATTLE_FLAG_GAP * zoom),
                                  bar.centery - flag_size[1] // 2, size=flag_size)
