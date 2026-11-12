@@ -15,7 +15,7 @@ The user's requested format and wording take priority.
 - Remove filler, repeated explanations, and background that the reader does not need.
 - Use the same term for the same thing. Explain unfamiliar abbreviations when the reader needs them.
 - Say which kind of schema you mean. Never write "schema" alone. This repository has several kinds:
-  - LLM reply schemas: the allowed fields and values of a model reply, which Ollama enforces. See `documentation/llm_ai.txt`.
+  - LLM reply schemas: the allowed fields and values of a model reply, which Ollama enforces.
   - The settings schema: the settings keys, aliases, and coercion in `data/io/settings_schema.py`.
   - Save and move formats: the shapes of saved data that the migrations convert. See `data/migrations/MIGRATIONS.md`.
 

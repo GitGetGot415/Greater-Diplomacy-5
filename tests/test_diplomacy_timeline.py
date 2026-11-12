@@ -1,4 +1,4 @@
-"""Turn-by-turn tests for the diplomacy timelines described in documentation/diplo_stuff.txt.
+"""Turn-by-turn tests for the diplomacy timelines described in documentation/diplo_stuff.md.
 
 The rules being pinned down:
   * a bilateral proposal is written on turn 0 and lands in the other side's
@@ -86,7 +86,7 @@ class BilateralDeliveryTests(unittest.TestCase):
                 )
 
     def test_join_faction_req_full_timeline(self):
-        """The worked example from diplo_stuff.txt, start to finish."""
+        """The worked example from diplo_stuff.md, start to finish."""
         game = StubMapScreen(["A", "B"], human_players=["A", "B"])
         game.set_faction("Pact", "B")
 
@@ -133,7 +133,7 @@ class SimultaneousRequestTests(unittest.TestCase):
                    "take_materials": 0, "take_fuel": 0, "puppet_state": "NONE"}
 
     def test_opposite_requests_both_resolve(self):
-        """The worked example from diplo_stuff.txt: a trade crossing an access request."""
+        """The worked example from diplo_stuff.md: a trade crossing an access request."""
         game = StubMapScreen(["A", "B"], human_players=["A", "B"])
 
         # turn 0: A offers a trade; B asks A for military access

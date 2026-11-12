@@ -13,10 +13,7 @@ AI means artificial intelligence. UI means user interface.
 2. Check `git status`.
    Preserve unrelated user changes. Do not discard work to get a clean tree.
 3. Read the relevant design notes:
-   - `documentation/non_llm_ai.txt`: rule-based AI and shared combat rules.
-   - `documentation/ai_movement.txt`: AI unit orders, movement caches, aircraft missions, and movement tuning.
-   - `documentation/llm_ai.txt`: large language models (LLMs), prompts, budgets, cancellation, and fairness.
-   - `documentation/diplo_stuff.txt`: diplomacy, messages, guarantees, volunteers, attach?s, factions, war, and peace.
+   - `documentation/diplo_stuff.md`: diplomatic message timing and cancellation.
    - `data/migrations/MIGRATIONS.md`: required before changing saved fields, stored identifiers, settings keys, or library content that older saves and moves can contain.
 4. Find the shared rule or data owner.
    Extend that implementation and make callers use it.
@@ -419,12 +416,12 @@ Keep tuning data in its source files:
   Do not give AI exclusive actions or bypass human gameplay restrictions.
 - **AI countries, rule-based and LLM, follow the same rules as human players, including diplomatic timing.**
   A message, letter, or proposal written in one turn is sent in the send phase after that turn.
-  The receiver gets it in the next turn and can answer it only then. See `documentation/diplo_stuff.txt`, Message timing.
+  The receiver gets it in the next turn and can answer it only then. See `documentation/diplo_stuff.md`.
   An AI must not read, answer, or react to a message before it is delivered, and must not answer a message in the turn it was delivered.
   This includes later passes or phases of the same turn's processing.
 - Keep rule-based AI authoritative when the LLM is enabled or disabled.
   Follow the legal-candidate restriction in the systems checklist.
-- Preserve shared prompt prefixes, turn-budget cancellation, and fairness rules from `documentation/llm_ai.txt`.
+- Preserve shared prompt prefixes, turn-budget cancellation, and fairness rules.
 - Test diplomacy in both directions and through delayed resolution.
   Preserve message timing, cancellation, crossing requests, and unilateral or bilateral behavior.
 
@@ -525,14 +522,12 @@ A data edit must not make a test fail, unless the test checks that JSON matches 
 ### Tutorial and Maintenance
 
 The fresh-game map tutorial is the Help window. Its text is in `data/json/tutorial.json`, and `ui/dialogs/message_box.py` draws it.
-See `documentation/general_info.txt`, HELP CONTENT.
 Treat it as player documentation.
 Update it when map navigation, unit selection, orders, or covered map controls change.
 Add or update tests for changed tutorial behavior.
 
 Update documentation, comments, examples, tests, schemas, and UI text when the implementation makes them incomplete or inaccurate.
 Check guides that refer to each changed rule. Keep their local instructions and references accurate.
-See `documentation/general_info.txt` for the guide index.
 Update every description or preview of changed player behavior.
 
 ### Handoff

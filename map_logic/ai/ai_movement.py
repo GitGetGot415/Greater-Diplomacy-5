@@ -178,7 +178,7 @@ def _patrol_protection_value(context, country, wings, threats, tile):
     """What a patrol over `tile` is worth: the air battle plus the strike it blunts.
 
     Interception happens before a strike, and only the surviving attackers
-    strike (documentation/air_stuff.txt, Interception). So a patrol earns the
+    strike. So a patrol earns the
     equipment it trades in the air *and* the damage the enemy would otherwise
     have done to the garrison and forts below -- valued as the enemy's own
     strike, unopposed, minus the same strike flown by the survivors. Valuing

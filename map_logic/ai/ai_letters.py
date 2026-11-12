@@ -10,8 +10,8 @@ bounded by AI_OPINION_CHANGE_MAX. Agreements still need the ordinary
 proposals, which the director chooses each turn with the notebook in front of
 it and the countries it writes to on its menu.
 
-AI countries follow the players' message timing (documentation/diplo_stuff.txt,
-Message timing). The phase runs once per turn, before the proactive pass. A
+AI countries follow the players' message timing (documentation/diplo_stuff.md).
+The phase runs once per turn, before the proactive pass. A
 country reads only mail delivered before this turn's processing: its unread
 letters, and any player's plain message still awaiting its answer. The letters
 it writes wait in session_state.queued_letters until the send phase
@@ -217,8 +217,7 @@ def build_prompt(world_state, nation, unread, readers, alive, current_date, worl
     """(system, user) for one country's sitting.
 
     The world context comes first and is the same for every country this turn,
-    and the system half names nobody, so the shared prefix survives (see
-    documentation/llm_ai.txt, SHARED PROMPT PREFIX). `world` is the turn's
+    and the system half names nobody, so the shared prefix survives. `world` is the turn's
     AIWorld, for the country's neighbors.
     """
     nation_data = world_state.nation_data

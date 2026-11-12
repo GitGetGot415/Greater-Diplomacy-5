@@ -189,7 +189,7 @@ class _MessageModal(_BaseModal):
         self.ok_button.draw(surface)
 
 
-#: Help content. See documentation/general_info.txt, HELP CONTENT, for the format.
+#: Help content.
 TUTORIAL_PATH = "data/json/tutorial.json"
 _ICON_MARKER = re.compile(r"\[icon:([a-z_]+)(?::([1-9][0-9]*))?\]")
 _TEXT_BLOCK_ALIGNMENTS = ("left", "center")

@@ -1,7 +1,6 @@
 Greater Diplomacy 4 AI response reference
 ==========================================
 
-Source: TEMP_GD4/project.json, target 'AI Message Processor'.
 The processor compared Type and Status.
 It selected a random line from the eligible Example Responses pool.
 GD4 status values map to GD5 strength values:

@@ -58,7 +58,7 @@ Other modules own related data:
 - Keep Greater Diplomacy Hex Edition conversion rules in `map_logic/imports/gdhex_translation.py`.
 - Keep current settings fields, coercion, and serialization in `data/io/settings_schema.py`. Missing-setting defaults come from `data/json/starting_defaults.json`.
   The older `show_intro_popup` preference supplies both `show_strategic_intro_popup` and `show_tactical_intro_popup` when either current key is absent. Current mode-specific preferences take priority.
-- Keep editable distribution preferences in `data/json/starting_defaults.json`. See `documentation/general_info.txt`, SETTINGS LOADING.
+- Keep editable distribution preferences in `data/json/starting_defaults.json`.
 - Keep current gameplay rules and validation in their shared rule modules.
 - Keep saved-file access, compression formats, and storage synchronization in their input and output modules.
 - The `armies.py`, `units.py`, `saves.py`, and `air.py` modules in `data/queries/` own unit identities, unit statistics, province overlays, air order repair, and spawned-territory repair.
@@ -102,7 +102,7 @@ The save builder and new history snapshots write the reference, or null outside 
 After loading and repairing units, the loader binds tactical control to the matching live unit.
 A selected history turn uses its own reference when recorded. Older saves and snapshots need no conversion:
 an absent reference preserves the older country-control behavior. Tournament moves do not grant tactical control,
-and real-time player projections omit the reference. See [Tactical Mode](../../documentation/tactical_mode.md).
+and real-time player projections omit the reference.
 
 ## Current Conversion Rules
 
@@ -382,7 +382,7 @@ This additive field does not change an older field's meaning or require a conver
 Scenario information remains the same when a selected history turn becomes live state.
 Only local map editors can change it. Multiplayer commands cannot change it.
 
-`WorldState.global_rules` owns the scenario's global rules. See `documentation/diplo_stuff.txt`, Editor and scripted events.
+`WorldState.global_rules` owns the scenario's global rules.
 The shared save builder writes `global_rules` to `meta.json`, saves, and multiplayer snapshots.
 The loader supplies an empty list when an older file omits this optional field. It needs no conversion rule.
 Each rule stores its type and strength as editor labels, such as `Make Peace With` and `Decent`.
@@ -412,8 +412,7 @@ Explicit metadata takes priority. Invalid explicit fields produce errors that id
 Unknown valid metadata fields remain intact.
 `get_unit_unlock_requirement` retains its older three-field result as a compatibility adapter.
 Runtime unlock checks use `get_unit_requirements` for explicit compound requirements.
-Add new units in `data/generators/recipes.py`. The Tkinter unit editor changes only the statistics of existing units.
-See `documentation/general_info.txt` for metadata ownership and cache invalidation.
+Add new units in `data/generators/recipes.py`.
 
 ## Diplomatic Record Identities
 
