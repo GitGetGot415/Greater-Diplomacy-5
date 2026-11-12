@@ -25,6 +25,7 @@ Playing tactical mode uses preview and actual battle, with participants supplied
 ### Editing: Edit Battle
 
 Choose **Custom Battle** to open editing.
+The **?** help button explains roster editing, group selection, deployment order, unit control, and the setup controls.
 The terrain button opens **Battle Terrain**. Choose Plains, Hills, Desert, Forest, Jungle, Mountains, or Swamp.
 The choice belongs to this custom-battle setup; campaign encounters use the province's terrain.
 **Add Friendly** and **Add Enemy** open the searchable land-unit picker. Each selection adds one unit at the chosen library level.
@@ -109,6 +110,7 @@ Preview has no **Exit** button. **Retreat** sits beside **Start**. In a custom b
 as does the configured Back key. In a tactical encounter it opens the retreat map.
 
 Preview uses the same friendly and enemy roster panels as editing.
+The **?** help button explains preview controls and the Retreat behavior for the current battle type.
 Preview cards use the base game's unit art and symbols for health, attack, and defense.
 The rosters can be scrolled. Drag friendly cards to change the friendly army's deployment order, the same way as in
 editing; the leftmost card deploys in the front rank. The enemy army's order is fixed.

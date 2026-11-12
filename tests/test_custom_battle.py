@@ -1804,6 +1804,48 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.screen.add_unit(0, "Fixture II")
         self.screen.add_unit(1, "Fixture I")
 
+    def test_edit_and_preview_help_buttons_open_mode_specific_help_without_changing_armies(self):
+        self.fill_armies()
+        self.screen.controlled_index = 0
+        rosters = copy.deepcopy(self.screen.rosters)
+        selected = list(self.screen.selected)
+        self.assertIsNone(self.screen.help_button.sound_kind)
+        with patch.object(battle_screen.dialogs, "show_info") as show, patch.object(battle_screen.ui_elements, "play_ui_sound") as sound:
+            self.click("?")
+        show.assert_called_once_with(f"{self.screen.get_title()} Help", battle_screen.EDIT_BATTLE_HELP_TEXT)
+        sound.assert_not_called()
+        self.assertEqual(self.screen.selected, selected)
+        self.assertEqual(self.screen.rosters, rosters)
+        self.assertEqual(self.screen.controlled_index, 0)
+        self.click("Simulate")
+        simulation = self.screen.simulation
+        with patch.object(battle_screen.dialogs, "show_info") as show:
+            self.click("?")
+        show.assert_called_once_with(f"{self.screen.get_title()} Help", battle_screen.PREVIEW_BATTLE_HELP_TEXT + battle_screen.PREVIEW_CUSTOM_HELP_TEXT)
+        self.assertIs(self.screen.simulation, simulation)
+        self.assertEqual(self.screen.rosters, rosters)
+        self.assertEqual(self.screen.controlled_index, 0)
+
+    def test_campaign_preview_help_uses_campaign_instructions(self):
+        self.fill_armies()
+        self.click("Simulate")
+        with patch.object(self.screen, "campaign", object()), patch.object(battle_screen.dialogs, "show_info") as show:
+            self.click("?")
+        show.assert_called_once_with(f"{self.screen.get_title()} Help", battle_screen.PREVIEW_BATTLE_HELP_TEXT + battle_screen.PREVIEW_CAMPAIGN_HELP_TEXT)
+
+    def test_preview_intro_blocks_help_and_battle_has_no_setup_help_button(self):
+        self.fill_armies()
+        self.click("Simulate", finish_intro=False)
+        with patch.object(battle_screen.dialogs, "show_info") as show:
+            self.click("?", finish_intro=False)
+        show.assert_not_called()
+        self.click("Start")  # Finish the intro; Start remains blocked during the intro.
+        self.click("Start")
+        self.assertIsNone(self.screen.help_button)
+        with patch.object(battle_screen.dialogs, "show_info") as show:
+            self.screen.show_help()
+        show.assert_not_called()
+
     def test_kill_feed_uses_simulation_kills_survives_results_and_clears_on_replay(self):
         self.fill_armies()
         self.click("Simulate")

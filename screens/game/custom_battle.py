@@ -13,6 +13,7 @@ from data import queries
 from data.io import starting_defaults
 from map_logic import custom_battle as combat
 from map_logic import battle_terrain
+from ui import dialogs
 from ui.dialogs import pickers
 from ui.navigation import screen_runner
 from ui.navigation.modal_screen import ModalScreen
@@ -33,6 +34,7 @@ PANEL_TOPS = (365, 120)  # Friendly and enemy rosters retain their separate area
 CARD_SIZE = (158, 148)
 CARD_GAP = 12
 CONTROLLED_CARD_BRIGHTNESS = 100
+TITLE_HELP_GAP = 12
 PREVIEW_CARD_ICON_SIZE = (96, 60)
 PREVIEW_ICON_CENTER_Y = 40
 # Health bar rows: preview puts the bar under the icon; editing puts it at the card bottom.
@@ -65,6 +67,26 @@ BUTTON_WIDTH = 170
 CLEAR_ALL_OFFSET_Y = 20
 CLEAR_ALL_HEIGHT = 32
 TEAM_COLORS = ((85, 170, 245), (235, 100, 90))
+
+EDIT_BATTLE_HELP_TEXT = (
+    "Build both armies, choose their deployment order, and optionally choose a unit to control. Custom battles do not change your campaign.\n\n"
+    "Add Friendly and Add Enemy open the unit picker. Choose units to add them; Cancel closes the picker and keeps your additions. Select a card and choose Remove to remove that unit. Clear All empties that army.\n\n"
+    "Drag cards within either army to reorder deployment. The leftmost card deploys in the front rank, closest to the enemy. Scroll long rosters with the mouse wheel, scrollbar, or by dragging the roster background.\n\n"
+    "A card's gear button opens Unit Settings for nationality and starting HP. You can also drag along the card's health bar to change starting HP.\n\n"
+    "To select several units, start in empty roster panel space outside the card area and drag a square across the cards. Every selected card gets a gold outline. The gear button on any selected card opens Group Settings for all selected units; dragging a selected card's health bar changes the group's starting HP. Mixed means the selected units have different values. Click empty space or enter preview to clear the selection.\n\n"
+    "Select a friendly card and choose Control to command that division's middle sub-unit during the battle. The controlled division's button is lighter blue and has a yellow arrow. Release Control lets both armies fight automatically.\n\n"
+    "Random replaces both armies. Year limits the units Random can choose; manual unit selection is unrestricted by Year. The terrain button chooses the custom battlefield's terrain.\n\n"
+    "The normal-game forecast estimates how these armies would fight under the strategic combat rules. The tactical battle can have a different result.\n\n"
+    "Both armies need units before Simulate becomes available. Simulate opens Preview Battle; combat starts only after Start in preview. Exit returns to the menu."
+)
+PREVIEW_BATTLE_HELP_TEXT = (
+    "Here you can review the armies before combat. The battle is paused here, so units do not move or fire.\n\n"
+    "Drag friendly cards to change deployment order. The leftmost card deploys in the front rank, closest to the enemy.\n\n"
+    "Start begins the tactical battle with the prepared forces.\n\n"
+)
+PREVIEW_CUSTOM_HELP_TEXT = "Retreat returns to Edit Battle and keeps your army setup."
+PREVIEW_CAMPAIGN_HELP_TEXT = "Retreat opens the map to choose a retreat destination. Back from the retreat chooser returns to this preview."
+
 # Actual battle fills the whole screen. The mouse wheel steps through these scales, starting at 1.0.
 ZOOM_LEVELS = (0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.75, 1.0, 1.25, 1.5, 2.0)
 DEFAULT_ZOOM_INDEX = ZOOM_LEVELS.index(1.0)
@@ -578,6 +600,13 @@ class CustomBattleScreen(Screen):
             return "Preview Battle"
         return "Edit Battle" if self.mode == "setup" else "Actual Battle"
 
+    def show_help(self):
+        if self.mode not in {"setup", "preview"} or self.preview_intro_stage is not None:
+            return
+        self.cancel_active_drags()
+        text = EDIT_BATTLE_HELP_TEXT if self.mode == "setup" else PREVIEW_BATTLE_HELP_TEXT + (PREVIEW_CAMPAIGN_HELP_TEXT if self.campaign is not None else PREVIEW_CUSTOM_HELP_TEXT)
+        dialogs.show_info(f"{self.get_title()} Help", text)
+
     @property
     def reserved_keys(self):
         if (self.preview_intro_stage is None and self.mode in {"preview", "battle"}
@@ -595,6 +624,12 @@ class CustomBattleScreen(Screen):
     def refresh_ui(self):
         self.unit_buttons = {}
         self.elements = []
+        self.help_button = None
+        if self.mode in {"setup", "preview"}:
+            title_width, title_height = fonts.get(self.title_preset).size(self.get_title())
+            self.help_button = ui_elements.make_info_button(0, 0, self.show_help)
+            self.help_button.rect.midleft = (c.SCREEN_WIDTH // 2 + title_width - title_width // 2 + TITLE_HELP_GAP, self.title_y + title_height // 2)
+            self.elements.append(self.help_button)
         self.battle_artwork = {}
         for name in dict.fromkeys(unit["type"] for roster in self.rosters for unit in roster):
             family = queries.get_unit_metadata(name, self.library)["family"]
