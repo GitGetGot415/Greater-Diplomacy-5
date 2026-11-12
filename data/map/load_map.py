@@ -148,7 +148,7 @@ def _apply_history_snapshot(save_meta, history, history_turn):
         save_meta["date"] = {}
     save_meta["date"]["day"] = snap.get("day", save_meta["date"].get("day", 1))
     save_meta["date"]["month"] = snap.get("month", save_meta["date"].get("month", 0))
-    save_meta["date"]["year"] = snap.get("year", save_meta["date"].get("year", 1910))
+    save_meta["date"]["year"] = snap.get("year", save_meta["date"].get("year", c.START_YEAR))
     save_meta["date"]["total_turns"] = int(history_turn)
 
     # Branch the timeline by discarding future turns, as before.
@@ -230,6 +230,11 @@ def _resolve_load_path(load_path):
     if not load_path or not os.path.exists(load_path):
         raise FileNotFoundError(f"CRITICAL: No valid map found. Make sure {c.BASE_MAPS_DIR} contains at least one map folder.")
     return load_path
+
+
+def _is_base_map(load_path):
+    """True for a map folder directly inside the base maps directory."""
+    return os.path.dirname(os.path.realpath(load_path)) == os.path.realpath(c.BASE_MAPS_DIR)
 
 
 def _load_map_images(context, load_path, load_presentation):
@@ -593,6 +598,10 @@ def _load_map_asset_steps(context, load_path, scenario_settings=None, *, load_pr
     context.nation_colors = country_io.nation_colors_from(world_state.nation_data)
 
     _restore_session_properties(context, save_meta)
+    if _is_base_map(load_path):
+        # Base maps are templates. Their stored year is ignored so a new map starts
+        # where the research timeline and the default starting research begin.
+        world_state.time_manager.year = c.START_YEAR
 
     # --- HISTORICAL LEADERS TIMELINE ---
     # Only scenarios launched straight out of scenarios/historical get the

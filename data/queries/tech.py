@@ -38,7 +38,7 @@ def get_map_default_research(context):
     levels for current techs and takes template levels for techs it lacks.
     Reading never changes the saved default; editors store a default only when the player saves one.
     """
-    fresh_template = {tech: (1800 if data["max_lvl"] == 9999 else 0) for tech, data in queries.get_tech_tree(context).items()}
+    fresh_template = {tech: (c.START_YEAR if data["max_lvl"] == 9999 else 0) for tech, data in queries.get_tech_tree(context).items()}
     if "infantry_type" in fresh_template: fresh_template["infantry_type"] = 1
     if "cavalry" in fresh_template: fresh_template["cavalry"] = 1
     saved = world_for(context).default_research or {}

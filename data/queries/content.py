@@ -609,7 +609,7 @@ def get_time_appropriate_research(start_year, *, context=None):
     if not struct:
         return {}
 
-    res_template = {tech: (1800 if data.get("max_lvl") == 9999 else 0) for tech, data in struct.items()}
+    res_template = {tech: (c.START_YEAR if data.get("max_lvl") == 9999 else 0) for tech, data in struct.items()}
     if "infantry_type" in res_template: res_template["infantry_type"] = 0
     if "cavalry" in res_template: res_template["cavalry"] = 0
 

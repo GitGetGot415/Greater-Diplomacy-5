@@ -205,6 +205,28 @@ class MapSaveFormatTests(unittest.TestCase):
         self.assertEqual(queries.build_save_dict(context, include_local_preferences=True)["conversation_colors"],
                          {"Avaria": [1, 2, 3]})
 
+    def test_base_maps_start_at_the_timeline_start_and_other_maps_keep_their_date(self):
+        context = map_double()
+        metadata = queries.build_save_dict(context, include_provinces=False)
+        metadata["date"]["year"] = c.START_YEAR + 110
+        with tempfile.TemporaryDirectory() as root, \
+                mock.patch.object(queries, "get_country_data", return_value={}), \
+                mock.patch.object(queries, "get_settings", return_value={}):
+            base_dir, custom_dir = os.path.join(root, "base"), os.path.join(root, "custom")
+            for parent in (base_dir, custom_dir):
+                directory = os.path.join(parent, "Fixture Map")
+                os.makedirs(directory)
+                with open(os.path.join(directory, "meta.json"), "w", encoding="utf-8") as handle:
+                    json.dump(metadata, handle)
+                with open(os.path.join(directory, "map_data.json"), "w", encoding="utf-8") as handle:
+                    json.dump({}, handle)
+                shutil.copyfile(os.path.join(c.BACKGROUNDS_DIR, "Province.png"), os.path.join(directory, "id_map.png"))
+            with mock.patch.object(c, "BASE_MAPS_DIR", base_dir):
+                base = load_map.load_backend_state(os.path.join(base_dir, "Fixture Map"), skip_initial_income=True)
+                custom = load_map.load_backend_state(os.path.join(custom_dir, "Fixture Map"), skip_initial_income=True)
+        self.assertEqual(base.time_manager.year, c.START_YEAR)
+        self.assertEqual(custom.time_manager.year, c.START_YEAR + 110)
+
     def test_conversation_colors_survive_backend_disk_load_and_ignore_old_global_preferences(self):
         context = map_double(conversation_colors={"A": [12, 34, 56]})
         metadata = queries.build_save_dict(context, include_provinces=False, include_local_preferences=True)
