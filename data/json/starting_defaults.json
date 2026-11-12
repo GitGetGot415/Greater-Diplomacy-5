@@ -123,10 +123,10 @@
         "checkerboard_gradient_strength": 0.0,
         "checkerboard_scroll_speed": 16,
         "tactical_infantry_songs": [
-            "assets/music/Greater Diplomacy 4/Under the Rainbow.json"
+            "assets/music/Greater Diplomacy 5/Dschungel.json"
         ],
         "tactical_tank_songs": [
-            "assets/music/Greater Diplomacy 5/Under the Rainbow Redux.json"
+            "assets/music/Greater Diplomacy 5/Dschungel.json"
         ]
     },
     "active_albums.json": [],
