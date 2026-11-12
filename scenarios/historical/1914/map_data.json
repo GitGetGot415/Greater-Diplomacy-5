@@ -24422,7 +24422,6 @@
                 "owner": "Ottoman Empire",
                 "health": 1200.0,
                 "max_health": 2400,
-                "morale": 100.0,
                 "speed": 1,
                 "attack": 1200,
                 "defense": 200,

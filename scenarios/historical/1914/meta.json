@@ -1,6 +1,6 @@
 {
-    "version": "v47",
-    "generated_at": "2026-11-05T20:19:19.932712",
+    "version": "v48",
+    "generated_at": "2026-11-11T23:19:27.798867",
     "date": {
         "day": 15,
         "month": 0,
@@ -11,6 +11,7 @@
     "player_country": "None",
     "active_players": [],
     "current_player_index": 0,
+    "tactical_player_unit_id": null,
     "scenario_settings": {
         "fog_of_war": true,
         "casus_belli_required": true,
@@ -24,6 +25,7 @@
         "description": ""
     },
     "script_variables": [],
+    "global_rules": [],
     "default_research": {
         "infantry_type": 25,
         "cavalry": 27,
