@@ -346,6 +346,15 @@ class EditorResearchTreeTests(unittest.TestCase):
         self.assertEqual(self.map.nation_data[self.country]["research"]["root"], 0)
         self.assertEqual(self.map.default_research, {"root": 2, "branch": 1})
 
+    def test_country_tree_opens_when_the_map_has_no_saved_default(self):
+        # Maps that never saved a map default store None; the tree must fall back to the shared template.
+        self.map.default_research = None
+        editor = research_screens.Research_List_Screen(self.map)
+        with patch.object(research_screens, "_run_pygame_sub_screen") as launch:
+            editor.edit_country(self.country)
+        self.assertTrue(launch.call_args.args[1].editing_starting_research)
+        self.assertIsNone(self.map.default_research)
+
     def test_spectator_edit_uses_shared_prerequisites_and_dependent_removal(self):
         with patch.object(self.map, "is_editor", False), patch.object(self.map, "player_country", "Spectator"), \
                 patch.object(self.map, "viewing_research_country", self.country, create=True), \

@@ -837,6 +837,7 @@ class Research_Screen(Screen):
 
     def draw_tech_nodes(self, res_levels, queue):
         unit_unlocks = queries.get_unit_unlock_index(self.map_screen)
+        map_defaults = queries.get_map_default_research(self.map_screen) if self.editing_starting_research else {}
         for node in self.nodes.get(self.current_category, []):
             tech_key = node["key"]
             lvl = node["lvl"]
@@ -880,7 +881,7 @@ class Research_Screen(Screen):
                 else:
                     status = "LOCKED"
                     
-            btn_color = self.tech_button_color(tech_key, lvl, status)
+            btn_color = self.tech_button_color(tech_key, lvl, status, map_defaults)
 
             icon_scale = presentation["icon_scale"]
             # Use the resolved image's style, including country variants and Classic fallbacks.
@@ -922,9 +923,9 @@ class Research_Screen(Screen):
         # about whether a tech is available.
         return queries.check_tech_requirements(res_levels, reqs, target_lvl)
 
-    def tech_button_color(self, tech_key, level, status):
+    def tech_button_color(self, tech_key, level, status, map_defaults):
         """Mark map-default levels only in the map research editor."""
-        if self.editing_starting_research and self.map_screen.default_research.get(tech_key, 0) == level:
+        if self.editing_starting_research and map_defaults.get(tech_key, 0) == level:
             return "pink" if status == "COMPLETED" else "purple"
         return STATUS_COLORS[status]
 

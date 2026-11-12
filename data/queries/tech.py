@@ -31,6 +31,20 @@ def apply_time_appropriate_research_to_map(context, year):
     return time_app_res
 
 
+def get_map_default_research(context):
+    """Return a copy of the map's default starting research for the current tech tree.
+
+    Maps without a saved default use a fresh template. A saved default keeps its
+    levels for current techs and takes template levels for techs it lacks.
+    Reading never changes the saved default; editors store a default only when the player saves one.
+    """
+    fresh_template = {tech: (1800 if data["max_lvl"] == 9999 else 0) for tech, data in queries.get_tech_tree(context).items()}
+    if "infantry_type" in fresh_template: fresh_template["infantry_type"] = 1
+    if "cavalry" in fresh_template: fresh_template["cavalry"] = 1
+    saved = world_for(context).default_research or {}
+    return {tech: saved.get(tech, level) for tech, level in fresh_template.items()}
+
+
 def get_total_turns(time_manager):
     """Calculates the total number of turns elapsed since the start of the scenario."""
     return time_manager.total_turns

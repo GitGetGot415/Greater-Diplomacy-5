@@ -135,25 +135,8 @@ class Research_List_Screen(NationListOverlayScreen):
 
     def __init__(self, map_screen):
         # The base __init__ builds the rows, and each row reads this value.
-        self.default_research = self._get_default_research(map_screen)
+        self.default_research = queries.get_map_default_research(map_screen)
         super().__init__(map_screen)
-
-    def _get_default_research(self, map_screen):
-        struct = queries.get_tech_tree(map_screen)
-        fresh_template = {tech: (1800 if data["max_lvl"] == 9999 else 0) for tech, data in struct.items()}
-        if "infantry_type" in fresh_template: fresh_template["infantry_type"] = 1
-        if "cavalry" in fresh_template: fresh_template["cavalry"] = 1
-
-        if map_screen.default_research is not None:
-            for k, v in fresh_template.items():
-                if k not in map_screen.default_research:
-                    map_screen.default_research[k] = v
-            obsolete_keys = [k for k in map_screen.default_research.keys() if k not in fresh_template]
-            for k in obsolete_keys:
-                del map_screen.default_research[k]
-            return map_screen.default_research
-
-        return fresh_template
 
     def list_header_elements(self):
         p = self.panel_rect

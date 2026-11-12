@@ -22,11 +22,12 @@ from screens.game import map_input, spectator_controls
 from screens.game.politics_screen import Politics_Screen
 from screens.setup import player_setup
 from ui import dialogs
-from ui.bars import resource_hud
+from ui.bars import resource_hud, top_bar_text
 from ui.dialogs import file_exchange, pickers
 from ui.navigation import screen_runner
 from ui.panels import realtime_status_panel
 from ui.panels.multiplayer_host_panel import export_next_turn, manage_keys_panel, manage_players_panel, show_move_rejection
+from ui.rendering.font_manager import fonts
 from ui.widgets import ui_elements
 from ui.widgets.ui_elements import Button, Slider
 
@@ -86,6 +87,7 @@ TOP_RIGHT_BTN_X = c.SCREEN_WIDTH - 120
 REFRESH_BTN_X = TOP_RIGHT_BTN_X - c.SIZES["small"][0] - TOP_BAR_BUTTON_GAP
 HELP_BTN_X = REFRESH_BTN_X - c.SIZES["tiny"][0] - TOP_BAR_BUTTON_GAP
 GLOBAL_ECON_BTN_X = HELP_BTN_X - c.SIZES["small"][0] - TOP_BAR_BUTTON_GAP
+EDITOR_STATS_BUTTON_SIZE = (150, 40)
 
 # --- Mode buttons on the country-selection screen ---
 BTN_SPECTATOR_Y = c.SCREEN_HEIGHT - 55
@@ -204,8 +206,10 @@ def _build_view_buttons(map_screen):
 
 
 def _build_editor_buttons(map_screen):
-    """The map editor's bottom strip and its three left-bar tools."""
+    """The map editor's top-bar stats, bottom strip, and three left-bar tools."""
     icons = ui_elements.UI_ICONS
+    stats_x = top_bar_text.TOP_BAR_COUNTRY_X + fonts.get("top_bar_country").size("Editor")[0] + top_bar_text.TOP_BAR_TEXT_BG_PADDING + TOP_BAR_BUTTON_GAP
+    map_screen.btn_ed_stats = Button(stats_x, c.TOP_BAR_UI_CENTER_Y, EDITOR_STATS_BUTTON_SIZE, "purple", "Unit / Building Stats", _sub_screen_opener(map_screen, "screens.editors.unit_stats_editor", "MapUnitBuildingStatsScreen"), font_preset="small")
     # (attribute, slots left of the strip's start, size, color, label, callback, icon).
     # An entry without an icon shows its label instead.
     bottom_strip = (
@@ -631,7 +635,7 @@ def render_buttons(map_screen):
         map_screen.btn_view_terrain, map_screen.btn_view_political, map_screen.btn_view_relations, map_screen.btn_view_cores, map_screen.btn_view_factions,
         map_screen.btn_view_resources, map_screen.btn_view_blank, map_screen.btn_view_units, map_screen.btn_view_economy, map_screen.btn_toggle_names,
         map_screen.btn_unit_events,
-        map_screen.btn_ed_load, map_screen.btn_ed_nation, map_screen.btn_ed_brush, map_screen.btn_ed_paint,
+        map_screen.btn_ed_stats, map_screen.btn_ed_load, map_screen.btn_ed_nation, map_screen.btn_ed_brush, map_screen.btn_ed_paint,
         map_screen.btn_ed_core, map_screen.btn_ed_claim, map_screen.btn_ed_autocore, map_screen.btn_ed_resource, map_screen.btn_ed_building,
         map_screen.btn_ed_unit, map_screen.btn_ed_refresh, map_screen.btn_ed_edited, map_screen.btn_ed_date, map_screen.btn_ed_diplo, map_screen.btn_ed_personality, map_screen.btn_ed_scripts, map_screen.btn_ed_bulk,
         map_screen.btn_next_turn, map_screen.btn_import_turn, map_screen.btn_skip_ai, map_screen.btn_multi_turn, map_screen.btn_declare_indep, map_screen.btn_gp_edit, map_screen.btn_gp_econ, map_screen.btn_gp_rd, map_screen.btn_gp_msgs,
@@ -872,7 +876,7 @@ def _update_editor_buttons(map_screen, is_sel):
     ed_btns = [
         map_screen.btn_gp_edit, map_screen.btn_gp_econ, map_screen.btn_gp_rd,
         map_screen.btn_gp_msgs, map_screen.btn_gp_save, map_screen.btn_gp_claims,
-        map_screen.btn_ed_load, map_screen.btn_ed_nation, map_screen.btn_ed_brush, map_screen.btn_ed_paint, map_screen.btn_ed_core, map_screen.btn_ed_claim,
+        map_screen.btn_ed_stats, map_screen.btn_ed_load, map_screen.btn_ed_nation, map_screen.btn_ed_brush, map_screen.btn_ed_paint, map_screen.btn_ed_core, map_screen.btn_ed_claim,
         map_screen.btn_ed_autocore, map_screen.btn_ed_resource, map_screen.btn_ed_building,
         map_screen.btn_ed_unit, map_screen.btn_ed_refresh, map_screen.btn_ed_bulk,
         map_screen.btn_ed_date, map_screen.btn_ed_edited, map_screen.btn_ed_diplo, map_screen.btn_ed_personality, map_screen.btn_ed_scripts,
