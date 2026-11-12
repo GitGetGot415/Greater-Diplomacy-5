@@ -73,10 +73,14 @@ DEATH_EXPLOSION_SECONDS = 0.7
 DEATH_EXPLOSION_RADIUS = 36
 DEATH_EXPLOSION_PARTICLE_SIZE = 12
 DEATH_EXPLOSION_PARTICLE_COUNT = 8
+DEATH_EXPLOSION_PARTICLE_SHAPE = "circle"  # "circle" or "square"
+DEATH_EXPLOSION_SPREAD = "circle"  # "circle" or "square"
 DEATH_EXPLOSION_CIRCLE_COLOR = (255, 180, 60)
 DEATH_EXPLOSION_CIRCLE_ALPHA = 180
 DEATH_EXPLOSION_COLORS = ((255, 240, 150), (255, 160, 45), (205, 65, 30), (75, 70, 65))
-DEATH_EXPLOSION_OFFSETS = tuple((math.cos(i * math.tau / DEATH_EXPLOSION_PARTICLE_COUNT), math.sin(i * math.tau / DEATH_EXPLOSION_PARTICLE_COUNT)) for i in range(DEATH_EXPLOSION_PARTICLE_COUNT))
+DEATH_EXPLOSION_CIRCLE_OFFSETS = tuple((math.cos(i * math.tau / DEATH_EXPLOSION_PARTICLE_COUNT), math.sin(i * math.tau / DEATH_EXPLOSION_PARTICLE_COUNT)) for i in range(DEATH_EXPLOSION_PARTICLE_COUNT))
+DEATH_EXPLOSION_OFFSETS = {"circle": DEATH_EXPLOSION_CIRCLE_OFFSETS, "square": tuple((dx / max(abs(dx), abs(dy)), dy / max(abs(dx), abs(dy))) for dx, dy in DEATH_EXPLOSION_CIRCLE_OFFSETS)}[DEATH_EXPLOSION_SPREAD]
+DEATH_EXPLOSION_DRAW_PARTICLE = {"circle": pygame.draw.ellipse, "square": pygame.draw.rect}[DEATH_EXPLOSION_PARTICLE_SHAPE]
 
 EDIT_BATTLE_HELP_TEXT = (
     "Build both armies, choose their deployment order, and optionally choose a unit to control. Custom battles do not change your campaign.\n\n"
@@ -2015,7 +2019,7 @@ class CustomBattleScreen(Screen):
             for dx, dy in DEATH_EXPLOSION_OFFSETS:
                 rect = pygame.Rect(0, 0, size, size)
                 rect.center = (round(center[0] + dx * radius), round(center[1] + dy * radius))
-                pygame.draw.ellipse(surface, color, rect)
+                DEATH_EXPLOSION_DRAW_PARTICLE(surface, color, rect)
 
     def _draw_battle(self, surface):
         self._draw_grass(surface)
