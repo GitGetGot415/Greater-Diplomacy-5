@@ -116,6 +116,13 @@ These rules override the default capitalization and punctuation guidance for tha
 | This is a review only. Do not change any files. | this is just a review, don't actually change anything |
 | AGENTS.md should link to the writing guide. | AGENTS.md should link to the writing guide |
 
+### Example abbreviations allowed
+
+| Word | Abbreviation |
+| --- | --- |
+| it was | twas |
+| except | cept |
+
 ### Exceptions
 
 - Category titles should be excluded from this style of wriring, for example:
