@@ -146,7 +146,7 @@
 - add a historical campaign from 1910 to 1940 `(this is INSANELY ambitious how the HELL are you going to railroad that) (maybe increasing the days per turn could help)`
 - think about continuous real-time gameplay `(ohhhhhhhh my god real time HOI4 multiplayer)`
 
-## Custom Map Terrain Painter not just Maker
+## Custom Map Terrain Maker not just Painter
 
 - let players import an image and turn it into a map `(and not like a custom terrain map i mean they should be able to import something like trollface.png and have that turned into a terrain map)`
 - let players change the map's shape without losing countries or scenario data

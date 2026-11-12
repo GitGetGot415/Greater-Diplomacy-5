@@ -32,6 +32,9 @@ MAP_PANELS = ("sidebar", "diplomatic", "queue")
 # click choosing a Relations viewpoint. Matches the box-select click size.
 RELATIONS_CLICK_SLOP = 4
 
+# The map maker's brushes use the left and right buttons, so they never pan there.
+EDITOR_BRUSH_MOUSE_BUTTONS = {1, 3}
+
 
 def _panel_rect(map_screen, name):
     return getattr(map_screen, f"{name}_scroll_rect", None)
@@ -421,9 +424,12 @@ def _handle_camera(map_screen, event, on_ui):
     # Full map panning works in every map workspace; the context-limited
     # variant deliberately stops at Orders. A panned order click is consumed,
     # while a deliberate overlapping selection/pan setup is allowed to run
-    # both gestures and is called out by Mouse Settings' warning.
-    pan_buttons = (mouse_buttons_for_map_panning()
-                   if not map_screen.is_editor else set())
+    # both gestures and is called out by Mouse Settings' warning. The map
+    # maker's brushes own the left and right buttons, so the map maker pans
+    # only with a pan-bound middle button.
+    pan_buttons = mouse_buttons_for_map_panning()
+    if map_screen.is_editor:
+        pan_buttons -= EDITOR_BRUSH_MOUSE_BUTTONS
     map_screen.camera.handle_input(event, map_screen, on_ui, pan_buttons=pan_buttons)
     return bool(event.type == pygame.MOUSEBUTTONUP
                 and map_screen.camera.finish_pan_drag(event.button)
