@@ -101,8 +101,8 @@ ZOOM_LEVELS = (0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.75, 1.0, 1.25, 1.5, 2.0)
 DEFAULT_ZOOM_INDEX = ZOOM_LEVELS.index(1.0)
 # Battle audio multipliers: 0.0 mutes, 0.5 halves, and 1.0 keeps normal volume.
 # Edit these values and restart the game. Zooming out reduces both further.
-BATTLE_MUSIC_VOLUME = 0.5
-BATTLE_SFX_VOLUME = 0.5
+BATTLE_MUSIC_VOLUME = 1.0
+BATTLE_SFX_VOLUME = 1.0
 AIM_CAMERA_OFFSET = 1.0  # Share of the pointer's distance from the view center, in screen pixels.
 CONTROLLED_MIN_ZOOM = 0.15 # Minimum zoom while controlling a living unit; choose a value from ZOOM_LEVELS.
 MIN_PLAYER_INDICATOR_SCALE = 0.85
