@@ -1,5 +1,0 @@
-SANDBOXED MODS
-==============
-
-Read documentation/other/SANDBOX_SECURITY.md for the sandbox rules and limitations.
-Use documentation/code_layout.md to find current source-replacement mod targets.
