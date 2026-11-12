@@ -39,6 +39,7 @@ RELEASES = {
     "v45": "069767d3de4c",
     "v46": "dd165c88434c",
     "v47": "042a84179ea0",
+    "v48": "b62d345262a9",
 }
 
 #: Unit identifiers from every release library.

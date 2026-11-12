@@ -1,23 +1,20 @@
 # hi hello if you're a human read this
 
 ## step 1
-change `GAME_VERSION` in constants.py
+compile and publish
 
 ## step 2
-compile
+change `version.txt` to match `GAME_VERSION` so the published files are on the current version and not the dev version
 
 ## step 3
-publish compiled versions
+change `GAME_VERSION` in constants.py so the current working space becomes the dev version
 
 ## step 4
-change `version.txt` to match `GAME_VERSION`
-
-## step 5
 once the previous release is committed, run:
 
     python scripts/data/write_released_content.py
 
-## why step 5
+## why step 4
 
 `write_released_content.py` reads committed git history to find released versions and the unit, building, and settings names those releases used
 
