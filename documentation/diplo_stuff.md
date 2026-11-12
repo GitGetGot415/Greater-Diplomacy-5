@@ -17,6 +17,8 @@ In the timelines below, 0.5 and 1.5 mean the send phase between planning turns.
 Allow cancellation of all outgoing diplomatic requests during the turn when they were written.
 This includes war declarations and volunteer offers.
 
+Send Millitary Attache, Garuntee Independence, and Millitary Access are one way offers. If one country has it with another country, that does not mean that the other country has it with the original country.
+
 ## Different requests sent in opposite directions must not overwrite each other.
 
     turn 0:   A offers B a trade. B asks A for military access.
