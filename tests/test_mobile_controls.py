@@ -262,15 +262,14 @@ class TouchGestureTests(unittest.TestCase):
 
     def test_dragging_over_confirmation_does_not_confirm(self):
         from ui.dialogs.yes_no import _YesNoModal
-        dialog = _YesNoModal(pygame.display.get_surface(), "Fixture", "Confirm?",
-                             mock.Mock(), "Yes", "No", None)
+        dialog = _YesNoModal(pygame.display.get_surface(), "Fixture", "Confirm?", "Yes", "No", None)
         self.owner = dialog
         point = dialog.yes_rect.center
         self.press(point)
         dialog.handle_events(self.send(finger(pygame.FINGERMOTION,
                                               (point[0] + 12, point[1]))))
         dialog.handle_events(self.release((point[0] + 12, point[1])))
-        self.assertFalse(dialog._resolved)
+        self.assertFalse(dialog.done)
 
     def test_dragging_over_skip_does_not_cancel_ai_processing(self):
         game = SimpleNamespace(show_player_ready_screen=False, show_exit_confirmation=False,

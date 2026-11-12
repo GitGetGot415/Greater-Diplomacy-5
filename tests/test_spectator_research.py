@@ -302,8 +302,10 @@ class SubjectTests(unittest.TestCase):
         draft = self.screen.spectator_draft
         self.screen.exit_screen()
         modal = modal_stack.active()
-        self.assertEqual(modal.back_label, "Go back")
-        modal.handle_events([pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=modal.back_rect.center)])
+        self.assertEqual(modal.screen.back_label, "Go back")
+        back = modal.screen.back_rect.center
+        modal.handle_events([pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=back),
+                             pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=back)])
         modal.update()
         self.assertTrue(modal_stack.is_empty())
         self.assertFalse(self.screen.done)
@@ -311,7 +313,9 @@ class SubjectTests(unittest.TestCase):
         self.assertEqual(self.map.nation_data[target]["research"], {})
         self.screen.exit_screen()
         modal = modal_stack.active()
-        modal.handle_events([pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=modal.no_rect.center)])
+        no = modal.screen.no_rect.center
+        modal.handle_events([pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=no),
+                             pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=no)])
         modal.update()
         self.assertTrue(self.screen.done)
         self.assertEqual(self.map.nation_data[target]["research"], {})

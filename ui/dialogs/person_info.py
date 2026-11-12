@@ -5,7 +5,7 @@ import webbrowser
 import pygame
 import data.constants as c
 from ui.rendering.font_manager import fonts
-from ui.dialogs.base import open_modal
+from ui.dialogs.base import open_dialog
 from ui.widgets import text_utils
 from ui.dialogs.message_box import _MessageModal
 
@@ -59,7 +59,7 @@ class _PersonInfoModal(_MessageModal):
 
     Scrolling comes from _MessageModal, the same as every other message popup."""
 
-    def __init__(self, surface, name, info_text, links, on_result, align="center", images=None):
+    def __init__(self, surface, name, info_text, links, align="center", images=None):
         self.align = align if align in ("left", "center", "right") else "center"
         self.BODY_ALIGN = self.align
         self.links = links or []
@@ -96,14 +96,14 @@ class _PersonInfoModal(_MessageModal):
         images_h = sum(max(cell["height"] for cell in row) + _IMAGE_ROW_GAP for row in grid_rows)
 
         links_h = len(self.links) * (self.link_font.get_height() + 8)
-        super().__init__(surface, name, info_text, on_result, "info",
+        super().__init__(surface, name, info_text, "info",
                          extra_h=images_h + (_CONTENT_GAP if self.image_rows else 0)
                          + links_h + (_CONTENT_GAP if self.links else 0))
 
         self.name = name
         left_x, right_x = self.content_rect.left, self.content_rect.right
         self.link_rects = []
-        y = self.box_rect.y + self.BODY_DY + self.body_height()
+        y = self.panel_rect.y + self.BODY_DY + self.body_height()
         if self.image_rows:
             y += _CONTENT_GAP
             for grid_row in grid_rows:
@@ -128,7 +128,7 @@ class _PersonInfoModal(_MessageModal):
             elif self.align == "right":
                 x = right_x - w
             else:
-                x = self.box_rect.centerx - w // 2
+                x = self.panel_rect.centerx - w // 2
             self.link_rects.append(pygame.Rect(x, y, w, self.link_font.get_height()))
             y += self.link_font.get_height() + 8
         self.set_content_bottom(y)
@@ -170,5 +170,5 @@ def show_person_info(name, info_text="", links=None, align="center", tk_parent=N
     Only PNG files are discovered. Labels default to filenames/relative paths. Overflow
     content scrolls like every message popup (see _MessageModal) while OK stays visible.
     """
-    open_modal(lambda surface, callback: _PersonInfoModal(surface, name, info_text, links, callback, align, images),
-               on_result, tk_parent)
+    open_dialog(lambda surface: _PersonInfoModal(surface, name, info_text, links, align, images),
+                on_result, tk_parent)

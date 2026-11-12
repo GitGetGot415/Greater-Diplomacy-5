@@ -55,9 +55,9 @@ class EditorScreenSmokeTests(unittest.TestCase):
 
     def test_message_popup_accepts_an_alignment_and_defaults_to_center(self):
         from ui.dialogs.message_box import _MessageModal
-        modal = _MessageModal(self.surface, "Help", "Short", None, "info", align="left")
+        modal = _MessageModal(self.surface, "Help", "Short", "info", align="left")
         self.assertEqual(modal.BODY_ALIGN, "left")
-        self.assertEqual(_MessageModal(self.surface, "Help", "Short", None, "info").BODY_ALIGN, "center")
+        self.assertEqual(_MessageModal(self.surface, "Help", "Short", "info").BODY_ALIGN, "center")
         modal.draw(self.surface)
 
     def test_scripted_events_global_rules_add_and_delete(self):

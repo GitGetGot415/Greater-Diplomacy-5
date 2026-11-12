@@ -1,26 +1,25 @@
-"""Shared modal skeleton and standalone/blocking-loop plumbing for every
-dialog in this package -- see ui/dialogs/__init__.py for the overview.
-"""
-from contextlib import contextmanager
+"""Shared shape of the small dialogs in this package -- see ui/dialogs/__init__.py
+for the overview.
 
+DialogScreen is a ModalScreen sized to its message and centred on the surface it
+opens over. open_dialog runs one through screen_runner.run_screen: on the modal
+stack in game, or in its own window for the standalone dev tools.
+"""
 import pygame
 import data.constants as c
-from data import queries
 from data.io import keybind_io
-from ui.navigation.screen import synthesize_keybind_mouse_events
-from ui.rendering.font_manager import fonts
-from ui.navigation import modal_stack
-from ui.widgets import text_utils
-from ui.widgets import ui_elements
-from ui.bars import ui_bars
 from ui.background_styles import DIALOG_STYLES
+from ui.navigation import screen_runner
+from ui.navigation.modal_screen import ModalScreen
+from ui.navigation.screen import resolve_keybind
+from ui.rendering.font_manager import fonts
+from ui import sound_effects
+from ui.widgets import text_utils
+from ui.widgets.ui_elements import Button
 
+# The window a standalone tool opens for one dialog.
 _STANDALONE_SIZE = (520, 320)
-
-# These dialogs keep their own darker, higher-contrast look rather than the
-# modal panel palette: they interrupt whatever is on screen, including the
-# panels in that palette, so they have to read as sitting above it.
-_DIALOG_OVERLAY_ALPHA = 180
+_STANDALONE_CAPTION = "Confirm"
 
 
 def _lighten(color, amount=40):
@@ -28,63 +27,19 @@ def _lighten(color, amount=40):
     return tuple(min(255, channel + amount) for channel in color)
 
 
-def _back_key():
-    """The rebound BACK key, so these dialogs dismiss on it same as everything else."""
-    return queries.get_keybind("BACK", keybind_io.default_keybind("BACK"))
+class DialogScreen(ModalScreen):
+    """A titled message box with answer buttons.
 
-
-def _hide_tk_chain(tk_widget):
-    """Withdraws a tkinter widget and every ancestor window so the pygame dialog isn't hidden behind a topmost tk window."""
-    hidden = []
-    widget = tk_widget
-    seen = set()
-    while widget is not None and id(widget) not in seen:
-        seen.add(id(widget))
-        try:
-            if widget.winfo_exists() and widget.state() != "withdrawn":
-                hidden.append(widget)
-                widget.withdraw()
-        except Exception:
-            pass
-        widget = getattr(widget, "master", None)
-    return hidden
-
-
-def _show_tk_chain(hidden):
-    for widget in reversed(hidden):
-        try:
-            widget.deiconify()
-        except Exception:
-            pass
-
-
-@contextmanager
-def tk_hidden(tk_parent):
-    """Keeps a standalone tool's tkinter windows out of the way of a pygame dialog."""
-    hidden = _hide_tk_chain(tk_parent) if tk_parent is not None else []
-    try:
-        yield
-    finally:
-        _show_tk_chain(hidden)
-
-
-class _BaseModal:
-    """Shared skeleton for the dialogs in this package.
-
-    Each one used to repeat the same __init__ prologue (snapshot the surface,
-    pick three fonts, wrap the message, centre a box), the same update/_finish
-    pair, and the same draw prologue (freeze-frame, dim, box, centred title,
-    wrapped body). Subclasses now declare their box width and extra height and
-    fill in draw_content().
+    A subclass sets its box width and extra height, adds its buttons with
+    add_button, and draws anything else in draw_body. A dialog closes with
+    answer(); run_screen then pops it and delivers the result.
     """
-
     #: Widest the box gets before it starts wrapping instead of growing.
     BOX_MAX_W = 520
     #: Minimum box height, and the fixed chrome above/below the message body.
     BOX_MIN_H = 200
     BOX_CHROME_H = 130
-    BORDER_COLOR = c.UI_TEXT_LIGHT
-    BORDER_WIDTH = 2
+    #: Title centre and first body line centre, below the box top.
     TITLE_DY = 35
     BODY_DY = 75
     BODY_ALIGN = "center"
@@ -92,59 +47,88 @@ class _BaseModal:
     TEXT_MARGIN = 20
     #: Whether on_result takes the answer. The message popups just signal "closed".
     PASSES_RESULT = True
+    #: The answer when a standalone tool's window is closed instead of the dialog being answered.
+    DEFAULT_RESULT = None
 
-    def __init__(self, surface, title, message, on_result, extra_h=0):
-        self.on_result = on_result
+    # These dialogs keep their own darker, higher-contrast look rather than the
+    # modal panel palette: they interrupt whatever is on screen, including the
+    # panels in that palette, so they have to read as sitting above it.
+    OVERLAY_ALPHA = 180
+    PANEL_STYLE = DIALOG_STYLES["main"]
+    PANEL_BORDER = c.UI_TEXT_LIGHT
+    PANEL_BORDER_WIDTH = 2
+    TITLE_PRESET = "heading2"
+
+    def __init__(self, surface, title, message, extra_h=0):
+        super().__init__(None, title)
         self.background = surface.copy()
-        self._resolved = False
-        self._result = None
-
-        self.title = title
-        self.title_font = fonts.get("heading2")
+        self.result = self.DEFAULT_RESULT
         self.msg_font = fonts.get("normal")
-        self.btn_font = fonts.get("button")
+        # draw_screen_panel places the title by its top edge.
+        self.TITLE_Y_OFFSET = self.TITLE_DY - fonts.get(self.TITLE_PRESET).get_height() // 2
 
         box_w = min(self.BOX_MAX_W, surface.get_width() - 40)
         self.lines = (text_utils.wrap_text(message, self.msg_font, box_w - 2 * self.TEXT_MARGIN)
                       if message else [])
         box_h = max(self.BOX_MIN_H, self.BOX_CHROME_H + self.body_height() + extra_h)
-
-        self.box_rect = pygame.Rect(0, 0, box_w, box_h)
-        self.box_rect.center = (surface.get_width() // 2, surface.get_height() // 2)
+        self.panel_rect = pygame.Rect(0, 0, box_w, box_h)
+        self.panel_rect.center = (surface.get_width() // 2, surface.get_height() // 2)
 
     def body_height(self):
         return len(self.lines) * (self.msg_font.get_height() + 2)
 
-    # -- resolution ----------------------------------------------------- #
+    # -- answers -------------------------------------------------------- #
 
-    def update(self):
-        if self._resolved:
-            modal_stack.pop()
-            self.deliver_result()
+    def answer(self, result=None, sound=None):
+        """Closes the dialog with `result`. Only the first answer counts."""
+        if self.done:
+            return
+        if sound:
+            sound_effects.play_ui_sound(sound)
+        self.result = result
+        self.done = True
 
-    def deliver_result(self):
-        if self.on_result:
-            if self.PASSES_RESULT:
-                self.on_result(self._result)
-            else:
-                self.on_result()
+    def is_cancel_key(self, key):
+        """Escape, and the rebindable BACK key, cancel every dialog."""
+        return key in (pygame.K_ESCAPE, resolve_keybind(self, "BACK", keybind_io.default_keybind("BACK")))
 
-    def _finish(self, result=None):
-        self._resolved = True
-        self._result = result
+    def cancel(self):
+        """What Escape and BACK do."""
+        self.answer(self.DEFAULT_RESULT)
+
+    def handle_back_key(self):
+        self.cancel()
+
+    def handle_events(self, events):
+        for event in events:
+            if self.done:
+                return
+            for element in self.elements:
+                element.handle_event(event)
+            self.additional_events(event)
+
+    def additional_events(self, event):
+        if event.type == pygame.KEYDOWN:
+            self.handle_key(event)
+
+    def handle_key(self, event):
+        """A key press. Escape and BACK cancel unless a subclass says otherwise."""
+        if self.is_cancel_key(event.key):
+            self.cancel()
 
     # -- drawing -------------------------------------------------------- #
 
-    def draw_button(self, surface, rect, label, color, hover_color):
-        """One of the dialog's action buttons, tinted while hovered."""
-        ui_elements.draw_pixel_button(surface, rect, color, hover_color=hover_color)
-        surf = self.btn_font.render(label, True, (255, 255, 255))
-        surface.blit(surf, surf.get_rect(center=rect.center))
+    def add_button(self, rect, label, color, hover_color, callback, sound_kind=None):
+        """An answer button in the dialog's own colors. Most answers play no sound."""
+        button = Button(*rect.topleft, rect.size, "blue", label, callback, sound_kind=sound_kind)
+        button.set_colors(color, hover_color)
+        self.elements.append(button)
+        return button
 
     def draw_body_lines(self, surface, offset_y=0):
         """Renders the wrapped message and returns the y below the last line."""
-        y = self.box_rect.y + self.BODY_DY + offset_y
-        left_x, right_x = self.box_rect.x + 40, self.box_rect.right - 40
+        y = self.panel_rect.y + self.BODY_DY + offset_y
+        left_x, right_x = self.panel_rect.x + 40, self.panel_rect.right - 40
         for line in self.lines:
             line_surf = self.msg_font.render(line, True, (210, 210, 210))
             if self.BODY_ALIGN == "left":
@@ -152,79 +136,27 @@ class _BaseModal:
             elif self.BODY_ALIGN == "right":
                 rect = line_surf.get_rect(midright=(right_x, y))
             else:
-                rect = line_surf.get_rect(center=(self.box_rect.centerx, y))
+                rect = line_surf.get_rect(center=(self.panel_rect.centerx, y))
             surface.blit(line_surf, rect)
             y += self.msg_font.get_height() + 2
         return y
 
-    def draw_content(self, surface):
-        """Whatever sits below the message: input box, buttons, links."""
-        pass
-
-    def draw(self, surface):
-        surface.blit(self.background, (0, 0))
-        ui_bars.draw_fullscreen_overlay(surface, _DIALOG_OVERLAY_ALPHA)
-
-        style = DIALOG_STYLES["main"]
-        ui_elements.draw_pixel_panel(surface, self.box_rect, style["color"], self.BORDER_COLOR,
-                                     border_width=self.BORDER_WIDTH,
-                                     gradient_strength=style["gradient_strength"])
-
-        title_surf = self.title_font.render(self.title, True, (255, 255, 255))
-        surface.blit(title_surf,
-                     title_surf.get_rect(center=(self.box_rect.centerx, self.box_rect.y + self.TITLE_DY)))
-
+    def draw_body(self, surface):
         self.draw_body_lines(surface)
-        self.draw_content(surface)
 
 
-def open_modal(make_modal, on_result, tk_parent=None, default_result=None):
+def open_dialog(make_dialog, on_result, tk_parent=None):
     """Opens a dialog and answers on_result when it closes.
 
-    make_modal(surface, on_result) builds the dialog. default_result is the answer
-    when a standalone tool's window is closed instead of the dialog being answered.
+    make_dialog(surface) builds the dialog over the current display. tk_parent
+    is a tkinter widget a standalone tool hides while its dialog is open.
     """
-    surface = pygame.display.get_surface()
-    if surface is not None:
-        modal_stack.push(make_modal(surface, on_result))
-        return
-    _run_blocking(lambda surf: make_modal(surf, on_result), tk_parent, default_result=default_result)
+    def deliver(dialog):
+        if on_result:
+            if dialog.PASSES_RESULT:
+                on_result(dialog.result)
+            else:
+                on_result()
 
-
-def _run_blocking(make_modal, tk_parent, default_result=None):
-    """Runs a dialog to completion with its own frame loop, then delivers the answer.
-
-    Only reachable when no display exists yet -- the standalone dev tools in
-    scripts/editors and scripts/maps, which run outside the game's main
-    loop. In-game the dialog goes on the modal stack instead; a nested loop
-    here would never yield to the browser and would freeze a pygbag tab
-    (see ui/navigation/modal_stack.py).
-
-    This was written out once per dialog, differing only in the modal class and
-    the sentinel returned on QUIT.
-    """
-    surface, owns_display = ui_bars.acquire_surface(_STANDALONE_SIZE, "Confirm")
-
-    modal = make_modal(surface)
-    clock = pygame.time.Clock()
-
-    try:
-        with tk_hidden(tk_parent):
-            while True:
-                events = pygame.event.get()
-                events = synthesize_keybind_mouse_events(events)
-                if any(event.type == pygame.QUIT for event in events):
-                    break
-                modal.handle_events(events)
-                if modal._resolved:
-                    break
-
-                modal.draw(surface)
-                pygame.display.flip()
-                clock.tick(c.TARGET_FPS)
-    finally:
-        ui_bars.release_surface(owns_display)
-
-    if not modal._resolved:
-        modal._result = default_result
-    modal.deliver_result()
+    screen_runner.run_screen(lambda: make_dialog(pygame.display.get_surface()), deliver,
+                             tk_parent=tk_parent, caption=_STANDALONE_CAPTION, size=_STANDALONE_SIZE)

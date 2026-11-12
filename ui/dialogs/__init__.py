@@ -10,14 +10,17 @@ that shape (see ui/navigation/modal_stack.py for the full rationale):
   browser tab (main.py's loop never gets to yield to the browser).
 - When no display exists yet (standalone tkinter dev tools like
   scripts/editors/country_editor.py, run outside the game's main loop entirely),
-  there's no modal stack pumping frames, so the dialog falls back to running
-  its own short-lived blocking loop and calls on_result() right before
-  returning -- same callback shape, just resolved synchronously.
+  there's no modal stack pumping frames, so the dialog runs in its own window
+  and short-lived blocking loop and calls on_result() right before returning --
+  same callback shape, just resolved synchronously. Closing that window gives
+  the dialog's cancel answer.
 
-Call sites always look the same either way: `ask_yes_no(title, msg, on_result=...)`.
+Both paths are ui/navigation/screen_runner.run_screen: every dialog is a
+ModalScreen, like the larger tool windows. Call sites always look the same
+either way: `ask_yes_no(title, msg, on_result=...)`.
 
-Split by dialog kind: base.py (the shared modal skeleton and the standalone
-blocking-loop runner), yes_no.py, text_input.py (ask_integer/ask_string),
+Split by dialog kind: base.py (DialogScreen, the shared dialog shape, and
+open_dialog), yes_no.py, text_input.py (ask_integer/ask_string),
 message_box.py (show_info/success/warning/error), person_info.py. Call sites
 do `from ui import dialogs; dialogs.ask_yes_no(...)` or import a
 name directly (`from ui.dialogs import show_person_info`), so every

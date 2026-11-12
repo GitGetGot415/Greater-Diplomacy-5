@@ -12,10 +12,8 @@ which meant every other screen would have had to import a private name out of an
 unrelated 1200-line editor to reuse it. That module keeps a _ModalScreen subclass
 that sets its own panel style.
 
-Import-graph note: this deliberately imports only screen, ui_bars, ui_elements
-and the font manager at module scope. data.queries and ui.dialogs are
-pulled in inside the methods that need them, since both would otherwise close a
-cycle back through screens.game.map.
+Import-graph note: ui.dialogs builds its dialogs on ModalScreen, so this module
+loads ui.dialogs and its pickers inside the method that needs them.
 """
 
 import pygame
@@ -27,10 +25,6 @@ from ui.widgets import text_utils
 from ui.bars import ui_bars
 from ui.widgets.scroll_panes import ScrollPanes
 from ui.widgets.ui_elements import Button, checkbox_label, toggle_color
-
-from data import queries
-from ui.dialogs import pickers
-from ui import dialogs
 class ModalScreen(ScrollPanes, Screen):
     """A dimmed freeze-frame behind a bordered panel -- the shape every converted
     tool window in ui/ uses. Subclasses fill in draw_body() and refresh_ui()."""
@@ -99,6 +93,9 @@ class ModalScreen(ScrollPanes, Screen):
                            lambda: self._choose(title, options, on_pick, is_enabled))
 
     def _choose(self, title, options, on_pick, is_enabled=None):
+        # The dialogs package builds its dialogs on this class, so it loads after this module.
+        from ui import dialogs
+        from ui.dialogs import pickers
 
         options = list(options)
         if not options:

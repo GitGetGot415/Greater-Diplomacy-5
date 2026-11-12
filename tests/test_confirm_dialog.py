@@ -4,7 +4,8 @@ They are pushed onto the modal stack from deep inside other screens, so nothing
 else in the suite reaches them -- and they all now share one base class, so a
 mistake in the shared half breaks every dialog at once.
 
-Tests drive the in-game modal stack. Standalone callback checks replace the blocking loop with a test double.
+Tests drive the in-game modal stack, where run_screen wraps each dialog screen.
+Standalone checks drive run_screen's own window with a closed-window event.
 """
 
 import unittest
@@ -37,6 +38,11 @@ def release(pos):
     return pygame.event.Event(pygame.MOUSEBUTTONUP, pos=pos, button=1)
 
 
+def press(pos):
+    """A full click: dialog buttons answer on release, like every Button."""
+    return [click(pos), release(pos)]
+
+
 class DialogTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -48,6 +54,12 @@ class DialogTests(unittest.TestCase):
         while not modal_stack.is_empty():
             modal_stack.pop()
         self.answers = []
+
+    def dialog(self):
+        """The dialog screen on top of the modal stack."""
+        wrapper = modal_stack.active()
+        self.assertIsNotNone(wrapper, "dialog was not pushed onto the modal stack")
+        return wrapper.screen
 
     def settle(self):
         """Runs the one update() that pops the modal and delivers the answer."""
@@ -61,16 +73,16 @@ class DialogTests(unittest.TestCase):
 
     def test_yes_no_confirms(self):
         dialogs.ask_yes_no("T", "Sure?", self.answers.append)
-        modal = modal_stack.active()
-        modal.handle_events([click(modal.yes_rect.center)])
+        modal = self.dialog()
+        modal.handle_events(press(modal.yes_rect.center))
         self.settle()
         self.assertEqual(self.answers, [True])
         self.assertTrue(modal_stack.is_empty())
 
     def test_yes_no_cancels(self):
         dialogs.ask_yes_no("T", "Sure?", self.answers.append)
-        modal = modal_stack.active()
-        modal.handle_events([click(modal.no_rect.center)])
+        modal = self.dialog()
+        modal.handle_events(press(modal.no_rect.center))
         self.settle()
         self.assertEqual(self.answers, [False])
 
@@ -90,15 +102,17 @@ class DialogTests(unittest.TestCase):
                 self.answers.clear()
                 dialogs.ask_yes_no("T", "Save, discard, or return?", self.answers.append,
                                           yes_label="Save", no_label="Cancel", back_label="Go back")
-                modal = modal_stack.active()
-                modal.handle_events([click(getattr(modal, rectangle).center)])
+                modal = self.dialog()
+                modal.handle_events(press(getattr(modal, rectangle).center))
                 self.settle()
                 self.assertEqual(self.answers, [expected])
 
     def test_three_choice_keyboard_returns_to_screen_on_back(self):
         for keyboard_key, expected in ((pygame.K_RETURN, True), (pygame.K_n, False),
                                        (pygame.K_ESCAPE, None), (pygame.K_g, None), (pygame.K_F8, None)):
-            with self.subTest(key=keyboard_key), mock.patch("ui.dialogs.yes_no._back_key", return_value=pygame.K_F8):
+            with self.subTest(key=keyboard_key), mock.patch(
+                    "ui.navigation.screen.queries.get_keybind",
+                    side_effect=lambda action, default: pygame.K_F8 if action == "BACK" else default):
                 self.answers.clear()
                 dialogs.ask_yes_no("T", "Save?", self.answers.append, back_label="Go back")
                 modal_stack.active().handle_events([key(keyboard_key)])
@@ -107,34 +121,33 @@ class DialogTests(unittest.TestCase):
 
     def standalone_window_closed(self):
         """A standalone tool with no game display, whose window the user closes."""
-        from ui.dialogs import base
-        return (mock.patch.object(pygame.display, "get_surface", return_value=None),
-                mock.patch.object(base.ui_bars, "acquire_surface", return_value=(self.surface, False)),
-                mock.patch.object(base.ui_bars, "release_surface"),
+        from ui.navigation import screen_runner
+        return (mock.patch.object(screen_runner.ui_bars, "acquire_surface", return_value=(self.surface, True)),
+                mock.patch.object(screen_runner.ui_bars, "release_surface"),
                 mock.patch.object(pygame.event, "get", return_value=[pygame.event.Event(pygame.QUIT)]))
 
     def test_closing_a_standalone_three_choice_window_answers_go_back(self):
-        no_display, acquire, release, quit_event = self.standalone_window_closed()
-        with no_display, acquire, release, quit_event:
+        acquire, release, quit_event = self.standalone_window_closed()
+        with acquire, release, quit_event:
             dialogs.ask_yes_no("T", "Save?", self.answers.append, back_label="Go back")
         self.assertEqual(self.answers, [None])
 
     def test_closing_a_standalone_two_choice_window_answers_no(self):
-        no_display, acquire, release, quit_event = self.standalone_window_closed()
-        with no_display, acquire, release, quit_event:
+        acquire, release, quit_event = self.standalone_window_closed()
+        with acquire, release, quit_event:
             dialogs.ask_yes_no("T", "Save?", self.answers.append)
         self.assertEqual(self.answers, [False])
 
     def test_closing_a_standalone_text_window_answers_cancelled(self):
-        no_display, acquire, release, quit_event = self.standalone_window_closed()
-        with no_display, acquire, release, quit_event:
+        acquire, release, quit_event = self.standalone_window_closed()
+        with acquire, release, quit_event:
             dialogs.ask_string("T", "Name?", self.answers.append)
         self.assertEqual(self.answers, [None])
 
     def test_closing_a_standalone_message_window_calls_back_without_arguments(self):
         calls = []
-        no_display, acquire, release, quit_event = self.standalone_window_closed()
-        with no_display, acquire, release, quit_event:
+        acquire, release, quit_event = self.standalone_window_closed()
+        with acquire, release, quit_event:
             dialogs.show_message("T", "Done.", on_result=lambda: calls.append(True))
         self.assertEqual(calls, [True])
 
@@ -142,14 +155,14 @@ class DialogTests(unittest.TestCase):
 
     def test_ask_string_returns_typed_text(self):
         dialogs.ask_string("T", "Name?", self.answers.append)
-        modal = modal_stack.active()
+        modal = self.dialog()
         modal.handle_events([typed("a"), typed("b"), key(pygame.K_RETURN)])
         self.settle()
         self.assertEqual(self.answers, ["ab"])
 
     def test_ask_string_backspace(self):
         dialogs.ask_string("T", "Name?", self.answers.append)
-        modal = modal_stack.active()
+        modal = self.dialog()
         modal.handle_events([typed("a"), typed("b"), key(pygame.K_BACKSPACE),
                              key(pygame.K_RETURN)])
         self.settle()
@@ -157,14 +170,14 @@ class DialogTests(unittest.TestCase):
 
     def test_text_input_clear_control_erases_the_current_value(self):
         dialogs.ask_string("T", "Name?", self.answers.append, initial="wrong invite")
-        modal = modal_stack.active()
-        modal.handle_events([click(modal.clear_rect.center), typed("r"), key(pygame.K_RETURN)])
+        modal = self.dialog()
+        modal.handle_events([*press(modal.clear_rect.center), typed("r"), key(pygame.K_RETURN)])
         self.settle()
         self.assertEqual(self.answers, ["r"])
 
     def test_ask_string_accepts_clipboard_paste(self):
         dialogs.ask_string("T", "Name?", self.answers.append)
-        modal = modal_stack.active()
+        modal = self.dialog()
         paste = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_v, unicode="", mod=pygame.KMOD_CTRL)
         with mock.patch("ui.widgets.ui_elements._clipboard_text", return_value="Pasted name"):
             modal.handle_events([paste, key(pygame.K_RETURN)])
@@ -173,7 +186,7 @@ class DialogTests(unittest.TestCase):
 
     def test_ask_string_accepts_macos_command_v_paste(self):
         dialogs.ask_string("T", "Name?", self.answers.append)
-        modal = modal_stack.active()
+        modal = self.dialog()
         paste = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_v, unicode="", mod=pygame.KMOD_GUI)
         with mock.patch("ui.widgets.ui_elements._clipboard_text", return_value="Pasted on Mac"):
             modal.handle_events([paste, key(pygame.K_RETURN)])
@@ -206,14 +219,14 @@ class DialogTests(unittest.TestCase):
 
     def test_ask_string_max_length_stops_new_characters(self):
         dialogs.ask_string("T", "Name?", self.answers.append, initial="ab", max_length=3)
-        modal = modal_stack.active()
+        modal = self.dialog()
         modal.handle_events([typed("c"), typed("d"), key(pygame.K_RETURN)])
         self.settle()
         self.assertEqual(self.answers, ["abc"])
 
     def test_ask_integer_accepts_digits(self):
         dialogs.ask_integer("T", "How many?", self.answers.append)
-        modal = modal_stack.active()
+        modal = self.dialog()
         modal.handle_events([typed("4"), typed("2"), key(pygame.K_RETURN)])
         self.settle()
         self.assertEqual(self.answers, [42])
@@ -221,9 +234,9 @@ class DialogTests(unittest.TestCase):
     def test_ask_integer_rejects_out_of_range(self):
         """A rejected value must keep the dialog open with an error, not resolve."""
         dialogs.ask_integer("T", "1-10?", self.answers.append, minvalue=1, maxvalue=10)
-        modal = modal_stack.active()
+        modal = self.dialog()
         modal.handle_events([typed("9"), typed("9"), key(pygame.K_RETURN)])
-        self.assertFalse(modal._resolved)
+        self.assertFalse(modal.done)
         self.assertNotEqual(modal.error_text, "")
         modal.draw(self.surface)
 
@@ -232,10 +245,10 @@ class DialogTests(unittest.TestCase):
     def test_show_message_closes_without_a_result(self):
         calls = []
         dialogs.show_message("T", "Done.", on_result=lambda: calls.append(True))
-        modal = modal_stack.active()
+        modal = self.dialog()
         with mock.patch.object(sound_effects, "play_ui_sound") as sound:
             modal.handle_events([click(modal.ok_rect.center)])
-            self.assertFalse(modal._resolved)
+            self.assertFalse(modal.done)
             sound.assert_not_called()
             modal.handle_events([release(modal.ok_rect.center)])
             sound.assert_called_once_with("back")
@@ -247,13 +260,13 @@ class DialogTests(unittest.TestCase):
 
     def test_message_ok_cancels_when_released_outside_like_other_buttons(self):
         dialogs.show_info("T", "Help text.")
-        modal = modal_stack.active()
+        modal = self.dialog()
         outside = (modal.ok_rect.left - 10, modal.ok_rect.centery)
         with mock.patch.object(sound_effects, "play_ui_sound") as sound:
             modal.handle_events([click(modal.ok_rect.center), release(outside)])
-            self.assertFalse(modal._resolved)
+            self.assertFalse(modal.done)
             modal.handle_events([click(outside), release(modal.ok_rect.center)])
-            self.assertFalse(modal._resolved)
+            self.assertFalse(modal.done)
             sound.assert_not_called()
             modal.handle_events([click(modal.ok_rect.center), release(modal.ok_rect.center)])
             sound.assert_called_once_with("back")
@@ -265,7 +278,7 @@ class DialogTests(unittest.TestCase):
                                       ("warning", [], "click"), ("error", [], "click")):
             with self.subTest(kind=kind), mock.patch.object(sound_effects, "play_ui_sound") as sound:
                 dialogs.show_message("T", "Body.", kind=kind)
-                modal = modal_stack.active()
+                modal = self.dialog()
                 self.assertEqual([call.args[0] for call in sound.call_args_list], opened)
                 sound.reset_mock()
                 modal.handle_events([click(modal.ok_rect.center), release(modal.ok_rect.center)])
@@ -277,10 +290,10 @@ class DialogTests(unittest.TestCase):
             dialogs.show_person_info("Name", "Some blurb.", [])
             sound.assert_called_once_with("info")
             sound.reset_mock()
-            modal = modal_stack.active()
+            modal = self.dialog()
             self.assertEqual(modal.ok_button.text, "OK")
             modal.handle_events([click(modal.ok_rect.center)])
-            self.assertFalse(modal._resolved)
+            self.assertFalse(modal.done)
             modal.handle_events([release(modal.ok_rect.center)])
             sound.assert_called_once_with("back")
         self.settle()
@@ -302,19 +315,19 @@ class DialogTests(unittest.TestCase):
             for pressed in (pygame.K_RETURN, pygame.K_ESCAPE, pygame.K_SPACE):
                 with self.subTest(expected=expected, key=pressed):
                     open_popup()
-                    modal = modal_stack.active()
+                    modal = self.dialog()
                     with mock.patch.object(sound_effects, "play_ui_sound") as sound:
                         modal.handle_events([key(pressed), key(pressed)])
-                    self.assertTrue(modal._resolved)
+                    self.assertTrue(modal.done)
                     self.assertEqual([call.args[0] for call in sound.call_args_list], expected)
                     modal_stack.pop()
 
     def test_credits_arrow_keys_scroll_without_closing_or_a_sound(self):
         dialogs.show_person_info("Name", "Blurb.", [])
-        modal = modal_stack.active()
+        modal = self.dialog()
         with mock.patch.object(sound_effects, "play_ui_sound") as sound:
             modal.handle_events([key(pygame.K_DOWN)])
-        self.assertFalse(modal._resolved)
+        self.assertFalse(modal.done)
         sound.assert_not_called()
         modal_stack.pop()
 
@@ -322,13 +335,13 @@ class DialogTests(unittest.TestCase):
         for kind in ("info", "success", "warning", "error"):
             with self.subTest(kind=kind):
                 dialogs.show_message("T", "Body text.", kind=kind)
-                modal = modal_stack.active()
+                modal = self.dialog()
                 modal.draw(self.surface)
                 modal_stack.pop()
 
     def test_show_message_with_no_callback(self):
         dialogs.show_message("T", "Body.")
-        modal = modal_stack.active()
+        modal = self.dialog()
         modal.handle_events([key(pygame.K_RETURN)])
         self.settle()
         self.assertTrue(modal_stack.is_empty())
@@ -336,14 +349,14 @@ class DialogTests(unittest.TestCase):
     def long_message_modal(self, inline):
         from ui.dialogs.message_box import _MessageModal
         text = "\n".join(f"Help line {n}." for n in range(60))
-        return _MessageModal(pygame.Surface((520, 320)), "Help", text, None, "info",
+        return _MessageModal(pygame.Surface((520, 320)), "Help", text, "info",
                              inline_parts=[(text, None)] if inline else None)
 
     def test_long_help_text_stops_at_the_window_and_scrolls_like_credits(self):
         for inline in (False, True):
             with self.subTest(inline=inline):
                 modal = self.long_message_modal(inline)
-                self.assertLessEqual(modal.box_rect.bottom, 320)
+                self.assertLessEqual(modal.panel_rect.bottom, 320)
                 self.assertGreater(modal.max_scroll, 0)
                 self.assertIsNotNone(modal.scroll_track_rect)
                 modal.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, y=-1000)])
@@ -359,11 +372,11 @@ class DialogTests(unittest.TestCase):
                 modal.draw(surface)
                 self.assertEqual(surface.get_clip(), surface.get_rect())
                 modal.handle_events([click(modal.ok_rect.center), release(modal.ok_rect.center)])
-                self.assertTrue(modal._resolved)
+                self.assertTrue(modal.done)
 
     def test_help_text_that_fits_has_no_scrollbar(self):
         dialogs.show_info("T", "Help text.")
-        modal = modal_stack.active()
+        modal = self.dialog()
         self.assertEqual(modal.max_scroll, 0)
         self.assertIsNone(modal.scroll_track_rect)
         modal_stack.pop()
@@ -381,7 +394,7 @@ class DialogTests(unittest.TestCase):
     def test_person_info_renders_links(self):
         links = [{"text": "Site", "url": "https://example.invalid"}, {"text": "No link"}]
         dialogs.show_person_info("Name", "Some blurb.", links)
-        modal = modal_stack.active()
+        modal = self.dialog()
         self.assertEqual(len(modal.link_rects), 2)
         modal.draw(self.surface)
         modal.handle_events([key(pygame.K_ESCAPE)])
@@ -454,13 +467,13 @@ class DialogTests(unittest.TestCase):
             self.save_credit_test_image(directory, "first.png")
             entries = [{"directory": directory}]
             with mock.patch.object(person_info, "expand_credit_images", wraps=person_info.expand_credit_images) as expand:
-                modal = person_info._PersonInfoModal(self.surface, "Artist", "Art", [], None, images=entries)
+                modal = person_info._PersonInfoModal(self.surface, "Artist", "Art", [], images=entries)
                 self.assertEqual(len(modal.image_rows), 1)
                 modal.draw(self.surface)
                 modal.draw(self.surface)
                 self.assertEqual(expand.call_count, 1)
                 self.save_credit_test_image(directory, "second.png")
-                reopened = person_info._PersonInfoModal(self.surface, "Artist", "Art", [], None, images=entries)
+                reopened = person_info._PersonInfoModal(self.surface, "Artist", "Art", [], images=entries)
                 self.assertEqual(len(reopened.image_rows), 2)
                 self.assertEqual(expand.call_count, 2)
 
@@ -477,7 +490,7 @@ class DialogTests(unittest.TestCase):
         images = self.credited_images()
         with mock.patch.object(pygame.image, "load", wraps=pygame.image.load) as load:
             dialogs.show_person_info("Artist", "Art", images=images)
-            modal = modal_stack.active()
+            modal = self.dialog()
             self.assertEqual(load.call_count, len({image["path"] for image in images}))
             modal.draw(self.surface)
             modal.draw(self.surface)
@@ -493,14 +506,14 @@ class DialogTests(unittest.TestCase):
             for align in ("left", "center", "right"):
                 with self.subTest(size=size, align=align):
                     surface = pygame.Surface(size)
-                    modal = _PersonInfoModal(surface, "Artist", "Art", [], None,
+                    modal = _PersonInfoModal(surface, "Artist", "Art", [],
                                              align, self.credited_images())
                     modal.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, y=-100)])
                     self.assertEqual(modal.scroll_y, modal.max_scroll)
                     modal.draw(surface)
                     self.assertEqual(surface.get_clip(), surface.get_rect())
                     modal.handle_events([click(modal.ok_rect.center), release(modal.ok_rect.center)])
-                    self.assertTrue(modal._resolved)
+                    self.assertTrue(modal.done)
 
     def test_credit_images_forwarded_from_clickable_name(self):
         from screens.menus import credits
@@ -518,7 +531,7 @@ class DialogTests(unittest.TestCase):
         from ui.dialogs.person_info import _PersonInfoModal
         links = [{"text": "Site", "url": "https://example.invalid"}]
         surface = pygame.Surface((520, 320))
-        modal = _PersonInfoModal(surface, "Artist", "Art", links, None,
+        modal = _PersonInfoModal(surface, "Artist", "Art", links,
                                  "left", self.credited_images())
         modal.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, y=-100)])
         visible_link = modal.link_rects[0].move(0, -modal.scroll_y)
@@ -527,21 +540,21 @@ class DialogTests(unittest.TestCase):
         open_url.assert_called_once_with(links[0]["url"])
 
     def test_standalone_person_info_receives_images(self):
-        from ui.dialogs import base
+        from ui.navigation import screen_runner
         images = self.credited_images()
         calls = []
-        with mock.patch.object(pygame.display, "get_surface", return_value=None), \
-                mock.patch.object(base, "_run_blocking") as run:
+        with mock.patch.object(screen_runner, "run_screen") as run:
             dialogs.show_person_info("Artist", "Art", [], "left", None,
                                      lambda: calls.append(True), images=images)
-        modal = run.call_args.args[0](self.surface)
+        make_dialog, on_done = run.call_args.args[:2]
+        modal = make_dialog()
         self.assertEqual(len(modal.image_rows), len(images))
-        modal.deliver_result()
+        on_done(modal)
         self.assertEqual(calls, [True])
 
     def scrollable_credit_modal(self):
         from ui.dialogs.person_info import _PersonInfoModal
-        return _PersonInfoModal(pygame.Surface((520, 320)), "Artist", "Art", [], None,
+        return _PersonInfoModal(pygame.Surface((520, 320)), "Artist", "Art", [],
                                 "left", self.credited_images() * 3)
 
     def test_credit_scrollbar_drags_without_a_jump(self):
@@ -576,7 +589,7 @@ class DialogTests(unittest.TestCase):
 
     def test_credit_scrollbar_is_hidden_when_all_images_fit(self):
         dialogs.show_person_info("Artist", "Art", images=self.credited_images())
-        modal = modal_stack.active()
+        modal = self.dialog()
         self.assertEqual(modal.max_scroll, 0)
         self.assertIsNone(modal.scroll_track_rect)
         self.assertIsNone(modal.scroll_handle_rect)
@@ -642,7 +655,7 @@ class ScreenRunnerTests(unittest.TestCase):
         import ast
         import os
 
-        allowed = {"ui/dialogs/base.py", "ui/navigation/screen_runner.py"}
+        allowed = {"ui/navigation/screen_runner.py"}
         offenders = []
         ui_dir = os.path.join(app_harness.ROOT, "ui")
         for dirpath, _dirnames, filenames in os.walk(ui_dir):

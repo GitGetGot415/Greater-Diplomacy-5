@@ -7,7 +7,7 @@ import pygame
 from data import queries
 from data.io import settings_schema
 from ui.background_styles import TUTORIAL_PANEL_STYLES
-from ui.dialogs.base import _BaseModal, _back_key, _lighten, open_modal
+from ui.dialogs.base import DialogScreen, _lighten, open_dialog
 from ui.bars import ui_bars
 import data.constants as c
 from ui.rendering.font_manager import fonts
@@ -23,7 +23,7 @@ _KIND_ACCENTS = {
 }
 
 
-class _MessageModal(_BaseModal):
+class _MessageModal(DialogScreen):
     """A titled message with one OK button. The "info" kind is the blue popup:
     it plays Info.mp3 when it opens and Back.wav when it closes.
 
@@ -39,7 +39,7 @@ class _MessageModal(_BaseModal):
     """
     BOX_MAX_W = 520
     BOX_CHROME_H = 170   # 110 of chrome plus the 60 the OK row occupies
-    BORDER_WIDTH = 3
+    PANEL_BORDER_WIDTH = 3
     PASSES_RESULT = False
     #: The scrollbar sits in the right margin, so text never runs under it.
     TEXT_MARGIN = 40
@@ -48,7 +48,7 @@ class _MessageModal(_BaseModal):
     SCROLLBAR_WIDTH = 15
     SCROLLBAR_GAP = 12
 
-    def __init__(self, surface, title, message, on_result, kind, inline_parts=None, extra_h=0, *, align=None):
+    def __init__(self, surface, title, message, kind, inline_parts=None, extra_h=0, *, align=None):
         if align is not None:
             self.BODY_ALIGN = align
         self.accent = _KIND_ACCENTS.get(kind, _KIND_ACCENTS["info"])
@@ -59,21 +59,20 @@ class _MessageModal(_BaseModal):
                              max(1, min(self.BOX_MAX_W, surface.get_width() - 40) - 2 * self.TEXT_MARGIN),
                              (210, 210, 210), wrap=True) if inline_parts is not None else None)
         self.inline_height = sum(line.get_height() + 2 for line in self.inline_lines or [])
-        super().__init__(surface, title, message, on_result, extra_h=extra_h)
-        self.box_rect.height = min(self.box_rect.height, surface.get_height() - 2 * self.VIEWPORT_MARGIN)
-        self.box_rect.centery = surface.get_height() // 2
-        self.BORDER_COLOR = self.accent
-        self.ok_rect = pygame.Rect(self.box_rect.centerx - 60, self.box_rect.bottom - 55, 120, 40)
-        self.ok_button = ui_elements.Button(*self.ok_rect.topleft, self.ok_rect.size, "blue", "OK",
-                                            self._finish, sound_kind="back" if self.is_info else "click")
-        self.ok_button.set_colors(self.accent, _lighten(self.accent))
+        super().__init__(surface, title, message, extra_h=extra_h)
+        self.panel_rect.height = min(self.panel_rect.height, surface.get_height() - 2 * self.VIEWPORT_MARGIN)
+        self.panel_rect.centery = surface.get_height() // 2
+        self.PANEL_BORDER = self.accent
+        self.ok_rect = pygame.Rect(self.panel_rect.centerx - 60, self.panel_rect.bottom - 55, 120, 40)
+        self.ok_button = self.add_button(self.ok_rect, "OK", self.accent, _lighten(self.accent), self.answer,
+                                         sound_kind="back" if self.is_info else "click")
 
         # Plain lines are drawn centred on BODY_DY, so the content starts half
         # a line above it.
         self.content_rect = pygame.Rect(
-            self.box_rect.x + self.TEXT_MARGIN,
-            self.box_rect.y + self.BODY_DY - self.msg_font.get_height() // 2,
-            self.box_rect.width - 2 * self.TEXT_MARGIN, 0)
+            self.panel_rect.x + self.TEXT_MARGIN,
+            self.panel_rect.y + self.BODY_DY - self.msg_font.get_height() // 2,
+            self.panel_rect.width - 2 * self.TEXT_MARGIN, 0)
         self.content_rect.height = max(
             0, self.ok_rect.top - self.CONTENT_BUTTON_GAP - self.content_rect.top)
         self.scroll_y = 0
@@ -108,14 +107,15 @@ class _MessageModal(_BaseModal):
                 pygame.K_PAGEDOWN: self.content_rect.height,
                 pygame.K_PAGEUP: -self.content_rect.height}.get(key, 0)
 
-    def close_on_key(self, key):
-        """Closes the popup if `key` dismisses it, and says whether it did."""
-        if key not in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_ESCAPE, pygame.K_SPACE, _back_key()):
-            return False
-        if self.is_info:
-            sound_effects.play_ui_sound("back")
-        self._finish()
-        return True
+    def cancel(self):
+        """Closes the popup. The blue popup closes with the Back sound."""
+        self.answer(sound="back" if self.is_info else None)
+
+    def handle_key(self, event):
+        if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE) or self.is_cancel_key(event.key):
+            self.cancel()
+        else:
+            self._set_scroll(self.scroll_y + self._scroll_key_step(event.key))
 
     def body_height(self):
         if self.inline_lines is None:
@@ -137,37 +137,31 @@ class _MessageModal(_BaseModal):
             surface.set_clip(clip)
 
     def cancel_pointer_input(self):
-        self.ok_button.is_pressed = False
+        super().cancel_pointer_input()
         self._scroll_drag_offset = None
 
-    def handle_events(self, events):
-        for event in events:
-            if self._resolved:
-                return
-            self.ok_button.handle_event(event)
-            if event.type == pygame.MOUSEWHEEL:
-                self._set_scroll(self.scroll_y - event.y * c.SCROLL_STEP)
-            elif event.type == pygame.MOUSEMOTION and self._scroll_drag_offset is not None:
-                self._drag_scrollbar(event.pos[1])
-            elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-                self._scroll_drag_offset = None
-            elif event.type == pygame.WINDOWFOCUSLOST:
-                self._scroll_drag_offset = None
-            elif event.type == pygame.KEYDOWN:
-                if not self.close_on_key(event.key):
-                    self._set_scroll(self.scroll_y + self._scroll_key_step(event.key))
-            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                if self.scroll_track_rect is not None and self.scroll_track_rect.collidepoint(event.pos):
-                    # Keep where the handle was grabbed so the first motion does
-                    # not jump. A track click centres the handle on the pointer.
-                    if self.scroll_handle_rect.collidepoint(event.pos):
-                        self._scroll_drag_offset = event.pos[1] - self.scroll_handle_rect.centery
-                    else:
-                        self._scroll_drag_offset = 0
-                        self._drag_scrollbar(event.pos[1])
-                elif (not getattr(event, "mobile_drag", False)
-                      and self.content_rect.collidepoint(event.pos) and self.handle_content_click(event.pos)):
-                    return
+    def additional_events(self, event):
+        if event.type == pygame.KEYDOWN:
+            self.handle_key(event)
+        elif event.type == pygame.MOUSEWHEEL:
+            self._set_scroll(self.scroll_y - event.y * c.SCROLL_STEP)
+        elif event.type == pygame.MOUSEMOTION and self._scroll_drag_offset is not None:
+            self._drag_scrollbar(event.pos[1])
+        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+            self._scroll_drag_offset = None
+        elif event.type == pygame.WINDOWFOCUSLOST:
+            self._scroll_drag_offset = None
+        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if self.scroll_track_rect is not None and self.scroll_track_rect.collidepoint(event.pos):
+                # Keep where the handle was grabbed so the first motion does
+                # not jump. A track click centres the handle on the pointer.
+                if self.scroll_handle_rect.collidepoint(event.pos):
+                    self._scroll_drag_offset = event.pos[1] - self.scroll_handle_rect.centery
+                else:
+                    self._scroll_drag_offset = 0
+                    self._drag_scrollbar(event.pos[1])
+            elif not getattr(event, "mobile_drag", False) and self.content_rect.collidepoint(event.pos):
+                self.handle_content_click(event.pos)
 
     def handle_content_click(self, pos):
         """A click on the visible content. Return True when it was used."""
@@ -177,7 +171,8 @@ class _MessageModal(_BaseModal):
         """Content below the message, drawn clipped to the scrolled content area."""
         pass
 
-    def draw_content(self, surface):
+    def draw_body(self, surface):
+        self.draw_body_lines(surface)
         clip = surface.get_clip()
         surface.set_clip(clip.clip(self.content_rect))
         try:
@@ -187,7 +182,6 @@ class _MessageModal(_BaseModal):
         self.scroll_track_rect, self.scroll_handle_rect = ui_bars.draw_standard_scrollbar(
             surface, -self.scroll_y, -self.max_scroll, *self._scrollbar_rects(),
             width=self.SCROLLBAR_WIDTH)
-        self.ok_button.draw(surface)
 
 
 #: Help content.
@@ -935,9 +929,8 @@ def show_message(title, message, tk_parent=None, kind="info", on_result=None, *,
     `align` sets plain message lines to "left", "center", or "right". The default is centered.
     on_result, if given, is called (with no arguments) once the user dismisses it.
     """
-    open_modal(lambda surface, callback: _MessageModal(surface, title, message, callback, kind, inline_parts,
-                                                       align=align),
-               on_result, tk_parent)
+    open_dialog(lambda surface: _MessageModal(surface, title, message, kind, inline_parts, align=align),
+                on_result, tk_parent)
 
 
 def show_info(title, message, tk_parent=None, on_result=None, *, inline_parts=None, align=None):

@@ -88,8 +88,8 @@ def synthesize_keybind_mouse_events(events, keybinds=None, allow_keydown=True, r
 def keyboard_input_is_captured(state):
     """Whether keyboard input belongs to an active text or key-capture field.
 
-    Screens answer through Screen.text_input_active. The getattr is for the
-    dialogs on the modal stack, which are not Screens and never capture keys.
+    Screens answer through Screen.text_input_active. The getattr is for
+    modal-stack entries that are not Screens, such as the loading modal.
     """
     return bool(getattr(state, "text_input_active", False))
 

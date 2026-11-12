@@ -13,7 +13,7 @@ back to a short-lived blocking loop of its own and calls on_done() right before
 returning. See ui/navigation/modal_stack.py's docstring for why the non-blocking path exists.
 """
 
-import sys
+from contextlib import contextmanager
 from threading import Event
 
 import pygame
@@ -26,7 +26,40 @@ from ui.bars import ui_bars
 from ui.panels import turn_progress
 from data.platform import IS_WEB, run_background
 
-from ui.dialogs.base import tk_hidden
+
+def _hide_tk_chain(tk_widget):
+    """Withdraws a tkinter widget and every ancestor window so the pygame window isn't hidden behind a topmost tk window."""
+    hidden = []
+    widget = tk_widget
+    seen = set()
+    while widget is not None and id(widget) not in seen:
+        seen.add(id(widget))
+        try:
+            if widget.winfo_exists() and widget.state() != "withdrawn":
+                hidden.append(widget)
+                widget.withdraw()
+        except Exception:
+            pass
+        widget = getattr(widget, "master", None)
+    return hidden
+
+
+def _show_tk_chain(hidden):
+    for widget in reversed(hidden):
+        try:
+            widget.deiconify()
+        except Exception:
+            pass
+
+
+@contextmanager
+def tk_hidden(tk_parent):
+    """Keeps a standalone tool's tkinter windows out of the way of a pygame window."""
+    hidden = _hide_tk_chain(tk_parent) if tk_parent is not None else []
+    try:
+        yield
+    finally:
+        _show_tk_chain(hidden)
 
 
 class _LoadingModal:
@@ -147,7 +180,11 @@ class _ScreenModal:
 
 
 def _run_screen_standalone(screen, on_done, tk_parent, surface):
-    """No main loop is pumping frames here, so resolve with our own blocking loop."""
+    """No main loop is pumping frames here, so resolve with our own blocking loop.
+
+    Closing the window ends only this screen. The screen keeps whatever answer
+    it had, so a dialog answers its cancel value.
+    """
     screen.done = False
     clock = pygame.time.Clock()
     touch_input = TouchInput()
@@ -156,13 +193,12 @@ def _run_screen_standalone(screen, on_done, tk_parent, surface):
         with tk_hidden(tk_parent):
             while not screen.done:
                 events = pygame.event.get()
+                if any(event.type == pygame.QUIT for event in events):
+                    break
                 events = touch_input.process_events(events, screen, c.CONTROL_MODE)
                 events = synthesize_keybind_mouse_events(
                     events, allow_keydown=not keyboard_input_is_captured(screen))
                 for event in events:
-                    if event.type == pygame.QUIT:
-                        pygame.quit()
-                        sys.exit()
                     dispatch_global_keys(screen, event)
                 screen.handle_events(events)
                 screen.update()
@@ -171,7 +207,7 @@ def _run_screen_standalone(screen, on_done, tk_parent, surface):
                 pygame.display.flip()
                 clock.tick(c.TARGET_FPS)
     finally:
-        pygame.display.quit()
+        ui_bars.release_surface(True)
 
     if on_done:
         on_done(screen)

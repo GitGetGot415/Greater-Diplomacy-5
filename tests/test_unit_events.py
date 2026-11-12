@@ -649,7 +649,7 @@ class UnitEventScreenTests(unittest.TestCase):
             with self.subTest(size=size), patch("pygame.display.get_surface", return_value=pygame.Surface(size)), \
                     patch.object(modal_stack, "push") as push:
                 screen.show_event(screen.rows[0])
-                popup = push.call_args.args[0]
+                popup = push.call_args.args[0].screen
                 popup.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, y=-1000)])
                 self.assertGreater(popup.scroll_y, 0)
                 self.assertEqual(popup.scroll_y, popup.max_scroll)
@@ -657,7 +657,7 @@ class UnitEventScreenTests(unittest.TestCase):
                 popup.handle_events([pygame.event.Event(pygame.MOUSEWHEEL, y=1000)])
                 self.assertEqual(popup.scroll_y, 0)
                 popup.handle_events([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_ESCAPE)])
-                self.assertTrue(popup._resolved)
+                self.assertTrue(popup.done)
 
     def test_mark_all_unread_restores_badge_after_closing_until_reopened(self):
         from screens.game.unit_events_screen import UnitEventsScreen

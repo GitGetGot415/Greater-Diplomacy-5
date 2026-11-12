@@ -849,11 +849,12 @@ class BattleEditorTests(BattleScreenTestCase):
         modal = modal_stack.active()
         self.assertIsNotNone(modal)
         try:
-            self.assertEqual(modal.no_label, "Continue Editing")
-            self.assertEqual(modal.yes_label, "Leave As Is")
+            dialog = modal.screen
+            self.assertEqual(dialog.no_label, "Continue Editing")
+            self.assertEqual(dialog.yes_label, "Leave As Is")
             modal.draw(self.surface)
-            modal.handle_events([pygame.event.Event(
-                pygame.MOUSEBUTTONDOWN, pos=modal.no_rect.center, button=1)])
+            modal.handle_events([pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=dialog.no_rect.center, button=1),
+                                 pygame.event.Event(pygame.MOUSEBUTTONUP, pos=dialog.no_rect.center, button=1)])
             modal.update()
             self.assertFalse(screen.done)
             self.assertFalse(screen._exit_confirmation_open)

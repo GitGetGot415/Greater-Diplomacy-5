@@ -254,8 +254,9 @@ class SpectatorRemovalControlTests(unittest.TestCase):
         with mock.patch.object(modal_stack, "_stack", []):
             spectator_controls.spec_delete_country(self.game)
             modal = modal_stack.active()
-            modal.handle_events([pygame.event.Event(pygame.MOUSEBUTTONDOWN,
-                                                    pos=modal.yes_rect.center, button=1)])
+            yes = modal.screen.yes_rect.center
+            modal.handle_events([pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=yes, button=1),
+                                 pygame.event.Event(pygame.MOUSEBUTTONUP, pos=yes, button=1)])
             self.assertIn("Target", self.game.nation_data)
             modal.update()
             self.assertTrue(modal_stack.is_empty())
