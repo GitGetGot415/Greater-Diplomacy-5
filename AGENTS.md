@@ -14,7 +14,7 @@ AI means artificial intelligence. UI means user interface.
    Preserve unrelated user changes. Do not discard work to get a clean tree.
 3. Read the relevant design notes:
    - `documentation/diplo_stuff.md`: diplomatic message timing and cancellation.
-   - `data/migrations/MIGRATIONS.md`: required before changing saved fields, stored identifiers, settings keys, or library content that older saves and moves can contain.
+   - `data/migrations/documentation/MIGRATIONS.md`: required before changing saved fields, stored identifiers, settings keys, or library content that older saves and moves can contain.
 4. Find the shared rule or data owner.
    Extend that implementation and make callers use it.
 
@@ -46,7 +46,7 @@ AI means artificial intelligence. UI means user interface.
   If it changes before a release exists, every player wrongly sees that an update is available.
   Only the user changes `version.txt`, when they release.
   Change `GAME_VERSION` in `data/constants.py` for development work. Report that you did not touch `version.txt`.
-- Use `color`, never `colour`, in identifiers, UI text, comments, and documentation.
+- Use `color`, never `colour`, in identifiers, UI text, and comments.
 - Preserve intentional comments.
   Update inaccurate comments. Keep explanations of rules that are not obvious.
 - **Report every change that the user did not explicitly request.**
@@ -95,7 +95,7 @@ AI means artificial intelligence. UI means user interface.
 
 Start with the shared rule.
 Complete this checklist before handoff. Update every affected system in the same change.
-Execution, UI, AI, and documentation must agree across affected modes and state transitions.
+Execution, UI, and AI must agree across affected modes and state transitions.
 Give a reason when a system does not apply.
 
 | System | Check | Likely locations |
@@ -110,7 +110,7 @@ Give a reason when a system does not apply.
 | Other modes | Enforce permissions for single-player, hotseat, spectators, tactical players, AI, editors, tournament players/hosts, and real-time clients/hosts. | `screens/game/map.py`, affected screens, `data/queries/` |
 | Content tools | Check scenario settings, map editing, scripted actions and conditions, and base data. | `screens/editors/`, scenario screens, map and scenario JSON |
 | Builds | Include new modules, packages, data, dependencies, and dynamically imported screens. | Build files listed below |
-| Documentation/tests | Add regression coverage for the rule and failure. Update affected guides. | `tests/`, `documentation/`, `README.md` |
+| Tests | Add regression coverage for the rule and failure. | `tests/` |
 
 ### Multiplayer Rules
 
@@ -166,7 +166,7 @@ Do not hand control to another unit, such as a surviving sub-unit of the same di
 
 - **Keep `data/json/starting_defaults.json` as the one source of truth for preference and setup defaults.**
   Startup, missing-setting fallbacks, reset controls, and builds must read those values through `data/io/starting_defaults.py`.
-  Existing constant names may expose values read from that file. Do not duplicate default values in Python, screen tables, or documentation.
+  Existing constant names may expose values read from that file. Do not duplicate default values in Python or screen tables.
   Keep saved player choices authoritative. Keep gameplay tuning and library content with their existing owners.
 - Keep names, identifiers, data shapes, and shared workflows as consistent as possible.
   Standardize unit types across generation, gameplay, UI, AI, editors, and multiplayer.
@@ -177,16 +177,16 @@ Do not hand control to another unit, such as a surviving sub-unit of the same di
 - Keep level suffixes in canonical unit identifiers, including single-level families.
   Omit the suffix from player-facing unit labels when the family has only one level.
   Use a shared display helper. Keep identifiers intact in saved data and action callbacks.
-- Match identifiers, data keys, constants, and documentation to player-facing names for the same thing.
+- Match identifiers, data keys, and constants to player-facing names for the same thing.
   Keep required formatting differences, such as spaces and capitalization.
   Exception: unit metadata `family` and `settings_family` keep the names of older releases.
-  Older saves and scenario settings use them. See `data/migrations/MIGRATIONS.md`, Older Family Names in Unit Metadata.
+  Older saves and scenario settings use them.
 - Preserve older settings, saves, and protocol values through shared migration rules when names change.
 - Test legacy loading and new-data round trips after a stored name changes.
 - Check existing helpers before you add another function.
 - Follow DRY (Don't Repeat Yourself).
   Combine duplicate calculations, variables, rules, functions, and state changes in one named helper.
-  Use the same path for similar behavior unless a documented gameplay rule requires a difference.
+  Use the same path for similar behavior unless an explicit gameplay rule requires a difference.
 - Remove unused functions and organize imports when those changes are in scope.
 - Use shared legality, cost, effect, timing, and valuation helpers across execution, UI, AI, scripts, editors, and multiplayer.
   Do not copy damage, price, eligibility, acceptance, capacity, or timing formulas into callers.
@@ -255,7 +255,6 @@ Keep tuning data in its source files:
 - Put every conversion rule for older saves and moves in `data/migrations/conversions.py`.
   Every rule runs on every load, whatever version wrote the file.
   A rule finds an older shape in the data and converts it. It must do nothing to current data.
-  See `data/migrations/MIGRATIONS.md`.
 - **Never reuse a saved field or identifier with a new meaning.** Give the new meaning a new name.
   Or save the data that is necessary to read the older meaning, as `research_years` does.
   Otherwise no rule can tell older data from current data.
@@ -267,7 +266,6 @@ Keep tuning data in its source files:
   Keep adaptation rules in one clear place and use one consistent representation internally.
 - Base compatibility handling on actual supported formats and callers.
   Do not invent hypothetical legacy cases.
-  To find out if a name or format was released, see `data/migrations/MIGRATIONS.md`, Released Names.
 - Convert older saves with the conversion rules when they load. Gameplay, UI, and AI code read only the current format.
   Do not add read-time adapters for older save shapes.
 - Do not remove existing compatibility mechanisms merely to simplify code.
@@ -416,7 +414,7 @@ Keep tuning data in its source files:
   Do not give AI exclusive actions or bypass human gameplay restrictions.
 - **AI countries, rule-based and LLM, follow the same rules as human players, including diplomatic timing.**
   A message, letter, or proposal written in one turn is sent in the send phase after that turn.
-  The receiver gets it in the next turn and can answer it only then. See `documentation/diplo_stuff.md`.
+  The receiver gets it in the next turn and can answer it only then.
   An AI must not read, answer, or react to a message before it is delivered, and must not answer a message in the turn it was delivered.
   This includes later passes or phases of the same turn's processing.
 - Keep rule-based AI authoritative when the LLM is enabled or disabled.
@@ -486,20 +484,7 @@ A data edit must not make a test fail, unless the test checks that JSON matches 
 - When a data edit makes a test fail, rewrite the test around its rule. Do not change the data to pass the test.
 - Run `python scripts/checks/tuning_stress.py` after you add or change tests that read real content.
 
-## Documentation
-
-### Shared Information
-
-- **Never document the positions of buttons or other UI elements.**
-  This applies to guides and design notes. This does NOT apply to in-game help and tutorials.
-  Identify controls by name and explain their behavior without screen coordinates, corners, or relative placement.
-- Keep each shared explanation in one primary guide. Check existing guides before adding documentation.
-- Use short references elsewhere. Keep local conditions, exceptions, permissions, and summaries needed to use each guide independently.
-- Update documentation when a change makes an existing explanation incomplete or inaccurate, or adds behavior that users must understand.
-  A code edit alone does not require a documentation addition.
-- Update the existing topic in its primary guide. Do not append a new section for each development task.
-- Document current rules and procedures. Keep development change reports and verification results in the handoff.
-  Omit repeated statements that unaffected systems remain unchanged.
+## Project Text
 
 ### Unit, Building, and Research Data
 
@@ -508,26 +493,22 @@ A data edit must not make a test fail, unless the test checks that JSON matches 
   Do not claim that unit or building families have equal stats, equal costs, or fixed strength relationships.
 - Explain shared mechanics, data fields, source locations, and how the game reads current data.
   Preserve save formats, migration rules, permissions, and control instructions.
-- Apply this rule to guides, design notes, examples, explanatory comments, docstrings, and tutorial text.
+- Apply this rule to examples, explanatory comments, docstrings, and tutorial text.
   The game can display current values and capabilities when it derives them from authoritative data or shared rules.
 
 ### Language
 
-- Read and follow [Writing Style](documentation/writing_style.md) before writing or editing project text or replying about repository work.
-  Keep the detailed writing rules in that guide.
 - **Name what you refer to.** Do not use "it", "that", "this", "they", or "the model" when the reader could match it to more than one thing.
   Repeat the noun instead, such as "the rule-based AI" or "the LLM".
-  This applies to UI text, documentation, comments, and replies.
+  This applies to UI text, comments, and replies.
 
 ### Tutorial and Maintenance
 
 The fresh-game map tutorial is the Help window. Its text is in `data/json/tutorial.json`, and `ui/dialogs/message_box.py` draws it.
-Treat it as player documentation.
 Update it when map navigation, unit selection, orders, or covered map controls change.
 Add or update tests for changed tutorial behavior.
 
-Update documentation, comments, examples, tests, schemas, and UI text when the implementation makes them incomplete or inaccurate.
-Check guides that refer to each changed rule. Keep their local instructions and references accurate.
+Update comments, examples, tests, schemas, and UI text when the implementation makes them incomplete or inaccurate.
 Update every description or preview of changed player behavior.
 
 ### Handoff
