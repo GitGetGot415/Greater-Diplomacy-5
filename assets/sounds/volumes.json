@@ -35,5 +35,6 @@
     "Bullet Ricochet 1.mp3":         {"volume": 2.0, "offset": 0.0},
     "Bullet Ricochet 2.mp3":         {"volume": 2.0, "offset": 0.0},
     "Bullet Ricochet 3.mp3":         {"volume": 2.0, "offset": 0.0},
-    "Bullet Ricochet 4.mp3":         {"volume": 2.0, "offset": 0.0}
+    "Bullet Ricochet 4.mp3":         {"volume": 2.0, "offset": 0.0},
+    "Tank Explosion.mp3":         {"volume": 2.0, "offset": 0.0}
 }

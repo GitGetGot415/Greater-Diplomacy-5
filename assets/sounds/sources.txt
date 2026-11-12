@@ -21,4 +21,6 @@ Flesh Wound 1           https://pixabay.com/sound-effects/film-special-effects-b
 Flesh Wound 2           https://pixabay.com/sound-effects/film-special-effects-bulletimpact2-442718/
 Flesh Wound 3           https://pixabay.com/sound-effects/film-special-effects-bulletimpact3-442719/
 
+Tank Explosion          https://pixabay.com/sound-effects/film-special-effects-explosion-91872/
+
 https://github.com/PenguinMod/PenguinMod-ObjectLibraries/tree/main/files/sounds

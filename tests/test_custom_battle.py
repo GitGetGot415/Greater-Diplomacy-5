@@ -1895,6 +1895,60 @@ class CustomBattleScreenTests(unittest.TestCase):
             self.screen.show_help()
         show.assert_not_called()
 
+    def test_non_foot_shapes_including_motorized_trigger_death_explosions_for_either_side(self):
+        self.fill_armies()
+        self.click("Simulate")
+        self.click("Start")
+        fighters = self.screen.simulation.fighters
+        for side in (0, 1):
+            target, source = fighters[side], fighters[1 - side]
+            for shape in (*sorted(combat.TANK_SHAPES), *sorted(combat.FOOT_SHAPES), "motorized", "armored_car", "ifv"):
+                for defense in (-1, 0, 0.25, 4):
+                    with self.subTest(side=side, shape=shape, defense=defense):
+                        target.shape = shape
+                        self.library[target.data["type"]]["defense"] = defense
+                        target.data["defense"] = defense
+                        self.screen.death_explosions.clear()
+                        with patch.object(battle_screen.ui_elements, "play_ui_sound") as sound:
+                            self.screen._record_kill(source, target, "shot" if side == 0 else "ram")
+                        if shape not in combat.FOOT_SHAPES:
+                            sound.assert_called_once_with("tank_explosion", volume_scale=self.screen.battle_sfx_volume_share())
+                            self.assertEqual(self.screen.death_explosions, [(target, 0.0)])
+                        else:
+                            sound.assert_not_called()
+                            self.assertFalse(self.screen.death_explosions)
+
+    def test_death_explosions_pause_finish_on_results_and_clear_on_replay(self):
+        self.fill_armies()
+        self.click("Simulate")
+        self.click("Start")
+        simulation = self.screen.simulation
+        source, target = simulation.fighters
+        target.shape = "armored_car"
+        with patch.object(battle_screen.ui_elements, "play_ui_sound"):
+            self.screen._record_kill(source, target, "shot")
+        simulation.paused = True
+        self.screen.last_tick = 1000
+        with patch("pygame.time.get_ticks", return_value=1050):
+            self.screen.update()
+        self.assertEqual(self.screen.death_explosions, [(target, 0.0)])
+        self.screen.mode = "result"
+        simulation.winner = 0
+        self.screen.refresh_ui()
+        elapsed = simulation.elapsed
+        with patch("pygame.time.get_ticks", return_value=1100):
+            self.screen.update()
+        self.assertGreater(self.screen.death_explosions[0][1], 0)
+        self.screen.draw(self.surface)
+        for index in range(math.ceil(battle_screen.DEATH_EXPLOSION_SECONDS / battle_screen.MAX_FRAME_SECONDS) + 1):
+            with patch("pygame.time.get_ticks", return_value=1200 + (index + 1) * 1000):
+                self.screen.update()
+        self.assertFalse(self.screen.death_explosions)
+        self.assertEqual(simulation.elapsed, elapsed)
+        self.screen.death_explosions.append((target, 0.0))
+        self.click("Run Again")
+        self.assertFalse(self.screen.death_explosions)
+
     def test_kill_feed_uses_simulation_kills_survives_results_and_clears_on_replay(self):
         self.fill_armies()
         self.click("Simulate")

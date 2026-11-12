@@ -67,6 +67,13 @@ BUTTON_WIDTH = 170
 CLEAR_ALL_OFFSET_Y = 20
 CLEAR_ALL_HEIGHT = 32
 TEAM_COLORS = ((85, 170, 245), (235, 100, 90))
+DEATH_EXPLOSION_SECONDS = 0.7
+DEATH_EXPLOSION_RADIUS = 36
+DEATH_EXPLOSION_PARTICLE_SIZE = 12
+DEATH_EXPLOSION_CIRCLE_COLOR = (255, 180, 60)
+DEATH_EXPLOSION_CIRCLE_ALPHA = 180
+DEATH_EXPLOSION_COLORS = ((255, 240, 150), (255, 160, 45), (205, 65, 30), (75, 70, 65))
+DEATH_EXPLOSION_OFFSETS = ((-1, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (0, 1), (1, 1))
 
 EDIT_BATTLE_HELP_TEXT = (
     "Build both armies, choose their deployment order, and optionally choose a unit to control. Custom battles do not change your campaign.\n\n"
@@ -445,6 +452,8 @@ class CustomBattleScreen(Screen):
         self.status_key = None
         self.status_surfaces = []
         self.kill_feed = deque()
+        self.death_explosions = []  # Destroyed sub-unit and animation age, in seconds.
+        self.death_explosion_circle = None
         self.kill_feed_surface = None
         self.kill_feed_scroll = self.kill_feed_limit = 0
         self.kill_feed_dragging = False
@@ -951,6 +960,7 @@ class CustomBattleScreen(Screen):
     def _build_simulation(self):
         """Deploy the armies, paused, as preview shows them."""
         self.kill_feed.clear()
+        self.death_explosions.clear()
         self.kill_feed_scroll = 0
         self.kill_feed_dragging = False
         self._refresh_kill_feed()
@@ -967,6 +977,9 @@ class CustomBattleScreen(Screen):
 
     def _record_kill(self, source, target, cause):
         """Update the recent kills when a battlefield sub-unit dies."""
+        if target.shape not in combat.FOOT_SHAPES:
+            self.death_explosions.append((target, 0.0))
+            ui_elements.play_ui_sound("tank_explosion", volume_scale=self.battle_sfx_volume_share())
         if self.kill_feed_scroll < 0:
             self.kill_feed_scroll -= KILL_FEED_ROW_HEIGHT
         self.kill_feed.appendleft((source, target, cause))
@@ -1565,11 +1578,15 @@ class CustomBattleScreen(Screen):
         if self.preview_intro_stage is not None:
             self._update_preview_intro()
             return
-        if self.mode != "battle":
+        if self.mode not in {"battle", "result"}:
             return
         now = pygame.time.get_ticks()
         dt = min(MAX_FRAME_SECONDS, max(0, now - self.last_tick) / 1000.0)
         self.last_tick = now
+        if self.mode == "result" or not self.simulation.paused:
+            self.death_explosions = [(fighter, age + dt) for fighter, age in self.death_explosions if age + dt < DEATH_EXPLOSION_SECONDS]
+        if self.mode == "result":
+            return
         driving = self._driving()
         pointer = pygame.mouse.get_pos()
         controlled = self.simulation.controlled
@@ -1961,6 +1978,29 @@ class CustomBattleScreen(Screen):
             if rect.colliderect(visible):
                 surface.blit(art, rect)
 
+    def _draw_death_explosions(self, surface, limited_sight):
+        if not self.death_explosions:
+            return
+        diameter = max(3, math.ceil(DEATH_EXPLOSION_RADIUS * self.zoom) * 2 + 1)
+        if self.death_explosion_circle is None or self.death_explosion_circle.get_width() != diameter:
+            self.death_explosion_circle = pygame.Surface((diameter, diameter), pygame.SRCALPHA)
+        for fighter, age in self.death_explosions:
+            if limited_sight and id(fighter) not in self.visible_fighters:
+                continue
+            progress = age / DEATH_EXPLOSION_SECONDS
+            center = self.to_screen(fighter.x, fighter.y)
+            radius = DEATH_EXPLOSION_RADIUS * progress * self.zoom
+            circle = self.death_explosion_circle
+            circle.fill((0, 0, 0, 0))
+            pygame.draw.circle(circle, (*DEATH_EXPLOSION_CIRCLE_COLOR, round(DEATH_EXPLOSION_CIRCLE_ALPHA * (1 - progress))), (diameter // 2, diameter // 2), max(1, round(radius)))
+            surface.blit(circle, circle.get_rect(center=center))
+            size = max(1, round(DEATH_EXPLOSION_PARTICLE_SIZE * (1 - progress) * self.zoom))
+            color = DEATH_EXPLOSION_COLORS[min(len(DEATH_EXPLOSION_COLORS) - 1, int(progress * len(DEATH_EXPLOSION_COLORS)))]
+            for dx, dy in DEATH_EXPLOSION_OFFSETS:
+                rect = pygame.Rect(0, 0, size, size)
+                rect.center = (round(center[0] + dx * radius), round(center[1] + dy * radius))
+                pygame.draw.rect(surface, color, rect)
+
     def _draw_battle(self, surface):
         self._draw_grass(surface)
         self._draw_terrain(surface)
@@ -2013,6 +2053,7 @@ class CustomBattleScreen(Screen):
             size = max(1, round((7 if shell else 3) * zoom * remaining / c.TACTICAL_IMPACT_SECONDS))
             pygame.draw.rect(surface, TANK_SHOT_COLOR if shell else SHOT_COLOR,
                              (point[0] - size, point[1] - size, size * 2, size * 2), max(1, round(zoom)))
+        self._draw_death_explosions(surface, limited_sight)
         self._draw_canopy(surface)
         for fighter, center, scale in labeled:
             bar = pygame.Rect(center[0] - bar_size[0] // 2, center[1] - round(23 * scale), *bar_size)

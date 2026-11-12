@@ -163,6 +163,7 @@ Muzzle flashes, cannon recoil, and brief impact flashes distinguish firing and i
 Regular shots from AI units play a random Rifle Shot 1, Rifle Shot 2, or Rifle Shot 3 sound.
 Regular shots from the player-controlled sub-unit play Heavy Gunshot instead.
 Each shell plays a random Tank Shot 1, Tank Shot 2, or Tank Shot 3 sound.
+Each destroyed sub-unit outside `FOOT_SHAPES` plays Tank Explosion.mp3 once and emits a short burst of square fire and smoke particles from its wreck. A circle at the burst's center expands and fades. Infantry and cavalry do not explode; motorized units do. The effect applies to both armies, pauses with combat, and finishes on the result view. Explosion sounds use the same zoom and volume settings as gunfire and share the bounded tank sound pool.
 The weapon determines the sound: a vehicle's machine gun uses regular firing sounds.
 Both armies and player-controlled units follow the same sound rules.
 Projectile hits on unarmored bodies play a random Flesh Wound 1, 2, or 3 sound.
