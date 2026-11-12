@@ -192,7 +192,10 @@ def _sub_screen_opener(map_screen, module_path, class_name):
 def _build_view_buttons(map_screen):
     """The top-bar tools, the bottom-left map view grid, and the unit filter bar."""
     icons = ui_elements.UI_ICONS
-    map_screen.btn_help = Button(HELP_BTN_X, c.TOP_BAR_UI_CENTER_Y, "tiny", "blue", "Help", map_screen.show_navigation_tutorial, font_preset="normal")
+    map_screen.btn_help = ui_elements.make_info_button(HELP_BTN_X, c.TOP_BAR_UI_CENTER_Y, map_screen.show_navigation_tutorial)
+    map_screen.btn_help.rect.center = (HELP_BTN_X + c.SIZES["tiny"][0] // 2, c.TOP_BAR_UI_CENTER_Y + c.SIZES["tiny"][1] // 2)
+    # The map tutorial has no opening sound, so the button keeps ownership of its click sound.
+    map_screen.btn_help.sound_kind = "click"
     map_screen.btn_refresh_all = Button(REFRESH_BTN_X, c.TOP_BAR_UI_CENTER_Y, "small", "blue", "Refresh Maps", map_screen.refresh_all_maps, font_preset="normal")
     map_screen.btn_global_econ_overview = Button(GLOBAL_ECON_BTN_X, c.TOP_BAR_UI_CENTER_Y, "small", "pink", "Global Economy", lambda: editor_menus.open_editor_economy(map_screen), font_preset="normal", sound_kind=None)
 

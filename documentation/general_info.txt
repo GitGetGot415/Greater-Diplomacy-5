@@ -823,7 +823,7 @@ Real-time broadcasts preserve local read status for the same turn.
 HELP CONTENT
 ============
 
-The Help window opens over the map for a fresh game and from the map's Help button.
+The Help window opens over the map for a fresh game and from the map's ? (Help) button.
 Settings has separate Show Strategic Tutorial and Show Tactical Tutorial controls for startup.
 The Help window's "Don't show this popup when starting a game" checkbox changes only the current mode's preference.
 The Help button remains available when either startup tutorial is disabled.
