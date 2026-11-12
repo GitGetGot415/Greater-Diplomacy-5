@@ -25,13 +25,13 @@ NON_PACKAGE_DIRS = {
 DEV_ONLY_PACKAGES = set(manifest.DEV_ONLY_PACKAGES)
 
 def _sub_screen_opener_module_paths(tree):
-    """First-arg string literals passed to every sub_screen_opener() call."""
+    """Module-path string literals passed to every _sub_screen_opener() call."""
     paths = []
     for node in ast.walk(tree):
         if (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
-                and node.func.id == "sub_screen_opener" and node.args):
+                and node.func.id == "_sub_screen_opener" and len(node.args) > 1):
             try:
-                paths.append(ast.literal_eval(node.args[0]))
+                paths.append(ast.literal_eval(node.args[1]))
             except (ValueError, SyntaxError):
                 pass
     return paths
@@ -66,8 +66,9 @@ class BuildManifestTests(unittest.TestCase):
         self.assertFalse({p.split(".")[0] for p in packages} - set(manifest.SOURCE_PACKAGES))
 
     def test_dynamic_screens_have_explicit_hidden_imports(self):
-        tree = ast.parse(Path(ROOT, "screens/game/map.py").read_text(encoding="utf-8"))
+        tree = ast.parse(Path(ROOT, "screens/game/map_buttons.py").read_text(encoding="utf-8"))
         needed = set(_sub_screen_opener_module_paths(tree))
+        self.assertTrue(needed)
         args = manifest.windows_arguments()
         hidden = {args[i + 1] for i, arg in enumerate(args[:-1]) if arg == "--hidden-import"}
         self.assertFalse(needed - hidden)

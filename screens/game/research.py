@@ -19,6 +19,9 @@ from ui.navigation.screen_runner import _run_pygame_sub_screen
 from ui import dialogs
 from map_logic.system32.research_processor import select_research
 
+ICON_WARNING = "Warning"
+MAX_RESEARCH_TURN_SIMULATION = 5000
+
 
 # ==========================================
 # LAYOUT
@@ -261,7 +264,7 @@ class ResearchDetailsScreen(ModalScreen):
         year_inc = days_per_turn / 360.0
 
         # Simulate the research progress turn-by-turn using the central math query
-        while pts_accumulated < cost and actual_turns < c.MAX_RESEARCH_TURN_SIMULATION:
+        while pts_accumulated < cost and actual_turns < MAX_RESEARCH_TURN_SIMULATION:
             mult = queries.get_research_multiplier(sim_year, target_year)
             pts_accumulated += (pts_per_turn * mult)
             sim_year += year_inc
@@ -277,7 +280,7 @@ class ResearchDetailsScreen(ModalScreen):
             warning = f"Ahead of Time Penalty! Estimated Actual Time: ~{actual_turns} turns"
         self.warning_surface = fonts.get("normal").render(warning, True, (255, 100, 100)) if warning else None
         self.warning_icon_size = max(16, fonts.get("normal").get_height())
-        self.warning_icon = ui_elements.scale_icon(c.ICON_WARNING, self.warning_icon_size) if warning else None
+        self.warning_icon = ui_elements.scale_icon(ICON_WARNING, self.warning_icon_size) if warning else None
 
     def _cache_unlocks(self):
         """Wraps capability notes and prepares each listed entity's numbers."""

@@ -158,8 +158,8 @@ def main():
             game_map.selected_unit_ids = set()
         # Map.refresh_ui is deliberately a no-op; this is the same per-frame
         # button-state path used by the live map without starting networking.
-        from screens.game.map import update_button_states
-        update_button_states(game_map)
+        from screens.game import map_buttons
+        map_buttons.update_button_states(game_map)
         if mode == 7:
             if battle_orders is None:
                 battle_orders = _battle_preview_orders(game_map, playable_country)

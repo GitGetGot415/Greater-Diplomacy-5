@@ -9,6 +9,9 @@ Values above 1 increase contrast. Borders and bevels keep their existing appeara
 
 import data.constants as c
 
+COLOR_SLIDER_TRACK = (100, 100, 100)
+COLOR_SLIDER_HANDLE = (200, 200, 200)
+
 MAP_FRAME_COLOR = (50, 80, 50)
 LEFT_FRAME_COLOR = (40, 80, 80)
 EDITOR_BG = (23, 35, 61, 245)
@@ -174,8 +177,8 @@ ASSET_VIEWER_STYLES = {
 # Shared sliders, scrollbars, and music progress use these RGB colors.
 # Replace a color reference with an RGB tuple to override its default.
 SLIDER_STYLES = {
-    "track": {"color": c.COLOR_SLIDER_TRACK, "gradient_strength": 0.5},
-    "handle": {"color": c.COLOR_SLIDER_HANDLE, "gradient_strength": 0.5},
+    "track": {"color": COLOR_SLIDER_TRACK, "gradient_strength": 0.5},
+    "handle": {"color": COLOR_SLIDER_HANDLE, "gradient_strength": 0.5},
     "locked": {"color": (60, 40, 40), "gradient_strength": 0.5},
     "progress": {"color": (255, 150, 50), "gradient_strength": 0.5},
 }

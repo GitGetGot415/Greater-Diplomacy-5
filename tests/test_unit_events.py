@@ -536,7 +536,7 @@ class UnitEventScreenTests(unittest.TestCase):
         unit_events.refresh_presentation(self.game)
 
     def test_report_button_updates_unread_count_and_opens_reports(self):
-        from screens.game.map import update_button_states
+        from screens.game.map_buttons import update_button_states
         from ui.navigation import modal_stack
         game = self.game
         update_button_states(game)

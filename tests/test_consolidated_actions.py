@@ -66,10 +66,10 @@ class RuntimeOwnerTests(unittest.TestCase):
             self.assertEqual(buildable_units(research, queries.get_unit_library(first)), ["Fixture"])
             self.assertEqual(buildable_units(research, queries.get_unit_library(second)), [])
     def test_planning_frames_reuse_forecasts_until_state_changes(self):
-        from screens.game.map import cached_bilateral_response_indicator
+        from screens.game.map_buttons import cached_bilateral_response_indicator
         context = game()
         context._presentation_cache_revision = 0
-        with patch("screens.game.map.bilateral_response_indicator", return_value="YES") as forecast:
+        with patch("screens.game.map_buttons.bilateral_response_indicator", return_value="YES") as forecast:
             for _ in range(3):
                 self.assertEqual(cached_bilateral_response_indicator(context, "B", "TRADE"), "YES")
             self.assertEqual(forecast.call_count, 1)

@@ -9,6 +9,21 @@ import data.constants as c
 from data import queries, research_display
 from data.queries import get_base_item_name
 
+# Classic unit art is kept in its own flat style folder, just like the
+# alternate art styles below. Combat bubbles have their own flat folder too;
+# both are loaded into the shared symbol registry by symbol_loader.
+CLASSIC_UNIT_ART_DIR = "assets/classic"
+COMBAT_BUBBLES_DIR = "assets/combat_bubbles"
+# Factory and recruitment center building art, kept out of the flat
+# assets/images set since building names/levels multiply fast. Loaded into
+# the same SYMBOLS name->Surface map as ASSETS_DIR -- see symbol_loader.load_symbols.
+BUILDINGS_DIR = "assets/buildings"
+# Alternate unit-art sets live in their own folder under here, named after the
+# style (e.g. assets/hanskolmer). Each has a unit_art.json file for culture
+# metadata and can contain baseline/tiered art filenames such as
+# artillery.png and infantry_<year>.png.
+UNIT_ART_STYLES_DIR = "assets"
+
 
 SYMBOLS = {}
 COLORED_SYMBOLS = {}
@@ -94,22 +109,22 @@ def clear_caches():
 
 def load_symbols():
     """Load flat icons, classic art, bubbles, army emblems, and alternate styles."""
-    for path in (c.ASSETS_DIR, c.CLASSIC_UNIT_ART_DIR, c.COMBAT_BUBBLES_DIR):
+    for path in (c.ASSETS_DIR, CLASSIC_UNIT_ART_DIR, COMBAT_BUBBLES_DIR):
         _load_flat_symbols(path)
     _load_army_symbols(c.ARMY_SYMBOLS_DIR)
 
     # Factory/recruitment center building art lives in its own folder (see
-    # c.BUILDINGS_DIR) but still resolves through the same flat name->Surface
+    # BUILDINGS_DIR) but still resolves through the same flat name->Surface
     # map as everything above, since _resolve_against only ever looks names
     # up in SYMBOLS -- it has no idea which folder a symbol came from.
-    if os.path.exists(c.BUILDINGS_DIR):
-        for file in os.listdir(c.BUILDINGS_DIR):
+    if os.path.exists(BUILDINGS_DIR):
+        for file in os.listdir(BUILDINGS_DIR):
             if file.endswith(".png"):
                 name = os.path.splitext(file)[0]
-                img = pygame.image.load(os.path.join(c.BUILDINGS_DIR, file)).convert_alpha()
+                img = pygame.image.load(os.path.join(BUILDINGS_DIR, file)).convert_alpha()
                 SYMBOLS[name] = img
 
-    _load_research_display("classic", c.CLASSIC_UNIT_ART_DIR)
+    _load_research_display("classic", CLASSIC_UNIT_ART_DIR)
     for style in c.UNIT_ART_STYLES:
         if style != "classic":
             load_style_symbols(style)
@@ -337,7 +352,7 @@ def load_style_symbols(style):
     rather than raised, since an incomplete style is meant to fall back to
     classic per-unit, not refuse to load at all.
     """
-    style_dir = os.path.join(c.UNIT_ART_STYLES_DIR, style)
+    style_dir = os.path.join(UNIT_ART_STYLES_DIR, style)
     manifest_path = os.path.join(style_dir, "unit_art.json")
 
     symbols = {}

@@ -1,6 +1,6 @@
 import pygame
 from ui.dialogs.base import _BaseModal, _back_key, open_modal
-from ui.widgets import ui_elements
+from ui import sound_effects
 
 
 class _YesNoModal(_BaseModal):
@@ -30,7 +30,7 @@ class _YesNoModal(_BaseModal):
         for event in events:
             if event.type == pygame.KEYDOWN:
                 if self.back_rect is not None and event.key in (pygame.K_ESCAPE, _back_key(), pygame.K_g):
-                    ui_elements.play_ui_sound("back")
+                    sound_effects.play_ui_sound("back")
                     self._finish(None)
                 elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_y):
                     self._finish(True)
@@ -43,7 +43,7 @@ class _YesNoModal(_BaseModal):
                 elif self.no_rect.collidepoint(event.pos):
                     self._finish(False)
                 elif self.back_rect is not None and self.back_rect.collidepoint(event.pos):
-                    ui_elements.play_ui_sound("back")
+                    sound_effects.play_ui_sound("back")
                     self._finish(None)
 
     def draw_content(self, surface):

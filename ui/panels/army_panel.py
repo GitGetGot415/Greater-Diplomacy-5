@@ -11,6 +11,7 @@ from ui.rendering.font_manager import fonts
 from ui.panels import map_top_right_layout
 from ui.widgets.ui_elements import process_text_input
 from ui.widgets import ui_elements
+from ui import sound_effects
 
 from screens.game.defense_area_screen import DefenseAreaScreen
 from ui.navigation import screen_runner
@@ -367,11 +368,11 @@ def _handle_custom_symbol_event(map_screen, event):
 def handle_back_key(map_screen):
     """Close the foremost army editor layer, returning whether one was open."""
     if _custom_symbol_editor_state(map_screen) is not None:
-        ui_elements.play_ui_sound("back")
+        sound_effects.play_ui_sound("back")
         map_screen.army_custom_symbol_state = None
         return True
     if _editor_state(map_screen) is not None:
-        ui_elements.play_ui_sound("back")
+        sound_effects.play_ui_sound("back")
         map_screen.army_editor_state = None
         map_screen.army_custom_symbol_state = None
         return True
@@ -418,7 +419,7 @@ def _handle_editor_event(map_screen, event):
         return True
     close = pygame.Rect(rect.right - 30, rect.y + 10, 18, 18)
     if close.collidepoint(event.pos):
-        ui_elements.play_ui_sound("back")
+        sound_effects.play_ui_sound("back")
         map_screen.army_editor_state = None
         map_screen.army_custom_symbol_state = None
         return True

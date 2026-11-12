@@ -7,7 +7,7 @@ from ui.camera import camera_handler
 from screens.setup import player_setup
 from data import queries
 from ui.widgets.ui_elements import process_text_input
-from ui.widgets import ui_elements
+from ui import sound_effects
 from map_logic.diplomacy import diplomacy_messages
 from screens.game import battle_screen
 from ui.bars import flag_renderer, ui_bars
@@ -17,6 +17,8 @@ from ui.information import tooltip
 from map_logic.ai import ai_handler
 from screens.editors.menus import open_convoy_converter, open_unit_transfer
 from screens.game import country_summary
+
+MAX_MAIL_DRAFT_LENGTH = 120
 
 
 # The three panels that sit on the map at fixed screen rects: Buildings/Garrison,
@@ -113,7 +115,7 @@ def _select_map_province(map_screen, position, navigate=True):
         map_screen.player_country, owner, map_screen.nation_data)
     if navigate and c.MAP_NAVIGATION_MODE != "CLASSIC":
         navigate_view_mode(map_screen, map_screen.secondary_mode)
-    ui_elements.play_ui_sound("click_province")
+    sound_effects.play_ui_sound("click_province")
     return True
 
 
@@ -537,7 +539,7 @@ def _handle_relations_viewpoint_click(map_screen, event, on_ui):
     # The same sound as a left-click on a province, and likewise silent on
     # empty space.
     if province is not None:
-        ui_elements.play_ui_sound("click_province")
+        sound_effects.play_ui_sound("click_province")
     return True
 
 
@@ -809,7 +811,7 @@ def _handle_combat_bubble_click(map_screen, event, on_ui, origin=None):
         origin.inspect_province(province)
         origin.entered_from_combat_bubble = True
         origin.open_battle_panel()
-    ui_elements.play_ui_sound("click_province")
+    sound_effects.play_ui_sound("click_province")
     return True
 
 
@@ -842,7 +844,7 @@ def _handle_mail_box(map_screen, event):
             map_screen.mail_input_active = False
         else:
             map_screen.mail_draft_text, status = process_text_input(
-                event, map_screen.mail_draft_text, max_length=c.MAX_MAIL_DRAFT_LENGTH
+                event, map_screen.mail_draft_text, max_length=MAX_MAIL_DRAFT_LENGTH
             )
 
             if status == "SUBMIT":
@@ -948,7 +950,7 @@ def handle_view_mode_keybind(map_screen, mode, action, origin=None):
     the view-mode row's own buttons behave. Plays the same sound as those buttons.
     """
     origin = origin or map_screen
-    ui_elements.play_ui_sound("select_view")
+    sound_effects.play_ui_sound("select_view")
     map_screen.set_view_mode(mode)
     _resync_view_mode_row(origin)
     if queries.get_keybind_changes_screen(action):

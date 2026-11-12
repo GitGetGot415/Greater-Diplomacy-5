@@ -3,6 +3,7 @@ import os
 from data import queries
 from data.io import settings_schema
 from ui.widgets import ui_elements
+from ui import sound_effects
 from ui.navigation.screen import Screen, ScreenLayer
 from ui.navigation.modal_screen import ModalScreen
 from ui.navigation.screen_runner import _run_pygame_sub_screen
@@ -578,7 +579,7 @@ class Music_Player(ScrollPanes, Screen):
 
     def set_sfx_volume(self, val):
         self.controller.sfx_volume = val
-        ui_elements.set_sfx_volume(val)
+        sound_effects.set_sfx_volume(val)
         self.save_audio_settings()
 
     def set_music_volume(self, val):
@@ -634,7 +635,7 @@ class Music_Player(ScrollPanes, Screen):
         
     def set_sfx_pitch(self, val):
         self.controller.sfx_pitch = val
-        ui_elements.set_sfx_pitch(val)
+        sound_effects.set_sfx_pitch(val)
         self.save_audio_settings()
         
     def save_audio_settings(self):
@@ -670,7 +671,7 @@ class Music_Player(ScrollPanes, Screen):
         if not albums:
             dialogs.show_info("Add Song", "Create an album before adding a song.")
             return
-        ui_elements.play_ui_sound("click")
+        sound_effects.play_ui_sound("click")
         pickers.open_listbox_selector(self, "Add Song", "Which album should the song go in?",
                                       albums, self.pick_song_file)
 
@@ -892,7 +893,7 @@ class TacticalSongsScreen(ModalScreen):
         if not items:
             dialogs.show_info("Add Song", "There are no songs to add.")
             return
-        ui_elements.play_ui_sound("click")
+        sound_effects.play_ui_sound("click")
         pickers.open_listbox_selector(
             self, "Add Song", "Which song should play?", items,
             lambda track, s=setting: self.add_song(s, track),

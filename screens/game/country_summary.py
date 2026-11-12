@@ -6,7 +6,8 @@ import data.constants as c
 from data import queries
 from ui.navigation.screen import Screen
 from ui.rendering.font_manager import fonts
-from ui.widgets import flag_icons, ui_elements
+from ui.widgets import flag_icons
+from ui import sound_effects
 from ui.bars import ui_bars
 from ui.background_styles import COUNTRY_SUMMARY_STYLES
 from ui.widgets.text_utils import fit_text, render_inline_text, wrap_text
@@ -40,7 +41,7 @@ class CountrySummaryScreen(Screen):
         self.flag = flag_icons.flag_surface(country_id, map_screen.nation_data, HEADER_FLAG_SIZE)
         self._layout_width = None
         self.refresh_ui()
-        ui_elements.play_ui_sound("paper")
+        sound_effects.play_ui_sound("paper")
 
     def _country_parts(self, country_ids):
         parts = []

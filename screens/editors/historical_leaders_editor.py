@@ -28,6 +28,7 @@ from ui import dialogs
 from ui.bars import ui_bars
 from ui.background_styles import EDITOR_PANEL_STYLES
 from ui.widgets import ui_elements
+from ui import sound_effects
 from ui.widgets.scroll_panes import ScrollPanes
 from ui.widgets import text_utils
 from ui.widgets.ui_elements import Button, TextField, make_back_button, make_choice_button
@@ -154,7 +155,7 @@ class Historical_Leaders_Editor(ScrollPanes, Screen):
             dialogs.show_info("Add Country", "Every playable country is already being tracked.")
             return
 
-        ui_elements.play_ui_sound("click")
+        sound_effects.play_ui_sound("click")
 
         def on_pick(country):
             self.data[country] = []

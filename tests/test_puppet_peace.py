@@ -128,7 +128,7 @@ class AIVerdictTests(unittest.TestCase):
 class RefusalWordingTests(unittest.TestCase):
     """Being refused for the right reason.
 
-    Declare War and Ceasefire are the same button -- map.py relabels it once you
+    Declare War and Ceasefire are the same button -- map_buttons.py relabels it once you
     are at war and leaves the callback alone -- and handle_declare_war ran its
     "puppets may only declare war on their master" gate before it noticed the
     click was about peace. So a puppet asking for a ceasefire was told, quite
@@ -167,7 +167,8 @@ class RefusalWordingTests(unittest.TestCase):
 
         screen = self.screen(at_war=False)
         player_diplomacy_actions.handle_declare_war(screen)
-        self.assertEqual(screen.said, ["Puppets can only declare war on their master!"])
+        self.assertEqual(len(screen.said), 1)
+        self.assertTrue(screen.said[0].startswith("Cannot declare war"), screen.said)
 
 
 if __name__ == "__main__":

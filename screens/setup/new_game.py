@@ -1,6 +1,6 @@
 import os
 from screens.game import map_launch
-from ui.widgets.ui_elements import play_ui_sound
+from ui.sound_effects import play_ui_sound
 from ui.widgets.ui_elements import Button, make_back_button
 from ui.widgets.content_browser import ScenarioLibraryScreen
 import data.constants as c

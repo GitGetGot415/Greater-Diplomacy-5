@@ -6,7 +6,7 @@ from ui.rendering.font_manager import fonts
 from ui.navigation.screen import Screen
 from ui.background_styles import AUTOMATION_PANEL_STYLES
 from ui.bars import ui_bars
-from ui.widgets import ui_elements
+from ui import sound_effects
 from map_logic.ai.automation_logic import (
     automate_player_construction, clear_player_construction,
     automate_player_movement, clear_player_movement,
@@ -106,7 +106,7 @@ class Automation_Screen(Screen):
                     # Rebuild cached training markers after construction queue changes.
                     self.map_screen.invalidate_map_presentation_cache()
                 if clearing_orders:
-                    ui_elements.play_ui_sound("cancel_orders")
+                    sound_effects.play_ui_sound("cancel_orders")
             self.refresh_ui()
 
         ask_yes_no("Automation", question, answered)

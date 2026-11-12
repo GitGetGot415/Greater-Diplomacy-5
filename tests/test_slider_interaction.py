@@ -8,6 +8,7 @@ import pygame
 from screens.menus.music_player import MusicScrubber
 from ui import background_styles
 from ui.widgets import ui_elements
+from ui import sound_effects
 
 
 class SliderInteractionTests(unittest.TestCase):
@@ -33,7 +34,7 @@ class SliderInteractionTests(unittest.TestCase):
         self.assertEqual(self.slider.value, initial)
         self.event(self.slider, pygame.MOUSEBUTTONDOWN, self.slider.handle_rect.center)
         with patch.object(pygame.mouse, "get_pressed", return_value=(True, False, False)), \
-                patch.object(ui_elements, "play_ui_sound"):
+                patch.object(sound_effects, "play_ui_sound"):
             for mouse_x, expected in ((400, 1), (-20, 0)):
                 self.event(self.slider, pygame.MOUSEMOTION, (mouse_x, 50))
                 self.slider.draw(self.surface)

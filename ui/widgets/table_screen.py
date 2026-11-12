@@ -2,7 +2,8 @@ import pygame
 from ui.navigation.screen import Screen, host_map_screen
 import data.constants as c
 from ui.bars import ui_bars
-from ui.widgets import text_utils, ui_elements
+from ui.widgets import text_utils
+from ui import sound_effects
 from ui.widgets.ui_elements import Button, make_back_button
 from ui.rendering.font_manager import fonts
 
@@ -76,7 +77,7 @@ class TableScreen(Screen):
                 self.group_spans.append((group, start_x, span_w))
 
         self.refresh_ui()
-        ui_elements.play_ui_sound("paper")
+        sound_effects.play_ui_sound("paper")
 
     def sort_by(self, col):
         reverse = self.sort_reverse.get(col.key, False)

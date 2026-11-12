@@ -74,11 +74,6 @@ KEYBIND_MOUSE_BUTTONS = {
 }
 
 # --- Text Input Limits ---
-MAX_API_KEY_LENGTH = 200
-MAX_MODEL_NAME_LENGTH = 150
-MAX_MESSAGE_LENGTH = 150
-MAX_MAIL_DRAFT_LENGTH = 120
-UNIT_NAME_MAX_LENGTH = 50
 COUNTRY_NAME_MAX_LENGTH = 50
 
 # How many messages a nation's inbox keeps. Inboxes live in nation_data and
@@ -150,194 +145,6 @@ CORE_CONSTRUCTION_TURNS = 24
 
 REMOVE_CORE_TURNS = 2
 
-# Each person may have "info" (free-text bio shown in the popup) and/or "links"
-# (a list of {"text", "url"} shown as clickable lines below the info text).
-# Optional "images" entries {"path", "text"} display an image beside a label;
-# omitting "text" uses the image filename as its label.
-# {"directory": "assets/..."} includes its PNGs; "recursive": True includes
-# subfolders, and "exclude": ["file.png", "prefix_*.png"] filters them out.
-# A person without info, links, or images is plain, non-clickable text.
-CREDITS_DATA = [
-    {
-        "main_text": "Lead Developer: ",
-        "people": [
-            {
-                "link_text": "GitGetGot415",
-                "info": "Owns the repository",
-                "align": "left",
-                "links": [{"text": "GitHub", "url": "https://github.com/GitGetGot415"}]
-            }
-        ]
-    },
-    {
-        "main_text": "Music: ",
-        "people": [
-            {
-                "link_text": "GitGetGot415",
-                "info": (
-                    "Albums Created:"
-                ),
-                "images": [
-                        {"path": "assets/music/Greater Diplomacy 1/icon.png", "text": "Greater Diplomacy 1"},
-                        {"path": "assets/music/Greater Diplomacy 2/icon.png", "text": "Greater Diplomacy 2"},
-                        {"path": "assets/music/Greater Diplomacy 3/icon.png", "text": "Greater Diplomacy 3"},
-                        {"path": "assets/music/Greater Diplomacy 4/icon.png", "text": "Greater Diplomacy 4"},
-                        {"path": "assets/music/Greater Diplomacy 5/icon.png", "text": "Greater Diplomacy 5"},
-                        {"path": "assets/music/Experimental/icon.png", "text": "Experimental"},
-                ],
-                "align": "left",
-                "links": [{"text": "GitHub", "url": "https://github.com/GitGetGot415"}]
-            }
-        ]
-    },
-    {
-        "main_text": "GitHub Contributors: ",
-        "people": [
-            {
-                "link_text": "litbrb",
-                "info": (
-                    "Added:\n"
-                    "- Submarines\n"
-                    "- Terrain art\n"
-                    "- Icons for New Game, Load Game, Map Editor, Credits"
-                ),
-                "images": [
-                    {"path": "assets/classic/Submarine.png"},
-                    {"directory": "assets/terrains", "exclude": ["Unknown.png"]},
-                    {"path": "assets/images/New Game.png"},
-                    {"path": "assets/images/Load Game.png"},
-                    {"path": "assets/images/Map Editor.png"},
-                    {"path": "assets/images/Credits.png"},
-                ],
-                "align": "left",
-                "links": [{"text": "GitHub", "url": "https://github.com/litbrb"}]
-            },
-            {
-                "link_text": "Pr1nted",
-                "info": (
-                    "Added:\n"
-                    "- Conversion between OpenDoctrines and GD5\n"
-                    "- Conversion between Unciv and GD5\n"
-                    "- OJH Benchmark"
-                ),
-                "align": "left",
-                "links": [{"text": "GitHub", "url": "https://github.com/Pr1nted"}]
-            }
-        ]
-    },
-    {
-        "main_text": "Map Makers: ",
-        "people": [
-            {
-                "link_text": "neptune2019",
-                "info": ("Maps Added:\n"
-                "- Kaiserreich 1936\n"
-                "- 1939 fixed schizo scenario\n"
-                "- 2000\n"
-                "- 2000 world\n"
-                "- 1914 world (simplified)\n"
-                "- 1914 world (detailed)\n"),
-                "align": "left",
-            },
-        ]
-    },
-    {
-        "main_text": "Unit Art: ",
-        "people": [
-            {
-                "link_text": "hanskolmer",
-                "info": "Hanskolmer unit art:",
-                "images": [{"directory": "assets/hanskolmer", "recursive": True}],
-                "align": "left",
-            },
-            {
-                "link_text": "GitGetGot415",
-                "info": "Classic unit art:",
-                "images": [{"directory": "assets/classic", "recursive": True, "exclude": ["Submarine.png"]}],
-                "align": "left",
-                "links": [{"text": "GitHub", "url": "https://github.com/GitGetGot415"}]
-            },
-        ]
-    },
-    {
-            "main_text": "Army Icons: ",
-            "people": [
-                {
-                    "link_text": "Randomly",
-                    "info": "Icons Added:",
-                    "images": [
-                        {"path": "assets/symbols/Randomly_King.png"},
-                        {"path": "assets/symbols/Randomly_Queen.png"},
-                        {"path": "assets/symbols/Randomly_Rook.png"},
-                        {"path": "assets/symbols/Randomly_Bishop.png"},
-                        {"path": "assets/symbols/Randomly_Knight.png"},
-                        {"path": "assets/symbols/Randomly_Pawn.png"},
-                    ],
-                    "align": "left",
-                },
-                {
-                    "link_text": "commanderg",
-                    "info": "Icons Added:",
-                    "images": [
-                        {"path": "assets/symbols/commanderg_Eagle.png"},
-                        {"path": "assets/symbols/commanderg_HammerAndSickle.png"},
-                        {"path": "assets/symbols/commanderg_WizardHat.png"},
-                        {"path": "assets/symbols/commanderg_Skull.png"},
-                    ],
-                    "align": "left",
-                },
-                {
-                    "link_text": "GitGetGot415",
-                    "info": "Icons Added:",
-                    "images": [{"directory": "assets/symbols", "exclude": ["Randomly_*.png", "commanderg_*.png"]}],
-                    "align": "left",
-                    "links": [{"text": "GitHub", "url": "https://github.com/GitGetGot415"}]
-                },
-            ]
-        },
-    {
-        "main_text": "Tools: ",
-        "people": [
-            {
-                "link_text": "github-advanced-security[bot]",
-                "info": "Improved encryption for tournaments",
-                "align": "left",
-                "links": [{"text": "Docs", "url": "https://docs.github.com/en/get-started/learning-about-github/about-github-advanced-security"}]
-            },
-            {
-                "link_text": "claude",
-                "info": "Massive refactors to consolidate / organize code",
-                "align": "left",
-                "links": [{"text": "GitHub", "url": "https://github.com/claude"}]
-            },
-            {
-                "link_text": "dependabot",
-                "info": "Update dependencies for conversion between OpenDoctrines and GD5",
-                "align": "left",
-                "links": [{"text": "GitHub", "url": "https://github.com/dependabot"}]
-            },
-            {
-                "link_text": "BeepBox",
-                "info": "Music editor and synthesizer used for BeepBox JSON playback",
-                "align": "left",
-                "links": [{"text": "GitHub", "url": "https://github.com/johnnesky/beepbox"}]
-            },
-            {
-                "link_text": "UltraBox",
-                "info": "Music editor and synthesizer used for UltraBox JSON playback",
-                "align": "left",
-                "links": [{"text": "GitHub", "url": "https://github.com/ultraabox/ultrabox_typescript"}]
-            },
-            {
-                "link_text": "PyMiniRacer",
-                "info": "Embedded V8 JavaScript runtime used for native BeepBox and UltraBox playback",
-                "align": "left",
-                "links": [{"text": "GitHub", "url": "https://github.com/bpcreech/PyMiniRacer"}]
-            }
-        ]
-    }
-]
-
 SHOW_FPS = get_starting_value("settings_config.json", "show_fps")
 
 # Show the sky checkerboard's reflection on the ocean. The pattern follows
@@ -405,7 +212,6 @@ TACTICAL_DEFAULT_YEAR = 1910
 USE_FOG_OF_WAR = get_starting_value("scenario_settings.json", "fog_of_war") # Toggle Fog of War mechanics on or off
 DEFAULT_FOG_OF_WAR = get_starting_value("scenario_settings.json", "fog_of_war")
 DEFAULT_FOG_OF_WAR_STRENGTH = get_starting_value("scenario_settings.json", "fog_of_war_strength")
-FOG_OF_WAR_ALPHA = 160 # How dark unseen provinces get (0-255)
 
 # Tournament spectators authenticate with this deliberately public key, but
 # receive the same no-territory fog perspective as a nation with no vision.
@@ -451,12 +257,8 @@ DEFAULT_FREE_REPAIRS = get_starting_value("scenario_settings.json", "free_repair
 # DEFAULTS & ASSETS
 # ==========================================
 
-MENU_BOTTOM_TEXT_COLOR = (255, 255, 255)
 MENU_BOTTOM_TEXT_LINK_COLOR = (150, 200, 255)
-MENU_BOTTOM_TEXT_HOVER_COLOR = (100, 255, 100)
 
-
-DEFAULT_BG_COLOR = (30, 30, 30)
 
 # AI Default Models
 DEFAULT_GEMINI_MODEL = get_starting_value("settings_config.json", "gemini_model")
@@ -939,8 +741,6 @@ COLOR_DIM_BORDER = (100, 100, 100)
 COLOR_RESOURCE_MANPOWER = (100, 200, 255)
 COLOR_RESOURCE_MATERIALS = (180, 180, 180)
 COLOR_RESOURCE_FUEL = (200, 100, 255)
-COLOR_SLIDER_TRACK = (100, 100, 100)
-COLOR_SLIDER_HANDLE = (200, 200, 200)
 
 COLOR_CHROMA_PINK = (255, 0, 255)
 
@@ -1008,7 +808,6 @@ INPUT_BORDER_ACTIVE = (255, 255, 255)
 # Back button placement. Full-screen menus anchor to the top-left corner;
 # screens layered over the map sit beside the top UI bar instead.
 BACK_BTN_TOPLEFT = (20, 20)
-BACK_BTN_MAP_CENTER = (50, TOP_BAR_UI_CENTER_Y)
 
 # Owner names that mean "nobody owns this". Deliberately NOT UNPLAYABLE_NATIONS:
 # that list also carries "The Rot"/"Spectator"/"GLOBAL_EVENTS"/"FACTION_WAR_MAPS"
@@ -1040,11 +839,7 @@ AIR_MISSION_CHOICES = (
     ("RANDOM", "Defend area (random enemy mission targeted first)", "Random First"),
 )
 AIR_MISSION_ICONS = {mission: icon for mission, _label, icon in AIR_MISSION_CHOICES}
-MAX_Y_TILT_FACTOR = 0.0 # The maximum compression of the Y axis (0.6 = 60% of original height)
 APPLY_TILT_TO_OVERLAYS = False # Whether the tilt compresses icons and text overlays
-APPLY_TILT_TO_ARROWS = True # Whether the tilt compresses movement arrows
-APPLY_TILT_TO_STATUS_ICONS = True # Whether the tilt compresses training, disbanding, and construction icons
-APPLY_TILT_TO_TEXT = True
 
 # Water brightness stuff
 OCEAN_DARK_BLUE = tuple(get_starting_value("settings_config.json", "ocean_dark_color"))
@@ -1184,8 +979,6 @@ BOMBARDMENT_UNITS = {
 # Fallback range for anything that can bombard without a listed range.
 DEFAULT_BOMBARDMENT_RANGE = 1
 
-# Scale of the barrage sprite drawn between the gun and its target.
-BOMBARDMENT_ARROW_SCALE = 1.0
 
 # ==========================================
 # CONVOY & TRUCK LOGIC
@@ -1219,28 +1012,10 @@ ORDERS_BLOCKING_MOVEMENT = MULTI_TURN_ORDER_TYPES + ("BOMBARD",)
 # OVERLAY ICONS & SCALES
 # ==========================================
 
-ICON_TRAINING = "Training"
-ICON_CONSTRUCTION = "Hammer"
-ICON_DISBANDING = "Disbanding"
-ICON_REPAIRING = "Repairing"
-ICON_UPGRADING = "Upgrading"
-ICON_CONVERTING_TO_CONVOY = "Convoying"
-ICON_CONVERTING_TO_LAND = "Unconvoying"
-ICON_CONVERTING_TO_TRUCK = "Trucking"
-ICON_CONVERTING_TO_SHIP = "Untrucking"
 
-# Maps a unit's CONVERT order "to" field to the icon shown over the unit while converting
-CONVERSION_ICONS = {
-    "Convoy": ICON_CONVERTING_TO_CONVOY,
-    "Land Unit": ICON_CONVERTING_TO_LAND,
-    "Truck": ICON_CONVERTING_TO_TRUCK,
-    "Ship": ICON_CONVERTING_TO_SHIP,
-}
 ICON_BOMBARDMENT = "Bombardment Arrows"
 ICON_BOMBARDMENT_LONG = "Long Range Bombardment Arrows"
 ICON_BOMBARDMENT_VERY_LONG = "Very Long Range Bombardment Arrows"
-ICON_MIDPOINT_BOUNCE = "Midpoint Bounce"
-ICON_MIDPOINT_OVERRUN = "Midpoint Overrun"
 
 # Barrage sprite keyed by the firing unit's range. The highest key at or below
 # the unit's range wins, so longer-ranged guns added later reuse the long art.
@@ -1250,11 +1025,6 @@ BOMBARDMENT_ARROW_ICONS = {
     3: ICON_BOMBARDMENT_VERY_LONG
 }
 
-# Scale of the marker shown halfway along a hostile head-on movement swap.
-MIDPOINT_BOUNCE_SCALE = 1.0
-
-OVERLAY_STATUS_ICON_SCALE = 0.6
-OVERLAY_STATUS_ICON_ALPHA = 180  # 0 to 255 transparency scale
 
 # Base unit classes that belong to the TANKS column despite not having
 # "Tank" or "Armored Car" in their name (see queries.get_ordered_unit_groups).
@@ -1292,7 +1062,6 @@ VEHICLE_INFANTRY_GATES = {
     "infantry_fighting_vehicle": "infantry_fighting_vehicle",
 }
 
-BUILDING_ICON_SCALE = 1.0
 
 # ==========================================
 # STAT ICONS
@@ -1301,18 +1070,6 @@ BUILDING_ICON_SCALE = 1.0
 ICON_ATTACK = "Attack"
 ICON_DEFENSE = "Shield"
 ICON_HEALTH = "Heart"
-ICON_SPEED = "Lightning"
-ICON_WARNING = "Warning"
-ICON_BOMBARD_RANGE = "Target"
-
-# ==========================================
-# MAP UNIT DISPLAY (HOI4 STYLE)
-# ==========================================
-
-UNIT_BOX_WIDTH = 80
-UNIT_BOX_HEIGHT = 40
-UNIT_BOX_BG_COLOR = (80, 80, 80, 200)
-UNIT_BOX_TEXT_COLOR = (255, 255, 255)
 
 # ==========================================
 # AI & SPECTATOR CONFIGURATION
@@ -1595,9 +1352,6 @@ AI_CORRESPONDENTS_MAX = 4
 # direction, on the -200 to 200 relation scale.
 AI_OPINION_CHANGE_MAX = 20
 
-# The director's own-initiative proposals, which no staff rule asked for. Low
-# enough that a staff recommendation still reads as the stronger case.
-AI_SCORE_INITIATIVE = 0.30
 
 AI_ACTION_PHRASES = {
     "WAR_DECLARATION": "declare war on",
@@ -1990,7 +1744,6 @@ AI_BUILDING_PAYBACK_TURNS = 60.0
 # One spare level keeps the pipeline full without letting it run away.
 AI_MAX_BUILDING_RESEARCH_LEAD = 1
 
-MAX_RESEARCH_TURN_SIMULATION = 5000
 
 # ==========================================
 # DIPLOMATIC ACTION CLASSIFICATIONS
@@ -2148,11 +1901,6 @@ REBELLION_TERMS = [
 # Directories
 ASSETS_ROOT_DIR = "assets"
 ASSETS_DIR = "assets/images"
-# Classic unit art is kept in its own flat style folder, just like the
-# alternate art styles below. Combat bubbles have their own flat folder too;
-# both are loaded into the shared symbol registry by symbol_loader.
-CLASSIC_UNIT_ART_DIR = "assets/classic"
-COMBAT_BUBBLES_DIR = "assets/combat_bubbles"
 # Small player-facing emblems used by persistent armies.  They are loaded
 # under an army-specific key, so a generic filename such as ``Star.png``
 # cannot replace normal unit or UI art.
@@ -2176,17 +1924,6 @@ ARMY_CUSTOM_SYMBOL_SIZE = 20
 ARMY_CUSTOM_SYMBOL_RED = "R"
 ARMY_CUSTOM_SYMBOL_BLACK = "B"
 ARMY_CUSTOM_SYMBOL_EMPTY = "."
-# Factory and recruitment center building art, kept out of the flat
-# assets/images set since building names/levels multiply fast. Loaded into
-# the same SYMBOLS name->Surface map as ASSETS_DIR -- see symbol_loader.load_symbols.
-BUILDINGS_DIR = "assets/buildings"
-FILE_SYSTEM_ICONS_DIR = "assets/file_system"
-# Alternate unit-art sets live in their own folder under here, named after the
-# style (e.g. assets/hanskolmer). Each has a unit_art.json file for culture
-# metadata and can contain baseline/tiered art filenames such as
-# artillery.png and infantry_<year>.png.
-UNIT_ART_STYLES_DIR = "assets"
-TERRAINS_DIR = "assets/terrains"
 BACKGROUNDS_DIR = "assets/backgrounds"
 FLAGS_DIR = "assets/flags"
 PORTRAITS_DIR = "assets/portraits"
@@ -2218,15 +1955,7 @@ MODS_DIR = "mods"
 # Default Map Assets
 DEFAULT_FLAG_PATH = "assets/flags/default_flag.png"
 DEFAULT_PORTRAIT_PATH = "assets/portraits/default_portrait.png"
-PROVINCE_BG_FILE = "Province.png"
-SETTINGS_BG_FILE = "Settings.png"
 
-# Scrolling checkerboard drawn behind any screen that has no bg_image_path
-# (see Screen.draw_checkerboard_background). The on-disk file is a plain
-# red template -- it exists only to define the light/dark contrast ratio
-# between squares; at runtime it's recolored to match each screen's own
-# bg_color instead of being drawn red.
-CHECKERBOARD_TEMPLATE_FILE = "Checkerboard.png"
 DEFAULT_CHECKERBOARD_SCROLL_SPEED = get_starting_value("settings_config.json", "checkerboard_scroll_speed")  # pixels/sec
 CHECKERBOARD_SCROLL_SPEED = DEFAULT_CHECKERBOARD_SCROLL_SPEED
 MAX_CHECKERBOARD_SCROLL_SPEED = 100
@@ -2300,7 +2029,6 @@ MOUSE_CONTROL_ACTIONS = (
     ("pan_map", "Pan the map", "Hold and drag to pan in every map workspace."),
     ("issue_orders", "Give move orders", "Click a destination for selected units."),
 )
-DEFAULT_MOUSE_BUTTON_ACTIONS = get_starting_value("settings_config.json", "mouse_button_actions")
 
 
 def default_mouse_button_actions():

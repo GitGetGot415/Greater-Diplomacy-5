@@ -89,7 +89,7 @@ class RealtimeMapEntryTests(unittest.TestCase):
         self.controller = SimpleNamespace(states={})
 
     def enter(self, after_layers=None):
-        with patch("screens.game.map.render_buttons") as render:
+        with patch("screens.game.map_buttons.render_buttons") as render:
             map_launch.enter_realtime_map(self.controller, self.board, self.session, "p1", "A", after_layers)
         render.assert_called_once_with(self.board)
 

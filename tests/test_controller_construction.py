@@ -190,7 +190,7 @@ class ControllerConstructionTests(unittest.TestCase):
     def test_editor_paint_selection_never_uses_the_unassigned_player_sentinel(self):
         """The loader must preserve editor mode and its UI must not expose
         player diplomacy when a paint stroke selects an ordinary province."""
-        from screens.game.map import update_button_states
+        from screens.game.map_buttons import update_button_states
         import main
 
         editor_map = main.Map(load_path=app_harness.SCENARIO_PATH,
@@ -219,7 +219,7 @@ class ControllerConstructionTests(unittest.TestCase):
         fallback preserves map navigation and the close control, while keeping
         all country-owned actions unavailable until the assignment completes.
         """
-        from screens.game.map import update_button_states
+        from screens.game.map_buttons import update_button_states
 
         game_map = app_harness.boot_map()
         original_player = game_map.player_country
@@ -244,7 +244,7 @@ class ControllerConstructionTests(unittest.TestCase):
             update_button_states(game_map)
 
     def test_hotseat_ai_preview_keeps_resolution_settings_and_music_available(self):
-        from screens.game.map import render_buttons, update_button_states
+        from screens.game.map_buttons import render_buttons, update_button_states
         from map_logic.system32 import turn_manager
 
         game = app_harness.boot_map()
@@ -286,7 +286,7 @@ class ControllerConstructionTests(unittest.TestCase):
             resolve.assert_called_once_with(turn_manager._resolve_turn_and_refresh, game)
 
     def test_unassigned_turn_control_only_allows_idle_local_ai_preview(self):
-        from screens.game.map import update_button_states
+        from screens.game.map_buttons import update_button_states
 
         game = app_harness.boot_map()
         self.addCleanup(update_button_states, game)

@@ -10,7 +10,7 @@ from data import queries
 import data.constants as c
 from tests.stub_map_screen import bare_orders_screen, fill_state_defaults
 from ui.camera import camera_handler
-from ui.widgets import ui_elements
+from ui import sound_effects
 from ui.rendering import overlay_renderer
 from screens.game.map import Map
 from screens.game import map as map_module
@@ -114,7 +114,7 @@ class MapOrderTests(unittest.TestCase):
     def test_unit_selection_sound_plays_once_for_single_and_group_selection(self):
         game, slow, fast, _destination = self.make_map()
         game.clear_map_unit_selection()
-        with patch.object(ui_elements, "play_ui_sound") as sound:
+        with patch.object(sound_effects, "play_ui_sound") as sound:
             self.assertTrue(game.click_select_map_units([slow]))
             sound.assert_called_once_with("select_unit")
             sound.reset_mock()
@@ -133,7 +133,7 @@ class MapOrderTests(unittest.TestCase):
 
     def test_empty_and_blocked_selection_do_not_play_unit_selection_sound(self):
         game, slow, _fast, _destination = self.make_map()
-        with patch.object(ui_elements, "play_ui_sound") as sound:
+        with patch.object(sound_effects, "play_ui_sound") as sound:
             game.select_map_units([])
             game.select_map_units([{"owner": "B"}])
             game.viewing_ai_moves = True
@@ -203,7 +203,7 @@ class CombatBubbleClickTests(unittest.TestCase):
         self.game.select_map_units = Map.select_map_units.__get__(self.game)
         self.enterContext(patch.object(overlay_renderer, "combat_bubble_at_screen_pos",
                                       return_value={"orders_province_id": 1}))
-        self.sound = self.enterContext(patch.object(ui_elements, "play_ui_sound"))
+        self.sound = self.enterContext(patch.object(sound_effects, "play_ui_sound"))
         self.enterContext(patch.object(pygame.mouse, "get_pos", return_value=self.position))
 
     def test_map_bubble_takes_priority_over_an_overlapping_unit_stack(self):
@@ -621,7 +621,7 @@ class OrdersBatchCommandsTests(unittest.TestCase):
         second = {"owner": "A", "type": "Infantry", "order": {"type": "DISBAND"}}
         screen, _map_stub, feedback = self._screen(first, second)
 
-        with patch.object(ui_elements, "play_ui_sound") as sound:
+        with patch.object(sound_effects, "play_ui_sound") as sound:
             screen.cancel_selected_batch_orders("DISBAND")
             sound.assert_called_once_with("cancel_orders")
             sound.reset_mock()
@@ -665,7 +665,7 @@ class OrdersBatchCommandsTests(unittest.TestCase):
         screen, game, _feedback = self._screen(first, second)
         records = game.selected_unit_records()
         game.map_data = {str(province["id"]): province for _unit, province in records}
-        with patch.object(ui_elements, "play_ui_sound") as sound:
+        with patch.object(sound_effects, "play_ui_sound") as sound:
             screen.cancel_unit_order(0, records[0][1])
             sound.assert_called_once_with("cancel_orders")
             sound.reset_mock()
@@ -692,7 +692,7 @@ class MapOrderGestureTests(unittest.TestCase):
               patch.object(map_input.sidebar_info, "prepare_unit_roster"),
               patch.object(camera_handler, "center_camera_on_province"),
               patch.object(queries, "get_message_draft", return_value=""),
-              patch.object(ui_elements, "play_ui_sound") as sound):
+              patch.object(sound_effects, "play_ui_sound") as sound):
             self.assertTrue(map_input._select_map_province(game, (10, 10), navigate=False))
             sound.assert_called_once_with("click_province")
             sound.reset_mock()
@@ -1077,7 +1077,7 @@ class MapViewDefaultTests(unittest.TestCase):
             "refresh_map_layers": lambda self, *_layers: None,
         })())
 
-        with patch("screens.game.map.render_buttons"):
+        with patch("screens.game.map_buttons.render_buttons"):
             player_setup.confirm_player_country(map_stub)
 
         self.assertEqual(map_stub.player_country, "A")
@@ -1094,7 +1094,7 @@ class MapViewDefaultTests(unittest.TestCase):
                                    focus_camera_on_country=Mock(), show_feedback=Mock(), refresh_map_layers=Mock())
         with (patch.object(player_setup.queries, "get_unit_library", return_value={}),
               patch.object(player_setup.tactical_battle, "land_unit_types", return_value=["Fixture"]),
-              patch("screens.game.map.render_buttons")):
+              patch("screens.game.map_buttons.render_buttons")):
             player_setup.confirm_player_country(map_stub)
         map_stub.focus_camera_on_position.assert_called_once_with(tile["center"], animate=True)
         map_stub.focus_camera_on_country.assert_not_called()
@@ -1118,7 +1118,7 @@ class MapViewDefaultTests(unittest.TestCase):
             "refresh_map_layers": lambda self, *_layers: None,
         })())
 
-        with patch("screens.game.map.render_buttons"):
+        with patch("screens.game.map_buttons.render_buttons"):
             player_setup.start_spectator(map_stub)
 
         self.assertEqual(map_stub.player_country, "Spectator")

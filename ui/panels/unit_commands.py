@@ -26,11 +26,13 @@ from ui.panels import army_panel
 from screens.game import map_input
 from screens.game import battle_screen
 from ui.navigation.modal_screen import ModalScreen
-from ui.widgets import ui_elements
+from ui import sound_effects
 
 from ui.dialogs.list_select_screen import ListSelectScreen
 from ui.rendering import map_utils
 from ui.navigation import screen_runner
+
+UNIT_NAME_MAX_LENGTH = 50
 
 
 # ==========================================
@@ -316,7 +318,7 @@ class UnitCommandControls:
         """
         changed = any(result.changed for result in results)
         if changed:
-            ui_elements.play_ui_sound(kind)
+            sound_effects.play_ui_sound(kind)
         return changed
 
     def _finish_batch_command(self, label, count):
@@ -1122,7 +1124,7 @@ class UnitCommandControls:
                     self.renaming_unit_actual_index = None
                     self.refresh_ui()
                 else:
-                    self.rename_text, _ = process_text_input(event, self.rename_text, max_length=c.UNIT_NAME_MAX_LENGTH)
+                    self.rename_text, _ = process_text_input(event, self.rename_text, max_length=UNIT_NAME_MAX_LENGTH)
                 return
 
             if (event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
@@ -1685,7 +1687,7 @@ class UnitCommandControls:
             self.refresh_ui()
             return True
         if self.bombarding_unit_index is not None:
-            ui_elements.play_ui_sound("back")
+            sound_effects.play_ui_sound("back")
             self.cancel_bombard_targeting()
             return True
         return False

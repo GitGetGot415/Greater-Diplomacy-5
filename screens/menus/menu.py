@@ -9,6 +9,7 @@ import urllib.request
 import urllib.error
 import ssl
 from ui.widgets import ui_elements
+from ui import sound_effects
 from ui.bars import ui_bars
 from ui.navigation.screen import Screen
 from ui.widgets.ui_elements import Button
@@ -21,6 +22,9 @@ from ui.rendering.font_manager import fonts
 
 from ui.dialogs.character_select_screen import CHARACTERS_DIR
 from ui import dialogs
+
+MENU_BOTTOM_TEXT_COLOR = (255, 255, 255)
+MENU_BOTTOM_TEXT_HOVER_COLOR = (100, 255, 100)
 
 # --- Dynamic Menu Text & Links ---
 MENU_VERSION_API_URL = "https://api.github.com/repos/GitGetGot415/Greater-Diplomacy-5/contents/version.txt"
@@ -620,7 +624,7 @@ class Menu(Screen):
     @staticmethod
     def _exit_game(confirmed):
         if confirmed:
-            ui_elements.play_ui_sound("back")
+            sound_effects.play_ui_sound("back")
             # Let the main loop handle cleanup and platform-specific shutdown.
             pygame.event.post(pygame.event.Event(pygame.QUIT))
 
@@ -897,11 +901,11 @@ class Menu(Screen):
         
         for item in self.bottom_texts:
             is_hovered = item["url"] and item["link_text"] and item["link_rect"].collidepoint(mouse_pos)
-            link_color = c.MENU_BOTTOM_TEXT_HOVER_COLOR if is_hovered else c.MENU_BOTTOM_TEXT_LINK_COLOR
+            link_color = MENU_BOTTOM_TEXT_HOVER_COLOR if is_hovered else c.MENU_BOTTOM_TEXT_LINK_COLOR
             
             # --- Draw the Main Chunk (Now on the Left) ---
             if item["main_text"]:
-                fonts.draw_text_with_shadow(surface, item["main_text"], item["main_rect"].x, item["main_rect"].y, "heading2", c.MENU_BOTTOM_TEXT_COLOR)
+                fonts.draw_text_with_shadow(surface, item["main_text"], item["main_rect"].x, item["main_rect"].y, "heading2", MENU_BOTTOM_TEXT_COLOR)
 
             # --- Draw the Link Chunk (Now on the Right) ---
             if item["link_text"]:

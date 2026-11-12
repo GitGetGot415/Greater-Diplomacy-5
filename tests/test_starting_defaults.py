@@ -194,7 +194,7 @@ class StartingDefaultsTests(unittest.TestCase):
     def test_audio_reset_reads_each_configured_value_and_updates_playback(self):
         import data.constants as c
         from screens.menus.music_player import Music_Player
-        from ui.widgets import ui_elements
+        from ui import sound_effects
         config = self.defaults["settings_config.json"]
         config.update(sfx_volume=0.23, music_volume=0.67, sfx_pitch=0.34,
                       music_pitch=0.78, music_pitch_timeline=c.MUSIC_PITCH_TIMELINE_DYNAMIC)
@@ -202,8 +202,8 @@ class StartingDefaultsTests(unittest.TestCase):
         player.controller = SimpleNamespace(music=None, now_playing="None")
         player.refresh_ui = mock.Mock()
         with mock.patch.object(queries, "save_global_settings") as save, \
-                mock.patch.object(ui_elements, "set_sfx_volume") as volume, \
-                mock.patch.object(ui_elements, "set_sfx_pitch") as pitch:
+                mock.patch.object(sound_effects, "set_sfx_volume") as volume, \
+                mock.patch.object(sound_effects, "set_sfx_pitch") as pitch:
             player.reset_audio_defaults()
         for key in ("sfx_volume", "music_volume", "sfx_pitch", "music_pitch", "music_pitch_timeline"):
             self.assertEqual(getattr(player.controller, key), config[key])

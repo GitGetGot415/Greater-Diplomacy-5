@@ -368,7 +368,7 @@ class MapSurfaceCacheTests(unittest.TestCase):
 
     def right_click(self, province, moved=0):
         """Press and release the right button over province, moving `moved` pixels."""
-        with mock.patch.object(queries, "get_clicked_province", return_value=province),                 mock.patch.object(map_input.ui_elements, "play_ui_sound") as self.sound:
+        with mock.patch.object(queries, "get_clicked_province", return_value=province),                 mock.patch.object(map_input.sound_effects, "play_ui_sound") as self.sound:
             map_input._handle_relations_viewpoint_click(self.screen, pygame.event.Event(
                 pygame.MOUSEBUTTONDOWN, button=3, pos=(5, 5)), False)
             return map_input._handle_relations_viewpoint_click(self.screen, pygame.event.Event(
@@ -491,7 +491,7 @@ class MapSurfaceCacheTests(unittest.TestCase):
             self.refresh(refresh_map.refresh_fog_map)
             self.assertEqual(self.screen.visible_provinces, set())
             self.assertEqual(self.screen.partial_visible_provinces, set())
-            self.assertTrue(np.all(pygame.surfarray.array_alpha(self.screen.fog_map) == c.FOG_OF_WAR_ALPHA))
+            self.assertTrue(np.all(pygame.surfarray.array_alpha(self.screen.fog_map) == refresh_map.FOG_OF_WAR_ALPHA))
 
     def test_fog_selection_spectator_and_strength_transitions(self):
         with mock.patch.object(c, "USE_FOG_OF_WAR", True), \

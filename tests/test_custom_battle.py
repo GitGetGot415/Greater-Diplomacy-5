@@ -1754,7 +1754,7 @@ class TacticalSelectionTests(unittest.TestCase):
                                    selected_province=None, active_players=[], tactical_mode=True)
         self.province = {"owner": "Fixture A", "units": self.units}
         self.enterContext(patch.object(queries, "get_unit_library", return_value=self.library))
-        self.enterContext(patch.object(player_setup.ui_elements, "play_ui_sound"))
+        self.enterContext(patch.object(player_setup.sound_effects, "play_ui_sound"))
         self.picker = self.enterContext(patch.object(player_setup.pickers, "open_listbox_selector"))
 
     def test_tile_and_stack_pickers_offer_only_battle_eligible_land_units(self):
@@ -1859,7 +1859,7 @@ class CustomBattleScreenTests(unittest.TestCase):
         rosters = copy.deepcopy(self.screen.rosters)
         selected = list(self.screen.selected)
         self.assertIsNone(self.screen.help_button.sound_kind)
-        with patch.object(battle_screen.dialogs, "show_info") as show, patch.object(battle_screen.ui_elements, "play_ui_sound") as sound:
+        with patch.object(battle_screen.dialogs, "show_info") as show, patch.object(battle_screen.sound_effects, "play_ui_sound") as sound:
             self.click("?")
         show.assert_called_once_with(f"{self.screen.get_title()} Help", battle_screen.EDIT_BATTLE_HELP_TEXT)
         sound.assert_not_called()
@@ -1909,7 +1909,7 @@ class CustomBattleScreenTests(unittest.TestCase):
                         self.library[target.data["type"]]["defense"] = defense
                         target.data["defense"] = defense
                         self.screen.death_explosions.clear()
-                        with patch.object(battle_screen.ui_elements, "play_ui_sound") as sound:
+                        with patch.object(battle_screen.sound_effects, "play_ui_sound") as sound:
                             self.screen._record_kill(source, target, "shot" if side == 0 else "ram")
                         if shape not in combat.FOOT_SHAPES:
                             sound.assert_called_once_with("tank_explosion", volume_scale=self.screen.battle_sfx_volume_share())
@@ -1925,7 +1925,7 @@ class CustomBattleScreenTests(unittest.TestCase):
         simulation = self.screen.simulation
         source, target = simulation.fighters
         target.shape = "armored_car"
-        with patch.object(battle_screen.ui_elements, "play_ui_sound"):
+        with patch.object(battle_screen.sound_effects, "play_ui_sound"):
             self.screen._record_kill(source, target, "shot")
         simulation.paused = True
         self.screen.last_tick = 1000
@@ -2089,7 +2089,7 @@ class CustomBattleScreenTests(unittest.TestCase):
         for side in (0, 1):
             source = self.screen.simulation.divisions[side][0]
             with patch.object(battle_screen.random, "choice", side_effect=battle_screen.RIFLE_SHOT_SOUNDS), patch(
-                    "ui.widgets.ui_elements.play_ui_sound") as sound:
+                    "ui.sound_effects.play_ui_sound") as sound:
                 for _ in battle_screen.RIFLE_SHOT_SOUNDS:
                     self.screen.simulation._fire_shot(source)
             self.assertEqual([call.args[0] for call in sound.call_args_list],
@@ -2108,7 +2108,7 @@ class CustomBattleScreenTests(unittest.TestCase):
                 if source.weapon()["shell"]:
                     continue
                 with self.subTest(side=source.side, controlled=source is simulation.controlled, shape=shape), patch(
-                        "ui.widgets.ui_elements.play_ui_sound") as sound, patch.object(
+                        "ui.sound_effects.play_ui_sound") as sound, patch.object(
                             battle_screen.random, "choice", return_value="rifle_shot_2") as choice:
                     source.shape = shape
                     simulation._fire_shot(source)
@@ -2130,7 +2130,7 @@ class CustomBattleScreenTests(unittest.TestCase):
                 if not source.weapon()["shell"]:
                     continue
                 with self.subTest(side=source.side, shape=shape), patch(
-                        "ui.widgets.ui_elements.play_ui_sound") as sound, patch.object(
+                        "ui.sound_effects.play_ui_sound") as sound, patch.object(
                             battle_screen.random, "choice", side_effect=battle_screen.TANK_SHOT_SOUNDS) as choice:
                     source.shape = shape
                     for _ in battle_screen.TANK_SHOT_SOUNDS:
@@ -2163,7 +2163,7 @@ class CustomBattleScreenTests(unittest.TestCase):
         unit, duplicate = self.screen.rosters[0]
         before = copy.deepcopy(duplicate)
         with patch("ui.navigation.screen_runner._run_pygame_sub_screen") as opened, \
-                patch("ui.widgets.ui_elements.play_ui_sound") as sound:
+                patch("ui.sound_effects.play_ui_sound") as sound:
             self.click_card_settings(0, 0)
         self.assertIsNone(self.screen.drag)
         sound.assert_called_once_with("open_settings")
@@ -2521,7 +2521,7 @@ class CustomBattleScreenTests(unittest.TestCase):
         map_screen = SimpleNamespace(show_feedback=Mock(), pending_unit=None, pending_selection=None,
                                      selected_province=None)
         with patch("data.queries.get_unit_library", return_value=self.library), \
-                patch("screens.setup.player_setup.ui_elements.play_ui_sound"):
+                patch("screens.setup.player_setup.sound_effects.play_ui_sound"):
             player_setup.select_tactical_unit(map_screen, {"owner": "Fixture A", "units": [gun, foot]})
             self.assertIs(map_screen.pending_unit, foot)
             map_screen.pending_unit = None
@@ -3018,7 +3018,7 @@ class CustomBattleScreenTests(unittest.TestCase):
         with patch.object(battle_screen, "PREVIEW_SLIDE_IN_SECONDS", 0.2), \
                 patch.object(battle_screen, "PREVIEW_HOLD_SECONDS", 0.3), \
                 patch.object(battle_screen, "PREVIEW_SLIDE_OUT_SECONDS", 0.4), \
-                patch("ui.widgets.ui_elements.play_ui_sound") as sound:
+                patch("ui.sound_effects.play_ui_sound") as sound:
             self.click("Simulate", finish_intro=False)
             self.assertEqual([call.args[0] for call in sound.call_args_list], ["open_music"])
             simulation = self.screen.simulation
@@ -3059,7 +3059,7 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.fill_armies()
         self.click("Control")
         rosters = copy.deepcopy(self.screen.rosters)
-        with patch("ui.widgets.ui_elements.play_ui_sound") as sound:
+        with patch("ui.sound_effects.play_ui_sound") as sound:
             self.click("Simulate", finish_intro=False)
             with patch("pygame.time.get_ticks", return_value=1000):
                 self.screen.draw(self.surface)
@@ -3207,7 +3207,7 @@ class CustomBattleScreenTests(unittest.TestCase):
         default_zoom = battle_screen.ZOOM_LEVELS[battle_screen.DEFAULT_ZOOM_INDEX]
         for steps in (2, -len(battle_screen.ZOOM_LEVELS)):
             self.screen.zoom_by(steps, center)
-            with self.subTest(zoom=self.screen.zoom), patch("ui.widgets.ui_elements.play_ui_sound") as sound:
+            with self.subTest(zoom=self.screen.zoom), patch("ui.sound_effects.play_ui_sound") as sound:
                 self.screen.simulation._fire_shot(source)
                 self.assertAlmostEqual(sound.call_args.kwargs["volume_scale"],
                                        battle_screen.BATTLE_SFX_VOLUME * min(1.0, self.screen.zoom / default_zoom))
@@ -3223,7 +3223,7 @@ class CustomBattleScreenTests(unittest.TestCase):
                     battle_screen, "BATTLE_SFX_VOLUME", effects):
                 for index, zoom in enumerate(battle_screen.ZOOM_LEVELS):
                     with self.subTest(music=music, effects=effects, zoom=zoom), patch(
-                            "ui.widgets.ui_elements.play_ui_sound") as sound:
+                            "ui.sound_effects.play_ui_sound") as sound:
                         self.screen.zoom_index = index
                         share = min(1.0, zoom / default_zoom)
                         self.screen.update_battle_music_volume()

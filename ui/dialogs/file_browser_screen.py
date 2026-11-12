@@ -30,10 +30,13 @@ from ui.bars import ui_bars
 from ui.navigation.modal_screen import ModalScreen
 from ui.background_styles import DIALOG_STYLES
 from ui.widgets import text_utils, ui_elements
+from ui import sound_effects
 from ui.widgets.ui_elements import Button, TextField
 from ui.rendering.font_manager import fonts
 
 from ui.navigation import screen_runner
+
+FILE_SYSTEM_ICONS_DIR = "assets/file_system"
 
 
 IS_WINDOWS = os.name == "nt"
@@ -70,7 +73,7 @@ GAME_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__
 # .svg	        # SVG.png
 # .txt	        # Text.png
 
-# Files in c.FILE_SYSTEM_ICONS_DIR.
+# Files in FILE_SYSTEM_ICONS_DIR.
 FOLDER_ICON = "Folder.png"
 HOME_ICON = "Home.png"
 DOWNLOADS_ICON = "Downloads.png"
@@ -319,7 +322,7 @@ class FileRow:
             self.is_pressed = False
             if self._accepts(event.pos):
                 if self.sound_kind is not None:
-                    ui_elements.play_ui_sound(self.sound_kind)
+                    sound_effects.play_ui_sound(self.sound_kind)
                 self.on_click()
 
     def draw(self, surface):
@@ -943,7 +946,7 @@ class FileBrowserScreen(ModalScreen):
         """Centers the pixel art at its native size in a fixed square. The icons
         differ in size, and the square keeps the names beside them aligned."""
         if name not in self._icons:
-            art = ui_bars.get_ui_image(name, directory=c.FILE_SYSTEM_ICONS_DIR)
+            art = ui_bars.get_ui_image(name, directory=FILE_SYSTEM_ICONS_DIR)
             icon = pygame.Surface((self.ICON_SIZE, self.ICON_SIZE), pygame.SRCALPHA)
             icon.blit(art, art.get_rect(center=icon.get_rect().center))
             self._icons[name] = icon

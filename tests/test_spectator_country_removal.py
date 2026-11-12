@@ -268,9 +268,9 @@ class SpectatorRemovalButtonTests(unittest.TestCase):
         cls.game = app_harness.boot_map()
 
     def setUp(self):
-        from screens.game import map as map_module
-        self.map_module = map_module
-        self.addCleanup(map_module.update_button_states, self.game)
+        from screens.game import map_buttons
+        self.map_buttons = map_buttons
+        self.addCleanup(map_buttons.update_button_states, self.game)
         selected = next(p for p in self.game.map_data.values()
                         if queries.is_playable(p.get("owner"), self.game.nation_data))
         fields = dict(player_country="Spectator", selected_province=selected,
@@ -284,7 +284,7 @@ class SpectatorRemovalButtonTests(unittest.TestCase):
             self.enterContext(mock.patch.object(app_harness.state_owner(self.game, field), field, value, create=True))
 
     def test_local_spectator_buttons_are_available_and_call_the_handlers(self):
-        self.map_module.update_button_states(self.game)
+        self.map_buttons.update_button_states(self.game)
         for button, handler in ((self.game.btn_spec_annex, "spec_annex_country"),
                                 (self.game.btn_spec_delete, "spec_delete_country")):
             self.assertTrue(button.visible)
@@ -296,7 +296,7 @@ class SpectatorRemovalButtonTests(unittest.TestCase):
     def test_buttons_are_hidden_outside_local_spectator_planning(self):
         for flag in ("multiplayer_mode", "realtime_multiplayer", "tactical_mode", "ai_is_thinking"):
             with mock.patch.object(self.game, flag, True):
-                self.map_module.update_button_states(self.game)
+                self.map_buttons.update_button_states(self.game)
                 self.assertFalse(self.game.btn_spec_annex.visible)
                 self.assertFalse(self.game.btn_spec_delete.visible)
 

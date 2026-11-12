@@ -10,6 +10,14 @@ from ui.background_styles import MAP_BAR_STYLES, MAP_CONFIRM_STYLES, MAP_FRAME_C
 from ui.rendering.font_manager import fonts
 from ui.widgets import text_utils, ui_elements
 
+PROVINCE_BG_FILE = "Province.png"
+# Scrolling checkerboard drawn behind any screen that has no bg_image_path
+# (see Screen.draw_checkerboard_background). The on-disk file is a plain
+# red template -- it exists only to define the light/dark contrast ratio
+# between squares; at runtime it's recolored to match each screen's own
+# bg_color instead of being drawn red.
+CHECKERBOARD_TEMPLATE_FILE = "Checkerboard.png"
+
 # Yes/No confirmation buttons: size, and horizontal offset from the box centre.
 CONFIRM_BTN_SIZE = (100, 40)
 CONFIRM_BTN_DX = 130
@@ -387,7 +395,7 @@ def get_province_menu_background(size):
     """Return the province-menu art at ``size`` for drawing and input masks."""
     size = tuple(size)
     if size not in _province_menu_background_cache:
-        background = get_ui_image(c.PROVINCE_BG_FILE, directory=c.BACKGROUNDS_DIR)
+        background = get_ui_image(PROVINCE_BG_FILE, directory=c.BACKGROUNDS_DIR)
         if background.get_size() != size:
             background = pygame.transform.scale(background, size)
         _province_menu_background_cache[size] = background
@@ -424,7 +432,7 @@ def get_checkerboard_tile(base_color):
         return _checkerboard_cache[cache_key]
     base_color = quantized
 
-    template = get_ui_image(c.CHECKERBOARD_TEMPLATE_FILE, directory=c.BACKGROUNDS_DIR)
+    template = get_ui_image(CHECKERBOARD_TEMPLATE_FILE, directory=c.BACKGROUNDS_DIR)
     square = template.get_width() // 2
 
     color_a = template.get_at((square // 2, square // 2))[:3]

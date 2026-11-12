@@ -909,7 +909,7 @@ class NavigationIntroPopupTests(unittest.TestCase):
                 pygame.MOUSEBUTTONDOWN, pos=popup.checkbox_rect.center, button=1))
         save.assert_called_once_with("settings", {"show_strategic_intro_popup": False})
 
-        with mock.patch.object(message_box.ui_elements, "play_ui_sound") as sound:
+        with mock.patch.object(message_box.sound_effects, "play_ui_sound") as sound:
             popup.handle_event(pygame.event.Event(
                 pygame.MOUSEBUTTONDOWN, pos=popup.prev_rect.center, button=1))
             sound.assert_not_called()
@@ -929,7 +929,7 @@ class NavigationIntroPopupTests(unittest.TestCase):
                                       side_effect=AssertionError("Frame wrapped help")):
                 popup.draw(surface)
         self.assertEqual(popup.topic_index, len(popup.topics) - 1)
-        with mock.patch.object(message_box.ui_elements, "play_ui_sound") as sound:
+        with mock.patch.object(message_box.sound_effects, "play_ui_sound") as sound:
             popup.handle_event(pygame.event.Event(
                 pygame.MOUSEBUTTONDOWN, pos=popup.next_rect.center, button=1))
             sound.assert_not_called()

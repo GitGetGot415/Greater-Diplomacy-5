@@ -58,7 +58,8 @@ from ui.navigation.screen import Screen, MenuListScreen
 from screens.game import map_launch
 from ui.rendering.font_manager import fonts
 from ui import dialogs
-from ui.widgets.ui_elements import Button, UI_ICONS, make_back_button, play_ui_sound
+from ui.widgets.ui_elements import Button, UI_ICONS, make_back_button
+from ui.sound_effects import play_ui_sound
 from ui.widgets.flag_icons import flag_surface
 
 from data.map.load_map import load_backend_state

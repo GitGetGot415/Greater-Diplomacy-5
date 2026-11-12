@@ -135,8 +135,8 @@ def copy_to_clipboard(text):
 
 def play_click_sound():
     """Plays the UI click sound."""
-    from ui.widgets import ui_elements
-    ui_elements.play_ui_sound("click")
+    from ui import sound_effects
+    sound_effects.play_ui_sound("click")
 
 
 def ask_directory(game_state, title, initialdir, on_result):

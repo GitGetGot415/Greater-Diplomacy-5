@@ -1,11 +1,198 @@
 import pygame
 from ui.navigation.screen import Screen
 from ui.widgets.ui_elements import make_back_button
-import data.constants as c
 from ui.rendering.font_manager import fonts
 from ui.dialogs import show_person_info
 
 CREDITS_LEFT_X = 120
+
+# Each person may have "info" (free-text bio shown in the popup) and/or "links"
+# (a list of {"text", "url"} shown as clickable lines below the info text).
+# Optional "images" entries {"path", "text"} display an image beside a label;
+# omitting "text" uses the image filename as its label.
+# {"directory": "assets/..."} includes its PNGs; "recursive": True includes
+# subfolders, and "exclude": ["file.png", "prefix_*.png"] filters them out.
+# A person without info, links, or images is plain, non-clickable text.
+CREDITS_DATA = [
+    {
+        "main_text": "Lead Developer: ",
+        "people": [
+            {
+                "link_text": "GitGetGot415",
+                "info": "Owns the repository",
+                "align": "left",
+                "links": [{"text": "GitHub", "url": "https://github.com/GitGetGot415"}]
+            }
+        ]
+    },
+    {
+        "main_text": "Music: ",
+        "people": [
+            {
+                "link_text": "GitGetGot415",
+                "info": (
+                    "Albums Created:"
+                ),
+                "images": [
+                        {"path": "assets/music/Greater Diplomacy 1/icon.png", "text": "Greater Diplomacy 1"},
+                        {"path": "assets/music/Greater Diplomacy 2/icon.png", "text": "Greater Diplomacy 2"},
+                        {"path": "assets/music/Greater Diplomacy 3/icon.png", "text": "Greater Diplomacy 3"},
+                        {"path": "assets/music/Greater Diplomacy 4/icon.png", "text": "Greater Diplomacy 4"},
+                        {"path": "assets/music/Greater Diplomacy 5/icon.png", "text": "Greater Diplomacy 5"},
+                        {"path": "assets/music/Experimental/icon.png", "text": "Experimental"},
+                ],
+                "align": "left",
+                "links": [{"text": "GitHub", "url": "https://github.com/GitGetGot415"}]
+            }
+        ]
+    },
+    {
+        "main_text": "GitHub Contributors: ",
+        "people": [
+            {
+                "link_text": "litbrb",
+                "info": (
+                    "Added:\n"
+                    "- Submarines\n"
+                    "- Terrain art\n"
+                    "- Icons for New Game, Load Game, Map Editor, Credits"
+                ),
+                "images": [
+                    {"path": "assets/classic/Submarine.png"},
+                    {"directory": "assets/terrains", "exclude": ["Unknown.png"]},
+                    {"path": "assets/images/New Game.png"},
+                    {"path": "assets/images/Load Game.png"},
+                    {"path": "assets/images/Map Editor.png"},
+                    {"path": "assets/images/Credits.png"},
+                ],
+                "align": "left",
+                "links": [{"text": "GitHub", "url": "https://github.com/litbrb"}]
+            },
+            {
+                "link_text": "Pr1nted",
+                "info": (
+                    "Added:\n"
+                    "- Conversion between OpenDoctrines and GD5\n"
+                    "- Conversion between Unciv and GD5\n"
+                    "- OJH Benchmark"
+                ),
+                "align": "left",
+                "links": [{"text": "GitHub", "url": "https://github.com/Pr1nted"}]
+            }
+        ]
+    },
+    {
+        "main_text": "Map Makers: ",
+        "people": [
+            {
+                "link_text": "neptune2019",
+                "info": ("Maps Added:\n"
+                "- Kaiserreich 1936\n"
+                "- 1939 fixed schizo scenario\n"
+                "- 2000\n"
+                "- 2000 world\n"
+                "- 1914 world (simplified)\n"
+                "- 1914 world (detailed)\n"),
+                "align": "left",
+            },
+        ]
+    },
+    {
+        "main_text": "Unit Art: ",
+        "people": [
+            {
+                "link_text": "hanskolmer",
+                "info": "Hanskolmer unit art:",
+                "images": [{"directory": "assets/hanskolmer", "recursive": True}],
+                "align": "left",
+            },
+            {
+                "link_text": "GitGetGot415",
+                "info": "Classic unit art:",
+                "images": [{"directory": "assets/classic", "recursive": True, "exclude": ["Submarine.png"]}],
+                "align": "left",
+                "links": [{"text": "GitHub", "url": "https://github.com/GitGetGot415"}]
+            },
+        ]
+    },
+    {
+            "main_text": "Army Icons: ",
+            "people": [
+                {
+                    "link_text": "Randomly",
+                    "info": "Icons Added:",
+                    "images": [
+                        {"path": "assets/symbols/Randomly_King.png"},
+                        {"path": "assets/symbols/Randomly_Queen.png"},
+                        {"path": "assets/symbols/Randomly_Rook.png"},
+                        {"path": "assets/symbols/Randomly_Bishop.png"},
+                        {"path": "assets/symbols/Randomly_Knight.png"},
+                        {"path": "assets/symbols/Randomly_Pawn.png"},
+                    ],
+                    "align": "left",
+                },
+                {
+                    "link_text": "commanderg",
+                    "info": "Icons Added:",
+                    "images": [
+                        {"path": "assets/symbols/commanderg_Eagle.png"},
+                        {"path": "assets/symbols/commanderg_HammerAndSickle.png"},
+                        {"path": "assets/symbols/commanderg_WizardHat.png"},
+                        {"path": "assets/symbols/commanderg_Skull.png"},
+                    ],
+                    "align": "left",
+                },
+                {
+                    "link_text": "GitGetGot415",
+                    "info": "Icons Added:",
+                    "images": [{"directory": "assets/symbols", "exclude": ["Randomly_*.png", "commanderg_*.png"]}],
+                    "align": "left",
+                    "links": [{"text": "GitHub", "url": "https://github.com/GitGetGot415"}]
+                },
+            ]
+        },
+    {
+        "main_text": "Tools: ",
+        "people": [
+            {
+                "link_text": "github-advanced-security[bot]",
+                "info": "Improved encryption for tournaments",
+                "align": "left",
+                "links": [{"text": "Docs", "url": "https://docs.github.com/en/get-started/learning-about-github/about-github-advanced-security"}]
+            },
+            {
+                "link_text": "claude",
+                "info": "Massive refactors to consolidate / organize code",
+                "align": "left",
+                "links": [{"text": "GitHub", "url": "https://github.com/claude"}]
+            },
+            {
+                "link_text": "dependabot",
+                "info": "Update dependencies for conversion between OpenDoctrines and GD5",
+                "align": "left",
+                "links": [{"text": "GitHub", "url": "https://github.com/dependabot"}]
+            },
+            {
+                "link_text": "BeepBox",
+                "info": "Music editor and synthesizer used for BeepBox JSON playback",
+                "align": "left",
+                "links": [{"text": "GitHub", "url": "https://github.com/johnnesky/beepbox"}]
+            },
+            {
+                "link_text": "UltraBox",
+                "info": "Music editor and synthesizer used for UltraBox JSON playback",
+                "align": "left",
+                "links": [{"text": "GitHub", "url": "https://github.com/ultraabox/ultrabox_typescript"}]
+            },
+            {
+                "link_text": "PyMiniRacer",
+                "info": "Embedded V8 JavaScript runtime used for native BeepBox and UltraBox playback",
+                "align": "left",
+                "links": [{"text": "GitHub", "url": "https://github.com/bpcreech/PyMiniRacer"}]
+            }
+        ]
+    }
+]
 
 
 class Credits(Screen):
@@ -24,7 +211,7 @@ class Credits(Screen):
         
         # Calculate positions once to avoid re-calculation in draw loop
         current_y = 150
-        for item in c.CREDITS_DATA:
+        for item in CREDITS_DATA:
             main_text = item.get("main_text", "")
             people = item.get("people", [])
             

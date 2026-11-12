@@ -27,9 +27,9 @@ def _refresh_country_removal(map_screen):
     map_screen.clear_map_unit_selection()
     map_screen.refresh_map_layers(*map_screen.ALL_MAP_LAYERS)
     map_screen.update_country_centers()
-    # The map imports these spectator controls before its button helpers exist.
-    from screens.game.map import update_button_states
-    update_button_states(map_screen)
+    # map_buttons imports these spectator controls before its button helpers exist.
+    from screens.game import map_buttons
+    map_buttons.update_button_states(map_screen)
 
 
 def spec_annex_country(map_screen):

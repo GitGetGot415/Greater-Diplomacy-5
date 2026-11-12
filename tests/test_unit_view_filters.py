@@ -11,7 +11,8 @@ import pygame
 import data.constants as c
 from data import queries
 from ui.rendering import overlay_renderer, map_renderer
-from screens.game.map import Map, update_button_states
+from screens.game.map import Map
+from screens.game.map_buttons import update_button_states
 from tests import app_harness
 from screens.game import map_input
 from ui.bars import ui_bars
@@ -84,7 +85,7 @@ class UnitViewFilterTests(unittest.TestCase):
                     self.game.unit_view_filter = view_filter
                     icons, surface = self.draw_training_badge()
                     expected = queries.unit_matches_view_filter(unit, view_filter)
-                    self.assertEqual(icons, [c.ICON_TRAINING] if expected else [])
+                    self.assertEqual(icons, [overlay_renderer.ICON_TRAINING] if expected else [])
                     self.assertEqual(surface.get_at((100, 100))[:3], (20, 90, 160) if expected else (0, 0, 0))
                     index = overlay_renderer._unit_render_index(self.game)
                     self.assertEqual(index.records, ())
@@ -94,11 +95,11 @@ class UnitViewFilterTests(unittest.TestCase):
         self.province["unit_queue"] = [{"unit_type": self.units[0]["type"]}]
         self.province["units"] = self.units[2:]
         self.game.unit_view_filter = "LAND"
-        self.assertEqual(self.draw_training_badge()[0], [c.ICON_TRAINING])
+        self.assertEqual(self.draw_training_badge()[0], [overlay_renderer.ICON_TRAINING])
         self.province["units"] = self.units[:1]
         self.game._presentation_cache_revision += 1
-        self.assertEqual(self.draw_training_badge(suppressed=[id(self.units[0])])[0], [c.ICON_TRAINING])
-        self.assertEqual(self.draw_training_badge(alphas={id(self.units[0]): 0})[0], [c.ICON_TRAINING])
+        self.assertEqual(self.draw_training_badge(suppressed=[id(self.units[0])])[0], [overlay_renderer.ICON_TRAINING])
+        self.assertEqual(self.draw_training_badge(alphas={id(self.units[0]): 0})[0], [overlay_renderer.ICON_TRAINING])
 
     def test_fog_hides_training_even_when_the_queue_is_present(self):
         self.province["units"] = []
@@ -116,7 +117,7 @@ class UnitViewFilterTests(unittest.TestCase):
         self.game._presentation_cache_revision += 1
         overlay_renderer._unit_render_index(self.game)
         with patch.object(queries, "is_training_troops", side_effect=AssertionError("Frame checked training")):
-            self.assertEqual(self.draw_training_badge()[0], [c.ICON_TRAINING])
+            self.assertEqual(self.draw_training_badge()[0], [overlay_renderer.ICON_TRAINING])
         self.province["unit_queue"].clear()
         self.game._presentation_cache_revision += 1
         self.assertEqual(self.draw_training_badge()[0], [])
@@ -300,7 +301,7 @@ class UnitViewFilterTests(unittest.TestCase):
                 self.assertEqual(self.game.unit_stack_hitboxes, [])
                 stack = self.game.unit_hover_hitboxes[0]
                 with (patch("screens.setup.player_setup.pickers.open_listbox_selector") as picker,
-                      patch("screens.setup.player_setup.ui_elements.play_ui_sound")):
+                      patch("screens.setup.player_setup.sound_effects.play_ui_sound")):
                     self.assertTrue(map_input._select_tactical_unit_stack(self.game, stack["rect"].center))
                     labels, on_select = picker.call_args.args[-2:]
                     self.assertEqual(len(labels), len(units))

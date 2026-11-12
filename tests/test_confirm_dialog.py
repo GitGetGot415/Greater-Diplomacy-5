@@ -18,7 +18,7 @@ import data.constants as c
 from tests import app_harness
 from ui import dialogs
 from ui.navigation import modal_stack
-from ui.widgets import ui_elements
+from ui import sound_effects
 
 
 def key(k):
@@ -233,7 +233,7 @@ class DialogTests(unittest.TestCase):
         calls = []
         dialogs.show_message("T", "Done.", on_result=lambda: calls.append(True))
         modal = modal_stack.active()
-        with mock.patch.object(ui_elements, "play_ui_sound") as sound:
+        with mock.patch.object(sound_effects, "play_ui_sound") as sound:
             modal.handle_events([click(modal.ok_rect.center)])
             self.assertFalse(modal._resolved)
             sound.assert_not_called()
@@ -249,7 +249,7 @@ class DialogTests(unittest.TestCase):
         dialogs.show_info("T", "Help text.")
         modal = modal_stack.active()
         outside = (modal.ok_rect.left - 10, modal.ok_rect.centery)
-        with mock.patch.object(ui_elements, "play_ui_sound") as sound:
+        with mock.patch.object(sound_effects, "play_ui_sound") as sound:
             modal.handle_events([click(modal.ok_rect.center), release(outside)])
             self.assertFalse(modal._resolved)
             modal.handle_events([click(outside), release(modal.ok_rect.center)])
@@ -263,7 +263,7 @@ class DialogTests(unittest.TestCase):
     def test_only_the_blue_popups_play_the_help_and_back_sounds(self):
         for kind, opened, clicked in (("info", ["info"], "back"), ("success", [], "click"),
                                       ("warning", [], "click"), ("error", [], "click")):
-            with self.subTest(kind=kind), mock.patch.object(ui_elements, "play_ui_sound") as sound:
+            with self.subTest(kind=kind), mock.patch.object(sound_effects, "play_ui_sound") as sound:
                 dialogs.show_message("T", "Body.", kind=kind)
                 modal = modal_stack.active()
                 self.assertEqual([call.args[0] for call in sound.call_args_list], opened)
@@ -273,7 +273,7 @@ class DialogTests(unittest.TestCase):
                 modal_stack.pop()
 
     def test_credits_popup_uses_the_blue_popup_button_and_sounds(self):
-        with mock.patch.object(ui_elements, "play_ui_sound") as sound:
+        with mock.patch.object(sound_effects, "play_ui_sound") as sound:
             dialogs.show_person_info("Name", "Some blurb.", [])
             sound.assert_called_once_with("info")
             sound.reset_mock()
@@ -288,7 +288,7 @@ class DialogTests(unittest.TestCase):
 
     def test_info_button_leaves_the_help_sound_to_the_popup(self):
         from ui.widgets.ui_elements import make_info_button
-        with mock.patch.object(ui_elements, "play_ui_sound") as sound:
+        with mock.patch.object(sound_effects, "play_ui_sound") as sound:
             button = make_info_button(10, 10, lambda: dialogs.show_info("T", "Help text."))
             button.handle_event(click(button.rect.center))
             button.handle_event(release(button.rect.center))
@@ -303,7 +303,7 @@ class DialogTests(unittest.TestCase):
                 with self.subTest(expected=expected, key=pressed):
                     open_popup()
                     modal = modal_stack.active()
-                    with mock.patch.object(ui_elements, "play_ui_sound") as sound:
+                    with mock.patch.object(sound_effects, "play_ui_sound") as sound:
                         modal.handle_events([key(pressed), key(pressed)])
                     self.assertTrue(modal._resolved)
                     self.assertEqual([call.args[0] for call in sound.call_args_list], expected)
@@ -312,7 +312,7 @@ class DialogTests(unittest.TestCase):
     def test_credits_arrow_keys_scroll_without_closing_or_a_sound(self):
         dialogs.show_person_info("Name", "Blurb.", [])
         modal = modal_stack.active()
-        with mock.patch.object(ui_elements, "play_ui_sound") as sound:
+        with mock.patch.object(sound_effects, "play_ui_sound") as sound:
             modal.handle_events([key(pygame.K_DOWN)])
         self.assertFalse(modal._resolved)
         sound.assert_not_called()
@@ -394,9 +394,9 @@ class DialogTests(unittest.TestCase):
         modal_stack.pop()
 
     def credited_images(self):
-        from data import constants as c
+        from screens.menus.credits import CREDITS_DATA
         from ui.dialogs.person_info import expand_credit_images
-        return next(images for entry in c.CREDITS_DATA
+        return next(images for entry in CREDITS_DATA
                     for person in entry.get("people", [])
                     for images in [expand_credit_images(person.get("images"))] if images
                     and all(Path(image["path"]).parent == Path(c.ARMY_SYMBOLS_DIR)
@@ -506,7 +506,7 @@ class DialogTests(unittest.TestCase):
         from screens.menus import credits
         images = self.credited_images()
         data = [{"main_text": "Art: ", "people": [{"link_text": "Artist", "images": images}]}]
-        with mock.patch.object(credits.c, "CREDITS_DATA", data):
+        with mock.patch.object(credits, "CREDITS_DATA", data):
             screen = credits.Credits()
         person = screen.credits_list[0]["people_links"][0]
         self.assertTrue(person["has_popup"])

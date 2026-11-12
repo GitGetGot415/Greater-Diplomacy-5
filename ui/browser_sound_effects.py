@@ -7,7 +7,7 @@ mixes on the browser's own audio thread, so an effect starts without waiting
 for a mixer buffer or a game frame. It also sets pitch, volume, and start
 offset per play, so this path needs no resampled copies of an effect.
 
-ui_elements.play_ui_sound is the only caller of play().
+sound_effects.play_ui_sound is the only caller of play().
 """
 
 import json

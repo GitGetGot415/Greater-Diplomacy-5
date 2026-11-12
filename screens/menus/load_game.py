@@ -5,7 +5,8 @@ from ui.dialogs import file_exchange
 from data.map import history_io
 from ui.widgets.content_browser import ContentBrowserScreen
 from screens.game import map_launch
-from ui.widgets.ui_elements import Button, make_back_button, play_ui_sound
+from ui.widgets.ui_elements import Button, make_back_button
+from ui.sound_effects import play_ui_sound
 from ui.navigation import screen_runner
 from data.platform import IS_WEB, LoadingSteps
 import data.constants as c

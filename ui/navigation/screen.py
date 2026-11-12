@@ -11,8 +11,11 @@ from ui.bars import ui_bars
 from ui.information import feedback_text
 from ui.panels import turn_progress
 from map_logic.diplomacy import diplomacy_processor
-from ui.widgets.ui_elements import Button, make_back_button, play_ui_sound
+from ui.widgets.ui_elements import Button, make_back_button
+from ui.sound_effects import play_ui_sound
 from ui.rendering.font_manager import fonts
+
+DEFAULT_BG_COLOR = (30, 30, 30)
 
 
 def resolve_keybind(state, action, default):
@@ -146,7 +149,7 @@ class ScreenLayer:
         getattr(self.screen, self.draw_method)(surface)
 
 class Screen:
-    bg_color = c.DEFAULT_BG_COLOR
+    bg_color = DEFAULT_BG_COLOR
     reserved_keys = ()
     _armed_drag_attrs = ()
 

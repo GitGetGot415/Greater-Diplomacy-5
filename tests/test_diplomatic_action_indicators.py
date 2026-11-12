@@ -4,7 +4,7 @@ import unittest
 from types import SimpleNamespace
 
 
-from screens.game.map import bilateral_response_indicator
+from screens.game.map_buttons import bilateral_response_indicator
 
 
 def nation(**overrides):

@@ -155,8 +155,8 @@ class FactionInvitationButtonTests(unittest.TestCase):
         cls.game = app_harness.boot_map()
 
     def setUp(self):
-        from screens.game import map as map_module
-        self.map_module = map_module
+        from screens.game import map_buttons
+        self.map_buttons = map_buttons
         game = self.game
         countries = sorted(queries.get_living_nations(game.map_data))[:3]
         self.leader, self.member, self.outsider = countries
@@ -187,22 +187,22 @@ class FactionInvitationButtonTests(unittest.TestCase):
 
     def test_player_invite_is_clickable_and_explains_leadership_and_preserves_undo(self):
         game = self.game
-        self.map_module.update_button_states(game)
+        self.map_buttons.update_button_states(game)
         self.assertTrue(game.btn_fac_invite.visible)
         self.assertFalse(game.btn_fac_invite.disabled)
-        self.assertEqual(self.map_module.bilateral_response_indicator(game, self.outsider, "FACTION_INVITE"), "NO")
+        self.assertEqual(self.map_buttons.bilateral_response_indicator(game, self.outsider, "FACTION_INVITE"), "NO")
         with mock.patch.object(game, "show_feedback") as feedback:
             game.btn_fac_invite.callback()
         feedback.assert_called_once_with("Only a faction leader may invite members.")
         self.assertNotIn(self.outsider, game.nation_data[self.member]["pending_diplomacy"])
         game.player_country = self.leader
-        self.map_module.update_button_states(game)
+        self.map_buttons.update_button_states(game)
         self.assertFalse(game.btn_fac_invite.disabled)
-        self.assertEqual(self.map_module.bilateral_response_indicator(game, self.outsider, "FACTION_INVITE"), "MAYBE")
+        self.assertEqual(self.map_buttons.bilateral_response_indicator(game, self.outsider, "FACTION_INVITE"), "MAYBE")
         game.nation_data[self.member]["pending_diplomacy"][self.outsider] = {
             "action": "FACTION_INVITE", "turns": 0}
         game.player_country = self.member
-        self.map_module.update_button_states(game)
+        self.map_buttons.update_button_states(game)
         self.assertFalse(game.btn_fac_invite.disabled)
 
     def test_spectator_invite_is_clickable_for_leaders_and_members(self):
@@ -211,7 +211,7 @@ class FactionInvitationButtonTests(unittest.TestCase):
         for country in (self.member, self.leader):
             game.selected_province = next(p for p in game.map_data.values()
                                           if p.get("owner") == country)
-            self.map_module.update_button_states(game)
+            self.map_buttons.update_button_states(game)
             self.assertTrue(game.btn_spec_invite_fac.visible)
             self.assertFalse(game.btn_spec_invite_fac.disabled)
             if country == self.member:
@@ -224,23 +224,23 @@ class FactionInvitationButtonTests(unittest.TestCase):
         game.player_country = self.outsider
         game.selected_province = next(p for p in game.map_data.values()
                                       if p.get("owner") == self.member)
-        self.map_module.update_button_states(game)
+        self.map_buttons.update_button_states(game)
         self.assertTrue(game.btn_fac_join_req.visible)
         self.assertFalse(game.btn_fac_join_req.disabled)
-        self.assertEqual(self.map_module.bilateral_response_indicator(game, self.member, "JOIN_FACTION_REQ"), "NO")
+        self.assertEqual(self.map_buttons.bilateral_response_indicator(game, self.member, "JOIN_FACTION_REQ"), "NO")
         with mock.patch.object(game, "show_feedback") as feedback:
             game.btn_fac_join_req.callback()
         self.assertIn("faction leader", feedback.call_args.args[0])
         self.assertNotIn(self.member, game.nation_data[self.outsider]["pending_diplomacy"])
         game.selected_province = next(p for p in game.map_data.values()
                                       if p.get("owner") == self.leader)
-        self.map_module.update_button_states(game)
-        self.assertEqual(self.map_module.bilateral_response_indicator(game, self.leader, "JOIN_FACTION_REQ"), "MAYBE")
+        self.map_buttons.update_button_states(game)
+        self.assertEqual(self.map_buttons.bilateral_response_indicator(game, self.leader, "JOIN_FACTION_REQ"), "MAYBE")
 
     def test_tactical_player_cannot_invite_even_when_the_country_leads(self):
         self.game.player_country = self.leader
         self.game.tactical_mode = True
-        self.map_module.update_button_states(self.game)
+        self.map_buttons.update_button_states(self.game)
         self.assertTrue(self.game.btn_fac_invite.disabled)
 
 

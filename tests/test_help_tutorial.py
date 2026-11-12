@@ -165,7 +165,7 @@ class HelpPopupTests(unittest.TestCase):
 
     def test_category_rows_open_their_first_topic_and_topic_rows_select_topics(self):
         popup = self.popup()
-        with mock.patch.object(message_box.ui_elements, "play_ui_sound") as sound:
+        with mock.patch.object(message_box.sound_effects, "play_ui_sound") as sound:
             self.assertTrue(self.click(popup, self.rail_row(popup, "category", 1).center))
             self.assertEqual(popup.topics[popup.topic_index], (1, 0))
             sound.assert_called_once_with("select_category")
@@ -182,7 +182,7 @@ class HelpPopupTests(unittest.TestCase):
         self.click(popup, self.rail_row(popup, "category", 0).center)
         # Only the open category lists its topics.
         self.assertEqual({index for _rect, kind, index in popup.rail_rows if kind == "topic"}, {0, 1})
-        with mock.patch.object(message_box.ui_elements, "play_ui_sound") as sound:
+        with mock.patch.object(message_box.sound_effects, "play_ui_sound") as sound:
             self.click(popup, self.rail_row(popup, "topic", 1).center)
         self.assertEqual(popup.topic_index, 1)
         sound.assert_called_once_with("select_sub_category")

@@ -150,9 +150,9 @@ async def _resolve_turn_and_refresh(context):
             session_state.player_country = session_state.active_players[session_state.current_player_index]
             context.show_player_ready_screen = True
 
-        # The map imports turn_manager. Load its UI helper after both modules initialize.
-        from screens.game.map import render_buttons
-        render_buttons(context)
+        # map_buttons imports turn_manager. Load its UI helper after both modules initialize.
+        from screens.game import map_buttons
+        map_buttons.render_buttons(context)
 
         elapsed_seconds = (pygame.time.get_ticks() - session_state.turn_start_time) / 1000.0
         context.show_feedback(f"Turn resolved in {elapsed_seconds:.2f}s")

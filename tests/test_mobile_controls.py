@@ -91,7 +91,7 @@ class TouchGestureTests(unittest.TestCase):
                 self.assertIsNone(self.touch.hold_progress())
                 events = self.send(up)
                 self.assertEqual([event.button for event in events], [1, 1])
-                with mock.patch("ui.widgets.ui_elements.play_ui_sound") as sound:
+                with mock.patch("ui.sound_effects.play_ui_sound") as sound:
                     self.owner.handle_events(events)
                 callback.assert_called_once_with()
                 sound.assert_called_once_with("open_music")

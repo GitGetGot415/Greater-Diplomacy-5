@@ -24,7 +24,7 @@ from data import platform as game_platform, queries
 from compilation_scripts import html_compilation
 from tests.web_fixtures import GarblingWindow
 from ui import browser_sound_effects, music_playback
-from ui.widgets import ui_elements
+from ui import sound_effects
 
 
 class WebAudioTests(unittest.TestCase):
@@ -100,10 +100,10 @@ class WebAudioTests(unittest.TestCase):
             converted.write_bytes(b"OggS")
             with patch.object(music_playback, "IS_WEB", True), \
                     patch.object(music_playback.pygame.mixer, "Sound") as factory, \
-                    patch.object(ui_elements.c, "SOUND_SLIDER_PATH", original):
+                    patch.object(sound_effects.c, "SOUND_SLIDER_PATH", original):
                 music_playback.load_pygame_sound(original)
                 factory.assert_called_once_with(str(converted))
-                self.assertEqual(ui_elements._ui_sound_filename("slider"), "Info.mp3")
+                self.assertEqual(sound_effects._ui_sound_filename("slider"), "Info.mp3")
             with patch.object(music_playback, "IS_WEB", False):
                 self.assertEqual(music_playback.pygame_audio_path(original), original)
 
@@ -121,22 +121,22 @@ class WebAudioTests(unittest.TestCase):
                 raise pygame.error("unsupported format")
             return sound
 
-        caches = {kind: OrderedDict() for kind in ui_elements._pygame_sfx_pitch_cache}
-        with patch.object(ui_elements.c, "SOUND_CLICK_PATH", "click.wav"), \
-                patch.object(ui_elements.c, "SOUND_SLIDER_PATH", "broken.mp3"), \
-                patch.object(ui_elements, "pygame_click_sound", None), \
-                patch.object(ui_elements, "pygame_slider_sound", None), \
-                patch.object(ui_elements, "pygame_music_ui_sounds", {}), \
-                patch.object(ui_elements, "_pygame_sfx_pitch_cache", caches), \
-                patch.dict(ui_elements.MUSIC_UI_SOUND_PATHS,
+        caches = {kind: OrderedDict() for kind in sound_effects._pygame_sfx_pitch_cache}
+        with patch.object(sound_effects.c, "SOUND_CLICK_PATH", "click.wav"), \
+                patch.object(sound_effects.c, "SOUND_SLIDER_PATH", "broken.mp3"), \
+                patch.object(sound_effects, "pygame_click_sound", None), \
+                patch.object(sound_effects, "pygame_slider_sound", None), \
+                patch.object(sound_effects, "pygame_music_ui_sounds", {}), \
+                patch.object(sound_effects, "_pygame_sfx_pitch_cache", caches), \
+                patch.dict(sound_effects.MUSIC_UI_SOUND_PATHS,
                            {"back": "broken.mp3", "paper": "paper.wav"}, clear=True), \
                 patch.object(music_playback, "load_pygame_sound", side_effect=load), \
                 redirect_stdout(io.StringIO()) as output:
-            ui_elements.load_pygame_ui_sounds()
-            self.assertIs(ui_elements.pygame_click_sound, sound)
-            self.assertIsNone(ui_elements.pygame_slider_sound)
-            self.assertIs(ui_elements.pygame_music_ui_sounds["paper"], sound)
-            self.assertIsNone(ui_elements.pygame_music_ui_sounds["back"])
+            sound_effects.load_pygame_ui_sounds()
+            self.assertIs(sound_effects.pygame_click_sound, sound)
+            self.assertIsNone(sound_effects.pygame_slider_sound)
+            self.assertIs(sound_effects.pygame_music_ui_sounds["paper"], sound)
+            self.assertIsNone(sound_effects.pygame_music_ui_sounds["back"])
             self.assertIn("broken.mp3", output.getvalue())
 
     def test_music_uses_the_same_converted_path(self):
@@ -224,19 +224,19 @@ class BrowserSoundEffectRoutingTests(unittest.TestCase):
         mixer_sound = Mock()
         with patch.object(browser_sound_effects, "active", True), \
                 patch.object(browser_sound_effects, "play") as play, \
-                patch.object(ui_elements, "pygame_click_sound", mixer_sound), \
-                patch.object(ui_elements, "global_sfx_volume", 0.5), \
-                patch.object(ui_elements, "global_sfx_pitch", 0.75), \
-                patch.object(ui_elements.c, "SOUND_CLICK_PATH", "sounds/Click.wav"), \
-                patch.dict(ui_elements.sound_volume_multipliers, {"Click.wav": 3.0}, clear=True), \
-                patch.dict(ui_elements.sound_start_offsets, {"Click.wav": 0.2}, clear=True), \
-                patch.dict(ui_elements.BATTLE_SFX_GROUPS, {"shot": "rifle"}, clear=True), \
-                patch.dict(ui_elements.BATTLE_SFX_VOICE_LIMITS, {"rifle": 3}, clear=True), \
-                patch.dict(ui_elements.MUSIC_UI_SOUND_PATHS, {"shot": "sounds/Shot.wav"}, clear=True):
-            ui_elements.play_ui_sound("click")
-            ui_elements.play_ui_sound("shot", volume_scale=0.5)
-            with patch.object(ui_elements, "global_sfx_volume", 0):
-                ui_elements.play_ui_sound("click")
+                patch.object(sound_effects, "pygame_click_sound", mixer_sound), \
+                patch.object(sound_effects, "global_sfx_volume", 0.5), \
+                patch.object(sound_effects, "global_sfx_pitch", 0.75), \
+                patch.object(sound_effects.c, "SOUND_CLICK_PATH", "sounds/Click.wav"), \
+                patch.dict(sound_effects.sound_volume_multipliers, {"Click.wav": 3.0}, clear=True), \
+                patch.dict(sound_effects.sound_start_offsets, {"Click.wav": 0.2}, clear=True), \
+                patch.dict(sound_effects.BATTLE_SFX_GROUPS, {"shot": "rifle"}, clear=True), \
+                patch.dict(sound_effects.BATTLE_SFX_VOICE_LIMITS, {"rifle": 3}, clear=True), \
+                patch.dict(sound_effects.MUSIC_UI_SOUND_PATHS, {"shot": "sounds/Shot.wav"}, clear=True):
+            sound_effects.play_ui_sound("click")
+            sound_effects.play_ui_sound("shot", volume_scale=0.5)
+            with patch.object(sound_effects, "global_sfx_volume", 0):
+                sound_effects.play_ui_sound("click")
         # A file multiplier above 1 reaches the browser unclipped.
         self.assertEqual(play.call_args_list, [
             call("click", 1.5, 1.25, 0.2, None, 0),

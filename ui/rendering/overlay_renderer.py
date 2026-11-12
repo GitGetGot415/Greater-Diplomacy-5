@@ -14,6 +14,38 @@ from map_logic.system32.combat_forecast import (
     simulate_combat as _simulate_combat,
 )
 
+APPLY_TILT_TO_ARROWS = True # Whether the tilt compresses movement arrows
+APPLY_TILT_TO_STATUS_ICONS = True # Whether the tilt compresses training, disbanding, and construction icons
+# Scale of the barrage sprite drawn between the gun and its target.
+BOMBARDMENT_ARROW_SCALE = 1.0
+ICON_TRAINING = "Training"
+ICON_CONSTRUCTION = "Hammer"
+ICON_DISBANDING = "Disbanding"
+ICON_REPAIRING = "Repairing"
+ICON_UPGRADING = "Upgrading"
+ICON_CONVERTING_TO_CONVOY = "Convoying"
+ICON_CONVERTING_TO_LAND = "Unconvoying"
+ICON_CONVERTING_TO_TRUCK = "Trucking"
+ICON_CONVERTING_TO_SHIP = "Untrucking"
+# Maps a unit's CONVERT order "to" field to the icon shown over the unit while converting
+CONVERSION_ICONS = {
+    "Convoy": ICON_CONVERTING_TO_CONVOY,
+    "Land Unit": ICON_CONVERTING_TO_LAND,
+    "Truck": ICON_CONVERTING_TO_TRUCK,
+    "Ship": ICON_CONVERTING_TO_SHIP,
+}
+ICON_MIDPOINT_BOUNCE = "Midpoint Bounce"
+ICON_MIDPOINT_OVERRUN = "Midpoint Overrun"
+# Scale of the marker shown halfway along a hostile head-on movement swap.
+MIDPOINT_BOUNCE_SCALE = 1.0
+OVERLAY_STATUS_ICON_SCALE = 0.6
+OVERLAY_STATUS_ICON_ALPHA = 180  # 0 to 255 transparency scale
+BUILDING_ICON_SCALE = 1.0
+UNIT_BOX_WIDTH = 80
+UNIT_BOX_HEIGHT = 40
+UNIT_BOX_BG_COLOR = (80, 80, 80, 200)
+UNIT_BOX_TEXT_COLOR = (255, 255, 255)
+
 #: How far outside the viewport a province centre may sit and still be drawn.
 #: A province is culled by its centre, but what hangs off it is much bigger than
 #: a point: a stack of unit boxes for six nations at full zoom is a few hundred
@@ -589,11 +621,11 @@ def status_icon(map_screen, name):
     both this badge and the main menu's mods button, and whichever drew last
     would have decided how solid the other one looked.
     """
-    icon = symbol_loader.get_symbol(name, map_screen.camera.zoom * c.OVERLAY_STATUS_ICON_SCALE,
-                                    alpha=c.OVERLAY_STATUS_ICON_ALPHA)
+    icon = symbol_loader.get_symbol(name, map_screen.camera.zoom * OVERLAY_STATUS_ICON_SCALE,
+                                    alpha=OVERLAY_STATUS_ICON_ALPHA)
     if not icon:
         return None
-    return map_utils.apply_tilt(icon, map_screen.camera.tilt_factor, c.APPLY_TILT_TO_STATUS_ICONS)
+    return map_utils.apply_tilt(icon, map_screen.camera.tilt_factor, APPLY_TILT_TO_STATUS_ICONS)
 
 
 def draw_map_highlight(surface, map_screen, pid, color, base_radius=10, inset=0, is_justifying=False):
@@ -638,7 +670,7 @@ def draw_bombardment_arrow(surface, map_screen, start_province, target_id,
 
     cam = map_screen.camera
     icon_name = queries.get_bombardment_arrow_icon(bomb_range)
-    arrow_img = symbol_loader.get_symbol(icon_name, cam.zoom * c.BOMBARDMENT_ARROW_SCALE)
+    arrow_img = symbol_loader.get_symbol(icon_name, cam.zoom * BOMBARDMENT_ARROW_SCALE)
 
     p1 = list(start_province["center"])
     p2 = list(target_prov["center"])
@@ -667,7 +699,7 @@ def draw_bombardment_arrow(surface, map_screen, start_province, target_id,
             if alpha < 255:
                 rotated = rotated.copy()
                 rotated.set_alpha(alpha)
-            rotated = map_utils.apply_tilt(rotated, cam.tilt_factor, c.APPLY_TILT_TO_ARROWS)
+            rotated = map_utils.apply_tilt(rotated, cam.tilt_factor, APPLY_TILT_TO_ARROWS)
             surface.blit(rotated, rotated.get_rect(center=mid))
         else:
             # Fallback until the barrage sprite is present in assets/images
@@ -785,10 +817,10 @@ def draw_midpoint_bounces(map_screen, surface):
         if not start_province or not end_province:
             continue
 
-        icon_name = (c.ICON_MIDPOINT_OVERRUN
-                     if outcome["overrun"] else c.ICON_MIDPOINT_BOUNCE)
+        icon_name = (ICON_MIDPOINT_OVERRUN
+                     if outcome["overrun"] else ICON_MIDPOINT_BOUNCE)
         bounce_img = symbol_loader.get_symbol(
-            icon_name, cam.zoom * c.MIDPOINT_BOUNCE_SCALE)
+            icon_name, cam.zoom * MIDPOINT_BOUNCE_SCALE)
         if bounce_img is None:
             continue
 
@@ -820,7 +852,7 @@ def draw_midpoint_bounces(map_screen, surface):
             angle = math.degrees(math.atan2(-dy, dx))
             rotated = pygame.transform.rotate(bounce_img, angle)
             rotated = map_utils.apply_tilt(
-                rotated, cam.tilt_factor, c.APPLY_TILT_TO_ARROWS)
+                rotated, cam.tilt_factor, APPLY_TILT_TO_ARROWS)
             surface.blit(rotated, rotated.get_rect(center=mid))
 
 
@@ -905,7 +937,7 @@ def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255
                     rotated_line.set_alpha(alpha)
                     
                 # --- THE FIX: Apply the tilt compression to the final rotated block ---
-                rotated_line = map_utils.apply_tilt(rotated_line, cam.tilt_factor, c.APPLY_TILT_TO_ARROWS)
+                rotated_line = map_utils.apply_tilt(rotated_line, cam.tilt_factor, APPLY_TILT_TO_ARROWS)
                 
                 # Place it at the TILTED midpoint
                 rect = rotated_line.get_rect(center=((start_pos[0] + end_pos[0])/2, (start_pos[1] + end_pos[1])/2))
@@ -946,7 +978,7 @@ def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255
                 if triangle_img:
                     rotated_tri = pygame.transform.rotate(triangle_img, angle)
                     if alpha < 255: rotated_tri.set_alpha(alpha)
-                    rotated_tri = map_utils.apply_tilt(rotated_tri, cam.tilt_factor, c.APPLY_TILT_TO_ARROWS)
+                    rotated_tri = map_utils.apply_tilt(rotated_tri, cam.tilt_factor, APPLY_TILT_TO_ARROWS)
                     rect = rotated_tri.get_rect(center=end_pos)
                     surface.blit(rotated_tri, rect)
                 else:
@@ -961,12 +993,12 @@ def draw_movement_path(surface, map_screen, start_province, path_ids, color=(255
                 if circle_img:
                     draw_circle = circle_img.copy() if alpha < 255 else circle_img
                     if alpha < 255: draw_circle.set_alpha(alpha)
-                    draw_circle = map_utils.apply_tilt(draw_circle, cam.tilt_factor, c.APPLY_TILT_TO_ARROWS)
+                    draw_circle = map_utils.apply_tilt(draw_circle, cam.tilt_factor, APPLY_TILT_TO_ARROWS)
                     rect = draw_circle.get_rect(center=end_pos)
                     surface.blit(draw_circle, rect)
                 else:
                     radius_x = max(3, int(4 * cam.zoom))
-                    radius_y = int(radius_x * cam.tilt_factor) if c.APPLY_TILT_TO_ARROWS else radius_x
+                    radius_y = int(radius_x * cam.tilt_factor) if APPLY_TILT_TO_ARROWS else radius_x
                     pygame.draw.ellipse(surface, color, pygame.Rect(int(end_pos[0]) - radius_x, int(end_pos[1]) - radius_y, radius_x*2, radius_y*2))
 
 def draw_overlay_content(map_screen, surface, draw_combat=True):
@@ -1094,28 +1126,28 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
                                     if strategic_unit_alphas.get(id(unit), 255) == 255]
 
                     if not is_partial and id(province) in unit_index.training_province_object_ids:
-                        training_sym = status_icon(map_screen, c.ICON_TRAINING)
+                        training_sym = status_icon(map_screen, ICON_TRAINING)
                         if training_sym:
                             rect = training_sym.get_rect(center=(sx, sy))
                             surface.blit(training_sym, rect)
 
                     # --- Disband Indicator ---
                     if not is_partial and any(u.get("order", {}).get("type") == "DISBAND" for u in status_units):
-                        disband_sym = status_icon(map_screen, c.ICON_DISBANDING)
+                        disband_sym = status_icon(map_screen, ICON_DISBANDING)
                         if disband_sym:
                             rect = disband_sym.get_rect(center=(sx, sy))
                             surface.blit(disband_sym, rect)
 
                     # --- Repair Indicator ---
                     if not is_partial and any(u.get("order", {}).get("type") == "REPAIR" for u in status_units):
-                        repair_sym = status_icon(map_screen, c.ICON_REPAIRING)
+                        repair_sym = status_icon(map_screen, ICON_REPAIRING)
                         if repair_sym:
                             rect = repair_sym.get_rect(center=(sx, sy))
                             surface.blit(repair_sym, rect)
 
                     # --- Upgrade Indicator ---
                     if not is_partial and any(u.get("order", {}).get("type") == "UPGRADE" for u in status_units):
-                        upgrade_sym = status_icon(map_screen, c.ICON_UPGRADING)
+                        upgrade_sym = status_icon(map_screen, ICON_UPGRADING)
                         if upgrade_sym:
                             rect = upgrade_sym.get_rect(center=(sx, sy))
                             surface.blit(upgrade_sym, rect)
@@ -1126,8 +1158,8 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
                                                if u.get("order", {}).get("type") == "CONVERT"), None)
                         convert_icon = None
                         if convert_order:
-                            base_icon = c.CONVERSION_ICONS.get(convert_order.get("to"))
-                            if base_icon in (c.ICON_CONVERTING_TO_TRUCK, c.ICON_CONVERTING_TO_SHIP):
+                            base_icon = CONVERSION_ICONS.get(convert_order.get("to"))
+                            if base_icon in (ICON_CONVERTING_TO_TRUCK, ICON_CONVERTING_TO_SHIP):
                                 turns_left = max(1, min(c.MAX_CONVERSION_TURNS, convert_order.get("turns_left", 1)))
                                 convert_icon = f"{base_icon} {turns_left}"
                             else:
@@ -1143,7 +1175,7 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
                     if is_partial:
                         # Show an unknown building marker if any infrastructure exists
                         if province.get("buildings") or province.get("building_queue"):
-                            sym = symbol_loader.get_symbol("Unknown Building", map_screen.camera.zoom * getattr(c, 'BUILDING_ICON_SCALE', 1.0))
+                            sym = symbol_loader.get_symbol("Unknown Building", map_screen.camera.zoom * BUILDING_ICON_SCALE)
                             if sym:
                                 sym = map_utils.apply_tilt(sym, map_screen.camera.tilt_factor, getattr(c, 'APPLY_TILT_TO_OVERLAYS', True))
                                 draw_x = sx - (sym.get_width() // 2)
@@ -1175,7 +1207,7 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
                     # Match the baseline to the exact factory sprite that the
                     # existing centered-building path uses, including zoom and
                     # optional tilt rounding.
-                    building_zoom = map_screen.camera.zoom * c.BUILDING_ICON_SCALE
+                    building_zoom = map_screen.camera.zoom * BUILDING_ICON_SCALE
                     reference_symbol = symbol_loader.get_symbol("Factory Lvl 1", building_zoom)
                     if reference_symbol:
                         reference_symbol = map_utils.apply_tilt(
@@ -1237,7 +1269,7 @@ def draw_overlay_content(map_screen, surface, draw_combat=True):
                     
                     # Draw Construction Hammer
                     if queries.is_constructing_building(province):
-                        hammer_sym = status_icon(map_screen, c.ICON_CONSTRUCTION)
+                        hammer_sym = status_icon(map_screen, ICON_CONSTRUCTION)
                         if hammer_sym:
                             rect = hammer_sym.get_rect(center=(sx, sy))
                             surface.blit(hammer_sym, rect)
@@ -1339,8 +1371,8 @@ def unit_box_size(map_screen):
     """The on-screen size of one unit box at the current zoom and tilt."""
     # Dampened Scaling rules
     display_scale = 0.25 + (map_screen.camera.zoom * 0.12)
-    scaled_w = max(20, int(c.UNIT_BOX_WIDTH * display_scale))
-    scaled_h = max(8, int(c.UNIT_BOX_HEIGHT * display_scale))
+    scaled_w = max(20, int(UNIT_BOX_WIDTH * display_scale))
+    scaled_h = max(8, int(UNIT_BOX_HEIGHT * display_scale))
     if map_screen.camera.tilt_factor < 0.99 and getattr(c, 'APPLY_TILT_TO_OVERLAYS', True):
         scaled_h = max(8, int(scaled_h * map_screen.camera.tilt_factor))
     return scaled_w, scaled_h, display_scale
@@ -1446,8 +1478,8 @@ def _get_box_template(symbol_name, border_color, inverted, owner=None):
     if cached is not None:
         return cached
 
-    internal_w = c.UNIT_BOX_WIDTH
-    internal_h = c.UNIT_BOX_HEIGHT
+    internal_w = UNIT_BOX_WIDTH
+    internal_h = UNIT_BOX_HEIGHT
     box_surf = pygame.Surface((internal_w, internal_h), pygame.SRCALPHA)
 
     if inverted:
@@ -1456,7 +1488,7 @@ def _get_box_template(symbol_name, border_color, inverted, owner=None):
         symbol = (symbol_loader.get_symbol(symbol_name, 2.5, color=(0, 0, 0), country=owner)
                   if symbol_name else None)
     else:
-        box_surf.fill(c.UNIT_BOX_BG_COLOR)
+        box_surf.fill(UNIT_BOX_BG_COLOR)
         pygame.draw.rect(box_surf, border_color, box_surf.get_rect(), 4)
         symbol = (symbol_loader.get_symbol(symbol_name, 2.5, color=border_color, country=owner)
                   if symbol_name else None)
@@ -1490,8 +1522,8 @@ def unit_box(symbol_name, border_color, count, inverted, size, owner=None):
     (see symbol_loader.py) draws the right one.
     """
     def build():
-        internal_h = c.UNIT_BOX_HEIGHT
-        internal_w = c.UNIT_BOX_WIDTH
+        internal_h = UNIT_BOX_HEIGHT
+        internal_w = UNIT_BOX_WIDTH
         template, text_x = _get_box_template(symbol_name, border_color, inverted, owner)
         box_surf = template.copy()
 
@@ -1499,7 +1531,7 @@ def unit_box(symbol_name, border_color, count, inverted, size, owner=None):
             text_color = (0, 0, 0)
             shadow_color = (255, 255, 255)
         else:
-            text_color = c.UNIT_BOX_TEXT_COLOR
+            text_color = UNIT_BOX_TEXT_COLOR
             shadow_color = (0, 0, 0)
 
         # Draw Unit Count Text
@@ -1534,14 +1566,14 @@ def unit_box(symbol_name, border_color, count, inverted, size, owner=None):
 def unknown_box(size):
     """The box a tile gets under partial vision: somebody is there, no more."""
     def build():
-        internal_w = c.UNIT_BOX_WIDTH
-        internal_h = c.UNIT_BOX_HEIGHT
+        internal_w = UNIT_BOX_WIDTH
+        internal_h = UNIT_BOX_HEIGHT
         box_surf = pygame.Surface((internal_w, internal_h), pygame.SRCALPHA)
-        box_surf.fill(getattr(c, 'UNIT_BOX_BG_COLOR', (40, 40, 40)))
+        box_surf.fill(UNIT_BOX_BG_COLOR)
         pygame.draw.rect(box_surf, (150, 150, 150), box_surf.get_rect(), 4)
 
         font = fonts.get("button")
-        txt = font.render("?", True, getattr(c, 'UNIT_BOX_TEXT_COLOR', (255, 255, 255)))
+        txt = font.render("?", True, UNIT_BOX_TEXT_COLOR)
         box_surf.blit(txt, txt.get_rect(center=(internal_w // 2, internal_h // 2)))
 
         return pygame.transform.smoothscale(box_surf, size)
@@ -1640,7 +1672,7 @@ def compact_army_group_icon(army, best_unit, owner_color, owner, size, count,
     if isinstance(size, tuple):
         box_size = size
     else:
-        box_size = (round(size * c.UNIT_BOX_WIDTH / c.UNIT_BOX_HEIGHT), size)
+        box_size = (round(size * UNIT_BOX_WIDTH / UNIT_BOX_HEIGHT), size)
     zoom_fraction = min(1.0, max(0.0, zoom / ARMY_GROUP_ICON_MAX_ZOOM))
     zoom_scale = (COMPACT_GROUP_MIN_ZOOM_SCALE
                   + ((1.0 - COMPACT_GROUP_MIN_ZOOM_SCALE) * zoom_fraction))
@@ -1660,7 +1692,7 @@ def compact_army_group_icon(army, best_unit, owner_color, owner, size, count,
         marker = pygame.Surface((diameter, diameter), pygame.SRCALPHA)
         center = (diameter // 2, diameter // 2)
         radius = max(1, diameter // 2 - 1)
-        pygame.draw.circle(marker, c.UNIT_BOX_BG_COLOR, center, radius)
+        pygame.draw.circle(marker, UNIT_BOX_BG_COLOR, center, radius)
         pygame.draw.circle(marker, owner_color, center, radius,
                            max(1, round(diameter * 0.08)))
 
@@ -1684,7 +1716,7 @@ def compact_army_group_icon(army, best_unit, owner_color, owner, size, count,
                 center=(round(diameter * 0.36), center[1])))
 
         font = fonts.get("button")
-        count_text = font.render(str(count), True, c.UNIT_BOX_TEXT_COLOR)
+        count_text = font.render(str(count), True, UNIT_BOX_TEXT_COLOR)
         count_shadow = font.render(str(count), True, (0, 0, 0))
         max_count_size = max(1, round(diameter * 0.34))
         if (count_text.get_width() > max_count_size

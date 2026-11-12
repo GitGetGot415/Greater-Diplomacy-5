@@ -3,7 +3,7 @@ from data import queries
 from map_logic import custom_battle as tactical_battle
 from map_logic.system32 import combat_processor
 from ui.dialogs import pickers
-from ui.widgets import ui_elements
+from ui import sound_effects
 
 # The map imports player_setup. Keep map-screen callbacks local to avoid that cycle.
 
@@ -15,7 +15,7 @@ def select_player_country(map_screen, province):
     if owner in map_screen.nation_data and map_screen.nation_data[owner].get("is_playable"):
         map_screen.pending_selection = owner
         map_screen.selected_province = province 
-        ui_elements.play_ui_sound("click_province")
+        sound_effects.play_ui_sound("click_province")
         map_screen.show_feedback(f"Selected {owner.title()}...")
     else:
         map_screen.show_feedback("Cannot select unowned or non-playable territory")
@@ -75,7 +75,7 @@ def _stage_tactical_selection(map_screen, unit, owner, province):
     map_screen.pending_selection = owner
     map_screen.pending_unit = unit
     map_screen.selected_province = province
-    ui_elements.play_ui_sound("click_province")
+    sound_effects.play_ui_sound("click_province")
     map_screen.show_feedback(f"Selected {unit.get('type')} in {owner.title()}...")
 
 def confirm_player_country(map_screen):
@@ -116,8 +116,8 @@ def confirm_player_country(map_screen):
                 map_screen.focus_camera_on_country(map_screen.player_country, animate=True)
             
             map_screen.show_feedback(f"Now playing as {map_screen.player_country}")
-            from screens.game.map import render_buttons
-            render_buttons(map_screen)
+            from screens.game import map_buttons
+            map_buttons.render_buttons(map_screen)
             map_screen.refresh_map_layers("relations")
 
 def cancel_selection(map_screen):
@@ -177,6 +177,6 @@ def start_spectator(map_screen):
     map_screen.set_play_view_defaults()
     map_screen.show_feedback("Entered Spectator Mode")
 
-    from screens.game.map import render_buttons
-    render_buttons(map_screen)
+    from screens.game import map_buttons
+    map_buttons.render_buttons(map_screen)
     map_screen.refresh_map_layers("relations")

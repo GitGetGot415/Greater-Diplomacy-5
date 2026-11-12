@@ -48,17 +48,8 @@ def handle_declare_war(context):
     target = _selected_diplomacy_target(context)
     if target is None:
         return
-    
-    p_data = context.nation_data.get(player, {})
-    t_data = context.nation_data.get(target, {})
-    
-    my_master = p_data.get("master", "")
-    my_type = p_data.get("puppet_type", "")
-    
-    t_master = t_data.get("master", "")
-    t_type = t_data.get("puppet_type", "")
 
-    # This is also the peace button -- map.py relabels it "Ceasefire / Peace"
+    # This is also the peace button -- map_buttons.py relabels it "Ceasefire / Peace"
     # against a nation we are already fighting, without changing the callback.
     # So the war gates below have to come *after* that hand-off, not before it:
     # a puppet clicking Ceasefire used to be told it "can only declare war on
@@ -70,35 +61,10 @@ def handle_declare_war(context):
         handle_ceasefire(context)
         return
 
-    # 1 & 2. Puppets (Integrated and Autonomous) can ONLY declare independence wars
-    if my_master and target != my_master:
-        context.show_feedback("Puppets can only declare war on their master!")
-        return
-
-    # 3. Cannot declare war ON an integrated puppet
-    if t_master and t_type == c.PUPPET_TYPE_INTEGRATED:
-        if t_master == player:
-            context.show_feedback("Cannot declare war on your own integrated puppet! (You can just annex them)")
-        else:
-            context.show_feedback(f"Integrated puppets cannot be declared war on! Declare on {t_master} instead.")
-        return
-
-    if target in context.nation_data.get(player, {}).get("puppets", []):
-        if t_type == c.PUPPET_TYPE_INTEGRATED:
-            context.show_feedback("Cannot declare war on your own integrated puppet!")
-            return
-
-    # Prevent declaring war on your own faction
-    if queries.are_in_same_faction(player, target, context.nation_data):
-        is_rebellion = (my_master == target and my_type == c.PUPPET_TYPE_AUTONOMOUS)
-        is_preemptive = (t_master == player and t_type == c.PUPPET_TYPE_AUTONOMOUS)
-        if not (is_rebellion or is_preemptive):
-            context.show_feedback("Cannot declare war on a faction member!")
-            return
-
-    # Prevent declaring war with active truce
-    if queries.has_active_truce(player, target, context.nation_data):
-        context.show_feedback("Cannot declare war while a truce is active!")
+    # The shared war rule covers puppets, integrated targets, factions, truces, and scenario rules.
+    available = availability(context, player, target, "WAR_DECLARATION")
+    if not available.allowed:
+        context.show_feedback(f"Cannot declare war: {available.reason}.")
         return
 
     # Direct import to bypass __init__.py namespace issues

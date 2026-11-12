@@ -216,7 +216,7 @@ class ExportOverwriteTests(unittest.TestCase):
         host.show_feedback.assert_called_once()
 
     def test_player_export_button_waits_for_overwrite_confirmation(self):
-        from screens.game.map import render_buttons
+        from screens.game.map_buttons import render_buttons
         from tests import app_harness
 
         game = app_harness.boot_map()

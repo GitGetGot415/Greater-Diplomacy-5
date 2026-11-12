@@ -6,6 +6,8 @@ from ui.rendering.font_manager import fonts
 
 from ui.rendering import map_utils
 
+APPLY_TILT_TO_TEXT = True
+
 # Toggle this to False if you want to strictly hide names on areas <= 3 provinces
 SHOW_SMALL_TERRITORY_NAMES = False
 
@@ -48,7 +50,7 @@ def _transformed_name_surfaces(map_screen, surf, shadow, blob):
 
     angle = blob.get('angle', 0)
     key = (id(surf), id(shadow), scaled_w, scaled_h, angle,
-           map_screen.camera.tilt_factor, c.APPLY_TILT_TO_TEXT)
+           map_screen.camera.tilt_factor, APPLY_TILT_TO_TEXT)
     cached = cache.get(key)
     if cached is not None:
         return cached
@@ -60,9 +62,9 @@ def _transformed_name_surfaces(map_screen, surf, shadow, blob):
         scaled_shadow = pygame.transform.rotate(scaled_shadow, angle)
 
     scaled_text = map_utils.apply_tilt(
-        scaled_text, map_screen.camera.tilt_factor, c.APPLY_TILT_TO_TEXT)
+        scaled_text, map_screen.camera.tilt_factor, APPLY_TILT_TO_TEXT)
     scaled_shadow = map_utils.apply_tilt(
-        scaled_shadow, map_screen.camera.tilt_factor, c.APPLY_TILT_TO_TEXT)
+        scaled_shadow, map_screen.camera.tilt_factor, APPLY_TILT_TO_TEXT)
     scaled_text.set_alpha(255)
     scaled_shadow.set_alpha(255)
 

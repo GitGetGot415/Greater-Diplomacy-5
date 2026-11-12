@@ -4,6 +4,8 @@ import data.constants as c
 from data import queries
 from ui.rendering import province_pixels
 
+FOG_OF_WAR_ALPHA = 160 # How dark unseen provinces get (0-255)
+
 # Lakes and seas render the same color as oceans on political maps
 VISUAL_WATER_MAPPING = {
     "ocean": "Ocean", 
@@ -659,17 +661,17 @@ def refresh_fog_map(map_screen):
     inputs = []
     for color_key, data in map_screen.map_data.items():
         p_id = data["id"]
-        alpha = c.FOG_OF_WAR_ALPHA
+        alpha = FOG_OF_WAR_ALPHA
         if p_id in map_screen.visible_provinces:
             alpha = 0 # 0 Alpha = Completely visible
         elif p_id in map_screen.partial_visible_provinces:
-            alpha = c.FOG_OF_WAR_ALPHA // 2 # Slightly darker for radius 2
+            alpha = FOG_OF_WAR_ALPHA // 2 # Slightly darker for radius 2
         else:
             if fog_strength == "lite":
-                alpha = c.FOG_OF_WAR_ALPHA // 2
+                alpha = FOG_OF_WAR_ALPHA // 2
             elif fog_strength == "extreme" and p_id in extreme_hidden:
                 alpha = 255
-            # else remains c.FOG_OF_WAR_ALPHA
+            # else remains FOG_OF_WAR_ALPHA
         inputs.append((color_key, alpha))
 
     inputs = tuple(inputs)
@@ -681,7 +683,7 @@ def refresh_fog_map(map_screen):
 
     # Colors no province uses stay fully fogged.
     pixels = province_pixels.for_id_map(map_screen.id_map)
-    slot_alpha = np.full(pixels.slot_count, c.FOG_OF_WAR_ALPHA, dtype=np.uint8)
+    slot_alpha = np.full(pixels.slot_count, FOG_OF_WAR_ALPHA, dtype=np.uint8)
     for color_key, alpha in inputs:
         slot = pixels.slot_for(color_key)
         if slot is not None:

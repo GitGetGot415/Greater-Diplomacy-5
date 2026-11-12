@@ -6,6 +6,7 @@ import data.constants as c
 from ui.bars import ui_bars
 from ui.widgets import text_utils
 from ui.widgets import flag_icons, ui_elements
+from ui import sound_effects
 from ui.widgets.ui_elements import Button, process_text_input
 from ui.rendering.font_manager import fonts
 from map_logic.diplomacy import diplomacy_messages, diplomacy_processor, volunteers
@@ -18,6 +19,8 @@ from map_logic.diplomacy import player_diplomacy_actions, ratification
 from map_logic.diplomacy.action_definitions import availability
 from screens.game.peace_screen import open_view_peace_treaty_menu, open_view_trade_deal_menu
 from screens.game.deal_screen import open_trade_menu
+
+MAX_MESSAGE_LENGTH = 150
 
 
 # ==========================================
@@ -345,7 +348,7 @@ class Messages_Screen(Screen):
             
             self.save_current_draft()
             if message:
-                ui_elements.play_ui_sound("send_message")
+                sound_effects.play_ui_sound("send_message")
             self.refresh_ui()
 
     def _forward_targets(self, message):
@@ -477,7 +480,7 @@ class Messages_Screen(Screen):
                             diplomacy_processor.toggle_diplomacy_action(self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient, "TRADE", "")
                             if pending.get("action") == "TRADE" and not diplomacy_messages.get_pending(
                                     self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient):
-                                ui_elements.play_ui_sound("delete_message")
+                                sound_effects.play_ui_sound("delete_message")
                             self.map_screen.show_feedback("Trade Offer Cancelled.")
                         elif idx == "WAR_DECLARATION":
                             diplomacy_messages.clear_pending(self.map_screen.nation_data, self.map_screen.player_country, self.selected_recipient)
@@ -510,7 +513,7 @@ class Messages_Screen(Screen):
                             if isinstance(idx, int) and 0 <= idx < len(self.drafts):
                                 self.drafts.pop(idx)
                                 self.save_current_draft()
-                                ui_elements.play_ui_sound("delete_message")
+                                sound_effects.play_ui_sound("delete_message")
                             
                         self.refresh_ui()
                         return
@@ -549,7 +552,7 @@ class Messages_Screen(Screen):
             locked = queries.is_diplomat_busy(self.map_screen.player_country, self.selected_recipient, self.map_screen.nation_data)
             if not locked and not is_tactical:
                 previous_text = self.compose_text
-                self.compose_text, status = process_text_input(event, self.compose_text, max_length=c.MAX_MESSAGE_LENGTH)
+                self.compose_text, status = process_text_input(event, self.compose_text, max_length=MAX_MESSAGE_LENGTH)
                 if status == "SUBMIT":
                     self.send_message()
                 elif self.compose_text != previous_text:

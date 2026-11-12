@@ -10,7 +10,7 @@ import pygame
 from data import queries
 import data.constants as c
 from map_logic.territory import ownership as ownership
-from screens.game import map as map_module
+from screens.game import map_buttons
 from tests import app_harness
 from ui.panels import diplomatic_popups
 from screens.game import map_input
@@ -160,7 +160,7 @@ class EditorPaintInputTests(unittest.TestCase):
         self.addCleanup(self.visual.stop)
 
     def send(self, province_id, event_type, button=1, held=(False, False, False), on_ui=False):
-        position = (map_module.EDITOR_SELECTION_TOOL_X, c.BOTTOM_BAR_UI_CENTER_Y) if on_ui else (600, 300)
+        position = (map_buttons.EDITOR_SELECTION_TOOL_X, c.BOTTOM_BAR_UI_CENTER_Y) if on_ui else (600, 300)
         event = pygame.event.Event(event_type, pos=position, button=button)
         with mock.patch.object(map_input.queries, "get_clicked_province", return_value=self.provinces[province_id]), \
                 mock.patch.object(map_input.map_utils, "create_glow_surface", return_value=(None, None)), \
@@ -231,7 +231,7 @@ class EditorPaintInputTests(unittest.TestCase):
         self.assertEqual(self.game.editor_selection_tool, "PAINT")
         for mode in ("RESOURCE", "CLAIM", "BUILDING", "UNIT"):
             self.game.editor_mode = mode
-            map_module.update_button_states(self.game)
+            map_buttons.update_button_states(self.game)
             self.assertTrue(self.game.btn_ed_paint.disabled)
             self.game.btn_ed_brush.callback()
             self.assertEqual(self.game.editor_selection_tool, "PAINT")

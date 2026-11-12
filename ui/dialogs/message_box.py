@@ -12,6 +12,7 @@ from ui.bars import ui_bars
 import data.constants as c
 from ui.rendering.font_manager import fonts
 from ui.widgets import ui_elements
+from ui import sound_effects
 from ui.widgets.text_utils import fit_text, render_inline_text, wrap_text
 
 _KIND_ACCENTS = {
@@ -53,7 +54,7 @@ class _MessageModal(_BaseModal):
         self.accent = _KIND_ACCENTS.get(kind, _KIND_ACCENTS["info"])
         self.is_info = self.accent == _KIND_ACCENTS["info"]
         if self.is_info:
-            ui_elements.play_ui_sound("info")
+            sound_effects.play_ui_sound("info")
         self.inline_lines = (render_inline_text(inline_parts, fonts.get("normal"),
                              max(1, min(self.BOX_MAX_W, surface.get_width() - 40) - 2 * self.TEXT_MARGIN),
                              (210, 210, 210), wrap=True) if inline_parts is not None else None)
@@ -112,7 +113,7 @@ class _MessageModal(_BaseModal):
         if key not in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_ESCAPE, pygame.K_SPACE, _back_key()):
             return False
         if self.is_info:
-            ui_elements.play_ui_sound("back")
+            sound_effects.play_ui_sound("back")
         self._finish()
         return True
 
@@ -661,7 +662,7 @@ class _NavigationIntroPopup:
         else:
             target = self.topic_index + direction
         if target is not None and self.select_topic(target):
-            ui_elements.play_ui_sound("click")
+            sound_effects.play_ui_sound("click")
 
     def _open_category(self):
         """The category whose topics are listed, or None when every category is closed."""
@@ -753,7 +754,7 @@ class _NavigationIntroPopup:
                 else:
                     target = index
                 if self.select_topic(target):
-                    ui_elements.play_ui_sound(
+                    sound_effects.play_ui_sound(
                         "select_category" if kind == "category" else "select_sub_category")
                 return True
         return False
@@ -788,7 +789,7 @@ class _NavigationIntroPopup:
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if self.close_rect.collidepoint(event.pos):
-                ui_elements.play_ui_sound("back")
+                sound_effects.play_ui_sound("back")
                 self.dismiss()
                 return True
             if self.prev_rect.collidepoint(event.pos):

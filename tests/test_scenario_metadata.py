@@ -293,15 +293,15 @@ class ScenarioMetadataTests(unittest.TestCase):
         self.assertIn(c.SCENARIOS_CUSTOM_DIR, platform._persisted_roots())
 
     def test_metadata_replaces_mail_only_for_the_editor(self):
-        from screens.game import map as map_module
+        from screens.game import map_buttons
         from screens.editors import menus
 
         game = mock.Mock(is_editor=True, player_country="Editor")
         def button(_x, _y, _size, _color, text, callback, **_appearance):
             return SimpleNamespace(text=text, callback=callback)
-        with mock.patch.object(map_module, "Button", side_effect=button), \
-                mock.patch.object(map_module, "Slider"):
-            map_module._build_left_bar_buttons(game)
+        with mock.patch.object(map_buttons, "Button", side_effect=button), \
+                mock.patch.object(map_buttons, "Slider"):
+            map_buttons._build_left_bar_buttons(game)
         with mock.patch.object(menus, "open_editor_metadata") as metadata, \
                 mock.patch.object(menus, "open_spectator_messages") as messages:
             game.btn_gp_msgs.callback()

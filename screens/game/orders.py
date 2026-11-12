@@ -17,6 +17,7 @@ from ui.panels.unit_commands import (
 from screens.game import map_input
 from ui.background_styles import ORDERS_PANEL_STYLES
 from ui.widgets import ui_elements
+from ui import sound_effects
 
 from ui.dialogs.list_select_screen import ListSelectScreen
 from ui.panels import sidebar_info
@@ -290,7 +291,7 @@ class Orders_Screen(UnitCommandControls, Screen):
                 or self.map_screen.tactical_mode):
             return
         if not self.clear_all_orders():
-            ui_elements.play_ui_sound("cancel_orders")
+            sound_effects.play_ui_sound("cancel_orders")
 
     def select_unit(self, index):
         if self.read_only:

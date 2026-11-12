@@ -85,7 +85,7 @@ def _import_project_modules():
     global IS_WEB, restore_persisted_dir, platform, pygame
     global ANDROID_MIXER_BUFFER_FRAMES, is_android_browser
     global Messages_Screen, dispatch_global_keys, synthesize_keybind_mouse_events, keyboard_input_is_captured, fonts, ui_elements, ui_bars, c, queries
-    global music_playback, TouchInput
+    global music_playback, sound_effects, TouchInput
     global Load_Game, Map, Menu, New_Game, Settings, Credits, Music_Player, View_Assets, Mods, Unit_Art, Keybinds, Mouse_Settings, Edit_Portrait, default_keybinds
     global Translate, Translation_Menu, Greater_Diplomacy_4_Translation, Greater_Diplomacy_Hex_Translation
     global Orders_Screen, Tactical_Orders_Screen, keybind_io, settings_schema, symbol_loader, modal_stack, screen_runner
@@ -133,6 +133,7 @@ def _import_project_modules():
                            keyboard_input_is_captured)
     from ui.rendering.font_manager import fonts
     from ui.widgets import ui_elements
+    from ui import sound_effects
     from ui import music_playback
     from ui.bars import ui_bars
     import data.constants as c
@@ -201,7 +202,7 @@ class Controller:
     is_fullscreen = False
 
     def __init__(self):
-        ui_elements.load_sound_volumes()
+        sound_effects.load_sound_volumes()
         pygame.init()
         if IS_WEB:
             # pygame.init() auto-inits the mixer subsystem as one of its defaults,
@@ -240,14 +241,14 @@ class Controller:
                 self.soloud = Soloud()
                 self.soloud.init()
                 self.music_stream = WavStream()
-                ui_elements.soloud_engine = self.soloud
+                sound_effects.soloud_engine = self.soloud
 
                 try:
-                    ui_elements.click_sound = Wav()
-                    ui_elements.click_sound.load(c.SOUND_CLICK_PATH)
-                    ui_elements.slider_sound = Wav()
-                    ui_elements.slider_sound.load(c.SOUND_SLIDER_PATH)
-                    ui_elements.load_music_ui_sounds(Wav, soloud=True)
+                    sound_effects.click_sound = Wav()
+                    sound_effects.click_sound.load(c.SOUND_CLICK_PATH)
+                    sound_effects.slider_sound = Wav()
+                    sound_effects.slider_sound.load(c.SOUND_SLIDER_PATH)
+                    sound_effects.load_music_ui_sounds(Wav, soloud=True)
                 except Exception:
                     print("Warning: Sound files not found in assets folder")
 
@@ -261,7 +262,7 @@ class Controller:
         # any click, and it never resumes even after later clicks.
         if not c.USE_SOLOUD and not IS_WEB:
             pygame.mixer.init()
-            ui_elements.load_pygame_ui_sounds()
+            sound_effects.load_pygame_ui_sounds()
 
         # Initialize fonts
         font_path = c.FONT_PATH_DEFAULT
@@ -336,8 +337,8 @@ class Controller:
         self.touch_input = TouchInput()
 
         # 3. Apply volume to global sounds on boot
-        ui_elements.global_sfx_volume = self.sfx_volume
-        ui_elements.global_sfx_pitch = self.sfx_pitch
+        sound_effects.global_sfx_volume = self.sfx_volume
+        sound_effects.global_sfx_pitch = self.sfx_pitch
 
         self.all_albums = {}
         self.active_albums = []
@@ -476,7 +477,7 @@ class Controller:
 
                     album_volumes, album_offsets = {}, {}
                     try:
-                        album_volumes, album_offsets = ui_elements.read_volumes_file(
+                        album_volumes, album_offsets = sound_effects.read_volumes_file(
                             os.path.join(album_dir, "volumes.json"))
                     except ValueError as error:
                         # One album's invalid file must not stop the other albums from loading.
@@ -614,10 +615,10 @@ class Controller:
             # The large buffer keeps mixer music free of gaps but delays every
             # mixer sound, so the browser plays the effects: ui/browser_sound_effects.py.
             pygame.mixer.init(buffer=ANDROID_MIXER_BUFFER_FRAMES)
-            ui_elements.load_browser_ui_sounds()
+            sound_effects.load_browser_ui_sounds()
         else:
             pygame.mixer.init()
-            ui_elements.load_pygame_ui_sounds()
+            sound_effects.load_pygame_ui_sounds()
 
     def build_playlist(self):
         self.playlist = []
@@ -836,7 +837,7 @@ class Controller:
                 if (event.type == pygame.KEYDOWN and not getattr(listening_screen, "listening_for", None)
                         and event.key not in getattr(listening_screen, "reserved_keys", ())
                         and event.key == self.keybinds.get("FULLSCREEN", pygame.K_F11)):
-                    ui_elements.play_ui_sound("click")
+                    sound_effects.play_ui_sound("click")
                     self.toggle_fullscreen()
 
             if top_modal is None:

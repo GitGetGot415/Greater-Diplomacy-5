@@ -1,5 +1,6 @@
 import pygame
 from ui.widgets import ui_elements
+from ui import sound_effects
 from ui.widgets.ui_elements import Button, Slider, TextField, make_info_button, make_toggle_button
 from ui.navigation.screen import Screen
 import data.constants as c
@@ -11,6 +12,9 @@ from ui.bars import ui_bars
 from ui import dialogs
 from map_logic.ai import ai_handler
 from screens.menus.keybinds import default_keybinds
+
+MAX_API_KEY_LENGTH = 200
+MAX_MODEL_NAME_LENGTH = 150
 
 
 # All categories share one fixed frame; changing a category only rebuilds its controls.
@@ -203,7 +207,7 @@ def render_settings_buttons(settings_screen):
             clear_x = SETTINGS_BOX_X + SETTINGS_BOX_W + SETTINGS_CLEAR_BTN_GAP_X
             default_x = clear_x + c.SIZES["small_square"][0] + SETTINGS_CLEAR_BTN_GAP_X
             for box_type, box_y, _label in screen.ai_field_rows():
-                field = TextField(SETTINGS_BOX_X, box_y, SETTINGS_BOX_W, SETTINGS_BOX_H, screen.get_field(box_type), max_length=c.MAX_MODEL_NAME_LENGTH if box_type == "MOD" else c.MAX_API_KEY_LENGTH, on_change=lambda text, box=box_type: screen.set_field(box, text), pad_x=5)
+                field = TextField(SETTINGS_BOX_X, box_y, SETTINGS_BOX_W, SETTINGS_BOX_H, screen.get_field(box_type), max_length=MAX_MODEL_NAME_LENGTH if box_type == "MOD" else MAX_API_KEY_LENGTH, on_change=lambda text, box=box_type: screen.set_field(box, text), pad_x=5)
                 screen.ai_fields[box_type] = field
                 screen.elements.extend([field, Button(clear_x, box_y, "small_square", "red", "X", lambda box=box_type: screen.clear_input(box))])
                 if box_type == "MOD":
@@ -658,7 +662,7 @@ class Settings(Screen):
             self.exit_screen()
 
     def handle_back_key(self):
-        ui_elements.play_ui_sound("back")
+        sound_effects.play_ui_sound("back")
         self.save_and_go_back()
 
     def toggle_full(self):
@@ -668,4 +672,4 @@ class Settings(Screen):
     def set_volume(self, val):
         self.sfx_volume = val
         self.controller.sfx_volume = val
-        ui_elements.set_sfx_volume(val)
+        sound_effects.set_sfx_volume(val)

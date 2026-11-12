@@ -22,6 +22,7 @@ from ui.navigation.screen import Screen
 from ui.rendering import symbol_loader
 from ui.rendering.font_manager import fonts
 from ui.widgets import ui_elements
+from ui import sound_effects
 from ui.widgets import flag_icons
 from ui.widgets.text_utils import fit_text, wrap_text
 from ui.widgets.ui_elements import Button, Slider
@@ -957,7 +958,7 @@ class CustomBattleScreen(Screen):
         # Start the clock on the first draw so entry always includes a black frame.
         self.preview_intro_started = None
         self.preview_intro_stage = 0
-        ui_elements.play_ui_sound("open_music")
+        sound_effects.play_ui_sound("open_music")
         self.start_tactical_music()
         self.status_key = None
         self._refresh_status()
@@ -1009,7 +1010,7 @@ class CustomBattleScreen(Screen):
         """Update the recent kills when a battlefield sub-unit dies."""
         if target.shape not in combat.FOOT_SHAPES:
             self.death_explosions.append((target, 0.0))
-            ui_elements.play_ui_sound("tank_explosion", volume_scale=self.battle_sfx_volume_share())
+            sound_effects.play_ui_sound("tank_explosion", volume_scale=self.battle_sfx_volume_share())
         if self.kill_feed_scroll < 0:
             self.kill_feed_scroll -= KILL_FEED_ROW_HEIGHT
         self.kill_feed.appendleft((source, target, cause))
@@ -1103,7 +1104,7 @@ class CustomBattleScreen(Screen):
             kind = "heavy_gunshot"
         else:
             kind = random.choice(RIFLE_SHOT_SOUNDS)
-        ui_elements.play_ui_sound(kind, volume_scale=self.battle_sfx_volume_share())
+        sound_effects.play_ui_sound(kind, volume_scale=self.battle_sfx_volume_share())
 
     def _play_hit_sound(self, target, damage):
         # The simulation supplies HP actually lost, including the remaining-HP limit.
@@ -1113,7 +1114,7 @@ class CustomBattleScreen(Screen):
             sounds = RICOCHET_SOUNDS
         else:
             return
-        ui_elements.play_ui_sound(random.choice(sounds), volume_scale=self.battle_sfx_volume_share())
+        sound_effects.play_ui_sound(random.choice(sounds), volume_scale=self.battle_sfx_volume_share())
 
     def start_battle(self):
         if self.mode != "preview" or self.preview_intro_stage is not None:
@@ -1708,10 +1709,10 @@ class CustomBattleScreen(Screen):
         opening_at = PREVIEW_SLIDE_IN_SECONDS + PREVIEW_HOLD_SECONDS
         # Check both boundaries in order, even if a slow frame crosses both.
         if self.preview_intro_stage == 0 and elapsed >= PREVIEW_SLIDE_IN_SECONDS:
-            ui_elements.play_ui_sound("select_unit_filter")
+            sound_effects.play_ui_sound("select_unit_filter")
             self.preview_intro_stage = 1
         if self.preview_intro_stage == 1 and elapsed >= opening_at:
-            ui_elements.play_ui_sound("open_music")
+            sound_effects.play_ui_sound("open_music")
             self.preview_intro_stage = 2
         if elapsed >= opening_at + PREVIEW_SLIDE_OUT_SECONDS:
             self.preview_intro_stage = None

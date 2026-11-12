@@ -109,7 +109,7 @@ class MapFrameRenderingTests(unittest.TestCase):
                 patch.object(pygame.transform, "scale", wraps=pygame.transform.scale) as scale:
             frame = ui_bars.get_province_menu_background((800, 600))
             self.assertIs(ui_bars.get_province_menu_background((800, 600)), frame)
-            load.assert_called_once_with(c.PROVINCE_BG_FILE, directory=c.BACKGROUNDS_DIR)
+            load.assert_called_once_with(ui_bars.PROVINCE_BG_FILE, directory=c.BACKGROUNDS_DIR)
             scale.assert_called_once_with(template, (800, 600))
 
     def test_map_bars_use_cached_shading_without_loading_images(self):

@@ -5,7 +5,7 @@ from unittest import mock
 
 import pygame
 
-from screens.game import map as map_module
+from screens.game import map_buttons
 from tests import app_harness
 
 
@@ -26,13 +26,13 @@ class MapMenuControlTests(unittest.TestCase):
             game.is_editor = is_editor
             game.selection_mode = False
             game.selected_province = saved["selected_province"] if selected else None
-            map_module.update_button_states(game)
+            map_buttons.update_button_states(game)
             return [el for el in game.elements
                     if getattr(el, "visible", False)]
         finally:
             for attr, value in saved.items():
                 setattr(game, attr, value)
-            map_module.update_button_states(game)
+            map_buttons.update_button_states(game)
 
     def test_claims_is_on_a_players_left_bar(self):
         """The Claims tab is a game screen, not only an authoring one.
@@ -80,7 +80,7 @@ class MapMenuControlTests(unittest.TestCase):
         saved = {attr: getattr(game, attr) for attr in (
             "selected_province", "selection_mode", "mail_draft_text",
             "navigation_intro_popup")}
-        self.addCleanup(map_module.update_button_states, game)
+        self.addCleanup(map_buttons.update_button_states, game)
         for attr, value in saved.items():
             self.addCleanup(setattr, game, attr, value)
         game.selection_mode = False
@@ -91,7 +91,7 @@ class MapMenuControlTests(unittest.TestCase):
             if province.get("owner") != game.player_country
             and province.get("owner") in game.nation_data
             and game.nation_data[province["owner"]].get("is_playable"))
-        map_module.update_button_states(game)
+        map_buttons.update_button_states(game)
         button = game.btn_declare_war
         button.disabled = False
         position = button.rect.center

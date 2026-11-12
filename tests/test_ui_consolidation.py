@@ -312,13 +312,13 @@ class FolderRowTests(SharedUiTestCase):
     def history_click_sounds(self, turn_dates):
         """Every sound one click on History makes, including the button's own."""
         from screens.menus import load_game
-        from ui.widgets import ui_elements
+        from ui import sound_effects
 
         screen = save_browser()
         button = button_named(screen, "History")
         with mock.patch.object(load_game.history_io, "read_turn_dates", return_value=turn_dates), \
                 mock.patch.object(load_game.pickers, "open_listbox_selector"), \
-                mock.patch.object(ui_elements, "play_ui_sound") as sound, \
+                mock.patch.object(sound_effects, "play_ui_sound") as sound, \
                 mock.patch.object(load_game, "play_ui_sound", sound), \
                 mock.patch.object(load_game.screen_runner, "run_loading") as loading, \
                 mock.patch("pygame.mouse.get_pos", return_value=button.rect.center):
@@ -441,9 +441,9 @@ class BackKeySoundTests(SharedUiTestCase):
 
     def back_sounds(self, screen):
         from ui.navigation import screen as screen_module
-        from ui.widgets import ui_elements
+        from ui import sound_effects
 
-        with mock.patch.object(ui_elements, "play_ui_sound") as sound, \
+        with mock.patch.object(sound_effects, "play_ui_sound") as sound, \
                 mock.patch.object(screen_module, "play_ui_sound", sound), \
                 mock.patch("ui.navigation.screen.queries.get_keybind",
                            side_effect=lambda _action, default: default):
@@ -494,11 +494,11 @@ class BackKeySoundTests(SharedUiTestCase):
     def test_map_only_sounds_when_it_closes_something(self):
         from screens.game.map import Map
         from ui.panels import army_panel
-        from ui.widgets import ui_elements
+        from ui import sound_effects
 
         game = mock.Mock(selected_province=None)
         with mock.patch.object(army_panel, "handle_back_key", return_value=False), \
-                mock.patch.object(ui_elements, "play_ui_sound") as sound:
+                mock.patch.object(sound_effects, "play_ui_sound") as sound:
             Map.handle_back_key(game)
             sound.assert_not_called()
             game.selected_province = {"id": 1}
@@ -509,12 +509,12 @@ class BackKeySoundTests(SharedUiTestCase):
     def test_go_back_option_on_a_three_way_popup_plays_back_from_the_keyboard(self):
         from ui import dialogs
         from ui.navigation import modal_stack
-        from ui.widgets import ui_elements
+        from ui import sound_effects
 
         answers = []
         dialogs.ask_yes_no("T", "Body.", answers.append, back_label="Go back")
         modal = modal_stack.active()
-        with mock.patch.object(ui_elements, "play_ui_sound") as sound:
+        with mock.patch.object(sound_effects, "play_ui_sound") as sound:
             modal.handle_events([key(pygame.K_ESCAPE)])
         sound.assert_called_once_with("back")
         modal_stack.pop()
@@ -528,9 +528,9 @@ class OneSoundPerClickTests(SharedUiTestCase):
 
     def click_sounds(self, button, *modules):
         """Every sound one click on `button` makes, wherever it is played from."""
-        from ui.widgets import ui_elements
+        from ui import sound_effects
 
-        with mock.patch.object(ui_elements, "play_ui_sound") as sound:
+        with mock.patch.object(sound_effects, "play_ui_sound") as sound:
             patches = [mock.patch.object(module, "play_ui_sound", sound) for module in modules]
             for patch in patches:
                 patch.start()
@@ -584,12 +584,12 @@ class OneSoundPerClickTests(SharedUiTestCase):
         self.assertFalse(item.checked)
 
     def test_puppets_plays_its_sound_once_and_opens_the_menu(self):
-        from screens.game import map as map_module
+        from screens.game import map_buttons
 
         game = SimpleNamespace(is_editor=False, player_country="A", save_map_data=mock.Mock(),
                                change_state=mock.Mock(), camera_tilt_slider_val=0.5, set_camera_tilt=mock.Mock())
-        with mock.patch.object(map_module.player_diplomacy_actions, "open_puppets_menu") as open_puppets:
-            map_module._build_left_bar_buttons(game)
+        with mock.patch.object(map_buttons.player_diplomacy_actions, "open_puppets_menu") as open_puppets:
+            map_buttons._build_left_bar_buttons(game)
             self.assertEqual(self.click_sounds(game.btn_gp_puppets), ["puppets"])
         open_puppets.assert_called_once_with(game)
 
@@ -641,14 +641,14 @@ class OneSoundPerClickTests(SharedUiTestCase):
 
     def test_deleting_a_queued_message_plays_delete_once_and_preserves_other_drafts(self):
         from map_logic.diplomacy import diplomacy_messages
-        from ui.widgets import ui_elements
+        from ui import sound_effects
 
         screen = self.message_screen("")
         screen.drafts = ["Keep this", "Remove this"]
         screen.save_current_draft()
         rectangle = pygame.Rect(700, 300, 25, 25)
         screen.draft_edit_rects = [(rectangle, 1)]
-        with mock.patch.object(ui_elements, "play_ui_sound") as sound:
+        with mock.patch.object(sound_effects, "play_ui_sound") as sound:
             screen.additional_events(click(rectangle.center))
         sound.assert_called_once_with("delete_message")
         self.assertEqual(screen.drafts, ["Keep this"])
@@ -656,7 +656,7 @@ class OneSoundPerClickTests(SharedUiTestCase):
         self.assertEqual(pending["message"], "Keep this")
 
     def test_blocked_or_invalid_message_deletion_does_not_play_delete(self):
-        from ui.widgets import ui_elements
+        from ui import sound_effects
         from data import constants as c
 
         for tactical, index, y in ((True, 0, 300), (False, 5, 300), (False, 0, c.SCREEN_HEIGHT - 30)):
@@ -666,14 +666,14 @@ class OneSoundPerClickTests(SharedUiTestCase):
                 screen.drafts = ["Keep this"]
                 rectangle = pygame.Rect(700, y, 25, 25)
                 screen.draft_edit_rects = [(rectangle, index)]
-                with mock.patch.object(ui_elements, "play_ui_sound") as sound:
+                with mock.patch.object(sound_effects, "play_ui_sound") as sound:
                     screen.additional_events(click(rectangle.center))
                 sound.assert_not_called()
                 self.assertEqual(screen.drafts, ["Keep this"])
 
     def test_trade_offer_delete_plays_only_when_the_offer_is_removed(self):
         from map_logic.diplomacy import diplomacy_messages
-        from ui.widgets import ui_elements
+        from ui import sound_effects
 
         for turns in (0, 1):
             with self.subTest(turns=turns):
@@ -682,7 +682,7 @@ class OneSoundPerClickTests(SharedUiTestCase):
                     "B": {"action": "TRADE", "turns": turns, "parameters": {}}}
                 rectangle = pygame.Rect(700, 300, 25, 25)
                 screen.draft_edit_rects = [(rectangle, "TRADE_OFFER")]
-                with mock.patch.object(ui_elements, "play_ui_sound") as sound:
+                with mock.patch.object(sound_effects, "play_ui_sound") as sound:
                     screen.additional_events(click(rectangle.center))
                 pending = diplomacy_messages.get_pending(screen.map_screen.nation_data, "A", "B")
                 if turns:
@@ -704,7 +704,7 @@ class OneSoundPerClickTests(SharedUiTestCase):
                     nation_data={"A": {"pending_diplomacy": pending}}, show_feedback=mock.Mock())
                 screen.player, screen.target_nation = "A", "B"
                 screen._clear_draft = mock.Mock()
-                with mock.patch.object(deal_screen.ui_elements, "play_ui_sound") as sound:
+                with mock.patch.object(deal_screen.sound_effects, "play_ui_sound") as sound:
                     screen.revoke_offer()
                 if has_offer:
                     sound.assert_called_once_with("delete_message")
@@ -714,21 +714,21 @@ class OneSoundPerClickTests(SharedUiTestCase):
                 self.assertTrue(screen.done)
 
     def test_empty_message_or_missing_recipient_does_not_play_send(self):
-        from ui.widgets import ui_elements
+        from ui import sound_effects
 
         screen = self.message_screen("   ")
         self.assertEqual(self.click_sounds(button_named(screen, "Queue")), [])
         screen.selected_recipient = None
         screen.compose_text = "Fixture message"
-        with mock.patch.object(ui_elements, "play_ui_sound") as sound:
+        with mock.patch.object(sound_effects, "play_ui_sound") as sound:
             screen.send_message()
         sound.assert_not_called()
 
     def test_enter_queues_a_message_with_one_send_sound(self):
-        from ui.widgets import ui_elements
+        from ui import sound_effects
 
         screen = self.message_screen("Fixture message")
-        with mock.patch.object(ui_elements, "play_ui_sound") as sound:
+        with mock.patch.object(sound_effects, "play_ui_sound") as sound:
             screen.additional_events(key(pygame.K_RETURN, "\r"))
         sound.assert_called_once_with("send_message")
         self.assertEqual(screen.drafts, ["Fixture message"])
@@ -752,7 +752,7 @@ class OneSoundPerClickTests(SharedUiTestCase):
                     with mock.patch.object(deal_screen.deal_mod, "validate", return_value=problems), \
                             mock.patch.object(deal_screen.deal_mod, "describe", return_value=["Fixture terms"]), \
                             mock.patch.object(deal_screen.diplomacy_messages, "set_pending") as queue, \
-                            mock.patch.object(deal_screen.ui_elements, "play_ui_sound") as sound:
+                            mock.patch.object(deal_screen.sound_effects, "play_ui_sound") as sound:
                         screen.confirm()
                     if problems:
                         sound.assert_not_called()
@@ -764,16 +764,16 @@ class OneSoundPerClickTests(SharedUiTestCase):
                         self.assertTrue(screen.done)
 
     def test_claims_and_editor_metadata_play_table_once_and_call_their_handlers(self):
-        from screens.game import map as map_module
+        from screens.game import map_buttons
 
         for is_editor in (False, True):
             game = SimpleNamespace(is_editor=is_editor, player_country="A", save_map_data=mock.Mock(),
                                    change_state=mock.Mock(), camera_tilt_slider_val=0.5, set_camera_tilt=mock.Mock())
             with self.subTest(is_editor=is_editor), \
-                    mock.patch.object(map_module.player_diplomacy_actions, "open_claims_menu") as open_claims, \
-                    mock.patch.object(map_module.editor_menus, "open_editor_metadata") as open_metadata:
+                    mock.patch.object(map_buttons.player_diplomacy_actions, "open_claims_menu") as open_claims, \
+                    mock.patch.object(map_buttons.editor_menus, "open_editor_metadata") as open_metadata:
                 # Metadata and Mail share a button. Rebuild it for each mode.
-                map_module._build_left_bar_buttons(game)
+                map_buttons._build_left_bar_buttons(game)
                 self.assertEqual(self.click_sounds(game.btn_gp_claims), ["paper"])
                 open_claims.assert_called_once_with(game)
                 if is_editor:
@@ -820,7 +820,7 @@ class OneSoundPerClickTests(SharedUiTestCase):
 
     def test_asset_folder_and_file_clicks_play_selection_sounds_once(self):
         from screens.menus import view_assets
-        from ui.widgets import ui_elements
+        from ui import sound_effects
 
         with tempfile.TemporaryDirectory() as temporary:
             for folder in ("First", "Second"):
@@ -828,7 +828,7 @@ class OneSoundPerClickTests(SharedUiTestCase):
                 directory.mkdir()
                 (directory / "fixture.txt").write_text("Fixture text", encoding="utf-8")
             with mock.patch.object(view_assets.c, "ASSETS_ROOT_DIR", temporary), \
-                    mock.patch.object(ui_elements, "play_ui_sound") as sound:
+                    mock.patch.object(sound_effects, "play_ui_sound") as sound:
                 screen = view_assets.View_Assets()
                 sound.assert_not_called()
                 self.assertEqual(self.click_sounds(button_named(screen, "Second")), ["select_category"])
@@ -949,12 +949,12 @@ class OneSoundPerClickTests(SharedUiTestCase):
 
     def test_token_page_clicks_unless_the_browser_fails(self):
         from screens.multiplayer import realtime_multiplayer as realtime
-        from ui.widgets import ui_elements
+        from ui import sound_effects
 
         screen = object.__new__(realtime.Realtime_Relay_Setup)
         with mock.patch.object(realtime, "IS_WEB", False), \
                 mock.patch.object(realtime, "play_ui_sound") as sound, \
-                mock.patch.object(ui_elements, "play_ui_sound", sound):
+                mock.patch.object(sound_effects, "play_ui_sound", sound):
             with mock.patch.object(realtime.webbrowser, "open"):
                 screen.open_token_page()
             sound.assert_called_once_with("click")
@@ -975,10 +975,10 @@ class OneSoundPerClickTests(SharedUiTestCase):
 class KeybindSoundTests(SharedUiTestCase):
     def test_orders_and_production_keys_play_the_view_button_sound_once(self):
         from screens.game import map_input
-        from ui.widgets import ui_elements
+        from ui import sound_effects
 
         for mode, action in (("UNITS", "ORDERS"), ("ECONOMY", "ECONOMY")):
-            with self.subTest(action=action), mock.patch.object(ui_elements, "play_ui_sound") as sound, \
+            with self.subTest(action=action), mock.patch.object(sound_effects, "play_ui_sound") as sound, \
                     mock.patch.object(map_input.queries, "get_keybind_changes_screen", return_value=False):
                 map_screen = mock.Mock()
                 map_input.handle_view_mode_keybind(map_screen, mode, action)
@@ -995,30 +995,30 @@ class KeybindSoundTests(SharedUiTestCase):
         return screen
 
     def test_clear_orders_key_plays_the_cancel_sound_even_with_nothing_to_clear(self):
-        from ui.widgets import ui_elements
+        from ui import sound_effects
 
         screen = self.orders_screen()
         with mock.patch.object(type(screen), "clear_all_orders", return_value=False), \
-                mock.patch.object(ui_elements, "play_ui_sound") as sound:
+                mock.patch.object(sound_effects, "play_ui_sound") as sound:
             screen.handle_clear_orders_key()
         sound.assert_called_once_with("cancel_orders")
 
     def test_clear_orders_key_does_not_repeat_a_sound_already_played(self):
-        from ui.widgets import ui_elements
+        from ui import sound_effects
 
         screen = self.orders_screen()
         with mock.patch.object(type(screen), "clear_all_orders", return_value=True), \
-                mock.patch.object(ui_elements, "play_ui_sound") as sound:
+                mock.patch.object(sound_effects, "play_ui_sound") as sound:
             screen.handle_clear_orders_key()
         sound.assert_not_called()
 
     def test_clear_orders_key_is_silent_where_it_is_unavailable(self):
-        from ui.widgets import ui_elements
+        from ui import sound_effects
 
         screen = self.orders_screen()
         screen.read_only = True
         with mock.patch.object(type(screen), "clear_all_orders") as clear, \
-                mock.patch.object(ui_elements, "play_ui_sound") as sound:
+                mock.patch.object(sound_effects, "play_ui_sound") as sound:
             screen.handle_clear_orders_key()
         clear.assert_not_called()
         sound.assert_not_called()

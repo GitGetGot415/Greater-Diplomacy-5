@@ -7,7 +7,8 @@ from data.platform import IS_WEB
 from screens.game import map_launch
 from ui.navigation.screen import ButtonMenuScreen
 from ui.widgets.content_browser import ScenarioLibraryScreen
-from ui.widgets.ui_elements import Button, make_back_button, play_ui_sound
+from ui.widgets.ui_elements import Button, make_back_button
+from ui.sound_effects import play_ui_sound
 from screens.setup import map_refresh
 
 

@@ -440,7 +440,7 @@ class TacticalSongsScreenTests(unittest.TestCase):
         raise AssertionError(f"No {callback_name}{args} button")
 
     def test_add_song_picks_any_album_song_not_already_in_the_list(self):
-        with mock.patch.object(music_player.pickers, "open_listbox_selector") as picker,                 mock.patch.object(music_player.ui_elements, "play_ui_sound"):
+        with mock.patch.object(music_player.pickers, "open_listbox_selector") as picker,                 mock.patch.object(music_player.sound_effects, "play_ui_sound"):
             click(self.screen, self.button("start_add_song", "tactical_infantry_songs"))
         items, on_pick = picker.call_args.args[3], picker.call_args.args[4]
         is_enabled = picker.call_args.kwargs["is_enabled"]

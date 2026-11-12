@@ -359,7 +359,7 @@ class TacticalHitSoundTests(unittest.TestCase):
                 target.shape = shape
                 with self.subTest(side=target.side, shape=shape), patch.object(
                         battle_screen.random, "choice", side_effect=battle_screen.FLESH_HIT_SOUNDS) as choice, patch(
-                        "ui.widgets.ui_elements.play_ui_sound") as sound:
+                        "ui.sound_effects.play_ui_sound") as sound:
                     for _ in battle_screen.FLESH_HIT_SOUNDS:
                         self.screen._play_hit_sound(target, 5)
                     self.assertEqual([entry.args[0] for entry in sound.call_args_list],
@@ -377,7 +377,7 @@ class TacticalHitSoundTests(unittest.TestCase):
                 for damage, ricochet in ((0, True), (5, True), (10, True), (10.001, False), (20, False)):
                     with self.subTest(side=target.side, shape=shape, damage=damage), patch.object(
                             battle_screen.random, "choice", return_value=battle_screen.RICOCHET_SOUNDS[0]) as choice, patch(
-                            "ui.widgets.ui_elements.play_ui_sound") as sound:
+                            "ui.sound_effects.play_ui_sound") as sound:
                         self.screen._play_hit_sound(target, damage)
                         if ricochet:
                             choice.assert_called_once_with(battle_screen.RICOCHET_SOUNDS)
@@ -397,7 +397,7 @@ class TacticalHitSoundTests(unittest.TestCase):
         with patch.object(simulation, "weapon_damage", return_value=11), patch.object(
                 self.screen, "_play_hit_sound", wraps=self.screen._play_hit_sound) as hit, patch(
                 "screens.game.custom_battle.random.choice", return_value=battle_screen.RICOCHET_SOUNDS[0]), patch(
-                "ui.widgets.ui_elements.play_ui_sound") as sound:
+                "ui.sound_effects.play_ui_sound") as sound:
             simulation.on_hit = hit
             simulation.advance(combat.FIXED_STEP)
         hit.assert_called_once_with(target, 1)
@@ -415,7 +415,7 @@ class TacticalHitSoundTests(unittest.TestCase):
         with patch.object(simulation, "weapon_damage", return_value=11), patch.object(
                 self.screen, "_play_hit_sound", wraps=self.screen._play_hit_sound) as hit, patch(
                 "screens.game.custom_battle.random.choice", return_value=battle_screen.RICOCHET_SOUNDS[0]), patch(
-                "ui.widgets.ui_elements.play_ui_sound") as sound:
+                "ui.sound_effects.play_ui_sound") as sound:
             simulation.on_hit = hit
             simulation.advance(combat.FIXED_STEP)
         self.assertEqual([entry.args[1] for entry in hit.call_args_list], [11, 4])
@@ -430,7 +430,7 @@ class TacticalHitSoundTests(unittest.TestCase):
         simulation.projectiles = [combat.Projectile(source, dict(source.data), source.x,
             source.y + (100 if hit_kind == "miss" else 0), 6000, 0, 1)]
         with patch.object(battle_screen.random, "choice", return_value=battle_screen.FLESH_HIT_SOUNDS[0]), patch(
-                "ui.widgets.ui_elements.play_ui_sound") as sound:
+                "ui.sound_effects.play_ui_sound") as sound:
             simulation.advance(combat.FIXED_STEP)
         if hit_kind == "body":
             sound.assert_called_once_with(battle_screen.FLESH_HIT_SOUNDS[0],
@@ -451,7 +451,7 @@ class TacticalHitSoundTests(unittest.TestCase):
         simulation = self.start_battle()
         target = simulation.fighters[1]
         with patch.object(simulation, "_resolve_contacts", return_value=[(target, 5, simulation.fighters[0])]), patch(
-                "ui.widgets.ui_elements.play_ui_sound") as sound:
+                "ui.sound_effects.play_ui_sound") as sound:
             simulation.advance(combat.FIXED_STEP)
         self.assertEqual(target.data["health"], 995)
         sound.assert_not_called()
@@ -609,7 +609,7 @@ class TacticalTouchTests(unittest.TestCase):
     def test_vehicle_machine_gun_uses_rifle_sound_instead_of_cannon_sound(self):
         self.start_controlled()
         source = self.screen.simulation.controlled
-        with patch("ui.widgets.ui_elements.play_ui_sound") as sound:
+        with patch("ui.sound_effects.play_ui_sound") as sound:
             self.screen.simulation._fire_shot(source, 1)
         self.assertEqual(sound.call_args.args[0], "heavy_gunshot")
 

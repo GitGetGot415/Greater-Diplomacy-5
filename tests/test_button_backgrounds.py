@@ -5,6 +5,7 @@ import pygame
 
 from ui import background_styles
 from ui.widgets import ui_elements
+from ui import sound_effects
 
 
 class ButtonBackgroundTests(unittest.TestCase):
@@ -76,7 +77,7 @@ class ButtonBackgroundTests(unittest.TestCase):
                                   pos=self.button.rect.center)
         up = pygame.event.Event(pygame.MOUSEBUTTONUP, button=1,
                                 pos=self.button.rect.center)
-        with patch.object(ui_elements, "play_ui_sound"):
+        with patch.object(sound_effects, "play_ui_sound"):
             self.button.handle_event(down)
             with patch.object(pygame.mouse, "get_pos", return_value=self.button.rect.center):
                 self.button.draw(self.surface)

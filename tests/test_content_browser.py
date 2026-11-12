@@ -106,7 +106,7 @@ class ContentBrowserTests(unittest.TestCase):
         self.bundle("Fixture", "SCENARIOS_ALTERNATE_DIR")
         for screen in self.library_screens():
             with self.subTest(screen=type(screen).__name__), \
-                    mock.patch("ui.widgets.ui_elements.play_ui_sound") as sound:
+                    mock.patch("ui.sound_effects.play_ui_sound") as sound:
                 self.click(screen, button_named(screen, "Alternate Scenarios"))
                 sound.assert_called_once_with("select_category")
                 sound.reset_mock()
@@ -117,7 +117,7 @@ class ContentBrowserTests(unittest.TestCase):
 
     def test_random_scenario_category_plays_one_selection_sound(self):
         screen = self.new_game_screen()
-        with mock.patch("ui.widgets.ui_elements.play_ui_sound") as sound:
+        with mock.patch("ui.sound_effects.play_ui_sound") as sound:
             self.click(screen, button_named(screen, "Random Scenario"))
         sound.assert_called_once_with("select_category")
         self.assertEqual(screen.next_state, "RANDOM_SETUP")
@@ -128,7 +128,7 @@ class ContentBrowserTests(unittest.TestCase):
         self.bundle("Fixture Map", "BASE_MAPS_DIR")
         with mock.patch.object(Random_Setup, "calculate_max_countries", return_value=50):
             screen = Random_Setup()
-        with mock.patch("ui.widgets.ui_elements.play_ui_sound") as sound:
+        with mock.patch("ui.sound_effects.play_ui_sound") as sound:
             self.click(screen, button_named(screen, "Random Map"))
             sound.assert_called_once_with("select_sub_category")
             self.assertTrue(screen.procedural_world)

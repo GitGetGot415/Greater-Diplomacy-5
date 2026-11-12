@@ -16,6 +16,7 @@ from unittest import mock
 import pygame
 
 import data.constants as c
+from ui import sound_effects
 from data import queries
 from map_logic.system32 import combat_rules
 from screens.game import battle_screen, battle_editor
@@ -156,7 +157,6 @@ class BuildAndPaintTests(BattleScreenTestCase):
     def test_color_help_opens_shared_popup_with_one_sound_and_preserves_orders(self):
         from screens.game.orders import Orders_Screen
         from ui.navigation import modal_stack
-        from ui.widgets import ui_elements
 
         for embedded in (False, True):
             with self.subTest(embedded=embedded):
@@ -171,7 +171,7 @@ class BuildAndPaintTests(BattleScreenTestCase):
                 before = copy.deepcopy(self.province["units"])
                 button = next(element for element in screen.elements
                               if getattr(element, "callback", None) == screen.show_color_help)
-                with mock.patch.object(ui_elements, "play_ui_sound") as sound:
+                with mock.patch.object(sound_effects, "play_ui_sound") as sound:
                     screen.handle_events([
                         pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=button.rect.center, button=1),
                         pygame.event.Event(pygame.MOUSEBUTTONUP, pos=button.rect.center, button=1)])
@@ -429,7 +429,6 @@ class BattleEditorTests(BattleScreenTestCase):
 
     def test_help_button_opens_shared_popup_without_changing_the_edit(self):
         from ui.navigation import modal_stack
-        from ui.widgets import ui_elements
         screen = self.editor()
         _rect, front = self.own_row(screen, battle_screen.PANE_FRONT)
         screen.drop_unit(front, battle_screen.PANE_RESERVE)
@@ -438,7 +437,7 @@ class BattleEditorTests(BattleScreenTestCase):
                      for key, slots in screen.front_slots.items()}
         help_button = next(element for element in screen.elements
                            if getattr(element, "callback", None) == screen.show_help)
-        with mock.patch.object(ui_elements, "play_ui_sound") as sound:
+        with mock.patch.object(sound_effects, "play_ui_sound") as sound:
             screen.handle_events([
                 pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=help_button.rect.center, button=1),
                 pygame.event.Event(pygame.MOUSEBUTTONUP, pos=help_button.rect.center, button=1)])
@@ -459,7 +458,6 @@ class BattleEditorTests(BattleScreenTestCase):
 
     def test_organize_control_opens_confirmation_and_cancel_preserves_the_edit(self):
         from ui.navigation import modal_stack
-        from ui.widgets import ui_elements
         screen = self.editor()
         _rect, front = self.own_row(screen, battle_screen.PANE_FRONT)
         screen.drop_unit(front, battle_screen.PANE_RESERVE)
@@ -467,7 +465,7 @@ class BattleEditorTests(BattleScreenTestCase):
         positions = {key: [id(unit) if unit is not None else None for unit in slots]
                      for key, slots in screen.front_slots.items()}
         organize = next(element for element in screen.elements if getattr(element, 'text', '') == 'Organize')
-        with mock.patch.object(ui_elements, 'play_ui_sound') as sound:
+        with mock.patch.object(sound_effects, 'play_ui_sound') as sound:
             screen.handle_events([
                 pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=organize.rect.center, button=1),
                 pygame.event.Event(pygame.MOUSEBUTTONUP, pos=organize.rect.center, button=1)])
@@ -1690,14 +1688,14 @@ class ButtonSwapTests(BattleScreenTestCase):
     """Orders remains the map entry point, including while the tile fights."""
 
     def visible_pair(self):
-        from screens.game import map as map_module
+        from screens.game import map_buttons
 
         shown = {}
 
         def set_btn(btn, visible, enabled, text, color="green"):
             shown[id(btn)] = visible
 
-        map_module.set_orders_or_battle(self.map, set_btn, True)
+        map_buttons.set_orders_or_battle(self.map, set_btn, True)
         return shown[id(self.map.btn_go_orders)], shown[id(self.map.btn_go_battle)]
 
     def test_a_fighting_tile_still_shows_the_orders_button(self):
@@ -1715,14 +1713,14 @@ class ButtonSwapTests(BattleScreenTestCase):
             if queries.is_playable(n, self.map.nation_data)
             and n not in (self.a, self.b, self.x, self.y))
 
-        from screens.game import map as map_module
+        from screens.game import map_buttons
 
         enabled = {}
 
         def set_btn(btn, visible, is_enabled, text, color="green"):
             enabled[id(btn)] = (visible, is_enabled)
 
-        map_module.set_orders_or_battle(self.map, set_btn, False)
+        map_buttons.set_orders_or_battle(self.map, set_btn, False)
         self.assertEqual(enabled[id(self.map.btn_go_orders)], (True, True))
         self.assertEqual(enabled[id(self.map.btn_go_battle)], (False, False))
 

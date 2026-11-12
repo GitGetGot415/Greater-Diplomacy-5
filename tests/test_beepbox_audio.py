@@ -17,7 +17,7 @@ from beepbox_audio import (
     is_beepbox_song,
 )
 from compilation_scripts.html_compilation import _ignore_web_asset
-from data.constants import CREDITS_DATA
+from screens.menus.credits import CREDITS_DATA
 from data.platform import browser_js_source
 from tests.web_fixtures import GarblingWindow
 

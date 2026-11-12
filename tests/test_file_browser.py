@@ -74,7 +74,7 @@ class FileBrowserTests(unittest.TestCase):
                 screen = self.browser()
                 index = self.names(screen).index(name)
                 row = [element for element in screen.elements if isinstance(element, fb.FileRow)][index]
-                with mock.patch.object(fb.ui_elements, "play_ui_sound") as sound, \
+                with mock.patch.object(fb.sound_effects, "play_ui_sound") as sound, \
                         mock.patch.object(pygame.mouse, "get_pos", return_value=row.rect.center):
                     for event in (
                         pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=row.rect.center, button=1),
@@ -404,7 +404,7 @@ class FileBrowserTests(unittest.TestCase):
         names = {fb.FOLDER_ICON, fb.HOME_ICON, fb.DOWNLOADS_ICON, fb.DRIVE_ICON, fb.FILE_ICON,
                  *fb.EXTENSION_ICONS.values()}
         # Compares exact names, because macOS and Linux paths are case-sensitive.
-        self.assertLessEqual(names, set(os.listdir(c.FILE_SYSTEM_ICONS_DIR)))
+        self.assertLessEqual(names, set(os.listdir(fb.FILE_SYSTEM_ICONS_DIR)))
 
     def test_entry_icon_follows_the_kind_and_extension(self):
         screen = self.browser()

@@ -7,6 +7,8 @@ from ui.widgets.ui_elements import draw_combat_stats, draw_bombardment_stats
 from ui.widgets import flag_icons
 from map_logic.system32 import combat_rules
 
+TERRAINS_DIR = "assets/terrains"
+
 # Small inline flag icon used in the garrison list, matching the FLAG_SIZE aspect ratio
 GARRISON_FLAG_SIZE = flag_icons.ROW_FLAG_SIZE
 
@@ -294,9 +296,9 @@ def draw_sidebar_info(map_screen, surface):
     terrain_filename = f"{terrain.title()}.png"
 
     try:
-        terrain_img = ui_bars.get_ui_image(terrain_filename, directory=c.TERRAINS_DIR)
+        terrain_img = ui_bars.get_ui_image(terrain_filename, directory=TERRAINS_DIR)
     except FileNotFoundError:
-        terrain_img = ui_bars.get_ui_image("Unknown.png", directory=c.TERRAINS_DIR)
+        terrain_img = ui_bars.get_ui_image("Unknown.png", directory=TERRAINS_DIR)
 
     # Scale to fit the sidebar width with a small padding
     img_width = SIDEBAR_INFO_WIDTH - 20

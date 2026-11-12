@@ -209,13 +209,13 @@ class ResearchInputTests(unittest.TestCase):
 
     def click_second_level(self):
         import pygame
-        from ui.widgets import ui_elements
+        from ui import sound_effects
         node = next(element for element in self.screen.elements
                     if getattr(element, "is_tech_node", False) and element.text.endswith(" II"))
         # This point is outside the original small button but inside the configured button.
         point = (node.rect.right - 2, node.rect.centery)
         with patch.object(pygame.mouse, "get_pos", return_value=point), \
-                patch.object(ui_elements, "play_ui_sound"):
+                patch.object(sound_effects, "play_ui_sound"):
             for event_type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP):
                 node.handle_event(pygame.event.Event(event_type, button=1, pos=point))
         self.assertEqual(self.screen.details_screen.node["tech_key"], "sample")

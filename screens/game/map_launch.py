@@ -88,7 +88,7 @@ def _open_tournament_map_steps(app, screen, *, incremental=True):
     """Build and filter the tournament view before publishing it."""
     # Tournament files load cryptography dependencies only when a player opens one.
     from data.multiplayer.tournament import files as tournament_files
-    from screens.game.map import render_buttons
+    from screens.game import map_buttons
     from ui import dialogs
     import data.constants as c
 
@@ -130,14 +130,14 @@ def _open_tournament_map_steps(app, screen, *, incremental=True):
 
     shutil.rmtree(temp_dir, ignore_errors=True)
     game_map.refresh_all_maps()
-    render_buttons(game_map)
+    map_buttons.render_buttons(game_map)
     app.states["MAP"] = game_map
     return True
 
 
 def enter_realtime_map(app, realtime_map, session, player_id, country_id, after_layers=None):
     """Make a loaded map the active real-time board for one player."""
-    from screens.game.map import render_buttons
+    from screens.game import map_buttons
 
     realtime_map.selection_mode = False
     realtime_map.pending_selection = None
@@ -155,7 +155,7 @@ def enter_realtime_map(app, realtime_map, session, player_id, country_id, after_
     if after_layers:
         after_layers()
     app.states["MAP"] = realtime_map
-    render_buttons(realtime_map)
+    map_buttons.render_buttons(realtime_map)
 
 
 def apply_initial_snapshot(realtime_map, view):
