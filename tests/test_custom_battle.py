@@ -1835,6 +1835,24 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.screen.add_unit(0, "Fixture II")
         self.screen.add_unit(1, "Fixture I")
 
+    def test_status_counts_living_sub_units_and_refreshes_when_one_dies(self):
+        friendly = [SimpleNamespace(side=0, alive=True) for _ in range(3)]
+        enemies = [SimpleNamespace(side=1, alive=True), SimpleNamespace(side=1, alive=False)]
+        self.screen.simulation = SimpleNamespace(fighters=friendly + enemies, elapsed=7.2)
+        self.screen._refresh_status()
+        self.assertEqual(self.screen.status_key, (3, 1, 7))
+        cached = self.screen.status_surfaces
+        self.screen._refresh_status()
+        self.assertIs(self.screen.status_surfaces, cached)
+        friendly[0].alive = False
+        self.screen._refresh_status()
+        self.assertEqual(self.screen.status_key, (2, 1, 7))
+        self.assertIsNot(self.screen.status_surfaces, cached)
+        enemies[0].alive = False
+        self.screen.simulation.elapsed = 8.1
+        self.screen._refresh_status()
+        self.assertEqual(self.screen.status_key, (2, 0, 8))
+
     def test_edit_and_preview_help_buttons_open_mode_specific_help_without_changing_armies(self):
         self.fill_armies()
         self.screen.controlled_index = 0

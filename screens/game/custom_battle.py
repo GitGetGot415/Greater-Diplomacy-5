@@ -1521,10 +1521,7 @@ class CustomBattleScreen(Screen):
         return True
 
     def _refresh_status(self):
-        # Divisions, not sub-units: a division counts while any of its sub-units survives.
-        counts = tuple(sum(any(fighter.alive for fighter in division)
-                           for division in self.simulation.divisions if division[0].side == side)
-                       for side in (0, 1))
+        counts = tuple(sum(fighter.alive for fighter in self.simulation.fighters if fighter.side == side) for side in (0, 1))
         key = (*counts, int(self.simulation.elapsed))
         if key != self.status_key:
             self.status_key = key

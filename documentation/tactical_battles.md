@@ -414,7 +414,7 @@ Losing window focus also pauses combat. Pausing or leaving combat clears held mo
 
 The custom battle is won when the enemy army is destroyed and lost when the friendly army is destroyed.
 Mutual destruction counts as a loss. If the controlled sub-unit is destroyed while friendly units remain, those friendly units continue fighting under AI control.
-The status line counts the divisions on each side that still have a sub-unit.
+The Friendly and Enemy counters beside the timer count the living sub-units on each side.
 The kill feed keeps the battle's sub-unit deaths, newest first, with each killer and victim represented by a flag
 and the normal unit artwork for its nationality and selected art style. Unit names are omitted.
 The controlled sub-unit's icon has a yellow square behind it; other sub-units in the controlled division have an orange square.
