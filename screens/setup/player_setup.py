@@ -93,6 +93,7 @@ def confirm_player_country(map_screen):
                 map_screen.pending_unit.pop("_is_tactical_ghost", None) # Remove the tag, it's a real unit now
             map_screen.player_unit = map_screen.pending_unit
 
+        starting_province = map_screen.selected_province
         map_screen.selected_province = None 
         map_screen.hovered_province = None
         map_screen.hover_glow_surf = None
@@ -109,7 +110,10 @@ def confirm_player_country(map_screen):
             map_screen.pending_selection = None
             map_screen.pending_unit = None
             map_screen.set_play_view_defaults()
-            map_screen.focus_camera_on_country(map_screen.player_country, animate=True)
+            if map_screen.tactical_mode:
+                map_screen.focus_camera_on_position(starting_province["center"], animate=True)
+            else:
+                map_screen.focus_camera_on_country(map_screen.player_country, animate=True)
             
             map_screen.show_feedback(f"Now playing as {map_screen.player_country}")
             from screens.game.map import render_buttons

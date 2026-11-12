@@ -1085,6 +1085,24 @@ class MapViewDefaultTests(unittest.TestCase):
         self.assertEqual(applied, [True])
         self.assertEqual(focused, [("A", True)])
 
+    def test_confirming_a_tactical_unit_focuses_its_tile_instead_of_its_country(self):
+        unit = {"type": "Fixture", "owner": "A", "_is_tactical_ghost": True}
+        tile = {"center": (700, 300), "units": [unit]}
+        map_stub = SimpleNamespace(pending_selection="A", pending_unit=unit, selected_province=tile,
+                                   active_players=[], num_players=1, tactical_mode=True,
+                                   set_play_view_defaults=Mock(), focus_camera_on_position=Mock(),
+                                   focus_camera_on_country=Mock(), show_feedback=Mock(), refresh_map_layers=Mock())
+        with (patch.object(player_setup.queries, "get_unit_library", return_value={}),
+              patch.object(player_setup.tactical_battle, "land_unit_types", return_value=["Fixture"]),
+              patch("screens.game.map.render_buttons")):
+            player_setup.confirm_player_country(map_stub)
+        map_stub.focus_camera_on_position.assert_called_once_with(tile["center"], animate=True)
+        map_stub.focus_camera_on_country.assert_not_called()
+        self.assertIs(map_stub.player_unit, unit)
+        self.assertNotIn("_is_tactical_ghost", unit)
+        self.assertIsNone(map_stub.selected_province)
+        self.assertFalse(map_stub.selection_mode)
+
     def test_starting_spectator_applies_the_play_view_defaults(self):
         applied = []
         map_stub = fill_state_defaults(type("MapStub", (), {

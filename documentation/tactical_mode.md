@@ -9,6 +9,7 @@ Shared battlefield controls, combat mechanics, and custom battles are documented
 ## Your division
 
 The player commands one land division while the parent country remains AI-controlled.
+After confirming a division for a new tactical game, the map camera centers on that division's tile.
 Choosing a tile or stack offers only land units eligible for tactical battles, excluding aircraft, ships, and artillery.
 A tile or stack holding only ineligible units offers no division and does not spawn a replacement.
 Tactical battles in tournament and real-time multiplayer remain unavailable.

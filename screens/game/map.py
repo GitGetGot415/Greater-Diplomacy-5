@@ -2048,6 +2048,11 @@ class Map(StateAccess, Screen):
         if center is None:
             return False
 
+        self.focus_camera_on_position(center, animate)
+        return True
+
+    def focus_camera_on_position(self, center, animate=False):
+        """Frame a world position at the unit-visible zoom."""
         target_zoom = max(
             self.min_zoom,
             min(c.MAX_CAMERA_ZOOM,
@@ -2056,7 +2061,6 @@ class Map(StateAccess, Screen):
         camera_handler.focus_camera_on_position(
             self.camera, center, c.SCREEN_WIDTH, c.SCREEN_HEIGHT,
             self.total_ui_h, target_zoom, animate)
-        return True
 
     def focus_camera_on_army(self, records):
         """Frame an explicitly selected army at the centre of its live units."""

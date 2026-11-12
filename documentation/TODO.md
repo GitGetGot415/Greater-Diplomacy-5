@@ -140,7 +140,6 @@
 
 ## Insane dedication required for these ones
 
-- add detailed tactical tank / naval battles, for tactical mode specifically `(HIGHFLEET?????)`
 - add a historical campaign from 1910 to 1940 `(this is INSANELY ambitious how the HELL are you going to railroad that) (maybe increasing the days per turn could help)`
 - think about continuous real-time gameplay `(ohhhhhhhh my god real time HOI4 multiplayer)`
 
