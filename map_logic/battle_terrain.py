@@ -109,7 +109,7 @@ class Feature:
     radius: float
     height: float = 0.0
     destroyed: bool = False
-    # Trees only: the Trunk image size and the foliage circle's radius. Foliage is drawn and never blocks anything.
+    # Trees only: the Trunk image size and the foliage circle's radius. Foliage shades sight but never blocks it, shots, or movement.
     trunk: int = 1
     foliage_radius: float = 0.0
     shade: float = 0.0  # Trees only, drawing only: -1 darkest to 1 lightest variation of the foliage's green.
@@ -231,6 +231,14 @@ class Battlefield:
             if math.dist(origin, center) - size < radius:
                 blockers.append((center, size))
         return tuple(blockers)
+
+    def foliage_silhouettes(self, origin, radius):
+        """Foliage circles casting translucent sight shadows, separate from opaque blockers."""
+        eye = self.elevation(origin) + WEAPON_HEIGHT
+        return tuple(((feature.x, feature.y), feature.foliage_radius) for feature in self.features
+                     if feature.kind == "tree" and not feature.destroyed and feature.foliage_radius > 0
+                     and math.dist(origin, (feature.x, feature.y)) - feature.foliage_radius < radius
+                     and self.elevation((feature.x, feature.y)) + feature.height >= eye)
 
     def walkable(self, point, padding=None):
         radius = self.body_radius if padding is None else padding

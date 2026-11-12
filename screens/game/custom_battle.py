@@ -113,6 +113,7 @@ TERRAIN_COLORS = {
 }
 # Out of 255. All foliage is partly transparent, so units and trunks show faintly beneath it.
 FOLIAGE_ALPHA = 200
+FOLIAGE_SHADOW_ALPHA = 96  # Translucent darkness behind foliage, separate from opaque sight shadows.
 FOLIAGE_COLOR = (25, 128, 0)  # Each tree's foliage is a circle of this green, lightened or darkened slightly.
 FOLIAGE_GREEN_VARIATION = 14  # Most a tree's shade can lighten or darken the foliage's green channel.
 FEATURE_COLORS = {
@@ -405,6 +406,8 @@ class CustomBattleScreen(Screen):
         self.visibility_blockers = ()
         self.visibility_mask_key = None
         self.visibility_mask = None
+        self.foliage_shadow_outline = ()
+        self.foliage_shadow_mask = None
         self.visible_fighters = set()
         self.terrain_sprites = {}
         self.battle_seed = None
@@ -1625,6 +1628,7 @@ class CustomBattleScreen(Screen):
         if self.mode != "battle" or controlled is None or not controlled.alive:
             self.visibility_key = self.visibility_mask_key = None
             self.visibility_mask = None
+            self.foliage_shadow_mask = None
             self.visible_fighters.clear()
             return
         field = self.simulation.battlefield
@@ -1634,6 +1638,8 @@ class CustomBattleScreen(Screen):
             self.visibility_key = key
             self.visibility_blockers = field.sight_blockers(origin, combat.WEAPON_RANGE)
             self.visibility_outline = battle_terrain.sight_polygon(origin, combat.WEAPON_RANGE, self.visibility_blockers)
+            foliage = field.foliage_silhouettes(origin, combat.WEAPON_RANGE)
+            self.foliage_shadow_outline = battle_terrain.sight_polygon(origin, combat.WEAPON_RANGE, foliage) if foliage else ()
         self.visible_fighters = {id(fighter) for fighter in self.simulation.fighters if fighter is controlled or battle_terrain.point_in_sight(origin, (fighter.x, fighter.y), combat.WEAPON_RANGE, self.visibility_blockers)}
         size = self.view_rect().size
         mask_key = key, tuple(self.camera), self.zoom, size
@@ -1643,6 +1649,13 @@ class CustomBattleScreen(Screen):
                 self.visibility_mask = pygame.Surface(size, pygame.SRCALPHA)
             self.visibility_mask.fill((0, 0, 0, 255))
             pygame.draw.polygon(self.visibility_mask, (0, 0, 0, 0), [self.to_screen(x, y) for x, y in self.visibility_outline])
+            if self.foliage_shadow_outline:
+                if self.foliage_shadow_mask is None or self.foliage_shadow_mask.get_size() != size:
+                    self.foliage_shadow_mask = pygame.Surface(size, pygame.SRCALPHA)
+                self.foliage_shadow_mask.fill((0, 0, 0, FOLIAGE_SHADOW_ALPHA))
+                pygame.draw.polygon(self.foliage_shadow_mask, (0, 0, 0, 0), [self.to_screen(x, y) for x, y in self.foliage_shadow_outline])
+                # Keep the stronger shadow: foliage must never reveal an opaque sight blocker.
+                self.visibility_mask.blit(self.foliage_shadow_mask, (0, 0), special_flags=pygame.BLEND_RGBA_MAX)
 
     def _update_preview_intro(self):
         if self.preview_intro_started is None:

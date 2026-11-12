@@ -1521,6 +1521,23 @@ class TacticalTerrainTests(unittest.TestCase):
         field.destroy_tree(tree)
         self.assertTrue(battle_terrain.point_in_sight(origin, (1400, 500), radius, field.sight_blockers(origin, radius)))
 
+    def test_foliage_silhouettes_shade_without_becoming_opaque_sight_blockers(self):
+        origin, radius = (1000, 500), 500
+        tree = battle_terrain.Feature("tree", 1200, 500, 10, 100, foliage_radius=100)
+        field = self.field(tree)
+        self.assertEqual(field.foliage_silhouettes(origin, radius), (((1200, 500), 100),))
+        target = (1400, 550)
+        self.assertTrue(battle_terrain.point_in_sight(origin, target, radius, field.sight_blockers(origin, radius)))
+        self.assertFalse(battle_terrain.point_in_sight(origin, target, radius, field.foliage_silhouettes(origin, radius)))
+        self.assertEqual(field.foliage_silhouettes((2000, 500), 100), ())
+        field.destroy_tree(tree)
+        self.assertEqual(field.foliage_silhouettes(origin, radius), ())
+
+    def test_high_ground_sees_over_foliage_below_eye_height(self):
+        field = self.field(battle_terrain.Feature("hill", 1000, 500, 80, 200),
+                           battle_terrain.Feature("tree", 1200, 500, 10, 100, foliage_radius=100))
+        self.assertEqual(field.foliage_silhouettes((1000, 500), 500), ())
+
     def test_hills_and_mountain_rocks_hide_ground_beyond_them_but_a_crest_opens_sight(self):
         for kind in ("hill", "rock"):
             with self.subTest(kind=kind):
@@ -3504,7 +3521,7 @@ class CustomBattleScreenTests(unittest.TestCase):
         field = self.screen.simulation.battlefield
         self.screen._refresh_visibility()
         key = self.screen.visibility_mask_key
-        with patch.object(field, "sight_blockers", side_effect=AssertionError("unchanged sight geometry")), patch.object(battle_terrain, "sight_polygon", side_effect=AssertionError("uncached sight outline")):
+        with patch.object(field, "sight_blockers", side_effect=AssertionError("unchanged sight geometry")), patch.object(field, "foliage_silhouettes", side_effect=AssertionError("unchanged foliage geometry")), patch.object(battle_terrain, "sight_polygon", side_effect=AssertionError("uncached sight outline")):
             self.screen._refresh_visibility()
             self.assertEqual(key, self.screen.visibility_mask_key)
             self.screen._move_camera(self.screen.camera[0] + 10, self.screen.camera[1] + 10)

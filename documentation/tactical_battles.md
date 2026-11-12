@@ -388,7 +388,8 @@ When no unit is controlled, both armies fight automatically.
 While a living sub-unit is controlled, sight is limited to a circle centered on that sub-unit, using the maximum weapon range.
 Everything outside sight is completely black, including terrain, units, projectiles, and aiming guides. Previously seen ground is not retained.
 Tree trunks, mountain rocks, and hills above the observer's eye height cast sight shadows. Climbing above a ridge opens the view beyond it.
-Foliage, marshes, and chasms do not block sight. Friendly units do not extend the controlled sub-unit's view.
+Tree foliage casts translucent sight shadows: terrain and units behind leaves look darker but remain visible and targetable. Overlapping foliage shadows do not accumulate darkness.
+Foliage shadow opacity uses `FOLIAGE_SHADOW_ALPHA` in `screens/game/custom_battle.py`. Marshes and chasms do not block sight. Friendly units do not extend the controlled sub-unit's view.
 The battle controls and readouts remain visible. Spectating and the result view show the whole battlefield again.
 
 Actual battle fills the whole screen; the title, status line, and buttons sit on top of the battlefield.
