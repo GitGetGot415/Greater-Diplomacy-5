@@ -337,9 +337,9 @@ class EditorScreenSmokeTests(unittest.TestCase):
             for category, _label in settings.categories():
                 settings.set_sub_state(category)
                 settings.draw(self.surface)
-                if category != "GAME":
+                if category != "INTERFACE_CONTROLS":
                     settings.reset_category_defaults()
-            self.click_preview_button(preview, "Controls")
+            self.click_preview_button(preview, "Interface & Controls")
             self.click_preview_button(preview, "Keybinds")
             self.assertEqual(preview.current_state, "KEYBINDS")
             bindings = preview.current_screen

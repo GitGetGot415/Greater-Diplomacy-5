@@ -18,7 +18,7 @@ MAX_MODEL_NAME_LENGTH = 150
 
 
 # All categories share one fixed frame; changing a category only rebuilds its controls.
-SETTINGS_CATEGORIES = (("GAME", "Game & Interface"), ("DISPLAY", "Display & Appearance"), ("CONTROLS", "Controls"), ("AI", "LLM AI"), ("FILES", "Default Paths"))
+SETTINGS_CATEGORIES = (("INTERFACE_CONTROLS", "Interface & Controls"), ("DISPLAY", "Display & Appearance"), ("AI", "LLM AI"), ("FILES", "Default Paths"))
 SETTINGS_MARGIN = 32
 SETTINGS_PANEL_TOP = 100
 SETTINGS_PANEL_HEIGHT = 568
@@ -152,7 +152,7 @@ def render_settings_buttons(settings_screen):
     screen.player_slider = screen.fps_slider = screen.ai_thread_slider = None
     screen.checkerboard_gradient_slider = screen.checkerboard_speed_slider = None
 
-    if screen.sub_state == "GAME":
+    if screen.sub_state == "INTERFACE_CONTROLS":
         rows = (
             ("show_strategic_intro_popup", "Show Strategic Tutorial", screen.show_strategic_intro_popup, lambda: screen.toggle_intro_popup(False)),
             ("show_tactical_intro_popup", "Show Tactical Tutorial", screen.show_tactical_intro_popup, lambda: screen.toggle_intro_popup(True)),
@@ -174,6 +174,16 @@ def render_settings_buttons(settings_screen):
         screen.player_slider.visible = screen.back_state != "MAP"
         screen.elements.append(screen.player_slider)
 
+        screen.elements.append(Button(SETTINGS_SECOND_X, SETTINGS_FIRST_Y, SETTINGS_OPTION_SIZE, "purple", f"Controls: {screen.control_mode.title()}", screen.cycle_control_mode))
+        screen.add_setting_info("control_mode", SETTINGS_FIRST_Y, x=SETTINGS_SECOND_X + SETTINGS_OPTION_SIZE[0] + SETTINGS_INFO_GAP_X)
+        y = SETTINGS_FIRST_Y + SETTINGS_ROW_GAP
+        screen.elements.append(Button(SETTINGS_SECOND_X, y, SETTINGS_OPTION_SIZE, "purple", f"Map Navigation: {screen.map_navigation_mode.title()}", screen.toggle_map_navigation_mode))
+        screen.add_setting_info("map_navigation_mode", y, x=SETTINGS_SECOND_X + SETTINGS_OPTION_SIZE[0] + SETTINGS_INFO_GAP_X)
+        screen.elements.extend([
+            Button(SETTINGS_SECOND_X, y + SETTINGS_ROW_GAP, SETTINGS_LINK_SIZE, "purple", "Keybinds", screen.open_keybinds, image=ui_bars.get_ui_image("Keybind.png"), layout="vertical"),
+            Button(SETTINGS_SECOND_X + SETTINGS_LINK_SIZE[0] + SETTINGS_LINK_GAP, y + SETTINGS_ROW_GAP, SETTINGS_LINK_SIZE, "purple", "Mouse Settings", screen.open_mouse_settings, image=ui_bars.get_ui_image("Blank.png", scale=0.6, directory=f"{c.ASSETS_ROOT_DIR}/mouse"), layout="vertical"),
+        ])
+
     elif screen.sub_state == "DISPLAY":
         for index, (key, label, callback) in enumerate((("fullscreen", "Toggle Fullscreen", screen.toggle_full), ("show_fps", "Show FPS", screen.toggle_fps), ("checkerboard_water", "Checkerboard Water", screen.toggle_checkerboard_water))):
             y = SETTINGS_FIRST_Y + index * SETTINGS_ROW_GAP
@@ -190,17 +200,6 @@ def render_settings_buttons(settings_screen):
         # A standalone game ships only the classic unit art.
         if not screen.is_standalone:
             screen.elements.append(Button(SETTINGS_SECOND_X, SETTINGS_FIRST_Y + 4 * SETTINGS_ROW_GAP, SETTINGS_LINK_SIZE, "blue", "Unit Art", screen.open_unit_art, image=ui_bars.get_ui_image("Brush.png")))
-
-    elif screen.sub_state == "CONTROLS":
-        screen.elements.append(Button(SETTINGS_X, SETTINGS_FIRST_Y, SETTINGS_OPTION_SIZE, "purple", f"Controls: {screen.control_mode.title()}", screen.cycle_control_mode))
-        screen.add_setting_info("control_mode", SETTINGS_FIRST_Y)
-        y = SETTINGS_FIRST_Y + SETTINGS_ROW_GAP
-        screen.elements.append(Button(SETTINGS_X, y, SETTINGS_OPTION_SIZE, "purple", f"Map Navigation: {screen.map_navigation_mode.title()}", screen.toggle_map_navigation_mode))
-        screen.add_setting_info("map_navigation_mode", y)
-        screen.elements.extend([
-            Button(SETTINGS_X, y + SETTINGS_ROW_GAP, SETTINGS_LINK_SIZE, "purple", "Keybinds", screen.open_keybinds, image=ui_bars.get_ui_image("Keybind.png"), layout="vertical"),
-            Button(SETTINGS_X + SETTINGS_LINK_SIZE[0] + SETTINGS_LINK_GAP, y + SETTINGS_ROW_GAP, SETTINGS_LINK_SIZE, "purple", "Mouse Settings", screen.open_mouse_settings, image=ui_bars.get_ui_image("Blank.png", scale=0.6, directory=f"{c.ASSETS_ROOT_DIR}/mouse"), layout="vertical"),
-        ])
 
     elif screen.sub_state == "AI":
         ai_is_on = screen.ai_mode != "OFF"
@@ -269,9 +268,8 @@ class Settings(Screen):
 
     # Category resets retain credentials, models, URLs, audio, and Unit Art.
     CATEGORY_RESET_FIELDS = {
-        "GAME": ("num_players", "show_strategic_intro_popup", "show_tactical_intro_popup", "show_unclaimed", "battle_display_mode", "army_group_animations"),
+        "INTERFACE_CONTROLS": ("num_players", "show_strategic_intro_popup", "show_tactical_intro_popup", "show_unclaimed", "battle_display_mode", "army_group_animations", "map_navigation_mode", "control_mode", "mouse_button_actions", "orders_key_changes_screen", "economy_key_changes_screen"),
         "DISPLAY": ("target_fps", "show_fps", "checkerboard_water", "checkerboard_gradient_strength", "checkerboard_scroll_speed", "ocean_light_color", "ocean_dark_color"),
-        "CONTROLS": ("map_navigation_mode", "control_mode", "mouse_button_actions", "orders_key_changes_screen", "economy_key_changes_screen"),
         "AI": ("ai_mode", "ai_immersion_level", "ai_threads"),
         "FILES": tuple(DIR_FIELDS),
     }
@@ -286,7 +284,7 @@ class Settings(Screen):
         self.is_standalone = standalone_game.IS_STANDALONE if standalone is None else standalone
         self.preview = preview
         self.bg_color = SETTINGS_BACKGROUND_COLOR
-        self.sub_state = "GAME"
+        self.sub_state = "INTERFACE_CONTROLS"
         self.back_state = "MENU"
 
         self.sfx_volume = self.controller.sfx_volume
@@ -351,9 +349,9 @@ class Settings(Screen):
         self.cancel_pointer_input()
         super().set_sub_state(state)
 
-    def add_setting_info(self, key, y):
+    def add_setting_info(self, key, y, *, x=SETTINGS_INFO_X):
         _key, title, text = next(row for row in SETTINGS_INFO_ROWS if row[0] == key)
-        self.elements.append(make_info_button(SETTINGS_INFO_X, y, lambda: dialogs.show_info(title, text), y_offset=SETTINGS_INFO_Y_NUDGE))
+        self.elements.append(make_info_button(x, y, lambda: dialogs.show_info(title, text), y_offset=SETTINGS_INFO_Y_NUDGE))
 
     # ------------------------------------------------------------------ #
     #                       AI PROVIDER TEXT FIELDS                      #
@@ -527,7 +525,7 @@ class Settings(Screen):
 
     def refresh_ui(self):
         if self.sub_state not in dict(self.categories()):
-            self.sub_state = "GAME"
+            self.sub_state = "INTERFACE_CONTROLS"
         # Either tutorial can change its preference while Settings is
         # closed, so re-read the cached persisted values whenever this screen
         # rebuilds rather than showing a stale controller value.
@@ -561,9 +559,9 @@ class Settings(Screen):
     def reset_category_defaults(self):
         """Reset only this category, preserving API keys, models, URLs and audio."""
         names = self.CATEGORY_RESET_FIELDS[self.sub_state]
-        if self.sub_state == "GAME" and self.back_state == "MAP":
+        if self.sub_state == "INTERFACE_CONTROLS" and self.back_state == "MAP":
             names = tuple(name for name in names if name != "num_players")
-        if self.sub_state == "CONTROLS":
+        if self.sub_state == "INTERFACE_CONTROLS":
             self.controller.keybinds = default_keybinds()
             self.controller.touch_input.cancel()
         if self.sub_state == "AI" and not self.preview:

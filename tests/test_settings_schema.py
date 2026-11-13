@@ -467,6 +467,21 @@ class SettingsCategoryTests(unittest.TestCase):
         for name in ("show_strategic_intro_popup", "show_tactical_intro_popup"):
             self.assertEqual(getattr(self.controller, name), settings_schema.defaults()[name])
 
+    def test_interface_and_control_options_work_in_the_same_category(self):
+        self.assertEqual(self.screen.sub_state, "INTERFACE_CONTROLS")
+        self.assertEqual(dict(self.screen.categories())[self.screen.sub_state], "Interface & Controls")
+        self.assertNotIn("GAME", dict(self.screen.categories()))
+        self.assertNotIn("CONTROLS", dict(self.screen.categories()))
+        before_unclaimed = self.controller.show_unclaimed
+        before_mode = self.controller.control_mode
+        self.click(f"Show Unassigned: {'ON' if before_unclaimed else 'OFF'}")
+        self.click(f"Controls: {before_mode.title()}")
+        self.assertEqual(self.controller.show_unclaimed, not before_unclaimed)
+        self.assertNotEqual(self.controller.control_mode, before_mode)
+        self.assertEqual(self.screen.sub_state, "INTERFACE_CONTROLS")
+        self.click("Keybinds")
+        self.assertEqual(self.screen.next_state, "KEYBINDS")
+
     def test_settings_refresh_reads_both_tutorial_opt_outs(self):
         from types import SimpleNamespace
         app = SimpleNamespace(states={name: object() for name in ("MAP", "REALTIME_LOBBY", "REALTIME_REMOTE_LOBBY", "CUSTOM_BATTLE", "MENU")})
@@ -498,20 +513,20 @@ class SettingsCategoryTests(unittest.TestCase):
         for exported_game in (True, False):
             with self.subTest(exported_game=exported_game), mock.patch.object(self.settings.standalone_game, "IS_STANDALONE", exported_game):
                 screen = self.settings.Settings(self.controller, standalone=None if exported_game else True, preview=not exported_game)
-                self.assertEqual(tuple(dict(screen.categories())), ("GAME", "DISPLAY", "CONTROLS"))
+                self.assertEqual(tuple(dict(screen.categories())), ("INTERFACE_CONTROLS", "DISPLAY"))
                 for label in ("LLM AI", "Default Paths"):
                     self.assertFalse(any(element.text == label for element in screen.elements))
-                next(element for element in screen.elements if element.text == "Controls").callback()
-                self.assertEqual(screen.sub_state, "CONTROLS")
+                next(element for element in screen.elements if element.text == "Interface & Controls").callback()
+                self.assertEqual(screen.sub_state, "INTERFACE_CONTROLS")
                 for category in ("AI", "FILES"):
                     screen.set_sub_state(category)
-                    self.assertEqual(screen.sub_state, "CONTROLS")
+                    self.assertEqual(screen.sub_state, "INTERFACE_CONTROLS")
                     self.assertEqual(screen.ai_fields, {})
                     # Rebuilding also clears an unavailable category retained by a caller.
                     screen.sub_state = category
                     screen.refresh_ui()
-                    self.assertEqual(screen.sub_state, "GAME")
-                    screen.set_sub_state("CONTROLS")
+                    self.assertEqual(screen.sub_state, "INTERFACE_CONTROLS")
+                    screen.set_sub_state("INTERFACE_CONTROLS")
 
     def test_regular_settings_keep_ai_and_paths_available(self):
         with mock.patch.object(self.settings.standalone_game, "IS_STANDALONE", False):
@@ -525,7 +540,7 @@ class SettingsCategoryTests(unittest.TestCase):
         states = {key: object() for key in ("MAP", "MENU", "REALTIME_LOBBY", "REALTIME_REMOTE_LOBBY", "CUSTOM_BATTLE", "UNIT_ART", "KEYBINDS", "MOUSE_SETTINGS")}
         app = SimpleNamespace(states=states)
         for origin in ("MENU", "MAP", "REALTIME_LOBBY", "REALTIME_REMOTE_LOBBY", "CUSTOM_BATTLE"):
-            for category, label, target in (("DISPLAY", "Unit Art", "UNIT_ART"), ("CONTROLS", "Keybinds", "KEYBINDS"), ("CONTROLS", "Mouse Settings", "MOUSE_SETTINGS")):
+            for category, label, target in (("DISPLAY", "Unit Art", "UNIT_ART"), ("INTERFACE_CONTROLS", "Keybinds", "KEYBINDS"), ("INTERFACE_CONTROLS", "Mouse Settings", "MOUSE_SETTINGS")):
                 with self.subTest(origin=origin, target=target):
                     self.screen.on_enter(app, states[origin])
                     self.screen.set_sub_state(category)
@@ -540,7 +555,7 @@ class SettingsCategoryTests(unittest.TestCase):
     def test_category_resets_only_its_preferences_and_saves(self):
         from screens.menus.keybinds import default_keybinds
         changes = dict(target_fps=41, show_fps=True, num_players=7, ai_threads=3, ai_mode="GEMINI", ai_immersion_level="ABSOLUTE", gemini_api_key="kept-key", gemini_model="kept-model", ollama_base_url="http://fixture", music_volume=0.21, unit_art_style="kept-art", control_mode="DESKTOP", saves_dir="fixture-saves", custom_scenarios_dir="fixture-maps", tournament_saves_dir="fixture-tournaments")
-        reset_changes = {"GAME": ("num_players",), "DISPLAY": ("target_fps", "show_fps"), "CONTROLS": ("control_mode",), "AI": ("ai_threads", "ai_mode", "ai_immersion_level"), "FILES": ("saves_dir", "custom_scenarios_dir", "tournament_saves_dir")}
+        reset_changes = {"INTERFACE_CONTROLS": ("num_players", "control_mode"), "DISPLAY": ("target_fps", "show_fps"), "AI": ("ai_threads", "ai_mode", "ai_immersion_level"), "FILES": ("saves_dir", "custom_scenarios_dir", "tournament_saves_dir")}
         for category, reset_fields in reset_changes.items():
             with self.subTest(category=category):
                 for key, value in changes.items():
@@ -555,7 +570,7 @@ class SettingsCategoryTests(unittest.TestCase):
                 after = settings_schema.from_controller(self.controller)
                 for key in changes:
                     self.assertEqual(after[key], defaults[key] if key in reset_fields else before[key], key)
-                self.assertEqual(self.controller.keybinds, default_keybinds() if category == "CONTROLS" else {"BACK": self.pygame.K_b})
+                self.assertEqual(self.controller.keybinds, default_keybinds() if category == "INTERFACE_CONTROLS" else {"BACK": self.pygame.K_b})
                 saved = self.save.call_args.args[1]
                 self.assertEqual(settings_schema.from_json_dict(saved), after)
                 for key in reset_fields:
@@ -571,10 +586,14 @@ class SettingsCategoryTests(unittest.TestCase):
         self.assertEqual(self.controller.num_players, 7)
 
     def test_controls_help_opens_the_shared_info_popup(self):
-        self.screen.set_sub_state("CONTROLS")
+        self.screen.set_sub_state("INTERFACE_CONTROLS")
         with mock.patch.object(self.settings.dialogs, "show_info") as show_info:
-            help_button = next(item for item in self.screen.elements if item.text == "?")
-            help_button.callback()
+            for help_button in (item for item in self.screen.elements if item.text == "?"):
+                help_button.callback()
+                if show_info.call_args.args[0] == "Controls":
+                    break
+            else:
+                self.fail("Controls help is missing from Interface & Controls")
         self.assertIsNone(help_button.sound_kind)
         title, body = show_info.call_args.args
         self.assertEqual(title, "Controls")
@@ -590,6 +609,14 @@ class SettingsCategoryTests(unittest.TestCase):
 
 
 class SettingsScreenTests(unittest.TestCase):
+    def setUp(self):
+        import pygame
+        # The initial merged category includes the existing control-screen icons.
+        pygame.font.init()
+        images = mock.patch("screens.menus.settings.ui_bars.get_ui_image", return_value=pygame.Surface((20, 20)))
+        images.start()
+        self.addCleanup(images.stop)
+
     def test_old_ling_url_is_ignored_without_changing_ollama_settings(self):
         old = {"ai_mode": "LING", "ling_base_url": "http://localhost:11434/v1",
                "ling_model": "custom-ling-model", "ollama_model": "existing-local-model",
