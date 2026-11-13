@@ -97,11 +97,15 @@ class TouchInput:
             values["button"] = button
         return pygame.event.Event(event_type, values)
 
+    def is_mobile(self, mode):
+        """Whether the control-mode setting `mode` means mobile controls on this device."""
+        return (self.automatic_mode if mode == "AUTO" else mode) == "MOBILE"
+
     def process_events(self, events, owner, mode):
         if owner is not self.owner or mode != self.mode:
             self.cancel()
             self.owner, self.mode = owner, mode
-        mobile = (self.automatic_mode if mode == "AUTO" else mode) == "MOBILE"
+        mobile = self.is_mobile(mode)
         # Screens may opt into continuous controls; ordinary dialogs remain
         # compatible without implementing the optional pointer hooks.
         configure = getattr(owner, "set_touch_mode", None)

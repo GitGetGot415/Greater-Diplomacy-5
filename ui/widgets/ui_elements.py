@@ -12,7 +12,7 @@ except Exception:
 import data.constants as c
 from data import queries
 from ui.background_styles import SLIDER_STYLES, TEXT_INPUT_STYLES
-from ui import sound_effects
+from ui import mobile_keyboard, sound_effects
 from ui.rendering.font_manager import fonts
 from ui.rendering import symbol_loader
 from ui.widgets.text_utils import wrap_text
@@ -782,7 +782,13 @@ def _text_box_text_x(rect, inner, text_width, pad_x, active):
 
 def draw_text_input_background(surface, rect, active=False, *, style_name=None,
                                bg_color=None, border_color=None, gradient_strength=None):
-    """Draw a text-entry background from the editable style settings."""
+    """Draw a text-entry background from the editable style settings.
+
+    Every text box draws through here, so an active box also asks for the
+    phone's on-screen keyboard.
+    """
+    if active:
+        mobile_keyboard.request()
     style = TEXT_INPUT_STYLES[style_name if style_name is not None else
                               "active" if active else "inactive"]
     if bg_color is None:

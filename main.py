@@ -85,7 +85,7 @@ def _import_project_modules():
     global IS_WEB, restore_persisted_dir, platform, pygame
     global ANDROID_MIXER_BUFFER_FRAMES, is_android_browser
     global Messages_Screen, dispatch_global_keys, synthesize_keybind_mouse_events, keyboard_input_is_captured, fonts, ui_elements, ui_bars, c, queries
-    global music_playback, sound_effects, TouchInput
+    global music_playback, sound_effects, mobile_keyboard, TouchInput
     global Load_Game, Map, Menu, New_Game, Settings, Credits, Music_Player, View_Assets, Mods, Unit_Art, Keybinds, Mouse_Settings, Edit_Portrait, default_keybinds
     global Translate, Translation_Menu, Greater_Diplomacy_4_Translation, Greater_Diplomacy_Hex_Translation
     global Orders_Screen, Tactical_Orders_Screen, keybind_io, settings_schema, symbol_loader, modal_stack, screen_runner
@@ -136,6 +136,7 @@ def _import_project_modules():
     from ui.widgets import ui_elements
     from ui import sound_effects
     from ui import music_playback
+    from ui import mobile_keyboard
     from ui.bars import ui_bars
     import data.constants as c
     from data import queries
@@ -806,7 +807,7 @@ class Controller:
                     if self.active_state == self.states.get("MUSIC_PLAYER"):
                         self.states["MUSIC_PLAYER"].refresh_ui()
 
-            events = pygame.event.get()
+            events = pygame.event.get() + mobile_keyboard.typed_events()
 
             if IS_WEB and not self._web_audio_unlocked:
                 for event in events:
@@ -896,6 +897,7 @@ class Controller:
             overlay_owner = (self.active_state if overlay_modal is None
                              else getattr(overlay_modal, "screen", overlay_modal))
             self.touch_input.draw(self.screen, overlay_owner, self.control_mode)
+            mobile_keyboard.sync(self.touch_input.is_mobile(self.control_mode))
             pygame.display.flip()
             if startup_music_pending:
                 startup_music_pending = False
