@@ -467,18 +467,23 @@ class SettingsCategoryTests(unittest.TestCase):
         for name in ("show_strategic_intro_popup", "show_tactical_intro_popup"):
             self.assertEqual(getattr(self.controller, name), settings_schema.defaults()[name])
 
-    def test_interface_and_control_options_work_in_the_same_category(self):
-        self.assertEqual(self.screen.sub_state, "INTERFACE_CONTROLS")
-        self.assertEqual(dict(self.screen.categories())[self.screen.sub_state], "Interface & Controls")
+    def test_general_includes_interface_controls_and_display_options(self):
+        self.assertEqual(self.screen.sub_state, "GENERAL")
+        self.assertEqual(dict(self.screen.categories())[self.screen.sub_state], "General")
         self.assertNotIn("GAME", dict(self.screen.categories()))
         self.assertNotIn("CONTROLS", dict(self.screen.categories()))
         before_unclaimed = self.controller.show_unclaimed
         before_mode = self.controller.control_mode
+        before_fps = self.controller.show_fps
         self.click(f"Show Unassigned: {'ON' if before_unclaimed else 'OFF'}")
         self.click(f"Controls: {before_mode.title()}")
         self.assertEqual(self.controller.show_unclaimed, not before_unclaimed)
         self.assertNotEqual(self.controller.control_mode, before_mode)
-        self.assertEqual(self.screen.sub_state, "INTERFACE_CONTROLS")
+        self.click(f"Show FPS: {'ON' if before_fps else 'OFF'}")
+        self.assertEqual(self.controller.show_fps, not before_fps)
+        self.assertIsNotNone(self.screen.checkerboard_gradient_slider)
+        self.assertIsNotNone(self.screen.checkerboard_speed_slider)
+        self.assertEqual(self.screen.sub_state, "GENERAL")
         self.click("Keybinds")
         self.assertEqual(self.screen.next_state, "KEYBINDS")
 
@@ -499,7 +504,7 @@ class SettingsCategoryTests(unittest.TestCase):
         field.active = True
         field.on_change("player-model")
         self.assertTrue(self.screen.text_input_active)
-        self.click("Display & Appearance")
+        self.click("General")
         self.assertFalse(self.screen.text_input_active)
         self.assertEqual(self.screen.ai_fields, {})
         self.assertFalse(any(item.text.startswith("LLM AI:") for item in self.screen.elements))
@@ -513,20 +518,20 @@ class SettingsCategoryTests(unittest.TestCase):
         for exported_game in (True, False):
             with self.subTest(exported_game=exported_game), mock.patch.object(self.settings.standalone_game, "IS_STANDALONE", exported_game):
                 screen = self.settings.Settings(self.controller, standalone=None if exported_game else True, preview=not exported_game)
-                self.assertEqual(tuple(dict(screen.categories())), ("INTERFACE_CONTROLS", "DISPLAY"))
+                self.assertEqual(tuple(dict(screen.categories())), ("GENERAL",))
                 for label in ("LLM AI", "Default Paths"):
                     self.assertFalse(any(element.text == label for element in screen.elements))
-                next(element for element in screen.elements if element.text == "Interface & Controls").callback()
-                self.assertEqual(screen.sub_state, "INTERFACE_CONTROLS")
+                next(element for element in screen.elements if element.text == "General").callback()
+                self.assertEqual(screen.sub_state, "GENERAL")
                 for category in ("AI", "FILES"):
                     screen.set_sub_state(category)
-                    self.assertEqual(screen.sub_state, "INTERFACE_CONTROLS")
+                    self.assertEqual(screen.sub_state, "GENERAL")
                     self.assertEqual(screen.ai_fields, {})
                     # Rebuilding also clears an unavailable category retained by a caller.
                     screen.sub_state = category
                     screen.refresh_ui()
-                    self.assertEqual(screen.sub_state, "INTERFACE_CONTROLS")
-                    screen.set_sub_state("INTERFACE_CONTROLS")
+                    self.assertEqual(screen.sub_state, "GENERAL")
+                    screen.set_sub_state("GENERAL")
 
     def test_regular_settings_keep_ai_and_paths_available(self):
         with mock.patch.object(self.settings.standalone_game, "IS_STANDALONE", False):
@@ -540,7 +545,7 @@ class SettingsCategoryTests(unittest.TestCase):
         states = {key: object() for key in ("MAP", "MENU", "REALTIME_LOBBY", "REALTIME_REMOTE_LOBBY", "CUSTOM_BATTLE", "UNIT_ART", "KEYBINDS", "MOUSE_SETTINGS")}
         app = SimpleNamespace(states=states)
         for origin in ("MENU", "MAP", "REALTIME_LOBBY", "REALTIME_REMOTE_LOBBY", "CUSTOM_BATTLE"):
-            for category, label, target in (("DISPLAY", "Unit Art", "UNIT_ART"), ("INTERFACE_CONTROLS", "Keybinds", "KEYBINDS"), ("INTERFACE_CONTROLS", "Mouse Settings", "MOUSE_SETTINGS")):
+            for category, label, target in (("GENERAL", "Unit Art", "UNIT_ART"), ("GENERAL", "Keybinds", "KEYBINDS"), ("GENERAL", "Mouse Settings", "MOUSE_SETTINGS")):
                 with self.subTest(origin=origin, target=target):
                     self.screen.on_enter(app, states[origin])
                     self.screen.set_sub_state(category)
@@ -555,7 +560,7 @@ class SettingsCategoryTests(unittest.TestCase):
     def test_category_resets_only_its_preferences_and_saves(self):
         from screens.menus.keybinds import default_keybinds
         changes = dict(target_fps=41, show_fps=True, num_players=7, ai_threads=3, ai_mode="GEMINI", ai_immersion_level="ABSOLUTE", gemini_api_key="kept-key", gemini_model="kept-model", ollama_base_url="http://fixture", music_volume=0.21, unit_art_style="kept-art", control_mode="DESKTOP", saves_dir="fixture-saves", custom_scenarios_dir="fixture-maps", tournament_saves_dir="fixture-tournaments")
-        reset_changes = {"INTERFACE_CONTROLS": ("num_players", "control_mode"), "DISPLAY": ("target_fps", "show_fps"), "AI": ("ai_threads", "ai_mode", "ai_immersion_level"), "FILES": ("saves_dir", "custom_scenarios_dir", "tournament_saves_dir")}
+        reset_changes = {"GENERAL": ("num_players", "control_mode", "target_fps", "show_fps"), "AI": ("ai_threads", "ai_mode", "ai_immersion_level"), "FILES": ("saves_dir", "custom_scenarios_dir", "tournament_saves_dir")}
         for category, reset_fields in reset_changes.items():
             with self.subTest(category=category):
                 for key, value in changes.items():
@@ -570,7 +575,7 @@ class SettingsCategoryTests(unittest.TestCase):
                 after = settings_schema.from_controller(self.controller)
                 for key in changes:
                     self.assertEqual(after[key], defaults[key] if key in reset_fields else before[key], key)
-                self.assertEqual(self.controller.keybinds, default_keybinds() if category == "INTERFACE_CONTROLS" else {"BACK": self.pygame.K_b})
+                self.assertEqual(self.controller.keybinds, default_keybinds() if category == "GENERAL" else {"BACK": self.pygame.K_b})
                 saved = self.save.call_args.args[1]
                 self.assertEqual(settings_schema.from_json_dict(saved), after)
                 for key in reset_fields:
@@ -586,26 +591,44 @@ class SettingsCategoryTests(unittest.TestCase):
         self.assertEqual(self.controller.num_players, 7)
 
     def test_controls_help_opens_the_shared_info_popup(self):
-        self.screen.set_sub_state("INTERFACE_CONTROLS")
+        self.screen.set_sub_state("GENERAL")
         with mock.patch.object(self.settings.dialogs, "show_info") as show_info:
             for help_button in (item for item in self.screen.elements if item.text == "?"):
                 help_button.callback()
                 if show_info.call_args.args[0] == "Controls":
                     break
             else:
-                self.fail("Controls help is missing from Interface & Controls")
+                self.fail("Controls help is missing from General")
         self.assertIsNone(help_button.sound_kind)
         title, body = show_info.call_args.args
         self.assertEqual(title, "Controls")
         for mode in ("Auto", "Mobile", "Desktop"):
             self.assertIn(mode, body)
 
-    def test_display_rebuild_keeps_the_fps_slider_value(self):
-        self.screen.set_sub_state("DISPLAY")
+    def test_general_rebuild_keeps_the_fps_slider_value(self):
+        self.screen.set_sub_state("GENERAL")
         self.screen.set_fps(0.375)
         self.screen.refresh_ui()
         self.assertEqual(self.controller.target_fps, 35)
         self.assertEqual(self.screen.fps_slider.value, 0.375)
+
+    def test_general_color_controls_edit_and_reset_only_the_selected_color(self):
+        for key, (constant, _default, _title) in self.screen.COLOR_FIELDS.items():
+            self.addCleanup(setattr, c, constant, getattr(c, constant))
+        for index, key in enumerate(self.screen.COLOR_FIELDS):
+            with self.subTest(key=key):
+                before = {name: getattr(self.controller, name) for name in self.screen.COLOR_FIELDS}
+                chosen = (1, 2, 3)
+                with mock.patch.object(self.settings.pickers, "ask_color", side_effect=lambda screen, title, current, callback: callback(chosen)):
+                    [button for button in self.screen.elements if button.text == "Edit"][index].callback()
+                self.assertEqual(getattr(self.controller, key), chosen)
+                self.assertEqual(self.save.call_args.args[1][key], chosen)
+                self.assertEqual(getattr(c, self.screen.COLOR_FIELDS[key][0]), chosen)
+                for other in before.keys() - {key}:
+                    self.assertEqual(getattr(self.controller, other), before[other])
+                [button for button in self.screen.elements if button.text == "Reset"][index].callback()
+                self.assertEqual(getattr(self.controller, key), settings_schema.defaults()[key])
+                self.assertEqual(self.save.call_args.args[1][key], settings_schema.defaults()[key])
 
 
 class SettingsScreenTests(unittest.TestCase):
@@ -811,7 +834,7 @@ class SettingsScreenTests(unittest.TestCase):
         with mock.patch.object(queries, "get_settings", return_value={}), \
                 mock.patch.object(queries, "save_cached_json") as save:
             screen = Settings(controller)
-            screen.set_sub_state("DISPLAY")
+            screen.set_sub_state("GENERAL")
             slider = screen.checkerboard_speed_slider
             screen.handle_events([pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=slider.handle_rect.center)])
             with mock.patch.object(pygame.mouse, "get_pressed", return_value=(True, False, False)):
@@ -844,7 +867,7 @@ class SettingsScreenTests(unittest.TestCase):
         with mock.patch.object(queries, "get_settings", return_value={}), \
                 mock.patch.object(queries, "save_cached_json") as save:
             screen = Settings(controller)
-            screen.set_sub_state("DISPLAY")
+            screen.set_sub_state("GENERAL")
             slider = screen.checkerboard_gradient_slider
             screen.handle_events([pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=slider.handle_rect.center)])
             with mock.patch.object(pygame.mouse, "get_pressed", return_value=(True, False, False)):

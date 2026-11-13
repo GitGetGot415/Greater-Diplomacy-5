@@ -18,7 +18,7 @@ MAX_MODEL_NAME_LENGTH = 150
 
 
 # All categories share one fixed frame; changing a category only rebuilds its controls.
-SETTINGS_CATEGORIES = (("INTERFACE_CONTROLS", "Interface & Controls"), ("DISPLAY", "Display & Appearance"), ("AI", "LLM AI"), ("FILES", "Default Paths"))
+SETTINGS_CATEGORIES = (("GENERAL", "General"), ("AI", "LLM AI"), ("FILES", "Default Paths"))
 SETTINGS_MARGIN = 32
 SETTINGS_PANEL_TOP = 100
 SETTINGS_PANEL_HEIGHT = 568
@@ -32,11 +32,10 @@ SETTINGS_PADDING = 28
 SETTINGS_X = SETTINGS_CONTENT_X + SETTINGS_PADDING
 SETTINGS_SECOND_X = SETTINGS_X + 458
 SETTINGS_FIRST_Y = SETTINGS_PANEL_TOP + 80
-SETTINGS_ROW_GAP = 52
 SETTINGS_NAV_SIZE = (SETTINGS_NAV_WIDTH - 24, 44)
 SETTINGS_NAV_GAP = 58
 SETTINGS_OPTION_SIZE = (c.SIZES["setting_option"][0], 32)
-SETTINGS_LINK_SIZE = (180, 110)
+SETTINGS_LINK_SIZE = (180, 60)
 SETTINGS_LINK_GAP = 20
 SETTINGS_SLIDER_WIDTH = 300
 SETTINGS_BACK_POS = (SETTINGS_MARGIN, 28)
@@ -59,6 +58,20 @@ SETTINGS_CLEAR_BTN_GAP_X = 10
 SETTINGS_PANEL_COLOR = (34, 40, 52)
 SETTINGS_PANEL_BORDER = (90, 110, 140)
 SETTINGS_BACKGROUND_COLOR = (32, 34, 40)
+GENERAL_SECTION_Y = SETTINGS_FIRST_Y - 30
+GENERAL_ROW_GAP = 36
+GENERAL_OPTION_SIZE = (SETTINGS_OPTION_SIZE[0], 30)
+GENERAL_PLAYER_SLIDER_GAP = 64
+GENERAL_SHORTCUT_GAP = 50
+GENERAL_SLIDER_GAP = 52
+GENERAL_FIRST_SLIDER_Y = SETTINGS_FIRST_Y + 3 * GENERAL_ROW_GAP + 30
+GENERAL_COLOR_Y = GENERAL_FIRST_SLIDER_Y + 3 * GENERAL_SLIDER_GAP - 10
+GENERAL_COLOR_ROW_GAP = 38
+GENERAL_COLOR_LABEL_WIDTH = 200
+GENERAL_COLOR_SWATCH_X = SETTINGS_SECOND_X + GENERAL_COLOR_LABEL_WIDTH
+GENERAL_COLOR_BUTTON_SIZE = (76, 30)
+GENERAL_COLOR_GAP = 8
+GENERAL_UNIT_ART_Y = GENERAL_COLOR_Y + 2 * GENERAL_COLOR_ROW_GAP + 4
 
 SETTINGS_AI_INFO_TITLE = "LLM AI"
 SETTINGS_AI_INFO_TEXT = (
@@ -152,7 +165,7 @@ def render_settings_buttons(settings_screen):
     screen.player_slider = screen.fps_slider = screen.ai_thread_slider = None
     screen.checkerboard_gradient_slider = screen.checkerboard_speed_slider = None
 
-    if screen.sub_state == "INTERFACE_CONTROLS":
+    if screen.sub_state == "GENERAL":
         rows = (
             ("show_strategic_intro_popup", "Show Strategic Tutorial", screen.show_strategic_intro_popup, lambda: screen.toggle_intro_popup(False)),
             ("show_tactical_intro_popup", "Show Tactical Tutorial", screen.show_tactical_intro_popup, lambda: screen.toggle_intro_popup(True)),
@@ -163,43 +176,41 @@ def render_settings_buttons(settings_screen):
             # A standalone game has no tactical mode.
             rows = tuple(row for row in rows if row[0] != "show_tactical_intro_popup")
         for index, (key, label, enabled, callback) in enumerate(rows):
-            y = SETTINGS_FIRST_Y + index * SETTINGS_ROW_GAP
-            screen.elements.append(make_toggle_button(SETTINGS_X, y, SETTINGS_OPTION_SIZE, label, enabled, callback, font_preset="small"))
-            screen.add_setting_info(key, y)
-        y = SETTINGS_FIRST_Y + len(rows) * SETTINGS_ROW_GAP
-        screen.elements.append(Button(SETTINGS_X, y, SETTINGS_OPTION_SIZE, "purple", f"Battle Display: {screen.battle_display_mode.title()}", screen.toggle_battle_display_mode))
-        screen.add_setting_info("battle_display_mode", y)
-        screen.player_slider = Slider(SETTINGS_X, y + 92, SETTINGS_SLIDER_WIDTH, f"Players: {screen.num_players}", (screen.num_players - 1) / 7.0, screen.set_players)
+            y = SETTINGS_FIRST_Y + index * GENERAL_ROW_GAP
+            screen.elements.append(make_toggle_button(SETTINGS_X, y, GENERAL_OPTION_SIZE, label, enabled, callback, font_preset="small"))
+            screen.add_setting_info(key, y, height=GENERAL_OPTION_SIZE[1])
+        values_y = SETTINGS_FIRST_Y + len(rows) * GENERAL_ROW_GAP
+        for index, (key, label, callback) in enumerate((("battle_display_mode", f"Battle Display: {screen.battle_display_mode.title()}", screen.toggle_battle_display_mode), ("control_mode", f"Controls: {screen.control_mode.title()}", screen.cycle_control_mode), ("map_navigation_mode", f"Map Navigation: {screen.map_navigation_mode.title()}", screen.toggle_map_navigation_mode))):
+            y = values_y + index * GENERAL_ROW_GAP
+            screen.elements.append(Button(SETTINGS_X, y, GENERAL_OPTION_SIZE, "purple", label, callback, font_preset="small"))
+            screen.add_setting_info(key, y, height=GENERAL_OPTION_SIZE[1])
+        player_y = y + GENERAL_PLAYER_SLIDER_GAP
+        screen.player_slider = Slider(SETTINGS_X, player_y, SETTINGS_SLIDER_WIDTH, f"Players: {screen.num_players}", (screen.num_players - 1) / 7.0, screen.set_players)
         # A live game's participant count cannot be changed from Settings.
         screen.player_slider.visible = screen.back_state != "MAP"
         screen.elements.append(screen.player_slider)
-
-        screen.elements.append(Button(SETTINGS_SECOND_X, SETTINGS_FIRST_Y, SETTINGS_OPTION_SIZE, "purple", f"Controls: {screen.control_mode.title()}", screen.cycle_control_mode))
-        screen.add_setting_info("control_mode", SETTINGS_FIRST_Y, x=SETTINGS_SECOND_X + SETTINGS_OPTION_SIZE[0] + SETTINGS_INFO_GAP_X)
-        y = SETTINGS_FIRST_Y + SETTINGS_ROW_GAP
-        screen.elements.append(Button(SETTINGS_SECOND_X, y, SETTINGS_OPTION_SIZE, "purple", f"Map Navigation: {screen.map_navigation_mode.title()}", screen.toggle_map_navigation_mode))
-        screen.add_setting_info("map_navigation_mode", y, x=SETTINGS_SECOND_X + SETTINGS_OPTION_SIZE[0] + SETTINGS_INFO_GAP_X)
+        shortcuts_y = player_y + GENERAL_SHORTCUT_GAP
         screen.elements.extend([
-            Button(SETTINGS_SECOND_X, y + SETTINGS_ROW_GAP, SETTINGS_LINK_SIZE, "purple", "Keybinds", screen.open_keybinds, image=ui_bars.get_ui_image("Keybind.png"), layout="vertical"),
-            Button(SETTINGS_SECOND_X + SETTINGS_LINK_SIZE[0] + SETTINGS_LINK_GAP, y + SETTINGS_ROW_GAP, SETTINGS_LINK_SIZE, "purple", "Mouse Settings", screen.open_mouse_settings, image=ui_bars.get_ui_image("Blank.png", scale=0.6, directory=f"{c.ASSETS_ROOT_DIR}/mouse"), layout="vertical"),
+            Button(SETTINGS_X, shortcuts_y, SETTINGS_LINK_SIZE, "purple", "Keybinds", screen.open_keybinds, image=ui_bars.get_ui_image("Keybind.png", scale=0.6), font_preset="small"),
+            Button(SETTINGS_X + SETTINGS_LINK_SIZE[0] + SETTINGS_LINK_GAP, shortcuts_y, SETTINGS_LINK_SIZE, "purple", "Mouse Settings", screen.open_mouse_settings, image=ui_bars.get_ui_image("Blank.png", scale=0.4, directory=f"{c.ASSETS_ROOT_DIR}/mouse"), font_preset="small"),
         ])
 
-    elif screen.sub_state == "DISPLAY":
+        display_info_x = SETTINGS_SECOND_X + GENERAL_OPTION_SIZE[0] + SETTINGS_INFO_GAP_X
         for index, (key, label, callback) in enumerate((("fullscreen", "Toggle Fullscreen", screen.toggle_full), ("show_fps", "Show FPS", screen.toggle_fps), ("checkerboard_water", "Checkerboard Water", screen.toggle_checkerboard_water))):
-            y = SETTINGS_FIRST_Y + index * SETTINGS_ROW_GAP
-            control = Button(SETTINGS_X, y, SETTINGS_OPTION_SIZE, "blue", label, callback) if key == "fullscreen" else make_toggle_button(SETTINGS_X, y, SETTINGS_OPTION_SIZE, label, getattr(screen, key), callback)
+            y = SETTINGS_FIRST_Y + index * GENERAL_ROW_GAP
+            control = Button(SETTINGS_SECOND_X, y, GENERAL_OPTION_SIZE, "blue", label, callback, font_preset="small") if key == "fullscreen" else make_toggle_button(SETTINGS_SECOND_X, y, GENERAL_OPTION_SIZE, label, getattr(screen, key), callback, font_preset="small")
             if key == "fullscreen" and screen.preview:
                 control.apply_state(enabled=False)
             screen.elements.append(control)
-            screen.add_setting_info(key, y)
+            screen.add_setting_info(key, y, x=display_info_x, height=GENERAL_OPTION_SIZE[1])
         # Use the same 20..60 scale as set_fps so rebuilding never moves the handle.
-        screen.fps_slider = Slider(SETTINGS_X, SETTINGS_FIRST_Y + 3 * SETTINGS_ROW_GAP + 32, SETTINGS_SLIDER_WIDTH, f"Max FPS: {screen.controller.target_fps}", (screen.controller.target_fps - 20) / 40.0, screen.set_fps)
-        screen.checkerboard_gradient_slider = Slider(SETTINGS_X, screen.fps_slider.rect.y + 78, SETTINGS_SLIDER_WIDTH, f"Checkerboard Gradient: {screen.controller.checkerboard_gradient_strength:.2f}", screen.controller.checkerboard_gradient_strength, screen.set_checkerboard_gradient, visual_max=c.MAX_CHECKERBOARD_GRADIENT_STRENGTH, allowed_max=c.MAX_CHECKERBOARD_GRADIENT_STRENGTH)
-        screen.checkerboard_speed_slider = Slider(SETTINGS_X, screen.checkerboard_gradient_slider.rect.y + 78, SETTINGS_SLIDER_WIDTH, f"Checkerboard Speed: {screen.controller.checkerboard_scroll_speed:g}", screen.controller.checkerboard_scroll_speed, screen.set_checkerboard_speed, visual_max=c.MAX_CHECKERBOARD_SCROLL_SPEED, allowed_max=c.MAX_CHECKERBOARD_SCROLL_SPEED)
+        screen.fps_slider = Slider(SETTINGS_SECOND_X, GENERAL_FIRST_SLIDER_Y, SETTINGS_SLIDER_WIDTH, f"Max FPS: {screen.controller.target_fps}", (screen.controller.target_fps - 20) / 40.0, screen.set_fps)
+        screen.checkerboard_gradient_slider = Slider(SETTINGS_SECOND_X, GENERAL_FIRST_SLIDER_Y + GENERAL_SLIDER_GAP, SETTINGS_SLIDER_WIDTH, f"Checkerboard Gradient: {screen.controller.checkerboard_gradient_strength:.2f}", screen.controller.checkerboard_gradient_strength, screen.set_checkerboard_gradient, visual_max=c.MAX_CHECKERBOARD_GRADIENT_STRENGTH, allowed_max=c.MAX_CHECKERBOARD_GRADIENT_STRENGTH)
+        screen.checkerboard_speed_slider = Slider(SETTINGS_SECOND_X, GENERAL_FIRST_SLIDER_Y + 2 * GENERAL_SLIDER_GAP, SETTINGS_SLIDER_WIDTH, f"Checkerboard Speed: {screen.controller.checkerboard_scroll_speed:g}", screen.controller.checkerboard_scroll_speed, screen.set_checkerboard_speed, visual_max=c.MAX_CHECKERBOARD_SCROLL_SPEED, allowed_max=c.MAX_CHECKERBOARD_SCROLL_SPEED)
         screen.elements.extend([screen.fps_slider, screen.checkerboard_gradient_slider, screen.checkerboard_speed_slider])
         # A standalone game ships only the classic unit art.
         if not screen.is_standalone:
-            screen.elements.append(Button(SETTINGS_SECOND_X, SETTINGS_FIRST_Y + 4 * SETTINGS_ROW_GAP, SETTINGS_LINK_SIZE, "blue", "Unit Art", screen.open_unit_art, image=ui_bars.get_ui_image("Brush.png")))
+            screen.elements.append(Button(SETTINGS_SECOND_X, GENERAL_UNIT_ART_Y, SETTINGS_LINK_SIZE, "blue", "Unit Art", screen.open_unit_art, image=ui_bars.get_ui_image("Brush.png", scale=0.6), font_preset="small"))
 
     elif screen.sub_state == "AI":
         ai_is_on = screen.ai_mode != "OFF"
@@ -226,10 +237,12 @@ def render_settings_buttons(settings_screen):
 
     # Field rows are shared with drawing so labels, controls and swatches agree.
     for y, kind, key, _label in screen.preference_rows():
-        edit_x = SETTINGS_X + screen.DIR_BOX_W + SETTINGS_CLEAR_BTN_GAP_X if kind == "dir" else SETTINGS_SECOND_X + screen.COLOR_BOX_W + SETTINGS_CLEAR_BTN_GAP_X
+        edit_x = SETTINGS_X + screen.DIR_BOX_W + SETTINGS_CLEAR_BTN_GAP_X if kind == "dir" else GENERAL_COLOR_SWATCH_X + screen.COLOR_BOX_W + GENERAL_COLOR_GAP
+        size = c.SIZES["small"] if kind == "dir" else GENERAL_COLOR_BUTTON_SIZE
+        gap = SETTINGS_CLEAR_BTN_GAP_X if kind == "dir" else GENERAL_COLOR_GAP
         screen.elements.extend([
-            Button(edit_x, y, "small", "blue", "Edit", lambda name=key: screen.edit_setting(name)),
-            Button(edit_x + c.SIZES["small"][0] + SETTINGS_CLEAR_BTN_GAP_X, y, "small", "red", "Reset", lambda name=key: screen.reset_setting(name)),
+            Button(edit_x, y, size, "blue", "Edit", lambda name=key: screen.edit_setting(name), font_preset="button" if kind == "dir" else "small"),
+            Button(edit_x + size[0] + gap, y, size, "red", "Reset", lambda name=key: screen.reset_setting(name), font_preset="button" if kind == "dir" else "small"),
         ])
     reset_label = dict(screen.categories())[screen.sub_state]
     screen.elements.append(Button(SETTINGS_X, SETTINGS_RESET_Y, SETTINGS_RESET_SIZE, "red", f"Reset {reset_label} Defaults", screen.reset_category_defaults, font_preset="small"))
@@ -268,15 +281,14 @@ class Settings(Screen):
 
     # Category resets retain credentials, models, URLs, audio, and Unit Art.
     CATEGORY_RESET_FIELDS = {
-        "INTERFACE_CONTROLS": ("num_players", "show_strategic_intro_popup", "show_tactical_intro_popup", "show_unclaimed", "battle_display_mode", "army_group_animations", "map_navigation_mode", "control_mode", "mouse_button_actions", "orders_key_changes_screen", "economy_key_changes_screen"),
-        "DISPLAY": ("target_fps", "show_fps", "checkerboard_water", "checkerboard_gradient_strength", "checkerboard_scroll_speed", "ocean_light_color", "ocean_dark_color"),
+        "GENERAL": ("num_players", "show_strategic_intro_popup", "show_tactical_intro_popup", "show_unclaimed", "battle_display_mode", "army_group_animations", "map_navigation_mode", "control_mode", "mouse_button_actions", "orders_key_changes_screen", "economy_key_changes_screen", "target_fps", "show_fps", "checkerboard_water", "checkerboard_gradient_strength", "checkerboard_scroll_speed", "ocean_light_color", "ocean_dark_color"),
         "AI": ("ai_mode", "ai_immersion_level", "ai_threads"),
         "FILES": tuple(DIR_FIELDS),
     }
 
     DIR_BOX_W = 400
     DIR_BOX_H = 35
-    COLOR_BOX_W = 40
+    COLOR_BOX_W = 32
 
     def __init__(self, controller, *, standalone=None, preview=False):
         super().__init__()
@@ -284,7 +296,7 @@ class Settings(Screen):
         self.is_standalone = standalone_game.IS_STANDALONE if standalone is None else standalone
         self.preview = preview
         self.bg_color = SETTINGS_BACKGROUND_COLOR
-        self.sub_state = "INTERFACE_CONTROLS"
+        self.sub_state = "GENERAL"
         self.back_state = "MENU"
 
         self.sfx_volume = self.controller.sfx_volume
@@ -349,9 +361,9 @@ class Settings(Screen):
         self.cancel_pointer_input()
         super().set_sub_state(state)
 
-    def add_setting_info(self, key, y, *, x=SETTINGS_INFO_X):
+    def add_setting_info(self, key, y, *, x=SETTINGS_INFO_X, height=SETTINGS_OPTION_SIZE[1]):
         _key, title, text = next(row for row in SETTINGS_INFO_ROWS if row[0] == key)
-        self.elements.append(make_info_button(x, y, lambda: dialogs.show_info(title, text), y_offset=SETTINGS_INFO_Y_NUDGE))
+        self.elements.append(make_info_button(x, y, lambda: dialogs.show_info(title, text), y_offset=(height - c.SIZES["scenario_setting_info"][1]) // 2))
 
     # ------------------------------------------------------------------ #
     #                       AI PROVIDER TEXT FIELDS                      #
@@ -525,7 +537,7 @@ class Settings(Screen):
 
     def refresh_ui(self):
         if self.sub_state not in dict(self.categories()):
-            self.sub_state = "INTERFACE_CONTROLS"
+            self.sub_state = "GENERAL"
         # Either tutorial can change its preference while Settings is
         # closed, so re-read the cached persisted values whenever this screen
         # rebuilds rather than showing a stale controller value.
@@ -559,9 +571,9 @@ class Settings(Screen):
     def reset_category_defaults(self):
         """Reset only this category, preserving API keys, models, URLs and audio."""
         names = self.CATEGORY_RESET_FIELDS[self.sub_state]
-        if self.sub_state == "INTERFACE_CONTROLS" and self.back_state == "MAP":
+        if self.sub_state == "GENERAL" and self.back_state == "MAP":
             names = tuple(name for name in names if name != "num_players")
-        if self.sub_state == "INTERFACE_CONTROLS":
+        if self.sub_state == "GENERAL":
             self.controller.keybinds = default_keybinds()
             self.controller.touch_input.cancel()
         if self.sub_state == "AI" and not self.preview:
@@ -648,8 +660,8 @@ class Settings(Screen):
         """Return the active category's path or color rows for controls and drawing."""
         if self.sub_state == "FILES":
             return [(SETTINGS_FIRST_Y + 35 + index * 108, "dir", key, label) for index, (key, label) in enumerate((("saves_dir", "Saves Path:"), ("custom_scenarios_dir", "Custom Maps Path:"), ("tournament_saves_dir", "Tournament Saves Path:")))]
-        if self.sub_state == "DISPLAY":
-            return [(SETTINGS_FIRST_Y + index * 100, "color", key, label) for index, (key, label) in enumerate((("ocean_light_color", "Zoom-In Water Color:"), ("ocean_dark_color", "Zoom-Out Water Color:")))]
+        if self.sub_state == "GENERAL":
+            return [(GENERAL_COLOR_Y + index * GENERAL_COLOR_ROW_GAP, "color", key, label) for index, (key, label) in enumerate((("ocean_light_color", "Zoom-In Water Color:"), ("ocean_dark_color", "Zoom-Out Water Color:")))]
         return []
 
     def draw_path_box(self, surface, rect, text):
@@ -660,14 +672,17 @@ class Settings(Screen):
         font = fonts.get("normal")
         heading = fonts.get("heading2").render(dict(self.categories())[self.sub_state], True, c.UI_TEXT_LIGHT)
         surface.blit(heading, (SETTINGS_X, SETTINGS_PANEL_TOP + 22))
+        if self.sub_state == "GENERAL":
+            for x, label in ((SETTINGS_X, "Interface & Controls"), (SETTINGS_SECOND_X, "Display & Appearance")):
+                surface.blit(font.render(label, True, c.UI_TEXT_LIGHT), (x, GENERAL_SECTION_Y))
         for y, kind, key, label in self.preference_rows():
-            x = SETTINGS_X if kind == "dir" else SETTINGS_SECOND_X
-            surface.blit(font.render(label, True, c.UI_TEXT_LIGHT), (x, y - 30))
             if kind == "dir":
-                self.draw_path_box(surface, pygame.Rect(x, y, self.DIR_BOX_W, self.DIR_BOX_H), getattr(self, key))
+                surface.blit(font.render(label, True, c.UI_TEXT_LIGHT), (SETTINGS_X, y - 30))
+                self.draw_path_box(surface, pygame.Rect(SETTINGS_X, y, self.DIR_BOX_W, self.DIR_BOX_H), getattr(self, key))
             else:
+                surface.blit(fonts.get("small").render(label, True, c.UI_TEXT_LIGHT), (SETTINGS_SECOND_X, y + 6))
                 # Swatches stay flat so the selected color is shown accurately.
-                swatch = pygame.Rect(x, y, self.COLOR_BOX_W, self.DIR_BOX_H)
+                swatch = pygame.Rect(GENERAL_COLOR_SWATCH_X, y, self.COLOR_BOX_W, GENERAL_OPTION_SIZE[1])
                 pygame.draw.rect(surface, getattr(self, key), swatch)
                 pygame.draw.rect(surface, SETTINGS_PANEL_BORDER, swatch, 1)
         if self.sub_state == "AI" and self.ai_mode != "OFF":
