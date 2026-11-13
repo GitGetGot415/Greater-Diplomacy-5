@@ -275,12 +275,29 @@ class NavalBattleTests(unittest.TestCase):
             self.assertAlmostEqual(first.data["health"], second.data["health"])
         self.assertEqual(len(whole.projectiles), len(partitioned.projectiles))
 
-    def test_water_random_candidates_keep_latest_ships_even_when_old(self):
+    def test_water_random_candidates_exclude_outdated_and_future_ships(self):
+        tree = {"fixture_ships": {"years": [1800, 2055, 2056, 2060, 2061]}}
+        entries = (("Old Ship I", "Fixture Old", 1, 1800), ("Boundary Ship I", "Fixture Boundary", 1, 2055), ("Recent Ship I", "Fixture Recent", 1, 2056), ("Modern Ship I", "Fixture Modern", 1, 2060), ("Modern Ship II", "Fixture Modern", 2, 2061), ("Modern Land I", "Fixture Land", 1, 2060))
+        library = {}
+        for name, family, tier, year in entries:
+            stats = dict(unit_stats(family, tier=tier), naval_unit=name != "Modern Land I")
+            requirement = {"tech": "fixture_ships", "year": year}
+            stats["metadata"].update(research=requirement, requirements=[requirement])
+            library[name] = stats
+        with patch.object(queries, "get_tech_tree", return_value=tree):
+            for terrain in c.WATER_TERRAINS:
+                with self.subTest(terrain=terrain):
+                    self.assertEqual(set(combat.custom_unit_types_for_year(library, 2060, terrain)), {"Recent Ship I", "Modern Ship I"})
+                    self.assertEqual(combat.custom_unit_types_for_year(library, 2061, terrain), ["Modern Ship II"])
+                    self.assertEqual(combat.custom_unit_types_for_year(library, 2066, terrain), [])
+
+    def test_water_random_candidates_resolve_numbered_research_and_skip_missing_dates(self):
         names = list(self.library)
-        with patch.object(queries, "get_latest_units_for_year", return_value=names) as latest:
-            candidates = combat.custom_unit_types_for_year(self.library, 1900, "ocean")
-        self.assertEqual(set(candidates), {name for name in names if self.library[name]["naval_unit"]})
-        latest.assert_called_once_with(self.library, 1900)
+        tree = {"fixture": {"years": [2060]}}
+        self.library[names[0]]["metadata"]["research"] = {"tech": "missing_fixture", "level": 1}
+        with patch.object(queries, "get_latest_units_for_year", return_value=names), patch.object(queries, "get_tech_tree", return_value=tree):
+            self.assertEqual(set(combat.custom_unit_types_for_year(self.library, 2060, "ocean")), {name for name in names[1:] if self.library[name]["naval_unit"]})
+            self.assertEqual(combat.custom_unit_types_for_year(self.library, 2065, "ocean"), [])
 
 
 class NavalSetupTests(unittest.TestCase):
@@ -298,6 +315,7 @@ class NavalSetupTests(unittest.TestCase):
         self.enterContext(patch.object(combat, "normal_game_forecast", return_value=(None, None)))
         self.enterContext(patch.object(queries, "get_latest_units_for_year", return_value=list(self.library)))
         self.screen = ui.CustomBattleScreen()
+        self.enterContext(patch.object(queries, "get_tech_tree", return_value={"fixture": {"years": [self.screen.generation_year]}}))
         self.controller = SimpleNamespace(set_tactical_battle_music=Mock(), set_music_volume_scale=Mock())
         self.screen.on_enter(self.controller, None)
 
@@ -353,6 +371,26 @@ class NavalSetupTests(unittest.TestCase):
         self.assertTrue(all(self.library[name]["naval_unit"] for name in self.screen.random_candidates))
         self.screen.generate_armies()
         self.assertTrue(all(self.library[unit["type"]]["naval_unit"] for roster in self.screen.rosters for unit in roster))
+
+    def test_year_change_refreshes_naval_random_without_restricting_manual_selection(self):
+        year = 2060
+        for name, stats in self.library.items():
+            researched = year if name == "Fixture destroyer I" else year - combat.RANDOM_UNIT_AGE_LIMIT
+            stats["metadata"]["research"] = {"tech": "fixture", "year": researched}
+        self.screen.set_terrain("ocean")
+        self.screen.update_generation_year(year - c.START_YEAR)
+        self.assertEqual(self.screen.random_candidates, ["Fixture destroyer I"])
+        button = self.screen.generate_button
+        self.screen.handle_events([pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=button.rect.center), pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=button.rect.center)])
+        self.assertTrue(all(unit["type"] == "Fixture destroyer I" for roster in self.screen.rosters for unit in roster))
+        self.screen.clear_army(0)
+        self.screen.add_unit(0, "Fixture ironclad I")
+        self.assertEqual(self.screen.rosters[0][0]["type"], "Fixture ironclad I")
+        before = copy.deepcopy(self.screen.rosters)
+        self.screen.update_generation_year(year + combat.RANDOM_UNIT_AGE_LIMIT - c.START_YEAR)
+        self.assertTrue(self.screen.generate_button.disabled)
+        self.screen.generate_armies()
+        self.assertEqual(self.screen.rosters, before)
 
     def test_preview_reorder_replay_and_start_keep_naval_terrain(self):
         self.screen.set_terrain("coastal_sea")

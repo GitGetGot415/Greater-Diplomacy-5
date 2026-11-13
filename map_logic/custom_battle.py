@@ -372,12 +372,11 @@ def normal_game_forecast(friendly, enemy):
     return outcome["winner_side"], outcome["turns"]
 
 
-def land_unit_types_for_year(library, year):
-    """Choose the latest unlocked land tiers less than five research years old."""
-    land = set(land_unit_types(library))
+def _recent_unit_types_for_year(library, year, allowed):
+    """Choose the latest unlocked tiers within the shared Random research-age limit."""
     candidates = []
     for name in queries.get_latest_units_for_year(library, year):
-        if name not in land:
+        if name not in allowed:
             continue
         researched = queries.get_unit_research_year(name, library)
         if researched is not None and 0 <= year - researched < RANDOM_UNIT_AGE_LIMIT:
@@ -385,10 +384,15 @@ def land_unit_types_for_year(library, year):
     return candidates
 
 
+def land_unit_types_for_year(library, year):
+    """Choose the latest unlocked land tiers less than five research years old."""
+    return _recent_unit_types_for_year(library, year, set(land_unit_types(library)))
+
+
 def custom_unit_types_for_year(library, year, terrain):
     if terrain not in c.WATER_TERRAINS:
         return land_unit_types_for_year(library, year)
-    return [name for name in queries.get_latest_units_for_year(library, year) if library[name].get("naval_unit")]
+    return _recent_unit_types_for_year(library, year, {name for name, stats in library.items() if stats.get("naval_unit")})
 
 
 def random_armies(candidates, *, rng=None):
