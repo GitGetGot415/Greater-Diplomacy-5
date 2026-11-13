@@ -225,6 +225,119 @@ class NavalBattleTests(unittest.TestCase):
         self.assertFalse(keep)
         self.assertEqual(hits, [])
 
+    def test_player_and_ai_launch_one_three_torpedo_fan_before_reloading(self):
+        weapon = c.TACTICAL_WEAPONS["torpedo"]
+        weapon.update(salvo_count=3, salvo_arc=12.0)
+        for controlled in (0, None):
+            with self.subTest(controlled=controlled):
+                simulation = self.simulation("submarine", controlled=controlled)
+                source, target = simulation.fighters
+                simulation._sides = [[source], [target]]
+                shots = []
+                if controlled is not None:
+                    simulation.set_player_input(fire=True, aim_point=(target.x, target.y))
+                    simulation._drive_player(source, combat.FIXED_STEP, shots)
+                else:
+                    simulation._drive_ai(source, combat._Grid([target], combat.TARGET_CELL), combat.FIXED_STEP, shots, (source.x, source.y), target)
+                self.assertEqual(shots, [(source, 0)])
+                simulation._fire_shot(source)
+                self.assertEqual(len(simulation.projectiles), weapon["salvo_count"])
+                angles = [math.atan2(shot.vy, shot.vx) for shot in simulation.projectiles]
+                self.assertAlmostEqual(angles[-1] - angles[0], math.radians(weapon["salvo_arc"]))
+                self.assertTrue(all(naval.aim_allowed(source, 0, angle) for angle in angles))
+                self.assertTrue(all(shot.attack_share == source.attack_share for shot in simulation.projectiles))
+                self.assertEqual(source.cooldown, weapon["reload"])
+                self.assertEqual(source.reload_duration(), weapon["reload"])
+                shots.clear()
+                if controlled is not None:
+                    simulation._drive_player(source, combat.FIXED_STEP, shots)
+                else:
+                    simulation._drive_ai(source, combat._Grid([target], combat.TARGET_CELL), combat.FIXED_STEP, shots, (source.x, source.y), target)
+                self.assertEqual(shots, [])
+
+    def test_torpedo_fan_stays_forward_and_clears_hull_at_sector_edges(self):
+        c.TACTICAL_WEAPONS["torpedo"].update(salvo_count=3, salvo_arc=12.0)
+        simulation = self.simulation("submarine")
+        source = simulation.controlled
+        bearing, arc = naval.sector(source, 0)
+        for aim in (bearing - arc / 2, bearing + arc / 2):
+            source.aim = aim
+            simulation.projectiles.clear()
+            simulation._fire_shot(source)
+            self.assertEqual(len(simulation.projectiles), 3)
+            for shot in simulation.projectiles:
+                self.assertTrue(naval.aim_allowed(source, 0, math.atan2(shot.vy, shot.vx)))
+                self.assertIsNone(naval.hull_interval((shot.x, shot.y), (shot.x, shot.y), source))
+
+    def test_ai_checks_outer_torpedo_fan_paths_for_friendly_ships(self):
+        c.TACTICAL_WEAPONS["torpedo"].update(salvo_count=3, salvo_arc=12.0)
+        simulation = self.simulation("submarine")
+        source, target = simulation.fighters
+        distance = 700
+        angle = math.radians(6)
+        ally = combat.Fighter(dict(target.data), source.side, source.x + distance * math.cos(angle), source.y + distance * math.sin(angle), "convoy", index=2)
+        simulation._sides = [[source, ally], [target]]
+        self.assertIs(simulation._naval_ally_in_line(source, target, 0), ally)
+        c.TACTICAL_WEAPONS["torpedo"]["salvo_count"] = 1
+        self.assertIsNone(simulation._naval_ally_in_line(source, target, 0))
+
+    def test_slow_ai_ships_on_both_sides_evade_even_when_ready_to_fire_or_ramming(self):
+        for side in (0, 1):
+            for friendly in (False, True):
+                with self.subTest(side=side, friendly=friendly):
+                    simulation = self.simulation(controlled=None)
+                    unit, source = simulation.fighters[::1 if side == 0 else -1]
+                    unit.data["speed"] = 1
+                    source.side = unit.side if friendly else 1 - unit.side
+                    unit.ram_committed = True
+                    shot = combat.Projectile(source, dict(source.data), unit.x + 600, unit.y, -100, 0, 10, height=0, weapon_data=dict(c.TACTICAL_WEAPONS["torpedo"]))
+                    simulation.projectiles = [shot]
+                    crowds = [combat._Grid([fighter for fighter in simulation.fighters if fighter.side == team], combat.GRID_CELL) for team in (0, 1)]
+                    with patch.object(simulation, "_ready_to_fire", return_value=True):
+                        simulation._dodge_incoming(crowds)
+                    self.assertEqual(unit.dodge, naval.TORPEDO_DODGE_SECONDS)
+                    self.assertFalse(unit.ram_committed)
+                    self.assertAlmostEqual(math.cos(unit.dodge_heading), 0)
+                    self.assertIsNotNone(naval.torpedo_threat_time(shot, unit))
+
+    def test_ships_ignore_receding_expired_or_missing_torpedoes_and_keep_player_control(self):
+        simulation = self.simulation(controlled=None)
+        source, unit = simulation.fighters
+        unit.data["speed"] = 1
+        cases = ((unit.x + 600, unit.y, 100, 0, 10), (unit.x + 600, unit.y + 300, -100, 0, 10), (unit.x + 600, unit.y, -100, 0, 0.1))
+        for x, y, vx, vy, remaining in cases:
+            shot = combat.Projectile(source, dict(source.data), x, y, vx, vy, remaining, height=0, weapon_data=dict(c.TACTICAL_WEAPONS["torpedo"]))
+            simulation._dodge_torpedo(shot)
+            self.assertEqual(unit.dodge, 0)
+        shot = combat.Projectile(source, dict(source.data), unit.x + 600, unit.y, -100, 0, 10, height=0, weapon_data=dict(c.TACTICAL_WEAPONS["torpedo"]))
+        for controlled, speed in ((unit, 1), (None, 0)):
+            simulation.controlled = controlled
+            unit.data["speed"] = speed
+            simulation._dodge_torpedo(shot)
+            self.assertEqual(unit.dodge, 0)
+
+    def test_a_slow_ship_maneuvers_away_from_a_torpedo_it_would_otherwise_hit(self):
+        results = []
+        for evades in (False, True):
+            simulation = self.simulation("submarine")
+            source, unit = simulation.fighters
+            source.x = unit.x + 1200
+            source.data["speed"] = 0
+            unit.angle = 0
+            unit.data["speed"] = 1
+            unit.hold = 1
+            unit.cooldown = unit.secondary_cooldown = 1000
+            shot = combat.Projectile(source, dict(source.data), unit.x + 600, unit.y, -100, 0, 10, height=0, weapon_data=dict(c.TACTICAL_WEAPONS["torpedo"]))
+            simulation.projectiles = [shot]
+            if evades:
+                simulation.advance(7)
+            else:
+                with patch.object(simulation, "_dodge_torpedo"):
+                    simulation.advance(7)
+            results.append((unit.data["health"], unit.y))
+        self.assertGreater(results[1][0], results[0][0])
+        self.assertNotEqual(results[1][1], results[0][1])
+
     def test_naval_ram_is_available_at_naval_minimum_speed(self):
         simulation = self.simulation("battleship", "destroyer", controlled=None)
         source, target = simulation.fighters

@@ -1292,19 +1292,23 @@ class BattleSimulation:
             flight = weapon["range"] / weapon["speed"]
         height = c.TACTICAL_NAVAL_HULL_HEIGHT if weapon["projectile"] == "artillery_shell" else 0.0
         gravity = weapon.get("gravity", 0.0)
-        shot = Projectile(fighter, fighter.data, *start, math.cos(angle) * weapon["speed"], math.sin(angle) * weapon["speed"], flight, height=height, vertical_speed=gravity * flight / 2 - height / flight, gravity=gravity, weapon_data=weapon)
-        return next((ally for ally in self._sides[fighter.side] if ally is not fighter and naval.projectile_contact(shot, ally, flight, (ally.x, ally.y), movement=(ally.vx * flight, ally.vy * flight)) is not None), None)
+        for heading in naval.launch_angles(fighter, slot, angle):
+            shot = Projectile(fighter, fighter.data, *start, math.cos(heading) * weapon["speed"], math.sin(heading) * weapon["speed"], flight, height=height, vertical_speed=gravity * flight / 2 - height / flight, gravity=gravity, weapon_data=weapon)
+            ally = next((ally for ally in self._sides[fighter.side] if ally is not fighter and naval.projectile_contact(shot, ally, flight, (ally.x, ally.y), movement=(ally.vx * flight, ally.vy * flight)) is not None), None)
+            if ally is not None:
+                return ally
+        return None
 
     def _naval_course(self, fighter, target):
         dx, dy = target.x - fighter.x, target.y - fighter.y
         distance = math.hypot(dx, dy)
         toward = math.atan2(dy, dx)
+        if fighter.dodge > 0:
+            return fighter.pace, fighter.dodge_heading
         if fighter.ram_committed:
             point = self._ram_point(fighter, target)
             if point is not None:
                 return 1.0, math.atan2(point[1] - fighter.y, point[0] - fighter.x)
-        if fighter.dodge > 0:
-            return fighter.pace, fighter.dodge_heading
         if fighter.data["health"] < fighter.data["max_health"] * FALL_BACK_HEALTH and self._healthy_sides[fighter.side]:
             return (fighter.pace, toward + math.pi) if distance < naval.WITHDRAW_RANGE else (0.0, toward)
         if self.elapsed < fighter.start_delay:
@@ -1427,7 +1431,9 @@ class BattleSimulation:
         height = c.TACTICAL_NAVAL_HULL_HEIGHT if gravity else 0.0
         vertical = gravity * flight / 2 - height / flight if gravity else 0.0
         remaining = flight if gravity else weapon["range"] / weapon["speed"]
-        self.projectiles.append(Projectile(fighter, dict(fighter.data), *start, math.cos(angle) * weapon["speed"], math.sin(angle) * weapon["speed"], remaining, height=height, vertical_speed=vertical, gravity=gravity, weapon_data=dict(weapon), attack_share=fighter.attack_share * naval.mounts(fighter.shape)[slot].attack_share))
+        for heading in naval.launch_angles(fighter, slot, angle):
+            origin = naval.muzzle_position(fighter, slot, heading) if weapon["projectile"] == "torpedo" else start
+            self.projectiles.append(Projectile(fighter, dict(fighter.data), *origin, math.cos(heading) * weapon["speed"], math.sin(heading) * weapon["speed"], remaining, height=height, vertical_speed=vertical, gravity=gravity, weapon_data=dict(weapon), attack_share=fighter.attack_share * naval.mounts(fighter.shape)[slot].attack_share))
         fighter.fired_weapon = slot
         fighter.muzzle = fighter.mount_muzzles[slot] = c.TACTICAL_MUZZLE_SECONDS
         fighter.recoil = fighter.mount_recoils[slot] = c.TACTICAL_MUZZLE_SECONDS if gravity else 0.0
@@ -1473,6 +1479,9 @@ class BattleSimulation:
         Shots hurt allies too, so an ally's shot is dodged like an enemy's.
         """
         for shot in self.projectiles:
+            if shot.kind == "torpedo":
+                self._dodge_torpedo(shot)
+                continue
             speed = math.hypot(shot.vx, shot.vy)
             lookahead = min(DODGE_LOOKAHEAD, shot.remaining)
             if shot.kind == "artillery_shell" and min(shot.height, naval.shell_height(shot, lookahead)) > c.TACTICAL_NAVAL_HULL_HEIGHT:
@@ -1497,6 +1506,16 @@ class BattleSimulation:
                 across = ((unit.y - shot.y) * shot.vx - (unit.x - shot.x) * shot.vy) / speed
                 if 0 <= along <= reach and abs(across) <= DODGE_DANGER * unit.radius / UNIT_RADIUS:
                     self._start_dodge(unit, shot)
+
+    def _dodge_torpedo(self, shot):
+        """Every AI ship may evade an incoming torpedo, even with a loaded gun or a ram planned."""
+        for unit in self.fighters:
+            if (not unit.naval or not unit.alive or unit is self.controlled or unit is shot.source
+                    or unit.max_speed <= 0 or unit.dodge > 0):
+                continue
+            if naval.torpedo_threat_time(shot, unit) is not None:
+                self._sidestep(unit, shot.x, shot.y, shot.vx, shot.vy, naval.TORPEDO_DODGE_SECONDS)
+                unit.ram_committed = False
 
     def _division_objectives(self, targets, dt):
         """Each division with living sub-units and enemies left: its center and the enemy it advances on.

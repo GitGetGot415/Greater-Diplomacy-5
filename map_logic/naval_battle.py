@@ -21,6 +21,8 @@ RAM_APPROACH_RANGE = 600.0
 RAM_SUPPORT_RANGE = 500.0
 RAM_MIN_UNIT_SPEED = 1.0
 TORPEDO_RADIUS = 3.0
+TORPEDO_LOOKAHEAD = 8.0  # Ships need time to turn and accelerate before an approaching torpedo arrives.
+TORPEDO_DODGE_SECONDS = 3.0
 MUZZLE_CLEARANCE = 5.0
 MAX_LEAD_PASSES = 5
 
@@ -100,10 +102,23 @@ def mount_position(fighter, slot):
     return fighter.x + co * forward - si * sideways, fighter.y + si * forward + co * sideways
 
 
-def muzzle_position(fighter, slot):
+def launch_angles(fighter, slot, angle=None):
+    """A fan centered on the aim, kept entirely inside the mount's firing sector."""
+    weapon = fighter.weapon(slot)
+    count = weapon.get("salvo_count", 1)
+    angle = fighter.weapon_aim(slot) if angle is None else angle
+    if count == 1:
+        return (angle,)
+    bearing, arc = sector(fighter, slot)
+    half = min(math.radians(weapon["salvo_arc"]) / 2, arc / 2)
+    center = bearing + max(-arc / 2 + half, min(arc / 2 - half, wrap(angle - bearing)))
+    return tuple(center - half + 2 * half * number / (count - 1) for number in range(count))
+
+
+def muzzle_position(fighter, slot, angle=None):
     """Start outside the hull, so the launching ship never immediately hits itself."""
     start = mount_position(fighter, slot)
-    angle = fighter.weapon_aim(slot)
+    angle = fighter.weapon_aim(slot) if angle is None else angle
     reach = fighter.radius * 2
     end = start[0] + math.cos(angle) * reach, start[1] + math.sin(angle) * reach
     interval = hull_interval(start, end, fighter, padding=TORPEDO_RADIUS)
@@ -197,3 +212,12 @@ def projectile_contact(shot, target, dt, start_position, *, movement=None):
         if enter * dt - 1e-9 <= seconds <= leave * dt + 1e-9 and -1e-7 <= shell_height(shot, seconds) <= c.TACTICAL_NAVAL_HULL_HEIGHT + 1e-7:
             return max(0.0, seconds / dt)
     return None
+
+
+def torpedo_threat_time(shot, fighter):
+    """Predict hull contact using the same relative-motion sweep as actual impacts."""
+    horizon = min(TORPEDO_LOOKAHEAD, shot.remaining)
+    if horizon <= 0:
+        return None
+    fraction = projectile_contact(shot, fighter, horizon, (fighter.x, fighter.y), movement=(fighter.vx * horizon, fighter.vy * horizon))
+    return None if fraction is None else fraction * horizon
