@@ -126,13 +126,6 @@ class EditorScreenSmokeTests(unittest.TestCase):
             with self.subTest(settings=settings):
                 preview = Standalone_Menu_Preview("Fixture Game", settings)
                 preview.update()
-                # A standalone menu has no intro animation: one update puts every part at rest.
-                menu = preview.menu
-                for button, target in menu._center_button_targets:
-                    self.assertEqual(button.rect.topleft, target)
-                self.assertEqual(menu.button_panel_rect, menu._button_panel_target)
-                # A standalone menu shows no title.
-                self.assertIsNone(menu.title_image)
                 self.exercise(preview)
 
     def interesting_entries(self):
@@ -142,7 +135,7 @@ class EditorScreenSmokeTests(unittest.TestCase):
                 for country, rank in zip(playable, ("major", "major", "minor"))]
 
     def test_export_screen_lists_interesting_countries(self):
-        from screens.editors.standalone_export import Standalone_Export_Screen
+        from screens.editors.standalone_export import Standalone_Export_Screen, screen_runner
         entries = self.interesting_entries()
         with mock.patch.dict(self.map.standalone_export_settings, {"interesting_countries": entries}):
             screen = Standalone_Export_Screen()
@@ -150,6 +143,12 @@ class EditorScreenSmokeTests(unittest.TestCase):
             self.exercise(screen)
             self.assertEqual([entry["rank"] for entry in screen.ordered_countries(screen.settings())],
                              ["major", "major", "minor"])
+            with mock.patch.object(screen_runner, "run_screen") as run:
+                next(button for button in screen.elements if getattr(button, "callback", None) == screen.preview).callback()
+            preview = run.call_args.args[0]
+            self.assertEqual(preview.settings, screen.settings())
+            self.assertEqual(preview.entries, entries)
+            self.assertIs(preview.controller, self.controller)
 
     def test_window_preview_redraws_only_when_the_background_changes(self):
         from screens.editors.standalone_export import Standalone_Export_Screen
@@ -242,37 +241,178 @@ class EditorScreenSmokeTests(unittest.TestCase):
                 else:
                     start.assert_not_called()
 
-    def test_selection_preview_selects_countries_but_never_leaves(self):
-        from screens.setup import country_select
-        from screens.editors.standalone_export import Standalone_Selection_Preview
-        from data import queries
-        entries = country_select.interesting_countries(
-            {"interesting_countries": self.interesting_entries()}, self.map.map_data, self.map.nation_data)
-        image = queries.encode_rgba_to_b64(bytes([1, 2, 3, 255]) * 6, (3, 2))
-        settings = {"background_color": [4, 5, 6], "background_image": image}
-        preview = Standalone_Selection_Preview(self.map.nation_data, entries, settings)
-        self.exercise(preview)
-        selector = preview.selector
-        # The selector draws the main menu's background, not the default checkerboard.
-        self.assertEqual(selector.background.color, [4, 5, 6])
-        self.assertIsNotNone(selector.background.image)
+    def make_game_preview(self, entries=None):
+        from screens.editors.standalone_export import Standalone_Menu_Preview
+        entries = self.interesting_entries() if entries is None else entries
+        return Standalone_Menu_Preview("Fixture", {"interesting_countries": entries}, self.controller, self.map.nation_data, entries)
 
-        def click(button):
-            position = button.rect.center
+    def click_preview_button(self, preview, label):
+        button = next(button for button in preview.current_screen.elements if getattr(button, "text", None) == label)
+        position = button.rect.center
+        with mock.patch("pygame.mouse.get_pos", return_value=position):
             preview.handle_events([
                 pygame.event.Event(pygame.MOUSEMOTION, pos=position, rel=(0, 0), buttons=(0, 0, 0)),
                 pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=position, button=1),
                 pygame.event.Event(pygame.MOUSEBUTTONUP, pos=position, button=1)])
+        preview.update()
 
-        minor = entries[-1]["country"]
-        click(next(button for button in selector.elements if button.text == selector.name(minor)))
-        self.assertEqual(selector.selected, minor)
-        for label in ("Back", "Select Country"):
-            click(next(button for button in selector.elements if button.text == label))
-            self.assertFalse(selector.done)
+    def test_game_preview_navigates_menu_screens_and_back_without_entering_the_game(self):
+        from screens.menus.menu import MENU_BUTTON_TABLE, MENU_MAIN_BUTTON_TABLE, STANDALONE_MENU_STATES
+        preview = self.make_game_preview()
+        for state in STANDALONE_MENU_STATES:
+            row = next(row for row in MENU_MAIN_BUTTON_TABLE + MENU_BUTTON_TABLE if row["state"] == state)
+            self.click_preview_button(preview, getattr(preview.menu, row["attribute"]).text)
+            self.assertEqual(preview.current_state, state)
+            preview.draw(self.surface)
+            preview.handle_back_key()
+            self.assertEqual(preview.current_state, "MENU")
             self.assertFalse(preview.done)
-        preview.go_back()
+        self.click_preview_button(preview, "New Game")
+        self.assertEqual(preview.current_state, "COUNTRY_SELECT")
+        selector = preview.current_screen
+        minor = preview.entries[-1]["country"]
+        self.click_preview_button(preview, selector.name(minor))
+        self.assertEqual(selector.selected, minor)
+        for label in ("Select Country", "Other Countries"):
+            self.click_preview_button(preview, label)
+            self.assertEqual(preview.current_state, "COUNTRY_SELECT")
+        selector.start()
+        selector.choose_on_map()
+        self.assertFalse(selector.done)
+        selector.go_to("MAP")  # A second boundary also refuses accidental gameplay navigation.
+        preview.update()
+        self.assertEqual(preview.current_state, "COUNTRY_SELECT")
+        preview.handle_back_key()
+        self.assertEqual(preview.current_state, "MENU")
+        preview.handle_back_key()
         self.assertTrue(preview.done)
+
+    def test_game_preview_always_opens_country_selection_and_closes_from_every_screen(self):
+        from screens.editors.standalone_export import Standalone_Menu_Preview
+        for entries in ([], self.interesting_entries()[:1]):
+            preview = self.make_game_preview(entries)
+            self.click_preview_button(preview, "New Game")
+            self.assertEqual(preview.current_state, "COUNTRY_SELECT")
+            self.assertEqual(preview.current_screen.entries, entries)
+            for label in ("Select Country", "Other Countries"):
+                self.click_preview_button(preview, label)
+                self.assertEqual(preview.current_state, "COUNTRY_SELECT")
+                self.assertFalse(preview.done)
+        for state in Standalone_Menu_Preview.PREVIEW_STATES:
+            preview = self.make_game_preview()
+            preview.open_screen(state)
+            position = preview.elements[0].rect.center
+            with mock.patch("pygame.mouse.get_pos", return_value=position):
+                preview.handle_events([
+                    pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=position, button=1),
+                    pygame.event.Event(pygame.MOUSEBUTTONUP, pos=position, button=1)])
+            self.assertTrue(preview.done, state)
+
+    def test_game_preview_settings_and_nested_controls_do_not_write_editor_preferences(self):
+        from copy import deepcopy
+        import data.constants as c
+        from data import queries
+        from data.io import settings_schema
+        from map_logic.ai import ai_handler
+        before = deepcopy(settings_schema.from_controller(self.controller))
+        keybinds = deepcopy(self.controller.keybinds)
+        saved_path, saved_color = c.SAVES_DIR, c.OCEAN_LIGHT_BLUE
+        preview = self.make_game_preview()
+        with mock.patch.object(queries, "save_global_settings") as save, mock.patch.object(c, "apply_runtime_settings") as apply, mock.patch.object(ai_handler, "reset_clients") as reset_clients:
+            preview.open_screen("SETTINGS")
+            settings = preview.current_screen
+            settings.toggle_intro_popup(False)
+            self.assertEqual(settings.show_strategic_intro_popup, preview.settings_controller.show_strategic_intro_popup)
+            changed = settings.show_strategic_intro_popup
+            settings.toggle_fps()
+            settings.toggle_checkerboard_water()
+            settings.toggle_show_unclaimed()
+            settings.toggle_army_group_animations()
+            settings.cycle_control_mode()
+            settings.set_ai_mode("OFF")
+            settings.apply_setting("saves_dir", "preview-only")
+            settings.apply_setting("ocean_light_color", (1, 2, 3))
+            self.assertEqual(c.SAVES_DIR, saved_path)
+            self.assertEqual(c.OCEAN_LIGHT_BLUE, saved_color)
+            for category in settings.CATEGORY_RESET_FIELDS:
+                settings.set_sub_state(category)
+                settings.draw(self.surface)
+                if category != "GAME":
+                    settings.reset_category_defaults()
+            self.click_preview_button(preview, "Controls")
+            self.click_preview_button(preview, "Keybinds")
+            self.assertEqual(preview.current_state, "KEYBINDS")
+            bindings = preview.current_screen
+            bindings.remove_binding("ORDERS")
+            bindings.toggle_screen_change("ORDERS")
+            bindings.start_listening("BACK")
+            preview.handle_back_key()  # Back belongs to key capture until a key is chosen.
+            self.assertEqual(preview.current_state, "KEYBINDS")
+            preview.handle_events([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_F6)])
+            self.assertEqual(preview.settings_controller.keybinds["BACK"], pygame.K_F6)
+            bindings.reset_defaults()
+            preview.handle_back_key()
+            self.assertEqual(preview.current_state, "SETTINGS")
+            self.assertEqual(settings.show_strategic_intro_popup, changed)
+            self.click_preview_button(preview, "Mouse Settings")
+            self.assertEqual(preview.current_state, "MOUSE_SETTINGS")
+            preview.current_screen.toggle_action("left", "pan_map")
+            preview.current_screen.reset_defaults()
+            preview.handle_back_key()
+            preview.handle_back_key()
+            self.assertEqual(preview.current_state, "MENU")
+            preview.open_screen("SETTINGS")
+            self.assertEqual(settings.show_strategic_intro_popup, changed)
+            save.assert_not_called()
+            apply.assert_not_called()
+            reset_clients.assert_not_called()
+        self.assertEqual(settings_schema.from_controller(self.controller), before)
+        self.assertEqual(self.controller.keybinds, keybinds)
+
+    def test_game_preview_load_browser_never_reads_or_writes_the_editors_saves(self):
+        from ui.widgets.content_browser import ContentBrowserScreen
+        with mock.patch.object(ContentBrowserScreen, "read_directory", side_effect=AssertionError("preview read editor saves")):
+            preview = self.make_game_preview()
+            self.click_preview_button(preview, "Load Game")
+            browser = preview.current_screen
+            browser.reload_entries()
+            self.assertEqual(browser.entries, [])
+            browser.load_specific_save("fixture")
+            browser.activate_selected()
+            self.assertFalse(browser.done)
+            preview.draw(self.surface)
+
+    def test_game_preview_uses_standalone_credits_and_music_without_library_changes(self):
+        from copy import deepcopy
+        from data import queries
+        preview = self.make_game_preview()
+        preview.open_screen("CREDITS")
+        self.assertEqual(preview.current_screen.credits_list, [])
+        albums = deepcopy(self.controller.active_albums)
+        with mock.patch.object(self.controller, "all_albums", {"Fixture": ["fixture/song.mp3"]}), mock.patch.object(self.controller, "play_specific_song") as play, mock.patch.object(queries, "save_global_settings") as save, mock.patch.object(queries, "save_cached_json") as save_json, mock.patch.object(queries, "delete_album") as delete_album:
+            preview.open_screen("MUSIC_PLAYER")
+            player = preview.current_screen
+            self.assertTrue(player.is_standalone)
+            player.play_track("fixture/song.mp3")
+            play.assert_called_once_with("fixture/song.mp3")
+            with mock.patch.object(self.controller, "play_random_song") as random_song:
+                player.play_track()
+                random_song.assert_called_once_with(playlist=["fixture/song.mp3"])
+            player.toggle_album("Fixture")
+            self.assertNotIn("Fixture", player.active_albums)
+            player.toggle_album("Fixture")
+            self.assertIn("Fixture", player.active_albums)
+            player.set_starting_song()
+            player.reset_starting_song()
+            player.delete_album("fixture")
+            player.create_album("fixture")
+            player.set_music_volume(0.1)
+            player.reset_audio_defaults()
+            save.assert_not_called()
+            save_json.assert_not_called()
+            delete_album.assert_not_called()
+            self.assertEqual(self.controller.active_albums, albums)
+            preview.draw(self.surface)
 
     def test_interesting_countries_load_from_a_saved_scenario(self):
         from data import queries

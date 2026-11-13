@@ -55,12 +55,14 @@ def mouse_control_warnings(actions):
 class Mouse_Settings(Screen):
     """Settings sub-screen for actions assigned to left, middle and right mouse."""
 
+    preview = False
     back_state = "SETTINGS"
     title = "Mouse Settings"
 
-    def __init__(self, controller):
+    def __init__(self, controller, *, preview=False):
         super().__init__()
         self.controller = controller
+        self.preview = preview
         self.bg_color = (40, 40, 40)
         self.refresh_ui()
 
@@ -77,15 +79,17 @@ class Mouse_Settings(Screen):
         if action == PAN_ACTION and not actions[button][action]:
             actions[button][EXCLUDE_ORDERS_ACTION] = False
         self.controller.mouse_button_actions = actions
-        c.apply_runtime_settings({"mouse_button_actions": actions})
-        queries.save_global_settings(self.controller)
+        if not self.preview:
+            c.apply_runtime_settings({"mouse_button_actions": actions})
+            queries.save_global_settings(self.controller)
         self.refresh_ui()
 
     def reset_defaults(self):
         """Restore the configured starting mouse layout."""
         self.controller.mouse_button_actions = c.default_mouse_button_actions()
-        c.apply_runtime_settings({"mouse_button_actions": self.controller.mouse_button_actions})
-        queries.save_global_settings(self.controller)
+        if not self.preview:
+            c.apply_runtime_settings({"mouse_button_actions": self.controller.mouse_button_actions})
+            queries.save_global_settings(self.controller)
         self.refresh_ui()
 
     def refresh_ui(self):

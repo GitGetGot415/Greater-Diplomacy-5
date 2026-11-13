@@ -60,8 +60,9 @@ class Country_Select_Screen(Screen):
     back_state = "MENU"
     title = "SELECT COUNTRY"
 
-    def __init__(self):
+    def __init__(self, *, preview=False):
         super().__init__()
+        self.preview = preview
         self.nation_data = {}
         self.entries = []
         self.selected = None
@@ -134,6 +135,7 @@ class Country_Select_Screen(Screen):
         other = Button(x, MAJOR_TOP, (card_width, MAJOR_CARD_SIZE[1]), "blue", "Other Countries",
                        self.choose_on_map)
         other.fit_text = True
+        other.apply_state(enabled=not self.preview, color="blue")
         self.elements.append(other)
 
         per_row = max(1, (available + CARD_GAP) // (MINOR_BUTTON_SIZE[0] + CARD_GAP))
@@ -151,7 +153,7 @@ class Country_Select_Screen(Screen):
         select_height = c.SIZES["medium"][1]
         select = Button("centered", c.SCREEN_HEIGHT - SELECT_BUTTON_BOTTOM_MARGIN - select_height, "medium",
                         "green", "Select Country", self.start)
-        select.apply_state(enabled=self.selected is not None, color="green")
+        select.apply_state(enabled=self.selected is not None and not self.preview, color="green")
         self.elements.append(select)
 
         # The main menu's button panel sits behind the title and every country button.
@@ -168,11 +170,15 @@ class Country_Select_Screen(Screen):
 
     def start(self):
         """Open the map as the selected country."""
+        if self.preview:
+            return
         self.chosen_country = self.selected
         self.go_to("MAP")
 
     def choose_on_map(self):
         """Open the map in country selection, as a game without interesting countries does."""
+        if self.preview:
+            return
         self.chosen_country = None
         self.go_to("MAP")
 

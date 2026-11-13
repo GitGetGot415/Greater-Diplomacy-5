@@ -95,12 +95,14 @@ class Keybinds(Screen):
     """Settings sub-screen: every rebindable key, moved out of Settings itself
     so that screen doesn't have to grow a row per action."""
 
+    preview = False
     back_state = "SETTINGS"
     title = "Keybinds"
 
-    def __init__(self, controller):
+    def __init__(self, controller, *, preview=False):
         super().__init__()
         self.controller = controller
+        self.preview = preview
         self.bg_color = (40, 40, 40)
         self.listening_for = None
         self.refresh_ui()
@@ -171,7 +173,8 @@ class Keybinds(Screen):
         """Persist an explicitly unassigned key without affecting other bindings."""
         self.controller.keybinds[action] = None
         self.listening_for = None
-        queries.save_global_settings(self.controller)
+        if not self.preview:
+            queries.save_global_settings(self.controller)
         self.refresh_ui()
 
     def screen_toggle_attr(self, action):
@@ -182,7 +185,8 @@ class Keybinds(Screen):
     def toggle_screen_change(self, action):
         attr = self.screen_toggle_attr(action)
         setattr(self.controller, attr, not getattr(self.controller, attr))
-        queries.save_global_settings(self.controller)
+        if not self.preview:
+            queries.save_global_settings(self.controller)
         self.refresh_ui()
 
     def reset_defaults(self):
@@ -191,13 +195,15 @@ class Keybinds(Screen):
         for action in SCREEN_TOGGLE_ACTIONS:
             attr = self.screen_toggle_attr(action)
             setattr(self.controller, attr, defaults[attr])
-        queries.save_global_settings(self.controller)
+        if not self.preview:
+            queries.save_global_settings(self.controller)
         self.refresh_ui()
 
     def additional_events(self, event):
         if self.listening_for and event.type == pygame.KEYDOWN:
             self.controller.keybinds[self.listening_for] = event.key
-            queries.save_global_settings(self.controller)
+            if not self.preview:
+                queries.save_global_settings(self.controller)
             self.listening_for = None
             self.refresh_ui()
 

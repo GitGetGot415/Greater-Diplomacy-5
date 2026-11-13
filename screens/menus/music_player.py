@@ -177,11 +177,16 @@ class MusicScrubber:
 
 
 class Music_Player(ScrollPanes, Screen):
+    preview = False
+    standalone = None
     progress_slider = None
 
-    def __init__(self, controller):
+    def __init__(self, controller, *, standalone=None, preview=False):
         super().__init__()
         self.controller = controller
+        self.standalone = standalone
+        self.preview = preview
+        self.preview_active_albums = list(controller.all_albums) if preview else []
         self.bg_color = (25, 25, 30)
         self.back_state = "MENU"
         
@@ -191,7 +196,7 @@ class Music_Player(ScrollPanes, Screen):
         self._last_playing_track = None
         
         # Ensure directories and files exist
-        if not os.path.exists(c.MUSIC_DIR):
+        if not self.preview and not os.path.exists(c.MUSIC_DIR):
             os.makedirs(c.MUSIC_DIR)
         
         self._scroll_album = 0
@@ -209,6 +214,20 @@ class Music_Player(ScrollPanes, Screen):
         
         
         self.refresh_ui()
+
+    @property
+    def is_standalone(self):
+        return standalone_game.IS_STANDALONE if self.standalone is None else self.standalone
+
+    @property
+    def active_albums(self):
+        return self.preview_active_albums if self.preview else self.controller.active_albums
+
+    @property
+    def playlist(self):
+        if self.preview:
+            return [track for album in self.preview_active_albums for track in self.controller.all_albums[album]]
+        return self.controller.playlist
 
     def on_enter(self, app, previous):
         self.return_to_previous_context(app, previous)
@@ -234,7 +253,7 @@ class Music_Player(ScrollPanes, Screen):
         # None stands for the new-album tile, which always comes last.
         tiles = albums + [None]
         for album in tiles:
-            is_active = album is not None and album in self.controller.active_albums
+            is_active = album is not None and album in self.active_albums
             color = "green" if is_active else "grey"
             
             # --- IMPROVED COVER ART SEARCH ---
@@ -295,6 +314,7 @@ class Music_Player(ScrollPanes, Screen):
                                     btn.rect.y - ALBUM_DELETE_OVERHANG,
                                     ALBUM_DELETE_BUTTON_SIZE, "red", "X",
                                     lambda a=album: self.start_delete_album(a), font_preset="tiny")
+                delete_btn.apply_state(enabled=not self.preview, color="red")
                 delete_btn.click_guard = album_guard
                 delete_btn.pane = "album"
                 self.elements.append(delete_btn)
@@ -334,7 +354,7 @@ class Music_Player(ScrollPanes, Screen):
         header_width = c.SIZES["song"][0] + TRACK_SHUFFLE_TOGGLE_GAP + TRACK_SHUFFLE_TOGGLE_SIZE[0]
         header_font = fonts.get("small")
         
-        for track_path in self.controller.playlist:
+        for track_path in self.playlist:
             album = os.path.basename(os.path.dirname(track_path.replace("\\", "/")))
             if album != previous_album:
                 header = pygame.Surface((header_width, TRACK_ALBUM_HEADER_HEIGHT), pygame.SRCALPHA)
@@ -381,6 +401,7 @@ class Music_Player(ScrollPanes, Screen):
                 lambda p=track_path: self.toggle_shuffle_exclusion(p),
                 font_preset="tiny",
             )
+            shuffle_toggle.apply_state(enabled=not self.preview, color="grey" if excluded_from_shuffle else "green")
             shuffle_toggle.click_guard = lambda: pygame.mouse.get_pos()[1] >= 200
             shuffle_toggle.pane = "track"
             self.elements.append(shuffle_toggle)
@@ -390,6 +411,7 @@ class Music_Player(ScrollPanes, Screen):
                 delete_btn = Button(track_btn.rect.right - SONG_DELETE_BUTTON_SIZE[0], track_btn.rect.y,
                                     SONG_DELETE_BUTTON_SIZE, "red", "X",
                                     lambda p=track_path: self.start_delete_song(p), font_preset="tiny")
+                delete_btn.apply_state(enabled=not self.preview, color="red")
                 delete_btn.click_guard = song_guard
                 delete_btn.pane = "track"
                 self.elements.append(delete_btn)
@@ -399,7 +421,7 @@ class Music_Player(ScrollPanes, Screen):
             track_y += song_y
             track_content_h += song_y
 
-        if self.controller.playlist:
+        if self.playlist:
             track_y += TRACK_ADD_SONG_DIVIDER_TOP_GAP
             track_content_h += TRACK_ADD_SONG_DIVIDER_TOP_GAP
             divider = pygame.Surface((header_width, TRACK_ADD_SONG_DIVIDER_HEIGHT), pygame.SRCALPHA)
@@ -425,7 +447,7 @@ class Music_Player(ScrollPanes, Screen):
         # --- 3. Top Layer: Fixed Overlay & Buttons ---
         self.elements.append(ScreenLayer(self, "draw_top_bar"))
         
-        self.elements.append(make_back_button(self.handle_back_key))
+        self.elements.append(make_back_button(self.exit_screen))
         # Anchored relative to the UI so it never scrolls away!
         self.elements.append(Button(MUSIC_LEFT_PANE_W + 20, 80, "medium", "green", "Skip / Random Song",
                                     self.play_track, sound_kind="skip_song"))
@@ -487,9 +509,17 @@ class Music_Player(ScrollPanes, Screen):
         clear_button.apply_state(enabled=bool(self.controller.starting_song), color="red")
         self.elements.extend((set_button, clear_button))
         # A standalone game has no tactical battles to pick songs for.
-        if not standalone_game.IS_STANDALONE:
+        if not self.is_standalone:
             self.elements.append(Button(slider_x, MUSIC_TACTICAL_SONGS_BUTTON_Y, MUSIC_PIN_BUTTON_SIZE,
                                         "blue", "Tactical Songs", self.open_tactical_songs, font_size=18))
+
+        if self.preview:
+            locked_callbacks = {self.start_new_album, self.start_add_song, self.reset_audio_defaults, self.set_starting_song, self.reset_starting_song, self.set_static_pitch_timeline, self.set_dynamic_pitch_timeline}
+            for element in self.elements:
+                if isinstance(element, Slider):
+                    element.disabled = True
+                elif isinstance(element, Button) and element.callback in locked_callbacks:
+                    element.apply_state(enabled=False)
 
     def is_paused(self):
         music = self.controller.music
@@ -500,6 +530,8 @@ class Music_Player(ScrollPanes, Screen):
         self.controller._frozen_time = 0.0
         if track_path:
             self.controller.play_specific_song(track_path)
+        elif self.preview:
+            self.controller.play_random_song(playlist=self.playlist)
         else:
             self.controller.play_random_song()
         self._last_playing_track = self.controller.now_playing
@@ -571,6 +603,8 @@ class Music_Player(ScrollPanes, Screen):
     # --- AUDIO MODIFICATION HANDLERS ---
     def reset_audio_defaults(self):
         """Restore the configured starting volume, pitch, and timeline settings."""
+        if self.preview:
+            return
         defaults = settings_schema.defaults()
         self.set_sfx_volume(defaults["sfx_volume"])
         self.set_music_volume(defaults["music_volume"])
@@ -580,17 +614,23 @@ class Music_Player(ScrollPanes, Screen):
         self.refresh_ui()
 
     def set_sfx_volume(self, val):
+        if self.preview:
+            return
         self.controller.sfx_volume = val
         sound_effects.set_sfx_volume(val)
         self.save_audio_settings()
 
     def set_music_volume(self, val):
+        if self.preview:
+            return
         self.controller.music_volume = val
         if self.controller.music is not None:
             self.controller.music.set_volume(self.controller.track_volume(self.controller.now_playing))
         self.save_audio_settings()
 
     def set_music_pitch(self, val):
+        if self.preview:
+            return
         music = self.controller.music
         if music is not None:
             # Keep the musical position while the speed changes.
@@ -626,6 +666,8 @@ class Music_Player(ScrollPanes, Screen):
 
     def set_music_pitch_timeline(self, timeline_mode):
         """Choose whether the scrubber shows source or elapsed playback time."""
+        if self.preview:
+            return
         if timeline_mode not in (
                 c.MUSIC_PITCH_TIMELINE_STATIC, c.MUSIC_PITCH_TIMELINE_DYNAMIC):
             return
@@ -636,26 +678,36 @@ class Music_Player(ScrollPanes, Screen):
         self.refresh_ui()
         
     def set_sfx_pitch(self, val):
+        if self.preview:
+            return
         self.controller.sfx_pitch = val
         sound_effects.set_sfx_pitch(val)
         self.save_audio_settings()
         
     def save_audio_settings(self):
+        if self.preview:
+            return
         queries.save_global_settings(self.controller)
 
     # --- STARTING SONG ACTIONS ---
     def set_starting_song(self):
+        if self.preview:
+            return
         if self.controller.now_playing and self.controller.now_playing != "None":
             self.controller.starting_song = self.controller.now_playing
             self.controller.save_starting_song()
             self.refresh_ui()
 
     def reset_starting_song(self):
+        if self.preview:
+            return
         self.controller.starting_song = None
         self.controller.save_starting_song()
         self.refresh_ui()
 
     def open_tactical_songs(self):
+        if self.preview:
+            return
         _run_pygame_sub_screen(self, TacticalSongsScreen(self))
 
     # --- PLAYLIST ACTIONS ---
@@ -669,6 +721,8 @@ class Music_Player(ScrollPanes, Screen):
         return [album for album in self.album_display_order() if queries.is_deletable_album(album)]
 
     def start_add_song(self):
+        if self.preview:
+            return
         albums = self.deletable_albums()
         if not albums:
             dialogs.show_info("Add Song", "Create an album before adding a song.")
@@ -678,11 +732,15 @@ class Music_Player(ScrollPanes, Screen):
                                       albums, self.pick_song_file)
 
     def pick_song_file(self, album):
+        if self.preview:
+            return
         pickers.open_file_browser(self, f"Select a Song for {album}", downloads_dir(),
                                   extensions=SONG_FILE_EXTENSIONS,
                                   on_result=lambda path: self.add_song(album, path))
 
     def add_song(self, album, path):
+        if self.preview:
+            return
         if not path:
             return
         try:
@@ -694,11 +752,15 @@ class Music_Player(ScrollPanes, Screen):
         self.refresh_ui()
 
     def start_delete_song(self, track_path):
+        if self.preview:
+            return
         dialogs.ask_yes_no(
             "Delete Song", f"Delete {os.path.basename(track_path)}? This cannot be undone.",
             lambda confirmed, p=track_path: self.delete_song(p) if confirmed else None)
 
     def delete_song(self, track_path):
+        if self.preview:
+            return
         if self.controller.now_playing.replace("\\", "/") == track_path.replace("\\", "/"):
             # The playing file stays open, which blocks deleting it.
             dialogs.show_error("Delete Song", "This song is playing. Play another song first.")
@@ -716,9 +778,13 @@ class Music_Player(ScrollPanes, Screen):
             self.refresh_ui()
 
     def start_new_album(self):
+        if self.preview:
+            return
         dialogs.ask_string("New Album", "Album name:", self.create_album, allow_empty=False)
 
     def create_album(self, name):
+        if self.preview:
+            return
         if name is None:
             return
         try:
@@ -730,11 +796,15 @@ class Music_Player(ScrollPanes, Screen):
         self.refresh_ui()
 
     def start_delete_album(self, album):
+        if self.preview:
+            return
         dialogs.ask_yes_no(
             "Delete Album", f"Delete {album} and every file in it? This cannot be undone.",
             lambda confirmed, a=album: self.delete_album(a) if confirmed else None)
 
     def delete_album(self, album):
+        if self.preview:
+            return
         album_prefix = f"{c.MUSIC_DIR}/{album}/"
         if self.controller.now_playing.replace("\\", "/").startswith(album_prefix):
             # The playing file stays open, which blocks deleting its folder.
@@ -753,6 +823,13 @@ class Music_Player(ScrollPanes, Screen):
             self.refresh_ui()
 
     def toggle_album(self, album):
+        if self.preview:
+            if album in self.preview_active_albums:
+                self.preview_active_albums.remove(album)
+            else:
+                self.preview_active_albums.append(album)
+            self.refresh_ui()
+            return
         if album in self.controller.active_albums:
             self.controller.active_albums.remove(album)
         else:
@@ -763,6 +840,8 @@ class Music_Player(ScrollPanes, Screen):
         self.refresh_ui()
 
     def toggle_shuffle_exclusion(self, track_path):
+        if self.preview:
+            return
         self.controller.toggle_shuffle_disabled_track(track_path)
         self.refresh_ui()
 

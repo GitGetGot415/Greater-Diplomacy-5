@@ -64,6 +64,17 @@ class ShuffleExclusionTests(unittest.TestCase):
 
         play_specific_song.assert_called_once_with("play.mp3")
 
+    def test_preview_playlist_uses_shuffle_rules_without_replacing_the_normal_playlist(self):
+        controller = make_controller()
+        controller.playlist = ["editor.mp3"]
+        controller.shuffle_disabled_tracks = {"skip.mp3"}
+        controller._failed_music_tracks = {"failed.mp3"}
+        with patch.object(controller, "play_specific_song") as play, patch.object(controller, "tactical_song_candidates") as tactical:
+            controller.play_random_song(playlist=["skip.mp3", "failed.mp3", "preview.mp3"])
+        play.assert_called_once_with("preview.mp3")
+        tactical.assert_not_called()
+        self.assertEqual(controller.playlist, ["editor.mp3"])
+
     def test_exclusion_persists_and_can_be_reversed(self):
         controller = make_controller()
         with patch.object(game_main, "queries", queries, create=True), \

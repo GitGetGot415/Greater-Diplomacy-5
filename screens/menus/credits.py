@@ -200,8 +200,9 @@ CREDITS_DATA = [
 class Credits(Screen):
     back_state = "MENU"
 
-    def __init__(self):
+    def __init__(self, *, standalone=None):
         super().__init__()
+        self.is_standalone = standalone_game.IS_STANDALONE if standalone is None else standalone
         self.bg_color = (10, 10, 40) # Midnight Blue
 
         self.elements = [
@@ -214,7 +215,7 @@ class Credits(Screen):
         # Calculate positions once to avoid re-calculation in draw loop
         current_y = 150
         # A standalone game's Credits screen shows only its Greater Diplomacy 5 credit. See additional_draw.
-        for item in [] if standalone_game.IS_STANDALONE else CREDITS_DATA:
+        for item in [] if self.is_standalone else CREDITS_DATA:
             main_text = item.get("main_text", "")
             people = item.get("people", [])
             
@@ -280,7 +281,7 @@ class Credits(Screen):
     def additional_draw(self, surface):
         font = fonts.get("heading2")
         mouse_pos = pygame.mouse.get_pos()
-        if standalone_game.IS_STANDALONE:
+        if self.is_standalone:
             text_surf = font.render(standalone_game.made_with_text(), True, (255, 255, 255))
             surface.blit(text_surf, text_surf.get_rect(center=(c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)))
         

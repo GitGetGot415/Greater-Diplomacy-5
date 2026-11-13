@@ -159,7 +159,7 @@ def render_settings_buttons(settings_screen):
             ("show_unclaimed", "Show Unassigned", screen.show_unclaimed, screen.toggle_show_unclaimed),
             ("army_group_animations", "Army Group Animations", screen.army_group_animations, screen.toggle_army_group_animations),
         )
-        if standalone_game.IS_STANDALONE:
+        if screen.is_standalone:
             # A standalone game has no tactical mode.
             rows = tuple(row for row in rows if row[0] != "show_tactical_intro_popup")
         for index, (key, label, enabled, callback) in enumerate(rows):
@@ -178,6 +178,8 @@ def render_settings_buttons(settings_screen):
         for index, (key, label, callback) in enumerate((("fullscreen", "Toggle Fullscreen", screen.toggle_full), ("show_fps", "Show FPS", screen.toggle_fps), ("checkerboard_water", "Checkerboard Water", screen.toggle_checkerboard_water))):
             y = SETTINGS_FIRST_Y + index * SETTINGS_ROW_GAP
             control = Button(SETTINGS_X, y, SETTINGS_OPTION_SIZE, "blue", label, callback) if key == "fullscreen" else make_toggle_button(SETTINGS_X, y, SETTINGS_OPTION_SIZE, label, getattr(screen, key), callback)
+            if key == "fullscreen" and screen.preview:
+                control.apply_state(enabled=False)
             screen.elements.append(control)
             screen.add_setting_info(key, y)
         # Use the same 20..60 scale as set_fps so rebuilding never moves the handle.
@@ -186,7 +188,7 @@ def render_settings_buttons(settings_screen):
         screen.checkerboard_speed_slider = Slider(SETTINGS_X, screen.checkerboard_gradient_slider.rect.y + 78, SETTINGS_SLIDER_WIDTH, f"Checkerboard Speed: {screen.controller.checkerboard_scroll_speed:g}", screen.controller.checkerboard_scroll_speed, screen.set_checkerboard_speed, visual_max=c.MAX_CHECKERBOARD_SCROLL_SPEED, allowed_max=c.MAX_CHECKERBOARD_SCROLL_SPEED)
         screen.elements.extend([screen.fps_slider, screen.checkerboard_gradient_slider, screen.checkerboard_speed_slider])
         # A standalone game ships only the classic unit art.
-        if not standalone_game.IS_STANDALONE:
+        if not screen.is_standalone:
             screen.elements.append(Button(SETTINGS_SECOND_X, SETTINGS_FIRST_Y + 4 * SETTINGS_ROW_GAP, SETTINGS_LINK_SIZE, "blue", "Unit Art", screen.open_unit_art, image=ui_bars.get_ui_image("Brush.png")))
 
     elif screen.sub_state == "CONTROLS":
@@ -239,6 +241,7 @@ def render_settings_buttons(settings_screen):
 
 
 class Settings(Screen):
+    preview = False
     title = "Settings"
     player_slider = None
     fps_slider = None
@@ -277,9 +280,11 @@ class Settings(Screen):
     DIR_BOX_H = 35
     COLOR_BOX_W = 40
 
-    def __init__(self, controller):
+    def __init__(self, controller, *, standalone=None, preview=False):
         super().__init__()
         self.controller = controller
+        self.is_standalone = standalone_game.IS_STANDALONE if standalone is None else standalone
+        self.preview = preview
         self.bg_color = SETTINGS_BACKGROUND_COLOR
         self.sub_state = "GAME"
         self.back_state = "MENU"
@@ -315,6 +320,15 @@ class Settings(Screen):
             setattr(self, key, getattr(self.controller, key))
 
         self.refresh_ui()
+
+    def save_settings(self):
+        """Preview uses a separate controller and never writes player preferences."""
+        if not self.preview:
+            queries.save_global_settings(self.controller)
+
+    def apply_runtime_settings(self, values):
+        if not self.preview:
+            c.apply_runtime_settings(values)
 
     def on_enter(self, app, previous):
         self.return_to_previous_context(app, previous)
@@ -393,14 +407,14 @@ class Settings(Screen):
     def toggle_fps(self):
         self.show_fps = not self.show_fps
         self.controller.show_fps = self.show_fps
-        queries.save_global_settings(self.controller)
+        self.save_settings()
         self.refresh_ui()
 
     def toggle_checkerboard_water(self):
         self.checkerboard_water = not self.checkerboard_water
         self.controller.checkerboard_water = self.checkerboard_water
-        c.apply_runtime_settings({"checkerboard_water": self.checkerboard_water})
-        queries.save_global_settings(self.controller)
+        self.apply_runtime_settings({"checkerboard_water": self.checkerboard_water})
+        self.save_settings()
         self.refresh_ui()
 
     def toggle_map_navigation_mode(self):
@@ -410,17 +424,17 @@ class Settings(Screen):
         See data.constants.MAP_NAVIGATION_MODE."""
         self.map_navigation_mode = "PREEMPTIVE" if self.map_navigation_mode == "CLASSIC" else "CLASSIC"
         self.controller.map_navigation_mode = self.map_navigation_mode
-        c.apply_runtime_settings({"map_navigation_mode": self.map_navigation_mode})
-        queries.save_global_settings(self.controller)
+        self.apply_runtime_settings({"map_navigation_mode": self.map_navigation_mode})
+        self.save_settings()
         self.refresh_ui()
 
     def cycle_control_mode(self):
         self.control_mode = c.CONTROL_MODES[(c.CONTROL_MODES.index(self.control_mode) + 1)
                                             % len(c.CONTROL_MODES)]
         self.controller.control_mode = self.control_mode
-        c.apply_runtime_settings({"control_mode": self.control_mode})
+        self.apply_runtime_settings({"control_mode": self.control_mode})
         self.controller.touch_input.cancel()
-        queries.save_global_settings(self.controller)
+        self.save_settings()
         self.refresh_ui()
 
     def toggle_battle_display_mode(self):
@@ -428,8 +442,8 @@ class Settings(Screen):
         self.battle_display_mode = (
             "COMPACT" if self.battle_display_mode == "FULL" else "FULL")
         self.controller.battle_display_mode = self.battle_display_mode
-        c.apply_runtime_settings({"battle_display_mode": self.battle_display_mode})
-        queries.save_global_settings(self.controller)
+        self.apply_runtime_settings({"battle_display_mode": self.battle_display_mode})
+        self.save_settings()
         self.refresh_ui()
 
     def open_unit_art(self):
@@ -447,23 +461,23 @@ class Settings(Screen):
         enabled = not getattr(self, name)
         setattr(self, name, enabled)
         setattr(self.controller, name, enabled)
-        queries.save_global_settings(self.controller)
+        self.save_settings()
         self.refresh_ui()
 
     def toggle_show_unclaimed(self):
         """Save whether the army tray displays units outside army groups."""
         self.show_unclaimed = not self.show_unclaimed
         self.controller.show_unclaimed = self.show_unclaimed
-        c.apply_runtime_settings({"show_unclaimed": self.show_unclaimed})
-        queries.save_global_settings(self.controller)
+        self.apply_runtime_settings({"show_unclaimed": self.show_unclaimed})
+        self.save_settings()
         self.refresh_ui()
 
     def toggle_army_group_animations(self):
         """Persist whether strategic army markers animate between presentations."""
         self.army_group_animations = not self.army_group_animations
         self.controller.army_group_animations = self.army_group_animations
-        c.apply_runtime_settings({"army_group_animations": self.army_group_animations})
-        queries.save_global_settings(self.controller)
+        self.apply_runtime_settings({"army_group_animations": self.army_group_animations})
+        self.save_settings()
         self.refresh_ui()
 
     def set_ai_threads(self, val):
@@ -474,7 +488,7 @@ class Settings(Screen):
         if self.ai_thread_slider is not None:
             self.ai_thread_slider.text = f"Maximum AI Threads: {threads}"
         # Silently save whenever the slider moves
-        queries.save_global_settings(self.controller)
+        self.save_settings()
 
     def update(self):
         super().update()
@@ -486,7 +500,8 @@ class Settings(Screen):
         self.controller.ai_mode = mode
         # Provider clients and the shared HTTP session are cached between turns;
         # drop them so the next call is built against the provider just picked.
-        ai_handler.reset_clients()
+        if not self.preview:
+            ai_handler.reset_clients()
         self.refresh_ui()
 
     def set_ai_immersion_level(self, level):
@@ -508,7 +523,7 @@ class Settings(Screen):
         # Either tutorial can change its preference while Settings is
         # closed, so re-read the cached persisted values whenever this screen
         # rebuilds rather than showing a stale controller value.
-        saved = queries.get_settings()
+        saved = {} if self.preview else queries.get_settings()
         for tactical_mode in (False, True):
             name = settings_schema.intro_popup_setting(tactical_mode)
             enabled = settings_schema.read_setting(saved, name, getattr(self.controller, name))
@@ -543,7 +558,7 @@ class Settings(Screen):
         if self.sub_state == "CONTROLS":
             self.controller.keybinds = default_keybinds()
             self.controller.touch_input.cancel()
-        if self.sub_state == "AI":
+        if self.sub_state == "AI" and not self.preview:
             ai_handler.reset_clients()
         self._reset_fields(names)
 
@@ -556,8 +571,8 @@ class Settings(Screen):
                 setattr(self.controller, name, defaults[name])
                 if hasattr(self, name):
                     setattr(self, name, defaults[name])
-        c.apply_runtime_settings({name: defaults[name] for name in names})
-        queries.save_global_settings(self.controller)
+        self.apply_runtime_settings({name: defaults[name] for name in names})
+        self.save_settings()
         self.refresh_ui()
 
     # ------------------------------------------------------------------ #
@@ -574,8 +589,9 @@ class Settings(Screen):
         const_attr = (self.DIR_FIELDS.get(key) or self.COLOR_FIELDS[key])[0]
         setattr(self, key, value)
         setattr(self.controller, key, value)
-        setattr(c, const_attr, value)
-        queries.save_global_settings(self.controller)
+        if not self.preview:
+            setattr(c, const_attr, value)
+        self.save_settings()
         if refresh:
             self.refresh_ui()
 
@@ -601,16 +617,16 @@ class Settings(Screen):
     def set_checkerboard_gradient(self, val):
         strength = round(val, 2)
         self.controller.checkerboard_gradient_strength = strength
-        c.apply_runtime_settings({"checkerboard_gradient_strength": strength})
+        self.apply_runtime_settings({"checkerboard_gradient_strength": strength})
         self.checkerboard_gradient_slider.text = f"Checkerboard Gradient: {strength:.2f}"
-        queries.save_global_settings(self.controller)
+        self.save_settings()
 
     def set_checkerboard_speed(self, val):
         speed = round(val)
         self.controller.checkerboard_scroll_speed = speed
-        c.apply_runtime_settings({"checkerboard_scroll_speed": speed})
+        self.apply_runtime_settings({"checkerboard_scroll_speed": speed})
         self.checkerboard_speed_slider.text = f"Checkerboard Speed: {speed}"
-        queries.save_global_settings(self.controller)
+        self.save_settings()
 
     def set_fps(self, val):
         fps = int(20 + (val * 40)) # Scale 0.0-1.0 to 20-60
@@ -661,7 +677,7 @@ class Settings(Screen):
             self.player_slider.text = f"Players: {self.num_players}"
 
     def save_and_go_back(self, execute_exit=True):
-        queries.save_global_settings(self.controller)
+        self.save_settings()
         
         if execute_exit:
             self.exit_screen()
@@ -671,10 +687,13 @@ class Settings(Screen):
         self.save_and_go_back()
 
     def toggle_full(self):
+        if self.preview:
+            return
         self.controller.toggle_fullscreen()
         self.fullscreen = getattr(self.controller, 'is_fullscreen', False)
 
     def set_volume(self, val):
         self.sfx_volume = val
         self.controller.sfx_volume = val
-        sound_effects.set_sfx_volume(val)
+        if not self.preview:
+            sound_effects.set_sfx_volume(val)

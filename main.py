@@ -637,9 +637,10 @@ class Controller:
             if album in self.all_albums:
                 self.playlist.extend(self.all_albums[album])
 
-    def play_random_song(self):
-        available_tracks = self.tactical_song_candidates() or [
-            track for track in self.playlist
+    def play_random_song(self, playlist=None):
+        # Preview can browse its own albums while sharing normal shuffle and failure rules.
+        available_tracks = (self.tactical_song_candidates() if playlist is None else []) or [
+            track for track in (self.playlist if playlist is None else playlist)
             if (track not in self._failed_music_tracks
                 and not self.is_shuffle_disabled(track))
         ]

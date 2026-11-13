@@ -20,8 +20,10 @@ class Load_Game(ContentBrowserScreen):
     title = "LOAD GAME"
     content_label = "saves"
 
-    def __init__(self):
+    def __init__(self, *, standalone=None, preview=False):
         super().__init__()
+        self.is_standalone = standalone_game.IS_STANDALONE if standalone is None else standalone
+        self.preview = preview
         self.bg_color = (50, 0, 50)
         self.refresh_ui()
 
@@ -51,8 +53,8 @@ class Load_Game(ContentBrowserScreen):
                                lambda: file_exchange.import_zip_to_dir(self, self.managed_dir, self.reload_entries),
                                font_preset="button_small")
         # A standalone game plays only its own scenario, so it cannot open saves from other folders or archives.
-        browse_button.apply_state(enabled=not IS_WEB and not standalone_game.IS_STANDALONE)
-        import_button.apply_state(enabled=not standalone_game.IS_STANDALONE)
+        browse_button.apply_state(enabled=not IS_WEB and not self.is_standalone and not self.preview)
+        import_button.apply_state(enabled=not self.is_standalone and not self.preview)
         self.elements.extend([
             make_back_button(self.exit_screen),
             browse_button,
@@ -69,6 +71,8 @@ class Load_Game(ContentBrowserScreen):
         self.open_button = self.add_primary_action("Load Game") if self.selection_can_open else None
 
     def activate_selected(self):
+        if self.preview:
+            return
         if self.selection_can_open:
             self.call_selected(self.load_specific_save)
 
@@ -119,6 +123,8 @@ class Load_Game(ContentBrowserScreen):
         screen_runner.run_loading(LoadingSteps(read_dates(), 1), "Loading History...", on_done=show_turns)
 
     def load_specific_save(self, folder_name, history_turn=None, *, play_sound=True):
+        if self.preview:
+            return
         message = newer_version_message(os.path.join(self.managed_dir, folder_name))
         if message:
             dialogs.show_info("Update Required", message)
@@ -129,3 +135,7 @@ class Load_Game(ContentBrowserScreen):
         self.selected_save_path = os.path.join(self.managed_dir, folder_name)
         self.selected_history_turn = history_turn
         self.go_to("MAP")
+
+    def read_directory(self, directory):
+        # A fresh export has no saves. Preview never reads or creates the editor's save folder.
+        return ([], "") if self.preview else super().read_directory(directory)
