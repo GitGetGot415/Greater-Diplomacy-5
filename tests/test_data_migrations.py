@@ -1,5 +1,6 @@
 """Older data keeps its meaning after conversion and serialization."""
 
+import base64
 import copy
 import gzip
 import json
@@ -13,6 +14,7 @@ import tempfile
 import unittest
 from unittest import mock
 
+import pygame
 
 from data import constants as c, migrations, queries
 from data.map import history_io, load_map
@@ -358,6 +360,61 @@ class OlderFormatTests(unittest.TestCase):
         meta, _map, _history = upgraded({"player_country": "None",
                                          "realtime_match": {"format": "gd5-realtime-v1"}})
         self.assertEqual(load_map._saved_player_view(meta), ("Spectator", []))
+
+    def test_raw_pixel_flags_and_portraits_become_png_everywhere(self):
+        """Older releases saved raw RGBA or RGB pixels; current text is Base64 PNG."""
+        def raw_text(size, channels, seed):
+            pixels = bytes((seed + 7 * index) % 256 for index in range(size[0] * size[1] * channels))
+            return base64.b64encode(pixels).decode("ascii")
+
+        flag, portrait = raw_text(c.FLAG_SIZE, 4, 1), raw_text(c.PORTRAIT_SIZE, 3, 2)
+        flag_pixels = base64.b64decode(flag)
+        rgb = base64.b64decode(portrait)
+        portrait_pixels = b"".join(rgb[start:start + 3] + b"\xff" for start in range(0, len(rgb), 3))
+        png = (queries.encode_rgba_to_b64(flag_pixels, c.FLAG_SIZE),
+               queries.encode_rgba_to_b64(portrait_pixels, c.PORTRAIT_SIZE))
+
+        def appearance():
+            return {"flag_data": flag, "portrait_data": portrait}
+
+        def country():
+            return {**appearance(), "scripted_events": [{"conditions": [], "fire_once": False, "actions": [
+                {"type": "Edit Flag", "message": flag}, {"type": "Edit Portrait", "message": portrait}]}]}
+
+        def images(record):
+            return record["flag_data"], record["portrait_data"]
+
+        meta, _map, history = upgraded({"nation_data": {"A": country()}},
+                                       history={"1": {"nation_data": {"A": country()}}})
+        for record in (meta["nation_data"]["A"], history["1"]["nation_data"]["A"]):
+            self.assertEqual(images(record), png)
+            self.assertEqual(tuple(action["message"] for action in record["scripted_events"][0]["actions"]), png)
+
+        move = {"nation_data": country(), "provinces": {},
+                "appearance_updates": [{"country_id": "B", "appearance": appearance()}],
+                "player_intents": [{"type": "country_appearance", "appearance": appearance()},
+                                   {"type": "puppet_draft", "appearances": {"B": appearance()}}]}
+        migrations.upgrade_move(move)
+        self.assertEqual(images(move["nation_data"]), png)
+        self.assertEqual(images(move["appearance_updates"][0]["appearance"]), png)
+        self.assertEqual(images(move["player_intents"][0]["appearance"]), png)
+        self.assertEqual(images(move["player_intents"][1]["appearances"]["B"]), png)
+
+        timeline = {"A": [appearance(), {"flag_data": None, "portrait_data": None}]}
+        migrations.convert_historical_leader_images(timeline)
+        self.assertEqual(images(timeline["A"][0]), png)
+        self.assertEqual(images(timeline["A"][1]), (None, None))
+
+        flag_surface = queries.decode_b64_to_surf(png[0], c.FLAG_SIZE)
+        portrait_surface = queries.decode_b64_to_surf(png[1], c.PORTRAIT_SIZE)
+        self.assertEqual(pygame.image.tobytes(flag_surface, "RGBA"), flag_pixels)
+        self.assertEqual(pygame.image.tobytes(portrait_surface, "RGBA"), portrait_pixels)
+
+        # Current PNG text, defaults, and unreadable text do not change.
+        current = {"A": {"flag_data": png[0], "portrait_data": "DEFAULT"},
+                   "B": {"flag_data": "", "portrait_data": "not an image"}}
+        meta, _map, _history = upgraded({"nation_data": copy.deepcopy(current)})
+        self.assertEqual(meta["nation_data"], current)
 
     def test_old_aircraft_names_and_truck_cargo_convert_everywhere(self):
         library = {"Biplane Fighter I": {"health": 100, "attack": 7, "defense": 4, "speed": 6,

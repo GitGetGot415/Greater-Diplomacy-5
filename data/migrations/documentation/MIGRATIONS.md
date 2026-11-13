@@ -134,6 +134,10 @@ They also keep support for older save formats that v46 accepted.
 - Map overlays, a selected history snapshot, and tournament move intents receive these conversions.
 - Older tournament move formats convert to the snapshot move shape. See [Move Conversion Rules](#move-conversion-rules).
 - Duplicate custom production entries combine when their older units become the same stage.
+- Flags and portraits that releases through v48 stored as raw RGBA or RGB pixels become Base64 PNG text.
+  `flag_data` and `portrait_data` keep their names because PNG text starts with the PNG signature, so the rule can tell the formats apart.
+  The rule converts country records, Edit Flag and Edit Portrait actions, a selected history snapshot, and move appearances.
+  The Historical Leaders library converts when it loads, as `scenario_settings.json` does. `"DEFAULT"`, empty text, and unreadable text do not change.
 
 ## What the Version Stamp Does
 

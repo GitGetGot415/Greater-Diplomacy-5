@@ -8,6 +8,7 @@ Rules that compare saved data with the active libraries run later in the load,
 when the scenario has selected its libraries. research.py and queries.refresh_unit_stats own them.
 """
 
+import base64
 import copy
 import uuid
 
@@ -37,6 +38,55 @@ RELEASED_CATEGORY_SETTINGS = {
     "use_default_range": ("unit_range_overrides",),
     "use_default_other": ("administrative_turn_overrides", "administrative_disabled", "conversion_turn_overrides"),
 }
+
+
+#: Flag and portrait fields, with the fixed size of their older raw-pixel text.
+IMAGE_FIELDS = {"flag_data": c.FLAG_SIZE, "portrait_data": c.PORTRAIT_SIZE}
+
+
+#: Scripted actions whose message holds flag or portrait text.
+IMAGE_ACTIONS = {"Edit Flag": c.FLAG_SIZE, "Edit Portrait": c.PORTRAIT_SIZE}
+
+
+def convert_image_text(value, size):
+    """Return older raw-pixel flag or portrait text as Base64 PNG text.
+
+    Releases through v48 stored RGBA or RGB pixels at the fixed image size.
+    PNG text starts with the PNG signature, so this rule does nothing to current text.
+    Other text stays unchanged; the image reader shows unreadable text as a blank image, as before.
+    """
+    from data import queries
+    if not isinstance(value, str) or value in ("", "DEFAULT"):
+        return value
+    try:
+        pixels = base64.b64decode(value, validate=True)
+    except ValueError:
+        return value
+    if pixels.startswith(queries.PNG_SIGNATURE):
+        return value
+    width, height = size
+    if len(pixels) == width * height * 3:
+        pixels = b"".join(pixels[start:start + 3] + b"\xff" for start in range(0, len(pixels), 3))
+    if len(pixels) != width * height * 4:
+        return value
+    return queries.encode_rgba_to_b64(pixels, size)
+
+
+def convert_appearance_images(record):
+    """Convert the flag and portrait text of a country record, appearance, or leader entry."""
+    for field, size in IMAGE_FIELDS.items():
+        if field in record:
+            record[field] = convert_image_text(record[field], size)
+
+
+def convert_historical_leader_images(timeline):
+    """Convert flag and portrait text in the Historical Leaders library."""
+    if not isinstance(timeline, dict):
+        return
+    for entries in timeline.values():
+        for entry in entries if isinstance(entries, list) else ():
+            if isinstance(entry, dict):
+                convert_appearance_images(entry)
 
 
 def convert_scenario_settings(settings):
@@ -156,7 +206,17 @@ def convert_move(player_data):
         elif kind == "country_preferences":
             _custom_production_units(command, aliases, command_path, player_input=True)
         elif kind == "country_appearance":
-            container(command, "appearance", dict, command_path)
+            convert_appearance_images(container(command, "appearance", dict, command_path))
+        elif kind == "puppet_draft" and isinstance(command.get("appearances"), dict):
+            # PlayerActions rejects other shapes with its own message.
+            for appearance in command["appearances"].values():
+                if isinstance(appearance, dict):
+                    convert_appearance_images(appearance)
+    # Host validation skips malformed appearance updates, so only readable ones convert.
+    updates = player_data.get("appearance_updates")
+    for update in updates if isinstance(updates, list) else ():
+        if isinstance(update, dict) and isinstance(update.get("appearance"), dict):
+            convert_appearance_images(update["appearance"])
 
 
 def _aircraft_orders(provinces):
@@ -191,6 +251,7 @@ def _nations(nation_data, aliases, path="meta.nation_data"):
 def _country(country, aliases, path, *, player_input=False):
     """Convert one country record."""
     research_country(country, path, repair=not player_input)
+    convert_appearance_images(country)
     country.pop("allied_with", None)
     # Summits and the commitments they produced were removed. Nothing reads them.
     country.pop("ai_commitments", None)
@@ -276,6 +337,8 @@ def _scripted_event(event, aliases, path, *, player_input=False):
             text_fields(action, ("unit_type",), action_path, repair=not player_input)
             if "unit_type" in action:
                 action["unit_type"] = _unit_name(action["unit_type"], aliases)
+        elif action.get("type") in IMAGE_ACTIONS and "message" in action:
+            action["message"] = convert_image_text(action["message"], IMAGE_ACTIONS[action["type"]])
 
 
 # --- Provinces ---

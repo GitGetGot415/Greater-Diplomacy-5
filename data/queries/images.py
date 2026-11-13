@@ -1,9 +1,20 @@
 """Flag and portrait image encoding, decoding, and caching."""
 
 import base64
-import data.constants as c
+import binascii
+import io
 import os
+import struct
+import zlib
+
 import pygame
+
+import data.constants as c
+
+
+#: Every PNG file starts with these bytes. Saved flags and portraits are
+#: Base64 PNG text, "DEFAULT", or empty.
+PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
 
 _default_flag_b64 = None
@@ -93,14 +104,34 @@ def scrub_default_images(nation_data_block):
             data["portrait_data"] = "DEFAULT"
 
 
-def encode_surf_to_b64(surf, fmt="RGBA"):
-    """Encodes a pygame surface to a Base64 string."""
-    img_str = pygame.image.tostring(surf, fmt)
-    return base64.b64encode(img_str).decode('utf-8')
+def _png_chunk(kind, data):
+    return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data))
+
+
+def encode_rgba_to_b64(pixels, size):
+    """Encode RGBA pixel bytes as Base64 PNG text.
+
+    The same pixels always give the same text, so saved images can be compared
+    with the encoded default and local images.
+    """
+    width, height = size
+    stride = width * 4
+    # Each PNG row starts with its filter type. Type 0 stores the row unchanged.
+    rows = b"".join(b"\x00" + pixels[start:start + stride] for start in range(0, stride * height, stride))
+    png = (PNG_SIGNATURE
+           + _png_chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0))
+           + _png_chunk(b"IDAT", zlib.compress(rows, 9))
+           + _png_chunk(b"IEND", b""))
+    return base64.b64encode(png).decode("ascii")
+
+
+def encode_surf_to_b64(surf):
+    """Encode a pygame surface as Base64 PNG text."""
+    return encode_rgba_to_b64(pygame.image.tobytes(surf, "RGBA"), surf.get_size())
 
 
 def decode_b64_to_surf(b64_str, size, is_portrait=False, country_name=None):
-    """Decodes a Base64 string back into a pygame surface."""
+    """Decode Base64 PNG text, or the country's file or default image for "DEFAULT"."""
     cache_key = (b64_str, size, is_portrait, country_name)
     if cache_key in _dynamic_image_cache:
         return _dynamic_image_cache[cache_key]
@@ -122,12 +153,13 @@ def decode_b64_to_surf(b64_str, size, is_portrait=False, country_name=None):
             scaled.fill((200, 200, 200, 255))
     else:
         try:
-            img_bytes = base64.b64decode(b64_str)
-            if len(img_bytes) == size[0] * size[1] * 4:
-                scaled = pygame.image.fromstring(img_bytes, size, "RGBA")
-            else:
-                scaled = pygame.image.fromstring(img_bytes, size, "RGB").convert_alpha()
-        except Exception:
+            png = base64.b64decode(b64_str, validate=True)
+            if not png.startswith(PNG_SIGNATURE):
+                raise ValueError("Saved image text is not a PNG image.")
+            scaled = pygame.image.load(io.BytesIO(png), "image.png")
+            if scaled.get_size() != tuple(size):
+                scaled = pygame.transform.scale(scaled, size)
+        except (TypeError, ValueError, binascii.Error, pygame.error):
             scaled = pygame.Surface(size, pygame.SRCALPHA)
             scaled.fill((255, 255, 255, 255))
 

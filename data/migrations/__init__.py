@@ -61,8 +61,8 @@ from data.migrations.units import (
     LEGACY_UNIT_NAMES,
     equipment_stage_aliases,
 )
-# Queries import this rule. tournament.py below imports queries, so export the rule first.
-from data.migrations.conversions import convert_scenario_settings
+# Queries import these rules. tournament.py below imports queries, so export the rules first.
+from data.migrations.conversions import convert_historical_leader_images, convert_scenario_settings
 from data.migrations.repairs import (
     clamp_building_level,
     clamp_building_queue,

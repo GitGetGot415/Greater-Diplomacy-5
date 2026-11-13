@@ -7,7 +7,7 @@ import json
 import os
 import pygame
 from data.state_access import world_for
-from data.migrations import convert_scenario_settings, normalize_cached_json_names
+from data.migrations import convert_historical_leader_images, convert_scenario_settings, normalize_cached_json_names
 from data.runtime_rules import rebuild, ActiveLibrary, for_world
 from data.io import settings_schema, starting_defaults
 from data import queries
@@ -277,6 +277,9 @@ def _load_cached_json(cache_key, *, reload=False):
         if cache_key == "scenario_settings":
             # The player's file can predate the Use Defaults settings, as saves can.
             convert_scenario_settings(cache_obj["data"])
+        elif cache_key == "historical_leaders":
+            # Older Historical Leaders Editor files hold raw-pixel flags and portraits.
+            convert_historical_leader_images(cache_obj["data"])
         if reload and isinstance(previous_data, dict):
             previous_data.clear()
             previous_data.update(cache_obj["data"])
