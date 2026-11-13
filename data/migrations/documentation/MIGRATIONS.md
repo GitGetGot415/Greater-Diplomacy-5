@@ -395,6 +395,8 @@ Requests and answers that scripted events create carry an optional `scripted` fi
 
 `WorldState.standalone_export_settings` owns the Standalone Export screen's choices: the standalone menu's
 solid background color and the Base64 text of a PNG image that the menu draws over that color.
+`image_fit` is `fill` (cover the screen and crop), `stretch`, or `actual` (the image's own size), and
+`image_smoothing` chooses smooth or nearest-pixel scaling. Older settings use `fill` with smoothing.
 `interesting_countries` lists the country selector's entries as `{"country", "rank", "description"}`,
 where `rank` is `major` or `minor`. Saves keep the full country records that these entries name.
 The shared save builder writes it to `meta.json` and saves. Real-time projections omit it.

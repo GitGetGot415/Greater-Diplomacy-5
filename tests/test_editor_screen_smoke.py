@@ -119,8 +119,10 @@ class EditorScreenSmokeTests(unittest.TestCase):
         pygame.image.save(pygame.Surface((3, 2), depth=8), palette_png, "palette.png")
         images = (queries.encode_rgba_to_b64(bytes([1, 2, 3, 255]) * 6, (3, 2)),
                   base64.b64encode(palette_png.getvalue()).decode("ascii"))
+        fits = queries.STANDALONE_IMAGE_FITS
         for settings in ({}, {"background_color": [1, 2, 3]},
-                         *({"background_image": image} for image in images)):
+                         *({"background_image": image, "image_fit": fit, "image_smoothing": smoothing}
+                           for image in images for fit in fits for smoothing in (True, False))):
             with self.subTest(settings=settings):
                 preview = Standalone_Menu_Preview("Fixture Game", settings)
                 preview.update()
@@ -147,6 +149,18 @@ class EditorScreenSmokeTests(unittest.TestCase):
             self.exercise(screen)
             self.assertEqual([entry["rank"] for entry in screen.ordered_countries(screen.settings())],
                              ["major", "major", "minor"])
+
+    def test_window_preview_redraws_only_when_the_background_changes(self):
+        from screens.editors.standalone_export import Standalone_Export_Screen
+        screen = Standalone_Export_Screen()
+        screen.on_enter(self.controller, None)
+        first = screen.window_preview_surface
+        screen.refresh_ui()  # Scrolling rebuilds the screen the same way.
+        self.assertIs(screen.window_preview_surface, first)
+        with mock.patch.dict(self.map.standalone_export_settings, {"background_color": [9, 8, 7]}):
+            screen.refresh_ui()
+            self.assertIsNot(screen.window_preview_surface, first)
+            self.exercise(screen)
 
     def test_standalone_new_game_opens_the_country_selector_for_more_than_one_country(self):
         from screens.menus.menu import Menu

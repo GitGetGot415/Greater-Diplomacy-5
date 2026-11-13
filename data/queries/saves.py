@@ -26,6 +26,11 @@ def normalized_scenario_metadata(metadata):
 #: Majors show portrait cards. Minors show flags.
 INTERESTING_COUNTRY_RANKS = ("major", "minor")
 
+#: How the standalone background image fits the screen, in the order the export screen offers them.
+#: fill covers the screen without stretching and crops the edges. stretch matches the screen exactly.
+#: actual keeps the image's own size, centered.
+STANDALONE_IMAGE_FITS = ("fill", "stretch", "actual")
+
 
 def _is_rgb(value):
     return (isinstance(value, list) and len(value) == 3
@@ -37,6 +42,7 @@ def normalized_standalone_export_settings(settings):
 
     The standalone menu fills background_color, an RGB list. background_image is Base64 text
     of a PNG file, or empty. The menu draws it over the background color.
+    image_fit is one of STANDALONE_IMAGE_FITS. image_smoothing chooses smooth or nearest-pixel scaling.
     interesting_countries lists {"country", "rank", "description"} entries for the country selector.
     Entries without a country ID or a known rank, and repeated countries, are dropped.
     Unknown fields are kept. Maps saved before these settings existed use the default color
@@ -47,6 +53,10 @@ def normalized_standalone_export_settings(settings):
         result["background_color"] = list(c.DEFAULT_BG_COLOR)
     if not isinstance(result.get("background_image"), str):
         result["background_image"] = ""
+    if result.get("image_fit") not in STANDALONE_IMAGE_FITS:
+        result["image_fit"] = STANDALONE_IMAGE_FITS[0]
+    if not isinstance(result.get("image_smoothing"), bool):
+        result["image_smoothing"] = True
     entries, listed = [], set()
     saved = result.get("interesting_countries")
     for entry in saved if isinstance(saved, list) else ():

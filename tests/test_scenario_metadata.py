@@ -330,8 +330,10 @@ class ScenarioMetadataTests(unittest.TestCase):
         return base64.b64decode(queries.encode_rgba_to_b64(bytes([10, 20, 30, 255]) * 6, (3, 2)))
 
     def test_standalone_export_settings_default_to_the_background_color_and_repair_bad_values(self):
-        defaults = {"background_color": list(c.DEFAULT_BG_COLOR), "background_image": "", "interesting_countries": []}
+        defaults = {"background_color": list(c.DEFAULT_BG_COLOR), "background_image": "", "image_fit": "fill",
+                    "image_smoothing": True, "interesting_countries": []}
         for value in (None, {}, [], {"background_color": [1, 2, 300], "background_image": 5},
+                      {"image_fit": "tile", "image_smoothing": "no"},
                       {"background_color": (1, 2, 3)}, {"interesting_countries": "A"}):
             with self.subTest(value=value):
                 self.assertEqual(queries.normalized_standalone_export_settings(value), defaults)
@@ -380,7 +382,7 @@ class ScenarioMetadataTests(unittest.TestCase):
         before = copy.deepcopy(settings)
         repeated = [{"country": "A", "rank": "major", "description": ""}] * 2
         for key, value in (("menu_background", "solid"), ("background_color", [1, 2, 300]),
-                           ("interesting_countries", repeated)):
+                           ("interesting_countries", repeated), ("image_fit", "tile"), ("image_smoothing", 0)):
             with self.subTest(key=key), self.assertRaises(ValueError):
                 queries.set_standalone_export_setting(self.game, key, value)
         queries.set_standalone_export_setting(self.game, "interesting_countries", repeated[:1])

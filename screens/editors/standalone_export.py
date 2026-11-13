@@ -16,8 +16,9 @@ from ui.dialogs import pickers
 from ui.navigation import screen_runner
 from ui.navigation.screen import Screen
 from ui.rendering.font_manager import fonts
+from ui.rendering.standalone_background import StandaloneBackground
 from ui.widgets import text_utils
-from ui.widgets.ui_elements import Button, make_back_button
+from ui.widgets.ui_elements import Button, make_back_button, toggle_color
 
 # --- Layout. CONTENT_TOP moves the background rows; COUNTRIES_TOP moves the country list. ---
 CONTENT_TOP = 90
@@ -25,8 +26,12 @@ ROW_GAP = 46
 BUTTON_GAP = 10
 SETTING_BUTTON_SIZE = (140, 36)
 CLEAR_BUTTON_SIZE = (70, 36)
+IMAGE_FIT_BUTTON_SIZE = (100, 36)
+# The window preview's width. Its height follows the window's shape.
+WINDOW_PREVIEW_WIDTH = 160
+WINDOW_PREVIEW_BORDER = 2
 SWATCH_SIZE = (36, 36)
-COUNTRIES_TOP = 220
+COUNTRIES_TOP = 266
 COUNTRY_ROW_HEIGHT = 42
 # The list ends above the two stacked preview buttons.
 COUNTRY_LIST_BOTTOM = c.SCREEN_HEIGHT - 160
@@ -45,6 +50,7 @@ DESCRIPTION_MAX_LENGTH = 600
 DESCRIPTION_LABEL_CHARS = 48
 RANK_LABELS = {"major": "Major", "minor": "Minor"}
 RANK_COLORS = {"major": "orange", "minor": "light_blue"}
+IMAGE_FIT_LABELS = {"fill": "Fill", "stretch": "Stretch", "actual": "Actual Size"}
 
 
 class Standalone_Export_Screen(Screen):
@@ -53,6 +59,8 @@ class Standalone_Export_Screen(Screen):
     title = "STANDALONE EXPORT"
     # The text and label of the last background image measured. See image_size_text.
     _image_size = ("", "No image")
+    # The settings and screen size of the last window preview, and the preview. See window_preview.
+    _window_preview = (None, None)
 
     def on_enter(self, app, previous):
         self.map_screen = app.states["MAP"]
@@ -98,6 +106,28 @@ class Standalone_Export_Screen(Screen):
                        enabled=bool(settings["background_image"]), size=CLEAR_BUTTON_SIZE)
         image_text_x = left_x + width + BUTTON_GAP + CLEAR_BUTTON_SIZE[0] + BUTTON_GAP
         self.labels.append((self.image_size_text(settings), (image_text_x, image_y + height // 2), "midleft"))
+
+        # Fit and smoothing apply only to an image, so they are disabled without one.
+        fit_y = image_y + ROW_GAP
+        has_image = bool(settings["background_image"])
+        fit_width = IMAGE_FIT_BUTTON_SIZE[0]
+        fits = queries.STANDALONE_IMAGE_FITS
+        fit_row_width = len(fits) * (fit_width + BUTTON_GAP) + width
+        fit_x = center_x - fit_row_width // 2
+        for index, fit in enumerate(fits):
+            setting_button(fit_x + index * (fit_width + BUTTON_GAP), fit_y, toggle_color(settings["image_fit"] == fit),
+                           IMAGE_FIT_LABELS[fit], lambda fit=fit: self.change_setting("image_fit", fit),
+                           enabled=has_image, size=IMAGE_FIT_BUTTON_SIZE)
+        smoothing = settings["image_smoothing"]
+        setting_button(fit_x + len(fits) * (fit_width + BUTTON_GAP), fit_y, toggle_color(smoothing),
+                       f"Smoothing: {'On' if smoothing else 'Off'}",
+                       lambda: self.change_setting("image_smoothing", not smoothing), enabled=has_image)
+
+        # Right of the image rows: the background as the game window shows it, outlined at the window's edges.
+        preview_height = round(WINDOW_PREVIEW_WIDTH * c.SCREEN_HEIGHT / c.SCREEN_WIDTH)
+        self.window_preview_rect = pygame.Rect(fit_x + fit_row_width + 2 * BUTTON_GAP, image_y,
+                                               WINDOW_PREVIEW_WIDTH, preview_height)
+        self.window_preview_surface = self.window_preview(settings)
 
         self.labels.append(("Interesting Countries", (center_x, COUNTRIES_TOP)))
         add_y = COUNTRIES_TOP + 30
@@ -170,7 +200,26 @@ class Standalone_Export_Screen(Screen):
         if self.map_screen is not None:
             self.handle_list_scroll(event, content_rect_attr="scroll_content_rect")
 
+    def window_preview(self, settings):
+        """Return the background drawn at the window's size and shrunk to the preview.
+
+        refresh_ui calls this, and frames only draw the result. Scrolling also rebuilds the screen,
+        so the background is drawn again only when its settings or the window size change.
+        """
+        key = (tuple(settings["background_color"]), settings["background_image"], settings["image_fit"],
+               settings["image_smoothing"], self.window_preview_rect.size, c.SCREEN_WIDTH, c.SCREEN_HEIGHT)
+        if self._window_preview[0] != key:
+            window = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
+            StandaloneBackground(settings).draw(window)
+            self._window_preview = (key, pygame.transform.smoothscale(window, self.window_preview_rect.size))
+        return self._window_preview[1]
+
     def additional_draw(self, surface):
+        if self.map_screen is not None:
+            surface.blit(self.window_preview_surface, self.window_preview_rect)
+            pygame.draw.rect(surface, SWATCH_BORDER_COLOR,
+                             self.window_preview_rect.inflate(2 * WINDOW_PREVIEW_BORDER, 2 * WINDOW_PREVIEW_BORDER),
+                             WINDOW_PREVIEW_BORDER)
         for rect, color in self.swatches:
             surface.fill(color, rect)
             pygame.draw.rect(surface, SWATCH_BORDER_COLOR, rect, 2)
