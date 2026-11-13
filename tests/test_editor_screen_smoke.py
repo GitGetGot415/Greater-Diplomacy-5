@@ -132,6 +132,103 @@ class EditorScreenSmokeTests(unittest.TestCase):
                 self.assertEqual(menu._title_draw_pos, menu.title_rect.topleft)
                 self.exercise(preview)
 
+    def interesting_entries(self):
+        from data import queries
+        playable = queries.playable_start_countries(self.map.map_data, self.map.nation_data)
+        return [{"country": country, "rank": rank, "description": "Fixture description " * 20}
+                for country, rank in zip(playable, ("major", "major", "minor"))]
+
+    def test_export_screen_lists_interesting_countries(self):
+        from screens.editors.standalone_export import Standalone_Export_Screen
+        entries = self.interesting_entries()
+        with mock.patch.dict(self.map.standalone_export_settings, {"interesting_countries": entries}):
+            screen = Standalone_Export_Screen()
+            screen.on_enter(self.controller, None)
+            self.exercise(screen)
+            self.assertEqual([entry["rank"] for entry in screen.ordered_countries(screen.settings())],
+                             ["major", "major", "minor"])
+
+    def test_standalone_new_game_opens_the_country_selector_for_more_than_one_country(self):
+        from screens.menus.menu import Menu
+        entries = self.interesting_entries()
+        for listed, state in ((entries, "COUNTRY_SELECT"), (entries[:1], "MAP"), ([], "MAP")):
+            with self.subTest(count=len(listed)):
+                self.assertEqual(Menu("Fixture", {"interesting_countries": listed})._standalone_new_game_state(), state)
+
+    def test_country_selector_starts_the_map_as_the_chosen_country(self):
+        from data.platform import LoadingSteps
+        from screens.setup import country_select
+        screen = country_select.Country_Select_Screen()
+        self.exercise(screen)  # Before on_enter it shows only Back.
+        screen.nation_data = self.map.nation_data
+        screen.entries = self.interesting_entries()
+        screen.images = {entry["country"]: screen._images(entry["country"]) for entry in screen.entries}
+        screen.selected = screen.entries[-1]["country"]
+        self.exercise(screen)
+
+        def loaded_map():
+            yield "Loading..."
+            return True
+
+        for chosen in (screen.entries[0]["country"], None):
+            with self.subTest(chosen=chosen), \
+                    mock.patch.object(country_select.standalone_game, "scenario_path", return_value="fixture"), \
+                    mock.patch.object(country_select.map_launch, "open_saved_map_steps",
+                                      return_value=LoadingSteps(loaded_map(), 1)), \
+                    mock.patch.object(country_select.player_setup, "start_as_country") as start:
+                if chosen:
+                    screen.select(chosen)
+                    screen.start()
+                else:
+                    screen.choose_on_map()
+                self.assertEqual(screen.next_state, "MAP")
+                list(screen.prepare_map_steps(self.controller))
+                if chosen:
+                    start.assert_called_once_with(self.controller.states["MAP"], chosen)
+                else:
+                    start.assert_not_called()
+
+    def test_selection_preview_selects_countries_but_never_leaves(self):
+        from screens.setup import country_select
+        from screens.editors.standalone_export import Standalone_Selection_Preview
+        from data import queries
+        entries = country_select.interesting_countries(
+            {"interesting_countries": self.interesting_entries()}, self.map.map_data, self.map.nation_data)
+        image = queries.encode_rgba_to_b64(bytes([1, 2, 3, 255]) * 6, (3, 2))
+        settings = {"background_color": [4, 5, 6], "background_image": image}
+        preview = Standalone_Selection_Preview(self.map.nation_data, entries, settings)
+        self.exercise(preview)
+        selector = preview.selector
+        # The selector draws the main menu's background, not the default checkerboard.
+        self.assertEqual(selector.background.color, [4, 5, 6])
+        self.assertIsNotNone(selector.background.image)
+
+        def click(button):
+            position = button.rect.center
+            preview.handle_events([
+                pygame.event.Event(pygame.MOUSEMOTION, pos=position, rel=(0, 0), buttons=(0, 0, 0)),
+                pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=position, button=1),
+                pygame.event.Event(pygame.MOUSEBUTTONUP, pos=position, button=1)])
+
+        minor = entries[-1]["country"]
+        click(next(button for button in selector.elements if button.text == selector.name(minor)))
+        self.assertEqual(selector.selected, minor)
+        for label in ("Back", "Select Country"):
+            click(next(button for button in selector.elements if button.text == label))
+            self.assertFalse(selector.done)
+            self.assertFalse(preview.done)
+        preview.go_back()
+        self.assertTrue(preview.done)
+
+    def test_interesting_countries_load_from_a_saved_scenario(self):
+        from data import queries
+        from screens.setup import country_select
+        path = "scenarios/historical/1939"
+        nation_data, entries = country_select.load_interesting_countries(path, queries.normalized_standalone_export_settings(
+            {"interesting_countries": [{"country": "Not A Country", "rank": "major"}] + self.interesting_entries()[::-1]}))
+        self.assertEqual([entry["rank"] for entry in entries], ["major", "major", "minor"])
+        self.assertTrue(all(entry["country"] in nation_data for entry in entries))
+
     def test_diplomacy_editor_agreements_view(self):
         from screens import editors as editor_screens
         screen = editor_screens.Diplomacy_Editor_Screen(self.map)

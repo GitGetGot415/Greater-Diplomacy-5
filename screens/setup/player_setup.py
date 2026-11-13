@@ -122,6 +122,18 @@ def confirm_player_country(map_screen):
             map_buttons.render_buttons(map_screen)
             map_screen.refresh_map_layers("relations")
 
+def start_as_country(map_screen, country):
+    """Confirm a country chosen before the map opened, as a click and Confirm on the map would.
+
+    A country that cannot start a game here leaves the map in country selection.
+    """
+    if country not in queries.playable_start_countries(map_screen.map_data, map_screen.nation_data):
+        map_screen.show_feedback(f"{queries.get_country_display_name(country, map_screen.nation_data)} cannot be played. Pick a country!")
+        return
+    map_screen.pending_selection = country
+    map_screen.selected_province = None
+    confirm_player_country(map_screen)
+
 def cancel_selection(map_screen):
     # Clean up ghost units
     if map_screen.tactical_mode and getattr(map_screen, 'pending_unit', None):

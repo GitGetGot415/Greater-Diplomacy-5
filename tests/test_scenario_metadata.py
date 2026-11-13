@@ -330,14 +330,46 @@ class ScenarioMetadataTests(unittest.TestCase):
         return base64.b64decode(queries.encode_rgba_to_b64(bytes([10, 20, 30, 255]) * 6, (3, 2)))
 
     def test_standalone_export_settings_default_to_the_background_color_and_repair_bad_values(self):
-        defaults = {"background_color": list(c.DEFAULT_BG_COLOR), "background_image": ""}
+        defaults = {"background_color": list(c.DEFAULT_BG_COLOR), "background_image": "", "interesting_countries": []}
         for value in (None, {}, [], {"background_color": [1, 2, 300], "background_image": 5},
-                      {"background_color": (1, 2, 3)}):
+                      {"background_color": (1, 2, 3)}, {"interesting_countries": "A"}):
             with self.subTest(value=value):
                 self.assertEqual(queries.normalized_standalone_export_settings(value), defaults)
         kept = {"background_color": [1, 2, 3], "extension": {"keep": True}}
         self.assertEqual(queries.normalized_standalone_export_settings(kept),
                          {**defaults, **kept})
+
+    def test_interesting_countries_keep_valid_entries_once_in_order(self):
+        saved = [{"country": "B", "rank": "minor", "description": "Second", "extra": 1},
+                 {"country": "A", "rank": "major"},
+                 {"country": "B", "rank": "major", "description": "Repeated"},
+                 {"country": "C", "rank": "regional"}, {"country": "", "rank": "major"}, {"rank": "minor"}, "D",
+                 {"country": "E", "rank": "major", "description": 5}]
+        result = queries.normalized_standalone_export_settings({"interesting_countries": saved})
+        self.assertEqual(result["interesting_countries"], [
+            {"country": "B", "rank": "minor", "description": "Second", "extra": 1},
+            {"country": "A", "rank": "major", "description": ""},
+            {"country": "E", "rank": "major", "description": ""}])
+
+    def test_only_owned_playable_countries_can_start_a_game(self):
+        map_data = {"a": {"owner": "A"}, "b": {"owner": "B"}, "c": {"owner": "C"}, "o": {"owner": "Ocean"}}
+        nation_data = {"A": {"is_playable": True}, "B": {"is_playable": False}, "C": {"is_playable": True},
+                       "D": {"is_playable": True}, "Ocean": {"is_playable": True}}
+        self.assertEqual(queries.playable_start_countries(map_data, nation_data), ["A", "C"])
+
+    def test_a_country_chosen_before_the_map_opens_confirms_like_a_map_selection(self):
+        from screens.setup import player_setup
+        game = map_double(map_data={"a": {"owner": "A"}, "b": {"owner": "B"}},
+                          nation_data={"A": {"is_playable": True}, "B": {}}, show_feedback=mock.Mock())
+        with mock.patch.object(player_setup, "confirm_player_country") as confirm:
+            player_setup.start_as_country(game, "A")
+            confirm.assert_called_once_with(game)
+            self.assertEqual(game.pending_selection, "A")
+            confirm.reset_mock()
+            game.pending_selection = None
+            player_setup.start_as_country(game, "B")
+            confirm.assert_not_called()
+            self.assertIsNone(game.pending_selection)
 
     def test_standalone_export_settings_change_only_with_valid_values_in_an_idle_editor(self):
         queries.set_standalone_export_setting(self.game, "background_color", [1, 2, 3])
@@ -346,9 +378,14 @@ class ScenarioMetadataTests(unittest.TestCase):
         self.assertEqual(settings["background_color"], [1, 2, 3])
         self.assertEqual(base64.b64decode(settings["background_image"]), self.png_bytes())
         before = copy.deepcopy(settings)
-        for key, value in (("menu_background", "solid"), ("background_color", [1, 2, 300])):
+        repeated = [{"country": "A", "rank": "major", "description": ""}] * 2
+        for key, value in (("menu_background", "solid"), ("background_color", [1, 2, 300]),
+                           ("interesting_countries", repeated)):
             with self.subTest(key=key), self.assertRaises(ValueError):
                 queries.set_standalone_export_setting(self.game, key, value)
+        queries.set_standalone_export_setting(self.game, "interesting_countries", repeated[:1])
+        self.assertEqual(settings["interesting_countries"], repeated[:1])
+        settings["interesting_countries"] = []
         with self.assertRaises(ValueError):
             queries.set_standalone_background_image(self.game, b"GIF89a not a png")
         self.game.multiplayer_mode = True

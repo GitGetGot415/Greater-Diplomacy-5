@@ -21,6 +21,7 @@ from screens.game import map_launch
 from ui.dialogs import pickers
 from data.platform import IS_WEB, browser_fetch_text, run_background
 from ui.rendering.font_manager import fonts
+from ui.rendering.standalone_background import StandaloneBackground
 
 from ui.dialogs.character_select_screen import CHARACTERS_DIR
 from ui import dialogs
@@ -308,8 +309,7 @@ class Menu(Screen):
         self.is_standalone = standalone_title is not None
         self.standalone_settings = (queries.normalized_standalone_export_settings(standalone_settings)
                                     if self.is_standalone else None)
-        self._background_image = self._load_standalone_background_image()
-        self._scaled_background = None
+        self.standalone_background = StandaloneBackground(standalone_settings) if self.is_standalone else None
 
         # Hildehrand stands near the left edge of the screen, scaled the same
         # nearest-neighbour way as The Sign.png (not smoothscale) so the
@@ -391,7 +391,7 @@ class Menu(Screen):
             new_game_button_size,
             "green",
             "New Game",
-            lambda: self.go_to("MAP" if self.is_standalone else "NEW_GAME"),
+            lambda: self.go_to(self._standalone_new_game_state() if self.is_standalone else "NEW_GAME"),
             image=ui_elements.UI_ICONS.get("new_game"),
             font_size=new_game_text_size,
         )
@@ -648,6 +648,10 @@ class Menu(Screen):
             print(f"Failed to load the Hildehrand image: {e}")
             self._hildehrand_plain_image = None
         self._refresh_hildehrand_image()
+
+    def _standalone_new_game_state(self):
+        """A standalone game with more than one interesting country opens its country selector first."""
+        return "COUNTRY_SELECT" if len(self.standalone_settings["interesting_countries"]) > 1 else "MAP"
 
     def prepare_map(self, app):
         # Only a standalone game's New Game button opens MAP from the main menu.
@@ -908,43 +912,9 @@ class Menu(Screen):
             item["main_rect"].y = int(_lerp(rise_start_y, item["_intro_target_main_y"], t))
             item["link_rect"].y = int(_lerp(rise_start_y, item["_intro_target_link_y"], t))
 
-    def _load_standalone_background_image(self):
-        """Return the standalone menu's image, or None when it has no readable image."""
-        if not self.is_standalone:
-            return None
-        text = self.standalone_settings["background_image"]
-        if not text:
-            return None
-        try:
-            image = queries.load_png_b64(text)
-        except (ValueError, pygame.error) as error:
-            print(f"Failed to load the standalone menu background image: {error}")
-            return None
-        # smoothscale needs 24- or 32-bit pixels. Palette PNGs load with 8.
-        full_color = pygame.Surface(image.get_size(), pygame.SRCALPHA, 32)
-        full_color.blit(image, (0, 0))
-        return full_color
-
-    def _draw_standalone_background(self, surface):
-        """Fill the standalone game's background color, then draw its image over it."""
-        surface.fill(self.standalone_settings["background_color"])
-        if self._background_image is None:
-            return
-        size = surface.get_size()
-        if self._scaled_background is None or self._scaled_background[0] != size:
-            # Cover the whole screen without stretching. The image is centered, so its edges are cropped.
-            # Transparent parts of the image show the background.
-            image = self._background_image
-            scale = max(size[0] / image.get_width(), size[1] / image.get_height())
-            scaled = pygame.transform.smoothscale(
-                image, (max(1, round(image.get_width() * scale)), max(1, round(image.get_height() * scale))))
-            self._scaled_background = (size, scaled, scaled.get_rect(center=(size[0] // 2, size[1] // 2)))
-        _size, scaled, rect = self._scaled_background
-        surface.blit(scaled, rect)
-
     def draw_background(self, surface):
         if self.is_standalone:
-            self._draw_standalone_background(surface)
+            self.standalone_background.draw(surface)
             return
         colors = _menu_gradient_colors()
         surface.blit(_menu_background(surface.get_size(), *colors), (0, 0))

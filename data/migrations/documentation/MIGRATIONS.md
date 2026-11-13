@@ -395,8 +395,11 @@ Requests and answers that scripted events create carry an optional `scripted` fi
 
 `WorldState.standalone_export_settings` owns the Standalone Export screen's choices: the standalone menu's
 solid background color and the Base64 text of a PNG image that the menu draws over that color.
+`interesting_countries` lists the country selector's entries as `{"country", "rank", "description"}`,
+where `rank` is `major` or `minor`. Saves keep the full country records that these entries name.
 The shared save builder writes it to `meta.json` and saves. Real-time projections omit it.
-`queries.normalized_standalone_export_settings` supplies the default color when an older file omits the field or a value.
+`queries.normalized_standalone_export_settings` supplies the default color and an empty country list when an older file
+omits the field or a value. It drops entries without a country ID or a known rank, and repeated countries.
 This additive field needs no conversion rule. A selected history turn keeps the map's current settings.
 A standalone export copies the settings into its `game.json`. An older `game.json` without them shows the default color.
 

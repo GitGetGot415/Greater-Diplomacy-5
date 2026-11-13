@@ -22,6 +22,11 @@ def normalized_scenario_metadata(metadata):
     return result
 
 
+#: Interesting country ranks on a standalone game's country selector.
+#: Majors show portrait cards. Minors show flags.
+INTERESTING_COUNTRY_RANKS = ("major", "minor")
+
+
 def _is_rgb(value):
     return (isinstance(value, list) and len(value) == 3
             and all(type(channel) is int and 0 <= channel <= 255 for channel in value))
@@ -32,13 +37,26 @@ def normalized_standalone_export_settings(settings):
 
     The standalone menu fills background_color, an RGB list. background_image is Base64 text
     of a PNG file, or empty. The menu draws it over the background color.
-    Unknown fields are kept. Maps saved before these settings existed use the default color.
+    interesting_countries lists {"country", "rank", "description"} entries for the country selector.
+    Entries without a country ID or a known rank, and repeated countries, are dropped.
+    Unknown fields are kept. Maps saved before these settings existed use the default color
+    and have no interesting countries.
     """
     result = copy.deepcopy(settings) if isinstance(settings, dict) else {}
     if not _is_rgb(result.get("background_color")):
         result["background_color"] = list(c.DEFAULT_BG_COLOR)
     if not isinstance(result.get("background_image"), str):
         result["background_image"] = ""
+    entries, listed = [], set()
+    saved = result.get("interesting_countries")
+    for entry in saved if isinstance(saved, list) else ():
+        if (not isinstance(entry, dict) or not isinstance(entry.get("country"), str) or not entry["country"]
+                or entry["country"] in listed or entry.get("rank") not in INTERESTING_COUNTRY_RANKS):
+            continue
+        description = entry.get("description")
+        entries.append({**entry, "description": description if isinstance(description, str) else ""})
+        listed.add(entry["country"])
+    result["interesting_countries"] = entries
     return result
 
 

@@ -269,6 +269,15 @@ def get_living_nations(map_data):
     return active_nations
 
 
+def playable_start_countries(map_data, nation_data):
+    """Return the sorted countries that a new game can start as.
+
+    As on the map's country selection, a country must own territory and be playable.
+    """
+    return sorted(country for country in get_living_nations(map_data)
+                  if isinstance(nation_data.get(country), dict) and nation_data[country].get("is_playable"))
+
+
 def is_government_in_exile(nation, map_data, nation_data):
     """Whether a faction member has lost its territory but still exists politically.
 
