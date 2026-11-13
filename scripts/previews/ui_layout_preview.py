@@ -2,8 +2,10 @@
 
 Run from the repository root with ``python scripts/previews/ui_layout_preview.py``.
 The preview uses a temporary in-memory historical map only; it never writes a
-scenario or save. Press 1-7 to change UI state, S to save a screenshot beneath
-the system temporary directory, and Esc to quit.
+scenario or save. Press 1-9 to change UI state, S to save a screenshot beneath
+the system temporary directory, and Esc to quit. View 8 opens the scenario in
+the map maker. View 9 shows the main menu as an exported standalone game shows
+it; standalone mode is switched on only while that view is open.
 """
 
 import os
@@ -33,7 +35,12 @@ MODE_LABELS = {
     5: "Tournament player",
     6: "Tournament host",
     7: "Battle screen",
+    8: "Map maker",
+    9: "Standalone menu",
 }
+MODE_KEYS = (pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5,
+             pygame.K_6, pygame.K_7, pygame.K_8, pygame.K_9)
+SCENARIO_PATH = "scenarios/historical/1939"
 
 
 def _preview_session():
@@ -90,6 +97,19 @@ def _battle_preview_orders(game_map, player_country):
     return orders
 
 
+def _set_standalone(enabled):
+    """Switch standalone mode the way game.json does at startup, for view 9 only.
+
+    The exported title is the scenario name, as the map maker's export names it.
+    """
+    # Like the preview screens, this module loads after application initialization.
+    from data.io import standalone_game
+
+    standalone_game.GAME = ({"title": Path(SCENARIO_PATH).name, "scenario": SCENARIO_PATH}
+                            if enabled else None)
+    standalone_game.IS_STANDALONE = enabled
+
+
 def main():
     import main as game_main
 
@@ -99,8 +119,11 @@ def main():
     surface = controller.screen
     pygame.display.set_caption(
         "GD5 UI Layout Preview -- 1 Normal | 2 Real-time | 3 Packed | "
-        "4 Spectator | 5 Tournament Player | 6 Tournament Host | 7 Battle | S Screenshot")
-    game_map = game_main.Map(load_path="scenarios/historical/1939", is_scenario=True, num_players=1)
+        "4 Spectator | 5 Tournament Player | 6 Tournament Host | 7 Battle | "
+        "8 Map Maker | 9 Standalone Menu | S Screenshot")
+    from screens.game import map_buttons
+    from screens.menus.menu import Menu
+    game_map = game_main.Map(load_path=SCENARIO_PATH, is_scenario=True, num_players=1)
     # Pick the country with the largest starting force so every preview mode
     # has real stack art and a selected army to display.
     playable_country = max(
@@ -119,16 +142,19 @@ def main():
     game_map._realtime_unsubmit = lambda: None
     mode = 1
     battle_orders = None
+    editor_map = None
+    standalone_menu = None
     clock = pygame.time.Clock()
     running = True
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                 running = False
-            elif event.type == pygame.KEYDOWN and event.key in (
-                    pygame.K_1, pygame.K_2, pygame.K_3,
-                    pygame.K_4, pygame.K_5, pygame.K_6, pygame.K_7):
-                mode = int(event.unicode)
+            elif event.type == pygame.KEYDOWN and event.key in MODE_KEYS:
+                mode = MODE_KEYS.index(event.key) + 1
+                _set_standalone(mode == 9)
+                # A new menu replays its intro each time view 9 opens.
+                standalone_menu = Menu() if mode == 9 else None
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_s:
                 output = Path(tempfile.gettempdir()) / "gd5_ui_previews"
                 output.mkdir(exist_ok=True)
@@ -136,38 +162,48 @@ def main():
                 pygame.image.save(surface, path)
                 print(f"Saved UI preview: {path}")
 
-        game_map.realtime_multiplayer = mode in (2, 3)
-        game_map.multiplayer_mode = mode in (5, 6)
-        game_map.multiplayer_host_mode = mode == 6
-        game_map.player_country = "Spectator" if mode in (4, 6) else playable_country
-        game_map.active_players = ([playable_country] if mode != 6
-                                   else [playable_country, "Germany"])
-        if game_map.realtime_multiplayer:
-            game_map.realtime_session = _preview_session()
-            game_map.realtime_session.players["preview"].country_id = game_map.player_country
-            game_map.realtime_player_id = "preview"
-            game_map.realtime_connection_error = ""
-        army_count = {1: 2, 2: 5, 3: 30, 5: 2}.get(mode, 0)
-        if army_count:
-            _set_armies(game_map, army_count)
-        game_map.selected_province = None
-        if army_count:
-            first_army = game_map.nation_data[game_map.player_country]["armies"][0]
-            game_map.selected_unit_ids = set(first_army["unit_ids"])
+        if mode == 8:
+            if editor_map is None:
+                # The map maker opens a saved scenario the way Select Base Map does.
+                editor_map = game_main.Map(load_path=SCENARIO_PATH, is_scenario=True,
+                                           force_editor=True, num_players=1)
+            map_buttons.update_button_states(editor_map)
+            editor_map.draw(surface)
+        elif mode == 9:
+            standalone_menu.update()
+            standalone_menu.draw(surface)
         else:
-            game_map.selected_unit_ids = set()
-        # Map.refresh_ui is deliberately a no-op; this is the same per-frame
-        # button-state path used by the live map without starting networking.
-        from screens.game import map_buttons
-        map_buttons.update_button_states(game_map)
-        if mode == 7:
-            if battle_orders is None:
-                battle_orders = _battle_preview_orders(game_map, playable_country)
-            battle_orders.draw(surface)
-        else:
-            game_map.draw(surface)
+            game_map.realtime_multiplayer = mode in (2, 3)
+            game_map.multiplayer_mode = mode in (5, 6)
+            game_map.multiplayer_host_mode = mode == 6
+            game_map.player_country = "Spectator" if mode in (4, 6) else playable_country
+            game_map.active_players = ([playable_country] if mode != 6
+                                       else [playable_country, "Germany"])
+            if game_map.realtime_multiplayer:
+                game_map.realtime_session = _preview_session()
+                game_map.realtime_session.players["preview"].country_id = game_map.player_country
+                game_map.realtime_player_id = "preview"
+                game_map.realtime_connection_error = ""
+            army_count = {1: 2, 2: 5, 3: 30, 5: 2}.get(mode, 0)
+            if army_count:
+                _set_armies(game_map, army_count)
+            game_map.selected_province = None
+            if army_count:
+                first_army = game_map.nation_data[game_map.player_country]["armies"][0]
+                game_map.selected_unit_ids = set(first_army["unit_ids"])
+            else:
+                game_map.selected_unit_ids = set()
+            # Map.refresh_ui is deliberately a no-op; this is the same per-frame
+            # button-state path used by the live map without starting networking.
+            map_buttons.update_button_states(game_map)
+            if mode == 7:
+                if battle_orders is None:
+                    battle_orders = _battle_preview_orders(game_map, playable_country)
+                battle_orders.draw(surface)
+            else:
+                game_map.draw(surface)
         label = pygame.font.Font(None, 24).render(
-            f"{MODE_LABELS[mode]}  |  1-7 switch views  |  S saves screenshot",
+            f"{MODE_LABELS[mode]}  |  1-9 switch views  |  S saves screenshot",
             True, (255, 235, 150))
         surface.blit(label, (12, c.TOP_UI_HEIGHT + 8))
         pygame.display.flip()
