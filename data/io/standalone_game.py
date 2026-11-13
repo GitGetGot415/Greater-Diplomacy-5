@@ -13,6 +13,8 @@ import shutil
 import sys
 
 import data.constants as c
+from data import queries
+from data.map import load_map
 from data.io.game_files import DESKTOP_SOURCE_FILES, EXPORTS_DIR, LICENSE_FILE, NATIVE_BINARIES, SOURCE_PACKAGES
 from data.io.starting_defaults import write_preference_defaults
 from data.platform import CHARACTERS_DIR, LoadingSteps
@@ -87,8 +89,28 @@ def _wanted_package_file(path, package):
     return extension == ".py" or (package == DATA_PACKAGE and extension == ".json")
 
 
-def _wanted_asset(path):
+def _scenario_flags(scenario_dir):
+    """Return the flag files that this scenario can show.
+
+    A country uses assets/flags/<country id>.png unless its scenario record stores its own image.
+    The flags kept are for countries that exist (including governments in exile), countries that cores
+    can release (puppet releases and rebellions copy a core country's flag), the non-country
+    flags such as Spectator, and the default flag.
+    """
+    save_meta, map_data, _history = load_map.read_save_files(scenario_dir)
+    nation_data = (save_meta or {}).get("nation_data", {})
+    countries = queries.get_politically_active_nations(map_data, nation_data)
+    countries.update(core for province in map_data.values() for core in province.get("cores", []))
+    countries.update(c.UNPLAYABLE_NATIONS)
+    flags = {f"{c.FLAGS_DIR}/{country}.png" for country in countries}
+    flags.add(c.DEFAULT_FLAG_PATH)
+    return flags
+
+
+def _wanted_asset(path, flags):
     path = path.replace(os.sep, "/")
+    if path.startswith(c.FLAGS_DIR + "/"):
+        return path in flags
     return not any(path == excluded or path.startswith(excluded + "/") for excluded in EXCLUDED_ASSETS)
 
 
@@ -99,7 +121,8 @@ def _export_copies(scenario_dir, destination, scenario_target):
     for package in SOURCE_PACKAGES:
         copies.extend((path, os.path.join(destination, path)) for path in _walk_files(package)
                       if _wanted_package_file(path, package))
-    copies.extend((path, os.path.join(destination, path)) for path in _walk_files("assets") if _wanted_asset(path))
+    flags = _scenario_flags(scenario_dir)
+    copies.extend((path, os.path.join(destination, path)) for path in _walk_files("assets") if _wanted_asset(path, flags))
     copies.extend((path, os.path.join(scenario_target, os.path.relpath(path, scenario_dir)))
                   for path in _walk_files(scenario_dir))
     return copies
