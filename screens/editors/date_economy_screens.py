@@ -48,13 +48,15 @@ class Editor_Metadata_Screen(EditorFormScreen):
 
     def refresh_ui(self):
         super().refresh_ui()
-        action = self.action_button.rect
-        export_button = Button(action.right + self.EXPORT_BUTTON_GAP, action.y, "medium", "blue",
-                               "Standalone Export", self.standalone_export)
-        export_button.fit_text = True
+
+        # Standalone map editor - disabled for now
+
+        # action = self.action_button.rect
+        #export_button = Button(action.right + self.EXPORT_BUTTON_GAP, action.y, "medium", "blue", "Standalone Export", self.standalone_export)
+        #export_button.fit_text = True
         # The web build cannot write a game folder for players to run.
-        export_button.apply_state(enabled=not IS_WEB, color="blue")
-        self.elements.append(export_button)
+        #export_button.apply_state(enabled=not IS_WEB, color="blue")
+        #self.elements.append(export_button)
 
     def standalone_export(self):
         """Export the saved copy of this scenario as a standalone game in exports/<scenario name>/."""
