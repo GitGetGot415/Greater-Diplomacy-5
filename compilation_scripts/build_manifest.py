@@ -21,7 +21,15 @@ ANDROID_PROJECT_FILES = (
     "app/src/main/java/org/greaterdiplomacy/gd5/MainActivity.java",
 )
 ANDROID_APPLICATION_ID = "org.greaterdiplomacy.gd5"
-ANDROID_APK = "dist/android/GD5 Android.apk"
+
+
+def android_apk():
+    """Return the APK path, named after the game version like the other platforms' exports."""
+    # data.constants loads game modules; importing it here keeps this module free of them.
+    from data.constants import GAME_VERSION
+    return f"dist/android/GD5 ANDROID {GAME_VERSION}.apk"
+
+
 ANDROID_ICON = "assets/icon/icon.png"
 # Android loads the gzip game bundle. Pygbag's ZIP-format .apk is only for web hosting.
 ANDROID_WEB_EXCLUDED_PATTERNS = ("*.apk",)

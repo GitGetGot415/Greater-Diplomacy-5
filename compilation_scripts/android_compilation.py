@@ -45,7 +45,7 @@ def build_apk(skip_web_build=False):
                     f"-Pgd5VersionName={GAME_VERSION}"],
                    cwd=android_tools.PROJECT_DIR, env=environment, check=True)
     source = android_tools.PROJECT_DIR / "app/build/outputs/apk/debug/app-debug.apk"
-    destination = REPO_ROOT / manifest.ANDROID_APK
+    destination = REPO_ROOT / manifest.android_apk()
     destination.parent.mkdir(parents=True, exist_ok=True)
     # Publish only after successful compilation; a failed build leaves the previous APK intact.
     temporary = destination.with_suffix(".apk.tmp")

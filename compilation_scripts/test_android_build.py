@@ -113,7 +113,7 @@ def main(argv=None):
     if args.build and args.apk:
         parser.error("--build and --apk cannot be combined.")
     try:
-        apk = build_apk() if args.build else (args.apk or REPO_ROOT / manifest.ANDROID_APK).resolve()
+        apk = build_apk() if args.build else (args.apk or REPO_ROOT / manifest.android_apk()).resolve()
         if not apk.is_file():
             raise FileNotFoundError(f"No APK at {apk}. Run android_compilation.py or use --build.")
         sdk = android_tools.android_sdk()
