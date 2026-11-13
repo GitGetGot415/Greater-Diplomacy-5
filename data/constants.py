@@ -40,6 +40,8 @@ TACTICAL_WEAPONS = {
     "cannon": dict(label="Cannon",                          interval=6.0, rounds=1, reload=6.0, speed=2300.0, spread=0.8, damage=2.5, penetration=3.0, shell=True, soft_only=False),
     "heavy_cannon": dict(label="Heavy cannon",              interval=8.0, rounds=1, reload=8.0, speed=2500.0, spread=0.8, damage=3.4, penetration=4.0, shell=True, soft_only=False),
     "autocannon": dict(label="Autocannon",                  interval=0.3, rounds=3, reload=2.8, speed=1800.0, spread=1.5, damage=0.5, penetration=1.0, shell=True, soft_only=False),
+    "artillery_shell": dict(label="Artillery shells", interval=8.0, rounds=1, reload=8.0, speed=700.0, spread=1.0, damage=1.0, penetration=0.0, shell=True, soft_only=False, projectile="artillery_shell", range=2800.0, gravity=300.0),
+    "torpedo": dict(label="Torpedoes", interval=10.0, rounds=1, reload=10.0, speed=140.0, spread=0.5, damage=1.0, penetration=0.0, shell=False, soft_only=False, projectile="torpedo", range=3000.0),
 }
 TACTICAL_VEHICLE_WEAPONS = {
     "armored_car": ("light_cannon", "vehicle_mg"),
@@ -56,8 +58,14 @@ TACTICAL_BODIES = {
     "ifv": (38, 26, 19.0, 2.5), "armored_car": (30, 20, 15.0, 2.0),
     "light_tank": (34, 24, 17.0, 3.0), "tank": (40, 28, 20.0, 4.0),
     "heavy_tank": (48, 34, 24.0, 5.0),
+    "carrack": (50, 26, 28.2, 3.0), "ironclad": (62, 26, 33.7, 4.0),
+    "destroyer": (124, 26, 63.4, 4.0), "pre_dreadnought": (124, 26, 63.4, 5.0),
+    "dreadnought": (182, 46, 93.9, 6.0), "battleship": (182, 46, 93.9, 6.0),
+    "aircraft_carrier": (208, 48, 106.8, 5.0), "submarine": (180, 24, 90.8, 3.0),
+    "convoy": (50, 26, 28.2, 2.0),
 }
 TACTICAL_PENETRATION_DAMAGE_RETAINED = 0.6
+TACTICAL_NAVAL_HULL_HEIGHT = 24.0
 TACTICAL_MOVING_SPREAD = 1.5  # Extra degrees at full movement speed.
 TACTICAL_TURNING_SPREAD = 1.0  # Extra degrees at full hull turn speed.
 TACTICAL_SHELL_SPREAD_MULTIPLIER = 0.35  # Shell spread, including movement and turning, relative to bullets.

@@ -1,4 +1,4 @@
-"""Standalone land battles with optional player control and no campaign state."""
+"""Standalone land and naval battles with optional control and no campaign state."""
 
 import math
 import random
@@ -8,7 +8,7 @@ import data.constants as c
 from data import queries
 from data.io import starting_defaults
 from data.state_access import session_for, world_for
-from map_logic import battle_terrain
+from map_logic import battle_terrain, naval_battle as naval
 from map_logic.system32 import combat_forecast, combat_rules
 
 
@@ -28,7 +28,7 @@ WITHDRAW_RANGE = 500.0
 FALLOFF_START = 400.0
 MIN_RANGED_DAMAGE = 0.45
 UNIT_RADIUS = c.TACTICAL_BODIES["infantry"][2]
-MAX_UNIT_RADIUS = max(body[2] for body in c.TACTICAL_BODIES.values())
+MAX_UNIT_RADIUS = max(body[2] for shape, body in c.TACTICAL_BODIES.items() if shape not in naval.SHAPES)
 SHOT_SPREAD = math.radians(c.TACTICAL_WEAPONS["rifle"]["spread"])
 # Each AI sub-unit draws its own temperament from these (low, high) ranges at deployment.
 AI_HOLD_RANGE = (0.6, 0.95)  # Share of engagement distance at which it stops closing in.
@@ -140,6 +140,10 @@ AIM = {
     "armored_car": (None, 180), "light_tank": (None, 150), "tank": (None, 120),
     "heavy_tank": (None, 90),
 }
+SUBUNIT_COUNTS.update({shape: 1 for shape in naval.SHAPES})
+MOBILITY.update({shape: naval.MOBILITY for shape in naval.SHAPES})
+AIM.update({shape: (None, naval.AIM_SPEED) for shape in naval.SHAPES})
+CONTACT_MASS.update(naval.CONTACT_MASS)
 
 
 def valid_starting_health(health, max_health):
@@ -181,17 +185,42 @@ def campaign_unit_eligible(name, library):
 
 
 def custom_unit_types(library):
-    """Selectable custom units, with every ship fighting in its Truck form."""
+    """Selectable units; terrain determines their fighting or transport form."""
     return [name for name, stats in library.items()
             if stats.get("naval_unit") or campaign_unit_eligible(name, library)]
 
 
-def create_battle_unit(name, owner, library):
-    """Build a battle record using the shared ship-to-Truck stats."""
-    ship = packed_ship_type(name, library)
-    unit = queries.create_unit_dict(ship or name, owner, library)
-    if ship or library[name].get("naval_unit"):
+def battle_unit_type(name, library):
+    """The library identity under a current tactical transport wrapper."""
+    for carrier in ("Truck", "Convoy"):
+        if name.startswith(carrier + " (") and name.endswith(")") and name[len(carrier) + 2:-1] in library:
+            return name[len(carrier) + 2:-1]
+    return name
+
+
+def create_battle_unit(name, owner, library, terrain=None):
+    """Build the terrain's current form through the shared transport rules."""
+    name = battle_unit_type(name, library)
+    unit = queries.create_unit_dict(name, owner, library)
+    water = terrain in c.WATER_TERRAINS
+    if water and not library[name].get("naval_unit"):
+        queries.load_transport(unit, "Convoy")
+    elif not water and library[name].get("naval_unit"):
         queries.load_transport(unit, "Truck")
+    return unit
+
+
+def prepare_battle_unit(entry, library, terrain):
+    """Prepare a copy, preserving identity, settings, and the current HP fraction."""
+    name = entry["type"]
+    base = battle_unit_type(name, library)
+    expected = base if bool(library[base].get("naval_unit")) == (terrain in c.WATER_TERRAINS) else f"{'Convoy' if terrain in c.WATER_TERRAINS else 'Truck'} ({base})"
+    if name == expected:
+        return dict(entry)
+    unit = create_battle_unit(base, entry["owner"], library, terrain)
+    unit["health"] = entry["health"] / entry["max_health"] * unit["max_health"]
+    if "unit_id" in entry:
+        unit["unit_id"] = entry["unit_id"]
     return unit
 
 
@@ -356,10 +385,16 @@ def land_unit_types_for_year(library, year):
     return candidates
 
 
+def custom_unit_types_for_year(library, year, terrain):
+    if terrain not in c.WATER_TERRAINS:
+        return land_unit_types_for_year(library, year)
+    return [name for name in queries.get_latest_units_for_year(library, year) if library[name].get("naval_unit")]
+
+
 def random_armies(candidates, *, rng=None):
     """Independently choose each army's size and types; repeated units are allowed."""
     if not candidates:
-        raise ValueError("No land units are available for the selected year.")
+        raise ValueError("No units are available for the selected year and terrain.")
     rng = random if rng is None else rng
     return [[rng.choice(candidates)
              for _ in range(rng.randint(RANDOM_ARMY_MIN_UNITS, RANDOM_ARMY_MAX_UNITS))]
@@ -368,8 +403,12 @@ def random_armies(candidates, *, rng=None):
 
 def unit_shape(name, library):
     """Choose prototype geometry from existing family and capability metadata."""
-    if packed_ship_type(name, library) or library.get(name, {}).get("naval_unit"):
+    if name.startswith("Convoy (") and battle_unit_type(name, library) != name:
+        return "convoy"
+    if packed_ship_type(name, library):
         return "motorized"
+    if library.get(name, {}).get("naval_unit"):
+        return naval.FAMILY_SHAPES.get(queries.get_unit_metadata(name, library)["family"], "destroyer")
     stats = library[name]
     family = queries.get_unit_metadata(name, library).get("family", "")
     if family in FAMILY_SHAPES:
@@ -476,12 +515,30 @@ class Fighter:
     recoil: float = 0.0
     fired_weapon: int = 0  # Presentation callback reads which independent gun fired.
     secondary_target: object = None
+    secondary_aim: float = 0.0
+    gun_points: list = field(default_factory=lambda: [None, None])
+    mount_muzzles: list = field(default_factory=lambda: [0.0, 0.0])
+    mount_recoils: list = field(default_factory=lambda: [0.0, 0.0])
+
+    @property
+    def naval(self):
+        return self.shape in naval.SHAPES
+
+    @property
+    def weapon_range(self):
+        return max((self.weapon(slot).get("range", WEAPON_RANGE) for slot in (0, 1) if self.weapon(slot) is not None), default=WEAPON_RANGE)
+
+    def weapon_aim(self, slot=0):
+        return self.secondary_aim if slot and self.naval else self.aim
 
     @property
     def radius(self):
         return c.TACTICAL_BODIES[self.shape][2]
 
     def weapon(self, slot=0):
+        if self.naval:
+            mounts = naval.mounts(self.shape)
+            return c.TACTICAL_WEAPONS[mounts[slot].weapon] if slot < len(mounts) else None
         loadout = c.TACTICAL_VEHICLE_WEAPONS.get(self.shape)
         if slot == 1:
             return c.TACTICAL_WEAPONS[loadout[1]] if loadout else None
@@ -504,7 +561,7 @@ class Fighter:
 
     @property
     def can_ram(self):
-        return self.data["speed"] >= RAM_MIN_UNIT_SPEED
+        return self.data["speed"] >= (naval.RAM_MIN_UNIT_SPEED if self.naval else RAM_MIN_UNIT_SPEED)
 
 
 @dataclass
@@ -525,12 +582,20 @@ class Projectile:
     penetration: object = None
     power: float = 1.0
     hit_units: set = field(default_factory=set)
+    gravity: float = 0.0
+    attack_share: object = None
 
     def __post_init__(self):
         if self.weapon_data is None:
             self.weapon_data = dict(self.source.weapon())
         if self.penetration is None:
             self.penetration = self.weapon_data["penetration"]
+        if self.attack_share is None:
+            self.attack_share = self.source.attack_share
+
+    @property
+    def kind(self):
+        return self.weapon_data.get("projectile", "direct")
 
 
 class _Grid:
@@ -541,7 +606,7 @@ class _Grid:
         self.cells = {}
         for fighter in fighters:
             self.cells.setdefault(self._key(fighter.x, fighter.y), []).append(fighter)
-        self.reach = math.ceil(max(ARENA_SIZE) / cell) + 1
+        self.reach = math.ceil(max(*ARENA_SIZE, *naval.ARENA_SIZE) / cell) + 1
 
     def _key(self, x, y):
         return int(x // self.cell), int(y // self.cell)
@@ -629,40 +694,59 @@ class BattleSimulation:
     _sides: list = field(init=False, default_factory=lambda: [[], []])  # Each side's living sub-units this tick.
     _contacts: set = field(init=False, default_factory=set)  # Rearm a ram only after the pair separates.
 
+    @property
+    def naval(self):
+        return self.terrain in c.WATER_TERRAINS
+
+    @property
+    def arena_size(self):
+        return naval.ARENA_SIZE if self.naval else ARENA_SIZE
+
+    @property
+    def sight_range(self):
+        return max((fighter.weapon_range for fighter in self.fighters), default=WEAPON_RANGE) if self.naval else WEAPON_RANGE
+
+    @property
+    def max_radius(self):
+        return max((c.TACTICAL_BODIES[shape][2] for shape in naval.SHAPES), default=MAX_UNIT_RADIUS) if self.naval else MAX_UNIT_RADIUS
+
     def __post_init__(self):
         if self.controlled_index is not None and (
                 type(self.controlled_index) is not int or not 0 <= self.controlled_index < len(self.friendly)):
             raise ValueError("The controlled unit must be an existing friendly roster entry.")
         self._rng = random.Random(self.seed)
+        if self.battlefield is not None:
+            self.terrain = self.battlefield.terrain
         if self.battlefield is None:
             self.battlefield = battle_terrain.Battlefield.generate(
-                self.terrain, ARENA_SIZE, MAX_UNIT_RADIUS, SPAWN_FRONT_GAP, self.seed,
+                self.terrain, self.arena_size, self.max_radius, naval.FRONT_GAP if self.naval else SPAWN_FRONT_GAP, self.seed,
                 deployment_half_height=(max(SUBUNIT_COUNTS.values()) - 1) * SUBUNIT_SPACING / 2)
         allowed = set(custom_unit_types(self.library))
         for side, roster in enumerate((self.friendly, self.enemy)):
             if not roster or len(roster) > c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE:
                 raise ValueError(f"Each army needs 1 to {c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE} units.")
-            if any((entry["type"] if isinstance(entry, dict) else entry) not in allowed
-                   and not packed_ship_type(entry["type"] if isinstance(entry, dict) else entry, self.library)
+            if any(battle_unit_type(entry["type"] if isinstance(entry, dict) else entry, self.library) not in allowed
                    for entry in roster):
                 raise ValueError("Custom battles accept only current land-unit or ship identifiers.")
-            front = (ARENA_SIZE[0] - SPAWN_FRONT_GAP) / 2
+            front = (self.arena_size[0] - (naval.FRONT_GAP if self.naval else SPAWN_FRONT_GAP)) / 2
             for index, entry in enumerate(roster):
                 name = entry["type"] if isinstance(entry, dict) else entry
                 # The first roster entry stands in the front rank, the last one furthest back.
-                x = front - index * RANK_GAP
+                x = front - index * (naval.RANK_GAP if self.naval else RANK_GAP)
                 if side:
-                    x = ARENA_SIZE[0] - x
+                    x = self.arena_size[0] - x
                 owner = entry["owner"] if isinstance(entry, dict) else "Enemy" if side else "Friendly"
-                data = (dict(entry) if isinstance(entry, dict) and packed_ship_type(name, self.library)
-                        else create_battle_unit(name, owner, self.library))
+                # Campaign Trucks retain their live stats. Other entries use the active library,
+                # as land battles did before naval terrain was introduced.
+                data = (dict(entry) if isinstance(entry, dict) and not self.naval and packed_ship_type(name, self.library)
+                        else create_battle_unit(name, owner, self.library, self.terrain))
                 if isinstance(entry, dict):
-                    source_max = entry["max_health"] if self.library.get(name, {}).get("naval_unit") else data["max_health"]
+                    source_max = entry["max_health"] if self.naval or self.library.get(name, {}).get("naval_unit") or battle_unit_type(name, self.library) != name else data["max_health"]
                     if not valid_starting_health(entry["health"], source_max):
                         raise ValueError("Starting HP must be above zero and no greater than the unit's maximum HP.")
                     data["health"] = entry["health"] / source_max * data["max_health"]
-                members = self._deploy_division(data, side, x, unit_shape(name, self.library))
-                lane = (index - (len(roster) - 1) / 2) * APPROACH_LANE_GAP
+                members = self._deploy_division(data, side, x, unit_shape(data["type"], self.library))
+                lane = (index - (len(roster) - 1) / 2) * (naval.LANE_GAP if self.naval else APPROACH_LANE_GAP)
                 for fighter in members:
                     fighter.lane = lane
                 if side == 0 and index == self.controlled_index:
@@ -694,8 +778,9 @@ class BattleSimulation:
             slot = (number - (count - 1) / 2) * SUBUNIT_SPACING
             members.append(Fighter(
                 dict(subunit), side,
-                x, ARENA_SIZE[1] / 2 + slot, shape, division=division, attack_share=1 / size,
-                angle=facing, aim=facing,
+                x, self.arena_size[1] / 2 + slot, shape, division=division, attack_share=1 / size,
+                angle=facing, aim=facing + naval.mounts(shape)[0].bearing if shape in naval.SHAPES else facing,
+                secondary_aim=facing + naval.mounts(shape)[1].bearing if shape in naval.SHAPES and len(naval.mounts(shape)) > 1 else facing,
                 index=len(self.fighters) + number,
                 retarget=(len(self.fighters) + number) % stagger * FIXED_STEP, slot=slot,
                 hold=rng.uniform(*AI_HOLD_RANGE), pace=rng.uniform(*AI_PACE),
@@ -813,8 +898,10 @@ class BattleSimulation:
         return cls.damage_amount(source, target, attack_share, weapon["damage"] * multiplier)
 
     @staticmethod
-    def ranged_multiplier(distance):
-        fraction = max(0.0, min(1.0, (distance - FALLOFF_START) / (WEAPON_RANGE - FALLOFF_START)))
+    def ranged_multiplier(distance, maximum=None, falloff=None):
+        maximum = WEAPON_RANGE if maximum is None else maximum
+        falloff = FALLOFF_START if falloff is None else falloff
+        fraction = max(0.0, min(1.0, (distance - falloff) / (maximum - falloff)))
         return 1.0 - fraction * (1.0 - MIN_RANGED_DAMAGE)
 
     def _firing_lane(self, fighter, target, start=None):
@@ -860,6 +947,8 @@ class BattleSimulation:
 
     def _clear_shot(self, fighter, target, start=None, slot=0):
         """A firing lane through terrain that keeps allies safe, including beyond a shell's target."""
+        if fighter.naval:
+            return self._naval_ally_in_line(fighter, target, slot) is None
         return (self._firing_lane(fighter, target, start)
                 and self._ally_in_line(fighter, target, start, slot=slot) is None)
 
@@ -898,6 +987,9 @@ class BattleSimulation:
             fighter.primary_rounds, fighter.cooldown, fighter.primary_wait = rounds, wait, wait
 
     def _drive_player(self, fighter, dt, shots):
+        if fighter.naval:
+            self._drive_naval(fighter, dt, shots)
+            return
         throttle, turn = self._throttle, self._turn
         if self._move_direction is not None:
             dx, dy = self._move_direction
@@ -1127,6 +1219,9 @@ class BattleSimulation:
         return abs(throttle), direction
 
     def _drive_ai(self, fighter, enemies, dt, shots, center, objective):
+        if fighter.naval:
+            self._drive_naval(fighter, dt, shots, enemies)
+            return
         fighter.retarget -= dt
         if fighter.retarget <= 0:
             fighter.retarget += RETARGET_SECONDS
@@ -1181,6 +1276,102 @@ class BattleSimulation:
                     and self._clear_shot(fighter, gun_target, slot=slot)):
                 self._queue_shot(fighter, shots, slot)
 
+    def _naval_ally_in_line(self, fighter, target, slot):
+        weapon = fighter.weapon(slot)
+        start = naval.mount_position(fighter, slot)
+        point = naval.lead_point(target, start, weapon)
+        angle = math.atan2(point[1] - start[1], point[0] - start[0])
+        flight = min(weapon["range"], math.dist(start, point)) / weapon["speed"]
+        if flight <= 0:
+            return None
+        if weapon["projectile"] == "torpedo":
+            flight = weapon["range"] / weapon["speed"]
+        height = c.TACTICAL_NAVAL_HULL_HEIGHT if weapon["projectile"] == "artillery_shell" else 0.0
+        gravity = weapon.get("gravity", 0.0)
+        shot = Projectile(fighter, fighter.data, *start, math.cos(angle) * weapon["speed"], math.sin(angle) * weapon["speed"], flight, height=height, vertical_speed=gravity * flight / 2 - height / flight, gravity=gravity, weapon_data=weapon)
+        return next((ally for ally in self._sides[fighter.side] if ally is not fighter and naval.projectile_contact(shot, ally, flight, (ally.x, ally.y), movement=(ally.vx * flight, ally.vy * flight)) is not None), None)
+
+    def _naval_course(self, fighter, target):
+        dx, dy = target.x - fighter.x, target.y - fighter.y
+        distance = math.hypot(dx, dy)
+        toward = math.atan2(dy, dx)
+        if fighter.ram_committed:
+            point = self._ram_point(fighter, target)
+            if point is not None:
+                return 1.0, math.atan2(point[1] - fighter.y, point[0] - fighter.x)
+        if fighter.dodge > 0:
+            return fighter.pace, fighter.dodge_heading
+        if fighter.data["health"] < fighter.data["max_health"] * FALL_BACK_HEALTH and self._healthy_sides[fighter.side]:
+            return (fighter.pace, toward + math.pi) if distance < naval.WITHDRAW_RANGE else (0.0, toward)
+        if self.elapsed < fighter.start_delay:
+            return 0.0, fighter.angle
+        preferred = min(naval.ENGAGEMENT_RANGE, fighter.weapon_range * 0.8) * fighter.hold
+        if distance > preferred:
+            return fighter.pace, toward
+        if fighter.shape in {"carrack", "ironclad"}:
+            # Present the nearer broadside instead of pointing the bow at the enemy.
+            heading = min((toward + math.pi / 2, toward - math.pi / 2), key=lambda angle: abs(_wrap(angle - fighter.angle)))
+            return 0.0, heading
+        return (-fighter.pace if distance < preferred * SKIRMISH_BACK_OFF else 0.0), toward
+
+    def _drive_naval(self, fighter, dt, shots, enemies=None):
+        """Both sides and the player use the same mount sectors and firing checks."""
+        controlled = fighter is self.controlled
+        if controlled:
+            throttle, turn = self._throttle, self._turn
+            if self._move_direction is not None:
+                dx, dy = self._move_direction
+                strength = min(1.0, math.hypot(dx, dy))
+                throttle, turn = self._heading_controls(fighter, strength, math.atan2(dy, dx)) if strength else (0.0, 0.0)
+        else:
+            fighter.retarget -= dt
+            if fighter.target is None or not fighter.target.alive or fighter.retarget <= 0:
+                fighter.retarget = RETARGET_SECONDS
+                if not fighter.ram_committed:
+                    fighter.target = self._choose_target(fighter, enemies)
+                fighter.secondary_target = None
+            fighter.dodge = max(0.0, fighter.dodge - dt)
+            if fighter.dodge <= 0 and not fighter.ram_committed:
+                for slot in range(len(naval.mounts(fighter.shape))):
+                    if fighter.weapon_cooldown(slot) > 0:
+                        continue
+                    ally = self._naval_ally_in_line(fighter, fighter.target, slot)
+                    if ally is not None:
+                        self._sidestep(fighter, ally.x, ally.y, fighter.target.x - fighter.x, fighter.target.y - fighter.y, LINE_SHIFT_SECONDS)
+                        break
+            throttle, heading = self._naval_course(fighter, fighter.target)
+            throttle, turn = self._heading_controls(fighter, throttle, heading)
+            throttle = self._ally_safe_throttle(fighter, throttle)
+        self._steer(fighter, turn, dt)
+        self._accelerate(fighter, throttle, dt)
+        for slot, mount in enumerate(naval.mounts(fighter.shape)):
+            weapon = fighter.weapon(slot)
+            start = naval.mount_position(fighter, slot)
+            if controlled:
+                point = self._aim_point
+                wants_fire = self._secondary_fire if slot else self._fire
+            else:
+                target = fighter.target
+                # A second turret may engage another enemy when the first target is outside its sector.
+                candidates = [target, *(enemy for bucket in enemies.cells.values() for enemy in bucket if enemy is not target)]
+                legal = [enemy for enemy in candidates if self._weapon_can_hurt(fighter, enemy, slot) and naval.aim_allowed(fighter, slot, math.atan2(enemy.y - start[1], enemy.x - start[0]))]
+                gun_target = min(legal, key=lambda enemy: math.dist(start, (enemy.x, enemy.y)), default=target)
+                if slot:
+                    fighter.secondary_target = gun_target
+                point = naval.lead_point(gun_target, start, weapon)
+                wants_fire = self._weapon_can_hurt(fighter, gun_target, slot) and self._clear_shot(fighter, gun_target, slot=slot)
+            fighter.gun_points[slot] = point
+            if point is None:
+                continue
+            desired = math.atan2(point[1] - start[1], point[0] - start[0])
+            aim = naval.slew(fighter, slot, desired, dt)
+            if slot:
+                fighter.secondary_aim = aim
+            else:
+                fighter.aim = aim
+            if wants_fire and fighter.weapon_cooldown(slot) <= 0 and naval.can_fire(fighter, slot, point, AIM_TOLERANCE):
+                self._queue_shot(fighter, shots, slot)
+
     @staticmethod
     def _shot_spread(fighter, weapon):
         movement = abs(fighter.speed) / fighter.max_speed if fighter.max_speed else 0.0
@@ -1189,6 +1380,9 @@ class BattleSimulation:
         return math.radians(spread * (c.TACTICAL_SHELL_SPREAD_MULTIPLIER if weapon["shell"] else 1.0))
 
     def _fire_shot(self, fighter, slot=0):
+        if fighter.naval:
+            self._fire_naval_shot(fighter, slot)
+            return
         # The shot leaves slightly off the aim, so the same error misses more often at long range.
         weapon = fighter.weapon(slot)
         spread = self._shot_spread(fighter, weapon)
@@ -1214,6 +1408,28 @@ class BattleSimulation:
         if self.on_shot is not None:
             self.on_shot(fighter)
 
+    def _fire_naval_shot(self, fighter, slot):
+        weapon = fighter.weapon(slot)
+        if not naval.aim_allowed(fighter, slot, fighter.weapon_aim(slot)):
+            return
+        point = fighter.gun_points[slot]
+        if point is not None and not naval.can_fire(fighter, slot, point, AIM_TOLERANCE):
+            return
+        start = naval.muzzle_position(fighter, slot)
+        distance = weapon["range"] if point is None else min(weapon["range"], math.dist(start, point))
+        flight = max(FIXED_STEP, distance / weapon["speed"])
+        angle = fighter.weapon_aim(slot) + self._rng.uniform(-self._shot_spread(fighter, weapon), self._shot_spread(fighter, weapon))
+        gravity = weapon.get("gravity", 0.0)
+        height = c.TACTICAL_NAVAL_HULL_HEIGHT if gravity else 0.0
+        vertical = gravity * flight / 2 - height / flight if gravity else 0.0
+        remaining = flight if gravity else weapon["range"] / weapon["speed"]
+        self.projectiles.append(Projectile(fighter, dict(fighter.data), *start, math.cos(angle) * weapon["speed"], math.sin(angle) * weapon["speed"], remaining, height=height, vertical_speed=vertical, gravity=gravity, weapon_data=dict(weapon), attack_share=fighter.attack_share * naval.mounts(fighter.shape)[slot].attack_share))
+        fighter.fired_weapon = slot
+        fighter.muzzle = fighter.mount_muzzles[slot] = c.TACTICAL_MUZZLE_SECONDS
+        fighter.recoil = fighter.mount_recoils[slot] = c.TACTICAL_MUZZLE_SECONDS if gravity else 0.0
+        if self.on_shot is not None:
+            self.on_shot(fighter)
+
     def _can_dodge(self, unit):
         """Only fast AI sub-units sidestep; for slower ones the time spent turning away costs more aim than it saves."""
         return unit is not self.controlled and unit.data["speed"] >= DODGE_MIN_SPEED
@@ -1235,9 +1451,15 @@ class BattleSimulation:
 
         It then holds rather than dodging.
         """
+        if unit.naval:
+            return any(unit.weapon(slot) is not None and unit.weapon_cooldown(slot) <= 0
+                       and target is not None and target.alive and self._weapon_can_hurt(unit, target, slot)
+                       and naval.can_fire(unit, slot, naval.lead_point(target, naval.mount_position(unit, slot), unit.weapon(slot)), AIM_TOLERANCE)
+                       and self._clear_shot(unit, target, slot=slot)
+                       for slot, target in enumerate((unit.target, unit.secondary_target)))
         return any(unit.weapon(slot) is not None and unit.weapon_cooldown(slot) <= 0
                    and target is not None and target.alive and self._weapon_can_hurt(unit, target, slot)
-                   and math.hypot(target.x - unit.x, target.y - unit.y) <= WEAPON_RANGE
+                   and math.hypot(target.x - unit.x, target.y - unit.y) <= unit.weapon_range
                    and self._clear_shot(unit, target, slot=slot)
                    for slot, target in enumerate((unit.target, unit.secondary_target)))
 
@@ -1249,6 +1471,8 @@ class BattleSimulation:
         for shot in self.projectiles:
             speed = math.hypot(shot.vx, shot.vy)
             lookahead = min(DODGE_LOOKAHEAD, shot.remaining)
+            if shot.kind == "artillery_shell" and min(shot.height, naval.shell_height(shot, lookahead)) > c.TACTICAL_NAVAL_HULL_HEIGHT:
+                continue
             reach = speed * lookahead
             end_x, end_y = shot.x + shot.vx / speed * reach, shot.y + shot.vy / speed * reach
             blocked = self.battlefield.first_hit((shot.x, shot.y), (end_x, end_y), shot.height,
@@ -1256,7 +1480,7 @@ class BattleSimulation:
             if blocked is not None:
                 reach *= blocked[0]
                 end_x, end_y = shot.x + shot.vx / speed * reach, shot.y + shot.vy / speed * reach
-            danger = DODGE_DANGER * MAX_UNIT_RADIUS / UNIT_RADIUS
+            danger = DODGE_DANGER * self.max_radius / UNIT_RADIUS
             nearby = (unit for crowd in crowds for unit in crowd.within(
                 min(shot.x, end_x) - danger, min(shot.y, end_y) - danger,
                 max(shot.x, end_x) + danger, max(shot.y, end_y) + danger))
@@ -1295,7 +1519,7 @@ class BattleSimulation:
         """Predict a reachable impact with enough run-up; a nearby target need not be catchable."""
         if target is None or not unit.can_ram:
             return None
-        speed = unit.max_speed * unit.pace
+        speed = unit.max_speed if unit.naval else unit.max_speed * unit.pace
         if speed < RAM_MIN_SPEED:
             return None
         dx, dy = target.x - unit.x, target.y - unit.y
@@ -1309,7 +1533,7 @@ class BattleSimulation:
             times = [] if discriminant < 0 else [(-b - math.sqrt(discriminant)) / (2 * a),
                                                  (-b + math.sqrt(discriminant)) / (2 * a)]
         arrival = min((time for time in times if time > 0), default=math.inf)
-        if arrival > RAM_APPROACH_RANGE / RAM_MIN_SPEED:
+        if arrival > (naval.RAM_APPROACH_RANGE if unit.naval else RAM_APPROACH_RANGE) / RAM_MIN_SPEED:
             return None
         point = target.x + target.vx * arrival, target.y + target.vy * arrival
         runup = max(0.0, math.dist((unit.x, unit.y), point) - unit.radius - target.radius)
@@ -1318,7 +1542,8 @@ class BattleSimulation:
         distance = math.dist((unit.x, unit.y), point)
         closing = impact_speed - ((target.vx * (point[0] - unit.x) + target.vy * (point[1] - unit.y)) / distance
                                   if distance else 0.0)
-        if (impact_speed < RAM_MIN_SPEED or closing < RAM_MIN_SPEED
+        minimum_impact = RAM_MIN_SPEED - (1e-9 if unit.naval else 0.0)
+        if (impact_speed < minimum_impact or closing < minimum_impact
                 or not self.battlefield.clear_path((unit.x, unit.y), point, unit.radius)):
             return None
         if any(other is not unit and other is not target and other.alive
@@ -1332,7 +1557,7 @@ class BattleSimulation:
         distance = math.hypot(target.x - unit.x, target.y - unit.y)
         committed = unit.ram_committed and unit.target is target
         return (unit.data["health"] >= unit.data["max_health"] * RAM_MIN_HEALTH
-                and distance <= RAM_APPROACH_RANGE
+                and distance <= (naval.RAM_APPROACH_RANGE if unit.naval else RAM_APPROACH_RANGE)
                 and CONTACT_MASS[unit.shape] >= CONTACT_MASS[target.shape] * RAM_MASS_ADVANTAGE
                 and self._can_hurt(unit, target) and threats <= support
                 and tuple(sorted((unit.index, target.index))) not in self._contacts
@@ -1352,16 +1577,18 @@ class BattleSimulation:
                 if not unit.can_ram:
                     unit.ram_committed = False
                     continue
-                nearby = [enemy for enemy in crowds[1 - side].around(unit.x, unit.y, RAM_APPROACH_RANGE)
-                          if math.hypot(enemy.x - unit.x, enemy.y - unit.y) <= RAM_APPROACH_RANGE]
+                ram_range = naval.RAM_APPROACH_RANGE if unit.naval else RAM_APPROACH_RANGE
+                support_range = naval.RAM_SUPPORT_RANGE if unit.naval else RAM_SUPPORT_RANGE
+                nearby = [enemy for enemy in crowds[1 - side].around(unit.x, unit.y, ram_range)
+                          if math.hypot(enemy.x - unit.x, enemy.y - unit.y) <= ram_range]
                 if not nearby:
                     unit.ram_committed = False
                     continue
-                friends = [friend for friend in crowds[side].around(unit.x, unit.y, RAM_SUPPORT_RANGE)
-                           if math.hypot(friend.x - unit.x, friend.y - unit.y) <= RAM_SUPPORT_RANGE
+                friends = [friend for friend in crowds[side].around(unit.x, unit.y, support_range)
+                           if math.hypot(friend.x - unit.x, friend.y - unit.y) <= support_range
                            and self.battlefield.clear_path((unit.x, unit.y), (friend.x, friend.y), unit.radius)]
-                threats = sum(1 for enemy in crowds[1 - side].around(unit.x, unit.y, WEAPON_RANGE)
-                              if math.hypot(enemy.x - unit.x, enemy.y - unit.y) <= WEAPON_RANGE
+                threats = sum(1 for enemy in crowds[1 - side].around(unit.x, unit.y, self.sight_range)
+                              if math.hypot(enemy.x - unit.x, enemy.y - unit.y) <= enemy.weapon_range
                               and any(self._weapon_can_hurt(enemy, unit, slot)
                                       and self._firing_lane(enemy, unit)
                                       for slot in (0, 1)))
@@ -1403,27 +1630,30 @@ class BattleSimulation:
         damage = []
         for unit in living:
             vx, vy = velocities[unit.index]
-            reach = math.hypot(vx, vy) * dt + max_move + unit.radius + MAX_UNIT_RADIUS
+            reach = math.hypot(vx, vy) * dt + max_move + unit.radius + self.max_radius
             for crowd in crowds:
                 for other in crowd.around(unit.x, unit.y, reach):
                     if other.index <= unit.index:
                         continue
                     diameter = unit.radius + other.radius
                     ovx, ovy = velocities[other.index]
-                    fraction = self._collision_fraction(
-                        unit.x, unit.y, unit.x + (vx - ovx) * dt, unit.y + (vy - ovy) * dt,
-                        other, radius=diameter)
-                    if fraction is None:
-                        continue
-                    dx = other.x - unit.x + (ovx - vx) * dt * fraction
-                    dy = other.y - unit.y + (ovy - vy) * dt * fraction
-                    length = math.hypot(dx, dy)
-                    nx, ny = (dx / length, dy / length) if length > 1e-9 else (1.0, 0.0)
+                    if unit.naval and other.naval:
+                        contact = naval.body_contact(unit, other, (vx, vy), (ovx, ovy), dt)
+                        if contact is None:
+                            continue
+                        fraction, nx, ny, overlap = contact
+                    else:
+                        fraction = self._collision_fraction(unit.x, unit.y, unit.x + (vx - ovx) * dt, unit.y + (vy - ovy) * dt, other, radius=diameter)
+                        if fraction is None:
+                            continue
+                        dx = other.x - unit.x + (ovx - vx) * dt * fraction
+                        dy = other.y - unit.y + (ovy - vy) * dt * fraction
+                        length = math.hypot(dx, dy)
+                        nx, ny = (dx / length, dy / length) if length > 1e-9 else (1.0, 0.0)
+                        overlap = max(0.0, diameter - ((positions[other.index][0] - positions[unit.index][0]) * nx + (positions[other.index][1] - positions[unit.index][1]) * ny))
                     first_mass, second_mass = CONTACT_MASS[unit.shape], CONTACT_MASS[other.shape]
                     total = first_mass + second_mass
                     first_pos, second_pos = positions[unit.index], positions[other.index]
-                    overlap = max(0.0, diameter - ((second_pos[0] - first_pos[0]) * nx
-                                                   + (second_pos[1] - first_pos[1]) * ny))
                     first_pos[0] -= nx * overlap * second_mass / total
                     first_pos[1] -= ny * overlap * second_mass / total
                     second_pos[0] += nx * overlap * first_mass / total
@@ -1456,12 +1686,47 @@ class BattleSimulation:
             unit.x, unit.y = x, y
         return damage
 
+    def _advance_naval_projectile(self, shot, dt, living, start_positions):
+        flight = min(dt, shot.remaining)
+        if flight <= 0:
+            return False, []
+        if shot.gravity:
+            flight = min(flight, naval.descending_time(shot.height, shot.vertical_speed, shot.gravity))
+        collisions = []
+        for target in living:
+            initial = start_positions[target.index]
+            # A projectile expiring partway through a tick sees that same share of ship motion.
+            movement = (target.x - initial[0]) * flight / dt, (target.y - initial[1]) * flight / dt
+            fraction = naval.projectile_contact(shot, target, flight, initial, movement=movement)
+            if fraction is not None:
+                collisions.append((fraction, target.index, target))
+        hit = min(collisions, default=None, key=lambda item: (item[0], item[1]))
+        traveled = math.hypot(shot.vx, shot.vy) * flight
+        if hit is not None:
+            fraction, _, target = hit
+            x, y = shot.x + shot.vx * flight * fraction, shot.y + shot.vy * flight * fraction
+            multiplier = self.ranged_multiplier(shot.distance + traveled * fraction, shot.weapon_data["range"], naval.FALLOFF_START)
+            loss = self.weapon_damage(shot.source_data, target.data, shot.attack_share, shot.weapon_data, target.shape, multiplier)
+            self.impacts.append((x, y, c.TACTICAL_IMPACT_SECONDS, shot.kind))
+            return False, [(target, loss, shot.source, "shot")]
+        shot.x += shot.vx * flight
+        shot.y += shot.vy * flight
+        shot.height = naval.shell_height(shot, flight)
+        shot.vertical_speed -= shot.gravity * flight
+        shot.distance += traveled
+        shot.remaining -= flight
+        if shot.remaining <= 1e-9 or (shot.gravity and shot.height <= 1e-7):
+            self.impacts.append((shot.x, shot.y, c.TACTICAL_IMPACT_SECONDS, shot.kind))
+            return False, []
+        return True, []
+
     def _step(self, dt):
         if int(self.elapsed / RETARGET_SECONDS) != int((self.elapsed + dt) / RETARGET_SECONDS):
             self.battlefield.begin_decision_interval()
         self.elapsed += dt
         self.impacts = [(x, y, remaining - dt, shell) for x, y, remaining, shell in self.impacts if remaining > dt]
         living = [fighter for fighter in self.fighters if fighter.alive]
+        start_positions = {fighter.index: (fighter.x, fighter.y) for fighter in living} if self.naval else {}
         sides = [[fighter for fighter in living if fighter.side == side] for side in (0, 1)]
         crowds = [_Grid(side, GRID_CELL) for side in sides]
         targets = [_Grid(side, TARGET_CELL) for side in sides]
@@ -1482,6 +1747,9 @@ class BattleSimulation:
             fighter.secondary_cooldown = max(0.0, fighter.secondary_cooldown - dt)
             fighter.muzzle = max(0.0, fighter.muzzle - dt)
             fighter.recoil = max(0.0, fighter.recoil - dt)
+            if fighter.naval:
+                fighter.mount_muzzles[:] = [max(0.0, value - dt) for value in fighter.mount_muzzles]
+                fighter.mount_recoils[:] = [max(0.0, value - dt) for value in fighter.mount_recoils]
             player_controlled = fighter is self.controlled
             if player_controlled:
                 self._drive_player(fighter, dt, shots)
@@ -1504,6 +1772,12 @@ class BattleSimulation:
         hittable = _Grid(living, GRID_CELL)
         remaining = []
         for shot in self.projectiles:
+            if shot.kind in {"artillery_shell", "torpedo"}:
+                keep, hits = self._advance_naval_projectile(shot, dt, living, start_positions)
+                close_hits.extend(hits)
+                if keep:
+                    remaining.append(shot)
+                continue
             flight = min(dt, shot.remaining)
             if flight <= 0:
                 continue

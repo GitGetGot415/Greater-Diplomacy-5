@@ -841,7 +841,7 @@ class BattleSimulationTests(unittest.TestCase):
 
     def course_setup(self, shape):
         """An AI sub-unit with a neutral temperament, given a battlefield shape so it takes that shape's behavior."""
-        simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"])
+        simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"], battlefield=battle_terrain.Battlefield("plains", combat.ARENA_SIZE, combat.MAX_UNIT_RADIUS))
         unit, = self.ready_division(simulation, 0)
         unit.shape = shape
         enemy = simulation.divisions[1][0]
@@ -1087,8 +1087,8 @@ class CloseCombatTests(unittest.TestCase):
 
     def test_ram_eligibility_uses_unit_speed_for_every_shape_and_side_including_allies(self):
         for shape in combat.CONTACT_MASS:
-            for speed in (combat.RAM_MIN_UNIT_SPEED - 0.01, combat.RAM_MIN_UNIT_SPEED,
-                          combat.RAM_MIN_UNIT_SPEED + 1):
+            minimum = battle_screen.naval.RAM_MIN_UNIT_SPEED if shape in battle_screen.naval.SHAPES else combat.RAM_MIN_UNIT_SPEED
+            for speed in (minimum - 0.01, minimum, minimum + 1):
                 for source_side in (0, 1):
                     for allied in (False, True):
                         with self.subTest(shape=shape, speed=speed, side=source_side, allied=allied):
@@ -1103,7 +1103,7 @@ class CloseCombatTests(unittest.TestCase):
                                 (source, direction * combat.RAM_REFERENCE_SPEED * combat.FIXED_STEP, 0),
                                 (target, 0, 0)])
                             loss = sum(loss for victim, loss, _source in hits if victim is target)
-                            self.assertEqual(loss > 0, not allied and speed >= combat.RAM_MIN_UNIT_SPEED)
+                            self.assertEqual(loss > 0, not allied and speed >= minimum)
 
     def test_ram_damage_speed_and_mass_multipliers_apply_after_bullet_damage(self):
         for closing in (combat.RAM_MIN_SPEED, combat.RAM_REFERENCE_SPEED,
@@ -1145,7 +1145,8 @@ class CloseCombatTests(unittest.TestCase):
     def test_ai_ram_eligibility_uses_speed_for_every_shape_on_both_sides(self):
         for shape in combat.CONTACT_MASS:
             target_shape = "tank" if shape == "infantry" else "infantry"
-            for speed in (combat.RAM_MIN_UNIT_SPEED - 0.01, combat.RAM_MIN_UNIT_SPEED):
+            minimum = battle_screen.naval.RAM_MIN_UNIT_SPEED if shape in battle_screen.naval.SHAPES else combat.RAM_MIN_UNIT_SPEED
+            for speed in (minimum - 0.01, minimum):
                 for side in (0, 1):
                     with self.subTest(shape=shape, speed=speed, side=side):
                         simulation = self.encounter(gap=120)
@@ -1153,13 +1154,14 @@ class CloseCombatTests(unittest.TestCase):
                         unit.shape, unit.pace = shape, 1
                         unit.data["speed"] = speed
                         target.shape = target_shape
+                        target.x = unit.x + (1 if side == 0 else -1) * (unit.radius + target.radius + 120)
                         target.data["health"] = target.data["max_health"] * combat.RAM_WOUNDED_TARGET / 2
                         target.cooldown = 0
                         sides = [[fighter for fighter in simulation.fighters if fighter.side == team]
                                  for team in (0, 1)]
                         with patch.dict(combat.CONTACT_MASS, {shape: 4, target_shape: 1}):
                             simulation._prepare_rams(sides, [combat._Grid(team, combat.GRID_CELL) for team in sides])
-                        self.assertEqual(unit.ram_committed, speed >= combat.RAM_MIN_UNIT_SPEED)
+                        self.assertEqual(unit.ram_committed, speed >= minimum)
                         if unit.ram_committed:
                             self.assertIs(unit.target, target)
 
@@ -1338,7 +1340,7 @@ class CloseCombatTests(unittest.TestCase):
                 ally.y, ally.vx = unit.y, unit.max_speed
                 self.assertEqual(simulation._ally_safe_throttle(unit, 1.0), 1.0)
                 # Units below the speed cutoff cannot deal ram damage and need no braking.
-                unit.data["speed"] = combat.RAM_MIN_UNIT_SPEED - 1
+                unit.data["speed"] = (battle_screen.naval.RAM_MIN_UNIT_SPEED if unit.naval else combat.RAM_MIN_UNIT_SPEED) - 1
                 ally.vx = 0.0
                 self.assertEqual(simulation._ally_safe_throttle(unit, 1.0), 1.0)
 
@@ -1431,6 +1433,7 @@ class TacticalTerrainTests(unittest.TestCase):
             "jungle": (0, 16, 0, 2), "mountain": (3, 0, 2, 1),
             "swamp": (0, 10, 0, 3),
         }
+        recipes.update({terrain: (0, 0, 0, 0) for terrain in c.WATER_TERRAINS})
         self.enterContext(patch.dict(battle_terrain.TERRAIN_RECIPES, recipes, clear=True))
         for terrain in battle_terrain.TERRAIN_NAMES:
             with self.subTest(terrain=terrain):
@@ -2176,7 +2179,7 @@ class CustomBattleScreenTests(unittest.TestCase):
         for source in simulation.fighters:
             for shape in combat.MOBILITY:
                 source.shape = shape
-                if source.weapon()["shell"]:
+                if source.weapon()["shell"] or source.weapon().get("projectile") == "torpedo":
                     continue
                 with self.subTest(side=source.side, controlled=source is simulation.controlled, shape=shape), patch(
                         "ui.sound_effects.play_ui_sound") as sound, patch.object(
@@ -2204,6 +2207,8 @@ class CustomBattleScreenTests(unittest.TestCase):
                         "ui.sound_effects.play_ui_sound") as sound, patch.object(
                             battle_screen.random, "choice", side_effect=battle_screen.TANK_SHOT_SOUNDS) as choice:
                     source.shape = shape
+                    if source.naval:
+                        source.aim = source.angle + battle_screen.naval.mounts(shape)[0].bearing
                     for _ in battle_screen.TANK_SHOT_SOUNDS:
                         self.screen.simulation._fire_shot(source)
                     self.assertEqual([call.args[0] for call in sound.call_args_list],
@@ -3598,6 +3603,9 @@ class CustomBattleScreenTests(unittest.TestCase):
                                rel=(5000, 5000), buttons=(1, 0, 0))])
         self.assertEqual(self.screen.camera, [0.0, 0.0])
         self.click("Exit")
+        # Preview clears selection; select the friendly card before enabling control.
+        card = self.screen.card_rect(0, 0)
+        self.screen.handle_events([pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=card.center), pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=card.center)])
         self.click("Control")
         self.click("Simulate")
         with patch("pygame.mouse.get_pos", return_value=view.center):

@@ -13,7 +13,7 @@ import data.constants as c
 from data import queries
 from data.io import starting_defaults
 from map_logic import custom_battle as combat
-from map_logic import battle_terrain
+from map_logic import battle_terrain, naval_battle as naval
 from ui import dialogs
 from ui.dialogs import pickers
 from ui.navigation import screen_runner
@@ -123,6 +123,7 @@ TERRAIN_COLORS = {
     "plains": (126, 163, 88), "hills": (177, 155, 64), "desert": (194, 124, 58),
     "forest": (80, 140, 80), "jungle": (35, 76, 47), "mountain": (119, 88, 64),
     "swamp": (160, 104, 132),
+    "ocean": (25, 65, 115), "coastal_sea": (40, 100, 140), "inland_sea": (45, 90, 130), "lakes": (45, 115, 135),
     # not used due to color conflicting with canopy leaves: (65, 115, 57)
 }
 # Out of 255. All foliage is partly transparent, so units and trunks show faintly beneath it.
@@ -225,6 +226,13 @@ SHOT_COLOR = (250, 232, 150)
 SHOT_WIDTH = 2
 TANK_SHOT_COLOR = (255, 110, 0)
 TANK_SHOT_WIDTH = 5
+ARTILLERY_SHOT_COLOR = (255, 205, 105)
+ARTILLERY_SHADOW_COLOR = (18, 40, 65)
+TORPEDO_COLOR = (185, 195, 190)
+TORPEDO_WAKE_COLOR = (115, 180, 200)
+SPLASH_COLOR = (170, 220, 240)
+SHELL_HEIGHT_DRAW_SCALE = 0.3
+EDIT_NAVAL_ICON_SIZE = (CARD_SIZE[0] - 24, 38)
 RIFLE_SHOT_SOUNDS = ("rifle_shot_1", "rifle_shot_2", "rifle_shot_3")
 TANK_SHOT_SOUNDS = ("tank_shot_1", "tank_shot_2", "tank_shot_3")
 FLESH_HIT_SOUNDS = ("flesh_wound_1", "flesh_wound_2", "flesh_wound_3")
@@ -317,7 +325,12 @@ def _battle_sprite(artwork, shape, part, color, scale):
             size = tuple(max(1, round(side * factor)) for side in source.get_size())
         else:
             size = (max(1, round(width * scale)), max(1, round(height * scale)))
-        _BODY_SPRITES[key] = pygame.transform.scale(symbol_loader.colorize_red_image(source, color), size)
+        if shape in naval.SHAPES:
+            tinted = source.copy()
+            tinted.fill((*color, 255), special_flags=pygame.BLEND_RGBA_MULT)
+        else:
+            tinted = symbol_loader.colorize_red_image(source, color)
+        _BODY_SPRITES[key] = pygame.transform.scale(tinted, size)
     return _BODY_SPRITES[key]
 
 
@@ -358,12 +371,26 @@ def _draw_rotated_sprite(surface, sprite, key, center, angle):
     surface.blit(rotated, rotated.get_rect(center=center))
 
 
-def draw_unit_shape(surface, shape, center, angle, color, *, scale=1.0, aim=None, artwork=None, recoil=0.0):
+def draw_unit_shape(surface, shape, center, angle, color, *, scale=1.0, aim=None, artwork=None, recoil=0.0, secondary_aim=None, mount_recoils=None):
     """Draw battle artwork or geometric silhouettes in setup cards and on the field.
 
     With ``aim``, the turret or gun line follows ``aim`` independently of the hull.
     """
     if artwork is not None:
+        if shape in naval.SHAPES:
+            sprite = _battle_sprite(artwork, shape, "chassis", color, scale)
+            _draw_rotated_sprite(surface, sprite, (artwork, shape, "chassis", tuple(color), scale), center, angle)
+            if artwork[1] is not None:
+                width, height = UNIT_SHAPE_SIZES[shape]
+                sprite = _battle_sprite(artwork, shape, "turret", color, scale)
+                aims = (angle if aim is None else aim, angle + math.pi if secondary_aim is None else secondary_aim)
+                for slot, mount in enumerate(naval.mounts(shape)):
+                    forward, sideways = width * mount.forward * scale, height * mount.sideways * scale
+                    heading = aims[slot]
+                    kick = 4 * mount_recoils[slot] / c.TACTICAL_MUZZLE_SECONDS if mount_recoils else 0.0
+                    part_center = (center[0] + math.cos(angle) * forward - math.sin(angle) * sideways - math.cos(heading) * kick * scale, center[1] + math.sin(angle) * forward + math.cos(angle) * sideways - math.sin(heading) * kick * scale)
+                    _draw_rotated_sprite(surface, sprite, (artwork, shape, "turret", tuple(color), scale), part_center, heading)
+            return
         for part, heading in (("chassis", angle), ("turret", angle if aim is None else aim)):
             if part == "turret" and artwork[1] is None:
                 continue
@@ -555,7 +582,7 @@ class CustomBattleScreen(Screen):
             queries.get_unit_metadata(name, self.library)["family"],
             queries.get_unit_tier(name, self.library)))
         allowed = set(self.unit_names)
-        self.rosters = [[unit for unit in roster if (combat.packed_ship_type(unit["type"], self.library) or unit["type"]) in allowed] for roster in self.rosters]
+        self.rosters = [[unit for unit in roster if combat.battle_unit_type(unit["type"], self.library) in allowed] for roster in self.rosters]
         self.selected = [None, None]
         self.group = [[], []]
         self.controlled_index = None
@@ -563,7 +590,7 @@ class CustomBattleScreen(Screen):
         self.card_surfaces.clear()
         self.simulation = None
         self.cancel_active_drags()
-        self.random_candidates = combat.land_unit_types_for_year(self.library, self.generation_year)
+        self.random_candidates = combat.custom_unit_types_for_year(self.library, self.generation_year, self.terrain)
         self.refresh_ui()
 
     def _enter_campaign(self, map_screen, province, friendly, enemy):
@@ -681,7 +708,8 @@ class CustomBattleScreen(Screen):
         self.battle_artwork = {}
         for name in dict.fromkeys(unit["type"] for roster in self.rosters for unit in roster):
             family = queries.get_unit_metadata(name, self.library)["family"]
-            artwork = (BATTLE_ART_FAMILIES["Motorized Infantry Type"] if combat.packed_ship_type(name, self.library)
+            shape = combat.unit_shape(name, self.library)
+            artwork = (naval.ARTWORK[shape] if shape in naval.SHAPES else BATTLE_ART_FAMILIES["Motorized Infantry Type"] if combat.packed_ship_type(name, self.library)
                        else BATTLE_ART_FAMILIES.get(family))
             self.battle_artwork[name] = artwork
             if artwork is not None:
@@ -803,7 +831,7 @@ class CustomBattleScreen(Screen):
 
     def _refresh_forecast(self):
         """Forecast how the armies would fare in the normal game, only when their types, order, or health change."""
-        key = tuple(tuple((unit["type"], unit["health"]) for unit in roster) for roster in self.rosters)
+        key = self.terrain, tuple(tuple((unit["type"], unit["health"]) for unit in roster) for roster in self.rosters)
         if key == self.forecast_key:
             return
         self.forecast_key = key
@@ -828,7 +856,7 @@ class CustomBattleScreen(Screen):
         year = max(c.START_YEAR, min(c.END_YEAR, c.START_YEAR + round(value)))
         if year != self.generation_year:
             self.generation_year = year
-            self.random_candidates = combat.land_unit_types_for_year(self.library, year)
+            self.random_candidates = combat.custom_unit_types_for_year(self.library, year, self.terrain)
             self.generate_button.apply_state(enabled=bool(self.random_candidates), color="purple")
         # Keep the current slider alive while dragging instead of rebuilding controls.
         self.year_slider.text = f"Year: {self.generation_year}"
@@ -870,7 +898,16 @@ class CustomBattleScreen(Screen):
     def set_terrain(self, terrain):
         if self.mode != "setup" or self.campaign is not None or terrain not in battle_terrain.TERRAIN_NAMES:
             return
+        self.cancel_active_drags()
+        for roster in self.rosters:
+            for entry in roster:
+                prepared = combat.prepare_battle_unit(entry, self.library, terrain)
+                entry.clear()
+                entry.update(prepared)
         self.terrain = terrain
+        self.random_candidates = combat.custom_unit_types_for_year(self.library, self.generation_year, terrain)
+        self.card_surfaces.clear()
+        self.forecast_key = None
         self.refresh_ui()
 
     def _roster_has_space(self, side):
@@ -890,7 +927,7 @@ class CustomBattleScreen(Screen):
     def _new_unit(self, side, name, country=None):
         if country is None:
             country = self.nationalities[min(side, len(self.nationalities) - 1)]
-        return combat.create_battle_unit(name, country, self.library)
+        return combat.create_battle_unit(name, country, self.library, self.terrain)
 
     def duplicate_unit(self, side):
         if self.mode != "setup" or self.campaign is not None or side not in (0, 1):
@@ -1125,6 +1162,8 @@ class CustomBattleScreen(Screen):
 
     def _play_shot_sound(self, fighter):
         # Keep audio randomness separate from the seeded simulation's aiming and movement decisions.
+        if fighter.weapon(fighter.fired_weapon).get("projectile") == "torpedo":
+            return  # There is no torpedo launch sample; gunshot sounds describe the wrong weapon.
         if fighter.weapon(fighter.fired_weapon)["shell"]:
             kind = random.choice(TANK_SHOT_SOUNDS)
         elif fighter is self.simulation.controlled:
@@ -1157,7 +1196,7 @@ class CustomBattleScreen(Screen):
         if controlled is not None:
             self._follow_controlled_camera(controlled, pygame.mouse.get_pos())
         else:
-            self._center_camera(combat.ARENA_SIZE[0] / 2, combat.ARENA_SIZE[1] / 2)
+            self._center_camera(self.simulation.arena_size[0] / 2, self.simulation.arena_size[1] / 2)
         self.refresh_ui()
         self._refresh_visibility()
 
@@ -1250,7 +1289,7 @@ class CustomBattleScreen(Screen):
     def _move_camera(self, left, top):
         """Keep the view inside the battlefield, or center the battlefield when it is smaller than the view."""
         self.camera = [(arena - span) / 2 if span >= arena else max(0.0, min(arena - span, start))
-                       for start, span, arena in zip((left, top), self._view_span(), combat.ARENA_SIZE)]
+                       for start, span, arena in zip((left, top), self._view_span(), self.simulation.arena_size)]
 
     def zoom_by(self, steps, pos):
         """Step through ZOOM_LEVELS, keeping the battlefield point under ``pos`` in place."""
@@ -1669,8 +1708,9 @@ class CustomBattleScreen(Screen):
             pointer = (c.SCREEN_WIDTH / 2 + aim.x * TOUCH_PAD_SIZE,
                        c.SCREEN_HEIGHT / 2 + aim.y * TOUCH_PAD_SIZE)
             if aim.length_squared():
-                aim_point = (controlled.x + aim.x * TOUCH_AIM_DISTANCE,
-                             controlled.y + aim.y * TOUCH_AIM_DISTANCE)
+                aim_distance = controlled.weapon_range if controlled.naval else TOUCH_AIM_DISTANCE
+                aim_point = (controlled.x + aim.x * aim_distance,
+                             controlled.y + aim.y * aim_distance)
             weapon_mode = self.touch_weapon_mode if controlled.weapon(1) is not None else "Primary"
             primary = bool(aim.length_squared()) and weapon_mode in {"Primary", "Both"}
             secondary = bool(aim.length_squared()) and weapon_mode in {"Secondary", "Both"}
@@ -1715,14 +1755,15 @@ class CustomBattleScreen(Screen):
             return
         field = self.simulation.battlefield
         origin = controlled.x, controlled.y
-        key = field, field.revision, origin, combat.WEAPON_RANGE
+        reach = self.simulation.sight_range
+        key = field, field.revision, origin, reach
         if key != self.visibility_key:
             self.visibility_key = key
-            self.visibility_blockers = field.sight_blockers(origin, combat.WEAPON_RANGE)
-            self.visibility_outline = battle_terrain.sight_polygon(origin, combat.WEAPON_RANGE, self.visibility_blockers)
-            foliage = field.foliage_silhouettes(origin, combat.WEAPON_RANGE)
-            self.foliage_shadow_outline = battle_terrain.sight_polygon(origin, combat.WEAPON_RANGE, foliage) if foliage else ()
-        self.visible_fighters = {id(fighter) for fighter in self.simulation.fighters if fighter is controlled or battle_terrain.point_in_sight(origin, (fighter.x, fighter.y), combat.WEAPON_RANGE, self.visibility_blockers)}
+            self.visibility_blockers = field.sight_blockers(origin, reach)
+            self.visibility_outline = battle_terrain.sight_polygon(origin, reach, self.visibility_blockers)
+            foliage = field.foliage_silhouettes(origin, reach)
+            self.foliage_shadow_outline = battle_terrain.sight_polygon(origin, reach, foliage) if foliage else ()
+        self.visible_fighters = {id(fighter) for fighter in self.simulation.fighters if fighter is controlled or battle_terrain.point_in_sight(origin, (fighter.x, fighter.y), reach, self.visibility_blockers)}
         size = self.view_rect().size
         mask_key = key, tuple(self.camera), self.zoom, size
         if mask_key != self.visibility_mask_key:
@@ -1783,7 +1824,7 @@ class CustomBattleScreen(Screen):
                                          gradient_strength=PREVIEW_BAR_GRADIENT_STRENGTH)
 
     def _card_key(self, side, unit):
-        return (self.mode, side, unit["type"], unit["owner"], unit["health"], unit["max_health"])
+        return (self.mode, self.terrain, side, unit["type"], unit["owner"], unit["health"], unit["max_health"])
 
     @staticmethod
     def _bar_geometry(top):
@@ -1820,8 +1861,10 @@ class CustomBattleScreen(Screen):
                 self._draw_health_bar(card, unit, PREVIEW_BAR_TOP)
                 stats_top = PREVIEW_STATS_TOP
             else:
-                draw_unit_shape(card, combat.unit_shape(name, self.library), (width // 2, 28),
-                                0 if side == 0 else math.pi, TEAM_COLORS[side], scale=1.4,
+                shape = combat.unit_shape(name, self.library)
+                icon_scale = min(EDIT_NAVAL_ICON_SIZE[0] / UNIT_SHAPE_SIZES[shape][0], EDIT_NAVAL_ICON_SIZE[1] / UNIT_SHAPE_SIZES[shape][1]) if shape in naval.SHAPES else 1.4
+                draw_unit_shape(card, shape, (width // 2, 28),
+                                0 if side == 0 else math.pi, TEAM_COLORS[side], scale=icon_scale,
                                 artwork=self.battle_artwork[name])
                 label = queries.get_unit_display_name(name, self.library)
                 line_height = font.get_height()
@@ -1893,18 +1936,21 @@ class CustomBattleScreen(Screen):
     def _draw_controls(self, surface, fighter, center):
         """Range, firing cone, gun direction, heading arrow, and reload for the controlled sub-unit only."""
         zoom = self.zoom
-        cone = combat.firing_cone(fighter.shape)
-        reach = round(combat.WEAPON_RANGE * zoom)
-        if cone is None:
-            pygame.draw.circle(surface, RANGE_COLOR, center, reach, 1)
-        else:
-            steps = max(1, math.ceil(cone / CONE_ARC_STEP))
-            start = fighter.angle - cone / 2
-            edge = [(center[0] + math.cos(start + cone * step / steps) * reach,
-                     center[1] + math.sin(start + cone * step / steps) * reach) for step in range(steps + 1)]
-            pygame.draw.lines(surface, RANGE_COLOR, True, [center, *edge])
-        end = (center[0] + math.cos(fighter.aim) * reach, center[1] + math.sin(fighter.aim) * reach)
-        pygame.draw.line(surface, AIM_LINE_COLOR, center, end, 1)
+        slots = range(len(naval.mounts(fighter.shape))) if fighter.naval else (0,)
+        for slot in slots:
+            bearing, cone = naval.sector(fighter, slot) if fighter.naval else (fighter.angle, combat.firing_cone(fighter.shape))
+            origin = self.to_screen(*naval.mount_position(fighter, slot)) if fighter.naval else center
+            reach = round(fighter.weapon(slot).get("range", combat.WEAPON_RANGE) * zoom)
+            if cone is None:
+                pygame.draw.circle(surface, RANGE_COLOR, origin, reach, 1)
+            else:
+                steps = max(1, math.ceil(cone / CONE_ARC_STEP))
+                start = bearing - cone / 2
+                edge = [(origin[0] + math.cos(start + cone * step / steps) * reach, origin[1] + math.sin(start + cone * step / steps) * reach) for step in range(steps + 1)]
+                pygame.draw.lines(surface, RANGE_COLOR, True, [origin, *edge])
+            aim = fighter.weapon_aim(slot)
+            end = (origin[0] + math.cos(aim) * reach, origin[1] + math.sin(aim) * reach)
+            pygame.draw.line(surface, AIM_LINE_COLOR, origin, end, 1)
         indicator_scale = max(MIN_PLAYER_INDICATOR_SCALE, zoom)
         pygame.draw.circle(surface, PLAYER_COLOR, center, max(PLAYER_RING_RADIUS, fighter.radius + 4) * indicator_scale, 2)
         draw_player_arrow(surface, center, fighter.angle,
@@ -1925,7 +1971,7 @@ class CustomBattleScreen(Screen):
         """The battlefield and its faint, fixed checkerboard; anything past its edges is dark."""
         surface.fill(OFF_FIELD_COLOR)
         zoom = self.zoom
-        width, height = combat.ARENA_SIZE
+        width, height = self.simulation.arena_size
         left, top = self.to_screen(0, 0)
         right, bottom = self.to_screen(width, height)
         field = pygame.Rect(left, top, right - left, bottom - top)
@@ -2073,14 +2119,20 @@ class CustomBattleScreen(Screen):
                 continue
             if not fighter.alive:
                 draw_unit_shape(surface, fighter.shape, center, fighter.angle, DEAD_COLOR,
-                                scale=zoom, aim=fighter.aim, artwork=self.battle_artwork[fighter.data["type"]])
+                                scale=zoom, aim=fighter.aim, secondary_aim=fighter.secondary_aim, artwork=self.battle_artwork[fighter.data["type"]])
                 continue
             scale = zoom
             draw_unit_shape(surface, fighter.shape, center, fighter.angle, TEAM_COLORS[fighter.side],
                             scale=scale, aim=fighter.aim,
                             artwork=self.battle_artwork[fighter.data["type"]],
-                            recoil=4 * fighter.recoil / c.TACTICAL_MUZZLE_SECONDS)
-            if fighter.muzzle > 0:
+                            recoil=4 * fighter.recoil / c.TACTICAL_MUZZLE_SECONDS, secondary_aim=fighter.secondary_aim, mount_recoils=fighter.mount_recoils)
+            if fighter.naval:
+                for slot in range(len(naval.mounts(fighter.shape))):
+                    if fighter.mount_muzzles[slot] > 0:
+                        tip = self.to_screen(*naval.muzzle_position(fighter, slot))
+                        flash = max(2, round(5 * scale))
+                        pygame.draw.rect(surface, ARTILLERY_SHOT_COLOR if fighter.weapon(slot)["shell"] else TORPEDO_WAKE_COLOR, (tip[0] - flash, tip[1] - flash, flash * 2, flash * 2))
+            elif fighter.muzzle > 0:
                 shell = fighter.weapon(fighter.fired_weapon)["shell"]
                 length = UNIT_SHAPE_SIZES[fighter.shape][0] / 2
                 tip = (round(center[0] + math.cos(fighter.aim) * length * scale),
@@ -2093,6 +2145,22 @@ class CustomBattleScreen(Screen):
         tank_line_width = max(2, round(TANK_SHOT_WIDTH * zoom))
         for shot in self.simulation.projectiles:
             head = self.to_screen(shot.x, shot.y)
+            if shot.kind == "artillery_shell":
+                elevated = (head[0], head[1] - round(max(0.0, shot.height) * SHELL_HEIGHT_DRAW_SCALE * zoom))
+                if visible.collidepoint(head) or visible.collidepoint(elevated):
+                    size = max(2, round(4 * zoom))
+                    pygame.draw.ellipse(surface, ARTILLERY_SHADOW_COLOR, (head[0] - size, head[1] - size // 2, size * 2, size))
+                    pygame.draw.rect(surface, ARTILLERY_SHOT_COLOR, (elevated[0] - size // 2, elevated[1] - size // 2, size, size))
+                continue
+            if shot.kind == "torpedo":
+                if visible.collidepoint(head):
+                    speed = math.hypot(shot.vx, shot.vy) or 1.0
+                    direction = shot.vx / speed, shot.vy / speed
+                    tail = (head[0] - direction[0] * 36 * zoom, head[1] - direction[1] * 36 * zoom)
+                    body = (head[0] - direction[0] * 12 * zoom, head[1] - direction[1] * 12 * zoom)
+                    pygame.draw.line(surface, TORPEDO_WAKE_COLOR, tail, head, max(1, round(3 * zoom)))
+                    pygame.draw.line(surface, TORPEDO_COLOR, body, head, max(2, round(5 * zoom)))
+                continue
             if not visible.collidepoint(head):
                 continue
             tail_length = SHOT_TAIL * zoom / (math.hypot(shot.vx, shot.vy) or 1.0)
@@ -2103,12 +2171,13 @@ class CustomBattleScreen(Screen):
         for x, y, remaining, shell in self.simulation.impacts:
             point = self.to_screen(x, y)
             size = max(1, round((7 if shell else 3) * zoom * remaining / c.TACTICAL_IMPACT_SECONDS))
-            pygame.draw.rect(surface, TANK_SHOT_COLOR if shell else SHOT_COLOR,
+            color = SPLASH_COLOR if shell in {"artillery_shell", "torpedo"} else TANK_SHOT_COLOR if shell else SHOT_COLOR
+            pygame.draw.rect(surface, color,
                              (point[0] - size, point[1] - size, size * 2, size * 2), max(1, round(zoom)))
         self._draw_death_explosions(surface, limited_sight)
         self._draw_canopy(surface)
         for fighter, center, scale in labeled:
-            bar = pygame.Rect(center[0] - bar_size[0] // 2, center[1] - round(23 * scale), *bar_size)
+            bar = pygame.Rect(center[0] - bar_size[0] // 2, center[1] - round((fighter.radius + 8 if fighter.naval else 23) * scale), *bar_size)
             pygame.draw.rect(surface, OUTLINE_COLOR, bar)
             ratio = max(0.0, min(1.0, fighter.data["health"] / fighter.data["max_health"]))
             _draw_health_fill(surface, pygame.Rect(bar.x, bar.y, round(bar.width * ratio), bar.height), ratio)

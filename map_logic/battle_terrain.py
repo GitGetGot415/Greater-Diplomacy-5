@@ -15,6 +15,7 @@ from dataclasses import dataclass
 TERRAIN_NAMES = {
     "plains": "Plains", "hills": "Hills", "desert": "Desert",
     "forest": "Forest", "jungle": "Jungle", "mountain": "Mountains", "swamp": "Swamp",
+    "ocean": "Ocean", "coastal_sea": "Coastal Sea", "inland_sea": "Inland Sea", "lakes": "Lakes",
 }
 NAV_CELL = 40.0
 FEATURE_CELL = 128.0
@@ -43,6 +44,7 @@ TERRAIN_RECIPES = {
     "hills": (24, 0, 0, 0), "forest": (0, 200, 0, 0),
     "jungle": (0, 400, 0, 32), "mountain": (32, 0, 16, 8),
     "swamp": (0, 192, 0, 64),
+    "ocean": (0, 0, 0, 0), "coastal_sea": (0, 0, 0, 0), "inland_sea": (0, 0, 0, 0), "lakes": (0, 0, 0, 0),
 }
 # What the impassable water/gaps of each recipe are. Both stop movement and let shots across.
 GAP_KINDS = {"mountain": "chasm", "jungle": "marsh", "swamp": "marsh"}
