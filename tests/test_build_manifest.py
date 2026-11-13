@@ -21,6 +21,8 @@ NON_PACKAGE_DIRS = {
     ".git", ".github", ".eggs", "__pycache__", "venv", ".venv", "build", "dist",
     "web_stage", "assets", "base_maps", "saves", "scenarios", "tournament_saves",
     "compilation_scripts", "context", "scripts", "mods", "tests",
+    # Standalone game exports hold copies of the game source.
+    "exports",
 }
 DEV_ONLY_PACKAGES = set(manifest.DEV_ONLY_PACKAGES)
 

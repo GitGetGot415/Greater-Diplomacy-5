@@ -9,6 +9,7 @@ from ui.widgets.ui_elements import Button, make_back_button
 from ui.sound_effects import play_ui_sound
 from ui.navigation import screen_runner
 from data.platform import IS_WEB, LoadingSteps
+from data.io import standalone_game
 import data.constants as c
 
 from data.map.load_map import newer_version_message
@@ -46,13 +47,16 @@ class Load_Game(ContentBrowserScreen):
         self.build_browser(self.managed_dir, "No saves yet. Save a game or import a .zip archive.")
         browse_button = Button(c.SCREEN_WIDTH - 496, 24, (160, 40), "blue", "Browse...", self.browse_save,
                                font_preset="button_small")
-        browse_button.apply_state(enabled=not IS_WEB)
+        import_button = Button(c.SCREEN_WIDTH - 324, 24, (160, 40), "green", "Import .zip",
+                               lambda: file_exchange.import_zip_to_dir(self, self.managed_dir, self.reload_entries),
+                               font_preset="button_small")
+        # A standalone game plays only its own scenario, so it cannot open saves from other folders or archives.
+        browse_button.apply_state(enabled=not IS_WEB and not standalone_game.IS_STANDALONE)
+        import_button.apply_state(enabled=not standalone_game.IS_STANDALONE)
         self.elements.extend([
             make_back_button(self.exit_screen),
             browse_button,
-            Button(c.SCREEN_WIDTH - 324, 24, (160, 40), "green", "Import .zip",
-                   lambda: file_exchange.import_zip_to_dir(self, self.managed_dir, self.reload_entries),
-                   font_preset="button_small"),
+            import_button,
             Button(c.SCREEN_WIDTH - 152, 24, (128, 40), "grey", "Refresh", self.reload_entries,
                    font_preset="button_small"),
         ])

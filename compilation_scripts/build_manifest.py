@@ -3,11 +3,9 @@
 This module must remain safe to import without game or packaging engines.
 """
 
+from data.io.game_files import DESKTOP_SOURCE_FILES, EXPORTS_DIR, NATIVE_BINARIES, SOURCE_FILES, SOURCE_PACKAGES
 from data.io.starting_defaults import PREFERENCE_FILES, STARTING_DEFAULTS_PATH, read_starting_defaults
 
-SOURCE_PACKAGES = ("data", "ui", "screens", "map_logic")
-SOURCE_FILES = ("main.py", "mod_loader.py", "beepbox_audio.py")
-DESKTOP_SOURCE_FILES = SOURCE_FILES + ("soloud.py",)
 WINDOWS_DIST_DIR = "dist/windows"
 MACOS_DIST_DIR = "dist/macos"
 MACOS_BUILD_DIR = "build/macos"
@@ -28,7 +26,7 @@ ANDROID_ICON = "assets/icon/icon.png"
 # Android loads the gzip game bundle. Pygbag's ZIP-format .apk is only for web hosting.
 ANDROID_WEB_EXCLUDED_PATTERNS = ("*.apk",)
 DATA_DIRS = ("assets", "base_maps", "scenarios")
-EMPTY_DIRS = ("saves", "tournament_saves", "mods")
+EMPTY_DIRS = ("saves", "tournament_saves", "mods", EXPORTS_DIR)
 WEB_EXCLUDED_SUBPACKAGES = ()
 DEV_ONLY_PACKAGES = ("data.generators",)
 DEV_ONLY_FILES = ("run_tests.py",)
@@ -79,7 +77,6 @@ RUNTIME_PACKAGES = (
 )
 NATIVE_PACKAGES = ("dragoman", "cryptography", "quickjs", "py_mini_racer")
 MAC_INCLUDES = tuple(dict.fromkeys(("soloud", "pygame", "tkinter") + HIDDEN_IMPORTS))
-NATIVE_BINARIES = ("win64-libsoloud.dll", "mac64-libsoloud.dylib", "lin64-libsoloud.so")
 RUNTIME_JSON_DEFAULTS = {name: value for name, value in read_starting_defaults().items()
                         if name in PREFERENCE_FILES}
 

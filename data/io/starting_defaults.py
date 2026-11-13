@@ -33,6 +33,14 @@ def read_starting_defaults(path=_DEFAULT_PATH):
     return defaults
 
 
+def write_preference_defaults(json_dir):
+    """Replace a copied game's preference files with the release defaults in its starting_defaults.json."""
+    json_dir = Path(json_dir)
+    defaults = read_starting_defaults(json_dir / Path(STARTING_DEFAULTS_PATH).name)
+    for name in PREFERENCE_FILES:
+        (json_dir / name).write_text(json.dumps(defaults[name], indent=4) + "\n", encoding="utf-8")
+
+
 @lru_cache(maxsize=1)
 def _cached_defaults():
     # Startup sets the game folder as the working directory for frozen builds.

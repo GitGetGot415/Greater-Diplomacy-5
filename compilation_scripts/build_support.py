@@ -1,13 +1,12 @@
 """Stage release files without initializing game or native audio engines."""
 
-import json
 import os
 from pathlib import Path
 import shutil
 import subprocess
 
 from compilation_scripts import build_manifest as manifest
-from data.io.starting_defaults import PREFERENCE_FILES, read_starting_defaults
+from data.io.starting_defaults import write_preference_defaults
 
 
 def is_git_ignored(path):
@@ -107,9 +106,7 @@ def reset_runtime_files(destination):
         (destination / directory).mkdir(parents=True, exist_ok=True)
     json_dir = destination / "data" / "json"
     if json_dir.is_dir():
-        defaults = read_starting_defaults(destination / manifest.STARTING_DEFAULTS_PATH)
-        for name in PREFERENCE_FILES:
-            (json_dir / name).write_text(json.dumps(defaults[name], indent=4) + "\n", encoding="utf-8")
+        write_preference_defaults(json_dir)
 
 
 def stage_release(root, destination, platform):

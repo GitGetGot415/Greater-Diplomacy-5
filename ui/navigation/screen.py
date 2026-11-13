@@ -1092,10 +1092,11 @@ class EditorFormScreen(EditorOverlayScreen):
         p = self.panel_rect
         for row, field in enumerate(self.fields.values()):
             field.rect.topleft = (p.centerx + self.FIELD_CENTER_OFFSET, p.y + self.FIELD_TOP + row * self.FIELD_GAP)
+        self.action_button = Button(self.centered_x("medium"), p.bottom - 55, "medium", self.ACTION_COLOR,
+                                    self.ACTION_LABEL, self.apply)
         self.elements = [
             make_back_button(self.exit_screen, style="map"),
-            Button(self.centered_x("medium"), p.bottom - 55, "medium", self.ACTION_COLOR,
-                   self.ACTION_LABEL, self.apply),
+            self.action_button,
         ] + list(self.fields.values())
 
 

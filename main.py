@@ -190,8 +190,9 @@ def _import_project_modules():
         Realtime_Relay_Provision,
     )
     from map_logic.ai import ai_handler
+    from data.io import standalone_game
 
-    pygame.display.set_caption("Greater Diplomacy 5")
+    pygame.display.set_caption(standalone_game.title() if standalone_game.IS_STANDALONE else "Greater Diplomacy 5")
 
 
 class Controller:

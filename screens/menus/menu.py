@@ -16,6 +16,8 @@ from ui.widgets.ui_elements import Button
 import data.constants as c
 from data import queries
 from data.migrations import version_number
+from data.io import standalone_game
+from screens.game import map_launch
 from ui.dialogs import pickers
 from data.platform import IS_WEB, browser_fetch_text, run_background
 from ui.rendering.font_manager import fonts
@@ -116,6 +118,16 @@ MENU_BUTTON_TABLE = [
         "text_size": 24,
     }
 ]
+
+# A standalone game keeps only these table buttons. New Game starts its one scenario.
+STANDALONE_MENU_STATES = ("LOAD_GAME", "SETTINGS", "MUSIC_PLAYER", "CREDITS")
+
+
+def _menu_table_rows(table):
+    if not standalone_game.IS_STANDALONE:
+        return table
+    return [row for row in table if row["state"] in STANDALONE_MENU_STATES]
+
 
 MENU_WATERLINE_RATIO = 0.6
 MENU_SKY_STEPPED = False  # False gives a smooth gradient
@@ -385,11 +397,15 @@ class Menu(Screen):
         )
 
         try:
-            raw_title = pygame.image.load("assets/backgrounds/Title.png").convert_alpha()
-            title_width = min(raw_title.get_width(), c.SCREEN_WIDTH - 80)
-            title_scale = title_width / raw_title.get_width()
-            title_size = (title_width, int(raw_title.get_height() * title_scale))
-            self.title_image = pygame.transform.smoothscale(raw_title, title_size)
+            if standalone_game.IS_STANDALONE:
+                # A standalone game shows its own name instead of the Greater Diplomacy 5 logo.
+                self.title_image = fonts.get("title").render(standalone_game.title(), True, MENU_BOTTOM_TEXT_COLOR)
+            else:
+                raw_title = pygame.image.load("assets/backgrounds/Title.png").convert_alpha()
+                title_width = min(raw_title.get_width(), c.SCREEN_WIDTH - 80)
+                title_scale = title_width / raw_title.get_width()
+                title_size = (title_width, int(raw_title.get_height() * title_scale))
+                self.title_image = pygame.transform.smoothscale(raw_title, title_size)
             self.title_rect = self.title_image.get_rect()
             self.title_rect.left = 20
             self.title_rect.top = 20
@@ -432,7 +448,7 @@ class Menu(Screen):
             new_game_button_size,
             "green",
             "New Game",
-            lambda: self.go_to("NEW_GAME"),
+            lambda: self.go_to("MAP" if standalone_game.IS_STANDALONE else "NEW_GAME"),
             image=ui_elements.UI_ICONS.get("new_game"),
             font_size=new_game_text_size,
         )
@@ -442,7 +458,7 @@ class Menu(Screen):
         main_table_x, main_table_y = (MENU_BUTTON_GROUP_POSITION[0], MENU_BUTTON_GROUP_POSITION[1] + 110)
         main_button_w, main_button_h = main_button_size
         main_columns = 1
-        for index, button_data in enumerate(MENU_MAIN_BUTTON_TABLE):
+        for index, button_data in enumerate(_menu_table_rows(MENU_MAIN_BUTTON_TABLE)):
             row, column = divmod(index, main_columns)
             button = Button(
                 main_table_x + column * (main_button_w + 10),
@@ -461,7 +477,7 @@ class Menu(Screen):
         table_x, table_y = MENU_BUTTON_GROUP_POSITION[0] + 210, MENU_BUTTON_GROUP_POSITION[1]
         button_w, button_h = button_size
         columns = 1
-        for index, button_data in enumerate(MENU_BUTTON_TABLE):
+        for index, button_data in enumerate(_menu_table_rows(MENU_BUTTON_TABLE)):
             row, column = divmod(index, columns)
             button = Button(
                 table_x + column * (button_w + 10),
@@ -489,7 +505,8 @@ class Menu(Screen):
         font = fonts.get("heading2")
         
         current_y = MENU_BOTTOM_TEXT_START_Y
-        for item in MENU_BOTTOM_TEXTS:
+        # The Discord and GitHub links belong to Greater Diplomacy 5, not to a standalone game.
+        for item in [] if standalone_game.IS_STANDALONE else MENU_BOTTOM_TEXTS:
             link_text = item.get("link_text", "")
             main_text = item.get("main_text", "")
             url = item.get("url")
@@ -569,6 +586,11 @@ class Menu(Screen):
         # alongside the sign and in the top corner respectively, and the
         # portrait edit button from the left, alongside Hildehrand.
         right_intro_buttons = [self.refresh_btn, self.custom_battle_btn]
+        if standalone_game.IS_STANDALONE:
+            # A standalone game has no custom battles, and the GD5 version check would call it outdated
+            # whenever GD5 releases. The Refresh button only repeats that check.
+            for button in right_intro_buttons:
+                self.elements.remove(button)
         if self.exit_btn:
             right_intro_buttons.append(self.exit_btn)
         for button in right_intro_buttons:
@@ -593,11 +615,22 @@ class Menu(Screen):
 
         # The version text isn't a Button, so it rides the same right-edge
         # slide-in as the refresh button just above it, sharing its delay.
-        self._version_text_intro_delay = self.refresh_btn._intro_delay
+        self._version_text_intro_delay = 0.0 if standalone_game.IS_STANDALONE else self.refresh_btn._intro_delay
         self._version_draw_pos = (0, 0)
         self._position_center_buttons(0.0)
 
-        self.trigger_version_check()
+        if standalone_game.IS_STANDALONE:
+            self.version_status = f"Greater Diplomacy 5 {c.GAME_VERSION}"
+        else:
+            self.trigger_version_check()
+
+    def prepare_map(self, app):
+        # Only a standalone game's New Game button opens MAP from the main menu.
+        map_launch.open_saved_map(app, standalone_game.scenario_path())
+        return True
+
+    def prepare_map_steps(self, app):
+        return map_launch.open_saved_map_steps(app, standalone_game.scenario_path())
 
     def _position_center_buttons(self, progress):
         """Move the panel and all center buttons with the same vertical offset."""
