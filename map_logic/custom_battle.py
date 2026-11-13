@@ -1292,12 +1292,8 @@ class BattleSimulation:
             flight = weapon["range"] / weapon["speed"]
         height = c.TACTICAL_NAVAL_HULL_HEIGHT if weapon["projectile"] == "artillery_shell" else 0.0
         gravity = weapon.get("gravity", 0.0)
-        for heading in naval.launch_angles(fighter, slot, angle):
-            shot = Projectile(fighter, fighter.data, *start, math.cos(heading) * weapon["speed"], math.sin(heading) * weapon["speed"], flight, height=height, vertical_speed=gravity * flight / 2 - height / flight, gravity=gravity, weapon_data=weapon)
-            ally = next((ally for ally in self._sides[fighter.side] if ally is not fighter and naval.projectile_contact(shot, ally, flight, (ally.x, ally.y), movement=(ally.vx * flight, ally.vy * flight)) is not None), None)
-            if ally is not None:
-                return ally
-        return None
+        shot = Projectile(fighter, fighter.data, *start, math.cos(angle) * weapon["speed"], math.sin(angle) * weapon["speed"], flight, height=height, vertical_speed=gravity * flight / 2 - height / flight, gravity=gravity, weapon_data=weapon)
+        return next((ally for ally in self._sides[fighter.side] if ally is not fighter and naval.projectile_contact(shot, ally, flight, (ally.x, ally.y), movement=(ally.vx * flight, ally.vy * flight)) is not None), None)
 
     def _naval_course(self, fighter, target):
         dx, dy = target.x - fighter.x, target.y - fighter.y
@@ -1431,9 +1427,11 @@ class BattleSimulation:
         height = c.TACTICAL_NAVAL_HULL_HEIGHT if gravity else 0.0
         vertical = gravity * flight / 2 - height / flight if gravity else 0.0
         remaining = flight if gravity else weapon["range"] / weapon["speed"]
-        for heading in naval.launch_angles(fighter, slot, angle):
-            origin = naval.muzzle_position(fighter, slot, heading) if weapon["projectile"] == "torpedo" else start
-            self.projectiles.append(Projectile(fighter, dict(fighter.data), *origin, math.cos(heading) * weapon["speed"], math.sin(heading) * weapon["speed"], remaining, height=height, vertical_speed=vertical, gravity=gravity, weapon_data=dict(weapon), attack_share=fighter.attack_share * naval.mounts(fighter.shape)[slot].attack_share))
+        if weapon["projectile"] == "torpedo":
+            bearing, arc = naval.sector(fighter, slot)
+            angle = bearing + max(-arc / 2, min(arc / 2, naval.wrap(angle - bearing)))
+            start = naval.muzzle_position(fighter, slot, angle)
+        self.projectiles.append(Projectile(fighter, dict(fighter.data), *start, math.cos(angle) * weapon["speed"], math.sin(angle) * weapon["speed"], remaining, height=height, vertical_speed=vertical, gravity=gravity, weapon_data=dict(weapon), attack_share=fighter.attack_share * naval.mounts(fighter.shape)[slot].attack_share))
         fighter.fired_weapon = slot
         fighter.muzzle = fighter.mount_muzzles[slot] = c.TACTICAL_MUZZLE_SECONDS
         fighter.recoil = fighter.mount_recoils[slot] = c.TACTICAL_MUZZLE_SECONDS if gravity else 0.0

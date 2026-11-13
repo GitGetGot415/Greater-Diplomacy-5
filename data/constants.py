@@ -40,8 +40,8 @@ TACTICAL_WEAPONS = {
     "cannon": dict(label="Cannon",                          interval=6.0, rounds=1, reload=6.0, speed=2300.0, spread=0.8, damage=2.5, penetration=3.0, shell=True, soft_only=False),
     "heavy_cannon": dict(label="Heavy cannon",              interval=8.0, rounds=1, reload=8.0, speed=2500.0, spread=0.8, damage=3.4, penetration=4.0, shell=True, soft_only=False),
     "autocannon": dict(label="Autocannon",                  interval=0.3, rounds=3, reload=2.8, speed=1800.0, spread=1.5, damage=0.5, penetration=1.0, shell=True, soft_only=False),
-    "artillery_shell": dict(label="Artillery shells", interval=8.0, rounds=1, reload=8.0, speed=700.0, spread=1.0, damage=1.0, penetration=0.0, shell=True, soft_only=False, projectile="artillery_shell", range=2800.0, gravity=300.0),
-    "torpedo": dict(label="Torpedoes", interval=10.0, rounds=1, reload=10.0, speed=140.0, spread=0.5, damage=1.0, penetration=0.0, shell=False, soft_only=False, projectile="torpedo", range=3000.0, salvo_count=3, salvo_arc=12.0),
+    "artillery_shell": dict(label="Artillery shells",       interval=8.0, rounds=1, reload=8.0, speed=700.0, spread=1.0, damage=1.0, penetration=0.0, shell=True, soft_only=False, projectile="artillery_shell", range=2800.0, gravity=300.0),
+    "torpedo": dict(label="Torpedoes",                      interval=0.5, rounds=4, reload=10.0, speed=140.0, spread=0.5, damage=1.0, penetration=0.0, shell=False, soft_only=False, projectile="torpedo", range=3000.0),
 }
 TACTICAL_VEHICLE_WEAPONS = {
     "armored_car": ("light_cannon", "vehicle_mg"),

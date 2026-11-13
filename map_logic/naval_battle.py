@@ -102,19 +102,6 @@ def mount_position(fighter, slot):
     return fighter.x + co * forward - si * sideways, fighter.y + si * forward + co * sideways
 
 
-def launch_angles(fighter, slot, angle=None):
-    """A fan centered on the aim, kept entirely inside the mount's firing sector."""
-    weapon = fighter.weapon(slot)
-    count = weapon.get("salvo_count", 1)
-    angle = fighter.weapon_aim(slot) if angle is None else angle
-    if count == 1:
-        return (angle,)
-    bearing, arc = sector(fighter, slot)
-    half = min(math.radians(weapon["salvo_arc"]) / 2, arc / 2)
-    center = bearing + max(-arc / 2 + half, min(arc / 2 - half, wrap(angle - bearing)))
-    return tuple(center - half + 2 * half * number / (count - 1) for number in range(count))
-
-
 def muzzle_position(fighter, slot, angle=None):
     """Start outside the hull, so the launching ship never immediately hits itself."""
     start = mount_position(fighter, slot)

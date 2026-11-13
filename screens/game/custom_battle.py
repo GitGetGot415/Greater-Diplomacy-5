@@ -232,6 +232,7 @@ TORPEDO_COLOR = (185, 195, 190)
 TORPEDO_WAKE_COLOR = (115, 180, 200)
 SPLASH_COLOR = (170, 220, 240)
 SHELL_HEIGHT_DRAW_SCALE = 0.3
+SUBMARINE_ALPHA = 200
 EDIT_NAVAL_ICON_SIZE = (CARD_SIZE[0] - 24, 38)
 RIFLE_SHOT_SOUNDS = ("rifle_shot_1", "rifle_shot_2", "rifle_shot_3")
 TANK_SHOT_SOUNDS = ("tank_shot_1", "tank_shot_2", "tank_shot_3")
@@ -361,17 +362,18 @@ def clear_rotated_sprites():
     _ROTATED_SPRITES.clear()
 
 
-def _draw_rotated_sprite(surface, sprite, key, center, angle):
+def _draw_rotated_sprite(surface, sprite, key, center, angle, *, alpha=255):
     step = round(math.degrees(angle) / SPRITE_ANGLE_STEP) % (360 // SPRITE_ANGLE_STEP)
-    key = (*key, step)
+    key = (*key, step, alpha)
     rotated = _ROTATED_SPRITES.get(key)
     if rotated is None:
         rotated = pygame.transform.rotate(sprite, -step * SPRITE_ANGLE_STEP)
+        rotated.set_alpha(alpha)
         _ROTATED_SPRITES[key] = rotated
     surface.blit(rotated, rotated.get_rect(center=center))
 
 
-def draw_unit_shape(surface, shape, center, angle, color, *, scale=1.0, aim=None, artwork=None, recoil=0.0, secondary_aim=None, mount_recoils=None):
+def draw_unit_shape(surface, shape, center, angle, color, *, scale=1.0, aim=None, artwork=None, recoil=0.0, secondary_aim=None, mount_recoils=None, alpha=255):
     """Draw battle artwork or geometric silhouettes in setup cards and on the field.
 
     With ``aim``, the turret or gun line follows ``aim`` independently of the hull.
@@ -379,7 +381,7 @@ def draw_unit_shape(surface, shape, center, angle, color, *, scale=1.0, aim=None
     if artwork is not None:
         if shape in naval.SHAPES:
             sprite = _battle_sprite(artwork, shape, "chassis", color, scale)
-            _draw_rotated_sprite(surface, sprite, (artwork, shape, "chassis", tuple(color), scale), center, angle)
+            _draw_rotated_sprite(surface, sprite, (artwork, shape, "chassis", tuple(color), scale), center, angle, alpha=alpha)
             if artwork[1] is not None:
                 width, height = UNIT_SHAPE_SIZES[shape]
                 sprite = _battle_sprite(artwork, shape, "turret", color, scale)
@@ -389,7 +391,7 @@ def draw_unit_shape(surface, shape, center, angle, color, *, scale=1.0, aim=None
                     heading = aims[slot]
                     kick = 4 * mount_recoils[slot] / c.TACTICAL_MUZZLE_SECONDS if mount_recoils else 0.0
                     part_center = (center[0] + math.cos(angle) * forward - math.sin(angle) * sideways - math.cos(heading) * kick * scale, center[1] + math.sin(angle) * forward + math.cos(angle) * sideways - math.sin(heading) * kick * scale)
-                    _draw_rotated_sprite(surface, sprite, (artwork, shape, "turret", tuple(color), scale), part_center, heading)
+                    _draw_rotated_sprite(surface, sprite, (artwork, shape, "turret", tuple(color), scale), part_center, heading, alpha=alpha)
             return
         for part, heading in (("chassis", angle), ("turret", angle if aim is None else aim)):
             if part == "turret" and artwork[1] is None:
@@ -405,10 +407,10 @@ def draw_unit_shape(surface, shape, center, angle, color, *, scale=1.0, aim=None
             if part == "turret" and recoil:
                 part_center = (part_center[0] - math.cos(heading) * recoil * scale,
                                part_center[1] - math.sin(heading) * recoil * scale)
-            _draw_rotated_sprite(surface, sprite, key, part_center, heading)
+            _draw_rotated_sprite(surface, sprite, key, part_center, heading, alpha=alpha)
         return
     key = (shape, tuple(color), scale, aim is None)
-    _draw_rotated_sprite(surface, _unit_sprite(shape, color, scale, aim is None), key, center, angle)
+    _draw_rotated_sprite(surface, _unit_sprite(shape, color, scale, aim is None), key, center, angle, alpha=alpha)
     if aim is not None and shape not in UNARMED_SHAPES:
         # Same reach as the sprite's own gun line at full scale: half the body plus the sprite's margin.
         length = (UNIT_SHAPE_SIZES[shape][0] / 2 + 9 - recoil) * scale
@@ -2119,13 +2121,13 @@ class CustomBattleScreen(Screen):
                 continue
             if not fighter.alive:
                 draw_unit_shape(surface, fighter.shape, center, fighter.angle, DEAD_COLOR,
-                                scale=zoom, aim=fighter.aim, secondary_aim=fighter.secondary_aim, artwork=self.battle_artwork[fighter.data["type"]])
+                                scale=zoom, aim=fighter.aim, secondary_aim=fighter.secondary_aim, artwork=self.battle_artwork[fighter.data["type"]], alpha=SUBMARINE_ALPHA if fighter.shape == "submarine" else 255)
                 continue
             scale = zoom
             draw_unit_shape(surface, fighter.shape, center, fighter.angle, TEAM_COLORS[fighter.side],
                             scale=scale, aim=fighter.aim,
                             artwork=self.battle_artwork[fighter.data["type"]],
-                            recoil=4 * fighter.recoil / c.TACTICAL_MUZZLE_SECONDS, secondary_aim=fighter.secondary_aim, mount_recoils=fighter.mount_recoils)
+                            recoil=4 * fighter.recoil / c.TACTICAL_MUZZLE_SECONDS, secondary_aim=fighter.secondary_aim, mount_recoils=fighter.mount_recoils, alpha=SUBMARINE_ALPHA if fighter.shape == "submarine" else 255)
             if fighter.naval:
                 for slot in range(len(naval.mounts(fighter.shape))):
                     if fighter.mount_muzzles[slot] > 0:
