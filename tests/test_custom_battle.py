@@ -2926,9 +2926,109 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.drag_card(self.screen.card_rect(0, 0).center, self.screen.card_rect(0, 2).center)
         self.assertEqual(self.roster_types(0), ["Fixture II", "Fixture III", "Fixture I"])
         before = list(self.screen.rosters[0])
-        self.drag_card(self.screen.card_rect(0, 0).center, self.screen.panes[1].center)
+        self.drag_card(self.screen.card_rect(0, 0).center, (10, 300))
         self.assertEqual(self.screen.rosters[0], before)
         self.assertEqual(self.screen.rosters[1], [])
+
+    def test_duplicate_buttons_copy_settings_with_independent_unit_identities(self):
+        self.fill_armies()
+        self.click("Control")
+        for side in (0, 1):
+            original = self.screen.rosters[side][0]
+            self.screen.set_unit_options(side, [original], owner="Fixture B", health_percent=35)
+            button = [button for button in self.screen.elements if button.text == "Duplicate"][side]
+            with patch.object(battle_screen.sound_effects, "play_ui_sound") as sound:
+                self.screen.handle_events([
+                    pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=button.rect.center),
+                    pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=button.rect.center)])
+            self.assertEqual(sound.call_count, 1)
+            duplicate = self.screen.rosters[side][1]
+            self.assertEqual({key: value for key, value in duplicate.items() if key != "unit_id"},
+                             {key: value for key, value in original.items() if key != "unit_id"})
+            self.assertNotEqual(duplicate["unit_id"], original["unit_id"])
+            self.assertIsNot(duplicate["order"], original["order"])
+            self.assertEqual(self.screen.selected[side], 1)
+            self.screen.set_unit_options(side, [duplicate], owner="Fixture A", health_percent=75)
+            self.assertEqual((original["owner"], original["health"]), ("Fixture B", original["max_health"] * 0.35))
+        self.assertEqual(self.screen.controlled_index, 0)
+
+    def test_duplicate_rechecks_the_limit_and_requires_a_selected_card(self):
+        self.fill_armies()
+        with patch.object(c, "CUSTOM_BATTLE_MAX_UNITS_PER_SIDE", 2):
+            for side in (0, 1):
+                callback = [button for button in self.screen.elements if button.text == "Duplicate"][side].callback
+                callback()
+                before = copy.deepcopy(self.screen.rosters)
+                button = [button for button in self.screen.elements if button.text == "Duplicate"][side]
+                self.assertTrue(button.disabled)
+                callback()  # A callback retained before the limit was reached must also refuse.
+                self.assertEqual(self.screen.rosters, before)
+        self.screen._clear_roster_selection()
+        self.screen.duplicate_unit(0)
+        self.assertEqual(self.screen.rosters, before)
+
+    def test_dragging_between_sides_preserves_units_and_tracks_friendly_control(self):
+        for name in ("Fixture I", "Fixture II", "Fixture III"):
+            self.screen.add_unit(0, name)
+        self.click("Control")
+        first, second, controlled = self.screen.rosters[0]
+        self.screen.set_unit_options(0, [first], owner="Fixture B", health_percent=40)
+        before = copy.deepcopy(first)
+        # Moving to an empty army keeps the same unit, including nationality and HP.
+        self.drag_card(self.screen.card_rect(0, 0).center, self.screen.panes[1].center)
+        self.assertIs(self.screen.rosters[1][0], first)
+        self.assertEqual(first, before)
+        self.assertEqual(self.screen.rosters[0], [second, controlled])
+        self.assertEqual(self.screen.controlled_index, 1)
+        self.assertEqual(self.screen.selected, [None, 0])
+        # Moving back before the controlled card shifts its index without changing control.
+        self.drag_card(self.screen.card_rect(1, 0).center, self.screen.card_rect(0, 0).center)
+        self.assertIs(self.screen.rosters[0][0], first)
+        self.assertEqual(self.screen.controlled_index, 2)
+        # Moving the controlled card to the enemy army releases control.
+        self.drag_card(self.screen.card_rect(0, 2).center, self.screen.panes[1].center)
+        self.assertIs(self.screen.rosters[1][0], controlled)
+        self.assertIsNone(self.screen.controlled_index)
+        self.click("Simulate")
+        self.assertEqual([division[0].side for division in self.screen.simulation.divisions], [0, 0, 1])
+
+    def test_cross_side_drop_rechecks_capacity_in_both_directions(self):
+        with patch.object(c, "CUSTOM_BATTLE_MAX_UNITS_PER_SIDE", 2):
+            for side in (0, 1):
+                self.screen.rosters = [[self.screen._new_unit(team, "Fixture I") for _ in range(2)] for team in (0, 1)]
+                self.screen.controlled_index = 0
+                self.screen.refresh_ui()
+                before = copy.deepcopy(self.screen.rosters)
+                self.drag_card(self.screen.card_rect(side, 0).center, self.screen.card_rect(1 - side, 0).center)
+                self.assertEqual(self.screen.rosters, before)
+                self.assertEqual(self.screen.controlled_index, 0)
+                self.assertIsNone(self.screen.drag)
+                self.screen.rosters[1 - side].pop()
+                self.screen.refresh_ui()
+                self.drag_card(self.screen.card_rect(side, 0).center, self.screen.card_rect(1 - side, 0).center)
+                self.assertEqual([len(roster) for roster in self.screen.rosters], [1, 2] if side == 0 else [2, 1])
+
+    def test_cross_side_drop_uses_destination_scroll_position(self):
+        self.screen.add_unit(0, "Fixture II")
+        for _ in range(8):
+            self.screen.add_unit(1, "Fixture I")
+        self.screen.roster_1_scroll = -(battle_screen.CARD_SIZE[0] + battle_screen.CARD_GAP) * 2
+        unit = self.screen.rosters[0][0]
+        self.drag_card(self.screen.card_rect(0, 0).center, self.screen.card_rect(1, 3).center)
+        self.assertIs(self.screen.rosters[1][3], unit)
+        self.assertEqual(self.screen.rosters[0], [])
+
+    def test_preview_rejects_duplication_and_cross_side_transfers(self):
+        self.fill_armies()
+        self.click("Simulate")
+        before = copy.deepcopy(self.screen.rosters)
+        self.screen.selected = [0, 0]  # Direct callbacks must enforce the mode too.
+        for side in (0, 1):
+            self.screen.duplicate_unit(side)
+            self.assertFalse(self.screen._move_roster_entry(side, 0, 0, target_side=1 - side))
+        self.drag_card(self.screen.card_rect(0, 0).center, self.screen.card_rect(1, 0).center)
+        self.assertEqual(self.screen.rosters, before)
+        self.assertFalse(any(button.text == "Duplicate" for button in self.screen.elements))
 
     def test_remove_pause_focus_loss_and_exit_callbacks(self):
         self.fill_armies()

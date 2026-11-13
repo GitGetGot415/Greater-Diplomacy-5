@@ -84,8 +84,8 @@ DEATH_EXPLOSION_DRAW_PARTICLE = {"circle": pygame.draw.ellipse, "square": pygame
 
 EDIT_BATTLE_HELP_TEXT = (
     "Build both armies, choose their deployment order, and optionally choose a unit to control. Custom battles do not change your campaign.\n\n"
-    "Add Friendly and Add Enemy open the unit picker. Choose units to add them; Cancel closes the picker and keeps your additions. Select a card and choose Remove to remove that unit. Clear All empties that army.\n\n"
-    "Drag cards within either army to reorder deployment. The leftmost card deploys in the front rank, closest to the enemy. Scroll long rosters with the mouse wheel, scrollbar, or by dragging the roster background.\n\n"
+    "Add Friendly and Add Enemy open the unit picker. Choose units to add them; Cancel closes the picker and keeps your additions. Select a card and choose Duplicate to copy that unit, including nationality and starting HP, or Remove to remove that unit. Clear All empties that army.\n\n"
+    "Drag cards within either army to reorder deployment, or into the other army to move units between sides. Duplicating and moving units cannot exceed the destination army's unit limit. The leftmost card deploys in the front rank, closest to the enemy. Scroll long rosters with the mouse wheel, scrollbar, or by dragging the roster background.\n\n"
     "A card's gear button opens Unit Settings for nationality and starting HP. You can also drag along the card's health bar to change starting HP.\n\n"
     "To select several units, start in empty roster panel space outside the card area and drag a square across the cards. Every selected card gets a gold outline. The gear button on any selected card opens Group Settings for all selected units; dragging a selected card's health bar changes the group's starting HP. Mixed means the selected units have different values. Click empty space or enter preview to clear the selection.\n\n"
     "Select a friendly card and choose Control to command that division's middle sub-unit during the battle. The controlled division's button is lighter blue and has a yellow arrow. Release Control lets both armies fight automatically.\n\n"
@@ -735,12 +735,14 @@ class CustomBattleScreen(Screen):
                 add = Button(x, top + 70, (BUTTON_WIDTH, 42), "blue" if side == 0 else "red",
                              "Add Friendly" if side == 0 else "Add Enemy",
                              lambda side=side: self.open_picker(side), font_size=20)
-                add.apply_state(enabled=len(roster) < c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE,
+                add.apply_state(enabled=self._roster_has_space(side),
                                 color="blue" if side == 0 else "red")
+                duplicate = Button(x - BUTTON_WIDTH - CARD_GAP, top + CLEAR_ALL_OFFSET_Y, (BUTTON_WIDTH, CLEAR_ALL_HEIGHT), "grey", "Duplicate", lambda side=side: self.duplicate_unit(side), font_size=18)
+                duplicate.apply_state(enabled=self.selected[side] is not None and self._roster_has_space(side), color="blue" if side == 0 else "red")
                 remove = Button(x, top + 128, (BUTTON_WIDTH, 42), "grey", "Remove",
                                 lambda side=side: self.remove_unit(side), font_size=20)
                 remove.apply_state(enabled=self.selected[side] is not None, color="red")
-                self.elements.extend((clear, add, remove))
+                self.elements.extend((clear, add, remove, duplicate))
                 if side == 0:
                     controlling = self.controlled_index is not None and self.controlled_index == self.selected[0]
                     control = Button(x, top + 178, (BUTTON_WIDTH, 32), "yellow",
@@ -854,7 +856,7 @@ class CustomBattleScreen(Screen):
             self, "Add Friendly Units" if side == 0 else "Add Enemy Units", "",
             queries.unit_picker_items(self.unit_names, self.library),
             lambda name: self.add_unit(side, name), close_on_select=False, background_draw=self.draw,
-            is_enabled=lambda item: len(self.rosters[side]) < c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE)
+            is_enabled=lambda item: self._roster_has_space(side))
 
     def choose_terrain(self):
         if self.mode != "setup" or self.campaign is not None:
@@ -870,11 +872,14 @@ class CustomBattleScreen(Screen):
         self.terrain = terrain
         self.refresh_ui()
 
+    def _roster_has_space(self, side):
+        return len(self.rosters[side]) < c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE
+
     def add_unit(self, side, name):
         if self.mode != "setup" or name not in self.unit_names:
             return
         roster = self.rosters[side]
-        if len(roster) >= c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE:
+        if not self._roster_has_space(side):
             return
         roster.append(self._new_unit(side, name))
         self.selected[side] = len(roster) - 1
@@ -885,6 +890,22 @@ class CustomBattleScreen(Screen):
         if country is None:
             country = self.nationalities[min(side, len(self.nationalities) - 1)]
         return queries.create_unit_dict(name, country, self.library)
+
+    def duplicate_unit(self, side):
+        if self.mode != "setup" or self.campaign is not None or side not in (0, 1):
+            return
+        index = self.selected[side]
+        if index is None or not 0 <= index < len(self.rosters[side]) or not self._roster_has_space(side):
+            return
+        self.cancel_active_drags()
+        original = self.rosters[side][index]
+        duplicate = self._new_unit(side, original["type"], original["owner"])
+        duplicate["health"] = original["health"]
+        self.rosters[side].append(duplicate)
+        self.selected[side] = len(self.rosters[side]) - 1
+        self.group[side] = []
+        self.refresh_ui()
+        setattr(self, f"roster_{side}_scroll", getattr(self, f"roster_{side}_limit"))
 
     def edit_unit(self, side, unit):
         if self.mode != "setup" or not any(entry is unit for entry in self.rosters[side]):
@@ -1435,26 +1456,34 @@ class CustomBattleScreen(Screen):
                     return True
         return False
 
-    def _move_roster_entry(self, side, index, destination):
+    def _move_roster_entry(self, side, index, destination, *, target_side=None):
         """Move one roster entry. The leftmost card deploys in the front rank."""
+        if target_side is None:
+            target_side = side
+        if (side not in (0, 1) or target_side not in (0, 1) or not self._roster_reorderable(side)
+                or not 0 <= index < len(self.rosters[side])):
+            return False
+        if target_side != side:
+            if self.mode != "setup" or self.campaign is not None or not self._roster_has_space(target_side):
+                return False
+        destination = min(len(self.rosters[target_side]) - (side == target_side), max(0, destination))
+        controlled = self.rosters[0][self.controlled_index] if self.controlled_index is not None else None
         unit = self.rosters[side].pop(index)
-        self.rosters[side].insert(destination, unit)
+        self.rosters[target_side].insert(destination, unit)
         self.group[side] = []
-        if side == 0 and self.controlled_index is not None:
-            if self.controlled_index == index:
-                self.controlled_index = destination
-            elif index < self.controlled_index <= destination:
-                self.controlled_index -= 1
-            elif destination <= self.controlled_index < index:
-                self.controlled_index += 1
+        if controlled is not None:
+            self.controlled_index = next((position for position, entry in enumerate(self.rosters[0]) if entry is controlled), None)
         if self.mode == "setup":
-            self.selected[side] = destination
-            return
+            if target_side != side:
+                self._clear_roster_selection()
+            self.selected[target_side] = destination
+            return True
         # Preview: campaign units follow their roster entries (friendly ones come first),
         # and the paused battle deploys again in the new order.
         if self.campaign is not None:
             self.campaign.units.insert(destination, self.campaign.units.pop(index))
         self._build_simulation()
+        return True
 
     def _roster_reorderable(self, side):
         """Editing reorders both armies; preview reorders only the friendly army."""
@@ -1471,11 +1500,13 @@ class CustomBattleScreen(Screen):
                     self.drag[3] = True
                 return True
             if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-                if active and self.panes[side].collidepoint(event.pos):
-                    offset = getattr(self, f"roster_{side}_scroll")
-                    destination = int((event.pos[0] - self.panes[side].x - offset)
-                                      // (CARD_SIZE[0] + CARD_GAP))
-                    self._move_roster_entry(side, index, min(len(self.rosters[side]) - 1, max(0, destination)))
+                if active:
+                    for target_side, pane in enumerate(self.panes):
+                        if pane.collidepoint(event.pos):
+                            offset = getattr(self, f"roster_{target_side}_scroll")
+                            destination = int((event.pos[0] - pane.x - offset) // (CARD_SIZE[0] + CARD_GAP))
+                            self._move_roster_entry(side, index, destination, target_side=target_side)
+                            break
                 self.drag = None
                 self.refresh_ui()
                 return True
