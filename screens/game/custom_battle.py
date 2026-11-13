@@ -950,7 +950,7 @@ class CustomBattleScreen(Screen):
                 self.controlled_index = None
             elif self.controlled_index > index:
                 self.controlled_index -= 1
-        self.selected[side] = None
+        self.selected[side] = min(index, len(self.rosters[side]) - 1) if self.rosters[side] else None
         self.refresh_ui()
 
     def clear_army(self, side):
