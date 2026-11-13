@@ -58,9 +58,9 @@ LIST_COLOR = (24, 28, 38)
 SWATCH_BORDER_COLOR = (255, 255, 255)
 FOOTER_Y = c.SCREEN_HEIGHT - 70
 FOOTER_BUTTON_SIZE = (180, 44)
-# Shared bottom-right position leaves country information and Settings reset controls clear.
+# The large Close Preview button stays in the bottom-left on every preview screen.
 PREVIEW_CLOSE_MARGIN = 20
-PREVIEW_CLOSE_SIZE = (170, 40)
+PREVIEW_CLOSE_SIZE = "large"
 DESCRIPTION_MAX_LENGTH = 600
 DESCRIPTION_LABEL_CHARS = 48
 RANK_LABELS = {"major": "Major", "minor": "Minor"}
@@ -465,5 +465,5 @@ class Standalone_Menu_Preview(Screen):
 
 def close_preview_button(on_click):
     """The same Close Preview control remains available on every preview screen."""
-    width, height = PREVIEW_CLOSE_SIZE
-    return Button(c.SCREEN_WIDTH - PREVIEW_CLOSE_MARGIN - width, c.SCREEN_HEIGHT - PREVIEW_CLOSE_MARGIN - height, PREVIEW_CLOSE_SIZE, "red", "Close Preview", on_click, sound_kind="back")
+    height = c.SIZES[PREVIEW_CLOSE_SIZE][1]
+    return Button(PREVIEW_CLOSE_MARGIN, c.SCREEN_HEIGHT - PREVIEW_CLOSE_MARGIN - height, PREVIEW_CLOSE_SIZE, "red", "Close Preview", on_click, sound_kind="back")

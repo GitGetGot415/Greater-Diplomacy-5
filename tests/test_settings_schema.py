@@ -494,6 +494,32 @@ class SettingsCategoryTests(unittest.TestCase):
         self.screen.save_and_go_back(execute_exit=False)
         self.assertEqual(self.save.call_args.args[1]["gemini_model"], "player-model")
 
+    def test_standalone_settings_and_preview_omit_ai_and_paths_and_reject_their_navigation(self):
+        for exported_game in (True, False):
+            with self.subTest(exported_game=exported_game), mock.patch.object(self.settings.standalone_game, "IS_STANDALONE", exported_game):
+                screen = self.settings.Settings(self.controller, standalone=None if exported_game else True, preview=not exported_game)
+                self.assertEqual(tuple(dict(screen.categories())), ("GAME", "DISPLAY", "CONTROLS"))
+                for label in ("LLM AI", "Default Paths"):
+                    self.assertFalse(any(element.text == label for element in screen.elements))
+                next(element for element in screen.elements if element.text == "Controls").callback()
+                self.assertEqual(screen.sub_state, "CONTROLS")
+                for category in ("AI", "FILES"):
+                    screen.set_sub_state(category)
+                    self.assertEqual(screen.sub_state, "CONTROLS")
+                    self.assertEqual(screen.ai_fields, {})
+                    # Rebuilding also clears an unavailable category retained by a caller.
+                    screen.sub_state = category
+                    screen.refresh_ui()
+                    self.assertEqual(screen.sub_state, "GAME")
+                    screen.set_sub_state("CONTROLS")
+
+    def test_regular_settings_keep_ai_and_paths_available(self):
+        with mock.patch.object(self.settings.standalone_game, "IS_STANDALONE", False):
+            screen = self.settings.Settings(self.controller)
+        for category, label in (("AI", "LLM AI"), ("FILES", "Default Paths")):
+            next(element for element in screen.elements if element.text == label).callback()
+            self.assertEqual(screen.sub_state, category)
+
     def test_child_screens_return_to_the_category_and_original_context(self):
         from types import SimpleNamespace
         states = {key: object() for key in ("MAP", "MENU", "REALTIME_LOBBY", "REALTIME_REMOTE_LOBBY", "CUSTOM_BATTLE", "UNIT_ART", "KEYBINDS", "MOUSE_SETTINGS")}

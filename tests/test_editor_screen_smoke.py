@@ -334,7 +334,7 @@ class EditorScreenSmokeTests(unittest.TestCase):
             settings.apply_setting("ocean_light_color", (1, 2, 3))
             self.assertEqual(c.SAVES_DIR, saved_path)
             self.assertEqual(c.OCEAN_LIGHT_BLUE, saved_color)
-            for category in settings.CATEGORY_RESET_FIELDS:
+            for category, _label in settings.categories():
                 settings.set_sub_state(category)
                 settings.draw(self.surface)
                 if category != "GAME":

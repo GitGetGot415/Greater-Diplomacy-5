@@ -147,7 +147,7 @@ def render_settings_buttons(settings_screen):
     """Build navigation and only the active category's controls."""
     screen = settings_screen
     screen.elements = [ui_elements.make_back_button(screen.save_and_go_back, pos=SETTINGS_BACK_POS)]
-    screen.elements.extend(ui_elements.make_choice_button(SETTINGS_MARGIN + 12, SETTINGS_PANEL_TOP + 24 + index * SETTINGS_NAV_GAP, SETTINGS_NAV_SIZE, label, screen.sub_state == category, lambda value=category: screen.set_sub_state(value), idle_color="grey", font_preset="small", sound_kind="select_category") for index, (category, label) in enumerate(SETTINGS_CATEGORIES))
+    screen.elements.extend(ui_elements.make_choice_button(SETTINGS_MARGIN + 12, SETTINGS_PANEL_TOP + 24 + index * SETTINGS_NAV_GAP, SETTINGS_NAV_SIZE, label, screen.sub_state == category, lambda value=category: screen.set_sub_state(value), idle_color="grey", font_preset="small", sound_kind="select_category") for index, (category, label) in enumerate(screen.categories()))
     screen.ai_fields = {}
     screen.player_slider = screen.fps_slider = screen.ai_thread_slider = None
     screen.checkerboard_gradient_slider = screen.checkerboard_speed_slider = None
@@ -232,7 +232,7 @@ def render_settings_buttons(settings_screen):
             Button(edit_x, y, "small", "blue", "Edit", lambda name=key: screen.edit_setting(name)),
             Button(edit_x + c.SIZES["small"][0] + SETTINGS_CLEAR_BTN_GAP_X, y, "small", "red", "Reset", lambda name=key: screen.reset_setting(name)),
         ])
-    reset_label = dict(SETTINGS_CATEGORIES)[screen.sub_state]
+    reset_label = dict(screen.categories())[screen.sub_state]
     screen.elements.append(Button(SETTINGS_X, SETTINGS_RESET_Y, SETTINGS_RESET_SIZE, "red", f"Reset {reset_label} Defaults", screen.reset_category_defaults, font_preset="small"))
     for element in screen.elements:
         if isinstance(element, Button):
@@ -341,7 +341,13 @@ class Settings(Screen):
         ui_elements.draw_pixel_panel(surface, pygame.Rect(SETTINGS_NAV_RECT), SETTINGS_PANEL_COLOR, SETTINGS_PANEL_BORDER, gradient_strength=0.25)
         ui_elements.draw_pixel_panel(surface, pygame.Rect(SETTINGS_CONTENT_RECT), SETTINGS_PANEL_COLOR, SETTINGS_PANEL_BORDER, gradient_strength=0.25)
 
+    def categories(self):
+        """Standalone games and export previews omit AI and path configuration."""
+        return tuple(item for item in SETTINGS_CATEGORIES if not self.is_standalone or item[0] not in ("AI", "FILES"))
+
     def set_sub_state(self, state):
+        if state not in dict(self.categories()):
+            return
         self.cancel_pointer_input()
         super().set_sub_state(state)
 
@@ -520,6 +526,8 @@ class Settings(Screen):
         self.refresh_ui()
 
     def refresh_ui(self):
+        if self.sub_state not in dict(self.categories()):
+            self.sub_state = "GAME"
         # Either tutorial can change its preference while Settings is
         # closed, so re-read the cached persisted values whenever this screen
         # rebuilds rather than showing a stale controller value.
@@ -652,7 +660,7 @@ class Settings(Screen):
 
     def additional_draw(self, surface):
         font = fonts.get("normal")
-        heading = fonts.get("heading2").render(dict(SETTINGS_CATEGORIES)[self.sub_state], True, c.UI_TEXT_LIGHT)
+        heading = fonts.get("heading2").render(dict(self.categories())[self.sub_state], True, c.UI_TEXT_LIGHT)
         surface.blit(heading, (SETTINGS_X, SETTINGS_PANEL_TOP + 22))
         for y, kind, key, label in self.preference_rows():
             x = SETTINGS_X if kind == "dir" else SETTINGS_SECOND_X
