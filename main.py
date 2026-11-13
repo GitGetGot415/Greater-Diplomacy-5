@@ -91,7 +91,7 @@ def _import_project_modules():
     global Orders_Screen, Tactical_Orders_Screen, keybind_io, settings_schema, symbol_loader, modal_stack, screen_runner
     global BattleEditorScreen
     global CustomBattleScreen, Tactical_Retreat_Screen, standalone_game
-    global Research_Screen, Economy_Screen, Edit_Country_Screen, Production_Screen
+    global Research_Screen, Economy_Screen, Edit_Country_Screen, Production_Screen, Standalone_Export_Screen
     global Faction_Screen, Faction_Territories_Screen
     global Map_Editor_Menu, Select_Base_Map, Random_Setup, Scenario_Settings
     global Multiplayer_Menu, Real_Time_Multiplayer
@@ -172,6 +172,7 @@ def _import_project_modules():
     from screens.game.research import Research_Screen
     from screens.game.economy import Economy_Screen
     from screens.editors.edit_country import Edit_Country_Screen
+    from screens.editors.standalone_export import Standalone_Export_Screen
     from screens.game.production import Production_Screen
     from screens.game.faction import Faction_Screen, Faction_Territories_Screen
     from screens.setup.select_base_map import Map_Editor_Menu, Select_Base_Map
@@ -402,6 +403,7 @@ class Controller:
             "RESEARCH": Research_Screen(),
             "ECONOMY": Economy_Screen(),
             "EDIT_COUNTRY": Edit_Country_Screen(),
+            "STANDALONE_EXPORT": Standalone_Export_Screen(),
             "MESSAGES": Messages_Screen(),
             "FACTION": Faction_Screen(),
             "FACTION_TERRITORIES": Faction_Territories_Screen(),

@@ -13,7 +13,9 @@ from data import constants as c, queries
 from data import platform
 from data.map import load_map, save_map
 from screens.editors import menus as editor_menus
+from screens.editors import standalone_export
 from screens.editors.date_economy_screens import Editor_Metadata_Screen
+from screens.editors.standalone_export import Standalone_Export_Screen
 from tests.stub_map_screen import map_double
 
 
@@ -288,6 +290,38 @@ class ScenarioMetadataTests(unittest.TestCase):
             screen.apply()
         error.assert_called_once()
         self.assertFalse(screen.done)
+
+    def test_metadata_standalone_button_opens_the_separate_export_screen(self):
+        screen = object.__new__(Editor_Metadata_Screen)
+        screen.map_screen = mock.Mock()
+        screen.done = False
+        screen.open_standalone_export()
+        self.assertTrue(screen.done)
+        screen.map_screen.change_state.assert_called_once_with("STANDALONE_EXPORT")
+
+    def test_standalone_export_screen_exports_only_a_saved_scenario_and_returns_to_the_map(self):
+        screen = object.__new__(Standalone_Export_Screen)
+        screen.map_screen, screen.done, screen.next_state = self.game, False, None
+        self.game.editor_scenario_name = "Fixture"
+        with mock.patch("ui.dialogs.show_error") as error, \
+                mock.patch.object(standalone_export.screen_runner, "run_loading") as loading:
+            screen.export()
+        error.assert_called_once()
+        loading.assert_not_called()
+
+        scenario_dir = os.path.join(self.directory, "Fixture")
+        os.makedirs(scenario_dir)
+        destination = os.path.join(self.enterContext(tempfile.TemporaryDirectory()), "Fixture")
+        with mock.patch.object(standalone_export.standalone_game, "export_dir", return_value=destination), \
+                mock.patch.object(standalone_export.standalone_game, "export_steps",
+                                  return_value="fixture steps") as steps, \
+                mock.patch.object(standalone_export.screen_runner, "run_loading") as loading:
+            screen.export()
+        steps.assert_called_once_with(scenario_dir, "Fixture")
+        self.assertEqual(loading.call_args.args[0], "fixture steps")
+
+        screen.exit_screen()
+        self.assertEqual((screen.done, screen.next_state), (True, "MAP"))
 
     def test_custom_scenarios_are_in_the_browser_persistence_roots(self):
         self.assertIn(c.SCENARIOS_CUSTOM_DIR, platform._persisted_roots())
