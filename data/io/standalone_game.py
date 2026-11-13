@@ -58,6 +58,11 @@ def scenario_path():
     return GAME["scenario"]
 
 
+def export_settings():
+    """Return the export settings for this standalone game. Older exports use the defaults."""
+    return queries.normalized_standalone_export_settings(GAME.get("standalone_export_settings"))
+
+
 def export_dir(name):
     return os.path.join(EXPORTS_DIR, name)
 
@@ -128,8 +133,10 @@ def _export_copies(scenario_dir, destination, scenario_target):
     return copies
 
 
-def export_steps(scenario_dir, name):
+def export_steps(scenario_dir, name, settings):
     """Copy this game and one saved scenario into exports/<name>/ as loading steps.
+
+    settings are the map editor's standalone export settings. game.json stores them.
 
     A frozen Windows game also copies its executable as <name>.exe.
     A game run from source exports a folder that runs with `python main.py`.
@@ -150,7 +157,9 @@ def export_steps(scenario_dir, name):
         write_preference_defaults(os.path.join(destination, "data", "json"))
         os.makedirs(os.path.join(destination, c.DEFAULT_SAVES_DIR), exist_ok=True)
         with open(os.path.join(destination, GAME_FILE), "w", encoding="utf-8") as stream:
-            json.dump({"title": name, "scenario": scenario_relative.replace(os.sep, "/")}, stream, indent=4)
+            json.dump({"title": name, "scenario": scenario_relative.replace(os.sep, "/"),
+                       "standalone_export_settings": queries.normalized_standalone_export_settings(settings)},
+                      stream, indent=4)
         if executable:
             yield "Copying the game executable..."
             shutil.copy2(sys.executable, os.path.join(destination, name + ".exe"))

@@ -106,6 +106,28 @@ class EditorScreenSmokeTests(unittest.TestCase):
             with self.subTest(screen=name):
                 self.exercise(getattr(editor_screens, name)(self.map))
 
+    def test_standalone_export_screen_and_menu_previews(self):
+        import base64
+        import io
+        from data import queries
+        from screens.editors.standalone_export import Standalone_Export_Screen, Standalone_Menu_Preview
+        screen = Standalone_Export_Screen()
+        screen.on_enter(self.controller, None)
+        self.exercise(screen)
+        # smoothscale refuses palette images, so the menu must convert an 8-bit PNG first.
+        palette_png = io.BytesIO()
+        pygame.image.save(pygame.Surface((3, 2), depth=8), palette_png, "palette.png")
+        images = (queries.encode_rgba_to_b64(bytes([1, 2, 3, 255]) * 6, (3, 2)),
+                  base64.b64encode(palette_png.getvalue()).decode("ascii"))
+        # The image draws over either background style.
+        for settings in ({"menu_background": "checkerboard"}, {"menu_background": "solid"},
+                         *({"menu_background": style, "background_image": image}
+                           for style in queries.STANDALONE_MENU_BACKGROUNDS for image in images)):
+            with self.subTest(settings=settings):
+                preview = Standalone_Menu_Preview("Fixture Game", settings)
+                preview.update()
+                self.exercise(preview)
+
     def test_diplomacy_editor_agreements_view(self):
         from screens import editors as editor_screens
         screen = editor_screens.Diplomacy_Editor_Screen(self.map)

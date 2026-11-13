@@ -130,6 +130,17 @@ def encode_surf_to_b64(surf):
     return encode_rgba_to_b64(pygame.image.tobytes(surf, "RGBA"), surf.get_size())
 
 
+def load_png_b64(text):
+    """Return the surface of Base64 PNG text at its own size.
+
+    Raises ValueError for text that is not Base64 PNG, and pygame.error for a PNG pygame cannot read.
+    """
+    png = base64.b64decode(text, validate=True)
+    if not png.startswith(PNG_SIGNATURE):
+        raise ValueError("Saved image text is not a PNG image.")
+    return pygame.image.load(io.BytesIO(png), "image.png")
+
+
 def decode_b64_to_surf(b64_str, size, is_portrait=False, country_name=None):
     """Decode Base64 PNG text, or the country's file or default image for "DEFAULT"."""
     cache_key = (b64_str, size, is_portrait, country_name)
@@ -153,10 +164,7 @@ def decode_b64_to_surf(b64_str, size, is_portrait=False, country_name=None):
             scaled.fill((200, 200, 200, 255))
     else:
         try:
-            png = base64.b64decode(b64_str, validate=True)
-            if not png.startswith(PNG_SIGNATURE):
-                raise ValueError("Saved image text is not a PNG image.")
-            scaled = pygame.image.load(io.BytesIO(png), "image.png")
+            scaled = load_png_b64(b64_str)
             if scaled.get_size() != tuple(size):
                 scaled = pygame.transform.scale(scaled, size)
         except (TypeError, ValueError, binascii.Error, pygame.error):

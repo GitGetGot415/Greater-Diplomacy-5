@@ -22,6 +22,34 @@ def normalized_scenario_metadata(metadata):
     return result
 
 
+#: Standalone menu background styles, in the order the Standalone Export screen offers them.
+#: Both styles use background_color.
+STANDALONE_MENU_BACKGROUNDS = ("checkerboard", "solid")
+
+
+def _is_rgb(value):
+    return (isinstance(value, list) and len(value) == 3
+            and all(type(channel) is int and 0 <= channel <= 255 for channel in value))
+
+
+def normalized_standalone_export_settings(settings):
+    """Copy standalone export settings. Missing or unreadable values use the defaults.
+
+    menu_background selects a checkerboard or a solid fill, both in background_color, an RGB list.
+    background_image is Base64 text of a PNG file, or empty. The menu draws it over the background.
+    Unknown fields are kept. Maps saved before these settings existed show the
+    default checkerboard, as every standalone game did before.
+    """
+    result = copy.deepcopy(settings) if isinstance(settings, dict) else {}
+    if result.get("menu_background") not in STANDALONE_MENU_BACKGROUNDS:
+        result["menu_background"] = STANDALONE_MENU_BACKGROUNDS[0]
+    if not _is_rgb(result.get("background_color")):
+        result["background_color"] = list(c.DEFAULT_BG_COLOR)
+    if not isinstance(result.get("background_image"), str):
+        result["background_image"] = ""
+    return result
+
+
 def normalized_conversation_colors(value):
     """Copy valid country RGB preferences at the save boundary."""
     if not isinstance(value, dict):
@@ -271,6 +299,7 @@ def build_save_dict(context, *, include_provinces=True, compact_nations=False, i
         "tactical_player_unit_id": saved_tactical_player_unit_id(context),
         "scenario_settings": scenario_settings,
         "scenario_metadata": normalized_scenario_metadata(world_state.scenario_metadata),
+        "standalone_export_settings": normalized_standalone_export_settings(world_state.standalone_export_settings),
         "script_variables": world_state.script_variables,
         "global_rules": world_state.global_rules,
         "default_research": world_state.default_research,
@@ -304,6 +333,8 @@ def player_snapshot_projection(context, snapshot, country_id):
     world_state = world_for(context)
     result = copy.deepcopy(snapshot)
     result.pop("tactical_player_unit_id", None)
+    # Only the map editor uses these settings, and a background image can be large.
+    result.pop("standalone_export_settings", None)
     from map_logic.system32 import unit_events
     report = unit_events.normalize_log(result.get("unit_event_log"),
                                       result.get("date", {}).get("total_turns", 0))

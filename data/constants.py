@@ -666,6 +666,10 @@ OBSOLESCENCE_RULES = {
 # GLOBAL COLORS & PALETTES
 # ==========================================
 
+# Screens draw their checkerboard from this color unless they set their own.
+# It is also the default standalone menu background color.
+DEFAULT_BG_COLOR = (30, 30, 30)
+
 UI_COLORS = {
     "red": ((200, 0, 0), (255, 50, 50)),
     "orange": ((200, 90, 0), (255, 140, 50)),

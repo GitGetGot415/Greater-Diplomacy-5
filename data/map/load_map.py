@@ -55,9 +55,14 @@ def read_save_files(load_path):
 
 
 def restore_scenario_metadata(context, save_meta, scenario_path=None):
-    """Load optional author information. Derive the editor name from its folder."""
+    """Load optional author information and standalone export settings.
+
+    Derive the editor name from its folder.
+    """
     replace_mapping(world_for(context), "scenario_metadata", queries.normalized_scenario_metadata(
         (save_meta or {}).get("scenario_metadata", {})))
+    replace_mapping(world_for(context), "standalone_export_settings", queries.normalized_standalone_export_settings(
+        (save_meta or {}).get("standalone_export_settings")))
     session = session_for(context)
     session.editor_scenario_name = (
         os.path.basename(os.path.normpath(scenario_path)) if session.is_editor and scenario_path else "")
@@ -171,6 +176,7 @@ def _clear_loaded_world(context):
     replace_mapping(world_state, "history", {})
     replace_mapping(world_state, "raw_json_data", {})
     replace_mapping(world_state, "scenario_metadata", {})
+    replace_mapping(world_state, "standalone_export_settings", {})
     session_state.conversation_colors = {}
     session_state.editor_scenario_name = ""
     session_state.tactical_mode = False

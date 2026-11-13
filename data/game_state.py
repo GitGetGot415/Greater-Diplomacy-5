@@ -19,6 +19,8 @@ class WorldState:
     history: dict = field(default_factory=dict)
     scenario_settings: dict = field(default_factory=dict)
     scenario_metadata: dict = field(default_factory=dict)
+    # Map editor choices for a standalone game export. See queries.normalized_standalone_export_settings.
+    standalone_export_settings: dict = field(default_factory=dict)
     runtime_rules: RuntimeRules = field(default_factory=RuntimeRules)
     factions: dict = field(default_factory=dict)
     faction_membership: dict = field(default_factory=dict)
@@ -45,7 +47,8 @@ class WorldState:
     def __copy__(self):
         result = object.__new__(type(self))
         for name, value in self.__dict__.items():
-            if name in ("scenario_settings", "scenario_metadata", "runtime_rules", "factions", "faction_membership"):
+            if name in ("scenario_settings", "scenario_metadata", "standalone_export_settings", "runtime_rules",
+                        "factions", "faction_membership"):
                 value = copy.deepcopy(value)
             elif isinstance(value, (dict, list)):
                 value = value.copy()

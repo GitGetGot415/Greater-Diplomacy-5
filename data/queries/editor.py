@@ -1,12 +1,17 @@
 """Map editor paint regions, bulk setup changes, and undo/redo state."""
 
+import base64
 import copy
+
+import pygame
+
 import data.constants as c
 from data.state_access import world_for, session_for
 from data import queries
 from data.queries.unit_info import get_base_unit_name, units_with_air_cargo
 from data.queries.units import apply_library_stats
-from data.queries.saves import normalized_scenario_metadata
+from data.queries.images import load_png_b64
+from data.queries.saves import normalized_scenario_metadata, normalized_standalone_export_settings
 from data.queries.files import validated_scenario_name
 
 
@@ -121,6 +126,28 @@ def set_editor_metadata(context, name, author, description):
     metadata = normalized_scenario_metadata({"author": author, "description": description})
     world_for(context).scenario_metadata.update(metadata)
     session_for(context).editor_scenario_name = name
+
+
+def set_standalone_export_setting(context, key, value):
+    """Change one standalone export setting only in an idle local editor."""
+    if not can_bulk_edit_map(context):
+        raise ValueError("Standalone export settings require an idle local map editor.")
+    settings = world_for(context).standalone_export_settings
+    updated = normalized_standalone_export_settings({**settings, key: value})
+    if updated[key] != value:
+        raise ValueError(f"{value!r} is not a valid {key} setting.")
+    settings.clear()
+    settings.update(updated)
+
+
+def set_standalone_background_image(context, png):
+    """Store the bytes of a PNG file as the standalone menu's background image."""
+    text = base64.b64encode(png).decode("ascii")
+    try:
+        load_png_b64(text)
+    except (ValueError, pygame.error) as error:
+        raise ValueError("Choose a PNG image.") from error
+    set_standalone_export_setting(context, "background_image", text)
 
 
 EDITOR_BUILDING_GROUPS = {

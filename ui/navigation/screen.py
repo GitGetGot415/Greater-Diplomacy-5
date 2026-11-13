@@ -15,7 +15,7 @@ from ui.widgets.ui_elements import Button, make_back_button
 from ui.sound_effects import play_ui_sound
 from ui.rendering.font_manager import fonts
 
-DEFAULT_BG_COLOR = (30, 30, 30)
+DEFAULT_BG_COLOR = c.DEFAULT_BG_COLOR
 
 
 def resolve_keybind(state, action, default):

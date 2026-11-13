@@ -123,8 +123,8 @@ MENU_BUTTON_TABLE = [
 STANDALONE_MENU_STATES = ("LOAD_GAME", "SETTINGS", "MUSIC_PLAYER", "CREDITS")
 
 
-def _menu_table_rows(table):
-    if not standalone_game.IS_STANDALONE:
+def _menu_table_rows(table, standalone):
+    if not standalone:
         return table
     return [row for row in table if row["state"] in STANDALONE_MENU_STATES]
 
@@ -296,8 +296,20 @@ class Menu(Screen):
             return lambda y: 0.0
         return lambda y: (y - min_y) / spread * cascade_ms
 
-    def __init__(self):
+    def __init__(self, standalone_title=None, standalone_settings=None):
+        """Build the main menu. A standalone game's menu uses its title and export settings.
+
+        The Standalone Export screen previews a standalone menu by passing the title and
+        settings of the game that it sets up. Otherwise a standalone game reads its own.
+        """
         super().__init__()
+        if standalone_title is None and standalone_game.IS_STANDALONE:
+            standalone_title, standalone_settings = standalone_game.title(), standalone_game.export_settings()
+        self.is_standalone = standalone_title is not None
+        self.standalone_settings = (queries.normalized_standalone_export_settings(standalone_settings)
+                                    if self.is_standalone else None)
+        self._background_image = self._load_standalone_background_image()
+        self._scaled_background = None
 
         # Hildehrand stands near the left edge of the screen, scaled the same
         # nearest-neighbour way as The Sign.png (not smoothscale) so the
@@ -313,8 +325,8 @@ class Menu(Screen):
         hildehrand_anchor_y = (c.SCREEN_HEIGHT // 2) + 120   # the "floor" line the feet rest on
         self._hildehrand_anchor_bottomleft = (hildehrand_anchor_x, hildehrand_anchor_y)
 
-        if standalone_game.IS_STANDALONE:
-            # A standalone game's menu is the plain checkerboard: no sign, ground, or portrait.
+        if self.is_standalone:
+            # A standalone game's menu draws only its chosen background: no sign, ground, or portrait.
             self.sign_image = self.sign_rect = None
             self.right_ground_image = self.right_ground_rect = None
             self.left_ground_image = self.left_ground_rect = None
@@ -328,9 +340,9 @@ class Menu(Screen):
         )
 
         try:
-            if standalone_game.IS_STANDALONE:
+            if self.is_standalone:
                 # A standalone game shows its own name instead of the Greater Diplomacy 5 logo.
-                self.title_image = fonts.get("title").render(standalone_game.title(), True, MENU_BOTTOM_TEXT_COLOR)
+                self.title_image = fonts.get("title").render(standalone_title, True, MENU_BOTTOM_TEXT_COLOR)
             else:
                 raw_title = pygame.image.load("assets/backgrounds/Title.png").convert_alpha()
                 title_width = min(raw_title.get_width(), c.SCREEN_WIDTH - 80)
@@ -379,7 +391,7 @@ class Menu(Screen):
             new_game_button_size,
             "green",
             "New Game",
-            lambda: self.go_to("MAP" if standalone_game.IS_STANDALONE else "NEW_GAME"),
+            lambda: self.go_to("MAP" if self.is_standalone else "NEW_GAME"),
             image=ui_elements.UI_ICONS.get("new_game"),
             font_size=new_game_text_size,
         )
@@ -389,7 +401,7 @@ class Menu(Screen):
         main_table_x, main_table_y = (MENU_BUTTON_GROUP_POSITION[0], MENU_BUTTON_GROUP_POSITION[1] + 110)
         main_button_w, main_button_h = main_button_size
         main_columns = 1
-        for index, button_data in enumerate(_menu_table_rows(MENU_MAIN_BUTTON_TABLE)):
+        for index, button_data in enumerate(_menu_table_rows(MENU_MAIN_BUTTON_TABLE, self.is_standalone)):
             row, column = divmod(index, main_columns)
             button = Button(
                 main_table_x + column * (main_button_w + 10),
@@ -408,7 +420,7 @@ class Menu(Screen):
         table_x, table_y = MENU_BUTTON_GROUP_POSITION[0] + 210, MENU_BUTTON_GROUP_POSITION[1]
         button_w, button_h = button_size
         columns = 1
-        for index, button_data in enumerate(_menu_table_rows(MENU_BUTTON_TABLE)):
+        for index, button_data in enumerate(_menu_table_rows(MENU_BUTTON_TABLE, self.is_standalone)):
             row, column = divmod(index, columns)
             button = Button(
                 table_x + column * (button_w + 10),
@@ -437,7 +449,7 @@ class Menu(Screen):
         
         current_y = MENU_BOTTOM_TEXT_START_Y
         # The Discord and GitHub links belong to Greater Diplomacy 5, not to a standalone game.
-        for item in [] if standalone_game.IS_STANDALONE else MENU_BOTTOM_TEXTS:
+        for item in [] if self.is_standalone else MENU_BOTTOM_TEXTS:
             link_text = item.get("link_text", "")
             main_text = item.get("main_text", "")
             url = item.get("url")
@@ -489,7 +501,7 @@ class Menu(Screen):
             font_preset="small",
         )
         # A standalone game has no portrait to edit.
-        if not standalone_game.IS_STANDALONE:
+        if not self.is_standalone:
             self.elements.append(self.edit_portrait_btn)
 
         # Exit lives in the top-right corner on desktop builds and uses the
@@ -519,7 +531,7 @@ class Menu(Screen):
         # alongside the sign and in the top corner respectively, and the
         # portrait edit button from the left, alongside Hildehrand.
         right_intro_buttons = [self.refresh_btn, self.custom_battle_btn]
-        if standalone_game.IS_STANDALONE:
+        if self.is_standalone:
             # A standalone game has no custom battles, and the GD5 version check would call it outdated
             # whenever GD5 releases. The Refresh button only repeats that check.
             for button in right_intro_buttons:
@@ -548,11 +560,11 @@ class Menu(Screen):
 
         # The version text isn't a Button, so it rides the same right-edge
         # slide-in as the refresh button just above it, sharing its delay.
-        self._version_text_intro_delay = 0.0 if standalone_game.IS_STANDALONE else self.refresh_btn._intro_delay
+        self._version_text_intro_delay = 0.0 if self.is_standalone else self.refresh_btn._intro_delay
         self._version_draw_pos = (0, 0)
         self._position_center_buttons(0.0)
 
-        if standalone_game.IS_STANDALONE:
+        if self.is_standalone:
             self.version_status = f"Greater Diplomacy 5 {c.GAME_VERSION}"
         else:
             self.trigger_version_check()
@@ -895,10 +907,47 @@ class Menu(Screen):
             item["main_rect"].y = int(_lerp(rise_start_y, item["_intro_target_main_y"], t))
             item["link_rect"].y = int(_lerp(rise_start_y, item["_intro_target_link_y"], t))
 
+    def _load_standalone_background_image(self):
+        """Return the standalone menu's image, or None when it has no readable image."""
+        if not self.is_standalone:
+            return None
+        text = self.standalone_settings["background_image"]
+        if not text:
+            return None
+        try:
+            image = queries.load_png_b64(text)
+        except (ValueError, pygame.error) as error:
+            print(f"Failed to load the standalone menu background image: {error}")
+            return None
+        # smoothscale needs 24- or 32-bit pixels. Palette PNGs load with 8.
+        full_color = pygame.Surface(image.get_size(), pygame.SRCALPHA, 32)
+        full_color.blit(image, (0, 0))
+        return full_color
+
+    def _draw_standalone_background(self, surface):
+        """Draw the standalone game's checkerboard or solid color, then its image over it."""
+        settings = self.standalone_settings
+        if settings["menu_background"] == "solid":
+            surface.fill(settings["background_color"])
+        else:
+            self.draw_checkerboard_background(surface, settings["background_color"])
+        if self._background_image is None:
+            return
+        size = surface.get_size()
+        if self._scaled_background is None or self._scaled_background[0] != size:
+            # Cover the whole screen without stretching. The image is centered, so its edges are cropped.
+            # Transparent parts of the image show the background.
+            image = self._background_image
+            scale = max(size[0] / image.get_width(), size[1] / image.get_height())
+            scaled = pygame.transform.smoothscale(
+                image, (max(1, round(image.get_width() * scale)), max(1, round(image.get_height() * scale))))
+            self._scaled_background = (size, scaled, scaled.get_rect(center=(size[0] // 2, size[1] // 2)))
+        _size, scaled, rect = self._scaled_background
+        surface.blit(scaled, rect)
+
     def draw_background(self, surface):
-        if standalone_game.IS_STANDALONE:
-            # The shared scrolling checkerboard replaces the GD5 menu's sky and water.
-            super().draw_background(surface)
+        if self.is_standalone:
+            self._draw_standalone_background(surface)
             return
         colors = _menu_gradient_colors()
         surface.blit(_menu_background(surface.get_size(), *colors), (0, 0))

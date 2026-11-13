@@ -1198,7 +1198,8 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
         map_ref.map_data['home']['units'].extend([enemy, dict(enemy, unit_id='hidden')])
         map_ref.map_data['foreign']['units'] = [dict(enemy, unit_id='fogged')]
         snapshot = {'nation_data': map_ref.nation_data, 'provinces': map_ref.map_data,
-                    '_raw_map_data': dict(map_ref.map_data)}
+                    '_raw_map_data': dict(map_ref.map_data),
+                    'standalone_export_settings': {'background_image': 'editor only'}}
         before = json.dumps(snapshot, sort_keys=True)
         with (mock.patch.object(queries, 'get_visible_provinces', return_value=({1}, set())),
               mock.patch.object(queries, 'is_unit_visible_to', side_effect=lambda unit, *args: unit['unit_id'] != 'hidden'),
@@ -1211,6 +1212,8 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
             self.assertEqual(visible_enemy['combat_stance'], 'RESERVE')
             self.assertFalse(set(visible_enemy) & {'order', 'lane_target', 'repair_trip', 'air_cargo'})
             self.assertEqual(records['foreign']['units'], [])
+        # Only the map editor uses these settings.
+        self.assertNotIn('standalone_export_settings', projected)
         self.assertEqual(json.dumps(snapshot, sort_keys=True), before)
 
     def test_battle_editor_draft_is_validated_then_applied_only_by_the_server(self):
