@@ -348,19 +348,18 @@ class Menu(Screen):
             if self.hildehrand_image else self._hildehrand_anchor_bottomleft
         )
 
+        self.title_image = self.title_rect = None
+        # A standalone game's menu shows no title. Its Credits screen names Greater Diplomacy 5.
         try:
-            if self.is_standalone:
-                # A standalone game shows its own name instead of the Greater Diplomacy 5 logo.
-                self.title_image = fonts.get("title").render(standalone_title, True, MENU_BOTTOM_TEXT_COLOR)
-            else:
+            if not self.is_standalone:
                 raw_title = pygame.image.load("assets/backgrounds/Title.png").convert_alpha()
                 title_width = min(raw_title.get_width(), c.SCREEN_WIDTH - 80)
                 title_scale = title_width / raw_title.get_width()
                 title_size = (title_width, int(raw_title.get_height() * title_scale))
                 self.title_image = pygame.transform.smoothscale(raw_title, title_size)
-            self.title_rect = self.title_image.get_rect()
-            self.title_rect.left = 20
-            self.title_rect.top = 20
+                self.title_rect = self.title_image.get_rect()
+                self.title_rect.left = 20
+                self.title_rect.top = 20
         except Exception as e:
             print(f"Failed to load the title image: {e}")
             self.title_image = None
@@ -573,7 +572,8 @@ class Menu(Screen):
         self._position_center_buttons(0.0)
 
         if self.is_standalone:
-            self.version_status = f"Made with Greater Diplomacy 5 ({c.GAME_VERSION})"
+            # A standalone game's menu shows no version text.
+            self.version_status = ""
         else:
             self.trigger_version_check()
 
@@ -1008,4 +1008,5 @@ class Menu(Screen):
 
         # --- Draw Version Text (Bottom Right) ---
         v_x, v_y = self._version_draw_pos
-        fonts.draw_text_with_shadow(surface, self.version_status, v_x, v_y, "heading2", self.version_color)
+        if self.version_status:
+            fonts.draw_text_with_shadow(surface, self.version_status, v_x, v_y, "heading2", self.version_color)

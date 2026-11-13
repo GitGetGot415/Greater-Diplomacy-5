@@ -58,6 +58,11 @@ def scenario_path():
     return GAME["scenario"]
 
 
+def made_with_text():
+    """The credit that a standalone game's Credits screen shows."""
+    return f"Made with Greater Diplomacy 5 ({c.GAME_VERSION})"
+
+
 def export_settings():
     """Return the export settings for this standalone game. Older exports use the defaults."""
     return queries.normalized_standalone_export_settings(GAME.get("standalone_export_settings"))

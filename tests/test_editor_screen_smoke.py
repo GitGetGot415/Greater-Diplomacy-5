@@ -131,7 +131,8 @@ class EditorScreenSmokeTests(unittest.TestCase):
                 for button, target in menu._center_button_targets:
                     self.assertEqual(button.rect.topleft, target)
                 self.assertEqual(menu.button_panel_rect, menu._button_panel_target)
-                self.assertEqual(menu._title_draw_pos, menu.title_rect.topleft)
+                # A standalone menu shows no title.
+                self.assertIsNone(menu.title_image)
                 self.exercise(preview)
 
     def interesting_entries(self):
@@ -176,7 +177,30 @@ class EditorScreenSmokeTests(unittest.TestCase):
         self.assertEqual(len({tuple(button.color) for button in column}), 1)
         # The button panel sits behind the whole column.
         self.assertTrue(all(menu.button_panel_rect.contains(button.rect) for button in column))
-        self.assertEqual(menu.version_status, f"Made with Greater Diplomacy 5 ({c.GAME_VERSION})")
+        # The menu shows no version text. The Credits screen names Greater Diplomacy 5 instead.
+        self.assertEqual(menu.version_status, "")
+
+    def test_standalone_credits_show_only_the_greater_diplomacy_credit(self):
+        import data.constants as c
+        from data.io import standalone_game
+        from screens.menus import credits
+        with mock.patch.object(standalone_game, "IS_STANDALONE", True):
+            screen = credits.Credits()
+            self.assertEqual(screen.credits_list, [])
+            self.exercise(screen)
+        self.assertEqual(standalone_game.made_with_text(), f"Made with Greater Diplomacy 5 ({c.GAME_VERSION})")
+        self.assertTrue(credits.Credits().credits_list)
+
+    def test_country_selector_panel_surrounds_the_title_and_country_buttons(self):
+        from screens.setup import country_select
+        screen = country_select.Country_Select_Screen()
+        screen.show(self.map.nation_data, self.interesting_entries(), {})
+        cards = [button for button in screen.elements if button.rect.top >= country_select.MAJOR_TOP
+                 and button.text != "Select Country"]
+        self.assertEqual(len(cards), len(screen.entries) + 1)  # Every country, then Other Countries.
+        self.assertTrue(all(screen.panel_rect.contains(button.rect) for button in cards))
+        self.assertLessEqual(screen.panel_rect.top, screen.title_y)
+        self.exercise(screen)
 
     def test_standalone_new_game_opens_the_country_selector_for_more_than_one_country(self):
         from screens.menus.menu import Menu

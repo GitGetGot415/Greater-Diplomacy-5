@@ -1,4 +1,6 @@
 import pygame
+import data.constants as c
+from data.io import standalone_game
 from ui.navigation.screen import Screen
 from ui.widgets.ui_elements import make_back_button
 from ui.rendering.font_manager import fonts
@@ -211,7 +213,8 @@ class Credits(Screen):
         
         # Calculate positions once to avoid re-calculation in draw loop
         current_y = 150
-        for item in CREDITS_DATA:
+        # A standalone game's Credits screen shows only its Greater Diplomacy 5 credit. See additional_draw.
+        for item in [] if standalone_game.IS_STANDALONE else CREDITS_DATA:
             main_text = item.get("main_text", "")
             people = item.get("people", [])
             
@@ -277,6 +280,9 @@ class Credits(Screen):
     def additional_draw(self, surface):
         font = fonts.get("heading2")
         mouse_pos = pygame.mouse.get_pos()
+        if standalone_game.IS_STANDALONE:
+            text_surf = font.render(standalone_game.made_with_text(), True, (255, 255, 255))
+            surface.blit(text_surf, text_surf.get_rect(center=(c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)))
         
         for item in self.credits_list:
             # Draw Main Text

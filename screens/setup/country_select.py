@@ -7,6 +7,8 @@ from data.io import standalone_game
 from data.map import load_map
 from data.platform import LoadingSteps
 from screens.game import map_launch
+from screens.menus.menu import (MENU_BUTTON_PANEL_BORDER_COLOR, MENU_BUTTON_PANEL_BORDER_WIDTH, MENU_BUTTON_PANEL_COLOR,
+                                MENU_BUTTON_PANEL_GRADIENT_STRENGTH, MENU_BUTTON_PANEL_PADDING)
 from screens.setup import player_setup
 from ui.navigation.screen import Screen
 from ui.rendering.font_manager import fonts
@@ -67,6 +69,8 @@ class Country_Select_Screen(Screen):
         self.images = {}
         # The main menu's background. None before the selector first opens.
         self.background = None
+        # The panel behind the title and country buttons. refresh_ui sizes it.
+        self.panel_rect = pygame.Rect(0, 0, 0, 0)
 
     def on_enter(self, app, previous):
         settings = standalone_game.export_settings()
@@ -150,6 +154,14 @@ class Country_Select_Screen(Screen):
         select.apply_state(enabled=self.selected is not None, color="green")
         self.elements.append(select)
 
+        # The main menu's button panel sits behind the title and every country button.
+        font = fonts.get(self.title_preset)
+        title = pygame.Rect(0, self.title_y, font.size(self.title)[0], font.get_height())
+        title.centerx = c.SCREEN_WIDTH // 2
+        cards = [button for button in self.elements if button.rect.top >= MAJOR_TOP and button is not select]
+        self.panel_rect = title.unionall([button.rect for button in cards]).inflate(
+            2 * MENU_BUTTON_PANEL_PADDING, 2 * MENU_BUTTON_PANEL_PADDING)
+
     def select(self, country):
         self.selected = country
         self.refresh_ui()
@@ -187,6 +199,10 @@ class Country_Select_Screen(Screen):
             super().draw_background(surface)
         else:
             self.background.draw(surface)
+        # Drawn here, before the title, so the title and buttons sit on the panel.
+        draw_pixel_panel(surface, self.panel_rect, MENU_BUTTON_PANEL_COLOR, MENU_BUTTON_PANEL_BORDER_COLOR,
+                         gradient_strength=MENU_BUTTON_PANEL_GRADIENT_STRENGTH,
+                         border_width=MENU_BUTTON_PANEL_BORDER_WIDTH)
 
     def additional_draw(self, surface):
         entry = next((entry for entry in self.entries if entry["country"] == self.selected), None)
