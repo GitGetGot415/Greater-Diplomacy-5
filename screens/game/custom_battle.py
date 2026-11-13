@@ -1813,8 +1813,7 @@ class CustomBattleScreen(Screen):
             font = fonts.get("tiny")
             if self.mode == "preview":
                 # Preview shows no unit name: a large icon, then a health bar with the flag to its right.
-                preview_name = (combat.packed_ship_type(name, self.library) or name) if self.campaign is None else name
-                icon = symbol_loader.get_symbol(preview_name, zoom=1, color=TEAM_COLORS[side],
+                icon = symbol_loader.get_symbol(name, zoom=1, color=TEAM_COLORS[side],
                                                 country=unit["owner"], fit_size=PREVIEW_CARD_ICON_SIZE)
                 if icon is not None:
                     card.blit(icon, icon.get_rect(center=(width // 2, PREVIEW_ICON_CENTER_Y)))
