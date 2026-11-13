@@ -516,12 +516,13 @@ class SettingsCategoryTests(unittest.TestCase):
 
     def test_standalone_settings_and_preview_omit_ai_and_paths_and_reject_their_navigation(self):
         for exported_game in (True, False):
-            with self.subTest(exported_game=exported_game), mock.patch.object(self.settings.standalone_game, "IS_STANDALONE", exported_game):
+            with self.subTest(exported_game=exported_game), mock.patch.object(self.settings.standalone_game, "IS_STANDALONE", exported_game), mock.patch.object(self.settings.standalone_game, "export_settings", return_value={}):
                 screen = self.settings.Settings(self.controller, standalone=None if exported_game else True, preview=not exported_game)
                 self.assertEqual(tuple(dict(screen.categories())), ("GENERAL",))
                 for label in ("LLM AI", "Default Paths"):
                     self.assertFalse(any(element.text == label for element in screen.elements))
-                next(element for element in screen.elements if element.text == "General").callback()
+                category_labels = set(dict(screen.categories()).values())
+                self.assertFalse(any(element.text in category_labels for element in screen.elements))
                 self.assertEqual(screen.sub_state, "GENERAL")
                 for category in ("AI", "FILES"):
                     screen.set_sub_state(category)
@@ -532,6 +533,19 @@ class SettingsCategoryTests(unittest.TestCase):
                     screen.refresh_ui()
                     self.assertEqual(screen.sub_state, "GENERAL")
                     screen.set_sub_state("GENERAL")
+
+    def test_standalone_settings_controls_still_accept_clicks_and_return_to_the_menu(self):
+        with mock.patch.object(self.settings.standalone_game, "IS_STANDALONE", True), mock.patch.object(self.settings.standalone_game, "export_settings", return_value={}):
+            self.screen = self.settings.Settings(self.controller)
+        before = self.controller.show_fps
+        self.click(f"Show FPS: {'ON' if before else 'OFF'}")
+        self.assertEqual(self.controller.show_fps, not before)
+        self.assertEqual(self.save.call_args.args[1]["show_fps"], not before)
+        self.click("Keybinds")
+        self.assertEqual(self.screen.next_state, "KEYBINDS")
+        self.screen.done, self.screen.next_state = False, None
+        self.click("Back")
+        self.assertEqual(self.screen.next_state, "MENU")
 
     def test_regular_settings_keep_ai_and_paths_available(self):
         with mock.patch.object(self.settings.standalone_game, "IS_STANDALONE", False):

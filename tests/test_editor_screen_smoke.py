@@ -339,7 +339,7 @@ class EditorScreenSmokeTests(unittest.TestCase):
                 settings.draw(self.surface)
                 if category != "GENERAL":
                     settings.reset_category_defaults()
-            self.click_preview_button(preview, "General")
+            self.assertEqual(settings.sub_state, "GENERAL")
             self.click_preview_button(preview, "Keybinds")
             self.assertEqual(preview.current_state, "KEYBINDS")
             bindings = preview.current_screen

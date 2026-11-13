@@ -1,4 +1,4 @@
-"""The background of a standalone game's main menu and country selector."""
+"""The shared background of standalone menus and settings."""
 import pygame
 
 from data import queries

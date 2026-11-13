@@ -401,7 +401,7 @@ class Standalone_Menu_Preview(Screen):
                 screen = country_select.Country_Select_Screen(preview=True)
                 screen.show(self.nation_data, self.entries, self.settings)
             elif state == "SETTINGS":
-                screen = Settings(self.settings_controller, standalone=True, preview=True)
+                screen = Settings(self.settings_controller, standalone=True, preview=True, standalone_settings=self.settings)
             elif state == "KEYBINDS":
                 screen = Keybinds(self.settings_controller, preview=True)
             elif state == "MOUSE_SETTINGS":
