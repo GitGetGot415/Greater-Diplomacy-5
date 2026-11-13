@@ -39,6 +39,8 @@ SWATCH_BORDER_COLOR = (255, 255, 255)
 EXPORT_BUTTON_BOTTOM_MARGIN = 40
 # Gap between the screen edges and each preview's Close Preview button.
 PREVIEW_CLOSE_MARGIN = 20
+# Larger sizes would cover the country selector's information panel.
+PREVIEW_CLOSE_SIZE = "large"
 DESCRIPTION_MAX_LENGTH = 600
 DESCRIPTION_LABEL_CHARS = 48
 RANK_LABELS = {"major": "Major", "minor": "Minor"}
@@ -336,11 +338,9 @@ class Standalone_Menu_Preview(Screen):
 
 def close_preview_button(on_click):
     """The Close Preview button in the bottom-left corner of both previews."""
-    close_height = c.SIZES["small"][1]
-    close = make_back_button(on_click, label="Close Preview",
-                             pos=(PREVIEW_CLOSE_MARGIN, c.SCREEN_HEIGHT - PREVIEW_CLOSE_MARGIN - close_height))
-    close.fit_text = True
-    return close
+    close_height = c.SIZES[PREVIEW_CLOSE_SIZE][1]
+    return Button(PREVIEW_CLOSE_MARGIN, c.SCREEN_HEIGHT - PREVIEW_CLOSE_MARGIN - close_height, PREVIEW_CLOSE_SIZE,
+                  "red", "Close Preview", on_click, sound_kind="back")
 
 
 class Standalone_Selection_Preview(Screen):
