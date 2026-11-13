@@ -1,9 +1,10 @@
 """Standalone games: a copy of GD5 that plays one scenario.
 
 The map editor exports a standalone game to exports/<scenario name>/.
-That folder holds the game's source, assets, one scenario, and game.json.
+That folder holds the game's source, the assets it shows, one scenario, and game.json.
 When game.json is next to the game at startup, the game runs in standalone mode.
-Standalone mode removes every way to reach another map, the editor, multiplayer, mods, or the GD5 version check.
+Standalone mode removes every way to reach another map, the editor, multiplayer, mods, tactical mode,
+unit art other than classic, and the GD5 version check. The music player stays, with no songs exported.
 """
 
 import json
@@ -14,12 +15,24 @@ import sys
 import data.constants as c
 from data.io.game_files import DESKTOP_SOURCE_FILES, EXPORTS_DIR, LICENSE_FILE, NATIVE_BINARIES, SOURCE_PACKAGES
 from data.io.starting_defaults import write_preference_defaults
-from data.platform import LoadingSteps
+from data.platform import CHARACTERS_DIR, LoadingSteps
 
 GAME_FILE = "game.json"
 # Packages keep only Python source, except data/, which also keeps its JSON libraries.
 DATA_PACKAGE = "data"
 SKIPPED_DIRS = ("__pycache__",)
+# Tactical mode is not exported. Turn processing still imports map_logic/custom_battle.py and map_logic/battle_terrain.py.
+EXCLUDED_SOURCE_FILES = ("screens/game/custom_battle.py", "screens/game/tactical_orders.py",
+                         "screens/game/tactical_retreat.py")
+# Assets that a standalone game never shows: songs, the BeepBox and UltraBox synths that play them,
+# the GD5 menu's title, scenery, and portraits, every unit art style except classic, tactical battle art,
+# and the Assets screen's art and copyright notes.
+EXCLUDED_ASSETS = (
+    c.MUSIC_DIR, "assets/beepbox", "assets/ultrabox",
+    "assets/backgrounds/Title.png", "assets/images/The Sign.png", "assets/images/Left Ground.png",
+    "assets/images/Right Ground.png", CHARACTERS_DIR,
+    "assets/battles", "assets/art", "assets/copyright", "assets/unused",
+) + tuple(os.path.join(c.ASSETS_ROOT_DIR, style).replace(os.sep, "/") for style in c.UNIT_ART_STYLES if style != "classic")
 
 
 def _read_game():
@@ -55,16 +68,15 @@ def _walk_files(root):
 
 
 def _wanted_package_file(path, package):
+    if path.replace(os.sep, "/") in EXCLUDED_SOURCE_FILES:
+        return False
     extension = os.path.splitext(path)[1]
     return extension == ".py" or (package == DATA_PACKAGE and extension == ".json")
 
 
 def _wanted_asset(path):
-    """Keep every asset except music albums that do not ship with GD5."""
-    album_parts = os.path.relpath(path, c.MUSIC_DIR).split(os.sep)
-    if album_parts[0] == os.pardir or len(album_parts) == 1:
-        return True
-    return album_parts[0] in c.UNDELETABLE_ALBUMS
+    path = path.replace(os.sep, "/")
+    return not any(path == excluded or path.startswith(excluded + "/") for excluded in EXCLUDED_ASSETS)
 
 
 def _export_copies(scenario_dir, destination, scenario_target):

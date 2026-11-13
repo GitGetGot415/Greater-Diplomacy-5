@@ -1,7 +1,7 @@
 import pygame
 import os
 from data import queries
-from data.io import settings_schema
+from data.io import settings_schema, standalone_game
 from ui.widgets import ui_elements
 from ui import sound_effects
 from ui.navigation.screen import Screen, ScreenLayer
@@ -486,8 +486,10 @@ class Music_Player(ScrollPanes, Screen):
                               self.reset_starting_song, font_size=18)
         clear_button.apply_state(enabled=bool(self.controller.starting_song), color="red")
         self.elements.extend((set_button, clear_button))
-        self.elements.append(Button(slider_x, MUSIC_TACTICAL_SONGS_BUTTON_Y, MUSIC_PIN_BUTTON_SIZE,
-                                    "blue", "Tactical Songs", self.open_tactical_songs, font_size=18))
+        # A standalone game has no tactical battles to pick songs for.
+        if not standalone_game.IS_STANDALONE:
+            self.elements.append(Button(slider_x, MUSIC_TACTICAL_SONGS_BUTTON_Y, MUSIC_PIN_BUTTON_SIZE,
+                                        "blue", "Tactical Songs", self.open_tactical_songs, font_size=18))
 
     def is_paused(self):
         music = self.controller.music

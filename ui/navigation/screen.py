@@ -231,7 +231,8 @@ class Screen:
             self.back_state = "REALTIME_LOBBY"
         elif previous == app.states["REALTIME_REMOTE_LOBBY"]:
             self.back_state = "REALTIME_REMOTE_LOBBY"
-        elif previous == app.states["CUSTOM_BATTLE"]:
+        elif previous is not None and previous == app.states.get("CUSTOM_BATTLE"):
+            # A standalone game registers no CUSTOM_BATTLE screen.
             # Opened from a tactical battle preview or a running battle; return to that same view.
             self.back_state = "CUSTOM_BATTLE"
         # Returning from a Settings sub-screen (e.g. Unit Art, Keybinds)

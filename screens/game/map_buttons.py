@@ -10,6 +10,7 @@ import pygame
 
 import data.constants as c
 from data import queries
+from data.io import standalone_game
 from data.multiplayer.tournament import files as tournament_files
 from map_logic.ai.ai_evaluation import evaluate_verdict
 from map_logic.ai.scripted_events import scripted_event_response_preview
@@ -809,7 +810,8 @@ def _update_selection_mode_buttons(map_screen):
     # Hide spectator and tactical buttons if awaiting confirmation
     show_mode_buttons = not bool(map_screen.pending_selection)
     map_screen.btn_spectator.visible = show_mode_buttons
-    map_screen.btn_tactical.visible = show_mode_buttons
+    # A standalone game has no tactical mode.
+    map_screen.btn_tactical.visible = show_mode_buttons and not standalone_game.IS_STANDALONE
 
     is_multiplayer = map_screen.num_players > 1
 

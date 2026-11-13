@@ -5,7 +5,7 @@ from ui.widgets.ui_elements import Button, Slider, TextField, make_info_button, 
 from ui.navigation.screen import Screen
 import data.constants as c
 from data import queries
-from data.io import settings_schema
+from data.io import settings_schema, standalone_game
 from ui.dialogs import pickers
 from ui.rendering.font_manager import fonts
 from ui.bars import ui_bars
@@ -159,6 +159,9 @@ def render_settings_buttons(settings_screen):
             ("show_unclaimed", "Show Unassigned", screen.show_unclaimed, screen.toggle_show_unclaimed),
             ("army_group_animations", "Army Group Animations", screen.army_group_animations, screen.toggle_army_group_animations),
         )
+        if standalone_game.IS_STANDALONE:
+            # A standalone game has no tactical mode.
+            rows = tuple(row for row in rows if row[0] != "show_tactical_intro_popup")
         for index, (key, label, enabled, callback) in enumerate(rows):
             y = SETTINGS_FIRST_Y + index * SETTINGS_ROW_GAP
             screen.elements.append(make_toggle_button(SETTINGS_X, y, SETTINGS_OPTION_SIZE, label, enabled, callback, font_preset="small"))
@@ -182,7 +185,9 @@ def render_settings_buttons(settings_screen):
         screen.checkerboard_gradient_slider = Slider(SETTINGS_X, screen.fps_slider.rect.y + 78, SETTINGS_SLIDER_WIDTH, f"Checkerboard Gradient: {screen.controller.checkerboard_gradient_strength:.2f}", screen.controller.checkerboard_gradient_strength, screen.set_checkerboard_gradient, visual_max=c.MAX_CHECKERBOARD_GRADIENT_STRENGTH, allowed_max=c.MAX_CHECKERBOARD_GRADIENT_STRENGTH)
         screen.checkerboard_speed_slider = Slider(SETTINGS_X, screen.checkerboard_gradient_slider.rect.y + 78, SETTINGS_SLIDER_WIDTH, f"Checkerboard Speed: {screen.controller.checkerboard_scroll_speed:g}", screen.controller.checkerboard_scroll_speed, screen.set_checkerboard_speed, visual_max=c.MAX_CHECKERBOARD_SCROLL_SPEED, allowed_max=c.MAX_CHECKERBOARD_SCROLL_SPEED)
         screen.elements.extend([screen.fps_slider, screen.checkerboard_gradient_slider, screen.checkerboard_speed_slider])
-        screen.elements.append(Button(SETTINGS_SECOND_X, SETTINGS_FIRST_Y + 4 * SETTINGS_ROW_GAP, SETTINGS_LINK_SIZE, "blue", "Unit Art", screen.open_unit_art, image=ui_bars.get_ui_image("Brush.png")))
+        # A standalone game ships only the classic unit art.
+        if not standalone_game.IS_STANDALONE:
+            screen.elements.append(Button(SETTINGS_SECOND_X, SETTINGS_FIRST_Y + 4 * SETTINGS_ROW_GAP, SETTINGS_LINK_SIZE, "blue", "Unit Art", screen.open_unit_art, image=ui_bars.get_ui_image("Brush.png")))
 
     elif screen.sub_state == "CONTROLS":
         screen.elements.append(Button(SETTINGS_X, SETTINGS_FIRST_Y, SETTINGS_OPTION_SIZE, "purple", f"Controls: {screen.control_mode.title()}", screen.cycle_control_mode))

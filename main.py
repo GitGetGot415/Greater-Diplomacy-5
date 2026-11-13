@@ -90,7 +90,7 @@ def _import_project_modules():
     global Translate, Translation_Menu, Greater_Diplomacy_4_Translation, Greater_Diplomacy_Hex_Translation
     global Orders_Screen, Tactical_Orders_Screen, keybind_io, settings_schema, symbol_loader, modal_stack, screen_runner
     global BattleEditorScreen
-    global CustomBattleScreen, Tactical_Retreat_Screen
+    global CustomBattleScreen, Tactical_Retreat_Screen, standalone_game
     global Research_Screen, Economy_Screen, Edit_Country_Screen, Production_Screen
     global Faction_Screen, Faction_Territories_Screen
     global Map_Editor_Menu, Select_Base_Map, Random_Setup, Scenario_Settings
@@ -158,10 +158,13 @@ def _import_project_modules():
     from screens.menus.mouse_settings import Mouse_Settings
     from screens.menus.edit_portrait import Edit_Portrait
     from screens.game.orders import Orders_Screen
-    from screens.game.tactical_orders import Tactical_Orders_Screen
     from screens.game.battle_editor import BattleEditorScreen
-    from screens.game.custom_battle import CustomBattleScreen
-    from screens.game.tactical_retreat import Tactical_Retreat_Screen
+    from data.io import standalone_game
+    # A standalone game is exported without tactical mode, so these modules are not in its folder.
+    if not standalone_game.IS_STANDALONE:
+        from screens.game.tactical_orders import Tactical_Orders_Screen
+        from screens.game.custom_battle import CustomBattleScreen
+        from screens.game.tactical_retreat import Tactical_Retreat_Screen
     from data.io import keybind_io, settings_schema
     from ui.rendering import symbol_loader
     from ui.navigation import modal_stack, screen_runner
@@ -190,7 +193,6 @@ def _import_project_modules():
         Realtime_Relay_Provision,
     )
     from map_logic.ai import ai_handler
-    from data.io import standalone_game
 
     pygame.display.set_caption(standalone_game.title() if standalone_game.IS_STANDALONE else "Greater Diplomacy 5")
 
@@ -396,10 +398,7 @@ class Controller:
             "MAP": None,
             "PRODUCTION": Production_Screen(),
             "ORDERS": Orders_Screen(),
-            "TACTICAL_ORDERS": Tactical_Orders_Screen(),
             "BATTLE_EDITOR": BattleEditorScreen(),
-            "CUSTOM_BATTLE": CustomBattleScreen(),
-            "TACTICAL_RETREAT": Tactical_Retreat_Screen(),
             "RESEARCH": Research_Screen(),
             "ECONOMY": Economy_Screen(),
             "EDIT_COUNTRY": Edit_Country_Screen(),
@@ -422,6 +421,12 @@ class Controller:
             "REALTIME_LAN_BROWSER": Realtime_Lan_Browser(),
             "REALTIME_REMOTE_LOBBY": Realtime_Remote_Lobby(),
         }
+        if not standalone_game.IS_STANDALONE:
+            self.states.update({
+                "TACTICAL_ORDERS": Tactical_Orders_Screen(),
+                "CUSTOM_BATTLE": CustomBattleScreen(),
+                "TACTICAL_RETREAT": Tactical_Retreat_Screen(),
+            })
         self.active_state = self.states["MENU"]
 
     def flip_state(self):

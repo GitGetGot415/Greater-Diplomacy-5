@@ -299,71 +299,6 @@ class Menu(Screen):
     def __init__(self):
         super().__init__()
 
-        try:
-            raw_image = pygame.image.load("assets/images/The Sign.png").convert_alpha()
-            
-            # --- EDIT THIS NUMBER TO CHANGE THE SIZE ---
-            # 1.0 is normal size. 0.5 is half size. 2.0 is double size.
-            scale_factor = 2
-            
-            new_size = (int(raw_image.get_width() * scale_factor), int(raw_image.get_height() * scale_factor))
-            self.sign_image = pygame.transform.scale(raw_image, new_size)
-            # Keep the sign attached to one fixed bottom-right point, just as
-            # the portrait is attached to its bottom-left point. The values
-            # preserve the sign's previous resting location while making its
-            # placement independent of the asset's height.
-            sign_anchor_x = c.SCREEN_WIDTH - 50
-            sign_anchor_y = 480
-            self._sign_anchor_bottomright = (sign_anchor_x, sign_anchor_y)
-            self.sign_rect = self.sign_image.get_rect(bottomright=self._sign_anchor_bottomright)
-        except Exception as e:
-            print(f"Failed to load the sign image: {e}")
-            self.sign_image = None
-            self.sign_rect = None
-
-        # The right ground sits directly beneath the sign's post, scaled the
-        # same as the sign so the pixel art matches, and rides along with the
-        # sign's slide-in as a single unit rather than animating on its own.
-        try:
-            raw_ground = pygame.image.load("assets/images/Right Ground.png").convert_alpha()
-            ground_size = (int(raw_ground.get_width() * scale_factor), int(raw_ground.get_height() * scale_factor))
-            self.right_ground_image = pygame.transform.scale(raw_ground, ground_size)
-            self.right_ground_rect = self.right_ground_image.get_rect()
-            self.right_ground_rect.left = 900
-            self.right_ground_rect.top = 460
-        except Exception as e:
-            print(f"Failed to load the right ground image: {e}")
-            self.right_ground_image = None
-            self.right_ground_rect = None
-
-        # The left ground is the same prop mirrored onto the left side of the
-        # screen, sliding in from the left independently of the sign. Mirrored
-        # off the right ground's own left-edge distance so the two sit
-        # symmetrically either side of the screen's centre.
-        try:
-            raw_left_ground = pygame.image.load("assets/images/Left Ground.png").convert_alpha()
-            left_ground_size = (int(raw_left_ground.get_width() * scale_factor),
-                                int(raw_left_ground.get_height() * scale_factor))
-            self.left_ground_image = pygame.transform.scale(raw_left_ground, left_ground_size)
-            self.left_ground_rect = self.left_ground_image.get_rect()
-            self.left_ground_rect.right = c.SCREEN_WIDTH - 900
-            self.left_ground_rect.top = 460
-        except Exception as e:
-            print(f"Failed to load the left ground image: {e}")
-            self.left_ground_image = None
-            self.left_ground_rect = None
-
-        if MENU_SIGN_GRADIENT_ENABLED and self.sign_image is not None:
-            self.sign_image = ui_elements.apply_button_gradient(
-                self.sign_image, MENU_SIGN_GRADIENT_STRENGTH, stepped=False)
-        for name in ("right_ground_image", "left_ground_image"):
-            image = getattr(self, name)
-            if image is not None and (MENU_SCENERY_GRADIENT_ENABLED or MENU_SCENERY_BRIGHTNESS):
-                strength = MENU_SCENERY_GRADIENT_STRENGTH if MENU_SCENERY_GRADIENT_ENABLED else 0
-                setattr(self, name, ui_elements.apply_button_gradient(
-                    image, strength, stepped=False, start=MENU_SCENERY_GRADIENT_START,
-                    end=MENU_SCENERY_GRADIENT_END, brightness=MENU_SCENERY_BRIGHTNESS))
-
         # Hildehrand stands near the left edge of the screen, scaled the same
         # nearest-neighbour way as The Sign.png (not smoothscale) so the
         # pixel art stays crisp instead of blurring. The portrait is anchored
@@ -378,18 +313,14 @@ class Menu(Screen):
         hildehrand_anchor_y = (c.SCREEN_HEIGHT // 2) + 120   # the "floor" line the feet rest on
         self._hildehrand_anchor_bottomleft = (hildehrand_anchor_x, hildehrand_anchor_y)
 
-        self.hildehrand_choice = queries.get_hildehrand_choice()
-        (self.hildehrand_gradient, self.hildehrand_gradient_strength,
-         self.hildehrand_gradient_stepped,
-         self.hildehrand_gradient_bands) = queries.get_hildehrand_gradient()
-        self.hildehrand_gradient_dithering = queries.get_hildehrand_dithering()
-        try:
-            self._hildehrand_plain_image = _load_scaled_image(
-                f"{CHARACTERS_DIR}/{self.hildehrand_choice}", self.HILDEHRAND_SCALE)
-        except Exception as e:
-            print(f"Failed to load the Hildehrand image: {e}")
-            self._hildehrand_plain_image = None
-        self._refresh_hildehrand_image()
+        if standalone_game.IS_STANDALONE:
+            # A standalone game's menu is the plain checkerboard: no sign, ground, or portrait.
+            self.sign_image = self.sign_rect = None
+            self.right_ground_image = self.right_ground_rect = None
+            self.left_ground_image = self.left_ground_rect = None
+            self.hildehrand_image = None
+        else:
+            self._load_scenery()
 
         self._hildehrand_draw_pos = (
             self.hildehrand_image.get_rect(bottomleft=self._hildehrand_anchor_bottomleft).topleft
@@ -557,7 +488,9 @@ class Menu(Screen):
             lambda: self.go_to("EDIT_PORTRAIT"),
             font_preset="small",
         )
-        self.elements.append(self.edit_portrait_btn)
+        # A standalone game has no portrait to edit.
+        if not standalone_game.IS_STANDALONE:
+            self.elements.append(self.edit_portrait_btn)
 
         # Exit lives in the top-right corner on desktop builds and uses the
         # shared modal dialog so the game is never closed accidentally by a
@@ -623,6 +556,86 @@ class Menu(Screen):
             self.version_status = f"Greater Diplomacy 5 {c.GAME_VERSION}"
         else:
             self.trigger_version_check()
+
+    def _load_scenery(self):
+        """Load the sign, both grounds, and the Hildehrand portrait for the GD5 menu."""
+        try:
+            raw_image = pygame.image.load("assets/images/The Sign.png").convert_alpha()
+            
+            # --- EDIT THIS NUMBER TO CHANGE THE SIZE ---
+            # 1.0 is normal size. 0.5 is half size. 2.0 is double size.
+            scale_factor = 2
+            
+            new_size = (int(raw_image.get_width() * scale_factor), int(raw_image.get_height() * scale_factor))
+            self.sign_image = pygame.transform.scale(raw_image, new_size)
+            # Keep the sign attached to one fixed bottom-right point, just as
+            # the portrait is attached to its bottom-left point. The values
+            # preserve the sign's previous resting location while making its
+            # placement independent of the asset's height.
+            sign_anchor_x = c.SCREEN_WIDTH - 50
+            sign_anchor_y = 480
+            self._sign_anchor_bottomright = (sign_anchor_x, sign_anchor_y)
+            self.sign_rect = self.sign_image.get_rect(bottomright=self._sign_anchor_bottomright)
+        except Exception as e:
+            print(f"Failed to load the sign image: {e}")
+            self.sign_image = None
+            self.sign_rect = None
+
+        # The right ground sits directly beneath the sign's post, scaled the
+        # same as the sign so the pixel art matches, and rides along with the
+        # sign's slide-in as a single unit rather than animating on its own.
+        try:
+            raw_ground = pygame.image.load("assets/images/Right Ground.png").convert_alpha()
+            ground_size = (int(raw_ground.get_width() * scale_factor), int(raw_ground.get_height() * scale_factor))
+            self.right_ground_image = pygame.transform.scale(raw_ground, ground_size)
+            self.right_ground_rect = self.right_ground_image.get_rect()
+            self.right_ground_rect.left = 900
+            self.right_ground_rect.top = 460
+        except Exception as e:
+            print(f"Failed to load the right ground image: {e}")
+            self.right_ground_image = None
+            self.right_ground_rect = None
+
+        # The left ground is the same prop mirrored onto the left side of the
+        # screen, sliding in from the left independently of the sign. Mirrored
+        # off the right ground's own left-edge distance so the two sit
+        # symmetrically either side of the screen's centre.
+        try:
+            raw_left_ground = pygame.image.load("assets/images/Left Ground.png").convert_alpha()
+            left_ground_size = (int(raw_left_ground.get_width() * scale_factor),
+                                int(raw_left_ground.get_height() * scale_factor))
+            self.left_ground_image = pygame.transform.scale(raw_left_ground, left_ground_size)
+            self.left_ground_rect = self.left_ground_image.get_rect()
+            self.left_ground_rect.right = c.SCREEN_WIDTH - 900
+            self.left_ground_rect.top = 460
+        except Exception as e:
+            print(f"Failed to load the left ground image: {e}")
+            self.left_ground_image = None
+            self.left_ground_rect = None
+
+        if MENU_SIGN_GRADIENT_ENABLED and self.sign_image is not None:
+            self.sign_image = ui_elements.apply_button_gradient(
+                self.sign_image, MENU_SIGN_GRADIENT_STRENGTH, stepped=False)
+        for name in ("right_ground_image", "left_ground_image"):
+            image = getattr(self, name)
+            if image is not None and (MENU_SCENERY_GRADIENT_ENABLED or MENU_SCENERY_BRIGHTNESS):
+                strength = MENU_SCENERY_GRADIENT_STRENGTH if MENU_SCENERY_GRADIENT_ENABLED else 0
+                setattr(self, name, ui_elements.apply_button_gradient(
+                    image, strength, stepped=False, start=MENU_SCENERY_GRADIENT_START,
+                    end=MENU_SCENERY_GRADIENT_END, brightness=MENU_SCENERY_BRIGHTNESS))
+
+        self.hildehrand_choice = queries.get_hildehrand_choice()
+        (self.hildehrand_gradient, self.hildehrand_gradient_strength,
+         self.hildehrand_gradient_stepped,
+         self.hildehrand_gradient_bands) = queries.get_hildehrand_gradient()
+        self.hildehrand_gradient_dithering = queries.get_hildehrand_dithering()
+        try:
+            self._hildehrand_plain_image = _load_scaled_image(
+                f"{CHARACTERS_DIR}/{self.hildehrand_choice}", self.HILDEHRAND_SCALE)
+        except Exception as e:
+            print(f"Failed to load the Hildehrand image: {e}")
+            self._hildehrand_plain_image = None
+        self._refresh_hildehrand_image()
 
     def prepare_map(self, app):
         # Only a standalone game's New Game button opens MAP from the main menu.
@@ -883,6 +896,10 @@ class Menu(Screen):
             item["link_rect"].y = int(_lerp(rise_start_y, item["_intro_target_link_y"], t))
 
     def draw_background(self, surface):
+        if standalone_game.IS_STANDALONE:
+            # The shared scrolling checkerboard replaces the GD5 menu's sky and water.
+            super().draw_background(surface)
+            return
         colors = _menu_gradient_colors()
         surface.blit(_menu_background(surface.get_size(), *colors), (0, 0))
         if MENU_CHECKERBOARD_OPACITY > 0 or MENU_WATER_CHECKERBOARD_OPACITY > 0:
