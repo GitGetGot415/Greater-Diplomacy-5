@@ -1,7 +1,6 @@
 """Native pygame replacements for the map editor's date and starting-economy
 tkinter tool windows -- see screens/editors/__init__.py."""
 import os
-import shutil
 import pygame
 import data.constants as c
 from ui.background_styles import EDITOR_PANEL_STYLES
@@ -76,9 +75,17 @@ class Editor_Metadata_Screen(EditorFormScreen):
             return
 
         def on_answer(replace):
-            if replace:
-                shutil.rmtree(destination)
-                self._run_standalone_export(scenario_dir, name)
+            if not replace:
+                return
+            try:
+                standalone_game.clear_export_dir(name)
+            except OSError as error:
+                # A running exported game keeps its files locked on Windows.
+                dialogs.show_error("Standalone Export",
+                                   f"Could not replace {os.path.abspath(destination)}: {error.strerror}. "
+                                   "Close the exported game and anything else using that folder, then try again.")
+                return
+            self._run_standalone_export(scenario_dir, name)
 
         dialogs.ask_yes_no("Standalone Export",
                            f"{os.path.abspath(destination)} already exists. Replace it? Saves inside it are deleted.",

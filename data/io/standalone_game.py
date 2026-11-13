@@ -60,6 +60,19 @@ def export_dir(name):
     return os.path.join(EXPORTS_DIR, name)
 
 
+def clear_export_dir(name):
+    """Delete everything inside an older export so a new export can replace it.
+
+    The folder itself stays. Windows refuses to delete a folder that another process uses
+    as its working directory, such as the exported game while it runs.
+    """
+    for entry in os.scandir(export_dir(name)):
+        if entry.is_dir(follow_symlinks=False):
+            shutil.rmtree(entry.path)
+        else:
+            os.remove(entry.path)
+
+
 def _walk_files(root):
     for parent, directories, filenames in os.walk(root):
         directories[:] = [name for name in directories if name not in SKIPPED_DIRS]
@@ -97,7 +110,7 @@ def export_steps(scenario_dir, name):
 
     A frozen Windows game also copies its executable as <name>.exe.
     A game run from source exports a folder that runs with `python main.py`.
-    The caller removes an older export of the same name first.
+    The caller clears an older export of the same name first (see clear_export_dir).
     """
     destination = export_dir(name)
     scenario_relative = os.path.join("scenarios", name)
