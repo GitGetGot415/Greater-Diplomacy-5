@@ -2,6 +2,7 @@
 
 Disk history uses compact JSON and compares two compressed representations.
 The writer stores full snapshots or snapshot changes, whichever is smaller.
+A list change can carry an offset when entries were inserted at its front.
 Reading restores independent full snapshots for all existing callers.
 Legacy full snapshots remain supported in plain and compressed files.
 Use read for history files. It prefers the compressed file.
@@ -35,6 +36,86 @@ def dump_compact_text(obj):
     return json.dumps(obj, separators=(",", ":"))
 
 
+def dump_save_text(obj):
+    """Serialize save and map JSON readably without one line per value.
+
+    Nested values are indented by SAVE_INDENT spaces. A list or object stays on
+    one line when that line, with its indentation and key, fits within
+    SAVE_LINE_WIDTH. json.loads reads the same value as from json.dumps(obj).
+    """
+    return _save_text(obj, 0, 0)
+
+
+# json.dumps builds a new encoder for each call with non-default separators.
+_LINE_ENCODER = json.JSONEncoder(separators=(", ", ": "))
+
+
+def _save_key(key):
+    """Write a dictionary key as json.dumps does."""
+    if isinstance(key, str):
+        return json.dumps(key)
+    if key is None or isinstance(key, (bool, int, float)):
+        return json.dumps(json.dumps(key))
+    raise TypeError(f"keys must be str, int, float, bool or None, not {type(key).__name__}")
+
+
+def _save_text(value, depth, prefix_length):
+    """Format one value. prefix_length counts the key text before it on its line."""
+    if not isinstance(value, (dict, list, tuple)) or not value:
+        return json.dumps(value)
+    available = c.SAVE_LINE_WIDTH - c.SAVE_INDENT * depth - prefix_length
+    # Each entry needs at least three characters on one line. Larger
+    # containers cannot fit, so do not serialize them only to discard the text.
+    if 3 * len(value) <= available:
+        line = _LINE_ENCODER.encode(value)
+        if len(line) <= available:
+            return line
+    if isinstance(value, dict):
+        opening, closing = "{", "}"
+        items = []
+        for key, item in value.items():
+            key_text = _save_key(key) + ": "
+            items.append(key_text + _save_text(item, depth + 1, len(key_text)))
+    else:
+        opening, closing = "[", "]"
+        items = [_save_text(item, depth + 1, 0) for item in value]
+    indent = " " * (c.SAVE_INDENT * depth)
+    separator = ",\n" + indent + " " * c.SAVE_INDENT
+    return opening + separator[1:] + separator.join(items) + "\n" + indent + closing
+
+
+#: How many of the previous list's first entries to look for further along the
+#: current list. A match means entries were inserted at the front, as a
+#: country's inbox does with each new message.
+_FRONT_INSERT_SEARCH = 4
+
+
+def _front_insert_offset(previous, current):
+    """Return how many entries appear to be inserted at the front, or 0."""
+    for source in range(min(len(previous), _FRONT_INSERT_SEARCH)):
+        try:
+            return current.index(previous[source], source + 1) - source
+        except ValueError:
+            continue
+    return 0
+
+
+def _list_delta(previous, current, offset):
+    """Compare current[index] with previous[index - offset]."""
+    changes = {}
+    for index, value in enumerate(current):
+        source = index - offset
+        delta = (_snapshot_delta(previous[source], value) if 0 <= source < len(previous)
+                 else ["set", value])
+        if delta is not None:
+            changes[str(index)] = delta
+    if offset:
+        return ["list", len(current), changes, offset]
+    if changes or len(previous) != len(current):
+        return ["list", len(current), changes]
+    return None
+
+
 def _snapshot_delta(previous, current):
     """Return changed JSON values, with None for an unchanged value."""
     if type(previous) is not type(current):
@@ -55,15 +136,15 @@ def _snapshot_delta(previous, current):
             return ["dict", removed, changes, order]
         return None
     if isinstance(current, (list, tuple)):
-        changes = {}
-        for index, value in enumerate(current):
-            delta = (_snapshot_delta(previous[index], value) if index < len(previous)
-                     else ["set", value])
-            if delta is not None:
-                changes[str(index)] = delta
-        if changes or len(previous) != len(current):
-            return ["list", len(current), changes]
-        return None
+        delta = _list_delta(previous, current, 0)
+        offset = _front_insert_offset(previous, current) if delta is not None else 0
+        if offset:
+            # Entries inserted at the front change every index. Keep the
+            # comparison with shifted indexes when it is smaller.
+            shifted = _list_delta(previous, current, offset)
+            if len(dump_compact_text(shifted)) < len(dump_compact_text(delta)):
+                return shifted
+        return delta
     return None if previous == current else ["set", current]
 
 
@@ -91,13 +172,19 @@ def _restore_delta(previous, delta):
                 raise ValueError("invalid history dictionary order")
             result = {key: result[key] for key in order}
         return result
-    if operation == "list" and len(delta) == 3 and isinstance(previous, list):
-        length, changes = delta[1:]
-        if type(length) is not int or length < 0 or not isinstance(changes, dict):
+    if operation == "list" and len(delta) in (3, 4) and isinstance(previous, list):
+        # The optional offset means current[index] is compared with
+        # previous[index - offset]. Older files have no offset.
+        length, changes = delta[1:3]
+        offset = delta[3] if len(delta) == 4 else 0
+        if (type(length) is not int or length < 0 or type(offset) is not int
+                or not 0 <= offset <= length or not isinstance(changes, dict)):
             raise ValueError("invalid history list delta")
-        if any(str(index) not in changes for index in range(len(previous), length)):
+        kept = previous[:length - offset]
+        if any(str(index) not in changes
+               for index in (*range(offset), *range(offset + len(kept), length))):
             raise ValueError("missing history list entries")
-        result = previous[:length] + [None] * max(0, length - len(previous))
+        result = [None] * offset + kept + [None] * (length - offset - len(kept))
         for key, change in changes.items():
             if not key.isdecimal() or not 0 <= int(key) < length:
                 raise ValueError("invalid history list index")

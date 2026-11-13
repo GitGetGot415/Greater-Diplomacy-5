@@ -108,7 +108,7 @@ class CountryEditor:
         in their own way.
         """
         with open(PATH, "w") as f:
-            json.dump(self.data, f, indent=c.SAVE_INDENT)
+            json.dump(self.data, f, indent=c.LIBRARY_JSON_INDENT)
         queries.clear_json_caches()
 
     def get_default_research_dict(self):

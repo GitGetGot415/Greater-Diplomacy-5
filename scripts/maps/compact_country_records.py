@@ -19,7 +19,8 @@ import sys
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from data import constants as c, queries
+from data import queries
+from data.map import history_io
 
 
 def compact_map_metadata(directory, *, write=False):
@@ -41,7 +42,7 @@ def compact_map_metadata(directory, *, write=False):
                    for name, record in compact.items())
     if not replaced:
         return 0, 0
-    payload = json.dumps(meta, indent=c.SAVE_INDENT).encode("utf-8")
+    payload = history_io.dump_save_text(meta).encode("utf-8")
     if write:
         meta_path.write_bytes(payload)
     return replaced, len(original) - len(payload)

@@ -7,6 +7,7 @@ import shutil
 import zipfile
 import pygame
 from pathlib import Path
+from data.map import history_io
 from data.platform import CHARACTERS_DIR, CUSTOM_SUBDIR, IS_WEB, download_file, downloads_dir, sync_persisted_dir
 from data.queries.content import IMAGE_EXTENSIONS
 from data.queries.files import extract_and_flatten_zip, read_saved_content_summary
@@ -117,7 +118,7 @@ def _readable_json_payload(file_path):
             value = json.load(file)
     except (OSError, UnicodeDecodeError, json.JSONDecodeError):
         return None
-    return json.dumps(value, indent=c.SAVE_INDENT).encode("utf-8")
+    return history_io.dump_save_text(value).encode("utf-8")
 
 
 def export_dir_as_zip(source_dir, zip_name, parent=None, *, game_state=None):

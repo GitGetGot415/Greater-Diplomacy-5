@@ -60,18 +60,16 @@ async def save_map_data(self, save_name=None, *, overwrite=False, save_path=None
         self.save_progress_completed = 1
         await asyncio.sleep(0)
 
-        # Pretty JSON makes saves and scenario exports easy to inspect and diff.
-        # The export path compresses these files with ZIP_DEFLATED, so the
-        # whitespace has only a small effect on the exported archive size.
+        # Indented JSON makes saves and scenario exports easy to inspect and
+        # diff. Short lists and objects stay on one line to keep files smaller.
         with open(os.path.join(save_path, "meta.json"), "w") as f:
-            f.write(history_io.dump_text(save_dict, indent=c.SAVE_INDENT))
+            f.write(history_io.dump_save_text(save_dict))
         self.save_progress_completed = 2
         await asyncio.sleep(0)
 
         # Structural map and current province state, so the save is self-contained.
         with open(os.path.join(save_path, "map_data.json"), "w") as f:
-            f.write(history_io.dump_text(
-                queries.build_map_data_save(self), indent=c.SAVE_INDENT))
+            f.write(history_io.dump_save_text(queries.build_map_data_save(self)))
         self.save_progress_completed = 3
         await asyncio.sleep(0)
 

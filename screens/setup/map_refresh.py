@@ -120,11 +120,10 @@ def refresh_map_directories(screen, dirs_to_check, success_message="Data refresh
                 # 5. Perform the manual write operations in-place
 
                 with open(os.path.join(scenario_path, "meta.json"), "w") as f:
-                    f.write(history_io.dump_text(save_dict, indent=c.SAVE_INDENT))
+                    f.write(history_io.dump_save_text(save_dict))
 
                 with open(map_json_path, "w") as f:
-                    f.write(history_io.dump_text(
-                        build_map_data_save(temp_map_context), indent=c.SAVE_INDENT))
+                    f.write(history_io.dump_save_text(build_map_data_save(temp_map_context)))
 
                 if hasattr(temp_map_context, 'history'):
                     history_io.write(scenario_path, temp_map_context.history)

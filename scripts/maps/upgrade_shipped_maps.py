@@ -40,7 +40,7 @@ def upgrade_map(directory, *, write=False):
     if write:
         for name, data in (("meta.json", save_meta), ("map_data.json", map_data)):
             if name in changed:
-                (directory / name).write_text(history_io.dump_text(data, indent=c.SAVE_INDENT))
+                (directory / name).write_text(history_io.dump_save_text(data))
         if "history" in changed:
             history_io.write(str(directory), history)
     return changed

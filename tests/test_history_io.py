@@ -145,6 +145,28 @@ class HistoryIOTests(unittest.TestCase):
         self.assertEqual(json.loads(text), obj)
         self.assertEqual(text, json.dumps(obj, separators=(",", ":")))
 
+    def test_save_text_keeps_short_values_on_one_line_and_splits_long_ones(self):
+        obj = {"province": {"center": [84, 47], "order": {"type": "MOVE", "path": []},
+                            "long": list(range(c.SAVE_LINE_WIDTH)), "empty": {}}}
+        text = history_io.dump_save_text(obj)
+        self.assertEqual(json.loads(text), obj)
+        lines = text.split("\n")
+        nested = " " * (2 * c.SAVE_INDENT)
+        self.assertIn(nested + '"center": [84, 47],', lines)
+        self.assertIn(nested + '"order": {"type": "MOVE", "path": []},', lines)
+        self.assertIn(nested + '"empty": {}', lines)
+        self.assertIn(nested + '"long": [', lines)
+        self.assertTrue(all(len(line.rstrip(",")) <= c.SAVE_LINE_WIDTH for line in lines))
+
+    def test_save_text_reads_back_as_json_dumps_does(self):
+        obj = {1: [1.5, float("inf"), None, True, "é\n\"quoted\""], None: {}, False: [],
+               2.5: (1, 2), "nested": [{"values": list(range(c.SAVE_LINE_WIDTH))}]}
+        self.assertEqual(json.loads(history_io.dump_save_text(obj)), json.loads(json.dumps(obj)))
+        with self.assertRaises(TypeError):
+            history_io.dump_save_text({(1, 2): "tuple keys are not JSON"})
+        with self.assertRaises(TypeError):
+            history_io.dump_save_text({"value": {"sets are not JSON"}})
+
     def test_saved_history_is_readably_indented_before_compression(self):
         obj = sample_history()
         path = history_io.write(self.dir, obj, compress=False)
@@ -190,6 +212,39 @@ class HistoryIOTests(unittest.TestCase):
         self.assertEqual(restored["10"], history["10"])
         self.assertEqual(restored["11"], history["11"])
         self.assertEqual(restored["7"], history["7"])
+
+    def test_messages_inserted_at_the_front_store_older_messages_once(self):
+        """Inboxes insert new messages first; older entries must not be rewritten."""
+        limit = 40
+        inbox = [{"text": f"message-{index}", "read": False} for index in range(limit)]
+        history = {"1": {"nation_data": {"A": {"inbox": copy.deepcopy(inbox)}}}}
+        inbox[0]["read"] = True
+        inbox = [{"text": "new-1", "read": False}, {"text": "new-2", "read": False}] + inbox
+        history["2"] = {"nation_data": {"A": {"inbox": inbox[:limit]}}}
+        encoded = history_io.encode_history(history)
+        inbox_delta = encoded["turns"][1][1][2]["nation_data"][2]["A"][2]["inbox"]
+        self.assertEqual(inbox_delta[0], "list")
+        self.assertEqual(inbox_delta[3], 2)
+        text = history_io.dump_compact_text(encoded)
+        for index in range(limit):
+            self.assertEqual(text.count(f'"message-{index}"'), 1)
+        self.assertEqual(history_io.decode_history(json.loads(text)), history)
+
+    def test_list_changes_without_an_offset_still_load(self):
+        payload = {"_history_format": history_io.DELTA_FORMAT, "turns": [
+            ["1", ["set", {"values": [1, 2]}]],
+            ["2", ["dict", [], {"values": ["list", 3, {"0": ["set", 9], "2": ["set", 3]}]}, None]],
+        ]}
+        self.assertEqual(history_io.decode_history(payload),
+                         {"1": {"values": [1, 2]}, "2": {"values": [9, 2, 3]}})
+
+    def test_invalid_list_offsets_are_rejected(self):
+        for change in (["list", 1, {"0": ["set", 1]}, 2], ["list", 1, {"0": ["set", 1]}, -1],
+                       ["list", 2, {}, 1], ["list", 2, {"0": ["set", 1]}, "1"]):
+            payload = {"_history_format": history_io.DELTA_FORMAT, "turns": [
+                ["1", ["set", {"values": [1]}]], ["2", ["dict", [], {"values": change}, None]]]}
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                history_io.decode_history(payload)
 
     def test_appended_messages_and_unchanged_units_are_stored_once(self):
         history = {}

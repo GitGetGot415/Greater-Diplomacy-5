@@ -320,8 +320,8 @@ class MapSaveFormatTests(unittest.TestCase):
         self.assertEqual(disk_meta["scenario_settings"]["days_per_turn"], 30)
 
         # These are the actual text forms written by map save paths.
-        self.assertEqual(json.loads(history_io.dump_text(disk_meta, indent=c.SAVE_INDENT)), disk_meta)
-        self.assertEqual(json.loads(history_io.dump_text(map_data, indent=c.SAVE_INDENT)), map_data)
+        self.assertEqual(json.loads(history_io.dump_save_text(disk_meta)), disk_meta)
+        self.assertEqual(json.loads(history_io.dump_save_text(map_data)), map_data)
         self.assertEqual(map_screen.raw_json_data, {key: {"id": 7, "terrain": "plains"}})
 
     def test_full_save_dictionary_still_carries_multiplayer_province_snapshot(self):
@@ -383,8 +383,8 @@ class MapSaveFormatTests(unittest.TestCase):
             "day": 15, "month": 5, "year": 1939, "total_turns": 12,
         })
         self.assertEqual(map_data["(7, 0, 0)"], map_screen.map_data[(7, 0, 0)])
-        self.assertEqual(meta_text, json.dumps(meta, indent=c.SAVE_INDENT))
-        self.assertEqual(map_data_text, json.dumps(map_data, indent=c.SAVE_INDENT))
+        self.assertEqual(meta_text, history_io.dump_save_text(meta))
+        self.assertEqual(map_data_text, history_io.dump_save_text(map_data))
         self.assertGreater(meta_text.count("\n"), 1)
         self.assertGreater(map_data_text.count("\n"), 1)
         self.assertEqual(saved_history, map_screen.history)
@@ -413,8 +413,10 @@ class MapSaveFormatTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             source_dir = os.path.join(temporary, "source")
             os.makedirs(source_dir)
+            meta = {"nation_data": {"Avaria": {"materials": 200}}, "date": {"year": 1939},
+                    "values": list(range(c.SAVE_LINE_WIDTH))}
             with open(os.path.join(source_dir, "meta.json"), "w", encoding="utf-8") as handle:
-                handle.write('{"nation_data":{"Avaria":{"materials":200}},"date":{"year":1939}}')
+                handle.write(history_io.dump_compact_text(meta))
             with open(os.path.join(source_dir, "terrain.png"), "wb") as handle:
                 handle.write(b"not json")
 
@@ -431,10 +433,8 @@ class MapSaveFormatTests(unittest.TestCase):
                 payload = archive.read("meta.json").decode("utf-8")
                 binary_payload = archive.read("terrain.png")
 
-        self.assertEqual(json.loads(payload), {
-            "nation_data": {"Avaria": {"materials": 200}},
-            "date": {"year": 1939},
-        })
+        self.assertEqual(json.loads(payload), meta)
+        self.assertEqual(payload, history_io.dump_save_text(meta))
         self.assertGreater(payload.count("\n"), 1)
         self.assertEqual(binary_payload, b"not json")
 

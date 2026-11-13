@@ -49,6 +49,6 @@ for path in files_to_fix:
                 attributes["research"] = new_research_block.copy()
                 
         with open(path, "w") as f:
-            json.dump(data, f, indent=c.SAVE_INDENT)
+            json.dump(data, f, indent=c.LIBRARY_JSON_INDENT)
             
 print("Countries updated to discrete research blocks!")

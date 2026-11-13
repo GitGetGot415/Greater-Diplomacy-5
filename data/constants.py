@@ -2012,9 +2012,16 @@ HISTORICAL_LEADERS_DEFAULT_PATH = "data/json/historical_leaders_DEFAULT.json"
 RECORD_HISTORY = True
 # Plain history exports use indentation. Compressed history uses compact JSON.
 HISTORY_INDENT = 4
-SAVE_INDENT = 4
-# Use fast compression when comparing full history with snapshot changes.
-HISTORY_GZIP_LEVEL = 1
+# Library files in data/json/ keep four-space indentation.
+LIBRARY_JSON_INDENT = 4
+# Save and map JSON (meta.json, map_data.json) indents nested values by
+# SAVE_INDENT spaces. A list or object stays on one line when that whole line
+# fits within SAVE_LINE_WIDTH characters. See history_io.dump_save_text.
+SAVE_INDENT = 2
+SAVE_LINE_WIDTH = 100
+# Level 6 makes history files about a quarter smaller than level 1. The extra
+# compression time is small next to serializing the snapshots.
+HISTORY_GZIP_LEVEL = 6
 # Marks a history snapshot whose images have already been scrubbed, so a save
 # does not redo identical work for every turn it has ever recorded.
 HISTORY_SCRUBBED_KEY = "_scrubbed"
