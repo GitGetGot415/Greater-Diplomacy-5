@@ -130,12 +130,61 @@ class BattleSimulationTests(unittest.TestCase):
         self.enterContext(single_subunits())
         self.enterContext(patch.object(combat, "TACTICAL_DAMAGE_AT_ZERO_HEALTH", 1.0))
 
-    def test_catalog_and_constructor_reject_air_sea_artillery_unknown_and_empty_rosters(self):
+    def test_catalog_and_constructor_reject_air_artillery_unknown_and_empty_rosters(self):
         self.assertEqual(set(combat.land_unit_types(self.library)), {"Fixture I", "Fixture II", "Fixture III"})
-        for roster in ([], ["missing"], ["Fixture Ship I"], ["Fixture Plane I"], ["Fixture Gun I"],
+        self.assertIn("Fixture Ship I", combat.custom_unit_types(self.library))
+        for roster in ([], ["missing"], ["Fixture Plane I"], ["Fixture Gun I"],
                        ["Fixture I"] * (c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE + 1)):
             with self.subTest(roster=roster[:2]), self.assertRaises(ValueError):
                 combat.BattleSimulation(self.library, roster, ["Fixture I"])
+
+    def test_custom_ships_deploy_with_shared_truck_stats_without_changing_the_library(self):
+        before = copy.deepcopy(self.library)
+        for side in (0, 1):
+            armies = [["Fixture I"], ["Fixture I"]]
+            armies[side] = ["Fixture Ship I"]
+            simulation = combat.BattleSimulation(self.library, *armies)
+            members = [fighter for fighter in simulation.fighters if fighter.side == side]
+            truck = combat.create_battle_unit("Fixture Ship I", "Fixture A", self.library)
+            self.assertEqual(sum(fighter.data["health"] for fighter in members), truck["health"])
+            for fighter in members:
+                for field in ("attack", "defense", "speed"):
+                    self.assertEqual(fighter.data[field], truck[field])
+                self.assertEqual(fighter.data["type"], "Truck (Fixture Ship I)")
+        self.assertEqual(self.library, before)
+
+    def test_ship_record_health_fraction_survives_packing_for_custom_battle(self):
+        ship = queries.create_unit_dict("Fixture Ship I", "Fixture A", self.library)
+        ship["health"] = ship["max_health"] / 2
+        before = copy.deepcopy(ship)
+        simulation = combat.BattleSimulation(self.library, [ship], ["Fixture I"])
+        self.assertEqual(simulation.division_health_fraction(0), 0.5)
+        self.assertEqual(ship, before)
+
+    def test_campaign_trucks_join_both_sides_and_preserve_current_stats_and_damage(self):
+        nations = {"Fixture A": {"at_war_with": ["Fixture B"]}, "Fixture B": {"at_war_with": ["Fixture A"]}}
+        trucks = [combat.create_battle_unit("Fixture Ship I", owner, self.library)
+                  for owner in nations]
+        trucks[0].update(health=120, max_health=400, attack=17, defense=3, speed=2)
+        before = copy.deepcopy(trucks)
+        province = {"terrain": "plains", "units": trucks}
+        friendly, enemy = combat.campaign_forces(trucks[0], province, nations, self.library)
+        self.assertEqual((friendly, enemy), ([trucks[0]], [trucks[1]]))
+        rosters = [combat.campaign_roster(side, self.library) for side in (friendly, enemy)]
+        simulation = combat.BattleSimulation(self.library, *rosters)
+        members = simulation.divisions[0]
+        self.assertAlmostEqual(sum(fighter.data["health"] for fighter in members), trucks[0]["health"])
+        for fighter in members:
+            for field in ("attack", "defense", "speed"):
+                self.assertEqual(fighter.data[field], trucks[0][field])
+        simulation.divisions[0][0].data["health"] /= 2
+        simulation.winner = 0
+        fraction = simulation.division_health_fraction(0)
+        combat.apply_campaign_result(simulation, trucks, province, ([], []), side_units=([trucks[0]], [trucks[1]]))
+        self.assertAlmostEqual(trucks[0]["health"], fraction * trucks[0]["max_health"])
+        self.assertEqual(trucks[1]["health"], 0)
+        self.assertEqual(province["units"], [trucks[0]])
+        self.assertEqual(rosters, [[before[0]], [before[1]]])
 
     def test_units_use_library_stats_without_mutating_content_or_rosters(self):
         before = copy.deepcopy(self.library)
@@ -1767,6 +1816,16 @@ class TacticalSelectionTests(unittest.TestCase):
                     callback(label)
                     self.assertIs(self.map.pending_unit, unit)
 
+    def test_packed_ship_can_be_selected_and_confirmed_for_tactical_control(self):
+        truck = combat.create_battle_unit("Fixture Ship I", "Fixture A", self.library)
+        province = {"owner": "Fixture A", "units": [truck]}
+        self.setup.select_tactical_unit(self.map, province)
+        self.assertIs(self.map.pending_unit, truck)
+        self.map.num_players = 2
+        self.setup.confirm_player_country(self.map)
+        self.assertIs(self.map.player_unit, truck)
+        self.assertEqual(self.map.active_players, ["Fixture A"])
+
     def test_ineligible_tiles_and_clicked_stacks_never_select_or_spawn_a_division(self):
         invalid = [*self.units[3:], {"type": "Missing", "owner": "Fixture A"}]
         for units in ([unit] for unit in invalid):
@@ -2913,11 +2972,28 @@ class CustomBattleScreenTests(unittest.TestCase):
         with patch("ui.dialogs.pickers.open_listbox_selector") as picker:
             self.click("Add Friendly")
         args, options = picker.call_args
-        self.assertEqual({value for label, value in args[3]}, set(combat.land_unit_types(self.library)))
+        self.assertEqual({value for label, value in args[3]}, set(combat.custom_unit_types(self.library)))
         args[4]("Fixture II")
         args[4]("Fixture II")
         self.assertEqual(self.roster_types(0), ["Fixture II", "Fixture II"])
         self.assertFalse(options["close_on_select"])
+
+    def test_ship_add_duplicate_health_edit_and_preview_use_truck_records(self):
+        self.screen.add_unit(0, "Fixture Ship I")
+        truck = self.screen.rosters[0][0]
+        self.screen.set_unit_options(0, [truck], health_percent=50)
+        self.screen.duplicate_unit(0)
+        self.assertEqual(self.screen.rosters[0][1]["health"], truck["health"])
+        self.assertEqual(truck["health"], c.TRUCK_MAX_HP / 2)
+        self.assertEqual(truck["attack"], c.TRUCK_ATK)
+        self.screen.add_unit(1, "Fixture Ship I")
+        self.click("Simulate")
+        self.assertEqual(self.screen.mode, "preview")
+        self.assertEqual(self.screen.simulation.division_health_fraction(0), 0.5)
+        self.click("Start")
+        self.assertEqual(self.screen.mode, "battle")
+        self.screen.draw(self.surface)
+        self.assertEqual(self.screen.rosters[0][0], truck)
 
     def test_reordering_and_invalid_drop_preserve_armies(self):
         for name in ("Fixture I", "Fixture II", "Fixture III"):

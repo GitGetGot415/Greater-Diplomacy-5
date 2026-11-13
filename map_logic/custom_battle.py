@@ -165,6 +165,36 @@ def land_unit_types(library):
     return [name for name, stats in library.items() if _is_land(stats) and not is_artillery(name, library)]
 
 
+def packed_ship_type(name, library):
+    """Return the carried ship's identifier for a current naval Truck, otherwise None."""
+    if isinstance(name, str) and name.startswith("Truck (") and name.endswith(")"):
+        ship = name[len("Truck ("):-1]
+        if library.get(ship, {}).get("naval_unit"):
+            return ship
+    return None
+
+
+def campaign_unit_eligible(name, library):
+    """Land fighters and packed ships can deploy; unpacked warships cannot."""
+    return bool(packed_ship_type(name, library) or (
+        name in library and _is_land(library[name]) and not is_artillery(name, library)))
+
+
+def custom_unit_types(library):
+    """Selectable custom units, with every ship fighting in its Truck form."""
+    return [name for name, stats in library.items()
+            if stats.get("naval_unit") or campaign_unit_eligible(name, library)]
+
+
+def create_battle_unit(name, owner, library):
+    """Build a battle record using the shared ship-to-Truck stats."""
+    ship = packed_ship_type(name, library)
+    unit = queries.create_unit_dict(ship or name, owner, library)
+    if ship or library[name].get("naval_unit"):
+        queries.load_transport(unit, "Truck")
+    return unit
+
+
 def campaign_sides(player_unit, province, nation_data):
     """Every living unit on the tile on the player's side (player's unit first) and on the enemy side."""
     country = queries.get_unit_combat_owner(player_unit)
@@ -190,7 +220,6 @@ def campaign_forces(player_unit, province, nation_data, library):
     so the enemy list is empty when hostile artillery alone shares the tile: the player wins
     without a battle (win_against_artillery). Each list holds at most one army's units.
     """
-    land = set(land_unit_types(library))
     sides = campaign_sides(player_unit, province, nation_data)
     # Convoys caught on land unload before fighting. Recognize their divisions
     # without first building or simulating an automatic campaign battle.
@@ -199,7 +228,7 @@ def campaign_forces(player_unit, province, nation_data, library):
             return unit.get("original_type")
         return unit.get("type")
 
-    friendly, enemy = ([unit for unit in side if land_type(unit) in land][:c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE]
+    friendly, enemy = ([unit for unit in side if campaign_unit_eligible(land_type(unit), library)][:c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE]
                        for side in sides)
     if not friendly or friendly[0] is not player_unit or not (enemy or _artillery(sides[1], library)):
         return None
@@ -275,7 +304,8 @@ def campaign_roster(units, library):
     """Battle roster entries for campaign units, keeping each unit's fraction of health."""
     roster = []
     for unit in units:
-        entry = queries.create_unit_dict(unit["type"], unit["owner"], library)
+        # Packed ships already carry their current transport stats, including damage.
+        entry = dict(unit) if packed_ship_type(unit["type"], library) else create_battle_unit(unit["type"], unit["owner"], library)
         entry["health"] = unit["health"] / unit["max_health"] * entry["max_health"]
         roster.append(entry)
     return roster
@@ -338,6 +368,8 @@ def random_armies(candidates, *, rng=None):
 
 def unit_shape(name, library):
     """Choose prototype geometry from existing family and capability metadata."""
+    if packed_ship_type(name, library) or library.get(name, {}).get("naval_unit"):
+        return "motorized"
     stats = library[name]
     family = queries.get_unit_metadata(name, library).get("family", "")
     if family in FAMILY_SHAPES:
@@ -606,13 +638,14 @@ class BattleSimulation:
             self.battlefield = battle_terrain.Battlefield.generate(
                 self.terrain, ARENA_SIZE, MAX_UNIT_RADIUS, SPAWN_FRONT_GAP, self.seed,
                 deployment_half_height=(max(SUBUNIT_COUNTS.values()) - 1) * SUBUNIT_SPACING / 2)
-        allowed = set(land_unit_types(self.library))
+        allowed = set(custom_unit_types(self.library))
         for side, roster in enumerate((self.friendly, self.enemy)):
             if not roster or len(roster) > c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE:
-                raise ValueError(f"Each army needs 1 to {c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE} land units.")
+                raise ValueError(f"Each army needs 1 to {c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE} units.")
             if any((entry["type"] if isinstance(entry, dict) else entry) not in allowed
+                   and not packed_ship_type(entry["type"] if isinstance(entry, dict) else entry, self.library)
                    for entry in roster):
-                raise ValueError("Custom battles accept only current land-unit identifiers.")
+                raise ValueError("Custom battles accept only current land-unit or ship identifiers.")
             front = (ARENA_SIZE[0] - SPAWN_FRONT_GAP) / 2
             for index, entry in enumerate(roster):
                 name = entry["type"] if isinstance(entry, dict) else entry
@@ -621,11 +654,13 @@ class BattleSimulation:
                 if side:
                     x = ARENA_SIZE[0] - x
                 owner = entry["owner"] if isinstance(entry, dict) else "Enemy" if side else "Friendly"
-                data = queries.create_unit_dict(name, owner, self.library)
+                data = (dict(entry) if isinstance(entry, dict) and packed_ship_type(name, self.library)
+                        else create_battle_unit(name, owner, self.library))
                 if isinstance(entry, dict):
-                    if not valid_starting_health(entry["health"], data["max_health"]):
+                    source_max = entry["max_health"] if self.library.get(name, {}).get("naval_unit") else data["max_health"]
+                    if not valid_starting_health(entry["health"], source_max):
                         raise ValueError("Starting HP must be above zero and no greater than the unit's maximum HP.")
-                    data["health"] = entry["health"]
+                    data["health"] = entry["health"] / source_max * data["max_health"]
                 members = self._deploy_division(data, side, x, unit_shape(name, self.library))
                 lane = (index - (len(roster) - 1) / 2) * APPROACH_LANE_GAP
                 for fighter in members:

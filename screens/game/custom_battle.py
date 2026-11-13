@@ -551,11 +551,11 @@ class CustomBattleScreen(Screen):
             key=lambda country: queries.get_country_display_name(country, self.country_data))
         if not self.nationalities:
             raise ValueError("Custom battles need at least one playable country in countries_data.json.")
-        self.unit_names = sorted(combat.land_unit_types(self.library), key=lambda name: (
+        self.unit_names = sorted(combat.custom_unit_types(self.library), key=lambda name: (
             queries.get_unit_metadata(name, self.library)["family"],
             queries.get_unit_tier(name, self.library)))
         allowed = set(self.unit_names)
-        self.rosters = [[unit for unit in roster if unit["type"] in allowed] for roster in self.rosters]
+        self.rosters = [[unit for unit in roster if (combat.packed_ship_type(unit["type"], self.library) or unit["type"]) in allowed] for roster in self.rosters]
         self.selected = [None, None]
         self.group = [[], []]
         self.controlled_index = None
@@ -681,7 +681,8 @@ class CustomBattleScreen(Screen):
         self.battle_artwork = {}
         for name in dict.fromkeys(unit["type"] for roster in self.rosters for unit in roster):
             family = queries.get_unit_metadata(name, self.library)["family"]
-            artwork = BATTLE_ART_FAMILIES.get(family)
+            artwork = (BATTLE_ART_FAMILIES["Motorized Infantry Type"] if combat.packed_ship_type(name, self.library)
+                       else BATTLE_ART_FAMILIES.get(family))
             self.battle_artwork[name] = artwork
             if artwork is not None:
                 _load_battle_art(artwork)
@@ -889,7 +890,7 @@ class CustomBattleScreen(Screen):
     def _new_unit(self, side, name, country=None):
         if country is None:
             country = self.nationalities[min(side, len(self.nationalities) - 1)]
-        return queries.create_unit_dict(name, country, self.library)
+        return combat.create_battle_unit(name, country, self.library)
 
     def duplicate_unit(self, side):
         if self.mode != "setup" or self.campaign is not None or side not in (0, 1):
@@ -1812,7 +1813,8 @@ class CustomBattleScreen(Screen):
             font = fonts.get("tiny")
             if self.mode == "preview":
                 # Preview shows no unit name: a large icon, then a health bar with the flag to its right.
-                icon = symbol_loader.get_symbol(name, zoom=1, color=TEAM_COLORS[side],
+                preview_name = (combat.packed_ship_type(name, self.library) or name) if self.campaign is None else name
+                icon = symbol_loader.get_symbol(preview_name, zoom=1, color=TEAM_COLORS[side],
                                                 country=unit["owner"], fit_size=PREVIEW_CARD_ICON_SIZE)
                 if icon is not None:
                     card.blit(icon, icon.get_rect(center=(width // 2, PREVIEW_ICON_CENTER_Y)))

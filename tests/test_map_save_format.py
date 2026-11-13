@@ -137,6 +137,29 @@ class MapSaveFormatTests(unittest.TestCase):
         self.assertTrue(context.tactical_mode)
         self.assertIs(context.player_unit, player)
 
+    def test_packed_ship_tactical_control_and_health_survive_disk_load(self):
+        context, _province, player = self.tactical_context()
+        library = queries.get_unit_library(context)
+        library["Fixture Ship I"] = dict(health=600, attack=80, defense=4, speed=3, naval_unit=True)
+        player.update(queries.create_unit_dict("Fixture Ship I", player["owner"], library))
+        queries.load_transport(player, "Truck")
+        player["health"] = player["max_health"] / 2
+        metadata = queries.build_save_dict(context, include_provinces=False)
+        with tempfile.TemporaryDirectory() as directory, \
+                mock.patch.object(queries, "get_country_data", return_value={}), \
+                mock.patch.object(queries, "get_settings", return_value={}):
+            with open(os.path.join(directory, "meta.json"), "w", encoding="utf-8") as handle:
+                json.dump(metadata, handle)
+            with open(os.path.join(directory, "map_data.json"), "w", encoding="utf-8") as handle:
+                json.dump(queries.build_map_data_save(context), handle)
+            shutil.copyfile(os.path.join(c.BACKGROUNDS_DIR, "Province.png"), os.path.join(directory, "id_map.png"))
+            loaded = load_map.load_backend_state(directory, skip_initial_income=True)
+        self.assertTrue(loaded.tactical_mode)
+        self.assertEqual(loaded.player_unit["unit_id"], player["unit_id"])
+        self.assertEqual(loaded.player_unit["type"], player["type"])
+        self.assertEqual(loaded.player_unit["health"] / loaded.player_unit["max_health"], 0.5)
+        self.assertEqual(queries.build_save_dict(loaded)["tactical_player_unit_id"], player["unit_id"])
+
     def test_realtime_player_projection_omits_tactical_control(self):
         context, _province, player = self.tactical_context()
         context.scenario_settings["fog_of_war"] = False
