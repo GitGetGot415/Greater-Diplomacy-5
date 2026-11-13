@@ -162,6 +162,22 @@ class EditorScreenSmokeTests(unittest.TestCase):
             self.assertIsNot(screen.window_preview_surface, first)
             self.exercise(screen)
 
+    def test_standalone_menu_is_one_column_of_equal_buttons(self):
+        import data.constants as c
+        from screens.menus.menu import Menu
+        menu = Menu("Fixture", {})
+        column = [button for button in menu.elements if button is not getattr(menu, "exit_btn", None)]
+        self.assertEqual([button.text for button in column],
+                         ["New Game", "Load Game", "Settings", "Music", "Credits"])
+        self.assertEqual(len({button.rect.size for button in column}), 1)
+        self.assertEqual(len({button.rect.centerx for button in column}), 1)
+        self.assertEqual([button.rect.y for button in column], sorted(button.rect.y for button in column))
+        self.assertTrue(all(button.image is None for button in column))
+        self.assertEqual(len({tuple(button.color) for button in column}), 1)
+        # The button panel sits behind the whole column.
+        self.assertTrue(all(menu.button_panel_rect.contains(button.rect) for button in column))
+        self.assertEqual(menu.version_status, f"Made with Greater Diplomacy 5 ({c.GAME_VERSION})")
+
     def test_standalone_new_game_opens_the_country_selector_for_more_than_one_country(self):
         from screens.menus.menu import Menu
         entries = self.interesting_entries()

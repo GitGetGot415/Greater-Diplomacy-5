@@ -120,8 +120,17 @@ MENU_BUTTON_TABLE = [
     }
 ]
 
-# A standalone game keeps only these table buttons. New Game starts its one scenario.
+# A standalone game keeps only these table buttons, in this order below New Game. New Game starts its one scenario.
 STANDALONE_MENU_STATES = ("LOAD_GAME", "SETTINGS", "MUSIC_PLAYER", "CREDITS")
+# A standalone game's menu is one centered column of equal grey text buttons on the button panel.
+STANDALONE_MENU_BUTTON_SIZE = (180, 38)
+STANDALONE_MENU_BUTTON_GAP = 10
+STANDALONE_MENU_TEXT_SIZE = 24
+STANDALONE_MENU_BUTTON_COLOR = "grey"
+
+# The sound each table button plays. Other buttons click.
+MENU_BUTTON_SOUNDS = {"MUSIC_PLAYER": "open_music", "SETTINGS": "open_settings", "CREDITS": "paper",
+                      "VIEW_ASSETS": "paper", "MODS": "paper", "TRANSLATION_MENU": "paper"}
 
 
 def _menu_table_rows(table, standalone):
@@ -431,14 +440,13 @@ class Menu(Screen):
                 lambda state=button_data["state"]: self.go_to(state),
                 image=ui_elements.UI_ICONS.get(button_data.get("image")),
                 font_size=button_data.get("text_size"),
-                sound_kind={"MUSIC_PLAYER": "open_music", "SETTINGS": "open_settings",
-                            "CREDITS": "paper", "VIEW_ASSETS": "paper",
-                            "MODS": "paper", "TRANSLATION_MENU": "paper"}.get(
-                    button_data["state"], "click"),
+                sound_kind=MENU_BUTTON_SOUNDS.get(button_data["state"], "click"),
             )
             setattr(self, button_data["attribute"], button)
             self.elements.append(button)
-        
+        if self.is_standalone:
+            self._build_standalone_buttons()
+
         self._center_button_targets = [(button, button.rect.topleft) for button in self.elements]
         bounds = self.new_game_btn.rect.unionall([button.rect for button in self.elements])
         self._button_panel_target = bounds.inflate(2 * MENU_BUTTON_PANEL_PADDING, 2 * MENU_BUTTON_PANEL_PADDING)
@@ -565,7 +573,7 @@ class Menu(Screen):
         self._position_center_buttons(0.0)
 
         if self.is_standalone:
-            self.version_status = f"Greater Diplomacy 5 {c.GAME_VERSION}"
+            self.version_status = f"Made with Greater Diplomacy 5 ({c.GAME_VERSION})"
         else:
             self.trigger_version_check()
 
@@ -648,6 +656,23 @@ class Menu(Screen):
             print(f"Failed to load the Hildehrand image: {e}")
             self._hildehrand_plain_image = None
         self._refresh_hildehrand_image()
+
+    def _build_standalone_buttons(self):
+        """Replace the menu buttons with one centered column: New Game, then STANDALONE_MENU_STATES."""
+        rows = {row["state"]: row for row in MENU_MAIN_BUTTON_TABLE + MENU_BUTTON_TABLE}
+        column = [("new_game_btn", "New Game", None)] + [
+            (rows[state]["attribute"], rows[state]["text"], state) for state in STANDALONE_MENU_STATES]
+        width, height = STANDALONE_MENU_BUTTON_SIZE
+        top = (c.SCREEN_HEIGHT - len(column) * height - (len(column) - 1) * STANDALONE_MENU_BUTTON_GAP) // 2
+        self.elements = []
+        for index, (attribute, text, state) in enumerate(column):
+            callback = (lambda: self.go_to(self._standalone_new_game_state())) if state is None else (
+                lambda state=state: self.go_to(state))
+            button = Button((c.SCREEN_WIDTH - width) // 2, top + index * (height + STANDALONE_MENU_BUTTON_GAP),
+                            STANDALONE_MENU_BUTTON_SIZE, STANDALONE_MENU_BUTTON_COLOR, text, callback,
+                            font_size=STANDALONE_MENU_TEXT_SIZE, sound_kind=MENU_BUTTON_SOUNDS.get(state, "click"))
+            setattr(self, attribute, button)
+            self.elements.append(button)
 
     def _standalone_new_game_state(self):
         """A standalone game with more than one interesting country opens its country selector first."""
