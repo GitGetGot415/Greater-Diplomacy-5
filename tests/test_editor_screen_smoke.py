@@ -7,6 +7,7 @@ refactor touches. Each is built against the real 1939 map and put through
 refresh_ui, a draw and a wheel notch.
 """
 
+import os
 import unittest
 from unittest import mock
 
@@ -383,21 +384,28 @@ class EditorScreenSmokeTests(unittest.TestCase):
             preview.draw(self.surface)
 
     def test_game_preview_uses_standalone_credits_and_music_without_library_changes(self):
+        import base64
         from copy import deepcopy
         from data import queries
+        from ui import music_playback
         preview = self.make_game_preview()
         preview.open_screen("CREDITS")
         self.assertEqual(preview.current_screen.credits_list, [])
         albums = deepcopy(self.controller.active_albums)
-        with mock.patch.object(self.controller, "all_albums", {"Fixture": ["fixture/song.mp3"]}), mock.patch.object(self.controller, "play_specific_song") as play, mock.patch.object(queries, "save_global_settings") as save, mock.patch.object(queries, "save_cached_json") as save_json, mock.patch.object(queries, "delete_album") as delete_album:
+        preview.settings["music"].update(album_name="Fixture", songs=[{"name": "song.mp3", "data": base64.b64encode(b"fixture audio").decode("ascii")}])
+        def run_loading(steps, status, on_done, on_error):
+            list(steps)
+            on_done(None)
+        with mock.patch("screens.editors.standalone_export.screen_runner.run_loading", side_effect=run_loading), mock.patch.object(self.controller, "play_specific_song") as play, mock.patch.object(queries, "save_global_settings") as save, mock.patch.object(queries, "save_cached_json") as save_json, mock.patch.object(queries, "delete_album") as delete_album:
             preview.open_screen("MUSIC_PLAYER")
             player = preview.current_screen
             self.assertTrue(player.is_standalone)
-            player.play_track("fixture/song.mp3")
-            play.assert_called_once_with("fixture/song.mp3")
+            track = player.playlist[0]
+            player.play_track(track)
+            play.assert_called_once_with(track)
             with mock.patch.object(self.controller, "play_random_song") as random_song:
                 player.play_track()
-                random_song.assert_called_once_with(playlist=["fixture/song.mp3"])
+                random_song.assert_called_once_with(playlist=[track])
             player.toggle_album("Fixture")
             self.assertNotIn("Fixture", player.active_albums)
             player.toggle_album("Fixture")
@@ -413,6 +421,15 @@ class EditorScreenSmokeTests(unittest.TestCase):
             delete_album.assert_not_called()
             self.assertEqual(self.controller.active_albums, albums)
             preview.draw(self.surface)
+            preview_directory = preview.preview_music_directory.name
+            playing = object.__new__(music_playback.PygamePlayback)
+            playing.stop = mock.Mock()
+            with mock.patch.object(self.controller, "now_playing", track), mock.patch.object(self.controller, "music", playing), mock.patch.object(self.controller, "play_random_song") as resume, mock.patch.object(pygame.mixer.music, "unload") as unload:
+                preview.exit_screen()
+            resume.assert_called_once_with()
+            playing.stop.assert_called_once_with()
+            unload.assert_called_once_with()
+            self.assertFalse(os.path.exists(preview_directory))
 
     def test_interesting_countries_load_from_a_saved_scenario(self):
         from data import queries

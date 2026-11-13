@@ -181,12 +181,15 @@ class Music_Player(ScrollPanes, Screen):
     standalone = None
     progress_slider = None
 
-    def __init__(self, controller, *, standalone=None, preview=False):
+    def __init__(self, controller, *, standalone=None, preview=False, preview_albums=None, album_directories=None, preview_starting_song=None):
         super().__init__()
         self.controller = controller
         self.standalone = standalone
         self.preview = preview
-        self.preview_active_albums = list(controller.all_albums) if preview else []
+        self.preview_albums = controller.all_albums if preview_albums is None else preview_albums
+        self.preview_album_directories = album_directories or {}
+        self.preview_starting_song = preview_starting_song
+        self.preview_active_albums = list(self.preview_albums) if preview else []
         self.bg_color = (25, 25, 30)
         self.back_state = "MENU"
         
@@ -226,7 +229,7 @@ class Music_Player(ScrollPanes, Screen):
     @property
     def playlist(self):
         if self.preview:
-            return [track for album in self.preview_active_albums for track in self.controller.all_albums[album]]
+            return [track for album in self.preview_active_albums for track in self.preview_albums[album]]
         return self.controller.playlist
 
     def on_enter(self, app, previous):
@@ -258,7 +261,7 @@ class Music_Player(ScrollPanes, Screen):
             
             # --- IMPROVED COVER ART SEARCH ---
             icon_img = None
-            album_dir = None if album is None else os.path.join(c.MUSIC_DIR, album)
+            album_dir = None if album is None else self.album_directory(album)
             
             if album_dir is not None and os.path.exists(album_dir):
                 # Search the album folder for ANY valid image file to use as the cover art
@@ -713,8 +716,14 @@ class Music_Player(ScrollPanes, Screen):
     # --- PLAYLIST ACTIONS ---
     def album_display_order(self):
         """Album names in screen order: ALBUM_ORDER first, then the rest A to Z."""
-        pinned = [album for album in ALBUM_ORDER if album in self.controller.all_albums]
-        return pinned + sorted(album for album in self.controller.all_albums if album not in pinned)
+        albums = self.preview_albums if self.preview else self.controller.all_albums
+        pinned = [album for album in ALBUM_ORDER if album in albums]
+        return pinned + sorted(album for album in albums if album not in pinned)
+
+    def album_directory(self, album):
+        if self.preview and album in self.preview_album_directories:
+            return self.preview_album_directories[album]
+        return os.path.join(c.MUSIC_DIR, album)
 
     def deletable_albums(self):
         """The albums that accept new songs: every album not in UNDELETABLE_ALBUMS."""
@@ -881,7 +890,7 @@ class Music_Player(ScrollPanes, Screen):
     def draw_starting_song_label(self, surface):
         """Fixed HUD label showing which track, if any, starts on boot."""
         font = fonts.get("normal")
-        track = self.controller.starting_song
+        track = self.preview_starting_song if self.preview else self.controller.starting_song
         name = os.path.basename(track) if track else "None (Random)"
         label = fit_text(f"Starting Song: {name}", font, MUSIC_RIGHT_CONTROL_W)
         surface.blit(font.render(label, True, c.COLOR_GOLD_HIGHLIGHT),

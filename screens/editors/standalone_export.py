@@ -1,5 +1,6 @@
 """Separate screen that sets up and exports the edited scenario as a standalone game."""
 import os
+import tempfile
 from copy import deepcopy
 from types import SimpleNamespace
 
@@ -7,9 +8,9 @@ import pygame
 
 import data.constants as c
 from data import queries
-from data.io import keybind_io, settings_schema, standalone_game
+from data.io import keybind_io, settings_schema, standalone_game, standalone_music
 from data.map import save_map
-from data.platform import IS_WEB, downloads_dir
+from data.platform import IS_WEB, LoadingSteps, downloads_dir
 from screens.menus.menu import Menu
 from screens.menus.credits import Credits
 from screens.menus.keybinds import Keybinds
@@ -18,7 +19,7 @@ from screens.menus.mouse_settings import Mouse_Settings
 from screens.menus.music_player import Music_Player
 from screens.menus.settings import Settings
 from screens.setup import country_select
-from ui import dialogs
+from ui import dialogs, music_playback
 from ui.bars import ui_bars
 from ui.dialogs import pickers
 from ui.navigation import screen_runner
@@ -29,10 +30,26 @@ from ui.rendering.standalone_background import StandaloneBackground
 from ui.widgets import text_utils
 from ui.widgets.ui_elements import Button, draw_pixel_panel, make_back_button, toggle_color
 
-# --- Layout. Both sections share one left edge and a fixed width. ---
-PANEL_WIDTH = 1000
-PANEL_PADDING = 24
+# --- Layout. Background and countries share the left column; music occupies the right. ---
+PANEL_X = 24
+PANEL_WIDTH = 780
+PANEL_PADDING = 20
 BACKGROUND_TOP = 90
+MUSIC_PANEL_X = PANEL_X + PANEL_WIDTH + 16
+MUSIC_PANEL_WIDTH = c.SCREEN_WIDTH - MUSIC_PANEL_X - PANEL_X
+MUSIC_BUTTON_SIZE = (140, 30)
+MUSIC_BASE_BUTTON_SIZE = (190, 28)
+MUSIC_STARTING_Y = BACKGROUND_TOP + 52
+MUSIC_SONGS_Y = MUSIC_STARTING_Y + 92
+MUSIC_ICON_Y = MUSIC_SONGS_Y + 90
+MUSIC_NAME_Y = MUSIC_ICON_Y + 70
+MUSIC_BASE_Y = MUSIC_NAME_Y + 72
+MUSIC_BASE_TOP = MUSIC_BASE_Y + 26
+MUSIC_BASE_ROW_GAP = 34
+MUSIC_SIZE_Y = MUSIC_BASE_Y + 138
+MUSIC_CLEAR_SIZE = (70, 30)
+MUSIC_ICON_SIZE = (56, 56)
+MUSIC_SIZE_UNITS = ("B", "KiB", "MiB", "GiB")
 BACKGROUND_HEIGHT = 246
 COUNTRIES_TOP = 350
 COUNTRIES_BOTTOM = c.SCREEN_HEIGHT - 90
@@ -43,13 +60,13 @@ SETTING_LABEL_WIDTH = 220
 SETTING_BUTTON_SIZE = (140, 36)
 CLEAR_BUTTON_SIZE = (70, 36)
 IMAGE_FIT_BUTTON_SIZE = (100, 36)
-WINDOW_PREVIEW_WIDTH = 200
+WINDOW_PREVIEW_WIDTH = 160
 WINDOW_PREVIEW_BORDER = 2
 SWATCH_SIZE = (36, 36)
 COUNTRY_ROW_HEIGHT = 42
 COUNTRY_LIST_TOP = COUNTRIES_TOP + 100
 COUNTRY_LIST_BOTTOM = COUNTRIES_BOTTOM - 16
-RANK_WIDTH, NAME_WIDTH, DESCRIPTION_WIDTH, REMOVE_WIDTH = 90, 220, 500, 90
+RANK_WIDTH, NAME_WIDTH, DESCRIPTION_WIDTH, REMOVE_WIDTH = 80, 170, 350, 70
 SCROLLBAR_GAP = 12
 TEXT_COLOR = (230, 230, 230)
 PANEL_COLOR = (34, 40, 52)
@@ -76,21 +93,27 @@ class Standalone_Export_Screen(Screen):
     _image_size = ("", "No image")
     # The settings and screen size of the last window preview, and the preview. See window_preview.
     _window_preview = (None, None)
+    # Album icon decoding is cached across country-list scrolling and other UI rebuilds.
+    _music_icon_text = None
+    _music_icon = None
 
     def on_enter(self, app, previous):
         self.controller = app
         self.map_screen = app.states["MAP"]
         self.scroll_y = 0
+        self.base_album_inventory = standalone_music.base_album_inventory()
         self.refresh_ui()
 
     def settings(self):
         return queries.normalized_standalone_export_settings(self.map_screen.standalone_export_settings)
 
     def refresh_ui(self):
-        panel_x = (c.SCREEN_WIDTH - PANEL_WIDTH) // 2
+        panel_x = PANEL_X
         self.elements = [make_back_button(self.exit_screen, pos=(panel_x, FOOTER_Y))]
         self.swatches, self.labels, self.row_labels = [], [], []
         self.column_labels = []
+        self.music_labels = []
+        self.music_icon_surface = None
         if self.map_screen is None:
             return
         settings = self.settings()
@@ -100,6 +123,7 @@ class Standalone_Export_Screen(Screen):
         control_x = left_x + SETTING_LABEL_WIDTH
         self.background_panel = pygame.Rect(panel_x, BACKGROUND_TOP, PANEL_WIDTH, BACKGROUND_HEIGHT)
         self.country_panel = pygame.Rect(panel_x, COUNTRIES_TOP, PANEL_WIDTH, COUNTRIES_BOTTOM - COUNTRIES_TOP)
+        self.music_panel = pygame.Rect(MUSIC_PANEL_X, BACKGROUND_TOP, MUSIC_PANEL_WIDTH, COUNTRIES_BOTTOM - BACKGROUND_TOP)
 
         def setting_button(x, y, color, label, callback, enabled=True, size=SETTING_BUTTON_SIZE, row=False, selected=False):
             button = Button(x, y, size, color, label, callback)
@@ -172,12 +196,112 @@ class Standalone_Export_Screen(Screen):
             x += DESCRIPTION_WIDTH + BUTTON_GAP
             setting_button(x, y, "red", "Remove", lambda country=country: self.remove_country(country), size=(REMOVE_WIDTH, height), row=True)
 
-        export_x = self.country_panel.right - FOOTER_BUTTON_SIZE[0]
+        music = settings["music"]
+        music_x = self.music_panel.x + PANEL_PADDING
+        self.labels.append(("Album & Music", (music_x, BACKGROUND_TOP + 24), "midleft"))
+        self.music_labels.extend([("Starting Song", (music_x, MUSIC_STARTING_Y)), (text_utils.fit_text(music["starting_song"] or "None", fonts.get("small"), MUSIC_PANEL_WIDTH - 2 * PANEL_PADDING), (music_x, MUSIC_STARTING_Y + 65)), (f"Other Songs: {len(music['songs']) - bool(music['starting_song'])}", (music_x, MUSIC_SONGS_Y)), ("Album Icon", (music_x, MUSIC_ICON_Y)), ("Album Name", (music_x, MUSIC_NAME_Y)), ("Include Base GD5 Albums", (music_x, MUSIC_BASE_Y))])
+        setting_button(music_x, MUSIC_STARTING_Y + 26, "blue", "Choose Song", self.choose_starting_song, size=MUSIC_BUTTON_SIZE)
+        setting_button(music_x + MUSIC_BUTTON_SIZE[0] + BUTTON_GAP, MUSIC_STARTING_Y + 26, "red", "Clear", lambda: self.change_music(starting_song=""), enabled=bool(music["starting_song"]), size=MUSIC_CLEAR_SIZE)
+        setting_button(music_x, MUSIC_SONGS_Y + 26, "blue", "Add Songs", self.choose_other_songs, size=MUSIC_BUTTON_SIZE)
+        setting_button(music_x + MUSIC_BUTTON_SIZE[0] + BUTTON_GAP, MUSIC_SONGS_Y + 26, "red", "Remove Song", self.remove_music_song, enabled=any(song["name"] != music["starting_song"] for song in music["songs"]), size=MUSIC_BUTTON_SIZE)
+        setting_button(music_x, MUSIC_ICON_Y + 26, "blue", "Choose icon.png", self.choose_album_icon, size=MUSIC_BUTTON_SIZE)
+        setting_button(music_x + MUSIC_BUTTON_SIZE[0] + BUTTON_GAP, MUSIC_ICON_Y + 26, "red", "Clear", lambda: self.change_music(icon=""), enabled=bool(music["icon"]), size=MUSIC_CLEAR_SIZE)
+        if music["icon"]:
+            if self._music_icon_text != music["icon"]:
+                self._music_icon_text = music["icon"]
+                try:
+                    self._music_icon = pygame.transform.smoothscale(queries.load_png_b64(music["icon"]), MUSIC_ICON_SIZE)
+                except (ValueError, pygame.error):
+                    self._music_icon = None
+            self.music_icon_surface = self._music_icon
+        self.music_icon_rect = pygame.Rect(self.music_panel.right - PANEL_PADDING - MUSIC_ICON_SIZE[0], MUSIC_ICON_Y + 2, *MUSIC_ICON_SIZE)
+        name = music["album_name"] or self.map_screen.editor_scenario_name or "Set Album Name"
+        setting_button(music_x, MUSIC_NAME_Y + 26, "blue", name, self.choose_album_name, size=(MUSIC_PANEL_WIDTH - 2 * PANEL_PADDING, 30))
+        for index, album in enumerate(c.UNDELETABLE_ALBUMS):
+            column, row = index % 2, index // 2
+            included = album in music["base_albums"]
+            setting_button(music_x + column * (MUSIC_BASE_BUTTON_SIZE[0] + BUTTON_GAP), MUSIC_BASE_TOP + row * MUSIC_BASE_ROW_GAP, toggle_color(included), album, lambda album=album: self.toggle_base_album(album), enabled=album in self.base_album_inventory, size=MUSIC_BASE_BUTTON_SIZE, selected=included)
+        total_bytes = standalone_music.music_size(music, self.base_album_inventory)
+        size = total_bytes
+        for unit in MUSIC_SIZE_UNITS:
+            if size < 1024 or unit == MUSIC_SIZE_UNITS[-1]:
+                break
+            size /= 1024
+        self.music_labels.append((f"Music Files: {size:.2f} {unit}", (music_x, MUSIC_SIZE_Y)))
+
+        export_x = self.music_panel.right - FOOTER_BUTTON_SIZE[0]
         self.elements.append(Button(export_x - FOOTER_BUTTON_SIZE[0] - BUTTON_GAP, FOOTER_Y, FOOTER_BUTTON_SIZE, "light_blue", "Preview Game", self.preview))
         export_button = Button(export_x, FOOTER_Y, FOOTER_BUTTON_SIZE, "blue", "Export Game", self.export)
         # The web build cannot write a game folder for players to run.
         export_button.apply_state(enabled=not IS_WEB, color="blue")
         self.elements.append(export_button)
+
+    def change_music(self, **changes):
+        self.change_setting("music", dict(self.settings()["music"], **changes))
+
+    def import_music_paths(self, paths, *, starting=False):
+        if not queries.can_bulk_edit_map(self.map_screen):
+            return
+        music = self.settings()["music"]
+        try:
+            for path in paths:
+                music = standalone_music.import_song(music, path, starting=starting)
+            self.change_setting("music", music)
+        except (OSError, ValueError) as error:
+            dialogs.show_error("Standalone Music", str(error))
+
+    def choose_starting_song(self):
+        music = self.settings()["music"]
+        if music["songs"]:
+            def chosen(name):
+                if name == "Import Song...":
+                    self.import_starting_song()
+                else:
+                    self.change_music(starting_song=name)
+            pickers.open_listbox_selector(self, "Starting Song", "Choose a song:", [song["name"] for song in music["songs"]] + ["Import Song..."], chosen)
+        else:
+            self.import_starting_song()
+
+    def import_starting_song(self):
+        pickers.open_file_browser(self, "Starting Song", downloads_dir(), extensions=list(standalone_music.SONG_EXTENSIONS), on_result=lambda path: self.import_music_paths([path], starting=True) if path else None)
+
+    def choose_other_songs(self):
+        pickers.open_file_browser(self, "Other Songs", downloads_dir(), mode="open_files", extensions=list(standalone_music.SONG_EXTENSIONS), on_result=lambda paths: self.import_music_paths(paths) if paths else None)
+
+    def remove_music_song(self):
+        music = self.settings()["music"]
+        names = [song["name"] for song in music["songs"] if song["name"] != music["starting_song"]]
+        pickers.open_listbox_selector(self, "Remove Song", "Choose a song:", names, lambda name: self.change_music(songs=[song for song in music["songs"] if song["name"] != name]))
+
+    def choose_album_icon(self):
+        def picked(path):
+            if not path or not queries.can_bulk_edit_map(self.map_screen):
+                return
+            try:
+                self.change_setting("music", standalone_music.import_icon(self.settings()["music"], path))
+            except (OSError, ValueError, pygame.error) as error:
+                dialogs.show_error("Standalone Music", str(error))
+        pickers.open_file_browser(self, "Album icon.png", downloads_dir(), extensions=[".png"], on_result=picked)
+
+    def choose_album_name(self):
+        def chosen(name):
+            if name is None:
+                return
+            try:
+                name = queries.validated_scenario_name(name, label="Album Name")
+                standalone_music.album_name(dict(self.settings()["music"], album_name=name), self.map_screen.editor_scenario_name)
+                self.change_music(album_name=name)
+            except ValueError as error:
+                dialogs.show_error("Standalone Music", str(error))
+        dialogs.ask_string("Album Name", "Album Name:", chosen, initial=self.settings()["music"]["album_name"], max_length=120, allow_empty=False)
+
+    def toggle_base_album(self, album):
+        included = list(self.settings()["music"]["base_albums"])
+        if album in included:
+            included.remove(album)
+        elif album in self.base_album_inventory:
+            included.append(album)
+        self.change_music(base_albums=[name for name in c.UNDELETABLE_ALBUMS if name in included])
 
     def image_size_text(self, settings):
         """Name the chosen image's size, or say that none is chosen.
@@ -214,13 +338,15 @@ class Standalone_Export_Screen(Screen):
 
     def additional_draw(self, surface):
         if self.map_screen is not None:
-            for rect in (self.background_panel, self.country_panel):
+            for rect in (self.background_panel, self.country_panel, self.music_panel):
                 draw_pixel_panel(surface, rect, PANEL_COLOR, PANEL_BORDER_COLOR, gradient_strength=0.25)
             draw_pixel_panel(surface, self.list_panel, LIST_COLOR, PANEL_BORDER_COLOR, gradient_strength=0.15)
             surface.blit(self.window_preview_surface, self.window_preview_rect)
             pygame.draw.rect(surface, SWATCH_BORDER_COLOR,
                              self.window_preview_rect.inflate(2 * WINDOW_PREVIEW_BORDER, 2 * WINDOW_PREVIEW_BORDER),
                              WINDOW_PREVIEW_BORDER)
+        if self.music_icon_surface is not None:
+            surface.blit(self.music_icon_surface, self.music_icon_rect)
         for rect, color in self.swatches:
             surface.fill(color, rect)
             pygame.draw.rect(surface, SWATCH_BORDER_COLOR, rect, 2)
@@ -230,6 +356,8 @@ class Standalone_Export_Screen(Screen):
             surface.blit(rendered, rendered.get_rect(**{anchor[0] if anchor else "midtop": position}))
         if self.map_screen is None:
             return
+        for text, position in self.music_labels:
+            surface.blit(fonts.get("small").render(text, True, TEXT_COLOR), position)
         name_font = fonts.get("normal")
         for text, position in self.column_labels:
             surface.blit(name_font.render(text, True, TEXT_COLOR), position)
@@ -336,9 +464,14 @@ class Standalone_Export_Screen(Screen):
         if scenario_dir is None or not os.path.isdir(scenario_dir):
             dialogs.show_error("Standalone Export", "Save the map before exporting it as a standalone game.")
             return
+        try:
+            steps = standalone_game.export_steps(scenario_dir, name, self.settings())
+        except (OSError, ValueError) as error:
+            dialogs.show_error("Standalone Export", str(error))
+            return
         destination = standalone_game.export_dir(name)
         if not os.path.exists(destination):
-            self._run_export(scenario_dir, name)
+            self._run_export(steps)
             return
 
         def on_answer(replace):
@@ -352,15 +485,15 @@ class Standalone_Export_Screen(Screen):
                                    f"Could not replace {os.path.abspath(destination)}: {error.strerror}. "
                                    "Close the exported game and anything else using that folder, then try again.")
                 return
-            self._run_export(scenario_dir, name)
+            self._run_export(steps)
 
         dialogs.ask_yes_no("Standalone Export",
                            f"{os.path.abspath(destination)} already exists. Replace it? Saves inside it are deleted.",
                            on_answer)
 
-    def _run_export(self, scenario_dir, name):
+    def _run_export(self, steps):
         screen_runner.run_loading(
-            standalone_game.export_steps(scenario_dir, name, self.settings()), "Exporting Standalone Game...",
+            steps, "Exporting Standalone Game...",
             on_done=lambda path: self.map_screen.show_feedback(f"Exported standalone game to {path}"),
             on_error=lambda error: dialogs.show_error("Standalone Export", str(error)))
 
@@ -373,6 +506,8 @@ class Standalone_Menu_Preview(Screen):
         super().__init__()
         self.settings = queries.normalized_standalone_export_settings(settings)
         self.controller = controller
+        self.scenario_name = title
+        self.preview_music_directory = None
         self.nation_data, self.entries = nation_data or {}, entries
         # Exported games start with the shared preference defaults, without editor credentials or paths.
         self.settings_controller = SimpleNamespace(**deepcopy(settings_schema.defaults()))
@@ -409,7 +544,8 @@ class Standalone_Menu_Preview(Screen):
             elif state == "MUSIC_PLAYER":
                 if self.controller is None:
                     return
-                screen = Music_Player(self.controller, standalone=True, preview=True)
+                self.open_music_preview()
+                return
             elif state == "LOAD_GAME":
                 screen = Load_Game(standalone=True, preview=True, standalone_settings=self.settings)
             elif state == "CREDITS":
@@ -421,6 +557,57 @@ class Standalone_Menu_Preview(Screen):
         self.current_screen.done, self.current_screen.next_state = False, None
         if state == "SETTINGS":
             self.current_screen.refresh_ui()
+
+    def open_music_preview(self):
+        music = self.settings["music"]
+        albums = {name: list(self.controller.all_albums.get(name, ())) for name in music["base_albums"]}
+        try:
+            _copies, files = standalone_music.export_files(dict(music, base_albums=[]), self.scenario_name)
+        except ValueError as error:
+            dialogs.show_error("Standalone Music", str(error))
+            return
+        if not files:
+            self.screens["MUSIC_PLAYER"] = Music_Player(self.controller, standalone=True, preview=True, preview_albums=albums)
+            self.open_screen("MUSIC_PLAYER")
+            return
+        self.preview_music_directory = tempfile.TemporaryDirectory(prefix="gd5-music-preview-")
+        root = self.preview_music_directory.name
+        name = standalone_music.album_name(music, self.scenario_name)
+        directory = os.path.join(root, c.MUSIC_DIR, name)
+
+        def steps():
+            for relative, data in files:
+                yield f"Preparing {os.path.basename(relative)}..."
+                path = os.path.join(root, relative)
+                os.makedirs(os.path.dirname(path), exist_ok=True)
+                with open(path, "wb") as target:
+                    target.write(data)
+            albums[name] = [os.path.join(directory, song["name"]).replace("\\", "/") for song in music["songs"]]
+
+        def prepared(_result):
+            starting_song = os.path.join(directory, music["starting_song"]) if music["starting_song"] else None
+            self.screens["MUSIC_PLAYER"] = Music_Player(self.controller, standalone=True, preview=True, preview_albums=albums, album_directories={name: directory}, preview_starting_song=starting_song)
+            self.open_screen("MUSIC_PLAYER")
+
+        def failed(error):
+            self.preview_music_directory.cleanup()
+            self.preview_music_directory = None
+            dialogs.show_error("Standalone Music", str(error))
+
+        screen_runner.run_loading(LoadingSteps(steps(), len(files)), "Preparing Music Preview...", on_done=prepared, on_error=failed)
+
+    def exit_screen(self):
+        if self.preview_music_directory is not None:
+            root = self.preview_music_directory.name.replace("\\", "/") + "/"
+            if self.controller.now_playing.replace("\\", "/").startswith(root):
+                # Release the temporary playing file and continue the normal playlist before cleanup.
+                if isinstance(self.controller.music, music_playback.PygamePlayback):
+                    self.controller.music.stop()
+                    pygame.mixer.music.unload()
+                self.controller.play_random_song()
+            self.preview_music_directory.cleanup()
+            self.preview_music_directory = None
+        super().exit_screen()
 
     def follow_navigation(self):
         if not self.current_screen.done:

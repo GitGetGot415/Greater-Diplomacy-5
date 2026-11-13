@@ -405,6 +405,12 @@ omits the field or a value. It drops entries without a country ID or a known ran
 This additive field needs no conversion rule. A selected history turn keeps the map's current settings.
 A standalone export copies the settings into its `game.json`. An older `game.json` without them shows the default color.
 
+The optional `music` object stores `album_name`, `starting_song` (an imported filename), `songs` (filename `name` and Base64 `data`), `icon` (Base64 PNG data), and `base_albums` (names from the shipped album list).
+Imported files remain part of the scenario after their original files move or disappear. `data/io/standalone_music.py` owns normalization, import validation, size calculation, and export queues.
+Missing music settings default to an empty album with no included songs, preserving older exports' behavior. This additive field needs no conversion rule.
+The existing save builder and metadata loader preserve music in scenarios and saves; selected history keeps current export settings as before. Tournament player moves cannot edit export settings, and real-time projections continue to omit the whole field.
+Export writes the selected media to `assets/music/<album>/`, includes synth assets for JSON songs, and sets the exported copy of `starting_defaults.json` before generating its preference files. The source preference defaults stay unchanged.
+
 `SessionState.editor_scenario_name` is an editor draft. It is not saved in scenario data.
 The loader derives the name from the selected folder.
 `screens/editors/menus.py` owns save confirmation dialogs.

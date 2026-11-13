@@ -331,7 +331,8 @@ class ScenarioMetadataTests(unittest.TestCase):
 
     def test_standalone_export_settings_default_to_the_background_color_and_repair_bad_values(self):
         defaults = {"background_color": list(c.DEFAULT_BG_COLOR), "background_image": "", "image_fit": "fill",
-                    "image_smoothing": True, "interesting_countries": []}
+                    "image_smoothing": True, "interesting_countries": [],
+                    "music": {"album_name": "", "starting_song": "", "songs": [], "icon": "", "base_albums": []}}
         for value in (None, {}, [], {"background_color": [1, 2, 300], "background_image": 5},
                       {"image_fit": "tile", "image_smoothing": "no"},
                       {"background_color": (1, 2, 3)}, {"interesting_countries": "A"}):
@@ -403,6 +404,8 @@ class ScenarioMetadataTests(unittest.TestCase):
         queries.set_editor_metadata(self.game, "Exported", "Author", "Description")
         queries.set_standalone_export_setting(self.game, "background_color", [7, 8, 9])
         queries.set_standalone_background_image(self.game, self.png_bytes())
+        music = queries.normalized_standalone_export_settings({"music": {"album_name": "Fixture Soundtrack", "starting_song": "Intro.mp3", "songs": [{"name": "Intro.mp3", "data": base64.b64encode(b"fixture audio").decode("ascii")}], "icon": self.game.standalone_export_settings["background_image"]}})["music"]
+        queries.set_standalone_export_setting(self.game, "music", music)
         path, _sync = self.write_scenario()
         saved, _map, _history = load_map.read_save_files(path)
         loaded = editor()

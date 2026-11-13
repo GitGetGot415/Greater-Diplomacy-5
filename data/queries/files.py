@@ -117,6 +117,14 @@ def create_album(name):
     return name
 
 
+def validated_music_file(source_path):
+    """Validate an imported song with the same formats used by the music player."""
+    extension = os.path.splitext(source_path)[1].lower()
+    if not (extension in c.MUSIC_AUDIO_EXTENSIONS or (extension == ".json" and beepbox_audio.is_beepbox_song(source_path))):
+        raise ValueError("The game plays MP3, WAV, and OGG files, and BeepBox or UltraBox JSON songs.")
+    return extension
+
+
 def add_song_to_album(source_path, album):
     """Copies a song file into an album folder and returns the new file name.
 
@@ -126,10 +134,7 @@ def add_song_to_album(source_path, album):
     album_dir = os.path.join(c.MUSIC_DIR, album)
     if not is_deletable_album(album) or not os.path.isdir(album_dir):
         raise ValueError(f"Songs cannot be added to {album}.")
-    extension = os.path.splitext(source_path)[1].lower()
-    if not (extension in c.MUSIC_AUDIO_EXTENSIONS
-            or (extension == ".json" and beepbox_audio.is_beepbox_song(source_path))):
-        raise ValueError("The game plays MP3, WAV, and OGG files, and BeepBox or UltraBox JSON songs.")
+    extension = validated_music_file(source_path)
     stem = os.path.splitext(os.path.basename(source_path))[0]
     file_name = stem + extension
     copy_number = 1

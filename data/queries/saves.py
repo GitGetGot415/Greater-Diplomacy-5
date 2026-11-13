@@ -2,6 +2,7 @@
 
 import copy
 import data.constants as c
+from data.io import standalone_music
 from types import SimpleNamespace
 from data.state_access import session_for, world_for
 from map_logic.diplomacy import faction_records, diplomacy_lifecycle
@@ -67,6 +68,7 @@ def normalized_standalone_export_settings(settings):
         entries.append({**entry, "description": description if isinstance(description, str) else ""})
         listed.add(entry["country"])
     result["interesting_countries"] = entries
+    result["music"] = standalone_music.normalized_music(result.get("music"))
     return result
 
 

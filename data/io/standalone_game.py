@@ -4,7 +4,7 @@ The map editor exports a standalone game to exports/<scenario name>/.
 That folder holds the game's source, the assets it shows, one scenario, and game.json.
 When game.json is next to the game at startup, the game runs in standalone mode.
 Standalone mode removes every way to reach another map, the editor, multiplayer, mods, tactical mode,
-unit art other than classic, and the GD5 version check. The music player stays, with no songs exported.
+unit art other than classic, and the GD5 version check. The music player uses the selected export albums.
 """
 
 import json
@@ -17,6 +17,7 @@ from data import queries
 from data.map import load_map
 from data.io.game_files import DESKTOP_SOURCE_FILES, EXPORTS_DIR, LICENSE_FILE, NATIVE_BINARIES, SOURCE_PACKAGES
 from data.io.starting_defaults import write_preference_defaults
+from data.io import standalone_music
 from data.platform import CHARACTERS_DIR, LoadingSteps
 
 GAME_FILE = "game.json"
@@ -26,7 +27,7 @@ SKIPPED_DIRS = ("__pycache__",)
 # Tactical mode is not exported. Turn processing still imports map_logic/custom_battle.py and map_logic/battle_terrain.py.
 EXCLUDED_SOURCE_FILES = ("screens/game/custom_battle.py", "screens/game/tactical_orders.py",
                          "screens/game/tactical_retreat.py")
-# Assets that a standalone game never shows: songs, the BeepBox and UltraBox synths that play them,
+# Music and its synthesizers are selected separately. Other excluded assets are
 # the GD5 menu's title, scenery, and portraits, every unit art style except classic, tactical battle art,
 # and the Assets screen's art and copyright notes.
 EXCLUDED_ASSETS = (
@@ -151,6 +152,9 @@ def export_steps(scenario_dir, name, settings):
     scenario_relative = os.path.join("scenarios", name)
     scenario_target = os.path.join(destination, scenario_relative)
     copies = _export_copies(scenario_dir, destination, scenario_target)
+    settings = queries.normalized_standalone_export_settings(settings)
+    music_copies, music_files = standalone_music.export_files(settings["music"], name)
+    copies.extend((source, os.path.join(destination, relative)) for source, relative in music_copies)
     executable = getattr(sys, "frozen", False) and os.name == "nt"
 
     def steps():
@@ -158,7 +162,15 @@ def export_steps(scenario_dir, name, settings):
             yield f"Copying {source}..."
             os.makedirs(os.path.dirname(target), exist_ok=True)
             shutil.copy2(source, target)
+        for relative, data in music_files:
+            yield f"Writing {relative}..."
+            target = os.path.join(destination, relative)
+            os.makedirs(os.path.dirname(target), exist_ok=True)
+            with open(target, "wb") as stream:
+                stream.write(data)
         yield "Writing game files..."
+        if settings["music"]["songs"] or settings["music"]["base_albums"]:
+            standalone_music.write_music_defaults(destination, settings["music"], name)
         write_preference_defaults(os.path.join(destination, "data", "json"))
         os.makedirs(os.path.join(destination, c.DEFAULT_SAVES_DIR), exist_ok=True)
         with open(os.path.join(destination, GAME_FILE), "w", encoding="utf-8") as stream:
@@ -170,4 +182,4 @@ def export_steps(scenario_dir, name, settings):
             shutil.copy2(sys.executable, os.path.join(destination, name + ".exe"))
         return os.path.abspath(destination)
 
-    return LoadingSteps(steps(), len(copies) + 1 + executable)
+    return LoadingSteps(steps(), len(copies) + len(music_files) + 1 + executable)

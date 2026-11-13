@@ -59,6 +59,7 @@ HIDDEN_IMPORTS = (
     "data.game_state", "data.session_state", "data.state_access",
     "data.research_display",
     "data.io.starting_defaults",
+    "data.io.standalone_music",
     "ui.background_styles",
     "ui.music_playback",
     "ui.widgets.content_browser",
