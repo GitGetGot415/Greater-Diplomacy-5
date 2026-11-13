@@ -843,7 +843,8 @@ class Menu(Screen):
         # Drives the whole intro: title drops from above, the sign slides in
         # from the right. Center buttons rise together with their panel;
         # other controls and bottom text retain their individual timings.
-        elapsed = pygame.time.get_ticks() - self.intro_start_ticks
+        # A standalone game's menu has no intro animation. Every part starts at rest.
+        elapsed = math.inf if self.is_standalone else pygame.time.get_ticks() - self.intro_start_ticks
 
         if self.title_rect:
             t = _ease_out_expo(elapsed / self.TITLE_INTRO_MS)
@@ -925,12 +926,8 @@ class Menu(Screen):
         return full_color
 
     def _draw_standalone_background(self, surface):
-        """Draw the standalone game's checkerboard or solid color, then its image over it."""
-        settings = self.standalone_settings
-        if settings["menu_background"] == "solid":
-            surface.fill(settings["background_color"])
-        else:
-            self.draw_checkerboard_background(surface, settings["background_color"])
+        """Fill the standalone game's background color, then draw its image over it."""
+        surface.fill(self.standalone_settings["background_color"])
         if self._background_image is None:
             return
         size = surface.get_size()

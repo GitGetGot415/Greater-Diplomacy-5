@@ -22,11 +22,6 @@ def normalized_scenario_metadata(metadata):
     return result
 
 
-#: Standalone menu background styles, in the order the Standalone Export screen offers them.
-#: Both styles use background_color.
-STANDALONE_MENU_BACKGROUNDS = ("checkerboard", "solid")
-
-
 def _is_rgb(value):
     return (isinstance(value, list) and len(value) == 3
             and all(type(channel) is int and 0 <= channel <= 255 for channel in value))
@@ -35,14 +30,11 @@ def _is_rgb(value):
 def normalized_standalone_export_settings(settings):
     """Copy standalone export settings. Missing or unreadable values use the defaults.
 
-    menu_background selects a checkerboard or a solid fill, both in background_color, an RGB list.
-    background_image is Base64 text of a PNG file, or empty. The menu draws it over the background.
-    Unknown fields are kept. Maps saved before these settings existed show the
-    default checkerboard, as every standalone game did before.
+    The standalone menu fills background_color, an RGB list. background_image is Base64 text
+    of a PNG file, or empty. The menu draws it over the background color.
+    Unknown fields are kept. Maps saved before these settings existed use the default color.
     """
     result = copy.deepcopy(settings) if isinstance(settings, dict) else {}
-    if result.get("menu_background") not in STANDALONE_MENU_BACKGROUNDS:
-        result["menu_background"] = STANDALONE_MENU_BACKGROUNDS[0]
     if not _is_rgb(result.get("background_color")):
         result["background_color"] = list(c.DEFAULT_BG_COLOR)
     if not isinstance(result.get("background_image"), str):

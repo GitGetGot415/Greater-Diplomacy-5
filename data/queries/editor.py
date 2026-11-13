@@ -132,6 +132,8 @@ def set_standalone_export_setting(context, key, value):
     """Change one standalone export setting only in an idle local editor."""
     if not can_bulk_edit_map(context):
         raise ValueError("Standalone export settings require an idle local map editor.")
+    if key not in normalized_standalone_export_settings({}):
+        raise ValueError(f"{key!r} is not a standalone export setting.")
     settings = world_for(context).standalone_export_settings
     updated = normalized_standalone_export_settings({**settings, key: value})
     if updated[key] != value:

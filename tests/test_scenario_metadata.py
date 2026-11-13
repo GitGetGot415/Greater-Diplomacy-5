@@ -329,26 +329,24 @@ class ScenarioMetadataTests(unittest.TestCase):
     def png_bytes():
         return base64.b64decode(queries.encode_rgba_to_b64(bytes([10, 20, 30, 255]) * 6, (3, 2)))
 
-    def test_standalone_export_settings_default_to_the_checkerboard_and_repair_bad_values(self):
-        defaults = {"menu_background": "checkerboard", "background_color": list(c.DEFAULT_BG_COLOR),
-                    "background_image": ""}
-        for value in (None, {}, [], {"menu_background": "plaid", "background_color": [1, 2, 300],
-                                     "background_image": 5}, {"background_color": (1, 2, 3)}):
+    def test_standalone_export_settings_default_to_the_background_color_and_repair_bad_values(self):
+        defaults = {"background_color": list(c.DEFAULT_BG_COLOR), "background_image": ""}
+        for value in (None, {}, [], {"background_color": [1, 2, 300], "background_image": 5},
+                      {"background_color": (1, 2, 3)}):
             with self.subTest(value=value):
                 self.assertEqual(queries.normalized_standalone_export_settings(value), defaults)
-        kept = {"menu_background": "solid", "background_color": [1, 2, 3], "extension": {"keep": True}}
+        kept = {"background_color": [1, 2, 3], "extension": {"keep": True}}
         self.assertEqual(queries.normalized_standalone_export_settings(kept),
                          {**defaults, **kept})
 
     def test_standalone_export_settings_change_only_with_valid_values_in_an_idle_editor(self):
-        queries.set_standalone_export_setting(self.game, "menu_background", "solid")
         queries.set_standalone_export_setting(self.game, "background_color", [1, 2, 3])
         queries.set_standalone_background_image(self.game, self.png_bytes())
         settings = self.game.standalone_export_settings
-        self.assertEqual((settings["menu_background"], settings["background_color"]), ("solid", [1, 2, 3]))
+        self.assertEqual(settings["background_color"], [1, 2, 3])
         self.assertEqual(base64.b64decode(settings["background_image"]), self.png_bytes())
         before = copy.deepcopy(settings)
-        for key, value in (("menu_background", "image"), ("background_color", [1, 2, 300])):
+        for key, value in (("menu_background", "solid"), ("background_color", [1, 2, 300])):
             with self.subTest(key=key), self.assertRaises(ValueError):
                 queries.set_standalone_export_setting(self.game, key, value)
         with self.assertRaises(ValueError):
@@ -364,7 +362,7 @@ class ScenarioMetadataTests(unittest.TestCase):
 
     def test_standalone_export_settings_survive_a_disk_round_trip(self):
         queries.set_editor_metadata(self.game, "Exported", "Author", "Description")
-        queries.set_standalone_export_setting(self.game, "menu_background", "solid")
+        queries.set_standalone_export_setting(self.game, "background_color", [7, 8, 9])
         queries.set_standalone_background_image(self.game, self.png_bytes())
         path, _sync = self.write_scenario()
         saved, _map, _history = load_map.read_save_files(path)
@@ -373,12 +371,12 @@ class ScenarioMetadataTests(unittest.TestCase):
         self.assertEqual(loaded.standalone_export_settings,
                          queries.normalized_standalone_export_settings(self.game.standalone_export_settings))
         older = editor()
-        older.standalone_export_settings["menu_background"] = "solid"
+        older.standalone_export_settings["background_color"] = [7, 8, 9]
         load_map.restore_scenario_metadata(older, {}, path)
         self.assertEqual(older.standalone_export_settings, queries.normalized_standalone_export_settings({}))
 
     def test_export_writes_the_settings_to_game_json_and_the_game_reads_them(self):
-        settings = queries.normalized_standalone_export_settings({"menu_background": "solid", "background_color": [4, 5, 6]})
+        settings = queries.normalized_standalone_export_settings({"background_color": [4, 5, 6]})
         destination = os.path.join(self.enterContext(tempfile.TemporaryDirectory()), "Fixture")
         with mock.patch.object(standalone_export.standalone_game, "export_dir", return_value=destination), \
                 mock.patch.object(standalone_export.standalone_game, "_export_copies", return_value=[]), \

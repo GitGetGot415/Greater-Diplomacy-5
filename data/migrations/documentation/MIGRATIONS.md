@@ -393,13 +393,12 @@ Each rule stores its type and strength as editor labels, such as `Make Peace Wit
 Renaming a released label needs a conversion rule. `bypass_scripted_events` stores the Bypass Scripted Events? toggle.
 Requests and answers that scripted events create carry an optional `scripted` field. Its absence means not scripted.
 
-`WorldState.standalone_export_settings` owns the Standalone Export screen's choices: the menu background style
-(a checkerboard or a solid fill), one background color for both styles, and the Base64 text of a PNG image
-that the menu draws over the background.
+`WorldState.standalone_export_settings` owns the Standalone Export screen's choices: the standalone menu's
+solid background color and the Base64 text of a PNG image that the menu draws over that color.
 The shared save builder writes it to `meta.json` and saves. Real-time projections omit it.
-`queries.normalized_standalone_export_settings` supplies the default checkerboard when an older file omits the field or a value.
+`queries.normalized_standalone_export_settings` supplies the default color when an older file omits the field or a value.
 This additive field needs no conversion rule. A selected history turn keeps the map's current settings.
-A standalone export copies the settings into its `game.json`. An older `game.json` without them shows the default checkerboard.
+A standalone export copies the settings into its `game.json`. An older `game.json` without them shows the default color.
 
 `SessionState.editor_scenario_name` is an editor draft. It is not saved in scenario data.
 The loader derives the name from the selected folder.

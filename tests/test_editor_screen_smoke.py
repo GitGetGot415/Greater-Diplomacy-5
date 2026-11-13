@@ -119,13 +119,17 @@ class EditorScreenSmokeTests(unittest.TestCase):
         pygame.image.save(pygame.Surface((3, 2), depth=8), palette_png, "palette.png")
         images = (queries.encode_rgba_to_b64(bytes([1, 2, 3, 255]) * 6, (3, 2)),
                   base64.b64encode(palette_png.getvalue()).decode("ascii"))
-        # The image draws over either background style.
-        for settings in ({"menu_background": "checkerboard"}, {"menu_background": "solid"},
-                         *({"menu_background": style, "background_image": image}
-                           for style in queries.STANDALONE_MENU_BACKGROUNDS for image in images)):
+        for settings in ({}, {"background_color": [1, 2, 3]},
+                         *({"background_image": image} for image in images)):
             with self.subTest(settings=settings):
                 preview = Standalone_Menu_Preview("Fixture Game", settings)
                 preview.update()
+                # A standalone menu has no intro animation: one update puts every part at rest.
+                menu = preview.menu
+                for button, target in menu._center_button_targets:
+                    self.assertEqual(button.rect.topleft, target)
+                self.assertEqual(menu.button_panel_rect, menu._button_panel_target)
+                self.assertEqual(menu._title_draw_pos, menu.title_rect.topleft)
                 self.exercise(preview)
 
     def test_diplomacy_editor_agreements_view(self):

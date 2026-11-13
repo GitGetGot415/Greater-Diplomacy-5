@@ -14,7 +14,7 @@ from ui.dialogs import pickers
 from ui.navigation import screen_runner
 from ui.navigation.screen import Screen
 from ui.rendering.font_manager import fonts
-from ui.widgets.ui_elements import Button, make_back_button, toggle_color
+from ui.widgets.ui_elements import Button, make_back_button
 
 # --- Layout. CONTENT_TOP moves every setting row together. ---
 CONTENT_TOP = 130
@@ -28,10 +28,6 @@ SWATCH_BORDER_COLOR = (255, 255, 255)
 EXPORT_BUTTON_BOTTOM_MARGIN = 40
 # Gap between the screen edges and the preview's Close Preview button.
 PREVIEW_CLOSE_MARGIN = 20
-
-#: Menu background styles and their button labels, in the order of
-#: queries.STANDALONE_MENU_BACKGROUNDS.
-BACKGROUND_LABELS = {"checkerboard": "Checkerboard", "solid": "Solid Color"}
 
 
 class Standalone_Export_Screen(Screen):
@@ -56,7 +52,7 @@ class Standalone_Export_Screen(Screen):
         editable = queries.can_bulk_edit_map(self.map_screen)
         width, height = SETTING_BUTTON_SIZE
         center_x = c.SCREEN_WIDTH // 2
-        # Every row starts at the left edge of the two-button style row.
+        # Every row starts at the left edge of the two-button image row.
         left_x = center_x - (2 * width + BUTTON_GAP) // 2
 
         def setting_button(x, y, color, label, callback, enabled=True):
@@ -66,13 +62,7 @@ class Standalone_Export_Screen(Screen):
             self.elements.append(button)
 
         self.labels.append(("Menu Background", (center_x, CONTENT_TOP)))
-        style_y = CONTENT_TOP + 30
-        for index, style in enumerate(queries.STANDALONE_MENU_BACKGROUNDS):
-            setting_button(left_x + index * (width + BUTTON_GAP), style_y,
-                           toggle_color(settings["menu_background"] == style), BACKGROUND_LABELS[style],
-                           lambda style=style: self.change_setting("menu_background", style))
-
-        color_y = style_y + ROW_GAP
+        color_y = CONTENT_TOP + 30
         setting_button(left_x, color_y, "blue", "Background Color", self.choose_color)
         self.swatches.append((pygame.Rect((left_x + width + BUTTON_GAP, color_y), SWATCH_SIZE),
                               settings["background_color"]))
