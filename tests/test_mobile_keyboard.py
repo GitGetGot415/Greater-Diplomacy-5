@@ -76,6 +76,19 @@ class MobileKeyboardTests(unittest.TestCase):
         self._frame(False)
         self.assertFalse(self._input_focused())
 
+    def test_android_app_opens_and_closes_the_keyboard_through_its_bridge(self):
+        self.context.eval("""
+            globalThis.bridgeCalls = [];
+            window.GD5Android = {
+                showKeyboard() { bridgeCalls.push('show'); },
+                hideKeyboard() { bridgeCalls.push('hide'); },
+            };
+        """)
+        self._frame(True)
+        self._frame(True)
+        self._frame(False)
+        self.assertEqual(self.context.eval("bridgeCalls.join(',')"), "show,hide")
+
     def test_desktop_controls_never_open_the_keyboard(self):
         self._frame(True, mobile_controls=False)
         self.assertFalse(mobile_keyboard._installed)

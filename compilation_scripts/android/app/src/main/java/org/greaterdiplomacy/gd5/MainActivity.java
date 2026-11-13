@@ -6,7 +6,9 @@ import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 import android.webkit.ConsoleMessage;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
@@ -67,11 +69,39 @@ public final class MainActivity extends Activity {
                 return true;
             }
         });
+        game.addJavascriptInterface(new Keyboard(), "GD5Android");
         if (Build.VERSION.SDK_INT >= 33) {
             getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
                 OnBackInvokedDispatcher.PRIORITY_DEFAULT, this::confirmExit);
         }
         game.loadUrl(GAME_URL);
+    }
+
+    /**
+     * Opens and closes the on-screen keyboard for ui/mobile_keyboard.py.
+     *
+     * The WebView opens the keyboard for a focused text box only when the
+     * focus happens during a tap. The game focuses its hidden text box a frame
+     * after the tap, so the game asks Android directly. JavaScript calls these
+     * methods on a background thread; the keyboard calls run on the UI thread.
+     */
+    private final class Keyboard {
+        @JavascriptInterface
+        public void showKeyboard() {
+            game.post(() -> {
+                game.requestFocus();
+                InputMethodManager keyboard = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+                keyboard.showSoftInput(game, 0);
+            });
+        }
+
+        @JavascriptInterface
+        public void hideKeyboard() {
+            game.post(() -> {
+                InputMethodManager keyboard = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+                keyboard.hideSoftInputFromWindow(game.getWindowToken(), 0);
+            });
+        }
     }
 
     @Override

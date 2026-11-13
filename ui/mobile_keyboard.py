@@ -23,6 +23,9 @@ from data.platform import IS_WEB
 # preventDefault on mousedown keeps a tap on the canvas from taking focus away
 # from the hidden <input>. A touchend while the hidden <input> is unfocused
 # focuses it inside the tap, which iOS requires before it opens the keyboard.
+# The Android app's WebView also opens the keyboard only for a focus during a
+# tap, so the app supplies window.GD5Android (MainActivity.java) to open and
+# close the keyboard directly. Browsers have no window.GD5Android.
 _KEYBOARD_JS = r"""
 (() => {
     const FILL = '................';
@@ -72,11 +75,13 @@ _KEYBOARD_JS = r"""
         state.queue = [];
         fill();
         input.focus();
+        if (window.GD5Android) window.GD5Android.showKeyboard();
     };
     state.hide = () => {
         state.shown = false;
         state.queue = [];
         input.blur();
+        if (window.GD5Android) window.GD5Android.hideKeyboard();
     };
     state.take = () => {
         const typed = JSON.stringify(state.queue).replace(/[\u0080-￿]/g, ch => '\\u' + ch.charCodeAt(0).toString(16).padStart(4, '0'));
