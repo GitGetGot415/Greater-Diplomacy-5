@@ -183,7 +183,7 @@ class EditorScreenSmokeTests(unittest.TestCase):
         import data.constants as c
         from data.io import standalone_game
         from screens.menus import credits
-        with mock.patch.object(standalone_game, "IS_STANDALONE", True):
+        with mock.patch.object(standalone_game, "IS_STANDALONE", True), mock.patch.object(standalone_game, "export_settings", return_value={}):
             screen = credits.Credits()
             self.assertEqual(screen.credits_list, [])
             self.exercise(screen)

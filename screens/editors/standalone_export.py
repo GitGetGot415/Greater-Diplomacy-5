@@ -411,9 +411,9 @@ class Standalone_Menu_Preview(Screen):
                     return
                 screen = Music_Player(self.controller, standalone=True, preview=True)
             elif state == "LOAD_GAME":
-                screen = Load_Game(standalone=True, preview=True)
+                screen = Load_Game(standalone=True, preview=True, standalone_settings=self.settings)
             elif state == "CREDITS":
-                screen = Credits(standalone=True)
+                screen = Credits(standalone=True, standalone_settings=self.settings)
             self.screens[state] = screen
         self.current_screen.cancel_pointer_input()
         self.current_state = state

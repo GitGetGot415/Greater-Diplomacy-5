@@ -8,6 +8,7 @@ from screens.game import map_launch
 from ui.widgets.ui_elements import Button, make_back_button
 from ui.sound_effects import play_ui_sound
 from ui.navigation import screen_runner
+from ui.rendering.standalone_background import StandaloneBackground
 from data.platform import IS_WEB, LoadingSteps
 from data.io import standalone_game
 import data.constants as c
@@ -20,12 +21,19 @@ class Load_Game(ContentBrowserScreen):
     title = "LOAD GAME"
     content_label = "saves"
 
-    def __init__(self, *, standalone=None, preview=False):
+    def __init__(self, *, standalone=None, preview=False, standalone_settings=None):
         super().__init__()
         self.is_standalone = standalone_game.IS_STANDALONE if standalone is None else standalone
         self.preview = preview
+        self.standalone_background = StandaloneBackground.from_game(standalone_settings) if self.is_standalone else None
         self.bg_color = (50, 0, 50)
         self.refresh_ui()
+
+    def draw_background(self, surface):
+        if self.is_standalone:
+            self.standalone_background.draw(surface)
+        else:
+            super().draw_background(surface)
 
     def on_enter(self, app, previous):
         # Refresh on entry. Frame updates use cached entries.

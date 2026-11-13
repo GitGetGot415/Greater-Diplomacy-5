@@ -2,6 +2,7 @@
 import pygame
 
 from data import queries
+from data.io import standalone_game
 
 
 def _load_image(text):
@@ -21,6 +22,13 @@ def _load_image(text):
 
 class StandaloneBackground:
     """Fill the export settings' background color, then draw their image over it, centered."""
+
+    @classmethod
+    def from_game(cls, settings=None):
+        """Use an export preview's settings, or the running standalone game's configuration."""
+        if settings is None and standalone_game.IS_STANDALONE:
+            settings = standalone_game.export_settings()
+        return cls(settings)
 
     def __init__(self, settings):
         settings = queries.normalized_standalone_export_settings(settings)

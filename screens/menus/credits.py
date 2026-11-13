@@ -2,11 +2,15 @@ import pygame
 import data.constants as c
 from data.io import standalone_game
 from ui.navigation.screen import Screen
-from ui.widgets.ui_elements import make_back_button
+from ui.widgets.ui_elements import draw_pixel_panel, make_back_button
 from ui.rendering.font_manager import fonts
+from ui.rendering.standalone_background import StandaloneBackground
 from ui.dialogs import show_person_info
 
 CREDITS_LEFT_X = 120
+STANDALONE_CREDIT_PANEL_PADDING = (24, 18)
+STANDALONE_CREDIT_PANEL_COLOR = (34, 40, 52)
+STANDALONE_CREDIT_PANEL_BORDER = (90, 110, 140)
 
 # Each person may have "info" (free-text bio shown in the popup) and/or "links"
 # (a list of {"text", "url"} shown as clickable lines below the info text).
@@ -200,9 +204,10 @@ CREDITS_DATA = [
 class Credits(Screen):
     back_state = "MENU"
 
-    def __init__(self, *, standalone=None):
+    def __init__(self, *, standalone=None, standalone_settings=None):
         super().__init__()
         self.is_standalone = standalone_game.IS_STANDALONE if standalone is None else standalone
+        self.standalone_background = StandaloneBackground.from_game(standalone_settings) if self.is_standalone else None
         self.bg_color = (10, 10, 40) # Midnight Blue
 
         self.elements = [
@@ -211,6 +216,11 @@ class Credits(Screen):
         
         self.credits_list = []
         font = fonts.get("heading2")
+        if self.is_standalone:
+            self.standalone_credit = font.render(standalone_game.made_with_text(), True, (255, 255, 255))
+            self.standalone_credit_rect = self.standalone_credit.get_rect(center=(c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2))
+            padding_x, padding_y = STANDALONE_CREDIT_PANEL_PADDING
+            self.standalone_credit_panel = self.standalone_credit_rect.inflate(2 * padding_x, 2 * padding_y)
         
         # Calculate positions once to avoid re-calculation in draw loop
         current_y = 150
@@ -269,6 +279,12 @@ class Credits(Screen):
             self.credits_list.append(credit_entry)
             current_y += 50
 
+    def draw_background(self, surface):
+        if self.is_standalone:
+            self.standalone_background.draw(surface)
+        else:
+            super().draw_background(surface)
+
     def additional_events(self, event):
         # Hook into mouse clicks to open the info popup for a clicked name
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -282,8 +298,8 @@ class Credits(Screen):
         font = fonts.get("heading2")
         mouse_pos = pygame.mouse.get_pos()
         if self.is_standalone:
-            text_surf = font.render(standalone_game.made_with_text(), True, (255, 255, 255))
-            surface.blit(text_surf, text_surf.get_rect(center=(c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2)))
+            draw_pixel_panel(surface, self.standalone_credit_panel, STANDALONE_CREDIT_PANEL_COLOR, STANDALONE_CREDIT_PANEL_BORDER, gradient_strength=0.25)
+            surface.blit(self.standalone_credit, self.standalone_credit_rect)
         
         for item in self.credits_list:
             # Draw Main Text

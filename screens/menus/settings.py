@@ -301,9 +301,7 @@ class Settings(Screen):
         self.standalone_background = None
         if self.is_standalone:
             self.content_rect.centerx = c.SCREEN_WIDTH // 2
-            if standalone_settings is None and standalone_game.IS_STANDALONE:
-                standalone_settings = standalone_game.export_settings()
-            self.standalone_background = StandaloneBackground(standalone_settings)
+            self.standalone_background = StandaloneBackground.from_game(standalone_settings)
         # All content anchors move with the panel; Back remains at the screen edge.
         offset_x = self.content_rect.x - SETTINGS_CONTENT_X
         self.content_x = SETTINGS_X + offset_x
