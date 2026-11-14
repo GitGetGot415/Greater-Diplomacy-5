@@ -255,12 +255,17 @@ def shell_height(shot, seconds):
     return shot.height + shot.vertical_speed * seconds - shot.gravity * seconds * seconds / 2
 
 
+def shell_descending(shot, seconds):
+    """Whether a shell is falling ``seconds`` after its current state; a rising shell clears the deck beside its gun."""
+    return shot.vertical_speed - shot.gravity * seconds <= 1e-9
+
+
 def descending_time(height, vertical_speed, gravity, target_height=0.0):
     return (vertical_speed + math.sqrt(max(0.0, vertical_speed * vertical_speed + 2 * gravity * (height - target_height)))) / gravity
 
 
 def projectile_contact(shot, target, dt, start_position, *, movement=None, start_angle=None, end_angle=None, padding=0.0):
-    """Hull sweep in relative motion; airborne shells only hit at hull height."""
+    """Hull sweep in relative motion; airborne shells only hit at hull height while falling."""
     dx, dy = (target.x - start_position[0], target.y - start_position[1]) if movement is None else movement
     start = shot.x, shot.y
     if shot.kind == "torpedo":
@@ -273,8 +278,9 @@ def projectile_contact(shot, target, dt, start_position, *, movement=None, start
         return None
     enter, leave = interval
     # A shell can descend into the hull after first entering its horizontal footprint.
+    # Shells launch at hull height, so a rising shell must not hit a ship lying alongside the muzzle.
     candidates = sorted((enter * dt, descending_time(shot.height, shot.vertical_speed, shot.gravity, c.TACTICAL_NAVAL_HULL_HEIGHT)))
     for seconds in candidates:
-        if enter * dt - 1e-9 <= seconds <= leave * dt + 1e-9 and -1e-7 <= shell_height(shot, seconds) <= c.TACTICAL_NAVAL_HULL_HEIGHT + 1e-7:
+        if enter * dt - 1e-9 <= seconds <= leave * dt + 1e-9 and -1e-7 <= shell_height(shot, seconds) <= c.TACTICAL_NAVAL_HULL_HEIGHT + 1e-7 and shell_descending(shot, seconds):
             return max(0.0, seconds / dt)
     return None

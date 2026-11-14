@@ -177,6 +177,37 @@ class NavalBattleTests(unittest.TestCase):
         self.assertIsNotNone(fraction)
         self.assertLessEqual(naval.shell_height(shot, shot.remaining * fraction), c.TACTICAL_NAVAL_HULL_HEIGHT + 1e-7)
 
+    def test_shell_clears_an_ally_alongside_the_muzzle_unless_fired_low_and_the_ai_check_agrees(self):
+        simulation = self.simulation(controlled=None)
+        source, target = simulation.fighters
+        source.angle = 0
+        source.aim = math.pi / 2
+        mount = naval.mount_position(source, 0)
+        muzzle = naval.muzzle_position(source, 0)
+        ally_half = c.TACTICAL_BODIES["aircraft_carrier"][1] / 2
+        ally = combat.Fighter(dict(source.data), source.side, muzzle[0], muzzle[1] + ally_half - 1, "aircraft_carrier", index=2)
+        self.assertIsNotNone(naval.hull_interval(muzzle, muzzle, ally))
+        simulation._sides = [[source, ally], [target]]
+        weapon = c.TACTICAL_WEAPONS["artillery_shell"]
+        # Shorter shots fall from launch; longer shots rise above hull height first.
+        falling_range = weapon["speed"] * math.sqrt(2 * c.TACTICAL_NAVAL_HULL_HEIGHT / weapon["gravity"])
+        short = ally.y + ally_half + c.TACTICAL_BODIES[target.shape][1] / 2 + 10 - muzzle[1]
+        self.assertLess(short, falling_range)
+        for distance, victim in ((short, ally), (3 * falling_range, target)):
+            with self.subTest(distance=distance):
+                target.x, target.y = mount[0], muzzle[1] + distance
+                source.gun_points[0] = (target.x, target.y)
+                self.assertIs(simulation._naval_ally_in_line(source, target, 0), ally if victim is ally else None)
+                simulation.projectiles.clear()
+                simulation._fire_shot(source)
+                shot = simulation.projectiles[0]
+                living = [source, ally, target]
+                initial = {fighter.index: (fighter.x, fighter.y) for fighter in living}
+                keep, hits = True, []
+                while keep:
+                    keep, hits = simulation._advance_naval_projectile(shot, 0.1, living, initial)
+                self.assertIs(hits[0][0], victim)
+
     def test_shell_splashes_at_fixed_aim_point_after_target_moves(self):
         simulation = self.simulation()
         source, target = simulation.fighters

@@ -1294,15 +1294,13 @@ class BattleSimulation:
         weapon = fighter.weapon(slot)
         if weapon["projectile"] == "torpedo":
             return self._torpedo_ally_in_path(fighter, slot, predict_motion=False)
-        start = naval.mount_position(fighter, slot)
-        point = naval.lead_point(target, start, weapon)
-        angle = math.atan2(point[1] - start[1], point[0] - start[0])
-        flight = min(weapon["range"], math.dist(start, point)) / weapon["speed"]
-        if flight <= 0:
-            return None
-        height = c.TACTICAL_NAVAL_HULL_HEIGHT if weapon["projectile"] == "artillery_shell" else 0.0
-        gravity = weapon.get("gravity", 0.0)
-        shot = Projectile(fighter, fighter.data, *start, math.cos(angle) * weapon["speed"], math.sin(angle) * weapon["speed"], flight, height=height, vertical_speed=gravity * flight / 2 - height / flight, gravity=gravity, weapon_data=weapon)
+        mount = naval.mount_position(fighter, slot)
+        point = naval.lead_point(target, mount, weapon)
+        angle = math.atan2(point[1] - mount[1], point[0] - mount[0])
+        # Launch from the muzzle with the real shot's arc, so the check sees what the fired shell will reach.
+        start = naval.muzzle_position(fighter, slot, angle)
+        flight, height, vertical = self._shell_arc(start, point, weapon)
+        shot = Projectile(fighter, fighter.data, *start, math.cos(angle) * weapon["speed"], math.sin(angle) * weapon["speed"], flight, height=height, vertical_speed=vertical, gravity=weapon.get("gravity", 0.0), weapon_data=weapon)
         return next((ally for ally in self._sides[fighter.side] if ally is not fighter and naval.projectile_contact(shot, ally, flight, (ally.x, ally.y), movement=(ally.vx * flight, ally.vy * flight)) is not None), None)
 
     def _torpedo_ally_in_path(self, fighter, slot, *, predict_motion=True):
@@ -1482,6 +1480,17 @@ class BattleSimulation:
         if self.on_shot is not None:
             self.on_shot(fighter)
 
+    @staticmethod
+    def _shell_arc(start, point, weapon):
+        """Flight seconds, launch height, and vertical speed of a naval shot landing at ``point``, or at full range."""
+        distance = weapon["range"] if point is None else min(weapon["range"], math.dist(start, point))
+        flight = max(FIXED_STEP, distance / weapon["speed"])
+        gravity = weapon.get("gravity", 0.0)
+        if not gravity:
+            return flight, 0.0, 0.0
+        height = c.TACTICAL_NAVAL_HULL_HEIGHT
+        return flight, height, gravity * flight / 2 - height / flight
+
     def _fire_naval_shot(self, fighter, slot):
         weapon = fighter.weapon(slot)
         if not naval.aim_allowed(fighter, slot, fighter.weapon_aim(slot)):
@@ -1492,12 +1501,9 @@ class BattleSimulation:
         if weapon["projectile"] == "torpedo" and fighter is not self.controlled and self._torpedo_ally_in_path(fighter, slot) is not None:
             return
         start = naval.muzzle_position(fighter, slot)
-        distance = weapon["range"] if point is None else min(weapon["range"], math.dist(start, point))
-        flight = max(FIXED_STEP, distance / weapon["speed"])
+        flight, height, vertical = self._shell_arc(start, point, weapon)
         angle = fighter.weapon_aim(slot) + self._rng.uniform(-self._shot_spread(fighter, weapon), self._shot_spread(fighter, weapon))
         gravity = weapon.get("gravity", 0.0)
-        height = c.TACTICAL_NAVAL_HULL_HEIGHT if gravity else 0.0
-        vertical = gravity * flight / 2 - height / flight if gravity else 0.0
         remaining = flight if gravity else weapon["range"] / weapon["speed"]
         if weapon["projectile"] == "torpedo":
             angle = naval.clamp_launch_angle(fighter, slot, angle)
@@ -1556,7 +1562,8 @@ class BattleSimulation:
                 continue
             speed = math.hypot(shot.vx, shot.vy)
             lookahead = min(DODGE_LOOKAHEAD, shot.remaining)
-            if shot.kind == "artillery_shell" and min(shot.height, naval.shell_height(shot, lookahead)) > c.TACTICAL_NAVAL_HULL_HEIGHT:
+            # A shell can only hit while falling through hull height, so one still rising or high at the lookahead is harmless.
+            if shot.kind == "artillery_shell" and (naval.shell_height(shot, lookahead) > c.TACTICAL_NAVAL_HULL_HEIGHT or not naval.shell_descending(shot, lookahead)):
                 continue
             reach = speed * lookahead
             end_x, end_y = shot.x + shot.vx / speed * reach, shot.y + shot.vy / speed * reach
