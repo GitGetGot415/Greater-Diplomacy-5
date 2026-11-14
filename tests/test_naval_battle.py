@@ -306,6 +306,117 @@ class NavalBattleTests(unittest.TestCase):
         ally.y = source.y
         self.assertIs(simulation._naval_ally_in_line(source, target, 0), ally)
 
+    def test_final_torpedo_check_uses_actual_barrel_aim_and_does_not_charge_a_blocked_shot(self):
+        simulation = self.simulation("submarine", controlled=None)
+        source, target = simulation.fighters
+        source.aim = math.radians(3.5)
+        source.gun_points[0] = (target.x, target.y)
+        ally = combat.Fighter(dict(target.data), source.side, source.x + 250, source.y + 20, "convoy", index=2)
+        simulation._sides = [[source, ally], [target]]
+        ideal_start = naval.mount_position(source, 0)
+        self.assertIsNone(naval.hull_interval(ideal_start, (target.x, target.y), ally))
+        muzzle = naval.muzzle_position(source, 0)
+        shot = self.torpedo_at(source, *muzzle, math.cos(source.aim) * 100, math.sin(source.aim) * 100)
+        self.assertIsNotNone(naval.projectile_contact(shot, ally, 3, (ally.x, ally.y)))
+        source.primary_rounds = 2
+        before = (source.primary_rounds, source.cooldown, source.primary_wait, source.muzzle)
+        shots = []
+        simulation._queue_shot(source, shots)
+        self.assertEqual(before, (source.primary_rounds, source.cooldown, source.primary_wait, source.muzzle))
+        with patch.object(simulation._rng, "uniform", side_effect=AssertionError("blocked torpedo sampled its spread")):
+            simulation._fire_shot(source)
+        self.assertEqual(simulation.projectiles, [])
+        self.assertEqual(before, (source.primary_rounds, source.cooldown, source.primary_wait, source.muzzle))
+
+    def test_torpedo_safety_covers_dispersion_and_an_ally_at_the_launch_point(self):
+        simulation = self.simulation("submarine", controlled=None)
+        source, target = simulation.fighters
+        c.TACTICAL_WEAPONS["torpedo"]["spread"] = 2.0
+        ally = combat.Fighter(dict(target.data), source.side, source.x + 400, source.y + 20, "convoy", index=2)
+        simulation._sides = [[source, ally], [target]]
+        self.assertIsNone(naval.hull_interval(naval.mount_position(source, 0), (target.x, target.y), ally))
+        self.assertIs(simulation._torpedo_ally_in_path(source, 0), ally)
+        ally.x, ally.y = naval.muzzle_position(source, 0)
+        self.assertIs(simulation._torpedo_ally_in_path(source, 0), ally)
+
+    def test_torpedo_launch_waits_for_an_ally_whose_bow_will_turn_into_the_corridor(self):
+        simulation, source, target = self.long_hull_encounter()
+        source.shape = "submarine"
+        source.angle = source.aim = math.pi
+        source.gun_points[0] = (target.x, target.y)
+        ally = combat.Fighter(dict(target.data), source.side, source.x - 250, source.y - 70, "destroyer", index=2, turn_rate=math.radians(60), naval_controls=(0.0, 1.0))
+        simulation._sides[source.side].append(ally)
+        simulation.fighters.append(ally)
+        self.assertIsNone(simulation._torpedo_ally_in_path(source, 0, predict_motion=False))
+        self.assertIs(simulation._torpedo_ally_in_path(source, 0), ally)
+        before = copy.deepcopy(vars(ally))
+        simulation._fire_shot(source)
+        self.assertEqual(simulation.projectiles, [])
+        self.assertEqual(source.primary_rounds, 0)
+        self.assertEqual(source.cooldown, 0)
+        self.assertEqual(vars(ally), before)
+
+    def test_torpedo_launch_predicts_an_ally_crossing_the_path(self):
+        simulation = self.simulation("submarine", controlled=None)
+        source, target = simulation.fighters
+        muzzle = naval.muzzle_position(source, 0)
+        ally = combat.Fighter(dict(target.data), source.side, muzzle[0] + 200, muzzle[1] - 100, "convoy", index=2, vy=50)
+        simulation._sides[source.side].append(ally)
+        self.assertIsNone(naval.hull_interval(muzzle, (muzzle[0] + 2000, muzzle[1]), ally))
+        self.assertIs(simulation._torpedo_ally_in_path(source, 0), ally)
+        ally.vy = -50
+        self.assertIsNone(simulation._torpedo_ally_in_path(source, 0, predict_motion=False))
+
+    def test_ally_entering_between_burst_shots_holds_the_counter_until_the_lane_clears(self):
+        weapon = c.TACTICAL_WEAPONS["torpedo"]
+        weapon.update(rounds=4, interval=0.01, reload=1.0)
+        simulation = self.simulation("submarine", controlled=None)
+        source, target = simulation.fighters
+        source.data["speed"] = target.data["speed"] = 0
+        target.cooldown = target.secondary_cooldown = 1000
+        ally = combat.Fighter(dict(target.data, speed=0), source.side, source.x + 300, source.y + 500, "convoy", index=2, cooldown=1000)
+        simulation.fighters.append(ally)
+        fired = []
+        simulation.on_shot = fired.append
+        simulation.advance(2 * combat.FIXED_STEP)
+        self.assertEqual(len(fired), 2)
+        ally.y = source.y
+        simulation.advance(0.3)
+        self.assertEqual(len(fired), 2)
+        self.assertEqual(source.primary_rounds, 2)
+        self.assertEqual(source.cooldown, 0)
+        ally.y = source.y + 500
+        simulation.advance(2 * combat.FIXED_STEP)
+        self.assertEqual(len(fired), 4)
+        self.assertEqual(source.primary_rounds, 0)
+        self.assertEqual(source.cooldown, weapon["reload"])
+
+    def test_both_ai_sides_hold_unsafe_torpedoes_while_manual_friendly_fire_stays_possible(self):
+        for side in (0, 1):
+            simulation = self.simulation("submarine", controlled=None)
+            source, target = simulation.fighters
+            source.side, target.side = side, 1 - side
+            ally = combat.Fighter(dict(target.data), side, source.x + 200, source.y, "convoy", index=2)
+            simulation._sides = [[], []]
+            simulation._sides[side] = [source, ally]
+            simulation._sides[1 - side] = [target]
+            source.gun_points[0] = (target.x, target.y)
+            simulation._fire_shot(source)
+            self.assertEqual(simulation.projectiles, [])
+            self.assertEqual(source.cooldown, 0)
+            simulation.controlled = source
+            simulation._fire_shot(source)
+            self.assertEqual(len(simulation.projectiles), 1)
+
+    def test_blocked_submarine_holds_if_both_repositioning_maneuvers_are_unsafe(self):
+        simulation = self.simulation("submarine", controlled=None)
+        source, target = simulation.fighters
+        ally = combat.Fighter(dict(target.data), source.side, source.x + 200, source.y, "convoy", index=2)
+        with patch.object(simulation, "_naval_maneuver_score", return_value=None) as evaluate:
+            self.assertEqual(simulation._naval_firing_course(source, ally, target), (0.0, source.angle))
+        self.assertEqual(evaluate.call_count, 2)
+        self.assertEqual(source.dodge, 0)
+
     def test_slow_ai_ships_on_both_sides_evade_even_when_ready_to_fire_or_ramming(self):
         for side in (0, 1):
             for friendly in (False, True):

@@ -22,6 +22,8 @@ RAM_SUPPORT_RANGE = 500.0
 RAM_MIN_UNIT_SPEED = 1.0
 TORPEDO_RADIUS = 3.0
 TORPEDO_LOOKAHEAD = 8.0  # Ships need time to turn and accelerate before an approaching torpedo arrives.
+TORPEDO_LAUNCH_LOOKAHEAD = 3.0
+TORPEDO_LAUNCH_CLEARANCE = 12.0
 EVASION_CLEARANCE = 12.0
 EVASION_SAMPLE_SECONDS = 0.2  # Motion still uses fixed ticks; hull checks cover each sampled interval.
 EVASION_TURN_ANGLES = tuple(math.radians(angle) for angle in (-90, -45, 45, 90))
@@ -114,6 +116,29 @@ def muzzle_position(fighter, slot, angle=None):
     interval = hull_interval(start, end, fighter, padding=TORPEDO_RADIUS)
     distance = (interval[1] * reach if interval is not None else 0.0) + MUZZLE_CLEARANCE
     return start[0] + math.cos(angle) * distance, start[1] + math.sin(angle) * distance
+
+
+def clamp_launch_angle(fighter, slot, angle):
+    bearing, arc = sector(fighter, slot)
+    return bearing + max(-arc / 2, min(arc / 2, wrap(angle - bearing)))
+
+
+def torpedo_corridor_contact(shot, target, duration, spread, clearance):
+    """Conservatively cover every dispersed ray against a hull moving straight.
+
+    Refine the cone width using the last possible contact time. Each refinement
+    still covers the whole previous contact interval, including its widest end.
+    """
+    start = shot.x, shot.y
+    end = shot.x + (shot.vx - target.vx) * duration, shot.y + (shot.vy - target.vy) * duration
+    widening = math.hypot(shot.vx, shot.vy) * math.tan(spread)
+    latest = duration
+    for _ in range(3):
+        interval = hull_interval(start, end, target, padding=TORPEDO_RADIUS + clearance + widening * latest)
+        if interval is None:
+            return None
+        latest = interval[1] * duration
+    return interval[0]
 
 
 def hull_interval(start, end, fighter, *, padding=0.0, position=None, angle=None):

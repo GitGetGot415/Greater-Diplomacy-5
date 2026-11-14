@@ -506,6 +506,7 @@ class Fighter:
     dodge_heading: float = 0.0  # The sidestep's direction: at right angles to the shot it avoids.
     evasion_course: object = None  # Temporary naval (throttle, heading), reconsidered as torpedoes move.
     evasion_next_check: float = 0.0
+    naval_controls: object = None  # Last applied throttle/turn, for short ally-motion predictions.
     route: list = field(default_factory=list)
     route_revision: int = -1
     navigate_at: float = 0.0
@@ -983,8 +984,14 @@ class BattleSimulation:
 
     @staticmethod
     def _queue_shot(fighter, shots, slot=0):
-        weapon = fighter.weapon(slot)
         shots.append((fighter, slot))
+        if not (fighter.naval and fighter.weapon(slot)["projectile"] == "torpedo"):
+            BattleSimulation._consume_shot(fighter, slot)
+
+    @staticmethod
+    def _consume_shot(fighter, slot=0):
+        """Advance the shared magazine/reload state only when a shot is accepted."""
+        weapon = fighter.weapon(slot)
         rounds = (fighter.secondary_rounds if slot else fighter.primary_rounds) + 1
         wait = weapon["reload"] if rounds >= weapon["rounds"] else weapon["interval"]
         rounds %= weapon["rounds"]
@@ -1285,18 +1292,72 @@ class BattleSimulation:
 
     def _naval_ally_in_line(self, fighter, target, slot):
         weapon = fighter.weapon(slot)
+        if weapon["projectile"] == "torpedo":
+            return self._torpedo_ally_in_path(fighter, slot, predict_motion=False)
         start = naval.mount_position(fighter, slot)
         point = naval.lead_point(target, start, weapon)
         angle = math.atan2(point[1] - start[1], point[0] - start[0])
         flight = min(weapon["range"], math.dist(start, point)) / weapon["speed"]
         if flight <= 0:
             return None
-        if weapon["projectile"] == "torpedo":
-            flight = weapon["range"] / weapon["speed"]
         height = c.TACTICAL_NAVAL_HULL_HEIGHT if weapon["projectile"] == "artillery_shell" else 0.0
         gravity = weapon.get("gravity", 0.0)
         shot = Projectile(fighter, fighter.data, *start, math.cos(angle) * weapon["speed"], math.sin(angle) * weapon["speed"], flight, height=height, vertical_speed=gravity * flight / 2 - height / flight, gravity=gravity, weapon_data=weapon)
         return next((ally for ally in self._sides[fighter.side] if ally is not fighter and naval.projectile_contact(shot, ally, flight, (ally.x, ally.y), movement=(ally.vx * flight, ally.vy * flight)) is not None), None)
+
+    def _torpedo_ally_in_path(self, fighter, slot, *, predict_motion=True):
+        """Check the actual muzzle/aim and its whole spread before an AI launch."""
+        weapon = fighter.weapon(slot)
+        angle = naval.clamp_launch_angle(fighter, slot, fighter.weapon_aim(slot))
+        spread = self._shot_spread(fighter, weapon)
+        start = naval.muzzle_position(fighter, slot, angle)
+        edges = [naval.muzzle_position(fighter, slot, naval.clamp_launch_angle(fighter, slot, angle + error)) for error in (-spread, spread)]
+        clearance = naval.TORPEDO_LAUNCH_CLEARANCE + max(math.dist(start, edge) for edge in edges)
+        duration = weapon["range"] / weapon["speed"]
+        shot = Projectile(fighter, fighter.data, *start, math.cos(angle) * weapon["speed"], math.sin(angle) * weapon["speed"], duration, height=0, weapon_data=weapon)
+        for ally in self._sides[fighter.side]:
+            if ally is fighter or not ally.alive:
+                continue
+            if naval.torpedo_corridor_contact(shot, ally, duration, spread, clearance) is not None:
+                return ally
+            if not predict_motion:
+                continue
+            horizon = min(naval.TORPEDO_LAUNCH_LOOKAHEAD, duration)
+            end = shot.x + shot.vx * horizon, shot.y + shot.vy * horizon
+            reach = ally.radius + ally.max_speed * horizon + clearance + math.tan(spread) * weapon["speed"] * horizon + math.hypot(ally.push_vx, ally.push_vy) * KNOCKBACK_SECONDS
+            if battle_terrain.circle_contact(start, end, (ally.x, ally.y), reach) is None:
+                continue
+            trial, ray = replace(ally), replace(shot)
+            # Before a ship's first drive command, preserve its current motion.
+            controls = ally.naval_controls
+            if controls is None:
+                controls = (ally.speed / ally.max_speed if ally.max_speed else 0.0, ally.turn_rate / math.radians(MOBILITY[ally.shape][1]))
+            elapsed = 0.0
+            while elapsed < horizon - 1e-9:
+                dt = min(FIXED_STEP, horizon - elapsed)
+                initial, heading = (trial.x, trial.y), trial.angle
+                self._predict_naval_tick(trial, *controls, dt)
+                trial.x, trial.y = self.battlefield.move(initial, (trial.x, trial.y), trial.radius)
+                padding = clearance + math.tan(spread) * weapon["speed"] * (elapsed + dt)
+                if naval.projectile_contact(ray, trial, dt, initial, start_angle=heading, padding=padding) is not None:
+                    return ally
+                ray.x += ray.vx * dt
+                ray.y += ray.vy * dt
+                elapsed += dt
+        return None
+
+    def _naval_firing_course(self, fighter, ally, target):
+        """Validate the existing side-step against hulls and edges; hold if neither side is safe."""
+        if fighter.max_speed <= 0:
+            return 0.0, fighter.angle
+        self._sidestep(fighter, ally.x, ally.y, target.x - fighter.x, target.y - fighter.y, naval.TORPEDO_LAUNCH_LOOKAHEAD)
+        for heading in (fighter.dodge_heading, fighter.dodge_heading + math.pi):
+            course = fighter.pace, heading
+            if self._naval_maneuver_score(fighter, course, []) is not None:
+                fighter.dodge_heading = heading
+                return course
+        fighter.dodge = 0.0
+        return 0.0, fighter.angle
 
     def _naval_course(self, fighter, target):
         dx, dy = target.x - fighter.x, target.y - fighter.y
@@ -1331,6 +1392,7 @@ class BattleSimulation:
                 strength = min(1.0, math.hypot(dx, dy))
                 throttle, turn = self._heading_controls(fighter, strength, math.atan2(dy, dx)) if strength else (0.0, 0.0)
         else:
+            blocked_course = None
             fighter.retarget -= dt
             if fighter.target is None or not fighter.target.alive or fighter.retarget <= 0:
                 fighter.retarget = RETARGET_SECONDS
@@ -1344,12 +1406,16 @@ class BattleSimulation:
                         continue
                     ally = self._naval_ally_in_line(fighter, fighter.target, slot)
                     if ally is not None:
-                        self._sidestep(fighter, ally.x, ally.y, fighter.target.x - fighter.x, fighter.target.y - fighter.y, LINE_SHIFT_SECONDS)
+                        if fighter.weapon(slot)["projectile"] == "torpedo":
+                            blocked_course = self._naval_firing_course(fighter, ally, fighter.target)
+                        else:
+                            self._sidestep(fighter, ally.x, ally.y, fighter.target.x - fighter.x, fighter.target.y - fighter.y, LINE_SHIFT_SECONDS)
                         break
-            throttle, heading = self._naval_course(fighter, fighter.target)
+            throttle, heading = blocked_course or self._naval_course(fighter, fighter.target)
             throttle, heading = self._naval_evasion(fighter, (throttle, heading))
             throttle, turn = self._heading_controls(fighter, throttle, heading)
             throttle = self._ally_safe_throttle(fighter, throttle)
+        fighter.naval_controls = throttle, turn
         self._steer(fighter, turn, dt)
         self._accelerate(fighter, throttle, dt)
         for slot, mount in enumerate(naval.mounts(fighter.shape)):
@@ -1423,6 +1489,8 @@ class BattleSimulation:
         point = fighter.gun_points[slot]
         if point is not None and not naval.can_fire(fighter, slot, point, AIM_TOLERANCE):
             return
+        if weapon["projectile"] == "torpedo" and fighter is not self.controlled and self._torpedo_ally_in_path(fighter, slot) is not None:
+            return
         start = naval.muzzle_position(fighter, slot)
         distance = weapon["range"] if point is None else min(weapon["range"], math.dist(start, point))
         flight = max(FIXED_STEP, distance / weapon["speed"])
@@ -1432,9 +1500,9 @@ class BattleSimulation:
         vertical = gravity * flight / 2 - height / flight if gravity else 0.0
         remaining = flight if gravity else weapon["range"] / weapon["speed"]
         if weapon["projectile"] == "torpedo":
-            bearing, arc = naval.sector(fighter, slot)
-            angle = bearing + max(-arc / 2, min(arc / 2, naval.wrap(angle - bearing)))
+            angle = naval.clamp_launch_angle(fighter, slot, angle)
             start = naval.muzzle_position(fighter, slot, angle)
+            self._consume_shot(fighter, slot)
         self.projectiles.append(Projectile(fighter, dict(fighter.data), *start, math.cos(angle) * weapon["speed"], math.sin(angle) * weapon["speed"], remaining, height=height, vertical_speed=vertical, gravity=gravity, weapon_data=dict(weapon), attack_share=fighter.attack_share * naval.mounts(fighter.shape)[slot].attack_share))
         fighter.fired_weapon = slot
         fighter.muzzle = fighter.mount_muzzles[slot] = c.TACTICAL_MUZZLE_SECONDS
@@ -1509,11 +1577,21 @@ class BattleSimulation:
                 if 0 <= along <= reach and abs(across) <= DODGE_DANGER * unit.radius / UNIT_RADIUS:
                     self._start_dodge(unit, shot)
 
+    def _predict_naval_tick(self, trial, throttle, turn, dt):
+        """Advance an isolated motion prediction with the live steering/acceleration rules."""
+        self._steer(trial, turn, dt)
+        self._accelerate(trial, throttle, dt)
+        trial.x += (math.cos(trial.angle) * trial.speed + trial.push_vx) * dt
+        trial.y += (math.sin(trial.angle) * trial.speed + trial.push_vy) * dt
+        decay = max(0.0, 1.0 - dt / KNOCKBACK_SECONDS)
+        trial.push_vx *= decay
+        trial.push_vy *= decay
+
     def _naval_maneuver_score(self, unit, course, torpedoes):
         """Predict only hull motion, using the live steering and acceleration helpers."""
         trial = replace(unit)
         shots = [replace(shot) for shot in torpedoes]
-        horizon = min(naval.TORPEDO_LOOKAHEAD, max(shot.remaining for shot in shots))
+        horizon = min(naval.TORPEDO_LOOKAHEAD, max((shot.remaining for shot in shots), default=naval.TORPEDO_LAUNCH_LOOKAHEAD))
         drift = math.hypot(unit.push_vx, unit.push_vy) * KNOCKBACK_SECONDS
         allies = [ally for ally in self.fighters if ally is not unit and ally.alive and ally.side == unit.side
                   and math.dist((unit.x, unit.y), (ally.x, ally.y)) <= unit.radius + ally.radius + drift + unit.max_speed * max(horizon, MOBILITY[unit.shape][0] / 2) + math.hypot(ally.vx, ally.vy) * horizon]
@@ -1527,13 +1605,7 @@ class BattleSimulation:
                 tick = min(FIXED_STEP, dt - segment)
                 throttle, turn = self._heading_controls(trial, *course)
                 throttle = self._ally_safe_throttle(trial, throttle, original=unit, time_ahead=elapsed + segment, allies=allies)
-                self._steer(trial, turn, tick)
-                self._accelerate(trial, throttle, tick)
-                trial.x += (math.cos(trial.angle) * trial.speed + trial.push_vx) * tick
-                trial.y += (math.sin(trial.angle) * trial.speed + trial.push_vy) * tick
-                decay = max(0.0, 1.0 - tick / KNOCKBACK_SECONDS)
-                trial.push_vx *= decay
-                trial.push_vy *= decay
+                self._predict_naval_tick(trial, throttle, turn, tick)
                 if not self.battlefield.walkable((trial.x, trial.y), trial.radius):
                     return None
                 segment += tick
