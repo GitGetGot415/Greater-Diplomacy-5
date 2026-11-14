@@ -42,8 +42,8 @@ TACTICAL_WEAPONS = {
     "autocannon": dict(label="Autocannon",                  interval=0.3, rounds=3, reload=2.8, speed=1800.0, spread=1.5, damage=0.5, penetration=1.0, shell=True, soft_only=False),
     "artillery_shell": dict(label="Artillery shells",       interval=8.0, rounds=1, reload=8.0, speed=700.0, spread=1.0, damage=1.0, penetration=0.0, shell=True, soft_only=False, projectile="artillery_shell", range=2800.0, gravity=300.0),
     "torpedo": dict(label="Torpedoes",                      interval=0.5, rounds=4, reload=8.0, speed=300.0, spread=0.5, damage=1.0, penetration=0.0, shell=False, soft_only=False, projectile="torpedo", range=3000.0),
-    # Convoys fire single flat bullets at short range; falloff is where their range damage loss begins.
-    "convoy_gun": dict(label="Convoy guns",                 interval=2.0, rounds=1, reload=2.0, speed=1000.0, spread=1.5, damage=0.25, penetration=0.0, shell=False, soft_only=False, projectile="bullet", range=600.0, falloff=300.0),
+    # Convoys fire single flat bullets at short range.
+    "convoy_gun": dict(label="Convoy guns",                 interval=2.0, rounds=1, reload=2.0, speed=1000.0, spread=1.5, damage=0.25, penetration=0.0, shell=False, soft_only=False, projectile="bullet"),
 }
 TACTICAL_VEHICLE_WEAPONS = {
     "armored_car": ("light_cannon", "vehicle_mg"),

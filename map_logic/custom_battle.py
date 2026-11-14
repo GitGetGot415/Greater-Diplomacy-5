@@ -1922,7 +1922,7 @@ class BattleSimulation:
         if hit is not None:
             fraction, _, target = hit
             x, y = shot.x + shot.vx * flight * fraction, shot.y + shot.vy * flight * fraction
-            multiplier = self.ranged_multiplier(shot.distance + traveled * fraction, shot.weapon_data["range"], shot.weapon_data.get("falloff", naval.FALLOFF_START))
+            multiplier = self.ranged_multiplier(shot.distance + traveled * fraction, shot.weapon_data["range"], naval.FALLOFF_START)
             loss = self.weapon_damage(shot.source_data, target.data, shot.attack_share, shot.weapon_data, target.shape, multiplier)
             self.impacts.append((x, y, c.TACTICAL_IMPACT_SECONDS, self._impact_kind(shot)))
             return False, [(target, loss, shot.source, "shot")]

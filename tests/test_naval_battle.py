@@ -229,6 +229,10 @@ class NavalBattleTests(unittest.TestCase):
         weapon = c.TACTICAL_WEAPONS["convoy_gun"]
         self.assertEqual((weapon["rounds"], weapon["shell"], weapon["projectile"]), (1, False, "bullet"))
         self.assertLess(weapon["range"], c.TACTICAL_WEAPONS["artillery_shell"]["range"])
+        # Convoy bullets have no range falloff: full damage up to their maximum range.
+        self.assertNotIn("falloff", weapon)
+        for distance in (0.0, weapon["range"] / 2, weapon["range"]):
+            self.assertEqual(combat.BattleSimulation.ranged_multiplier(distance, weapon["range"], naval.FALLOFF_START), 1.0)
         simulation, source, target = self.fire_convoy_at(weapon["range"] / 2)
         self.assertEqual(len(simulation.projectiles), 1)
         shot = simulation.projectiles[0]
