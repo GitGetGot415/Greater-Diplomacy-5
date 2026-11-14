@@ -238,6 +238,17 @@ class NavalBattleTests(unittest.TestCase):
         self.assertGreater(hits[0][1], 0)
         self.assertIs(simulation.impacts[-1][3], False)
 
+    def test_naval_hits_do_full_damage_at_any_distance(self):
+        weapon = c.TACTICAL_WEAPONS["convoy_gun"]
+        losses = []
+        for distance in (weapon["range"] * 0.1, weapon["range"] * 0.9):
+            simulation, source, target = self.fire_convoy_at(distance)
+            hits = self.run_shot(simulation, simulation.projectiles[0])
+            self.assertIs(hits[0][0], target)
+            losses.append(hits[0][1])
+        self.assertGreater(losses[0], 0)
+        self.assertEqual(losses[0], losses[1])
+
     def test_convoy_bullet_stops_at_its_range_and_the_gun_holds_fire_beyond_it(self):
         weapon = c.TACTICAL_WEAPONS["convoy_gun"]
         simulation, source, target = self.fire_convoy_at(weapon["range"] + 200)

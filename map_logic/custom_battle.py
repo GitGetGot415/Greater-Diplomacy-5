@@ -925,10 +925,9 @@ class BattleSimulation:
         return cls.damage_amount(source, target, attack_share, weapon["damage"] * multiplier)
 
     @staticmethod
-    def ranged_multiplier(distance, maximum=None, falloff=None):
-        maximum = WEAPON_RANGE if maximum is None else maximum
-        falloff = FALLOFF_START if falloff is None else falloff
-        fraction = max(0.0, min(1.0, (distance - falloff) / (maximum - falloff)))
+    def ranged_multiplier(distance):
+        """Land shots only; naval shots keep full damage at every distance."""
+        fraction = max(0.0, min(1.0, (distance - FALLOFF_START) / (WEAPON_RANGE - FALLOFF_START)))
         return 1.0 - fraction * (1.0 - MIN_RANGED_DAMAGE)
 
     def _firing_lane(self, fighter, target, start=None):
@@ -1918,19 +1917,17 @@ class BattleSimulation:
             if fraction is not None:
                 collisions.append((fraction, target.index, target))
         hit = min(collisions, default=None, key=lambda item: (item[0], item[1]))
-        traveled = math.hypot(shot.vx, shot.vy) * flight
         if hit is not None:
             fraction, _, target = hit
             x, y = shot.x + shot.vx * flight * fraction, shot.y + shot.vy * flight * fraction
-            multiplier = self.ranged_multiplier(shot.distance + traveled * fraction, shot.weapon_data["range"], shot.weapon_data.get("falloff", naval.FALLOFF_START))
-            loss = self.weapon_damage(shot.source_data, target.data, shot.attack_share, shot.weapon_data, target.shape, multiplier)
+            # Naval weapons have no range falloff: a hit does full damage at any distance.
+            loss = self.weapon_damage(shot.source_data, target.data, shot.attack_share, shot.weapon_data, target.shape)
             self.impacts.append((x, y, c.TACTICAL_IMPACT_SECONDS, self._impact_kind(shot)))
             return False, [(target, loss, shot.source, "shot")]
         shot.x += shot.vx * flight
         shot.y += shot.vy * flight
         shot.height = naval.shell_height(shot, flight)
         shot.vertical_speed -= shot.gravity * flight
-        shot.distance += traveled
         shot.remaining -= flight
         if shot.remaining <= 1e-9 or (shot.gravity and shot.height <= 1e-7):
             self.impacts.append((shot.x, shot.y, c.TACTICAL_IMPACT_SECONDS, self._impact_kind(shot)))
