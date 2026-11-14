@@ -1986,7 +1986,7 @@ class CustomBattleScreenTests(unittest.TestCase):
                         with patch.object(battle_screen.sound_effects, "play_ui_sound") as sound:
                             self.screen._record_kill(source, target, "shot" if side == 0 else "ram")
                         if shape not in combat.FOOT_SHAPES:
-                            sound.assert_called_once_with("tank_explosion", volume_scale=self.screen.battle_sfx_volume_share())
+                            sound.assert_called_once_with("tank_explosion", volume_scale=self.screen.battle_sfx_volume_share(target))
                             self.assertEqual(self.screen.death_explosions, [(target, 0.0)])
                         else:
                             sound.assert_not_called()
@@ -2187,7 +2187,7 @@ class CustomBattleScreenTests(unittest.TestCase):
                     source.shape = shape
                     simulation._fire_shot(source)
                     expected = "heavy_gunshot" if source is simulation.controlled else "rifle_shot_2"
-                    sound.assert_called_once_with(expected, volume_scale=battle_screen.BATTLE_SFX_VOLUME * self.screen.zoom_volume_share())
+                    sound.assert_called_once_with(expected, volume_scale=self.screen.battle_sfx_volume_share(source))
                     if source is simulation.controlled:
                         choice.assert_not_called()
                     else:
@@ -2226,7 +2226,7 @@ class CustomBattleScreenTests(unittest.TestCase):
         source.aim = source.angle + battle_screen.naval.mounts(source.shape)[0].bearing
         with patch("ui.sound_effects.play_ui_sound") as sound:
             self.screen.simulation._fire_shot(source)
-        sound.assert_called_once_with("torpedo_launch", volume_scale=self.screen.battle_sfx_volume_share())
+        sound.assert_called_once_with("torpedo_launch", volume_scale=self.screen.battle_sfx_volume_share(source))
 
     def win_battle(self):
         """End actual battle with a friendly win, without relying on random aim and movement."""
@@ -3415,7 +3415,41 @@ class CustomBattleScreenTests(unittest.TestCase):
             with self.subTest(zoom=self.screen.zoom), patch("ui.sound_effects.play_ui_sound") as sound:
                 self.screen.simulation._fire_shot(source)
                 self.assertAlmostEqual(sound.call_args.kwargs["volume_scale"],
-                                       battle_screen.BATTLE_SFX_VOLUME * min(1.0, self.screen.zoom / default_zoom))
+                                       battle_screen.BATTLE_SFX_VOLUME * min(1.0, self.screen.zoom / default_zoom) * self.screen.distance_volume_share(source))
+
+    def check_distance_fade(self, source, listener):
+        width = self.screen.simulation.arena_size[0]
+        near, far, floor = battle_screen.SFX_FULL_VOLUME_DISTANCE, battle_screen.SFX_FLOOR_DISTANCE, battle_screen.SFX_DISTANCE_FLOOR
+        for share, expected in ((0.0, 1.0), (near, 1.0), ((near + far) / 2, (1.0 + floor) / 2), (far, floor), (2 * far, floor)):
+            with self.subTest(share=share), patch("ui.sound_effects.play_ui_sound") as sound:
+                source.x, source.y = listener()[0] + share * width, listener()[1]
+                self.assertAlmostEqual(self.screen.distance_volume_share(source), expected)
+                self.screen.simulation._fire_shot(source)
+                self.assertAlmostEqual(sound.call_args.kwargs["volume_scale"], battle_screen.BATTLE_SFX_VOLUME * self.screen.zoom_volume_share() * expected)
+
+    def test_unit_sounds_fade_with_distance_from_the_controlled_unit_wherever_the_camera_looks(self):
+        self.fill_armies()
+        self.click("Control")
+        self.click("Simulate")
+        self.click("Start")
+        simulation = self.screen.simulation
+        controlled = simulation.controlled
+        source = next(fighter for fighter in simulation.fighters if fighter.side != controlled.side)
+        controlled.x, controlled.y = 300, 300
+        self.screen._center_camera(*(size - 300 for size in simulation.arena_size))
+        self.assertGreater(math.dist(self.screen.to_field(self.screen.view_rect().center), (controlled.x, controlled.y)), 0)
+        self.assertEqual(self.screen.sound_listener(), (controlled.x, controlled.y))
+        self.check_distance_fade(source, lambda: (controlled.x, controlled.y))
+
+    def test_spectated_unit_sounds_fade_with_distance_from_the_view_center(self):
+        self.fill_armies()
+        self.click("Control")
+        self.click("Simulate")
+        self.click("Start")
+        simulation = self.screen.simulation
+        simulation.controlled.data["health"] = 0
+        source = next(fighter for fighter in simulation.fighters if fighter.alive)
+        self.check_distance_fade(source, lambda: self.screen.to_field(self.screen.view_rect().center))
 
     def test_editable_music_and_sfx_multipliers_apply_independently_at_every_zoom(self):
         self.fill_armies()
@@ -3439,8 +3473,8 @@ class CustomBattleScreenTests(unittest.TestCase):
                         target.shape = "tank"
                         self.screen._play_hit_sound(target, 0)
                         self.assertEqual(sound.call_count, 3)
-                        for entry in sound.call_args_list:
-                            self.assertAlmostEqual(entry.kwargs["volume_scale"], effects * share)
+                        for entry, fighter in zip(sound.call_args_list, (source, target, target)):
+                            self.assertAlmostEqual(entry.kwargs["volume_scale"], effects * share * self.screen.distance_volume_share(fighter))
 
     def test_music_override_spans_preview_and_actual_and_ends_on_exit_or_result(self):
         music = self.controller.set_tactical_battle_music

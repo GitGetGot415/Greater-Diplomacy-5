@@ -3,7 +3,7 @@
 import copy
 import math
 import unittest
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 import pygame
 
@@ -364,7 +364,7 @@ class TacticalHitSoundTests(unittest.TestCase):
                         self.screen._play_hit_sound(target, 5)
                     self.assertEqual([entry.args[0] for entry in sound.call_args_list],
                                      list(battle_screen.FLESH_HIT_SOUNDS))
-                    self.assertTrue(all(entry.kwargs["volume_scale"] == battle_screen.BATTLE_SFX_VOLUME * self.screen.zoom_volume_share()
+                    self.assertTrue(all(entry.kwargs["volume_scale"] == self.screen.battle_sfx_volume_share(target)
                                         for entry in sound.call_args_list))
                     self.assertTrue(all(entry.args == (battle_screen.FLESH_HIT_SOUNDS,)
                                         for entry in choice.call_args_list))
@@ -382,7 +382,7 @@ class TacticalHitSoundTests(unittest.TestCase):
                         if ricochet:
                             choice.assert_called_once_with(battle_screen.RICOCHET_SOUNDS)
                             sound.assert_called_once_with(battle_screen.RICOCHET_SOUNDS[0],
-                                                          volume_scale=battle_screen.BATTLE_SFX_VOLUME * self.screen.zoom_volume_share())
+                                                          volume_scale=self.screen.battle_sfx_volume_share(target))
                         else:
                             choice.assert_not_called()
                             sound.assert_not_called()
@@ -401,7 +401,9 @@ class TacticalHitSoundTests(unittest.TestCase):
             simulation.on_hit = hit
             simulation.advance(combat.FIXED_STEP)
         hit.assert_called_once_with(target, 1)
-        sound.assert_called_once_with(battle_screen.RICOCHET_SOUNDS[0], volume_scale=battle_screen.BATTLE_SFX_VOLUME * self.screen.zoom_volume_share())
+        # The hit empties the tank's health, so its destruction explosion follows the ricochet.
+        volume = self.screen.battle_sfx_volume_share(target)
+        self.assertEqual(sound.call_args_list, [call(battle_screen.RICOCHET_SOUNDS[0], volume_scale=volume), call("tank_explosion", volume_scale=volume)])
         self.assertEqual(target.data["health"], 0)
 
     def test_each_simultaneous_hit_uses_its_actual_hp_loss(self):
@@ -419,7 +421,9 @@ class TacticalHitSoundTests(unittest.TestCase):
             simulation.on_hit = hit
             simulation.advance(combat.FIXED_STEP)
         self.assertEqual([entry.args[1] for entry in hit.call_args_list], [11, 4])
-        sound.assert_called_once_with(battle_screen.RICOCHET_SOUNDS[0], volume_scale=battle_screen.BATTLE_SFX_VOLUME * self.screen.zoom_volume_share())
+        # The hit empties the tank's health, so its destruction explosion follows the ricochet.
+        volume = self.screen.battle_sfx_volume_share(target)
+        self.assertEqual(sound.call_args_list, [call(battle_screen.RICOCHET_SOUNDS[0], volume_scale=volume), call("tank_explosion", volume_scale=volume)])
 
     def check_projectile_sound(self, hit_kind):
         simulation = self.start_battle()
@@ -434,7 +438,7 @@ class TacticalHitSoundTests(unittest.TestCase):
             simulation.advance(combat.FIXED_STEP)
         if hit_kind == "body":
             sound.assert_called_once_with(battle_screen.FLESH_HIT_SOUNDS[0],
-                                          volume_scale=battle_screen.BATTLE_SFX_VOLUME * self.screen.zoom_volume_share())
+                                          volume_scale=self.screen.battle_sfx_volume_share(target))
         else:
             sound.assert_not_called()
 

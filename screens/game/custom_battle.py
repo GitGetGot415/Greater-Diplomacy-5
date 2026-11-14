@@ -108,6 +108,11 @@ DEFAULT_ZOOM_INDEX = ZOOM_LEVELS.index(1.0)
 # Edit these values and restart the game. Zooming out reduces both further.
 BATTLE_MUSIC_VOLUME = 1.0
 BATTLE_SFX_VOLUME = 1.0
+# Unit sounds fade with distance from the controlled unit, or from the screen's center while spectating.
+# Distances are shares of the battlefield's width, so land and naval arenas fade alike.
+SFX_FULL_VOLUME_DISTANCE = 0.1  # Closer than this plays at full volume.
+SFX_FLOOR_DISTANCE = 0.5  # Farther than this plays at SFX_DISTANCE_FLOOR.
+SFX_DISTANCE_FLOOR = 0.1  # Share of full volume for the most distant sounds; they never go silent.
 AIM_CAMERA_OFFSET = 1.0  # Share of the pointer's distance from the view center, in screen pixels.
 CONTROLLED_MIN_ZOOM = 0.15 # Minimum zoom while controlling a living unit; choose a value from ZOOM_LEVELS.
 MIN_PLAYER_INDICATOR_SCALE = 0.85
@@ -1045,9 +1050,22 @@ class CustomBattleScreen(Screen):
         """Full volume at the default zoom and closer; zooming out lowers it in proportion to the zoom."""
         return min(1.0, self.zoom / ZOOM_LEVELS[DEFAULT_ZOOM_INDEX])
 
-    def battle_sfx_volume_share(self):
-        """Apply the editable battle SFX multiplier before the shared zoom reduction."""
-        return BATTLE_SFX_VOLUME * self.zoom_volume_share()
+    def sound_listener(self):
+        """Where battle sounds are heard from: the living controlled unit, otherwise the screen's center."""
+        controlled = self.simulation.controlled
+        if controlled is not None and controlled.alive:
+            return controlled.x, controlled.y
+        return self.to_field(self.view_rect().center)
+
+    def distance_volume_share(self, fighter):
+        """Full volume near the sound listener, fading linearly to SFX_DISTANCE_FLOOR farther away."""
+        distance = math.dist(self.sound_listener(), (fighter.x, fighter.y)) / self.simulation.arena_size[0]
+        fade = max(0.0, min(1.0, (distance - SFX_FULL_VOLUME_DISTANCE) / (SFX_FLOOR_DISTANCE - SFX_FULL_VOLUME_DISTANCE)))
+        return 1.0 - fade * (1.0 - SFX_DISTANCE_FLOOR)
+
+    def battle_sfx_volume_share(self, fighter):
+        """Apply the editable battle SFX multiplier, the shared zoom reduction, and the sound's distance from the listener."""
+        return BATTLE_SFX_VOLUME * self.zoom_volume_share() * self.distance_volume_share(fighter)
 
     def update_battle_music_volume(self):
         """Lower music in actual battle: BATTLE_MUSIC_VOLUME, then quieter the further the view zooms out."""
@@ -1076,7 +1094,7 @@ class CustomBattleScreen(Screen):
         """Update the recent kills when a battlefield sub-unit dies."""
         if target.shape not in combat.FOOT_SHAPES:
             self.death_explosions.append((target, 0.0))
-            sound_effects.play_ui_sound("tank_explosion", volume_scale=self.battle_sfx_volume_share())
+            sound_effects.play_ui_sound("tank_explosion", volume_scale=self.battle_sfx_volume_share(target))
         if self.kill_feed_scroll < 0:
             self.kill_feed_scroll -= KILL_FEED_ROW_HEIGHT
         self.kill_feed.appendleft((source, target, cause))
@@ -1172,7 +1190,7 @@ class CustomBattleScreen(Screen):
             kind = "heavy_gunshot"
         else:
             kind = random.choice(RIFLE_SHOT_SOUNDS)
-        sound_effects.play_ui_sound(kind, volume_scale=self.battle_sfx_volume_share())
+        sound_effects.play_ui_sound(kind, volume_scale=self.battle_sfx_volume_share(fighter))
 
     def _play_hit_sound(self, target, damage):
         # The simulation supplies HP actually lost, including the remaining-HP limit.
@@ -1182,7 +1200,7 @@ class CustomBattleScreen(Screen):
             sounds = RICOCHET_SOUNDS
         else:
             return
-        sound_effects.play_ui_sound(random.choice(sounds), volume_scale=self.battle_sfx_volume_share())
+        sound_effects.play_ui_sound(random.choice(sounds), volume_scale=self.battle_sfx_volume_share(target))
 
     def start_battle(self):
         if self.mode != "preview" or self.preview_intro_stage is not None:
