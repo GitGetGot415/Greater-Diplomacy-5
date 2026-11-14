@@ -230,6 +230,23 @@ class TacticalSwapTests(unittest.TestCase):
                 self.assertIsNone(custom_battle.tactical_meeting_side(
                     screen, origin, destination, [player], [opponent]))
 
+    def test_warships_cross_into_a_tactical_battle_only_at_sea(self):
+        self.library["Fixture Ship I"] = {"health": 1000, "attack": 100, "defense": 0, "speed": 3, "naval_unit": True, "bombard_range": 0}
+        for terrain, coastal in (("ocean", False), ("plains", False), ("plains", True)):
+            with self.subTest(terrain=terrain, coastal=coastal):
+                screen = self.screen()
+                player = self.mover("A", ["p2"])
+                opponent = self.mover("B", ["p1"])
+                player["type"] = opponent["type"] = "Fixture Ship I"
+                origin = screen.add_province("p1", "Unclaimed", units=[player], terrain="ocean")
+                destination = screen.add_province("p2", "Unclaimed" if terrain == "ocean" else "A", units=[opponent], terrain=terrain)
+                destination["is_coastal"] = coastal
+                screen.player_unit = player
+                side = custom_battle.tactical_meeting_side(screen, origin, destination, [player], [opponent])
+                # A ship can dock in its own port, but a battle there is a land battle a warship cannot fight.
+                self.assertEqual(side, 0 if terrain == "ocean" else None)
+                self.assertEqual(custom_battle.tactical_encounter(screen, {"terrain": terrain, "units": [player, opponent]}) is not None, terrain == "ocean")
+
     def test_unrelated_war_on_the_same_crossing_still_resolves_normally(self):
         for mid_turn in (False, True):
             with self.subTest(mid_turn=mid_turn):

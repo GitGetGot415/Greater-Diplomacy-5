@@ -1093,7 +1093,7 @@ class MapViewDefaultTests(unittest.TestCase):
                                    set_play_view_defaults=Mock(), focus_camera_on_position=Mock(),
                                    focus_camera_on_country=Mock(), show_feedback=Mock(), refresh_map_layers=Mock())
         with (patch.object(player_setup.queries, "get_unit_library", return_value={}),
-              patch.object(player_setup.tactical_battle, "campaign_unit_eligible", return_value=True),
+              patch.object(player_setup.tactical_battle, "tactical_unit_eligible", return_value=True),
               patch("screens.game.map_buttons.render_buttons")):
             player_setup.confirm_player_country(map_stub)
         map_stub.focus_camera_on_position.assert_called_once_with(tile["center"], animate=True)

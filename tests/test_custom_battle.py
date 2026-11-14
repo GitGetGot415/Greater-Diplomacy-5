@@ -1809,13 +1809,21 @@ class TacticalSelectionTests(unittest.TestCase):
         self.enterContext(patch.object(player_setup.sound_effects, "play_ui_sound"))
         self.picker = self.enterContext(patch.object(player_setup.pickers, "open_listbox_selector"))
 
-    def test_tile_and_stack_pickers_offer_only_battle_eligible_land_units(self):
+    def eligible_units(self):
+        return [unit for unit in self.units if combat.tactical_unit_eligible(unit["type"], self.library)]
+
+    def ineligible_units(self):
+        return [unit for unit in self.units if not combat.tactical_unit_eligible(unit["type"], self.library)]
+
+    def test_tile_and_stack_pickers_offer_only_battle_eligible_land_units_and_warships(self):
+        eligible = self.eligible_units()
+        self.assertEqual([unit["type"] for unit in eligible], [*combat.land_unit_types(self.library), "Fixture Ship I"])
         for candidates in (None, self.units):
             with self.subTest(stack=candidates is not None):
                 self.setup.select_tactical_unit(self.map, self.province, candidate_units=candidates)
                 labels, callback = self.picker.call_args.args[-2:]
-                self.assertEqual(labels, [f"{i + 1}. {name}" for i, name in enumerate(combat.land_unit_types(self.library))])
-                for label, unit in zip(labels, self.units[:3]):
+                self.assertEqual(labels, [f"{i + 1}. {unit['type']}" for i, unit in enumerate(eligible)])
+                for label, unit in zip(labels, eligible):
                     callback(label)
                     self.assertIs(self.map.pending_unit, unit)
 
@@ -1829,8 +1837,17 @@ class TacticalSelectionTests(unittest.TestCase):
         self.assertIs(self.map.player_unit, truck)
         self.assertEqual(self.map.active_players, ["Fixture A"])
 
+    def test_warship_can_be_selected_and_confirmed_for_tactical_control(self):
+        ship = queries.create_unit_dict("Fixture Ship I", "Fixture A", self.library)
+        self.setup.select_tactical_unit(self.map, {"owner": "Unclaimed", "units": [ship]})
+        self.assertIs(self.map.pending_unit, ship)
+        self.map.num_players = 2
+        self.setup.confirm_player_country(self.map)
+        self.assertIs(self.map.player_unit, ship)
+        self.assertEqual(self.map.active_players, ["Fixture A"])
+
     def test_ineligible_tiles_and_clicked_stacks_never_select_or_spawn_a_division(self):
-        invalid = [*self.units[3:], {"type": "Missing", "owner": "Fixture A"}]
+        invalid = [*self.ineligible_units(), {"type": "Missing", "owner": "Fixture A"}]
         for units in ([unit] for unit in invalid):
             for stack in (False, True):
                 with self.subTest(unit=units[0]["type"], stack=stack):
@@ -1844,7 +1861,7 @@ class TacticalSelectionTests(unittest.TestCase):
 
     def test_mixed_tile_automatically_selects_its_only_eligible_division(self):
         foot = self.units[0]
-        self.province["units"] = [*self.units[3:], foot]
+        self.province["units"] = [*self.ineligible_units(), foot]
         self.setup.select_tactical_unit(self.map, self.province)
         self.assertIs(self.map.pending_unit, foot)
         self.picker.assert_not_called()
@@ -1862,7 +1879,7 @@ class TacticalSelectionTests(unittest.TestCase):
                     self.assertEqual(self.map.pending_selection, foot["owner"])
 
     def test_confirmation_rechecks_tactical_eligibility_before_granting_control(self):
-        for unit in self.units[3:]:
+        for unit in self.ineligible_units():
             with self.subTest(unit=unit["type"]):
                 self.map.pending_unit = unit
                 self.map.pending_selection = "Fixture A"
@@ -2633,6 +2650,37 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.assertEqual(roster[1]["health"] / roster[1]["max_health"], 0.5)
         self.assertIsNone(combat.campaign_forces(player, {"units": [player, ally]}, nations, self.library))
         self.assertIsNone(combat.campaign_forces(player, {"units": [player, ship]}, nations, self.library))
+
+    def test_at_sea_ships_and_deployable_convoys_fight_a_naval_campaign_battle(self):
+        nations = {"Fixture A": {"at_war_with": ["Fixture B"]}, "Fixture B": {"at_war_with": ["Fixture A"]}}
+
+        def unit(name, owner, cargo=False):
+            made = queries.create_unit_dict(name, owner, self.library)
+            if cargo:
+                queries.load_transport(made, "Convoy")
+            return made
+
+        player, ally_ship = unit("Fixture Ship I", "Fixture A"), unit("Fixture Ship I", "Fixture A")
+        ally_convoy = unit("Fixture I", "Fixture A", cargo=True)
+        ally_convoy["health"] = ally_convoy["max_health"] / 2
+        foe_ship, foe_gun, foe_plane = unit("Fixture Ship I", "Fixture B"), unit("Fixture Gun I", "Fixture B", cargo=True), unit("Fixture Plane I", "Fixture B")
+        sea = {"terrain": "ocean", "units": [ally_convoy, player, foe_gun, ally_ship, foe_plane, foe_ship]}
+        friendly, enemy = combat.campaign_forces(player, sea, nations, self.library)
+        self.assertEqual(friendly, [player, ally_convoy, ally_ship])
+        self.assertEqual(enemy, [foe_ship])
+        roster = combat.campaign_roster(friendly + enemy, self.library, "ocean")
+        self.assertEqual([entry["type"] for entry in roster], ["Fixture Ship I", "Convoy (Fixture I)", "Fixture Ship I", "Fixture Ship I"])
+        self.assertEqual(roster[1]["health"] / roster[1]["max_health"], 0.5)
+        simulation = combat.BattleSimulation(self.library, roster[:3], roster[3:], terrain="ocean", controlled_index=0, seed=1)
+        self.assertTrue(simulation.naval and simulation.controlled.naval)
+        self.assertEqual(simulation.controlled.shape, combat.unit_shape("Fixture Ship I", self.library))
+        # A division carried by a convoy also fights at sea.
+        self.assertIs(combat.campaign_forces(ally_convoy, sea, nations, self.library)[0][0], ally_convoy)
+        # Undeployable cargo alone gives no naval battle; the normal campaign combat applies.
+        self.assertIsNone(combat.campaign_forces(player, {"terrain": "ocean", "units": [player, foe_gun, foe_plane]}, nations, self.library))
+        # A warship never fights a land battle.
+        foe_foot = unit("Fixture I", "Fixture B")
+        self.assertIsNone(combat.campaign_forces(player, {"terrain": "plains", "units": [player, foe_foot]}, nations, self.library))
 
     def test_campaign_forces_limit_both_armies_and_keep_the_player_first(self):
         nations = {"Fixture A": {"at_war_with": ["Fixture B"]}, "Fixture B": {"at_war_with": ["Fixture A"]}}

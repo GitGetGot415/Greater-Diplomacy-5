@@ -433,8 +433,9 @@ def process_combat(context):
         # No automatic battle calculation precedes an eligible tactical fight.
         # Cancel only the routes of actual belligerents, preserving bystanders.
         if custom_battle.tactical_encounter(context, province) is not None:
-            # Aircraft and warships cannot join the tactical battlefield. Keep
-            # their existing ground-exposure rules without simulating the armies.
+            # Aircraft cannot join the tactical battlefield, and warships join only
+            # naval battles. Keep their existing ground-exposure rules without
+            # simulating the armies.
             queries.prepare_aircraft_for_ground_combat(
                 units, world_state.nation_data, on_land=is_land, context=context)
             province["units"] = [unit for unit in units if unit.get("health", 0) > 0]

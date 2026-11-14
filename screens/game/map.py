@@ -454,7 +454,7 @@ class Map(StateAccess, Screen):
         self.confirm_box_rect = pygame.Rect(0, 0, 400, 200)
 
     def open_tactical_battle(self):
-        """Once per turn, put a tactical player whose land unit is fighting into battle preview.
+        """Once per turn, put a tactical player whose unit is fighting into battle preview.
 
         Hostile artillery alone cannot fight back: the player wins at once without a battle.
         """

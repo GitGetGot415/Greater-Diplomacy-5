@@ -232,7 +232,7 @@
                         {
                             "type": "steps",
                             "items": [
-                                {"heading": "Choose a division", "text": "Choose a land division. Aircraft, ships, and artillery cannot be your tactical division. A stack containing only ineligible units offers no division to control."},
+                                {"heading": "Choose a division", "text": "Choose a land division or a ship. Aircraft and artillery cannot be your tactical division. A stack containing only ineligible units offers no division to control."},
                                 {"heading": "Tactical Orders", "text": "Give orders only to your division. Other units on the opened tile are read-only and stay under AI control."},
                                 {"heading": "Resources", "text": "Tactical play has no resource pool. Your division moves without fuel, and repairs are free for both you and the parent country."},
                                 {"heading": "Battle control", "text": "During a tactical battle, you directly control one sub-unit of your division. The other sub-units fight automatically. You see only within a circle around your controlled sub-unit; everything outside sight is black. Tree trunks, hills, and mountain rocks block sight behind them. Tree foliage casts translucent shadows that make the area behind the leaves darker while keeping units visible."}
@@ -249,10 +249,10 @@
                             "items": [
                                 {"heading": "Normal movement", "text": "Your division follows the normal tile access and speed rules. An enemy arriving from another tile pins your attack route, regardless of tile ownership. If the enemy dies or is stopped before arriving, your division continues its original route without losing movement to the failed pin. An enemy destroyed after arriving still pins your division. A friendly first step does not avoid pinning if the route attacks later in the same turn. Pinning is checked on every movement step. A route that stays in friendly territory this turn can withdraw, even into a friendly tile where enemies are fighting. Your division joins combat on arrival."},
                                 {"heading": "Head-on crossings", "text": "Your division enters the enemy's tile only when no other incoming attack pins your division. Otherwise your division stays to defend. Crossing priority does not win the battle."},
-                                {"heading": "Battle first", "text": "Ground encounters involving your division wait for the tactical battle, without an automatic charge or ground-combat calculation first. Captures and capture bounces wait for the result too."},
+                                {"heading": "Battle first", "text": "Encounters involving your division wait for the tactical battle, without an automatic charge or combat calculation first. On land, the battle is a ground battle; at sea, ships and convoys fight a naval battle. Captures and capture bounces wait for the result too."},
                                 {"heading": "Preview", "text": "Review the forces and reorder your friendly divisions before Start. Campaign tactical play has no editing view for adding or replacing units."},
                                 {"heading": "Artillery", "text": "Artillery sits out tactical battles. The losing side's artillery is destroyed afterward. Hostile artillery alone is still defeated automatically without a battle."},
-                                {"heading": "Other attacks", "text": "Air units and ships do not join the tactical battlefield. Air missions, bombardment, and the destruction rules for grounded aircraft and warships on land still apply."}
+                                {"heading": "Other attacks", "text": "Air units do not join the tactical battlefield, and ships join only naval battles at sea. Air missions, bombardment, and the destruction rules for grounded aircraft and warships on land still apply."}
                             ]
                         }
                     ]

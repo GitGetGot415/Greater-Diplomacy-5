@@ -436,11 +436,11 @@ def _restore_tactical_player(context, save_meta):
     library = queries.get_unit_library(context)
     for province in world_for(context).map_data.values():
         for unit in queries.units_with_air_cargo(province.get("units", [])):
-            # Land divisions aboard convoys and ships packed into trucks retain control.
+            # Land divisions aboard convoys, ships packed into trucks, and warships retain control.
             if (unit.get("unit_id") == unit_id and unit.get("health", 0) > 0
                     and unit.get("owner") == session.player_country
                     and (custom_battle.packed_ship_type(unit.get("type"), library)
-                         or custom_battle.campaign_unit_eligible(unit.get("original_type", unit.get("type")), library))):
+                         or custom_battle.tactical_unit_eligible(unit.get("original_type", unit.get("type")), library))):
                 session.player_unit = unit
                 session.tactical_mode = True
                 return

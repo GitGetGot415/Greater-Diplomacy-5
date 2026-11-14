@@ -607,8 +607,8 @@ class CustomBattleScreen(Screen):
         self.campaign = CampaignBattle(map_screen, province, friendly + enemy, self.rosters)
         self.library = queries.get_unit_library(map_screen)
         self.country_data = map_screen.nation_data
-        self.rosters = [combat.campaign_roster(friendly, self.library),
-                        combat.campaign_roster(enemy, self.library)]
+        self.rosters = [combat.campaign_roster(friendly, self.library, province.get("terrain")),
+                        combat.campaign_roster(enemy, self.library, province.get("terrain"))]
         self.selected = [None, None]
         self.group = [[], []]
         self.controlled_index = 0

@@ -184,6 +184,18 @@ def campaign_unit_eligible(name, library):
         name in library and _is_land(library[name]) and not is_artillery(name, library)))
 
 
+def naval_campaign_unit_eligible(name, library):
+    """Warships and convoys carrying a deployable land unit fight naval tactical battles at sea."""
+    if isinstance(name, str) and name.startswith("Convoy (") and name.endswith(")"):
+        return campaign_unit_eligible(name[len("Convoy ("):-1], library)
+    return bool(library.get(name, {}).get("naval_unit"))
+
+
+def tactical_unit_eligible(name, library):
+    """Divisions a tactical player may command: land fighters, packed ships, and warships."""
+    return campaign_unit_eligible(name, library) or bool(library.get(name, {}).get("naval_unit"))
+
+
 def custom_unit_types(library):
     """Selectable units; terrain determines their fighting or transport form."""
     return [name for name, stats in library.items()
@@ -242,22 +254,25 @@ def _artillery(units, library):
 
 
 def campaign_forces(player_unit, province, nation_data, library):
-    """The campaign units (friendly, enemy) fighting a tactical player's land unit on its tile.
+    """The campaign units (friendly, enemy) fighting a tactical player's unit on its tile.
 
-    The player's unit leads the friendly list. Returns None when that unit cannot fight a
-    tactical battle or no hostile land unit shares its tile. Artillery sits the battle out,
-    so the enemy list is empty when hostile artillery alone shares the tile: the player wins
-    without a battle (win_against_artillery). Each list holds at most one army's units.
+    On land, land fighters and packed ships fight; at sea, warships and convoys fight a
+    naval battle. The player's unit leads the friendly list. Returns None when that unit
+    cannot fight on this tile or no hostile fighter shares it. Artillery sits a land battle
+    out, so the enemy list is empty when hostile artillery alone shares the tile: the player
+    wins without a battle (win_against_artillery). Each list holds at most one army's units.
     """
     sides = campaign_sides(player_unit, province, nation_data)
+    water = queries.is_water_province(province)
     # Convoys caught on land unload before fighting. Recognize their divisions
     # without first building or simulating an automatic campaign battle.
-    def land_type(unit):
-        if unit.get("type", "").startswith("Convoy (") and not queries.is_water_province(province):
+    def battle_type(unit):
+        if unit.get("type", "").startswith("Convoy (") and not water:
             return unit.get("original_type")
         return unit.get("type")
 
-    friendly, enemy = ([unit for unit in side if campaign_unit_eligible(land_type(unit), library)][:c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE]
+    eligible = naval_campaign_unit_eligible if water else campaign_unit_eligible
+    friendly, enemy = ([unit for unit in side if eligible(battle_type(unit), library)][:c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE]
                        for side in sides)
     if not friendly or friendly[0] is not player_unit or not (enemy or _artillery(sides[1], library)):
         return None
@@ -284,8 +299,8 @@ def win_against_artillery(player_unit, province, nation_data, library):
 def tactical_encounter(context, province):
     """The (friendly, enemy) campaign units of the tactical encounter on ``province``, or None.
 
-    Only the tile holding the tactical player's land unit has one, and only while hostile land
-    units share it. The encounter deals that tile's damage, so campaign combat must skip the tile.
+    Only the tile holding the tactical player's unit has one, and only while hostile units
+    that can fight there (land fighters on land, ships and convoys at sea) share it. The encounter deals that tile's damage, so campaign combat must skip the tile.
     """
     session = session_for(context)
     # Lightweight test doubles carry no tactical state.
@@ -312,8 +327,13 @@ def tactical_meeting_side(context, prov1, prov2, units1, units2, *, pinned_units
     for index, (side, opponents) in enumerate(((units1, units2), (units2, units1))):
         if any(other is unit for other in side):
             destination = (prov1, prov2)[1 - index]
-            if unit.get("speed", 1) <= 0 or not queries.can_land_units_enter(
-                    queries.get_unit_combat_owner(unit), destination, world_for(context).nation_data):
+            owner, nation_data = queries.get_unit_combat_owner(unit), world_for(context).nation_data
+            # Warships meet at sea; land divisions, including packed ships, meet on land.
+            if queries.get_unit_library(context).get(unit.get("type"), {}).get("naval_unit"):
+                can_meet = queries.is_water_province(destination) and queries.can_ships_enter(owner, destination, nation_data)
+            else:
+                can_meet = queries.can_land_units_enter(owner, destination, nation_data)
+            if unit.get("speed", 1) <= 0 or not can_meet:
                 return None
             # A separate incoming attack takes precedence over the player's
             # head-on crossing. Movement applies this same rule at every step.
@@ -321,20 +341,20 @@ def tactical_meeting_side(context, prov1, prov2, units1, units2, *, pinned_units
                 pinned_units = queries.find_movement_pins(context)
             if id(unit) in pinned_units:
                 return None
-            # Only hostile land forces, including artillery sitting the battle out,
-            # can start the existing tactical encounter flow.
-            forces = campaign_forces(unit, {"units": [unit, *opponents]},
-                                     world_for(context).nation_data, queries.get_unit_library(context))
+            # Only hostile forces that can fight on the destination, including artillery
+            # sitting a land battle out, can start the existing tactical encounter flow.
+            forces = campaign_forces(unit, {"units": [unit, *opponents], "terrain": destination.get("terrain")},
+                                     nation_data, queries.get_unit_library(context))
             return index if forces is not None else None
     return None
 
 
-def campaign_roster(units, library):
-    """Battle roster entries for campaign units, keeping each unit's fraction of health."""
+def campaign_roster(units, library, terrain=None):
+    """Battle roster entries for campaign units in their form on ``terrain``, keeping each unit's fraction of health."""
     roster = []
     for unit in units:
         # Packed ships already carry their current transport stats, including damage.
-        entry = dict(unit) if packed_ship_type(unit["type"], library) else create_battle_unit(unit["type"], unit["owner"], library)
+        entry = dict(unit) if packed_ship_type(unit["type"], library) else create_battle_unit(unit["type"], unit["owner"], library, terrain)
         entry["health"] = unit["health"] / unit["max_health"] * entry["max_health"]
         roster.append(entry)
     return roster

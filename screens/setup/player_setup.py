@@ -25,9 +25,9 @@ def select_tactical_unit(map_screen, province, candidate_units=None):
     units = list(candidate_units) if candidate_units is not None else province.get("units", [])
     # Selection and battle deployment must accept the same unit types.
     library = queries.get_unit_library(map_screen)
-    eligible_units = [unit for unit in units if tactical_battle.campaign_unit_eligible(unit.get("type"), library) and unit.get("owner") not in c.UNPLAYABLE_NATIONS]
+    eligible_units = [unit for unit in units if tactical_battle.tactical_unit_eligible(unit.get("type"), library) and unit.get("owner") not in c.UNPLAYABLE_NATIONS]
     if units and not eligible_units:
-        map_screen.show_feedback("No eligible land division to control")
+        map_screen.show_feedback("No eligible division to control")
         return
     units = eligible_units
 
@@ -84,8 +84,8 @@ def confirm_player_country(map_screen):
     if map_screen.pending_selection:
         if map_screen.tactical_mode:
             unit = map_screen.pending_unit
-            if not unit or not tactical_battle.campaign_unit_eligible(unit.get("type"), queries.get_unit_library(map_screen)):
-                map_screen.show_feedback("No eligible land division to control")
+            if not unit or not tactical_battle.tactical_unit_eligible(unit.get("type"), queries.get_unit_library(map_screen)):
+                map_screen.show_feedback("No eligible division to control")
                 return
         map_screen.active_players.append(map_screen.pending_selection)
         

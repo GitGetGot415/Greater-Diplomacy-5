@@ -108,8 +108,17 @@ class MapSaveFormatTests(unittest.TestCase):
                 self.assertIsNone(context.player_unit)
                 self.assertEqual(context.player_country, "Avaria")
 
-    def test_tactical_load_rejects_air_sea_artillery_and_unknown_types_without_removing_units(self):
-        for stats in ({"naval_unit": True}, {"air_role": "fighter"}, {"bombard_range": 2}, None):
+    def test_tactical_load_keeps_control_of_a_warship(self):
+        context, _province, player = self.tactical_context()
+        metadata = queries.build_save_dict(context)
+        player["type"] = "Fixture Warship I"
+        queries.get_unit_library(context)[player["type"]] = {"naval_unit": True}
+        load_map._restore_tactical_player(context, metadata)
+        self.assertTrue(context.tactical_mode)
+        self.assertIs(context.player_unit, player)
+
+    def test_tactical_load_rejects_air_artillery_and_unknown_types_without_removing_units(self):
+        for stats in ({"air_role": "fighter"}, {"bombard_range": 2}, None):
             with self.subTest(stats=stats):
                 context, province, player = self.tactical_context()
                 metadata = queries.build_save_dict(context)
