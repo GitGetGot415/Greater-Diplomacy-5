@@ -208,6 +208,48 @@ class NavalBattleTests(unittest.TestCase):
                     keep, hits = simulation._advance_naval_projectile(shot, 0.1, living, initial)
                 self.assertIs(hits[0][0], victim)
 
+    def fire_convoy_at(self, distance):
+        simulation = self.simulation("Land", controlled=None)
+        source, target = simulation.fighters
+        self.assertEqual(source.shape, "convoy")
+        source.angle = source.aim = 0
+        target.x, target.y = naval.muzzle_position(source, 0)[0] + distance, source.y
+        source.gun_points[0] = (target.x, target.y)
+        simulation._fire_shot(source)
+        return simulation, source, target
+
+    def run_shot(self, simulation, shot):
+        initial = {fighter.index: (fighter.x, fighter.y) for fighter in simulation.fighters}
+        keep, hits = True, []
+        while keep:
+            keep, hits = simulation._advance_naval_projectile(shot, 0.05, simulation.fighters, initial)
+        return hits
+
+    def test_convoy_fires_one_flat_bullet_that_hits_a_ship_within_its_short_range(self):
+        weapon = c.TACTICAL_WEAPONS["convoy_gun"]
+        self.assertEqual((weapon["rounds"], weapon["shell"], weapon["projectile"]), (1, False, "bullet"))
+        self.assertLess(weapon["range"], c.TACTICAL_WEAPONS["artillery_shell"]["range"])
+        simulation, source, target = self.fire_convoy_at(weapon["range"] / 2)
+        self.assertEqual(len(simulation.projectiles), 1)
+        shot = simulation.projectiles[0]
+        self.assertEqual((shot.kind, shot.height, shot.gravity), ("bullet", 0, 0))
+        hits = self.run_shot(simulation, shot)
+        self.assertIs(hits[0][0], target)
+        self.assertGreater(hits[0][1], 0)
+        self.assertIs(simulation.impacts[-1][3], False)
+
+    def test_convoy_bullet_stops_at_its_range_and_the_gun_holds_fire_beyond_it(self):
+        weapon = c.TACTICAL_WEAPONS["convoy_gun"]
+        simulation, source, target = self.fire_convoy_at(weapon["range"] + 200)
+        self.assertFalse(naval.can_fire(source, 0, (target.x, target.y), combat.AIM_TOLERANCE))
+        simulation.projectiles.clear()
+        source.gun_points[0] = None
+        simulation._fire_shot(source)
+        shot = simulation.projectiles[0]
+        start = shot.x, shot.y
+        self.assertEqual(self.run_shot(simulation, shot), [])
+        self.assertAlmostEqual(math.dist(start, (shot.x, shot.y)), weapon["range"])
+
     def test_shell_splashes_at_fixed_aim_point_after_target_moves(self):
         simulation = self.simulation()
         source, target = simulation.fighters
@@ -758,6 +800,21 @@ class NavalSetupTests(unittest.TestCase):
         self.screen.set_terrain("plains")
         self.assertEqual(unit["type"], "Truck (Fixture battleship I)")
         self.assertAlmostEqual(unit["health"] / unit["max_health"], 0.37)
+
+    def test_naval_battles_show_the_whole_battlefield_without_a_sight_mask(self):
+        self.screen.set_terrain("ocean")
+        self.screen.add_unit(0, "Fixture destroyer I")
+        self.screen.add_unit(1, "Fixture destroyer I")
+        self.screen.controlled_index = 0
+        self.screen.preview_battle()
+        self.screen.preview_intro_stage = None
+        self.screen.start_battle()
+        simulation = self.screen.simulation
+        player, enemy = simulation.fighters
+        enemy.x, enemy.y = player.x + simulation.sight_range + 500, player.y
+        self.screen._refresh_visibility()
+        self.assertIsNone(self.screen.visibility_mask)
+        self.assertEqual(self.screen.visible_fighters, {id(fighter) for fighter in simulation.fighters})
 
     def test_naval_preview_uses_prepared_ship_and_convoy_symbols(self):
         self.screen.set_terrain("lakes")

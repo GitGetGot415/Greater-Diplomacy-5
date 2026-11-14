@@ -1922,9 +1922,9 @@ class BattleSimulation:
         if hit is not None:
             fraction, _, target = hit
             x, y = shot.x + shot.vx * flight * fraction, shot.y + shot.vy * flight * fraction
-            multiplier = self.ranged_multiplier(shot.distance + traveled * fraction, shot.weapon_data["range"], naval.FALLOFF_START)
+            multiplier = self.ranged_multiplier(shot.distance + traveled * fraction, shot.weapon_data["range"], shot.weapon_data.get("falloff", naval.FALLOFF_START))
             loss = self.weapon_damage(shot.source_data, target.data, shot.attack_share, shot.weapon_data, target.shape, multiplier)
-            self.impacts.append((x, y, c.TACTICAL_IMPACT_SECONDS, shot.kind))
+            self.impacts.append((x, y, c.TACTICAL_IMPACT_SECONDS, self._impact_kind(shot)))
             return False, [(target, loss, shot.source, "shot")]
         shot.x += shot.vx * flight
         shot.y += shot.vy * flight
@@ -1933,9 +1933,14 @@ class BattleSimulation:
         shot.distance += traveled
         shot.remaining -= flight
         if shot.remaining <= 1e-9 or (shot.gravity and shot.height <= 1e-7):
-            self.impacts.append((shot.x, shot.y, c.TACTICAL_IMPACT_SECONDS, shot.kind))
+            self.impacts.append((shot.x, shot.y, c.TACTICAL_IMPACT_SECONDS, self._impact_kind(shot)))
             return False, []
         return True, []
+
+    @staticmethod
+    def _impact_kind(shot):
+        """Shells and torpedoes splash; a naval bullet leaves the small mark of any bullet."""
+        return shot.kind if shot.kind in {"artillery_shell", "torpedo"} else shot.weapon_data["shell"]
 
     def _step(self, dt):
         if int(self.elapsed / RETARGET_SECONDS) != int((self.elapsed + dt) / RETARGET_SECONDS):
@@ -1990,7 +1995,8 @@ class BattleSimulation:
         hittable = _Grid(living, GRID_CELL)
         remaining = []
         for shot in self.projectiles:
-            if shot.kind in {"artillery_shell", "torpedo"}:
+            # Every naval mount's shot, including a convoy's bullet, sweeps ship hulls.
+            if self.naval:
                 keep, hits = self._advance_naval_projectile(shot, dt, living, start_positions, start_angles=start_angles)
                 close_hits.extend(hits)
                 if keep:

@@ -56,8 +56,8 @@ class Mount:
 BROADSIDES = (Mount(0.0, 0.5, math.pi / 2, math.radians(70), "artillery_shell", 1.0), Mount(0.0, -0.5, -math.pi / 2, math.radians(70), "artillery_shell", 1.0))
 TURRETS = (Mount(0.32, 0.0, 0.0, math.radians(270), "artillery_shell", 0.5), Mount(-0.32, 0.0, math.pi, math.radians(270), "artillery_shell", 0.5))
 FORWARD_TORPEDO = (Mount(0.5, 0.0, 0.0, math.radians(30), "torpedo", 1.0),)
-# Convoys retain the shared transport attack, with one forward deck gun.
-CONVOY_GUN = (Mount(0.5, 0.0, 0.0, math.radians(90), "artillery_shell", 1.0),)
+# Convoys retain the shared transport attack, with one forward gun firing single bullets.
+CONVOY_GUN = (Mount(0.5, 0.0, 0.0, math.radians(90), "convoy_gun", 1.0),)
 
 
 def mounts(shape):
@@ -265,12 +265,13 @@ def descending_time(height, vertical_speed, gravity, target_height=0.0):
 
 
 def projectile_contact(shot, target, dt, start_position, *, movement=None, start_angle=None, end_angle=None, padding=0.0):
-    """Hull sweep in relative motion; airborne shells only hit at hull height while falling."""
+    """Hull sweep in relative motion; flat torpedoes and bullets hit any hull, airborne shells only at hull height while falling."""
     dx, dy = (target.x - start_position[0], target.y - start_position[1]) if movement is None else movement
     start = shot.x, shot.y
-    if shot.kind == "torpedo":
+    if shot.kind == "torpedo" or not shot.gravity:
         angle = target.angle if start_angle is None else start_angle
-        interval = swept_hull_interval(start, (shot.x + shot.vx * dt, shot.y + shot.vy * dt), target, start_position, (start_position[0] + dx, start_position[1] + dy), angle, target.angle if end_angle is None else end_angle, TORPEDO_RADIUS + padding)
+        radius = TORPEDO_RADIUS if shot.kind == "torpedo" else 0.0
+        interval = swept_hull_interval(start, (shot.x + shot.vx * dt, shot.y + shot.vy * dt), target, start_position, (start_position[0] + dx, start_position[1] + dy), angle, target.angle if end_angle is None else end_angle, radius + padding)
         return None if interval is None else interval[0]
     end = shot.x + shot.vx * dt - dx, shot.y + shot.vy * dt - dy
     interval = hull_interval(start, end, target, position=start_position)

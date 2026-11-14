@@ -1773,6 +1773,12 @@ class CustomBattleScreen(Screen):
             self.foliage_shadow_mask = None
             self.visible_fighters.clear()
             return
+        if self.simulation.naval:
+            # Naval battles show the whole battlefield: nothing is blacked out beyond sight range.
+            self.visibility_key = self.visibility_mask_key = None
+            self.visibility_mask = self.foliage_shadow_mask = None
+            self.visible_fighters = {id(fighter) for fighter in self.simulation.fighters}
+            return
         field = self.simulation.battlefield
         origin = controlled.x, controlled.y
         reach = self.simulation.sight_range
@@ -2150,8 +2156,10 @@ class CustomBattleScreen(Screen):
                 for slot in range(len(naval.mounts(fighter.shape))):
                     if fighter.mount_muzzles[slot] > 0:
                         tip = self.to_screen(*naval.muzzle_position(fighter, slot))
-                        flash = max(2, round(5 * scale))
-                        pygame.draw.rect(surface, ARTILLERY_SHOT_COLOR if fighter.weapon(slot)["shell"] else TORPEDO_WAKE_COLOR, (tip[0] - flash, tip[1] - flash, flash * 2, flash * 2))
+                        projectile = fighter.weapon(slot)["projectile"]
+                        flash = max(2, round((2 if projectile == "bullet" else 5) * scale))
+                        color = {"torpedo": TORPEDO_WAKE_COLOR, "bullet": SHOT_COLOR}.get(projectile, ARTILLERY_SHOT_COLOR)
+                        pygame.draw.rect(surface, color, (tip[0] - flash, tip[1] - flash, flash * 2, flash * 2))
             elif fighter.muzzle > 0:
                 shell = fighter.weapon(fighter.fired_weapon)["shell"]
                 length = UNIT_SHAPE_SIZES[fighter.shape][0] / 2
