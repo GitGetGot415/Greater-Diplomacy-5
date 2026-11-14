@@ -29,6 +29,7 @@ class NavalBattleTests(unittest.TestCase):
         self.enterContext(patch.dict(c.TACTICAL_WEAPONS, {
             "artillery_shell": dict(label="Fixture shell", interval=1.0, rounds=1, reload=1.0, speed=200.0, spread=0.0, damage=1.0, penetration=0.0, shell=True, soft_only=False, projectile="artillery_shell", range=2000.0, gravity=100.0),
             "torpedo": dict(label="Fixture torpedo", interval=1.0, rounds=1, reload=1.0, speed=100.0, spread=0.0, damage=1.0, penetration=0.0, shell=False, soft_only=False, projectile="torpedo", range=2000.0),
+            "convoy_gun": dict(label="Fixture convoy gun", interval=1.0, rounds=1, reload=1.0, speed=500.0, spread=0.0, damage=1.0, penetration=0.0, shell=False, soft_only=False, projectile="bullet", range=600.0),
         }))
         self.enterContext(patch.object(combat, "TACTICAL_DAMAGE_AT_ZERO_HEALTH", 1.0))
 
@@ -225,14 +226,9 @@ class NavalBattleTests(unittest.TestCase):
             keep, hits = simulation._advance_naval_projectile(shot, 0.05, simulation.fighters, initial)
         return hits
 
-    def test_convoy_fires_one_flat_bullet_that_hits_a_ship_within_its_short_range(self):
+    def test_convoy_fires_one_flat_bullet_that_hits_a_ship_within_its_range(self):
+        self.assertEqual(naval.CONVOY_GUN[0].weapon, "convoy_gun")
         weapon = c.TACTICAL_WEAPONS["convoy_gun"]
-        self.assertEqual((weapon["rounds"], weapon["shell"], weapon["projectile"]), (1, False, "bullet"))
-        self.assertLess(weapon["range"], c.TACTICAL_WEAPONS["artillery_shell"]["range"])
-        # Convoy bullets have no range falloff: full damage up to their maximum range.
-        self.assertNotIn("falloff", weapon)
-        for distance in (0.0, weapon["range"] / 2, weapon["range"]):
-            self.assertEqual(combat.BattleSimulation.ranged_multiplier(distance, weapon["range"], naval.FALLOFF_START), 1.0)
         simulation, source, target = self.fire_convoy_at(weapon["range"] / 2)
         self.assertEqual(len(simulation.projectiles), 1)
         shot = simulation.projectiles[0]
@@ -253,6 +249,25 @@ class NavalBattleTests(unittest.TestCase):
         start = shot.x, shot.y
         self.assertEqual(self.run_shot(simulation, shot), [])
         self.assertAlmostEqual(math.dist(start, (shot.x, shot.y)), weapon["range"])
+
+    def test_naval_gun_without_a_range_reaches_across_the_battlefield_with_ship_falloff(self):
+        del c.TACTICAL_WEAPONS["convoy_gun"]["range"]
+        distance = naval.ARENA_SIZE[0] / 2
+        simulation, source, target = self.fire_convoy_at(distance)
+        self.assertEqual(source.slot_range(0), naval.UNLIMITED_RANGE)
+        self.assertTrue(naval.can_fire(source, 0, (target.x, target.y), combat.AIM_TOLERANCE))
+        simulation._sides = [[source], [target]]
+        self.assertIsNone(simulation._naval_ally_in_line(source, target, 0))
+        shot = simulation.projectiles[0]
+        hits = self.run_shot(simulation, shot)
+        self.assertIs(hits[0][0], target)
+        # Damage falls off as for other ship guns, toward the battlefield-wide reach.
+        full = combat.BattleSimulation.weapon_damage(source.data, target.data, source.attack_share, c.TACTICAL_WEAPONS["convoy_gun"], target.shape)
+        self.assertLess(hits[0][1], full)
+        self.assertGreater(hits[0][1], full * combat.MIN_RANGED_DAMAGE)
+        # The AI drives and fires the gun through whole simulation steps.
+        simulation.projectiles.clear()
+        simulation.advance(1.0)
 
     def test_shell_splashes_at_fixed_aim_point_after_target_moves(self):
         simulation = self.simulation()

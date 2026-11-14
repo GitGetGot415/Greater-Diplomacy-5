@@ -1966,7 +1966,7 @@ class CustomBattleScreen(Screen):
         for slot in slots:
             bearing, cone = naval.sector(fighter, slot) if fighter.naval else (fighter.angle, combat.firing_cone(fighter.shape))
             origin = self.to_screen(*naval.mount_position(fighter, slot)) if fighter.naval else center
-            reach = round(fighter.weapon(slot).get("range", combat.WEAPON_RANGE) * zoom)
+            reach = round(fighter.slot_range(slot) * zoom)
             if cone is None:
                 pygame.draw.circle(surface, RANGE_COLOR, origin, reach, 1)
             else:

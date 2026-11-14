@@ -553,7 +553,12 @@ class Fighter:
 
     @property
     def weapon_range(self):
-        return max((self.weapon(slot).get("range", WEAPON_RANGE) for slot in (0, 1) if self.weapon(slot) is not None), default=WEAPON_RANGE)
+        return max((self.slot_range(slot) for slot in (0, 1) if self.weapon(slot) is not None), default=WEAPON_RANGE)
+
+    def slot_range(self, slot=0):
+        """One gun's reach. A naval gun without a range limit reaches across the whole battlefield."""
+        weapon = self.weapon(slot)
+        return naval.weapon_range(weapon) if self.naval else weapon.get("range", WEAPON_RANGE)
 
     def weapon_aim(self, slot=0):
         return self.secondary_aim if slot and self.naval else self.aim
@@ -1331,7 +1336,7 @@ class BattleSimulation:
         start = naval.muzzle_position(fighter, slot, angle)
         edges = [naval.muzzle_position(fighter, slot, naval.clamp_launch_angle(fighter, slot, angle + error)) for error in (-spread, spread)]
         clearance = naval.TORPEDO_LAUNCH_CLEARANCE + max(math.dist(start, edge) for edge in edges)
-        duration = weapon["range"] / weapon["speed"]
+        duration = naval.weapon_range(weapon) / weapon["speed"]
         shot = Projectile(fighter, fighter.data, *start, math.cos(angle) * weapon["speed"], math.sin(angle) * weapon["speed"], duration, height=0, weapon_data=weapon)
         for ally in self._sides[fighter.side]:
             if ally is fighter or not ally.alive:
@@ -1503,7 +1508,8 @@ class BattleSimulation:
     @staticmethod
     def _shell_arc(start, point, weapon):
         """Flight seconds, launch height, and vertical speed of a naval shot landing at ``point``, or at full range."""
-        distance = weapon["range"] if point is None else min(weapon["range"], math.dist(start, point))
+        reach = naval.weapon_range(weapon)
+        distance = reach if point is None else min(reach, math.dist(start, point))
         flight = max(FIXED_STEP, distance / weapon["speed"])
         gravity = weapon.get("gravity", 0.0)
         if not gravity:
@@ -1524,7 +1530,7 @@ class BattleSimulation:
         flight, height, vertical = self._shell_arc(start, point, weapon)
         angle = fighter.weapon_aim(slot) + self._rng.uniform(-self._shot_spread(fighter, weapon), self._shot_spread(fighter, weapon))
         gravity = weapon.get("gravity", 0.0)
-        remaining = flight if gravity else weapon["range"] / weapon["speed"]
+        remaining = flight if gravity else naval.weapon_range(weapon) / weapon["speed"]
         if weapon["projectile"] == "torpedo":
             angle = naval.clamp_launch_angle(fighter, slot, angle)
             start = naval.muzzle_position(fighter, slot, angle)
@@ -1922,7 +1928,7 @@ class BattleSimulation:
         if hit is not None:
             fraction, _, target = hit
             x, y = shot.x + shot.vx * flight * fraction, shot.y + shot.vy * flight * fraction
-            multiplier = self.ranged_multiplier(shot.distance + traveled * fraction, shot.weapon_data["range"], naval.FALLOFF_START)
+            multiplier = self.ranged_multiplier(shot.distance + traveled * fraction, naval.weapon_range(shot.weapon_data), naval.FALLOFF_START)
             loss = self.weapon_damage(shot.source_data, target.data, shot.attack_share, shot.weapon_data, target.shape, multiplier)
             self.impacts.append((x, y, c.TACTICAL_IMPACT_SECONDS, self._impact_kind(shot)))
             return False, [(target, loss, shot.source, "shot")]

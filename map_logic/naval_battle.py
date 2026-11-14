@@ -11,6 +11,7 @@ FRONT_GAP = 4200.0
 SPAWN_MARGIN = 200.0
 ARENA_WIDTH = FRONT_GAP + 2 * (SPAWN_MARGIN + (c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE - 1) * RANK_GAP)
 ARENA_SIZE = (ARENA_WIDTH, ARENA_WIDTH / 2)
+UNLIMITED_RANGE = math.hypot(*ARENA_SIZE)  # A naval weapon without a range reaches across the whole battlefield.
 ENGAGEMENT_RANGE = 1800.0
 WITHDRAW_RANGE = 2300.0
 LANE_GAP = 240.0
@@ -82,12 +83,17 @@ def aim_allowed(fighter, slot, angle):
     return abs(wrap(angle - bearing)) <= arc / 2 + 1e-9
 
 
+def weapon_range(weapon):
+    """A naval weapon's reach; a weapon without a range limit reaches across the whole battlefield."""
+    return weapon.get("range", UNLIMITED_RANGE)
+
+
 def can_fire(fighter, slot, point, tolerance):
     if point is None:
         return False
     start = mount_position(fighter, slot)
     desired = math.atan2(point[1] - start[1], point[0] - start[0])
-    return (math.dist(start, point) <= fighter.weapon(slot)["range"] and aim_allowed(fighter, slot, desired)
+    return (math.dist(start, point) <= weapon_range(fighter.weapon(slot)) and aim_allowed(fighter, slot, desired)
             and abs(wrap(desired - fighter.weapon_aim(slot))) <= tolerance)
 
 
@@ -246,7 +252,7 @@ def lead_point(target, start, weapon):
     """Predict the same fixed trajectory's flight time used at launch."""
     point = target.x, target.y
     for _ in range(MAX_LEAD_PASSES):
-        flight = min(weapon["range"], math.dist(start, point)) / weapon["speed"]
+        flight = min(weapon_range(weapon), math.dist(start, point)) / weapon["speed"]
         point = target.x + target.vx * flight, target.y + target.vy * flight
     return point
 
