@@ -2,7 +2,7 @@
 
 import math
 import random
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 import data.constants as c
 from data import queries
@@ -504,6 +504,8 @@ class Fighter:
     withdrawing: bool = False  # A charging sub-unit pulling back before it charges again.
     dodge: float = 0.0  # Seconds of sidestepping left.
     dodge_heading: float = 0.0  # The sidestep's direction: at right angles to the shot it avoids.
+    evasion_course: object = None  # Temporary naval (throttle, heading), reconsidered as torpedoes move.
+    evasion_next_check: float = 0.0
     route: list = field(default_factory=list)
     route_revision: int = -1
     navigate_at: float = 0.0
@@ -956,7 +958,7 @@ class BattleSimulation:
         return (self._firing_lane(fighter, target, start)
                 and self._ally_in_line(fighter, target, start, slot=slot) is None)
 
-    def _ally_safe_throttle(self, fighter, throttle):
+    def _ally_safe_throttle(self, fighter, throttle, *, original=None, time_ahead=0.0, allies=None):
         """Brake ram-capable AI units before they hit allies fast enough to damage them."""
         if not throttle or not fighter.can_ram:
             return throttle
@@ -964,10 +966,11 @@ class BattleSimulation:
         hx, hy = math.cos(fighter.angle) * direction, math.sin(fighter.angle) * direction
         acceleration = fighter.max_speed / MOBILITY[fighter.shape][0]
         limit = abs(throttle) * fighter.max_speed
-        for ally in self._sides[fighter.side]:
-            if ally is fighter:
+        neighbors = self._sides[fighter.side] if allies is None else allies
+        for ally in neighbors:
+            if ally is (fighter if original is None else original):
                 continue
-            ox, oy = ally.x - fighter.x, ally.y - fighter.y
+            ox, oy = ally.x + ally.vx * time_ahead - fighter.x, ally.y + ally.vy * time_ahead - fighter.y
             along = ox * hx + oy * hy
             clearance = fighter.radius + ally.radius
             if along <= 0 or abs(oy * hx - ox * hy) > clearance:
@@ -1344,6 +1347,7 @@ class BattleSimulation:
                         self._sidestep(fighter, ally.x, ally.y, fighter.target.x - fighter.x, fighter.target.y - fighter.y, LINE_SHIFT_SECONDS)
                         break
             throttle, heading = self._naval_course(fighter, fighter.target)
+            throttle, heading = self._naval_evasion(fighter, (throttle, heading))
             throttle, turn = self._heading_controls(fighter, throttle, heading)
             throttle = self._ally_safe_throttle(fighter, throttle)
         self._steer(fighter, turn, dt)
@@ -1478,7 +1482,7 @@ class BattleSimulation:
         """
         for shot in self.projectiles:
             if shot.kind == "torpedo":
-                self._dodge_torpedo(shot)
+                # Choose a maneuver against all torpedoes together in _drive_naval.
                 continue
             speed = math.hypot(shot.vx, shot.vy)
             lookahead = min(DODGE_LOOKAHEAD, shot.remaining)
@@ -1505,15 +1509,105 @@ class BattleSimulation:
                 if 0 <= along <= reach and abs(across) <= DODGE_DANGER * unit.radius / UNIT_RADIUS:
                     self._start_dodge(unit, shot)
 
-    def _dodge_torpedo(self, shot):
-        """Every AI ship may evade an incoming torpedo, even with a loaded gun or a ram planned."""
-        for unit in self.fighters:
-            if (not unit.naval or not unit.alive or unit is self.controlled or unit is shot.source
-                    or unit.max_speed <= 0 or unit.dodge > 0):
+    def _naval_maneuver_score(self, unit, course, torpedoes):
+        """Predict only hull motion, using the live steering and acceleration helpers."""
+        trial = replace(unit)
+        shots = [replace(shot) for shot in torpedoes]
+        horizon = min(naval.TORPEDO_LOOKAHEAD, max(shot.remaining for shot in shots))
+        drift = math.hypot(unit.push_vx, unit.push_vy) * KNOCKBACK_SECONDS
+        allies = [ally for ally in self.fighters if ally is not unit and ally.alive and ally.side == unit.side
+                  and math.dist((unit.x, unit.y), (ally.x, ally.y)) <= unit.radius + ally.radius + drift + unit.max_speed * max(horizon, MOBILITY[unit.shape][0] / 2) + math.hypot(ally.vx, ally.vy) * horizon]
+        elapsed, hit_at, clearance = 0.0, math.inf, math.inf
+        while elapsed < horizon - 1e-9:
+            dt = min(naval.EVASION_SAMPLE_SECONDS, horizon - elapsed)
+            initial, angle = (trial.x, trial.y), trial.angle
+            poses = [(0.0, trial.x, trial.y, trial.angle)]
+            segment = 0.0
+            while segment < dt - 1e-9:
+                tick = min(FIXED_STEP, dt - segment)
+                throttle, turn = self._heading_controls(trial, *course)
+                throttle = self._ally_safe_throttle(trial, throttle, original=unit, time_ahead=elapsed + segment, allies=allies)
+                self._steer(trial, turn, tick)
+                self._accelerate(trial, throttle, tick)
+                trial.x += (math.cos(trial.angle) * trial.speed + trial.push_vx) * tick
+                trial.y += (math.sin(trial.angle) * trial.speed + trial.push_vy) * tick
+                decay = max(0.0, 1.0 - tick / KNOCKBACK_SECONDS)
+                trial.push_vx *= decay
+                trial.push_vy *= decay
+                if not self.battlefield.walkable((trial.x, trial.y), trial.radius):
+                    return None
+                segment += tick
+                poses.append((segment, trial.x, trial.y, trial.angle))
+            # Bound every fixed-tick departure from the sampled straight/rotating sweep.
+            # Padding makes the cheaper sampled collision checks conservative, never narrower.
+            turn_angle = _wrap(trial.angle - angle)
+            padding = max(math.dist((x, y), (initial[0] + (trial.x - initial[0]) * time / dt, initial[1] + (trial.y - initial[1]) * time / dt)) + trial.radius * abs(_wrap(heading - angle - turn_angle * time / dt)) for time, x, y, heading in poses)
+            for ally in allies:
+                # Allies keep their current motion; the planner never runs another unit's AI.
+                center = ally.x + ally.vx * elapsed, ally.y + ally.vy * elapsed
+                if math.dist(initial, center) > trial.radius + ally.radius + (trial.max_speed + math.hypot(ally.vx, ally.vy)) * dt:
+                    continue
+                movement = (trial.x - initial[0]) / dt, (trial.y - initial[1]) / dt
+                if naval.body_contact(trial, ally, movement, (ally.vx, ally.vy), dt, first_position=initial, second_position=center, start_angle=angle, padding=padding) is not None:
+                    return None
+            for shot in shots:
+                flight = min(dt, shot.remaining)
+                if flight <= 0:
+                    continue
+                motion = (trial.x - initial[0]) * flight / dt, (trial.y - initial[1]) * flight / dt
+                fraction = naval.projectile_contact(shot, trial, flight, initial, movement=motion, start_angle=angle, end_angle=angle + turn_angle * flight / dt, padding=padding)
+                if fraction is not None:
+                    hit_at = min(hit_at, elapsed + fraction * flight)
+                shot.x += shot.vx * flight
+                shot.y += shot.vy * flight
+                shot.remaining -= flight
+                clearance = min(clearance, naval.hull_clearance((shot.x, shot.y), trial, (trial.x, trial.y), trial.angle) - naval.TORPEDO_RADIUS - padding)
+            elapsed += dt
+            if hit_at != math.inf:
+                break
+        return hit_at, clearance, -abs(_wrap(course[1] - unit.angle)), -abs(course[0] - unit.speed / unit.max_speed)
+
+    def _naval_evasion(self, unit, normal_course):
+        """Keep safe maneuvers stable, and reject turns that sweep the bow or stern into danger."""
+        if unit is self.controlled or unit.max_speed <= 0:
+            unit.evasion_course = None
+            return normal_course
+        torpedoes = [shot for shot in self.projectiles if shot.kind == "torpedo" and shot.source is not unit and shot.remaining > 0
+                     and battle_terrain.circle_contact((shot.x, shot.y), (shot.x + shot.vx * min(naval.TORPEDO_LOOKAHEAD, shot.remaining), shot.y + shot.vy * min(naval.TORPEDO_LOOKAHEAD, shot.remaining)), (unit.x, unit.y), unit.radius + math.hypot(unit.push_vx, unit.push_vy) * KNOCKBACK_SECONDS + unit.max_speed * min(naval.TORPEDO_LOOKAHEAD, shot.remaining)) is not None]
+        if not torpedoes:
+            unit.evasion_course = None
+            return normal_course
+        if unit.evasion_course is not None:
+            unit.ram_committed = False
+        if self.elapsed < unit.evasion_next_check:
+            return unit.evasion_course or normal_course
+        # Spread decisions across fixed ticks, as deployment already does for target selection.
+        cycle = max(1, round(RETARGET_SECONDS / FIXED_STEP))
+        tick = round(self.elapsed / FIXED_STEP)
+        unit.evasion_next_check = (tick + ((unit.index - tick) % cycle or cycle)) * FIXED_STEP
+        normal_score = self._naval_maneuver_score(unit, normal_course, torpedoes)
+        if normal_score is not None and normal_score[0] == math.inf and (unit.evasion_course is None or normal_score[1] >= naval.EVASION_CLEARANCE):
+            unit.evasion_course = None
+            return normal_course
+        if unit.evasion_course is not None:
+            score = self._naval_maneuver_score(unit, unit.evasion_course, torpedoes)
+            if score is not None and score[0] == math.inf:
+                return unit.evasion_course
+        courses = [normal_course, (unit.speed / unit.max_speed, unit.angle), (1.0, unit.angle), (0.0, unit.angle), (-1.0, unit.angle)]
+        courses.extend((1.0, unit.angle + angle) for angle in naval.EVASION_TURN_ANGLES)
+        best, best_score = normal_course, normal_score
+        for course in dict.fromkeys(courses):
+            if course == normal_course:
                 continue
-            if naval.torpedo_threat_time(shot, unit) is not None:
-                self._sidestep(unit, shot.x, shot.y, shot.vx, shot.vy, naval.TORPEDO_DODGE_SECONDS)
-                unit.ram_committed = False
+            score = self._naval_maneuver_score(unit, course, torpedoes)
+            if score is not None and (best_score is None or score > best_score):
+                best, best_score = course, score
+            # A straight escape with comfortable clearance avoids an unnecessary hull swing.
+            if best_score is not None and best_score[0] == math.inf and best_score[1] >= naval.EVASION_CLEARANCE and abs(_wrap(best[1] - unit.angle)) < 1e-9:
+                break
+        unit.evasion_course = best
+        unit.ram_committed = False
+        return best
 
     def _division_objectives(self, targets, dt):
         """Each division with living sub-units and enemies left: its center and the enemy it advances on.
@@ -1707,7 +1801,7 @@ class BattleSimulation:
             unit.x, unit.y = x, y
         return damage
 
-    def _advance_naval_projectile(self, shot, dt, living, start_positions):
+    def _advance_naval_projectile(self, shot, dt, living, start_positions, *, start_angles=None):
         flight = min(dt, shot.remaining)
         if flight <= 0:
             return False, []
@@ -1718,7 +1812,8 @@ class BattleSimulation:
             initial = start_positions[target.index]
             # A projectile expiring partway through a tick sees that same share of ship motion.
             movement = (target.x - initial[0]) * flight / dt, (target.y - initial[1]) * flight / dt
-            fraction = naval.projectile_contact(shot, target, flight, initial, movement=movement)
+            initial_angle = target.angle if start_angles is None else start_angles[target.index]
+            fraction = naval.projectile_contact(shot, target, flight, initial, movement=movement, start_angle=initial_angle, end_angle=initial_angle + _wrap(target.angle - initial_angle) * flight / dt)
             if fraction is not None:
                 collisions.append((fraction, target.index, target))
         hit = min(collisions, default=None, key=lambda item: (item[0], item[1]))
@@ -1748,6 +1843,7 @@ class BattleSimulation:
         self.impacts = [(x, y, remaining - dt, shell) for x, y, remaining, shell in self.impacts if remaining > dt]
         living = [fighter for fighter in self.fighters if fighter.alive]
         start_positions = {fighter.index: (fighter.x, fighter.y) for fighter in living} if self.naval else {}
+        start_angles = {fighter.index: fighter.angle for fighter in living} if self.naval else {}
         sides = [[fighter for fighter in living if fighter.side == side] for side in (0, 1)]
         crowds = [_Grid(side, GRID_CELL) for side in sides]
         targets = [_Grid(side, TARGET_CELL) for side in sides]
@@ -1794,7 +1890,7 @@ class BattleSimulation:
         remaining = []
         for shot in self.projectiles:
             if shot.kind in {"artillery_shell", "torpedo"}:
-                keep, hits = self._advance_naval_projectile(shot, dt, living, start_positions)
+                keep, hits = self._advance_naval_projectile(shot, dt, living, start_positions, start_angles=start_angles)
                 close_hits.extend(hits)
                 if keep:
                     remaining.append(shot)

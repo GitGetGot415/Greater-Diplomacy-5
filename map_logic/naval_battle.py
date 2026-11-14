@@ -22,7 +22,10 @@ RAM_SUPPORT_RANGE = 500.0
 RAM_MIN_UNIT_SPEED = 1.0
 TORPEDO_RADIUS = 3.0
 TORPEDO_LOOKAHEAD = 8.0  # Ships need time to turn and accelerate before an approaching torpedo arrives.
-TORPEDO_DODGE_SECONDS = 3.0
+EVASION_CLEARANCE = 12.0
+EVASION_SAMPLE_SECONDS = 0.2  # Motion still uses fixed ticks; hull checks cover each sampled interval.
+EVASION_TURN_ANGLES = tuple(math.radians(angle) for angle in (-90, -45, 45, 90))
+HULL_SWEEP_ERROR = 1.0  # Maximum extra corner clearance from approximating a rotating hull.
 MUZZLE_CLEARANCE = 5.0
 MAX_LEAD_PASSES = 5
 
@@ -113,10 +116,11 @@ def muzzle_position(fighter, slot, angle=None):
     return start[0] + math.cos(angle) * distance, start[1] + math.sin(angle) * distance
 
 
-def hull_interval(start, end, fighter, *, padding=0.0, position=None):
+def hull_interval(start, end, fighter, *, padding=0.0, position=None, angle=None):
     """Entry/exit fractions of a swept point against the oriented hull rectangle."""
     center = (fighter.x, fighter.y) if position is None else position
-    co, si = math.cos(fighter.angle), math.sin(fighter.angle)
+    angle = fighter.angle if angle is None else angle
+    co, si = math.cos(angle), math.sin(angle)
     width, height = c.TACTICAL_BODIES[fighter.shape][:2]
     enter, leave = 0.0, 1.0
     for axis, half in (((co, si), width / 2 + padding), ((-si, co), height / 2 + padding)):
@@ -133,17 +137,54 @@ def hull_interval(start, end, fighter, *, padding=0.0, position=None):
     return enter, leave
 
 
-def body_contact(first, second, velocity, other_velocity, dt):
+def swept_hull_interval(start, end, fighter, start_position, end_position, start_angle, end_angle, padding=0.0):
+    """Sweep the rotating bow and stern as well as the hull's translation.
+
+    Each small angular segment uses its middle orientation with conservative
+    corner padding, so no part of a rotating hull can slip between samples.
+    """
+    turn = wrap(end_angle - start_angle)
+    relative = tuple((start[index] - start_position[index], end[index] - end_position[index]) for index in (0, 1))
+    reach = fighter.radius + padding
+    if any(min(a, b) > reach or max(a, b) < -reach for a, b in relative):
+        return None
+    if abs(turn) < 1e-12:
+        return hull_interval(tuple(a for a, _ in relative), tuple(b for _, b in relative), fighter, position=(0.0, 0.0), angle=start_angle, padding=padding)
+    steps = max(1, math.ceil(abs(turn) * fighter.radius / (2 * HULL_SWEEP_ERROR)))
+    angular_padding = fighter.radius * abs(turn) / (2 * steps)
+    for step in range(steps):
+        low, high = step / steps, (step + 1) / steps
+        first = tuple(a + (b - a) * low for a, b in relative)
+        last = tuple(a + (b - a) * high for a, b in relative)
+        interval = hull_interval(first, last, fighter, position=(0.0, 0.0), angle=start_angle + turn * (low + high) / 2, padding=padding + angular_padding)
+        if interval is not None:
+            return low + interval[0] / steps, low + interval[1] / steps
+    return None
+
+
+def hull_clearance(point, fighter, position, angle):
+    """Distance from a point to the complete oriented hull, including both ends."""
+    co, si = math.cos(angle), math.sin(angle)
+    dx, dy = point[0] - position[0], point[1] - position[1]
+    width, height = c.TACTICAL_BODIES[fighter.shape][:2]
+    return math.hypot(max(0.0, abs(dx * co + dy * si) - width / 2), max(0.0, abs(-dx * si + dy * co) - height / 2))
+
+
+def body_contact(first, second, velocity, other_velocity, dt, *, first_position=None, second_position=None, start_angle=None, padding=0.0):
     """Swept separating-axis hull contact, including ships crossing between ticks."""
-    axes = [(math.cos(ship.angle), math.sin(ship.angle)) for ship in (first, second)]
+    turn = 0.0 if start_angle is None else wrap(first.angle - start_angle)
+    angles = (first.angle - turn / 2, second.angle)
+    axes = [(math.cos(angle), math.sin(angle)) for angle in angles]
     axes += [(-axis[1], axis[0]) for axis in axes[:]]
     half_sizes = [c.TACTICAL_BODIES[ship.shape][:2] for ship in (first, second)]
     forward = axes[:2]
     enter, leave, contact_axis, smallest = 0.0, 1.0, None, math.inf
     motion = ((other_velocity[0] - velocity[0]) * dt, (other_velocity[1] - velocity[1]) * dt)
-    delta = second.x - first.x, second.y - first.y
+    first_position = (first.x, first.y) if first_position is None else first_position
+    second_position = (second.x, second.y) if second_position is None else second_position
+    delta = second_position[0] - first_position[0], second_position[1] - first_position[1]
     for axis in axes:
-        extent = sum((abs(axis[0] * heading[0] + axis[1] * heading[1]) * size[0] + abs(-axis[0] * heading[1] + axis[1] * heading[0]) * size[1]) / 2 for heading, size in zip(forward, half_sizes))
+        extent = sum((abs(axis[0] * heading[0] + axis[1] * heading[1]) * size[0] + abs(-axis[0] * heading[1] + axis[1] * heading[0]) * size[1]) / 2 for heading, size in zip(forward, half_sizes)) + first.radius * abs(turn) / 2 + padding
         offset = delta[0] * axis[0] + delta[1] * axis[1]
         move = motion[0] * axis[0] + motion[1] * axis[1]
         if abs(move) < 1e-12:
@@ -182,29 +223,22 @@ def descending_time(height, vertical_speed, gravity, target_height=0.0):
     return (vertical_speed + math.sqrt(max(0.0, vertical_speed * vertical_speed + 2 * gravity * (height - target_height)))) / gravity
 
 
-def projectile_contact(shot, target, dt, start_position, *, movement=None):
+def projectile_contact(shot, target, dt, start_position, *, movement=None, start_angle=None, end_angle=None, padding=0.0):
     """Hull sweep in relative motion; airborne shells only hit at hull height."""
     dx, dy = (target.x - start_position[0], target.y - start_position[1]) if movement is None else movement
     start = shot.x, shot.y
+    if shot.kind == "torpedo":
+        angle = target.angle if start_angle is None else start_angle
+        interval = swept_hull_interval(start, (shot.x + shot.vx * dt, shot.y + shot.vy * dt), target, start_position, (start_position[0] + dx, start_position[1] + dy), angle, target.angle if end_angle is None else end_angle, TORPEDO_RADIUS + padding)
+        return None if interval is None else interval[0]
     end = shot.x + shot.vx * dt - dx, shot.y + shot.vy * dt - dy
-    interval = hull_interval(start, end, target, padding=TORPEDO_RADIUS if shot.kind == "torpedo" else 0.0, position=start_position)
+    interval = hull_interval(start, end, target, position=start_position)
     if interval is None:
         return None
     enter, leave = interval
-    if shot.kind == "torpedo":
-        return enter
     # A shell can descend into the hull after first entering its horizontal footprint.
     candidates = sorted((enter * dt, descending_time(shot.height, shot.vertical_speed, shot.gravity, c.TACTICAL_NAVAL_HULL_HEIGHT)))
     for seconds in candidates:
         if enter * dt - 1e-9 <= seconds <= leave * dt + 1e-9 and -1e-7 <= shell_height(shot, seconds) <= c.TACTICAL_NAVAL_HULL_HEIGHT + 1e-7:
             return max(0.0, seconds / dt)
     return None
-
-
-def torpedo_threat_time(shot, fighter):
-    """Predict hull contact using the same relative-motion sweep as actual impacts."""
-    horizon = min(TORPEDO_LOOKAHEAD, shot.remaining)
-    if horizon <= 0:
-        return None
-    fraction = projectile_contact(shot, fighter, horizon, (fighter.x, fighter.y), movement=(fighter.vx * horizon, fighter.vy * horizon))
-    return None if fraction is None else fraction * horizon

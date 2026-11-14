@@ -317,13 +317,12 @@ class NavalBattleTests(unittest.TestCase):
                     unit.ram_committed = True
                     shot = combat.Projectile(source, dict(source.data), unit.x + 600, unit.y, -100, 0, 10, height=0, weapon_data=dict(c.TACTICAL_WEAPONS["torpedo"]))
                     simulation.projectiles = [shot]
-                    crowds = [combat._Grid([fighter for fighter in simulation.fighters if fighter.side == team], combat.GRID_CELL) for team in (0, 1)]
+                    simulation._sides = [[fighter for fighter in simulation.fighters if fighter.side == team] for team in (0, 1)]
                     with patch.object(simulation, "_ready_to_fire", return_value=True):
-                        simulation._dodge_incoming(crowds)
-                    self.assertEqual(unit.dodge, naval.TORPEDO_DODGE_SECONDS)
+                        course = simulation._naval_evasion(unit, (0.0, unit.angle))
+                    self.assertIsNotNone(unit.evasion_course)
                     self.assertFalse(unit.ram_committed)
-                    self.assertAlmostEqual(math.cos(unit.dodge_heading), 0)
-                    self.assertIsNotNone(naval.torpedo_threat_time(shot, unit))
+                    self.assertEqual(simulation._naval_maneuver_score(unit, course, [shot])[0], math.inf)
 
     def test_ships_ignore_receding_expired_or_missing_torpedoes_and_keep_player_control(self):
         simulation = self.simulation(controlled=None)
@@ -332,14 +331,16 @@ class NavalBattleTests(unittest.TestCase):
         cases = ((unit.x + 600, unit.y, 100, 0, 10), (unit.x + 600, unit.y + 300, -100, 0, 10), (unit.x + 600, unit.y, -100, 0, 0.1))
         for x, y, vx, vy, remaining in cases:
             shot = combat.Projectile(source, dict(source.data), x, y, vx, vy, remaining, height=0, weapon_data=dict(c.TACTICAL_WEAPONS["torpedo"]))
-            simulation._dodge_torpedo(shot)
-            self.assertEqual(unit.dodge, 0)
+            simulation.projectiles = [shot]
+            self.assertEqual(simulation._naval_evasion(unit, (0.0, unit.angle)), (0.0, unit.angle))
+            self.assertIsNone(unit.evasion_course)
         shot = combat.Projectile(source, dict(source.data), unit.x + 600, unit.y, -100, 0, 10, height=0, weapon_data=dict(c.TACTICAL_WEAPONS["torpedo"]))
         for controlled, speed in ((unit, 1), (None, 0)):
             simulation.controlled = controlled
             unit.data["speed"] = speed
-            simulation._dodge_torpedo(shot)
-            self.assertEqual(unit.dodge, 0)
+            simulation.projectiles = [shot]
+            self.assertEqual(simulation._naval_evasion(unit, (0.0, unit.angle)), (0.0, unit.angle))
+            self.assertIsNone(unit.evasion_course)
 
     def test_a_slow_ship_maneuvers_away_from_a_torpedo_it_would_otherwise_hit(self):
         results = []
@@ -357,11 +358,139 @@ class NavalBattleTests(unittest.TestCase):
             if evades:
                 simulation.advance(7)
             else:
-                with patch.object(simulation, "_dodge_torpedo"):
+                with patch.object(simulation, "_naval_evasion", side_effect=lambda unit, course: course):
                     simulation.advance(7)
-            results.append((unit.data["health"], unit.y))
+            results.append((unit.data["health"], (unit.x, unit.y)))
         self.assertGreater(results[1][0], results[0][0])
         self.assertNotEqual(results[1][1], results[0][1])
+
+    def long_hull_encounter(self):
+        self.enterContext(patch.dict(c.TACTICAL_BODIES, {"destroyer": (200, 20, math.hypot(100, 10), 4.0)}))
+        self.enterContext(patch.dict(combat.MOBILITY, {"destroyer": (1.0, 60.0, 0.1)}))
+        simulation = self.simulation(controlled=None)
+        source, unit = simulation.fighters
+        unit.x = unit.y = 2000
+        unit.angle = unit.speed = unit.turn_rate = 0
+        unit.data["speed"] = 1
+        source.x, source.y = 4000, 2000
+        simulation._sides = [[source], [unit]]
+        return simulation, source, unit
+
+    def torpedo_at(self, source, x, y, vx, vy, remaining=6):
+        return combat.Projectile(source, dict(source.data), x, y, vx, vy, remaining, height=0, weapon_data=dict(c.TACTICAL_WEAPONS["torpedo"]))
+
+    def test_rotating_bow_and_stern_hit_between_clear_endpoint_orientations(self):
+        simulation, source, unit = self.long_hull_encounter()
+        for sign in (-1, 1):
+            with self.subTest(end="bow" if sign > 0 else "stern"):
+                shot = self.torpedo_at(source, unit.x + sign * 70, unit.y + sign * 70, 0, 0)
+                unit.angle = 0
+                self.assertIsNone(naval.projectile_contact(shot, unit, 1, (unit.x, unit.y)))
+                unit.angle = math.pi / 2
+                self.assertIsNone(naval.projectile_contact(shot, unit, 1, (unit.x, unit.y)))
+                fraction = naval.projectile_contact(shot, unit, 1, (unit.x, unit.y), start_angle=0)
+                self.assertIsNotNone(fraction)
+                self.assertGreater(fraction, 0)
+                self.assertLess(fraction, 1)
+                keep, hits = simulation._advance_naval_projectile(shot, 1, [unit], {unit.index: (unit.x, unit.y)}, start_angles={unit.index: 0})
+                self.assertFalse(keep)
+                self.assertIs(hits[0][0], unit)
+
+    def test_planner_rejects_bow_and_stern_turns_when_staying_straight_is_safe(self):
+        simulation, source, unit = self.long_hull_encounter()
+        for dx, dy, vx, heading in ((180, 50, -80, math.pi / 2), (-120, 50, 80, -math.pi / 2), (180, -50, -80, -math.pi / 2)):
+            with self.subTest(offset=(dx, dy)):
+                shot = self.torpedo_at(source, unit.x + dx, unit.y + dy, vx, 0)
+                simulation.projectiles = [shot]
+                unit.evasion_course = None
+                unit.evasion_next_check = 0
+                self.assertEqual(simulation._naval_maneuver_score(unit, (0.0, 0.0), [shot])[0], math.inf)
+                self.assertNotEqual(simulation._naval_maneuver_score(unit, (1.0, heading), [shot])[0], math.inf)
+                chosen = simulation._naval_evasion(unit, (1.0, heading))
+                self.assertEqual(simulation._naval_maneuver_score(unit, chosen, [shot])[0], math.inf)
+
+    def test_new_torpedo_replaces_an_active_maneuver_that_would_hit_the_stern(self):
+        simulation, source, unit = self.long_hull_encounter()
+        bow = self.torpedo_at(source, unit.x + 180, unit.y + 50, -80, 0)
+        stern = self.torpedo_at(source, unit.x - 120, unit.y + 50, 80, 0)
+        normal, active = (1.0, math.pi / 2), (1.0, -math.pi / 2)
+        unit.evasion_course = active
+        simulation.projectiles = [bow]
+        self.assertEqual(simulation._naval_evasion(unit, normal), active)
+        simulation.projectiles.append(stern)
+        simulation.elapsed = unit.evasion_next_check
+        self.assertNotEqual(simulation._naval_maneuver_score(unit, active, [bow, stern])[0], math.inf)
+        chosen = simulation._naval_evasion(unit, normal)
+        self.assertNotEqual(chosen, active)
+        self.assertEqual(simulation._naval_maneuver_score(unit, chosen, [bow, stern])[0], math.inf)
+
+    def test_live_turn_avoids_the_bow_hit_caused_by_the_old_sideways_dodge(self):
+        results = []
+        for evades in (False, True):
+            simulation, source, unit = self.long_hull_encounter()
+            simulation.controlled = source
+            source.data["speed"] = 0
+            unit.cooldown = unit.secondary_cooldown = 1000
+            unit.dodge, unit.dodge_heading = 4.0, math.pi / 2
+            simulation.projectiles = [self.torpedo_at(source, unit.x + 180, unit.y + 50, -80, 0)]
+            if evades:
+                simulation.advance(4)
+            else:
+                with patch.object(simulation, "_naval_evasion", side_effect=lambda unit, course: course):
+                    simulation.advance(4)
+            results.append(unit.data["health"])
+        self.assertLess(results[0], results[1])
+
+    def test_unavoidable_torpedo_prefers_a_maneuver_that_delays_contact(self):
+        simulation, source, unit = self.long_hull_encounter()
+        unit.data["speed"] = 0.05
+        shot = self.torpedo_at(source, unit.x + 140, unit.y, -100, 0)
+        simulation.projectiles = [shot]
+        baseline = simulation._naval_maneuver_score(unit, (0.0, 0.0), [shot])
+        chosen = simulation._naval_evasion(unit, (0.0, 0.0))
+        result = simulation._naval_maneuver_score(unit, chosen, [shot])
+        self.assertLess(result[0], math.inf)
+        self.assertGreater(result[0], baseline[0])
+
+    def test_prediction_does_not_modify_live_units_projectiles_or_randomness(self):
+        simulation, source, unit = self.long_hull_encounter()
+        shot = self.torpedo_at(source, unit.x + 180, unit.y + 50, -80, 0)
+        simulation.projectiles = [shot]
+        units = [copy.deepcopy(vars(fighter)) for fighter in simulation.fighters]
+        position, remaining = (shot.x, shot.y), shot.remaining
+        randomness = simulation._rng.getstate()
+        simulation._naval_maneuver_score(unit, (1.0, math.pi / 2), [shot])
+        self.assertEqual([vars(fighter) for fighter in simulation.fighters], units)
+        self.assertEqual((shot.x, shot.y), position)
+        self.assertEqual(shot.remaining, remaining)
+        self.assertEqual(simulation._rng.getstate(), randomness)
+
+    def test_maneuvers_cannot_leave_the_field_or_swing_into_a_friendly_hull(self):
+        simulation, source, unit = self.long_hull_encounter()
+        shot = self.torpedo_at(source, unit.x + 180, unit.y + 50, -80, 0)
+        ally = combat.Fighter(dict(unit.data), unit.side, unit.x + 70, unit.y + 70, "convoy", index=2)
+        simulation.fighters.append(ally)
+        simulation._sides[unit.side].append(ally)
+        self.assertIsNone(simulation._naval_maneuver_score(unit, (1.0, math.pi / 2), [shot]))
+        simulation.fighters.remove(ally)
+        simulation._sides[unit.side].remove(ally)
+        unit.x = unit.radius + 1
+        shot.x = unit.x + 180
+        shot.y = unit.y + 500
+        self.assertIsNone(simulation._naval_maneuver_score(unit, (1.0, math.pi), [shot]))
+        self.assertIsNotNone(simulation._naval_maneuver_score(unit, (0.0, 0.0), [shot]))
+
+    def test_evasion_uses_the_same_decision_for_identical_hulls_on_either_side(self):
+        simulation, source, unit = self.long_hull_encounter()
+        simulation.projectiles = [self.torpedo_at(source, unit.x + 180, unit.y + 50, -80, 0)]
+        chosen = []
+        for side in (0, 1):
+            unit.side, source.side = side, 1 - side
+            unit.evasion_course = None
+            unit.evasion_next_check = 0
+            simulation._sides = [[fighter for fighter in simulation.fighters if fighter.side == team] for team in (0, 1)]
+            chosen.append(simulation._naval_evasion(unit, (1.0, math.pi / 2)))
+        self.assertEqual(chosen[0], chosen[1])
 
     def test_naval_ram_is_available_at_naval_minimum_speed(self):
         simulation = self.simulation("battleship", "destroyer", controlled=None)
