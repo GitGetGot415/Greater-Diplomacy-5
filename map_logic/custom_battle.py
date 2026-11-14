@@ -1503,6 +1503,8 @@ class BattleSimulation:
             angle = naval.clamp_launch_angle(fighter, slot, angle)
             start = naval.muzzle_position(fighter, slot, angle)
             self._consume_shot(fighter, slot)
+            # A torpedo has no range limit: it runs until it leaves the map.
+            remaining = naval.time_to_leave_map(start, angle, weapon["speed"], self.battlefield.size)
         self.projectiles.append(Projectile(fighter, dict(fighter.data), *start, math.cos(angle) * weapon["speed"], math.sin(angle) * weapon["speed"], remaining, height=height, vertical_speed=vertical, gravity=gravity, weapon_data=dict(weapon), attack_share=fighter.attack_share * naval.mounts(fighter.shape)[slot].attack_share))
         fighter.fired_weapon = slot
         fighter.muzzle = fighter.mount_muzzles[slot] = c.TACTICAL_MUZZLE_SECONDS

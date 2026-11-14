@@ -118,6 +118,17 @@ def muzzle_position(fighter, slot, angle=None):
     return start[0] + math.cos(angle) * distance, start[1] + math.sin(angle) * distance
 
 
+def time_to_leave_map(start, angle, speed, size):
+    """Seconds a shot moving straight at ``speed`` takes to cross the map edge from ``start``."""
+    times = []
+    for origin, step, limit in ((start[0], math.cos(angle), size[0]), (start[1], math.sin(angle), size[1])):
+        if step > 1e-9:
+            times.append((limit - origin) / step)
+        elif step < -1e-9:
+            times.append(-origin / step)
+    return max(min(times, default=0.0), 0.0) / speed
+
+
 def clamp_launch_angle(fighter, slot, angle):
     bearing, arc = sector(fighter, slot)
     return bearing + max(-arc / 2, min(arc / 2, wrap(angle - bearing)))
