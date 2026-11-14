@@ -23,4 +23,6 @@ Flesh Wound 3           https://pixabay.com/sound-effects/film-special-effects-b
 
 Tank Explosion          https://pixabay.com/sound-effects/film-special-effects-explosion-91872/
 
+Torpedo Launch          https://pixabay.com/sound-effects/film-special-effects-water-splash-102492/
+
 https://github.com/PenguinMod/PenguinMod-ObjectLibraries/tree/main/files/sounds

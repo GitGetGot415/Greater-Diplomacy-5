@@ -1165,8 +1165,8 @@ class CustomBattleScreen(Screen):
     def _play_shot_sound(self, fighter):
         # Keep audio randomness separate from the seeded simulation's aiming and movement decisions.
         if fighter.weapon(fighter.fired_weapon).get("projectile") == "torpedo":
-            return  # There is no torpedo launch sample; gunshot sounds describe the wrong weapon.
-        if fighter.weapon(fighter.fired_weapon)["shell"]:
+            kind = "torpedo_launch"
+        elif fighter.weapon(fighter.fired_weapon)["shell"]:
             kind = random.choice(TANK_SHOT_SOUNDS)
         elif fighter is self.simulation.controlled:
             kind = "heavy_gunshot"

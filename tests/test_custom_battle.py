@@ -2216,6 +2216,18 @@ class CustomBattleScreenTests(unittest.TestCase):
                     self.assertTrue(all(call.args == (battle_screen.TANK_SHOT_SOUNDS,)
                                         for call in choice.call_args_list))
 
+    def test_torpedo_launch_plays_the_torpedo_sound(self):
+        self.fill_armies()
+        self.click("Control")
+        self.click("Simulate")
+        self.click("Start")
+        source = self.screen.simulation.controlled
+        source.shape = "submarine"
+        source.aim = source.angle + battle_screen.naval.mounts(source.shape)[0].bearing
+        with patch("ui.sound_effects.play_ui_sound") as sound:
+            self.screen.simulation._fire_shot(source)
+        sound.assert_called_once_with("torpedo_launch", volume_scale=self.screen.battle_sfx_volume_share())
+
     def win_battle(self):
         """End actual battle with a friendly win, without relying on random aim and movement."""
         for fighter in self.screen.simulation.fighters:
