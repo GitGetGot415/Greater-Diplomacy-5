@@ -62,15 +62,16 @@ RETARGET_SECONDS = 0.25  # AI units choose the nearest enemy again this often.
 # Collision and separation cells, and the coarser cells of the nearest-enemy search.
 GRID_CELL = 64.0
 TARGET_CELL = 256.0
-# Each division deploys as one vertical line of its sub-units, one division per rank.
-# Roster order runs front to back: the first division stands closest to the enemy.
+# Each division deploys as one vertical line of its sub-units. Each column (rank) holds one division,
+# centered, or two divisions, one above the other. Roster order runs front to back, then top to
+# bottom within a column: the first column stands closest to the enemy.
 RANK_GAP = 56.0  # Between ranks, front to back; leaves room for the largest hull.
 SUBUNIT_SPACING = 60.0  # Between neighboring sub-units along a division's line.
 # Distance between the two armies' front ranks at deployment, centered on the battlefield.
 SPAWN_FRONT_GAP = 2000.0
 SPAWN_MARGIN = 100.0  # Between the battlefield edge and the last rank of the largest army.
 # The battlefield is twice as wide as it is tall, with room for two full armies behind their front ranks.
-ARENA_WIDTH = SPAWN_FRONT_GAP + 2 * (SPAWN_MARGIN + (c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE - 1) * RANK_GAP)
+ARENA_WIDTH = SPAWN_FRONT_GAP + 2 * (SPAWN_MARGIN + (c.CUSTOM_BATTLE_MAX_COLUMNS_PER_SIDE - 1) * RANK_GAP)
 ARENA_SIZE = (ARENA_WIDTH, ARENA_WIDTH / 2)
 APPROACH_LANE_GAP = 70.0
 FLANK_ARRIVAL_DISTANCE = 45.0
@@ -144,6 +145,19 @@ SUBUNIT_COUNTS.update({shape: 1 for shape in naval.SHAPES})
 MOBILITY.update({shape: naval.MOBILITY for shape in naval.SHAPES})
 AIM.update({shape: (None, naval.AIM_SPEED) for shape in naval.SHAPES})
 CONTACT_MASS.update(naval.CONTACT_MASS)
+
+
+def stack_offset():
+    """How far above and below the battlefield's middle two divisions sharing a column stand.
+
+    The two longest lines keep one sub-unit spacing between them.
+    """
+    return max(SUBUNIT_COUNTS.values()) * SUBUNIT_SPACING / 2
+
+
+def deployment_half_height():
+    """Half the height of a column holding two of the longest lines; trees stay out of this band."""
+    return stack_offset() + (max(SUBUNIT_COUNTS.values()) - 1) * SUBUNIT_SPACING / 2
 
 
 def valid_starting_health(health, max_health):
@@ -425,6 +439,53 @@ def random_armies(candidates, *, rng=None):
             for side in (0, 1)]
 
 
+def paired_columns(count):
+    """The starting formation: divisions two to a column, front to back."""
+    return [index // c.CUSTOM_BATTLE_UNITS_PER_COLUMN for index in range(count)]
+
+
+def valid_columns(columns, count):
+    """Whether ``columns`` gives each of ``count`` roster entries a column number, in roster order.
+
+    Columns are numbered from 0 without gaps, each holds one or two divisions, and an army
+    uses at most CUSTOM_BATTLE_MAX_COLUMNS_PER_SIDE columns.
+    """
+    return (len(columns) == count
+            and all(type(column) is int for column in columns)
+            and (not columns or columns[0] == 0)
+            and all(after - before in (0, 1) for before, after in zip(columns, columns[1:]))
+            and all(columns.count(column) <= c.CUSTOM_BATTLE_UNITS_PER_COLUMN for column in set(columns))
+            and len(set(columns)) <= c.CUSTOM_BATTLE_MAX_COLUMNS_PER_SIDE)
+
+
+def column_groups(entries, columns):
+    """Split a roster into its columns, front to back; each column lists its divisions top to bottom."""
+    groups = []
+    for entry, column in zip(entries, columns):
+        if column == len(groups):
+            groups.append([])
+        groups[column].append(entry)
+    return groups
+
+
+def flatten_columns(groups):
+    """The roster and its column numbers for a list of columns. Empty columns close up."""
+    groups = [group for group in groups if group]
+    return ([entry for group in groups for entry in group],
+            [column for column, group in enumerate(groups) for _entry in group])
+
+
+def open_column(groups):
+    """The column a new division joins: beside the last column's only division, else a new column,
+    else the first column with room. None when the army is full."""
+    if groups and len(groups[-1]) < c.CUSTOM_BATTLE_UNITS_PER_COLUMN:
+        return len(groups) - 1
+    if len(groups) < c.CUSTOM_BATTLE_MAX_COLUMNS_PER_SIDE:
+        return len(groups)
+    return next((column for column, group in enumerate(groups)
+                 if len(group) < c.CUSTOM_BATTLE_UNITS_PER_COLUMN), None)
+
+
 def unit_shape(name, library):
     """Choose prototype geometry from existing family and capability metadata."""
     if name.startswith("Convoy (") and battle_unit_type(name, library) != name:
@@ -697,6 +758,9 @@ class BattleSimulation:
     battlefield: object = None  # Optional explicit geometry for headless encounters and fixtures.
     on_hit: object = None  # Optional presentation callback: struck body and HP actually lost.
     on_kill: object = None  # Optional presentation callback: source, destroyed sub-unit, and shot/ram.
+    # Each roster entry's column (see valid_columns). None deploys one division per column.
+    friendly_columns: object = None
+    enemy_columns: object = None
     controlled: object = field(init=False, default=None)
     fighters: list = field(init=False, default_factory=list)
     divisions: list = field(init=False, default_factory=list)  # Sub-unit lists, friendly roster then enemy roster.
@@ -747,19 +811,29 @@ class BattleSimulation:
         if self.battlefield is None:
             self.battlefield = battle_terrain.Battlefield.generate(
                 self.terrain, self.arena_size, self.max_radius, naval.FRONT_GAP if self.naval else SPAWN_FRONT_GAP, self.seed,
-                deployment_half_height=(max(SUBUNIT_COUNTS.values()) - 1) * SUBUNIT_SPACING / 2)
+                deployment_half_height=deployment_half_height())
         allowed = set(custom_unit_types(self.library))
-        for side, roster in enumerate((self.friendly, self.enemy)):
+        for side, (roster, columns) in enumerate(((self.friendly, self.friendly_columns), (self.enemy, self.enemy_columns))):
             if not roster or len(roster) > c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE:
                 raise ValueError(f"Each army needs 1 to {c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE} units.")
+            if columns is None:
+                columns = list(range(len(roster)))
+            if not valid_columns(columns, len(roster)):
+                raise ValueError(f"Each army needs one column number per unit, numbered from 0 without gaps, with at most "
+                                 f"{c.CUSTOM_BATTLE_UNITS_PER_COLUMN} units per column and {c.CUSTOM_BATTLE_MAX_COLUMNS_PER_SIDE} columns.")
             if any(battle_unit_type(entry["type"] if isinstance(entry, dict) else entry, self.library) not in allowed
                    for entry in roster):
                 raise ValueError("Custom battles accept only current land-unit or ship identifiers.")
             front = (self.arena_size[0] - (naval.FRONT_GAP if self.naval else SPAWN_FRONT_GAP)) / 2
+            column_count = columns[-1] + 1
+            offset = stack_offset()
             for index, entry in enumerate(roster):
                 name = entry["type"] if isinstance(entry, dict) else entry
-                # The first roster entry stands in the front rank, the last one furthest back.
-                x = front - index * (naval.RANK_GAP if self.naval else RANK_GAP)
+                column = columns[index]
+                # The first column stands in the front rank, the last one furthest back.
+                x = front - column * (naval.RANK_GAP if self.naval else RANK_GAP)
+                # A column's only division stands centered; two stand one above the other.
+                height = 0.0 if columns.count(column) == 1 else offset if index and columns[index - 1] == column else -offset
                 if side:
                     x = self.arena_size[0] - x
                 owner = entry["owner"] if isinstance(entry, dict) else "Enemy" if side else "Friendly"
@@ -772,8 +846,10 @@ class BattleSimulation:
                     if not valid_starting_health(entry["health"], source_max):
                         raise ValueError("Starting HP must be above zero and no greater than the unit's maximum HP.")
                     data["health"] = entry["health"] / source_max * data["max_health"]
-                members = self._deploy_division(data, side, x, unit_shape(data["type"], self.library))
-                lane = (index - (len(roster) - 1) / 2) * (naval.LANE_GAP if self.naval else APPROACH_LANE_GAP)
+                members = self._deploy_division(data, side, x, unit_shape(data["type"], self.library),
+                                                self.arena_size[1] / 2 + height)
+                # Each column approaches in its own lane; a stacked division keeps its height within it.
+                lane = (column - (column_count - 1) / 2) * (naval.LANE_GAP if self.naval else APPROACH_LANE_GAP) + height
                 for fighter in members:
                     fighter.lane = lane
                 if side == 0 and index == self.controlled_index:
@@ -783,8 +859,8 @@ class BattleSimulation:
         """Whether the enemy army deployed a tank. Tactical battle music uses this; friendly tanks do not count."""
         return any(fighter.side == 1 and fighter.shape in TANK_SHAPES for fighter in self.fighters)
 
-    def _deploy_division(self, data, side, x, shape):
-        """Split one division into sub-units standing in a vertical line at ``x``, centered top to bottom.
+    def _deploy_division(self, data, side, x, shape, y):
+        """Split one division into sub-units standing in a vertical line at ``x``, centered on ``y``.
 
         A division at fraction ``f`` of full health brings ceil(f * N) of its N sub-units,
         sharing its health equally: 63% of 10 is 7 sub-units at 90% each.
@@ -805,7 +881,7 @@ class BattleSimulation:
             slot = (number - (count - 1) / 2) * SUBUNIT_SPACING
             members.append(Fighter(
                 dict(subunit), side,
-                x, self.arena_size[1] / 2 + slot, shape, division=division, attack_share=1 / size,
+                x, y + slot, shape, division=division, attack_share=1 / size,
                 angle=facing, aim=facing + naval.mounts(shape)[0].bearing if shape in naval.SHAPES else facing,
                 secondary_aim=facing + naval.mounts(shape)[1].bearing if shape in naval.SHAPES and len(naval.mounts(shape)) > 1 else facing,
                 index=len(self.fighters) + number,

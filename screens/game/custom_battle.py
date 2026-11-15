@@ -24,7 +24,7 @@ from ui.rendering.font_manager import fonts
 from ui.widgets import ui_elements
 from ui import sound_effects
 from ui.widgets import flag_icons
-from ui.widgets.text_utils import fit_text, wrap_text
+from ui.widgets.text_utils import fit_text
 from ui.widgets.ui_elements import Button, Slider
 from screens.setup import player_setup
 
@@ -33,35 +33,49 @@ PANEL_X = 60
 ROSTER_TOP = 56
 PANEL_WIDTH = 1160
 PANEL_TOPS = (365, 120)  # Friendly and enemy rosters retain their separate areas.
-CARD_SIZE = (158, 148)
-CARD_GAP = 12
+# Edit Battle and preview share one card size and one grid: each column of the grid is a
+# battlefield rank, holding one card or two cards stacked.
+CARD_SIZE = (160, 68)
+CARD_GAP = 12  # Between columns, and between a column's two rows.
+ROSTER_ROWS = c.CUSTOM_BATTLE_UNITS_PER_COLUMN
+ROSTER_HEIGHT = ROSTER_ROWS * CARD_SIZE[1] + (ROSTER_ROWS - 1) * CARD_GAP
 CONTROLLED_CARD_BRIGHTNESS = 100
 TITLE_HELP_GAP = 12
-PREVIEW_CARD_ICON_SIZE = (96, 60)
-PREVIEW_ICON_CENTER_Y = 40
-# Health bar rows: preview puts the bar under the icon; editing puts it at the card bottom.
-PREVIEW_BAR_TOP = 80
-EDIT_BAR_TOP = 124
-CARD_BAR_HEIGHT = 14
+# Card contents: the icon, health bar, and flag on the left; health, attack, and defense on the right.
+CARD_INSET = 5
+CARD_STATS_WIDTH = 64  # Fits a six-character value such as 999.9K after its icon.
+CARD_LEFT_WIDTH = CARD_SIZE[0] - CARD_STATS_WIDTH - 2 * CARD_INSET
+CARD_NAME_TOP = 2  # Edit Battle only: the unit name shares the top row with the gear button.
+EDIT_ICON_TOP = 20
+EDIT_ICON_MAX_SCALE = 1.4
+PREVIEW_ICON_TOP = 4
+CARD_BAR_TOP = 53
+CARD_BAR_HEIGHT = 10
 CARD_BAR_GRAB_PAD = 6  # Extra pixels above and below the bar that still grab it in editing.
-CARD_ROW_INSET = 8
-CARD_BAR_FLAG_GAP = 6
-CARD_BAR_FLAG_SIZE = (24, 16)
-PREVIEW_STATS_TOP = 108
+CARD_BAR_FLAG_GAP = 4
+CARD_BAR_FLAG_SIZE = (18, 12)
+CARD_ICON_BAR_GAP = 4
+EDIT_STATS_TOP = 20
+PREVIEW_STATS_TOP = 11
+CARD_STAT_ROW_HEIGHT = 15
+CONTROLLED_ARROW_Y = 30  # Below the edit card's name row.
+# Pixels at each card's left and right edge where a drop, like a drop in the gap between
+# columns, gives the dragged card a new column instead of dropping it on that card.
+DROP_NEW_COLUMN_EDGE = 14
 HEALTH_BAR_FULL_COLOR = (105, 215, 85)
 HEALTH_BAR_HALF_COLOR = (235, 205, 60)  # Reached at half health.
 HEALTH_BAR_EMPTY_COLOR = (215, 60, 50)  # Reached at zero health; the fill blends between the three colors.
 HEALTH_BAR_SHADE = 30  # Brightness step between the light, middle, and dark bands of the fill.
 HEALTH_BAR_BANDS = 3
 PANEL_BOTTOM_SPACE = 32  # Below the cards: scrollbar row and margin.
-PANEL_HEIGHT = ROSTER_TOP + CARD_SIZE[1] + PANEL_BOTTOM_SPACE
-CARD_STATS_TOP = 96
-CARD_STAT_ICON_SIZE = 14
+PANEL_HEIGHT = ROSTER_TOP + ROSTER_HEIGHT + PANEL_BOTTOM_SPACE
+CARD_STAT_ICON_SIZE = 12
 BATTLE_FLAG_SIZE = (14, 9)
 BATTLE_FLAG_GAP = 3
 MIXED_LABEL = "Mixed"
-CARD_EDIT_SIZE = 24
-CARD_EDIT_INSET = 6
+CARD_EDIT_SIZE = 18
+CARD_EDIT_ICON_PAD = 3  # Between the gear button's edge and its icon.
+CARD_EDIT_INSET = 2
 ROSTER_INSET = 20
 ROSTER_WIDTH = 900
 SCROLLBAR_HEIGHT = 14
@@ -85,7 +99,7 @@ DEATH_EXPLOSION_DRAW_PARTICLE = {"circle": pygame.draw.ellipse, "square": pygame
 EDIT_BATTLE_HELP_TEXT = (
     "Build both armies, choose their deployment order, and optionally choose a unit to control. Custom battles do not change your campaign.\n\n"
     "Add Friendly and Add Enemy open the unit picker. Choose units to add them; Cancel closes the picker and keeps your additions. Select a card and choose Duplicate to copy that unit, including nationality and starting HP, or Remove to remove that unit. Clear All empties that army.\n\n"
-    "Drag cards within either army to reorder deployment, or into the other army to move units between sides. Duplicating and moving units cannot exceed the destination army's unit limit. The leftmost card deploys in the front rank, closest to the enemy. Scroll long rosters with the mouse wheel, scrollbar, or by dragging the roster background.\n\n"
+    "Each column of cards is one rank of the battlefield; the leftmost column deploys in the front rank, closest to the enemy. A column holds one division, centered, or two divisions, one above the other. New units join the last column when it has room. Drop a card on another card to swap them, on a column's empty lower space to stack it there, or between columns to give it a column of its own. Drag cards into the other army to move units between sides. Duplicating and moving units cannot exceed the destination army's unit limit. Scroll long rosters with the mouse wheel, scrollbar, or by dragging the roster background.\n\n"
     "A card's gear button opens Unit Settings for nationality and starting HP. You can also drag along the card's health bar to change starting HP.\n\n"
     "To select several units, start in empty roster panel space outside the card area and drag a square across the cards. Every selected card gets a gold outline. The gear button on any selected card opens Group Settings for all selected units; dragging a selected card's health bar changes the group's starting HP. Mixed means the selected units have different values. Click empty space or enter preview to clear the selection.\n\n"
     "Select a friendly card and choose Control to command that division's middle sub-unit during the battle. The controlled division's button is lighter blue and has a yellow arrow. Release Control lets both armies fight automatically.\n\n"
@@ -95,7 +109,7 @@ EDIT_BATTLE_HELP_TEXT = (
 )
 PREVIEW_BATTLE_HELP_TEXT = (
     "Here you can review the armies before combat. The battle is paused here, so units do not move or fire.\n\n"
-    "Drag friendly cards to change deployment order. The leftmost card deploys in the front rank, closest to the enemy.\n\n"
+    "Each column of cards is one rank of the battlefield; the leftmost column deploys in the front rank, closest to the enemy. Drag friendly cards to change deployment: drop a card on another card to swap them, on a column's empty lower space to stack it there, or between columns to give it a column of its own.\n\n"
     "Start begins the tactical battle with the prepared forces.\n\n"
 )
 PREVIEW_CUSTOM_HELP_TEXT = "Retreat returns to Edit Battle and keeps your army setup."
@@ -238,7 +252,8 @@ TORPEDO_WAKE_COLOR = (115, 180, 200)
 SPLASH_COLOR = (170, 220, 240)
 SHELL_HEIGHT_DRAW_SCALE = 0.3
 SUBMARINE_ALPHA = 128  # Half opacity: submarines read as underwater.
-EDIT_NAVAL_ICON_SIZE = (CARD_SIZE[0] - 24, 38)
+EDIT_ICON_SIZE = (CARD_LEFT_WIDTH, CARD_BAR_TOP - CARD_ICON_BAR_GAP - EDIT_ICON_TOP)
+PREVIEW_CARD_ICON_SIZE = (CARD_LEFT_WIDTH, CARD_BAR_TOP - CARD_ICON_BAR_GAP - PREVIEW_ICON_TOP)
 RIFLE_SHOT_SOUNDS = ("rifle_shot_1", "rifle_shot_2", "rifle_shot_3")
 TANK_SHOT_SOUNDS = ("tank_shot_1", "tank_shot_2", "tank_shot_3")
 FLESH_HIT_SOUNDS = ("flesh_wound_1", "flesh_wound_2", "flesh_wound_3")
@@ -452,13 +467,14 @@ class CampaignBattle:
     Reordering the friendly army in preview reorders ``units`` the same way.
     """
 
-    def __init__(self, map_screen, province, units, custom_rosters):
+    def __init__(self, map_screen, province, units, custom_rosters, custom_columns):
         self.map_screen = map_screen
         self.province = province
         self.units = units  # The campaign units in roster order: friendly army, then enemy army.
         self.unit = units[0]
         self.result_applied = False
-        self.custom_rosters = custom_rosters  # The custom-battle armies to restore afterward.
+        self.custom_rosters = custom_rosters  # The custom-battle armies and their columns to restore afterward.
+        self.custom_columns = custom_columns
 
 
 class CustomBattleScreen(Screen):
@@ -490,6 +506,8 @@ class CustomBattleScreen(Screen):
         self.battle_seed = None
         self.random_candidates = []
         self.rosters = [[], []]
+        # Each roster entry's column, in roster order (see combat.valid_columns). Every roster change goes through _set_columns.
+        self.columns = [[], []]
         self.selected = [None, None]
         # Roster indices chosen by a selection square; two or more entries per side.
         self.group = [[], []]
@@ -538,7 +556,7 @@ class CustomBattleScreen(Screen):
         self.forecast_surface = None
         for side, top in enumerate(PANEL_TOPS):
             self.panes.append(pygame.Rect(PANEL_X + ROSTER_INSET, top + ROSTER_TOP,
-                                          ROSTER_WIDTH, CARD_SIZE[1]))
+                                          ROSTER_WIDTH, ROSTER_HEIGHT))
             setattr(self, f"roster_{side}_scroll", 0)
             setattr(self, f"roster_{side}_limit", 0)
             setattr(self, f"roster_{side}_content", self.panes[side])
@@ -579,7 +597,7 @@ class CustomBattleScreen(Screen):
         self.library = queries.get_unit_library()
         self.country_data = queries.get_country_data()
         self.gear_icon = symbol_loader.get_symbol(
-            "Gear", zoom=1, fit_size=(CARD_EDIT_SIZE - 8, CARD_EDIT_SIZE - 8))
+            "Gear", zoom=1, fit_size=(CARD_EDIT_SIZE - 2 * CARD_EDIT_ICON_PAD, CARD_EDIT_SIZE - 2 * CARD_EDIT_ICON_PAD))
         self.nationalities = sorted(
             (country for country in self.country_data if queries.is_playable(country, self.country_data)),
             key=lambda country: queries.get_country_display_name(country, self.country_data))
@@ -589,10 +607,12 @@ class CustomBattleScreen(Screen):
             queries.get_unit_metadata(name, self.library)["family"],
             queries.get_unit_tier(name, self.library)))
         allowed = set(self.unit_names)
-        self.rosters = [[unit for unit in roster if combat.battle_unit_type(unit["type"], self.library) in allowed] for roster in self.rosters]
         self.selected = [None, None]
         self.group = [[], []]
         self.controlled_index = None
+        for side in (0, 1):
+            self._set_columns(side, [[unit for unit in group if combat.battle_unit_type(unit["type"], self.library) in allowed]
+                                     for group in self._column_groups(side)])
         self.held_keys.clear()
         self.card_surfaces.clear()
         self.simulation = None
@@ -604,11 +624,12 @@ class CustomBattleScreen(Screen):
         """Open preview at once for a tactical player's encounter, controlling their unit."""
         self.done = False
         self.next_state = None
-        self.campaign = CampaignBattle(map_screen, province, friendly + enemy, self.rosters)
+        self.campaign = CampaignBattle(map_screen, province, friendly + enemy, self.rosters, self.columns)
         self.library = queries.get_unit_library(map_screen)
         self.country_data = map_screen.nation_data
         self.rosters = [combat.campaign_roster(friendly, self.library, province.get("terrain")),
                         combat.campaign_roster(enemy, self.library, province.get("terrain"))]
+        self.columns = [combat.paired_columns(len(roster)) for roster in self.rosters]
         self.selected = [None, None]
         self.group = [[], []]
         self.controlled_index = 0
@@ -623,6 +644,7 @@ class CustomBattleScreen(Screen):
 
     def _end_campaign(self):
         self.rosters = self.campaign.custom_rosters
+        self.columns = self.campaign.custom_columns
         self.campaign = None
         self.choosing_retreat = False
 
@@ -759,7 +781,8 @@ class CustomBattleScreen(Screen):
                             lambda side=side, unit=unit: self.edit_unit(side, unit),
                             image=self.gear_icon, show_text=False,
                             sound_kind="open_settings")
-                limit = min(0, ROSTER_WIDTH - len(roster) * (CARD_SIZE[0] + CARD_GAP) + CARD_GAP)
+                column_count = self.columns[side][-1] + 1 if roster else 0
+                limit = min(0, ROSTER_WIDTH - column_count * (CARD_SIZE[0] + CARD_GAP) + CARD_GAP)
                 setattr(self, f"roster_{side}_limit", limit)
                 offset = max(limit, min(0, getattr(self, f"roster_{side}_scroll")))
                 setattr(self, f"roster_{side}_scroll", offset)
@@ -877,6 +900,7 @@ class CustomBattleScreen(Screen):
         self.cancel_active_drags()
         self.rosters = [[self._new_unit(side, name, random.choice(self.nationalities)) for name in roster]
                         for side, roster in enumerate(combat.random_armies(self.random_candidates))]
+        self.columns = [combat.paired_columns(len(roster)) for roster in self.rosters]
         self.selected = [None, None]
         self.group = [[], []]
         self.controlled_index = None
@@ -920,16 +944,43 @@ class CustomBattleScreen(Screen):
     def _roster_has_space(self, side):
         return len(self.rosters[side]) < c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE
 
+    def _column_groups(self, side):
+        return combat.column_groups(self.rosters[side], self.columns[side])
+
+    def _set_columns(self, side, groups):
+        """Replace one army with ``groups``: columns front to back, each listing its cards top to bottom.
+
+        Empty columns close up, and control stays with the same friendly entry.
+        """
+        controlled = self.rosters[0][self.controlled_index] if self.controlled_index is not None else None
+        self.rosters[side][:], self.columns[side][:] = combat.flatten_columns(groups)
+        if controlled is not None:
+            self.controlled_index = self._index_of(0, controlled)
+
+    def _index_of(self, side, unit):
+        return next((index for index, entry in enumerate(self.rosters[side]) if entry is unit), None)
+
+    def _place_new_unit(self, side, unit):
+        """Add a unit to the column combat.open_column chooses, select it, and scroll its column into view."""
+        groups = self._column_groups(side)
+        column = combat.open_column(groups)
+        if column is None:
+            return
+        if column == len(groups):
+            groups.append([])
+        groups[column].append(unit)
+        self._set_columns(side, groups)
+        self.selected[side] = self._index_of(side, unit)
+        self.refresh_ui()
+        setattr(self, f"roster_{side}_scroll", max(getattr(self, f"roster_{side}_limit"),
+                                                   min(0, ROSTER_WIDTH - (column + 1) * (CARD_SIZE[0] + CARD_GAP) + CARD_GAP)))
+
     def add_unit(self, side, name):
         if self.mode != "setup" or name not in self.unit_names:
             return
-        roster = self.rosters[side]
         if not self._roster_has_space(side):
             return
-        roster.append(self._new_unit(side, name))
-        self.selected[side] = len(roster) - 1
-        self.refresh_ui()
-        setattr(self, f"roster_{side}_scroll", getattr(self, f"roster_{side}_limit"))
+        self._place_new_unit(side, self._new_unit(side, name))
 
     def _new_unit(self, side, name, country=None):
         if country is None:
@@ -946,11 +997,8 @@ class CustomBattleScreen(Screen):
         original = self.rosters[side][index]
         duplicate = self._new_unit(side, original["type"], original["owner"])
         duplicate["health"] = original["health"]
-        self.rosters[side].append(duplicate)
-        self.selected[side] = len(self.rosters[side]) - 1
         self.group[side] = []
-        self.refresh_ui()
-        setattr(self, f"roster_{side}_scroll", getattr(self, f"roster_{side}_limit"))
+        self._place_new_unit(side, duplicate)
 
     def edit_unit(self, side, unit):
         if self.mode != "setup" or not any(entry is unit for entry in self.rosters[side]):
@@ -988,13 +1036,9 @@ class CustomBattleScreen(Screen):
         index = self.selected[side]
         if self.mode != "setup" or index is None or not 0 <= index < len(self.rosters[side]):
             return
-        self.rosters[side].pop(index)
+        removed = self.rosters[side][index]
+        self._set_columns(side, [[entry for entry in group if entry is not removed] for group in self._column_groups(side)])
         self.group[side] = []
-        if side == 0 and self.controlled_index is not None:
-            if self.controlled_index == index:
-                self.controlled_index = None
-            elif self.controlled_index > index:
-                self.controlled_index -= 1
         self.selected[side] = min(index, len(self.rosters[side]) - 1) if self.rosters[side] else None
         self.refresh_ui()
 
@@ -1002,7 +1046,7 @@ class CustomBattleScreen(Screen):
         if self.mode != "setup" or side not in (0, 1):
             return
         self.cancel_active_drags()
-        self.rosters[side].clear()
+        self._set_columns(side, [])
         self.selected[side] = None
         self.group[side] = []
         if side == 0:
@@ -1080,6 +1124,7 @@ class CustomBattleScreen(Screen):
         self.kill_feed_dragging = False
         self._refresh_kill_feed()
         self.simulation = combat.BattleSimulation(self.library, *self.rosters,
+                                                  friendly_columns=self.columns[0], enemy_columns=self.columns[1],
                                                   controlled_index=self.controlled_index,
                                                   seed=self.battle_seed,
                                                   terrain=self.campaign.province["terrain"] if self.campaign else self.terrain,
@@ -1388,9 +1433,27 @@ class CustomBattleScreen(Screen):
             setattr(self, f"roster_{side}_dragging", False)
 
     def card_rect(self, side, index):
+        """A card stands in its column; a column's second card stands below its first."""
+        columns = self.columns[side]
+        column = columns[index]
+        row = int(index > 0 and columns[index - 1] == column)
         pane = self.panes[side]
-        return pygame.Rect(pane.x + index * (CARD_SIZE[0] + CARD_GAP)
-                           + getattr(self, f"roster_{side}_scroll"), pane.y, *CARD_SIZE)
+        return pygame.Rect(pane.x + column * (CARD_SIZE[0] + CARD_GAP) + getattr(self, f"roster_{side}_scroll"),
+                           pane.y + row * (CARD_SIZE[1] + CARD_GAP), *CARD_SIZE)
+
+    def _drop_target(self, side, pos):
+        """The column and card row a drop at ``pos`` lands on.
+
+        Near a card's left or right edge, or in the gap between columns, the row is None:
+        the dropped card gets a new column there.
+        """
+        pane = self.panes[side]
+        column, within = divmod(pos[0] - pane.x - getattr(self, f"roster_{side}_scroll"), CARD_SIZE[0] + CARD_GAP)
+        if within < DROP_NEW_COLUMN_EDGE:
+            return int(column), None
+        if within > CARD_SIZE[0] - DROP_NEW_COLUMN_EDGE:
+            return int(column) + 1, None
+        return int(column), min(ROSTER_ROWS - 1, max(0, int((pos[1] - pane.y) // (CARD_SIZE[1] + CARD_GAP))))
 
     @staticmethod
     def _position_edit_button(button, card):
@@ -1485,7 +1548,7 @@ class CustomBattleScreen(Screen):
     def _set_bar_health(self, side, index, x):
         """Set starting HP from the pointer's position along a card's health bar."""
         card = self.card_rect(side, index)
-        bar, _flag_x = self._bar_geometry(EDIT_BAR_TOP)
+        bar, _flag_x = self._bar_geometry()
         percent = round((x - card.x - bar.x) / bar.width * 100)
         unit = self.rosters[side][index]
         self.set_unit_options(side, self._units_to_edit(side, unit), health_percent=max(1, min(100, percent)))
@@ -1504,7 +1567,7 @@ class CustomBattleScreen(Screen):
             return False
         if event.type != pygame.MOUSEBUTTONDOWN or event.button != 1 or self.drag is not None:
             return False
-        bar, _flag_x = self._bar_geometry(EDIT_BAR_TOP)
+        bar, _flag_x = self._bar_geometry()
         for side, pane in enumerate(self.panes):
             if not pane.collidepoint(event.pos):
                 continue
@@ -1516,8 +1579,14 @@ class CustomBattleScreen(Screen):
                     return True
         return False
 
-    def _move_roster_entry(self, side, index, destination, *, target_side=None):
-        """Move one roster entry. The leftmost card deploys in the front rank."""
+    def _move_roster_entry(self, side, index, column, *, row=None, target_side=None):
+        """Move one roster entry. The leftmost column deploys in the front rank.
+
+        With ``row``, the entry is dropped on that card space of ``column``. Within one army it
+        swaps with the card there. On an empty space, or any space of the other army, it joins
+        the column when the column has room. Otherwise, and without ``row``, it gets a new column
+        before ``column``; an army already using every column refuses that.
+        """
         if target_side is None:
             target_side = side
         if (side not in (0, 1) or target_side not in (0, 1) or not self._roster_reorderable(side)
@@ -1526,22 +1595,40 @@ class CustomBattleScreen(Screen):
         if target_side != side:
             if self.mode != "setup" or self.campaign is not None or not self._roster_has_space(target_side):
                 return False
-        destination = min(len(self.rosters[target_side]) - (side == target_side), max(0, destination))
-        controlled = self.rosters[0][self.controlled_index] if self.controlled_index is not None else None
-        unit = self.rosters[side].pop(index)
-        self.rosters[target_side].insert(destination, unit)
+        unit = self.rosters[side][index]
+        before = list(self.rosters[0])
+        source = self._column_groups(side)
+        target = source if target_side == side else self._column_groups(target_side)
+        origin = next(group for group in source if any(entry is unit for entry in group))
+        origin_row = next(position for position, entry in enumerate(origin) if entry is unit)
+        column = max(0, column)
+        group = target[column] if row is not None and column < len(target) else None
+        if group is not None and row < len(group) and target_side == side:
+            if group[row] is unit:
+                return False
+            origin[origin_row], group[row] = group[row], unit
+        elif group is not None and len(group) - (group is origin) < c.CUSTOM_BATTLE_UNITS_PER_COLUMN:
+            origin.pop(origin_row)
+            group.append(unit)
+        else:
+            origin.pop(origin_row)
+            if sum(1 for entry_group in target if entry_group) >= c.CUSTOM_BATTLE_MAX_COLUMNS_PER_SIDE:
+                return False
+            target.insert(min(column, len(target)), [unit])
+        self._set_columns(side, source)
+        if target_side != side:
+            self._set_columns(target_side, target)
         self.group[side] = []
-        if controlled is not None:
-            self.controlled_index = next((position for position, entry in enumerate(self.rosters[0]) if entry is controlled), None)
         if self.mode == "setup":
             if target_side != side:
                 self._clear_roster_selection()
-            self.selected[target_side] = destination
+            self.selected[target_side] = self._index_of(target_side, unit)
             return True
         # Preview: campaign units follow their roster entries (friendly ones come first),
-        # and the paused battle deploys again in the new order.
+        # and the paused battle deploys again in the new formation.
         if self.campaign is not None:
-            self.campaign.units.insert(destination, self.campaign.units.pop(index))
+            order = [next(position for position, entry in enumerate(before) if entry is moved) for moved in self.rosters[0]]
+            self.campaign.units[:len(before)] = [self.campaign.units[position] for position in order]
         self._build_simulation()
         return True
 
@@ -1563,9 +1650,8 @@ class CustomBattleScreen(Screen):
                 if active:
                     for target_side, pane in enumerate(self.panes):
                         if pane.collidepoint(event.pos):
-                            offset = getattr(self, f"roster_{target_side}_scroll")
-                            destination = int((event.pos[0] - pane.x - offset) // (CARD_SIZE[0] + CARD_GAP))
-                            self._move_roster_entry(side, index, destination, target_side=target_side)
+                            column, row = self._drop_target(target_side, event.pos)
+                            self._move_roster_entry(side, index, column, row=row, target_side=target_side)
                             break
                 self.drag = None
                 self.refresh_ui()
@@ -1853,15 +1939,14 @@ class CustomBattleScreen(Screen):
         return (self.mode, self.terrain, side, unit["type"], unit["owner"], unit["health"], unit["max_health"])
 
     @staticmethod
-    def _bar_geometry(top):
-        """The health bar rect and the flag's x, in card coordinates; the flag sits right of the bar."""
-        flag_x = CARD_SIZE[0] - CARD_ROW_INSET - CARD_BAR_FLAG_SIZE[0]
-        bar = pygame.Rect(CARD_ROW_INSET, top,
-                          flag_x - CARD_BAR_FLAG_GAP - CARD_ROW_INSET, CARD_BAR_HEIGHT)
+    def _bar_geometry():
+        """The health bar rect and the flag's x, in card coordinates; the flag sits right of the bar, under the icon."""
+        flag_x = CARD_INSET + CARD_LEFT_WIDTH - CARD_BAR_FLAG_SIZE[0]
+        bar = pygame.Rect(CARD_INSET, CARD_BAR_TOP, flag_x - CARD_BAR_FLAG_GAP - CARD_INSET, CARD_BAR_HEIGHT)
         return bar, flag_x
 
-    def _draw_health_bar(self, card, unit, top):
-        bar, flag_x = self._bar_geometry(top)
+    def _draw_health_bar(self, card, unit):
+        bar, flag_x = self._bar_geometry()
         pygame.draw.rect(card, OUTLINE_COLOR, bar)
         ratio = max(0.0, min(1.0, unit["health"] / unit["max_health"]))
         fill = pygame.Rect(bar.x + 1, bar.y + 1, round((bar.width - 2) * ratio), bar.height - 2)
@@ -1870,41 +1955,43 @@ class CustomBattleScreen(Screen):
                              bar.centery - CARD_BAR_FLAG_SIZE[1] // 2, size=CARD_BAR_FLAG_SIZE)
 
     def _cache_card(self, side, unit):
+        """Edit Battle and preview cards share one size: the icon over the health bar and flag on the left,
+        and health, attack, and defense on the right. Edit Battle adds the unit name beside the gear button."""
         key = self._card_key(side, unit)
         if key not in self.card_surfaces:
-            width, height = CARD_SIZE
             card = pygame.Surface(CARD_SIZE, pygame.SRCALPHA)
             if not self._roster_reorderable(side):
                 ui_elements.draw_pixel_panel(card, card.get_rect(), (46, 51, 65), (15, 19, 27))
             name = unit["type"]
             font = fonts.get("tiny")
+            icon_x = CARD_INSET + CARD_LEFT_WIDTH // 2
             if self.mode == "preview":
-                # Preview shows no unit name: a large icon, then a health bar with the flag to its right.
+                # Preview shows no unit name, so the unit symbol takes the full height above the bar.
                 icon = symbol_loader.get_symbol(name, zoom=1, color=TEAM_COLORS[side],
                                                 country=unit["owner"], fit_size=PREVIEW_CARD_ICON_SIZE)
                 if icon is not None:
-                    card.blit(icon, icon.get_rect(center=(width // 2, PREVIEW_ICON_CENTER_Y)))
-                self._draw_health_bar(card, unit, PREVIEW_BAR_TOP)
+                    card.blit(icon, icon.get_rect(center=(icon_x, PREVIEW_ICON_TOP + PREVIEW_CARD_ICON_SIZE[1] // 2)))
                 stats_top = PREVIEW_STATS_TOP
             else:
                 shape = combat.unit_shape(name, self.library)
-                icon_scale = min(EDIT_NAVAL_ICON_SIZE[0] / UNIT_SHAPE_SIZES[shape][0], EDIT_NAVAL_ICON_SIZE[1] / UNIT_SHAPE_SIZES[shape][1]) if shape in naval.SHAPES else 1.4
-                draw_unit_shape(card, shape, (width // 2, 28),
+                width, height = UNIT_SHAPE_SIZES[shape]
+                icon_scale = min(EDIT_ICON_MAX_SCALE, EDIT_ICON_SIZE[0] / width, EDIT_ICON_SIZE[1] / height)
+                draw_unit_shape(card, shape, (icon_x, EDIT_ICON_TOP + EDIT_ICON_SIZE[1] // 2),
                                 0 if side == 0 else math.pi, TEAM_COLORS[side], scale=icon_scale,
                                 artwork=self.battle_artwork[name])
+                # One line beside the gear button; longer names end in an ellipsis.
                 label = queries.get_unit_display_name(name, self.library)
-                line_height = font.get_height()
-                for line_number, line in enumerate(wrap_text(label, font, width - 16)[:3]):
-                    text = font.render(fit_text(line, font, width - 16), True, c.UI_TEXT_BRIGHT)
-                    card.blit(text, text.get_rect(midtop=(width // 2, 52 + line_number * line_height)))
-                self._draw_health_bar(card, unit, EDIT_BAR_TOP)
-                stats_top = CARD_STATS_TOP
+                name_width = CARD_SIZE[0] - 2 * CARD_INSET - CARD_EDIT_SIZE - CARD_EDIT_INSET
+                card.blit(font.render(fit_text(label, font, name_width), True, c.UI_TEXT_BRIGHT), (CARD_INSET, CARD_NAME_TOP))
+                stats_top = EDIT_STATS_TOP
+            self._draw_health_bar(card, unit)
             attack = combat.division_attack(unit, self.library)
             entries = [(icon, queries.format_number(value)) for icon, value in (
                 (c.ICON_HEALTH, unit["health"]), (c.ICON_ATTACK, attack), (c.ICON_DEFENSE, unit["defense"]))]
+            # A one-pixel row width puts each stat on its own line.
             ui_elements.draw_wrapped_icon_row(
-                card, font, entries, 6, stats_top, c.UI_TEXT_LIGHT,
-                width - 12, icon_size=CARD_STAT_ICON_SIZE)
+                card, font, entries, CARD_SIZE[0] - CARD_STATS_WIDTH, stats_top, c.UI_TEXT_LIGHT,
+                1, line_height=CARD_STAT_ROW_HEIGHT, icon_size=CARD_STAT_ICON_SIZE)
             self.card_surfaces[key] = card
         return self.card_surfaces[key]
 
@@ -1939,7 +2026,7 @@ class CustomBattleScreen(Screen):
                     self._position_edit_button(button, rect)
                     button.draw(surface)
                 if side == 0 and self.controlled_index == index:
-                    draw_player_arrow(surface, (rect.centerx, rect.y + 28), 0)
+                    draw_player_arrow(surface, (rect.x + CARD_INSET + CARD_LEFT_WIDTH // 2, rect.y + CONTROLLED_ARROW_Y), 0)
             surface.set_clip(old_clip)
             self.draw_list_scrollbar(surface, self.panes[side].x, self.panes[side].bottom + 10,
                                      ROSTER_WIDTH, width=SCROLLBAR_HEIGHT, **self._scroll_options(side))
@@ -1953,7 +2040,7 @@ class CustomBattleScreen(Screen):
                 self._position_edit_button(button, rect)
                 button.draw(surface)
             if side == 0 and self.controlled_index == index:
-                draw_player_arrow(surface, (rect.centerx, rect.y + 28), 0)
+                draw_player_arrow(surface, (rect.x + CARD_INSET + CARD_LEFT_WIDTH // 2, rect.y + CONTROLLED_ARROW_Y), 0)
         if self.marquee is not None:
             side, origin, current = self.marquee
             if math.dist(origin, current) >= DRAG_THRESHOLD:

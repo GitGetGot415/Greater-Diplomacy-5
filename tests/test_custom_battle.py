@@ -660,13 +660,60 @@ class BattleSimulationTests(unittest.TestCase):
         width, height = combat.ARENA_SIZE
         for size in (1, 5, c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE):
             with self.subTest(size=size):
-                simulation = combat.BattleSimulation(self.library, ["Fixture I"] * size, ["Fixture I"] * size)
+                # A full army needs two divisions per column.
+                columns = combat.paired_columns(size)
+                simulation = combat.BattleSimulation(self.library, ["Fixture I"] * size, ["Fixture I"] * size,
+                                                     friendly_columns=columns, enemy_columns=columns)
                 friendly_front = max(f.x for f in simulation.fighters if f.side == 0)
                 enemy_front = min(f.x for f in simulation.fighters if f.side == 1)
                 self.assertAlmostEqual(enemy_front - friendly_front, combat.SPAWN_FRONT_GAP)
                 self.assertTrue(all(combat.UNIT_RADIUS <= f.x <= width - combat.UNIT_RADIUS
                                     and combat.UNIT_RADIUS <= f.y <= height - combat.UNIT_RADIUS
                                     for f in simulation.fighters))
+
+    def test_two_divisions_in_one_column_share_a_rank_one_above_the_other(self):
+        with patch.dict(combat.SUBUNIT_COUNTS, {"infantry": 10}):
+            simulation = combat.BattleSimulation(self.library, ["Fixture I"] * 3, ["Fixture I"] * 3,
+                                                 friendly_columns=[0, 0, 1], enemy_columns=[0, 1, 1])
+            middle = combat.ARENA_SIZE[1] / 2
+            for top, bottom, single in ((0, 1, 2), (4, 5, 3)):
+                with self.subTest(side=simulation.divisions[top][0].side):
+                    top, bottom, single = (simulation.divisions[index] for index in (top, bottom, single))
+                    self.assertEqual({f.x for f in top}, {f.x for f in bottom})
+                    self.assertNotEqual(top[0].x, single[0].x)
+                    # The stacked lines keep one sub-unit spacing apart; the lone division stays centered.
+                    self.assertAlmostEqual(min(f.y for f in bottom) - max(f.y for f in top), combat.SUBUNIT_SPACING)
+                    self.assertAlmostEqual(sum(f.y for f in top) / len(top), middle - combat.stack_offset())
+                    self.assertAlmostEqual(sum(f.y for f in bottom) / len(bottom), middle + combat.stack_offset())
+                    self.assertAlmostEqual(sum(f.y for f in single) / len(single), middle)
+            front = (combat.ARENA_SIZE[0] - combat.SPAWN_FRONT_GAP) / 2
+            self.assertAlmostEqual(simulation.divisions[0][0].x, front)
+            self.assertAlmostEqual(simulation.divisions[2][0].x, front - combat.RANK_GAP)
+            # Trees stay out of the band both stacked lines stand in.
+            self.assertTrue(all(simulation.battlefield.walkable((f.x, f.y)) for f in simulation.fighters))
+
+    def test_simulation_rejects_formations_outside_the_column_rules(self):
+        too_many_columns = list(range(c.CUSTOM_BATTLE_MAX_COLUMNS_PER_SIDE + 1))
+        for roster, columns in ((["Fixture I"] * 2, [0]), (["Fixture I"] * 2, [0, 2]), (["Fixture I"] * 2, [1, 1]),
+                                (["Fixture I"] * 3, [0, 0, 0]), (["Fixture I"] * 2, [1, 0]),
+                                (["Fixture I"] * len(too_many_columns), too_many_columns)):
+            with self.subTest(columns=columns), self.assertRaises(ValueError):
+                combat.BattleSimulation(self.library, roster, ["Fixture I"], friendly_columns=columns)
+
+    def test_column_helpers_pair_new_divisions_and_close_empty_columns(self):
+        self.assertEqual(combat.paired_columns(5), [0, 0, 1, 1, 2])
+        self.assertTrue(combat.valid_columns(combat.paired_columns(c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE),
+                                             c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE))
+        groups = combat.column_groups(["a", "b", "c"], [0, 0, 1])
+        self.assertEqual(groups, [["a", "b"], ["c"]])
+        self.assertEqual(combat.flatten_columns([["a"], [], ["b", "c"]]), (["a", "b", "c"], [0, 1, 1]))
+        self.assertEqual(combat.open_column([]), 0)
+        self.assertEqual(combat.open_column(groups), 1)
+        self.assertEqual(combat.open_column([["a", "b"]]), 1)
+        # With every column in use, a new division fills the first column that has room.
+        full = [["x", "y"]] * (c.CUSTOM_BATTLE_MAX_COLUMNS_PER_SIDE - 1)
+        self.assertEqual(combat.open_column([["a"], *full]), 0)
+        self.assertIsNone(combat.open_column([["a", "b"], *full]))
 
     def test_sub_units_of_one_division_deploy_without_overlapping(self):
         with patch.dict(combat.SUBUNIT_COUNTS, {"infantry": 10}):
@@ -1462,8 +1509,10 @@ class TacticalTerrainTests(unittest.TestCase):
             for terrain in ("forest", "jungle", "swamp"):
                 for seed in (0, 4, 19):
                     with self.subTest(terrain=terrain, seed=seed):
+                        columns = combat.paired_columns(len(roster))
                         simulation = combat.BattleSimulation(
-                            self.library, roster, roster, terrain=terrain, seed=seed)
+                            self.library, roster, roster, terrain=terrain, seed=seed,
+                            friendly_columns=columns, enemy_columns=columns)
                         field = simulation.battlefield
                         trees = [feature for feature in field.features if feature.kind == "tree"]
                         self.assertTrue(any(tree.x < front for tree in trees))
@@ -2358,28 +2407,30 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.fill_armies()
         self.screen.add_unit(0, "Fixture I")
         self.screen.draw(self.surface)
-        bar, _flag_x = self.screen._bar_geometry(battle_screen.EDIT_BAR_TOP)
+        bar, _flag_x = self.screen._bar_geometry()
 
-        def drag_bar(index, fraction):
+        def drag_bar(index, offset):
+            """Drag to ``offset`` pixels along the bar; returns the share of the bar that offset covers."""
             card = self.screen.card_rect(0, index)
             y = card.y + bar.centery
             start = (card.x + bar.left + 1, y)
-            end = (card.x + bar.left + round(bar.width * fraction), y)
+            end = (card.x + bar.left + offset, y)
             self.screen.handle_events([
                 pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=start),
                 pygame.event.Event(pygame.MOUSEMOTION, pos=end, rel=(0, 0), buttons=(1, 0, 0)),
                 pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=end)])
             self.screen.draw(self.surface)
+            return round(offset * 100 / bar.width) / 100
 
         first, second = self.screen.rosters[0]
-        drag_bar(0, 0.5)
-        self.assertEqual(first["health"], first["max_health"] * 0.5)
+        share = drag_bar(0, bar.width // 2)
+        self.assertEqual(first["health"], first["max_health"] * share)
         self.assertEqual(second["health"], second["max_health"])
         self.assertIsNone(self.screen.drag)
         self.screen.group[0] = [0, 1]
-        drag_bar(1, 0.25)
+        share = drag_bar(1, bar.width // 4)
         for unit in (first, second):
-            self.assertEqual(unit["health"], unit["max_health"] * 0.25)
+            self.assertEqual(unit["health"], unit["max_health"] * share)
 
     def finish_intro(self):
         self.screen.draw(self.surface)
@@ -2874,8 +2925,9 @@ class CustomBattleScreenTests(unittest.TestCase):
             self.screen.add_unit(0, "Fixture I")
         first, second, third = self.screen.rosters[0]
         self.screen.draw(self.surface)
+        # The first two cards share the first column; the third stands in the next column.
         start = (self.screen.card_rect(0, 0).left, self.screen.panes[0].top - 20)
-        end = (self.screen.card_rect(0, 1).right - 1, self.screen.panes[0].centery)
+        end = (self.screen.card_rect(0, 1).right - 1, self.screen.card_rect(0, 1).centery)
         self.screen.handle_events([
             pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=start),
             pygame.event.Event(pygame.MOUSEMOTION, pos=end, rel=(0, 0), buttons=(1, 0, 0))])
@@ -2907,7 +2959,7 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.screen.draw(self.surface)
         first = self.screen.card_rect(0, 0)
         second = self.screen.card_rect(0, 1)
-        for point in ((first.right + (second.left - first.right) // 2, first.centery),
+        for point in ((first.centerx, first.bottom + (second.top - first.bottom) // 2),
                       (c.SCREEN_WIDTH - 2, c.SCREEN_HEIGHT - 2)):
             with self.subTest(point=point):
                 self.screen.selected = [None, 0]
@@ -2939,7 +2991,7 @@ class CustomBattleScreenTests(unittest.TestCase):
 
     def test_gear_clicks_respect_roster_clipping_and_do_not_intercept_unit_drops(self):
         self.fill_armies()
-        for _ in range(8):
+        for _ in range(12):
             self.screen.add_unit(0, "Fixture I")
         with patch("ui.navigation.screen_runner._run_pygame_sub_screen") as opened:
             self.click_card_settings(0, 0)
@@ -3064,8 +3116,10 @@ class CustomBattleScreenTests(unittest.TestCase):
         for name in ("Fixture I", "Fixture II", "Fixture III"):
             self.screen.add_unit(0, name)
         self.screen.draw(self.surface)
+        # A drop on another card of the same army swaps the two cards.
         self.drag_card(self.screen.card_rect(0, 0).center, self.screen.card_rect(0, 2).center)
-        self.assertEqual(self.roster_types(0), ["Fixture II", "Fixture III", "Fixture I"])
+        self.assertEqual(self.roster_types(0), ["Fixture III", "Fixture II", "Fixture I"])
+        self.assertEqual(self.screen.columns[0], [0, 0, 1])
         before = list(self.screen.rosters[0])
         self.drag_card(self.screen.card_rect(0, 0).center, (10, 300))
         self.assertEqual(self.screen.rosters[0], before)
@@ -3122,9 +3176,11 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.assertEqual(self.screen.rosters[0], [second, controlled])
         self.assertEqual(self.screen.controlled_index, 1)
         self.assertEqual(self.screen.selected, [None, 0])
-        # Moving back before the controlled card shifts its index without changing control.
+        # Moving back onto a card with room in its column stacks below it, before the controlled card,
+        # which shifts the controlled card's index without changing control.
         self.drag_card(self.screen.card_rect(1, 0).center, self.screen.card_rect(0, 0).center)
-        self.assertIs(self.screen.rosters[0][0], first)
+        self.assertEqual(self.screen.rosters[0], [second, first, controlled])
+        self.assertEqual(self.screen.columns[0], [0, 0, 1])
         self.assertEqual(self.screen.controlled_index, 2)
         # Moving the controlled card to the enemy army releases control.
         self.drag_card(self.screen.card_rect(0, 2).center, self.screen.panes[1].center)
@@ -3137,6 +3193,7 @@ class CustomBattleScreenTests(unittest.TestCase):
         with patch.object(c, "CUSTOM_BATTLE_MAX_UNITS_PER_SIDE", 2):
             for side in (0, 1):
                 self.screen.rosters = [[self.screen._new_unit(team, "Fixture I") for _ in range(2)] for team in (0, 1)]
+                self.screen.columns = [combat.paired_columns(2) for _team in (0, 1)]
                 self.screen.controlled_index = 0
                 self.screen.refresh_ui()
                 before = copy.deepcopy(self.screen.rosters)
@@ -3145,18 +3202,22 @@ class CustomBattleScreenTests(unittest.TestCase):
                 self.assertEqual(self.screen.controlled_index, 0)
                 self.assertIsNone(self.screen.drag)
                 self.screen.rosters[1 - side].pop()
+                self.screen.columns[1 - side].pop()
                 self.screen.refresh_ui()
                 self.drag_card(self.screen.card_rect(side, 0).center, self.screen.card_rect(1 - side, 0).center)
                 self.assertEqual([len(roster) for roster in self.screen.rosters], [1, 2] if side == 0 else [2, 1])
 
     def test_cross_side_drop_uses_destination_scroll_position(self):
         self.screen.add_unit(0, "Fixture II")
-        for _ in range(8):
+        # Sixteen enemy cards fill eight columns, more than the roster shows at once.
+        for _ in range(16):
             self.screen.add_unit(1, "Fixture I")
         self.screen.roster_1_scroll = -(battle_screen.CARD_SIZE[0] + battle_screen.CARD_GAP) * 2
         unit = self.screen.rosters[0][0]
-        self.drag_card(self.screen.card_rect(0, 0).center, self.screen.card_rect(1, 3).center)
-        self.assertIs(self.screen.rosters[1][3], unit)
+        # A drop on the full fourth column inserts a column before it.
+        self.drag_card(self.screen.card_rect(0, 0).center, self.screen.card_rect(1, 6).center)
+        self.assertIs(self.screen.rosters[1][6], unit)
+        self.assertEqual(self.screen.columns[1][5:8], [2, 3, 4])
         self.assertEqual(self.screen.rosters[0], [])
 
     def test_preview_rejects_duplication_and_cross_side_transfers(self):
@@ -3402,13 +3463,15 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.assertEqual(self.screen.controlled_index, 0)
         self.assertEqual(self.screen.selected, selected)
         self.assertIsNone(self.screen.drag)
-        # The paused battle deploys again: the leftmost card now stands in the front rank.
+        # The paused battle deploys again: the swapped card now stands above its partner in the front rank.
         simulation = self.screen.simulation
         self.assertIsNot(simulation, before)
         self.assertTrue(simulation.paused)
-        front, second = simulation.divisions[:2]
+        front, second, behind = simulation.divisions[:3]
         self.assertEqual(front[0].data["type"], "Fixture III")
-        self.assertGreater(front[0].x, second[0].x)
+        self.assertEqual(front[0].x, second[0].x)
+        self.assertLess(max(f.y for f in front), min(f.y for f in second))
+        self.assertGreater(front[0].x, behind[0].x)
         self.assertIs(simulation.controlled, front[0])
         self.drag_card(self.screen.card_rect(1, 0).center, self.screen.card_rect(1, 1).center)
         self.assertEqual(self.screen.rosters[1], enemy)
@@ -3559,7 +3622,10 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.click("Simulate")
         self.assertEqual(self.screen.simulation.controlled.data["type"], "Fixture III")
         self.click("Retreat")
-        self.drag_card(self.screen.card_rect(0, 2).center, self.screen.card_rect(0, 0).center)
+        # A drop at a card's left edge gives the dragged card a new column before that card's column.
+        front = self.screen.card_rect(0, 0)
+        self.drag_card(self.screen.card_rect(0, 2).center, (front.left + 2, front.centery))
+        self.assertEqual(self.screen.columns[0], [0, 1, 1])
         self.assertEqual(self.screen.controlled_index, 1)
         self.click("Remove")
         self.assertEqual(self.screen.controlled_index, 0)
@@ -3940,9 +4006,59 @@ class CustomBattleScreenTests(unittest.TestCase):
             [event], {"MOUSE_LEFT_CLICK": pygame.K_w}, reserved_keys=self.screen.reserved_keys)
         self.assertEqual(translated, [event])
 
+    def test_new_units_pair_into_columns_and_the_edit_battle_layout_carries_into_preview(self):
+        for name in ("Fixture I", "Fixture II", "Fixture III"):
+            self.screen.add_unit(0, name)
+        self.screen.add_unit(1, "Fixture I")
+        self.assertEqual(self.screen.columns, [[0, 0, 1], [0]])
+        first, second, third = self.screen.rosters[0]
+        self.screen.draw(self.surface)
+        # A drop on the empty space below a lone card stacks the dragged card there.
+        lone = self.screen.card_rect(0, 2)
+        self.drag_card(self.screen.card_rect(0, 1).center, (lone.centerx, lone.bottom + battle_screen.CARD_GAP + 5))
+        self.assertEqual(self.screen.rosters[0], [first, third, second])
+        self.assertEqual(self.screen.columns[0], [0, 1, 1])
+        self.click("Simulate")
+        self.assertEqual(self.screen.simulation.friendly_columns, [0, 1, 1])
+        self.assertEqual(self.screen.card_rect(0, 1).x, self.screen.card_rect(0, 2).x)
+        self.assertLess(self.screen.card_rect(0, 1).y, self.screen.card_rect(0, 2).y)
+        self.click("Retreat")
+        self.assertEqual(self.screen.columns[0], [0, 1, 1])
+        # Removing a column's only card closes the column.
+        self.screen.selected[0] = 0
+        self.screen.remove_unit(0)
+        self.assertEqual(self.screen.rosters[0], [third, second])
+        self.assertEqual(self.screen.columns[0], [0, 0])
+
+    def test_campaign_armies_start_paired_and_custom_columns_return_afterward(self):
+        self.fill_armies()
+        for _ in range(2):
+            self.screen.add_unit(0, "Fixture I")
+        custom_columns = copy.deepcopy(self.screen.columns)
+        self.enter_campaign(ally_types=["Fixture III", "Fixture I"])
+        self.assertEqual(self.screen.columns[0], [0, 0, 1])
+        self.assertEqual(self.screen.simulation.friendly_columns, [0, 0, 1])
+        self.screen.finish_retreat()
+        self.assertEqual(self.screen.columns, custom_columns)
+
+    def test_a_new_column_is_refused_when_the_army_uses_every_column(self):
+        count = c.CUSTOM_BATTLE_MAX_COLUMNS_PER_SIDE + 1
+        self.screen.rosters[0] = [self.screen._new_unit(0, "Fixture I") for _ in range(count)]
+        self.screen.columns[0] = [0, *range(count - 1)]  # The first column holds two cards.
+        self.screen.refresh_ui()
+        before = list(self.screen.rosters[0])
+        self.assertFalse(self.screen._move_roster_entry(0, 0, 3))
+        self.assertEqual(self.screen.rosters[0], before)
+        self.assertEqual(self.screen.columns[0], [0, *range(count - 1)])
+        # A lone card can still take a new column, since its own column closes.
+        self.assertTrue(self.screen._move_roster_entry(0, count - 1, 1))
+        self.assertIs(self.screen.rosters[0][2], before[-1])
+        self.assertEqual(len(set(self.screen.columns[0])), c.CUSTOM_BATTLE_MAX_COLUMNS_PER_SIDE)
+
     def test_unit_limit_is_rechecked_and_setup_draw_uses_cached_cards(self):
         self.screen.rosters[0] = [self.screen._new_unit(0, "Fixture I")
                                   for _ in range(c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE)]
+        self.screen.columns[0] = combat.paired_columns(c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE)
         self.screen.refresh_ui()
         self.screen.add_unit(0, "Fixture II")
         self.assertEqual(len(self.screen.rosters[0]), c.CUSTOM_BATTLE_MAX_UNITS_PER_SIDE)
@@ -3956,13 +4072,14 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.screen.handle_back_key()
         self.assertIsNone(self.screen.drag)
         self.assertEqual(self.screen.mode, "setup")
-        self.screen.rosters[0] = [self.screen._new_unit(0, "Fixture I") for _ in range(12)]
+        self.screen.rosters[0] = [self.screen._new_unit(0, "Fixture I") for _ in range(24)]
+        self.screen.columns[0] = combat.paired_columns(24)
         self.screen.refresh_ui()
         self.screen.draw(self.surface)
         self.screen.roster_0_scroll = -100
-        # Gaps between cards use the shared content-drag direction.
+        # Gaps between columns use the shared content-drag direction.
         pane = self.screen.panes[0]
-        first, second = (self.screen.card_rect(0, index) for index in (0, 1))
+        first, second = (self.screen.card_rect(0, index) for index in (0, 2))
         point = ((first.right + second.left) // 2, pane.centery)
         self.screen.handle_events([
             pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=point),
