@@ -1,5 +1,7 @@
 """Check Android staging and device targeting without requiring an SDK or emulator."""
 
+import hashlib
+import io
 from pathlib import Path
 import subprocess
 import tempfile
@@ -7,15 +9,21 @@ import unittest
 from unittest.mock import patch
 
 from compilation_scripts import build_manifest as manifest, build_support
-from compilation_scripts import android_tools, test_android_build as launcher
+from compilation_scripts import android_runtime, android_tools, test_android_build as launcher
 
 
 ROOT = Path(__file__).resolve().parent.parent
+WEB_BOOTSTRAP = f'<script src="{manifest.ANDROID_RUNTIME_CDN}{manifest.ANDROID_RUNTIME_LOADER}" data-python="{manifest.ANDROID_RUNTIME_PYTHON}"></script>\n'
 
 
 class AndroidPackagingTests(unittest.TestCase):
     def test_staging_refreshes_web_assets_and_retains_incremental_files(self):
-        with tempfile.TemporaryDirectory() as temporary:
+        runtime_bytes = b"bundled interpreter"
+        runtime_name = "interpreter/main.wasm"
+        inventory = {runtime_name: hashlib.sha256(runtime_bytes).hexdigest()}
+        with tempfile.TemporaryDirectory() as temporary, \
+                patch.object(manifest, "ANDROID_RUNTIME_FILES", inventory), \
+                patch.object(android_runtime.urllib.request, "urlopen", return_value=io.BytesIO(runtime_bytes)) as download:
             root = Path(temporary)
             for name in manifest.ANDROID_PROJECT_FILES:
                 target = root / manifest.ANDROID_PROJECT_DIR / name
@@ -26,26 +34,32 @@ class AndroidPackagingTests(unittest.TestCase):
             icon.write_bytes((ROOT / manifest.ANDROID_ICON).read_bytes())
             web = root / "browser-output"
             web.mkdir()
-            (web / "index.html").write_text("current game: game.tar.gz")
+            (web / "index.html").write_text(WEB_BOOTSTRAP + "current game: game.tar.gz")
             (web / "game.tar.gz").write_bytes(b"game archive")
             (web / "game.apk").write_bytes(b"redundant web ZIP archive")
             destination = root / "wrapper-output"
             build_support.stage_android_project(root, web, destination)
             assets = destination / "app/src/main/assets/www"
+            runtime = assets.parent / "runtime"
+            self.assertEqual((runtime / runtime_name).read_bytes(), runtime_bytes)
+            (runtime / "obsolete-runtime.js").write_bytes(b"old interpreter")
             (assets / "removed-asset.dat").write_bytes(b"old")
             (assets / "game.apk").write_bytes(b"left over from an older Android build")
             (destination / "compile-cache.dat").write_bytes(b"keep")
-            (web / "index.html").write_text("updated game: game.tar.gz")
+            (web / "index.html").write_text(WEB_BOOTSTRAP + "updated game: game.tar.gz")
             build_support.stage_android_project(root, web, destination)
-            self.assertEqual((assets / "index.html").read_text(), "updated game: game.tar.gz.bin")
+            self.assertEqual((assets / "index.html").read_text(), WEB_BOOTSTRAP + "updated game: game.tar.gz.bin")
             self.assertEqual((assets / "game.tar.gz.bin").read_bytes(), b"game archive")
-            self.assertEqual((web / "index.html").read_text(), "updated game: game.tar.gz")
+            self.assertEqual((web / "index.html").read_text(), WEB_BOOTSTRAP + "updated game: game.tar.gz")
             self.assertEqual((web / "game.tar.gz").read_bytes(), b"game archive")
             self.assertFalse((assets / "game.apk").exists())
             self.assertEqual((web / "game.apk").read_bytes(), b"redundant web ZIP archive")
             self.assertFalse((assets / "removed-asset.dat").exists())
             self.assertEqual((destination / "compile-cache.dat").read_bytes(), b"keep")
             self.assertTrue((destination / "app/src/main/res/drawable/icon.png").is_file())
+            self.assertEqual((runtime / runtime_name).read_bytes(), runtime_bytes)
+            self.assertFalse((runtime / "obsolete-runtime.js").exists())
+            download.assert_called_once()
 
     def test_staging_rejects_output_outside_workspace(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -60,6 +74,44 @@ class AndroidPackagingTests(unittest.TestCase):
             (sdk / "platform-tools").mkdir(parents=True)
             with patch.dict("os.environ", {"ANDROID_HOME": str(sdk)}, clear=True):
                 self.assertEqual(android_tools.android_sdk(), sdk.resolve())
+
+
+class AndroidRuntimeTests(unittest.TestCase):
+    def test_web_build_must_match_the_bundled_interpreter(self):
+        android_runtime.validate_web_runtime(WEB_BOOTSTRAP)
+        for index in ("", WEB_BOOTSTRAP.replace("pythons.js", "other.js"), WEB_BOOTSTRAP.replace(manifest.ANDROID_RUNTIME_PYTHON, "python0.0"), WEB_BOOTSTRAP.replace(manifest.ANDROID_RUNTIME_CDN, "https://example.invalid/")):
+            with self.subTest(index=index), self.assertRaisesRegex(ValueError, "Unsupported Pygbag runtime"):
+                android_runtime.validate_web_runtime(index)
+
+    def test_corrupt_cache_is_replaced_and_verified_cache_needs_no_network(self):
+        content = b"verified runtime"
+        with tempfile.TemporaryDirectory() as temporary, \
+                patch.object(manifest, "ANDROID_RUNTIME_FILES", {"main.wasm": hashlib.sha256(content).hexdigest()}), \
+                patch.object(android_runtime.urllib.request, "urlopen", return_value=io.BytesIO(content)) as download:
+            target = Path(temporary, "main.wasm")
+            target.write_bytes(b"partial or obsolete runtime")
+            android_runtime.download_runtime(temporary)
+            self.assertEqual(target.read_bytes(), content)
+            android_runtime.download_runtime(temporary)
+            download.assert_called_once()
+            self.assertEqual(download.call_args.args[0].full_url, manifest.ANDROID_RUNTIME_CDN + "main.wasm")
+
+    def test_failed_download_does_not_publish_partial_runtime(self):
+        expected = hashlib.sha256(b"complete runtime").hexdigest()
+        for response in (io.BytesIO(b"truncated runtime"), OSError("offline")):
+            with self.subTest(response=response), tempfile.TemporaryDirectory() as temporary, \
+                    patch.object(manifest, "ANDROID_RUNTIME_FILES", {"main.wasm": expected}), \
+                    patch.object(android_runtime.urllib.request, "urlopen") as download:
+                target = Path(temporary, "main.wasm")
+                target.write_bytes(b"previous cache")
+                if isinstance(response, OSError):
+                    download.side_effect = response
+                else:
+                    download.return_value = response
+                with self.assertRaises((ValueError, OSError)):
+                    android_runtime.download_runtime(temporary)
+                self.assertEqual(target.read_bytes(), b"previous cache")
+                self.assertFalse(target.with_name("main.wasm.download").exists())
 
 
 class AndroidLauncherTests(unittest.TestCase):

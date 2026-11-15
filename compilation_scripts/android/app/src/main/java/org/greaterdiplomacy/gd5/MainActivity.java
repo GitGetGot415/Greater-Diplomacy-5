@@ -20,6 +20,8 @@ import android.window.OnBackInvokedDispatcher;
 
 import androidx.webkit.WebViewAssetLoader;
 
+import java.util.Collections;
+
 /** Runs the same game archive and browser storage as the web distribution. */
 public final class MainActivity extends Activity {
     private static final String TAG = "GD5WebView";
@@ -43,16 +45,32 @@ public final class MainActivity extends Activity {
         WebViewAssetLoader loader = new WebViewAssetLoader.Builder()
             .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
             .build();
+        // Preserve Pygbag's relative imports and package URLs while serving its
+        // entire runtime from the APK, including on the first launch offline.
+        WebViewAssetLoader.AssetsPathHandler runtimeAssets = new WebViewAssetLoader.AssetsPathHandler(this);
+        WebViewAssetLoader runtimeLoader = new WebViewAssetLoader.Builder()
+            .setDomain("pygame-web.github.io")
+            .addPathHandler("/cdn/", path -> {
+                // NumPy's wheel URL can contain a second slash after /cdn/.
+                WebResourceResponse response = runtimeAssets.handle("runtime/" + path.replaceAll("^/+", ""));
+                if (response != null) {
+                    response.setResponseHeaders(Collections.singletonMap("Access-Control-Allow-Origin", "*"));
+                    if (path.endsWith(".wasm")) response.setMimeType("application/wasm");
+                }
+                return response;
+            })
+            .build();
         game.setWebViewClient(new WebViewClient() {
             @Override
             public WebResourceResponse shouldInterceptRequest(
                     WebView view, WebResourceRequest request) {
-                return loader.shouldInterceptRequest(request.getUrl());
+                WebResourceResponse response = runtimeLoader.shouldInterceptRequest(request.getUrl());
+                return response != null ? response : loader.shouldInterceptRequest(request.getUrl());
             }
 
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                // Runtime subresources can use the network; top-level navigation stays in GD5.
+                // Top-level navigation stays in GD5; the version check can use the network.
                 return !request.getUrl().toString().equals(GAME_URL);
             }
 

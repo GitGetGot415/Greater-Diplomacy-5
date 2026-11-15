@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Pygbag downloads its Python/WebAssembly runtime over HTTPS. -->
+    <!-- Only optional online features such as the version check need internet. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <application
         android:label="Greater Diplomacy 5"

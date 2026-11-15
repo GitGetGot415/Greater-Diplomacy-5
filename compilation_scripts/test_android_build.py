@@ -126,7 +126,7 @@ def main(argv=None):
                          "-n", manifest.ANDROID_APPLICATION_ID + "/.MainActivity", timeout=60)
         if "Error:" in output or "Status: ok" not in output:
             raise RuntimeError(f"Android could not launch GD5: {output}")
-        print("GD5 launched. Internet access is required for runtime downloads.", flush=True)
+        print("GD5 launched. The bundled runtime supports offline startup.", flush=True)
         if not args.no_logs:
             log = REPO_ROOT / "build/android/logs/game.log"
             log.parent.mkdir(parents=True, exist_ok=True)

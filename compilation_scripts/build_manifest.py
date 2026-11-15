@@ -33,6 +33,26 @@ def android_apk():
 ANDROID_ICON = "assets/icon/icon.png"
 # Android loads the gzip game bundle. Pygbag's ZIP-format .apk is only for web hosting.
 ANDROID_WEB_EXCLUDED_PATTERNS = ("*.apk",)
+# Mirror the tested Pygbag runtime inside the APK. Verify cached downloads too:
+# the public CDN can change independently of the installed build-time Pygbag.
+ANDROID_RUNTIME_CDN = "https://pygame-web.github.io/cdn/"
+ANDROID_RUNTIME_LOADER = "0.9.3/pythons.js"
+ANDROID_RUNTIME_PYTHON = "python3.12"
+ANDROID_RUNTIME_FILES = {
+    ANDROID_RUNTIME_LOADER: "6da43e3e62c3db933421b99681e8ef99ed9b0ce1589ed8a0c69b88443278e019",
+    "0.9.3/cpythonrc.py": "b8a0b8168b58ef7c38c17d4705c9cbe1751fa667a0a6d26ed26f0537134735de",
+    "0.9.3/cpython312/main.js": "01c4e4dc7145a482ad259d8272ce73d97b58ec2a141bfb57e620347730d159c7",
+    "0.9.3/cpython312/main.data": "b068df4d59b06b113cfc3c4d6419bdf699d2c2eeb547c9119e2044c98cdc4a59",
+    "0.9.3/cpython312/main.wasm": "3cfb882de90feeb367325f0c58731932880c8f424fb5a670b98d035ae862b280",
+    "0.9.3/empty.html": "b0693dc92f76e08bf1485b3dd9b514a2e31dfd6f39422a6b60edb722671dc98f",
+    "index-0.9.3-cp312.json": "ec6edacc1b95700c99b8daecb8ce3949e58e96a1da5234c81d8a0071aa537213",
+    "cp312/numpy-2.0.2-cp312-cp312-pyodide_2024_0_wasm32.whl": "ebfa5de0256e98fcd4ece4546e054dea50b73ecf735ec836237fd45bcc5eab1f",
+    "cp312/pygame_ce-2.5.7-cp312-cp312-wasm32_bi_emscripten.whl": "4f2caa3020592950565f3649c41e2eeacd001be93da892d60e5a4a43d893a323",
+    "vtx.js": "9c5f4de60a85dad9093862715094d67d9c8065872657ad3effa1a6cac6834797",
+    "vt/xterm.js": "f0aea0f75f48559013ae6643c2479dd737d26da42d5524e6d2b70915ae6523c7",
+    "vt/xterm.css": "832f3f2c603b43ad4351ff04970150cc7a873014276db126a6065c6dd81e4872",
+    "vt/xterm-addon-image.js": "a4795cf0998c595de120f79a69c6e522db5fff28dba7c50c1e872ea81a89fd81",
+}
 DATA_DIRS = ("assets", "base_maps", "scenarios")
 EMPTY_DIRS = ("saves", "tournament_saves", "mods", EXPORTS_DIR)
 WEB_EXCLUDED_SUBPACKAGES = ()

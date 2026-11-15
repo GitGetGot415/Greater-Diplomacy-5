@@ -5,7 +5,7 @@ from pathlib import Path
 import shutil
 import subprocess
 
-from compilation_scripts import build_manifest as manifest
+from compilation_scripts import android_runtime, build_manifest as manifest
 from data.io.starting_defaults import write_preference_defaults
 
 
@@ -152,6 +152,10 @@ def stage_android_project(root, web_output, destination):
     destination = Path(verified_build_path(root, destination))
     if not (web_output / "index.html").is_file():
         raise FileNotFoundError("No web build found. Run html_compilation.py first.")
+    index = (web_output / "index.html").read_text(encoding="utf-8")
+    android_runtime.validate_web_runtime(index)
+    runtime_cache = Path(verified_build_path(root, "build/android/runtime"))
+    android_runtime.download_runtime(runtime_cache)
     for relative in manifest.ANDROID_PROJECT_FILES:
         target = destination / relative
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -166,12 +170,18 @@ def stage_android_project(root, web_output, destination):
     # AAPT expands .gz assets and drops their suffix, even with noCompress.
     # Keep the gzip bytes Pygbag expects and change only the Android copy's URL.
     index_path = assets / "index.html"
-    index = index_path.read_text(encoding="utf-8")
     for archive in assets.glob("*.tar.gz"):
         bundled = archive.with_name(archive.name + ".bin")
         archive.rename(bundled)
         index = index.replace(archive.name, bundled.name)
     index_path.write_text(index, encoding="utf-8")
+    runtime = Path(verified_build_path(root, destination / "app/src/main/assets/runtime"))
+    if runtime.exists():
+        shutil.rmtree(runtime)
+    for relative in manifest.ANDROID_RUNTIME_FILES:
+        target = runtime / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(runtime_cache / relative, target)
     mismatches = png_signature_mismatches(assets)
     icon = root / manifest.ANDROID_ICON
     with icon.open("rb") as stream:

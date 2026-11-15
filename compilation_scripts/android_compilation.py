@@ -52,7 +52,7 @@ def build_apk(skip_web_build=False):
     shutil.copy2(source, temporary)
     temporary.replace(destination)
     print(f"APK ready: {destination}", flush=True)
-    print("This debug APK needs internet access for Pygbag's runtime downloads.", flush=True)
+    print("The Python/WebAssembly runtime is bundled; this APK can start offline.", flush=True)
     return destination
 
 
