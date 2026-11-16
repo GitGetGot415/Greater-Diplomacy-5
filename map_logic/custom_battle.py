@@ -1440,7 +1440,12 @@ class BattleSimulation:
         return None
 
     def _naval_firing_course(self, fighter, ally, target):
-        """Validate the existing side-step against hulls and edges; hold if neither side is safe."""
+        """Validate the existing side-step against hulls and edges.
+
+        When turning either way is unsafe, as for two hulls bow to bow, back straight away to open
+        room for the turn; hold only if backing away is unsafe too. Both choices end the side-step,
+        so the next tick tries it again from the new position.
+        """
         if fighter.max_speed <= 0:
             return 0.0, fighter.angle
         self._sidestep(fighter, ally.x, ally.y, target.x - fighter.x, target.y - fighter.y, naval.TORPEDO_LAUNCH_LOOKAHEAD)
@@ -1450,6 +1455,9 @@ class BattleSimulation:
                 fighter.dodge_heading = heading
                 return course
         fighter.dodge = 0.0
+        reverse = -fighter.pace, fighter.angle
+        if self._naval_maneuver_score(fighter, reverse, []) is not None:
+            return reverse
         return 0.0, fighter.angle
 
     def _naval_course(self, fighter, target):
@@ -1618,10 +1626,25 @@ class BattleSimulation:
         return unit is not self.controlled and unit.data["speed"] >= DODGE_MIN_SPEED
 
     def _sidestep(self, unit, x, y, vx, vy, seconds):
-        """Sidestep at right angles to a path through (x, y) along (vx, vy), away from it (a random side when dead on)."""
-        # How far the unit sits to the left of the path; negative is to the right.
-        offset = ((unit.y - y) * vx - (unit.x - x) * vy) / math.hypot(vx, vy)
-        side = (1 if offset > 0 else -1) if abs(offset) > 1e-9 else self._rng.choice((-1, 1))
+        """Sidestep at right angles to a path through (x, y) along (vx, vy), away from it.
+
+        Dead on the path, the unit steps away from its nearest other ally, so two units sharing a
+        column do not step into each other; with no ally beside the path, it picks a random side.
+        """
+        length = math.hypot(vx, vy)
+
+        def offset(point):
+            # How far a point sits to the left of the path; negative is to the right.
+            return ((point[1] - y) * vx - (point[0] - x) * vy) / length
+
+        own = offset((unit.x, unit.y))
+        if abs(own) > 1e-9:
+            side = 1 if own > 0 else -1
+        else:
+            others = [ally for ally in self._sides[unit.side] if ally is not unit and (ally.x, ally.y) != (x, y)]
+            nearest = min(others, key=lambda ally: math.dist((ally.x, ally.y), (unit.x, unit.y)), default=None)
+            beside = 0.0 if nearest is None else offset((nearest.x, nearest.y))
+            side = (-1 if beside > 0 else 1) if abs(beside) > 1e-9 else self._rng.choice((-1, 1))
         unit.dodge = seconds
         unit.dodge_heading = math.atan2(vy, vx) + side * math.pi / 2
 

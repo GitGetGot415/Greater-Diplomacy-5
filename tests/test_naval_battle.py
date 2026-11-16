@@ -497,14 +497,57 @@ class NavalBattleTests(unittest.TestCase):
             simulation._fire_shot(source)
             self.assertEqual(len(simulation.projectiles), 1)
 
-    def test_blocked_submarine_holds_if_both_repositioning_maneuvers_are_unsafe(self):
+    def test_blocked_submarine_holds_if_both_repositioning_maneuvers_and_backing_away_are_unsafe(self):
         simulation = self.simulation("submarine", controlled=None)
         source, target = simulation.fighters
         ally = combat.Fighter(dict(target.data), source.side, source.x + 200, source.y, "convoy", index=2)
         with patch.object(simulation, "_naval_maneuver_score", return_value=None) as evaluate:
             self.assertEqual(simulation._naval_firing_course(source, ally, target), (0.0, source.angle))
-        self.assertEqual(evaluate.call_count, 2)
+        self.assertEqual(evaluate.call_count, 3)
         self.assertEqual(source.dodge, 0)
+
+    def test_blocked_submarine_backs_away_when_turning_either_way_is_unsafe(self):
+        simulation = self.simulation("submarine", controlled=None)
+        source, target = simulation.fighters
+        ally = combat.Fighter(dict(target.data), source.side, source.x + 200, source.y, "convoy", index=2)
+        safe = (math.inf, 0.0, 0.0, 0.0)
+        with patch.object(simulation, "_naval_maneuver_score", side_effect=[None, None, safe]) as evaluate:
+            self.assertEqual(simulation._naval_firing_course(source, ally, target), (-source.pace, source.angle))
+        self.assertEqual(evaluate.call_args.args[1], (-source.pace, source.angle))
+        # The side-step ends, so the next tick tries turning again from the new position.
+        self.assertEqual(source.dodge, 0)
+
+    def test_dead_on_sidestep_steps_away_from_the_nearest_other_ally(self):
+        simulation = self.simulation("submarine", controlled=None)
+        source, target = simulation.fighters
+        blocker = combat.Fighter(dict(source.data), source.side, source.x + 300, source.y, "submarine", index=2)
+        partner = combat.Fighter(dict(source.data), source.side, source.x, source.y, "submarine", index=3)
+        simulation._sides = [[], []]
+        simulation._sides[source.side] = [source, blocker, partner]
+        simulation._sides[target.side] = [target]
+        for offset in (240, -240):
+            with self.subTest(offset=offset):
+                partner.y = source.y + offset
+                # The blocking ally and the target lie dead on the unit's line of fire.
+                simulation._sidestep(source, blocker.x, blocker.y, target.x - source.x, target.y - source.y, 1.0)
+                self.assertLess(math.sin(source.dodge_heading) * offset, 0)
+
+    def test_submarines_sharing_a_column_do_not_freeze_bow_to_bow(self):
+        # Two submarines that turned into each other: bows touching, the enemy ahead of both lines of fire.
+        simulation = combat.BattleSimulation(self.library, ["Fixture submarine I"] * 2, ["Fixture submarine I"], terrain="ocean",
+                                             seed=7, controlled_index=None, friendly_columns=[0, 0])
+        top, bottom, enemy = simulation.fighters
+        length = c.TACTICAL_BODIES["submarine"][0]
+        top.x, top.y, top.angle = enemy.x - 4000, 1400.0, math.pi / 2
+        bottom.x, bottom.y, bottom.angle = top.x, top.y + length + 1, -math.pi / 2
+        enemy.y = top.y + length / 2
+        starts = [(fighter.x, fighter.y) for fighter in (top, bottom)]
+        gap = math.dist(*starts)
+        # Before the fix, both hulls held still here for the rest of the battle.
+        simulation.advance(8.0)
+        self.assertGreater(math.dist((top.x, top.y), (bottom.x, bottom.y)), gap + 100)
+        for fighter, start in zip((top, bottom), starts):
+            self.assertGreater(math.dist(start, (fighter.x, fighter.y)), 100)
 
     def test_slow_ai_ships_on_both_sides_evade_even_when_ready_to_fire_or_ramming(self):
         for side in (0, 1):
