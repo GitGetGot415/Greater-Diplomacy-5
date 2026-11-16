@@ -1,5 +1,6 @@
 import pygame
 import data.constants as c
+from ui import mobile_keyboard
 from ui.widgets import ui_elements
 from ui.widgets import text_utils
 from ui.navigation.modal_screen import ModalScreen
@@ -37,8 +38,22 @@ class ListSelectScreen(ModalScreen):
         self.close_on_select = close_on_select
         self.background_draw = background_draw
         self.search_text = ""
+        # Set by tapping the search box. See search_active.
+        self.search_focused = False
+        self.search_rect = pygame.Rect(self.panel_rect.x + 20, self.panel_rect.y + self.SEARCH_BOX_Y,
+                                       self.panel_rect.width - 40, self.SEARCH_BOX_HEIGHT)
         self.visible_items = self.items
         self.refresh_ui()
+
+    @property
+    def search_active(self):
+        """Whether typing filters the list.
+
+        Without the phone keyboard, the search box is the screen's only text
+        target, so typing always filters. With the phone keyboard, a focused box
+        opens the keyboard, so the box is focused only after the player taps it.
+        """
+        return self.search_focused or not mobile_keyboard.uses_phone_keyboard()
 
     def select(self, item):
         if not self._item_enabled(item):
@@ -126,9 +141,15 @@ class ListSelectScreen(ModalScreen):
             self.refresh_ui()
 
     def additional_events(self, event):
+        if event.type == mobile_keyboard.KEYBOARD_DISMISSED:
+            self.search_focused = False
+            return
+        # Before the list scroll, which consumes the press that starts a drag.
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            self.search_focused = self.search_rect.collidepoint(event.pos)
         if self.handle_list_scroll(event, content_rect_attr="scroll_content_rect"):
             return
-        if event.type == pygame.KEYDOWN:
+        if event.type == pygame.KEYDOWN and self.search_active:
             self._handle_search_key(event)
 
     def draw_body(self, surface):
@@ -150,8 +171,6 @@ class ListSelectScreen(ModalScreen):
                                  self.panel_rect.height - self.ROW_TOP - 30)
 
     def draw_search_box(self, surface):
-        box = pygame.Rect(self.panel_rect.x + 20, self.panel_rect.y + self.SEARCH_BOX_Y,
-                          self.panel_rect.width - 40, self.SEARCH_BOX_HEIGHT)
-        # Always drawn focused: this box is the screen's only text target.
-        ui_elements.draw_text_box(surface, box, self.search_text, active=True,
+        # An active box also asks for the phone keyboard.
+        ui_elements.draw_text_box(surface, self.search_rect, self.search_text, active=self.search_active,
                                   placeholder="Search...")

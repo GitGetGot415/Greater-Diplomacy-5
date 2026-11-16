@@ -55,6 +55,65 @@ class TextFieldTests(SharedUiTestCase):
         field.handle_event(key(pygame.K_BACKSPACE))
         self.assertEqual(changes, ["ab", "a"])
 
+    def test_closing_the_phone_keyboard_unfocuses_the_field(self):
+        from ui import mobile_keyboard
+        from ui.widgets.ui_elements import TextField
+
+        field = TextField(0, 0, 100, 30, "Rome")
+        field.active = True
+        field.handle_event(pygame.event.Event(mobile_keyboard.KEYBOARD_DISMISSED))
+        self.assertFalse(field.active)
+        self.assertEqual(field.text, "Rome")
+
+
+class PickerSearchFocusTests(SharedUiTestCase):
+    """The picker's search box opens the phone keyboard only while focused."""
+
+    def picker(self):
+        from ui.dialogs.list_select_screen import ListSelectScreen
+        return ListSelectScreen(self.controller, "Pick", "Choose", ["Rome", "Paris"], lambda _value: None)
+
+    def empty_spot(self, screen):
+        return click((screen.panel_rect.centerx, screen.panel_rect.bottom - 25))
+
+    def test_phone_keyboard_opens_only_after_tapping_the_search_box(self):
+        from ui import mobile_keyboard
+
+        screen = self.picker()
+        with mock.patch.object(mobile_keyboard, "_phone_keyboard", True), \
+                mock.patch.object(mobile_keyboard, "request") as request:
+            screen.draw(self.surface)
+            request.assert_not_called()
+            screen.handle_events([key(pygame.K_UNKNOWN, "r")])
+            self.assertEqual(screen.search_text, "")
+
+            screen.handle_events([click(screen.search_rect.center)])
+            screen.draw(self.surface)
+            request.assert_called()
+            screen.handle_events([key(pygame.K_UNKNOWN, "r")])
+            self.assertEqual(screen.search_text, "r")
+
+    def test_tapping_away_or_closing_the_keyboard_unfocuses_the_search_box(self):
+        from ui import mobile_keyboard
+
+        screen = self.picker()
+        with mock.patch.object(mobile_keyboard, "_phone_keyboard", True):
+            for leave in (self.empty_spot(screen), pygame.event.Event(mobile_keyboard.KEYBOARD_DISMISSED)):
+                with self.subTest(event=pygame.event.event_name(leave.type)):
+                    screen.handle_events([click(screen.search_rect.center)])
+                    self.assertTrue(screen.search_active)
+                    screen.handle_events([leave])
+                    self.assertFalse(screen.search_active)
+
+    def test_typing_filters_without_the_phone_keyboard(self):
+        from ui import mobile_keyboard
+
+        screen = self.picker()
+        with mock.patch.object(mobile_keyboard, "_phone_keyboard", False):
+            screen.handle_events([self.empty_spot(screen), key(pygame.K_UNKNOWN, "p")])
+        self.assertEqual(screen.search_text, "p")
+        self.assertEqual(screen.visible_items, ["Paris"])
+
 
 class MenuListTests(SharedUiTestCase):
     def test_scenario_library_routes_input_through_its_panes(self):

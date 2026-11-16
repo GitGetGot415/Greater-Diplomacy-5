@@ -845,7 +845,8 @@ class TextField:
     screen's `self.elements` list and get events/drawing for free.
 
     Click to focus; typing while focused edits `.text`. Enter calls on_submit
-    (if given) and unfocuses; Escape just unfocuses. Screens that need Tab-like
+    (if given) and unfocuses; Escape or closing the phone keyboard just
+    unfocuses. Screens that need Tab-like
     behaviour between fields should defocus other fields themselves on click.
     on_change receives the new text after each edit, for a screen that applies
     the value while the player types. A disabled field shows muted text and
@@ -874,6 +875,10 @@ class TextField:
 
     def handle_event(self, event):
         if not self.visible:
+            return
+
+        if event.type == mobile_keyboard.KEYBOARD_DISMISSED:
+            self.active = False
             return
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:

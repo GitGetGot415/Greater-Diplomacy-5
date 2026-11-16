@@ -6,6 +6,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.view.WindowInsets;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.ConsoleMessage;
 import android.webkit.JavascriptInterface;
@@ -28,6 +29,7 @@ public final class MainActivity extends Activity {
     private static final String GAME_URL =
         "https://appassets.androidplatform.net/assets/www/index.html";
     private WebView game;
+    private boolean keyboardVisible;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -88,6 +90,23 @@ public final class MainActivity extends Activity {
             }
         });
         game.addJavascriptInterface(new Keyboard(), "GD5Android");
+        if (Build.VERSION.SDK_INT >= 30) {
+            // The back gesture and the keyboard's hide key close the keyboard
+            // without the game. Report the close so the focused text box
+            // unfocuses. ui/mobile_keyboard.py ignores the report after the
+            // game's own hideKeyboard(). Android 8-10 have no keyboard
+            // visibility signal, so there a text box stays focused until tapped away.
+            game.setOnApplyWindowInsetsListener((view, insets) -> {
+                boolean visible = insets.isVisible(WindowInsets.Type.ime());
+                if (keyboardVisible && !visible) {
+                    game.evaluateJavascript(
+                        "window.__gd5_keyboard && window.__gd5_keyboard.dismissed()", null);
+                }
+                keyboardVisible = visible;
+                // Keep the WebView's own handling of insets.
+                return view.onApplyWindowInsets(insets);
+            });
+        }
         if (Build.VERSION.SDK_INT >= 33) {
             getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
                 OnBackInvokedDispatcher.PRIORITY_DEFAULT, this::confirmExit);

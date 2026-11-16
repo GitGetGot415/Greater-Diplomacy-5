@@ -11,7 +11,7 @@ from ui.rendering.font_manager import fonts
 from ui.panels import map_top_right_layout
 from ui.widgets.ui_elements import process_text_input
 from ui.widgets import ui_elements
-from ui import sound_effects
+from ui import mobile_keyboard, sound_effects
 
 from screens.game.defense_area_screen import DefenseAreaScreen
 from ui.navigation import screen_runner
@@ -384,6 +384,9 @@ def _handle_editor_event(map_screen, event):
     if state is None:
         return False
     rect = _editor_rect()
+    if event.type == mobile_keyboard.KEYBOARD_DISMISSED:
+        state["name_active"] = False
+        return True
     if event.type == pygame.KEYDOWN:
         if event.key == pygame.K_ESCAPE:
             handle_back_key(map_screen)

@@ -55,6 +55,7 @@ class MobileKeyboardTests(unittest.TestCase):
             patch.object(mobile_keyboard, "_installed", False),
             patch.object(mobile_keyboard, "_shown", False),
             patch.object(mobile_keyboard, "_requested", False),
+            patch.object(mobile_keyboard, "_phone_keyboard", False),
         ]
         for active_patch in patches:
             active_patch.start()
@@ -88,6 +89,39 @@ class MobileKeyboardTests(unittest.TestCase):
         self._frame(True)
         self._frame(False)
         self.assertEqual(self.context.eval("bridgeCalls.join(',')"), "show,hide")
+
+    def test_closing_the_keyboard_outside_the_game_reaches_the_game(self):
+        self._frame(True)
+        self.context.eval("window.__gd5_keyboard.dismissed()")
+        self.assertFalse(self._input_focused())
+        self.assertEqual([event.type for event in mobile_keyboard.typed_events()],
+                         [mobile_keyboard.KEYBOARD_DISMISSED])
+
+    def test_close_report_after_the_game_hid_the_keyboard_is_ignored(self):
+        self._frame(True)
+        self._frame(False)
+        self.context.eval("window.__gd5_keyboard.dismissed()")
+        self.assertEqual(self.context.eval("window.__gd5_keyboard.queue.length"), 0)
+
+    def test_tap_reopens_the_keyboard_for_a_text_box_still_editing(self):
+        self.context.eval("""
+            globalThis.bridgeCalls = [];
+            window.GD5Android = {
+                showKeyboard() { bridgeCalls.push('show'); },
+                hideKeyboard() { bridgeCalls.push('hide'); },
+            };
+        """)
+        self._frame(True)
+        self.context.eval("window.__gd5_keyboard.dismissed()")
+        self.context.eval("document.listeners.touchend()")
+        self.assertTrue(self._input_focused())
+        self.assertEqual(self.context.eval("bridgeCalls.join(',')"), "show,show")
+
+    def test_phone_keyboard_use_follows_the_control_mode(self):
+        self._frame(False, mobile_controls=True)
+        self.assertTrue(mobile_keyboard.uses_phone_keyboard())
+        self._frame(False, mobile_controls=False)
+        self.assertFalse(mobile_keyboard.uses_phone_keyboard())
 
     def test_desktop_controls_never_open_the_keyboard(self):
         self._frame(True, mobile_controls=False)

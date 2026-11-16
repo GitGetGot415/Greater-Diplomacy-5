@@ -10,6 +10,11 @@ Phone keyboards rarely send usable key codes, so the hidden <input> compares
 its value after each change and queues the added characters and backspaces.
 It starts filled with dots so a backspace always has something to delete and
 still reaches the game's text box.
+
+A player can also close the keyboard without the game: the Android back
+gesture or the keyboard's own hide key. The Android app reports that close
+(MainActivity.java), and typed_events() returns it as a KEYBOARD_DISMISSED
+event so a focused text box unfocuses instead of reopening the keyboard.
 """
 
 import json
@@ -26,9 +31,15 @@ from data.platform import IS_WEB
 # The Android app's WebView also opens the keyboard only for a focus during a
 # tap, so the app supplies window.GD5Android (MainActivity.java) to open and
 # close the keyboard directly. Browsers have no window.GD5Android.
+# MainActivity calls dismissed() when the player closes the keyboard. The call
+# is ignored after the game's own hide(). It queues DISMISSED for
+# typed_events() and blurs the hidden <input>, so a text box that stays in edit
+# mode reopens the keyboard through the touchend handler on the next tap.
+_DISMISSED = "\x04"
 _KEYBOARD_JS = r"""
 (() => {
     const FILL = '................';
+    const DISMISSED = '\x04';
     const input = document.createElement('input');
     input.type = 'text';
     input.autocomplete = 'off';
@@ -68,7 +79,10 @@ _KEYBOARD_JS = r"""
         if (state.shown && event.target !== input) event.preventDefault();
     }, true);
     document.addEventListener('touchend', () => {
-        if (state.shown && document.activeElement !== input) input.focus();
+        if (state.shown && document.activeElement !== input) {
+            input.focus();
+            if (window.GD5Android) window.GD5Android.showKeyboard();
+        }
     }, true);
     state.show = () => {
         state.shown = true;
@@ -83,6 +97,11 @@ _KEYBOARD_JS = r"""
         input.blur();
         if (window.GD5Android) window.GD5Android.hideKeyboard();
     };
+    state.dismissed = () => {
+        if (!state.shown) return;
+        state.queue.push(DISMISSED);
+        input.blur();
+    };
     state.take = () => {
         const typed = JSON.stringify(state.queue).replace(/[\u0080-￿]/g, ch => '\\u' + ch.charCodeAt(0).toString(16).padStart(4, '0'));
         state.queue = [];
@@ -93,9 +112,21 @@ _KEYBOARD_JS = r"""
 
 _CONTROL_KEYS = {"\b": pygame.K_BACKSPACE, "\r": pygame.K_RETURN, "\x1b": pygame.K_ESCAPE}
 
+# The player closed the keyboard. Every text box with a focus state unfocuses.
+KEYBOARD_DISMISSED = pygame.event.custom_type()
+
 _installed = False
 _shown = False
 _requested = False
+_phone_keyboard = False
+
+
+def uses_phone_keyboard():
+    """Whether focusing a text box opens the phone's on-screen keyboard.
+
+    The value comes from the last sync(), so it follows the control-mode setting.
+    """
+    return _phone_keyboard
 
 
 def request():
@@ -111,7 +142,7 @@ def typed_events():
     import platform  # pygbag supplies platform.window only in the browser.
     typed = json.loads(str(platform.window.eval("window.__gd5_keyboard.take()")))
     # Key K_UNKNOWN keeps a typed letter from also firing a keybind.
-    return [pygame.event.Event(pygame.KEYDOWN, key=_CONTROL_KEYS.get(ch, pygame.K_UNKNOWN), mod=0, scancode=0, unicode="" if ch in _CONTROL_KEYS else ch) for ch in typed]
+    return [pygame.event.Event(KEYBOARD_DISMISSED) if ch == _DISMISSED else pygame.event.Event(pygame.KEYDOWN, key=_CONTROL_KEYS.get(ch, pygame.K_UNKNOWN), mod=0, scancode=0, unicode="" if ch in _CONTROL_KEYS else ch) for ch in typed]
 
 
 def sync(mobile_controls):
@@ -120,8 +151,9 @@ def sync(mobile_controls):
     The keyboard is open while any text box drew as active this frame, on the
     web build in mobile controls. Desktop browsers keep their normal keyboard.
     """
-    global _installed, _shown, _requested
-    wanted = _requested and IS_WEB and mobile_controls
+    global _installed, _shown, _requested, _phone_keyboard
+    _phone_keyboard = IS_WEB and mobile_controls
+    wanted = _requested and _phone_keyboard
     _requested = False
     if wanted == _shown:
         return
