@@ -77,16 +77,27 @@ def draw_country_names(map_screen, surface):
     # --- LAYER 3.5: COUNTRY NAMES ---
     # Keep tactical unit selection clear; active games follow the Names toggle.
     if map_screen.show_country_names and not (map_screen.tactical_mode and map_screen.selection_mode):
-        
-        # 1. Cache text surfaces once to save performance
-        if not hasattr(map_screen, 'country_name_surfs'):
-            map_screen.country_name_surfs = {}
-            map_screen.faction_name_surfs = {} # Cache faction text globally
-            
-            # Use your biggest font preset for maximum resolution before scaling down
-            name_font = fonts.get("country_name_display") 
-            for c_id, data in map_screen.nation_data.items():
-                if c_id not in c.UNPLAYABLE_NATIONS:
+
+        # 2 & 3. Draw the names at full opacity whenever the player has
+        # enabled them.  Zoom changes their scale, never their visibility.
+        if hasattr(map_screen, 'country_text_blobs'):
+
+            # 1. Cache text surfaces once to save performance. Only countries
+            # with a landmass or core blob are ever drawn, and a scenario lists
+            # many more countries than it places, so render only those.
+            # update_country_centers clears this cache whenever the blobs change.
+            if not hasattr(map_screen, 'country_name_surfs'):
+                map_screen.country_name_surfs = {}
+                map_screen.faction_name_surfs = {} # Cache faction text globally
+                placed = {blob["owner"] for blob in map_screen.country_text_blobs}
+                placed.update(blob["owner"] for blob in map_screen.core_text_blobs)
+
+                # Use your biggest font preset for maximum resolution before scaling down
+                name_font = fonts.get("country_name_display")
+                for c_id in placed:
+                    data = map_screen.nation_data.get(c_id)
+                    if data is None:
+                        continue
                     # Cache normal country name
                     disp = data.get("name", c_id).upper()
                     surf = name_font.render(disp, True, (255, 255, 255)).convert_alpha()
@@ -100,10 +111,6 @@ def draw_country_names(map_screen, surface):
                         f_shadow = name_font.render(fac, True, (20, 20, 20)).convert_alpha()
                         map_screen.faction_name_surfs[c_id] = (f_surf, f_shadow)
 
-        # 2 & 3. Draw the names at full opacity whenever the player has
-        # enabled them.  Zoom changes their scale, never their visibility.
-        if hasattr(map_screen, 'country_text_blobs'):
-            
             drawn_countries = set()
             drawn_factions = set() # Keep track of which factions have already been drawn!
             

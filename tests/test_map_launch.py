@@ -197,15 +197,40 @@ class ScreenHookTests(unittest.TestCase):
         target = mock.Mock()
         source = SimpleNamespace(next_state="MAP", done=True,
                                  prepare_map_steps=lambda app: iter(["stage"]))
-        app = SimpleNamespace(active_state=source, states={"MAP": target})
+        app = SimpleNamespace(active_state=source, states={"MAP": None}, release_map=mock.Mock())
         with mock.patch.object(main.screen_runner, "run_loading") as loading:
             main.Controller.flip_state(app)
+        app.release_map.assert_called_once_with()
         self.assertIs(app.active_state, source)
         self.assertFalse(source.done)
+        # The loading steps publish the built map before reporting success.
+        app.states["MAP"] = target
         target.on_enter.assert_not_called()
         loading.call_args.kwargs["on_done"](True)
         self.assertIs(app.active_state, target)
         target.on_enter.assert_called_once_with(app, source)
+
+    def test_releasing_the_map_frees_it_before_another_map_loads(self):
+        import weakref
+        import main
+
+        class CyclicMap:
+            """A map that, like the real one, is kept alive only by reference cycles."""
+            def __init__(self):
+                self.cycle = self
+
+        old_map = CyclicMap()
+        freed = weakref.ref(old_map)
+        layered = SimpleNamespace(map_screen=old_map)
+        unrelated_map = object()
+        unrelated = SimpleNamespace(map_screen=unrelated_map)
+        app = SimpleNamespace(states={"MAP": old_map, "PRODUCTION": layered, "OTHER": unrelated, "UNBUILT": None})
+        del old_map
+        main.Controller.release_map(app)
+        self.assertIsNone(app.states["MAP"])
+        self.assertIsNone(layered.map_screen)
+        self.assertIs(unrelated.map_screen, unrelated_map)
+        self.assertIsNone(freed())
 
     def test_editor_folder_loading_waits_for_the_overlay(self):
         from screens.editors import menus

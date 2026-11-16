@@ -12,6 +12,7 @@
 import random
 
 import asyncio
+import gc
 import os
 import sys
 
@@ -435,6 +436,25 @@ class Controller:
             })
         self.active_state = self.states["MENU"]
 
+    def release_map(self):
+        """Free the previous map before another map loads.
+
+        A map's surfaces take hundreds of megabytes. The map's reference cycles
+        keep that memory until the cyclic garbage collector runs, and screens
+        layered on the map keep their own reference. Without this, the old map
+        and the new map's first frame are in memory together, which runs the
+        Android build out of memory.
+        """
+        old_map = self.states["MAP"]
+        if old_map is None:
+            return
+        self.states["MAP"] = None
+        for screen in self.states.values():
+            if screen is not None and screen.map_screen is old_map:
+                screen.map_screen = None
+        del old_map
+        gc.collect()
+
     def flip_state(self):
         """Switch to the screen that the active screen asked for."""
         previous_state = self.active_state
@@ -443,6 +463,8 @@ class Controller:
             steps = previous_state.prepare_map_steps(self)
             if steps is not None:
                 previous_state.done = False
+                # Map loaders open only from menus and lobbies, never over a live map.
+                self.release_map()
 
                 def loaded(success):
                     if success:
