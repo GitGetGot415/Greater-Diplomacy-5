@@ -546,8 +546,9 @@ class CustomBattleScreen(Screen):
         self.status_key = None
         self.status_surfaces = []
         self.kill_feed = deque()
-        # Explosion animations: the sub-unit, the animation age in seconds, and its palette.
-        # A destroyed vehicle or ship uses DEATH_EXPLOSION_PALETTE; a torpedo hit uses TORPEDO_SPLASH_PALETTE.
+        # Explosion animations: the sub-unit, the animation age in seconds, its palette, and the battlefield point it grows from.
+        # A destroyed vehicle or ship explodes from its center in DEATH_EXPLOSION_PALETTE;
+        # a torpedo hit splashes from the point the torpedo struck in TORPEDO_SPLASH_PALETTE.
         self.death_explosions = []
         self.death_explosion_circle = None
         self.kill_feed_surface = None
@@ -1146,7 +1147,7 @@ class CustomBattleScreen(Screen):
     def _record_kill(self, source, target, cause):
         """Update the recent kills when a battlefield sub-unit dies."""
         if target.shape not in combat.FOOT_SHAPES:
-            self.death_explosions.append((target, 0.0, DEATH_EXPLOSION_PALETTE))
+            self.death_explosions.append((target, 0.0, DEATH_EXPLOSION_PALETTE, (target.x, target.y)))
             sound_effects.play_ui_sound("tank_explosion", volume_scale=self.battle_sfx_volume_share(target))
         if self.kill_feed_scroll < 0:
             self.kill_feed_scroll -= KILL_FEED_ROW_HEIGHT
@@ -1245,11 +1246,11 @@ class CustomBattleScreen(Screen):
             kind = random.choice(RIFLE_SHOT_SOUNDS)
         sound_effects.play_ui_sound(kind, volume_scale=self.battle_sfx_volume_share(fighter))
 
-    def _play_hit_sound(self, target, damage, projectile=None):
+    def _play_hit_sound(self, target, damage, projectile=None, point=None):
         # The simulation supplies HP actually lost, including the remaining-HP limit.
         if projectile == "torpedo":
             # A torpedo hit splashes: the explosion animation in water colors, and its own sound.
-            self.death_explosions.append((target, 0.0, TORPEDO_SPLASH_PALETTE))
+            self.death_explosions.append((target, 0.0, TORPEDO_SPLASH_PALETTE, point))
             sound_effects.play_ui_sound("torpedo_hit", volume_scale=self.battle_sfx_volume_share(target))
             return
         if target.shape in combat.SOFT_TARGET_SHAPES:
@@ -1810,7 +1811,7 @@ class CustomBattleScreen(Screen):
         dt = min(MAX_FRAME_SECONDS, max(0, now - self.last_tick) / 1000.0)
         self.last_tick = now
         if self.mode == "result" or not self.simulation.paused:
-            self.death_explosions = [(fighter, age + dt, palette) for fighter, age, palette in self.death_explosions if age + dt < DEATH_EXPLOSION_SECONDS]
+            self.death_explosions = [(fighter, age + dt, palette, point) for fighter, age, palette, point in self.death_explosions if age + dt < DEATH_EXPLOSION_SECONDS]
         if self.mode == "result":
             return
         driving = self._driving()
@@ -2208,11 +2209,11 @@ class CustomBattleScreen(Screen):
         diameter = max(3, math.ceil(DEATH_EXPLOSION_RADIUS * self.zoom) * 2 + 1)
         if self.death_explosion_circle is None or self.death_explosion_circle.get_width() != diameter:
             self.death_explosion_circle = pygame.Surface((diameter, diameter), pygame.SRCALPHA)
-        for fighter, age, (circle_color, colors) in self.death_explosions:
+        for fighter, age, (circle_color, colors), point in self.death_explosions:
             if limited_sight and id(fighter) not in self.visible_fighters:
                 continue
             progress = age / DEATH_EXPLOSION_SECONDS
-            center = self.to_screen(fighter.x, fighter.y)
+            center = self.to_screen(*point)
             radius = DEATH_EXPLOSION_RADIUS * progress * self.zoom
             circle = self.death_explosion_circle
             circle.fill((0, 0, 0, 0))

@@ -38,5 +38,5 @@
     "Bullet Ricochet 4.mp3":    {"volume": 2.0, "offset": 0.0},
     "Tank Explosion.mp3":       {"volume": 2.0, "offset": 0.0},
     "Torpedo Launch.mp3":       {"volume": 2.0, "offset": 0.0},
-    "Torpedo Hit.mp3":          {"volume": 2.0, "offset": 0.1}
+    "Torpedo Hit.mp3":          {"volume": 3.0, "offset": 0.1}
 }

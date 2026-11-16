@@ -756,7 +756,7 @@ class BattleSimulation:
     terrain: str = field(default_factory=lambda: starting_defaults.get_starting_value(
         "random_setup", "custom_battle_terrain"))
     battlefield: object = None  # Optional explicit geometry for headless encounters and fixtures.
-    on_hit: object = None  # Optional presentation callback: struck body, HP actually lost, and the projectile's kind.
+    on_hit: object = None  # Optional presentation callback: struck body, HP actually lost, the projectile's kind, and the hit point.
     on_kill: object = None  # Optional presentation callback: source, destroyed sub-unit, and shot/ram.
     # Each roster entry's column (see valid_columns). None deploys one division per column.
     friendly_columns: object = None
@@ -1999,7 +1999,7 @@ class BattleSimulation:
             # Naval weapons have no range falloff: a hit does full damage at any distance.
             loss = self.weapon_damage(shot.source_data, target.data, shot.attack_share, shot.weapon_data, target.shape)
             self.impacts.append((x, y, c.TACTICAL_IMPACT_SECONDS, self._impact_kind(shot)))
-            return False, [(target, loss, shot.source, "shot", shot.kind)]
+            return False, [(target, loss, shot.source, "shot", shot.kind, (x, y))]
         shot.x += shot.vx * flight
         shot.y += shot.vy * flight
         shot.height = naval.shell_height(shot, flight)
@@ -2060,7 +2060,7 @@ class BattleSimulation:
             movements.append((fighter, mx, my))
         for fighter, slot in shots:
             self._fire_shot(fighter, slot)
-        close_hits = [(target, loss, source, "ram", None)
+        close_hits = [(target, loss, source, "ram", None, None)
                       for target, loss, source in self._resolve_contacts(living, crowds, movements, dt)]
 
         # Accumulate impacts first so units destroyed together can both land their shots.
@@ -2104,11 +2104,10 @@ class BattleSimulation:
                 loss = self.weapon_damage(shot.source_data, target.data, shot.source.attack_share,
                                           shot.weapon_data, target.shape,
                                           shot.power * self.ranged_multiplier(distance))
-                close_hits.append((target, loss, shot.source, "shot", shot.kind))
+                point = (shot.x + (nx - shot.x) * fraction, shot.y + (ny - shot.y) * fraction)
+                close_hits.append((target, loss, shot.source, "shot", shot.kind, point))
                 shot.hit_units.add(target.index)
-                self.impacts.append((shot.x + (nx - shot.x) * fraction,
-                                     shot.y + (ny - shot.y) * fraction,
-                                     c.TACTICAL_IMPACT_SECONDS, shot.weapon_data["shell"]))
+                self.impacts.append((*point, c.TACTICAL_IMPACT_SECONDS, shot.weapon_data["shell"]))
                 if loss > 0 and self._can_dodge(target):
                     self._start_dodge(target, shot)
                 resistance = c.TACTICAL_BODIES[target.shape][3]
@@ -2132,11 +2131,11 @@ class BattleSimulation:
                 if shot.remaining > 0:
                     remaining.append(shot)
         self.projectiles = remaining
-        for target, loss, source, cause, projectile in close_hits:
+        for target, loss, source, cause, projectile, point in close_hits:
             previous_health = target.data["health"]
             target.data["health"] = max(0.0, previous_health - loss)
             if cause == "shot" and self.on_hit is not None:
-                self.on_hit(target, previous_health - target.data["health"], projectile)
+                self.on_hit(target, previous_health - target.data["health"], projectile, point)
             if previous_health > 0 and not target.alive and self.on_kill is not None:
                 self.on_kill(source, target, cause)
         alive_sides = {fighter.side for fighter in self.fighters if fighter.alive}
