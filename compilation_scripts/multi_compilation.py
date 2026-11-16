@@ -12,9 +12,13 @@ SCRIPTS_DIR = Path(__file__).resolve().parent
 MULTI_BUILD_PLATFORMS = ["web", "android", "windows"]
 
 # Every platform this script can build, and the build script that makes it.
-# macOS builds only on a Mac because its script zips with ditto.
+# macOS builds only on a Mac because its script zips with ditto, and Linux
+# builds only on Linux because PyInstaller does not cross-compile. Neither is
+# in MULTI_BUILD_PLATFORMS above for that reason: name either one there when
+# running this script on that operating system.
 PLATFORM_SCRIPTS = {
     "windows": "windows_compilation.py",
+    "linux": "linux_compilation.py",
     "web": "html_compilation.py",
     "android": "android_compilation.py",
     "macos": "macos_compilation.py",

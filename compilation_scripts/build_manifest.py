@@ -7,6 +7,14 @@ from data.io.game_files import DESKTOP_SOURCE_FILES, EXPORTS_DIR, NATIVE_BINARIE
 from data.io.starting_defaults import PREFERENCE_FILES, STARTING_DEFAULTS_PATH, read_starting_defaults
 
 WINDOWS_DIST_DIR = "dist/windows"
+LINUX_DIST_DIR = "dist/linux"
+# The platforms a release attaches a download for. Android is absent on purpose:
+# the Android package is built from the web build by its own script and is
+# published through its own channel rather than attached to a release.
+# tests/test_release_tooling.py checks that the release build workflow builds
+# every platform named here, so adding a platform here is what makes a release
+# carry it.
+RELEASE_PLATFORMS = ("windows", "linux", "macos", "web")
 MACOS_DIST_DIR = "dist/macos"
 MACOS_BUILD_DIR = "build/macos"
 WEB_DIST_DIR = "dist/web"
@@ -111,13 +119,29 @@ RUNTIME_JSON_DEFAULTS = {name: value for name, value in read_starting_defaults()
                         if name in PREFERENCE_FILES}
 
 
-def windows_arguments():
-    """Return explicit PyInstaller arguments, preserving native dependencies."""
-    args = ["--clean", "--onefile", "--distpath", WINDOWS_DIST_DIR]
+def frozen_arguments(dist_dir, binary_separator):
+    """Return explicit PyInstaller arguments, preserving native dependencies.
+
+    PyInstaller separates an --add-binary source from its destination with the
+    host operating system's path separator, which is a semicolon on Windows and
+    a colon everywhere else. Each caller passes the separator for the operating
+    system that caller builds on, because neither PyInstaller build cross-compiles.
+    """
+    args = ["--clean", "--onefile", "--distpath", dist_dir]
     for package in NATIVE_PACKAGES:
         args.extend(("--collect-all", package))
     for module in HIDDEN_IMPORTS:
         args.extend(("--hidden-import", module))
     for binary in NATIVE_BINARIES:
-        args.extend(("--add-binary", binary + ";."))
+        args.extend(("--add-binary", binary + binary_separator + "."))
     return args + ["main.py"]
+
+
+def windows_arguments():
+    """Return the PyInstaller arguments for the Windows build, which runs on Windows."""
+    return frozen_arguments(WINDOWS_DIST_DIR, ";")
+
+
+def linux_arguments():
+    """Return the PyInstaller arguments for the Linux build, which runs on Linux."""
+    return frozen_arguments(LINUX_DIST_DIR, ":")
