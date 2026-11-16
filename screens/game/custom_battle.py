@@ -1698,8 +1698,10 @@ class CustomBattleScreen(Screen):
         for event in events:
             if event.type == pygame.WINDOWFOCUSLOST:
                 self.cancel_active_drags()
+                # Only a player driving a living unit needs the battle held; a spectator's battle keeps running.
+                driving = self._driving()
                 self.clear_controls()
-                if self.mode == "battle" and not self.simulation.paused:
+                if driving:
                     self.toggle_pause()
             if self.done:
                 return

@@ -3324,7 +3324,10 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.assertTrue(self.screen.simulation.paused)
         self.click("Resume")
         self.assertFalse(self.screen.simulation.paused)
+        # No sub-unit is under the player's control, so the spectated battle keeps running.
         self.screen.handle_events([pygame.event.Event(pygame.WINDOWFOCUSLOST)])
+        self.assertFalse(self.screen.simulation.paused)
+        self.screen.handle_back_key()
         self.assertTrue(self.screen.simulation.paused)
         self.screen.handle_back_key()
         self.assertFalse(self.screen.simulation.paused)
@@ -3334,6 +3337,19 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.click("Exit")
         self.assertTrue(self.screen.done)
         self.assertEqual(self.screen.next_state, "MENU")
+
+    def test_focus_loss_pauses_only_while_the_player_drives_a_living_unit(self):
+        self.fill_armies()
+        self.click("Control")
+        self.click("Simulate")
+        self.click("Start")
+        self.screen.handle_events([pygame.event.Event(pygame.WINDOWFOCUSLOST)])
+        self.assertTrue(self.screen.simulation.paused)
+        self.screen.handle_back_key()
+        # The controlled sub-unit is destroyed: the player now spectates, so the battle keeps running.
+        self.screen.simulation.controlled.data["health"] = 0
+        self.screen.handle_events([pygame.event.Event(pygame.WINDOWFOCUSLOST)])
+        self.assertFalse(self.screen.simulation.paused)
 
     def test_winner_screen_restart_and_edit_armies(self):
         self.fill_armies()
