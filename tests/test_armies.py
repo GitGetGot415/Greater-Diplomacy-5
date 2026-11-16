@@ -755,14 +755,16 @@ class ArmyControlTests(unittest.TestCase):
         self.assertEqual(overlay_renderer.strategic_unit_fade_alphas(map_screen), {})
         self.assertEqual(map_screen.strategic_unit_fade_states, {})
 
-    def test_tactical_mode_suppresses_country_names_even_when_the_toggle_is_on(self):
-        map_screen = SimpleNamespace(show_country_names=True, tactical_mode=True)
+    def test_tactical_country_name_cache_follows_selection_and_toggle(self):
         surface = pygame.Surface((100, 100))
 
-        with patch.object(country_names.fonts, "get") as get_font:
-            country_names.draw_country_names(map_screen, surface)
+        for selection_mode, show_names, expected_calls in ((True, True, 0), (True, False, 0), (False, False, 0), (False, True, 1)):
+            with self.subTest(selection_mode=selection_mode, show_names=show_names):
+                map_screen = SimpleNamespace(show_country_names=show_names, tactical_mode=True, selection_mode=selection_mode, nation_data={})
+                with patch.object(country_names.fonts, "get") as get_font:
+                    country_names.draw_country_names(map_screen, surface)
 
-        get_font.assert_not_called()
+                self.assertEqual(get_font.call_count, expected_calls)
 
     def test_army_group_transition_moves_units_to_the_average_marker(self):
         first = {"unit_id": "first"}
