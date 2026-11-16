@@ -513,15 +513,6 @@ Add or update tests for changed tutorial behavior.
 Update comments, examples, tests, schemas, and UI text when the implementation makes them incomplete or inaccurate.
 Update every description or preview of changed player behavior.
 
-### Pull Requests
-
-- When you write a pull request, list yourself as a co-contributor.
-  End the pull request description with a `Co-Authored-By:` line that names your model, such as `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
-  Add the same line to every commit you create for the pull request.
-- Write the pull request description in CUE (casual user english).
-  Follow the CUE rules in `documentation/writing_style.md`, including its exceptions for headings, code, paths, and identifiers.
-  The pull request title and the `Co-Authored-By:` line keep their normal format.
-
 ### Handoff
 
 State the behavior change and verification results.
