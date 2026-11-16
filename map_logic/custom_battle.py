@@ -94,12 +94,18 @@ KNOCKBACK_SECONDS = 0.25 # Controls how quickly extra push fades. Larger values 
 # Shots hurt allies too, so AI sub-units keep out of each other's way.
 LINE_SHIFT_SECONDS = 0.6  # A loaded AI sub-unit whose shot would cross an ally sidesteps this long.
 ALLY_BUMP_SPEED = RAM_MIN_SPEED * 0.5  # Speed allowance used by AI braking to approach allies without damaging them
+# An AI ship steers PASS_ALLY_ANGLE off its course to pass a slower allied hull it would reach within
+# PASS_ALLY_SECONDS at top speed, rather than queuing behind it.
+PASS_ALLY_SECONDS = 1.5
+PASS_ALLY_ANGLE = math.radians(30)
 TANK_SHAPES = frozenset(("tank", "light_tank", "heavy_tank"))
 NAVIGATION_SECONDS = 0.8
 WAYPOINT_REACH = 25.0
 FIRING_POSITION_ANGLES = 12
 FIRING_POSITION_RINGS = (1.0, 0.6, 0.3)
 FIRING_POSITION_STEP = 200.0
+# Side-steps across the line of fire, as shares of FIRING_POSITION_STEP: a shot blocked close by often needs only a short move.
+FIRING_POSITION_SIDESTEPS = (0.2, 0.4, 0.6, 0.8)
 FIRING_DISTANCE_WEIGHT = 0.25
 COVER_DISTANCE_WEIGHT = 0.1
 # Relative contact mass is independent of health, price, and campaign defense.
@@ -617,6 +623,7 @@ class Fighter:
     route_revision: int = -1
     navigate_at: float = 0.0
     position_goal: object = None
+    ally_blocked: bool = False  # Within weapon range with a clear terrain lane, but an ally in its line of fire.
     position_target: object = None
     primary_weapon: object = None  # None uses the shape's standard loadout.
     secondary_cooldown: float = 0.0
@@ -1079,6 +1086,23 @@ class BattleSimulation:
         return (self._firing_lane(fighter, target, start)
                 and self._ally_in_line(fighter, target, start, slot=slot) is None)
 
+    def _allies_ahead(self, fighter, hx, hy, *, original=None, time_ahead=0.0, allies=None):
+        """Allies whose bodies lie across the path from ``fighter`` along the unit vector (hx, hy).
+
+        Yields (ally, gap before the bodies touch, the ally's speed along the path, the ally's offset
+        to the left of the path; negative is to the right).
+        """
+        for ally in self._sides[fighter.side] if allies is None else allies:
+            if ally is (fighter if original is None else original):
+                continue
+            ox, oy = ally.x + ally.vx * time_ahead - fighter.x, ally.y + ally.vy * time_ahead - fighter.y
+            along = ox * hx + oy * hy
+            clearance = fighter.radius + ally.radius
+            beside = oy * hx - ox * hy
+            if along <= 0 or abs(beside) > clearance:
+                continue
+            yield ally, max(0.0, along - clearance), ally.vx * hx + ally.vy * hy, beside
+
     def _ally_safe_throttle(self, fighter, throttle, *, original=None, time_ahead=0.0, allies=None):
         """Brake ram-capable AI units before they hit allies fast enough to damage them."""
         if not throttle or not fighter.can_ram:
@@ -1087,20 +1111,31 @@ class BattleSimulation:
         hx, hy = math.cos(fighter.angle) * direction, math.sin(fighter.angle) * direction
         acceleration = fighter.max_speed / MOBILITY[fighter.shape][0]
         limit = abs(throttle) * fighter.max_speed
-        neighbors = self._sides[fighter.side] if allies is None else allies
-        for ally in neighbors:
-            if ally is (fighter if original is None else original):
-                continue
-            ox, oy = ally.x + ally.vx * time_ahead - fighter.x, ally.y + ally.vy * time_ahead - fighter.y
-            along = ox * hx + oy * hy
-            clearance = fighter.radius + ally.radius
-            if along <= 0 or abs(oy * hx - ox * hy) > clearance:
-                continue
+        for _ally, gap, ally_speed, _beside in self._allies_ahead(fighter, hx, hy, original=original, time_ahead=time_ahead, allies=allies):
             # Brake in time to arrive no faster than ALLY_BUMP_SPEED; the ally's own motion opens or closes the gap.
-            gap = max(0.0, along - clearance)
             allowed = math.sqrt(ALLY_BUMP_SPEED ** 2 + 2 * acceleration * gap)
-            limit = min(limit, ally.vx * hx + ally.vy * hy + allowed)
+            limit = min(limit, ally_speed + allowed)
         return direction * max(0.0, limit) / fighter.max_speed
+
+    def _pass_allies(self, fighter, throttle, heading):
+        """Bend a ship's forward course to pass a slower ally that lies across it, on the side away from that ally.
+
+        Only units that brake for allies (_ally_safe_throttle) pass them. Ships use it; land units keep
+        braking in formation, because in headless battles land units that bent around allies lost more
+        often. The check follows the intended straight course, so the bend ends once the ship is
+        alongside the ally or past it. An ally dead ahead is passed on the side its division flanks to.
+        """
+        if throttle <= 0 or not fighter.can_ram:
+            return throttle, heading
+        hx, hy = math.cos(heading), math.sin(heading)
+        speed = throttle * fighter.max_speed
+        blocking = [(gap, beside) for _ally, gap, ally_speed, beside in self._allies_ahead(fighter, hx, hy)
+                    if ally_speed < speed and gap <= fighter.max_speed * PASS_ALLY_SECONDS]
+        if not blocking:
+            return throttle, heading
+        _gap, beside = min(blocking)
+        side = (1 if beside > 0 else -1) if abs(beside) > 1e-9 else fighter.flank
+        return throttle, heading - side * PASS_ALLY_ANGLE
 
     @staticmethod
     def _queue_shot(fighter, shots, slot=0):
@@ -1193,9 +1228,11 @@ class BattleSimulation:
         """(throttle share, heading) for an AI sub-unit. ``toward`` is the heading to the enemy it shoots at.
 
         Reactions come first: a badly hurt sub-unit falls back, and one that was just hit sidesteps.
-        Otherwise its shape's behavior decides (BEHAVIORS).
+        Otherwise its shape's behavior decides (BEHAVIORS). Within weapon range, a sub-unit whose shot
+        an ally blocks is never in position; _terrain_course finds it a clear firing position.
         """
         away = toward + math.pi
+        fighter.ally_blocked = False
         if (fighter.data["health"] < fighter.data["max_health"] * FALL_BACK_HEALTH
                 and self._healthy_sides[fighter.side]):
             # Retreat while healthier allies cover the withdrawal. The last wounded
@@ -1227,8 +1264,11 @@ class BattleSimulation:
                 return fighter.pace, away
             hold = CHARGE_CLOSE
         flanking = behavior == "flank" and not fighter.flank_complete
-        if (distance <= ENGAGEMENT_RANGE * hold and not flanking
-                and self._firing_lane(fighter, fighter.target or objective)):
+        target = fighter.target or objective
+        lane = not flanking and self._firing_lane(fighter, target)
+        # Within weapon range, an ally in the line of fire sends it to a clear firing position, closing in or parked.
+        fighter.ally_blocked = lane and distance <= WEAPON_RANGE and self._ally_in_line(fighter, target) is not None
+        if distance <= ENGAGEMENT_RANGE * hold and lane and not fighter.ally_blocked:
             # In position: face the enemy it shoots at, so a firing cone covers it.
             return 0.0, toward
         if self.elapsed < fighter.start_delay:
@@ -1257,7 +1297,10 @@ class BattleSimulation:
         return throttle, math.atan2(goal_y - fighter.y, goal_x - fighter.x) + weave
 
     def _firing_position(self, fighter, target):
-        """Find an accessible firing position; blocked shots never count as holding a position."""
+        """An accessible firing position with a shot clear of terrain and allies, or None.
+
+        Blocked shots never count as holding a position.
+        """
         start = fighter.x, fighter.y
         preferred = ENGAGEMENT_RANGE * fighter.hold
         candidates = []
@@ -1272,6 +1315,9 @@ class BattleSimulation:
             fraction = min(1.0, FIRING_POSITION_STEP / distance)
             candidates.append((fighter.x + (target.x - fighter.x) * fraction,
                                fighter.y + (target.y - fighter.y) * fraction))
+            ux, uy = (target.x - fighter.x) / distance, (target.y - fighter.y) / distance
+            candidates.extend((fighter.x - uy * side * share * FIRING_POSITION_STEP, fighter.y + ux * side * share * FIRING_POSITION_STEP)
+                              for share in FIRING_POSITION_SIDESTEPS for side in (-1, 1))
         # A nearby crest can be a better firing position than a long detour.
         candidates.extend((feature.x, feature.y) for feature in self.battlefield.nearby(
             start, start, ENGAGEMENT_RANGE) if feature.kind == "hill")
@@ -1281,7 +1327,7 @@ class BattleSimulation:
             if (self.battlefield.walkable(point, fighter.radius) and self._clear_shot(fighter, target, point)
                     and self.battlefield.route(start, point, fighter.radius)):
                 return point
-        return target.x, target.y
+        return None
 
     def _cover_position(self, fighter, target):
         start = fighter.x, fighter.y
@@ -1305,6 +1351,7 @@ class BattleSimulation:
             return throttle, heading
         if not throttle:
             fighter.route.clear()
+            fighter.position_goal = None
             return throttle, heading
         revision = self.battlefield.revision
         reconsider = (self.elapsed >= fighter.navigate_at or fighter.route_revision != revision
@@ -1322,6 +1369,9 @@ class BattleSimulation:
             elif (not flanking and fighter.dodge <= 0 and not fighter.ram_committed
                   and not fighter.withdrawing and throttle > 0):
                 if not self._firing_lane(fighter, target):
+                    fighter.position_goal = self._firing_position(fighter, target) or (target.x, target.y)
+                elif fighter.ally_blocked:
+                    # An ally stands in the line of fire: move to a nearby position with a clear shot, if there is one.
                     fighter.position_goal = self._firing_position(fighter, target)
             if fighter.position_goal is not None:
                 goal = fighter.position_goal
@@ -1370,7 +1420,13 @@ class BattleSimulation:
         target = fighter.target
         dx, dy = target.x - fighter.x, target.y - fighter.y
         distance = math.hypot(dx, dy)
-        if fighter.dodge <= 0 and not fighter.ram_committed:
+        throttle, heading = self._ai_course(fighter, distance, math.atan2(dy, dx), center, objective)
+        # Open ground needs no routing, except to reach a firing position clear of allies.
+        if self.battlefield.features or fighter.ally_blocked or fighter.position_goal is not None:
+            throttle, heading = self._terrain_course(fighter, throttle, heading, center, objective)
+        # A loaded sub-unit with an ally in its line of fire, and no firing position to head for,
+        # steps out from behind the ally from the next tick.
+        if fighter.dodge <= 0 and not fighter.ram_committed and fighter.position_goal is None:
             for slot, gun_target in enumerate((target, fighter.secondary_target)):
                 if (gun_target is None or fighter.weapon(slot) is None or fighter.weapon_cooldown(slot) > 0
                         or not self._weapon_can_hurt(fighter, gun_target, slot)
@@ -1384,9 +1440,6 @@ class BattleSimulation:
                                    gun_target.y - fighter.y, LINE_SHIFT_SECONDS)
                     fighter.navigate_at = 0.0
                     break
-        throttle, heading = self._ai_course(fighter, distance, math.atan2(dy, dx), center, objective)
-        if self.battlefield.features:
-            throttle, heading = self._terrain_course(fighter, throttle, heading, center, objective)
         throttle, turn = self._heading_controls(fighter, throttle, heading)
         throttle = self._ally_safe_throttle(fighter, throttle)
         self._steer(fighter, turn, dt)
@@ -1542,9 +1595,14 @@ class BattleSimulation:
             # A torpedo-only ship closes in until its torpedoes arrive before the target can move clear.
             reach = min(reach, fighter.weapon(0)["speed"] * self.torpedo_escape_seconds(target))
         preferred = reach * fighter.hold
+        broadside = naval.mounts(fighter.shape) is naval.BROADSIDES
         if distance > preferred:
+            if broadside and distance <= fighter.weapon_range:
+                # Close in at an angle, so the nearer broadside bears on the way.
+                offsets = (naval.BROADSIDE_APPROACH_ANGLE, -naval.BROADSIDE_APPROACH_ANGLE)
+                return fighter.pace, min((toward + offset for offset in offsets), key=lambda angle: abs(_wrap(angle - fighter.angle)))
             return fighter.pace, toward
-        if fighter.shape in {"carrack", "ironclad"}:
+        if broadside:
             # Present the nearer broadside instead of pointing the bow at the enemy.
             heading = min((toward + math.pi / 2, toward - math.pi / 2), key=lambda angle: abs(_wrap(angle - fighter.angle)))
             return 0.0, heading
@@ -1581,6 +1639,8 @@ class BattleSimulation:
                             self._sidestep(fighter, ally.x, ally.y, fighter.target.x - fighter.x, fighter.target.y - fighter.y, LINE_SHIFT_SECONDS)
                         break
             throttle, heading = blocked_course or self._naval_course(fighter, fighter.target)
+            if blocked_course is None and fighter.dodge <= 0 and not fighter.ram_committed:
+                throttle, heading = self._pass_allies(fighter, throttle, heading)
             throttle, heading = self._naval_evasion(fighter, (throttle, heading))
             throttle, turn = self._heading_controls(fighter, throttle, heading)
             throttle = self._ally_safe_throttle(fighter, throttle)

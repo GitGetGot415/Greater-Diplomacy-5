@@ -56,6 +56,10 @@ class Mount:
 
 
 BROADSIDES = (Mount(0.0, 0.5, math.pi / 2, math.radians(70), "artillery_shell", 1.0), Mount(0.0, -0.5, -math.pi / 2, math.radians(70), "artillery_shell", 1.0))
+# Within gun range, a broadside ship closes in this far off the line to its target, just inside its
+# broadside's arc, so it can fire on the way instead of only after it stops.
+BROADSIDE_APPROACH_MARGIN = math.radians(5)
+BROADSIDE_APPROACH_ANGLE = BROADSIDES[0].bearing - BROADSIDES[0].arc / 2 + BROADSIDE_APPROACH_MARGIN
 TURRETS = (Mount(0.32, 0.0, 0.0, math.radians(270), "artillery_shell", 0.5), Mount(-0.32, 0.0, math.pi, math.radians(270), "artillery_shell", 0.5))
 FORWARD_TORPEDO = (Mount(0.5, 0.0, 0.0, math.radians(30), "torpedo", 1.0),)
 # Convoys retain the shared transport attack, with one forward gun firing single bullets.

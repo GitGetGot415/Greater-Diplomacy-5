@@ -892,8 +892,39 @@ class BattleSimulationTests(unittest.TestCase):
         unit, = self.ready_division(simulation, 0)
         unit.shape = shape
         enemy = simulation.divisions[1][0]
-        # The enemy straight ahead, on the division's own course.
-        return simulation, unit, (unit.x, unit.y), SimpleNamespace(x=unit.x + 2000, y=unit.y), enemy
+        # The enemy straight ahead, on the division's own course, holding still.
+        return simulation, unit, (unit.x, unit.y), SimpleNamespace(x=unit.x + 2000, y=unit.y, vx=0.0, vy=0.0), enemy
+
+    def test_a_sub_unit_whose_shot_an_ally_blocks_moves_to_a_clear_firing_position(self):
+        # Open ground, with an ally standing between a loaded sub-unit and the enemy it would otherwise hold at.
+        simulation = combat.BattleSimulation(self.library, ["Fixture I"] * 2, ["Fixture I"], seed=5,
+                                             battlefield=battle_terrain.Battlefield("plains", combat.ARENA_SIZE, combat.MAX_UNIT_RADIUS))
+        unit, ally, enemy = (division[0] for division in simulation.divisions)
+        for fighter in (unit, ally, enemy):
+            fighter.wander = fighter.start_delay = 0.0
+        unit.x, unit.y, ally.x, ally.y = 1000.0, 500.0, 1150.0, 500.0
+        enemy.x, enemy.y = unit.x + combat.ENGAGEMENT_RANGE * unit.hold * 0.9, unit.y
+        unit.target = enemy
+        simulation._sides = [[unit, ally], [enemy]]
+        enemies = combat._Grid([enemy], combat.TARGET_CELL)
+        self.assertIsNotNone(simulation._ally_in_line(unit, enemy))
+        # Close enough to hold, but its shot is blocked, so it is not in position.
+        throttle, _heading = simulation._ai_course(unit, math.dist((unit.x, unit.y), (enemy.x, enemy.y)), 0.0, (unit.x, unit.y), enemy)
+        self.assertGreater(throttle, 0)
+        self.assertTrue(unit.ally_blocked)
+        # It heads for a nearby position with a clear shot instead of shuffling sideways, and land units never
+        # steer around allies the way ships do.
+        with patch.object(simulation, "_pass_allies", side_effect=AssertionError("land units do not pass allies")):
+            simulation._drive_ai(unit, enemies, combat.FIXED_STEP, [], (unit.x, unit.y), enemy)
+        self.assertIsNotNone(unit.position_goal)
+        self.assertTrue(simulation._clear_shot(unit, enemy, unit.position_goal))
+        self.assertLessEqual(math.dist((unit.x, unit.y), unit.position_goal), combat.FIRING_POSITION_STEP)
+        self.assertEqual(unit.dodge, 0)
+        # With no clear position to reach, it steps out from behind the ally as before.
+        unit.position_goal, unit.navigate_at = None, 0.0
+        with patch.object(simulation, "_firing_position", return_value=None):
+            simulation._drive_ai(unit, enemies, combat.FIXED_STEP, [], (unit.x, unit.y), enemy)
+        self.assertEqual(unit.dodge, combat.LINE_SHIFT_SECONDS)
 
     def test_infantry_keeps_advancing_without_halting_until_in_position(self):
         simulation, unit, center, objective, _enemy = self.course_setup("infantry")

@@ -606,6 +606,46 @@ class NavalBattleTests(unittest.TestCase):
         simulation.projectiles = [shell]
         self.assertEqual(simulation._naval_threats(unit), [])
 
+    def test_broadside_ships_close_in_at_an_angle_once_within_gun_range(self):
+        for shape in ("carrack", "ironclad", "destroyer"):
+            with self.subTest(shape=shape):
+                simulation = self.simulation(shape, "destroyer", controlled=None)
+                source, target = simulation.fighters
+                simulation.elapsed = source.start_delay + 1
+                source.angle = 0.0
+                broadside = naval.mounts(shape) is naval.BROADSIDES
+                # Within gun range, but farther than it would stop.
+                target.x = source.x + source.weapon_range * 0.95
+                self.assertGreater(target.x - source.x, min(naval.ENGAGEMENT_RANGE, source.weapon_range * 0.8) * source.hold)
+                throttle, heading = simulation._naval_course(source, target)
+                self.assertEqual(throttle, source.pace)
+                self.assertAlmostEqual(abs(heading), naval.BROADSIDE_APPROACH_ANGLE if broadside else 0.0)
+                if broadside:
+                    # On that course a broadside bears on the target.
+                    source.angle = heading
+                    self.assertTrue(any(naval.aim_allowed(source, slot, 0.0) for slot in range(len(naval.mounts(shape)))))
+                # Beyond gun range every ship closes bow-on.
+                target.x = source.x + source.weapon_range * 1.2
+                self.assertEqual(simulation._naval_course(source, target), (source.pace, 0.0))
+
+    def test_ships_steer_around_a_slower_ally_on_their_course(self):
+        simulation = self.simulation("destroyer", "destroyer", controlled=None)
+        source, enemy = simulation.fighters
+        ally = combat.Fighter(dict(source.data), source.side, source.x + source.radius * 2 + 20, source.y + 10, "destroyer", index=2)
+        simulation._sides = [[], []]
+        simulation._sides[source.side], simulation._sides[enemy.side] = [source, ally], [enemy]
+        # The ally sits just below the course, so the ship bends upward, away from it.
+        self.assertEqual(simulation._pass_allies(source, source.pace, 0.0), (source.pace, -combat.PASS_ALLY_ANGLE))
+        # An ally pulling away faster, or one too far ahead to matter yet, is not passed.
+        ally.vx = source.pace * source.max_speed + 1
+        self.assertEqual(simulation._pass_allies(source, source.pace, 0.0), (source.pace, 0.0))
+        ally.vx = 0.0
+        ally.x = source.x + source.radius + ally.radius + source.max_speed * combat.PASS_ALLY_SECONDS + 50
+        self.assertEqual(simulation._pass_allies(source, source.pace, 0.0), (source.pace, 0.0))
+        # Reversing or stopping never bends the course.
+        ally.x = source.x + source.radius * 2 + 20
+        self.assertEqual(simulation._pass_allies(source, 0.0, 0.0), (0.0, 0.0))
+
     def test_submarines_sharing_a_column_do_not_freeze_bow_to_bow(self):
         length, width = c.TACTICAL_BODIES["submarine"][:2]
         # Far away the enemy is outside the launch window, so the pair simply sails for it. An enemy that
