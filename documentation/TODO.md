@@ -5,11 +5,12 @@
 - the politics section is kinda empty `(TLDR add more stuff there, maybe a 2D political compass rather than it simply being a 1D political compass)`
 - make it so that in tactical mode you can get other units to make simmilar movement orders to you to coordinate attacks n such
 - you can bring allies when declaring independence
+- bring back in artillery to land battles `(using artillery shells obviously, same stuff naval ships use)`
 - expand tactical battles so as to allow air battles
 - total kill count for tactical mode
 - also maybe like medals or something
 - level up and progress in tactical mode
-- have years on infantry name or at least to make that an option
+- **have years on infantry names** or at least make that an option
 
 ## Check First
 
@@ -18,7 +19,7 @@
 - check which historical scenarios use the wrong Germany tag `(oh right german reich vs regular ol germany, historical leaders use the germany tag not the german reich tag)`
 - only show active countries under "Claims On You," and decide what to do with governments in exile
 - add a way to reset a country's appearance to its defaults
-- find specific examples of bad or predictable AI decisions
+- find specific examples of bad or predictable AI decisions `(losing as poland, but despite it all managing to get a favorable peace deal with germany because they're also fighting the allies)`
 - measure which parts of the game are slow before looking into C++ or vectorization
 - check whether saving during tournament move entry is allowed
 - check whether sending military access and then declaring war while the request is pending works
@@ -27,7 +28,7 @@
 - check whether overkill can kill a unit before the rest of the damage is applied
 - check the maximum country-data length `(search for max_length)`
 - check whether all current tests are needed `(visual menu tests may not be useful)`
-- review the old TODOs
+- review the old TODOs `(wow what a HELPFUL SUGGESTION)`
 
 ## Audio
 
