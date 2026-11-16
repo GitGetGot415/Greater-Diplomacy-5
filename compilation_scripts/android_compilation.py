@@ -51,6 +51,10 @@ def build_apk(skip_web_build=False):
     temporary = destination.with_suffix(".apk.tmp")
     shutil.copy2(source, temporary)
     temporary.replace(destination)
+    # Remove APKs from earlier versions so the folder holds only the current build.
+    for stale in (*destination.parent.glob("*.apk"), *destination.parent.glob("*.apk.tmp")):
+        if stale != destination:
+            stale.unlink()
     print(f"APK ready: {destination}", flush=True)
     print("The Python/WebAssembly runtime is bundled; this APK can start offline.", flush=True)
     return destination
