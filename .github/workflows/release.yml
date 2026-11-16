@@ -1,0 +1,171 @@
+name: GD5 Release
+
+# WHAT THIS IS FOR
+#
+# version.txt is the announcement. Every running copy of the game downloads
+# version.txt from this repository, compares the contents with its own
+# GAME_VERSION, and shows the player "Outdated!" when version.txt is higher.
+# Editing one line of version.txt therefore tells every player an update exists,
+# whether or not a build of that version has been produced, and whether or not
+# the source it would be built from compiles.
+#
+# This workflow makes that build happen first. Pushing a tag such as v50 runs
+# the whole test suite, then builds Windows, macOS, Linux and web for real, and
+# attaches each of them to a DRAFT release. Nothing is announced: the draft is
+# private until a human presses Publish, and version.txt is a separate commit
+# made afterwards.
+#
+# A failure here is a release that does not exist yet, which is the cheap half
+# of the two ways it can go wrong. The expensive half is every player being
+# pointed at a download that was never produced.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  # The same gate, runnable from the Actions tab against any branch, which
+  # answers "would a release from here build?" without creating a tag.
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  # The versions have to agree before anything is built. A tag that does not
+  # match GAME_VERSION produces artifacts named after one version from a tree
+  # that calls itself another, and the mismatch is only visible to whoever
+  # notices the file names.
+  versions:
+    name: Tag and GAME_VERSION agree
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Report where the release stands
+        run: python scripts/release/release_state.py --notes || true
+
+      - name: The tag names the version this source builds
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          set -e
+          tag="${GITHUB_REF#refs/tags/}"
+          built=$(python -c "import sys; sys.path.insert(0, 'scripts/release'); import release_state; print(release_state.built_version())")
+          if [ "$tag" != "$built" ]; then
+            echo "::error title=Tag does not match GAME_VERSION::The tag is $tag and data/constants.py builds $built. Point the tag at a commit whose GAME_VERSION is $tag, or raise GAME_VERSION."
+            exit 1
+          fi
+          echo "tag $tag matches GAME_VERSION $built"
+
+      - name: version.txt is not this version yet
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          set -e
+          tag="${GITHUB_REF#refs/tags/}"
+          published=$(tr -d '[:space:]' < version.txt)
+          if [ "$tag" = "$published" ]; then
+            echo "::warning title=Already announced::version.txt already says $tag, so players were told about this release before the build for it ran. The build still runs, and the files it produces are what those players are looking for."
+          else
+            echo "version.txt says $published; $tag will be announced after this run."
+          fi
+
+  # The suite that pr-checks.yml does not run. pr-checks.yml compiles every
+  # module and runs three test files, which is the right trade for every push.
+  # A release is the one time the whole suite is worth the minutes.
+  suite:
+    name: Full test suite
+    runs-on: ubuntu-latest
+    needs: versions
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install system dependencies for Pygame
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev xvfb
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run the whole suite
+        env:
+          SDL_VIDEODRIVER: "dummy"
+          SDL_AUDIODRIVER: "dummy"
+        run: python run_tests.py
+
+  # Every platform, with the steps from build.yml rather than a second copy of
+  # them. The builds are what a release is; the suite above is what says they
+  # are worth attaching.
+  builds:
+    name: Build every platform
+    needs: suite
+    uses: ./.github/workflows/build.yml
+
+  # A draft, holding the files. Publishing stays a decision a person makes
+  # after downloading one of these and starting the game.
+  draft:
+    name: Draft release
+    runs-on: ubuntu-latest
+    needs: builds
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download every build
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List what was built
+        run: find artifacts -type f | sort
+
+      - name: Create or update the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          tag="${GITHUB_REF#refs/tags/}"
+          # The web build uploads a directory, so collect files rather than
+          # artifact names, and keep the archives only.
+          files=$(find artifacts -type f \( -name '*.zip' -o -name '*.tar.gz' -o -name '*.apk' \) | sort)
+          test -n "$files" || { echo "::error::no archives among the artifacts"; exit 1; }
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "updating the existing release for $tag"
+            # shellcheck disable=SC2086
+            gh release upload "$tag" $files --clobber
+          else
+            {
+              echo "Built by the GD5 Release workflow from $GITHUB_SHA."
+              echo
+              echo "Every platform below was built from this tag. Publishing this draft"
+              echo "notifies nobody: the game notices a release when version.txt changes"
+              echo "on main, which is a separate commit."
+              echo
+              python scripts/release/release_state.py --notes || true
+            } > /tmp/release-notes.md
+            # shellcheck disable=SC2086
+            gh release create "$tag" $files --draft --title "$tag" \
+              --notes-file /tmp/release-notes.md
+          fi
+          gh release view "$tag"

@@ -66,7 +66,9 @@ def include_file(path, relative, platform, *, ignore_check=None):
         return not any(relative.as_posix().startswith(pkg.replace(".", "/") + "/")
                        for pkg in manifest.WEB_EXCLUDED_SUBPACKAGES)
     if root == "data":
-        return path.suffix in (".py", ".json") if platform == "windows" else (
+        # Windows and Linux both ship a PyInstaller one-file executable with
+        # loose sources beside it, so both carry the same data inventory.
+        return path.suffix in (".py", ".json") if platform in ("windows", "linux") else (
             path.suffix == ".py" or relative.as_posix().startswith("data/json/"))
     if root in manifest.SOURCE_PACKAGES:
         return path.suffix == ".py"
@@ -75,7 +77,7 @@ def include_file(path, relative, platform, *, ignore_check=None):
 
 def distributed_files(root, platform):
     """Yield source and relative paths. Do not read local save directories."""
-    if platform not in ("windows", "macos", "web"):
+    if platform not in ("windows", "linux", "macos", "web"):
         raise ValueError(f"Unknown build platform: {platform}")
     root = Path(root).resolve()
     sources = manifest.WEB_SOURCE_FILES if platform == "web" else manifest.DESKTOP_SOURCE_FILES
