@@ -938,6 +938,30 @@ class BattleSimulationTests(unittest.TestCase):
         self.assertEqual(simulation._ai_course(unit, in_position, toward, center, objective), (0.0, toward))
         self.assertGreater(simulation._ai_course(unit, combat.WEAPON_RANGE, toward, center, objective)[0], 0)
 
+    def test_slow_land_units_dodge_a_falling_shell_only_when_they_can_get_clear_in_time(self):
+        simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"], seed=1)
+        source, unit = simulation.fighters
+        unit.data["speed"] = 1
+        self.assertLess(unit.data["speed"], combat.DODGE_MIN_SPEED)  # It never sidesteps bullets.
+        # A fixture falling shell, independent of current weapon tuning.
+        weapon = dict(label="Fixture shell", interval=1.0, rounds=1, reload=1.0, speed=200.0, spread=0.0, damage=1.0, penetration=0.0,
+                      shell=True, soft_only=False, projectile="artillery_shell", range=2000.0, gravity=100.0)
+        ground = simulation.battlefield.elevation((unit.x, unit.y))
+        crowds = [combat._Grid([unit], combat.GRID_CELL)]
+        for distance, dodges in ((1500, True), (30, False)):
+            with self.subTest(distance=distance):
+                unit.dodge = 0.0
+                start = (unit.x - distance, unit.y)
+                flight, height, vertical = simulation._shell_arc(start, (unit.x, unit.y), weapon)
+                shell = combat.Projectile(source, dict(source.data), *start, weapon["speed"], 0.0, flight, height=ground + height,
+                                          vertical_speed=vertical, gravity=weapon["gravity"], weapon_data=weapon)
+                simulation._dodge_falling_shell(shell, crowds)
+                self.assertEqual(unit.dodge > 0, dodges)
+                if dodges:
+                    # It steps side-on to the shell's path and keeps going until the shell has come down.
+                    self.assertAlmostEqual(abs(math.sin(unit.dodge_heading)), 1)
+                    self.assertAlmostEqual(unit.dodge, distance / weapon["speed"])
+
     def test_badly_hurt_sub_units_fall_back_out_of_range_and_hit_ones_sidestep(self):
         simulation, unit, center, objective, _enemy = self.course_setup("infantry")
         toward = 0.0
@@ -971,8 +995,10 @@ class BattleSimulationTests(unittest.TestCase):
 
         def watch(start_dx, start_dy, velocity=-speed, *, controlled=None, ready=False, own_shot=False,
                   ally_shot=False, unit_speed=combat.DODGE_MIN_SPEED):
+            # Open ground: a random rock or tree in a shot's path would rightly stop the dodge.
             simulation = combat.BattleSimulation(self.library, ["Fixture I"], ["Fixture I"],
-                                                 controlled_index=controlled)
+                                                 controlled_index=controlled,
+                                                 battlefield=battle_terrain.Battlefield("plains", combat.ARENA_SIZE, combat.MAX_UNIT_RADIUS))
             hold_still(simulation)  # Both reloading, so neither is about to fire.
             unit, shooter = simulation.fighters
             unit.data["speed"] = unit_speed

@@ -532,6 +532,80 @@ class NavalBattleTests(unittest.TestCase):
                 simulation._sidestep(source, blocker.x, blocker.y, target.x - source.x, target.y - source.y, 1.0)
                 self.assertLess(math.sin(source.dodge_heading) * offset, 0)
 
+    def test_time_to_shift_accelerates_then_holds_its_speed_change(self):
+        self.assertEqual(combat.time_to_shift(0, 10, 5), 0)
+        self.assertAlmostEqual(combat.time_to_shift(4, 10, 2), 2)  # Still accelerating: 2 * 2 * 2 / 2 = 4.
+        self.assertAlmostEqual(combat.time_to_shift(35, 10, 2), 5 + 1)  # 25 while accelerating, then 10 more at 10/s.
+        self.assertEqual(combat.time_to_shift(5, 0, 2), math.inf)
+        self.assertEqual(combat.time_to_shift(5, 10, 0), math.inf)
+
+    def test_ai_torpedoes_wait_until_the_target_cannot_move_clear_in_time(self):
+        for side in (0, 1):
+            for share, fires in ((1.5, False), (0.7, True)):
+                with self.subTest(side=side, share=share):
+                    simulation = self.simulation("submarine", "destroyer", controlled=None)
+                    source, target = simulation.fighters
+                    source.side, target.side = side, 1 - side
+                    source.angle = source.aim = 0.0
+                    window = c.TACTICAL_WEAPONS["torpedo"]["speed"] * simulation.torpedo_escape_seconds(target)
+                    target.x = naval.mount_position(source, 0)[0] + window * share
+                    simulation.advance(combat.FIXED_STEP)
+                    launched = [shot for shot in simulation.projectiles if shot.kind == "torpedo" and shot.source is source]
+                    self.assertEqual(bool(launched), fires)
+
+    def test_a_target_that_cannot_move_is_torpedoed_from_any_range(self):
+        simulation = self.simulation("submarine", "destroyer", controlled=None)
+        source, target = simulation.fighters
+        target.data["speed"] = 0
+        self.assertEqual(simulation.torpedo_escape_seconds(target), math.inf)
+        source.angle = source.aim = 0.0
+        target.x = naval.mount_position(source, 0)[0] + c.TACTICAL_WEAPONS["torpedo"]["range"] * 0.9
+        simulation.advance(combat.FIXED_STEP)
+        self.assertTrue(any(shot.kind == "torpedo" for shot in simulation.projectiles))
+
+    def test_torpedo_only_ships_close_inside_their_launch_window_before_stopping(self):
+        simulation = self.simulation("submarine", "destroyer", controlled=None)
+        source, target = simulation.fighters
+        simulation.elapsed = source.start_delay + 1
+        window = c.TACTICAL_WEAPONS["torpedo"]["speed"] * simulation.torpedo_escape_seconds(target)
+        self.assertLess(window, source.weapon_range * 0.8)
+        for share, throttle in ((1.1, source.pace), (0.9, 0.0)):
+            with self.subTest(share=share):
+                target.x = source.x + window * source.hold * share
+                self.assertEqual(simulation._naval_course(source, target)[0], throttle)
+
+    def falling_shell(self, simulation, source, start, point):
+        weapon = dict(c.TACTICAL_WEAPONS["artillery_shell"])
+        angle = math.atan2(point[1] - start[1], point[0] - start[0])
+        flight, height, vertical = simulation._shell_arc(start, point, weapon)
+        return combat.Projectile(source, dict(source.data), *start, math.cos(angle) * weapon["speed"], math.sin(angle) * weapon["speed"],
+                                 flight, height=height, vertical_speed=vertical, gravity=weapon["gravity"], weapon_data=weapon)
+
+    def test_ships_steer_clear_of_a_falling_shell_aimed_at_them(self):
+        for side in (0, 1):
+            with self.subTest(side=side):
+                simulation = self.simulation("battleship", "battleship", controlled=None)
+                source, unit = simulation.fighters[::1 if side else -1]
+                unit.angle, unit.speed = 0.0, 0.0
+                shell = self.falling_shell(simulation, source, (unit.x - 600, unit.y + 10), (unit.x, unit.y))
+                simulation.projectiles = [shell]
+                self.assertEqual(simulation._naval_threats(unit), [shell])
+                stay = (0.0, unit.angle)
+                self.assertNotEqual(simulation._naval_maneuver_score(unit, stay, [shell])[0], math.inf)
+                course = simulation._naval_evasion(unit, stay)
+                self.assertNotEqual(course, stay)
+                self.assertEqual(simulation._naval_maneuver_score(unit, course, [shell])[0], math.inf)
+
+    def test_a_shell_passing_high_overhead_is_not_a_threat(self):
+        simulation = self.simulation("battleship", "battleship", controlled=None)
+        source, unit = simulation.fighters
+        unit.data["speed"] = 0.25  # Too slow to reach the far landing point in time.
+        start = (unit.x - 400, unit.y)
+        shell = self.falling_shell(simulation, source, start, (start[0] + c.TACTICAL_WEAPONS["artillery_shell"]["range"], unit.y))
+        self.assertGreater(naval.shell_height(shell, 400 / c.TACTICAL_WEAPONS["artillery_shell"]["speed"]), c.TACTICAL_NAVAL_HULL_HEIGHT)
+        simulation.projectiles = [shell]
+        self.assertEqual(simulation._naval_threats(unit), [])
+
     def test_submarines_sharing_a_column_do_not_freeze_bow_to_bow(self):
         # Two submarines that turned into each other: bows touching, the enemy ahead of both lines of fire.
         simulation = combat.BattleSimulation(self.library, ["Fixture submarine I"] * 2, ["Fixture submarine I"], terrain="ocean",

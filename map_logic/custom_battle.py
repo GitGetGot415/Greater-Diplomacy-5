@@ -545,6 +545,31 @@ def _approach(value, goal, step):
     return min(goal, value + step) if value < goal else max(goal, value - step)
 
 
+def time_to_shift(distance, speed_change, acceleration):
+    """Seconds a unit needs to end up ``distance`` from where its steady motion would take it.
+
+    It accelerates at ``acceleration`` until its speed has changed by ``speed_change``, then holds
+    that speed. A unit that cannot change speed never shifts.
+    """
+    if distance <= 0:
+        return 0.0
+    if speed_change <= 0 or acceleration <= 0:
+        return math.inf
+    ramp = speed_change * speed_change / (2 * acceleration)
+    if distance <= ramp:
+        return math.sqrt(2 * distance / acceleration)
+    return speed_change / acceleration + (distance - ramp) / speed_change
+
+
+def falling_window(shot, hit_height):
+    """Seconds from now until a falling shell drops through ``hit_height``, and until it lands.
+
+    Only that end of its flight can hit a body; before it, the shell passes overhead.
+    """
+    land = shot.remaining
+    return max(0.0, min(land, naval.descending_time(shot.height, shot.vertical_speed, shot.gravity, hit_height))), land
+
+
 @dataclass(eq=False)
 class Fighter:
     """One sub-unit on the battlefield. A division becomes one or more sub-units."""
@@ -585,7 +610,7 @@ class Fighter:
     withdrawing: bool = False  # A charging sub-unit pulling back before it charges again.
     dodge: float = 0.0  # Seconds of sidestepping left.
     dodge_heading: float = 0.0  # The sidestep's direction: at right angles to the shot it avoids.
-    evasion_course: object = None  # Temporary naval (throttle, heading), reconsidered as torpedoes move.
+    evasion_course: object = None  # Temporary naval (throttle, heading), reconsidered as torpedoes and falling shells move.
     evasion_next_check: float = 0.0
     naval_controls: object = None  # Last applied throttle/turn, for short ally-motion predictions.
     route: list = field(default_factory=list)
@@ -1460,6 +1485,25 @@ class BattleSimulation:
             return reverse
         return 0.0, fighter.angle
 
+    @staticmethod
+    def torpedo_escape_seconds(target):
+        """Seconds a ship needs to move half its hull length clear of a torpedo aimed at its center.
+
+        It escapes by braking, reversing, or speeding up along its length, so the most it can change
+        speed is its top speed plus its current speed: full reverse from full ahead.
+        """
+        distance = c.TACTICAL_BODIES[target.shape][0] / 2 + naval.TORPEDO_RADIUS
+        acceleration = target.max_speed / MOBILITY[target.shape][0]
+        return time_to_shift(distance, target.max_speed + abs(target.speed), acceleration)
+
+    def _torpedo_in_window(self, fighter, slot, target, point):
+        """An AI torpedo launches only when it arrives at ``point`` before ``target`` could move clear of it."""
+        weapon = fighter.weapon(slot)
+        if weapon["projectile"] != "torpedo" or point is None:
+            return True
+        flight = math.dist(naval.mount_position(fighter, slot), point) / weapon["speed"]
+        return flight <= self.torpedo_escape_seconds(target)
+
     def _naval_course(self, fighter, target):
         dx, dy = target.x - fighter.x, target.y - fighter.y
         distance = math.hypot(dx, dy)
@@ -1474,7 +1518,11 @@ class BattleSimulation:
             return (fighter.pace, toward + math.pi) if distance < naval.WITHDRAW_RANGE else (0.0, toward)
         if self.elapsed < fighter.start_delay:
             return 0.0, fighter.angle
-        preferred = min(naval.ENGAGEMENT_RANGE, fighter.weapon_range * 0.8) * fighter.hold
+        reach = min(naval.ENGAGEMENT_RANGE, fighter.weapon_range * 0.8)
+        if all(mount.weapon == "torpedo" for mount in naval.mounts(fighter.shape)):
+            # A torpedo-only ship closes in until its torpedoes arrive before the target can move clear.
+            reach = min(reach, fighter.weapon(0)["speed"] * self.torpedo_escape_seconds(target))
+        preferred = reach * fighter.hold
         if distance > preferred:
             return fighter.pace, toward
         if fighter.shape in {"carrack", "ironclad"}:
@@ -1534,7 +1582,8 @@ class BattleSimulation:
                 if slot:
                     fighter.secondary_target = gun_target
                 point = naval.lead_point(gun_target, start, weapon)
-                wants_fire = self._weapon_can_hurt(fighter, gun_target, slot) and self._clear_shot(fighter, gun_target, slot=slot)
+                wants_fire = (self._weapon_can_hurt(fighter, gun_target, slot) and self._torpedo_in_window(fighter, slot, gun_target, point)
+                              and self._clear_shot(fighter, gun_target, slot=slot))
             fighter.gun_points[slot] = point
             if point is None:
                 continue
@@ -1658,10 +1707,12 @@ class BattleSimulation:
         It then holds rather than dodging.
         """
         if unit.naval:
+            def ready(slot, target):
+                point = naval.lead_point(target, naval.mount_position(unit, slot), unit.weapon(slot))
+                return (naval.can_fire(unit, slot, point, AIM_TOLERANCE) and self._torpedo_in_window(unit, slot, target, point)
+                        and self._clear_shot(unit, target, slot=slot))
             return any(unit.weapon(slot) is not None and unit.weapon_cooldown(slot) <= 0
-                       and target is not None and target.alive and self._weapon_can_hurt(unit, target, slot)
-                       and naval.can_fire(unit, slot, naval.lead_point(target, naval.mount_position(unit, slot), unit.weapon(slot)), AIM_TOLERANCE)
-                       and self._clear_shot(unit, target, slot=slot)
+                       and target is not None and target.alive and self._weapon_can_hurt(unit, target, slot) and ready(slot, target)
                        for slot, target in enumerate((unit.target, unit.secondary_target)))
         return any(unit.weapon(slot) is not None and unit.weapon_cooldown(slot) <= 0
                    and target is not None and target.alive and self._weapon_can_hurt(unit, target, slot)
@@ -1676,13 +1727,13 @@ class BattleSimulation:
         """
         for shot in self.projectiles:
             if shot.kind == "torpedo":
-                # Choose a maneuver against all torpedoes together in _drive_naval.
+                # Ships choose one maneuver against every torpedo and falling shell in _naval_evasion.
+                continue
+            if shot.gravity:
+                self._dodge_falling_shell(shot, crowds)
                 continue
             speed = math.hypot(shot.vx, shot.vy)
             lookahead = min(DODGE_LOOKAHEAD, shot.remaining)
-            # A shell can only hit while falling through hull height, so one still rising or high at the lookahead is harmless.
-            if shot.kind == "artillery_shell" and (naval.shell_height(shot, lookahead) > c.TACTICAL_NAVAL_HULL_HEIGHT or not naval.shell_descending(shot, lookahead)):
-                continue
             reach = speed * lookahead
             end_x, end_y = shot.x + shot.vx / speed * reach, shot.y + shot.vy / speed * reach
             blocked = self.battlefield.first_hit((shot.x, shot.y), (end_x, end_y), shot.height,
@@ -1704,6 +1755,37 @@ class BattleSimulation:
                 if 0 <= along <= reach and abs(across) <= DODGE_DANGER * unit.radius / UNIT_RADIUS:
                     self._start_dodge(unit, shot)
 
+    def _dodge_falling_shell(self, shot, crowds):
+        """AI land units where a falling shell comes down step clear, whatever their speed, if they can in time.
+
+        A falling shell is slow and lands where it was aimed, so even a slow unit can escape one.
+        A unit dodges only when it can turn side-on and get clear before the shell drops onto it;
+        otherwise it keeps aiming. Units about to fire hold, as they do for other shots.
+        Ships steer clear of falling shells in _naval_evasion instead.
+        """
+        speed = math.hypot(shot.vx, shot.vy)
+        land_x, land_y = shot.x + shot.vx * shot.remaining, shot.y + shot.vy * shot.remaining
+        danger = DODGE_DANGER * self.max_radius / UNIT_RADIUS
+        nearby = (unit for crowd in crowds for unit in crowd.within(
+            min(shot.x, land_x) - danger, min(shot.y, land_y) - danger, max(shot.x, land_x) + danger, max(shot.y, land_y) + danger))
+        for unit in nearby:
+            if (unit.naval or unit is shot.source or unit is self.controlled or unit.dodge > 0 or self._ready_to_fire(unit)
+                    or (unit.ram_committed and unit.target is not None
+                        and math.hypot(unit.x - unit.target.x, unit.y - unit.target.y) <= RAM_COMMIT_RANGE)):
+                continue
+            low, land = falling_window(shot, self.battlefield.elevation((unit.x, unit.y)) + battle_terrain.BODY_HEIGHT)
+            along = ((unit.x - shot.x) * shot.vx + (unit.y - shot.y) * shot.vy) / speed
+            across = ((unit.y - shot.y) * shot.vx - (unit.x - shot.x) * shot.vy) / speed
+            reach = DODGE_DANGER * unit.radius / UNIT_RADIUS
+            if not (speed * low <= along <= speed * land and abs(across) <= reach):
+                continue
+            arrival = along / speed
+            seconds, degrees, _turn_seconds = MOBILITY[unit.shape]
+            # Turning side-on takes up to a quarter turn; then the unit accelerates clear of the path.
+            escape = math.pi / 2 / math.radians(degrees) + time_to_shift(reach - abs(across), unit.max_speed, unit.max_speed / seconds)
+            if escape <= arrival:
+                self._sidestep(unit, shot.x, shot.y, shot.vx, shot.vy, arrival)
+
     def _predict_naval_tick(self, trial, throttle, turn, dt):
         """Advance an isolated motion prediction with the live steering/acceleration rules."""
         self._steer(trial, turn, dt)
@@ -1714,10 +1796,10 @@ class BattleSimulation:
         trial.push_vx *= decay
         trial.push_vy *= decay
 
-    def _naval_maneuver_score(self, unit, course, torpedoes):
+    def _naval_maneuver_score(self, unit, course, threats):
         """Predict only hull motion, using the live steering and acceleration helpers."""
         trial = replace(unit)
-        shots = [replace(shot) for shot in torpedoes]
+        shots = [replace(shot) for shot in threats]
         horizon = min(naval.TORPEDO_LOOKAHEAD, max((shot.remaining for shot in shots), default=naval.TORPEDO_LAUNCH_LOOKAHEAD))
         drift = math.hypot(unit.push_vx, unit.push_vy) * KNOCKBACK_SECONDS
         allies = [ally for ally in self.fighters if ally is not unit and ally.alive and ally.side == unit.side
@@ -1759,21 +1841,50 @@ class BattleSimulation:
                     hit_at = min(hit_at, elapsed + fraction * flight)
                 shot.x += shot.vx * flight
                 shot.y += shot.vy * flight
+                if shot.gravity:
+                    shot.height = naval.shell_height(shot, flight)
+                    shot.vertical_speed -= shot.gravity * flight
                 shot.remaining -= flight
-                clearance = min(clearance, naval.hull_clearance((shot.x, shot.y), trial, (trial.x, trial.y), trial.angle) - naval.TORPEDO_RADIUS - padding)
+                # A shell still above hull height passes over, so only its falling end counts toward clearance.
+                if not shot.gravity or (shot.height <= c.TACTICAL_NAVAL_HULL_HEIGHT and naval.shell_descending(shot, 0.0)):
+                    clearance = min(clearance, naval.hull_clearance((shot.x, shot.y), trial, (trial.x, trial.y), trial.angle) - naval.TORPEDO_RADIUS - padding)
             elapsed += dt
             if hit_at != math.inf:
                 break
         return hit_at, clearance, -abs(_wrap(course[1] - unit.angle)), -abs(course[0] - unit.speed / unit.max_speed)
 
+    def _naval_threats(self, unit):
+        """Torpedoes and falling shells, from either side, that could reach this hull wherever it steers.
+
+        A torpedo counts within TORPEDO_LOOKAHEAD. A shell counts only along the falling end of its
+        flight, where it drops through hull height before it lands; higher up it passes overhead.
+        """
+        drift = unit.radius + math.hypot(unit.push_vx, unit.push_vy) * KNOCKBACK_SECONDS
+        threats = []
+        for shot in self.projectiles:
+            if shot.source is unit or shot.remaining <= 0:
+                continue
+            if shot.kind == "torpedo":
+                start, end = 0.0, min(naval.TORPEDO_LOOKAHEAD, shot.remaining)
+            elif shot.gravity:
+                start, end = falling_window(shot, c.TACTICAL_NAVAL_HULL_HEIGHT)
+            else:
+                continue
+            path = [(shot.x + shot.vx * seconds, shot.y + shot.vy * seconds) for seconds in (start, end)]
+            if battle_terrain.circle_contact(*path, (unit.x, unit.y), drift + unit.max_speed * end) is not None:
+                threats.append(shot)
+        return threats
+
     def _naval_evasion(self, unit, normal_course):
-        """Keep safe maneuvers stable, and reject turns that sweep the bow or stern into danger."""
+        """Steer clear of torpedoes and falling shells together.
+
+        Keep safe maneuvers stable, and reject turns that sweep the bow or stern into danger.
+        """
         if unit is self.controlled or unit.max_speed <= 0:
             unit.evasion_course = None
             return normal_course
-        torpedoes = [shot for shot in self.projectiles if shot.kind == "torpedo" and shot.source is not unit and shot.remaining > 0
-                     and battle_terrain.circle_contact((shot.x, shot.y), (shot.x + shot.vx * min(naval.TORPEDO_LOOKAHEAD, shot.remaining), shot.y + shot.vy * min(naval.TORPEDO_LOOKAHEAD, shot.remaining)), (unit.x, unit.y), unit.radius + math.hypot(unit.push_vx, unit.push_vy) * KNOCKBACK_SECONDS + unit.max_speed * min(naval.TORPEDO_LOOKAHEAD, shot.remaining)) is not None]
-        if not torpedoes:
+        threats = self._naval_threats(unit)
+        if not threats:
             unit.evasion_course = None
             return normal_course
         if unit.evasion_course is not None:
@@ -1784,12 +1895,12 @@ class BattleSimulation:
         cycle = max(1, round(RETARGET_SECONDS / FIXED_STEP))
         tick = round(self.elapsed / FIXED_STEP)
         unit.evasion_next_check = (tick + ((unit.index - tick) % cycle or cycle)) * FIXED_STEP
-        normal_score = self._naval_maneuver_score(unit, normal_course, torpedoes)
+        normal_score = self._naval_maneuver_score(unit, normal_course, threats)
         if normal_score is not None and normal_score[0] == math.inf and (unit.evasion_course is None or normal_score[1] >= naval.EVASION_CLEARANCE):
             unit.evasion_course = None
             return normal_course
         if unit.evasion_course is not None:
-            score = self._naval_maneuver_score(unit, unit.evasion_course, torpedoes)
+            score = self._naval_maneuver_score(unit, unit.evasion_course, threats)
             if score is not None and score[0] == math.inf:
                 return unit.evasion_course
         courses = [normal_course, (unit.speed / unit.max_speed, unit.angle), (1.0, unit.angle), (0.0, unit.angle), (-1.0, unit.angle)]
@@ -1798,7 +1909,7 @@ class BattleSimulation:
         for course in dict.fromkeys(courses):
             if course == normal_course:
                 continue
-            score = self._naval_maneuver_score(unit, course, torpedoes)
+            score = self._naval_maneuver_score(unit, course, threats)
             if score is not None and (best_score is None or score > best_score):
                 best, best_score = course, score
             # A straight escape with comfortable clearance avoids an unnecessary hull swing.
