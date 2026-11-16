@@ -55,6 +55,7 @@ MUSIC_UI_SOUND_PATHS = {
     "tank_shot_3": "assets/sounds/Tank Shot 3.mp3",
     "tank_explosion": "assets/sounds/Tank Explosion.mp3",
     "torpedo_launch": "assets/sounds/Torpedo Launch.mp3",
+    "torpedo_hit": "assets/sounds/Torpedo Hit.mp3",
     "flesh_wound_1": "assets/sounds/Flesh Wound 1.mp3",
     "flesh_wound_2": "assets/sounds/Flesh Wound 2.mp3",
     "flesh_wound_3": "assets/sounds/Flesh Wound 3.mp3",
@@ -70,13 +71,13 @@ global_sfx_volume = starting_defaults.get_starting_value("settings_config.json",
 global_sfx_pitch = starting_defaults.get_starting_value("settings_config.json", "sfx_pitch")
 
 # Bound guaranteed battle voices so gunfire cannot exhaust the native mixer.
-# Rifles share one pool across variants; tanks and torpedo launches retain their own quieter voices.
+# Rifles share one pool across variants; tanks and torpedo launches and hits retain their own quieter voices.
 # Body impacts share the rifle pool, keeping repeated hits bounded on every backend.
 BATTLE_SFX_GROUPS = {
     "rifle_shot_1": "rifle", "rifle_shot_2": "rifle", "rifle_shot_3": "rifle",
     "heavy_gunshot": "tank",
     "tank_shot_1": "tank", "tank_shot_2": "tank", "tank_shot_3": "tank",
-    "tank_explosion": "tank", "torpedo_launch": "tank",
+    "tank_explosion": "tank", "torpedo_launch": "tank", "torpedo_hit": "tank",
     "flesh_wound_1": "rifle", "flesh_wound_2": "rifle", "flesh_wound_3": "rifle",
     "bullet_ricochet_1": "rifle", "bullet_ricochet_2": "rifle",
     "bullet_ricochet_3": "rifle", "bullet_ricochet_4": "rifle",

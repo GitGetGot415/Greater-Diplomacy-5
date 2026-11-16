@@ -2053,7 +2053,7 @@ class CustomBattleScreenTests(unittest.TestCase):
                             self.screen._record_kill(source, target, "shot" if side == 0 else "ram")
                         if shape not in combat.FOOT_SHAPES:
                             sound.assert_called_once_with("tank_explosion", volume_scale=self.screen.battle_sfx_volume_share(target))
-                            self.assertEqual(self.screen.death_explosions, [(target, 0.0)])
+                            self.assertEqual(self.screen.death_explosions, [(target, 0.0, battle_screen.DEATH_EXPLOSION_PALETTE)])
                         else:
                             sound.assert_not_called()
                             self.assertFalse(self.screen.death_explosions)
@@ -2071,7 +2071,7 @@ class CustomBattleScreenTests(unittest.TestCase):
         self.screen.last_tick = 1000
         with patch("pygame.time.get_ticks", return_value=1050):
             self.screen.update()
-        self.assertEqual(self.screen.death_explosions, [(target, 0.0)])
+        self.assertEqual(self.screen.death_explosions, [(target, 0.0, battle_screen.DEATH_EXPLOSION_PALETTE)])
         self.screen.mode = "result"
         simulation.winner = 0
         self.screen.refresh_ui()
@@ -2085,7 +2085,7 @@ class CustomBattleScreenTests(unittest.TestCase):
                 self.screen.update()
         self.assertFalse(self.screen.death_explosions)
         self.assertEqual(simulation.elapsed, elapsed)
-        self.screen.death_explosions.append((target, 0.0))
+        self.screen.death_explosions.append((target, 0.0, battle_screen.DEATH_EXPLOSION_PALETTE))
         self.click("Run Again")
         self.assertFalse(self.screen.death_explosions)
 
@@ -2293,6 +2293,27 @@ class CustomBattleScreenTests(unittest.TestCase):
         with patch("ui.sound_effects.play_ui_sound") as sound:
             self.screen.simulation._fire_shot(source)
         sound.assert_called_once_with("torpedo_launch", volume_scale=self.screen.battle_sfx_volume_share(source))
+
+    def test_torpedo_hit_splashes_in_water_colors_and_plays_the_torpedo_hit_sound(self):
+        self.fill_armies()
+        self.click("Simulate")
+        self.click("Start")
+        target = self.screen.simulation.fighters[-1]
+        for projectile, damage in (("torpedo", 5), ("torpedo", 0)):
+            with self.subTest(projectile=projectile, damage=damage), patch("ui.sound_effects.play_ui_sound") as sound:
+                self.screen.death_explosions.clear()
+                self.screen._play_hit_sound(target, damage, projectile)
+                sound.assert_called_once_with("torpedo_hit", volume_scale=self.screen.battle_sfx_volume_share(target))
+                self.assertEqual(self.screen.death_explosions, [(target, 0.0, battle_screen.TORPEDO_SPLASH_PALETTE)])
+        # Other projectiles keep their ordinary hit sounds and show no splash.
+        self.screen.death_explosions.clear()
+        target.shape = "infantry"
+        with patch("ui.sound_effects.play_ui_sound") as sound:
+            self.screen._play_hit_sound(target, 5, "direct")
+        self.assertIn(sound.call_args.args[0], battle_screen.FLESH_HIT_SOUNDS)
+        self.assertFalse(self.screen.death_explosions)
+        self.screen.death_explosions.append((target, 0.0, battle_screen.TORPEDO_SPLASH_PALETTE))
+        self.screen.draw(self.surface)
 
     def win_battle(self):
         """End actual battle with a friendly win, without relying on random aim and movement."""

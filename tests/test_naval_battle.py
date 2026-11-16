@@ -288,6 +288,8 @@ class NavalBattleTests(unittest.TestCase):
         self.assertEqual(hits[0][0], target)
         self.assertGreater(hits[0][1], 0)
         self.assertEqual(shot.kind, "torpedo")
+        # The hit carries its projectile kind, which the hit callback receives for the splash and sound.
+        self.assertEqual(hits[0][3:], ("shot", "torpedo"))
 
     def test_moving_ship_crosses_torpedo_between_ticks(self):
         simulation = self.simulation("submarine")

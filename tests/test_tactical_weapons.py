@@ -196,7 +196,7 @@ class TacticalWeaponTests(unittest.TestCase):
         source.shape = "tank"
         second.x = 1800
         hits = []
-        simulation.on_hit = lambda target, damage: hits.append((target, damage))
+        simulation.on_hit = lambda target, damage, projectile: hits.append((target, damage))
         simulation.projectiles = [combat.Projectile(source, dict(source.data), first.x - first.radius - 1,
                                                    first.y, 300, 0, 2)]
         simulation.advance(combat.FIXED_STEP)
@@ -400,7 +400,7 @@ class TacticalHitSoundTests(unittest.TestCase):
                 "ui.sound_effects.play_ui_sound") as sound:
             simulation.on_hit = hit
             simulation.advance(combat.FIXED_STEP)
-        hit.assert_called_once_with(target, 1)
+        hit.assert_called_once_with(target, 1, "direct")
         # The hit empties the tank's health, so its destruction explosion follows the ricochet.
         volume = self.screen.battle_sfx_volume_share(target)
         self.assertEqual(sound.call_args_list, [call(battle_screen.RICOCHET_SOUNDS[0], volume_scale=volume), call("tank_explosion", volume_scale=volume)])

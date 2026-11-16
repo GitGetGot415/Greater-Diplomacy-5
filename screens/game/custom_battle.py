@@ -95,6 +95,12 @@ DEATH_EXPLOSION_COLORS = ((255, 240, 150), (255, 160, 45), (205, 65, 30), (75, 7
 DEATH_EXPLOSION_CIRCLE_OFFSETS = tuple((math.cos(i * math.tau / DEATH_EXPLOSION_PARTICLE_COUNT), math.sin(i * math.tau / DEATH_EXPLOSION_PARTICLE_COUNT)) for i in range(DEATH_EXPLOSION_PARTICLE_COUNT))
 DEATH_EXPLOSION_OFFSETS = {"circle": DEATH_EXPLOSION_CIRCLE_OFFSETS, "square": tuple((dx / max(abs(dx), abs(dy)), dy / max(abs(dx), abs(dy))) for dx, dy in DEATH_EXPLOSION_CIRCLE_OFFSETS)}[DEATH_EXPLOSION_SPREAD]
 DEATH_EXPLOSION_DRAW_PARTICLE = {"circle": pygame.draw.ellipse, "square": pygame.draw.rect}[DEATH_EXPLOSION_PARTICLE_SHAPE]
+# A torpedo hit on a ship reuses the explosion animation in white and blue, as a splash of water.
+TORPEDO_SPLASH_CIRCLE_COLOR = (190, 225, 255)
+TORPEDO_SPLASH_COLORS = ((255, 255, 255), (220, 240, 255), (120, 185, 240), (45, 110, 200))
+# (expanding circle color, particle colors from start to finish) for each explosion animation.
+DEATH_EXPLOSION_PALETTE = (DEATH_EXPLOSION_CIRCLE_COLOR, DEATH_EXPLOSION_COLORS)
+TORPEDO_SPLASH_PALETTE = (TORPEDO_SPLASH_CIRCLE_COLOR, TORPEDO_SPLASH_COLORS)
 
 EDIT_BATTLE_HELP_TEXT = (
     "Build both armies, choose their deployment order, and optionally choose a unit to control. Custom battles do not change your campaign.\n\n"
@@ -540,7 +546,9 @@ class CustomBattleScreen(Screen):
         self.status_key = None
         self.status_surfaces = []
         self.kill_feed = deque()
-        self.death_explosions = []  # Destroyed sub-unit and animation age, in seconds.
+        # Explosion animations: the sub-unit, the animation age in seconds, and its palette.
+        # A destroyed vehicle or ship uses DEATH_EXPLOSION_PALETTE; a torpedo hit uses TORPEDO_SPLASH_PALETTE.
+        self.death_explosions = []
         self.death_explosion_circle = None
         self.kill_feed_surface = None
         self.kill_feed_scroll = self.kill_feed_limit = 0
@@ -1138,7 +1146,7 @@ class CustomBattleScreen(Screen):
     def _record_kill(self, source, target, cause):
         """Update the recent kills when a battlefield sub-unit dies."""
         if target.shape not in combat.FOOT_SHAPES:
-            self.death_explosions.append((target, 0.0))
+            self.death_explosions.append((target, 0.0, DEATH_EXPLOSION_PALETTE))
             sound_effects.play_ui_sound("tank_explosion", volume_scale=self.battle_sfx_volume_share(target))
         if self.kill_feed_scroll < 0:
             self.kill_feed_scroll -= KILL_FEED_ROW_HEIGHT
@@ -1237,8 +1245,13 @@ class CustomBattleScreen(Screen):
             kind = random.choice(RIFLE_SHOT_SOUNDS)
         sound_effects.play_ui_sound(kind, volume_scale=self.battle_sfx_volume_share(fighter))
 
-    def _play_hit_sound(self, target, damage):
+    def _play_hit_sound(self, target, damage, projectile=None):
         # The simulation supplies HP actually lost, including the remaining-HP limit.
+        if projectile == "torpedo":
+            # A torpedo hit splashes: the explosion animation in water colors, and its own sound.
+            self.death_explosions.append((target, 0.0, TORPEDO_SPLASH_PALETTE))
+            sound_effects.play_ui_sound("torpedo_hit", volume_scale=self.battle_sfx_volume_share(target))
+            return
         if target.shape in combat.SOFT_TARGET_SHAPES:
             sounds = FLESH_HIT_SOUNDS
         elif damage <= target.data["max_health"] * RICOCHET_MAX_HEALTH_SHARE:
@@ -1797,7 +1810,7 @@ class CustomBattleScreen(Screen):
         dt = min(MAX_FRAME_SECONDS, max(0, now - self.last_tick) / 1000.0)
         self.last_tick = now
         if self.mode == "result" or not self.simulation.paused:
-            self.death_explosions = [(fighter, age + dt) for fighter, age in self.death_explosions if age + dt < DEATH_EXPLOSION_SECONDS]
+            self.death_explosions = [(fighter, age + dt, palette) for fighter, age, palette in self.death_explosions if age + dt < DEATH_EXPLOSION_SECONDS]
         if self.mode == "result":
             return
         driving = self._driving()
@@ -2195,7 +2208,7 @@ class CustomBattleScreen(Screen):
         diameter = max(3, math.ceil(DEATH_EXPLOSION_RADIUS * self.zoom) * 2 + 1)
         if self.death_explosion_circle is None or self.death_explosion_circle.get_width() != diameter:
             self.death_explosion_circle = pygame.Surface((diameter, diameter), pygame.SRCALPHA)
-        for fighter, age in self.death_explosions:
+        for fighter, age, (circle_color, colors) in self.death_explosions:
             if limited_sight and id(fighter) not in self.visible_fighters:
                 continue
             progress = age / DEATH_EXPLOSION_SECONDS
@@ -2203,10 +2216,10 @@ class CustomBattleScreen(Screen):
             radius = DEATH_EXPLOSION_RADIUS * progress * self.zoom
             circle = self.death_explosion_circle
             circle.fill((0, 0, 0, 0))
-            pygame.draw.circle(circle, (*DEATH_EXPLOSION_CIRCLE_COLOR, round(DEATH_EXPLOSION_CIRCLE_ALPHA * (1 - progress))), (diameter // 2, diameter // 2), max(1, round(radius)))
+            pygame.draw.circle(circle, (*circle_color, round(DEATH_EXPLOSION_CIRCLE_ALPHA * (1 - progress))), (diameter // 2, diameter // 2), max(1, round(radius)))
             surface.blit(circle, circle.get_rect(center=center))
             size = max(1, round(DEATH_EXPLOSION_PARTICLE_SIZE * (1 - progress) * self.zoom))
-            color = DEATH_EXPLOSION_COLORS[min(len(DEATH_EXPLOSION_COLORS) - 1, int(progress * len(DEATH_EXPLOSION_COLORS)))]
+            color = colors[min(len(colors) - 1, int(progress * len(colors)))]
             for dx, dy in DEATH_EXPLOSION_OFFSETS:
                 rect = pygame.Rect(0, 0, size, size)
                 rect.center = (round(center[0] + dx * radius), round(center[1] + dy * radius))
