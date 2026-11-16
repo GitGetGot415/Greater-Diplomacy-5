@@ -23,6 +23,9 @@ TORPEDO_RADIUS = 3.0
 TORPEDO_LOOKAHEAD = 8.0  # Ships need time to turn and accelerate before an approaching torpedo arrives.
 TORPEDO_LAUNCH_LOOKAHEAD = 3.0
 TORPEDO_LAUNCH_CLEARANCE = 12.0
+# A submarine whose torpedo path is blocked by an ally steers this far off the line to its target,
+# so it clears its line of fire while still closing in.
+TORPEDO_CLEARING_ANGLE = math.radians(45)
 EVASION_CLEARANCE = 12.0
 EVASION_SAMPLE_SECONDS = 0.2  # Motion still uses fixed ticks; hull checks cover each sampled interval.
 EVASION_TURN_ANGLES = tuple(math.radians(angle) for angle in (-90, -45, 45, 90))

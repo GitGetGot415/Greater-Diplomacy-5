@@ -607,21 +607,64 @@ class NavalBattleTests(unittest.TestCase):
         self.assertEqual(simulation._naval_threats(unit), [])
 
     def test_submarines_sharing_a_column_do_not_freeze_bow_to_bow(self):
-        # Two submarines that turned into each other: bows touching, the enemy ahead of both lines of fire.
-        simulation = combat.BattleSimulation(self.library, ["Fixture submarine I"] * 2, ["Fixture submarine I"], terrain="ocean",
-                                             seed=7, controlled_index=None, friendly_columns=[0, 0])
-        top, bottom, enemy = simulation.fighters
-        length = c.TACTICAL_BODIES["submarine"][0]
-        top.x, top.y, top.angle = enemy.x - 4000, 1400.0, math.pi / 2
-        bottom.x, bottom.y, bottom.angle = top.x, top.y + length + 1, -math.pi / 2
-        enemy.y = top.y + length / 2
-        starts = [(fighter.x, fighter.y) for fighter in (top, bottom)]
-        gap = math.dist(*starts)
-        # Before the fix, both hulls held still here for the rest of the battle.
-        simulation.advance(8.0)
-        self.assertGreater(math.dist((top.x, top.y), (bottom.x, bottom.y)), gap + 100)
-        for fighter, start in zip((top, bottom), starts):
-            self.assertGreater(math.dist(start, (fighter.x, fighter.y)), 100)
+        length, width = c.TACTICAL_BODIES["submarine"][:2]
+        # Far away the enemy is outside the launch window, so the pair simply sails for it. An enemy that
+        # cannot move is always inside the window, so each must clear its line of fire past the other.
+        for distance, immobile in ((4000, False), (c.TACTICAL_WEAPONS["torpedo"]["range"] * 0.75, True)):
+            with self.subTest(immobile=immobile):
+                # Two submarines that turned into each other: bows touching, the enemy ahead of both lines of fire.
+                simulation = combat.BattleSimulation(self.library, ["Fixture submarine I"] * 2, ["Fixture submarine I"], terrain="ocean",
+                                                     seed=7, controlled_index=None, friendly_columns=[0, 0])
+                top, bottom, enemy = simulation.fighters
+                if immobile:
+                    enemy.data["speed"] = 0
+                top.x, top.y, top.angle = enemy.x - distance, 1400.0, math.pi / 2
+                bottom.x, bottom.y, bottom.angle = top.x, top.y + length + 1, -math.pi / 2
+                enemy.y = top.y + length / 2
+                starts = [(fighter.x, fighter.y) for fighter in (top, bottom)]
+                launched = set()
+                simulation.on_shot = lambda fighter: launched.add(fighter.index)
+                # Before the fix, both hulls held still here for the rest of the battle.
+                simulation.advance(8.0)
+                self.assertGreater(math.dist((top.x, top.y), (bottom.x, bottom.y)), width)
+                for fighter, start in zip((top, bottom), starts):
+                    if immobile:
+                        # Already close enough to stop: each turns to bring its torpedo tube onto the enemy and fires.
+                        self.assertLess(abs(combat._wrap(math.atan2(enemy.y - fighter.y, enemy.x - fighter.x) - fighter.angle)), naval.FORWARD_TORPEDO[0].arc / 2)
+                        self.assertIn(fighter.index, launched)
+                    else:
+                        self.assertGreater(math.dist(start, (fighter.x, fighter.y)), 100)
+
+    def test_rear_submarines_close_in_instead_of_clearing_a_line_they_cannot_fire_down_yet(self):
+        simulation = self.simulation("submarine", "destroyer", controlled=None)
+        source, target = simulation.fighters
+        ally = combat.Fighter(dict(source.data), source.side, source.x + 300, source.y, "submarine", index=2)
+        simulation.fighters.append(ally)
+        source.angle = source.aim = ally.angle = 0.0
+        window = c.TACTICAL_WEAPONS["torpedo"]["speed"] * simulation.torpedo_escape_seconds(target)
+        target.x = naval.mount_position(source, 0)[0] + window * 3
+        simulation._sides = [[source, ally], [target]]
+        # The ally is in the torpedo's path, but the target is outside the launch window.
+        self.assertIsNotNone(simulation._naval_ally_in_line(source, target, 0))
+        self.assertFalse(simulation._naval_launch_ready(source, 0, target))
+        with patch.object(simulation, "_naval_firing_course", wraps=simulation._naval_firing_course) as clearing:
+            simulation._drive_naval(source, combat.FIXED_STEP, [], combat._Grid([target], combat.TARGET_CELL))
+        clearing.assert_not_called()
+        self.assertEqual(source.dodge, 0)
+
+    def test_a_blocked_submarine_clears_its_line_while_still_closing_in(self):
+        simulation = self.simulation("submarine", "destroyer", controlled=None)
+        source, target = simulation.fighters
+        ally = combat.Fighter(dict(source.data), source.side, source.x + 300, source.y + 5, "submarine", index=2)
+        simulation._sides = [[source, ally], [target]]
+        throttle, heading = simulation._naval_firing_course(source, ally, target)
+        toward = math.atan2(target.y - source.y, target.x - source.x)
+        self.assertEqual(throttle, source.pace)
+        self.assertAlmostEqual(abs(combat._wrap(heading - toward)), naval.TORPEDO_CLEARING_ANGLE)
+        # Away from the ally, which sits just below the line to the target.
+        self.assertLess(math.sin(heading), 0)
+        # Decided again every tick, so it ends as soon as the path is clear.
+        self.assertEqual(source.dodge, 0)
 
     def test_slow_ai_ships_on_both_sides_evade_even_when_ready_to_fire_or_ramming(self):
         for side in (0, 1):

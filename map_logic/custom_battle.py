@@ -1465,21 +1465,25 @@ class BattleSimulation:
         return None
 
     def _naval_firing_course(self, fighter, ally, target):
-        """Validate the existing side-step against hulls and edges.
+        """Clear a blocked torpedo path while still closing in, validated against hulls and edges.
 
+        The ship steers TORPEDO_CLEARING_ANGLE off the line to its target, on the side away from
+        the blocking ally, or on the other side if that is unsafe. It decides again every tick,
+        so it turns back toward the target as soon as the path is clear.
         When turning either way is unsafe, as for two hulls bow to bow, back straight away to open
-        room for the turn; hold only if backing away is unsafe too. Both choices end the side-step,
-        so the next tick tries it again from the new position.
+        room for the turn; hold only if backing away is unsafe too.
         """
         if fighter.max_speed <= 0:
             return 0.0, fighter.angle
-        self._sidestep(fighter, ally.x, ally.y, target.x - fighter.x, target.y - fighter.y, naval.TORPEDO_LAUNCH_LOOKAHEAD)
-        for heading in (fighter.dodge_heading, fighter.dodge_heading + math.pi):
+        dx, dy = target.x - fighter.x, target.y - fighter.y
+        self._sidestep(fighter, ally.x, ally.y, dx, dy, 0.0)
+        toward = math.atan2(dy, dx)
+        side = 1 if _wrap(fighter.dodge_heading - toward) > 0 else -1
+        for heading in (toward + side * naval.TORPEDO_CLEARING_ANGLE, toward - side * naval.TORPEDO_CLEARING_ANGLE):
             course = fighter.pace, heading
             if self._naval_maneuver_score(fighter, course, []) is not None:
                 fighter.dodge_heading = heading
                 return course
-        fighter.dodge = 0.0
         reverse = -fighter.pace, fighter.angle
         if self._naval_maneuver_score(fighter, reverse, []) is not None:
             return reverse
@@ -1495,6 +1499,21 @@ class BattleSimulation:
         distance = c.TACTICAL_BODIES[target.shape][0] / 2 + naval.TORPEDO_RADIUS
         acceleration = target.max_speed / MOBILITY[target.shape][0]
         return time_to_shift(distance, target.max_speed + abs(target.speed), acceleration)
+
+    def _naval_launch_ready(self, fighter, slot, target, point=None):
+        """Whether a mount could fire at ``target`` now, apart from its aim settling and allies in the way.
+
+        The weapon must be able to hurt the target, the aim point must be within range and the mount's
+        arc, and an AI torpedo must arrive before the target could move clear (_torpedo_in_window).
+        """
+        if target is None or not target.alive or not self._weapon_can_hurt(fighter, target, slot):
+            return False
+        start = naval.mount_position(fighter, slot)
+        if point is None:
+            point = naval.lead_point(target, start, fighter.weapon(slot))
+        return (math.dist(start, point) <= fighter.weapon(slot)["range"]
+                and naval.aim_allowed(fighter, slot, math.atan2(point[1] - start[1], point[0] - start[0]))
+                and self._torpedo_in_window(fighter, slot, target, point))
 
     def _torpedo_in_window(self, fighter, slot, target, point):
         """An AI torpedo launches only when it arrives at ``point`` before ``target`` could move clear of it."""
@@ -1551,7 +1570,8 @@ class BattleSimulation:
             fighter.dodge = max(0.0, fighter.dodge - dt)
             if fighter.dodge <= 0 and not fighter.ram_committed:
                 for slot in range(len(naval.mounts(fighter.shape))):
-                    if fighter.weapon_cooldown(slot) > 0:
+                    # Clear a line of fire only when that weapon could fire down it now.
+                    if fighter.weapon_cooldown(slot) > 0 or not self._naval_launch_ready(fighter, slot, fighter.target):
                         continue
                     ally = self._naval_ally_in_line(fighter, fighter.target, slot)
                     if ally is not None:
@@ -1582,8 +1602,7 @@ class BattleSimulation:
                 if slot:
                     fighter.secondary_target = gun_target
                 point = naval.lead_point(gun_target, start, weapon)
-                wants_fire = (self._weapon_can_hurt(fighter, gun_target, slot) and self._torpedo_in_window(fighter, slot, gun_target, point)
-                              and self._clear_shot(fighter, gun_target, slot=slot))
+                wants_fire = self._naval_launch_ready(fighter, slot, gun_target, point) and self._clear_shot(fighter, gun_target, slot=slot)
             fighter.gun_points[slot] = point
             if point is None:
                 continue
