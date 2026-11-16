@@ -2,10 +2,14 @@
 
 ## Uncategorized
 
-- the politics section is kinda empty
+- the politics section is kinda empty `(TLDR add more stuff there, maybe a 2D political compass rather than it simply being a 1D political compass)`
 - make it so that in tactical mode you can get other units to make simmilar movement orders to you to coordinate attacks n such
 - you can bring allies when declaring independence
-- expand tactical battles so as to allow naval and air battles
+- expand tactical battles so as to allow air battles
+- total kill count for tactical mode
+- also maybe like medals or something
+- level up and progress in tactical mode
+- have years on infantry name or at least to make that an option
 
 ## Check First
 
