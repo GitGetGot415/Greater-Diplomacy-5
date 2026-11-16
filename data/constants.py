@@ -196,7 +196,7 @@ DEFAULT_SHOW_UNCLAIMED = get_starting_value("settings_config.json", "show_unclai
 SHOW_UNCLAIMED = DEFAULT_SHOW_UNCLAIMED
 
 # Which unit art set ui.rendering.symbol_loader draws unit icons from.
-# "classic" is the flat assets/images set every icon has always shipped with;
+# "classic" is the flat assets/classic unit art set the game has always shipped with;
 # any other style (e.g. "hanskolmer") discovers unit art from filenames under
 # its own assets/<style> folder. Both fall back to "classic" when they do not
 # cover a request. See screens/menus/unit_art.py for the picker.
