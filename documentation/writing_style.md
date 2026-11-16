@@ -93,13 +93,16 @@ These rules override the default capitalization and punctuation guidance for tha
 - Explain the idea without technical terminology unless a specific technical name is needed.
 - Keep necessary conditions and exceptions. Preserve the original meaning and level of detail.
 - Do not invent slang, jokes, swearing, or exaggerated enthusiasm to make the text sound casual.
+- Use "the" as little as possible. Drop it when the sentence still reads naturally, for example "fixed bug where units didn't move" instead of "fixed the bug where the units didn't move." Keep it when dropping it would change the meaning or make the sentence hard to read, and keep it inside names, UI labels, and quoted text.
 
 ### Capitalization, punctuation, and spelling
 
 - Start sentences with lowercase letters unless the first word is a name or another term that needs capitals.
 - Use lowercase "i" and "i'm" in ordinary prose.
 - Preserve the capitalization of names, acronyms, filenames, identifiers, and exact UI labels, including at the start of a sentence.
-- Keep punctuation minimal. Usually omit the final period from a paragraph or list item.
+- Keep punctuation minimal.
+- Leave off the final period when a line, paragraph, or list item is only one sentence.
+- When a line, paragraph, or list item has more than one sentence, end every sentence with a period, including the last one.
 - Separate sentences with periods or line breaks so they do not run together.
 - Use commas, question marks, and parentheses when they help convey the meaning or tone.
 - Keep apostrophes in contractions: "don't," "can't," "it's," and "there's."
@@ -111,7 +114,8 @@ These rules override the default capitalization and punctuation guidance for tha
 | Default wording | CUE |
 | --- | --- |
 | Allow players to edit unit production costs. | let players change how much units cost |
-| Keep the existing file and create a simpler version. | make a simpler version but keep the old file too |
+| Keep the existing file and create a simpler version. | make a simpler version but keep old file too |
+| Keep the old file. Add a simpler version next to it. | keep old file. add a simpler version next to it. |
 | Display oil cost and defense even when their values are zero. | show oil cost and defense even when they're zero |
 | This is a review only. Do not change any files. | this is just a review, don't actually change anything |
 | AGENTS.md should link to the writing guide. | AGENTS.md should link to the writing guide |

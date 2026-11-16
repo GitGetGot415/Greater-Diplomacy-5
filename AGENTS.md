@@ -20,7 +20,7 @@ AI means artificial intelligence. UI means user interface.
 
 ## Required Rules
 
-- **Never edit files in the documentation folder.**
+- **Never edit files in the documentation folder unless the user asks you to.**
   This rule takes precedence over any other instruction in this guide to update documentation.
 - Keep `map_logic/system32/` as the turn-processing package.
   The name `system32` is intentional.
