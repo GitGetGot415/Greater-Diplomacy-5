@@ -604,6 +604,39 @@ class ConversationInteractionTests(unittest.TestCase):
                 screen.select_recipient("A")
                 self.assertEqual(screen.drafts, ["h"])
 
+    def test_phone_keyboard_composer_takes_focus_only_from_a_tap_on_the_bar(self):
+        from ui import mobile_keyboard
+
+        screen = self.make_screen()
+        screen.select_recipient("A")
+        screen.bar_shown = 1.0
+        bar = screen.input_rect.center
+        away = screen.thread_rect.center
+        surface = pygame.Surface((c.SCREEN_WIDTH, c.SCREEN_HEIGHT))
+        typed = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_UNKNOWN, unicode="h", mod=0)
+        with mock.patch.object(mobile_keyboard, "_phone_keyboard", True), \
+                mock.patch.object(mobile_keyboard, "request") as request:
+            screen.draw(surface)
+            request.assert_not_called()
+            screen.additional_events(typed)
+            self.assertEqual(screen.compose_text, "")
+            self.assertFalse(screen.text_input_active)
+
+            for leave in (pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=away),
+                          pygame.event.Event(mobile_keyboard.KEYBOARD_DISMISSED)):
+                with self.subTest(event=pygame.event.event_name(leave.type)):
+                    screen.additional_events(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=bar))
+                    self.assertTrue(screen.compose_active)
+                    screen.draw(surface)
+                    request.assert_called()
+                    screen.additional_events(typed)
+                    request.reset_mock()
+                    screen.additional_events(leave)
+                    self.assertFalse(screen.compose_active)
+                    screen.draw(surface)
+                    request.assert_not_called()
+            self.assertEqual(screen.compose_text, "hh")
+
     def test_follow_up_input_still_obeys_formal_action_and_tactical_restrictions(self):
         for tactical, action in ((False, "TRADE"), (True, "MSG:Previous turn")):
             with self.subTest(tactical=tactical, action=action):

@@ -6,7 +6,7 @@ import data.constants as c
 from ui.bars import ui_bars
 from ui.widgets import text_utils
 from ui.widgets import flag_icons, ui_elements
-from ui import sound_effects
+from ui import mobile_keyboard, sound_effects
 from ui.widgets.ui_elements import Button, process_text_input
 from ui.rendering.font_manager import fonts
 from map_logic.diplomacy import diplomacy_messages, diplomacy_processor, volunteers
@@ -184,6 +184,8 @@ class Messages_Screen(Screen):
         self.processed_messages = []
         self.compose_surface = None
         self.compose_enabled = False
+        # Set by tapping the compose bar. See _compose_has_focus.
+        self.compose_focused = False
 
         # 0 is fully rolled out, 1 fully rolled in. bar_anim holds the start
         # time and start value of a roll toward bar_target.
@@ -205,6 +207,7 @@ class Messages_Screen(Screen):
         self.map_screen = map_ref
         self.selected_recipient = None
         self.compose_text = ""
+        self.compose_focused = False
         self.drafts = []
         self.draft_edit_rects = []
         self.msg_scroll_y = 0
@@ -225,8 +228,23 @@ class Messages_Screen(Screen):
 
     @property
     def text_input_active(self):
-        """The compose bar accepts keystrokes whenever a conversation is open."""
-        return self.selected_recipient is not None or super().text_input_active
+        """The compose bar accepts keystrokes while a conversation is open and the bar has focus."""
+        return (self.selected_recipient is not None and self._compose_has_focus()) or super().text_input_active
+
+    def _compose_has_focus(self):
+        """Whether the compose bar holds the keyboard focus.
+
+        Without the phone keyboard, the compose bar is the screen's only text
+        target, so the bar always has focus. With the phone keyboard, a focused
+        bar keeps the keyboard open, so the bar has focus only after the player
+        taps it, until the player taps elsewhere or closes the keyboard.
+        """
+        return self.compose_focused or not mobile_keyboard.uses_phone_keyboard()
+
+    @property
+    def compose_active(self):
+        """Whether the compose bar takes typing, draws its caret, and asks for the phone keyboard."""
+        return self.compose_enabled and self._compose_has_focus()
 
     def accept_proposal(self, target):
         custom_msg = self.compose_text.strip()
@@ -445,7 +463,13 @@ class Messages_Screen(Screen):
         self.refresh_ui()
 
     def additional_events(self, event):
+        if event.type == mobile_keyboard.KEYBOARD_DISMISSED:
+            self._set_compose_focus(False)
+            return
         mx, my = getattr(event, "pos", pygame.mouse.get_pos())
+        # Before the thread drag and the list scroll, which consume the press that starts a drag.
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            self._set_compose_focus(self.input_rect.move(0, self._bar_offsets()[1]).collidepoint((mx, my)))
         is_tactical = self.map_screen.tactical_mode
         in_thread = self.thread_rect.collidepoint((mx, my))
         if self.selected_recipient and event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION):
@@ -550,13 +574,20 @@ class Messages_Screen(Screen):
         # --- Text Input Logic ---
         if self.selected_recipient:
             locked = queries.is_diplomat_busy(self.map_screen.player_country, self.selected_recipient, self.map_screen.nation_data)
-            if not locked and not is_tactical:
+            if not locked and not is_tactical and self._compose_has_focus():
                 previous_text = self.compose_text
                 self.compose_text, status = process_text_input(event, self.compose_text, max_length=MAX_MESSAGE_LENGTH)
                 if status == "SUBMIT":
                     self.send_message()
                 elif self.compose_text != previous_text:
                     self._prepare_composer()
+
+    def _set_compose_focus(self, focused):
+        """Focus or unfocus the compose bar and redraw its caret when that changes."""
+        if focused != self.compose_focused:
+            self.compose_focused = focused
+            if self.map_screen:
+                self._prepare_composer()
 
     def _handle_offer_buttons(self, event, pos, in_thread):
         """Press and release an offer's reply button. True when one took the event.
@@ -1133,7 +1164,7 @@ class Messages_Screen(Screen):
         if self.compose_enabled:
             self.compose_enabled = not queries.is_diplomat_busy(
                 self.map_screen.player_country, self.selected_recipient, self.map_screen.nation_data)
-        text = self.compose_text + ("|" if self.compose_enabled else "")
+        text = self.compose_text + ("|" if self.compose_active else "")
         self.compose_surface = fonts.get("normal").render(text, True, (242, 245, 250))
 
     def draw_background(self, surface):
@@ -1176,9 +1207,11 @@ class Messages_Screen(Screen):
                                      self.thread_rect.width, MSG_INPUT_H)
         self._draw_panel(surface, composer_rect, "composer")
         input_rect = self.input_rect.move(0, bottom_dy)
-        ui_elements.draw_text_input_background(surface, input_rect, active=self.compose_enabled,
+        # An active bar also asks for the phone keyboard.
+        compose_active = self.compose_active
+        ui_elements.draw_text_input_background(surface, input_rect, active=compose_active,
                                                style_name="message",
-                                               border_color=MSG_SELECTED_ACCENT if self.compose_enabled else (80, 90, 106))
+                                               border_color=MSG_SELECTED_ACCENT if compose_active else (80, 90, 106))
         text_rect = input_rect.inflate(-24, -12)
         with ui_bars.clip_scroll_region(surface, text_rect, draw_top=False, draw_bottom=False):
             x = text_rect.x - max(0, self.compose_surface.get_width() - text_rect.width)
