@@ -50,7 +50,10 @@ class Editor_Metadata_Screen(EditorFormScreen):
         export_button.fit_text = True
         # The web build cannot write a game folder for players to run.
         export_button.apply_state(enabled=not IS_WEB, color="blue")
-        self.elements.append(export_button)
+
+        # disabled for now
+        
+        # self.elements.append(export_button)
 
     def open_standalone_export(self):
         """Close this form and open the separate Standalone Export screen."""
