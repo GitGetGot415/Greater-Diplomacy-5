@@ -93,7 +93,9 @@ These rules override the default capitalization and punctuation guidance for tha
 - Explain the idea without technical terminology unless a specific technical name is needed.
 - Keep necessary conditions and exceptions. Preserve the original meaning and level of detail.
 - Do not invent slang, jokes, swearing, or exaggerated enthusiasm to make the text sound casual.
-- Use "the" as little as possible. Drop it when the sentence still reads naturally, for example "fixed bug where units didn't move" instead of "fixed the bug where the units didn't move." Keep it when dropping it would change the meaning or make the sentence hard to read, and keep it inside names, UI labels, and quoted text.
+- Drop "the" in short, label-like lines where it's obvious what's meant, such as list items, TODOs, and commit-style summaries. For example, write "fixed bug where units didn't move" instead of "fixed the bug where the units didn't move."
+- In full sentences, keep "the" when it points back to something already mentioned ("the file," "the archive," "the CI job"). Also keep it when several nouns are in a row and dropping it would make it hard to tell where one ends and the next begins.
+- Always keep "the" inside names, UI labels, and quoted text. When unsure, keep it.
 
 ### Capitalization, punctuation, and spelling
 
