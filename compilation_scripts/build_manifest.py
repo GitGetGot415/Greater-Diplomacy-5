@@ -8,13 +8,6 @@ from data.io.starting_defaults import PREFERENCE_FILES, STARTING_DEFAULTS_PATH, 
 
 WINDOWS_DIST_DIR = "dist/windows"
 LINUX_DIST_DIR = "dist/linux"
-# The platforms a release attaches a download for. Android is absent on purpose:
-# the Android package is built from the web build by its own script and is
-# published through its own channel rather than attached to a release.
-# tests/test_release_tooling.py checks that the release build workflow builds
-# every platform named here, so adding a platform here is what makes a release
-# carry it.
-RELEASE_PLATFORMS = ("windows", "linux", "macos", "web")
 MACOS_DIST_DIR = "dist/macos"
 MACOS_BUILD_DIR = "build/macos"
 WEB_DIST_DIR = "dist/web"

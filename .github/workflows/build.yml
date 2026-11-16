@@ -6,10 +6,6 @@ name: GD5 Build
 # compilation_scripts/macos_compilation.py on their native runners.
 on:
   workflow_dispatch: {}
-  # release.yml calls this workflow, so a release builds every platform with
-  # the same steps a manual build uses. A second copy of these steps inside
-  # the release workflow would be a second copy to keep correct.
-  workflow_call: {}
 
 permissions:
   contents: read
