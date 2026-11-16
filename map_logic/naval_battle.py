@@ -23,6 +23,9 @@ TORPEDO_RADIUS = 3.0
 TORPEDO_LOOKAHEAD = 8.0  # Ships need time to turn and accelerate before an approaching torpedo arrives.
 TORPEDO_LAUNCH_LOOKAHEAD = 3.0
 TORPEDO_LAUNCH_CLEARANCE = 12.0
+# An AI torpedo may launch while its flight time is up to this multiple of the target's escape time,
+# so a submarine fires while still closing in; it still stops at the unstretched distance.
+TORPEDO_LAUNCH_WINDOW_STRETCH = 2.0
 # A submarine whose torpedo path is blocked by an ally steers this far off the line to its target,
 # so it clears its line of fire while still closing in.
 TORPEDO_CLEARING_ANGLE = math.radians(45)

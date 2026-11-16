@@ -1557,7 +1557,7 @@ class BattleSimulation:
         """Whether a mount could fire at ``target`` now, apart from its aim settling and allies in the way.
 
         The weapon must be able to hurt the target, the aim point must be within range and the mount's
-        arc, and an AI torpedo must arrive before the target could move clear (_torpedo_in_window).
+        arc, and an AI torpedo must arrive within its launch window (_torpedo_in_window).
         """
         if target is None or not target.alive or not self._weapon_can_hurt(fighter, target, slot):
             return False
@@ -1569,12 +1569,13 @@ class BattleSimulation:
                 and self._torpedo_in_window(fighter, slot, target, point))
 
     def _torpedo_in_window(self, fighter, slot, target, point):
-        """An AI torpedo launches only when it arrives at ``point`` before ``target`` could move clear of it."""
+        """An AI torpedo launches only when it arrives at ``point`` within TORPEDO_LAUNCH_WINDOW_STRETCH
+        times the seconds ``target`` needs to move clear of it."""
         weapon = fighter.weapon(slot)
         if weapon["projectile"] != "torpedo" or point is None:
             return True
         flight = math.dist(naval.mount_position(fighter, slot), point) / weapon["speed"]
-        return flight <= self.torpedo_escape_seconds(target)
+        return flight <= self.torpedo_escape_seconds(target) * naval.TORPEDO_LAUNCH_WINDOW_STRETCH
 
     def _naval_course(self, fighter, target):
         dx, dy = target.x - fighter.x, target.y - fighter.y

@@ -539,19 +539,31 @@ class NavalBattleTests(unittest.TestCase):
         self.assertEqual(combat.time_to_shift(5, 0, 2), math.inf)
         self.assertEqual(combat.time_to_shift(5, 10, 0), math.inf)
 
-    def test_ai_torpedoes_wait_until_the_target_cannot_move_clear_in_time(self):
+    def test_ai_torpedoes_wait_until_the_target_is_inside_the_stretched_launch_window(self):
         for side in (0, 1):
-            for share, fires in ((1.5, False), (0.7, True)):
+            for share, fires in ((1.1, False), (0.9, True)):
                 with self.subTest(side=side, share=share):
                     simulation = self.simulation("submarine", "destroyer", controlled=None)
                     source, target = simulation.fighters
                     source.side, target.side = side, 1 - side
                     source.angle = source.aim = 0.0
-                    window = c.TACTICAL_WEAPONS["torpedo"]["speed"] * simulation.torpedo_escape_seconds(target)
+                    window = c.TACTICAL_WEAPONS["torpedo"]["speed"] * simulation.torpedo_escape_seconds(target) * naval.TORPEDO_LAUNCH_WINDOW_STRETCH
                     target.x = naval.mount_position(source, 0)[0] + window * share
                     simulation.advance(combat.FIXED_STEP)
                     launched = [shot for shot in simulation.projectiles if shot.kind == "torpedo" and shot.source is source]
                     self.assertEqual(bool(launched), fires)
+
+    def test_submarines_launch_while_still_closing_in(self):
+        simulation = self.simulation("submarine", "destroyer", controlled=None)
+        source, target = simulation.fighters
+        simulation.elapsed = source.start_delay + 1
+        source.angle = source.aim = 0.0
+        self.assertGreater(naval.TORPEDO_LAUNCH_WINDOW_STRETCH, 1.0)
+        # Between the stopping distance and the stretched launch window: the torpedo is ready and the hull still advances.
+        stop = c.TACTICAL_WEAPONS["torpedo"]["speed"] * simulation.torpedo_escape_seconds(target)
+        target.x = naval.mount_position(source, 0)[0] + stop * (1 + naval.TORPEDO_LAUNCH_WINDOW_STRETCH) / 2
+        self.assertTrue(simulation._naval_launch_ready(source, 0, target))
+        self.assertEqual(simulation._naval_course(source, target)[0], source.pace)
 
     def test_a_target_that_cannot_move_is_torpedoed_from_any_range(self):
         simulation = self.simulation("submarine", "destroyer", controlled=None)
