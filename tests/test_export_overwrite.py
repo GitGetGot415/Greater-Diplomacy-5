@@ -147,6 +147,28 @@ class ExportOverwriteTests(unittest.TestCase):
         self.success.assert_not_called()
         self.assertEqual(self.destination.read_bytes(), b"original move")
 
+    def test_web_export_waits_for_android_before_reporting_success(self):
+        destination = self.root / "save.zip"
+        with mock.patch.object(file_exchange, "IS_WEB", True):
+            file_exchange.export_file(str(destination), lambda path: Path(path).write_bytes(b"archive"))
+        self.success.assert_not_called()
+        callback = self.download.call_args.kwargs["on_result"]
+        callback("saved", "")
+        self.success.assert_called_once()
+        self.error.assert_not_called()
+
+    def test_web_export_cancel_and_failure_do_not_report_success(self):
+        destination = self.root / "save.zip"
+        with mock.patch.object(file_exchange, "IS_WEB", True):
+            file_exchange.export_file(str(destination), lambda path: Path(path).write_bytes(b"archive"))
+        callback = self.download.call_args.kwargs["on_result"]
+        callback("cancelled", "")
+        self.success.assert_not_called()
+        self.error.assert_not_called()
+        callback("error", "Document is read-only")
+        self.success.assert_not_called()
+        self.error.assert_called_once()
+
     def test_image_write_errors_are_reported_after_choosing_a_destination(self):
         produce = mock.Mock(side_effect=file_exchange.pygame.error("Cannot write PNG"))
         file_exchange.export_file("portrait.png", produce)
@@ -168,6 +190,9 @@ class ExportOverwriteTests(unittest.TestCase):
                 self.ask.call_args.kwargs["on_result"](answer)
                 self.assertEqual(produce.call_count, int(answer))
                 self.assertEqual(self.download.call_count, int(answer))
+                self.success.assert_not_called()
+                if answer:
+                    self.download.call_args.kwargs["on_result"]("downloaded", "")
                 self.assertEqual(self.success.call_count, int(answer))
 
     def test_host_cancel_preserves_pending_keys_and_submissions(self):

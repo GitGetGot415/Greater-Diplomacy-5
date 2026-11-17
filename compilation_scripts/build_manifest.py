@@ -20,6 +20,7 @@ ANDROID_PROJECT_FILES = (
     "gradle/wrapper/gradle-wrapper.jar", "gradle/wrapper/gradle-wrapper.properties",
     "app/build.gradle", "app/src/main/AndroidManifest.xml",
     "app/src/main/java/org/greaterdiplomacy/gd5/MainActivity.java",
+    "app/src/main/java/org/greaterdiplomacy/gd5/AndroidFiles.java",
 )
 ANDROID_APPLICATION_ID = "org.greaterdiplomacy.gd5"
 

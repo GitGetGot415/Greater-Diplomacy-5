@@ -80,6 +80,13 @@ def export_file(file_name, produce, parent=None, *, game_state=None):
     """
     default_path = file_name if IS_WEB else os.path.join(downloads_dir(), file_name)
 
+    def downloaded(status, error):
+        if status == "error":
+            dialogs.show_error("Export Error", error, tk_parent=parent)
+        elif status in ("saved", "downloaded"):
+            action = "exported" if status == "saved" else "downloaded"
+            dialogs.show_success("Export Success", f"{file_name} {action}.", tk_parent=parent)
+
     def export(dest_path, _overwrite):
         try:
             if not IS_WEB:
@@ -87,8 +94,7 @@ def export_file(file_name, produce, parent=None, *, game_state=None):
             produce(dest_path)
 
             if IS_WEB:
-                download_file(dest_path)
-                dialogs.show_success("Export Success", f"{file_name} downloaded.", tk_parent=parent)
+                download_file(dest_path, on_result=downloaded)
             else:
                 dialogs.show_success("Export Success", f"Exported to {dest_path}", tk_parent=parent)
             return dest_path

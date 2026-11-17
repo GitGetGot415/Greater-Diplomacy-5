@@ -2,6 +2,8 @@ package org.greaterdiplomacy.gd5;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
@@ -10,6 +12,7 @@ import android.view.WindowInsets;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.ConsoleMessage;
 import android.webkit.JavascriptInterface;
+import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
@@ -29,18 +32,21 @@ public final class MainActivity extends Activity {
     private static final String GAME_URL =
         "https://appassets.androidplatform.net/assets/www/index.html";
     private WebView game;
+    private AndroidFiles files;
     private boolean keyboardVisible;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         game = new WebView(this);
+        files = new AndroidFiles(this, game);
         setContentView(game);
         WebSettings settings = game.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setAllowFileAccess(false);
-        settings.setAllowContentAccess(false);
+        // The system picker grants access to the documents chosen for imports.
+        settings.setAllowContentAccess(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
         WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG);
 
@@ -84,12 +90,19 @@ public final class MainActivity extends Activity {
         });
         game.setWebChromeClient(new WebChromeClient() {
             @Override
+            public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback,
+                                             FileChooserParams params) {
+                return files.chooseImport(callback, params);
+            }
+
+            @Override
             public boolean onConsoleMessage(ConsoleMessage message) {
                 Log.i(TAG, message.message());
                 return true;
             }
         });
         game.addJavascriptInterface(new Keyboard(), "GD5Android");
+        game.addJavascriptInterface(files, "GD5AndroidFiles");
         if (Build.VERSION.SDK_INT >= 30) {
             // The back gesture and the keyboard's hide key close the keyboard
             // without the game. Report the close so the focused text box
@@ -181,7 +194,15 @@ public final class MainActivity extends Activity {
     }
 
     @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (!files.onActivityResult(requestCode, resultCode, data)) {
+            super.onActivityResult(requestCode, resultCode, data);
+        }
+    }
+
+    @Override
     protected void onDestroy() {
+        files.close();
         game.destroy();
         super.onDestroy();
     }

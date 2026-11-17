@@ -180,12 +180,16 @@ async def browser_fetch_text(url, *, headers=None, timeout=3):
 
 
 _download_js_defined = False
+_download_ids = count()
 
 
-def download_file(path):
+def download_file(path, on_result=None):
     """Send a file from the browser's virtual filesystem to the user's real
-    Downloads folder (web only; no-op on desktop, where files are just written
-    to a real path directly).
+    Downloads folder, or Android's system Save As picker (web only; no-op on
+    desktop, where files are just written to a real path directly).
+
+    on_result(status, error) runs after the download is requested or Android
+    finishes writing. Status is downloaded, saved, cancelled, or error.
 
     `path` is a path inside the virtual FS (e.g. a relative path from the
     current working directory), not a real host path -- there is no such
@@ -206,22 +210,84 @@ def download_file(path):
     global _download_js_defined
     import platform  # stdlib `platform`, patched by pygbag with `.window` on web
     if not _download_js_defined:
-        platform.window.eval(
-            "window.__gd5_download = function(diskfileJson, filenameJson) {"
-            "  var diskfile = JSON.parse(diskfileJson), filename = JSON.parse(filenameJson);"
-            "  var blob = new Blob([FS.readFile(diskfile)]);"
-            "  var elem = window.document.createElement('a');"
-            "  elem.href = window.URL.createObjectURL(blob);"
-            "  elem.download = filename;"
-            "  document.body.appendChild(elem);"
-            "  elem.click();"
-            "  document.body.removeChild(elem);"
-            "};"
-        )
+        platform.window.eval("""
+            window.__gd5_download_results = {};
+            window.__gd5_download_done = function(id, status, error) {
+                if (Object.prototype.hasOwnProperty.call(window.__gd5_download_results, id) && window.__gd5_download_results[id] === null) {
+                    window.__gd5_download_results[id] = JSON.stringify({status: status, error: error});
+                }
+            };
+            window.__gd5_download = function(diskfileJson, filenameJson, id) {
+                var diskfile = JSON.parse(diskfileJson), filename = JSON.parse(filenameJson);
+                window.__gd5_download_results[id] = null;
+                if (window.GD5AndroidFiles) {
+                    // Stage bounded chunks across the Java bridge, yielding between chunks.
+                    // A save with a long history must not become one huge base64 message.
+                    (async function() {
+                        var bridge = window.GD5AndroidFiles;
+                        try {
+                            if (!bridge.beginExport(id, filename)) return;
+                            var stream = FS.open(diskfile, 'r');
+                            try {
+                                const CHUNK_BYTES = 16384;
+                                var buffer = new Uint8Array(CHUNK_BYTES);
+                                var size;
+                                while ((size = FS.read(stream, buffer, 0, buffer.length)) > 0) {
+                                    var encoded = btoa(String.fromCharCode.apply(null, buffer.subarray(0, size)));
+                                    if (!bridge.appendExport(id, encoded)) return;
+                                    await new Promise(resolve => setTimeout(resolve, 0));
+                                }
+                            } finally {
+                                FS.close(stream);
+                            }
+                            bridge.finishExport(id);
+                        } catch (error) {
+                            window.__gd5_download_done(id, 'error', String(error));
+                            bridge.cancelExport(id);
+                        }
+                    })();
+                    return;
+                }
+                try {
+                    var blob = new Blob([FS.readFile(diskfile)]);
+                    var elem = window.document.createElement('a');
+                    elem.href = window.URL.createObjectURL(blob);
+                    elem.download = filename;
+                    document.body.appendChild(elem);
+                    elem.click();
+                    document.body.removeChild(elem);
+                    window.__gd5_download_done(id, 'downloaded', '');
+                } catch (error) {
+                    window.__gd5_download_done(id, 'error', String(error));
+                }
+            };
+        """)
         _download_js_defined = True
     # pygbag garbles non-ASCII text on its way to JavaScript, and export names
     # can contain it. json.dumps writes it as ASCII \u escapes.
-    platform.window.__gd5_download(json.dumps(path), json.dumps(os.path.basename(path)))
+    request_id = f"download_{next(_download_ids)}"
+    platform.window.__gd5_download(json.dumps(path), json.dumps(os.path.basename(path)), request_id)
+    result_key = f"window.__gd5_download_results[{json.dumps(request_id)}]"
+
+    def finish(result_json):
+        platform.window.eval(f"delete {result_key}")
+        result = json.loads(result_json)
+        if on_result:
+            on_result(result["status"], result["error"])
+
+    result_json = platform.window.eval(result_key)
+    if result_json:
+        finish(result_json)
+    else:
+        async def wait_for_download():
+            # The user can take as long as needed in Android's system picker.
+            while True:
+                result_json = platform.window.eval(result_key)
+                if result_json:
+                    finish(result_json)
+                    return
+                await asyncio.sleep(0.1)
+        run_background(wait_for_download)
 
 
 _upload_js_defined = False
