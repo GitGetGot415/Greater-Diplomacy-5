@@ -103,7 +103,6 @@ These rules override the default capitalization and punctuation guidance for tha
 - Use lowercase "i" and "i'm" in ordinary prose.
 - Preserve the capitalization of names, acronyms, filenames, identifiers, and exact UI labels, including at the start of a sentence.
 - Keep punctuation minimal.
-- Leave off the final period when a line, paragraph, or list item is only one sentence.
 - When a line, paragraph, or list item has more than one sentence, end every sentence with a period, including the last one.
 - Separate sentences with periods or line breaks so they do not run together.
 - Use commas, question marks, and parentheses when they help convey the meaning or tone.
