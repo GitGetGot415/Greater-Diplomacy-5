@@ -1524,7 +1524,7 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
 
         map_ref = map_double(
             map_data={}, id_to_province={}, player_country="None",
-            nation_data={"A": {"political_value": -3, "research": {}}})
+            nation_data={"A": {"economic_value": politics.MIXED_BAND_LIMIT + 1, "research": {}}})
         driver = MapRealtimeDriver(map_ref)
         preferences = {
             "type": "country_preferences", "political_drift": 0,

@@ -1,7 +1,7 @@
 """Domestic politics: political and economic drift and timed national policies.
 
-The vertical axis trades army damage against research speed. The horizontal
-axis tracks the balance between planned and market economics. Each axis moves
+The vertical axis trades army damage against core province manpower. The
+horizontal axis trades factory output against research speed. Each axis moves
 by ``POLITICS_STEP`` per processed turn while a direction is selected. Map
 authors can set a country's starting coordinates. National policies have their
 own activation and cancellation durations.
@@ -15,6 +15,8 @@ Stdlib and `data.constants` only, so it imports under Pyodide and can be
 imported at module level from combat_rules without joining the queries cycle.
 """
 
+from operator import gt, lt
+
 from data.state_access import world_for, session_for
 import data.constants as c
 
@@ -27,6 +29,7 @@ VALUE_KEY = "political_value"
 DRIFT_KEY = "political_drift"
 ECONOMIC_VALUE_KEY = "economic_value"
 ECONOMIC_DRIFT_KEY = "economic_drift"
+MIXED_BAND_LIMIT = 2
 
 # Policies remain a flat mapping within nation_data so saves and history
 # snapshots need no schema migration.  Every card has its own lifecycle.
@@ -44,14 +47,14 @@ POLICIES = (
     {
         "id": "research_subsidies",
         "name": "Research Subsidies",
-        "max_politics": -2,
+        "min_economy": MIXED_BAND_LIMIT,
         "effects": {"research": 1.50, "manpower": 0.80, "materials": 0.90, "fuel": 0.90},
         "effect_lines": ("Research +50%", "Manpower -20%", "Materials -10%", "Fuel -10%"),
     },
     {
         "id": "prioritize_civilian_needs",
         "name": "Prioritize Civilian Needs",
-        "max_politics": 3,
+        "min_economy": -MIXED_BAND_LIMIT - 1,
         "effects": {"research": 1.20, "manpower": 0.90},
         "effect_lines": ("Research +20%", "Manpower -10%"),
     },
@@ -181,26 +184,31 @@ def policy_state(nation_data, nation, policy_id=None):
     return next(iter(states.values()), None) if len(states) == 1 else None
 
 
+_POLICY_REQUIREMENTS = (
+    ("max_politics", "politics", "<", value, lt),
+    ("min_politics", "politics", ">", value, gt),
+    ("max_economy", "economy", "<", economic_value, lt),
+    ("min_economy", "economy", ">", economic_value, gt),
+)
+
+
 def requirements_met(nation_data, nation, policy_id):
     """Whether a policy can be activated at the country's current position."""
     definition = policy(policy_id)
     if definition is None:
         return False
-    political_value = value(nation_data, nation)
-    return (("max_politics" not in definition or political_value < definition["max_politics"])
-            and ("min_politics" not in definition or political_value > definition["min_politics"]))
+    return all(compare(read(nation_data, nation), definition[key])
+               for key, _axis, _symbol, read, compare in _POLICY_REQUIREMENTS if key in definition)
 
 
 def requirement_text(policy_id):
-    """A short, exact explanation of a policy's political-axis requirement."""
+    """A short, exact explanation of a policy's compass requirements."""
     definition = policy(policy_id)
     if definition is None:
         return "Unavailable"
-    if "max_politics" in definition:
-        return "Requires politics < %+d" % definition["max_politics"]
-    if "min_politics" in definition:
-        return "Requires politics > %+d" % definition["min_politics"]
-    return "No political requirement"
+    bounds = [f"{axis} {symbol} {definition[key]:+d}"
+              for key, axis, symbol, _read, _compare in _POLICY_REQUIREMENTS if key in definition]
+    return "Requires " + " and ".join(bounds) if bounds else "No compass requirement"
 
 
 def activate_or_cancel_policy(nation_data, nation, policy_id):
@@ -329,7 +337,7 @@ def active_policies(nation_data, nation):
 
 
 def reconcile_policy(nation_data, nation):
-    """Immediately removes every policy whose political requirement was lost."""
+    """Immediately remove every policy whose compass requirement was lost."""
     stats = nation_data.get(nation, {})
     states = stats.get(POLICY_KEY, {})
     if not isinstance(states, dict):
@@ -356,8 +364,22 @@ def axis_damage_multiplier(position):
     return 1.0 + c.POLITICS_DAMAGE_SPAN * (position / float(c.POLITICS_MAX))
 
 
+def axis_core_manpower_multiplier(position):
+    return 1.0 - c.POLITICS_CORE_MANPOWER_SPAN * (position / float(c.POLITICS_MAX))
+
+
+def _economic_strength(position):
+    """Convert the economic score to -1 through +1, with all Mixed scores neutral."""
+    distance = max(0, position - MIXED_BAND_LIMIT) + min(0, position + MIXED_BAND_LIMIT)
+    return distance / (c.POLITICS_MAX - MIXED_BAND_LIMIT)
+
+
+def axis_factory_multiplier(position):
+    return 1.0 - c.ECONOMICS_FACTORY_SPAN * _economic_strength(position)
+
+
 def axis_research_multiplier(position):
-    return 1.0 - c.POLITICS_RESEARCH_SPAN * (position / float(c.POLITICS_MAX))
+    return 1.0 + c.ECONOMICS_RESEARCH_SPAN * _economic_strength(position)
 
 
 def damage_multiplier(nation_data, nation):
@@ -369,11 +391,11 @@ def damage_multiplier(nation_data, nation):
 def research_multiplier(nation_data, nation):
     """What this nation multiplies its research points by, including policy.
 
-    Zero at the authoritarian end is deliberate and not a floor to guard
+    Zero at the fully planned end is deliberate and not a floor to guard
     against: points_remaining simply stops falling, which is what "research is
     frozen" has to look like.
     """
-    axis_multiplier = axis_research_multiplier(value(nation_data, nation))
+    axis_multiplier = axis_research_multiplier(economic_value(nation_data, nation))
     return axis_multiplier * effect_multiplier(nation_data, nation, "research")
 
 
@@ -388,7 +410,7 @@ def resource_multiplier(nation_data, nation, resource):
 _COMPASS_BANDS = (
     (-7, "Libertarian", "light_blue", "Planned"),
     (-3, "Liberal", "green", "Planned-leaning"),
-    (2, "Centrist", "yellow", "Mixed"),
+    (MIXED_BAND_LIMIT, "Centrist", "yellow", "Mixed"),
     (6, "Statist", "orange", "Market-leaning"),
     (c.POLITICS_MAX, "Authoritarian", "red", "Market"),
 )

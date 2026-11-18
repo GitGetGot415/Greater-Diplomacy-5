@@ -219,7 +219,7 @@ class Politics_Screen(Screen):
         if not definition or not self.can_edit:
             return
         if not politics.activate_or_cancel_policy(self.map_screen.nation_data, self.player, policy_id):
-            self.map_screen.show_feedback("This policy's political requirement is not met.")
+            self.map_screen.show_feedback(politics.requirement_text(policy_id))
             return
 
         after = politics.policy_state(self.map_screen.nation_data, self.player, policy_id)

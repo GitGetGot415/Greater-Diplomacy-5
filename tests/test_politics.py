@@ -1,13 +1,10 @@
-"""The political axis: what it does, how fast, and where it stops.
+"""Political and economic compass rules, policies, and input.
 
 The rule, as specified:
 
-    A line from libertarian to authoritarian. Further left means your armies
-    deal less damage but your research is faster; further right means slower
-    research and harder-hitting armies. Ten turns to go from the centre to
-    either end, twenty to cross the whole thing. Everyone starts in the middle.
-    Max left is 0.7x damage and 2.0x research; max right is 1.3x damage and
-    0.0x research, linear in between.
+    Authority trades core manpower income for damage. A planned economy
+    favours factory income and a market economy favours research. Both axes
+    take one step each processed turn while a direction is set.
 
 Two things in there are easy to get quietly wrong and are pinned hardest here.
 The first is *whose* multiplier applies: a volley is measured off a LaneSide's
@@ -205,24 +202,9 @@ def axis_damage_multiplier(value):
     return 1.0 + c.POLITICS_DAMAGE_SPAN * value / float(c.POLITICS_MAX)
 
 
-def axis_research_multiplier(value):
-    """Expected axis-only research multiplier from the canonical tuning values."""
-    return 1.0 - c.POLITICS_RESEARCH_SPAN * value / float(c.POLITICS_MAX)
-
-
 def policy_effect(policy_id, effect):
     """Read a policy effect from the production definition, never a test literal."""
     return politics.policy(policy_id).get("effects", {}).get(effect, 1.0)
-
-
-def eligible_value(policy_id):
-    """One legal political position for a policy, derived from its strict bound."""
-    definition = politics.policy(policy_id)
-    if "max_politics" in definition:
-        return definition["max_politics"] - c.POLITICS_STEP
-    if "min_politics" in definition:
-        return definition["min_politics"] + c.POLITICS_STEP
-    return c.POLITICS_START
 
 
 # ============================================================================ #
@@ -230,31 +212,21 @@ def eligible_value(policy_id):
 # ============================================================================ #
 
 class MultiplierTests(unittest.TestCase):
-    def multipliers_at(self, value):
-        nation_data = {"A": {"political_value": value}}
-        return (politics.damage_multiplier(nation_data, "A"),
-                politics.research_multiplier(nation_data, "A"))
+    def test_political_curve_trades_core_manpower_for_damage(self):
+        for value, damage, manpower in ((-10, 0.7, 1.3), (-5, 0.85, 1.15), (0, 1, 1),
+                                        (5, 1.15, 0.85), (10, 1.3, 0.7)):
+            with self.subTest(value=value):
+                country = {"A": {"political_value": value, "economic_value": c.POLITICS_MAX}}
+                self.assertAlmostEqual(politics.damage_multiplier(country, "A"), damage)
+                self.assertAlmostEqual(politics.axis_core_manpower_multiplier(value), manpower)
 
-    def test_the_centre_changes_nothing(self):
-        self.assertEqual(self.multipliers_at(c.POLITICS_START), (1.0, 1.0))
-
-    def test_the_libertarian_end_is_weak_and_fast(self):
-        damage, research = self.multipliers_at(c.POLITICS_MIN)
-        self.assertAlmostEqual(damage, axis_damage_multiplier(c.POLITICS_MIN))
-        self.assertAlmostEqual(research, axis_research_multiplier(c.POLITICS_MIN))
-
-    def test_the_authoritarian_end_is_strong_and_stopped(self):
-        damage, research = self.multipliers_at(c.POLITICS_MAX)
-        self.assertAlmostEqual(damage, axis_damage_multiplier(c.POLITICS_MAX))
-        self.assertAlmostEqual(research, axis_research_multiplier(c.POLITICS_MAX))
-
-    def test_the_scale_is_linear(self):
-        """Intermediate positions follow the canonical linear spans."""
-        span = c.POLITICS_MAX - c.POLITICS_MIN
-        for value in (c.POLITICS_MIN + span // 4, c.POLITICS_MIN + 3 * span // 4):
-            damage, research = self.multipliers_at(value)
-            self.assertAlmostEqual(damage, axis_damage_multiplier(value))
-            self.assertAlmostEqual(research, axis_research_multiplier(value))
+    def test_economic_curve_trades_factory_output_for_research(self):
+        for value, factory, research in ((-10, 1.3, 0), (-6, 1.15, 0.5), (-2, 1, 1),
+                                         (0, 1, 1), (2, 1, 1), (6, 0.85, 1.5), (10, 0.7, 2)):
+            with self.subTest(value=value):
+                country = {"A": {"political_value": c.POLITICS_MAX, "economic_value": value}}
+                self.assertAlmostEqual(politics.axis_factory_multiplier(value), factory)
+                self.assertAlmostEqual(politics.research_multiplier(country, "A"), research)
 
     def test_a_nation_nobody_has_touched_is_centrist(self):
         """An old save has none of these keys, and must play exactly as before."""
@@ -378,8 +350,8 @@ class DriftTests(unittest.TestCase):
 # ============================================================================ #
 
 class PolicyTests(unittest.TestCase):
-    def screen_at(self, political_value):
-        return StubTurnScreen({"A": {"political_value": political_value}})
+    def screen_at(self, political_value=0, economic_value=0):
+        return StubTurnScreen({"A": {"political_value": political_value, "economic_value": economic_value}})
 
     def activate_and_finish(self, screen, policy_id):
         self.assertTrue(politics.activate_or_cancel_policy(screen.nation_data, "A", policy_id))
@@ -387,26 +359,26 @@ class PolicyTests(unittest.TestCase):
             politics.tick(screen)
 
     def test_policy_requirements_are_strict(self):
-        for policy_id in ("research_subsidies", "prioritize_civilian_needs",
-                          "recruitment_propaganda", "total_mobilisation"):
-            definition = politics.policy(policy_id)
-            bound = definition.get("max_politics", definition.get("min_politics"))
+        for policy_id, field, bound in (("research_subsidies", "economic_value", 2),
+                                        ("prioritize_civilian_needs", "economic_value", -3),
+                                        ("recruitment_propaganda", "political_value", -3),
+                                        ("total_mobilisation", "political_value", 2)):
             self.assertFalse(politics.requirements_met(
-                {"A": {"political_value": bound}}, "A", policy_id))
+                {"A": {field: bound}}, "A", policy_id))
             self.assertTrue(politics.requirements_met(
-                {"A": {"political_value": eligible_value(policy_id)}}, "A", policy_id))
+                {"A": {field: bound + 1}}, "A", policy_id))
 
     def test_losing_a_requirement_cancels_before_the_turn_uses_the_effect(self):
         policy_id = "research_subsidies"
-        screen = self.screen_at(eligible_value(policy_id))
+        screen = self.screen_at(economic_value=politics.MIXED_BAND_LIMIT + 1)
         self.activate_and_finish(screen, policy_id)
-        politics.set_drift(screen.nation_data, "A", 1)
+        politics.set_economic_drift(screen.nation_data, "A", -1)
 
         politics.tick(screen)
 
         self.assertIsNone(politics.policy_state(screen.nation_data, "A"))
         self.assertAlmostEqual(politics.research_multiplier(screen.nation_data, "A"),
-                               axis_research_multiplier(politics.value(screen.nation_data, "A")))
+                               politics.axis_research_multiplier(politics.economic_value(screen.nation_data, "A")))
 
     def test_cancel_can_be_undone_before_the_next_processed_turn(self):
         screen = self.screen_at(0)
@@ -443,7 +415,7 @@ class PolicyTests(unittest.TestCase):
         self.assertNotIn(politics.POLICY_KEY, screen.nation_data["A"])
 
     def test_each_eligible_policy_has_its_own_activation_and_effect(self):
-        screen = self.screen_at(eligible_value("prioritize_civilian_needs"))
+        screen = self.screen_at()
         politics.activate_or_cancel_policy(screen.nation_data, "A", "prioritize_civilian_needs")
         politics.activate_or_cancel_policy(screen.nation_data, "A", "prioritize_industrial_needs")
 
@@ -455,7 +427,7 @@ class PolicyTests(unittest.TestCase):
         self.assertEqual(politics.policy_state(screen.nation_data, "A", "prioritize_industrial_needs")["status"],
                          politics.POLICY_ACTIVE)
         self.assertAlmostEqual(politics.research_multiplier(screen.nation_data, "A"),
-                               axis_research_multiplier(politics.value(screen.nation_data, "A"))
+                               politics.axis_research_multiplier(politics.economic_value(screen.nation_data, "A"))
                                * policy_effect("prioritize_civilian_needs", "research")
                                * policy_effect("prioritize_industrial_needs", "research"))
         self.assertAlmostEqual(politics.resource_multiplier(screen.nation_data, "A", "manpower"),
@@ -466,7 +438,7 @@ class PolicyTests(unittest.TestCase):
         from data import queries
 
         policy_id = "research_subsidies"
-        screen = self.screen_at(eligible_value(policy_id))
+        screen = self.screen_at(economic_value=politics.MIXED_BAND_LIMIT + 1)
         screen.nation_data["A"]["research"] = {}
         map_data = {"p": {"owner": "A", "cores": ["A"], "resources": {},
                           "buildings": [], "units": []}}
@@ -481,13 +453,13 @@ class PolicyTests(unittest.TestCase):
 
     def test_total_mobilisation_stacks_its_damage_bonus_on_the_axis_bonus(self):
         policy_id = "total_mobilisation"
-        screen = self.screen_at(eligible_value(policy_id))
+        screen = self.screen_at(political_value=politics.policy(policy_id)["min_politics"] + 1)
         self.activate_and_finish(screen, policy_id)
         value = politics.value(screen.nation_data, "A")
         self.assertAlmostEqual(politics.damage_multiplier(screen.nation_data, "A"),
                                axis_damage_multiplier(value) * policy_effect(policy_id, "damage"))
         self.assertAlmostEqual(politics.research_multiplier(screen.nation_data, "A"),
-                               axis_research_multiplier(value) * policy_effect(policy_id, "research"))
+                               policy_effect(policy_id, "research"))
 
 
 # ============================================================================ #
@@ -671,7 +643,7 @@ class BombardmentDamageTests(unittest.TestCase):
 class ResearchTests(unittest.TestCase):
     """The resolver reads the multiplier off the nation whose queue it is on."""
 
-    def points_after_one_turn(self, value):
+    def points_after_one_turn(self, economic_value, political_value=c.POLITICS_MAX):
         from map_logic.system32 import research_processor
 
         class Screen:
@@ -684,7 +656,7 @@ class ResearchTests(unittest.TestCase):
             "A": {"research": {"infantry_type": 0},
                   "research_queue": [{"tech_name": "infantry_type",
                                       "points_remaining": 100000}],
-                  "political_value": value},
+                  "political_value": political_value, "economic_value": economic_value},
         }
 
         class Time:
@@ -698,18 +670,17 @@ class ResearchTests(unittest.TestCase):
         after = screen.nation_data["A"]["research_queue"][0]["points_remaining"]
         return before - after
 
-    def test_a_centrist_nation_researches_at_the_base_rate(self):
-        self.assertGreater(self.points_after_one_turn(c.POLITICS_START), 0)
+    def test_mixed_research_is_independent_of_political_position(self):
+        base = self.points_after_one_turn(c.POLITICS_START, c.POLITICS_MIN)
+        self.assertGreater(base, 0)
+        self.assertEqual(self.points_after_one_turn(c.POLITICS_START, c.POLITICS_MAX), base)
 
-    def test_libertarian_research_is_twice_as_fast(self):
+    def test_fully_market_research_is_twice_as_fast(self):
         base = self.points_after_one_turn(c.POLITICS_START)
-        self.assertAlmostEqual(self.points_after_one_turn(c.POLITICS_MIN),
-                               base * axis_research_multiplier(c.POLITICS_MIN))
+        self.assertAlmostEqual(self.points_after_one_turn(c.POLITICS_MAX), base * 2)
 
-    def test_authoritarian_research_uses_the_configured_end_multiplier(self):
-        base = self.points_after_one_turn(c.POLITICS_START)
-        self.assertAlmostEqual(self.points_after_one_turn(c.POLITICS_MAX),
-                               base * axis_research_multiplier(c.POLITICS_MAX))
+    def test_fully_planned_research_halts(self):
+        self.assertEqual(self.points_after_one_turn(c.POLITICS_MIN, c.POLITICS_MIN), 0)
 
 
 class FactionResearchTests(unittest.TestCase):

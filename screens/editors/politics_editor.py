@@ -122,7 +122,7 @@ class Politics_Edit_Screen(EditorSliderScreen):
                 reading = small.render(text, True, c.UI_TEXT_LIGHT)
                 self._preview.blit(reading, reading.get_rect(centerx=center_x, y=self.SLIDER_TOP + index * 28))
         damage = politics.axis_damage_multiplier(self.value)
-        research = politics.axis_research_multiplier(self.value)
+        research = politics.axis_research_multiplier(self.economic_value)
         effects = small.render(f"Damage dealt x{damage:.2f}      Research speed x{research:.2f}", True, c.UI_TEXT_DIM)
         self._preview.blit(effects, effects.get_rect(centerx=center_x, y=self.EFFECTS_Y))
 

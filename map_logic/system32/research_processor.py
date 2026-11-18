@@ -37,9 +37,8 @@ def process_national_research(context):
             target_year = years_array[target_index]
             
             multiplier = queries.get_research_multiplier(current_exact_year, target_year)
-            # A libertarian nation researches faster and an authoritarian one
-            # slower -- at the far end, not at all, which is a stalled project
-            # rather than a guarded division.
+            # Market economies research faster. A fully planned economy stalls
+            # progress even when it has a faction research bonus.
             faction_bonus = queries.get_faction_research_bonus(
                 country_name, tech_key, current_level + 1, world_state.nation_data)
             effective_points = (base_points_per_turn * multiplier

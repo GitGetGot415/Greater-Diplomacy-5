@@ -239,13 +239,13 @@ class ResearchDetailsScreen(ModalScreen):
         map_screen = self.research.map_screen
         cost = self.node["cost"]
         days_per_turn = queries.get_days_per_turn(map_screen.scenario_settings)
-        pol_mult = politics.research_multiplier(map_screen.nation_data, self.research.subject)
+        research_mult = politics.research_multiplier(map_screen.nation_data, self.research.subject)
         faction_bonus = queries.get_faction_research_bonus(
             self.research.subject, self.node["tech_key"], self.node["level"], map_screen.nation_data)
-        pts_per_turn = (c.BASE_RESEARCH_POINTS_PER_DAY * days_per_turn * pol_mult
+        pts_per_turn = (c.BASE_RESEARCH_POINTS_PER_DAY * days_per_turn * research_mult
                         * (1.0 + faction_bonus))
 
-        # pts_per_turn is 0 at the authoritarian end of the political axis, which
+        # pts_per_turn is 0 at the planned end of the economic axis, which
         # is a project that never finishes rather than one that takes a very
         # large number of turns -- say so instead of printing the number.
         base_time = (cost / pts_per_turn) if pts_per_turn > 0 else 0
@@ -264,18 +264,17 @@ class ResearchDetailsScreen(ModalScreen):
         year_inc = days_per_turn / 360.0
 
         # Simulate the research progress turn-by-turn using the central math query
-        while pts_accumulated < cost and actual_turns < MAX_RESEARCH_TURN_SIMULATION:
+        while pts_per_turn > 0 and pts_accumulated < cost and actual_turns < MAX_RESEARCH_TURN_SIMULATION:
             mult = queries.get_research_multiplier(sim_year, target_year)
             pts_accumulated += (pts_per_turn * mult)
             sim_year += year_inc
             actual_turns += 1
 
-        # A fully authoritarian nation researches at 0x, so the loop runs out
-        # its cap instead of finishing. Saying "~500 turns" would be a lie of a
-        # different kind to the one this warning exists to prevent.
         warning = None
-        if pts_accumulated < cost:
-            warning = "Research is halted under the current political system."
+        if pts_per_turn <= 0:
+            warning = "Research is halted in a fully planned economy."
+        elif pts_accumulated < cost:
+            warning = f"Estimated Actual Time: >{MAX_RESEARCH_TURN_SIMULATION} turns"
         elif actual_turns > base_time:
             warning = f"Ahead of Time Penalty! Estimated Actual Time: ~{actual_turns} turns"
         self.warning_surface = fonts.get("normal").render(warning, True, (255, 100, 100)) if warning else None
@@ -830,7 +829,7 @@ class Research_Screen(Screen):
                 self.editor_help_surfaces.append(rendered)
         else:
             days = queries.get_days_per_turn(self.map_screen.scenario_settings)
-            # The headline uses the same political multiplier as turn resolution.
+            # The headline uses the same economic and policy modifiers as turn resolution.
             multiplier = politics.research_multiplier(self.map_screen.nation_data, self.subject)
             points = int(c.BASE_RESEARCH_POINTS_PER_DAY * days * multiplier)
             self.header_output_surface = font.render(f"RESEARCH OUTPUT: {points} pts/turn", True, (0, 255, 255))
