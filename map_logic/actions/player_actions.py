@@ -232,6 +232,16 @@ class PlayerActions:
         automation = command.get("automation", {})
         if not isinstance(drift, int) or drift not in (-1, 0, 1):
             raise PlayerActionError("Invalid political direction.")
+        if politics.ECONOMIC_VALUE_KEY in command:
+            raise PlayerActionError("The host controls the economic position.")
+        economic_preference = {}
+        if politics.ECONOMIC_DRIFT_KEY in command:
+            economic_drift = command[politics.ECONOMIC_DRIFT_KEY]
+            if type(economic_drift) is not int or economic_drift not in (-1, 0, 1):
+                raise PlayerActionError("Invalid economic direction.")
+            if not politics.can_shift(politics.economic_value(self.world.nation_data, country_id), economic_drift):
+                raise PlayerActionError("The economy is already at the end of that direction.")
+            economic_preference[politics.ECONOMIC_DRIFT_KEY] = economic_drift
         if not isinstance(automation, dict) or set(automation) - self._AUTOMATION_KEYS:
             raise PlayerActionError("Invalid automation settings.")
         if any(not isinstance(value, bool) for value in automation.values()):
@@ -261,6 +271,7 @@ class PlayerActions:
         except ValueError as exc:
             raise PlayerActionError(str(exc)) from exc
         return {"type": "country_preferences", "political_drift": drift,
+                **economic_preference,
                 "automation": {key: bool(automation.get(key, False))
                                for key in self._AUTOMATION_KEYS},
                 "conscription_slider": float(conscription),
@@ -752,6 +763,8 @@ class PlayerActions:
                     apply_research_selection(country_data, command)
                 elif command["type"] == "country_preferences":
                     country_data["political_drift"] = command["political_drift"]
+                    if politics.ECONOMIC_DRIFT_KEY in command:
+                        politics.set_economic_drift(self.world.nation_data, country_id, command[politics.ECONOMIC_DRIFT_KEY])
                     country_data["automation"] = copy.deepcopy(command["automation"])
                     country_data["conscription_slider"] = command["conscription_slider"]
                     country_data["mat_to_fuel_slider"] = command["mat_to_fuel_slider"]
@@ -867,6 +880,7 @@ def collect_map_commands(context, country_id: str) -> list[dict[str, Any]]:
     commands.append({"type": "research_queue", "tech_names": tech_names})
     commands.append({"type": "country_preferences",
                      "political_drift": country_data.get("political_drift", 0),
+                     politics.ECONOMIC_DRIFT_KEY: politics.economic_drift(world_state.nation_data, country_id),
                      "automation": copy.deepcopy(country_data.get("automation", {})),
                      "conscription_slider": country_data.get("conscription_slider", 1.0),
                      "mat_to_fuel_slider": country_data.get("mat_to_fuel_slider", 0.0),

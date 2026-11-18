@@ -5,6 +5,7 @@ import data.constants as c
 from data.io import standalone_music
 from types import SimpleNamespace
 from data.state_access import session_for, world_for
+from map_logic import politics
 from map_logic.diplomacy import faction_records, diplomacy_lifecycle
 from data.queries.content import get_research_years
 from data.queries.nation_summary import get_shared_country_economy_summaries
@@ -383,7 +384,7 @@ def player_snapshot_projection(context, snapshot, country_id):
     private_fields = ("production_queue", "current_research", "research_queue", "research_progress",
         "research", "inbox", "pending_diplomacy", "diplo_responses", "diplo_draft_lists",
         "queued_ai_actions", "ai_notebook", "orders", "armies", "automation", "materials",
-        "manpower", "fuel", "manpower_pool", "materials_pool", "fuel_pool")
+        "manpower", "fuel", "manpower_pool", "materials_pool", "fuel_pool", politics.ECONOMIC_DRIFT_KEY)
     # New record fields must not bypass the established country visibility policy.
     result["factions"] = {
         identity: {key: copy.deepcopy(record[key])

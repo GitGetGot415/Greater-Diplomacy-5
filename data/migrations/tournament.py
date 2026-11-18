@@ -61,7 +61,7 @@ def tournament_player_intents(payload, map_data=None):
                 if key in older and older[key] != command.get(key):
                     raise ValueError("Conflicting unit choices in the move file.")
         elif kind == "country_preferences":
-            for key in ("political_drift", "automation", "conscription_slider",
+            for key in ("political_drift", politics.ECONOMIC_DRIFT_KEY, "automation", "conscription_slider",
                         "mat_to_fuel_slider", "custom_production_units"):
                 if key in country and country[key] != command.get(key):
                     raise ValueError("Conflicting country choices in the move file.")
@@ -105,6 +105,14 @@ def legacy_player_country(context, country_id, nation_update):
     for key in ("faction", "is_faction_leader", "faction_pressure", "faction_tenure"):
         if key in faction_state:
             merged[key] = faction_state[key]
+        else:
+            merged.pop(key, None)
+
+    # Only current intent files can propose economic drift. Snapshot moves
+    # predate the economic axis and must preserve the host's coordinates.
+    for key in (politics.ECONOMIC_VALUE_KEY, politics.ECONOMIC_DRIFT_KEY):
+        if key in existing:
+            merged[key] = existing[key]
         else:
             merged.pop(key, None)
 

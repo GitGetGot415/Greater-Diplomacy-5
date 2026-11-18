@@ -1558,6 +1558,56 @@ class RealtimeStrategicCommandCoverageTests(unittest.TestCase):
             driver.process_turn({"A": [empty]})
         self.assertNotIn(politics.POLICY_KEY, map_ref.nation_data["A"])
 
+    def test_economic_draft_moves_server_position_at_resolution(self):
+        from map_logic import politics
+
+        map_ref = self.make_map()
+        politics.set_economic_value(map_ref.nation_data, "A", 4)
+        driver = MapRealtimeDriver(map_ref)
+        preferences = {"type": "country_preferences", politics.ECONOMIC_DRIFT_KEY: -1}
+        canonical = driver.validate_draft("A", [preferences])
+        self.assertEqual(politics.economic_drift(map_ref.nation_data, "A"), 0)
+
+        async def prepare(_context):
+            pass
+
+        async def resolve(context):
+            politics.tick(context)
+
+        with mock.patch("map_logic.system32.turn_processor.prepare_turn", new=prepare), \
+                mock.patch("map_logic.system32.turn_processor.resolve_turn_logic", new=resolve):
+            driver.process_turn({"A": canonical})
+
+        self.assertEqual(politics.economic_value(map_ref.nation_data, "A"), 4 - c.POLITICS_STEP)
+        self.assertEqual(politics.economic_drift(map_ref.nation_data, "A"), -1)
+        self.assertEqual(politics.economic_value(map_ref.nation_data, "B"), c.POLITICS_START)
+        self.assertEqual(politics.economic_drift(map_ref.nation_data, "B"), 0)
+
+        for extra_fields in ({politics.ECONOMIC_DRIFT_KEY: True}, {politics.ECONOMIC_DRIFT_KEY: 2},
+                             {politics.ECONOMIC_VALUE_KEY: 8}):
+            with self.assertRaises(RealtimeError):
+                driver.validate_draft("A", [{**preferences, **extra_fields}])
+        with self.assertRaises(RealtimeError):
+            driver.validate_draft("Unknown", [preferences])
+        politics.set_economic_value(map_ref.nation_data, "A", c.POLITICS_MIN)
+        with self.assertRaises(RealtimeError):
+            driver.validate_draft("A", [preferences])
+
+    def test_foreign_economic_position_is_visible_and_drift_is_private(self):
+        from data import queries
+        from map_logic import politics
+
+        map_ref = self.make_map()
+        politics.set_economic_drift(map_ref.nation_data, "A", 1)
+        politics.set_economic_value(map_ref.nation_data, "B", -4)
+        politics.set_economic_drift(map_ref.nation_data, "B", -1)
+        snapshot = {"nation_data": map_ref.nation_data}
+        nations = queries.player_snapshot_projection(map_ref, snapshot, "A")["nation_data"]
+        self.assertEqual(nations["A"][politics.ECONOMIC_DRIFT_KEY], 1)
+        self.assertEqual(nations["B"][politics.ECONOMIC_VALUE_KEY], -4)
+        self.assertNotIn(politics.ECONOMIC_DRIFT_KEY, nations["B"])
+        self.assertEqual(map_ref.nation_data["B"][politics.ECONOMIC_DRIFT_KEY], -1)
+
 
 if __name__ == "__main__":
     unittest.main()
