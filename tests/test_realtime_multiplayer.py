@@ -181,8 +181,55 @@ class HostSnapshotTests(unittest.TestCase):
         self.assertEqual(host_view._realtime_snapshot_turn, 2)
         session.public_state.assert_called_once_with()
 
-        Map._apply_host_realtime_snapshot(host_view)
+        with mock.patch.object(session, "lock") as lock:
+            Map._apply_host_realtime_snapshot(host_view)
+            lock.__enter__.assert_not_called()
         session.public_state.assert_called_once_with()
+
+    def test_update_waits_for_the_current_turn_snapshot_before_syncing_a_draft(self):
+        board = object.__new__(Map)
+        board.realtime_multiplayer = True
+        board.realtime_player_id = "player"
+        board.player_country = "A"
+        board._unit_selection_turn = board.time_manager.total_turns
+        board._unit_selection_player = board.player_country
+        board.show_player_ready_screen = True
+        board.show_navigation_intro_when_ready = False
+        board.centers_need_update = False
+        board.is_editor = False
+        board.elements, board.camera = [], mock.Mock()
+        board.realtime_session = SimpleNamespace(
+            phase="TURN", turn_number=2, sync_draft=mock.Mock(),
+            players={"player": SimpleNamespace(submitted=False, eliminated=False)},
+        )
+        board._realtime_snapshot_turn = 1
+
+        with mock.patch("data.multiplayer.realtime.session.collect_map_commands", return_value=[]) as collect, \
+                mock.patch.object(pygame.mouse, "get_pressed", return_value=(False, False, False)):
+            board.update()
+            collect.assert_not_called()
+            self.assertTrue(board._realtime_draft_dirty)
+
+            board._realtime_snapshot_turn = 2
+            board.update()
+
+        collect.assert_called_once_with(board, "A")
+        board.realtime_session.sync_draft.assert_called_once_with("player", 2, [])
+
+    def test_submit_confirmation_stays_bound_to_the_turn_displayed_when_opened(self):
+        from screens.game import map_buttons
+
+        session = SimpleNamespace(turn_number=1, sync_draft=mock.Mock(), submit=mock.Mock())
+        board = SimpleNamespace(realtime_session=session, _realtime_snapshot_turn=1, show_feedback=mock.Mock())
+        with mock.patch.object(map_buttons.dialogs, "ask_yes_no") as dialog:
+            map_buttons._submit_realtime_turn(board)
+        session.turn_number = board._realtime_snapshot_turn = 2
+
+        dialog.call_args.args[2](True)
+
+        session.sync_draft.assert_not_called()
+        session.submit.assert_not_called()
+        board.show_feedback.assert_called_once()
 
     def test_snapshot_heartbeats_keep_drafts_and_final_result_replaces_them(self):
         board = object.__new__(Map)

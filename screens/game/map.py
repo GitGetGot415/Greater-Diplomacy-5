@@ -1613,9 +1613,11 @@ class Map(StateAccess, Screen):
         from data.multiplayer.realtime.session import apply_realtime_turn_snapshot, realtime_snapshot_is_new
 
         session = self.realtime_session
+        turn, phase = session.turn_number, session.phase
+        if phase not in ("TURN", "GAME_OVER") or not realtime_snapshot_is_new(self, turn, phase):
+            return
         with session.lock:
-            turn, phase = session.turn_number, session.phase
-            if phase not in ("TURN", "GAME_OVER") or not realtime_snapshot_is_new(self, turn, phase):
+            if (turn, phase) != (session.turn_number, session.phase):
                 return
             # Detach live state before releasing the lock. The UI rebuild runs outside it.
             snapshot = copy.deepcopy(session.public_state().get("game_state"))
@@ -1632,7 +1634,9 @@ class Map(StateAccess, Screen):
             self._apply_host_realtime_snapshot()
             session = self.realtime_session
             player = session.players.get(self.realtime_player_id)
-            if (session.phase == "TURN" and player and not player.submitted and not player.eliminated
+            turn = session.turn_number
+            if (session.phase == "TURN" and turn == self._realtime_snapshot_turn
+                    and player and not player.submitted and not player.eliminated
                     and not self.realtime_submission_pending
                     and self._realtime_draft_dirty):
                 # Keep the server's last accepted draft current after a real
@@ -1641,10 +1645,10 @@ class Map(StateAccess, Screen):
                 # to rediscover an unchanged draft.
                 from data.multiplayer.realtime.session import collect_map_commands, RealtimeError
                 commands = collect_map_commands(self, self.player_country)
-                fingerprint = f"{session.turn_number}:" + json.dumps(commands, sort_keys=True, separators=(",", ":"))
+                fingerprint = f"{turn}:" + json.dumps(commands, sort_keys=True, separators=(",", ":"))
                 if fingerprint != self._realtime_draft_fingerprint:
                     try:
-                        if session.sync_draft(self.realtime_player_id, session.turn_number, commands) is not False:
+                        if session.sync_draft(self.realtime_player_id, turn, commands) is not False:
                             self._realtime_draft_fingerprint = fingerprint
                     except RealtimeError as error:
                         self.show_feedback(f"Order update rejected: {error}")
