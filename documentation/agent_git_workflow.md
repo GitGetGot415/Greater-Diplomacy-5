@@ -6,7 +6,8 @@ By default you should never do this. Unless the user allows it.
 
 1. An explicit request to make changes authorizes creating a local feature branch from `main`, staging the changes for that task, and committing them locally. Answer questions and review-only requests without creating a branch.
 2. Check `git status --short --branch` before editing. Use `git switch -c <branch> main` in a clean checkout. If the checkout has unrelated work, use a separate Git worktree based on `main` to preserve the user's changes and staging area. Make task commits on the feature branch.
-3. Review the staged diff before each commit. Include only changes that belong to the task and follow the repository's verification rules.
+3. For substantial changes, aim to split the work into focused commits that can be reviewed independently. Keep each change with its relevant tests. A single commit is fine for small or tightly coupled changes.
+4. Review the staged diff before each commit. Include only changes that belong to the task and follow the repository's verification rules.
 
 ## Credit the agent in commit messages
 
@@ -16,7 +17,13 @@ Keep the user's configured Git author. For each commit an agent helped write, ad
 Co-authored-by: Agent Name <verified GitHub-linked email>
 ```
 
-If you cannot verify the agent's email, record the credit with a plain-text trailer such as `Assisted-by: Codex` or `Assisted-by: Gemini CLI`.
+Use this verified trailer for Codex contributions. [Codex GitHub account](https://github.com/codex)
+
+```text
+Co-authored-by: Codex <267193182+codex@users.noreply.github.com>
+```
+
+If you cannot verify the agent's email, record the credit with a plain-text trailer such as `Assisted-by: Agent Name`.
 
 ## Ask before publishing
 
