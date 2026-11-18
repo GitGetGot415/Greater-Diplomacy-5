@@ -28,10 +28,6 @@ MAX_MAIL_DRAFT_LENGTH = 120
 # were previously three copy-pasted blocks per behaviour, nine in total.
 MAP_PANELS = ("sidebar", "diplomatic", "queue")
 
-# A right-press that moves this many pixels before release is a pan, not a
-# click choosing a Relations viewpoint. Matches the box-select click size.
-RELATIONS_CLICK_SLOP = 4
-
 # The map maker's brushes use the left and right buttons, so they never pan there.
 EDITOR_BRUSH_MOUSE_BUTTONS = {1, 3}
 
@@ -94,6 +90,12 @@ def _select_tactical_unit_stack(map_screen, position):
     return True
 
 
+def set_inspected_province(map_screen, province):
+    """Change the province inspection and update the active Relations layer."""
+    map_screen.selected_province = province
+    refresh_map.update_relations_view(map_screen)
+
+
 def _select_map_province(map_screen, position, navigate=True):
     """Run the normal primary-click province selection after a box-select check."""
     if (map_screen.viewing_ai_moves
@@ -108,7 +110,7 @@ def _select_map_province(map_screen, position, navigate=True):
     if (map_screen.player_country == c.TOURNAMENT_SPECTATOR
             and not queries.is_province_visible(map_screen, province["id"])):
         return False
-    map_screen.selected_province = province
+    set_inspected_province(map_screen, province)
     sidebar_info.prepare_unit_roster(map_screen, province)
     ui_info_popup.prepare_relation_indicators(map_screen)
     camera_handler.center_camera_on_province(
@@ -493,7 +495,7 @@ def _interactive_province(map_screen, pos):
     return province
 
 
-def has_secondary_map_action(map_screen, position, *, allow_relations=True):
+def has_secondary_map_action(map_screen, position):
     """Evaluate a hold at an input boundary; rendering uses the cached result."""
     if (map_screen.selection_mode or map_screen.is_refreshing
             or map_screen._ignore_right_until_release):
@@ -512,44 +514,9 @@ def has_secondary_map_action(map_screen, position, *, allow_relations=True):
                        for target in queries.get_editor_paint_region(
                            province, map_screen.id_to_province, "CORE"))
         return False
-    if (allow_relations and map_screen.map_mode == "RELATIONS"
-            and not map_screen.selected_unit_records()):
-        return (refresh_map.relations_viewpoint_for(map_screen, province)
-                != refresh_map.shown_relations_viewpoint(map_screen))
     return (map_screen.secondary_mode == "UNITS"
             and map_screen.can_issue_selected_move_orders(
                 province, append=bool(pygame.key.get_mods() & pygame.KMOD_SHIFT)))
-
-
-def _handle_relations_viewpoint_click(map_screen, event, on_ui):
-    """Right-click a country in the Relations view to see the map as it sees everyone.
-
-    A right-drag pans the map instead, and with units selected a right-click
-    still gives their move orders. Returns True when the click chose a view.
-    Plays the province click sound, which is this click's only sound.
-    """
-    if (event.type not in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP)
-            or event.button != 3 or map_screen.map_mode != "RELATIONS"):
-        return False
-    if event.type == pygame.MOUSEBUTTONDOWN:
-        map_screen._relations_click_start = None if on_ui else event.pos
-        return False
-
-    start = map_screen._relations_click_start
-    map_screen._relations_click_start = None
-    if (start is None or on_ui or map_screen.is_refreshing
-            or map_screen._ignore_right_until_release
-            or map_screen.selected_unit_records()
-            or abs(event.pos[0] - start[0]) >= RELATIONS_CLICK_SLOP
-            or abs(event.pos[1] - start[1]) >= RELATIONS_CLICK_SLOP):
-        return False
-    province = _interactive_province(map_screen, event.pos)
-    refresh_map.choose_relations_viewpoint(map_screen, province)
-    # The same sound as a left-click on a province, and likewise silent on
-    # empty space.
-    if province is not None:
-        sound_effects.play_ui_sound("click_province")
-    return True
 
 
 def _handle_editor_undo(map_screen, event):
@@ -814,7 +781,7 @@ def _handle_combat_bubble_click(map_screen, event, on_ui, origin=None):
         map_screen.select_map_units(units, sound_kind=None)
     if origin is None:
         map_screen._orders_entered_from_combat_bubble = True
-        map_screen.selected_province = province
+        set_inspected_province(map_screen, province)
         map_screen.change_state(orders_state(map_screen))
     else:
         origin.inspect_province(province)
@@ -902,10 +869,6 @@ def handle_map_events(map_screen, event):
     # Bubbles are drawn above unit stacks and take the click even where their
     # hitboxes overlap. Ordinary selection handles the remaining map space.
     if _handle_combat_bubble_click(map_screen, event, on_ui):
-        return
-    # Ahead of unit selection: in the Units view it takes every release of the
-    # move-orders button, even with no units selected.
-    if _handle_relations_viewpoint_click(map_screen, event, on_ui):
         return
     if _handle_map_unit_selection(map_screen, event, on_ui):
         return

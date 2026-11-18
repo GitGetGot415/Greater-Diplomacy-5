@@ -147,7 +147,7 @@ class Orders_Screen(UnitCommandControls, Screen):
     def inspect_province(self, province, preserve_scroll=False):
         """Retarget the live Orders workspace to another visible stack."""
         self.target_province = province
-        self.map_screen.selected_province = province
+        map_input.set_inspected_province(self.map_screen, province)
         self.battle_screen = None
         if not preserve_scroll:
             self.scroll_y = 0

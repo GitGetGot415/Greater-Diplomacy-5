@@ -1,7 +1,7 @@
 import pygame
 import data.constants as c
 from data import queries
-from ui.rendering import overlay_renderer, refresh_map
+from ui.rendering import overlay_renderer
 
 UNIT_PREVIEW_LIMIT = 5
 
@@ -37,14 +37,16 @@ def draw_tooltip(map_screen, surface):
     prov = map_screen.hovered_province
 
     # --- FOG OF WAR VISIBILITY CHECK ---
-    is_visible = queries.is_province_visible(map_screen, prov["id"])
+    show_details = map_screen.base_layer != "RELATIONS" or not map_screen.selected_province
+    is_visible = show_details and queries.is_province_visible(map_screen, prov["id"])
 
     owner_id = prov.get('owner', 'Unclaimed')
     owner_display = map_screen.nation_data.get(owner_id, {}).get("name", owner_id)
 
     # Coastal Sea and Inland Sea display
     terrain = prov.get('terrain', 'Unknown')
-    if queries.is_water_province(prov):
+    is_water = queries.is_water_province(prov)
+    if is_water:
         owner_display = terrain.replace('_', ' ').title()
 
     # 1. Start with the basic header info based on the primary map mode
@@ -52,11 +54,14 @@ def draw_tooltip(map_screen, surface):
         terrain_display = terrain.replace('_', ' ').title()
         lines = [f"ID: {prov['id']} | {terrain_display}"]
     elif map_screen.base_layer == "RELATIONS":
-        # Display Relations: the owner's opinion of whichever country's view
-        # is showing, as the map colors it.
-        viewpoint = refresh_map.shown_relations_viewpoint(map_screen) or map_screen.player_country
-        rel_score = queries.get_relation_score(owner_id, viewpoint, map_screen.nation_data, map_screen.id_to_province)
-        lines = [f"ID: {prov['id']} | {owner_display}", f"Opinion: {rel_score}"]
+        lines = [f"ID: {prov['id']} | {owner_display}"]
+        viewpoint = map_screen._relations_viewpoint
+        score = map_screen._relations_scores.get(owner_id)
+        if (score is not None and not is_water
+                and viewpoint in map_screen.nation_data and viewpoint not in c.UNPLAYABLE_NATIONS):
+            name = queries.get_country_display_name(viewpoint, map_screen.nation_data)
+            signed_score = f"{score:+d}" if score else "0"
+            lines.append(f"{name}'s opinion: {signed_score}")
     else:
         lines = [f"ID: {prov['id']} | {owner_display}"]
 
@@ -67,8 +72,8 @@ def draw_tooltip(map_screen, surface):
             lines.append(f"Cores: {', '.join(core_names)}")
 
     # 2. Add contextual info based on secondary view mode
-    if map_screen.secondary_mode == "BLANK":
-        # The header is already set correctly above, no need to overwrite it
+    if not show_details or map_screen.secondary_mode == "BLANK":
+        # With a province selected, show only the Relations score and header.
         pass
 
     elif map_screen.secondary_mode == "UNITS":

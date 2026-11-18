@@ -1,5 +1,5 @@
 import pygame
-from ui.rendering import hover_renderer, province_select, overlay_renderer, country_names, refresh_map
+from ui.rendering import hover_renderer, province_select, overlay_renderer, country_names
 from ui.panels import turn_progress
 from ui.panels import minimap
 from data import queries
@@ -124,7 +124,7 @@ def draw_map_screen(map_screen, surface):
         return
         
     # --- LAYER 1: THE BASE MAP ---
-    current_base = refresh_map.shown_base_map(map_screen)
+    current_base = map_screen.active_map
 
     vw = surface.get_width() / map_screen.camera.zoom
     vh = (surface.get_height() - map_screen.total_ui_h) / (map_screen.camera.zoom * map_screen.camera.tilt_factor)
@@ -428,9 +428,8 @@ def draw_map_screen(map_screen, surface):
                 bg=style["color"], gradient_strength=style["gradient_strength"])
 
     # --- LAYER 6: FEEDBACK & TOOLTIPS ---
-    # Check flag before drawing the tooltip
-    # this is the stuff that makes it so that if you select a province you don't display the tooltip
-    if map_screen.hovered_province and not map_screen.selected_province and not map_screen.hide_tooltip: 
+    show_hover = not map_screen.selected_province or (map_screen.base_layer == "RELATIONS" and not map_screen.selection_mode)
+    if map_screen.hovered_province and show_hover and not map_screen.hide_tooltip:
         tooltip.draw_tooltip(map_screen, surface)
         
     # --- LAYER 7: EXIT CONFIRMATION MODAL ---

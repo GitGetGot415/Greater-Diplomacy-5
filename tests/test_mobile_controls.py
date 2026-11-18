@@ -450,23 +450,12 @@ class SecondaryActionAvailabilityTests(unittest.TestCase):
             self.assertFalse(Map.has_secondary_action_at(self.game, (600, 350)))
         available.assert_not_called()
 
-    def test_relations_hold_only_offers_a_different_viewpoint(self):
+    def test_relations_layer_does_not_add_a_hold_action(self):
         self.game.map_mode = "RELATIONS"
         self.game.selected_unit_records = lambda: []
-        self.game.nation_data["B"] = {}
         foreign = {"id": 3, "owner": "B", "units": []}
-        with (mock.patch.object(queries, "get_clicked_province", return_value=foreign) as hit,
-              mock.patch.object(map_input.refresh_map, "shown_relations_viewpoint", return_value=None) as shown):
-            self.assertTrue(map_input.has_secondary_map_action(self.game, (600, 350)))
-            shown.return_value = "B"
+        with mock.patch.object(queries, "get_clicked_province", return_value=foreign):
             self.assertFalse(map_input.has_secondary_map_action(self.game, (600, 350)))
-            hit.return_value = self.destination
-            self.assertTrue(map_input.has_secondary_map_action(self.game, (600, 350)))
-            shown.return_value = None
-            self.assertFalse(map_input.has_secondary_map_action(self.game, (600, 350)))
-            hit.return_value = foreign
-            self.assertFalse(map_input.has_secondary_map_action(self.game, (600, 350),
-                                                                allow_relations=False))
 
     def test_editor_paint_holds_require_an_owner_to_pick_or_a_core_to_remove(self):
         self.game.is_editor = True

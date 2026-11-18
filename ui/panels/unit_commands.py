@@ -1080,8 +1080,7 @@ class UnitCommandControls:
         if self.read_only or self.bombarding_unit_index is not None:
             return False
         return (self.touch_map_at(position) is self.map_screen
-                and map_input.has_secondary_map_action(self.map_screen, position,
-                                                       allow_relations=False))
+                and map_input.has_secondary_map_action(self.map_screen, position))
 
     def handle_events(self, events):
         for event in events:

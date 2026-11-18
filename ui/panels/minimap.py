@@ -1,6 +1,5 @@
 import pygame
 import data.constants as c
-from ui.rendering import refresh_map
 
 # ==========================================
 # LAYOUT
@@ -26,7 +25,7 @@ def minimap_rect(map_screen, screen_width, screen_height):
 
 def _map_image(map_screen, size, ocean_color):
     """Return a cached miniaturized active map layer, refreshing on layer changes."""
-    source = refresh_map.shown_base_map(map_screen)
+    source = map_screen.active_map
     if source is None:
         return None
     fog = map_screen.fog_map

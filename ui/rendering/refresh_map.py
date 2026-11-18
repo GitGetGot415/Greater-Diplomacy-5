@@ -380,15 +380,24 @@ def refresh_political_map(map_screen):
 RELATIONS_VIEWPOINT_COLOR = (0, 0, 255)
 
 
-def _relations_colors(map_screen, viewpoint):
-    """get_data for the relations map: every country colored by its score toward viewpoint."""
+def _selected_relations_viewpoint(map_screen):
+    province = map_screen.selected_province
+    if province and not map_screen.selection_mode and not queries.is_water_province(province):
+        owner = province.get("owner")
+        if owner in map_screen.nation_data and owner not in c.UNPLAYABLE_NATIONS and owner not in c.UNOWNED_LAND_OWNERS:
+            return owner
+    return map_screen.player_country
+
+
+def refresh_relations_map(map_screen):
+    """Bake the selected country's opinions into the Relations layer and its hover scores."""
+    viewpoint = _selected_relations_viewpoint(map_screen)
     # The score depends only on who owns the tile, so score each owner once,
     # and all of them in one walk over the provinces.
     rated = {data.get("owner", "Unclaimed") for data in map_screen.map_data.values()
              if data.get("terrain", "plains") not in VISUAL_WATER_MAPPING}
     rated.difference_update(c.UNOWNED_LAND_OWNERS)
-    rated.discard(viewpoint)
-    scores = queries.get_relation_scores_toward(
+    scores = queries.get_relation_scores_from(
         viewpoint, rated, map_screen.nation_data, map_screen.id_to_province)
 
     def get_data(data):
@@ -400,85 +409,18 @@ def _relations_colors(map_screen, viewpoint):
         else:
             color = queries.get_relation_color(scores[owner])
         return owner, color
-    return get_data
+    _refresh_mode(map_screen, "Relations", "relations_map", "RELATIONS", get_data)
+    map_screen._relations_viewpoint = viewpoint
+    map_screen._relations_scores = scores
 
 
-def refresh_relations_map(map_screen):
-    """Rebuilds the relations map surface instantly using a NumPy LUT."""
-    _refresh_mode(map_screen, "Relations", "relations_map", "RELATIONS",
-                  _relations_colors(map_screen, map_screen.player_country))
-    # A chosen country's view was built from the state before this refresh.
-    # Rebuild it while that country still owns land and the same player is
-    # looking; otherwise return to the player's own view.
-    view = map_screen._relations_view
-    map_screen._relations_view = None
-    if view is not None and view[0] == map_screen.player_country:
-        _show_relations_view(map_screen, view[1])
+def update_relations_view(map_screen):
+    """Follow province selection while the Relations layer is active."""
+    # Setup and lightweight input callers can run before map layers exist.
+    if (getattr(map_screen, "map_mode", None) == "RELATIONS"
+            and _selected_relations_viewpoint(map_screen) != map_screen._relations_viewpoint):
+        refresh_relations_map(map_screen)
 
-
-# Right-clicking a country in the Relations view shows the map as that country
-# sees everyone, until the player right-clicks elsewhere or changes map layer.
-# _relations_view holds (player who chose it, chosen country, surface).
-
-
-def relations_viewpoint_for(map_screen, province):
-    """The country a right-click on this province chooses, or None for the player's own view.
-
-    Water, unowned land, unplayable owners, the player's own land and no
-    province at all choose the player's view.
-    """
-    if province is None or queries.is_water_province(province):
-        return None
-    owner = province.get("owner", "Unclaimed")
-    if (owner == map_screen.player_country or owner in c.UNOWNED_LAND_OWNERS
-            or owner in c.UNPLAYABLE_NATIONS or owner not in map_screen.nation_data):
-        return None
-    return owner
-
-
-def _show_relations_view(map_screen, viewpoint):
-    owns_land = any(data.get("owner") == viewpoint for data in map_screen.map_data.values()
-                    if data.get("terrain", "plains") not in VISUAL_WATER_MAPPING)
-    if not owns_land:
-        return
-    surface = _build_map_surface(map_screen, _relations_colors(map_screen, viewpoint))
-    map_screen._relations_view = (map_screen.player_country, viewpoint, surface)
-
-
-def choose_relations_viewpoint(map_screen, province):
-    """Shows the relations map from the right-clicked province's country.
-
-    Called from input handling, never from drawing.
-    """
-    viewpoint = relations_viewpoint_for(map_screen, province)
-    if viewpoint is None:
-        map_screen._relations_view = None
-    elif viewpoint != shown_relations_viewpoint(map_screen):
-        _show_relations_view(map_screen, viewpoint)
-
-
-def _showing_player_relations(map_screen):
-    # Screens that swap another surface in for their own draw keep map_mode,
-    # so check the surface itself.
-    return (map_screen.map_mode == "RELATIONS"
-            and map_screen.active_map is map_screen.relations_map)
-
-
-def shown_relations_viewpoint(map_screen):
-    """The other country whose relations view is on screen, or None for the player's."""
-    if not _showing_player_relations(map_screen):
-        return None
-    view = map_screen._relations_view
-    if view is None or view[0] != map_screen.player_country:
-        return None
-    return view[1]
-
-
-def shown_base_map(map_screen):
-    """The surface the renderer draws as the map: the active map, or a chosen relations view."""
-    if shown_relations_viewpoint(map_screen) is None:
-        return map_screen.active_map
-    return map_screen._relations_view[2]
 
 def refresh_cores_map(map_screen):
     """Rebuilds the cores map surface instantly using a NumPy LUT."""

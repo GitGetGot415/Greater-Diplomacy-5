@@ -46,38 +46,28 @@ def get_mutual_relation_breakdowns(nation_a, nation_b, nation_data, id_to_provin
             tuple(_relation_factors(nation_b, nation_a, nation_data, claim_count)))
 
 
-def get_relation_scores_toward(nation_b, nations, nation_data, id_to_province=None):
-    """get_relation_score(nation_a, nation_b, ...) for every nation_a in nations.
-
-    The relations map scores every country toward one viewpoint. Counting
-    claims pair by pair walked every province once per country; this walks the
-    provinces once for all of them and gives the same scores.
-    """
-    claim_counts = None
+def get_relation_scores_from(viewpoint, nations, nation_data, id_to_province=None):
+    """One country's opinions of several others, counting disputes in one map scan."""
+    claim_counts = dict.fromkeys(nations, 0)
     if id_to_province:
-        claim_counts = dict.fromkeys(nations, 0)
-        claims_b = set(nation_data.get(nation_b, {}).get("claims", []))
-        # Which rated countries claim each province, from their claim lists.
+        viewpoint_claims = set(nation_data.get(viewpoint, {}).get("claims", []))
         claimed_by = collections.defaultdict(set)
-        for nation_a in claim_counts:
-            for province_id in nation_data.get(nation_a, {}).get("claims", []):
-                claimed_by[province_id].add(nation_a)
+        for nation in claim_counts:
+            for province_id in nation_data.get(nation, {}).get("claims", []):
+                claimed_by[province_id].add(nation)
 
         for prov in id_to_province.values():
             owner = prov.get("owner")
-            if owner == nation_b:
-                # Each rated country with a core or claim here claims nation_b's land.
-                for nation_a in set(prov.get("cores", [])) | claimed_by.get(prov["id"], set()):
-                    if nation_a in claim_counts:
-                        claim_counts[nation_a] += 1
+            if owner == viewpoint:
+                for claimant in set(prov.get("cores", [])) | claimed_by.get(prov["id"], set()):
+                    if claimant in claim_counts:
+                        claim_counts[claimant] += 1
             elif owner in claim_counts:
-                if nation_b in prov.get("cores", []) or prov["id"] in claims_b:
+                if viewpoint in prov.get("cores", []) or prov["id"] in viewpoint_claims:
                     claim_counts[owner] += 1
 
-    return {nation_a: 0 if nation_a == nation_b else _relation_score(
-                nation_a, nation_b, nation_data,
-                None if claim_counts is None else claim_counts[nation_a])
-            for nation_a in nations}
+    return {nation: 0 if nation == viewpoint else _relation_score(viewpoint, nation, nation_data, count)
+            for nation, count in claim_counts.items()}
 
 
 def _relation_score(nation_a, nation_b, nation_data, claim_count):
