@@ -1,11 +1,10 @@
-"""Domestic politics: an ideological axis and timed national policies.
+"""Domestic politics: political and economic drift and timed national policies.
 
-A country trades how hard its armies hit against how fast it researches, and it
-cannot do it quickly -- picking a direction moves it by ``POLITICS_STEP`` per
-processed turn. Everyone starts at ``POLITICS_START``; the map editor can
-author a different starting position. A country may additionally pursue
-eligible policies. Their activation and cancellation durations are the
-respective ``POLICY_*_TURNS`` values below.
+The vertical axis trades army damage against research speed. The horizontal
+axis tracks the balance between planned and market economics. Each axis moves
+by ``POLITICS_STEP`` per processed turn while a direction is selected. Map
+authors can set a country's starting coordinates. National policies have their
+own activation and cancellation durations.
 
 Damage means every point of damage a nation's units deal, attacking or
 defending, plus bombardment. A lane fight is a simultaneous exchange with no
@@ -19,13 +18,15 @@ imported at module level from combat_rules without joining the queries cycle.
 from data.state_access import world_for, session_for
 import data.constants as c
 
-#: Where the two scalars live on nation_data[name]. Flat and defaulted, never
+#: Position and drift live on nation_data[name]. Flat and defaulted, never
 #: written at country-creation time: build_save_dict dumps nation_data verbatim
 #: and snapshot_history copies scalars by value, so persistence costs nothing,
 #: and reading through the accessors below covers every nation the base-template
 #: merge in load_map never sees -- rebellions, splinter states, generated maps.
 VALUE_KEY = "political_value"
 DRIFT_KEY = "political_drift"
+ECONOMIC_VALUE_KEY = "economic_value"
+ECONOMIC_DRIFT_KEY = "economic_drift"
 
 # Policies remain a flat mapping within nation_data so saves and history
 # snapshots need no schema migration.  Every card has its own lifecycle.
@@ -82,33 +83,47 @@ POLICIES_BY_ID = {policy["id"]: policy for policy in POLICIES}
 
 
 def clamp(value):
-    """A political value forced onto the axis, as an int."""
+    """Constrain a compass coordinate to the shared integer range."""
     try:
         return max(c.POLITICS_MIN, min(c.POLITICS_MAX, int(round(float(value)))))
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         return c.POLITICS_START
+
+
+def _read_value(nation_data, nation, key):
+    return clamp(nation_data.get(nation, {}).get(key, c.POLITICS_START))
 
 
 def value(nation_data, nation):
     """Where this nation sits, POLITICS_MIN..POLITICS_MAX. Centre by default."""
-    if not nation_data:
-        return c.POLITICS_START
-    return clamp(nation_data.get(nation, {}).get(VALUE_KEY, c.POLITICS_START))
+    return _read_value(nation_data or {}, nation, VALUE_KEY)
+
+
+def economic_value(nation_data, nation):
+    """Where the economy sits, from planned to market. Mixed by default."""
+    return _read_value(nation_data or {}, nation, ECONOMIC_VALUE_KEY)
+
+
+def _read_drift(nation_data, nation, key):
+    try:
+        raw = int(nation_data.get(nation, {}).get(key, 0) or 0)
+    except (TypeError, ValueError, OverflowError):
+        return 0
+    return max(-1, min(1, raw))
 
 
 def drift(nation_data, nation):
     """Which way it is heading: -1 libertarian, 0 holding, +1 authoritarian.
 
-    A direction persists until something changes it -- the player reopening the
-    tab, the AI reconsidering, or `tick` hitting the end of the axis.
+    A direction persists until the player or AI changes it or the axis reaches
+    an end.
     """
-    if not nation_data:
-        return 0
-    try:
-        raw = int(nation_data.get(nation, {}).get(DRIFT_KEY, 0) or 0)
-    except (TypeError, ValueError):
-        return 0
-    return max(-1, min(1, raw))
+    return _read_drift(nation_data or {}, nation, DRIFT_KEY)
+
+
+def economic_drift(nation_data, nation):
+    """Read the economic direction: -1 planned, 0 hold, +1 market."""
+    return _read_drift(nation_data or {}, nation, ECONOMIC_DRIFT_KEY)
 
 
 def set_value(nation_data, nation, new_value):
@@ -119,6 +134,26 @@ def set_value(nation_data, nation, new_value):
 def set_drift(nation_data, nation, direction):
     """Points a nation at one end of the axis, or stops it."""
     nation_data.setdefault(nation, {})[DRIFT_KEY] = max(-1, min(1, int(direction)))
+
+
+def set_economic_value(nation_data, nation, new_value):
+    """Set a scenario's starting economic position."""
+    nation_data.setdefault(nation, {})[ECONOMIC_VALUE_KEY] = clamp(new_value)
+
+
+def set_economic_drift(nation_data, nation, direction):
+    """Point a nation toward a planned or market economy, or hold."""
+    nation_data.setdefault(nation, {})[ECONOMIC_DRIFT_KEY] = max(-1, min(1, int(direction)))
+
+
+def advance(position, direction):
+    """Calculate the next position on either axis."""
+    return clamp(position + direction * c.POLITICS_STEP)
+
+
+def can_shift(position, direction):
+    """Allow holding anywhere and moving only when there is space."""
+    return direction == 0 or advance(position, direction) != position
 
 
 def policy(policy_id):
@@ -317,14 +352,17 @@ def effect_multiplier(nation_data, nation, effect):
     return result
 
 
-def _fraction(nation_data, nation):
-    """Position as -1.0..+1.0, which is what both multipliers are linear in."""
-    return value(nation_data, nation) / float(c.POLITICS_MAX)
+def axis_damage_multiplier(position):
+    return 1.0 + c.POLITICS_DAMAGE_SPAN * (position / float(c.POLITICS_MAX))
+
+
+def axis_research_multiplier(position):
+    return 1.0 - c.POLITICS_RESEARCH_SPAN * (position / float(c.POLITICS_MAX))
 
 
 def damage_multiplier(nation_data, nation):
     """What this nation's units multiply their damage by, including policy."""
-    axis_multiplier = 1.0 + c.POLITICS_DAMAGE_SPAN * _fraction(nation_data, nation)
+    axis_multiplier = axis_damage_multiplier(value(nation_data, nation))
     return axis_multiplier * effect_multiplier(nation_data, nation, "damage")
 
 
@@ -335,7 +373,7 @@ def research_multiplier(nation_data, nation):
     against: points_remaining simply stops falling, which is what "research is
     frozen" has to look like.
     """
-    axis_multiplier = 1.0 - c.POLITICS_RESEARCH_SPAN * _fraction(nation_data, nation)
+    axis_multiplier = axis_research_multiplier(value(nation_data, nation))
     return axis_multiplier * effect_multiplier(nation_data, nation, "research")
 
 
@@ -374,6 +412,14 @@ def label(political_value):
     return band(political_value)[1]
 
 
+def economic_label(position):
+    if position < c.POLITICS_START:
+        return "Planned"
+    if position > c.POLITICS_START:
+        return "Market"
+    return "Mixed"
+
+
 def palette(political_value):
     """The c.UI_COLORS name a position is drawn in.
 
@@ -390,26 +436,19 @@ def at_limit(political_value):
 
 
 def tick(context):
-    """One processed turn of drift, for every nation that has picked a direction.
-
-    Reaching either end clears the direction rather than leaving it pressed
-    against the wall: "stop at the maximum" and "stop because the player chose
-    to" then become the same state, which is what the map button's arrow badge
-    reads and what keeps the AI from re-deciding a move it cannot make.
-    """
+    """Advance each axis and clear its direction when it reaches an end."""
     world_state = world_for(context)
     for name, stats in world_state.nation_data.items():
-        if name == "GLOBAL_EVENTS" or name in c.UNPLAYABLE_NATIONS:
+        if name in c.UNPLAYABLE_NATIONS:
             continue
 
-        direction = drift(world_state.nation_data, name)
-        if not direction:
-            continue
-
-        new_value = clamp(value(world_state.nation_data, name) + direction * c.POLITICS_STEP)
-        stats[VALUE_KEY] = new_value
-        if at_limit(new_value):
-            stats[DRIFT_KEY] = 0
+        for value_key, drift_key in ((VALUE_KEY, DRIFT_KEY), (ECONOMIC_VALUE_KEY, ECONOMIC_DRIFT_KEY)):
+            direction = _read_drift(world_state.nation_data, name, drift_key)
+            if direction:
+                position = advance(_read_value(world_state.nation_data, name, value_key), direction)
+                stats[value_key] = position
+                if at_limit(position):
+                    stats[drift_key] = 0
 
     # Do this after political drift, before combat/economy/research resolve.
     # An activated policy becomes effective on the third processed turn; a

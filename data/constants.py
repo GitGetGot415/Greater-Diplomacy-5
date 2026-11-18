@@ -1269,15 +1269,14 @@ AI_TRADE_ROUNDING_LADDER = (1000, 500, 100, 50, 25, 10, 5)
 # ==========================================
 # POLITICS (map_logic/politics.py, map_logic/ai/ai_politics.py)
 # ==========================================
-# One domestic axis, libertarian at the bottom and authoritarian at the top,
-# trading how hard a nation's armies hit against how fast it researches. A
-# nation moves one step per processed turn while a direction is selected, so
-# either extreme is ten turns away from the centre and twenty from the far end.
+# The political axis trades army damage against research speed. The economic
+# axis tracks how planned or market-oriented the economy is. Each direction
+# moves its axis independently once per processed turn.
 
-POLITICS_MIN = -10              # fully libertarian
-POLITICS_MAX = 10               # fully authoritarian
-POLITICS_START = 0              # everyone begins centrist
-POLITICS_STEP = 1               # how far one processed turn moves the value
+POLITICS_MIN = -10              # libertarian / planned
+POLITICS_MAX = 10               # authoritarian / market
+POLITICS_START = 0              # centrist / mixed
+POLITICS_STEP = 1               # distance per processed turn on each axis
 
 # Both effects are linear in the value and meet at 1.0 in the centre.
 POLITICS_DAMAGE_SPAN = 0.3      # +/-30% damage dealt at the extremes (0.7x .. 1.3x)

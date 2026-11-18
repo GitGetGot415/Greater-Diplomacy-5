@@ -130,6 +130,19 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
         self.assertEqual(screen.policy_scroll_x, -120)
 
 
+class EconomicDriftTests(unittest.TestCase):
+    def test_reaching_the_economic_edge_stops_only_horizontal_movement(self):
+        screen = screen_with(A=(0, -1))
+        politics.set_economic_value(screen.nation_data, "A", c.POLITICS_MAX - c.POLITICS_STEP)
+        politics.set_economic_drift(screen.nation_data, "A", 1)
+        politics.tick(screen)
+
+        self.assertEqual(politics.economic_value(screen.nation_data, "A"), c.POLITICS_MAX)
+        self.assertEqual(politics.economic_drift(screen.nation_data, "A"), 0)
+        self.assertEqual(politics.value(screen.nation_data, "A"), -c.POLITICS_STEP)
+        self.assertEqual(politics.drift(screen.nation_data, "A"), -1)
+
+
 def screen_with(**by_nation):
     """A nation_data holder where each nation is (value, drift)."""
     nation_data = {}

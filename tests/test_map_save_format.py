@@ -9,14 +9,61 @@ import unittest
 import zipfile
 from unittest import mock
 
-from data import queries
+from data import migrations, queries
 from ui.dialogs import file_exchange
 from data.map import history_io, load_map, save_map
 import data.constants as c
 from tests.stub_map_screen import map_double, sample_map_screen
+from map_logic import politics
+from map_logic.system32.turn_processor import snapshot_history
 
 
 class MapSaveFormatTests(unittest.TestCase):
+    def test_compass_coordinates_survive_disk_load_and_selected_history(self):
+        context = sample_map_screen()
+        next(iter(context.map_data.values())).update(units=[], unit_queue=[])
+        context.time_manager.get_date_string = lambda: "Fixture date"
+        country = context.player_country
+        politics.set_value(context.nation_data, country, 6)
+        politics.set_drift(context.nation_data, country, -1)
+        snapshot_history(context)
+        context.time_manager.total_turns += 1
+        politics.set_economic_value(context.nation_data, country, -4)
+        politics.set_economic_drift(context.nation_data, country, 1)
+        snapshot_history(context)
+        history_turn = context.time_manager.total_turns
+        context.time_manager.total_turns += 1
+        politics.set_economic_value(context.nation_data, country, 3)
+        politics.set_economic_drift(context.nation_data, country, -1)
+        metadata = queries.build_save_dict(context, include_provinces=False)
+
+        with tempfile.TemporaryDirectory() as directory, \
+                mock.patch.object(queries, "get_settings", return_value={}):
+            with open(os.path.join(directory, "map_data.json"), "w", encoding="utf-8") as handle:
+                json.dump(queries.build_map_data_save(context), handle)
+            shutil.copyfile(os.path.join(c.BACKGROUNDS_DIR, "Province.png"), os.path.join(directory, "id_map.png"))
+            history_io.write(directory, context.history)
+            for turn, expected in ((None, (3, -1)), (history_turn, (-4, 1)), (history_turn - 1, (0, 0))):
+                with self.subTest(turn=turn):
+                    with open(os.path.join(directory, "meta.json"), "w", encoding="utf-8") as handle:
+                        json.dump(metadata, handle)
+                    loaded = load_map.load_backend_state(directory, history_turn=turn, skip_initial_income=True)
+                    self.assertEqual(politics.value(loaded.nation_data, country), 6)
+                    self.assertEqual(politics.drift(loaded.nation_data, country), -1)
+                    self.assertEqual((politics.economic_value(loaded.nation_data, country),
+                                      politics.economic_drift(loaded.nation_data, country)), expected)
+
+            metadata["version"] = f"v{migrations.CURRENT_VERSION - 1}"
+            metadata["nation_data"][country].pop(politics.ECONOMIC_VALUE_KEY)
+            metadata["nation_data"][country].pop(politics.ECONOMIC_DRIFT_KEY)
+            with open(os.path.join(directory, "meta.json"), "w", encoding="utf-8") as handle:
+                json.dump(metadata, handle)
+            older = load_map.load_backend_state(directory, skip_initial_income=True)
+            self.assertEqual(politics.value(older.nation_data, country), 6)
+            self.assertEqual(politics.drift(older.nation_data, country), -1)
+            self.assertEqual(politics.economic_value(older.nation_data, country), c.POLITICS_START)
+            self.assertEqual(politics.economic_drift(older.nation_data, country), 0)
+
     def tactical_context(self):
         context = sample_map_screen()
         library = {"Fixture Infantry I": {"health": 100, "speed": 2, "attack": 10, "defense": 3,
@@ -54,7 +101,6 @@ class MapSaveFormatTests(unittest.TestCase):
             self.assertFalse(unit_actions.unit_permission(loaded, "Avaria", units[0]))
             self.assertEqual(queries.build_save_dict(loaded)["tactical_player_unit_id"], player["unit_id"])
             # A historical selection takes its own control reference, rather than the latest save's.
-            from map_logic.system32.turn_processor import snapshot_history
             context.time_manager.get_date_string = lambda: "Fixture date"
             snapshot_history(context)
             history_io.write(directory, context.history)
