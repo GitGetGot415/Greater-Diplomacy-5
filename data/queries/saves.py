@@ -283,6 +283,14 @@ def saved_tactical_player_unit_id(context):
     return unit["unit_id"]
 
 
+def normalize_saved_diplomacy(context):
+    """Canonicalize faction and message identities before exporting live choices."""
+    world_state = world_for(context)
+    if hasattr(world_state, "factions"):
+        faction_records.records_for(world_state)
+    diplomacy_lifecycle.normalize_diplomatic_records(world_state.nation_data)
+
+
 def build_save_dict(context, *, include_provinces=True, compact_nations=False, include_local_preferences=False):
     """Standardize save state; only disk saves opt into country compaction.
 
@@ -291,11 +299,9 @@ def build_save_dict(context, *, include_provinces=True, compact_nations=False, i
     Disk saves opt into local display preferences. Network snapshots omit them.
     """
     world_state = world_for(context)
-    if hasattr(world_state, "factions"):
-        faction_records.records_for(world_state)
+    normalize_saved_diplomacy(world_state)
     session_state = session_for(context)
     from map_logic.system32 import unit_events
-    diplomacy_lifecycle.normalize_diplomatic_records(world_state.nation_data)
     scenario_settings = world_state.scenario_settings or {}
     # Keep this setting explicit in every new save. Older base maps omit it,
     # but their effective default is OFF and that default should survive the

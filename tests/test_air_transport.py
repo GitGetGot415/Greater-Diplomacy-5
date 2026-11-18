@@ -22,6 +22,10 @@ from tests.stub_map_screen import synchronous_progress
 from tests.tournament_fixtures import fast_tournament_crypto
 
 
+def move_intents(data, kind):
+    return [command for command in data["player_intents"] if command["type"] == kind]
+
+
 @fast_tournament_crypto()
 class TransportTests(unittest.TestCase):
     def setUp(self):
@@ -364,10 +368,15 @@ class TransportTests(unittest.TestCase):
 
     def test_tournament_rejects_invalid_or_stale_drop_atomically(self):
         client, plane, _cargo, _target = self.drop_client()
-        for transform in (lambda data: data["aircraft_orders"][0]["order"].update(base_id=999),
-                          lambda data: data["aircraft_orders"][0]["order"].update(target_id=True),
-                          lambda data: data["aircraft_orders"][0]["order"].update(target_id=2),
-                          lambda data: data["air_transport"][0].update(cargo_ids=[]),
+
+        def edit_order(data, **changes):
+            command = next(command for command in move_intents(data, "unit_order") if command["unit_id"] == plane["unit_id"])
+            command["order"].update(changes)
+
+        for transform in (lambda data: edit_order(data, base_id=999),
+                          lambda data: edit_order(data, target_id=True),
+                          lambda data: edit_order(data, target_id=2),
+                          lambda data: move_intents(data, "air_transport")[0].update(cargo_ids=[]),
                           lambda data: data.update(tournament_turn=0)):
             with self.subTest(transform=transform):
                 before = deepcopy(self.game.map_data)
@@ -651,9 +660,13 @@ class TransportTests(unittest.TestCase):
         foreign = wing(self.base, "Fixture Cargo", "B")
         wing(self.base, "Monoplane Transport")
         client = deepcopy(self.game)
-        for transform in (lambda data: data["air_transport"][0].update(cargo_ids=[foreign["unit_id"]]),
-                          lambda data: [command.update(cargo_ids=[self.cargo["unit_id"]])
-                                        for command in data["air_transport"]]):
+
+        def duplicate_cargo(data):
+            for command in move_intents(data, "air_transport"):
+                command["cargo_ids"] = [self.cargo["unit_id"]]
+
+        for transform in (lambda data: move_intents(data, "air_transport")[0].update(cargo_ids=[foreign["unit_id"]]),
+                          duplicate_cargo):
             with self.subTest(transform=transform):
                 before = deepcopy(self.game.map_data)
                 self.assertEqual(self.import_client(client, transform)["rejected"], 1)
@@ -716,13 +729,26 @@ class TransportTests(unittest.TestCase):
 
     def test_tournament_rejects_bad_transport_and_stale_turn_atomically(self):
         client = deepcopy(self.game)
-        for transform in (lambda data: data["air_transport"][0].update(cargo_ids=["missing"]),
-                          lambda data: data["air_transport"][0].update(province_id=2),
+        for transform in (lambda data: move_intents(data, "air_transport")[0].update(cargo_ids=["missing"]),
+                          lambda data: move_intents(data, "air_transport")[0].update(province_id=2),
                           lambda data: data.update(tournament_turn=0)):
             with self.subTest(transform=transform):
                 before = deepcopy(self.game.map_data)
                 self.assertEqual(self.import_client(client, transform)["rejected"], 1)
                 self.assertEqual(self.game.map_data, before)
+
+    def test_tournament_still_rejects_conflicting_older_transport_projections(self):
+        client = deepcopy(self.game)
+
+        def add_conflicting_projection(data):
+            transport = move_intents(data, "air_transport")[0]
+            data["air_transport"] = [dict(transport, cargo_ids=["different"])]
+
+        before = deepcopy(self.game.map_data)
+        summary = self.import_client(client, add_conflicting_projection)
+        self.assertEqual(summary["rejected"], 1)
+        self.assertIn("Conflicting aircraft cargo choices", summary["rejections"][0]["reason"])
+        self.assertEqual(self.game.map_data, before)
 
 
 class TransportSaveSmokeTests(unittest.TestCase):
