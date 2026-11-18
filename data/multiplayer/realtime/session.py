@@ -869,6 +869,20 @@ class RemoteSessionView:
         return self.client.send("unsubmit", {"turn": turn})
 
 
+def realtime_snapshot_is_new(context, turn, phase):
+    """A new planning turn or the final result supersedes the local draft."""
+    applied_turn = context._realtime_snapshot_turn
+    return (applied_turn is None or turn != applied_turn or
+            (phase == "GAME_OVER" and context._realtime_snapshot_phase != "GAME_OVER"))
+
+
+def apply_realtime_turn_snapshot(context, snapshot, turn, phase):
+    if snapshot and realtime_snapshot_is_new(context, turn, phase):
+        apply_authoritative_snapshot(context, snapshot)
+        context._realtime_snapshot_turn = turn
+        context._realtime_snapshot_phase = phase
+
+
 def apply_authoritative_snapshot(context, snapshot: dict[str, Any]) -> None:
     """Replace mutable game state on a client map after a server broadcast."""
     world_state = world_for(context)

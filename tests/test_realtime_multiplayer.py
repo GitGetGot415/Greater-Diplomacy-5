@@ -26,6 +26,7 @@ from data.multiplayer.realtime.session import (
     sanitize_display_name,
     MapRealtimeDriver,
     apply_authoritative_snapshot,
+    apply_realtime_turn_snapshot,
     collect_map_commands,
     default_advertised_address,
     load_reconnect_token,
@@ -165,10 +166,15 @@ class HostSnapshotTests(unittest.TestCase):
             "provinces": {"home": {"units": [{"owner": "A", "type": "Infantry"}]}},
             "date": {"day": 1, "month": 0, "year": 1939, "total_turns": 1},
         }
-        session = SimpleNamespace(phase="TURN", turn_number=2,
+        session = SimpleNamespace(phase="PROCESSING", turn_number=2, lock=threading.RLock(),
                                   public_state=mock.Mock(return_value={"game_state": snapshot}))
         host_view.realtime_session = session
 
+        Map._apply_host_realtime_snapshot(host_view)
+        session.public_state.assert_not_called()
+        self.assertEqual(host_view.map_data["home"]["units"], [])
+
+        session.phase = "TURN"
         Map._apply_host_realtime_snapshot(host_view)
 
         self.assertEqual(host_view.map_data["home"]["units"], snapshot["provinces"]["home"]["units"])
@@ -177,6 +183,22 @@ class HostSnapshotTests(unittest.TestCase):
 
         Map._apply_host_realtime_snapshot(host_view)
         session.public_state.assert_called_once_with()
+
+    def test_snapshot_heartbeats_keep_drafts_and_final_result_replaces_them(self):
+        board = object.__new__(Map)
+        snapshot = {"nation_data": {"A": {}}}
+        with mock.patch("data.multiplayer.realtime.session.apply_authoritative_snapshot") as apply:
+            apply_realtime_turn_snapshot(board, snapshot, 1, "TURN")
+            apply_realtime_turn_snapshot(board, snapshot, 1, "TURN")
+            apply_realtime_turn_snapshot(board, snapshot, 1, "PROCESSING")
+            apply.assert_called_once_with(board, snapshot)
+
+            apply_realtime_turn_snapshot(board, snapshot, 2, "TURN")
+            apply_realtime_turn_snapshot(board, snapshot, 2, "GAME_OVER")
+            apply_realtime_turn_snapshot(board, snapshot, 2, "GAME_OVER")
+
+        self.assertEqual(apply.call_count, 3)
+        self.assertEqual((board._realtime_snapshot_turn, board._realtime_snapshot_phase), (2, "GAME_OVER"))
 
     def test_snapshot_retains_local_read_and_popup_state_for_the_same_message(self):
         client_map = object.__new__(Map)
