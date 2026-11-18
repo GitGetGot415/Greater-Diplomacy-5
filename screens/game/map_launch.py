@@ -160,11 +160,8 @@ def enter_realtime_map(app, realtime_map, session, player_id, country_id, after_
 
 def apply_initial_snapshot(realtime_map, view):
     # Real-time networking stays off web import paths until a real-time match opens.
-    from data.multiplayer.realtime.session import apply_authoritative_snapshot
-    if view.snapshot:
-        apply_authoritative_snapshot(realtime_map, view.snapshot)
-        realtime_map._realtime_snapshot_turn = view.turn_number
-        realtime_map._realtime_snapshot_phase = view.phase
+    from data.multiplayer.realtime.session import apply_board_snapshot
+    apply_board_snapshot(realtime_map, view.snapshot, view.turn_number, view.phase)
 
 
 def open_hosted_realtime_map(app, lobby):

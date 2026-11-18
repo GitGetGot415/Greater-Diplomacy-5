@@ -26,7 +26,7 @@ from map_logic.diplomacy.faction_actions import (
     why_an_ai_may_not_leave,
 )
 
-from map_logic.diplomacy.action_definitions import LITE_RESPONSE_KEYS, WAR_CANCELLED_ACTIONS, availability
+from map_logic.diplomacy.action_definitions import LITE_RESPONSE_KEYS, WAR_CANCELLED_ACTIONS, action_handlers, availability
 from map_logic.ai import ai_handler, ai_world
 from map_logic.diplomacy import deal as deal_mod, deal_effects
 from map_logic.territory import ownership
@@ -764,17 +764,7 @@ def _retaliate_disband_faction(move):
     move.queue("DISBAND_FACTION", move.country, "")
 
 
-_RETALIATION_HANDLERS = {
-    "WAR_DECLARATION": _retaliate_war_declaration,
-    "JOIN_WARS": _retaliate_join_wars,
-    "LEAVE_FACTION": _retaliate_leave_faction,
-    "JOIN_FACTION_REQ": _retaliate_join_faction_request,
-    "CEASEFIRE": _retaliate_ceasefire,
-    "CALL_TO_ARMS": _retaliate_call_to_arms,
-    "CREATE_FACTION": _retaliate_create_faction,
-    "KICK_FACTION_MEMBER": _retaliate_kick_member,
-    "DISBAND_FACTION": _retaliate_disband_faction,
-}
+_RETALIATION_HANDLERS = action_handlers("retaliation_handler", globals())
 
 
 def _process_ai_retaliation(context, active_nations_list, delayed_responses, country_name, reply_dict, default_target=None):
@@ -1251,37 +1241,7 @@ def _send_leadership_claim(send):
 
 
 #: Pass 1 handlers. Each returns True when its action finishes on this turn.
-_SEND_HANDLERS = {
-    "JUSTIFY_WARGOAL": _send_justify_wargoal,
-    "WAR_DECLARATION": _send_war_declaration,
-    "JOIN_WARS": _send_join_wars,
-    "CALL_TO_ARMS": _send_announcement,
-    volunteers.ACTION: _send_volunteer_offer,
-    volunteers.RECALL_ACTION: _send_volunteer_recall,
-    volunteers.SEND_HOME_ACTION: _send_volunteers_home,
-    guarantees.ACTION: _send_guarantee,
-    guarantees.REVOKE_ACTION: _send_guarantee_revoke,
-    military_attaches.WITHDRAW_ACTION: _send_attache_withdrawal,
-    military_attaches.REVOKE_ACTION: _send_attache_revoke,
-    "BREAK_ALLIANCE": _send_break_alliance,
-    "ANNEX_PUPPET": _send_annex_puppet,
-    "RELEASE_PUPPET": _send_release_puppet,
-    "TAKE_PUPPETS": _send_take_puppets,
-    "CANCEL_MILITARY_ACCESS": _send_cancel_military_access,
-    "REVOKE_MILITARY_ACCESS": _send_revoke_military_access,
-    FORWARD_ACTION: _send_forward,
-    "FACTION_INVITE": _send_offer,
-    "JOIN_FACTION_REQ": _send_offer,
-    "REQ_MILITARY_ACCESS": _send_offer,
-    "CEASEFIRE": _send_offer,
-    "CREATE_FACTION": _send_offer,
-    "TRADE": _send_offer,
-    "PEACE_TREATY": _send_offer,
-    "DISBAND_FACTION": _send_disband_faction,
-    "KICK_FACTION_MEMBER": _send_kick_member,
-    "LEAVE_FACTION": _send_leave_faction,
-    "CLAIM_FACTION_LEADERSHIP": _send_leadership_claim,
-}
+_SEND_HANDLERS = action_handlers("send_handler", globals())
 
 
 def _leadership_contest_winners(context):

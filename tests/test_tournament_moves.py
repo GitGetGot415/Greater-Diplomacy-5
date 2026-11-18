@@ -1177,6 +1177,7 @@ class TournamentMoveTests(unittest.TestCase):
 
     def test_export_includes_empty_unit_snapshot_and_puppet_siphons(self):
         host = Host()
+        host.source_game_version = 46
         host.player_country = "Leader"
         host.active_players = ["Leader"]
         host.current_player_index = 0
@@ -1199,6 +1200,28 @@ class TournamentMoveTests(unittest.TestCase):
             "country_id": "Subject",
             "siphon_rates": {"manpower": 0.25, "materials": 0.5, "fuel": 0.5},
         }])
+
+    def test_intent_only_export_applies_shared_changes_on_the_host(self):
+        local, host = Host(), Host()
+        local.source_game_version = 47
+        local.player_country = "Leader"
+        local.multiplayer_pending_faction_renames = [{"old_name": "Old Pact", "new_name": "New Pact"}]
+        local.multiplayer_pending_appearance_updates = {"Subject": {"name": "New Subject"}}
+        local.nation_data["Subject"]["siphon_rates"] = {"manpower": 0.25, "materials": 0.5, "fuel": 0.5}
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "intent-only.gd5move")
+            tournament_files.export_move_file(local, path, self.keys["Leader"])
+            with open(path, encoding="utf-8") as file:
+                payload = json.load(file)
+            data = tournament_files.decrypt_dict(payload["data"], self.keys["Leader"])
+            self.assertEqual(set(data), {"game_version", "tournament_session", "tournament_turn", "player_intents"})
+            summary = self.import_moves(host, [path])
+
+        self.assertEqual(summary["loaded"], 1, summary)
+        self.assertEqual(host.nation_data["Member"]["faction"], "New Pact")
+        self.assertEqual(host.nation_data["Subject"]["name"], "New Subject")
+        self.assertEqual(host.nation_data["Subject"]["siphon_rates"], local.nation_data["Subject"]["siphon_rates"])
 
     def test_empty_unit_snapshot_removes_all_player_units(self):
         host = Host()

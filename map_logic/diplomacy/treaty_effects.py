@@ -22,6 +22,7 @@ The processor calls this shared implementation for both player and AI acceptance
 from collections import namedtuple
 
 from map_logic.ai import ai_prompts
+from map_logic.diplomacy.action_definitions import action_handlers
 from map_logic.diplomacy import deal as deal_mod
 from map_logic.diplomacy import war_calls
 
@@ -246,19 +247,7 @@ def _accept_volunteers(host, action, proposer, accepter, params, escrow):
     return _canned("ACCEPT_GENERIC")
 
 
-_ACCEPTANCE_EFFECTS = {
-    "FACTION_INVITE": _accept_faction_invite,
-    "JOIN_FACTION_REQ": _accept_join_request,
-    "CREATE_FACTION": _accept_create_faction,
-    "CEASEFIRE": _accept_peace,
-    "PEACE_TREATY": _accept_peace,
-    "TRADE": _accept_trade,
-    "CALL_TO_ARMS": _accept_call_to_arms,
-    "JOIN_WARS": _accept_join_wars,
-    "REQ_MILITARY_ACCESS": _accept_military_access,
-    "SEND_MILITARY_ATTACHE": _accept_military_attache,
-    "SEND_VOLUNTEERS": _accept_volunteers,
-}
+_ACCEPTANCE_EFFECTS = action_handlers("acceptance_effect", globals())
 
 
 def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=None, *, scripted=False):

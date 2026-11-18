@@ -2,29 +2,32 @@ from data.state_access import world_for, session_for
 import data.queries as queries
 from map_logic.ai import ai_construction, ai_movement, ai_research
 
-def _run_with_player_as_ai(context, func):
-    """
-    Temporarily overrides get_active_ai_nations to only return the player,
-    so that the standard AI logic processes their turn for them.
-    """
-    original_get_ai = queries.get_active_ai_nations
-    try:
-        queries.get_active_ai_nations = lambda ms: [ms.player_country]
-        func(context)
-    finally:
-        queries.get_active_ai_nations = original_get_ai
-
-
 # --- AUTOMATE THIS TURN ---
 
 def automate_player_construction(context):
-    _run_with_player_as_ai(context, ai_construction.process_ai_economy_decisions)
+    ai_construction.process_ai_economy_decisions(context, countries=[session_for(context).player_country])
 
 def automate_player_movement(context):
-    _run_with_player_as_ai(context, ai_movement.process_ai_unit_orders)
+    ai_movement.process_ai_unit_orders(context, countries=[session_for(context).player_country])
 
 def automate_player_research(context):
-    _run_with_player_as_ai(context, ai_research.process_ai_research)
+    ai_research.process_ai_research(context, countries=[session_for(context).player_country])
+
+
+def run_enabled_automation(context):
+    """Prepare the next turn for one country's enabled automation options."""
+    country = session_for(context).player_country
+    if not country or country == "Spectator":
+        return
+    automation = world_for(context).nation_data.get(country, {}).get("automation", {})
+    if not isinstance(automation, dict):
+        return
+    if automation.get("construction"):
+        automate_player_construction(context)
+    if automation.get("movement"):
+        automate_player_movement(context)
+    if automation.get("research"):
+        automate_player_research(context)
 
 
 # --- CLEAR ---

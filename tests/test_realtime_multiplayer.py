@@ -154,7 +154,9 @@ class HostSnapshotTests(unittest.TestCase):
                     "cores": [], "building_queue": [], "unit_queue": []}
         host_view = object.__new__(Map)
         host_view.selected_unit_ids = set()
-        host_view.realtime_server_map = object()
+        host_view.realtime_multiplayer = True
+        server_clock = SimpleNamespace(total_turns=1)
+        host_view.realtime_server_map = SimpleNamespace(time_manager=server_clock)
         host_view.map_data = {"home": province}
         host_view.nation_data = {"A": {}}
         host_view.time_manager = SimpleNamespace(day=1, month_index=0, year=1939,
@@ -165,7 +167,7 @@ class HostSnapshotTests(unittest.TestCase):
             "provinces": {"home": {"units": [{"owner": "A", "type": "Infantry"}]}},
             "date": {"day": 1, "month": 0, "year": 1939, "total_turns": 1},
         }
-        session = SimpleNamespace(phase="TURN", turn_number=2,
+        session = SimpleNamespace(lock=threading.RLock(), phase="TURN", turn_number=2, players={},
                                   public_state=mock.Mock(return_value={"game_state": snapshot}))
         host_view.realtime_session = session
 
@@ -177,6 +179,30 @@ class HostSnapshotTests(unittest.TestCase):
 
         Map._apply_host_realtime_snapshot(host_view)
         session.public_state.assert_called_once_with()
+
+        # The server clock can already have advanced during resolution. The
+        # host must keep its local board until the session opens or ends a turn.
+        snapshot["date"]["total_turns"] = 2
+        server_clock.total_turns = 2
+        session.phase = "PROCESSING"
+        host_view.camera = mock.Mock()
+        host_view.centers_need_update = False
+        host_view.show_navigation_intro_when_ready = False
+        host_view.show_player_ready_screen = True
+        host_view.elements = []
+        host_view._unit_selection_turn = 1
+        host_view._unit_selection_player = host_view.player_country
+        with mock.patch("ui.navigation.screen.Screen.update"), mock.patch("pygame.mouse.get_pressed", return_value=(False,) * 3):
+            host_view.update()
+        self.assertEqual(host_view.time_manager.total_turns, 1)
+        session.public_state.assert_called_once_with()
+
+        session.phase = "GAME_OVER"
+        Map._apply_host_realtime_snapshot(host_view)
+        self.assertEqual(host_view.time_manager.total_turns, 2)
+        self.assertEqual(host_view._realtime_snapshot_turn, 2)
+        self.assertEqual(host_view._realtime_snapshot_phase, "GAME_OVER")
+        self.assertEqual(session.public_state.call_count, 2)
 
     def test_snapshot_retains_local_read_and_popup_state_for_the_same_message(self):
         client_map = object.__new__(Map)
@@ -879,6 +905,43 @@ class RealtimeSessionTests(unittest.TestCase):
         self.assertEqual(resolved_bonuses["A"], queries.get_conscription_damage_bonus(
             {"conscription_slider": 0.25}))
         self.assertEqual(resolved_bonuses["B"], 0.0)
+
+    def test_player_automation_runs_after_resolution_for_each_enabled_country(self):
+        from data import queries
+        from map_logic.ai import ai_construction, ai_movement, ai_research
+
+        game = map_double(player_country="None", nation_data={
+            "A": {"automation": {"construction": True, "movement": True, "research": True}},
+            "B": {"automation": {"research": True}},
+            "C": {"automation": {"construction": True}},
+        })
+        driver = MapRealtimeDriver(game)
+        events = []
+        active_ai_nations = queries.get_active_ai_nations
+
+        async def prepare(_game):
+            events.append("prepare")
+
+        async def resolve(_game):
+            events.append("resolve")
+
+        def record(pass_name):
+            def run(context, *, countries):
+                self.assertIs(queries.get_active_ai_nations, active_ai_nations)
+                self.assertEqual(countries, [context.player_country])
+                events.append((pass_name, *countries))
+            return run
+
+        with mock.patch("map_logic.system32.turn_processor.prepare_turn", new=prepare), \
+                mock.patch("map_logic.system32.turn_processor.resolve_turn_logic", new=resolve), \
+                mock.patch.object(ai_construction, "process_ai_economy_decisions", new=record("construction")), \
+                mock.patch.object(ai_movement, "process_ai_unit_orders", new=record("movement")), \
+                mock.patch.object(ai_research, "process_ai_research", new=record("research")):
+            driver.process_turn({"A": [], "B": []})
+
+        self.assertEqual(events, ["prepare", "resolve", ("construction", "A"), ("movement", "A"),
+                                  ("research", "A"), ("research", "B")])
+        self.assertEqual(game.player_country, "None")
 
     def test_wartime_trade_draft_is_validated_and_applied_by_server(self):
         game = map_double(map_data={}, id_to_province={}, nation_data={

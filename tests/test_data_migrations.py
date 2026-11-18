@@ -685,6 +685,7 @@ class MalformedInputTests(unittest.TestCase):
             (root / "map_data.json").write_text(json.dumps({key: province}))
             game = load_map.load_backend_state(root, skip_initial_income=True,
                                                scenario_settings=queries.get_default_scenario_settings())
+            self.assertEqual(game.source_game_version, migrations.version_number(PREVIOUS_VERSION))
             loaded = next(iter(game.map_data.values()))
             self.assertEqual(len(loaded["units"]), 1)
             self.assertEqual(loaded["units"][0]["health"], library[unit_type]["health"])
@@ -695,10 +696,12 @@ class MalformedInputTests(unittest.TestCase):
             economy_processor.process_queues(game)
             self.assertEqual(loaded["unit_queue"][0]["turns_remaining"], 1)
             current = queries.build_save_dict(game, include_provinces=False)
+            self.assertNotIn("source_game_version", current)
             (root / "meta.json").write_text(json.dumps(current))
             (root / "map_data.json").write_text(json.dumps(queries.build_map_data_save(game)))
             restored = load_map.load_backend_state(root, skip_initial_income=True,
                                                    scenario_settings=queries.get_default_scenario_settings())
+            self.assertEqual(restored.source_game_version, migrations.CURRENT_VERSION)
             economy_processor.process_queues(restored)
             self.assertEqual(next(iter(restored.map_data.values()))["unit_queue"], [])
 

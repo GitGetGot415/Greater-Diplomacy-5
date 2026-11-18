@@ -295,12 +295,4 @@ async def _resolve_turn_logic(context): # Renamed from resolve_turn
     print("="*40 + "\n")
     
     # --- PROCESS PLAYER AUTOMATION FOR NEXT TURN ---
-    player = session_state.player_country
-    if player and player != "Spectator":
-        auto = world_state.nation_data.get(player, {}).get("automation", {})
-        if auto.get("construction"):
-            automation_logic.automate_player_construction(context)
-        if auto.get("movement"):
-            automation_logic.automate_player_movement(context)
-        if auto.get("research"):
-            automation_logic.automate_player_research(context)
+    automation_logic.run_enabled_automation(context)

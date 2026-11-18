@@ -791,23 +791,12 @@ class MapRealtimeDriver(PlayerActions):
         self.apply_validated_drafts(drafts)
         asyncio.run(turn_processor.prepare_turn(self.context))
         asyncio.run(turn_processor.resolve_turn_logic(self.context))
-        # In a normal game this hook runs *after* resolution, so its orders
-        # genuinely prepare the next turn.  The server has no local player and
-        # therefore cannot use that single-player hook directly; replay it for
-        # each opted-in real-time player at the same point in the turn instead.
+        # The server has no local player. Prepare the next turn for each participant.
         original_player = self.session.player_country
         try:
             for country_id in drafts:
-                automation = self.world.nation_data.get(country_id, {}).get("automation", {})
-                if not isinstance(automation, dict):
-                    continue
                 self.session.player_country = country_id
-                if automation.get("construction"):
-                    automation_logic.automate_player_construction(self.context)
-                if automation.get("movement"):
-                    automation_logic.automate_player_movement(self.context)
-                if automation.get("research"):
-                    automation_logic.automate_player_research(self.context)
+                automation_logic.run_enabled_automation(self.context)
         finally:
             self.session.player_country = original_player
 
@@ -872,6 +861,19 @@ class RemoteSessionView:
 
     def unsubmit(self, _player_id: str, turn: int) -> bool:
         return self.client.send("unsubmit", {"turn": turn})
+
+
+def board_snapshot_due(context, turn, phase):
+    """A new turn or its final result can replace the player's local draft."""
+    return (context._realtime_snapshot_turn != turn
+            or (phase == "GAME_OVER" and context._realtime_snapshot_phase != "GAME_OVER"))
+
+
+def apply_board_snapshot(context, snapshot, turn, phase):
+    if snapshot and board_snapshot_due(context, turn, phase):
+        apply_authoritative_snapshot(context, snapshot)
+        context._realtime_snapshot_turn = turn
+        context._realtime_snapshot_phase = phase
 
 
 def apply_authoritative_snapshot(context, snapshot: dict[str, Any]) -> None:

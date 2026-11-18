@@ -54,6 +54,8 @@ class SessionState:
     refresh_tasks_total: int = 0
     refresh_tasks_completed: int = 0
     turn_start_time: int = 0
+    # Original save stamp before migration, used for tournament move exports.
+    source_game_version: int = 0
     # Tournament host and player state.
     multiplayer_tournament_dir: object = None
     multiplayer_master_key: str = ""

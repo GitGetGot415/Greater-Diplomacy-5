@@ -6,7 +6,7 @@ from map_logic.ai import ai_tech_eval, ai_unit_eval, ai_world
 from map_logic.system32.research_processor import enqueue_research
 
 
-def process_ai_research(context):
+def process_ai_research(context, *, countries=None):
     """Automates research queueing for AI nations."""
     world_state = world_for(context)
     # REPLACED DISK I/O WITH CACHED QUERIES
@@ -21,7 +21,7 @@ def process_ai_research(context):
     # Content stays fixed during this pass. Validate its index once for all countries.
     research_index = queries.get_unit_research_index(unit_library)
 
-    ai_nations = queries.get_active_ai_nations(context)
+    ai_nations = queries.get_active_ai_nations(context) if countries is None else countries
 
     for ai_name in ai_nations:
         data = world_state.nation_data[ai_name]

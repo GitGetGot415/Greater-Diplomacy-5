@@ -23,9 +23,12 @@ from data.platform import sync_persisted_dir
 
 from data.migrations import snapshot_moves
 from map_logic.actions.player_actions import collect_map_commands, PlayerActions
+from map_logic.diplomacy import diplomacy_lifecycle, faction_records
 
 
 TOURNAMENT_GZIP_LEVEL = 6
+# Earlier hosts used the snapshot sections and did not read player_intents.
+FIRST_INTENT_MOVE_VERSION = 47
 
 def active_owners_of(context):
     """Every nation entitled to a tournament move right now.
@@ -568,11 +571,58 @@ def export_move_file(context, file_path, player_key):
     if cid not in world_state.nation_data:
         raise ValueError("Only a tournament country player may export a move file.")
 
-    queries.ensure_unit_ids(world_state.map_data)
-    save_dict = queries.build_save_dict(context)
-    
+    legacy_host = session_state.source_game_version < FIRST_INTENT_MOVE_VERSION
+    if legacy_host:
+        queries.ensure_unit_ids(world_state.map_data)
+        save_dict = queries.build_save_dict(context)
+    else:
+        # The full save builder also normalizes these references. The intent
+        # writer can do that without serializing any world or province data.
+        if hasattr(world_state, "factions"):
+            faction_records.records_for(world_state)
+        diplomacy_lifecycle.normalize_diplomatic_records(world_state.nation_data)
+
+    commands = collect_map_commands(context, cid)
+    pending_renames = context.multiplayer_pending_faction_renames
+    pending_appearances = context.multiplayer_pending_appearance_updates
+    for command in commands:
+        if command["type"] == "faction_rename" and pending_renames:
+            command["name"] = pending_renames[-1]["new_name"]
+        elif command["type"] == "puppet_draft" and pending_appearances:
+            command["appearances"] = {
+                target: {**{key: copy.deepcopy(world_state.nation_data[target].get(key))
+                            for key in c.COUNTRY_APPEARANCE_FIELDS}, **appearance}
+                for target, appearance in pending_appearances.items()}
+
+    player_data = {"game_version": c.GAME_VERSION, "player_intents": commands}
+    session_key = context.multiplayer_session_key
+    if session_key:
+        player_data["tournament_session"] = session_key
+    if hasattr(context, "time_manager"):
+        player_data["tournament_turn"] = world_state.time_manager.total_turns
+    if legacy_host:
+        player_data.update(_legacy_move_projection(context, cid, save_dict, commands))
+
+    payload = {
+        "country_id": cid,
+        "hash": hash_key(player_key),
+        "data": encrypt_dict(player_data, player_key, compress=True)
+    }
+
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    with open(file_path, 'w') as f:
+        f.write(history_io.dump_compact_text(payload))
+
+    # Web only: mirror the .gd5move into IndexedDB so it survives closing the
+    # tab. No-op on desktop.
+    sync_persisted_dir(c.TOURNAMENT_SAVES_DIR)
+
+
+def _legacy_move_projection(context, cid, save_dict, commands):
+    """Build the extra move sections required by snapshot-only hosts."""
+    player_country = save_dict.get("nation_data", {}).get(cid, {})
     player_data = {
-        "nation_data": copy.deepcopy(save_dict.get("nation_data", {}).get(cid, {})),
+        "nation_data": copy.deepcopy(player_country),
         "research_years": save_dict["research_years"],
         "provinces": {},
         # A move must be able to say "I have no units left".  Older moves
@@ -583,18 +633,11 @@ def export_move_file(context, file_path, player_key):
         "unit_snapshot": True,
         "aircraft_orders": [],
         "air_transport": queries.air_transport_commands(context, cid),
-        "game_version": c.GAME_VERSION,
         "release_subjects": [{"core_nation": entry["core_nation"],
                               "keep_cores": entry.get("keep_cores", False),
                               "release_type": entry["release_type"]}
-                             for entry in save_dict.get("nation_data", {}).get(cid, {}).get("release_puppet_queue", [])],
+                             for entry in player_country.get("release_puppet_queue", [])],
     }
-
-    session_key = context.multiplayer_session_key
-    if session_key:
-        player_data["tournament_session"] = session_key
-    if hasattr(context, "time_manager"):
-        player_data["tournament_turn"] = world_state.time_manager.total_turns
 
     # A faction rename affects every member, while normal move data contains
     # only one nation record.  Preserve it as a separate host-validated command
@@ -615,7 +658,6 @@ def export_move_file(context, file_path, player_key):
     # explicit command, just like integrated-puppet appearance edits, so an
     # asynchronous player does not silently lose them on host import.
     siphon_updates = []
-    player_country = save_dict.get("nation_data", {}).get(cid, {})
     for puppet in player_country.get("puppets", []) if isinstance(player_country, dict) else ():
         puppet_data = save_dict.get("nation_data", {}).get(puppet, {})
         if (isinstance(puppet_data, dict)
@@ -626,17 +668,9 @@ def export_move_file(context, file_path, player_key):
     if siphon_updates:
         player_data["puppet_siphon_updates"] = siphon_updates
 
-    player_data["player_intents"] = collect_map_commands(context, cid)
-    for command in player_data["player_intents"]:
+    for command in commands:
         if command["type"] == "army_roster":
             player_data["nation_data"]["armies"] = copy.deepcopy(command["armies"])
-        if command["type"] == "faction_rename" and pending_renames:
-            command["name"] = pending_renames[-1]["new_name"]
-        elif command["type"] == "puppet_draft" and pending_appearances:
-            command["appearances"] = {
-                target: {**{key: copy.deepcopy(world_state.nation_data[target].get(key))
-                            for key in c.COUNTRY_APPEARANCE_FIELDS}, **appearance}
-                for target, appearance in pending_appearances.items()}
     
     for prov_key, prov_data in save_dict.get("provinces", {}).items():
         prov_updates = {}
@@ -664,19 +698,7 @@ def export_move_file(context, file_path, player_key):
         if prov_updates:
             player_data["provinces"][prov_key] = prov_updates
             
-    payload = {
-        "country_id": cid,
-        "hash": hash_key(player_key),
-        "data": encrypt_dict(player_data, player_key, compress=True)
-    }
-    
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)
-    with open(file_path, 'w') as f:
-        f.write(history_io.dump_compact_text(payload))
-
-    # Web only: mirror the .gd5move into IndexedDB so it survives closing the
-    # tab. No-op on desktop.
-    sync_persisted_dir(c.TOURNAMENT_SAVES_DIR)
+    return player_data
 
 def _move_context_error(context, player_data):
     """Returns a reason a move targets the wrong tournament turn, if any.

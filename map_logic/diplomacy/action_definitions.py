@@ -39,6 +39,11 @@ class ActionDefinition:
     proactive_context: str | None = None
     unilateral_notice: str | None = None
     proposal_notice: str | None = None
+    # Resolve handler names in their owning modules after the functions exist.
+    # Importing those modules here would create a cycle through data.constants.
+    send_handler: str | None = None
+    acceptance_effect: str | None = None
+    retaliation_handler: str | None = None
 
 
 def _check_existing(context, sender, target, action_type, nation_data, sender_data, target_data):
@@ -183,71 +188,90 @@ def _check_leave_faction(context, sender, target, action_type, nation_data, send
 ACTION_DEFINITIONS = {
     "WAR_DECLARATION": ActionDefinition(
         "unilateral", "send", _check_war_declaration,
+        send_handler="_send_war_declaration",
+        retaliation_handler="_retaliate_war_declaration",
         lite_response="BETRAYAL",
         proactive_context="declaring war on {target} to reclaim rightful core territory, you are not negotiating",
         unilateral_notice="{sender} has DECLARED WAR on us!",
     ),
     "BREAK_ALLIANCE": ActionDefinition(
         "unilateral", "send", _check_existing,
+        send_handler="_send_break_alliance",
         announcement=("BREAK_ALLIANCE", "We have broken our alliance."),
         lite_response="ALLIANCE_BROKEN",
         unilateral_notice="{sender} has broken their alliance with us!",
     ),
     "KICK_FACTION_MEMBER": ActionDefinition(
         "unilateral", "send", _check_faction_control,
+        send_handler="_send_kick_member",
+        retaliation_handler="_retaliate_kick_member",
         announcement=("KICKED_FROM_FACTION", "We will not forget being expelled from the alliance."),
         lite_response="KICKED_FROM_FACTION",
         unilateral_notice="{sender} has expelled us from the faction!",
     ),
     "LEAVE_FACTION": ActionDefinition(
         "unilateral", "send", _check_leave_faction,
+        send_handler="_send_leave_faction",
+        retaliation_handler="_retaliate_leave_faction",
         announcement=("FACTION_ABANDONED", "We will not forget your abandonment."),
         lite_response="FACTION_ABANDONED",
         unilateral_notice="{sender} has abandoned our faction!",
     ),
     "DISBAND_FACTION": ActionDefinition(
         "unilateral", "send", _check_faction_control,
+        send_handler="_send_disband_faction",
+        retaliation_handler="_retaliate_disband_faction",
         announcement=("FACTION_DISBANDED", "It is a shame to see our alliance broken."),
         lite_response="FACTION_DISBANDED",
         unilateral_notice="{sender} has disbanded our faction!",
     ),
     "CLAIM_FACTION_LEADERSHIP": ActionDefinition(
         "unilateral", "send", _check_existing,
+        send_handler="_send_leadership_claim",
         announcement=("FACTION_LEADERSHIP_TAKEN", "The pact needs a stronger hand at its head. It will be ours."),
     ),
-    "JUSTIFY_WARGOAL": ActionDefinition("unilateral", "send", _check_existing),
-    "ANNEX_PUPPET": ActionDefinition("unilateral", "send", _check_subject_control),
-    "RELEASE_PUPPET": ActionDefinition("unilateral", "send", _check_subject_control),
-    "TAKE_PUPPETS": ActionDefinition("unilateral", "send", _check_subject_control),
+    "JUSTIFY_WARGOAL": ActionDefinition("unilateral", "send", _check_existing, send_handler="_send_justify_wargoal"),
+    "ANNEX_PUPPET": ActionDefinition("unilateral", "send", _check_subject_control, send_handler="_send_annex_puppet"),
+    "RELEASE_PUPPET": ActionDefinition("unilateral", "send", _check_subject_control, send_handler="_send_release_puppet"),
+    "TAKE_PUPPETS": ActionDefinition("unilateral", "send", _check_subject_control, send_handler="_send_take_puppets"),
     "CANCEL_MILITARY_ACCESS": ActionDefinition(
         "unilateral", "send", _check_existing,
+        send_handler="_send_cancel_military_access",
         announcement="We no longer require military access through your territory.",
     ),
     "REVOKE_MILITARY_ACCESS": ActionDefinition(
         "unilateral", "send", _check_existing,
+        send_handler="_send_revoke_military_access",
         announcement="Your military access through our territory has been revoked.",
     ),
-    "FORWARD_MESSAGE": ActionDefinition("unilateral", "send", _check_existing),
+    "FORWARD_MESSAGE": ActionDefinition("unilateral", "send", _check_existing, send_handler="_send_forward"),
     "RECALL_VOLUNTEERS": ActionDefinition(
         "unilateral", "send", _check_existing,
+        send_handler="_send_volunteer_recall",
         announcement="We are recalling our volunteer divisions.",
     ),
     "SEND_HOME_VOLUNTEERS": ActionDefinition(
         "unilateral", "send", _check_existing,
+        send_handler="_send_volunteers_home",
         announcement="Your volunteer divisions are being sent home.",
     ),
-    "GUARANTEE": ActionDefinition("unilateral", "send", _check_guarantee),
-    "REVOKE_GUARANTEE": ActionDefinition("unilateral", "send", _check_existing),
+    "GUARANTEE": ActionDefinition("unilateral", "send", _check_guarantee, send_handler="_send_guarantee"),
+    "REVOKE_GUARANTEE": ActionDefinition("unilateral", "send", _check_existing, send_handler="_send_guarantee_revoke"),
     "WITHDRAW_MILITARY_ATTACHE": ActionDefinition(
         "unilateral", "send", _check_existing,
+        send_handler="_send_attache_withdrawal",
         announcement="We are withdrawing our military attaché.",
     ),
     "REVOKE_MILITARY_ATTACHE": ActionDefinition(
         "unilateral", "send", _check_existing,
+        send_handler="_send_attache_revoke",
         announcement="Your military attaché has been revoked.",
     ),
     "JOIN_WARS": ActionDefinition(
         "bilateral", "reply", _check_join_wars,
+        send_handler="_send_join_wars",
+        acceptance_effect="_accept_join_wars",
+        retaliation_handler="_retaliate_join_wars",
         announcement=("REQUEST_JOIN_WARS", "We request permission to join your ongoing wars."),
         lite_response="ACCEPTED_HELP",
         proactive_context="mobilizing our forces to join your war against {target}",
@@ -256,6 +280,8 @@ ACTION_DEFINITIONS = {
     ),
     "FACTION_INVITE": ActionDefinition(
         "bilateral", "reply", _check_faction_invite,
+        send_handler="_send_offer",
+        acceptance_effect="_accept_faction_invite",
         announcement="We invite your nation to join our faction.",
         cancelled_by_war=True,
         proactive_context="inviting you into our faction, since we are on good terms and would both be stronger for it",
@@ -263,6 +289,9 @@ ACTION_DEFINITIONS = {
     ),
     "JOIN_FACTION_REQ": ActionDefinition(
         "bilateral", "reply", _check_join_faction_req,
+        send_handler="_send_offer",
+        acceptance_effect="_accept_join_request",
+        retaliation_handler="_retaliate_join_faction_request",
         announcement="We formally request to join your faction.",
         cancelled_by_war=True,
         proactive_context="requesting to join your faction to stand against our mutual enemies",
@@ -270,6 +299,9 @@ ACTION_DEFINITIONS = {
     ),
     "CEASEFIRE": ActionDefinition(
         "bilateral", "reply", _check_ceasefire,
+        send_handler="_send_offer",
+        acceptance_effect="_accept_peace",
+        retaliation_handler="_retaliate_ceasefire",
         announcement="We offer terms for a ceasefire.",
         cancelled_by_war=True,
         proactive_context="offering a ceasefire because our nations cannot physically reach each other",
@@ -277,6 +309,9 @@ ACTION_DEFINITIONS = {
     ),
     "CALL_TO_ARMS": ActionDefinition(
         "bilateral", "reply", _check_join_wars,
+        send_handler="_send_announcement",
+        acceptance_effect="_accept_call_to_arms",
+        retaliation_handler="_retaliate_call_to_arms",
         announcement="We request your aid in our ongoing conflicts!",
         lite_response="ANSWERED_CALL",
         proactive_context="calling you to arms in our war against {target}",
@@ -284,12 +319,17 @@ ACTION_DEFINITIONS = {
     ),
     "CREATE_FACTION": ActionDefinition(
         "bilateral", "reply", _check_create_faction,
+        send_handler="_send_offer",
+        acceptance_effect="_accept_create_faction",
+        retaliation_handler="_retaliate_create_faction",
         announcement="We propose establishing a new faction together.",
         cancelled_by_war=True,
         proactive_context="proposing to create a new faction together to combat mutual threats",
     ),
     "PEACE_TREATY": ActionDefinition(
         "bilateral", "reply", _check_ceasefire,
+        send_handler="_send_offer",
+        acceptance_effect="_accept_peace",
         announcement="We propose terms to end this war.",
         cancelled_by_war=True,
         proactive_context="offering terms to end the war between us, which has gone badly for us",
@@ -297,24 +337,31 @@ ACTION_DEFINITIONS = {
     ),
     "TRADE": ActionDefinition(
         "bilateral", "reply", _check_existing,
+        send_handler="_send_offer",
+        acceptance_effect="_accept_trade",
         announcement="We propose a trade agreement.",
         proactive_context="proposing an exchange of resources, each of us sending what the other lacks",
         proposal_notice="{sender} has proposed a Trade Agreement. Terms: {terms}",
     ),
     "REQ_MILITARY_ACCESS": ActionDefinition(
         "bilateral", "reply", _check_req_military_access,
+        send_handler="_send_offer",
+        acceptance_effect="_accept_military_access",
         announcement="We formally request military access to move our troops through your territory.",
         proactive_context="requesting military access through your territory since we are both fighting a common enemy",
         proposal_notice="{sender} is requesting military access to move their troops through your territory.",
     ),
     "SEND_MILITARY_ATTACHE": ActionDefinition(
         "bilateral", "reply", _check_send_military_attache,
+        acceptance_effect="_accept_military_attache",
         announcement="We request to send a military attaché to observe your war.",
         proactive_context="requesting to send a military attaché to observe your war",
         proposal_notice="{sender} is requesting to send a military attaché to observe your war.",
     ),
     "SEND_VOLUNTEERS": ActionDefinition(
         "bilateral", "reply", _check_existing,
+        send_handler="_send_volunteer_offer",
+        acceptance_effect="_accept_volunteers",
         announcement="We offer volunteer divisions for your war.",
     ),
 }
@@ -324,6 +371,12 @@ BILATERAL_ACTIONS = [action for action, definition in ACTION_DEFINITIONS.items()
 WAR_CANCELLED_ACTIONS = [action for action, definition in ACTION_DEFINITIONS.items() if definition.cancelled_by_war]
 LITE_RESPONSE_KEYS = {action: definition.lite_response for action, definition in ACTION_DEFINITIONS.items()
                       if definition.lite_response}
+
+
+def action_handlers(field, namespace):
+    """Bind a phase's declared handlers in the module that implements them."""
+    return {action: namespace[name] for action, definition in ACTION_DEFINITIONS.items()
+            if (name := getattr(definition, field)) is not None}
 
 
 def availability(context, sender, target, action, *, phase="draft", scripted=False):

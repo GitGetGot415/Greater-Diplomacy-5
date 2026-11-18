@@ -178,6 +178,7 @@ def _clear_loaded_world(context):
     replace_mapping(world_state, "scenario_metadata", {})
     replace_mapping(world_state, "standalone_export_settings", {})
     session_state.conversation_colors = {}
+    session_state.source_game_version = 0
     session_state.editor_scenario_name = ""
     session_state.tactical_mode = False
     session_state.player_unit = None
@@ -564,7 +565,7 @@ def _load_map_asset_steps(context, load_path, scenario_settings=None, *, load_pr
     yield "Reading Game Data..."
     save_meta, raw_map_data, history = read_save_files(load_path)
     yield "Preparing Game Data..."
-    migrations.upgrade_save(save_meta if save_meta is not None else {}, raw_map_data)
+    session_state.source_game_version = migrations.upgrade_save(save_meta if save_meta is not None else {}, raw_map_data)
     # Other snapshots stay in their saved format. Only the selected turn becomes live state.
     if context.history_turn is not None:
         migrations.upgrade_history_turn(history.get(str(context.history_turn)), raw_map_data)

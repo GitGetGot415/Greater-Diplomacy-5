@@ -201,6 +201,7 @@ class SharedActionTests(unittest.TestCase):
 
     def test_local_tournament_and_realtime_apply_the_same_choices(self):
         local, realtime, tournament = game(), game(), game()
+        local.source_game_version = migrations.CURRENT_VERSION
         province = local.map_data[1]
         unit_actions.apply_action(local, "A", province, province["units"][0], {"type": "REPAIR"})
         commands = collect_map_commands(local, "A")

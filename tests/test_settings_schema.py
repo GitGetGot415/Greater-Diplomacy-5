@@ -371,20 +371,17 @@ class LegacyNamingTests(unittest.TestCase):
             keybind_io.save_settings({}, 0.4, 0.6, unknown_setting=True)
 
 
-class SaveSignatureTests(unittest.TestCase):
-    def test_save_settings_takes_exactly_the_schema_names(self):
-        """queries.save_global_settings splats from_controller() into this, so
-        the parameter names and the schema names have to stay in step. They
-        must stay in step whenever a persisted preference is added or replaced."""
-        import inspect
+class NamedSettingsWriterTests(unittest.TestCase):
+    def test_legacy_writer_accepts_all_positional_slots(self):
+        from data import queries
         from data.io import keybind_io
 
-        signature = inspect.signature(keybind_io.save_settings)
-        params = ["show_strategic_intro_popup" if name == "show_intro_popup" else name
-                  for name, param in signature.parameters.items() if param.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD]
-        self.assertEqual(params[0], "keybind_dict")
-        self.assertEqual(tuple(params[1:]), settings_schema.SETTINGS_ORDER)
-        self.assertTrue(set(settings_schema.SETTINGS_ORDER).issubset(signature.parameters))
+        values = settings_schema.defaults()
+        values.update(show_tactical_intro_popup=False, sfx_volume=0.3, music_volume=0.4)
+        args = ({"BACK": None}, *(values[name] for name in GOLDEN_ORDER))
+        with mock.patch.object(queries, "save_cached_json") as save:
+            keybind_io.save_settings(*args)
+        save.assert_called_once_with("settings", {"keybinds": {"BACK": None}, **settings_schema.to_json_dict(values)})
 
     def test_from_controller_supplies_every_parameter(self):
         controller = ControllerTests.Fake()

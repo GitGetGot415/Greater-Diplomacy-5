@@ -6,49 +6,35 @@ from data.io import settings_schema, starting_defaults
 
 CONFIG_PATH = c.SETTINGS_CONFIG_PATH
 
-def save_settings(keybind_dict, sfx_volume, music_volume, num_players=None, ai_mode=None,
-                  gemini_api_key=None, chatgpt_api_key=None, claude_api_key=None, ollama_base_url=None,
-                  gemini_model=None, chatgpt_model=None, claude_model=None, ollama_model=None,
-                  ai_immersion_level=None, music_pitch=None, sfx_pitch=None, target_fps=None,
-                  ai_threads=None, show_fps=None, show_intro_popup=None,
-                  saves_dir=None, custom_scenarios_dir=None,
-                  ocean_light_color=None, ocean_dark_color=None,
-                  tournament_saves_dir=None, checkerboard_water=None,
-                  deepseek_api_key=None, kimi_api_key=None,
-                  deepseek_model=None, kimi_model=None,
-                  ai_turn_budget_seconds=None,
-                  unit_art_style=None,
-                  map_navigation_mode=None,
-                  orders_key_changes_screen=None, economy_key_changes_screen=None,
-                  battle_display_mode=None,
-                  mouse_button_actions=None,
-                  army_group_animations=None,
-                  music_pitch_timeline=None,
-                  show_unclaimed=None,
-                  openrouter_api_key=None, openrouter_model=None,
-                  checkerboard_gradient_strength=None,
-                  checkerboard_scroll_speed=None,
-                  tactical_infantry_songs=None, tactical_tank_songs=None,
-                  control_mode=None,
-                  show_tactical_intro_popup=None,
-                  *, show_strategic_intro_popup=None,
-                  **legacy_settings):
-    """Convert key codes to names and save settings as JSON.
+# The positional writer stopped at show_tactical_intro_popup. Its earlier
+# tutorial slot supplied both modes, so keep the old name for that slot.
+_LEGACY_POSITIONAL_SETTINGS = tuple(
+    "show_intro_popup" if name == "show_strategic_intro_popup" else name
+    for name in settings_schema.SETTINGS_ORDER[2:settings_schema.SETTINGS_ORDER.index("show_tactical_intro_popup") + 1]
+)
 
-    Keep positional argument slots for older callers.
-    Accept older keyword names for renamed fields.
-    A current keyword takes priority, including an empty string.
-    None uses the schema default, or an older keyword for a renamed field.
-    Write current JSON keys from settings_schema.SETTINGS_FIELDS.
-    """
-    unexpected = set(legacy_settings) - migrations.LEGACY_SETTINGS_KEYWORD_NAMES
+
+def save_settings(keybind_dict, sfx_volume, music_volume, *positional, **values):
+    """Adapt older positional and keyword callers to the named writer."""
+    unexpected = set(values) - set(settings_schema.SETTINGS_ORDER) - migrations.LEGACY_SETTINGS_KEYWORD_NAMES
     if unexpected:
         raise TypeError(f"Unknown settings arguments: {', '.join(sorted(unexpected))}")
-    values = {name: value for name, value in locals().items()
-              if name in settings_schema.SETTINGS_ORDER and value is not None}
-    if show_intro_popup is not None:
-        values["show_intro_popup"] = show_intro_popup
-    values.update(legacy_settings)
+    if len(positional) > len(_LEGACY_POSITIONAL_SETTINGS):
+        raise TypeError("Too many positional settings arguments.")
+    for name, value in zip(_LEGACY_POSITIONAL_SETTINGS, positional):
+        if name in values:
+            raise TypeError(f"Multiple values for settings argument {name!r}.")
+        values[name] = value
+    values.update(sfx_volume=sfx_volume, music_volume=music_volume)
+    save_settings_values(keybind_dict, values)
+
+
+def save_settings_values(keybind_dict, values):
+    """Write keybinds and named settings using the current JSON schema."""
+    # A missing current preference can still fall back to its legacy alias.
+    nullable_aliases = migrations.LEGACY_SETTINGS_KEYWORD_NAMES - {"show_intro_popup"}
+    values = {name: value for name, value in values.items()
+              if value is not None or name in nullable_aliases}
 
     # ``None`` is an intentional, persistent "unassigned" binding.  Omitting
     # it would make load restore the action's default, which prevents players

@@ -313,17 +313,10 @@ def save_cached_json(cache_key, new_data):
 
 
 def save_global_settings(controller):
-    """Writes every setting straight off the Controller.
-
-    The attribute reads this used to spell out positionally are now one
-    settings_schema lookup -- which also means tournament_saves_dir is actually
-    saved. It was missing from the old list, so saving any setting quietly reset
-    the tournament folder to its default.
-    """
+    """Write the Controller's named settings and keybinds."""
     from data.io import keybind_io
 
-    keybind_io.save_settings(controller.keybinds,
-                             **settings_schema.from_controller(controller))
+    keybind_io.save_settings_values(controller.keybinds, settings_schema.from_controller(controller))
 
 
 def get_ai_threads():
