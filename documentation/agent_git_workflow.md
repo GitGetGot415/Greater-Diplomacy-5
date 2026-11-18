@@ -23,6 +23,24 @@ Use this verified trailer for Codex contributions. [Codex GitHub account](https:
 Co-authored-by: Codex <267193182+codex@users.noreply.github.com>
 ```
 
+Use this verified trailer for GitHub Copilot contributions. [GitHub Copilot documentation](https://docs.github.com/en/copilot)
+
+```text
+Co-authored-by: Copilot <copilot@github.com>
+```
+
+Use this verified trailer for Gemini contributions. [Gemini Code Assist GitHub App](https://github.com/apps/gemini-code-assist)
+
+```text
+Co-authored-by: gemini-code-assist[bot] <176961590+gemini-code-assist[bot]@users.noreply.github.com>
+```
+
+Use this verified trailer for CodeRabbit contributions. [CodeRabbit GitHub App](https://github.com/apps/coderabbitai)
+
+```text
+Co-authored-by: coderabbitai[bot] <136622811+coderabbitai[bot]@users.noreply.github.com>
+```
+
 If you cannot verify the agent's email, record the credit with a plain-text trailer such as `Assisted-by: Agent Name`.
 
 ## Ask before publishing
