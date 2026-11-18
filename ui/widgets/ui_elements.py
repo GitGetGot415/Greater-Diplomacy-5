@@ -634,6 +634,42 @@ def make_info_button(x, y, on_click, y_offset=0):
                   sound_kind=None)
 
 
+def draw_political_compass(surface, rect, position, preview=None):
+    """Draw a square compass with economy on x and political authority on y."""
+    style = SLIDER_STYLES["track"]
+    draw_pixel_panel(surface, rect, style["color"], c.COLOR_DIM_BORDER,
+                     gradient_strength=style["gradient_strength"])
+    plot = rect.inflate(-16, -16)
+    span = c.POLITICS_MAX - c.POLITICS_MIN
+
+    def point(coordinates):
+        x, y = coordinates
+        return (plot.left + round(plot.width * (x - c.POLITICS_MIN) / span),
+                plot.bottom - round(plot.height * (y - c.POLITICS_MIN) / span))
+
+    zero_x, zero_y = point((c.POLITICS_START, c.POLITICS_START))
+    pygame.draw.line(surface, c.UI_TEXT_MUTED, (plot.left, zero_y), (plot.right, zero_y))
+    pygame.draw.line(surface, c.UI_TEXT_MUTED, (zero_x, plot.top), (zero_x, plot.bottom))
+
+    current = pygame.Rect(0, 0, 7, 7)
+    current.center = point(position)
+    pygame.draw.rect(surface, c.COLOR_GOLD_HIGHLIGHT, current)
+    if preview is not None and preview != position:
+        next_marker = current.copy()
+        next_marker.center = point(preview)
+        pygame.draw.rect(surface, c.UI_TEXT_LIGHT, next_marker, 1)
+
+    small = fonts.get("small")
+    for text, anchor, coordinates in (
+        ("Authoritarian", "midbottom", (rect.centerx, rect.top - 2)),
+        ("Libertarian", "midtop", (rect.centerx, rect.bottom + 2)),
+        ("Planned", "midright", (rect.left - 8, zero_y)),
+        ("Market", "midleft", (rect.right + 8, zero_y)),
+    ):
+        caption = small.render(text, True, c.UI_TEXT_LIGHT)
+        surface.blit(caption, caption.get_rect(**{anchor: coordinates}))
+
+
 def draw_slider(surface, rect, handle_rect, *, dragging=False, allowed_ratio=1.0,
                 progress_ratio=None):
     """Draw a recessed track and a handle with the cached button shading."""

@@ -587,12 +587,7 @@ class AIWorld:
 
     @property
     def economies(self):
-        """queries.calculate_all_economies, computed on first ask.
-
-        Lazy because the diplomacy passes never look at it and it is the most
-        expensive single thing in here; Phase 2's unit pricing is what makes it
-        worth caching at all.
-        """
+        """Share one economy sweep across diplomacy and strategic decisions."""
         if self._economies is None:
             self._economies = queries.calculate_all_economies(self.map_data, self.nation_data)
         return self._economies

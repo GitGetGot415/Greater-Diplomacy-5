@@ -413,7 +413,7 @@ def open_personality_editor(map_screen):
     _launch_editor_screen(map_screen, "Personality_List_Screen", needs_countries=True)
 
 def open_politics_editor(map_screen):
-    """Opens a native screen to set where each nation starts on the political axis."""
+    """Open the starting politics picker for the map editor or spectator."""
     _launch_editor_screen(map_screen, "Politics_List_Screen", needs_countries=True)
 
 def open_edited_countries(map_screen):

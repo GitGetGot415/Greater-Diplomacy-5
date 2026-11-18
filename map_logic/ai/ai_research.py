@@ -148,4 +148,5 @@ def _rank_for_nation(available_techs, ai_name, data, econ, world,
 
     return ai_tech_eval.rank_available(
         available_techs, research, unit_library, building_library, ctx,
-        set(candidates), current_year, econ.get("total_inc", {}), built, provinces=provinces, research_index=index)
+        set(candidates), current_year, econ.get("total_inc", {}), built, provinces=provinces, research_index=index,
+        factory_multiplier=econ.get("factory_multiplier", 1.0))

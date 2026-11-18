@@ -17,6 +17,7 @@ from data import queries
 from data.runtime_rules import RuntimeRules
 from ui.dialogs import pickers
 from data.multiplayer.tournament import files as tournament_files
+from map_logic import politics
 from map_logic.actions import production_actions
 
 
@@ -1241,10 +1242,8 @@ class TournamentMoveTests(unittest.TestCase):
         self.assertNotIn("siphon_rates", host.nation_data["Outsider"])
 
     def test_policy_activation_round_trips_without_trusting_player_timers(self):
-        from map_logic import politics
-
         host = Host()
-        host.nation_data["Leader"]["political_value"] = -3
+        host.nation_data["Leader"][politics.VALUE_KEY] = -3
         move = self.player_data("Leader", host)
         move["nation_data"][politics.POLICY_KEY] = {
             "research_subsidies": {"status": politics.POLICY_ACTIVATING,
@@ -1259,6 +1258,61 @@ class TournamentMoveTests(unittest.TestCase):
         self.assertEqual(summary["loaded"], 1)
         self.assertEqual(state["status"], politics.POLICY_ACTIVATING)
         self.assertEqual(state["turns_remaining"], politics.POLICY_ACTIVATION_TURNS)
+
+    def test_economic_direction_export_changes_only_the_submitting_countrys_drift(self):
+        host = Host()
+        player = Host()
+        player.player_country = "Leader"
+        politics.set_economic_value(host.nation_data, "Leader", 4)
+        politics.set_economic_value(player.nation_data, "Leader", -6)
+        politics.set_economic_drift(player.nation_data, "Leader", -1)
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "compass.gd5move")
+            tournament_files.export_move_file(player, path, self.keys["Leader"])
+            summary = self.import_moves(host, [path])
+
+        self.assertEqual(summary["loaded"], 1, summary["rejections"])
+        self.assertEqual(politics.economic_value(host.nation_data, "Leader"), 4)
+        self.assertEqual(politics.economic_drift(host.nation_data, "Leader"), -1)
+        self.assertEqual(politics.economic_drift(host.nation_data, "Member"), 0)
+
+    def test_older_snapshots_and_intents_preserve_the_hosts_economic_state(self):
+        for legacy_shape in ("snapshot", "snapshot_with_fields", "intents"):
+            with self.subTest(legacy_shape=legacy_shape), tempfile.TemporaryDirectory() as directory:
+                host = Host()
+                politics.set_economic_value(host.nation_data, "Leader", 4)
+                politics.set_economic_drift(host.nation_data, "Leader", -1)
+                move = self.player_data("Leader", host, game_version="v49")
+                move["nation_data"].pop(politics.ECONOMIC_VALUE_KEY)
+                move["nation_data"].pop(politics.ECONOMIC_DRIFT_KEY)
+                if legacy_shape == "snapshot_with_fields":
+                    move["nation_data"].update({politics.ECONOMIC_VALUE_KEY: 9, politics.ECONOMIC_DRIFT_KEY: 1})
+                if legacy_shape == "intents":
+                    move["player_intents"] = [{"type": "country_preferences", "political_drift": 1}]
+                path = self.write_move(directory, "legacy-compass.gd5move", "Leader", move)
+                summary = self.import_moves(host, [path], accept_older_versions=True)
+
+                self.assertEqual(summary["loaded"], 1, summary["rejections"])
+                self.assertEqual(politics.economic_value(host.nation_data, "Leader"), 4)
+                self.assertEqual(politics.economic_drift(host.nation_data, "Leader"), -1)
+
+    def test_tournament_rejects_malformed_unauthorized_or_stale_economic_intents(self):
+        for failure in ("malformed", "position", "stale"):
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as directory:
+                host = Host()
+                preferences = {"type": "country_preferences", politics.ECONOMIC_DRIFT_KEY: 1}
+                move = self.player_data("Leader", host, player_intents=[preferences])
+                if failure == "malformed":
+                    preferences[politics.ECONOMIC_DRIFT_KEY] = True
+                elif failure == "position":
+                    preferences[politics.ECONOMIC_VALUE_KEY] = 8
+                else:
+                    move["tournament_turn"] -= 1
+                path = self.write_move(directory, "invalid-compass.gd5move", "Leader", move)
+                summary = self.import_moves(host, [path])
+
+                self.assertEqual(summary["loaded"], 0)
+                self.assertEqual(politics.economic_drift(host.nation_data, "Leader"), 0)
 
     def test_tournament_round_trip_and_malformed_key_entry(self):
         host = Host()

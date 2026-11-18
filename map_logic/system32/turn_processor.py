@@ -210,10 +210,9 @@ async def _resolve_turn_logic(context): # Renamed from resolve_turn
     days_to_advance = queries.get_days_per_turn(world_state.scenario_settings)
     world_state.time_manager.process_time(days_to_advance)
 
-    # Before combat and before research, so the whole turn resolves under one
-    # political value rather than shooting under the old one and researching
-    # under the new. The direction was chosen last turn -- by the player in the
-    # Politics tab, by the AI in prepare_turn -- and this is where it lands.
+    # Resolve both axes before combat, income, and research so all three use
+    # the same new compass position. Players choose directions in Politics.
+    # AI countries choose them in prepare_turn.
     politics.tick(context)
     
     print("[SYSTEM] Executing Unit Orders & Combat...")

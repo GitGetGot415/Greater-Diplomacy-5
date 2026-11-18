@@ -418,7 +418,7 @@ def _build_left_bar_buttons(map_screen):
             map_screen.change_state("RESEARCH")
 
     def politics_callback():
-        """Steering your own axis, or authoring everyone's starting position.
+        """Steer your own compass or author a country's starting coordinates.
 
         Same split as research_callback: the map editor sets what a nation
         *starts* at, a player picks which way their own country is heading.

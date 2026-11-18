@@ -59,6 +59,7 @@ class CountrySummaryTests(unittest.TestCase):
     def test_own_summary_matches_shared_damage_and_economy_rules(self):
         game = world()
         game.nation_data["A"][politics.VALUE_KEY] = c.POLITICS_MAX
+        politics.set_economic_value(game.nation_data, "A", -4)
         game.nation_data["A"][politics.POLICY_KEY] = {
             "total_mobilisation": {"status": politics.POLICY_ACTIVE}}
         summary = queries.get_country_summary(game, "A")
@@ -80,6 +81,7 @@ class CountrySummaryTests(unittest.TestCase):
             self.assertEqual(row["expenses"], expenses[row["resource"]])
             self.assertEqual(row["net"], row["income"] - row["expenses"])
         self.assertEqual(summary["politics"]["value"], c.POLITICS_MAX)
+        self.assertEqual(summary["politics"]["economic_value"], -4)
         self.assertEqual(summary["politics"]["research_multiplier"], politics.research_multiplier(game.nation_data, "A"))
 
     def test_foreign_totals_exclude_fogged_units_hidden_submarines_and_cargo(self):

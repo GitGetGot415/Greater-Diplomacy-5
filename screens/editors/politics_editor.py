@@ -1,24 +1,10 @@
-"""Authoring where a nation *starts* on the political axis.
-
-Everyone begins centrist, which is right for a blank map and wrong for a dated
-scenario: a 1939 setup where the Reich and the Western democracies open at the
-same point on a libertarian/authoritarian axis is saying something it does not
-mean. This is the one place that can be changed before the first turn.
-
-Unlike the player's Politics screen this one *is* a drag -- the editor is
-setting a position outright rather than choosing a direction to walk in, and the
-Slider is the right widget for that. Saving also clears any stored direction, so
-an authored country opens the game standing still where it was placed.
-
-See screens/editors/__init__.py: every screen class here is re-exported
-at package level, because screens/editors/menus.py looks them up by name.
-"""
+"""Set a country's starting coordinates on the political compass."""
 import pygame
 import data.constants as c
 from ui.background_styles import EDITOR_PANEL_STYLES
 from data import queries
 from ui.navigation.screen import EditorSliderScreen, NationListOverlayScreen
-from ui.widgets.ui_elements import Button, Slider
+from ui.widgets.ui_elements import Button, Slider, draw_political_compass, make_back_button
 from ui.rendering.font_manager import fonts
 from map_logic import politics
 
@@ -39,61 +25,116 @@ class Politics_Edit_Screen(EditorSliderScreen):
     PANEL_STYLE = EDITOR_PANEL_STYLES["politics"]
     RESET_LABEL = "Reset to Centre"
 
-    SLIDER_Y = 150
+    PANEL_SIZE = (780, 340)
+    COMPASS_RECT = (107, 82, 146, 146)
+    SLIDER_X = 445
+    SLIDER_W = 210
+    POLE_LABEL_X = 348
+    SLIDER_TOP = 113
+    SLIDER_GAP = 82
+    EFFECTS_Y = 245
+    EFFECTS_LINE_GAP = 20
 
     def __init__(self, map_screen, country_id):
-        super().__init__(map_screen, pygame.Rect(0, 0, 520, 400))
+        super().__init__(map_screen, pygame.Rect(0, 0, *self.PANEL_SIZE))
         self.country_id = country_id
         self.value = politics.value(map_screen.nation_data, country_id)
-        self.slider = None
+        self.economic_value = politics.economic_value(map_screen.nation_data, country_id)
         self.refresh_ui()
 
-    def _set(self, fraction):
-        self.value = _from_slider(fraction)
+    def can_edit(self):
+        return (self.country_id in self.map_screen.nation_data
+                and (queries.can_bulk_edit_map(self.map_screen)
+                     or queries.can_use_spectator_country_actions(self.map_screen))
+                and self.country_id in queries.get_living_nations(self.map_screen.map_data))
+
+    def _readings(self):
+        return (f"Political: {politics.label(self.value)} ({self.value:+d})",
+                f"Economic: {politics.economic_label(self.economic_value)} ({self.economic_value:+d})")
+
+    def _set(self, index, fraction):
+        position = _from_slider(fraction)
+        if index == 0:
+            if position == self.value:
+                return
+            self.value = position
+        else:
+            if position == self.economic_value:
+                return
+            self.economic_value = position
+        self.rows[index][0].text = self._readings()[index]
+        self._refresh_preview()
+
+    def refresh_ui(self):
+        self._editable = self.can_edit()
+        if self._editable:
+            super().refresh_ui()
+        else:
+            self.rows = []
+            self.elements = [make_back_button(self.exit_screen, style="map")]
+        self._refresh_preview()
 
     def slider_rows(self):
         p = self.panel_rect
-        self.slider = Slider(p.x + self.SLIDER_X, p.y + self.SLIDER_Y, self.SLIDER_W,
-                             "Political Position", _to_slider(self.value), self._set)
-        return [(self.slider, "libertarian", "authoritarian")]
+        axes = ((self.value, "Libertarian", "Authoritarian"),
+                (self.economic_value, "Planned", "Market"))
+        rows = []
+        for index, (value, low, high) in enumerate(axes):
+            slider = Slider(p.x + self.SLIDER_X, p.y + self.SLIDER_TOP + index * self.SLIDER_GAP,
+                            self.SLIDER_W, self._readings()[index], _to_slider(value),
+                            lambda fraction, row=index: self._set(row, fraction))
+            rows.append((slider, low, high))
+        return rows
 
     def reset(self):
+        if not self.can_edit():
+            return
         self.value = c.POLITICS_START
+        self.economic_value = c.POLITICS_START
         self.refresh_ui()
 
     def save(self):
+        if not self.can_edit():
+            return
         nation_data = self.map_screen.nation_data
         politics.set_value(nation_data, self.country_id, self.value)
-        # A starting position is a place, not a journey: clear any direction so
-        # the scenario does not open with the country already on the move.
+        politics.set_economic_value(nation_data, self.country_id, self.economic_value)
+        # A scenario starts with both directions on Hold.
         politics.set_drift(nation_data, self.country_id, 0)
+        politics.set_economic_drift(nation_data, self.country_id, 0)
+        self.map_screen.invalidate_map_presentation_cache()
+        name = queries.get_country_display_name(self.country_id, nation_data)
         self.map_screen.show_feedback(
-            "%s starts as %s (%+d)" % (queries.get_country_display_name(
-                self.country_id, nation_data), politics.label(self.value), self.value))
+            f"{name} starts at {politics.label(self.value)} ({self.value:+d}), "
+            f"{politics.economic_label(self.economic_value)} ({self.economic_value:+d}).")
         self.done = True
 
     def get_panel_title(self):
         return "%s Politics" % queries.get_country_display_name(
             self.country_id, self.map_screen.nation_data)
 
+    def _refresh_preview(self):
+        self._preview = pygame.Surface(self.panel_rect.size, pygame.SRCALPHA)
+        draw_political_compass(self._preview, pygame.Rect(*self.COMPASS_RECT), (self.economic_value, self.value))
+        small = fonts.get("small")
+        center_x = self.SLIDER_X + self.SLIDER_W // 2
+        if not self._editable:
+            for index, text in enumerate((*self._readings(), "Read-only")):
+                reading = small.render(text, True, c.UI_TEXT_LIGHT)
+                self._preview.blit(reading, reading.get_rect(centerx=center_x, y=self.SLIDER_TOP + index * 28))
+        damage = politics.axis_damage_multiplier(self.value)
+        manpower = politics.axis_core_manpower_multiplier(self.value)
+        factory = politics.axis_factory_multiplier(self.economic_value)
+        research = politics.axis_research_multiplier(self.economic_value)
+        lines = (f"Army damage x{damage:.2f}      Core manpower x{manpower:.2f}",
+                 f"Factory output x{factory:.2f}      Research speed x{research:.2f}")
+        for row, text in enumerate(lines):
+            effects = small.render(text, True, c.UI_TEXT_DIM)
+            self._preview.blit(effects, effects.get_rect(centerx=center_x, y=self.EFFECTS_Y + row * self.EFFECTS_LINE_GAP))
+
     def draw_content(self, surface):
         super().draw_content(surface)
-        p = self.panel_rect
-        small = fonts.get("small")
-
-        # The brighter of the palette's two shades: these are button fills, and
-        # the base one is chosen to sit under white text rather than to be it.
-        reading = fonts.get("normal").render(
-            "%s  (%+d)" % (politics.label(self.value), self.value),
-            True, c.UI_COLORS[politics.palette(self.value)][1])
-        surface.blit(reading, (p.centerx - reading.get_width() // 2, self.slider.rect.y + 50))
-
-        effects = small.render(
-            "Damage dealt x%.2f      Research speed x%.2f"
-            % (1.0 + c.POLITICS_DAMAGE_SPAN * self.value / float(c.POLITICS_MAX),
-               1.0 - c.POLITICS_RESEARCH_SPAN * self.value / float(c.POLITICS_MAX)),
-            True, c.UI_TEXT_DIM)
-        surface.blit(effects, (p.centerx - effects.get_width() // 2, self.slider.rect.y + 90))
+        surface.blit(self._preview, self.panel_rect)
 
 
 class Politics_List_Screen(NationListOverlayScreen):
@@ -104,10 +145,11 @@ class Politics_List_Screen(NationListOverlayScreen):
     EDIT_SCREEN = Politics_Edit_Screen
 
     def country_button(self, country_id, x, y):
-        value = politics.value(self.map_screen.nation_data, country_id)
-        country_name = queries.get_country_display_name(country_id, self.map_screen.nation_data)
-        label = country_name if value == c.POLITICS_START else "%s  (%+d %s)" % (
-            country_name, value, politics.label(value))
+        nation_data = self.map_screen.nation_data
+        value = politics.value(nation_data, country_id)
+        economic = politics.economic_value(nation_data, country_id)
+        country_name = queries.get_country_display_name(country_id, nation_data)
+        label = f"{country_name}  |  {politics.label(value)} {value:+d}  |  {politics.economic_label(economic)} {economic:+d}"
         # Color is the ideology, not "has anybody edited this" -- the list
         # then reads as a heat map of who has centralised, and an untouched
         # map opens uniformly yellow because centrist *is* a position.

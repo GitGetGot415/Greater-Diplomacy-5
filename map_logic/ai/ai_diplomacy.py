@@ -1262,6 +1262,7 @@ def _run_basic_proactive_ai(context):
         # this needs no gate of its own.
         ai_politics.decide(world, ai_name, world_state.nation_data,
                            world_state.scenario_settings)
+        ai_politics.decide_economy(world, ai_name, world_state.nation_data)
 
         # Battle Royale has no diplomacy to run, but the cooldown/access
         # upkeep above still applies to every nation -- this used to `return`

@@ -22,6 +22,7 @@ from data.map.map_cache import remove_optional_layer_files
 from data.platform import sync_persisted_dir
 
 from data.migrations import snapshot_moves
+from map_logic import politics
 from map_logic.actions.player_actions import collect_map_commands, PlayerActions
 
 
@@ -152,6 +153,7 @@ def strip_sensitive_data_for_player(context, country_id):
 
             # Hide an AI government's private notebook
             country.pop("ai_notebook", None)
+            country.pop(politics.ECONOMIC_DRIFT_KEY, None)
 
 
 def strip_sensitive_data_for_tournament_spectator(context):
@@ -186,6 +188,7 @@ def strip_sensitive_data_for_tournament_spectator(context):
         country["pending_diplomacy"] = {}
         country["diplo_responses"] = {}
         country.pop("ai_notebook", None)
+        country.pop(politics.ECONOMIC_DRIFT_KEY, None)
 
     for province in world_state.map_data.values():
         for unit in province.get("units", []):
@@ -229,6 +232,7 @@ def build_tournament_spectator_save(save_dict):
             country["pending_diplomacy"] = {}
             country["diplo_responses"] = {}
             country.pop("ai_notebook", None)
+            country.pop(politics.ECONOMIC_DRIFT_KEY, None)
 
     for province in spectator_save.get("provinces", {}).values():
         if not isinstance(province, dict):
