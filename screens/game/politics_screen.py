@@ -30,7 +30,7 @@ DRIFT_BUTTON_GAP = 8
 EFFECTS_OFFSET_Y = 283
 DRIFT_ROWS = (
     ("Political Direction", ("Liberalise", "Hold", "Centralise")),
-    ("Economic Direction", ("Toward Planned", "Hold", "Toward Market")),
+    ("Economic Direction", ("Left", "Hold", "Right")),
 )
 
 POLICY_VIEWPORT_MARGIN_X = 20
