@@ -859,6 +859,23 @@ class AIPoliticsTests(unittest.TestCase):
         self.assertEqual(self.ai_politics.desired_value(first, "A"),
                          self.ai_politics.desired_value(second, "A"))
 
+    def test_economic_drift_responds_to_a_shortage_independently(self):
+        world = ai_world_with("A")
+        world.provs_by_owner = {"A": [{"buildings": ["Basic Factory"]}]}
+        world.economies = {"A": {"upkeep": {"materials": 100, "fuel": 20},
+                                 "total_inc": {"materials": 80, "fuel": 10},
+                                 "breakdown": {"materials": {"buildings": 60},
+                                               "fuel": {"buildings": 0}}}}
+        politics.set_drift(world.nation_data, "A", 1)
+        self.assertEqual(self.ai_politics.decide_economy(world, "A", world.nation_data), -1)
+        self.assertEqual(politics.economic_value(world.nation_data, "A"), c.POLITICS_START)
+        self.assertEqual(politics.drift(world.nation_data, "A"), 1)
+
+        # A factory cannot help the remaining fuel deficit in this economy.
+        world.nation_data["A"]["materials"] = 20 * c.AI_DISBAND_RUNWAY_TURNS
+        self.assertEqual(self.ai_politics.decide_economy(world, "A", world.nation_data), 1)
+        self.assertEqual(politics.economic_drift(world.nation_data, "A"), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

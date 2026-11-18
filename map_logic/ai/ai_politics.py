@@ -1,4 +1,4 @@
-"""Which way an AI nation leans on the libertarian/authoritarian axis.
+"""Choose an AI nation's targets on the political and economic axes.
 
 The mechanic itself lives in map_logic/politics.py; this is only the AI's half
 of it -- the player steers their own country from the Politics tab.
@@ -37,7 +37,7 @@ def _danger(world, nation, enemies):
     Two parts: the worst war it is in, and how many of them there are. The
     `losing` term is ai_opinion.peace_appetite's, read off the same cached
     power ratios -- a nation that wants out of a war for being beaten is the
-    same nation that wants its factories under state control.
+    same nation that values more immediate damage from its army.
     """
     losing = 0.0
     for enemy in enemies:
@@ -89,20 +89,41 @@ def desired_value(world, nation, scenario_settings=None):
     return politics.clamp((2.0 * clamp01(base) - 1.0) * c.POLITICS_MAX)
 
 
-def decide(world, nation, nation_data, scenario_settings=None):
-    """Points `nation` at its target, or stops it if it has arrived.
-
-    Returns the direction written, so a caller can log it.
-    """
-    target = desired_value(world, nation, scenario_settings)
-    current = politics.value(nation_data, nation)
-
+def _direction_toward(current, target):
     if target > current:
-        direction = 1
-    elif target < current:
-        direction = -1
-    else:
-        direction = 0
+        return 1
+    if target < current:
+        return -1
+    return 0
 
+
+def decide(world, nation, nation_data, scenario_settings=None):
+    """Set political drift toward the current strategic target."""
+    target = desired_value(world, nation, scenario_settings)
+    direction = _direction_toward(politics.value(nation_data, nation), target)
     politics.set_drift(nation_data, nation, direction)
+    return direction
+
+
+def desired_economic_value(world, nation):
+    """Favour research until a factory resource is at risk of running out."""
+    if not any(queries.has_industry(province) for province in world.provs_by_owner.get(nation, ())):
+        return c.POLITICS_MAX
+
+    country = world.nation_data[nation]
+    economy = world.economies[nation]
+    for resource in ("materials", "fuel"):
+        drain = economy["upkeep"][resource] - economy["total_inc"][resource]
+        if (economy["breakdown"][resource]["buildings"] > 0 and drain > 0
+                and country.get(resource, 0) < drain * c.AI_DISBAND_RUNWAY_TURNS):
+            # Leave one step of research progress during a supply emergency.
+            return c.POLITICS_MIN + c.POLITICS_STEP
+    return c.POLITICS_MAX
+
+
+def decide_economy(world, nation, nation_data):
+    """Set economic drift independently of the political direction."""
+    target = desired_economic_value(world, nation)
+    direction = _direction_toward(politics.economic_value(nation_data, nation), target)
+    politics.set_economic_drift(nation_data, nation, direction)
     return direction
