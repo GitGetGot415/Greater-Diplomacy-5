@@ -294,6 +294,15 @@ class BandTests(unittest.TestCase):
         for value in range(c.POLITICS_MIN, c.POLITICS_MAX + 1):
             self.assertEqual(politics.palette(value), expected[politics.label(value)])
 
+    def test_economic_labels_follow_the_same_five_bands(self):
+        economic_labels = {bound: politics.economic_label(bound) for bound, _label, _palette in politics.BANDS}
+        self.assertEqual(len(set(economic_labels.values())), 5)
+        for value in range(c.POLITICS_MIN, c.POLITICS_MAX + 1):
+            with self.subTest(value=value):
+                label = politics.economic_label(value)
+                self.assertEqual(label, economic_labels[politics.band(value)[0]])
+                self.assertEqual(label == "Mixed", -2 <= value <= 2)
+
     def test_a_value_off_the_axis_is_still_painted(self):
         self.assertEqual(politics.palette(c.POLITICS_MAX + c.POLITICS_STEP),
                          politics.BANDS[-1][2])

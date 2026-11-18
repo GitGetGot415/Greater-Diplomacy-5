@@ -382,29 +382,30 @@ def resource_multiplier(nation_data, nation, resource):
     return effect_multiplier(nation_data, nation, resource)
 
 
-#: The axis carved into five named bands, libertarian first. Each entry is
-#: (highest value in the band, what to call it, its c.UI_COLORS palette name).
-#:
-#: One table rather than two, because the word and the color are the same
-#: statement made twice: a screen that called a nation "Statist" and painted it
-#: red would be telling the reader two different things about one number. The
-#: centre band is yellow, so a map nobody has authored yet opens all one color.
-BANDS = (
-    (-7, "Libertarian", "light_blue"),
-    (-3, "Liberal", "green"),
-    (2, "Centrist", "yellow"),
-    (6, "Statist", "orange"),
-    (c.POLITICS_MAX, "Authoritarian", "red"),
+#: Both axes share the same five score ranges. Each row contains the upper
+#: bound, political label, political palette, and economic label. The political
+#: label and palette describe the same band, with yellow for the centre.
+_COMPASS_BANDS = (
+    (-7, "Libertarian", "light_blue", "Planned"),
+    (-3, "Liberal", "green", "Planned-leaning"),
+    (2, "Centrist", "yellow", "Mixed"),
+    (6, "Statist", "orange", "Market-leaning"),
+    (c.POLITICS_MAX, "Authoritarian", "red", "Market"),
 )
+BANDS = tuple(row[:3] for row in _COMPASS_BANDS)
+
+
+def _band_index(position):
+    position = clamp(position)
+    for index, row in enumerate(_COMPASS_BANDS):
+        if position <= row[0]:
+            return index
+    return len(_COMPASS_BANDS) - 1
 
 
 def band(political_value):
     """The (bound, label, palette) entry a value falls in."""
-    v = clamp(political_value)
-    for entry in BANDS:
-        if v <= entry[0]:
-            return entry
-    return BANDS[-1]
+    return BANDS[_band_index(political_value)]
 
 
 def label(political_value):
@@ -413,11 +414,8 @@ def label(political_value):
 
 
 def economic_label(position):
-    if position < c.POLITICS_START:
-        return "Planned"
-    if position > c.POLITICS_START:
-        return "Market"
-    return "Mixed"
+    """Return the economic label for the position's compass band."""
+    return _COMPASS_BANDS[_band_index(position)][3]
 
 
 def palette(political_value):
