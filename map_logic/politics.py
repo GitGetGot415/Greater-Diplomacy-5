@@ -360,22 +360,20 @@ def effect_multiplier(nation_data, nation, effect):
     return result
 
 
+def _axis_strength(position):
+    return position / float(c.POLITICS_MAX)
+
+
 def axis_damage_multiplier(position):
-    return 1.0 + c.POLITICS_DAMAGE_SPAN * (position / float(c.POLITICS_MAX))
+    return 1.0 + c.POLITICS_DAMAGE_SPAN * _axis_strength(position)
 
 
 def axis_core_manpower_multiplier(position):
-    return 1.0 - c.POLITICS_CORE_MANPOWER_SPAN * (position / float(c.POLITICS_MAX))
-
-
-def _economic_strength(position):
-    """Convert the economic score to -1 through +1, with all Mixed scores neutral."""
-    distance = max(0, position - MIXED_BAND_LIMIT) + min(0, position + MIXED_BAND_LIMIT)
-    return distance / (c.POLITICS_MAX - MIXED_BAND_LIMIT)
+    return 1.0 - c.POLITICS_CORE_MANPOWER_SPAN * _axis_strength(position)
 
 
 def axis_factory_multiplier(position):
-    return 1.0 - c.ECONOMICS_FACTORY_SPAN * _economic_strength(position)
+    return 1.0 - c.ECONOMICS_FACTORY_SPAN * _axis_strength(position)
 
 
 def factory_output_multiplier(nation_data, nation):
@@ -383,7 +381,7 @@ def factory_output_multiplier(nation_data, nation):
 
 
 def axis_research_multiplier(position):
-    return 1.0 + c.ECONOMICS_RESEARCH_SPAN * _economic_strength(position)
+    return 1.0 + c.ECONOMICS_RESEARCH_SPAN * _axis_strength(position)
 
 
 def damage_multiplier(nation_data, nation):

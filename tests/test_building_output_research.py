@@ -1,5 +1,6 @@
 """Research output bonuses share targeting, economy, preview, and AI rules."""
 
+import asyncio
 import copy
 import json
 import unittest
@@ -9,8 +10,10 @@ from unittest.mock import Mock, patch
 import data.constants as c
 from data import queries
 from data.runtime_rules import ActiveLibrary, RuntimeRules
+from data.state_access import BackendState
+from map_logic import politics
 from map_logic.ai import ai_tech_eval
-from map_logic.system32 import economy_processor, research_processor
+from map_logic.system32 import economy_processor, research_processor, turn_processor
 from tests.stub_map_screen import map_double, sample_map_screen
 from tests.research_fixtures import research_lock_cases
 
@@ -227,6 +230,33 @@ class OutputBonusTests(unittest.TestCase):
         economy_processor.process_economy(game)
         for res in c.ECON_RESOURCE_KEYS:
             self.assertEqual(country[res], expected["total_inc"][res])
+
+    def test_first_economic_step_changes_credited_factory_income_and_research(self):
+        self.library["Basic Factory"] = building(100, 0, 0, "industry")
+
+        def resolve(drift):
+            game = BackendState()
+            game.player_country = "A"
+            game.active_players = ["A"]
+            self.tree["progress"] = {"max_lvl": 1, "years": [game.time_manager.year - 1]}
+            project = {"tech_name": "progress", "points_remaining": 100_000}
+            country = {"research": {}, "research_queue": [project], "is_playable": True}
+            game.nation_data["A"] = country
+            province = {"id": 1, "json_key": "1", "terrain": "plains", "neighbors": [], "owner": "A",
+                        "cores": ["A"], "units": [], "buildings": ["Basic Factory"]}
+            game.map_data[1] = game.id_to_province[1] = province
+            politics.set_economic_drift(game.nation_data, "A", drift)
+            asyncio.run(turn_processor.resolve_turn_logic(game))
+            self.assertEqual(politics.economic_value(game.nation_data, "A"), drift)
+            return country["materials"], 100_000 - project["points_remaining"]
+
+        base_materials, base_research = resolve(0)
+        self.assertGreater(base_research, 0)
+        for drift in (-1, 1):
+            with self.subTest(drift=drift):
+                materials, research = resolve(drift)
+                self.assertEqual(materials, base_materials - 3 * drift)
+                self.assertAlmostEqual(research, base_research * (1.0 + 0.1 * drift))
 
     def test_shared_sweep_tables_give_each_nation_its_own_research_output(self):
         # One economy sweep shares building tables between nations with the same
