@@ -730,13 +730,13 @@ def _bfs_nearest_target(start_id, target_ids, allowed_prov_ids, id_to_province, 
 
     return []
 
-def process_ai_unit_orders(context):
+def process_ai_unit_orders(context, *, countries=None):
     """Generates movement orders for AI-controlled units to balance borders, attack, or escort."""
     # Order generation only reads the diplomatic picture -- it writes unit orders
     # and nothing else -- so faction and alliance membership can be resolved once
     # for the whole pass instead of once per pathfinding edge.
     with queries.diplomacy_snapshot():
-        _generate_unit_orders(context)
+        _generate_unit_orders(context, countries=countries)
 
 
 # ============================================================================ #
@@ -2088,10 +2088,10 @@ def _cancel_opposing_transitions(ai_nations, nation_units, contested=None):
             processed.add((dest, src))
 
 
-def _generate_unit_orders(context):
+def _generate_unit_orders(context, *, countries=None):
     world_state = world_for(context)
     session_state = session_for(context)
-    ai_nations = queries.get_active_ai_nations(context)
+    ai_nations = queries.get_active_ai_nations(context) if countries is None else countries
     session_state.movement_tasks_total = len(ai_nations)
     session_state.movement_tasks_completed = 0
     world = ai_world.for_screen(context)

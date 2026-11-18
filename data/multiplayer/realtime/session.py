@@ -802,12 +802,7 @@ class MapRealtimeDriver(PlayerActions):
                 if not isinstance(automation, dict):
                     continue
                 self.session.player_country = country_id
-                if automation.get("construction"):
-                    automation_logic.automate_player_construction(self.context)
-                if automation.get("movement"):
-                    automation_logic.automate_player_movement(self.context)
-                if automation.get("research"):
-                    automation_logic.automate_player_research(self.context)
+                automation_logic.run_enabled_automation(self.context, automation)
         finally:
             self.session.player_country = original_player
 
