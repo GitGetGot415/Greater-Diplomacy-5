@@ -1243,7 +1243,7 @@ class TournamentMoveTests(unittest.TestCase):
 
     def test_policy_activation_round_trips_without_trusting_player_timers(self):
         host = Host()
-        host.nation_data["Leader"][politics.ECONOMIC_VALUE_KEY] = politics.MIXED_BAND_LIMIT + 1
+        host.nation_data["Leader"][politics.VALUE_KEY] = -3
         move = self.player_data("Leader", host)
         move["nation_data"][politics.POLICY_KEY] = {
             "research_subsidies": {"status": politics.POLICY_ACTIVATING,
