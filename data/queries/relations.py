@@ -14,28 +14,36 @@ from data.queries.strength import (
 from data import queries
 
 
-def get_relation_score(nation_a, nation_b, nation_data, id_to_province=None):
-    """Calculates dynamic relations based on flat state modifiers and temporary modifiers."""
+def _count_disputed_provinces(nation_a, nation_b, nation_data, id_to_province):
+    claims = {
+        nation_a: set(nation_data.get(nation_a, {}).get("claims", [])),
+        nation_b: set(nation_data.get(nation_b, {}).get("claims", [])),
+    }
+    other = {nation_a: nation_b, nation_b: nation_a}
+    count = 0
+    for province in id_to_province.values():
+        claimant = other.get(province.get("owner"))
+        if claimant is not None and (claimant in province.get("cores", []) or province["id"] in claims[claimant]):
+            count += 1
+    return count
+
+
+def get_relation_score(nation_a, nation_b, nation_data, id_to_province=None, *, claim_count=None):
+    """Calculate a directional opinion, optionally using a preindexed claim count."""
     if nation_a == nation_b:
         return 0
-    claim_count = None
     if id_to_province:
-        claims_a = nation_data.get(nation_a, {}).get("claims", [])
-        claims_b = nation_data.get(nation_b, {}).get("claims", [])
-
-        a_claims_b = 0
-        b_claims_a = 0
-
-        for prov in id_to_province.values():
-            owner = prov.get("owner")
-            if owner == nation_b:
-                if nation_a in prov.get("cores", []) or prov["id"] in claims_a:
-                    a_claims_b += 1
-            elif owner == nation_a:
-                if nation_b in prov.get("cores", []) or prov["id"] in claims_b:
-                    b_claims_a += 1
-        claim_count = a_claims_b + b_claims_a
+        claim_count = _count_disputed_provinces(nation_a, nation_b, nation_data, id_to_province)
     return _relation_score(nation_a, nation_b, nation_data, claim_count)
+
+
+def get_mutual_relation_breakdowns(nation_a, nation_b, nation_data, id_to_province):
+    """Return the factors for A's opinion of B, then B's opinion of A."""
+    if nation_a == nation_b:
+        return (), ()
+    claim_count = _count_disputed_provinces(nation_a, nation_b, nation_data, id_to_province)
+    return (tuple(_relation_factors(nation_a, nation_b, nation_data, claim_count)),
+            tuple(_relation_factors(nation_b, nation_a, nation_data, claim_count)))
 
 
 def get_relation_scores_toward(nation_b, nations, nation_data, id_to_province=None):
@@ -73,45 +81,35 @@ def get_relation_scores_toward(nation_b, nations, nation_data, id_to_province=No
 
 
 def _relation_score(nation_a, nation_b, nation_data, claim_count):
-    """The score of two different nations, given the provinces each claims of
-    the other's. claim_count None leaves claims out, as when no province map
-    was given."""
-    score = 0
+    return sum(value for _, value, _ in _relation_factors(nation_a, nation_b, nation_data, claim_count))
+
+
+def _relation_factors(nation_a, nation_b, nation_data, claim_count):
+    """Yield each rule's name, contribution, and any details for display."""
     if are_at_war(nation_a, nation_b, nation_data):
-        score += c.REL_MOD_AT_WAR
+        yield "war", c.REL_MOD_AT_WAR, None
     elif are_in_same_faction(nation_a, nation_b, nation_data):
-        score += c.REL_MOD_IN_FACTION
-        
-    # Common Enemy Bonus
+        yield "faction", c.REL_MOD_IN_FACTION, None
+
     enemies_a = set(get_enemies(nation_a, nation_data))
     enemies_b = set(get_enemies(nation_b, nation_data))
-    
-    # If the intersection contains anything, they share at least one enemy.
-    # The flat bonus is applied once, capping the effect.
     if enemies_a & enemies_b:
-        score += c.REL_MOD_COMMON_ENEMY
-        
-    # master and puppet mechanics
+        yield "shared_enemy", c.REL_MOD_COMMON_ENEMY, None
+
     master_a = nation_data.get(nation_a, {}).get("master", "")
     master_b = nation_data.get(nation_b, {}).get("master", "")
     if master_b == nation_a:
-        score += c.REL_MOD_MASTER_OF
+        yield "overlord", c.REL_MOD_MASTER_OF, None
     elif master_a == nation_b:
-        score += c.REL_MOD_PUPPET_OF
-                
-    # Apply all decaying temporary modifiers
+        yield "subject", c.REL_MOD_PUPPET_OF, None
+
+    if claim_count:
+        penalty = min(abs(c.REL_MOD_MAX_CLAIM_PENALTY), claim_count * abs(c.REL_MOD_PER_CLAIM))
+        yield "claims", -penalty, claim_count
+
     temp_mods = nation_data.get(nation_a, {}).get("temp_modifiers", {}).get(nation_b, {})
-    for entry in temp_mods.values():
-        score += modifier_value(entry)
-
-    if claim_count is not None:
-        penalty_per_claim = abs(c.REL_MOD_PER_CLAIM)
-        max_penalty = abs(c.REL_MOD_MAX_CLAIM_PENALTY)
-
-        claim_penalty = min(max_penalty, claim_count * penalty_per_claim)
-        score -= claim_penalty
-
-    return score
+    for name, entry in temp_mods.items():
+        yield "temporary", modifier_value(entry), (name, entry)
 
 
 # A relation modifier is stored either as a bare int -- every modifier written

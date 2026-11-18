@@ -55,7 +55,7 @@ from map_logic.diplomacy import diplomacy_lifecycle
 from map_logic.system32 import economy_processor, turn_processor
 from map_logic.ai import ai_handler
 from map_logic.actions import unit_actions
-from ui.information import feedback_text, tooltip
+from ui.information import feedback_text, tooltip, ui_info_popup
 
 MAX_Y_TILT_FACTOR = 0.0 # The maximum compression of the Y axis (0.6 = 60% of original height)
 
@@ -151,6 +151,10 @@ class Map(StateAccess, Screen):
         province = getattr(self, "selected_province", None)
         if province is not None:
             sidebar_info.prepare_unit_roster(self, province)
+            ui_info_popup.prepare_relation_indicators(self)
+
+    def on_enter(self, app, previous):
+        ui_info_popup.prepare_relation_indicators(self)
 
     def __init__(self, load_path=None, is_scenario=False, is_random=False, force_editor=False, random_settings=None, map_settings=None, num_players=1, history_turn=None, skip_initial_income=False):
         for _ in self._initialize_steps(
@@ -418,6 +422,7 @@ class Map(StateAccess, Screen):
         self.selected_province = self.hovered_province = self.last_hovered_id = None
         self._tooltip_building_stamp = None
         self._tooltip_building_yields = []
+        self._relation_indicator_cache = None
         self.hover_glow_surf = self.hover_glow_rect = None
         self.hovered_unit_stack = None
         # Map-unit selection is presentation state only. Unit dictionaries
@@ -805,6 +810,7 @@ class Map(StateAccess, Screen):
                 self.mail_input_active = False
 
         self.selected_province = self.hovered_province = self.hover_glow_surf = self.last_hovered_id = None
+        self._relation_indicator_cache = None
         self.hovered_unit_stack = None
         # Back keys run before queued mouse events. Cancel presses and hide
         # province controls before a later release can use the cleared selection.
@@ -899,7 +905,7 @@ class Map(StateAccess, Screen):
         # The inspector projects aircraft caught in ground combat as casualties.
         # Build its roster at this boundary, never during the frame draw.
         if self.selected_province is not None:
-            sidebar_info.prepare_unit_roster(self, self.selected_province)
+            self.refresh_ui()
         map_renderer.clear_viewport_scale_cache(self)
         # A real-time draft is a state snapshot, not per-frame presentation.
         # The next update serializes it once after the action that changed it.
@@ -1317,7 +1323,7 @@ class Map(StateAccess, Screen):
             return False
         self.select_map_units([unit for unit, _province in records])
         self.selected_province = records[0][1]
-        sidebar_info.prepare_unit_roster(self, self.selected_province)
+        self.refresh_ui()
         self.focus_camera_on_army(records)
         if open_orders:
             self._orders_return_to_province_menu = False
@@ -1480,6 +1486,9 @@ class Map(StateAccess, Screen):
     def draw(self, surface):
         super().draw(surface)
         map_renderer.draw_badges(self, surface)
+        if not (self.show_exit_confirmation or self.show_player_ready_screen or self.viewing_ai_moves
+                or self.ai_is_thinking or self.is_refreshing or self.is_saving):
+            ui_info_popup.draw_relation_indicators(self, surface)
 
         realtime_status_panel.draw(self, surface)
         army_panel.draw(self, surface)

@@ -13,7 +13,7 @@ from screens.game import battle_screen
 from ui.bars import flag_renderer, ui_bars
 
 from ui.panels import sidebar_info, diplomatic_popups, llm_threads_panel, turn_progress
-from ui.information import tooltip
+from ui.information import tooltip, ui_info_popup
 from map_logic.ai import ai_handler
 from screens.editors.menus import open_convoy_converter, open_unit_transfer
 from screens.game import country_summary
@@ -110,6 +110,7 @@ def _select_map_province(map_screen, position, navigate=True):
         return False
     map_screen.selected_province = province
     sidebar_info.prepare_unit_roster(map_screen, province)
+    ui_info_popup.prepare_relation_indicators(map_screen)
     camera_handler.center_camera_on_province(
         map_screen.camera, province["center"], c.SCREEN_WIDTH, c.SCREEN_HEIGHT,
         map_screen.total_ui_h)
@@ -340,6 +341,8 @@ def _map_position_is_on_ui(map_screen, event_pos):
     # hover/camera-pan shouldn't reach through them to the map underneath.
     if _panels_are_live(map_screen):
         if any((r := _panel_rect(map_screen, name)) and r.collidepoint(mx, my) for name in MAP_PANELS):
+            on_ui = True
+        if ui_info_popup.relation_indicator_at_position(map_screen, event_pos) is not None:
             on_ui = True
         action_rect = map_screen.country_actions_scroll_rect
         if action_rect and action_rect.collidepoint(mx, my):

@@ -8,6 +8,7 @@ blocks; these tests pin the behaviour the table-driven version has to keep.
 """
 
 import unittest
+from types import SimpleNamespace
 from unittest import mock
 
 import pygame
@@ -15,6 +16,7 @@ import pygame
 import data.constants as c
 from tests import app_harness
 from screens.game import map_input
+from ui.information import ui_info_popup
 def wheel(y, pos):
     pygame.mouse.get_pos = lambda: pos
     return pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=y, flipped=False,
@@ -186,6 +188,43 @@ class MapPanelScrollTests(unittest.TestCase):
                                              pos=pos, button=1))
 
         self.assertIs(self.map.selected_province, replacement)
+
+class RelationIndicatorTests(unittest.TestCase):
+    def test_only_hovered_opinion_shows_its_own_breakdown(self):
+        pygame.font.init()
+        player_tile = {"id": 1, "owner": "A", "cores": ["B"]}
+        foreign_tile = {"id": 2, "owner": "B", "center": (20, 30)}
+        game = SimpleNamespace(
+            selected_province=None, player_country="A", selection_mode=False,
+            viewing_ai_moves=False, extreme_hidden_provinces=set(), camera=None, total_ui_h=0,
+            _presentation_cache_revision=0, _relation_indicator_cache=None,
+            small_font=pygame.font.Font(None, 14), id_to_province={1: player_tile, 2: foreign_tile},
+            nation_data={"A": {"temp_modifiers": {"B": {"general": 6}}},
+                         "B": {"claims": [1], "temp_modifiers": {"A": {"recent_war": -12}}}},
+        )
+        with (mock.patch.object(map_input, "map_ui_bar_at_position", return_value=False),
+              mock.patch.object(map_input.queries, "get_clicked_province", return_value=foreign_tile),
+              mock.patch.object(map_input.sidebar_info, "prepare_unit_roster"),
+              mock.patch.object(map_input.camera_handler, "center_camera_on_province"),
+              mock.patch.object(map_input.sound_effects, "play_ui_sound")):
+            self.assertTrue(map_input._select_map_province(game, (400, 200), navigate=False))
+
+        surface = pygame.Surface((400, 360))
+        with mock.patch.object(ui_info_popup, "_draw_relation_breakdown") as draw_breakdown:
+            for rect, modifier in zip(ui_info_popup.RELATION_ROW_RECTS, (-12, 6)):
+                draw_breakdown.reset_mock()
+                with mock.patch.object(pygame.mouse, "get_pos", return_value=rect.center):
+                    ui_info_popup.draw_relation_indicators(game, surface)
+                draw_breakdown.assert_called_once()
+                _, score, factors = draw_breakdown.call_args.args[-1]
+                self.assertEqual(score, c.REL_MOD_PER_CLAIM + modifier)
+                self.assertCountEqual([value for _, value in factors], [c.REL_MOD_PER_CLAIM, modifier])
+
+            draw_breakdown.reset_mock()
+            with mock.patch.object(pygame.mouse, "get_pos", return_value=(400, 200)):
+                ui_info_popup.draw_relation_indicators(game, surface)
+            draw_breakdown.assert_not_called()
+
 
 class ExitConfirmationTests(unittest.TestCase):
     """The quit-to-menu dialog is drawn by ui/rendering/map_renderer.py

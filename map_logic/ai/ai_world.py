@@ -485,13 +485,7 @@ class AIWorld:
     # ------------------------------------------------------------------
 
     def relation(self, nation_a, nation_b):
-        """queries.get_relation_score, claim penalty always included.
-
-        The AI's one relation-driven decision today calls the query without
-        id_to_province, which silently skips the claim penalty. Here the count
-        is already indexed, so the full score costs nothing and there is no
-        reason to ever compute the partial one.
-        """
+        """Use the shared score with the world snapshot's indexed claim count."""
         if nation_a == nation_b:
             return 0
 
@@ -500,28 +494,8 @@ class AIWorld:
         if cached is not None:
             return cached
 
-        nation_data = self.nation_data
-        score = 0
-        if queries.are_at_war(nation_a, nation_b, nation_data):
-            score += c.REL_MOD_AT_WAR
-        elif queries.are_in_same_faction(nation_a, nation_b, nation_data):
-            score += c.REL_MOD_IN_FACTION
-
-        if set(queries.get_enemies(nation_a, nation_data)) & set(queries.get_enemies(nation_b, nation_data)):
-            score += c.REL_MOD_COMMON_ENEMY
-
-        master_a = nation_data.get(nation_a, {}).get("master", "")
-        master_b = nation_data.get(nation_b, {}).get("master", "")
-        if master_b == nation_a:
-            score += c.REL_MOD_MASTER_OF
-        elif master_a == nation_b:
-            score += c.REL_MOD_PUPPET_OF
-
-        for entry in nation_data.get(nation_a, {}).get("temp_modifiers", {}).get(nation_b, {}).values():
-            score += queries.modifier_value(entry)
-
         contested = self.claim_pressure[(nation_b, nation_a)] + self.claim_pressure[(nation_a, nation_b)]
-        score -= min(abs(c.REL_MOD_MAX_CLAIM_PENALTY), contested * abs(c.REL_MOD_PER_CLAIM))
+        score = queries.get_relation_score(nation_a, nation_b, self.nation_data, claim_count=contested)
 
         self._relation[key] = score
         return score
