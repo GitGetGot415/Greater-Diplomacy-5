@@ -36,7 +36,8 @@ AI means artificial intelligence. UI means user interface.
 - Do not run tests unless absolutely nessecary.
 - Never reference Git-ignored files or directories in tests.
 - Never generate an image under any circumstances without explicit user approval.
-- **Never stage changes, commit to `main` or make another branch without explicit user approval.** If the user allows this, read `agents_git_workflow.md` for further details.
+- **Never stage changes, commit to `main` or make another branch without explicit user approval.** If the user allows this, read `documentation/agent_git_workflow.md` for further details.
+- **Every agent that contributes to a pull request must receive co-author credit.** Each commit an agent helped write must end with a `Co-authored-by` trailer for that agent, with one trailer per contributing agent. Use the verified trailers in `documentation/agent_git_workflow.md`.
 - **Never use `git stash`, `git checkout`, `git reset`, `git restore`, or `git clean` to change the working tree.**
   Do not use them to compare against a baseline or to test a clean state.
   If the command is interrupted, the user's work can stay hidden or be lost.
