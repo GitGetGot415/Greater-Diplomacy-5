@@ -28,6 +28,7 @@ from map_logic.diplomacy import war_calls
 from data import queries
 from data.state_access import session_for
 from map_logic.diplomacy import peace_scope, deal_effects, global_rules, ratification, military_attaches, volunteers
+from map_logic.diplomacy.action_definitions import handlers_for
 from map_logic.diplomacy.faction_actions import finalize_create_faction, finalize_faction_join, join_faction_wars
 from map_logic.diplomacy.diplomacy_events import log_global_event
 
@@ -246,19 +247,7 @@ def _accept_volunteers(host, action, proposer, accepter, params, escrow):
     return _canned("ACCEPT_GENERIC")
 
 
-_ACCEPTANCE_EFFECTS = {
-    "FACTION_INVITE": _accept_faction_invite,
-    "JOIN_FACTION_REQ": _accept_join_request,
-    "CREATE_FACTION": _accept_create_faction,
-    "CEASEFIRE": _accept_peace,
-    "PEACE_TREATY": _accept_peace,
-    "TRADE": _accept_trade,
-    "CALL_TO_ARMS": _accept_call_to_arms,
-    "JOIN_WARS": _accept_join_wars,
-    "REQ_MILITARY_ACCESS": _accept_military_access,
-    "SEND_MILITARY_ATTACHE": _accept_military_attache,
-    "SEND_VOLUNTEERS": _accept_volunteers,
-}
+_ACCEPTANCE_EFFECTS = handlers_for("acceptance_effect", globals())
 
 
 def apply_treaty_effect(host, action, proposer, accepter, params=None, escrow=None, *, scripted=False):
