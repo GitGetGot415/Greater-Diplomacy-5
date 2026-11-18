@@ -1,39 +1,14 @@
-"""The player's half of the political axis: one line, one marker, three buttons.
-
-The value itself is not editable here -- picking a direction is, and the country
-walks one step per processed turn. That is the whole mechanic: a choice you make
-now and live with for ten turns, not a slider you drag to whatever you need this
-turn.
-
-The axis is drawn rather than built from the Slider widget for exactly that
-reason. A Slider invites a drag, and dragging is the one thing this must not
-allow. The map editor's version of this screen (screens/editors/
-politics_editor.py) *does* use a Slider, because authoring a starting position
-is the case where dragging is right. Tactical mode keeps the player-facing
-axis readable but locks its direction controls while the player commands a
-single unit.
-"""
+"""View the political compass and set a country's turn-by-turn direction."""
 import pygame
 import data.constants as c
 from data import queries
-from ui.background_styles import SLIDER_STYLES, POLITICS_PANEL_STYLES
+from ui.background_styles import POLITICS_PANEL_STYLES
 from ui.widgets import ui_elements
 from ui.widgets.ui_elements import Button, make_back_button
 from ui.bars import ui_bars
 from ui.rendering.font_manager import fonts
 from ui.navigation.screen import Screen
 from map_logic import politics
-
-#: Direction, button face, and the word under it.
-DRIFT_OPTIONS = (
-    (-1, "<", "Liberalise"),
-    (0, "=", "Hold"),
-    (1, ">", "Centralise"),
-)
-
-TRACK_WIDTH = 520
-TRACK_HEIGHT = 8
-BUTTON_STEP_X = 130
 
 # The politics screen intentionally keeps both panels the same size.  Change
 # these values to retune the whole screen layout without hunting through draw
@@ -43,11 +18,20 @@ SCREEN_PANEL_MARGIN_Y = 20
 PANEL_GAP = 20
 
 POLITICS_TITLE_OFFSET_Y = 18
-POLITICS_TRACK_OFFSET_Y = 112
-POLITICS_EFFECTS_OFFSET_Y = 170
-POLITICS_BUTTON_OFFSET_Y = 205
-POLITICS_CAPTION_OFFSET_Y = 267
-POLITICS_NOTE_OFFSET_FROM_BOTTOM = 34
+COMPASS_OFFSET = (105, 83)
+COMPASS_SIZE = 184
+DETAILS_CENTER_X = 588
+POSITION_OFFSET_Y = 69
+POSITION_LINE_GAP = 20
+DRIFT_ROW_TOP = 139
+DRIFT_ROW_GAP = 63
+DRIFT_BUTTON_SIZE = (110, 34)
+DRIFT_BUTTON_GAP = 8
+EFFECTS_OFFSET_Y = 283
+DRIFT_ROWS = (
+    ("Political Direction", ("Liberalise", "Hold", "Centralise")),
+    ("Economic Direction", ("Toward Planned", "Hold", "Toward Market")),
+)
 
 POLICY_VIEWPORT_MARGIN_X = 20
 POLICY_VIEWPORT_TOP_OFFSET_Y = 62
@@ -83,7 +67,9 @@ class Politics_Screen(Screen):
         self.policy_scroll_handle_rect = None
 
         self.is_valid_player = (self.player in self.map_screen.nation_data
-                                and self.player not in ["Spectator", "None", "Editor"])
+                                and self.player not in c.UNPLAYABLE_NATIONS + ["Editor"])
+        self._title = (f"{queries.get_country_display_name(self.player, map_screen.nation_data)} Politics"
+                       if self.is_read_only else "Politics")
 
         self.refresh_ui()
 
@@ -117,22 +103,22 @@ class Politics_Screen(Screen):
     @property
     def can_edit(self):
         """Whether this screen may change the player's political direction."""
-        if (self.is_read_only or not self.is_valid_player
+        if (self.is_read_only or not self.is_valid_player or self.player != self.map_screen.player_country
                 or self.map_screen.tactical_mode):
             return False
         return queries.realtime_turn_open(self.map_screen)
 
-    def set_drift(self, direction):
+    def set_drift(self, direction, *, economic=False):
         if not self.can_edit:
             return
-        # Refuse a direction there is no axis left to travel in. Accepting it
-        # would put the arrow badge back on the map button for a move that can
-        # never happen, which is exactly the state the badge exists to rule out.
-        if ((direction > 0 and self.value >= c.POLITICS_MAX)
-                or (direction < 0 and self.value <= c.POLITICS_MIN)):
+        nation_data = self.map_screen.nation_data
+        position = politics.economic_value(nation_data, self.player) if economic else self.value
+        if not politics.can_shift(position, direction):
             self.map_screen.show_feedback("Already as far as this country can go.")
             return
-        politics.set_drift(self.map_screen.nation_data, self.player, direction)
+        setter = politics.set_economic_drift if economic else politics.set_drift
+        setter(nation_data, self.player, direction)
+        self.map_screen.invalidate_map_presentation_cache()
         self.refresh_ui()
 
     # ------------------------------------------------------------------ #
@@ -153,22 +139,33 @@ class Politics_Screen(Screen):
         if self.can_edit:
             politics.reconcile_policy(self.map_screen.nation_data, self.player)
 
-        current = self.drift
-        centre_x = self.politics_rect.centerx
-        y = self.politics_rect.y + POLITICS_BUTTON_OFFSET_Y
+        nation_data = self.map_screen.nation_data
+        position = (politics.economic_value(nation_data, self.player), self.value)
+        direction = (politics.economic_drift(nation_data, self.player), self.drift)
+        self._preview = (tuple(politics.advance(value, drift) for value, drift in zip(position, direction))
+                         if not self.is_read_only else position)
+        self._compass_details = self._build_compass_details(position)
+        self._policy_rows = [(definition, politics.policy_state(nation_data, self.player, definition["id"]),
+                              politics.requirements_met(nation_data, self.player, definition["id"]))
+                             for definition in politics.POLICIES]
 
         if not self.is_read_only:
-            for direction, face, _caption in DRIFT_OPTIONS:
-                btn = Button(centre_x + BUTTON_STEP_X * direction - 25, y,
-                             "medium_square", "blue" if direction else "grey",
-                             face, lambda d=direction: self.set_drift(d))
-                btn.is_selected = (current == direction)
-                btn.disabled = not self.can_edit
-                self.elements.append(btn)
+            center_x = self.politics_rect.x + DETAILS_CENTER_X
+            stride = DRIFT_BUTTON_SIZE[0] + DRIFT_BUTTON_GAP
+            for row, (_heading, labels) in enumerate(DRIFT_ROWS):
+                axis = 1 - row  # Compass stores x, y. Controls show politics first.
+                y = self.politics_rect.y + DRIFT_ROW_TOP + row * DRIFT_ROW_GAP + 19
+                for drift, label in zip((-1, 0, 1), labels):
+                    button = Button(center_x + stride * drift - DRIFT_BUTTON_SIZE[0] // 2, y,
+                                    DRIFT_BUTTON_SIZE, "blue" if drift else "grey", label,
+                                    lambda d=drift, economic=axis == 0: self.set_drift(d, economic=economic),
+                                    font_preset="small")
+                    button.is_selected = direction[axis] == drift
+                    button.disabled = not self.can_edit or not politics.can_shift(position[axis], drift)
+                    self.elements.append(button)
 
-        if not self.is_read_only:
-            for definition in politics.POLICIES:
-                button = self._make_policy_button(definition)
+            for index, (definition, state, eligible) in enumerate(self._policy_rows):
+                button = self._make_policy_button(index, definition, state, eligible)
                 button.is_scrollable = True
                 viewport = self._policy_viewport_rect()
                 button.click_guard = lambda rect=viewport: rect.collidepoint(pygame.mouse.get_pos())
@@ -197,10 +194,9 @@ class Politics_Screen(Screen):
                            + index * (POLICY_CARD_WIDTH + POLICY_CARD_GAP),
                            viewport.y, POLICY_CARD_WIDTH, viewport.height)
 
-    def _make_policy_button(self, definition):
-        index = politics.POLICIES.index(definition)
+    def _make_policy_button(self, index, definition, state, eligible):
         card = self._policy_card_rect(index)
-        label, color, disabled = self._policy_button_appearance(definition)
+        label, color, disabled = self._policy_button_appearance(state, eligible)
         button = Button(card.x + POLICY_CARD_PADDING,
                         card.bottom - POLICY_BUTTON_HEIGHT - POLICY_BUTTON_BOTTOM_GAP,
                         (POLICY_BUTTON_WIDTH, POLICY_BUTTON_HEIGHT), color, label,
@@ -208,13 +204,12 @@ class Politics_Screen(Screen):
         button.disabled = disabled
         return button
 
-    def _policy_button_appearance(self, definition):
-        state = politics.policy_state(self.map_screen.nation_data, self.player, definition["id"])
+    def _policy_button_appearance(self, state, eligible):
         if state:
             if state["status"] == politics.POLICY_CANCELLING:
                 return "Undo Cancel", "green", not self.can_edit
             return "Cancel", "red", not self.can_edit
-        if not politics.requirements_met(self.map_screen.nation_data, self.player, definition["id"]):
+        if not eligible:
             return "Requirements Unmet", "grey", True
         return "Activate", "blue", not self.can_edit
 
@@ -238,42 +233,53 @@ class Politics_Screen(Screen):
             message = "%s activates in %d turns." % (definition["name"],
                                                         politics.POLICY_ACTIVATION_TURNS)
         self.map_screen.show_feedback(message)
+        self.map_screen.invalidate_map_presentation_cache()
         self.refresh_ui()
 
     # ------------------------------------------------------------------ #
     #                              DRAWING                               #
     # ------------------------------------------------------------------ #
 
-    def _track_rect(self):
-        return pygame.Rect(self.politics_rect.centerx - TRACK_WIDTH // 2,
-                           self.politics_rect.y + POLITICS_TRACK_OFFSET_Y,
-                           TRACK_WIDTH, TRACK_HEIGHT)
+    def _build_compass_details(self, position):
+        details = pygame.Surface(self.politics_rect.size, pygame.SRCALPHA)
+        compass = pygame.Rect(*COMPASS_OFFSET, COMPASS_SIZE, COMPASS_SIZE)
+        ui_elements.draw_political_compass(details, compass, position, self._preview)
 
-    def _x_for(self, political_value):
-        """Where a value sits along the track."""
-        track = self._track_rect()
-        span = float(c.POLITICS_MAX - c.POLITICS_MIN)
-        return track.x + int(track.width * (political_value - c.POLITICS_MIN) / span)
+        def draw_line(text, y, color=c.UI_TEXT_LIGHT):
+            line = fonts.get("small").render(text, True, color)
+            details.blit(line, line.get_rect(centerx=DETAILS_CENTER_X, y=y))
+
+        economic, political = position
+        draw_line(f"Politics  {politics.label(political)} ({political:+d})", POSITION_OFFSET_Y, c.COLOR_GOLD_HIGHLIGHT)
+        draw_line(f"Economy  {politics.economic_label(economic)} ({economic:+d})",
+                  POSITION_OFFSET_Y + POSITION_LINE_GAP, c.COLOR_GOLD_HIGHLIGHT)
+        if self._preview != position:
+            next_economic, next_political = self._preview
+            draw_line(f"Next turn  ({next_economic:+d}, {next_political:+d})",
+                      POSITION_OFFSET_Y + 2 * POSITION_LINE_GAP)
+
+        if self.is_read_only:
+            draw_line("Read-only", DRIFT_ROW_TOP, c.UI_TEXT_DIM)
+        else:
+            for row, (heading, _labels) in enumerate(DRIFT_ROWS):
+                draw_line(heading, DRIFT_ROW_TOP + row * DRIFT_ROW_GAP)
+            if self.map_screen.tactical_mode:
+                draw_line("Political direction is locked in Tactical Mode.", EFFECTS_OFFSET_Y - 20, c.UI_TEXT_DIM)
+
+        nation_data = self.map_screen.nation_data
+        damage = politics.damage_multiplier(nation_data, self.player)
+        research = politics.research_multiplier(nation_data, self.player)
+        draw_line(f"Damage modifier  x{damage:.2f}      Research speed  x{research:.2f}",
+                  DRIFT_ROW_TOP + DRIFT_ROW_GAP if self.is_read_only else EFFECTS_OFFSET_Y)
+        return details
 
     def additional_draw(self, surface):
         self._draw_panel(surface, self.politics_rect)
         self._draw_panel(surface, self.policies_rect)
 
-        title = ("%s Politics" % self.map_screen.nation_data.get(
-            self.player, {}).get("name", self.player)
-                 if self.is_read_only else "Politics")
-        title_surf = fonts.get("title").render(title, True, c.COLOR_GOLD_HIGHLIGHT)
+        title_surf = fonts.get("title").render(self._title, True, c.COLOR_GOLD_HIGHLIGHT)
         surface.blit(title_surf, (self.politics_rect.centerx - title_surf.get_width() // 2,
                                   self.politics_rect.y + POLITICS_TITLE_OFFSET_Y))
-
-        subtitle = ("Viewing this country's internal political position and policies."
-                    if self.is_read_only else
-                    "Liberalising raises research speed but weakens army damage; "
-                    "centralising does the reverse.")
-        subtitle_surf = fonts.get("small").render(subtitle, True, c.UI_TEXT_DIM)
-        surface.blit(subtitle_surf, (self.politics_rect.centerx - subtitle_surf.get_width() // 2,
-                                     self.politics_rect.y + POLITICS_TITLE_OFFSET_Y
-                                     + title_surf.get_height() + 6))
 
         policies_title = fonts.get("title").render("Policies", True, c.COLOR_GOLD_HIGHLIGHT)
         surface.blit(policies_title, (self.policies_rect.centerx - policies_title.get_width() // 2,
@@ -286,9 +292,7 @@ class Politics_Screen(Screen):
                                self.politics_rect.centery))
             return
 
-        self._draw_axis(surface)
-        self._draw_effects(surface)
-        self._draw_captions(surface)
+        surface.blit(self._compass_details, self.politics_rect)
         self._draw_policies(surface)
 
     @staticmethod
@@ -297,49 +301,11 @@ class Politics_Screen(Screen):
         ui_elements.draw_pixel_panel(surface, rect, style["color"], c.COLOR_DIM_BORDER,
                                      border_width=3, gradient_strength=style["gradient_strength"])
 
-    def _draw_axis(self, surface):
-        track = self._track_rect()
-        normal, small = fonts.get("normal"), fonts.get("small")
-
-        pygame.draw.rect(surface, SLIDER_STYLES["track"]["color"], track)
-
-        # Ticks at both ends and dead centre, so the marker reads as a position
-        # on a line rather than as a bar filling up.
-        for tick_value in (c.POLITICS_MIN, 0, c.POLITICS_MAX):
-            tick_x = self._x_for(tick_value)
-            pygame.draw.line(surface, c.UI_TEXT_MUTED,
-                             (tick_x, track.y - 10), (tick_x, track.bottom + 10), 2)
-
-        marker_x = self._x_for(self.value)
-        pygame.draw.circle(surface, c.COLOR_GOLD_HIGHLIGHT, (marker_x, track.centery), 12)
-        pygame.draw.circle(surface, (255, 255, 255), (marker_x, track.centery), 12, 2)
-
-        left = normal.render("Libertarian", True, c.UI_TEXT_LIGHT)
-        right = normal.render("Authoritarian", True, c.UI_TEXT_LIGHT)
-        surface.blit(left, (track.x - left.get_width() - 20,
-                            track.centery - left.get_height() // 2))
-        surface.blit(right, (track.right + 20, track.centery - right.get_height() // 2))
-
-        reading = small.render("%s  (%+d)" % (politics.label(self.value), self.value),
-                               True, c.COLOR_GOLD_HIGHLIGHT)
-        surface.blit(reading, (marker_x - reading.get_width() // 2, track.bottom + 26))
-
-    def _draw_effects(self, surface):
-        normal = fonts.get("normal")
-        nation_data = self.map_screen.nation_data
-        damage = politics.damage_multiplier(nation_data, self.player)
-        research = politics.research_multiplier(nation_data, self.player)
-
-        text = "Damage modifier  x%.2f          Research speed  x%.2f" % (damage, research)
-        line = normal.render(text, True, c.UI_TEXT_LIGHT)
-        surface.blit(line, (self.politics_rect.centerx - line.get_width() // 2,
-                            self.politics_rect.y + POLITICS_EFFECTS_OFFSET_Y))
-
     def _draw_policies(self, surface):
         viewport = self._policy_viewport_rect()
         with ui_bars.clip_scroll_region(surface, viewport):
-            for index, definition in enumerate(politics.POLICIES):
-                self._draw_policy_card(surface, self._policy_card_rect(index), definition)
+            for index, (definition, state, eligible) in enumerate(self._policy_rows):
+                self._draw_policy_card(surface, self._policy_card_rect(index), definition, state, eligible)
 
         track, handle = ui_bars.draw_standard_scrollbar_horizontal(
             # The policy cards themselves retain conventional direct-drag
@@ -353,8 +319,7 @@ class Politics_Screen(Screen):
         self.policy_scroll_track_rect = track
         self.policy_scroll_handle_rect = handle
 
-    def _draw_policy_card(self, surface, card, definition):
-        state = politics.policy_state(self.map_screen.nation_data, self.player, definition["id"])
+    def _draw_policy_card(self, surface, card, definition, state, eligible):
         if state and state["status"] == politics.POLICY_ACTIVE:
             border = c.COLOR_GOLD_HIGHLIGHT
         elif state:
@@ -376,9 +341,7 @@ class Politics_Screen(Screen):
             y += effect.get_height() + 3
 
         requirement = small.render(politics.requirement_text(definition["id"]), True,
-                                   c.UI_TEXT_DIM if politics.requirements_met(
-                                       self.map_screen.nation_data, self.player, definition["id"])
-                                   else (255, 150, 150))
+                                   c.UI_TEXT_DIM if eligible else (255, 150, 150))
         surface.blit(requirement, (card.x + POLICY_CARD_PADDING, y + 4))
 
         status = self._policy_status_text(definition, state)
@@ -435,27 +398,3 @@ class Politics_Screen(Screen):
             handle_value = ui_bars.calculate_scroll_snap_horizontal(
                 mouse_x, self.policy_scroll_min_x, 0, track.x, track.width)
             self.policy_scroll_x = self.policy_scroll_min_x - handle_value
-
-    def _draw_captions(self, surface):
-        small = fonts.get("small")
-        centre_x = self.politics_rect.centerx
-        caption_y = self.politics_rect.y + POLITICS_CAPTION_OFFSET_Y
-
-        if not self.is_read_only:
-            for direction, _face, caption in DRIFT_OPTIONS:
-                surf = small.render(caption, True, c.UI_TEXT_MUTED)
-                surface.blit(surf, (centre_x + BUTTON_STEP_X * direction - surf.get_width() // 2,
-                                    caption_y))
-
-        if self.is_read_only:
-            note = "Read-only: this country's political choices cannot be changed here."
-        elif self.map_screen.tactical_mode:
-            note = "Political direction cannot be changed in Tactical Mode."
-        elif self.drift:
-            note = ("Moving %s one step per turn until you stop it or it reaches the end."
-                    % ("left" if self.drift < 0 else "right"))
-        else:
-            note = "Holding position. Nothing changes until you pick a direction."
-        surf = small.render(note, True, c.UI_TEXT_DIM)
-        surface.blit(surf, (centre_x - surf.get_width() // 2,
-                            self.politics_rect.bottom - POLITICS_NOTE_OFFSET_FROM_BOTTOM))

@@ -22,6 +22,7 @@ every country at war from ending up at +10 together.
 """
 
 import unittest
+from unittest.mock import Mock
 
 
 import data.constants as c
@@ -51,7 +52,7 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
     def screen(self, tactical_mode):
         from screens.game.politics_screen import Politics_Screen
 
-        map_screen = map_double()
+        map_screen = map_double(invalidate_map_presentation_cache=Mock())
         map_screen.player_country = "A"
         map_screen.tactical_mode = tactical_mode
         map_screen.nation_data = {
@@ -64,21 +65,36 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
 
         self.assertTrue(screen.is_valid_player)
         self.assertFalse(screen.can_edit)
-        self.assertTrue(all(button.disabled for button in screen.elements[1:4]))
+        self.assertTrue(all(button.disabled for button in screen.elements[1:7]))
 
     def test_tactical_mode_guard_does_not_change_the_direction(self):
         screen = self.screen(True)
         before = screen.drift
 
         screen.set_drift(1)
+        screen.set_drift(1, economic=True)
 
         self.assertEqual(screen.drift, before)
+        self.assertEqual(politics.economic_drift(screen.map_screen.nation_data, "A"), 0)
 
     def test_strategic_mode_keeps_direction_controls_editable(self):
         screen = self.screen(False)
 
         self.assertTrue(screen.can_edit)
-        self.assertTrue(all(not button.disabled for button in screen.elements[1:4]))
+        self.assertTrue(all(not button.disabled for button in screen.elements[1:7]))
+
+    def test_direction_buttons_queue_independent_steps_and_preview_the_turn(self):
+        screen = self.screen(False)
+        screen.elements[3].callback()
+        screen.elements[4].callback()
+        nation_data = screen.map_screen.nation_data
+
+        self.assertEqual((politics.economic_value(nation_data, "A"), screen.value), (0, 0))
+        self.assertEqual((politics.economic_drift(nation_data, "A"), screen.drift), (-1, 1))
+        self.assertEqual(screen._preview, (-c.POLITICS_STEP, c.POLITICS_STEP))
+        politics.tick(screen.map_screen)
+        self.assertEqual((politics.economic_value(nation_data, "A"), screen.value), screen._preview)
+        self.assertEqual(screen.map_screen.invalidate_map_presentation_cache.call_count, 2)
 
     def test_politics_and_blank_policies_panels_split_the_available_height(self):
         screen = self.screen(False)
@@ -103,7 +119,9 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
         self.assertFalse(screen.can_edit)
         self.assertEqual(len(screen.elements), 1, "foreign view has no policy or drift controls")
         screen.set_drift(-1)
+        screen.set_drift(1, economic=True)
         self.assertEqual(politics.drift(map_screen.nation_data, "B"), 0)
+        self.assertEqual(politics.economic_drift(map_screen.nation_data, "B"), 0)
 
     def test_policy_scrollbar_moves_cards_opposite_to_handle(self):
         screen = self.screen(False)
@@ -128,6 +146,37 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
         screen.additional_events(pygame.event.Event(
             pygame.MOUSEMOTION, pos=(start[0] - 20, start[1]), rel=(-20, 0)))
         self.assertEqual(screen.policy_scroll_x, -120)
+
+    def test_starting_economic_slider_saves_both_coordinates_and_clears_drift(self):
+        from screens.editors.politics_editor import Politics_Edit_Screen
+
+        map_screen = map_double(is_editor=True, map_data={1: {"owner": "A"}},
+                                nation_data={"A": {"political_value": 4, "political_drift": -1,
+                                                   "economic_drift": 1}},
+                                invalidate_map_presentation_cache=Mock(), show_feedback=Mock())
+        screen = Politics_Edit_Screen(map_screen, "A")
+        slider = screen.rows[1][0]
+        slider.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=slider.handle_rect.center, button=1))
+        slider.handle_event(pygame.event.Event(pygame.MOUSEMOTION, pos=slider.rect.midleft, mobile_touch=True))
+        slider.handle_event(pygame.event.Event(pygame.MOUSEBUTTONUP, pos=slider.rect.midleft, button=1))
+        self.assertEqual(politics.economic_value(map_screen.nation_data, "A"), c.POLITICS_START)
+        screen.elements[2].callback()
+
+        self.assertTrue(screen.done)
+        self.assertEqual(politics.value(map_screen.nation_data, "A"), 4)
+        self.assertEqual(politics.economic_value(map_screen.nation_data, "A"), c.POLITICS_MIN)
+        self.assertEqual(politics.drift(map_screen.nation_data, "A"), 0)
+        self.assertEqual(politics.economic_drift(map_screen.nation_data, "A"), 0)
+        map_screen.invalidate_map_presentation_cache.assert_called_once()
+
+        screen = Politics_Edit_Screen(map_screen, "A")
+        screen.elements[1].callback()
+        self.assertEqual((screen.value, screen.economic_value), (c.POLITICS_START, c.POLITICS_START))
+        map_screen.is_editor = False
+        map_screen.player_country = "Spectator"
+        map_screen.realtime_multiplayer = True
+        screen.save()
+        self.assertEqual(politics.economic_value(map_screen.nation_data, "A"), c.POLITICS_MIN)
 
 
 class EconomicDriftTests(unittest.TestCase):

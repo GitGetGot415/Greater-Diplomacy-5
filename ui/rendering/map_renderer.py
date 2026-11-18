@@ -23,6 +23,11 @@ from ui.panels import sidebar_info
 # key deliberately includes every camera-derived input to a transform.
 _VIEWPORT_SCALE_CACHE_LIMIT = 16
 MAP_CHECKERBOARD_SCALE = 0.5
+POLITICS_DIRECTION_ARROWS = {
+    (-1, 1): "↖", (0, 1): "↑", (1, 1): "↗",
+    (-1, 0): "←",             (1, 0): "→",
+    (-1, -1): "↙", (0, -1): "↓", (1, -1): "↘",
+}
 
 
 def _scaled_map_region(map_screen, source, source_rect, destination_size):
@@ -460,7 +465,7 @@ def draw_badges(map_screen, surface):
         cached = map_screen._badge_state_cache
         if cached is not None and cached[0] == cache_key:
             (unread_msgs, free_research, incoming_claims,
-             leadership_contested, political_drift) = cached[1]
+             leadership_contested, politics_arrow) = cached[1]
         else:
             unread_msgs = queries.get_unread_message_count(
                 map_screen.player_country, map_screen.nation_data)
@@ -476,11 +481,12 @@ def draw_badges(map_screen, surface):
                 map_screen.player_country, {}).get("faction", "")
             leadership_contested = bool(
                 faction_leadership.contenders(map_screen.nation_data, my_faction))
-            political_drift = politics.drift(
-                map_screen.nation_data, map_screen.player_country)
+            direction = (politics.economic_drift(map_screen.nation_data, map_screen.player_country),
+                         politics.drift(map_screen.nation_data, map_screen.player_country))
+            politics_arrow = POLITICS_DIRECTION_ARROWS.get(direction)
             map_screen._badge_state_cache = (
                 cache_key, (unread_msgs, free_research, incoming_claims,
-                            leadership_contested, political_drift))
+                            leadership_contested, politics_arrow))
 
         def draw_badge(btn, text):
             if not btn.visible: return
@@ -499,9 +505,5 @@ def draw_badges(map_screen, surface):
         if incoming_claims > 0:
             draw_badge(map_screen.btn_gp_claims, incoming_claims)
 
-        # Which way the country is drifting politically, and only while it is
-        # actually going somewhere. politics.tick clears the direction on
-        # reaching either end of the axis, so "we have arrived" and "the player
-        # chose to hold" are one condition rather than two.
-        if political_drift:
-            draw_badge(map_screen.btn_gp_politics, "<" if political_drift < 0 else ">")
+        if politics_arrow:
+            draw_badge(map_screen.btn_gp_politics, politics_arrow)
