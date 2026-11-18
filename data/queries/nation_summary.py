@@ -134,6 +134,7 @@ def get_country_summary(context, country_id):
     policies = [{"name": politics.policy(policy_id)["name"], "status": state["status"],
                  "turns_remaining": state.get("turns_remaining", 0)}
                 for policy_id, state in politics.policy_states(nation_data, country_id).items()]
+    political_value = politics.value(nation_data, country_id)
     economic_value = politics.economic_value(nation_data, country_id)
     return {
         "country_id": country_id, "name": get_country_display_name(country_id, nation_data),
@@ -145,11 +146,13 @@ def get_country_summary(context, country_id):
             "political_damage_multiplier": politics.damage_multiplier(nation_data, country_id),
             "conscription_damage_bonus": queries.get_conscription_damage_bonus(country),
         },
-        "politics": {"label": politics.label(politics.value(nation_data, country_id)),
-                     "value": politics.value(nation_data, country_id),
+        "politics": {"label": politics.label(political_value),
+                     "value": political_value,
                      "drift": politics.drift(nation_data, country_id),
                      "economic_value": economic_value,
                      "economic_label": politics.economic_label(economic_value),
+                     "core_manpower_multiplier": politics.axis_core_manpower_multiplier(political_value),
+                     "factory_multiplier": politics.axis_factory_multiplier(economic_value),
                      "research_multiplier": politics.research_multiplier(nation_data, country_id),
                      "policies": policies},
         "diplomacy": {"faction": faction,

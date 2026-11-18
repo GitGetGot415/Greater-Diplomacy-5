@@ -1,6 +1,7 @@
 import pygame
 import data.constants as c
 from data import queries
+from map_logic import politics
 from ui.rendering import overlay_renderer
 
 UNIT_PREVIEW_LIMIT = 5
@@ -22,10 +23,11 @@ def prepare_building_yields(map_screen):
     research = map_screen.nation_data.get(owner, {}).get("research", {})
     library = queries.get_building_library(map_screen)
     modifiers = queries.get_building_output_modifiers(research, library, context=map_screen)
+    factory_multiplier = politics.factory_output_multiplier(map_screen.nation_data, owner)
     for name in province.get("buildings", []):
         building_province = dict(province, buildings=[name], building_queue=[])
         output = queries.get_province_building_output(building_province, research, library,
-                                                      context=map_screen, modifiers=modifiers)
+                                                      context=map_screen, modifiers=modifiers, factory_multiplier=factory_multiplier)
         map_screen._tooltip_building_yields.append((name, output))
 
 

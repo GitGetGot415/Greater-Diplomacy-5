@@ -295,9 +295,10 @@ class ResearchDetailsScreen(ModalScreen):
         self.modal_body_line_step = MODAL_COMPACT_LINE_STEP_Y if compact else MODAL_LINE_STEP_Y
         self.modal_subhead_step = MODAL_COMPACT_LINE_STEP_Y if compact else MODAL_SUBHEAD_STEP_Y
         self.modal_entity_padding = MODAL_COMPACT_ENTITY_PADDING_Y if compact else MODAL_ENTITY_PADDING_Y
+        factory_multiplier = politics.factory_output_multiplier(map_screen.nation_data, research.subject)
         self.modal_building_outputs = {
             name: queries.get_building_output(name, research.subject_data.get("research", {}),
-                                             self.building_library, context=map_screen)
+                                             self.building_library, context=map_screen, factory_multiplier=factory_multiplier)
             for name in [self.entity_name, *self.modal_unlocks]
             if name in self.building_library}
         self.modal_building_costs = {

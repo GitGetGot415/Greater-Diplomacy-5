@@ -378,6 +378,10 @@ def axis_factory_multiplier(position):
     return 1.0 - c.ECONOMICS_FACTORY_SPAN * _economic_strength(position)
 
 
+def factory_output_multiplier(nation_data, nation):
+    return axis_factory_multiplier(economic_value(nation_data, nation))
+
+
 def axis_research_multiplier(position):
     return 1.0 + c.ECONOMICS_RESEARCH_SPAN * _economic_strength(position)
 

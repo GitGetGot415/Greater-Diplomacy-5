@@ -17,6 +17,7 @@ from screens.game import recruit_ui
 from ui.rendering.font_manager import fonts
 from data import queries
 from ui.dialogs import pickers
+from map_logic import politics
 from map_logic.actions import production_actions
 from map_logic.diplomacy import restrictions
 from ui.bars import resource_hud, view_mode_buttons
@@ -366,6 +367,7 @@ class Production_Screen(Screen):
         owner = province.get("owner")
         research = self._owner_research()
         building_queue = province.get("building_queue", [])
+        factory_multiplier = politics.factory_output_multiplier(self.map_screen.nation_data, owner)
 
         for group_id in ("industry", "fortification", "recruitment"):
             target = self._next_building_in_group(group_id, province.get("buildings", []))
@@ -376,7 +378,7 @@ class Production_Screen(Screen):
             data = queries.get_building_cost(target, owner, self.map_screen.map_data, self.building_library)
             output = queries.get_province_building_output(
                 {"owner": owner, "cores": province.get("cores", []), "buildings": [target]},
-                research, self.building_library, context=self.map_screen)
+                research, self.building_library, context=self.map_screen, factory_multiplier=factory_multiplier)
             data.update({f"prod_{res}": amount for res, amount in output.items()})
             # Compare this building chain only; unrelated buildings retain their yields.
             data["previous_yields"] = queries.get_province_building_output(
@@ -385,7 +387,7 @@ class Production_Screen(Screen):
                                if self.building_library.get(name, {}).get("group") == group_id],
                  "building_queue": [project for project in building_queue
                                     if self.building_library.get(project.get("item_name"), {}).get("group") == group_id]},
-                research, self.building_library, context=self.map_screen)
+                research, self.building_library, context=self.map_screen, factory_multiplier=factory_multiplier)
             is_building = any(q.get("group") == data["group"] for q in building_queue)
             req_tech, req_lvl = queries.get_building_required_tech(target)
 

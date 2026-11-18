@@ -268,9 +268,12 @@ class Politics_Screen(Screen):
 
         nation_data = self.map_screen.nation_data
         damage = politics.damage_multiplier(nation_data, self.player)
+        manpower = politics.axis_core_manpower_multiplier(political)
+        factory = politics.axis_factory_multiplier(economic)
         research = politics.research_multiplier(nation_data, self.player)
-        draw_line(f"Damage modifier  x{damage:.2f}      Research speed  x{research:.2f}",
-                  DRIFT_ROW_TOP + DRIFT_ROW_GAP if self.is_read_only else EFFECTS_OFFSET_Y)
+        effects_y = DRIFT_ROW_TOP + DRIFT_ROW_GAP if self.is_read_only else EFFECTS_OFFSET_Y
+        draw_line(f"Army damage x{damage:.2f}      Core manpower x{manpower:.2f}", effects_y)
+        draw_line(f"Factory output x{factory:.2f}      Research speed x{research:.2f}", effects_y + POSITION_LINE_GAP)
         return details
 
     def additional_draw(self, surface):

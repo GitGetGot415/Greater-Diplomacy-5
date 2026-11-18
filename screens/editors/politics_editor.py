@@ -33,6 +33,7 @@ class Politics_Edit_Screen(EditorSliderScreen):
     SLIDER_TOP = 113
     SLIDER_GAP = 82
     EFFECTS_Y = 245
+    EFFECTS_LINE_GAP = 20
 
     def __init__(self, map_screen, country_id):
         super().__init__(map_screen, pygame.Rect(0, 0, *self.PANEL_SIZE))
@@ -122,9 +123,14 @@ class Politics_Edit_Screen(EditorSliderScreen):
                 reading = small.render(text, True, c.UI_TEXT_LIGHT)
                 self._preview.blit(reading, reading.get_rect(centerx=center_x, y=self.SLIDER_TOP + index * 28))
         damage = politics.axis_damage_multiplier(self.value)
+        manpower = politics.axis_core_manpower_multiplier(self.value)
+        factory = politics.axis_factory_multiplier(self.economic_value)
         research = politics.axis_research_multiplier(self.economic_value)
-        effects = small.render(f"Damage dealt x{damage:.2f}      Research speed x{research:.2f}", True, c.UI_TEXT_DIM)
-        self._preview.blit(effects, effects.get_rect(centerx=center_x, y=self.EFFECTS_Y))
+        lines = (f"Army damage x{damage:.2f}      Core manpower x{manpower:.2f}",
+                 f"Factory output x{factory:.2f}      Research speed x{research:.2f}")
+        for row, text in enumerate(lines):
+            effects = small.render(text, True, c.UI_TEXT_DIM)
+            self._preview.blit(effects, effects.get_rect(centerx=center_x, y=self.EFFECTS_Y + row * self.EFFECTS_LINE_GAP))
 
     def draw_content(self, surface):
         super().draw_content(surface)

@@ -70,7 +70,9 @@ class CountrySummaryScreen(Screen):
         direction = {-1: "Liberalising", 0: "Holding", 1: "Centralising"}[politics["drift"]]
         lines = [f"Political position: {politics['label']} ({politics['value']:+d})",
                  f"Political direction: {direction}",
+                 f"Core province manpower: {politics['core_manpower_multiplier']:.2f}x",
                  f"Economic position: {politics['economic_label']} ({politics['economic_value']:+d})",
+                 f"Factory output: {politics['factory_multiplier']:.2f}x",
                  f"Research modifier: {politics['research_multiplier'] - 1.0:+.2%}"]
         if not politics["policies"]:
             lines.append("Policies: None")

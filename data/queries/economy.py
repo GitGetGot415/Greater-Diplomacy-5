@@ -538,8 +538,8 @@ def apply_building_stat_overrides(building_library, settings):
                 stats[key] = max(0, round(start + (level - 1) * step))
 
 
-def get_building_output(building_name, research, building_library=None, *, context=None, multipliers=None, modifiers=None):
-    """Return building yields with national research bonuses before territory penalties."""
+def get_building_output(building_name, research, building_library=None, *, context=None, multipliers=None, modifiers=None, factory_multiplier=1.0):
+    """Return building yields with national modifiers before territory penalties."""
     if building_library is None:
         building_library = queries.get_building_library(context)
     if modifiers is None:
@@ -549,11 +549,12 @@ def get_building_output(building_name, research, building_library=None, *, conte
     stats = building_library.get(building_name, {})
     values = multipliers.get(building_name, {})
     additions = modifiers["additions"].get(building_name, {})
-    return {res: (stats.get(f"prod_{res}", 0) + additions.get(res, 0)) * values.get(res, 1.0)
+    output_multiplier = factory_multiplier if stats.get("group") == "industry" else 1.0
+    return {res: (stats.get(f"prod_{res}", 0) + additions.get(res, 0)) * values.get(res, 1.0) * output_multiplier
             for res in c.ECON_RESOURCE_KEYS}
 
 
-def get_province_building_output(province, research, building_library=None, *, context=None, multipliers=None, modifiers=None):
+def get_province_building_output(province, research, building_library=None, *, context=None, multipliers=None, modifiers=None, factory_multiplier=1.0):
     """Apply building bonuses and territory penalties, including factory construction yields."""
     if building_library is None:
         building_library = queries.get_building_library(context)
@@ -565,7 +566,7 @@ def get_province_building_output(province, research, building_library=None, *, c
     output = {res: 0 for res in c.ECON_RESOURCE_KEYS}
     for name in province.get("buildings", []):
         yields = queries.get_building_output(name, research, building_library, context=context,
-                                    multipliers=multipliers, modifiers=modifiers)
+                                    multipliers=multipliers, modifiers=modifiers, factory_multiplier=factory_multiplier)
         for res in c.ECON_RESOURCE_KEYS:
             output[res] += int(yields[res] * territory_mult)
     for project in province.get("building_queue", []):
@@ -575,7 +576,7 @@ def get_province_building_output(province, research, building_library=None, *, c
             stage_turns = max(1, c.BASIC_FACTORY_TURNS // len(fractions))
             stage = int(max(0, min(len(fractions) - 1, (c.BASIC_FACTORY_TURNS - remaining) // stage_turns)))
             materials = queries.get_building_output("Basic Factory", research, building_library, context=context,
-                                           multipliers=multipliers, modifiers=modifiers)["materials"]
+                                           multipliers=multipliers, modifiers=modifiers, factory_multiplier=factory_multiplier)["materials"]
             output["materials"] += int(materials * fractions[stage] * territory_mult)
     return output
 
@@ -613,7 +614,10 @@ def calculate_all_economies(map_data, nation_data, *, context=None):
             for res in c.ECON_RESOURCE_KEYS
         }
 
-        econ_data[name] = {"dynamic_yields": dyn_yields, "breakdown": breakdown, "upkeep": {r: 0 for r in c.ECON_RESOURCE_KEYS}, "total_inc": {r: 0 for r in c.ECON_RESOURCE_KEYS}, "resource_mult": resource_refining_mult}
+        core_manpower_multiplier = politics.axis_core_manpower_multiplier(politics.value(nation_data, name))
+        econ_data[name] = {"dynamic_yields": dyn_yields, "breakdown": breakdown, "upkeep": {r: 0 for r in c.ECON_RESOURCE_KEYS}, "total_inc": {r: 0 for r in c.ECON_RESOURCE_KEYS}, "resource_mult": resource_refining_mult,
+                           "core_manpower_multiplier": core_manpower_multiplier,
+                           "factory_multiplier": politics.factory_output_multiplier(nation_data, name)}
 
     # Single efficient pass over the map
     for province in map_data.values():
@@ -623,18 +627,21 @@ def calculate_all_economies(map_data, nation_data, *, context=None):
         if owner and owner in econ_data and owner not in c.UNPLAYABLE_NATIONS:
             is_core = queries.has_core(owner, province)
             cat = "core" if is_core else "non_core"
-            bd = econ_data[owner]["breakdown"]
-            dyn_yields = econ_data[owner]["dynamic_yields"]
+            economy = econ_data[owner]
+            bd = economy["breakdown"]
+            dyn_yields = economy["dynamic_yields"]
 
             # Base tile yields based on ownership tier
             for res in c.ECON_RESOURCE_KEYS:
                 mult = 1.0 if is_core else c.NON_CORE_MULTIPLIERS[res]
                 bd[res][cat] += mult * dyn_yields[res]
+            if is_core:
+                bd["manpower"]["core"] += dyn_yields["manpower"] * (economy["core_manpower_multiplier"] - 1.0)
 
             # Natural Resources
             res = province.get("resources", {})
             if isinstance(res, dict):
-                refining_mult = econ_data[owner]["resource_mult"]
+                refining_mult = economy["resource_mult"]
                 for deposit, econ_res in c.NATURAL_RESOURCE_OUTPUTS.items():
                     bd[econ_res]["resources"] += int(res.get(deposit, 0)) * (1.0 if is_core else c.NON_CORE_MULTIPLIERS[econ_res]) * refining_mult
 
@@ -645,7 +652,7 @@ def calculate_all_economies(map_data, nation_data, *, context=None):
                 modifiers = building_modifiers[owner] = get_building_output_modifiers(
                     owner_research, bldg_lib, context=context, cache=modifier_cache)
             building_output = queries.get_province_building_output(
-                province, owner_research, bldg_lib, modifiers=modifiers)
+                province, owner_research, bldg_lib, modifiers=modifiers, factory_multiplier=economy["factory_multiplier"])
             for res in c.ECON_RESOURCE_KEYS:
                 bd[res]["buildings"] += building_output[res]
 
