@@ -802,12 +802,7 @@ class MapRealtimeDriver(PlayerActions):
                 if not isinstance(automation, dict):
                     continue
                 self.session.player_country = country_id
-                if automation.get("construction"):
-                    automation_logic.automate_player_construction(self.context)
-                if automation.get("movement"):
-                    automation_logic.automate_player_movement(self.context)
-                if automation.get("research"):
-                    automation_logic.automate_player_research(self.context)
+                automation_logic.run_enabled_automation(self.context, automation)
         finally:
             self.session.player_country = original_player
 
@@ -872,6 +867,20 @@ class RemoteSessionView:
 
     def unsubmit(self, _player_id: str, turn: int) -> bool:
         return self.client.send("unsubmit", {"turn": turn})
+
+
+def realtime_snapshot_is_new(context, turn, phase):
+    """A new planning turn or the final result supersedes the local draft."""
+    applied_turn = context._realtime_snapshot_turn
+    return (applied_turn is None or turn != applied_turn or
+            (phase == "GAME_OVER" and context._realtime_snapshot_phase != "GAME_OVER"))
+
+
+def apply_realtime_turn_snapshot(context, snapshot, turn, phase):
+    if snapshot and realtime_snapshot_is_new(context, turn, phase):
+        apply_authoritative_snapshot(context, snapshot)
+        context._realtime_snapshot_turn = turn
+        context._realtime_snapshot_phase = phase
 
 
 def apply_authoritative_snapshot(context, snapshot: dict[str, Any]) -> None:

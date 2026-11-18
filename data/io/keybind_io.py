@@ -33,7 +33,7 @@ def save_settings(keybind_dict, sfx_volume, music_volume, num_players=None, ai_m
                   show_tactical_intro_popup=None,
                   *, show_strategic_intro_popup=None,
                   **legacy_settings):
-    """Convert key codes to names and save settings as JSON.
+    """Adapt the legacy save signature to the named settings writer.
 
     Keep positional argument slots for older callers.
     Accept older keyword names for renamed fields.
@@ -49,6 +49,13 @@ def save_settings(keybind_dict, sfx_volume, music_volume, num_players=None, ai_m
     if show_intro_popup is not None:
         values["show_intro_popup"] = show_intro_popup
     values.update(legacy_settings)
+    save_settings_values(keybind_dict, values)
+
+
+def save_settings_values(keybind_dict, values):
+    """Write named settings and pygame keybinds using the current schema."""
+    values = {name: value for name, value in values.items()
+              if value is not None or name in migrations.LEGACY_SETTINGS_KEYWORD_NAMES}
 
     # ``None`` is an intentional, persistent "unassigned" binding.  Omitting
     # it would make load restore the action's default, which prevents players

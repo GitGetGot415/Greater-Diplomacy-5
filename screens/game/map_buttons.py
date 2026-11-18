@@ -250,13 +250,17 @@ def _build_editor_buttons(map_screen):
 def _submit_realtime_turn(map_screen):
     from data.multiplayer.realtime.session import collect_map_commands, RealtimeError
 
+    turn = map_screen._realtime_snapshot_turn
+
     def confirmed(accepted):
         if not accepted:
             return
         try:
             session = map_screen.realtime_session
+            if turn is None or turn != session.turn_number:
+                map_screen.show_feedback("The turn changed before submission.")
+                return
             player = map_screen.realtime_player_id
-            turn = session.turn_number
             commands = collect_map_commands(map_screen, map_screen.player_country)
             is_remote = bool(map_screen.realtime_client)
             # Set this before the queued socket work begins.  The

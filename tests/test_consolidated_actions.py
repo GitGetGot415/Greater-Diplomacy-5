@@ -1,12 +1,13 @@
 """Check shared action boundaries with artificial content and independent worlds."""
 
+import asyncio
 import copy
 import json
 import random
 import tempfile
 from pathlib import Path
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, call, patch
 
 from data import migrations, queries
 from data.game_state import WorldState
@@ -15,8 +16,10 @@ from data.multiplayer.tournament import files as tournament_files
 from data.multiplayer.realtime.session import MapRealtimeDriver, apply_authoritative_snapshot
 from map_logic.actions import unit_actions
 from map_logic.actions.player_actions import PlayerActions, collect_map_commands
+from map_logic.ai import automation_logic
 from map_logic.diplomacy import faction_actions, faction_leadership, faction_records
 from map_logic.diplomacy.action_definitions import availability
+from map_logic.system32 import turn_processor
 from tests.research_fixtures import fixture_metadata
 from tests.stub_map_screen import synchronous_progress
 from tests.tournament_fixtures import fast_tournament_crypto
@@ -49,6 +52,42 @@ def game():
                     "neighbors": [3 - number], "units": [unit] if number == 1 else []}
         context.map_data[number] = context.id_to_province[number] = province
     return context
+
+
+class PlayerAutomationTests(unittest.TestCase):
+    def test_offline_and_realtime_automate_only_enabled_countries_after_resolution(self):
+        offline = BackendState()
+        offline.player_country = "A"
+        offline.nation_data["A"] = {"automation": {"construction": True, "research": True}}
+        server = BackendState()
+        server.player_country = "None"
+        server.nation_data.update({"A": copy.deepcopy(offline.nation_data["A"]),
+                                   "B": {"automation": {"movement": True}}})
+        driver = MapRealtimeDriver(server)
+        original_roster = queries.get_active_ai_nations
+        passes = Mock()
+
+        def check_turn(context, *, countries):
+            self.assertEqual(context.time_manager.total_turns, 1)
+            self.assertEqual(countries, [context.player_country])
+            self.assertIs(queries.get_active_ai_nations, original_roster)
+
+        for runner in (passes.construction, passes.movement, passes.research):
+            runner.side_effect = check_turn
+
+        with patch.object(automation_logic.ai_construction, "process_ai_economy_decisions", passes.construction), \
+                patch.object(automation_logic.ai_movement, "process_ai_unit_orders", passes.movement), \
+                patch.object(automation_logic.ai_research, "process_ai_research", passes.research), \
+                patch.object(driver, "apply_validated_drafts"), patch.object(turn_processor, "prepare_turn"):
+            asyncio.run(turn_processor.resolve_turn_logic(offline))
+            driver.process_turn({"A": [], "B": []})
+
+        self.assertEqual(passes.mock_calls, [
+            call.construction(offline, countries=["A"]), call.research(offline, countries=["A"]),
+            call.construction(server, countries=["A"]), call.research(server, countries=["A"]),
+            call.movement(server, countries=["B"]),
+        ])
+        self.assertEqual(server.player_country, "None")
 
 
 class RuntimeOwnerTests(unittest.TestCase):

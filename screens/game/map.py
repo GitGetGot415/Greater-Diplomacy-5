@@ -3,6 +3,7 @@
 # Load real-time networking inside its callbacks. This map screen also serves local and browser games.
 
 import asyncio
+import copy
 import traceback
 import threading
 import re
@@ -1605,41 +1606,22 @@ class Map(StateAccess, Screen):
         map_buttons.update_button_states(self)
 
     def _apply_host_realtime_snapshot(self):
-        """Refresh the host's visible map when the authoritative turn changes.
-
-        The host intentionally plays on a separate map from MapRealtimeDriver,
-        so its UI cannot mutate the server state directly.  Unlike guests it
-        has no network client to poll, however, and therefore needs to take a
-        turn-boundary snapshot from its local session before it serializes its
-        next draft.  Applying only at a new turn (or game over) preserves the
-        host's unsubmitted local orders throughout the active turn.
-        """
-        if (not self.realtime_server_map
-                or self.realtime_client):
+        """Read a finished turn from the local session before syncing a draft."""
+        if not self.realtime_server_map or self.realtime_client or not self.realtime_session:
             return
+        # Keep desktop-only networking off the web import path.
+        from data.multiplayer.realtime.session import apply_realtime_turn_snapshot, realtime_snapshot_is_new
+
         session = self.realtime_session
-        if not session or session.phase not in ("TURN", "GAME_OVER"):
+        turn, phase = session.turn_number, session.phase
+        if phase not in ("TURN", "GAME_OVER") or not realtime_snapshot_is_new(self, turn, phase):
             return
-
-        current_turn = session.turn_number
-        current_phase = session.phase
-        applied_turn = self._realtime_snapshot_turn
-        applied_phase = self._realtime_snapshot_phase
-        should_apply = (applied_turn is None or current_turn != applied_turn or
-                        (current_phase == "GAME_OVER" and applied_phase != "GAME_OVER"))
-        if not should_apply:
-            return
-
-        # public_state holds the session lock while it snapshots the server
-        # map, so the UI cannot copy a halfway-resolved turn.
-        state = session.public_state()
-        snapshot = state.get("game_state") if isinstance(state, dict) else None
-        if not snapshot:
-            return
-        from data.multiplayer.realtime.session import apply_authoritative_snapshot
-        apply_authoritative_snapshot(self, snapshot)
-        self._realtime_snapshot_turn = current_turn
-        self._realtime_snapshot_phase = current_phase
+        with session.lock:
+            if (turn, phase) != (session.turn_number, session.phase):
+                return
+            # Detach live state before releasing the lock. The UI rebuild runs outside it.
+            snapshot = copy.deepcopy(session.public_state().get("game_state"))
+        apply_realtime_turn_snapshot(self, snapshot, turn, phase)
 
     def update(self):
         self._advance_unit_view_animation()
@@ -1650,10 +1632,11 @@ class Map(StateAccess, Screen):
             self._unit_selection_player = self.player_country
         if self.realtime_multiplayer:
             self._apply_host_realtime_snapshot()
-        if self.realtime_multiplayer:
             session = self.realtime_session
             player = session.players.get(self.realtime_player_id)
-            if (session.phase == "TURN" and player and not player.submitted and not player.eliminated
+            turn = session.turn_number
+            if (session.phase == "TURN" and turn == self._realtime_snapshot_turn
+                    and player and not player.submitted and not player.eliminated
                     and not self.realtime_submission_pending
                     and self._realtime_draft_dirty):
                 # Keep the server's last accepted draft current after a real
@@ -1662,16 +1645,16 @@ class Map(StateAccess, Screen):
                 # to rediscover an unchanged draft.
                 from data.multiplayer.realtime.session import collect_map_commands, RealtimeError
                 commands = collect_map_commands(self, self.player_country)
-                fingerprint = f"{session.turn_number}:" + json.dumps(commands, sort_keys=True, separators=(",", ":"))
+                fingerprint = f"{turn}:" + json.dumps(commands, sort_keys=True, separators=(",", ":"))
                 if fingerprint != self._realtime_draft_fingerprint:
                     try:
-                        if session.sync_draft(self.realtime_player_id, session.turn_number, commands) is not False:
+                        if session.sync_draft(self.realtime_player_id, turn, commands) is not False:
                             self._realtime_draft_fingerprint = fingerprint
                     except RealtimeError as error:
                         self.show_feedback(f"Order update rejected: {error}")
                 self._realtime_draft_dirty = False
         if self.realtime_multiplayer and self.realtime_client:
-            from data.multiplayer.realtime.session import apply_authoritative_snapshot
+            from data.multiplayer.realtime.session import apply_realtime_turn_snapshot
             events = self.realtime_client.poll()
             # A socket close can be queued next to the host's explicit
             # shutdown frame.  The latter is the useful reason, so never let
@@ -1686,21 +1669,8 @@ class Map(StateAccess, Screen):
                     player = self.realtime_session.players.get(self.realtime_player_id)
                     if player and player.submitted:
                         self.realtime_submission_pending = False
-                    # Status heartbeats and draft acknowledgements describe
-                    # the same in-progress turn. Re-applying their base-game
-                    # snapshot would erase a player's unsubmitted local
-                    # research/orders/queues. Apply only the initial board,
-                    # a newly opened turn, or the final processed result.
-                    current_turn = self.realtime_session.turn_number
-                    current_phase = self.realtime_session.phase
-                    applied_turn = self._realtime_snapshot_turn
-                    applied_phase = self._realtime_snapshot_phase
-                    should_apply = (applied_turn is None or current_turn != applied_turn or
-                                    (current_phase == "GAME_OVER" and applied_phase != "GAME_OVER"))
-                    if self.realtime_session.snapshot and should_apply:
-                        apply_authoritative_snapshot(self, self.realtime_session.snapshot)
-                        self._realtime_snapshot_turn = current_turn
-                        self._realtime_snapshot_phase = current_phase
+                    view = self.realtime_session
+                    apply_realtime_turn_snapshot(self, view.snapshot, view.turn_number, view.phase)
                 elif event.get("type") in ("error", "disconnected", "shutdown"):
                     message = payload.get("message", "Disconnected from real-time server.")
                     self.realtime_submission_pending = False
@@ -1718,14 +1688,6 @@ class Map(StateAccess, Screen):
                             "Connection lost. Multiplayer actions are disabled; rejoin from the menu.")
                     else:
                         self.show_feedback(message)
-        elif self.realtime_multiplayer and self.realtime_server_map:
-            # The host uses a separate visual map. Pull only processed server
-            # turns across, never an in-progress draft, so hosting confers no
-            # direct gameplay authority.
-            server_map = self.realtime_server_map
-            if server_map.time_manager.total_turns != self.time_manager.total_turns:
-                from data.multiplayer.realtime.session import MapRealtimeDriver, apply_authoritative_snapshot
-                apply_authoritative_snapshot(self, MapRealtimeDriver(server_map).snapshot())
         super().update()
         self.camera.update(self, c.SCREEN_HEIGHT)
 

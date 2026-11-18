@@ -833,7 +833,7 @@ def _apply_construction_logic(context, ai_name, data, my_provs, building_library
                 break
 
 
-def process_ai_economy_decisions(context):
+def process_ai_economy_decisions(context, *, countries=None):
     """Handles AI unit recruitment and building construction based on economy."""
     world_state = world_for(context)
     unit_library = queries.get_unit_library(context)
@@ -855,7 +855,7 @@ def process_ai_economy_decisions(context):
         if owner and not queries.is_water_province(prov):
             nation_provs.setdefault(owner, []).append(prov)
 
-    ai_nations = queries.get_active_ai_nations(context)
+    ai_nations = queries.get_active_ai_nations(context) if countries is None else countries
 
     for ai_name in ai_nations:
         data = world_state.nation_data[ai_name]

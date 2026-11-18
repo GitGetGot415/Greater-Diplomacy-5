@@ -553,9 +553,7 @@ def load_tournament(file_path, key):
     return True, role, cid, temp_dir, keys_dict, "Loaded successfully", session_key, ver_table
 
 def export_move_file(context, file_path, player_key):
-    """
-    Exports a .gd5move file containing ONLY the submitting player's changes
-    for the current tournament turn.
+    """Export the submitting player's intents for the current tournament turn.
 
     The session and turn fields make an accidental import of an old move (or a
     move from another tournament using the same player key) detectable by the
@@ -569,26 +567,9 @@ def export_move_file(context, file_path, player_key):
         raise ValueError("Only a tournament country player may export a move file.")
 
     queries.ensure_unit_ids(world_state.map_data)
-    save_dict = queries.build_save_dict(context)
-    
-    player_data = {
-        "nation_data": copy.deepcopy(save_dict.get("nation_data", {}).get(cid, {})),
-        "research_years": save_dict["research_years"],
-        "provinces": {},
-        # A move must be able to say "I have no units left".  Older moves
-        # inferred that from a non-empty province update, which lost an
-        # all-disbanded army (and an all-volunteer army) because there was
-        # nothing left to serialize.  New hosts use this marker to replace
-        # the submitting country's complete map-unit snapshot atomically.
-        "unit_snapshot": True,
-        "aircraft_orders": [],
-        "air_transport": queries.air_transport_commands(context, cid),
-        "game_version": c.GAME_VERSION,
-        "release_subjects": [{"core_nation": entry["core_nation"],
-                              "keep_cores": entry.get("keep_cores", False),
-                              "release_type": entry["release_type"]}
-                             for entry in save_dict.get("nation_data", {}).get(cid, {}).get("release_puppet_queue", [])],
-    }
+    queries.normalize_saved_diplomacy(context)
+    commands = collect_map_commands(context, cid)
+    player_data = {"game_version": c.GAME_VERSION, "player_intents": commands}
 
     session_key = context.multiplayer_session_key
     if session_key:
@@ -596,40 +577,11 @@ def export_move_file(context, file_path, player_key):
     if hasattr(context, "time_manager"):
         player_data["tournament_turn"] = world_state.time_manager.total_turns
 
-    # A faction rename affects every member, while normal move data contains
-    # only one nation record.  Preserve it as a separate host-validated command
-    # rather than allowing the renamed leader to drift away from its members.
+    # Tournament edits use their own draft buffers. Fold them into the shared
+    # commands so the host applies faction and appearance changes together.
     pending_renames = context.multiplayer_pending_faction_renames
-    if pending_renames:
-        player_data["faction_renames"] = list(pending_renames)
-
     pending_appearances = context.multiplayer_pending_appearance_updates
-    if pending_appearances:
-        player_data["appearance_updates"] = [
-            {"country_id": target, "appearance": appearance}
-            for target, appearance in pending_appearances.items()
-        ]
-
-    # Integrated-puppet siphon sliders live on the subject's country record,
-    # not on the controlling player's record.  Carry their values as a small
-    # explicit command, just like integrated-puppet appearance edits, so an
-    # asynchronous player does not silently lose them on host import.
-    siphon_updates = []
-    player_country = save_dict.get("nation_data", {}).get(cid, {})
-    for puppet in player_country.get("puppets", []) if isinstance(player_country, dict) else ():
-        puppet_data = save_dict.get("nation_data", {}).get(puppet, {})
-        if (isinstance(puppet_data, dict)
-                and puppet_data.get("master") == cid
-                and puppet_data.get("puppet_type") == c.PUPPET_TYPE_INTEGRATED):
-            siphon_updates.append({"country_id": puppet,
-                                   "siphon_rates": puppet_data.get("siphon_rates", {})})
-    if siphon_updates:
-        player_data["puppet_siphon_updates"] = siphon_updates
-
-    player_data["player_intents"] = collect_map_commands(context, cid)
-    for command in player_data["player_intents"]:
-        if command["type"] == "army_roster":
-            player_data["nation_data"]["armies"] = copy.deepcopy(command["armies"])
+    for command in commands:
         if command["type"] == "faction_rename" and pending_renames:
             command["name"] = pending_renames[-1]["new_name"]
         elif command["type"] == "puppet_draft" and pending_appearances:
@@ -637,33 +589,7 @@ def export_move_file(context, file_path, player_key):
                 target: {**{key: copy.deepcopy(world_state.nation_data[target].get(key))
                             for key in c.COUNTRY_APPEARANCE_FIELDS}, **appearance}
                 for target, appearance in pending_appearances.items()}
-    
-    for prov_key, prov_data in save_dict.get("provinces", {}).items():
-        prov_updates = {}
-        if prov_data.get("owner") == cid:
-            if "building_queue" in prov_data:
-                prov_updates["building_queue"] = prov_data["building_queue"]
-            if "unit_queue" in prov_data:
-                prov_updates["unit_queue"] = prov_data["unit_queue"]
-                
-        player_units = []
-        for unit in prov_data.get("units", []):
-            if unit.get("owner") != cid:
-                continue
-            if queries.is_air_unit(unit, context=context) or queries.is_air_transport(unit, context=context):
-                # Position, health and transported stats always belong to the
-                # host. A planning file carries only identity and desired orders.
-                player_data["aircraft_orders"].append({
-                    "unit_id": unit["unit_id"], "order": unit.get("order"),
-                    "custom_name": unit.get("custom_name")})
-            else:
-                player_units.append(unit)
-        if player_units:
-            prov_updates["units"] = player_units
-            
-        if prov_updates:
-            player_data["provinces"][prov_key] = prov_updates
-            
+
     payload = {
         "country_id": cid,
         "hash": hash_key(player_key),
@@ -832,10 +758,9 @@ def load_move_files(context, move_file_paths, keys_dict, *, accept_stat_mismatch
     if summary["loaded"] and any(
             isinstance(country, dict) and "armies" in country
             for country in world_state.nation_data.values()):
-        # Nation data carries army metadata while the move file replaces the
-        # submitting country's unit snapshot.  Normalize only after that
-        # replacement so valid incoming member IDs are retained and malformed
-        # or foreign references cannot survive host import.
+        # A legacy move can replace the submitting country's units. Normalize
+        # against the final unit set to keep valid member IDs and drop malformed
+        # or foreign references.
         queries.normalize_armies(world_state.nation_data, world_state.map_data)
 
     return summary

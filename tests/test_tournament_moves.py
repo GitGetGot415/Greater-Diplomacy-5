@@ -1,9 +1,4 @@
-"""Regression coverage for tournament move serialization and host import.
-
-Tournament players submit only their own country record.  Shared faction state
-and integrated-puppet appearance edits therefore need explicit, host-validated
-commands rather than relying on that one record to describe the whole world.
-"""
+"""Cover tournament intent exports and host validation of current and older moves."""
 
 import json
 import copy
@@ -1159,23 +1154,28 @@ class TournamentMoveTests(unittest.TestCase):
             {"old_name": "Old Pact", "new_name": "New Pact"}]
         host.multiplayer_pending_appearance_updates = {
             "Subject": {"name": "New Subject", "color": [1, 2, 3]}}
+        authority = Host()
 
         with tempfile.TemporaryDirectory() as directory:
             path = os.path.join(directory, "out.gd5move")
             tournament_files.export_move_file(host, path, self.keys["Leader"])
             with open(path, "r") as file:
                 payload = json.load(file)
+            summary = self.import_moves(authority, [path])
 
         data = tournament_files.decrypt_dict(payload["data"], self.keys["Leader"])
+        self.assertEqual(set(data), {"tournament_session", "tournament_turn", "game_version", "player_intents"})
         self.assertEqual(data["tournament_session"], "test-session")
         self.assertEqual(data["tournament_turn"], 4)
         self.assertEqual(data["game_version"], c.GAME_VERSION)
-        self.assertEqual(data["faction_renames"][0]["new_name"], "New Pact")
-        self.assertEqual(data["appearance_updates"][0]["country_id"], "Subject")
-        self.assertNotIn("conversation_colors", data)
+        self.assertEqual(summary["loaded"], 1, summary["rejections"])
+        self.assertEqual(authority.nation_data["Leader"]["faction"], "New Pact")
+        self.assertEqual(authority.nation_data["Member"]["faction"], "New Pact")
+        self.assertEqual(authority.nation_data["Subject"]["name"], "New Subject")
+        self.assertEqual(authority.nation_data["Subject"]["color"], [1, 2, 3])
         self.assertEqual(host.conversation_colors, {"Leader": [12, 34, 56]})
 
-    def test_export_includes_empty_unit_snapshot_and_puppet_siphons(self):
+    def test_export_carries_puppet_siphons_in_the_shared_intents(self):
         host = Host()
         host.player_country = "Leader"
         host.active_players = ["Leader"]
@@ -1186,19 +1186,20 @@ class TournamentMoveTests(unittest.TestCase):
         host.default_research = None
         host.nation_data["Subject"]["siphon_rates"] = {
             "manpower": 0.25, "materials": 0.5, "fuel": 0.5}
+        authority = Host()
 
         with tempfile.TemporaryDirectory() as directory:
             path = os.path.join(directory, "out.gd5move")
             tournament_files.export_move_file(host, path, self.keys["Leader"])
             with open(path, "r") as file:
                 payload = json.load(file)
+            summary = self.import_moves(authority, [path])
 
         data = tournament_files.decrypt_dict(payload["data"], self.keys["Leader"])
-        self.assertTrue(data["unit_snapshot"])
-        self.assertEqual(data["puppet_siphon_updates"], [{
-            "country_id": "Subject",
-            "siphon_rates": {"manpower": 0.25, "materials": 0.5, "fuel": 0.5},
-        }])
+        puppet = next(command for command in data["player_intents"] if command["type"] == "puppet_draft")
+        self.assertEqual(puppet["siphons"], {"Subject": {"manpower": 0.25, "materials": 0.5, "fuel": 0.5}})
+        self.assertEqual(summary["loaded"], 1, summary["rejections"])
+        self.assertEqual(authority.nation_data["Subject"]["siphon_rates"], puppet["siphons"]["Subject"])
 
     def test_empty_unit_snapshot_removes_all_player_units(self):
         host = Host()
