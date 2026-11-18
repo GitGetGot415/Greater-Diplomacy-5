@@ -129,6 +129,22 @@ class RoundTripTests(unittest.TestCase):
         self.assertFalse(save.call_args.args[1]["show_strategic_intro_popup"])
         self.assertFalse(save.call_args.args[1]["show_tactical_intro_popup"])
 
+    def test_controller_writer_saves_fields_declared_only_in_the_schema(self):
+        from types import SimpleNamespace
+        from data import queries
+
+        field = settings_schema.SettingField("fixture_setting", "fixture_setting", lambda: "default", None, ())
+        controller = SimpleNamespace(keybinds={"BACK": None}, fixture_setting="selected")
+        with mock.patch.object(settings_schema, "SETTINGS_FIELDS", (*settings_schema.SETTINGS_FIELDS, field)), \
+                mock.patch.object(settings_schema, "SETTINGS_ORDER", (*settings_schema.SETTINGS_ORDER, field.name)), \
+                mock.patch.object(queries, "save_cached_json") as save:
+            queries.save_global_settings(controller)
+
+        cache_name, saved = save.call_args.args
+        self.assertEqual(cache_name, "settings")
+        self.assertEqual(saved["fixture_setting"], "selected")
+        self.assertEqual(saved["keybinds"], {"BACK": None})
+
     def test_older_tutorial_settings_load_and_save_independent_choices_on_disk(self):
         import json
         import tempfile
