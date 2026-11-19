@@ -499,7 +499,7 @@ class AirRealtimeTests(unittest.TestCase):
             with self.assertRaises(RealtimeError):
                 self.driver.validate_draft("A", [command])
 
-    def test_tournament_import_preserves_air_in_existing_move_fields(self):
+    def test_tournament_intents_use_host_aircraft_costs_and_research(self):
         from map_logic.actions import production_actions
         for tech_key, unit_name in aircraft_cases():
             self.reset_map()
@@ -510,23 +510,25 @@ class AirRealtimeTests(unittest.TestCase):
             province.update(json_key="home", owner="Leader", cores=["Leader"],
                             is_coastal=queries.get_unit_metadata(unit_name)["recruitment"]["coastal"])
             host.map_data = {"home": province}
-            host.nation_data["Leader"]["research"] = {tech_key: queries.get_unit_research_requirement(unit_name)[1]}
+            host.id_to_province = {province["id"]: province}
+            research = {tech_key: queries.get_unit_research_requirement(unit_name)[1]}
+            research_queue = [{"tech_name": "jet_engine", "points_remaining": 50}]
+            host.nation_data["Leader"].update(research=research.copy(), research_queue=copy.deepcopy(research_queue))
             stats = queries.get_unit_library()[unit_name]
             for resource in c.ECON_RESOURCE_KEYS:
                 host.nation_data["Leader"][resource] = 1 + stats[f"cost_{resource}"]
             expected = production_actions.prepare_production(
                 host, "Leader", province, "unit_queue", {"unit_type": unit_name}).order
             older_entry = {key: value for key, value in expected.items() if key != "refund"}
-            move = harness.player_data("Leader", host)
-            move["nation_data"]["research_queue"] = [{"tech_name": "jet_engine", "points_remaining": 50}]
-            move["provinces"] = {"home": {"unit_queue": [older_entry]}}
+            command = {"type": "province_queue", "province_id": province["id"], "queue": "unit_queue", "items": [older_entry]}
+            move = harness.player_data(host, player_intents=[command], provinces={"home": {"unit_queue": [older_entry]}})
             with tempfile.TemporaryDirectory() as directory:
                 path = harness.write_move(directory, "air.gd5move", "Leader", move)
                 result = harness.import_moves(host, [path])
-            self.assertEqual(result["loaded"], 1)
-            self.assertEqual(host.nation_data["Leader"]["research_queue"], move["nation_data"]["research_queue"])
+            self.assertEqual(result["loaded"], 1, result["rejections"])
+            self.assertEqual(host.nation_data["Leader"]["research_queue"], research_queue)
             self.assertEqual(host.map_data["home"]["unit_queue"], [expected])
-            self.assertEqual(host.nation_data["Leader"]["research"][tech_key], move["nation_data"]["research"][tech_key])
+            self.assertEqual(host.nation_data["Leader"]["research"], research)
 
 
 class AirScreenTests(unittest.TestCase):
