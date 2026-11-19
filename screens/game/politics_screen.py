@@ -34,7 +34,7 @@ TACTICAL_NOTICE_Y = COMPASS_OFFSET[1] + COMPASS_SIZE + POSITION_LINE_GAP
 DECREASE_COLOR = (255, 150, 150)
 DRIFT_ROWS = (
     ("Political Direction", ("Libertarian", "Hold", "Authoritarian")),
-    ("Economic Direction", ("Plan", "Hold", "Market")),
+    ("Economic Direction", ("Planned", "Hold", "Market")),
 )
 AXIS_EFFECT_ROWS = (
     (("Army damage", politics.axis_damage_multiplier), ("Core manpower", politics.axis_core_manpower_multiplier)),
