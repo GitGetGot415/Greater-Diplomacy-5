@@ -41,13 +41,10 @@ HEADER_OUTPUT_MARGIN_X = 30
 RESEARCH_BREAKDOWN_PADDING = 8
 RESEARCH_BREAKDOWN_GAP = 14
 RESEARCH_BREAKDOWN_LABELS = {
-    "base": "Base points across active projects",
+    "base": "Base research",
     "economy": "Economic system",
     "policies": "Domestic policies",
-    "faction": "Faction sharing",
-    "timing": "Ahead-of-time penalty",
-    "funding": "Research funding",
-    "completion": "Points beyond completion",
+    "funding": f"Research funding (split across {c.RESEARCH_SLOTS} slots)",
 }
 
 TIMELINE_AXIS_Y = 180
@@ -259,7 +256,8 @@ class ResearchDetailsScreen(ModalScreen):
 
         self.funding_surface = None
         if self.node["status"] == "RESEARCHING" and not self.research.editing_research_levels:
-            bonus = self.research.research_funding_awards.get(tech_key, 0)
+            _, awards = queries.get_projected_research_funding(map_screen, subject)
+            bonus = awards.get(tech_key, 0)
             if bonus:
                 self.funding_surface = fonts.get("normal").render(
                     f"Next turn research funding +{bonus:,.2f} pts", True, c.COLOR_GOLD_HIGHLIGHT)
@@ -838,7 +836,6 @@ class Research_Screen(Screen):
         prefix = f"{name} -- " if self.editing_starting_research or self.subject != self.map_screen.player_country else ""
         self.header_title_surface = font.render(f"{prefix}VIEWING: {category}", True, (255, 255, 255))
         self.header_output_rect = None
-        self.research_funding_awards = {}
         if self.editing_research_levels:
             hud_font = fonts.get("button")
             lines = EDITOR_HELP_LINES if self.editing_starting_research else SPECTATOR_HELP_LINES
@@ -851,7 +848,7 @@ class Research_Screen(Screen):
                     rendered = pygame.transform.smoothscale(rendered, (width, height))
                 self.editor_help_surfaces.append(rendered)
         else:
-            breakdown, self.research_funding_awards = queries.get_projected_research_breakdown(self.map_screen, self.subject)
+            breakdown = queries.get_projected_research_breakdown(self.map_screen, self.subject)
             points = max(0, sum(breakdown.values()))
             self.header_output_surface = font.render(f"RESEARCH: {points:,.2f} pts/turn", True, (0, 255, 255))
             self.header_output_rect = self.header_output_surface.get_rect(topright=(c.SCREEN_WIDTH - HEADER_OUTPUT_MARGIN_X, HEADER_OUTPUT_Y))
@@ -859,7 +856,7 @@ class Research_Screen(Screen):
 
     def _render_research_breakdown(self, breakdown):
         font = fonts.get("normal")
-        title = font.render("Projected research next turn" if breakdown else "No active research projects", True, c.UI_TEXT_BRIGHT)
+        title = font.render("Research per slot per turn", True, c.UI_TEXT_BRIGHT)
         rows = []
         for key, points in breakdown.items():
             if not points and key not in {"base", "funding"}:

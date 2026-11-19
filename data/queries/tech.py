@@ -506,11 +506,12 @@ def get_research_multiplier(current_exact_year, target_year):
 
 def get_base_research_points(nation_data, country_id, days_per_turn):
     """Normal points per slot before project-specific modifiers."""
-    _, _, modified = _base_research_steps(nation_data, country_id, days_per_turn)
+    _, _, modified = get_base_research_rates(nation_data, country_id, days_per_turn)
     return modified
 
 
-def _base_research_steps(nation_data, country_id, days_per_turn):
+def get_base_research_rates(nation_data, country_id, days_per_turn):
+    """Return per-slot points before modifiers, after the economic system, and after policy."""
     # Politics imports the query package for its other rules.
     from map_logic import politics
     base = c.BASE_RESEARCH_POINTS_PER_DAY * days_per_turn
@@ -526,24 +527,18 @@ def get_project_research_rate(base_points, nation_data, country_id, tech_name, l
 
 def get_normal_research_progress(nation_data, country_id, tech_tree, days_per_turn, current_year):
     """Calculate each queued project's regular progress for the turn."""
-    _, projects = get_normal_research_steps(nation_data, country_id, tech_tree, days_per_turn, current_year)
-    return {tech_name: points for tech_name, (_, points) in projects.items()}
-
-
-def get_normal_research_steps(nation_data, country_id, tech_tree, days_per_turn, current_year):
-    """Calculate base rates and each queued project's points before and after the timing penalty."""
     country = nation_data[country_id]
     levels = country.get("research", {})
-    base, economic, modified = _base_research_steps(nation_data, country_id, days_per_turn)
-    projects = {}
+    base_points = get_base_research_points(nation_data, country_id, days_per_turn)
+    progress = {}
     for project in country.get("research_queue", []):
         tech_name = project["tech_name"]
         level = levels.get(tech_name, 0)
         years = tech_tree.get(tech_name, {}).get("years", [1850])
         target_year = years[min(level, len(years) - 1)]
-        rate = get_project_research_rate(modified, nation_data, country_id, tech_name, level + 1)
-        projects[tech_name] = rate, rate * get_research_multiplier(current_year, target_year)
-    return (base, economic, modified), projects
+        rate = get_project_research_rate(base_points, nation_data, country_id, tech_name, level + 1)
+        progress[tech_name] = rate * get_research_multiplier(current_year, target_year)
+    return progress
 
 
 def valid_research_funding_rate(value):
@@ -556,6 +551,11 @@ def get_research_funding_rate(country):
     return rate if valid_research_funding_rate(rate) else c.DEFAULT_RESEARCH_FUNDING_RATE
 
 
+def get_research_funding_budget(country, net_materials):
+    """Return the Materials budget available before allocating points to projects."""
+    return max(0, net_materials) * get_research_funding_rate(country)
+
+
 def get_funded_research_points(materials):
     """Use a logarithmic return so each additional research point costs more."""
     return c.RESEARCH_FUNDING_POINT_SCALE * math.log1p(materials / c.RESEARCH_FUNDING_MATERIAL_SCALE) / math.log(2)
@@ -563,7 +563,7 @@ def get_funded_research_points(materials):
 
 def calculate_research_funding(country, net_materials, normal_progress):
     """Return Materials spent and bonus points per project after normal progress."""
-    budget = max(0, net_materials) * get_research_funding_rate(country)
+    budget = get_research_funding_budget(country, net_materials)
     if budget <= 0:
         return 0, {}
     remaining = {}

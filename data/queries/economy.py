@@ -7,8 +7,8 @@ from data.state_access import session_for, world_for
 from map_logic import politics
 from data.queries.content import get_category_setting
 from data.queries.geometry import is_water_province
-from data.queries.tech import (calculate_research_funding, get_exact_year, get_normal_research_steps,
-                              get_research_funding_rate)
+from data.queries.tech import (calculate_research_funding, get_base_research_rates, get_exact_year, get_funded_research_points,
+                              get_normal_research_progress, get_research_funding_budget, get_research_funding_rate)
 from data.queries.unit_info import (base_item_name_from_text, get_base_item_name, is_naval_unit,
                                    units_with_air_cargo)
 from data import queries
@@ -842,7 +842,7 @@ def get_net_materials_income(economy):
     return economy["total_inc"]["materials"] - economy["upkeep"]["materials"]
 
 
-def get_projected_research_funding(context, country_id, *, economy=None, normal_progress=None):
+def get_projected_research_funding(context, country_id, *, economy=None):
     """Estimate the next turn's research funding from the current planning state."""
     world = world_for(context)
     # Context-free economy callers and lightweight display fixtures lack a date.
@@ -857,35 +857,31 @@ def get_projected_research_funding(context, country_id, *, economy=None, normal_
     if not economy:
         return 0, {}
 
-    if normal_progress is None:
-        _, projects = _projected_research_steps(context, world, country_id)
-        normal_progress = {tech_name: points for tech_name, (_, points) in projects.items()}
+    days = queries.get_days_per_turn(world.scenario_settings)
+    next_year = get_exact_year(time_manager) + days / 360.0
+    normal_progress = get_normal_research_progress(world.nation_data, country_id, queries.get_tech_tree(context), days, next_year)
     return calculate_research_funding(country, get_net_materials_income(economy), normal_progress)
 
 
-def _projected_research_steps(context, world, country_id):
-    days = queries.get_days_per_turn(world.scenario_settings)
-    next_year = get_exact_year(world.time_manager) + days / 360.0
-    return get_normal_research_steps(world.nation_data, country_id, queries.get_tech_tree(context), days, next_year)
-
-
 def get_projected_research_breakdown(context, country_id):
-    """Return the sources of next-turn progress and each project's funded points."""
+    """Return the country-wide research rate for one slot, with funding split across all slots."""
     world = world_for(context)
-    queue = world.nation_data[country_id].get("research_queue", [])
-    if not queue:
-        return {}, {}
-    (base, economic, modified), projects = _projected_research_steps(context, world, country_id)
-    normal = {tech_name: points for tech_name, (_, points) in projects.items()}
-    _, funded = get_projected_research_funding(context, country_id, normal_progress=normal)
+    nation_data = world.nation_data
+    country = nation_data[country_id]
+    days = queries.get_days_per_turn(world.scenario_settings)
+    base, economic, modified = get_base_research_rates(nation_data, country_id, days)
+
+    funding = 0
+    if get_research_funding_rate(country):
+        economy = queries.calculate_all_economies(world.map_data, nation_data, context=context).get(country_id)
+        if economy:
+            budget = get_research_funding_budget(country, get_net_materials_income(economy))
+            funding = get_funded_research_points(budget) / c.RESEARCH_SLOTS
 
     return {
-        "base": base * len(queue),
-        "economy": (economic - base) * len(queue),
-        "policies": (modified - economic) * len(queue),
-        "faction": sum(rate - modified for rate, _ in projects.values()),
-        "timing": sum(points - rate for rate, points in projects.values()),
-        "funding": sum(funded.values()),
-        "completion": -sum(max(0, normal[project["tech_name"]] - project["points_remaining"]) for project in queue),
-    }, funded
+        "base": base,
+        "economy": economic - base,
+        "policies": modified - economic,
+        "funding": funding,
+    }
 
