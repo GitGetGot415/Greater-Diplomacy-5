@@ -80,6 +80,7 @@ CREDITS_DATA = [
                     "Added:\n"
                     "- Conversion between OpenDoctrines and GD5\n"
                     "- Conversion between Unciv and GD5\n"
+                    "- Linux Compilation\n"
                     "- OJH Benchmark"
                 ),
                 "align": "left",
@@ -158,19 +159,13 @@ CREDITS_DATA = [
             ]
         },
     {
-        "main_text": "Tools: ",
+        "main_text": "Other: ",
         "people": [
             {
                 "link_text": "github-advanced-security[bot]",
                 "info": "Improved encryption for tournaments",
                 "align": "left",
                 "links": [{"text": "Docs", "url": "https://docs.github.com/en/get-started/learning-about-github/about-github-advanced-security"}]
-            },
-            {
-                "link_text": "claude",
-                "info": "Massive refactors to consolidate / organize code",
-                "align": "left",
-                "links": [{"text": "GitHub", "url": "https://github.com/claude"}]
             },
             {
                 "link_text": "dependabot",
