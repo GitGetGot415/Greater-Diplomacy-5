@@ -44,7 +44,7 @@ class ResearchFundingTests(unittest.TestCase):
         for days in (5, 30):
             base = c.BASE_RESEARCH_POINTS_PER_DAY * days
             country = {"research_queue": [project("tech", base * 2)]}
-            for rate, share in ((0, 0), (0.01, 0.01495), (0.25, 0.34375), (0.5, 0.625), (1, 1)):
+            for rate, share in ((0, 0), (0.01, 0.0199), (0.25, 0.4375), (0.5, 0.75), (1, 1)):
                 country["research_funding_slider"] = rate
                 for gross in (10_000, 1_000_000):
                     with self.subTest(days=days, rate=rate, gross=gross):
@@ -110,7 +110,7 @@ class ResearchFundingTests(unittest.TestCase):
                 game = BackendState()
                 days = queries.get_days_per_turn(game.scenario_settings)
                 unmodified_base = c.BASE_RESEARCH_POINTS_PER_DAY * days
-                bonus_per_project = unmodified_base * 0.145 / len(tree)
+                bonus_per_project = unmodified_base * 0.19 / len(tree)
                 game.player_country = "A"
                 game.active_players = ["A"]
                 game.time_manager = TimeHandler(start_year=1920)
@@ -153,7 +153,7 @@ class ResearchFundingTests(unittest.TestCase):
         game.nation_data["A"] = country
         with patch.object(queries, "calculate_all_economies", side_effect=funded_economies(game.nation_data, {"A": (40, 20)})) as calculate:
             breakdown = queries.get_projected_research_breakdown(game, "A")
-            funding = base * 0.625
+            funding = base * 0.75
             self.assertAlmostEqual(breakdown["funding"], funding)
             self.assertAlmostEqual(sum(breakdown.values()), base + funding)
 

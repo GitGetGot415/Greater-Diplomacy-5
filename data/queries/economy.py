@@ -89,7 +89,7 @@ def get_funded_research_points(country, materials_spent, days_per_turn):
     if materials_spent <= 0:
         return 0
     rate = get_research_funding_rate(country)
-    return get_unmodified_research_points(days_per_turn) * rate * (1.5 - 0.5 * rate)
+    return get_unmodified_research_points(days_per_turn) * rate * (2.0 - 1.0 * rate)
 
 
 def get_research_funding_awards(country, materials_spent, normal_progress, *, days_per_turn):
