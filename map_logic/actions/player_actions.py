@@ -211,6 +211,10 @@ class PlayerActions:
             return volunteers.draft_context(self.context, country_id)
         return self.context
 
+    def _is_local_tournament_player(self, country_id):
+        return (self.session.multiplayer_mode and not self.session.realtime_multiplayer
+                and self.session.player_country == country_id)
+
     def _collect_country_preferences(self, country_id):
         country_data = self.world.nation_data.get(country_id, {})
         return {"political_drift": country_data.get("political_drift", 0),
@@ -475,6 +479,8 @@ class PlayerActions:
             self.world.nation_data[puppet]["siphon_rates"] = copy.deepcopy(rates)
         for puppet, appearance in command["appearances"].items():
             self._apply_appearance(puppet, appearance)
+            if self._is_local_tournament_player(country_id):
+                self.session.pending_subject_appearances[puppet] = copy.deepcopy(appearance)
 
     def _validate_puppet_draft(self, country_id: str, command: dict[str, Any]) -> dict[str, Any]:
         """Validate the controller-only subject controls from the Puppets UI."""
@@ -521,13 +527,19 @@ class PlayerActions:
                 "siphons": canonical_siphons, "release_subjects": canonical_releases,
                 "appearances": canonical_appearances}
 
-    def _collect_faction_rename(self, country_id):
-        return {"name": queries.get_country_faction(country_id, self.world.nation_data)}
+    def _collect_faction_rename(self, _country_id):
+        # Only a player edit may request a rename. A copy of the old faction
+        # name would reject a member's draft if the leader imported first.
+        return {"name": self.session.pending_faction_rename}
 
     def _apply_faction_rename(self, country_id, command):
-        if command.get("name"):
-            faction_actions.rename_faction(self.world.nation_data, country_id,
-                                           queries.get_country_faction(country_id, self.world.nation_data), command["name"])
+        name = command.get("name")
+        if name:
+            if self._is_local_tournament_player(country_id):
+                rename_player_faction(self.context, name)
+            else:
+                current = queries.get_country_faction(country_id, self.world.nation_data)
+                faction_actions.rename_faction(self.world.nation_data, country_id, current, name)
 
     def _validate_faction_rename(self, country_id: str, command: dict[str, Any]) -> dict[str, Any]:
         self._country(country_id)
@@ -963,6 +975,18 @@ _COUNTRY_COMMANDS = {
     "faction_rename": _CountryCommand(PlayerActions._collect_faction_rename, PlayerActions._validate_faction_rename, PlayerActions._apply_faction_rename),
     "ratification_response": _CountryCommand(PlayerActions._collect_ratification_response, PlayerActions._validate_ratification_response, PlayerActions._apply_ratification_response),
 }
+
+
+def rename_player_faction(context, new_name):
+    """Rename on the planning map and record the player's requested name."""
+    world = world_for(context)
+    session = session_for(context)
+    country = session.player_country
+    current = queries.get_country_faction(country, world.nation_data)
+    renamed = faction_actions.rename_faction(world.nation_data, country, current, new_name)
+    if renamed and (session.multiplayer_mode or session.realtime_multiplayer):
+        session.pending_faction_rename = queries.get_country_faction(country, world.nation_data)
+    return renamed
 
 
 def collect_map_commands(context, country_id: str) -> list[dict[str, Any]]:

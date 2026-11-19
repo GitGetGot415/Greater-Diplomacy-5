@@ -63,7 +63,8 @@ class SessionState:
     multiplayer_protected_countries: set = field(default_factory=set)
     multiplayer_pending_key_regen: set = field(default_factory=set)
     submitted_moves: set = field(default_factory=set)
-    # Subject edits made on a local planning map are sent as explicit commands.
+    # Shared edits made on a local planning map are sent as explicit commands.
+    pending_faction_rename: str | None = None
     pending_subject_appearances: dict = field(default_factory=dict)
     # Real-time client drafts that travel as server-validated commands.
     realtime_volunteer_drafts: dict = field(default_factory=dict)

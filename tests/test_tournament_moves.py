@@ -808,23 +808,21 @@ class TournamentMoveTests(unittest.TestCase):
         self.assertNotIn("Outsider", active)
 
     def test_faction_rename_keeps_every_member_together(self):
+        from map_logic.actions.player_actions import rename_player_faction
+
         host = Host()
-        leader_move = self.player_data(
-            host,
-            player_intents=[{"type": "faction_rename", "name": "New Pact"}],
-        )
-        # This is what an ordinary member submitted from the still-old tournament
-        # snapshot.  It must not undo the leader's rename when imported second.
-        member_move = self.player_data(host)
+        leader, member = Host(), Host()
+        leader.player_country, member.player_country = "Leader", "Member"
+        leader.multiplayer_mode = member.multiplayer_mode = True
+        self.assertTrue(rename_player_faction(leader, "New Pact"))
 
         with tempfile.TemporaryDirectory() as directory:
-            paths = [
-                self.write_move(directory, "leader.gd5move", "Leader", leader_move),
-                self.write_move(directory, "member.gd5move", "Member", member_move),
-            ]
+            paths = [os.path.join(directory, f"{player.player_country}.gd5move") for player in (leader, member)]
+            for player, path in zip((leader, member), paths):
+                tournament_files.export_move_file(player, path, self.keys[player.player_country])
             summary = self.import_moves(host, paths)
 
-        self.assertEqual(summary["loaded"], 2)
+        self.assertEqual(summary["loaded"], 2, summary["rejections"])
         self.assertEqual(host.nation_data["Leader"]["faction"], "New Pact")
         self.assertEqual(host.nation_data["Member"]["faction"], "New Pact")
         self.assertTrue(host.nation_data["Leader"]["is_faction_leader"])
@@ -903,18 +901,19 @@ class TournamentMoveTests(unittest.TestCase):
         self.assertEqual(host.submitted_moves, {"Leader"})
 
     def test_export_records_session_turn_and_pending_shared_updates(self):
-        from map_logic.diplomacy.faction_actions import rename_faction
+        from map_logic.actions.player_actions import rename_player_faction
 
         host = Host()
         host.conversation_colors = {"Leader": [12, 34, 56]}
         host.player_country = "Leader"
+        host.multiplayer_mode = True
         host.active_players = ["Leader"]
         host.current_player_index = 0
         host.loop_map = False
         host.scenario_settings = {}
         host.script_variables = []
         host.default_research = None
-        self.assertTrue(rename_faction(host.nation_data, "Leader", "Old Pact", "New Pact"))
+        self.assertTrue(rename_player_faction(host, "New Pact"))
         host.nation_data["Subject"].update(name="New Subject", color=[1, 2, 3])
         host.pending_subject_appearances["Subject"] = queries.country_appearance_draft(host.nation_data["Subject"])
         authority = Host()
@@ -924,7 +923,14 @@ class TournamentMoveTests(unittest.TestCase):
             tournament_files.export_move_file(host, path, self.keys["Leader"])
             with open(path, "r") as file:
                 payload = json.load(file)
-            summary = self.import_moves(authority, [path])
+            reopened = Host()
+            reopened.multiplayer_mode = True
+            reopened.player_country = "Leader"
+            restored = self.import_moves(reopened, [path])
+            self.assertEqual(restored["loaded"], 1, restored["rejections"])
+            reexport = os.path.join(directory, "reopened.gd5move")
+            tournament_files.export_move_file(reopened, reexport, self.keys["Leader"])
+            summary = self.import_moves(authority, [reexport])
 
         data = tournament_files.decrypt_dict(payload["data"], self.keys["Leader"])
         self.assertEqual(set(data), {"tournament_session", "tournament_turn", "game_version", "player_intents"})

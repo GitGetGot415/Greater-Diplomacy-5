@@ -1,11 +1,12 @@
 import pygame
 from ui.navigation.screen import Screen
 import data.constants as c
+from map_logic.actions.player_actions import rename_player_faction
 from ui.bars import ui_bars
 from ui.widgets.flag_icons import draw_flag_centered
 from ui.widgets.ui_elements import Button, make_back_button
 from ui.rendering.font_manager import fonts
-from map_logic.diplomacy import faction_actions, faction_leadership
+from map_logic.diplomacy import faction_leadership
 from data import queries
 from ui import dialogs
 
@@ -167,8 +168,7 @@ class Faction_Screen(Screen):
         new_name = new_name.strip()
 
         if new_name and old_name and new_name != old_name:
-            renamed = faction_actions.rename_faction(
-                self.map_screen.nation_data, player_country, old_name, new_name)
+            renamed = rename_player_faction(self.map_screen, new_name)
             if renamed:
                 self.map_screen.show_feedback(f"Faction renamed to {new_name}")
                 country_names.clear_country_name_cache(self.map_screen)

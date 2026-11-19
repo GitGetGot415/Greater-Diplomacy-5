@@ -953,9 +953,9 @@ def apply_authoritative_snapshot(context, snapshot: dict[str, Any]) -> None:
     if hasattr(context, "time_manager"):
         unit_events.restore(context, snapshot | {"unit_event_read_turns": local_event_reads})
     # These are local intent buffers.  The processed server snapshot has now
-    # either applied or rejected them, so carrying them into the next turn
-    # would replay an old subject edit or volunteer offer.
+    # either applied or rejected them. Start the next turn with fresh drafts.
     if context.realtime_multiplayer:
+        context.pending_faction_rename = None
         context.pending_subject_appearances = {}
         context.realtime_volunteer_drafts = {}
     if context.presentation_enabled:
