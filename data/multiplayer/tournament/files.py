@@ -584,19 +584,6 @@ def export_move_file(context, file_path, player_key):
     if hasattr(context, "time_manager"):
         player_data["tournament_turn"] = world_state.time_manager.total_turns
 
-    # Tournament edits use their own draft buffers. Fold them into the shared
-    # commands so the host applies faction and appearance changes together.
-    pending_renames = context.multiplayer_pending_faction_renames
-    pending_appearances = context.multiplayer_pending_appearance_updates
-    for command in commands:
-        if command["type"] == "faction_rename" and pending_renames:
-            command["name"] = pending_renames[-1]["new_name"]
-        elif command["type"] == "puppet_draft" and pending_appearances:
-            command["appearances"] = {
-                target: {**{key: copy.deepcopy(world_state.nation_data[target].get(key))
-                            for key in c.COUNTRY_APPEARANCE_FIELDS}, **appearance}
-                for target, appearance in pending_appearances.items()}
-
     payload = {
         "country_id": cid,
         "hash": hash_key(player_key),

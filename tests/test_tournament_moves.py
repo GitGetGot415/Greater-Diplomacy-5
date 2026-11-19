@@ -1142,6 +1142,8 @@ class TournamentMoveTests(unittest.TestCase):
         self.assertEqual(host.submitted_moves, {"Leader"})
 
     def test_export_records_session_turn_and_pending_shared_updates(self):
+        from map_logic.diplomacy.faction_actions import rename_faction
+
         host = Host()
         host.conversation_colors = {"Leader": [12, 34, 56]}
         host.player_country = "Leader"
@@ -1151,10 +1153,9 @@ class TournamentMoveTests(unittest.TestCase):
         host.scenario_settings = {}
         host.script_variables = []
         host.default_research = None
-        host.multiplayer_pending_faction_renames = [
-            {"old_name": "Old Pact", "new_name": "New Pact"}]
-        host.multiplayer_pending_appearance_updates = {
-            "Subject": {"name": "New Subject", "color": [1, 2, 3]}}
+        self.assertTrue(rename_faction(host.nation_data, "Leader", "Old Pact", "New Pact"))
+        host.nation_data["Subject"].update(name="New Subject", color=[1, 2, 3])
+        host.pending_subject_appearances["Subject"] = queries.country_appearance_draft(host.nation_data["Subject"])
         authority = Host()
 
         with tempfile.TemporaryDirectory() as directory:

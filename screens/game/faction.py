@@ -170,13 +170,6 @@ class Faction_Screen(Screen):
             renamed = faction_actions.rename_faction(
                 self.map_screen.nation_data, player_country, old_name, new_name)
             if renamed:
-                # A tournament move otherwise carries only the renaming
-                # leader's nation record.  Keep an explicit, host-validated
-                # command so every member is renamed when the host imports it.
-                if self.map_screen.multiplayer_mode:
-                    self.map_screen.multiplayer_pending_faction_renames.append(
-                        {"old_name": old_name, "new_name": new_name})
-
                 self.map_screen.show_feedback(f"Faction renamed to {new_name}")
                 country_names.clear_country_name_cache(self.map_screen)
                 self.map_screen.refresh_diplomacy_maps()

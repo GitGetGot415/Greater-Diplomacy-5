@@ -956,7 +956,7 @@ def apply_authoritative_snapshot(context, snapshot: dict[str, Any]) -> None:
     # either applied or rejected them, so carrying them into the next turn
     # would replay an old subject edit or volunteer offer.
     if context.realtime_multiplayer:
-        context.realtime_pending_appearance_updates = {}
+        context.pending_subject_appearances = {}
         context.realtime_volunteer_drafts = {}
     if context.presentation_enabled:
         context.refresh_all_maps()

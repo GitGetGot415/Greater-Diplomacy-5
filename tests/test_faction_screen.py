@@ -75,14 +75,15 @@ class FactionScreenTests(unittest.TestCase):
         self.assertEqual(game.nation_data[nations[0]]["faction"], "The Pact")
 
     def test_tournament_rename_records_the_host_command(self):
+        from map_logic.actions.player_actions import collect_map_commands
+
         game, _nations = self.make_game()
         game.multiplayer_mode = True
-        game.multiplayer_pending_faction_renames = []
         screen = Faction_Screen()
         screen.start_faction(game)
         self.open_rename(screen).call_args.args[2]("New Pact")
-        self.assertEqual(game.multiplayer_pending_faction_renames,
-                         [{"old_name": "The Pact", "new_name": "New Pact"}])
+        commands = collect_map_commands(game, game.player_country)
+        self.assertIn({"type": "faction_rename", "name": "New Pact"}, commands)
 
     def test_realtime_rename_is_refused_when_diplomacy_cannot_be_edited(self):
         game, nations = self.make_game()
