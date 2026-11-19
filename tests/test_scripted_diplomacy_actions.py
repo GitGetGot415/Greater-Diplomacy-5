@@ -193,14 +193,19 @@ class ScriptedConditionRuleTests(unittest.TestCase):
         return scripted_events._conditions_met(run, "A", list(conditions))
 
     def test_editor_choices_all_have_rules(self):
-        self.assertEqual(set(scripted_events.COND_TYPES), set(scripted_events.CONDITIONS))
-        for action in scripted_events.ACT_TYPES:
-            with self.subTest(action=action):
-                self.assertTrue(action in scripted_events.ACTIONS
-                                or action in scripted_events._SCRIPTED_REQUEST_ACTIONS
-                                or action in scripted_events._SCRIPTED_RESPONSE_ACTIONS
-                                or action in scripted_events._GENERIC_RESPONSE_VERDICTS
-                                or action in ("Offer Volunteer Divisions", "Send Custom Message"))
+        from screens.editors.scripted_events_editor import CONDITION_FIELDS, HELP_TEXT
+
+        for name, definition in scripted_events.CONDITIONS.items():
+            with self.subTest(condition=name):
+                self.assertTrue(callable(definition.evaluate))
+                self.assertIn(definition.field, {*CONDITION_FIELDS, "variable", "turn"})
+                if definition.help_text:
+                    self.assertIn(definition.help_text, HELP_TEXT)
+        for name, definition in scripted_events.ACTIONS.items():
+            with self.subTest(action=name):
+                self.assertTrue(callable(definition.run))
+                if definition.help_text:
+                    self.assertIn(definition.help_text, HELP_TEXT)
 
     def test_turn_number_comparisons_and_ranges(self):
         run = self.run_state(turn=5)

@@ -17,9 +17,7 @@ from ui.background_styles import EDITOR_PANEL_STYLES
 from data import queries
 from ui.dialogs import pickers
 from map_logic.system32.time_handler import TimeHandler
-from map_logic.ai.scripted_events import (ACT_TYPES, CHAIN_OPS, COND_TYPES, EDIT_ACTIONS, NUMERIC_OPS,
-                                          SELF_NUMERIC_CONDITION_TYPES, SELF_OR_TARGET_TYPES,
-                                          TARGET_LIST_TYPES, TURN_OPS, VAR_MATH_OPS)
+from map_logic.ai.scripted_events import ACTIONS, CONDITIONS, CHAIN_OPS, NUMERIC_OPS, TURN_OPS, VAR_MATH_OPS
 from map_logic.diplomacy import global_rules
 from ui.rendering.font_manager import fonts
 from ui import dialogs
@@ -44,70 +42,31 @@ RECEIVED_ACTIONS = ["WAR_DECLARATION", "JOIN_WARS", "CALL_TO_ARMS", "CREATE_FACT
                     "REQ_MILITARY_ACCESS", "SEND_MILITARY_ATTACHE", "SEND_VOLUNTEERS"]
 TRIGGER_TYPES = ["AI Only", "Player Only", "Both"]
 
-# Actions that only write a plain text value onto the event's owner.
-TEXT_ONLY_ACTIONS = ["Edit Name", "Edit Leader Name", "Edit Leader Title",
-                     "Queue Claims", "Revoke Claims"]
+CONDITION_FIELDS = {
+    "country": (["=="], "(Target Nation ID, comma separated)"),
+    "countries": (["=="], "(Target Nation IDs, comma separated)"),
+    "country_or_self": (["=="], "(Target Nation ID, or blank for self)"),
+    "count": (NUMERIC_OPS, "(This country's count)"),
+    "random": (TURN_OPS, ""),
+    "received_action": (RECEIVED_ACTIONS, "(Sender Nation ID)"),
+    "none": (["=="], ""),
+    "compare_countries": (["==", "!="], "(Target Nation IDs, comma separated)"),
+    "compare_tiles": (["==", "!="], "(Tile IDs, comma separated)"),
+}
 
 VAR_TYPES = ["int", "double", "string"]
 
-HELP_TEXT = """ === EVENT TYPE ===
+HELP_TEXT = "\n".join((
+    """ === EVENT TYPE ===
 - AI Only: Event fires only if this country is controlled by an AI
 - Player Only: Event fires only if this country is controlled by a player
-- Both: Event fires if this country is controlled by either an AI or a player
-
-=== CONDITIONALS ===
-- Turn Number: Checks if the current game turn matches the specified value
-- At War With: Checks if the nation is at war with the specified target(s) (comma-separated)
-- Is At War: Checks if the target nation (or self if blank) is currently in any war
-- In Faction With: Checks if the nation shares a faction with the target(s)
-- Not In Faction With: Checks if the nation does NOT share a faction with the target(s)
-- Is In Faction: Checks if the target nation (or self if blank) is currently in any faction
-- Not In Faction: Checks if the target nation (or self if blank) is currently outside every faction
-- Is Faction Leader: Checks if the target nation (or self if blank) is the leader of their faction
-- Has Truce With: Checks if the nation has an active truce with the specified target(s) (comma-separated)
-- At Peace With: Checks if the nation is explicitly NOT at war with the target(s)
-- Is At Peace: Checks if the target nation (or self if blank) is in ZERO wars
-- Random (0.00 - 1.00): Returns a random value between 0.0 and 1.0
-- Received Action: Checks if a specific diplomatic action is pending from a specific sender
-- Country Exists: Checks if the target(s) currently hold territory on the map
-- Country Doesn't Exist: Checks if the target(s) are completely wiped off the map
-- Occupying Core Of: Checks if the nation occupies any core of the target
-- Occupying All Cores Of: Checks if the nation occupies EVERY core of the target
-- Occupying Claims Of: Checks if the nation occupies any claim of the target
-- Occupying All Claims: Checks if the nation occupies EVERY claim of the target
-- Occupying Tile: Checks if the nation occupies specific province IDs (comma-separated)
-- Is AI Controlled: Checks if the target nation (or self if blank) is controlled by AI
-- Is Player Controlled: Checks if the target nation (or self if blank) is controlled by a human
-- Bordering / Not Bordering: Checks physical adjacency to the target
-- Guaranteeing / Not Guaranteeing: Checks whether this country guarantees each target country
-- Has / Doesn't Have Military Attaché: Checks whether this country has an attaché at each target country
-- Has / Doesn't Have Military Access Through: Checks whether this country can move through each target country's territory
-- Grants / Doesn't Grant Military Access To: Checks whether each target country can move through this country's territory
-- Volunteer Divisions Sent: Compares this country's volunteer divisions currently reserved, travelling, or deployed
-- Volunteer Capacity Remaining: Compares how many more volunteer divisions this country may currently send
-- Variable: Compares a selected global variable against a static value (supports math operators for numerical variables)
-
-=== ACTIONS ===
-- Declare War: Declares war on the target
-- Join Faction / Create Faction / Invite to Faction: Modifies faction alignments
-- Accept / Reject Proposal: Responds to a pending diplomatic request
-- Send Ceasefire: Offers peace to the target
-- Send Custom Message: Sends a text message to the target
-- Queue Claims: Begins fabricating claims on the specified Province IDs (comma-separated)
-- Revoke Claims: Removes claims on the specified Province IDs (comma-separated)
-- Revoke All Claims: Removes ALL claims held by the target nation
-- Edit Name / Leader / Title: Changes cosmetic names for the event owner
-- Edit Color / Flag / Portrait: Modifies cosmetic visual aspects
-- Give Territory: Transfers the specified Province IDs (comma-separated) to the target nation. Check 'Must Control' if they must currently control the tiles to transfer them.
-- Spawn Unit: Spawns the specified unit type for the target nation on the specified Province IDs (comma-separated). Check 'Must Control' if they must currently control the tiles to spawn the unit on them.
-- Set Variable: Modifies a selected global variable by setting, adding, subtracting, multiplying, or dividing it by a static value.
-- Guarantee Independence: Queues a unilateral guarantee of the selected country's independence.
-- Send Military Attaché / Request Military Access: Sends the normal diplomatic request to the selected country.
-- Offer Volunteer Divisions: Sends the selected country the number of available land divisions entered in the message box (default: 1). Enable 'Use Available Capacity' to send fewer if the requested number exceeds the remaining cap. The host must accept the offer.
-- Accept / Reject Military Attaché, Military Access, or Volunteer Divisions: Responds only to that matching pending request from the selected country.
-
-The AI Msg Checkbox means that you can allow the ai to generate custom text for that message
-It will fallback to whatever you manually entered if the llm ai is turned off or otherwise fails"""
+- Both: Event fires if this country is controlled by either an AI or a player""", "", "=== CONDITIONALS ===",
+    *("- " + entry.help_text for entry in CONDITIONS.values() if entry.help_text),
+    "", "=== ACTIONS ===",
+    *("- " + entry.help_text for entry in ACTIONS.values() if entry.help_text),
+    "", """The AI Msg Checkbox means that you can allow the ai to generate custom text for that message
+It will fallback to whatever you manually entered if the llm ai is turned off or otherwise fails""",
+))
 
 VARIABLES_HELP_TEXT = """Variables hold values that every country's scripted events share. Events check them with the Variable condition and change them with the Set Variable action.
 
@@ -709,32 +668,16 @@ class _EventEditScreen(_ModalScreen):
         return " / ".join(out)
 
     def cond_options(self, row):
-        """Operator choices and the grey hint for a row -- the original's update_row()."""
-        ctype = row.type
-        if ctype == "Variable":
+        """Return operators and the hint for the selected field."""
+        definition = CONDITIONS.get(row.type)
+        field = definition.field if definition else "country"
+        if field == "variable":
             var_type = next((v["type"] for v in self.variables if v["name"] == row.variable), "string")
             return (NUMERIC_OPS if var_type in ("int", "double") else ["==", "!="]), ""
-        if ctype in SELF_NUMERIC_CONDITION_TYPES:
-            return NUMERIC_OPS, "(This country's count)"
-        if ctype in ("Turn Number", "Random (0.00 - 1.00)"):
-            hint = ""
-            if ctype == "Turn Number":
-                dates = self._date_string(row.field.text)
-                hint = f"({dates})" if dates else ""
-            return TURN_OPS, hint
-        if ctype == "Received Action":
-            return RECEIVED_ACTIONS, "(Sender Nation ID)"
-        if ctype in TARGET_LIST_TYPES:
-            return ["=="], "(Target Nation IDs, comma separated)"
-        if ctype in ("True", "False"):
-            return ["=="], ""
-        if ctype == "Occupying All Cores Of":
-            return ["==", "!="], "(Target Nation IDs, comma separated)"
-        if ctype == "Occupying Tile":
-            return ["==", "!="], "(Tile IDs, comma separated)"
-        if ctype in SELF_OR_TARGET_TYPES:
-            return ["=="], "(Target Nation ID, or blank for self)"
-        return ["=="], "(Target Nation ID, comma separated)"
+        if field == "turn":
+            dates = self._date_string(row.field.text)
+            return TURN_OPS, f"({dates})" if dates else ""
+        return CONDITION_FIELDS[field]
 
     # -- row edits ------------------------------------------------------ #
 
@@ -784,7 +727,7 @@ class _EventEditScreen(_ModalScreen):
             if path:
                 try:
                     img = pygame.image.load(path).convert_alpha()
-                    size = c.PORTRAIT_SIZE if row.type == "Edit Portrait" else c.FLAG_SIZE
+                    size = c.PORTRAIT_SIZE if ACTIONS[row.type].field == "portrait" else c.FLAG_SIZE
                     row.field.text = queries.encode_surf_to_b64(pygame.transform.scale(img, size))
                 except Exception as e:
                     dialogs.show_error("Error", f"Could not load image: {e}")
@@ -838,11 +781,11 @@ class _EventEditScreen(_ModalScreen):
                                   lambda v: self._set(row, "chain", v), color="orange"))
         x += 82
 
-        els.append(self.combo(x, y + 2, 200, row.type, COND_TYPES, "Condition Type",
+        els.append(self.combo(x, y + 2, 200, row.type, list(CONDITIONS), "Condition Type",
                               lambda v: self._set(row, "type", v)))
         x += 206
 
-        if row.type == "Variable":
+        if row.type in CONDITIONS and CONDITIONS[row.type].field == "variable":
             els.append(self.combo(x, y + 2, 170, row.variable or "-",
                                   [v["name"] for v in self.variables], "Variable",
                                   lambda v: self._set(row, "variable", v)))
@@ -864,10 +807,11 @@ class _EventEditScreen(_ModalScreen):
         return els
 
     def _build_act_row(self, row, index, y):
-        els = [self.combo(self.list_x, y + 2, 200, row.type, ACT_TYPES, "Action Type",
+        els = [self.combo(self.list_x, y + 2, 200, row.type, list(ACTIONS), "Action Type",
                           lambda v: self._set(row, "type", v))]
         x = self.list_x + 206
-        t = row.type
+        definition = ACTIONS.get(row.type)
+        field = definition.field if definition else "message"
 
         def target_combo(options, title="Target"):
             nonlocal x
@@ -887,7 +831,7 @@ class _EventEditScreen(_ModalScreen):
                                    lambda: self._set(row, "ai_generate", not row.ai_generate)))
             x += 166
 
-        if t == "Set Variable":
+        if field == "variable":
             target_combo([v["name"] for v in self.variables], "Variable")
             var_type = next((v["type"] for v in self.variables if v["name"] == row.target), "string")
             if var_type in ("int", "double"):
@@ -901,33 +845,29 @@ class _EventEditScreen(_ModalScreen):
                                   lambda v: self._set(row, "unit_type", v)))
             x += 256
             message_field()
-        elif t == "Send Custom Message":
-            target_combo(["None"] + self.countries)
-            message_field()
-            flag_toggle("AI Msg")
-        elif t == "Edit Color":
+        elif field == "color":
             row.target = "None"
             els.append(self.button(x, y + 2, 130, "purple", "Pick Color", lambda: self.pick_color(row)))
             x += 136
             self._previews.append(("color", row.field.text, pygame.Rect(x, y + 3, 60, 28)))
             x += 66
-        elif t in ("Edit Flag", "Edit Portrait"):
+        elif field in ("flag", "portrait"):
             row.target = "None"
             els.append(self.button(x, y + 2, 150, "purple", "Browse Image", lambda: self.pick_image(row)))
             x += 156
-            kind = "portrait" if t == "Edit Portrait" else "flag"
+            kind = field
             self._previews.append((kind, row.field.text, pygame.Rect(x, y + 2, 46, 30)))
             x += 52
-        elif t in TEXT_ONLY_ACTIONS:
+        elif field == "text":
             row.target = "None"
             message_field()
-        elif t == "Revoke All Claims":
+        elif field == "target":
             target_combo(["None"] + self.countries)
-        elif t == "Give Territory":
+        elif field == "territory":
             target_combo(["None"] + self.countries)
             message_field()
             flag_toggle("Must Control")
-        elif t == "Spawn Unit":
+        elif field == "unit":
             target_combo(["None"] + self.countries)
             # unit_type doubles as the Set Variable operation, so a row switched over
             # from that can arrive holding "Add"/"Set"; snap it back to a real unit.
@@ -943,16 +883,11 @@ class _EventEditScreen(_ModalScreen):
             x += 256
             message_field()
             flag_toggle("Must Control")
-        elif t == "Offer Volunteer Divisions":
+        elif field == "volunteers":
             target_combo(["None"] + self.countries)
             message_field()
             els.append(self.toggle(x, y + 2, 200, row.send_up_to, "Use Available Capacity",
                                    lambda: self._set(row, "send_up_to", not row.send_up_to)))
-        elif t in ("Guarantee Independence", "Accept Military Attaché",
-                   "Reject Military Attaché", "Accept Military Access",
-                   "Reject Military Access", "Accept Volunteer Divisions",
-                   "Reject Volunteer Divisions"):
-            target_combo(["None"] + self.countries)
         else:
             target_combo(["None"] + self.countries)
             message_field()
@@ -1146,7 +1081,7 @@ class Scripted_Events_Editor_Screen(_ModalScreen):
             a_type = a.get("type")
             if a_type == "Send Custom Message":
                 act_strs.append(f"MSG to '{a.get('target')}'")
-            elif a_type in EDIT_ACTIONS:
+            elif a_type in ACTIONS and ACTIONS[a_type].edits_identity:
                 act_strs.append(f"{a_type}: '{a.get('message')}'")
             elif a_type == "Queue Claims":
                 act_strs.append(f"Queue Claims on Provs: '{a.get('message')}'")
