@@ -407,6 +407,124 @@ class MapSurfaceCacheTests(unittest.TestCase):
               mock.patch.object(pygame.mouse, "get_pos", return_value=position)):
             map_input.update_relations_hover(self.screen, workspace=workspace)
 
+    def add_internal_seam(self):
+        color = (3, 0, 0)
+        province = dict(self.province_of("B"), id=3, map_color=color)
+        self.screen.map_data[color] = self.screen.id_to_province[3] = province
+        self.screen.id_map.fill((0, 0, 0), (8, 0, 1, 6))
+        self.screen.id_map.fill(color, (9, 0, 3, 6))
+        return province
+
+    def test_relations_keeps_its_viewpoint_across_an_internal_seam_under_fog(self):
+        self.add_internal_seam()
+        self.show_relations()
+        self.screen.visible_provinces = {1}
+        self.screen.partial_visible_provinces = {2}
+        self.screen.camera.zoom = 2
+        self.screen.camera.tilt_factor = 0.5
+        self.screen.top_ui_height = 10
+        self.hover((14, 12))
+        self.assertEqual(self.screen._relations_viewpoint, "B")
+        previous = self.screen.relations_map
+        with mock.patch.object(queries, "get_relation_scores_from", side_effect=AssertionError("recomputed")):
+            self.hover((16, 12))
+            self.assertEqual(self.screen._relations_viewpoint, "B")
+            self.assertIs(self.screen.relations_map, previous)
+            self.hover((18, 12))
+        self.assertIsNone(queries.get_clicked_province((16, 12), self.screen))
+
+    def test_relations_resolves_a_one_pixel_seam_before_checking_farther_away(self):
+        self.add_internal_seam()
+        border_color = self.province_of("A")["map_color"]
+        self.screen.id_map.set_at((8, 0), border_color)
+        self.show_relations()
+
+        self.hover((8, 2))
+        self.assertEqual(self.screen._relations_viewpoint, "B")
+        self.hover((8, 1))
+        self.assertEqual(self.screen._relations_viewpoint, "A")
+
+    def test_relations_rejects_a_seam_at_foreign_water_unowned_or_hidden_land(self):
+        province = self.add_internal_seam()
+        self.show_relations()
+        for owner, terrain, extreme_hidden in (
+            ("A", "plains", set()),
+            ("B", "ocean", set()),
+            ("Unclaimed", "plains", set()),
+            ("B", "plains", {3}),
+        ):
+            with self.subTest(owner=owner, terrain=terrain, extreme_hidden=extreme_hidden):
+                province.update(owner=owner, terrain=terrain)
+                self.screen.extreme_hidden_provinces = extreme_hidden
+                self.hover((7, 2))
+                self.assertEqual(self.screen._relations_viewpoint, "B")
+                self.hover((8, 2))
+                self.assertEqual(self.screen._relations_viewpoint, "A")
+
+    def test_relations_seam_does_not_reveal_a_fogged_tile_to_tournament_spectators(self):
+        self.add_internal_seam()
+        self.screen.player_country = c.TOURNAMENT_SPECTATOR
+        self.show_relations()
+        self.screen.visible_provinces = {2}
+
+        self.hover((7, 2))
+        self.assertEqual(self.screen._relations_viewpoint, "B")
+        self.hover((8, 2))
+        self.assertEqual(self.screen._relations_viewpoint, c.TOURNAMENT_SPECTATOR)
+
+    def test_relations_tooltip_displays_only_the_country_name_on_a_seam(self):
+        from ui.information import tooltip
+
+        self.add_internal_seam()
+        self.show_relations()
+        self.screen.nation_data["B"]["name"] = "Fixture Country"
+        self.screen.hovered_province = self.screen.hovered_unit_stack = self.screen.hovered_combat_bubble = None
+        self.screen.small_font = mock.Mock()
+        self.screen.small_font.render.return_value = pygame.Surface((1, 1))
+        self.hover((8, 2))
+
+        with (mock.patch.object(tooltip, "_province_tooltip_lines", side_effect=AssertionError("province tooltip")),
+              mock.patch.object(pygame.mouse, "get_pos", return_value=(8, 2))):
+            tooltip.draw_tooltip(self.screen, pygame.Surface((50, 50)))
+        self.assertEqual([call.args[0] for call in self.screen.small_font.render.call_args_list], ["Fixture Country"])
+
+    def test_country_gap_wraps_only_on_a_looping_map(self):
+        self.add_internal_seam()
+        self.screen.id_map.fill((0, 0, 0), (0, 0, 1, 6))
+        self.screen.id_map.fill((2, 0, 0), (1, 0, 2, 6))
+        self.show_relations()
+
+        self.hover((0, 2))
+        self.assertEqual(self.screen._relations_viewpoint, "A")
+        self.screen.loop_map = True
+        self.hover((0, 2))
+        self.assertEqual(self.screen._relations_viewpoint, "B")
+
+    def test_country_picker_accepts_the_seam_and_tactical_picker_requires_a_hit(self):
+        self.add_internal_seam()
+        self.show_relations()
+        self.screen.selection_mode = True
+        self.screen.pending_selection = None
+        self.screen.secondary_mode = "BLANK"
+        self.screen.nation_data["B"]["is_playable"] = True
+        self.screen.show_feedback = mock.Mock()
+        self.screen.unit_hover_hitboxes = []
+        self.screen._tooltip_building_stamp = None
+        event = pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(8, 2))
+
+        with (mock.patch.object(map_input.player_setup, "select_tactical_unit") as tactical,
+              mock.patch.object(map_input.sound_effects, "play_ui_sound")):
+            self.screen.tactical_mode = True
+            map_input._update_map_hover(self.screen, False, *event.pos)
+            map_input._handle_country_selection(self.screen, event, *event.pos, False)
+            tactical.assert_not_called()
+            self.assertIsNone(self.screen.pending_selection)
+
+            self.screen.tactical_mode = False
+            map_input._handle_country_selection(self.screen, event, *event.pos, False)
+        self.assertEqual(self.screen.pending_selection, "B")
+        self.assertEqual(self.screen.selected_province["owner"], "B")
+
     def test_the_tooltip_omits_the_hovered_countrys_self_opinion(self):
         from ui.information import tooltip
 

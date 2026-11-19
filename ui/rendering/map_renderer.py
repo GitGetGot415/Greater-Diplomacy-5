@@ -434,7 +434,7 @@ def draw_map_screen(map_screen, surface):
 
     # --- LAYER 6: FEEDBACK & TOOLTIPS ---
     show_hover = not map_screen.selected_province or (map_screen.base_layer == "RELATIONS" and not map_screen.selection_mode)
-    if map_screen.hovered_province and show_hover and not map_screen.hide_tooltip:
+    if show_hover and not map_screen.hide_tooltip:
         tooltip.draw_tooltip(map_screen, surface)
         
     # --- LAYER 7: EXIT CONFIRMATION MODAL ---

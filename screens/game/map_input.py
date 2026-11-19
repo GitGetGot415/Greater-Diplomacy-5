@@ -96,13 +96,7 @@ def _select_map_province(map_screen, position, navigate=True):
             or map_ui_bar_at_position(map_screen, position)):
         return False
     province = queries.get_clicked_province(position, map_screen)
-    if (province is None or province["id"] in map_screen.extreme_hidden_provinces):
-        return False
-    # A Tournament Spectator owns no territory. Never let a click through a
-    # fogged tile reveal its sidebar data; Lite still keeps its intended visual
-    # map treatment, but this role has no fully visible province to inspect.
-    if (map_screen.player_country == c.TOURNAMENT_SPECTATOR
-            and not queries.is_province_visible(map_screen, province["id"])):
+    if province is None or not _can_inspect_province(map_screen, province):
         return False
     map_screen.selected_province = province
     sidebar_info.prepare_unit_roster(map_screen, province)
@@ -477,16 +471,25 @@ def _update_map_hover(map_screen, on_ui, mx, my):
     tooltip.prepare_building_yields(map_screen)
 
 
-def _interactive_province(map_screen, pos):
+def _can_inspect_province(map_screen, province):
+    # Ordinary fog shades ownership. Tournament spectators can inspect only
+    # fully visible tiles, even when Lite fog still gives the map some color.
+    province_id = province["id"]
+    return (province_id not in map_screen.extreme_hidden_provinces
+            and (map_screen.player_country != c.TOURNAMENT_SPECTATOR
+                 or queries.is_province_visible(map_screen, province_id)))
+
+
+def _interactive_province(map_screen, pos, *, country_target=False):
     """The province at pos that the player may hover or click, or None."""
-    province = queries.get_clicked_province(pos, map_screen)
-    # Block interaction with extreme hidden tiles
-    if province and province["id"] in map_screen.extreme_hidden_provinces:
-        return None
-    if (province and map_screen.player_country == c.TOURNAMENT_SPECTATOR
-            and not queries.is_province_visible(map_screen, province["id"])):
-        return None
-    return province
+    if country_target:
+        def gap_province_is_visible(candidate):
+            return _can_inspect_province(map_screen, candidate)
+
+        province = queries.get_clicked_province(pos, map_screen, country_gap_is_visible=gap_province_is_visible)
+    else:
+        province = queries.get_clicked_province(pos, map_screen)
+    return province if province and _can_inspect_province(map_screen, province) else None
 
 
 def update_relations_hover(map_screen, *, workspace=None):
@@ -498,7 +501,7 @@ def update_relations_hover(map_screen, *, workspace=None):
     if not map_screen.viewing_ai_moves and pygame.mouse.get_focused():
         position = pygame.mouse.get_pos()
         if (workspace or map_screen).touch_map_at(position) is map_screen:
-            province = _interactive_province(map_screen, position)
+            province = _interactive_province(map_screen, position, country_target=True)
 
     previous = map_screen.relations_map
     refresh_map.update_relations_view(map_screen, province)
@@ -759,13 +762,15 @@ def _handle_country_selection(map_screen, event, mx, my, on_ui):
     # selection must not depend on the tile itself being hovered.
     if on_ui:
         return
-    if map_screen.tactical_mode and _select_tactical_unit_stack(map_screen, event.pos):
-        return
-    if map_screen.hovered_province:
-        if map_screen.tactical_mode:
+    if map_screen.tactical_mode:
+        if _select_tactical_unit_stack(map_screen, event.pos):
+            return
+        if map_screen.hovered_province:
             player_setup.select_tactical_unit(map_screen, map_screen.hovered_province)
-        else:
-            player_setup.select_player_country(map_screen, map_screen.hovered_province)
+    elif not (map_screen.hovered_combat_bubble or map_screen.hovered_unit_stack):
+        province = map_screen.hovered_province or _interactive_province(map_screen, event.pos, country_target=True)
+        if province:
+            player_setup.select_player_country(map_screen, province)
 
 
 def _handle_combat_bubble_click(map_screen, event, on_ui, origin=None):

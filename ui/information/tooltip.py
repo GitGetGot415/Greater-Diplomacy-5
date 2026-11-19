@@ -31,13 +31,7 @@ def prepare_building_yields(map_screen):
         map_screen._tooltip_building_yields.append((name, output))
 
 
-def draw_tooltip(map_screen, surface):
-    if not map_screen.hovered_province:
-        return
-
-    mx, my = pygame.mouse.get_pos()
-    prov = map_screen.hovered_province
-
+def _province_tooltip_lines(map_screen, prov):
     # --- FOG OF WAR VISIBILITY CHECK ---
     show_details = map_screen.base_layer != "RELATIONS" or not map_screen.selected_province
     is_visible = show_details and queries.is_province_visible(map_screen, prov["id"])
@@ -182,7 +176,21 @@ def draw_tooltip(map_screen, surface):
                 prod_hint = f"({', '.join(yields)})" if yields else ""
                 lines.append(f"- {b} {prod_hint}")
 
-    # 3. Render the Tooltip
+    return lines
+
+
+def draw_tooltip(map_screen, surface):
+    if map_screen.hovered_province:
+        lines = _province_tooltip_lines(map_screen, map_screen.hovered_province)
+    elif (map_screen.base_layer == "RELATIONS" and not map_screen.selection_mode
+          and not (map_screen.hovered_combat_bubble or map_screen.hovered_unit_stack)
+          and (province := map_screen._relations_hovered_province)
+          and (owner := province.get("owner")) == map_screen._relations_viewpoint):
+        lines = [queries.get_country_display_name(owner, map_screen.nation_data)]
+    else:
+        return
+
+    mx, my = pygame.mouse.get_pos()
     # Calculate dimensions
     rendered_lines = [map_screen.small_font.render(line, True, (255, 255, 255)) for line in lines]
     width = max(ts.get_width() for ts in rendered_lines) + 20
