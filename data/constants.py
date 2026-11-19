@@ -316,6 +316,10 @@ FORT_DEFENSE_PER_LEVEL = 10
 # ECONOMY SCREEN
 # ==========================================
 
+DEFAULT_CONSCRIPTION_RATE = get_starting_value("country_defaults", "conscription_slider")
+DEFAULT_FUEL_CONVERSION_RATE = get_starting_value("country_defaults", "mat_to_fuel_slider")
+DEFAULT_RESEARCH_FUNDING_RATE = get_starting_value("country_defaults", "research_funding_slider")
+
 FUEL_REFINING_CONVERSION_PER_LVL = 0.01
 
 MAX_CONVERSION_SLIDER_VAL = 0.50
@@ -431,7 +435,6 @@ END_YEAR = 2200
 
 BASE_RESEARCH_POINTS_PER_DAY = 10
 RESEARCH_SLOTS = 3 # Number of techs a nation can research simultaneously
-DEFAULT_RESEARCH_FUNDING_RATE = get_starting_value("country_defaults", "research_funding_slider")
 RESEARCH_FUNDING_MATERIAL_SCALE = 10
 RESEARCH_FUNDING_POINT_SCALE = 10
 AI_RESEARCH_FUNDING_RATE = 0.10

@@ -916,6 +916,22 @@ class RealtimeSessionTests(unittest.TestCase):
         self.assertEqual((preferences["conscription_slider"], preferences["mat_to_fuel_slider"]), (.6, .2))
         self.assertEqual(claim_draft["province_ids"], [4])
 
+    def test_missing_economy_choices_use_country_defaults_and_respect_fuel_research(self):
+        map_ref = map_double(map_data={}, nation_data={"A": {}})
+        driver = MapRealtimeDriver(map_ref)
+        with mock.patch.object(c, "DEFAULT_CONSCRIPTION_RATE", 0.35), \
+                mock.patch.object(c, "DEFAULT_FUEL_CONVERSION_RATE", 0.30), \
+                mock.patch("data.queries.get_max_fuel_conversion", return_value=0.20):
+            preferences = next(command for command in collect_map_commands(map_ref, "A")
+                               if command["type"] == "country_preferences")
+            legacy = {"type": "country_preferences"}
+            for draft in (preferences, legacy):
+                canonical = driver.validate_draft("A", [draft])[0]
+                self.assertEqual(canonical["conscription_slider"], 0.35)
+                self.assertEqual(canonical["mat_to_fuel_slider"], 0.20)
+            with self.assertRaises(RealtimeError):
+                driver.validate_draft("A", [{**legacy, "mat_to_fuel_slider": 0.30}])
+
     def test_conscription_damage_uses_server_applied_preferences_before_combat(self):
         from data import queries
 

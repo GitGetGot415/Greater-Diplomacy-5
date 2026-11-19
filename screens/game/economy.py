@@ -164,10 +164,10 @@ class Economy_Screen(Screen):
         max_allowed = queries.get_max_fuel_conversion(p_data)
         
         # Safely clamp the loaded slider value just in case they lost tech
-        slider_val = min(p_data.get("mat_to_fuel_slider", 0.0), max_allowed)
+        slider_val = min(queries.get_fuel_conversion_rate(p_data, max_conversion=max_allowed), max_allowed)
         p_data["mat_to_fuel_slider"] = slider_val
         
-        conscript_val = p_data.get("conscription_slider", 1.0)
+        conscript_val = queries.get_conscription_rate(p_data)
         p_data["conscription_slider"] = conscript_val
         
         conscription = Slider(c.SCREEN_WIDTH // 2 - SLIDER_WIDTH // 2, CONSCRIPTION_SLIDER_Y, SLIDER_WIDTH, "Conscription (Keep Manpower %)", conscript_val, self.set_conscription, visual_max=1.0, allowed_max=1.0)

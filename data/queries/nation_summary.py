@@ -8,7 +8,7 @@ from data.queries.diplomacy import get_enemies
 from data.queries.factions import are_in_same_faction, get_faction_members
 from data.queries.countries import get_country_display_name, get_viewing_country
 from data.queries.unit_info import units_with_air_cargo
-from data.queries.economy import get_country_damage_multiplier
+from data.queries.economy import get_conscription_rate, get_country_damage_multiplier, get_fuel_conversion_rate
 from data import queries
 
 
@@ -38,8 +38,8 @@ def shares_country_economy(viewer, country_id, nation_data):
 def _country_economy_summary(country, income, expenses):
     return {
         "available": True,
-        "conscription": country.get("conscription_slider", 1.0),
-        "conversion": country.get("mat_to_fuel_slider", 0.0),
+        "conscription": get_conscription_rate(country),
+        "conversion": get_fuel_conversion_rate(country),
         "resources": [{"resource": resource, "stockpile": country.get(resource, 0),
                        "income": income[resource], "expenses": expenses[resource],
                        "net": income[resource] - expenses[resource]}

@@ -222,6 +222,7 @@ defaults["scenario_settings.json"].update(fog_of_war=False, truce_turns=3,
     turns_to_wait_before_war=7, ai_war_declaration_chance=0.23)
 defaults["hildehrand_choice.json"].update(variant="fixture.png", gradient_dithering=True)
 defaults["ai_defaults"].update(local_threads=2, reenable_mode="GEMINI", ollama_url="http://fixture/api/chat")
+defaults["country_defaults"].update(conscription_slider=0.35, mat_to_fuel_slider=0.12, research_funding_slider=0.17)
 starting_defaults._cached_defaults = lambda: defaults
 import data.constants as c
 assert (c.TARGET_FPS, c.SHOW_FPS, c.DEFAULT_AI_THREADS) == (39, True, 6)
@@ -231,6 +232,12 @@ assert c.TURNS_TO_WAIT_BEFORE_WAR == 7 and c.AI_WAR_DECLARATION_CHANCE == 0.23
 assert c.DEFAULT_AI_THREADS_LOCAL == 2 and c.AI_MODE_REENABLE_FALLBACK == "GEMINI"
 from data import queries
 assert queries.DEFAULT_PORTRAIT == "fixture.png" and queries.DEFAULT_PORTRAIT_DITHERING is True
+assert queries.get_conscription_rate({}) == 0.35
+assert queries.get_fuel_conversion_rate({}, max_conversion=0.2) == 0.12
+assert queries.get_fuel_conversion_rate({}) == 0.0
+assert queries.get_research_funding_rate({}) == 0.17
+assert queries.get_conscription_rate({"conscription_slider": 0.8}) == 0.8
+assert queries.get_fuel_conversion_rate({"mat_to_fuel_slider": 0.05}, max_conversion=0.2) == 0.05
 from map_logic.ai import ai_settings
 queries.get_settings = lambda: {}
 assert ai_settings.get_ai_immersion_level() == "FULL"

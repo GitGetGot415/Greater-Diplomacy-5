@@ -30,6 +30,19 @@ def get_max_fuel_conversion(nation_data_block):
     return lvl * c.FUEL_REFINING_CONVERSION_PER_LVL
 
 
+def get_conscription_rate(country):
+    return country.get("conscription_slider", c.DEFAULT_CONSCRIPTION_RATE)
+
+
+def get_fuel_conversion_rate(country, *, max_conversion=None):
+    """Read a saved selection or start at the configured rate within the research limit."""
+    if "mat_to_fuel_slider" in country:
+        return country["mat_to_fuel_slider"]
+    if max_conversion is None:
+        max_conversion = queries.get_max_fuel_conversion(country)
+    return min(c.DEFAULT_FUEL_CONVERSION_RATE, max_conversion)
+
+
 def get_industry(province):
     """Returns the highest level of industry in the province."""
     level = 0
@@ -380,9 +393,9 @@ def get_conscription_damage_bonus(country_data):
 
     Two exponential segments meet smoothly at half conscription.
     Full, half, quarter, and zero conscription give zero, quarter, half, and full bonus.
-    Missing slider values use full conscription for older saves.
+    Missing slider values use the configured conscription default.
     """
-    conscription = max(0.0, min(1.0, country_data.get("conscription_slider", 1.0)))
+    conscription = max(0.0, min(1.0, get_conscription_rate(country_data)))
     bonus_at_half = c.CONSCRIPTION_MAX_DAMAGE_BONUS / 4.0
     if conscription <= 0.5:
         return c.CONSCRIPTION_MAX_DAMAGE_BONUS * 2.0 ** (-4.0 * conscription)
@@ -682,9 +695,11 @@ def calculate_all_economies(map_data, nation_data, *, context=None):
         n_data = nation_data.get(name, {})
         
         # Conscription (1.0 = keep all, 0.0 = convert all)
-        _process_conversion(data, "manpower", "materials", "conscription", 1.0 - n_data.get("conscription_slider", 1.0), c.CONSCRIPTION_RATIO)
+        _process_conversion(data, "manpower", "materials", "conscription", 1.0 - get_conscription_rate(n_data), c.CONSCRIPTION_RATIO)
         # Fuel Conversion
-        _process_conversion(data, "materials", "fuel", "conversion", min(n_data.get("mat_to_fuel_slider", 0.0), queries.get_max_fuel_conversion(n_data)), c.FUEL_CONVERSION_RATIO)
+        max_conversion = queries.get_max_fuel_conversion(n_data)
+        conversion = min(get_fuel_conversion_rate(n_data, max_conversion=max_conversion), max_conversion)
+        _process_conversion(data, "materials", "fuel", "conversion", conversion, c.FUEL_CONVERSION_RATIO)
 
         for res in c.ECON_RESOURCE_KEYS:
             produced_income = sum(data["breakdown"][res].values())

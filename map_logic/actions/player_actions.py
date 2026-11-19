@@ -246,12 +246,12 @@ class PlayerActions:
             raise PlayerActionError("Invalid automation settings.")
         if any(not isinstance(value, bool) for value in automation.values()):
             raise PlayerActionError("Invalid automation settings.")
-        conscription = command.get("conscription_slider", 1.0)
-        fuel_conversion = command.get("mat_to_fuel_slider", 0.0)
+        conscription = queries.get_conscription_rate(command)
         if (isinstance(conscription, bool) or not isinstance(conscription, (int, float))
                 or not 0.0 <= float(conscription) <= 1.0):
             raise PlayerActionError("Invalid manpower conversion setting.")
         max_conversion = max(0.0, float(queries.get_max_fuel_conversion(country)))
+        fuel_conversion = queries.get_fuel_conversion_rate(command, max_conversion=max_conversion)
         if (isinstance(fuel_conversion, bool) or not isinstance(fuel_conversion, (int, float))
                 or not 0.0 <= float(fuel_conversion) <= max_conversion):
             raise PlayerActionError("Invalid material-to-fuel conversion setting.")
@@ -891,8 +891,8 @@ def collect_map_commands(context, country_id: str) -> list[dict[str, Any]]:
                      "political_drift": country_data.get("political_drift", 0),
                      politics.ECONOMIC_DRIFT_KEY: politics.economic_drift(world_state.nation_data, country_id),
                      "automation": copy.deepcopy(country_data.get("automation", {})),
-                     "conscription_slider": country_data.get("conscription_slider", 1.0),
-                     "mat_to_fuel_slider": country_data.get("mat_to_fuel_slider", 0.0),
+                     "conscription_slider": queries.get_conscription_rate(country_data),
+                     "mat_to_fuel_slider": queries.get_fuel_conversion_rate(country_data),
                      "research_funding_slider": queries.get_research_funding_rate(country_data),
                      "custom_production_units": copy.deepcopy(country_data.get("custom_production_units", [])),
                      politics.POLICY_KEY: politics.policy_draft_projection(
