@@ -75,11 +75,14 @@ class ResearchFundingTests(unittest.TestCase):
                 with patch.object(queries, "get_tech_tree", return_value=tree), \
                         patch.object(queries, "get_faction_research_bonus", return_value=0.5), \
                         patch.object(queries, "calculate_all_economies", return_value={"A": report}):
-                    income, upkeep, breakdown = queries.get_economy_projections("A", game.map_data, game.nation_data, context=game)
+                    income, upkeep, economy_breakdown = queries.get_economy_projections("A", game.map_data, game.nation_data, context=game)
                     spent, awards = queries.get_projected_research_funding(game, "A")
+                    breakdown, funded = queries.get_projected_research_breakdown(game, "A")
                     self.assertEqual(income["materials"] - upkeep["materials"], 90)
-                    self.assertEqual(breakdown["materials"]["research_funding"], -10)
+                    self.assertEqual(economy_breakdown["materials"]["research_funding"], -10)
                     self.assertEqual((spent, awards), (10, {"first": 5, "second": 5}))
+                    self.assertEqual(funded, awards)
+                    self.assertEqual(breakdown["funding"], sum(awards.values()))
 
                     days = queries.get_days_per_turn(game.scenario_settings)
                     asyncio.run(turn_processor.resolve_turn_logic(game))
@@ -88,9 +91,34 @@ class ResearchFundingTests(unittest.TestCase):
                     policy_multiplier = politics.policy(policy_id)["effects"]["research"]
                     self.assertEqual(country["materials"], 98)
                     self.assertEqual(country["research_funding_slider"], 0.1)
+                    self.assertAlmostEqual(breakdown["base"] + breakdown["economy"], 2 * base)
+                    self.assertAlmostEqual(breakdown["policies"], 2 * base * (policy_multiplier - 1))
+                    self.assertAlmostEqual(breakdown["faction"], 2 * base * policy_multiplier * 0.5)
                     for entry in country["research_queue"]:
                         penalty = 0.5 ** max(0, tree[entry["tech_name"]]["years"][0] - date)
                         self.assertAlmostEqual(entry["points_remaining"], 1_000 - base * policy_multiplier * 1.5 * penalty - 5)
+                    applied = sum(1_000 - entry["points_remaining"] for entry in country["research_queue"])
+                    self.assertAlmostEqual(sum(breakdown.values()), applied)
+
+    def test_projected_progress_caps_normal_points_at_completion(self):
+        tree = {"almost_done": {"years": [1920]}, "ongoing": {"years": [1920]}}
+        game = BackendState()
+        game.time_manager = TimeHandler(start_year=1920)
+        days = queries.get_days_per_turn(game.scenario_settings)
+        base = c.BASE_RESEARCH_POINTS_PER_DAY * days
+        country = {"economic_value": 0, "research_funding_slider": 0.5, "research": {},
+                   "research_queue": [project("almost_done", base - 1), project("ongoing", base + 20)]}
+        game.nation_data["A"] = country
+        with patch.object(queries, "get_tech_tree", return_value=tree), \
+                patch.object(queries, "calculate_all_economies", return_value={"A": economy(40, 20)}) as calculate:
+            breakdown, funded = queries.get_projected_research_breakdown(game, "A")
+            self.assertEqual(breakdown["completion"], -1)
+            self.assertEqual(funded, {"ongoing": queries.get_funded_research_points(10)})
+            self.assertAlmostEqual(sum(breakdown.values()), 2 * base - 1 + funded["ongoing"])
+
+            country["research_queue"].clear()
+            self.assertEqual(queries.get_projected_research_breakdown(game, "A"), ({}, {}))
+            calculate.assert_called_once()
 
     def test_save_and_selected_history_restore_the_country_rate(self):
         game = map_double(player_country="A", time_manager=TimeHandler(start_year=1920),

@@ -506,9 +506,17 @@ def get_research_multiplier(current_exact_year, target_year):
 
 def get_base_research_points(nation_data, country_id, days_per_turn):
     """Normal points per slot before project-specific modifiers."""
+    _, _, modified = _base_research_steps(nation_data, country_id, days_per_turn)
+    return modified
+
+
+def _base_research_steps(nation_data, country_id, days_per_turn):
     # Politics imports the query package for its other rules.
     from map_logic import politics
-    return c.BASE_RESEARCH_POINTS_PER_DAY * days_per_turn * politics.research_multiplier(nation_data, country_id)
+    base = c.BASE_RESEARCH_POINTS_PER_DAY * days_per_turn
+    economic = base * politics.axis_research_multiplier(politics.economic_value(nation_data, country_id))
+    modified = base * politics.research_multiplier(nation_data, country_id)
+    return base, economic, modified
 
 
 def get_project_research_rate(base_points, nation_data, country_id, tech_name, level):
@@ -518,18 +526,24 @@ def get_project_research_rate(base_points, nation_data, country_id, tech_name, l
 
 def get_normal_research_progress(nation_data, country_id, tech_tree, days_per_turn, current_year):
     """Calculate each queued project's regular progress for the turn."""
+    _, projects = get_normal_research_steps(nation_data, country_id, tech_tree, days_per_turn, current_year)
+    return {tech_name: points for tech_name, (_, points) in projects.items()}
+
+
+def get_normal_research_steps(nation_data, country_id, tech_tree, days_per_turn, current_year):
+    """Calculate base rates and each queued project's points before and after the timing penalty."""
     country = nation_data[country_id]
     levels = country.get("research", {})
-    base_points = get_base_research_points(nation_data, country_id, days_per_turn)
-    progress = {}
+    base, economic, modified = _base_research_steps(nation_data, country_id, days_per_turn)
+    projects = {}
     for project in country.get("research_queue", []):
         tech_name = project["tech_name"]
         level = levels.get(tech_name, 0)
         years = tech_tree.get(tech_name, {}).get("years", [1850])
         target_year = years[min(level, len(years) - 1)]
-        rate = get_project_research_rate(base_points, nation_data, country_id, tech_name, level + 1)
-        progress[tech_name] = rate * get_research_multiplier(current_year, target_year)
-    return progress
+        rate = get_project_research_rate(modified, nation_data, country_id, tech_name, level + 1)
+        projects[tech_name] = rate, rate * get_research_multiplier(current_year, target_year)
+    return (base, economic, modified), projects
 
 
 def valid_research_funding_rate(value):

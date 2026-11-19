@@ -38,6 +38,17 @@ HEADER_HEIGHT = 70
 HEADER_TITLE_Y = 75
 HEADER_OUTPUT_Y = 85
 HEADER_OUTPUT_MARGIN_X = 30
+RESEARCH_BREAKDOWN_PADDING = 8
+RESEARCH_BREAKDOWN_GAP = 14
+RESEARCH_BREAKDOWN_LABELS = {
+    "base": "Base points across active projects",
+    "economy": "Economic system",
+    "policies": "Domestic policies",
+    "faction": "Faction sharing",
+    "timing": "Ahead-of-time penalty",
+    "funding": "Research funding",
+    "completion": "Points beyond completion",
+}
 
 TIMELINE_AXIS_Y = 180
 TIMELINE_TICK_HALF = 10
@@ -248,8 +259,7 @@ class ResearchDetailsScreen(ModalScreen):
 
         self.funding_surface = None
         if self.node["status"] == "RESEARCHING" and not self.research.editing_research_levels:
-            _, awards = queries.get_projected_research_funding(map_screen, subject)
-            bonus = awards.get(tech_key, 0)
+            bonus = self.research.research_funding_awards.get(tech_key, 0)
             if bonus:
                 self.funding_surface = fonts.get("normal").render(
                     f"Next turn research funding +{bonus:,.2f} pts", True, c.COLOR_GOLD_HIGHLIGHT)
@@ -479,6 +489,7 @@ class Research_Screen(Screen):
         self.research_edit_token = None
         self.research_confirmation_pending = False
         self.current_category = "INFANTRY" 
+        self.header_output_rect = None
 
         # REPLACED DISK I/O WITH CACHED QUERIES
         self.tech_tree = queries.get_tech_tree(self.map_screen)
@@ -826,7 +837,8 @@ class Research_Screen(Screen):
         name = queries.get_country_display_name(self.subject, self.map_screen.nation_data)
         prefix = f"{name} -- " if self.editing_starting_research or self.subject != self.map_screen.player_country else ""
         self.header_title_surface = font.render(f"{prefix}VIEWING: {category}", True, (255, 255, 255))
-        self.header_output_surface = None
+        self.header_output_rect = None
+        self.research_funding_awards = {}
         if self.editing_research_levels:
             hud_font = fonts.get("button")
             lines = EDITOR_HELP_LINES if self.editing_starting_research else SPECTATOR_HELP_LINES
@@ -839,9 +851,37 @@ class Research_Screen(Screen):
                     rendered = pygame.transform.smoothscale(rendered, (width, height))
                 self.editor_help_surfaces.append(rendered)
         else:
-            days = queries.get_days_per_turn(self.map_screen.scenario_settings)
-            points = int(queries.get_base_research_points(self.map_screen.nation_data, self.subject, days))
-            self.header_output_surface = font.render(f"BASE RESEARCH: {points} pts/turn", True, (0, 255, 255))
+            breakdown, self.research_funding_awards = queries.get_projected_research_breakdown(self.map_screen, self.subject)
+            points = max(0, sum(breakdown.values()))
+            self.header_output_surface = font.render(f"RESEARCH: {points:,.2f} pts/turn", True, (0, 255, 255))
+            self.header_output_rect = self.header_output_surface.get_rect(topright=(c.SCREEN_WIDTH - HEADER_OUTPUT_MARGIN_X, HEADER_OUTPUT_Y))
+            self.header_breakdown_surface = self._render_research_breakdown(breakdown)
+
+    def _render_research_breakdown(self, breakdown):
+        font = fonts.get("normal")
+        title = font.render("Projected research next turn" if breakdown else "No active research projects", True, c.UI_TEXT_BRIGHT)
+        rows = []
+        for key, points in breakdown.items():
+            if not points and key not in {"base", "funding"}:
+                continue
+            label = font.render(RESEARCH_BREAKDOWN_LABELS[key], True, c.UI_TEXT_LIGHT)
+            color = c.COLOR_SUCCESS_GREEN if points > 0 and key != "base" else c.UI_TEXT_LIGHT
+            if points < 0:
+                color = (240, 125, 125)
+            value = font.render(f"{points:+,.2f}" if points and key != "base" else f"{points:,.2f}", True, color)
+            rows.append((label, value))
+        pad = RESEARCH_BREAKDOWN_PADDING
+        line_height = font.get_linesize() + 2
+        rows_width = max((label.get_width() + RESEARCH_BREAKDOWN_GAP + value.get_width() for label, value in rows), default=0)
+        width = max(title.get_width(), rows_width) + 2 * pad
+        panel = pygame.Surface((width, (len(rows) + 1) * line_height + 2 * pad))
+        ui_elements.draw_pixel_panel(panel, panel.get_rect(), RESEARCH_PANEL_STYLES["details"]["color"], c.UI_TEXT_LIGHT, border_width=1)
+        panel.blit(title, (pad, pad))
+        for index, (label, value) in enumerate(rows, start=1):
+            y = pad + index * line_height
+            panel.blit(label, (pad, y))
+            panel.blit(value, value.get_rect(topright=(width - pad, y)))
+        return panel
 
     def draw_tech_nodes(self, res_levels, queue):
         unit_unlocks = queries.get_unit_unlock_index(self.map_screen)
@@ -1286,9 +1326,8 @@ class Research_Screen(Screen):
         ts = self.header_title_surface
         surface.blit(ts, (c.SCREEN_WIDTH//2 - ts.get_width()//2, HEADER_TITLE_Y))
 
-        if self.header_output_surface is not None:
-            output_text = self.header_output_surface
-            surface.blit(output_text, (c.SCREEN_WIDTH - output_text.get_width() - HEADER_OUTPUT_MARGIN_X, HEADER_OUTPUT_Y))
+        if self.header_output_rect is not None:
+            surface.blit(self.header_output_surface, self.header_output_rect)
 
         if self.current_category == "COMPLETED":
             self.render_completed_text_list(surface)
@@ -1297,3 +1336,10 @@ class Research_Screen(Screen):
 
         # ACTIVE RESEARCH SLOTS is now drawn by ResearchHudOverlay (appended last
         # in refresh_ui), so it renders on top of any scrolled tech-node button.
+
+    def draw(self, surface):
+        super().draw(surface)
+        anchor = self.header_output_rect
+        if anchor is not None and anchor.collidepoint(pygame.mouse.get_pos()):
+            panel = self.header_breakdown_surface
+            surface.blit(panel, panel.get_rect(topright=anchor.bottomright))
