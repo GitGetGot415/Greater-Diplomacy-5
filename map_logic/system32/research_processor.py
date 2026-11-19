@@ -20,7 +20,7 @@ def process_national_research(context, *, economies=None):
         bonus = {}
         if economies and country_name in economies and country_name not in c.UNPLAYABLE_NATIONS and country_name != "GLOBAL_EVENTS":
             surplus = min(country_data["materials"], queries.get_net_materials_income(economies[country_name]))
-            diverted, bonus = queries.calculate_research_funding(country_data, surplus, normal)
+            diverted, bonus = queries.calculate_research_funding(country_data, surplus, normal, days_per_turn=days_per_turn)
             if diverted:
                 country_data["materials"] -= diverted
 

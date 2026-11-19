@@ -504,6 +504,10 @@ def get_research_multiplier(current_exact_year, target_year):
     return 1.0
 
 
+def _get_unmodified_research_points(days_per_turn):
+    return c.BASE_RESEARCH_POINTS_PER_DAY * days_per_turn
+
+
 def get_base_research_points(nation_data, country_id, days_per_turn):
     """Normal points per slot before project-specific modifiers."""
     _, _, modified = get_base_research_rates(nation_data, country_id, days_per_turn)
@@ -514,7 +518,7 @@ def get_base_research_rates(nation_data, country_id, days_per_turn):
     """Return per-slot points before modifiers, after the economic system, and after policy."""
     # Politics imports the query package for its other rules.
     from map_logic import politics
-    base = c.BASE_RESEARCH_POINTS_PER_DAY * days_per_turn
+    base = _get_unmodified_research_points(days_per_turn)
     economic = base * politics.axis_research_multiplier(politics.economic_value(nation_data, country_id))
     modified = base * politics.research_multiplier(nation_data, country_id)
     return base, economic, modified
@@ -551,20 +555,19 @@ def get_research_funding_rate(country):
     return rate if valid_research_funding_rate(rate) else c.DEFAULT_RESEARCH_FUNDING_RATE
 
 
-def get_research_funding_budget(country, net_materials):
-    """Return the Materials budget available before allocating points to projects."""
-    return max(0, net_materials) * get_research_funding_rate(country)
+def get_research_funding_budget_and_bonus(country, net_materials, days_per_turn):
+    """Return the Materials budget and potential points for the full queue."""
+    if net_materials <= 0:
+        return 0, 0
+    rate = get_research_funding_rate(country)
+    bonus_share = rate * (1.5 - 0.5 * rate)
+    return net_materials * rate, _get_unmodified_research_points(days_per_turn) * bonus_share
 
 
-def get_funded_research_points(materials):
-    """Use a logarithmic return so each additional research point costs more."""
-    return c.RESEARCH_FUNDING_POINT_SCALE * math.log1p(materials / c.RESEARCH_FUNDING_MATERIAL_SCALE) / math.log(2)
-
-
-def calculate_research_funding(country, net_materials, normal_progress):
+def calculate_research_funding(country, net_materials, normal_progress, *, days_per_turn):
     """Return Materials spent and bonus points per project after normal progress."""
-    budget = get_research_funding_budget(country, net_materials)
-    if budget <= 0:
+    budget, bonus = get_research_funding_budget_and_bonus(country, net_materials, days_per_turn)
+    if bonus <= 0:
         return 0, {}
     remaining = {}
     for project in country.get("research_queue", []):
@@ -575,12 +578,12 @@ def calculate_research_funding(country, net_materials, normal_progress):
     if not remaining:
         return 0, {}
 
-    bonus = get_funded_research_points(budget)
     total_needed = sum(remaining.values())
     if bonus >= total_needed:
-        # Invert the same curve to pay only for the points that can be used.
-        cost = c.RESEARCH_FUNDING_MATERIAL_SCALE * math.expm1(total_needed * math.log(2) / c.RESEARCH_FUNDING_POINT_SCALE)
-        return min(budget, cost), remaining
+        # Solve share = rate * (1.5 - 0.5 * rate) for the rate needed to finish.
+        share_needed = total_needed / _get_unmodified_research_points(days_per_turn)
+        rate_needed = 4 * share_needed / (3 + math.sqrt(9 - 8 * share_needed))
+        return min(budget, net_materials * rate_needed), remaining
 
     # Projects close to completion use less than an equal share. Redistribute
     # the spare points across the rest of the queue.

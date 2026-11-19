@@ -7,8 +7,8 @@ from data.state_access import session_for, world_for
 from map_logic import politics
 from data.queries.content import get_category_setting
 from data.queries.geometry import is_water_province
-from data.queries.tech import (calculate_research_funding, get_base_research_rates, get_exact_year, get_funded_research_points,
-                              get_normal_research_progress, get_research_funding_budget, get_research_funding_rate)
+from data.queries.tech import (calculate_research_funding, get_base_research_rates, get_exact_year, get_normal_research_progress,
+                              get_research_funding_budget_and_bonus, get_research_funding_rate)
 from data.queries.unit_info import (base_item_name_from_text, get_base_item_name, is_naval_unit,
                                    units_with_air_cargo)
 from data import queries
@@ -860,7 +860,7 @@ def get_projected_research_funding(context, country_id, *, economy=None):
     days = queries.get_days_per_turn(world.scenario_settings)
     next_year = get_exact_year(time_manager) + days / 360.0
     normal_progress = get_normal_research_progress(world.nation_data, country_id, queries.get_tech_tree(context), days, next_year)
-    return calculate_research_funding(country, get_net_materials_income(economy), normal_progress)
+    return calculate_research_funding(country, get_net_materials_income(economy), normal_progress, days_per_turn=days)
 
 
 def get_projected_research_breakdown(context, country_id):
@@ -875,8 +875,7 @@ def get_projected_research_breakdown(context, country_id):
     if get_research_funding_rate(country):
         economy = queries.calculate_all_economies(world.map_data, nation_data, context=context).get(country_id)
         if economy:
-            budget = get_research_funding_budget(country, get_net_materials_income(economy))
-            funding = get_funded_research_points(budget)
+            _, funding = get_research_funding_budget_and_bonus(country, get_net_materials_income(economy), days)
 
     return {
         "base": base,
