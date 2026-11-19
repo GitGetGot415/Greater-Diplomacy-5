@@ -19,7 +19,7 @@ every country at war from ending up at +10 together.
 """
 
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 
 import data.constants as c
@@ -89,9 +89,43 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
         self.assertEqual((politics.economic_value(nation_data, "A"), screen.value), (0, 0))
         self.assertEqual((politics.economic_drift(nation_data, "A"), screen.drift), (-1, 1))
         self.assertEqual(screen._preview, (-c.POLITICS_STEP, c.POLITICS_STEP))
+        political_effects, economic_effects = screen._axis_effect_rows
+        self.assertEqual([projected for _label, _current, projected in political_effects],
+                         [politics.axis_damage_multiplier(c.POLITICS_STEP),
+                          politics.axis_core_manpower_multiplier(c.POLITICS_STEP)])
+        self.assertEqual([projected for _label, _current, projected in economic_effects],
+                         [politics.axis_factory_multiplier(-c.POLITICS_STEP),
+                          politics.axis_research_multiplier(-c.POLITICS_STEP)])
         politics.tick(screen.map_screen)
         self.assertEqual((politics.economic_value(nation_data, "A"), screen.value), screen._preview)
         self.assertEqual(screen.map_screen.invalidate_map_presentation_cache.call_count, 2)
+
+        screen.elements[5].callback()
+        _label, current_damage, projected_damage = screen._axis_effect_rows[0][0]
+        self.assertEqual(current_damage, politics.axis_damage_multiplier(screen.value))
+        self.assertGreater(projected_damage, current_damage)
+        self.assertTrue(all(current == projected for _label, current, projected in screen._axis_effect_rows[1]))
+
+    def test_policy_eligibility_preview_keeps_current_activation_requirements(self):
+        policy = {"id": "preview_fixture", "name": "Preview Fixture", "effect_lines": (), "min_politics": 0}
+        with patch.object(politics, "POLICIES", (policy,)), patch.dict(politics.POLICIES_BY_ID, {policy["id"]: policy}):
+            screen = self.screen(False)
+            screen.elements[3].callback()  # Centralise from the strict boundary.
+            self.assertIsNotNone(screen._policy_rows[0][4])
+            self.assertTrue(screen.elements[-1].disabled)
+
+            politics.tick(screen.map_screen)
+            screen.refresh_ui()
+            self.assertIsNone(screen._policy_rows[0][4])
+            self.assertFalse(screen.elements[-1].disabled)
+
+            screen.elements[1].callback()  # Liberalise back across the boundary.
+            self.assertIsNotNone(screen._policy_rows[0][4])
+            self.assertFalse(screen.elements[-1].disabled)
+
+            politics.tick(screen.map_screen)
+            screen.refresh_ui()
+            self.assertTrue(screen.elements[-1].disabled)
 
     def test_politics_and_blank_policies_panels_split_the_available_height(self):
         screen = self.screen(False)
@@ -108,17 +142,19 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
         map_screen.tactical_mode = False
         map_screen.nation_data = {
             "A": {"political_value": 0, "political_drift": 0},
-            "B": {"political_value": 4, "political_drift": 0},
+            "B": {"political_value": 4, "political_drift": -1, "economic_drift": 1},
         }
         screen = Politics_Screen(map_screen, country_id="B")
 
         self.assertTrue(screen.is_read_only)
         self.assertFalse(screen.can_edit)
         self.assertEqual(len(screen.elements), 1, "foreign view has no policy or drift controls")
-        screen.set_drift(-1)
-        screen.set_drift(1, economic=True)
-        self.assertEqual(politics.drift(map_screen.nation_data, "B"), 0)
-        self.assertEqual(politics.economic_drift(map_screen.nation_data, "B"), 0)
+        self.assertEqual(screen._preview, (c.POLITICS_START, 4))
+        self.assertTrue(all(forecast is None for _definition, _state, _eligible, _requirement, forecast in screen._policy_rows))
+        screen.set_drift(1)
+        screen.set_drift(-1, economic=True)
+        self.assertEqual(politics.drift(map_screen.nation_data, "B"), -1)
+        self.assertEqual(politics.economic_drift(map_screen.nation_data, "B"), 1)
 
     def test_policy_scrollbar_moves_cards_opposite_to_handle(self):
         screen = self.screen(False)

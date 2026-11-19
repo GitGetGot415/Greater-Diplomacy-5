@@ -181,25 +181,27 @@ def policy_state(nation_data, nation, policy_id=None):
     return next(iter(states.values()), None) if len(states) == 1 else None
 
 
-def requirements_met(nation_data, nation, policy_id):
-    """Whether a policy can be activated at the country's political position."""
+def requirements_met(nation_data, nation, policy_id, *, political_value=None):
+    """Whether a policy meets its requirement at the current or projected position."""
     definition = policy(policy_id)
     if definition is None:
         return False
-    political_value = value(nation_data, nation)
+    if political_value is None:
+        political_value = value(nation_data, nation)
     return (("max_politics" not in definition or political_value < definition["max_politics"])
             and ("min_politics" not in definition or political_value > definition["min_politics"]))
 
 
-def requirement_text(policy_id):
+def requirement_text(policy_id, *, compact=False):
     """A short, exact explanation of a policy's political requirement."""
     definition = policy(policy_id)
     if definition is None:
         return "Unavailable"
+    prefix = "Politics" if compact else "Requires politics"
     if "max_politics" in definition:
-        return f"Requires politics < {definition['max_politics']:+d}"
+        return f"{prefix} < {definition['max_politics']:+d}"
     if "min_politics" in definition:
-        return f"Requires politics > {definition['min_politics']:+d}"
+        return f"{prefix} > {definition['min_politics']:+d}"
     return "No political requirement"
 
 
