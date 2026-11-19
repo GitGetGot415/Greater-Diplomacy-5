@@ -256,7 +256,7 @@ class ResearchDetailsScreen(ModalScreen):
 
         self.funding_surface = None
         if self.node["status"] == "RESEARCHING" and not self.research.editing_research_levels:
-            _, awards = queries.get_projected_research_funding(map_screen, subject)
+            awards = queries.get_projected_research_funding_awards(map_screen, subject)
             bonus = awards.get(tech_key, 0)
             if bonus:
                 self.funding_surface = fonts.get("normal").render(

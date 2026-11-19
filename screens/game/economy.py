@@ -186,15 +186,13 @@ class Economy_Screen(Screen):
         country = self.map_screen.nation_data[self.map_screen.player_country]
         self.econ_cache = queries.get_economy_projections(
             self.map_screen.player_country, self.map_screen.map_data, self.map_screen.nation_data, context=self.map_screen)
-        income, upkeep, breakdown = self.econ_cache
-        diverted = -breakdown.get("materials", {}).get("research_funding", 0)
-        net_materials = income["materials"] + diverted - upkeep["materials"]
+        spent = queries.get_research_funding_spent(self.econ_cache[2])
         days = queries.get_days_per_turn(self.map_screen.scenario_settings)
-        budget, bonus = queries.get_research_funding_budget_and_bonus(country, net_materials, days)
-        if not budget and queries.get_research_funding_rate(country) and net_materials <= 0:
+        bonus = queries.get_funded_research_points(country, spent, days)
+        if not spent and queries.get_research_funding_rate(country):
             caption = "No surplus Materials income"
         else:
-            caption = f"Materials budget {budget:,.2f}   |   Bonus research +{bonus:,.2f} pts/turn"
+            caption = f"Materials budget {spent:,}   |   Bonus research +{bonus:,.2f} pts/turn"
         self.research_funding_caption = fonts.get("normal").render(caption, True, c.COLOR_GOLD_HIGHLIGHT)
         bonus = queries.get_conscription_damage_bonus(country)
         self.conscription_damage_caption = f"dmg modifier: +{bonus:.2%}"
@@ -287,6 +285,8 @@ class Economy_Screen(Screen):
                 detail_breakdown += f"  |  Siphoned to Master: {int(bd.get('siphon', 0))}"
             if bd.get('siphon_income', 0) != 0:
                 detail_breakdown += f"  |  Siphon Income: +{int(bd.get('siphon_income', 0))}"
+            if bd.get('research_funding', 0) != 0:
+                detail_breakdown += f"  |  Research Funding: {int(bd.get('research_funding', 0))}"
 
             # Stats Breakdown (Main)
             surface.blit(font_med.render(main_breakdown, True, c.UI_TEXT_LIGHT), (row_rect.x + 350, row_rect.y + 18))

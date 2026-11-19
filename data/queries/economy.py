@@ -7,8 +7,8 @@ from data.state_access import session_for, world_for
 from map_logic import politics
 from data.queries.content import get_category_setting
 from data.queries.geometry import is_water_province
-from data.queries.tech import (calculate_research_funding, get_base_research_rates, get_exact_year, get_normal_research_progress,
-                              get_research_funding_budget_and_bonus, get_research_funding_rate)
+from data.queries.tech import (get_base_research_rates, get_exact_year, get_funded_research_points, get_normal_research_progress,
+                              get_research_funding_awards, get_research_funding_cost, get_research_funding_rate)
 from data.queries.unit_info import (base_item_name_from_text, get_base_item_name, is_naval_unit,
                                    units_with_air_cargo)
 from data import queries
@@ -624,7 +624,7 @@ def calculate_all_economies(map_data, nation_data, *, context=None):
             res: {"base": c.COUNTRY_BASE_YIELDS[res] + (bergius_bonus if res == "fuel" else 0), 
                   "core": 0, "non_core": 0, "buildings": 0, "resources": 0, 
                   "conversion": 0, "conscription": 0, "policy": 0,
-                  "siphon": 0, "siphon_income": 0}
+                  "siphon": 0, "siphon_income": 0, "research_funding": 0}
             for res in c.ECON_RESOURCE_KEYS
         }
 
@@ -722,6 +722,18 @@ def calculate_all_economies(map_data, nation_data, *, context=None):
                 data["breakdown"][res]["siphon"] = -siphon_amt
                 econ_data[master]["breakdown"][res]["siphon_income"] = econ_data[master]["breakdown"][res].get("siphon_income", 0) + siphon_amt
 
+    # Research funding takes its share of the surplus after upkeep and siphoning,
+    # so it runs once every master has received its puppets' income.
+    apply_research_funding(econ_data, nation_data)
+    return econ_data
+
+
+def apply_research_funding(econ_data, nation_data):
+    """Move each country's research funding out of its Materials income."""
+    for name, data in econ_data.items():
+        spent = get_research_funding_cost(nation_data.get(name, {}), get_net_materials_income(data))
+        data["total_inc"]["materials"] -= spent
+        data["breakdown"]["materials"]["research_funding"] = -spent
     return econ_data
 
 
@@ -829,11 +841,6 @@ def get_economy_projections(target_nation, map_data, nation_data, *, context=Non
             {r: {} for r in c.ECON_RESOURCE_KEYS}
         )
         
-    diverted, _ = get_projected_research_funding(context, target_nation, economy=p_econ)
-    if diverted:
-        income, breakdown = p_econ["total_inc"], p_econ["breakdown"]
-        return ({**income, "materials": income["materials"] - diverted}, p_econ["upkeep"],
-                {**breakdown, "materials": {**breakdown["materials"], "research_funding": -diverted}})
     return p_econ["total_inc"], p_econ["upkeep"], p_econ["breakdown"]
 
 
@@ -842,25 +849,25 @@ def get_net_materials_income(economy):
     return economy["total_inc"]["materials"] - economy["upkeep"]["materials"]
 
 
-def get_projected_research_funding(context, country_id, *, economy=None):
-    """Estimate the next turn's research funding from the current planning state."""
+def get_research_funding_spent(breakdown):
+    """Materials the economy breakdown sends to research funding this turn."""
+    # get_economy_projections returns empty breakdowns for a country with no economy.
+    return -breakdown["materials"].get("research_funding", 0)
+
+
+def get_projected_research_funding_awards(context, country_id):
+    """Estimate next turn's funding points per project from the current planning state."""
     world = world_for(context)
-    # Context-free economy callers and lightweight display fixtures lack a date.
-    time_manager = getattr(world, "time_manager", None)
-    if time_manager is None:
-        return 0, {}
     country = world.nation_data[country_id]
     if not country.get("research_queue") or not get_research_funding_rate(country):
-        return 0, {}
-    if economy is None:
-        economy = queries.calculate_all_economies(world.map_data, world.nation_data, context=context).get(country_id)
+        return {}
+    economy = queries.calculate_all_economies(world.map_data, world.nation_data, context=context).get(country_id)
     if not economy:
-        return 0, {}
-
+        return {}
     days = queries.get_days_per_turn(world.scenario_settings)
-    next_year = get_exact_year(time_manager) + days / 360.0
+    next_year = get_exact_year(world.time_manager) + days / 360.0
     normal_progress = get_normal_research_progress(world.nation_data, country_id, queries.get_tech_tree(context), days, next_year)
-    return calculate_research_funding(country, get_net_materials_income(economy), normal_progress, days_per_turn=days)
+    return get_research_funding_awards(country, get_research_funding_spent(economy["breakdown"]), normal_progress, days_per_turn=days)
 
 
 def get_projected_research_breakdown(context, country_id):
@@ -875,7 +882,7 @@ def get_projected_research_breakdown(context, country_id):
     if get_research_funding_rate(country):
         economy = queries.calculate_all_economies(world.map_data, nation_data, context=context).get(country_id)
         if economy:
-            _, funding = get_research_funding_budget_and_bonus(country, get_net_materials_income(economy), days)
+            funding = get_funded_research_points(country, get_research_funding_spent(economy["breakdown"]), days)
 
     return {
         "base": base,

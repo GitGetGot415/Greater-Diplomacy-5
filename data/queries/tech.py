@@ -1,7 +1,6 @@
 """Technology and research queries, unit unlock lookups, and research-edit previews."""
 
 import copy
-import math
 import data.constants as c
 from data.state_access import world_for, session_for
 from data.queries.content import get_time_appropriate_research
@@ -555,35 +554,31 @@ def get_research_funding_rate(country):
     return rate if valid_research_funding_rate(rate) else c.DEFAULT_RESEARCH_FUNDING_RATE
 
 
-def get_research_funding_budget_and_bonus(country, net_materials, days_per_turn):
-    """Return the Materials budget and potential points for the full queue."""
-    if net_materials <= 0:
-        return 0, 0
+def get_research_funding_cost(country, net_materials):
+    """Materials the slider takes from surplus income, whether or not anything is queued."""
+    # Truncate like the other slider conversions in the economy breakdown.
+    return int(max(0, net_materials) * get_research_funding_rate(country))
+
+
+def get_funded_research_points(country, materials_spent, days_per_turn):
+    """Return the points that paid funding adds across the full queue."""
+    if materials_spent <= 0:
+        return 0
     rate = get_research_funding_rate(country)
-    bonus_share = rate * (1.5 - 0.5 * rate)
-    return net_materials * rate, _get_unmodified_research_points(days_per_turn) * bonus_share
+    return _get_unmodified_research_points(days_per_turn) * rate * (1.5 - 0.5 * rate)
 
 
-def calculate_research_funding(country, net_materials, normal_progress, *, days_per_turn):
-    """Return Materials spent and bonus points per project after normal progress."""
-    budget, bonus = get_research_funding_budget_and_bonus(country, net_materials, days_per_turn)
-    if bonus <= 0:
-        return 0, {}
+def get_research_funding_awards(country, materials_spent, normal_progress, *, days_per_turn):
+    """Return bonus points per project after normal progress. Unusable points are lost."""
+    bonus = get_funded_research_points(country, materials_spent, days_per_turn)
     remaining = {}
     for project in country.get("research_queue", []):
         tech_name = project["tech_name"]
         points = project["points_remaining"] - normal_progress[tech_name]
         if points > 0:
             remaining[tech_name] = points
-    if not remaining:
-        return 0, {}
-
-    total_needed = sum(remaining.values())
-    if bonus >= total_needed:
-        # Solve share = rate * (1.5 - 0.5 * rate) for the rate needed to finish.
-        share_needed = total_needed / _get_unmodified_research_points(days_per_turn)
-        rate_needed = 4 * share_needed / (3 + math.sqrt(9 - 8 * share_needed))
-        return min(budget, net_materials * rate_needed), remaining
+    if bonus <= 0 or not remaining:
+        return {}
 
     # Projects close to completion use less than an equal share. Redistribute
     # the spare points across the rest of the queue.
@@ -594,7 +589,7 @@ def calculate_research_funding(country, net_materials, normal_progress, *, days_
         award = min(points, bonus / projects_left)
         awards[tech_name] = award
         bonus -= award
-    return budget, awards
+    return awards
 
 
 def has_free_research_slots(nation, nation_data):
