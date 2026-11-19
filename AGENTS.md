@@ -3,6 +3,13 @@
 This file gives the rules for AI-assisted changes in this repository.
 AI means artificial intelligence. UI means user interface.
 
+## Scope of Changes
+
+- **Make the requested change and the supporting edits it requires.** Use the [affected-systems checklist](#apply-changes-to-all-affected-systems) to find callers that depend on the change. Ask before expanding the task to include adjacent bug fixes, cleanup, or other improvements.
+- Preserve the meaning of existing numbers, controls, and labels unless the user asks to change it. Keep the unit and scope of a displayed value. For example, adding funding to a per-slot research rate keeps the rate per slot and leaves project-specific modifiers in the project view.
+- Add only the UI text needed for the requested feature. Keep labels short and reuse existing wording where it fits. Add explanations, parentheticals, and new status messages only when requested or essential to understanding the result. Follow the stricter rules for help text, hints, and placeholders in [UI Appearance](#ui-appearance).
+- Before handoff, review the diff. For each changed calculation, new UI string, and other edit, identify the part of the request or necessary dependency it serves. Remove edits that have neither purpose.
+
 ## Before Editing
 
 - **Never begin an edit when the user asks a question.** Answer the question and wait for an explicit instruction to make changes. A question about whether something can or should change does not authorize editing.
@@ -52,12 +59,9 @@ AI means artificial intelligence. UI means user interface.
 - Use `color`, never `colour`, in identifiers, UI text, and comments.
 - Preserve intentional comments.
   Update inaccurate comments. Keep explanations of rules that are not obvious.
-- **Report every change that the user did not explicitly request.**
-  This includes obvious bug fixes, improvements, cleanups, version numbers, and changes to other files.
-  For each change, say exactly what you changed and why, as well as if you think it was an obvious change to make or not.
-  Give this report in the same handoff as the change. Do not wait until the user asks.
-- Do not change gameplay during a refactor.
-  A behavior change needs a user request, an obvious bug, or a clear explanation to the user.
+- **Report required supporting edits and any separately approved changes in the handoff.**
+  Say what changed and why the edit was needed.
+- Preserve gameplay during a refactor unless the user also requests a gameplay change.
 - All repository image assets must be real PNG files with `.png` extensions.
   Check the file signature. Report mismatches and convert them when conversion is in scope.
 - Do not treat generated directories as source.
@@ -96,8 +100,8 @@ AI means artificial intelligence. UI means user interface.
 
 ## Apply Changes to All Affected Systems
 
-Start with the shared rule.
-Complete this checklist before handoff. Update every affected system in the same change.
+Start with the shared rule that owns the requested behavior.
+Use this checklist before handoff to identify systems that depend on the requested change. Update each dependent system where the change requires it.
 Execution, UI, and AI must agree across affected modes and state transitions.
 Give a reason when a system does not apply.
 
