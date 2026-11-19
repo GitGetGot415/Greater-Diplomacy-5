@@ -381,24 +381,19 @@ def refresh_political_map(map_screen):
 RELATIONS_VIEWPOINT_COLOR = (0, 0, 255)
 
 
-def _selected_relations_viewpoint(map_screen):
-    province = map_screen.selected_province
-    if province and not map_screen.selection_mode and not queries.is_water_province(province):
+def _hovered_relations_viewpoint(map_screen):
+    province = map_screen._relations_hovered_province
+    if (map_screen.map_mode == "RELATIONS" and not map_screen.selection_mode
+            and not map_screen.viewing_ai_moves and province and not queries.is_water_province(province)):
         owner = province.get("owner")
         if owner in map_screen.nation_data and owner not in c.UNPLAYABLE_NATIONS and owner not in c.UNOWNED_LAND_OWNERS:
             return owner
-    if province is None and map_screen.map_mode == "RELATIONS" and not map_screen.selection_mode:
-        retained = map_screen._deselected_relations_view
-        if retained is not None:
-            viewer, viewpoint = retained
-            if viewer == map_screen.player_country and viewpoint in map_screen.nation_data:
-                return viewpoint
     return map_screen.player_country
 
 
 def refresh_relations_map(map_screen):
-    """Bake the selected country's opinions into the Relations layer and its hover scores."""
-    viewpoint = _selected_relations_viewpoint(map_screen)
+    """Bake the hovered country's opinions into the Relations layer and its hover scores."""
+    viewpoint = _hovered_relations_viewpoint(map_screen)
     # The score depends only on who owns the tile, so score each owner once,
     # and all of them in one walk over the provinces.
     rated = {data.get("owner", "Unclaimed") for data in map_screen.map_data.values()
@@ -421,11 +416,10 @@ def refresh_relations_map(map_screen):
     map_screen._relations_scores = scores
 
 
-def update_relations_view(map_screen):
-    """Follow province selection while the Relations layer is active."""
-    # Setup and lightweight input callers can run before map layers exist.
-    if (getattr(map_screen, "map_mode", None) == "RELATIONS"
-            and _selected_relations_viewpoint(map_screen) != map_screen._relations_viewpoint):
+def update_relations_view(map_screen, province):
+    """Refresh the active Relations view when the pointer crosses countries."""
+    map_screen._relations_hovered_province = province
+    if _hovered_relations_viewpoint(map_screen) != map_screen._relations_viewpoint:
         refresh_relations_map(map_screen)
 
 

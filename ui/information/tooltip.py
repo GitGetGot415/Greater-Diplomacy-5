@@ -59,7 +59,7 @@ def draw_tooltip(map_screen, surface):
         lines = [f"ID: {prov['id']} | {owner_display}"]
         viewpoint = map_screen._relations_viewpoint
         score = map_screen._relations_scores.get(owner_id)
-        if (score is not None and not is_water
+        if (score is not None and not is_water and viewpoint != owner_id
                 and viewpoint in map_screen.nation_data and viewpoint not in c.UNPLAYABLE_NATIONS):
             name = queries.get_country_display_name(viewpoint, map_screen.nation_data)
             signed_score = f"{score:+d}" if score else "0"

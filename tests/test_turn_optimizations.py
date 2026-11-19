@@ -363,7 +363,7 @@ class MapSurfaceCacheTests(unittest.TestCase):
 
     def test_relations_map_and_opinion_breakdown_follow_compass_drift(self):
         self.screen.map_mode = "RELATIONS"
-        self.screen.selected_province = self.province_of("B")
+        self.screen.selected_province = self.screen._relations_hovered_province = self.province_of("B")
         self.screen._presentation_cache_revision = 0
         self.screen._relation_indicator_cache = None
         self.screen.nation_data["A"].update({politics.VALUE_KEY: 10, politics.ECONOMIC_VALUE_KEY: -10})
@@ -393,81 +393,116 @@ class MapSurfaceCacheTests(unittest.TestCase):
         self.screen.map_mode = self.screen.base_layer = "RELATIONS"
         self.screen.nation_data["A"]["temp_modifiers"] = {"B": {"general": -30}}
         self.screen.nation_data["B"]["temp_modifiers"] = {"A": {"general": 15}}
+        self.screen.camera = SimpleNamespace(pos=pygame.Vector2(), zoom=1, tilt_factor=1)
+        self.screen.map_w, self.screen.map_h = self.screen.id_map.get_size()
+        self.screen.top_ui_height = 0
+        self.screen.touch_map_at = mock.Mock(return_value=self.screen)
         self.refresh(refresh_map.refresh_relations_map)
 
     def province_of(self, owner):
         return next(p for p in self.screen.map_data.values() if p["owner"] == owner)
 
-    def test_the_tooltip_uses_the_inspected_owners_cached_opinion_after_deselection(self):
+    def hover(self, position, *, focused=True, workspace=None):
+        with (mock.patch.object(pygame.mouse, "get_focused", return_value=focused),
+              mock.patch.object(pygame.mouse, "get_pos", return_value=position)):
+            map_input.update_relations_hover(self.screen, workspace=workspace)
+
+    def test_the_tooltip_omits_the_hovered_countrys_self_opinion(self):
         from ui.information import tooltip
 
         self.show_relations()
-        self.screen.secondary_mode = "UNITS"
-        self.screen.unit_view_filter = "ALL"
+        self.screen.secondary_mode = "BLANK"
         self.screen.small_font = mock.Mock()
         self.screen.small_font.render.side_effect = lambda *args: pygame.Surface((1, 1))
-        map_input.set_inspected_province(self.screen, self.province_of("B"))
-        map_input.set_inspected_province(self.screen, None)
-        self.screen.hovered_province = self.province_of("A")
+        self.hover((8, 1))
+        self.screen.hovered_province = self.province_of("B")
 
         with (mock.patch.object(queries, "get_relation_score", side_effect=AssertionError("score recalculated")),
               mock.patch.object(queries, "is_province_visible", return_value=True),
               mock.patch.object(pygame.mouse, "get_pos", return_value=(1, 1))):
             tooltip.draw_tooltip(self.screen, pygame.Surface((50, 50)))
         lines = [call.args[0] for call in self.screen.small_font.render.call_args_list]
-        self.assertTrue(any("B" in line and "+15" in line for line in lines))
+        self.assertFalse(any("opinion" in line for line in lines))
 
     def test_the_view_shows_outgoing_opinions_and_reuses_the_same_owners_surface(self):
         self.show_relations()
-        self.screen.hovered_province = self.province_of("B")
         self.assertEqual(self.screen._relations_viewpoint, "A")
         self.assertEqual(self.screen._relations_scores["B"], -30)
         player_view = self.screen.active_map
 
-        foreign = self.province_of("B")
-        map_input.set_inspected_province(self.screen, foreign)
+        self.screen.selected_province = self.province_of("A")
+        self.hover((8, 1))
         self.assertEqual(self.screen._relations_viewpoint, "B")
         self.assertEqual(self.screen._relations_scores["A"], 15)
         self.assertIs(self.screen.active_map, self.screen.relations_map)
         self.assertIsNot(self.screen.active_map, player_view)
         with mock.patch.object(queries, "get_relation_scores_from", side_effect=AssertionError("recomputed")):
-            map_input.set_inspected_province(self.screen, dict(foreign, id=3))
+            self.hover((9, 1))
 
     def test_own_land_water_and_unowned_land_restore_the_players_view(self):
         self.show_relations()
         water = dict(self.province_of("B"), terrain="ocean")
         unowned = dict(self.province_of("B"), owner="Unclaimed")
-        for province in (self.province_of("A"), water, unowned):
-            with self.subTest(province=province and province["terrain"]):
-                map_input.set_inspected_province(self.screen, self.province_of("B"))
-                map_input.set_inspected_province(self.screen, None)
-                map_input.set_inspected_province(self.screen, province)
+        for province in (self.province_of("A"), water, unowned, None):
+            with self.subTest(province=province):
+                self.hover((8, 1))
+                with mock.patch.object(queries, "get_clicked_province", return_value=province):
+                    self.hover((2, 1))
                 self.assertEqual(self.screen._relations_viewpoint, "A")
                 self.assertEqual(self.screen._relations_scores["B"], -30)
 
-    def test_deselecting_preserves_the_view_and_refreshes_its_scores(self):
+    def test_ui_hidden_tiles_and_leaving_the_window_restore_the_players_view(self):
         self.show_relations()
-        map_input.set_inspected_province(self.screen, self.province_of("B"))
-        foreign_view = self.screen.active_map
+        self.hover((8, 1))
+        self.screen.touch_map_at.return_value = None
+        self.hover((8, 1))
+        self.assertEqual(self.screen._relations_viewpoint, "A")
+
+        self.screen.touch_map_at.return_value = self.screen
+        self.hover((8, 1))
+        self.screen.extreme_hidden_provinces = {self.province_of("B")["id"]}
+        self.hover((8, 1))
+        self.assertEqual(self.screen._relations_viewpoint, "A")
+
+        self.screen.extreme_hidden_provinces = set()
+        self.hover((8, 1))
+        self.hover((8, 1), focused=False)
+        self.assertEqual(self.screen._relations_viewpoint, "A")
+
+    def test_deselecting_leaves_the_view_at_the_pointer(self):
+        self.show_relations()
+        self.screen.selected_province = self.province_of("B")
+        self.hover((8, 1))
         self.screen.mail_draft_text = ""
         self.screen.elements = []
         self.screen.show_feedback = mock.Mock()
         with (mock.patch("screens.game.map_buttons.update_button_states"),
               mock.patch.object(queries, "get_relation_scores_from", side_effect=AssertionError("recomputed"))):
             Map.deselect_province(self.screen)
+            self.hover((8, 1))
         self.assertIsNone(self.screen.selected_province)
         self.assertEqual(self.screen._relations_viewpoint, "B")
-        self.assertIs(self.screen.active_map, foreign_view)
 
-        self.screen.nation_data["B"]["temp_modifiers"]["A"]["general"] = 25
-        self.refresh(refresh_map.refresh_relations_map)
-        self.assertEqual(self.screen._relations_viewpoint, "B")
-        self.assertEqual(self.screen._relations_scores["A"], 25)
-
-    def test_leaving_relations_discards_the_deselected_view(self):
+    def test_stationary_pointer_follows_camera_movement(self):
         self.show_relations()
-        map_input.set_inspected_province(self.screen, self.province_of("B"))
-        map_input.set_inspected_province(self.screen, None)
+        self.hover((2, 1))
+        self.assertEqual(self.screen._relations_viewpoint, "A")
+        self.screen.camera.pos.x = 6
+        self.hover((2, 1))
+        self.assertEqual(self.screen._relations_viewpoint, "B")
+
+    def test_hover_uses_the_active_orders_workspaces_hit_test(self):
+        self.show_relations()
+        self.screen.touch_map_at.return_value = None
+        workspace = SimpleNamespace(touch_map_at=mock.Mock(return_value=self.screen))
+        self.hover((8, 1), workspace=workspace)
+        self.assertEqual(self.screen._relations_viewpoint, "B")
+        workspace.touch_map_at.return_value = None
+        self.hover((8, 1), workspace=workspace)
+        self.assertEqual(self.screen._relations_viewpoint, "A")
+
+    def test_entering_relations_uses_the_current_pointer(self):
+        self.show_relations()
         self.refresh(refresh_map.refresh_political_map)
         self.screen.terrain_map = self.screen.factions_map = self.screen.cores_map = self.screen.faction_territories_map = None
         self.screen.update_country_centers = mock.Mock()
@@ -475,14 +510,16 @@ class MapSurfaceCacheTests(unittest.TestCase):
 
         Map.set_map_layer(self.screen, "POLITICAL")
         self.assertIs(self.screen.active_map, self.screen.political_map)
-        Map.set_map_layer(self.screen, "RELATIONS")
-        self.assertEqual(self.screen._relations_viewpoint, "A")
-        self.assertEqual(self.screen._relations_scores["B"], -30)
+        with (mock.patch.object(pygame.mouse, "get_focused", return_value=True),
+              mock.patch.object(pygame.mouse, "get_pos", return_value=(8, 1))):
+            Map.set_map_layer(self.screen, "RELATIONS")
+        self.assertEqual(self.screen._relations_viewpoint, "B")
+        self.assertEqual(self.screen._relations_scores["A"], 15)
 
-    def test_refresh_uses_the_selected_provinces_current_owner(self):
+    def test_refresh_uses_the_hovered_provinces_current_owner(self):
         self.show_relations()
         province = self.province_of("B")
-        map_input.set_inspected_province(self.screen, province)
+        self.hover((8, 1))
         self.screen.nation_data["B"]["temp_modifiers"]["A"]["general"] = 25
         self.refresh(refresh_map.refresh_relations_map)
         self.assertEqual(self.screen._relations_scores["A"], 25)

@@ -92,7 +92,7 @@ class Tactical_Orders_Screen(UnitCommandControls, Screen):
     def inspect_province(self, province, preserve_scroll=False):
         """List the units of another tile without leaving the screen."""
         self.target_province = province
-        map_input.set_inspected_province(self.map_screen, province)
+        self.map_screen.selected_province = province
         self.battle_screen = None
         if not preserve_scroll:
             self.scroll_y = 0

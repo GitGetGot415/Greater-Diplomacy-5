@@ -153,11 +153,9 @@ class Map(StateAccess, Screen):
         if province is not None:
             sidebar_info.prepare_unit_roster(self, province)
             ui_info_popup.prepare_relation_indicators(self)
-        refresh_map.update_relations_view(self)
 
     def on_enter(self, app, previous):
         ui_info_popup.prepare_relation_indicators(self)
-        refresh_map.update_relations_view(self)
         self._resource_hud_economy_key = None
         self._refresh_resource_hud_economy()
 
@@ -357,7 +355,7 @@ class Map(StateAccess, Screen):
         self._map_surface_cache = {}
         self._fog_surface_cache = None
         self._relations_viewpoint = None
-        self._deselected_relations_view = None
+        self._relations_hovered_province = None
         self._relations_scores = {}
         self.visible_provinces = None
         self.mail_draft_text = ""
@@ -770,7 +768,7 @@ class Map(StateAccess, Screen):
     def set_map_layer(self, layer_name):
         """Unified map layer setter."""
         if layer_name != "RELATIONS":
-            self._deselected_relations_view = None
+            self._relations_hovered_province = None
         self.base_layer = layer_name
         self.map_mode = layer_name
         layer_map = {
@@ -782,7 +780,7 @@ class Map(StateAccess, Screen):
             "FACTION_TERRITORIES": self.faction_territories_map
         }
         self.active_map = layer_map.get(layer_name, self.political_map)
-        refresh_map.update_relations_view(self)
+        map_input.update_relations_hover(self)
 
         # --- ADDED: Auto-refresh the text blobs when changing map views ---
         self.update_country_centers()
@@ -824,7 +822,7 @@ class Map(StateAccess, Screen):
                     diplomacy_messages.cancel_text_message(self.nation_data, self.player_country, owner)
                 self.mail_input_active = False
 
-        map_input.set_inspected_province(self, None)
+        self.selected_province = None
         self.hovered_province = self.hover_glow_surf = self.last_hovered_id = None
         self._relation_indicator_cache = None
         self.hovered_unit_stack = None
@@ -1338,7 +1336,7 @@ class Map(StateAccess, Screen):
             queries.normalize_armies(self.nation_data, self.map_data)
             return False
         self.select_map_units([unit for unit, _province in records])
-        map_input.set_inspected_province(self, records[0][1])
+        self.selected_province = records[0][1]
         self.refresh_ui()
         self.focus_camera_on_army(records)
         if open_orders:
@@ -1349,7 +1347,7 @@ class Map(StateAccess, Screen):
     def open_orders_for_unit_stack(self, province, units, return_to_province_menu=False):
         """Open Orders around a clicked stack without losing map selection."""
         self.select_map_units(units)
-        map_input.set_inspected_province(self, province)
+        self.selected_province = province
         self._orders_return_to_province_menu = return_to_province_menu
         self.change_state(map_input.orders_state(self))
 
@@ -1786,3 +1784,4 @@ class Map(StateAccess, Screen):
 
         self.bg_color = camera_handler.get_dynamic_ocean_color(self.camera, self.min_zoom)
         map_buttons.update_button_states(self)
+        map_input.update_relations_hover(self)

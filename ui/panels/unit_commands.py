@@ -1623,6 +1623,7 @@ class UnitCommandControls:
         # even when the Orders screen is the active state
         if self.map_screen:
             self.map_screen.camera.update(self.map_screen, c.SCREEN_HEIGHT)
+            map_input.update_relations_hover(self.map_screen, workspace=self)
             self._refresh_air_range_hover(pygame.mouse.get_pos())
 
     def _cache_row_icon(self, row_key, unit):

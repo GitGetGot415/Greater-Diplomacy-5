@@ -1,5 +1,5 @@
 import pygame
-from ui.rendering import map_utils, overlay_renderer, refresh_map
+from ui.rendering import map_renderer, map_utils, overlay_renderer, refresh_map
 from map_logic.territory import ownership
 from map_logic.actions import unit_actions
 import data.constants as c
@@ -90,17 +90,6 @@ def _select_tactical_unit_stack(map_screen, position):
     return True
 
 
-def set_inspected_province(map_screen, province):
-    """Change the province inspection and update the active Relations layer."""
-    if getattr(map_screen, "map_mode", None) == "RELATIONS":
-        if province is not None:
-            map_screen._deselected_relations_view = None
-        elif map_screen.selected_province is not None:
-            map_screen._deselected_relations_view = (map_screen.player_country, map_screen._relations_viewpoint)
-    map_screen.selected_province = province
-    refresh_map.update_relations_view(map_screen)
-
-
 def _select_map_province(map_screen, position, navigate=True):
     """Run the normal primary-click province selection after a box-select check."""
     if (map_screen.viewing_ai_moves
@@ -115,7 +104,7 @@ def _select_map_province(map_screen, position, navigate=True):
     if (map_screen.player_country == c.TOURNAMENT_SPECTATOR
             and not queries.is_province_visible(map_screen, province["id"])):
         return False
-    set_inspected_province(map_screen, province)
+    map_screen.selected_province = province
     sidebar_info.prepare_unit_roster(map_screen, province)
     ui_info_popup.prepare_relation_indicators(map_screen)
     camera_handler.center_camera_on_province(
@@ -500,6 +489,24 @@ def _interactive_province(map_screen, pos):
     return province
 
 
+def update_relations_hover(map_screen, *, workspace=None):
+    """Resolve the live pointer after camera movement and reuse each country's view while hovered."""
+    if (map_screen.map_mode != "RELATIONS" or map_screen.selection_mode
+            or map_screen.is_refreshing or map_screen.ai_is_thinking or map_screen.is_saving):
+        return
+    province = None
+    if not map_screen.viewing_ai_moves and pygame.mouse.get_focused():
+        position = pygame.mouse.get_pos()
+        if (workspace or map_screen).touch_map_at(position) is map_screen:
+            province = _interactive_province(map_screen, position)
+
+    previous = map_screen.relations_map
+    refresh_map.update_relations_view(map_screen, province)
+    if map_screen.relations_map is not previous:
+        map_renderer.clear_viewport_scale_cache(map_screen)
+        map_screen._minimap_image_cache = None
+
+
 def has_secondary_map_action(map_screen, position):
     """Evaluate a hold at an input boundary; rendering uses the cached result."""
     if (map_screen.selection_mode or map_screen.is_refreshing
@@ -786,7 +793,7 @@ def _handle_combat_bubble_click(map_screen, event, on_ui, origin=None):
         map_screen.select_map_units(units, sound_kind=None)
     if origin is None:
         map_screen._orders_entered_from_combat_bubble = True
-        set_inspected_province(map_screen, province)
+        map_screen.selected_province = province
         map_screen.change_state(orders_state(map_screen))
     else:
         origin.inspect_province(province)
