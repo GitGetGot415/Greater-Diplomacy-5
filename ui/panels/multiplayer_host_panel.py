@@ -52,10 +52,6 @@ def load_multiplayer_moves(map_ref, on_result):
             detail = f"Loaded {loaded} move file{'s' if loaded != 1 else ''}. Rejected {rejected}."
             if summary["converted"]:
                 detail += f" Converted {summary['converted']} from an older game version."
-            if summary["overridden"]:
-                detail += f" Accepted {summary['overridden']} despite stat warnings."
-            if summary["legacy"]:
-                detail += " Some accepted files use the legacy move format."
             map_ref.show_feedback(detail)
             on_result(bool(loaded))
 
@@ -64,10 +60,10 @@ def load_multiplayer_moves(map_ref, on_result):
             if rejection is None:
                 finish()
                 return
-            review(rejection, frozenset())
+            review(rejection)
 
-        def review(rejection, accepted_overrides):
-            """Show one rejection. Ask about its override, then retry with every accepted override."""
+        def review(rejection):
+            """Show one rejection and offer to convert a supported older move."""
             file_name = os.path.basename(rejection["file_path"])
             cid = rejection["country_id"]
             country = queries.get_country_display_name(cid, map_ref.nation_data) if cid else "Unknown country"
@@ -79,25 +75,19 @@ def load_multiplayer_moves(map_ref, on_result):
 
                 def after_choice(accepted):
                     if accepted and can_import():
-                        overrides = accepted_overrides | {rejection["override"]}
                         # Read and validate again. The file or host turn may have changed.
                         retry = tournament_files.load_move_files(
                             map_ref, [rejection["file_path"]],
                             map_ref.multiplayer_keys_dict,
-                            accept_stat_mismatches="stats" in overrides,
-                            accept_older_versions="version" in overrides,
+                            accept_older_versions=True,
                             loaded_countries=summary["loaded_countries"])
                         if retry["loaded"]:
                             summary["rejected"] -= 1
-                            for key in ("loaded", "legacy", "overridden", "converted"):
+                            for key in ("loaded", "converted"):
                                 summary[key] += retry[key]
                             summary["loaded_countries"].extend(retry["loaded_countries"])
                         elif retry["rejections"]:
                             again = retry["rejections"][0]
-                            if again["overridable"] and again["override"] not in overrides:
-                                # A converted move can still need stat approval.
-                                review(again, overrides)
-                                return
                             retry_message = f"{file_name}\n\n{again['reason']}"
                             dialogs.show_message(
                                 "Move still rejected",
@@ -106,20 +96,10 @@ def load_multiplayer_moves(map_ref, on_result):
                             return
                     review_next()
 
-                if rejection["override"] == "version":
-                    title = "Convert older move?"
-                    question = ("This move was made with an older game version. Converting it can lose "
-                                "choices the current version reads differently. Convert and validate it?")
-                    yes_label = "Convert"
-                else:
-                    title = "Accept move anyway?"
-                    question = ("This move has stat mismatches, or orders that the current rules refuse. "
-                                "Accepting it can import incorrect values or unfair advantages. "
-                                "Refused orders are dropped and refunded. Accept it despite these risks?")
-                    yes_label = "Accept"
-                dialogs.ask_yes_no(
-                    title, f"{file_name}\nCountry: {country}\n\n{question}",
-                    on_result=after_choice, yes_label=yes_label, no_label="Reject")
+                question = ("This move was made with an older game version. Converting it can lose "
+                            "choices the current version reads differently. Convert and validate it?")
+                dialogs.ask_yes_no("Convert older move?", f"{file_name}\nCountry: {country}\n\n{question}",
+                                   on_result=after_choice, yes_label="Convert", no_label="Reject")
 
             show_move_rejection(map_ref, rejection, on_result=after_details)
 

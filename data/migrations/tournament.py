@@ -1,20 +1,14 @@
-"""Tournament move projections and encrypted-file payloads from older versions.
-
-data/migrations/snapshot_moves.py reads snapshot moves. These helpers serve it and the current loader.
-"""
+"""Compatibility projections for tournament intents and encrypted payload decoding."""
 
 import copy
 import gzip
 import json
 
-from data.state_access import world_for
 from map_logic import politics
-from map_logic.diplomacy import diplomacy_messages, diplomacy_lifecycle as lifecycle
-from map_logic.diplomacy.action_definitions import availability
 
 
 def tournament_player_intents(payload, map_data=None):
-    """Read optional intents and reject conflicting older choice projections."""
+    """Read intents and reject conflicting older choice projections."""
     commands = payload["player_intents"]
     if not isinstance(commands, list):
         raise ValueError("Player intents must be a list.")
@@ -80,114 +74,3 @@ def decode_saved_json(payload):
     if payload.startswith(b'\x1f\x8b'):
         payload = gzip.decompress(payload)
     return json.loads(payload.decode('utf-8'))
-
-
-def legacy_player_country(context, country_id, nation_update):
-    """Prepare a player's record without changing host state.
-
-    Faction membership is shared state.  The player can queue a leave/invite
-    in their normal diplomacy data, but the authoritative outcome is resolved
-    by the host at turn processing.  A member's old move must therefore not
-    restore the previous faction string after its leader has renamed the bloc.
-    """
-    from data import queries
-    world_state = world_for(context)
-    if not isinstance(nation_update, dict) or country_id not in world_state.nation_data:
-        raise ValueError("The move does not contain a valid country record.")
-
-    existing = world_state.nation_data[country_id]
-    faction_state = {
-        key: existing[key]
-        for key in ("faction", "is_faction_leader", "faction_pressure", "faction_tenure")
-        if key in existing
-    }
-    merged = dict(nation_update)
-    for key in ("faction", "is_faction_leader", "faction_pressure", "faction_tenure"):
-        if key in faction_state:
-            merged[key] = faction_state[key]
-        else:
-            merged.pop(key, None)
-
-    # Snapshot moves predate these economic choices. Preserve the host's
-    # position, drift, and funding rate.
-    for key in (politics.ECONOMIC_VALUE_KEY, politics.ECONOMIC_DRIFT_KEY, "research_funding_slider"):
-        if key in existing:
-            merged[key] = existing[key]
-        else:
-            merged.pop(key, None)
-
-    # Tournament moves carry a full country record, but policy countdowns are
-    # host-owned turn state.  Read only the player's requested lifecycle
-    # statuses and rebuild the timers from the host's existing country record.
-    requested_policies = politics.policy_draft_projection({country_id: merged}, country_id)
-    canonical_policies = politics.canonicalize_policy_draft(
-        world_state.nation_data, country_id, requested_policies)
-    if canonical_policies:
-        merged[politics.POLICY_KEY] = canonical_policies
-    else:
-        merged.pop(politics.POLICY_KEY, None)
-
-    probe = copy.deepcopy(world_state.nation_data)
-    lifecycle.normalize_diplomacy_channels(probe)
-    pending = merged.get("pending_diplomacy", {})
-    responses = merged.get("diplo_responses", {})
-    draft_lists = merged.get("draft_lists", {})
-    if not all(isinstance(channel, dict) for channel in (pending, responses, draft_lists)):
-        raise ValueError("Invalid diplomatic channels.")
-    if any(not isinstance(record, (dict, str)) for record in pending.values()):
-        raise ValueError("Invalid diplomatic request.")
-    if any(not isinstance(response, dict) for response in responses.values()):
-        raise ValueError("Invalid diplomatic response.")
-    submitted = {country_id: copy.deepcopy(merged)}
-    lifecycle.normalize_diplomacy_channels(submitted)
-    drafts = {}
-    for target, record in submitted[country_id]["pending_diplomacy"].items():
-        if record.get("turns", 0) > 0:
-            host_record = probe[country_id].get("pending_diplomacy", {}).get(target)
-            supplied = pending[target]
-            reference = supplied.get("request_id") if isinstance(supplied, dict) else None
-            if (not isinstance(host_record, dict) or record.get("action") != host_record.get("action")
-                    or (reference is not None and reference != host_record.get("request_id"))):
-                raise ValueError("A travelling request does not belong to this move.")
-            if diplomacy_messages.has_queued_forward(record):
-                record.update(diplomacy_messages.canonical_forward_fields(world_state.nation_data, country_id, record))
-                intent = diplomacy_messages.forward_intent(record)
-                intent["request_id"] = host_record["request_id"]
-                drafts[target] = intent
-        else:
-            # Only the host's scripted events may mark a request as scripted.
-            record.pop("scripted", None)
-            available = availability(context, country_id, target, record.get("action", ""))
-            if not available.allowed:
-                # Older snapshots discard invalid drafts while retaining unrelated choices.
-                continue
-            if record.get("action") == diplomacy_messages.FORWARD_ACTION:
-                record.update(diplomacy_messages.canonical_forward_fields(world_state.nation_data, country_id, record))
-            drafts[target] = record
-    canonical_responses = {}
-    for target, response in submitted[country_id]["diplo_responses"].items():
-        canonical = dict(response)
-        canonical.pop("legacy_unmatched", None)
-        canonical.pop("scripted", None)
-        canonical.update(lifecycle.canonical_response_reference(probe, country_id, target, response))
-        canonical_responses[target] = canonical
-    lifecycle.apply_draft(probe, country_id, drafts, canonical_responses, draft_lists)
-    for channel in ("pending_diplomacy", "diplo_responses", "draft_lists"):
-        merged[channel] = probe[country_id].get(channel, {})
-    ratification = merged.get("pending_ratification")
-    host_ratification = probe[country_id].get("pending_ratification")
-    if isinstance(ratification, dict):
-        reference = ratification.get("treaty_id")
-        if (not isinstance(host_ratification, dict)
-                or (reference is not None and reference != host_ratification.get("treaty_id"))):
-            raise ValueError("That ratification refers to an expired treaty.")
-        merged["pending_ratification"] = copy.deepcopy(host_ratification)
-        if "verdict" in ratification:
-            merged["pending_ratification"]["verdict"] = ratification["verdict"]
-        else:
-            merged["pending_ratification"].pop("verdict", None)
-    elif ratification is not None:
-        raise ValueError("Invalid treaty ratification.")
-    elif isinstance(host_ratification, dict):
-        merged["pending_ratification"] = copy.deepcopy(host_ratification)
-    return merged

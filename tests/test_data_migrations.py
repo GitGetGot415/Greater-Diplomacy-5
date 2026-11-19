@@ -96,7 +96,7 @@ class GameVersionTests(unittest.TestCase):
         for stamp in (None, PREVIOUS_VERSION, c.GAME_VERSION):
             with self.subTest(stamp=stamp):
                 move = {"nation_data": {"allied_with": ["B"]}, "provinces": {},
-                        "aircraft_orders": [], "release_subjects": []}
+                        "aircraft_orders": [], "player_intents": []}
                 if stamp is not None:
                     move["game_version"] = stamp
                 self.assertEqual(migrations.upgrade_move(move), migrations.version_number(stamp))
@@ -104,38 +104,9 @@ class GameVersionTests(unittest.TestCase):
                 self.assertEqual(move["game_version"], c.GAME_VERSION)
         with self.assertRaisesRegex(migrations.NewerVersionError, "Update the game"):
             migrations.upgrade_move({"game_version": f"v{migrations.CURRENT_VERSION + 1}"})
-        # A move without the later sections converts. It is not refused.
-        move = {"nation_data": {}, "provinces": {}}
+        move = {"player_intents": []}
         migrations.upgrade_move(move)
-        self.assertEqual(move["aircraft_orders"], [])
-
-    def test_country_only_moves_convert_to_the_snapshot_shape(self):
-        """The oldest moves held only the country record."""
-        move = {"allied_with": ["B"], "materials": 5, "tournament_turn": 3,
-                "release_puppet_queue": [{"core_nation": "B"}]}
-        migrations.upgrade_move(move)
-        release = {"core_nation": "B", "release_type": c.PUPPET_TYPE_INTEGRATED}
-        self.assertEqual(move["nation_data"], {"materials": 5, "release_puppet_queue": [release]})
-        self.assertEqual(move["provinces"], {})
-        self.assertEqual(move["tournament_turn"], 3)
-        self.assertEqual(move["release_subjects"], [release])
-        self.assertEqual(move["aircraft_orders"], [])
-        self.assertIs(move["unit_snapshot"], False)
-        once = copy.deepcopy(move)
-        migrations.upgrade_move(move)
-        self.assertEqual(move, once)
-
-    def test_older_moves_read_aircraft_orders_from_whole_aircraft_records(self):
-        library = queries.get_unit_library()
-        aircraft = next(name for name in library if queries.is_air_unit({"type": name}))
-        ground = next(name for name in library if not queries.is_air_unit({"type": name}))
-        order = {"type": "MOVE", "path": [2]}
-        move = {"nation_data": {}, "provinces": {"P": {"units": [
-            {"unit_id": "air", "type": aircraft, "order": order, "custom_name": "Ace", "health": 1},
-            {"unit_id": "foot", "type": ground, "order": None}]}}}
-        migrations.upgrade_move(move)
-        self.assertEqual(move["aircraft_orders"], [{"unit_id": "air", "order": order, "custom_name": "Ace"}])
-        self.assertIs(move["unit_snapshot"], True)
+        self.assertEqual(move, {"player_intents": [], "game_version": c.GAME_VERSION})
 
     def test_current_move_sections_do_not_change(self):
         move = {"nation_data": {"release_puppet_queue": []}, "provinces": {"P": {"units": []}},
@@ -276,7 +247,7 @@ class OlderFormatTests(unittest.TestCase):
         meta = {"provinces": {"P": province()}}
         history = {"4": {"provinces": {"P": province()}}}
         _meta, map_data, history = upgraded(meta, {"P": province()}, history)
-        move = {"nation_data": {}, "provinces": {"P": province()}}
+        move = {"nation_data": {}, "provinces": {"P": province()}, "player_intents": []}
         migrations.upgrade_move(move)
         for record in (map_data["P"], meta["provinces"]["P"], history["4"]["provinces"]["P"],
                        move["provinces"]["P"]):
@@ -391,12 +362,10 @@ class OlderFormatTests(unittest.TestCase):
             self.assertEqual(tuple(action["message"] for action in record["scripted_events"][0]["actions"]), png)
 
         move = {"nation_data": country(), "provinces": {},
-                "appearance_updates": [{"country_id": "B", "appearance": appearance()}],
                 "player_intents": [{"type": "country_appearance", "appearance": appearance()},
                                    {"type": "puppet_draft", "appearances": {"B": appearance()}}]}
         migrations.upgrade_move(move)
         self.assertEqual(images(move["nation_data"]), png)
-        self.assertEqual(images(move["appearance_updates"][0]["appearance"]), png)
         self.assertEqual(images(move["player_intents"][0]["appearance"]), png)
         self.assertEqual(images(move["player_intents"][1]["appearances"]["B"]), png)
 
@@ -529,7 +498,7 @@ class MigrationBoundaryTests(unittest.TestCase):
         migrations.upgrade_save(restored, {})
         self.assertEqual(restored, saved)
 
-    def test_unknown_fields_survive_save_history_and_both_move_formats(self):
+    def test_unknown_fields_survive_saves_history_and_intent_moves(self):
         unknown = {key: self.OLDER for key in ("type", "unit_type", "original_type", "target_type")}
         unknown["custom_production_units"] = [self.OLDER, self.OLDER]
         unknown["units"] = [{"type": self.OLDER}]
@@ -552,24 +521,23 @@ class MigrationBoundaryTests(unittest.TestCase):
                     "future_field": copy.deepcopy(unknown)}
         upgraded(saved, raw, {"1": snapshot})
         records = [saved, raw, snapshot]
-        for intents in (False, True):
-            move = {"nation_data": copy.deepcopy(country), "provinces": {"P": copy.deepcopy(province)},
-                    "aircraft_orders": [{"order": copy.deepcopy(order), "future_field": copy.deepcopy(unknown)}],
-                    "future_field": copy.deepcopy(unknown)}
-            if intents:
-                move["player_intents"] = [
-                    {"type": "unit_order", "order": copy.deepcopy(order), "future_field": copy.deepcopy(unknown)},
-                    {"type": "province_queue", "queue": "unit_queue", "items": [
-                        {"unit_type": self.OLDER, "future_field": copy.deepcopy(unknown)}]},
-                    {"type": "country_preferences", "custom_production_units": [self.OLDER, self.CURRENT]}]
+        for compatibility_projection in (False, True):
+            move = {"future_field": copy.deepcopy(unknown), "player_intents": [
+                {"type": "unit_order", "order": copy.deepcopy(order), "future_field": copy.deepcopy(unknown)},
+                {"type": "province_queue", "queue": "unit_queue", "items": [
+                    {"unit_type": self.OLDER, "future_field": copy.deepcopy(unknown)}]},
+                {"type": "country_preferences", "custom_production_units": [self.OLDER, self.CURRENT]}]}
+            if compatibility_projection:
+                move.update(nation_data=copy.deepcopy(country), provinces={"P": copy.deepcopy(province)},
+                            aircraft_orders=[{"order": copy.deepcopy(order), "future_field": copy.deepcopy(unknown)}])
             migrations.upgrade_move(move)
-            self.assertEqual(move["nation_data"]["volunteer_missions"]["B"]["held_units"][0]["unit"]["type"],
-                             self.CURRENT)
-            self.assertEqual(move["aircraft_orders"][0]["order"]["target_type"], self.CURRENT)
-            if intents:
-                self.assertEqual(move["player_intents"][0]["order"]["target_type"], self.CURRENT)
-                self.assertEqual(move["player_intents"][1]["items"][0]["unit_type"], self.CURRENT)
-                self.assertEqual(move["player_intents"][2]["custom_production_units"], [self.CURRENT])
+            if compatibility_projection:
+                self.assertEqual(move["nation_data"]["volunteer_missions"]["B"]["held_units"][0]["unit"]["type"],
+                                 self.CURRENT)
+                self.assertEqual(move["aircraft_orders"][0]["order"]["target_type"], self.CURRENT)
+            self.assertEqual(move["player_intents"][0]["order"]["target_type"], self.CURRENT)
+            self.assertEqual(move["player_intents"][1]["items"][0]["unit_type"], self.CURRENT)
+            self.assertEqual(move["player_intents"][2]["custom_production_units"], [self.CURRENT])
             once = round_trip(move)
             migrations.upgrade_move(move)
             self.assertEqual(move, once)
@@ -1135,17 +1103,16 @@ class LibraryAndTournamentTests(unittest.TestCase):
         with self.assertRaises(json.JSONDecodeError):
             migrations.decode_saved_json(b"invalid json")
 
-    def test_snapshot_moves_convert_their_country_and_province_records(self):
+    def test_intent_moves_convert_optional_country_and_province_records(self):
         move = {"nation_data": {"allied_with": ["B"], "research_queue": [{"tech_name": "a"}]},
                 "provinces": {"P": {"unit_queue": [{"unit_type": "Biplane", "days_remaining": 0}]}},
-                "aircraft_orders": [], "release_subjects": [{"core_nation": "B"}]}
+                "aircraft_orders": [], "player_intents": []}
         migrations.upgrade_move(move)
         self.assertEqual(move["game_version"], c.GAME_VERSION)
         self.assertNotIn("allied_with", move["nation_data"])
         self.assertIn("points_remaining", move["nation_data"]["research_queue"][0])
         self.assertEqual(move["provinces"]["P"]["unit_queue"],
                          [{"unit_type": "Biplane Fighter I", "turns_remaining": 1}])
-        self.assertEqual(move["release_subjects"][0]["release_type"], c.PUPPET_TYPE_INTEGRATED)
 
     def test_cold_imports_work_from_each_entry_point(self):
         for first in ("data.migrations", "data.constants", "data.io.settings_schema",

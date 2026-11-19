@@ -104,10 +104,9 @@ class TournamentMoveTests(unittest.TestCase):
         with mock.patch.object(tournament_files, "run_with_progress", synchronous_progress):
             return tournament_files.load_move_files(host, paths, self.keys, **options)
 
-    def player_data(self, country_id, host, **extra):
+    def player_data(self, host, **extra):
         result = {
-            "nation_data": dict(host.nation_data[country_id]),
-            "provinces": {},
+            "player_intents": [],
             "game_version": c.GAME_VERSION,
             "tournament_session": host.multiplayer_session_key,
             "tournament_turn": host.time_manager.total_turns,
@@ -137,7 +136,7 @@ class TournamentMoveTests(unittest.TestCase):
                     commands[0]["unit_id"] = "enemy"
                 elif variant == "malformed":
                     commands[0]["lane_target"] = ["Outsider"]
-                move = self.player_data("Leader", host, player_intents=commands)
+                move = self.player_data(host, player_intents=commands)
                 if variant == "stale":
                     move["tournament_turn"] += 1
                 before = copy.deepcopy(units)
@@ -152,19 +151,12 @@ class TournamentMoveTests(unittest.TestCase):
                     self.assertEqual(result["loaded"], 0)
                     self.assertEqual(units, before)
 
-    def v46_move(self, country_id, host, **extra):
-        """A move with the sections every v46 export wrote, and no version stamp."""
-        result = self.player_data(country_id, host, aircraft_orders=[], release_subjects=[])
-        result.pop("game_version")
-        result.update(extra)
-        return result
-
     def test_forward_and_text_move_preserve_host_message_and_reject_invalid_references(self):
         from map_logic.diplomacy import diplomacy_messages as dm
 
-        for explicit_commands in (False, True):
+        for compatibility_projection in (False, True):
             for mode in ("valid", "missing_source", "malformed_source", "stale", "wrong_key"):
-                with self.subTest(commands=explicit_commands, mode=mode), tempfile.TemporaryDirectory() as directory:
+                with self.subTest(compatibility_projection=compatibility_projection, mode=mode), tempfile.TemporaryDirectory() as directory:
                     host = Host()
                     source = {"message_id": "received-id", "sender": "Member", "content": "Original text", "read": False}
                     host.nation_data["Leader"]["inbox"] = [source]
@@ -178,12 +170,12 @@ class TournamentMoveTests(unittest.TestCase):
                         request["forwarded_message"]["message_id"] = "not-received"
                     elif mode == "malformed_source":
                         request["forwarded_message"] = None
-                    move = self.player_data("Leader", host)
-                    move["nation_data"] = local["Leader"]
-                    if explicit_commands:
-                        move["player_intents"] = [{"type": "country_diplomacy",
-                            "pending": local["Leader"]["pending_diplomacy"], "responses": {},
-                            "draft_lists": local["Leader"]["draft_lists"]}]
+                    move = self.player_data(host)
+                    if compatibility_projection:
+                        move["nation_data"] = local["Leader"]
+                    move["player_intents"] = [{"type": "country_diplomacy",
+                        "pending": local["Leader"]["pending_diplomacy"], "responses": {},
+                        "draft_lists": local["Leader"]["draft_lists"]}]
                     if mode == "stale":
                         move["tournament_turn"] -= 1
                     path = self.write_move(directory, "forward.gd5move", "Leader", move)
@@ -207,9 +199,9 @@ class TournamentMoveTests(unittest.TestCase):
         from map_logic.actions.player_actions import collect_map_commands
         from map_logic.diplomacy import diplomacy_messages as dm
 
-        for explicit_commands in (False, True):
+        for compatibility_projection in (False, True):
             for mode in ("valid", "missing_source", "stale_reference"):
-                with self.subTest(commands=explicit_commands, mode=mode), tempfile.TemporaryDirectory() as directory:
+                with self.subTest(compatibility_projection=compatibility_projection, mode=mode), tempfile.TemporaryDirectory() as directory:
                     host = Host()
                     source = {"message_id": "received-id", "sender": "Member", "content": "Original text", "read": False}
                     host.nation_data["Leader"]["inbox"] = [source]
@@ -224,10 +216,10 @@ class TournamentMoveTests(unittest.TestCase):
                     elif mode == "stale_reference":
                         request["request_id"] = "expired-request"
                         command["pending"]["Outsider"]["request_id"] = "expired-request"
-                    move = self.player_data("Leader", host)
-                    move["nation_data"] = local.nation_data["Leader"]
-                    if explicit_commands:
-                        move["player_intents"] = [command]
+                    move = self.player_data(host)
+                    if compatibility_projection:
+                        move["nation_data"] = local.nation_data["Leader"]
+                    move["player_intents"] = [command]
                     path = self.write_move(directory, "forward.gd5move", "Leader", move)
                     summary = self.import_moves(host, [path])
                     self.assertEqual(summary["loaded"], int(mode == "valid"), summary)
@@ -239,9 +231,9 @@ class TournamentMoveTests(unittest.TestCase):
         from map_logic.actions.player_actions import collect_map_commands
         from map_logic.diplomacy import diplomacy_messages as dm
 
-        for explicit_commands in (False, True):
+        for compatibility_projection in (False, True):
             for mode in ("valid", "stale", "wrong_key", "duplicate"):
-                with self.subTest(commands=explicit_commands, mode=mode), tempfile.TemporaryDirectory() as directory:
+                with self.subTest(compatibility_projection=compatibility_projection, mode=mode), tempfile.TemporaryDirectory() as directory:
                     host = Host()
                     source = {"message_id": "source-id", "sender": "Member", "content": "Forward this", "read": False}
                     host.nation_data["Leader"]["inbox"] = [source]
@@ -249,10 +241,10 @@ class TournamentMoveTests(unittest.TestCase):
                     local = map_double(map_data={}, id_to_province={}, nation_colors={}, nation_data=copy.deepcopy(host.nation_data))
                     dm.queue_forwarded_message(local.nation_data, "Leader", "Outsider", "Leader", source)
                     dm.queue_text_message(local.nation_data, "Leader", "Outsider", "Follow-up")
-                    move = self.player_data("Leader", host)
-                    move["nation_data"] = local.nation_data["Leader"]
-                    if explicit_commands:
-                        move["player_intents"] = [item for item in collect_map_commands(local, "Leader") if item["type"] == "country_diplomacy"]
+                    move = self.player_data(host)
+                    if compatibility_projection:
+                        move["nation_data"] = local.nation_data["Leader"]
+                    move["player_intents"] = [item for item in collect_map_commands(local, "Leader") if item["type"] == "country_diplomacy"]
                     if mode == "stale":
                         move["tournament_turn"] -= 1
                     path = self.write_move(directory, "follow_up.gd5move", "Leader", move)
@@ -307,16 +299,6 @@ class TournamentMoveTests(unittest.TestCase):
                     else:
                         self.assertEqual(host.nation_data, before)
 
-    def stat_move(self, host):
-        unit = {"unit_id": "test-unit", "owner": "Leader", "type": "Test ground unit",
-                "health": 12, "max_health": 20, "attack": 4, "defense": 3,
-                "speed": 2, "level": 0}
-        host.map_data = {"home": {"id": 1, "json_key": "P1", "owner": "Leader", "units": [unit]}}
-        move = self.player_data("Leader", host, unit_snapshot=True,
-                                provinces={"P1": {"units": [copy.deepcopy(unit)]}})
-        move["provinces"]["P1"]["units"][0]["attack"] += 1
-        return move
-
     def test_production_uses_shared_costs_and_rejects_cumulative_overspend(self):
         from map_logic.actions import production_actions
         from tests.research_fixtures import fixture_metadata
@@ -331,24 +313,23 @@ class TournamentMoveTests(unittest.TestCase):
                 host.map_data = {str(number): {"id": number, "json_key": str(number), "owner": "Leader",
                                               "cores": ["Leader"], "units": [], "unit_queue": []}
                                  for number in (1, 2)}
+                host.id_to_province = {province["id"]: province for province in host.map_data.values()}
                 with mock.patch.object(queries, "get_unit_library", return_value=library):
-                    queues = {key: {"unit_queue": [production_actions.prepare_production(
-                        host, "Leader", province, "unit_queue", {"unit_type": "Fixture recruit"}).order]}
-                              for key, province in host.map_data.items()}
-                    expected = copy.deepcopy(queues)
-                    if not complete:
-                        for update in queues.values():
-                            update["unit_queue"][0].pop("refund")
-                    move = self.player_data("Leader", host, provinces=queues)
-                    for resource in c.ECON_RESOURCE_KEYS:
-                        move["nation_data"][resource] -= 2 * library["Fixture recruit"][f"cost_{resource}"]
+                    expected = [production_actions.prepare_production(
+                        host, "Leader", province, "unit_queue", {"unit_type": "Fixture recruit"}).order
+                        for province in host.map_data.values()]
+                    items = expected if complete else [{"unit_type": "Fixture recruit"} for _ in expected]
+                    commands = [{"type": "province_queue", "province_id": number, "queue": "unit_queue", "items": [item]}
+                                for number, item in enumerate(items, start=1)]
+                    move = self.player_data(host, player_intents=commands)
                     before = copy.deepcopy((host.nation_data, host.map_data))
                     path = self.write_move(directory, "production.gd5move", "Leader", move)
-                    result = self.import_moves(host, [path], accept_stat_mismatches=True)
-                self.assertEqual(result["loaded"], int(affordable))
+                    result = self.import_moves(host, [path])
+                self.assertEqual(result["loaded"], int(affordable), result["rejections"])
                 if affordable:
-                    for key in host.map_data:
-                        self.assertEqual(host.map_data[key]["unit_queue"], expected[key]["unit_queue"])
+                    for province, order in zip(host.map_data.values(), expected):
+                        self.assertEqual(province["unit_queue"], [order])
+                    self.assertEqual(host.nation_data["Leader"]["materials"], 0)
                 else:
                     self.assertEqual((host.nation_data, host.map_data), before)
                     self.assertFalse(result["rejections"][0]["overridable"])
@@ -363,42 +344,25 @@ class TournamentMoveTests(unittest.TestCase):
         host.id_to_province = {province["id"]: province for province in host.map_data.values()}
         return host
 
-    def test_both_move_formats_enforce_the_coring_rule(self):
-        def intents(host, province_id):
-            return {"player_intents": [{"type": "province_queue", "province_id": province_id,
-                                        "queue": "building_queue", "items": [{"order_type": "CORE"}]}],
-                    "game_version": c.GAME_VERSION, "tournament_session": host.multiplayer_session_key,
-                    "tournament_turn": host.time_manager.total_turns}
-
-        def snapshot(host, province_id):
-            order = production_actions.prepare_production(
-                host, "Leader", host.id_to_province[2], "building_queue", {"order_type": "CORE"}).order
-            return self.player_data("Leader", host, provinces={f"P{province_id}": {"building_queue": [order]}})
-
-        for move_format in (intents, snapshot):
-            for province_id, legal in ((2, True), (3, False)):
-                with self.subTest(move_format=move_format.__name__, province_id=province_id), \
-                        tempfile.TemporaryDirectory() as directory:
-                    host = self.coring_host()
-                    before = copy.deepcopy(host.map_data)
-                    path = self.write_move(directory, "core.gd5move", "Leader", move_format(host, province_id))
-                    result = self.import_moves(host, [path])
-                    self.assertEqual(result["loaded"], int(legal), result["rejections"])
+    def test_move_enforces_the_coring_rule(self):
+        for province_id, legal in ((2, True), (3, False)):
+            with self.subTest(province_id=province_id), tempfile.TemporaryDirectory() as directory:
+                host = self.coring_host()
+                before = copy.deepcopy(host.map_data)
+                command = {"type": "province_queue", "province_id": province_id, "queue": "building_queue",
+                           "items": [{"order_type": "CORE"}]}
+                move = self.player_data(host, player_intents=[command])
+                path = self.write_move(directory, "core.gd5move", "Leader", move)
+                result = self.import_moves(host, [path])
+                self.assertEqual(result["loaded"], int(legal), result["rejections"])
+                if legal:
                     queue = host.id_to_province[province_id]["building_queue"]
-                    if legal:
-                        self.assertEqual([item["order_type"] for item in queue], ["CORE"])
-                    else:
-                        rejection = result["rejections"][0]
-                        self.assertIn("coast", rejection["reason"])
-                        self.assertEqual(host.map_data, before)
-                        if move_format is intents:
-                            self.assertFalse(rejection["overridable"])
-                        else:
-                            # A snapshot move drops the refused order after host review.
-                            self.assertEqual(rejection["override"], "stats")
-                            accepted = self.import_moves(host, [path], accept_stat_mismatches=True)
-                            self.assertEqual(accepted["loaded"], 1, accepted["rejections"])
-                            self.assertEqual(host.id_to_province[province_id]["building_queue"], [])
+                    self.assertEqual([item["order_type"] for item in queue], ["CORE"])
+                else:
+                    rejection = result["rejections"][0]
+                    self.assertIn("coast", rejection["reason"])
+                    self.assertFalse(rejection["overridable"])
+                    self.assertEqual(host.map_data, before)
 
     def test_wartime_trade_intent_is_imported_by_host(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -407,7 +371,7 @@ class TournamentMoveTests(unittest.TestCase):
             host.nation_data["Outsider"]["at_war_with"] = ["Leader"]
             command = {"type": "country_diplomacy", "pending": {
                 "Outsider": {"action": "TRADE", "message": "", "parameters": {"give_materials": 30}}}}
-            move = self.player_data("Leader", host, player_intents=[command])
+            move = self.player_data(host, player_intents=[command])
             path = self.write_move(directory, "trade.gd5move", "Leader", move)
             result = self.import_moves(host, [path])
             self.assertEqual(result["loaded"], 1, result["rejections"])
@@ -416,20 +380,19 @@ class TournamentMoveTests(unittest.TestCase):
             self.assertEqual(request["parameters"], {"give_materials": 30})
             self.assertEqual(host.nation_data["Leader"]["at_war_with"], ["Outsider"])
 
-    def test_response_references_are_checked_before_country_merge(self):
+    def test_response_references_are_checked_before_applying_intents(self):
         from map_logic.diplomacy import diplomacy_messages
         for correct in (True, False):
             with self.subTest(correct=correct), tempfile.TemporaryDirectory() as directory:
                 host = Host()
                 request = diplomacy_messages.set_pending(host.nation_data, "Member", "Leader", "TRADE", turns=1)
-                move = self.player_data("Leader", host)
-                move["nation_data"] = copy.deepcopy(move["nation_data"])
-                move["nation_data"]["diplo_responses"] = {"Member": {
-                    "action": "TRADE", "verdict": "ACCEPT", "message": "",
-                    "request_id": request["request_id"] if correct else "cancelled-request"}}
+                reply = {"action": "TRADE", "verdict": "ACCEPT", "message": "",
+                         "request_id": request["request_id"] if correct else "cancelled-request"}
+                move = self.player_data(host, player_intents=[
+                    {"type": "country_diplomacy", "responses": {"Member": reply}}])
                 before = copy.deepcopy(host.nation_data)
                 path = self.write_move(directory, "reply.gd5move", "Leader", move)
-                result = self.import_moves(host, [path], accept_stat_mismatches=True)
+                result = self.import_moves(host, [path])
                 self.assertEqual(result["loaded"], int(correct))
                 if not correct:
                     self.assertEqual(host.nation_data, before)
@@ -439,12 +402,15 @@ class TournamentMoveTests(unittest.TestCase):
         host = Host()
         paid = {"unit_type": "Retired fixture unit", "days_remaining": 2 * c.DEFAULT_DAYS_PER_TURN,
                 "refund": {"cost_materials": 7}, "custom_field": {"keep": True}}
-        # The v46 move keeps the day countdown. Loading already converted the host's own queue.
+        # The older intent stores days. The host's loaded queue already uses turns.
         converted = {key: value for key, value in paid.items() if key != "days_remaining"}
         converted["turns_remaining"] = 2
         host.map_data = {"home": {"id": 1, "json_key": "P1", "owner": "Leader", "units": [],
                                   "unit_queue": [copy.deepcopy(converted)]}}
-        move = self.v46_move("Leader", host, provinces={"P1": {"unit_queue": [copy.deepcopy(paid)]}})
+        host.id_to_province = {1: host.map_data["home"]}
+        command = {"type": "province_queue", "province_id": 1, "queue": "unit_queue", "items": [copy.deepcopy(paid)]}
+        move = self.previous_release_move(host, player_intents=[command],
+                                          provinces={"P1": {"unit_queue": [paid]}})
         before = copy.deepcopy(host.nation_data["Leader"])
         with tempfile.TemporaryDirectory() as directory:
             path = self.write_move(directory, "paid.gd5move", "Leader", move)
@@ -454,67 +420,6 @@ class TournamentMoveTests(unittest.TestCase):
         for resource in c.ECON_RESOURCE_KEYS:
             self.assertEqual(host.nation_data["Leader"][resource], before[resource])
 
-    def test_snapshot_units_take_the_host_library_stats_before_review(self):
-        """A snapshot from an older release holds that release's unit statistics."""
-        from tests.research_fixtures import fixture_metadata
-        library = {"Fixture soldier": {"metadata": fixture_metadata(level=0), "health": 30,
-                                       "attack": 5, "defense": 4, "speed": 2}}
-        host = Host()
-        # The host's load already applied the library. Health keeps its fraction.
-        current = {"unit_id": "soldier", "owner": "Leader", "type": "Fixture soldier",
-                   "health": 15, "max_health": 30, "attack": 5, "defense": 4, "speed": 2,
-                   "naval_unit": False, "level": 0}
-        host.map_data = {"home": {"id": 1, "json_key": "P1", "owner": "Leader", "units": [current]}}
-        older = dict(current, health=10, max_health=20, attack=9, defense=8, speed=1)
-        move = self.v46_move("Leader", host, unit_snapshot=True, provinces={"P1": {"units": [older]}})
-        with mock.patch.object(queries, "get_unit_library", return_value=library), \
-                tempfile.TemporaryDirectory() as directory:
-            path = self.write_move(directory, "older.gd5move", "Leader", move)
-            summary = self.import_moves(host, [path], accept_older_versions=True)
-        self.assertEqual(summary["loaded"], 1, summary["rejections"])
-        self.assertEqual(summary["overridden"], 0)
-        self.assertEqual(host.map_data["home"]["units"], [current])
-
-    def test_snapshot_drops_and_refunds_a_new_order_that_current_rules_refuse(self):
-        host = Host()
-        host.map_data = {"home": {"id": 1, "json_key": "P1", "owner": "Leader", "cores": ["Leader"],
-                                  "units": [], "unit_queue": []}}
-        refused = {"unit_type": "Retired fixture unit", "turns_remaining": 1,
-                   "refund": {"cost_materials": 7}}
-        move = self.v46_move("Leader", host, provinces={"P1": {"unit_queue": [refused]}})
-        paid_balance = move["nation_data"]["materials"]
-        with tempfile.TemporaryDirectory() as directory:
-            path = self.write_move(directory, "refused.gd5move", "Leader", move)
-            held = self.import_moves(host, [path], accept_older_versions=True)
-            self.assertEqual(held["rejections"][0]["override"], "stats")
-            self.assertIn("Retired fixture unit", held["rejections"][0]["reason"])
-            summary = self.import_moves(host, [path], accept_older_versions=True,
-                                        accept_stat_mismatches=True)
-        self.assertEqual(summary["loaded"], 1, summary["rejections"])
-        self.assertEqual(host.map_data["home"]["unit_queue"], [])
-        self.assertEqual(host.nation_data["Leader"]["materials"], paid_balance + 7)
-
-    def test_older_reply_actions_bind_to_the_host_request_and_keep_travelling_requests(self):
-        from map_logic.diplomacy import diplomacy_messages
-        for reply in ({"action": "ACCEPT_TRADE", "message": "Reply"},
-                      {"action": "REJECT_TRADE", "message": "Reply"}):
-            with self.subTest(reply=reply), tempfile.TemporaryDirectory() as directory:
-                host = Host()
-                incoming = diplomacy_messages.set_pending(host.nation_data, "Member", "Leader", "TRADE", turns=1)
-                outgoing = diplomacy_messages.set_pending(host.nation_data, "Leader", "Outsider", "TRADE", turns=1)
-                move = self.v46_move("Leader", host)
-                move["nation_data"] = copy.deepcopy(move["nation_data"])
-                move["nation_data"]["pending_diplomacy"] = {"Member": reply, "Outsider": "TRADE"}
-                before = copy.deepcopy(host.nation_data)
-                path = self.write_move(directory, "older-reply.gd5move", "Leader", move)
-                result = self.import_moves(host, [path], accept_older_versions=True)
-                self.assertEqual(result["loaded"], 1, result["rejections"])
-                response = host.nation_data["Leader"]["diplo_responses"]["Member"]
-                self.assertEqual(response["request_id"], incoming["request_id"])
-                self.assertEqual(response["verdict"], reply["action"].split("_")[0])
-                self.assertEqual(host.nation_data["Leader"]["pending_diplomacy"]["Outsider"], outgoing)
-                self.assertEqual(host.nation_data["Member"], before["Member"])
-
     def test_ratification_defaults_keep_the_host_round_and_reject_explicit_stale_ids(self):
         for answer in (None, {"verdict": "RATIFY"}, {"verdict": "RATIFY", "treaty_id": "expired"}):
             with self.subTest(answer=answer), tempfile.TemporaryDirectory() as directory:
@@ -522,10 +427,8 @@ class TournamentMoveTests(unittest.TestCase):
                 asked = {"treaty_id": "current", "signatory": "Member", "opponent": "Outsider",
                          "turns": 1, "deal": {"fixture": "authoritative"}}
                 host.nation_data["Leader"]["pending_ratification"] = copy.deepcopy(asked)
-                move = self.player_data("Leader", host)
-                move["nation_data"].pop("pending_ratification")
-                if answer is not None:
-                    move["nation_data"]["pending_ratification"] = answer
+                intents = [{"type": "ratification_response", **answer}] if answer is not None else []
+                move = self.player_data(host, player_intents=intents)
                 before = copy.deepcopy(host.nation_data)
                 path = self.write_move(directory, "ratification.gd5move", "Leader", move)
                 result = self.import_moves(host, [path])
@@ -540,10 +443,10 @@ class TournamentMoveTests(unittest.TestCase):
     def test_imported_conscription_changes_only_the_submitting_countrys_damage_bonus(self):
         host = Host()
         host.nation_data["Member"]["conscription_slider"] = 0.5
-        move = self.player_data("Leader", host)
-        move["nation_data"]["conscription_slider"] = 0.25
+        command = {"type": "country_preferences", "conscription_slider": 0.25}
+        move = self.player_data(host, player_intents=[command])
         before_member = copy.deepcopy(host.nation_data["Member"])
-        expected = queries.get_conscription_damage_bonus(move["nation_data"])
+        expected = queries.get_conscription_damage_bonus(command)
         with tempfile.TemporaryDirectory() as directory:
             path = self.write_move(directory, "conscription.gd5move", "Leader", move)
             result = self.import_moves(host, [path])
@@ -554,8 +457,8 @@ class TournamentMoveTests(unittest.TestCase):
 
     def test_older_move_cannot_restore_the_removed_direct_alliance_field(self):
         host = Host()
-        move = self.v46_move("Leader", host)
-        move["nation_data"]["allied_with"] = ["Outsider"]
+        projection = dict(host.nation_data["Leader"], allied_with=["Outsider"])
+        move = self.previous_release_move(host, nation_data=projection)
         with tempfile.TemporaryDirectory() as directory:
             path = self.write_move(directory, "older-country.gd5move", "Leader", move)
             result = self.import_moves(host, [path], accept_older_versions=True)
@@ -577,95 +480,43 @@ class TournamentMoveTests(unittest.TestCase):
                 with open(path, "w") as file:
                     file.write(payload)
                 paths.append(path)
-            summary = self.import_moves(host, paths, accept_stat_mismatches=True)
+            summary = self.import_moves(host, paths)
         self.assertEqual(summary["rejected"], len(paths))
         self.assertEqual([item["file_path"] for item in summary["rejections"]], paths)
         self.assertTrue(all(item["reason"] and not item["overridable"] for item in summary["rejections"]))
         self.assertEqual(summary["loaded"], 0)
         self.assertEqual(host.submitted_moves, set())
 
-    def test_stat_mismatch_requires_explicit_acceptance_without_partial_changes(self):
-        host = Host()
-        move = self.stat_move(host)
-        move["faction_renames"] = [{"old_name": "Old Pact", "new_name": "New Pact"}]
-        before = copy.deepcopy((host.nation_data, host.map_data))
-        with tempfile.TemporaryDirectory() as directory:
-            path = self.write_move(directory, "stats.gd5move", "Leader", move)
-            rejected = self.import_moves(host, [path])
-            self.assertEqual(rejected["rejected"], 1)
-            self.assertTrue(rejected["rejections"][0]["overridable"])
-            self.assertIn("attack", rejected["rejections"][0]["reason"])
-            self.assertEqual((host.nation_data, host.map_data), before)
-            self.assertEqual(host.submitted_moves, set())
-            self.assertEqual(host.syncs, 0)
-            accepted = self.import_moves(host, [path], accept_stat_mismatches=True)
-        self.assertEqual(accepted["loaded"], 1)
-        self.assertEqual(accepted["overridden"], 1)
-        self.assertEqual(host.map_data["home"]["units"][0]["attack"], move["provinces"]["P1"]["units"][0]["attack"])
-        self.assertEqual(host.nation_data["Member"]["faction"], "New Pact")
-
-    def test_stat_override_never_bypasses_hard_failures(self):
-        from map_logic import politics
-
-        def invalid_policy(move):
-            move["nation_data"][politics.POLICY_KEY] = {
-                "research_subsidies": {"status": politics.POLICY_ACTIVE}}
-
-        mutations = {
-            "wrong turn": lambda move: move.update(tournament_turn=Time.total_turns - 1),
-            "wrong session": lambda move: move.update(tournament_session="another-session"),
-            "empty country": lambda move: move.update(nation_data={}),
-            "missing section": lambda move: move.pop("provinces"),
-            "malformed province": lambda move: move["provinces"].update(P1=[]),
-            "province list": lambda move: move.update(provinces=[{}]),
-            "null provinces": lambda move: move.update(provinces=None),
-            "null releases": lambda move: move.update(release_subjects=None),
-            "country list": lambda move: move.update(nation_data=[]),
-            "null research queue": lambda move: move["nation_data"].update(research_queue=None),
-            "broken research entry": lambda move: move["nation_data"].update(research_queue=[None]),
-            "null pending diplomacy": lambda move: move["nation_data"].update(pending_diplomacy=None),
-            "null responses": lambda move: move["nation_data"].update(diplo_responses=None),
-            "null inbox": lambda move: move["nation_data"].update(inbox=None),
-            "null scripted events": lambda move: move["nation_data"].update(scripted_events=None),
-            "broken scripted actions": lambda move: move["nation_data"].update(scripted_events=[{"actions": 7}]),
-            "null release queue": lambda move: move["nation_data"].update(release_puppet_queue=None),
-            "null units": lambda move: move["provinces"]["P1"].update(units=None),
-            "null production queue": lambda move: move["provinces"]["P1"].update(unit_queue=None),
-            "null deployment queue": lambda move: move["provinces"]["P1"].update(deployment_queue=None),
-            "broken deployment entry": lambda move: move["provinces"]["P1"].update(deployment_queue=[None]),
-            "unknown province": lambda move: move["provinces"].update(missing={}),
-            "foreign unit": lambda move: move["provinces"]["P1"]["units"][0].update(owner="Member"),
-            "broken stat": lambda move: move["provinces"]["P1"]["units"][0].update(attack="bad"),
-            "nonfinite stat": lambda move: move["provinces"]["P1"]["units"][0].update(attack=float("nan")),
-            "foreign aircraft": lambda move: move.update(aircraft_orders=[{"unit_id": "missing"}]),
-            "invalid policy": invalid_policy,
-        }
-        for name, mutate in mutations.items():
-            with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
+    def test_snapshot_formats_are_rejected_without_conversion_or_partial_changes(self):
+        for shape in ("country_only", "v46_snapshot", "current_stamp"):
+            with self.subTest(shape=shape), tempfile.TemporaryDirectory() as directory:
                 host = Host()
-                move = self.stat_move(host)
-                move["faction_renames"] = [{"old_name": "Old Pact", "new_name": "New Pact"}]
-                mutate(move)
+                move = self.previous_release_move(host)
+                del move["player_intents"]
+                country = dict(host.nation_data["Leader"], faction="Untrusted")
+                if shape == "country_only":
+                    move = country
+                else:
+                    move.update(nation_data=country, provinces={})
+                    if shape == "current_stamp":
+                        move["game_version"] = c.GAME_VERSION
                 before = copy.deepcopy((host.nation_data, host.map_data))
-                path = self.write_move(directory, "bad.gd5move", "Leader", move)
-                summary = self.import_moves(host, [path], accept_stat_mismatches=True)
-                self.assertEqual(summary["loaded"], 0)
-                self.assertEqual(summary["rejected"], 1)
-                self.assertFalse(summary["rejections"][0]["overridable"])
-                self.assertTrue(summary["rejections"][0]["reason"])
-                self.assertEqual((host.nation_data, host.map_data), before)
-                self.assertEqual(host.submitted_moves, set())
+                path = self.write_move(directory, "snapshot.gd5move", "Leader", move)
+                for approve in (False, True):
+                    summary = self.import_moves(host, [path], accept_older_versions=approve)
+                    self.assertEqual(summary["loaded"], 0)
+                    self.assertFalse(summary["rejections"][0]["overridable"])
+                    self.assertIn("Snapshot-format", summary["rejections"][0]["reason"])
+                    self.assertEqual((host.nation_data, host.map_data), before)
+                    self.assertEqual(host.submitted_moves, set())
 
     def test_malformed_move_does_not_stop_a_valid_move_in_the_same_batch(self):
-        for intents in (False, True):
-            with self.subTest(intents=intents), tempfile.TemporaryDirectory() as directory:
+        for payload in ({"provinces": [{}]}, {"player_intents": None}):
+            with self.subTest(payload=payload), tempfile.TemporaryDirectory() as directory:
                 host = Host()
                 before = copy.deepcopy(host.nation_data["Leader"])
-                bad = self.player_data("Leader", host, provinces=[{}])
-                good = self.player_data("Member", host)
-                if intents:
-                    bad["player_intents"] = []
-                    good["player_intents"] = []
+                bad = self.player_data(host, **payload)
+                good = self.player_data(host)
                 paths = [self.write_move(directory, "bad.gd5move", "Leader", bad),
                          self.write_move(directory, "good.gd5move", "Member", good)]
                 summary = self.import_moves(host, paths)
@@ -674,62 +525,57 @@ class TournamentMoveTests(unittest.TestCase):
                 self.assertEqual(host.nation_data["Leader"], before)
                 self.assertEqual(host.submitted_moves, {"Member"})
 
-    def test_malformed_known_fields_reject_one_move_and_continue_the_batch(self):
+    def test_malformed_known_fields_reject_one_older_intent_move_and_continue_the_batch(self):
         for field, country, province in malformed_records():
-            for intents in (False, True):
-                with self.subTest(field=field, intents=intents), tempfile.TemporaryDirectory() as directory:
-                    host = Host()
-                    before_country = copy.deepcopy(host.nation_data["Leader"])
-                    before_map = copy.deepcopy(host.map_data)
-                    bad = self.player_data("Leader", host, provinces={"P1": copy.deepcopy(province)})
-                    bad["nation_data"].update(copy.deepcopy(country))
-                    good = self.player_data("Member", host)
-                    if intents:
-                        bad["player_intents"] = []
-                        good["player_intents"] = []
-                    paths = [self.write_move(directory, "bad.gd5move", "Leader", bad),
-                             self.write_move(directory, "good.gd5move", "Member", good)]
-                    result = self.import_moves(host, paths, accept_stat_mismatches=True)
-                    self.assertEqual((result["rejected"], result["loaded_countries"]), (1, ["Member"]), result)
-                    self.assertIn(field, result["rejections"][0]["reason"])
-                    self.assertFalse(result["rejections"][0]["overridable"])
-                    self.assertEqual(host.nation_data["Leader"], before_country)
-                    self.assertEqual(host.map_data, before_map)
-                    self.assertEqual(host.submitted_moves, {"Member"})
+            with self.subTest(field=field), tempfile.TemporaryDirectory() as directory:
+                host = Host()
+                before_country = copy.deepcopy(host.nation_data["Leader"])
+                before_map = copy.deepcopy(host.map_data)
+                bad = self.previous_release_move(host, provinces={"P1": copy.deepcopy(province)},
+                                                 nation_data={**host.nation_data["Leader"], **copy.deepcopy(country)})
+                good = self.player_data(host)
+                paths = [self.write_move(directory, "bad.gd5move", "Leader", bad),
+                         self.write_move(directory, "good.gd5move", "Member", good)]
+                result = self.import_moves(host, paths, accept_older_versions=True)
+                self.assertEqual((result["rejected"], result["loaded_countries"]), (1, ["Member"]), result)
+                self.assertIn(field, result["rejections"][0]["reason"])
+                self.assertFalse(result["rejections"][0]["overridable"])
+                self.assertEqual(host.nation_data["Leader"], before_country)
+                self.assertEqual(host.map_data, before_map)
+                self.assertEqual(host.submitted_moves, {"Member"})
 
     def test_duplicate_during_host_review_cannot_be_overridden(self):
         host = Host()
         with tempfile.TemporaryDirectory() as directory:
-            path = self.write_move(directory, "move.gd5move", "Leader", self.player_data("Leader", host))
+            path = self.write_move(directory, "move.gd5move", "Leader", self.player_data(host))
             initial = self.import_moves(host, [path])
             self.assertEqual(initial["loaded"], 1)
-            summary = self.import_moves(host, [path], accept_stat_mismatches=True,
+            summary = self.import_moves(host, [path], accept_older_versions=True,
                                         loaded_countries=initial["loaded_countries"])
         self.assertEqual(summary["rejected"], 1)
         self.assertFalse(summary["rejections"][0]["overridable"])
         self.assertIn("already", summary["rejections"][0]["reason"])
 
-    def test_administrative_duration_can_be_overridden_but_disabled_actions_cannot(self):
-        order, (setting, _) = next(iter(queries.ADMINISTRATIVE_ACTIONS.items()))
+    def test_host_sets_administrative_duration_and_rejects_disabled_orders(self):
+        setting = queries.ADMINISTRATIVE_ACTIONS["CORE"][0]
         for disabled in (False, True):
             with self.subTest(disabled=disabled), tempfile.TemporaryDirectory() as directory:
-                host = Host()
-                host.map_data = {"home": {"id": 1, "json_key": "P1", "owner": "Leader", "units": []}}
+                host = self.coring_host()
                 host.scenario_settings = {"administrative_turn_overrides": {setting: 7},
                                           "administrative_disabled": [setting] if disabled else [],
                                           "use_default_other": False}
-                cost = queries.get_core_cost("Leader", host.map_data, host.scenario_settings)
-                for resource in c.ECON_RESOURCE_KEYS:
-                    host.nation_data["Leader"][resource] = cost[f"cost_{resource}"]
-                move = self.player_data("Leader", host, provinces={"P1": {"building_queue": [
-                    {"order_type": order, "turns_remaining": 8}]}})
+                command = {"type": "province_queue", "province_id": 2, "queue": "building_queue",
+                           "items": [{"order_type": "CORE", "turns_remaining": 8}]}
+                move = self.player_data(host, player_intents=[command])
                 path = self.write_move(directory, "duration.gd5move", "Leader", move)
-                rejected = self.import_moves(host, [path])
-                self.assertEqual(rejected["rejections"][0]["overridable"], not disabled)
-                accepted = self.import_moves(host, [path], accept_stat_mismatches=True)
-                self.assertEqual(accepted["loaded"], int(not disabled))
-                if not disabled:
-                    self.assertEqual(host.map_data["home"]["building_queue"][0]["turns_remaining"], 8)
+                summary = self.import_moves(host, [path])
+                self.assertEqual(summary["loaded"], int(not disabled), summary["rejections"])
+                queue = host.id_to_province[2]["building_queue"]
+                if disabled:
+                    self.assertFalse(summary["rejections"][0]["overridable"])
+                    self.assertEqual(queue, [])
+                else:
+                    self.assertEqual(queue[0]["turns_remaining"], 7)
 
     def test_host_ui_reviews_each_file_and_waits_for_acceptance(self):
         from ui import dialogs 
@@ -738,12 +584,12 @@ class TournamentMoveTests(unittest.TestCase):
         for choice in (False, True):
             with self.subTest(choice=choice), tempfile.TemporaryDirectory() as directory:
                 host = Host()
-                move = self.stat_move(host)
+                move = self.previous_release_move(host)
                 host.multiplayer_host_mode = True
                 host.multiplayer_keys_dict = self.keys
                 host.show_feedback = mock.Mock()
                 host.refresh_all_maps = mock.Mock()
-                move_path = self.write_move(directory, "stats.gd5move", "Leader", move)
+                move_path = self.write_move(directory, "older.gd5move", "Leader", move)
                 missing_path = os.path.join(directory, "missing.gd5move")
                 completed = mock.Mock()
                 with mock.patch.object(pickers, "open_file_browser") as browser, \
@@ -755,9 +601,9 @@ class TournamentMoveTests(unittest.TestCase):
                     self.assertIn("missing.gd5move", message.call_args.args[1])
                     ask.assert_not_called()
                     message.call_args.kwargs["on_result"]()
-                    self.assertIn("stats.gd5move", message.call_args.args[1])
+                    self.assertIn("older.gd5move", message.call_args.args[1])
                     self.assertIn("Leader", message.call_args.args[1])
-                    self.assertIn("attack", message.call_args.args[1])
+                    self.assertIn("host can convert", message.call_args.args[1])
                     message.call_args.kwargs["on_result"]()
                     completed.assert_not_called()
                     ask.call_args.kwargs["on_result"](choice)
@@ -772,12 +618,12 @@ class TournamentMoveTests(unittest.TestCase):
         for change in ("turn", "permission"):
             with self.subTest(change=change), tempfile.TemporaryDirectory() as directory:
                 host = Host()
-                move = self.stat_move(host)
+                move = self.previous_release_move(host)
                 host.time_manager = Time()
                 host.multiplayer_host_mode = True
                 host.multiplayer_keys_dict = self.keys
                 host.show_feedback = mock.Mock()
-                path = self.write_move(directory, "stats.gd5move", "Leader", move)
+                path = self.write_move(directory, "older.gd5move", "Leader", move)
                 completed = mock.Mock()
                 with mock.patch.object(pickers, "open_file_browser") as browser, \
                         mock.patch.object(dialogs, "show_message") as message, \
@@ -810,37 +656,19 @@ class TournamentMoveTests(unittest.TestCase):
             browser.assert_not_called()
             completed.assert_called_once_with(False)
 
-    def test_unchanged_stats_legacy_units_and_changed_forms_need_no_override(self):
-        for variation in ("unchanged", "legacy", "form"):
-            with self.subTest(variation=variation), tempfile.TemporaryDirectory() as directory:
-                host = Host()
-                move = self.stat_move(host)
-                unit = move["provinces"]["P1"]["units"][0]
-                if variation == "unchanged":
-                    unit["attack"] = host.map_data["home"]["units"][0]["attack"]
-                elif variation == "legacy":
-                    unit.pop("unit_id")
-                else:
-                    unit["type"] = "Another test ground unit"
-                path = self.write_move(directory, "ordinary.gd5move", "Leader", move)
-                summary = self.import_moves(host, [path])
-                self.assertEqual(summary["loaded"], 1)
-                self.assertEqual(summary["overridden"], 0)
-                self.assertEqual(summary["rejections"], [])
-
-    def test_import_discards_reserved_unassigned_entry_without_assigning_its_units(self):
+    def test_import_rejects_reserved_unassigned_entry_without_assigning_its_units(self):
         host = Host()
         unit = {"owner": "Leader", "type": "Infantry", "unit_id": "owned"}
         host.map_data = {"home": {"id": 1, "owner": "Leader", "units": [unit]}}
-        player_data = self.player_data("Leader", host)
-        player_data["nation_data"]["armies"] = [{
+        command = {"type": "army_roster", "armies": [{
             "id": c.UNASSIGNED_ARMY_ID, "name": "Changed", "unit_ids": ["owned"],
-            "symbol": "Star", "defense_area": [1]}]
+            "symbol": "Star", "defense_area": [1]}]}
+        player_data = self.player_data(host, player_intents=[command])
         with tempfile.TemporaryDirectory() as directory:
             path = self.write_move(directory, "leader.gd5move", "Leader", player_data)
             summary = self.import_moves(host, [path])
-        self.assertEqual(summary["loaded"], 1)
-        self.assertEqual(host.nation_data["Leader"]["armies"], [])
+        self.assertEqual(summary["loaded"], 0)
+        self.assertNotIn("armies", host.nation_data["Leader"])
         self.assertEqual(queries.get_unassigned_army(
             "Leader", host.nation_data, host.map_data)["unit_ids"], ["owned"])
 
@@ -850,8 +678,9 @@ class TournamentMoveTests(unittest.TestCase):
                 host = Host()
                 host.map_data = {"land": {"id": 1, "owner": "Leader", "cores": ["Outsider"],
                                           "terrain": "plains", "units": []}}
-                player_data = self.player_data("Leader", host, release_subjects=[
-                    {"core_nation": "Outsider", "keep_cores": False, "release_type": release_type, "turns_left": 0}])
+                releases = [{"core_nation": "Outsider", "keep_cores": False, "release_type": release_type, "turns_left": 0}]
+                player_data = self.player_data(host, player_intents=[
+                    {"type": "puppet_draft", "puppet_order": ["Subject"], "release_subjects": releases}])
                 with tempfile.TemporaryDirectory() as directory:
                     path = self.write_move(directory, "leader.gd5move", "Leader", player_data)
                     summary = self.import_moves(host, [path])
@@ -870,7 +699,9 @@ class TournamentMoveTests(unittest.TestCase):
                 host = Host()
                 host.map_data = {"land": {"id": 1, "owner": "Leader", "cores": ["Outsider"],
                                           "terrain": "plains", "units": []}}
-                player_data = self.player_data(country, host, release_subjects=entries)
+                command = {"type": "puppet_draft", "puppet_order": host.nation_data[country]["puppets"],
+                           "release_subjects": entries}
+                player_data = self.player_data(host, player_intents=[command])
                 if stale:
                     player_data["tournament_turn"] -= 1
                 with tempfile.TemporaryDirectory() as directory:
@@ -880,49 +711,15 @@ class TournamentMoveTests(unittest.TestCase):
                 self.assertEqual(summary["loaded"], 0)
                 self.assertNotIn("release_puppet_queue", host.nation_data[country])
 
-    def test_v46_release_requests_default_to_integrated(self):
-        host = Host()
-        host.map_data = {"land": {"id": 1, "owner": "Leader", "cores": ["Outsider"],
-                                  "terrain": "plains", "units": []}}
-        player_data = self.v46_move("Leader", host)
-        player_data["release_subjects"] = [{"core_nation": "Outsider", "keep_cores": False}]
-        with tempfile.TemporaryDirectory() as directory:
-            path = self.write_move(directory, "move.gd5move", "Leader", player_data)
-            summary = self.import_moves(host, [path], accept_older_versions=True)
-        self.assertEqual(summary["loaded"], 1)
-        release = host.nation_data["Leader"]["release_puppet_queue"][0]
-        self.assertEqual(release["release_type"], c.PUPPET_TYPE_INTEGRATED)
-        self.assertEqual(release["turns_left"], 1)
-
-    def previous_release_move(self, country_id, host):
+    def previous_release_move(self, host, **extra):
         from data import migrations
-        return self.v46_move(country_id, host, game_version=f"v{migrations.CURRENT_VERSION - 1}")
-
-    def test_converted_snapshot_drops_a_project_at_the_active_research_cap(self):
-        host = Host()
-        host.runtime_rules = RuntimeRules(libraries={
-            "tech_tree": {"fixture_tech": {"max_lvl": 2, "req": {}, "years": [1800, 1850]}},
-            "unit_library": {}, "building_library": {}})
-        host.nation_data["Leader"]["research"] = {"fixture_tech": 2}
-        move = self.previous_release_move("Leader", host)
-        move["nation_data"].update(
-            research_queue=[{"tech_name": "fixture_tech", "points_remaining": 13}],
-            research_progress={"fixture_tech": 13}, current_research="fixture_tech")
-        with tempfile.TemporaryDirectory() as directory, \
-                mock.patch("data.migrations.conversions.equipment_stage_aliases", return_value={}):
-            path = self.write_move(directory, "at-cap.gd5move", "Leader", move)
-            summary = self.import_moves(host, [path], accept_older_versions=True)
-        self.assertEqual(summary["loaded"], 1, summary["rejections"])
-        country = host.nation_data["Leader"]
-        self.assertEqual(country["research"], {"fixture_tech": 2})
-        self.assertEqual(country["research_queue"], [])
-        self.assertEqual(country["research_progress"], {})
-        self.assertIsNone(country["current_research"])
+        return self.player_data(host, game_version=f"v{migrations.CURRENT_VERSION - 1}", **extra)
 
     def test_move_from_this_release_needs_no_conversion_or_host_review(self):
         host = Host()
-        move = self.v46_move("Leader", host, game_version=c.GAME_VERSION, release_subjects=[
-            {"core_nation": "Outsider", "release_type": c.PUPPET_TYPE_INTEGRATED}])
+        command = {"type": "puppet_draft", "puppet_order": ["Subject"],
+                   "release_subjects": [{"core_nation": "Outsider", "release_type": c.PUPPET_TYPE_INTEGRATED}]}
+        move = self.player_data(host, player_intents=[command])
         host.map_data = {"land": {"id": 1, "owner": "Leader", "cores": ["Outsider"],
                                   "terrain": "plains", "units": []}}
         with tempfile.TemporaryDirectory() as directory:
@@ -935,10 +732,11 @@ class TournamentMoveTests(unittest.TestCase):
 
     def test_older_move_waits_for_host_conversion_then_validates_normally(self):
         host = Host()
-        move = self.previous_release_move("Leader", host)
-        move["nation_data"]["conscription_slider"] = 0.25
+        command = {"type": "country_preferences", "conscription_slider": 0.25}
+        move = self.previous_release_move(host, player_intents=[command],
+                                          nation_data=dict(host.nation_data["Leader"], conscription_slider=0.25))
         with tempfile.TemporaryDirectory() as directory:
-            path = self.write_move(directory, "v46.gd5move", "Leader", move)
+            path = self.write_move(directory, "older.gd5move", "Leader", move)
             before = copy.deepcopy(host.nation_data)
             held = self.import_moves(host, [path])
             self.assertEqual(held["loaded"], 0)
@@ -951,9 +749,9 @@ class TournamentMoveTests(unittest.TestCase):
 
     def test_converted_move_still_fails_normal_validation(self):
         host = Host()
-        move = self.v46_move("Leader", host, tournament_turn=host.time_manager.total_turns + 1)
+        move = self.previous_release_move(host, tournament_turn=host.time_manager.total_turns + 1)
         with tempfile.TemporaryDirectory() as directory:
-            path = self.write_move(directory, "v46.gd5move", "Leader", move)
+            path = self.write_move(directory, "older.gd5move", "Leader", move)
             before = copy.deepcopy(host.nation_data)
             summary = self.import_moves(host, [path], accept_older_versions=True)
         self.assertEqual(summary["loaded"], 0)
@@ -964,7 +762,7 @@ class TournamentMoveTests(unittest.TestCase):
         from data import migrations
         with tempfile.TemporaryDirectory() as directory:
             host = Host()
-            move = self.player_data("Leader", host, game_version=f"v{migrations.CURRENT_VERSION + 1}")
+            move = self.player_data(host, game_version=f"v{migrations.CURRENT_VERSION + 1}")
             path = self.write_move(directory, "move.gd5move", "Leader", move)
             before = copy.deepcopy(host.nation_data)
             summary = self.import_moves(host, [path], accept_older_versions=True)
@@ -972,27 +770,6 @@ class TournamentMoveTests(unittest.TestCase):
         self.assertFalse(summary["rejections"][0]["overridable"])
         self.assertIn("update", summary["rejections"][0]["reason"].lower())
         self.assertEqual(host.nation_data, before)
-
-    def test_moves_from_before_v46_convert_after_host_approval(self):
-        """Moves older than v46 lack later sections, or hold only the country record."""
-        for shape in ("missing_sections", "country_only"):
-            with self.subTest(shape=shape), tempfile.TemporaryDirectory() as directory:
-                host = Host()
-                move = self.v46_move("Leader", host)
-                move["nation_data"]["conscription_slider"] = 0.25
-                for section in ("aircraft_orders", "release_subjects"):
-                    move.pop(section)
-                if shape == "country_only":
-                    move = {**move.pop("nation_data"),
-                            **{key: move[key] for key in ("tournament_session", "tournament_turn")}}
-                path = self.write_move(directory, "older.gd5move", "Leader", move)
-                held = self.import_moves(host, [path])
-                self.assertEqual(held["rejections"][0]["override"], "version")
-                summary = self.import_moves(host, [path], accept_older_versions=True)
-                self.assertEqual(summary["loaded"], 1, summary["rejections"])
-                self.assertEqual(summary["converted"], 1)
-                self.assertEqual(host.nation_data["Leader"]["conscription_slider"], 0.25)
-                self.assertNotIn("tournament_turn", host.nation_data["Leader"])
 
     def test_host_ui_converts_an_older_move_only_after_approval(self):
         from ui import dialogs 
@@ -1005,7 +782,7 @@ class TournamentMoveTests(unittest.TestCase):
                 host.multiplayer_keys_dict = self.keys
                 host.show_feedback = mock.Mock()
                 host.refresh_all_maps = mock.Mock()
-                path = self.write_move(directory, "older.gd5move", "Leader", self.previous_release_move("Leader", host))
+                path = self.write_move(directory, "older.gd5move", "Leader", self.previous_release_move(host))
                 completed = mock.Mock()
                 with mock.patch.object(pickers, "open_file_browser") as browser, \
                         mock.patch.object(dialogs, "show_message") as message, \
@@ -1033,12 +810,12 @@ class TournamentMoveTests(unittest.TestCase):
     def test_faction_rename_keeps_every_member_together(self):
         host = Host()
         leader_move = self.player_data(
-            "Leader", host,
-            faction_renames=[{"old_name": "Old Pact", "new_name": "New Pact"}],
+            host,
+            player_intents=[{"type": "faction_rename", "name": "New Pact"}],
         )
         # This is what an ordinary member submitted from the still-old tournament
         # snapshot.  It must not undo the leader's rename when imported second.
-        member_move = self.player_data("Member", host)
+        member_move = self.player_data(host)
 
         with tempfile.TemporaryDirectory() as directory:
             paths = [
@@ -1048,7 +825,6 @@ class TournamentMoveTests(unittest.TestCase):
             summary = self.import_moves(host, paths)
 
         self.assertEqual(summary["loaded"], 2)
-        self.assertEqual(summary["faction_renames"], 1)
         self.assertEqual(host.nation_data["Leader"]["faction"], "New Pact")
         self.assertEqual(host.nation_data["Member"]["faction"], "New Pact")
         self.assertTrue(host.nation_data["Leader"]["is_faction_leader"])
@@ -1062,16 +838,16 @@ class TournamentMoveTests(unittest.TestCase):
         for country_id in ("Leader", "Member"):
             with self.subTest(country_id=country_id):
                 host = Host()
-                move = self.player_data(country_id, host)
-                # A player record cannot grant leadership on the host.
-                move["nation_data"]["is_faction_leader"] = True
-                move["nation_data"]["pending_diplomacy"] = {
+                # A compatibility country record cannot grant leadership on the host.
+                projection = dict(host.nation_data[country_id], is_faction_leader=True)
+                command = {"type": "country_diplomacy", "pending": {
                     "Outsider": {"action": "FACTION_INVITE", "turns": 0,
-                                 "timer": 0, "message": "Please join."}}
+                                 "timer": 0, "message": "Please join."}}}
+                move = self.player_data(host, nation_data=projection, player_intents=[command])
                 with tempfile.TemporaryDirectory() as directory:
                     path = self.write_move(directory, "invitation.gd5move", country_id, move)
                     summary = self.import_moves(host, [path])
-                self.assertEqual(summary["loaded"], 1)
+                self.assertEqual(summary["loaded"], int(country_id == "Leader"), summary["rejections"])
                 game = StubMapScreen(["Leader", "Member", "Outsider"],
                                      human_players=["Leader", "Member", "Outsider"])
                 for nation, data in host.nation_data.items():
@@ -1081,22 +857,6 @@ class TournamentMoveTests(unittest.TestCase):
                 if country_id == "Member":
                     self.assertFalse(game.nation_data[country_id]["is_faction_leader"])
                     self.assertEqual(game.pending_action(country_id, "Outsider"), "")
-
-    def test_legacy_faction_rename_is_repaired_on_import(self):
-        host = Host()
-        # A v46 host without a session key exported moves without session or turn fields.
-        legacy_data = {"nation_data": dict(host.nation_data["Leader"]), "provinces": {},
-                       "aircraft_orders": [], "release_subjects": []}
-        legacy_data["nation_data"]["faction"] = "New Pact"
-
-        with tempfile.TemporaryDirectory() as directory:
-            path = self.write_move(directory, "legacy.gd5move", "Leader", legacy_data)
-            summary = self.import_moves(host, [path], accept_older_versions=True)
-
-        self.assertEqual(summary["loaded"], 1)
-        self.assertEqual(summary["legacy"], 1)
-        self.assertEqual(host.nation_data["Leader"]["faction"], "New Pact")
-        self.assertEqual(host.nation_data["Member"]["faction"], "New Pact")
 
     def test_integrated_puppet_appearance_reaches_the_host(self):
         host = Host()
@@ -1110,24 +870,25 @@ class TournamentMoveTests(unittest.TestCase):
             "color": [1, 2, 3],
         }
         move = self.player_data(
-            "Leader", host,
-            appearance_updates=[{"country_id": "Subject", "appearance": appearance}],
+            host,
+            player_intents=[{"type": "puppet_draft", "puppet_order": ["Subject"],
+                             "appearances": {"Subject": appearance}}],
         )
 
         with tempfile.TemporaryDirectory() as directory:
             path = self.write_move(directory, "appearance.gd5move", "Leader", move)
             summary = self.import_moves(host, [path])
 
-        self.assertEqual(summary["appearance_updates"], 1)
+        self.assertEqual(summary["loaded"], 1, summary["rejections"])
         for key, value in appearance.items():
             self.assertEqual(host.nation_data["Subject"][key], value)
         self.assertEqual(host.nation_colors["Subject"], (1, 2, 3))
 
     def test_rejects_wrong_turn_and_duplicate_submissions(self):
         host = Host()
-        valid = self.player_data("Leader", host)
-        wrong_turn = self.player_data("Member", host, tournament_turn=3)
-        duplicate = self.player_data("Leader", host)
+        valid = self.player_data(host)
+        wrong_turn = self.player_data(host, tournament_turn=3)
+        duplicate = self.player_data(host)
 
         with tempfile.TemporaryDirectory() as directory:
             paths = [
@@ -1203,7 +964,7 @@ class TournamentMoveTests(unittest.TestCase):
         self.assertEqual(summary["loaded"], 1, summary["rejections"])
         self.assertEqual(authority.nation_data["Subject"]["siphon_rates"], puppet["siphons"]["Subject"])
 
-    def test_empty_unit_snapshot_removes_all_player_units(self):
+    def test_empty_compatibility_projection_preserves_host_units(self):
         host = Host()
         host.map_data = {
             (1, 1): {"id": 1, "json_key": "P1", "units": [
@@ -1211,54 +972,49 @@ class TournamentMoveTests(unittest.TestCase):
                 {"owner": "Member", "type": "Infantry"},
             ]},
         }
-        move = self.player_data("Leader", host, unit_snapshot=True)
+        move = self.player_data(host, unit_snapshot=True)
 
         with tempfile.TemporaryDirectory() as directory:
             path = self.write_move(directory, "empty-army.gd5move", "Leader", move)
             summary = self.import_moves(host, [path])
 
         self.assertEqual(summary["loaded"], 1)
-        self.assertEqual(host.map_data[(1, 1)]["units"], [
-            {"owner": "Member", "type": "Infantry"}])
+        self.assertEqual([unit["owner"] for unit in host.map_data[(1, 1)]["units"]], ["Leader", "Member"])
         self.assertEqual(host.syncs, 1)
 
     def test_integrated_puppet_siphons_are_host_validated(self):
-        host = Host()
-        move = self.player_data("Leader", host, puppet_siphon_updates=[{
-            "country_id": "Subject",
-            "siphon_rates": {"manpower": 0.2, "materials": 0.4, "fuel": 0.5},
-        }, {
-            # A controller cannot alter a country it does not integrate.
-            "country_id": "Outsider",
-            "siphon_rates": {"manpower": 1, "materials": 1, "fuel": 1},
-        }])
+        rates = {"manpower": 0.2, "materials": 0.4, "fuel": 0.5}
+        for allowed in (True, False):
+            with self.subTest(allowed=allowed), tempfile.TemporaryDirectory() as directory:
+                host = Host()
+                subject = "Subject" if allowed else "Outsider"
+                command = {"type": "puppet_draft", "puppet_order": ["Subject"], "siphons": {subject: rates}}
+                move = self.player_data(host, player_intents=[command])
+                path = self.write_move(directory, "siphons.gd5move", "Leader", move)
+                summary = self.import_moves(host, [path])
+                self.assertEqual(summary["loaded"], int(allowed), summary["rejections"])
+                self.assertEqual(host.nation_data["Subject"].get("siphon_rates"), rates if allowed else None)
+                self.assertNotIn("siphon_rates", host.nation_data["Outsider"])
 
-        with tempfile.TemporaryDirectory() as directory:
-            path = self.write_move(directory, "siphons.gd5move", "Leader", move)
-            summary = self.import_moves(host, [path])
-
-        self.assertEqual(summary["puppet_siphon_updates"], 1)
-        self.assertEqual(host.nation_data["Subject"]["siphon_rates"], {
-            "manpower": 0.2, "materials": 0.4, "fuel": 0.5})
-        self.assertNotIn("siphon_rates", host.nation_data["Outsider"])
-
-    def test_policy_activation_round_trips_without_trusting_player_timers(self):
-        host = Host()
-        host.nation_data["Leader"][politics.VALUE_KEY] = -3
-        move = self.player_data("Leader", host)
-        move["nation_data"][politics.POLICY_KEY] = {
-            "research_subsidies": {"status": politics.POLICY_ACTIVATING,
-                                   "turns_remaining": 999},
-        }
-
-        with tempfile.TemporaryDirectory() as directory:
-            path = self.write_move(directory, "policy.gd5move", "Leader", move)
-            summary = self.import_moves(host, [path])
-
-        state = politics.policy_state(host.nation_data, "Leader", "research_subsidies")
-        self.assertEqual(summary["loaded"], 1)
-        self.assertEqual(state["status"], politics.POLICY_ACTIVATING)
-        self.assertEqual(state["turns_remaining"], politics.POLICY_ACTIVATION_TURNS)
+    def test_policy_activation_uses_host_timing_and_rejects_submitted_countdowns(self):
+        for inject_countdown in (False, True):
+            with self.subTest(inject_countdown=inject_countdown), tempfile.TemporaryDirectory() as directory:
+                host = Host()
+                host.nation_data["Leader"][politics.VALUE_KEY] = -3
+                requested = {"status": politics.POLICY_ACTIVATING}
+                if inject_countdown:
+                    requested["turns_remaining"] = 999
+                command = {"type": "country_preferences", politics.POLICY_KEY: {"research_subsidies": requested}}
+                move = self.player_data(host, player_intents=[command])
+                path = self.write_move(directory, "policy.gd5move", "Leader", move)
+                summary = self.import_moves(host, [path])
+                state = politics.policy_state(host.nation_data, "Leader", "research_subsidies")
+                self.assertEqual(summary["loaded"], int(not inject_countdown), summary["rejections"])
+                if inject_countdown:
+                    self.assertIsNone(state)
+                else:
+                    self.assertEqual(state["status"], politics.POLICY_ACTIVATING)
+                    self.assertEqual(state["turns_remaining"], politics.POLICY_ACTIVATION_TURNS)
 
     def test_economic_choices_export_changes_only_the_submitting_country(self):
         host = Host()
@@ -1281,36 +1037,28 @@ class TournamentMoveTests(unittest.TestCase):
         self.assertEqual(host.nation_data["Leader"]["research_funding_slider"], 0.37)
         self.assertEqual(host.nation_data["Member"]["research_funding_slider"], 0.15)
 
-    def test_older_snapshots_and_intents_preserve_the_hosts_economic_state(self):
-        for legacy_shape in ("snapshot", "snapshot_with_fields", "intents"):
-            with self.subTest(legacy_shape=legacy_shape), tempfile.TemporaryDirectory() as directory:
-                host = Host()
-                politics.set_economic_value(host.nation_data, "Leader", 4)
-                politics.set_economic_drift(host.nation_data, "Leader", -1)
-                host.nation_data["Leader"]["research_funding_slider"] = 0.2
-                move = self.player_data("Leader", host, game_version="v49")
-                move["nation_data"].pop(politics.ECONOMIC_VALUE_KEY)
-                move["nation_data"].pop(politics.ECONOMIC_DRIFT_KEY)
-                move["nation_data"].pop("research_funding_slider")
-                if legacy_shape == "snapshot_with_fields":
-                    move["nation_data"].update({politics.ECONOMIC_VALUE_KEY: 9, politics.ECONOMIC_DRIFT_KEY: 1,
-                                                "research_funding_slider": 0.95})
-                if legacy_shape == "intents":
-                    move["player_intents"] = [{"type": "country_preferences", "political_drift": 1}]
-                path = self.write_move(directory, "legacy-compass.gd5move", "Leader", move)
-                summary = self.import_moves(host, [path], accept_older_versions=True)
+    def test_older_intents_preserve_the_hosts_economic_state(self):
+        host = Host()
+        politics.set_economic_value(host.nation_data, "Leader", 4)
+        politics.set_economic_drift(host.nation_data, "Leader", -1)
+        host.nation_data["Leader"]["research_funding_slider"] = 0.2
+        command = {"type": "country_preferences", "political_drift": 1}
+        move = self.previous_release_move(host, player_intents=[command])
+        with tempfile.TemporaryDirectory() as directory:
+            path = self.write_move(directory, "older-compass.gd5move", "Leader", move)
+            summary = self.import_moves(host, [path], accept_older_versions=True)
 
-                self.assertEqual(summary["loaded"], 1, summary["rejections"])
-                self.assertEqual(politics.economic_value(host.nation_data, "Leader"), 4)
-                self.assertEqual(politics.economic_drift(host.nation_data, "Leader"), -1)
-                self.assertEqual(host.nation_data["Leader"]["research_funding_slider"], 0.2)
+        self.assertEqual(summary["loaded"], 1, summary["rejections"])
+        self.assertEqual(politics.economic_value(host.nation_data, "Leader"), 4)
+        self.assertEqual(politics.economic_drift(host.nation_data, "Leader"), -1)
+        self.assertEqual(host.nation_data["Leader"]["research_funding_slider"], 0.2)
 
     def test_tournament_rejects_malformed_unauthorized_or_stale_economic_intents(self):
         for failure in ("malformed", "position", "funding", "stale"):
             with self.subTest(failure=failure), tempfile.TemporaryDirectory() as directory:
                 host = Host()
                 preferences = {"type": "country_preferences", politics.ECONOMIC_DRIFT_KEY: 1}
-                move = self.player_data("Leader", host, player_intents=[preferences])
+                move = self.player_data(host, player_intents=[preferences])
                 if failure == "malformed":
                     preferences[politics.ECONOMIC_DRIFT_KEY] = True
                 elif failure == "position":

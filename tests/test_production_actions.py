@@ -7,7 +7,6 @@ from unittest.mock import patch
 import data.constants as c
 from data.state_access import BackendState
 from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError
-from data.migrations.snapshot_moves import _validate_production_projection
 from map_logic.actions import production_actions as actions
 from tests.research_fixtures import fixture_metadata
 
@@ -77,10 +76,6 @@ class ProductionActionTests(unittest.TestCase):
         self.assertEqual((self.context.world.map_data, self.context.world.nation_data), before)
         with self.assertRaisesRegex(RealtimeError, "one projection"):
             driver.validate_draft("A", [commands[0], commands[0]])
-        self.assertEqual((self.context.world.map_data, self.context.world.nation_data), before)
-        with self.assertRaises(ValueError):
-            _validate_production_projection(self.context, "A", {
-                str(number): {"unit_queue": [self.intent]} for number in (1, 2)})
         self.assertEqual((self.context.world.map_data, self.context.world.nation_data), before)
 
     def test_paid_entries_keep_their_progress_and_are_not_charged_twice(self):

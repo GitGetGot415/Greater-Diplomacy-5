@@ -6,7 +6,6 @@ from unittest import mock
 
 from data import queries
 import data.constants as c
-from data.migrations.snapshot_moves import _validate_administrative_orders
 from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError
 from map_logic.ai.ai_construction import _apply_coring_priority
 from tests.stub_map_screen import map_double, sample_map_screen
@@ -73,34 +72,6 @@ class AdministrativeConstructionTests(unittest.TestCase):
             self.settings["administrative_disabled"] = [name]
             with self.assertRaises(RealtimeError):
                 driver._build_queue_item("A", self.province, "building_queue", intent)
-            self.settings["administrative_disabled"] = []
-
-    def test_tournament_validates_new_entries_preserves_paid_progress(self):
-        for order, (name, constant) in queries.ADMINISTRATIVE_ACTIONS.items():
-            duration = getattr(c, constant) + 3
-            self.settings["administrative_turn_overrides"][name] = duration
-            item = {"order_type": order, "turns_remaining": duration}
-            updates = {"home": {"building_queue": [item]}}
-            self.assertEqual(_validate_administrative_orders(self.world, "A", updates), [])
-            with self.assertRaises(ValueError):
-                _validate_administrative_orders(self.world, "B", updates)
-            for malformed in (None, "3", True, -1):
-                item["turns_remaining"] = malformed
-                with self.assertRaises(ValueError):
-                    _validate_administrative_orders(self.world, "A", updates)
-            item["turns_remaining"] = duration + 1
-            warnings = _validate_administrative_orders(self.world, "A", updates)
-            self.assertEqual(len(warnings), 1)
-            self.assertIn(str(duration + 1), warnings[0])
-            self.assertIn(str(duration), warnings[0])
-            item["turns_remaining"] = duration
-            self.settings["administrative_disabled"] = [name]
-            with self.assertRaises(ValueError):
-                _validate_administrative_orders(self.world, "A", updates)
-            item["turns_remaining"] = 1
-            self.province["building_queue"] = [copy.deepcopy(item)]
-            _validate_administrative_orders(self.world, "A", updates)
-            self.province["building_queue"] = []
             self.settings["administrative_disabled"] = []
 
     def test_settings_survive_save_dictionary_and_json_round_trip(self):

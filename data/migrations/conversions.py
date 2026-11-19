@@ -9,7 +9,6 @@ when the scenario has selected its libraries. research.py and queries.refresh_un
 """
 
 import base64
-import copy
 import uuid
 
 import data.constants as c
@@ -21,13 +20,6 @@ LEGACY_RESEARCH_DEFAULT_DAYS = 30
 
 
 LEGACY_RESEARCH_POINTS_PER_DAY = 10
-
-
-#: Fields that a move holds beside the country record. The oldest moves held only a country record.
-MOVE_FIELDS = ("game_version", "tournament_session", "tournament_turn", "research_years",
-               "unit_snapshot", "aircraft_orders", "air_transport", "release_subjects",
-               "faction_renames", "appearance_updates", "puppet_siphon_updates",
-               "player_intents", "factions")
 
 
 #: Released scenario settings of each Unit / Building Stats category, by its Use Defaults setting.
@@ -152,37 +144,18 @@ def _province_overlays(saved, map_data, aliases, path):
 
 
 def convert_move(player_data):
-    """Convert a tournament move in place, whatever version wrote it.
-
-    A move without player_intents holds a snapshot of the country.
-    data/migrations/snapshot_moves.py reads it after conversion.
-    """
+    """Convert tournament intents and any older compatibility projections in place."""
     expect(player_data, dict, "move")
-    if not any(key in player_data for key in ("nation_data", "provinces", "player_intents")):
-        # The oldest moves held only the country record.
-        country = {key: player_data.pop(key) for key in list(player_data) if key not in MOVE_FIELDS}
-        player_data["nation_data"] = country
-        player_data["provinces"] = {}
     aliases = {**LEGACY_UNIT_NAMES, **equipment_stage_aliases()}
     country = container(player_data, "nation_data", dict, "move")
     if "nation_data" in player_data:
         _country(country, aliases, "move.nation_data", player_input=True)
-        if "release_subjects" not in player_data and isinstance(country.get("release_puppet_queue"), list):
-            # Older moves held release requests only in the country's queue.
-            player_data["release_subjects"] = copy.deepcopy(country["release_puppet_queue"])
-    for entry, _entry_path in records(player_data, "release_subjects", "move"):
-        entry.setdefault("release_type", c.PUPPET_TYPE_INTEGRATED)
     provinces = container(player_data, "provinces", dict, "move")
     for key, province in provinces.items():
         expect(province, dict, f"move.provinces.{key}")
         # A move has no terrain, so a Truck aircraft unpacks as on land.
         # Host validation then checks every unit against host state.
         _province(province, None, aliases, f"move.provinces.{key}", player_input=True)
-    if "provinces" in player_data:
-        if "aircraft_orders" not in player_data:
-            player_data["aircraft_orders"] = _aircraft_orders(provinces)
-        # Older moves replaced the country's units only when they listed provinces.
-        player_data.setdefault("unit_snapshot", bool(provinces))
     for aircraft, aircraft_path in records(player_data, "aircraft_orders", "move"):
         if aircraft.get("unit_id") is not None:
             text_fields(aircraft, ("unit_id",), aircraft_path)
@@ -212,28 +185,6 @@ def convert_move(player_data):
             for appearance in command["appearances"].values():
                 if isinstance(appearance, dict):
                     convert_appearance_images(appearance)
-    # Host validation skips malformed appearance updates, so only readable ones convert.
-    updates = player_data.get("appearance_updates")
-    for update in updates if isinstance(updates, list) else ():
-        if isinstance(update, dict) and isinstance(update.get("appearance"), dict):
-            convert_appearance_images(update["appearance"])
-
-
-def _aircraft_orders(provinces):
-    """Read orders from the whole aircraft records that older moves held.
-
-    The host keeps its own aircraft statistics and positions, so only orders and names convert.
-    """
-    from data import queries
-    commands = []
-    for province in provinces.values():
-        units = province.get("units") if isinstance(province, dict) else None
-        for unit in units if isinstance(units, list) else ():
-            if (isinstance(unit, dict) and isinstance(unit.get("type"), str)
-                    and (queries.is_air_unit(unit) or queries.is_air_transport(unit))):
-                commands.append({"unit_id": unit.get("unit_id"), "order": copy.deepcopy(unit.get("order")),
-                                 "custom_name": unit.get("custom_name")})
-    return commands
 
 
 # --- Countries ---
