@@ -175,6 +175,13 @@ class ResearchFundingTests(unittest.TestCase):
             ])
             self.assertEqual(country["research_funding_slider"], 0.25)
             self.assertEqual(screen.econ_cache[2]["materials"]["research_funding"], -25)
+
+            country["research_queue"].clear()
+            with patch.object(queries, "get_funded_research_points", wraps=queries.get_funded_research_points) as preview:
+                screen.refresh_economy_preview()
+            preview.assert_called_once_with(25)
+            self.assertNotIn("research_funding", screen.econ_cache[2]["materials"])
+
             game.tactical_mode = True
             screen.set_research_funding(0.75)
             self.assertEqual(country["research_funding_slider"], 0.25)

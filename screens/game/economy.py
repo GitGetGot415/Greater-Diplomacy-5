@@ -182,19 +182,21 @@ class Economy_Screen(Screen):
         self.refresh_economy_preview()
 
     def refresh_economy_preview(self):
-        """Cache income and the damage caption when economy inputs change."""
+        """Cache income and slider captions when economy inputs change."""
         country = self.map_screen.nation_data[self.map_screen.player_country]
         self.econ_cache = queries.get_economy_projections(
             self.map_screen.player_country, self.map_screen.map_data, self.map_screen.nation_data, context=self.map_screen)
         income, upkeep, breakdown = self.econ_cache
         diverted = -breakdown.get("materials", {}).get("research_funding", 0)
-        if not diverted and queries.get_research_funding_rate(country):
-            if not country.get("research_queue"):
-                caption = "Funding paused | No active research projects"
-            elif income["materials"] <= upkeep["materials"]:
-                caption = "Funding paused | No surplus Materials income"
-            else:
-                caption = "No funding needed | Projects are projected to finish with regular research"
+        net_materials = income["materials"] - upkeep["materials"]
+        has_projects = bool(country.get("research_queue"))
+        if not has_projects:
+            diverted = queries.get_research_funding_budget(country, net_materials)
+        funding_rate = queries.get_research_funding_rate(country)
+        if not diverted and funding_rate and net_materials <= 0:
+            caption = "No surplus Materials income"
+        elif not diverted and funding_rate and has_projects:
+            caption = "No funding needed | Projects are projected to finish with regular research"
         else:
             bonus = queries.get_funded_research_points(diverted)
             caption = f"Materials diverted {diverted:,.2f}   |   Bonus research +{bonus:,.2f} pts/turn"
