@@ -7,7 +7,7 @@ from data.io import country_io
 from ui.rendering import map_utils, refresh_map
 
 from data import queries
-from map_logic.diplomacy import faction_leadership
+from map_logic.diplomacy import faction_leadership, faction_records
 
 
 def apply_editor_territory_brush(context, province, remove=False):
@@ -171,7 +171,7 @@ def retire_landless_nation(context, nation, *, force=False):
         # unless every member is already landless. In that case there is no
         # possible restorer, so retire the whole exhausted roster now instead
         # of allowing a dead bloc to remain at war indefinitely.
-        if data.get("faction", "") and not force:
+        if queries.get_country_faction(nation, world_state.nation_data) and not force:
             retire_exhausted_factions(context)
             # Either the roster was exhausted and this nation has already been
             # retired by the helper, or another member still owns land and it
@@ -181,8 +181,8 @@ def retire_landless_nation(context, nation, *, force=False):
         # Nobody is still allied with, at war with, or in a bloc with a nation
         # that no longer holds any ground.
         from map_logic.diplomacy.faction_actions import leave_faction
-        fac = data.get("faction", "")
-        was_leader = bool(data.get("is_faction_leader", False))
+        fac = queries.get_country_faction(nation, world_state.nation_data)
+        was_leader = queries.is_faction_leader(nation, world_state.nation_data)
         if fac:
             leave_faction(world_state.nation_data, nation)
             # A bloc is negotiated with through whoever runs it, so a faction
@@ -217,10 +217,9 @@ def retire_landless_nation(context, nation, *, force=False):
                 if nation in n_data.get(dict_key, {}):
                     del n_data[dict_key][nation]
 
-        if fac and "FACTION_WAR_MAPS" in world_state.nation_data:
-            war_maps = world_state.nation_data["FACTION_WAR_MAPS"]
-            if fac in war_maps and nation in war_maps[fac]:
-                del war_maps[fac][nation]
+        borders = faction_records.pre_war_map(world_state.nation_data, fac)
+        if borders is not None:
+            borders.pop(nation, None)
 
     # --- Only for a puppet the player created, or a rebellion put down while
     # the war was still running: erase the cores and the nation with them. ---

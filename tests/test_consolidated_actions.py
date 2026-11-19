@@ -168,9 +168,13 @@ class FactionOwnerTests(unittest.TestCase):
         self.assertEqual(queries.get_country_faction_id(context, "B"), identity)
         self.assertEqual(record["members"], ["A", "B"])
         self.assertEqual(record["pre_war_borders"], {"1": "A", "2": "A"})
+        self.assertNotIn("FACTION_WAR_MAPS", context.nation_data)
+        self.assertEqual(queries.get_historical_owner(context.map_data[1], "Renamed Pact", context.nation_data), "A")
         snapshot = json.loads(json.dumps(queries.build_save_dict(context)))
+        self.assertEqual(snapshot["nation_data"]["FACTION_WAR_MAPS"], {"Renamed Pact": {"1": "A", "2": "A"}})
         # Canonical records take precedence over stale country projections.
         snapshot["nation_data"]["A"]["faction"] = "Stale"
+        snapshot["nation_data"]["FACTION_WAR_MAPS"]["Renamed Pact"]["1"] = "B"
         restored = BackendState()
         apply_authoritative_snapshot(restored, snapshot)
         self.assertEqual(restored.world.factions, context.world.factions)

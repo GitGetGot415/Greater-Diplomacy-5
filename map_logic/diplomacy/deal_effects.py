@@ -320,7 +320,7 @@ def execute(context, deal, escrowed=None):
             # offers can remain in saves written before that was fixed.
             if deal.get("kind") != deal_mod.KIND_PEACE:
                 continue
-            if nation_data.get(clause["nation"], {}).get("faction", ""):
+            if queries.get_country_faction(clause['nation'], nation_data):
                 finalize_faction_leave(nation_data, clause["nation"])
 
         elif kind == deal_mod.WAR_EXIT:

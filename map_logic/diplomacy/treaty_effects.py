@@ -110,7 +110,7 @@ def _accept_faction_invite(host, action, proposer, accepter, params, escrow):
     nation_data = host.nation_data
     if not queries.can_choose_own_faction(accepter, nation_data):
         return _blocked("PUPPET_CANNOT_CHOOSE_FACTION")
-    if nation_data[accepter].get("faction", ""):
+    if queries.get_country_faction(accepter, nation_data):
         return _blocked("ACCEPT_FACTION_ALREADY_IN")
     leadership_error = queries.faction_request_leadership_error(proposer, accepter, action, nation_data)
     if leadership_error:
@@ -124,7 +124,7 @@ def _accept_join_request(host, action, proposer, accepter, params, escrow):
     nation_data = host.nation_data
     if not queries.can_choose_own_faction(proposer, nation_data):
         return _blocked("PUPPET_CANNOT_CHOOSE_FACTION")
-    if nation_data[proposer].get("faction", ""):
+    if queries.get_country_faction(proposer, nation_data):
         return _blocked("ACCEPT_FACTION_JOIN_ALREADY_IN")
     leadership_error = queries.faction_request_leadership_error(proposer, accepter, action, nation_data)
     if leadership_error:
@@ -135,7 +135,7 @@ def _accept_join_request(host, action, proposer, accepter, params, escrow):
 
 def _accept_create_faction(host, action, proposer, accepter, params, escrow):
     nation_data = host.nation_data
-    if nation_data[accepter].get("faction", "") or nation_data[proposer].get("faction", ""):
+    if queries.get_country_faction(accepter, nation_data) or queries.get_country_faction(proposer, nation_data):
         return _blocked("CREATE_FACTION_CONFLICT")
     finalize_create_faction(host.map_data, nation_data, proposer)
     finalize_faction_join(host.map_data, nation_data, proposer, accepter)

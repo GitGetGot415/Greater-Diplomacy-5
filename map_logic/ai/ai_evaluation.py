@@ -206,7 +206,7 @@ def get_world_context(nation_data, active_nations, ai_nation, target_nation=None
     for nation in sorted(active_nations):
         n_data = nation_data.get(nation, {})
         wars = [w for w in sorted(n_data.get("at_war_with", [])) if w in active_nations]
-        fac = n_data.get("faction", "")
+        fac = queries.get_country_faction(nation, nation_data)
         master = n_data.get("master", "")
         puppets = [p for p in sorted(n_data.get("puppets", [])) if p in active_nations]
 
@@ -406,7 +406,7 @@ def _standing(nation_data, active_nations, nation, world=None, current_date=None
         lines.append(f"Your neighbors: {', '.join(land)}." if land else "You border no country by land.")
         if sea:
             lines.append(f"Across nearby water: {', '.join(sea)}.")
-    faction = data.get("faction", "")
+    faction = queries.get_country_faction(nation, nation_data)
     if faction:
         allies = [m for m in sorted(queries.get_faction_members(faction, nation_data))
                   if m != nation and m in active_nations]
@@ -514,7 +514,7 @@ def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_typ
 
     ai_stats = nation_data.get(ai_nation, {})
     at_war = len(ai_stats.get("at_war_with", [])) > 0
-    in_faction = bool(ai_stats.get("faction", ""))
+    in_faction = bool(queries.get_country_faction(ai_nation, nation_data))
 
     accepted = False
 
@@ -570,7 +570,7 @@ def evaluate_verdict(nation_data, map_data, ai_nation, sender_nation, action_typ
                            "a subject state does not choose its own alliances")
 
     # 2. Check for Join Faction Requests (If we are the leader)
-    if action_type == "JOIN_FACTION_REQ" and ai_stats.get("is_faction_leader", False):
+    if action_type == "JOIN_FACTION_REQ" and queries.is_faction_leader(ai_nation, nation_data):
         relation_score = queries.get_relation_score(ai_nation, sender_nation, nation_data)
 
         # Calculate shared enemies

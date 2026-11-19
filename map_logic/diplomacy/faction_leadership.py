@@ -27,7 +27,7 @@ import random
 
 import data.constants as c
 from data import queries
-from map_logic.diplomacy import war_score
+from map_logic.diplomacy import faction_records, war_score
 
 
 def power_of(context, nation, world=None):
@@ -36,7 +36,7 @@ def power_of(context, nation, world=None):
 
 
 def _leader_of(nation, nation_data):
-    faction = nation_data.get(nation, {}).get("faction", "")
+    faction = queries.get_country_faction(nation, nation_data)
     if not faction:
         return None
     leader = queries.get_faction_leader(faction, nation_data)
@@ -97,7 +97,7 @@ def strongest_claimants(context, nations, world=None):
     for nation in set(nations):
         if not can_claim(context, nation):
             continue
-        faction = world_state.nation_data.get(nation, {}).get("faction", "")
+        faction = queries.get_country_faction(nation, world_state.nation_data)
         if faction:
             grouped.setdefault(faction, []).append(nation)
 
@@ -177,7 +177,7 @@ def promote(context, faction, world=None):
             queries.set_country_faction(nation_data, member, "")
             queries.set_faction_leadership(nation_data, member, False)
             nation_data[member].pop("faction_pressure", None)
-        (nation_data.get("FACTION_WAR_MAPS") or {}).pop(faction, None)
+        faction_records.set_pre_war_map(nation_data, faction, None)
         return None
 
     heir = max(roster, key=lambda n: (power_of(context, n, world), n))
@@ -200,8 +200,7 @@ def repair_leaderless_factions(context, world=None):
     """
     world_state = world_for(context)
     nation_data = world_state.nation_data
-    factions = sorted({data.get("faction", "") for data in nation_data.values()
-                       if isinstance(data, dict) and data.get("faction")})
+    factions = queries.get_faction_names(nation_data)
     repaired = []
     for faction in factions:
         if not queries.get_faction_leader(faction, nation_data):
@@ -226,7 +225,7 @@ def tick(context, world=None):
     for nation, data in nation_data.items():
         if not isinstance(data, dict):
             continue
-        faction = data.get("faction", "")
+        faction = queries.get_country_faction(nation, nation_data)
         if not faction:
             data.pop("faction_pressure", None)
             data.pop("faction_tenure", None)
@@ -238,7 +237,7 @@ def tick(context, world=None):
         # crossed invitation that bypasses the treaty layer entirely. Unlike
         # faction_pressure it counts for the leader too.
         data["faction_tenure"] = int(data.get("faction_tenure", 0) or 0) + 1
-        if data.get("is_faction_leader"):
+        if queries.is_faction_leader(nation, nation_data):
             leaders[faction] = nation
         members.setdefault(faction, []).append(nation)
 
@@ -278,7 +277,7 @@ def transfer(nation_data, old_leader, new_leader):
     a new bar, and a nation that had been closing on the old one has not yet
     outweighed anybody.
     """
-    faction = nation_data.get(new_leader, {}).get("faction", "")
+    faction = queries.get_country_faction(new_leader, nation_data)
 
     for member in queries.get_faction_members(faction, nation_data):
         queries.set_faction_leadership(nation_data, member, member == new_leader)

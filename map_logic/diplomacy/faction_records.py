@@ -65,6 +65,54 @@ def find(context, identity_or_name):
     return next((record for record in records.values() if record["name"] == identity_or_name), None)
 
 
+def country_record(context, country):
+    records = records_for(context)
+    if records is None:
+        return None
+    return records.get(world_for(context).faction_membership.get(country))
+
+
+def pre_war_map(nation_data, faction):
+    if not faction:
+        return None
+    if records_for(nation_data) is None:
+        return nation_data.get("FACTION_WAR_MAPS", {}).get(faction)
+    record = find(nation_data, faction)
+    return (record.get("pre_war_borders") or None) if record else None
+
+
+def set_pre_war_map(nation_data, faction, borders):
+    if records_for(nation_data) is None:
+        if borders is None:
+            nation_data.get("FACTION_WAR_MAPS", {}).pop(faction, None)
+        else:
+            nation_data.setdefault("FACTION_WAR_MAPS", {})[faction] = borders
+    else:
+        record = find(nation_data, faction)
+        if record is not None:
+            record["pre_war_borders"] = {} if borders is None else borders
+
+
+def pre_war_maps(nation_data):
+    records = records_for(nation_data)
+    if records is None:
+        return nation_data.get("FACTION_WAR_MAPS", {})
+    return {record["name"]: record["pre_war_borders"] for record in records.values()
+            if record.get("pre_war_borders")}
+
+
+def saved_country_projection(nation_data):
+    """Supply the old name-keyed border view to existing save consumers."""
+    result = dict(nation_data)
+    if records_for(nation_data) is not None:
+        borders = pre_war_maps(nation_data)
+        if borders:
+            result["FACTION_WAR_MAPS"] = copy.deepcopy(borders)
+        else:
+            result.pop("FACTION_WAR_MAPS", None)
+    return result
+
+
 def project(context):
     """Refresh compatibility fields from canonical records at mutation boundaries."""
     world = world_for(context)
@@ -75,7 +123,7 @@ def project(context):
         if isinstance(country, dict) and ("faction" in country or "is_faction_leader" in country):
             country["faction"] = ""
             country["is_faction_leader"] = False
-    borders = {}
+    world.nation_data.pop("FACTION_WAR_MAPS", None)
     world.faction_membership = {}
     for identity, record in records.items():
         for member in record["members"]:
@@ -83,10 +131,6 @@ def project(context):
             if member in world.nation_data:
                 world.nation_data[member]["faction"] = record["name"]
                 world.nation_data[member]["is_faction_leader"] = member == record["leader"]
-        if record.get("pre_war_borders"):
-            borders[record["name"]] = record["pre_war_borders"]
-    if borders or "FACTION_WAR_MAPS" in world.nation_data:
-        world.nation_data["FACTION_WAR_MAPS"] = borders
 
 
 def set_membership(nation_data, country, name):
@@ -94,7 +138,7 @@ def set_membership(nation_data, country, name):
     if records is None:
         nation_data[country]["faction"] = name
         return
-    current = next((record for record in records.values() if country in record["members"]), None)
+    current = country_record(nation_data, country)
     if current is not None and current["name"] == name:
         return
     if current is not None:
@@ -122,7 +166,7 @@ def set_leadership(nation_data, country, is_leader):
     if records is None:
         nation_data[country]["is_faction_leader"] = is_leader
         return
-    record = next((record for record in records.values() if country in record["members"]), None)
+    record = country_record(nation_data, country)
     if record is not None:
         if is_leader:
             record["leader"] = country

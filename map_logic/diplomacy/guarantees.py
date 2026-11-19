@@ -20,8 +20,7 @@ def is_eligible(guarantor, target, nation_data):
     if guarantor not in nation_data or target not in nation_data:
         return False, "That country no longer exists."
 
-    target_data = nation_data.get(target, {})
-    if target_data.get("faction", ""):
+    if queries.get_country_faction(target, nation_data):
         return False, "A country in a faction cannot be guaranteed."
     if queries.get_enemies(target, nation_data):
         return False, "A country at war cannot be guaranteed."

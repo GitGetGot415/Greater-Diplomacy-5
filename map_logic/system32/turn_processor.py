@@ -158,7 +158,7 @@ def snapshot_history(context):
             return tuple(copy_history_value(item) for item in value)
         return value
 
-    nation_snap = copy_history_value(world_state.nation_data)
+    nation_snap = copy_history_value(faction_records.saved_country_projection(world_state.nation_data))
 
     snapshot = {
         "date_str": world_state.time_manager.get_date_string(),

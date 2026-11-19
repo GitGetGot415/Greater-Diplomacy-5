@@ -4,7 +4,7 @@ import contextlib
 import data.constants as c
 import threading
 from data.state_access import world_for
-from map_logic.diplomacy.faction_records import records_for, set_leadership, find, set_membership
+from map_logic.diplomacy.faction_records import records_for, set_leadership, set_membership
 from map_logic.diplomacy import faction_records
 from data.queries.diplomacy import get_enemies
 
@@ -56,9 +56,17 @@ def get_imperial_family(nation, nation_data):
     return family
 
 
+def get_country_faction(nation, nation_data):
+    """Return the faction's display name for a country, or an empty string."""
+    if records_for(nation_data) is None:
+        return nation_data.get(nation, {}).get("faction", "")
+    record = faction_records.country_record(nation_data, nation)
+    return record["name"] if record else ""
+
+
 def _compute_friendly_nations(nation, nation_data):
     friendly = get_imperial_family(nation, nation_data)
-    faction = nation_data.get(nation, {}).get("faction", "")
+    faction = get_country_faction(nation, nation_data)
     if faction:
         friendly.update(get_faction_members(faction, nation_data))
     return friendly
@@ -89,13 +97,21 @@ def get_all_friendly_nations(nation, nation_data):
 
 
 def are_in_same_faction(nation_a, nation_b, nation_data):
-    """Returns True if both nations share a faction string."""
+    """Return whether both countries belong to the same faction."""
     if records_for(nation_data) is not None:
         index = world_for(nation_data).faction_membership
         return nation_a in index and index[nation_a] == index.get(nation_b)
     fac_a = nation_data.get(nation_a, {}).get("faction", "")
     fac_b = nation_data.get(nation_b, {}).get("faction", "")
     return fac_a != "" and fac_a == fac_b
+
+
+def get_faction_names(nation_data):
+    records = records_for(nation_data)
+    if records is not None:
+        return sorted(record["name"] for record in records.values())
+    return sorted({record["faction"] for record in nation_data.values()
+                   if isinstance(record, dict) and record.get("faction")})
 
 
 def get_faction_members(faction_name, nation_data):
@@ -131,7 +147,7 @@ def get_faction_research_bonus(nation, tech_key, target_level, nation_data):
     a faction member with Infantry III useful for an ally researching Infantry
     I or II, but not for an ally moving on to Infantry IV.
     """
-    faction = nation_data.get(nation, {}).get("faction", "")
+    faction = get_country_faction(nation, nation_data)
     if not faction:
         return 0.0
 
@@ -181,14 +197,14 @@ def is_faction_leader(nation, nation_data):
     """Returns True if the nation is currently a faction leader."""
     records = records_for(nation_data)
     if records is not None:
-        return any(record["leader"] == nation for record in records.values())
+        record = faction_records.country_record(nation_data, nation)
+        return record is not None and record["leader"] == nation
     return nation_data.get(nation, {}).get("is_faction_leader", False)
 
 
 def can_invite_to_faction(nation, nation_data):
     """Only the leader of an existing faction can invite new members."""
-    return bool(nation_data.get(nation, {}).get("faction")
-                and is_faction_leader(nation, nation_data))
+    return bool(get_country_faction(nation, nation_data) and is_faction_leader(nation, nation_data))
 
 
 def faction_request_leadership_error(sender, target, action, nation_data):
@@ -202,8 +218,8 @@ def faction_request_leadership_error(sender, target, action, nation_data):
 
 def get_historical_owner(province, faction_name, nation_data):
     """Returns the pre-war owner of a tile if a faction war is active, otherwise the primary core."""
-    if faction_name and "FACTION_WAR_MAPS" in nation_data and faction_name in nation_data["FACTION_WAR_MAPS"]:
-        pre_war = nation_data["FACTION_WAR_MAPS"][faction_name]
+    pre_war = faction_records.pre_war_map(nation_data, faction_name)
+    if pre_war is not None:
         return pre_war.get(str(province["id"])) or pre_war.get(province["id"])
     return province.get("cores", [None])[0] if province.get("cores") else None
 
@@ -217,7 +233,7 @@ def get_faction_core_transfer_target(capturer, province, nation_data):
     if capturer in c.UNPLAYABLE_NATIONS:
         return capturer
 
-    faction_name = nation_data.get(capturer, {}).get("faction", "")
+    faction_name = get_country_faction(capturer, nation_data)
     if not faction_name:
         return capturer
 
@@ -247,9 +263,6 @@ def is_faction_at_war(faction_name, nation_data):
 
 def save_faction_pre_war_map(faction_name, map_data, nation_data):
     """Snapshots the faction's borders right before entering a war."""
-    if "FACTION_WAR_MAPS" not in nation_data:
-        nation_data["FACTION_WAR_MAPS"] = {}
-
     members = get_faction_members(faction_name, nation_data)
     pre_war_map = {}
     for prov in map_data.values():
@@ -257,16 +270,14 @@ def save_faction_pre_war_map(faction_name, map_data, nation_data):
         if owner in members:
             pre_war_map[str(prov["id"])] = owner
 
-    nation_data["FACTION_WAR_MAPS"][faction_name] = pre_war_map
-    record = find(nation_data, faction_name)
-    if record is not None:
-        record["pre_war_borders"] = pre_war_map
+    faction_records.set_pre_war_map(nation_data, faction_name, pre_war_map)
 
 
 def _modify_pre_war_map(faction_name, nation_data, modify_func):
     """Helper to safely access and modify the pre-war map."""
-    if "FACTION_WAR_MAPS" in nation_data and faction_name in nation_data["FACTION_WAR_MAPS"]:
-        modify_func(nation_data["FACTION_WAR_MAPS"][faction_name])
+    pre_war = faction_records.pre_war_map(nation_data, faction_name)
+    if pre_war is not None:
+        modify_func(pre_war)
 
 
 def add_member_to_pre_war_map(member_name, faction_name, map_data, nation_data):
@@ -290,8 +301,4 @@ def remove_member_from_pre_war_map(member_name, faction_name, nation_data):
 def clear_faction_pre_war_map_if_peace(faction_name, nation_data):
     """Clears the pre-war map if the faction is no longer at war."""
     if not is_faction_at_war(faction_name, nation_data):
-        record = find(nation_data, faction_name)
-        if record is not None:
-            record["pre_war_borders"].clear()
-        if "FACTION_WAR_MAPS" in nation_data and faction_name in nation_data["FACTION_WAR_MAPS"]:
-            del nation_data["FACTION_WAR_MAPS"][faction_name]
+        faction_records.set_pre_war_map(nation_data, faction_name, None)

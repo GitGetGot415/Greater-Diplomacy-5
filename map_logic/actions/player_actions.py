@@ -454,10 +454,10 @@ class PlayerActions:
             return {"type": "faction_rename", "name": None}
         if not isinstance(name, str) or len(name.strip()) > 40:
             raise PlayerActionError("Invalid faction name.")
-        old_name = country.get("faction", "")
+        old_name = queries.get_country_faction(country_id, self.world.nation_data)
         if name.strip() == old_name:
             return {"type": "faction_rename", "name": None}
-        if not country.get("is_faction_leader") or not old_name:
+        if not queries.is_faction_leader(country_id, self.world.nation_data) or not old_name:
             raise PlayerActionError("Only a faction leader may rename their faction.")
         # Validate against a copy: the helper owns the collision and membership
         # rules, while the real mutation waits for atomic turn processing.
@@ -807,7 +807,7 @@ class PlayerActions:
                         self.context.nation_colors[puppet] = tuple(subject["color"])
                 elif command["type"] == "faction_rename" and command.get("name"):
                     faction_actions.rename_faction(self.world.nation_data, country_id,
-                                                   country_data.get("faction", ""), command["name"])
+                                                   queries.get_country_faction(country_id, self.world.nation_data), command["name"])
                 elif command["type"] == "ratification_response":
                     pending = country_data.get("pending_ratification")
                     if isinstance(pending, dict):
@@ -948,7 +948,7 @@ def collect_map_commands(context, country_id: str) -> list[dict[str, Any]]:
                                           for entry in country_data.get("release_puppet_queue", [])
                                           if isinstance(entry, dict)],
                      "appearances": copy.deepcopy(context.realtime_pending_appearance_updates)})
-    commands.append({"type": "faction_rename", "name": country_data.get("faction", "")})
+    commands.append({"type": "faction_rename", "name": queries.get_country_faction(country_id, world_state.nation_data)})
     pending_ratification = country_data.get("pending_ratification", {})
     commands.append({"type": "ratification_response",
                      "verdict": pending_ratification.get("verdict") if isinstance(pending_ratification, dict) else None,

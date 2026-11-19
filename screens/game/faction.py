@@ -48,7 +48,7 @@ class Faction_Screen(Screen):
 
         player_country = self.map_screen.player_country
         nation_data = self.map_screen.nation_data
-        my_faction = nation_data.get(player_country, {}).get("faction", "")
+        my_faction = queries.get_country_faction(player_country, nation_data)
 
         if not my_faction:
             return
@@ -121,7 +121,7 @@ class Faction_Screen(Screen):
             if nation_data.get(player, {}).get("master", ""):
                 btn.apply_state(enabled=False, text="Puppets Cannot Claim")
             elif not queries.get_faction_leader(
-                    nation_data.get(player, {}).get("faction", ""), nation_data):
+                    queries.get_country_faction(player, nation_data), nation_data):
                 btn.apply_state(enabled=False, text="Faction Needs A Leader")
             else:
                 btn.apply_state(enabled=False, text="Cannot Claim Leadership")
@@ -152,7 +152,7 @@ class Faction_Screen(Screen):
     def start_rename(self):
         """Opens the popup that asks for a new faction name."""
         player_country = self.map_screen.player_country
-        current_name = self.map_screen.nation_data.get(player_country, {}).get("faction", "")
+        current_name = queries.get_country_faction(player_country, self.map_screen.nation_data)
         dialogs.ask_string("Rename Faction", f"Enter a new name for {current_name}:", self.confirm_rename,
                            initial=current_name, allow_empty=False, max_length=c.FACTION_NAME_MAX_LENGTH)
 
@@ -163,7 +163,7 @@ class Faction_Screen(Screen):
             if not player_diplomacy_actions.can_edit_diplomacy(self.map_screen):
                 return
         player_country = self.map_screen.player_country
-        old_name = self.map_screen.nation_data.get(player_country, {}).get("faction", "")
+        old_name = queries.get_country_faction(player_country, self.map_screen.nation_data)
         new_name = new_name.strip()
 
         if new_name and old_name and new_name != old_name:
@@ -194,7 +194,7 @@ class Faction_Screen(Screen):
 
         player_country = self.map_screen.player_country
         nation_data = self.map_screen.nation_data
-        my_faction = nation_data.get(player_country, {}).get("faction", "")
+        my_faction = queries.get_country_faction(player_country, nation_data)
 
         font_heading = fonts.get("heading1")
         font_normal = fonts.get("normal")

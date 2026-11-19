@@ -1009,7 +1009,7 @@ def _update_gameplay_buttons(map_screen, is_sel, is_thinking):
             btn.visible = not is_sel
 
     # GREY OUT THE FACTION BUTTON
-    my_faction = map_screen.nation_data.get(map_screen.player_country, {}).get("faction", "")
+    my_faction = queries.get_country_faction(map_screen.player_country, map_screen.nation_data)
     map_screen.btn_gp_faction.disabled = not bool(my_faction)
 
     # DISABLE BUTTONS FOR BATTLE ROYALE
@@ -1046,7 +1046,7 @@ def _update_spectator_province_buttons(map_screen, owner):
         set_btn(map_screen.btn_spec_annex, can_remove_country, can_remove_country, "Annex", "orange")
         set_btn(map_screen.btn_spec_delete, can_remove_country, can_remove_country, "Delete", "red")
 
-        in_faction = map_screen.nation_data[owner].get("faction", "")
+        in_faction = queries.get_country_faction(owner, map_screen.nation_data)
         is_leader = queries.is_faction_leader(owner, map_screen.nation_data)
 
         if not in_faction:
@@ -1220,8 +1220,8 @@ def _update_attache_buttons(map_screen, owner, pending_action, pending_turns):
 
 def _update_faction_offer_buttons(map_screen, owner, set_offer, at_war, in_same_faction):
     """Update the faction buttons and return what each proposal can forecast."""
-    my_faction = map_screen.nation_data[map_screen.player_country].get("faction", "")
-    target_faction = map_screen.nation_data[owner].get("faction", "")
+    my_faction = queries.get_country_faction(map_screen.player_country, map_screen.nation_data)
+    target_faction = queries.get_country_faction(owner, map_screen.nation_data)
     i_am_leader = queries.is_faction_leader(map_screen.player_country, map_screen.nation_data)
     factions_disabled = queries.get_scenario_flag("disable_factions", c.DEFAULT_DISABLE_FACTIONS, map_screen.scenario_settings)
 

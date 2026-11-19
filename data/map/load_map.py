@@ -517,12 +517,10 @@ def _repair_factions(context, save_meta):
     faction_leadership.repair_leaderless_factions(context)
 
     # Init Pre-War Maps for Factions starting at war
-    world_state.nation_data.setdefault("FACTION_WAR_MAPS", {})
-    for c_name, c_data in world_state.nation_data.items():
-        fac = c_data.get("faction", "")
-        if fac and queries.is_faction_at_war(fac, world_state.nation_data):
-            if fac not in world_state.nation_data["FACTION_WAR_MAPS"]:
-                queries.save_faction_pre_war_map(fac, world_state.map_data, world_state.nation_data)
+    for record in world_state.factions.values():
+        fac = record["name"]
+        if not record["pre_war_borders"] and queries.is_faction_at_war(fac, world_state.nation_data):
+            queries.save_faction_pre_war_map(fac, world_state.map_data, world_state.nation_data)
 
 
 def load_map_assets(context, load_path, scenario_settings=None, *, load_presentation=True):

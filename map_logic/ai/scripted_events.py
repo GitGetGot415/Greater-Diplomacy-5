@@ -168,9 +168,9 @@ SELF_OR_TARGET_CONDITIONS = {
     "Is Player Controlled": lambda run, target: target in run.human_players and target in run.active_nations,
     "Is At War": lambda run, target: len(queries.get_enemies(target, run.world.nation_data)) > 0,
     "Is At Peace": lambda run, target: len(queries.get_enemies(target, run.world.nation_data)) == 0,
-    "Is In Faction": lambda run, target: run.world.nation_data.get(target, {}).get("faction", "") != "",
+    "Is In Faction": lambda run, target: queries.get_country_faction(target, run.world.nation_data) != "",
     "Not In Faction": lambda run, target: (target in run.active_nations and
-                                           run.world.nation_data.get(target, {}).get("faction", "") == ""),
+                                           queries.get_country_faction(target, run.world.nation_data) == ""),
     "Is Faction Leader": lambda run, target: bool(queries.is_faction_leader(target, run.world.nation_data)),
 }
 

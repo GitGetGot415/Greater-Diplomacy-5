@@ -226,7 +226,7 @@ def settle(context, signatory, deal, opponent, refused, escrow=None):
 
     for member in refused or []:
         deal = deal_mod.without_nation(deal, member)
-        if nation_data.get(member, {}).get("faction", ""):
+        if queries.get_country_faction(member, nation_data):
             finalize_faction_leave(nation_data, member)
         log_global_event(nation_data,
                          f"{member} refused the terms {signatory} agreed with {opponent}, "

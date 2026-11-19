@@ -6,6 +6,7 @@ import random
 import re
 from data.state_access import session_for, world_for
 from data.queries.geometry import is_water_province
+from map_logic.diplomacy import faction_records
 from data import queries
 
 
@@ -287,7 +288,7 @@ def is_government_in_exile(nation, map_data, nation_data):
     no duplicate flag avoids a stale ``in_exile`` value after either event.
     """
     return (nation not in c.UNPLAYABLE_NATIONS
-            and bool(nation_data.get(nation, {}).get("faction", ""))
+            and bool(queries.get_country_faction(nation, nation_data))
             and nation not in queries.get_living_nations(map_data))
 
 
@@ -303,7 +304,7 @@ def get_politically_active_nations(map_data, nation_data):
         nation for nation, data in nation_data.items()
         if isinstance(data, dict)
         and nation not in c.UNPLAYABLE_NATIONS
-        and data.get("faction", ""))
+        and queries.get_country_faction(nation, nation_data))
     return active_nations
 
 
@@ -406,11 +407,10 @@ def was_original_owner(prov, nation, nation_data):
     the war actions, which used to keep separate copies of this rule and
     could therefore disagree about what a treaty was going to do.
     """
-    fac = nation_data.get(nation, {}).get("faction", "")
-    if fac and "FACTION_WAR_MAPS" in nation_data and fac in nation_data["FACTION_WAR_MAPS"]:
-        pre_war = nation_data["FACTION_WAR_MAPS"][fac]
-        if str(prov["id"]) in pre_war:
-            return pre_war[str(prov["id"])] == nation
+    fac = queries.get_country_faction(nation, nation_data)
+    pre_war = faction_records.pre_war_map(nation_data, fac)
+    if pre_war is not None and str(prov["id"]) in pre_war:
+        return pre_war[str(prov["id"])] == nation
     return nation in prov.get("cores", [])
 
 

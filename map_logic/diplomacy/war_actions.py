@@ -197,8 +197,8 @@ def finalize_war(map_data, nation_data, a, b, activate_guarantees=True):
         _break_for_independence(map_data, nation_data, rebel=b, master=a,
                                 headline=f"{b} has achieved independence after being attacked by {a}!")
 
-    fac_a = nation_data.get(a, {}).get("faction", "")
-    fac_b = nation_data.get(b, {}).get("faction", "")
+    fac_a = queries.get_country_faction(a, nation_data)
+    fac_b = queries.get_country_faction(b, nation_data)
 
     if fac_a and not queries.is_faction_at_war(fac_a, nation_data):
         queries.save_faction_pre_war_map(fac_a, map_data, nation_data)
@@ -206,7 +206,7 @@ def finalize_war(map_data, nation_data, a, b, activate_guarantees=True):
         queries.save_faction_pre_war_map(fac_b, map_data, nation_data)
 
     for country in (a, b):
-        if not nation_data.get(country, {}).get("faction", ""):
+        if not queries.get_country_faction(country, nation_data):
             save_own_pre_war_map(map_data, nation_data, country)
 
     # Going to war ends passage between the two, both the standing grant and any
@@ -228,7 +228,7 @@ def finalize_war(map_data, nation_data, a, b, activate_guarantees=True):
             nation_data[country].setdefault("war_durations", {})[other] = 0
 
         # Clear faction war cooldowns so allies can be called in
-        faction = nation_data[country].get("faction", "")
+        faction = queries.get_country_faction(country, nation_data)
         if faction:
             for member in queries.get_faction_members(faction, nation_data):
                 clear_war_call_cooldowns(nation_data, country, member)
@@ -278,8 +278,8 @@ def finalize_neutral(nation_data, a, b):
     pull_puppets_into_peace(a, b, nation_data)
     pull_puppets_into_peace(b, a, nation_data)
 
-    fac_a = nation_data.get(a, {}).get("faction", "")
-    fac_b = nation_data.get(b, {}).get("faction", "")
+    fac_a = queries.get_country_faction(a, nation_data)
+    fac_b = queries.get_country_faction(b, nation_data)
 
     if fac_a: queries.clear_faction_pre_war_map_if_peace(fac_a, nation_data)
     if fac_b: queries.clear_faction_pre_war_map_if_peace(fac_b, nation_data)

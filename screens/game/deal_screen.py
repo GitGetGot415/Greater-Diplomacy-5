@@ -77,7 +77,7 @@ def _thousands(number):
 def _bloc_name(nation_data, side):
     """What to call a side: its faction if it has one, otherwise its leader."""
     for member in side:
-        faction = nation_data.get(member, {}).get("faction", "")
+        faction = queries.get_country_faction(member, nation_data)
         if faction:
             return faction
     return side[0] if side else "?"

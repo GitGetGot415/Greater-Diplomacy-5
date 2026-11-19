@@ -477,8 +477,7 @@ def draw_badges(map_screen, surface):
             # Everyone in the faction sees this, not only the leader and not
             # only the challenger: a handover changes who negotiates for the
             # bloc and who can put your provinces on the table.
-            my_faction = map_screen.nation_data.get(
-                map_screen.player_country, {}).get("faction", "")
+            my_faction = queries.get_country_faction(map_screen.player_country, map_screen.nation_data)
             leadership_contested = bool(
                 faction_leadership.contenders(map_screen.nation_data, my_faction))
             direction = (politics.economic_drift(map_screen.nation_data, map_screen.player_country),

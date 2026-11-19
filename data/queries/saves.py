@@ -333,7 +333,7 @@ def build_save_dict(context, *, include_provinces=True, compact_nations=False, i
         "global_rules": world_state.global_rules,
         "default_research": world_state.default_research,
         "research_years": get_research_years(context=context),
-        "nation_data": world_state.nation_data,
+        "nation_data": faction_records.saved_country_projection(world_state.nation_data),
         "factions": copy.deepcopy(world_state.factions) if hasattr(world_state, "factions")
                     else faction_records.canonical_records(world_state.nation_data),
         "unit_event_log": unit_events.saved_log(context),

@@ -695,7 +695,7 @@ def _seek_defensive_faction(bag, context, ai_name, pending, my_enemies, active_n
             if mutual_combatant in my_enemies:
                 continue
             # If they have a faction, we want to talk to the leader
-            fac = world_state.nation_data.get(mutual_combatant, {}).get("faction", "")
+            fac = queries.get_country_faction(mutual_combatant, world_state.nation_data)
             if fac:
                 fac_leader = queries.get_faction_leader(fac, world_state.nation_data)
                 if (fac_leader and fac_leader not in potential_leaders
@@ -734,7 +734,7 @@ def _seek_defensive_faction(bag, context, ai_name, pending, my_enemies, active_n
                 continue
             if mutual_combatant in my_enemies:
                 continue
-            fac = world_state.nation_data.get(mutual_combatant, {}).get("faction", "")
+            fac = queries.get_country_faction(mutual_combatant, world_state.nation_data)
             if not fac and mutual_combatant not in potential_partners:
                 potential_partners.append(mutual_combatant)
 
@@ -984,7 +984,7 @@ def _invite_friends_to_faction(bag, context, ai_name, data, active_nations, worl
         if other == ai_name:
             continue
         other_data = world_state.nation_data.get(other, {})
-        if other_data.get("faction"):
+        if queries.get_country_faction(other, world_state.nation_data):
             continue
         # Courting somebody else's subject is courting their overlord's answer.
         if not queries.can_choose_own_faction(other, world_state.nation_data):
@@ -1248,7 +1248,7 @@ def _run_basic_proactive_ai(context):
 
         data = world_state.nation_data[ai_name]
         pending = data.setdefault("pending_diplomacy", {})
-        my_faction = data.get("faction", "")
+        my_faction = queries.get_country_faction(ai_name, world_state.nation_data)
         my_enemies = data.get("at_war_with", [])
         my_master = data.get("master", "")
         my_type = data.get("puppet_type", "")

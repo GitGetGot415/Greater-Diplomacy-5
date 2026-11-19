@@ -80,7 +80,7 @@ def toggle_diplomacy_action(nation_data, player_name, target_name, action_type, 
 
     # --- THE FIX: Prevent multiple faction requests ---
     if action_type in c.FACTION_REQUEST_ACTIONS:
-        if nation_data[player_name].get("faction", ""):
+        if queries.get_country_faction(player_name, nation_data):
             return "Cannot do this while already in a faction!"
 
         for other_target, info in pending.items():
@@ -425,7 +425,7 @@ def _gather_ai_tasks(context):
 
                 # Special self-targeting actions for Factions
                 if action in ["LEAVE_FACTION", "DISBAND_FACTION"]:
-                    fac = world_state.nation_data[country_name].get("faction", "")
+                    fac = queries.get_country_faction(country_name, world_state.nation_data)
                     members = queries.get_faction_members(fac, world_state.nation_data) if fac else []
                     info["cached_members"] = members
                     for m in members:
@@ -706,7 +706,7 @@ def _retaliate_leave_faction(move):
 
 
 def _retaliate_join_faction_request(move):
-    if not move.world_state.nation_data[move.country].get("faction", ""):
+    if not queries.get_country_faction(move.country, move.world_state.nation_data):
         move.queue("JOIN_FACTION_REQ", move.target, move.worded("PROACTIVE_JOIN_FACTION", "We formally request to join your faction."))
 
 
@@ -1181,7 +1181,7 @@ def _send_offer(send):
 
 def _announce_to_former_faction(send, event):
     nation_data = send.world.nation_data
-    faction = nation_data[send.country].get("faction", "")
+    faction = queries.get_country_faction(send.country, nation_data)
     send.info["cached_members"] = send.info.get(
         "cached_members", queries.get_faction_members(faction, nation_data) if faction else [])
     log_global_event(nation_data, event)
@@ -1216,7 +1216,7 @@ def _send_leadership_claim(send):
     # long enough to lose the army that justified it -- or the
     # faction, if the leader disbanded it in the meantime.
     nation_data = send.world.nation_data
-    fac = nation_data[send.country].get("faction", "")
+    fac = queries.get_country_faction(send.country, nation_data)
     old = queries.get_faction_leader(fac, nation_data) if fac else ""
     if not faction_leadership.can_claim(send.context, send.country):
         print(f"[GUARDRAIL] {send.country} no longer has a claim on "
