@@ -17,6 +17,7 @@ import unittest
 
 import data.constants as c
 from data import queries
+from map_logic import politics
 from map_logic.ai import ai_world
 
 
@@ -189,6 +190,8 @@ class AIWorldParityTests(unittest.TestCase):
 
     def test_relation_matches_the_full_score(self):
         """Compared against the id_to_province form, i.e. claim penalty included."""
+        politics.set_value(self.nation_data, "Avaria", 10)
+        politics.set_value(self.nation_data, "Carrow", -10)
         for a, b in self.pairs():
             self.assertEqual(
                 self.world.relation(a, b),

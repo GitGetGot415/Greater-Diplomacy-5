@@ -24,6 +24,7 @@ from unittest.mock import Mock, patch
 
 import data.constants as c
 import pygame
+from data import queries
 from map_logic import politics
 from map_logic.system32 import combat_processor, combat_rules
 
@@ -186,7 +187,7 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
         map_screen = map_double(is_editor=True, map_data={1: {"owner": "A"}},
                                 nation_data={"A": {"political_value": 4, "political_drift": -1,
                                                    "economic_drift": 1}},
-                                invalidate_map_presentation_cache=Mock(), show_feedback=Mock())
+                                refresh_map_layers=Mock(), show_feedback=Mock())
         screen = Politics_Edit_Screen(map_screen, "A")
         slider = screen.rows[1][0]
         slider.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, pos=slider.handle_rect.center, button=1))
@@ -200,7 +201,7 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
         self.assertEqual(politics.economic_value(map_screen.nation_data, "A"), c.POLITICS_MIN)
         self.assertEqual(politics.drift(map_screen.nation_data, "A"), 0)
         self.assertEqual(politics.economic_drift(map_screen.nation_data, "A"), 0)
-        map_screen.invalidate_map_presentation_cache.assert_called_once()
+        map_screen.refresh_map_layers.assert_called_once_with("relations")
 
         screen = Politics_Edit_Screen(map_screen, "A")
         screen.elements[1].callback()
@@ -210,6 +211,25 @@ class PoliticsScreenEditGuardTests(unittest.TestCase):
         map_screen.realtime_multiplayer = True
         screen.save()
         self.assertEqual(politics.economic_value(map_screen.nation_data, "A"), c.POLITICS_MIN)
+
+
+class PoliticalAffinityTests(unittest.TestCase):
+    def test_affinity_scores_agreement_and_opposition_on_both_axes(self):
+        for a, b, expected in (
+            ((10, 10), (10, 10), 20),
+            ((-10, -10), (-10, -10), 20),
+            ((5, 5), (5, 5), 5),
+            ((8, -6), (6, -5), 8),
+            ((10, 10), (10, -10), 0),
+            ((10, 10), (-10, -10), -20),
+            ((10, -10), (0, -10), 10),
+        ):
+            with self.subTest(a=a, b=b):
+                data = {name: {politics.VALUE_KEY: political, politics.ECONOMIC_VALUE_KEY: economic}
+                        for name, (political, economic) in (("A", a), ("B", b))}
+                self.assertEqual(queries.get_relation_score("A", "B", data), expected)
+                self.assertEqual(queries.get_relation_score("B", "A", data), expected)
+                self.assertEqual(queries.get_relation_score("A", "A", data), 0)
 
 
 class EconomicDriftTests(unittest.TestCase):

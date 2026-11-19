@@ -12,6 +12,10 @@ from data.queries.strength import (
     get_economic_power,
 )
 from data import queries
+from map_logic import politics
+
+
+_POLITICAL_AFFINITY_PER_AXIS = 10
 
 
 def _count_disputed_provinces(nation_a, nation_b, nation_data, id_to_province):
@@ -74,6 +78,13 @@ def _relation_score(nation_a, nation_b, nation_data, claim_count):
     return sum(value for _, value, _ in _relation_factors(nation_a, nation_b, nation_data, claim_count))
 
 
+def _political_affinity(nation_a, nation_b, nation_data):
+    """Similar positions add goodwill in proportion to both countries' leanings."""
+    political_alignment = politics.value(nation_data, nation_a) * politics.value(nation_data, nation_b)
+    economic_alignment = politics.economic_value(nation_data, nation_a) * politics.economic_value(nation_data, nation_b)
+    return round(_POLITICAL_AFFINITY_PER_AXIS * (political_alignment + economic_alignment) / c.POLITICS_MAX ** 2)
+
+
 def _relation_factors(nation_a, nation_b, nation_data, claim_count):
     """Yield each rule's name, contribution, and any details for display."""
     if are_at_war(nation_a, nation_b, nation_data):
@@ -85,6 +96,10 @@ def _relation_factors(nation_a, nation_b, nation_data, claim_count):
     enemies_b = set(get_enemies(nation_b, nation_data))
     if enemies_a & enemies_b:
         yield "shared_enemy", c.REL_MOD_COMMON_ENEMY, None
+
+    affinity = _political_affinity(nation_a, nation_b, nation_data)
+    if affinity:
+        yield "political_affinity", affinity, None
 
     master_a = nation_data.get(nation_a, {}).get("master", "")
     master_b = nation_data.get(nation_b, {}).get("master", "")

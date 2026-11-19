@@ -12,8 +12,10 @@ import numpy as np
 import pygame
 
 from data import constants as c, queries
+from map_logic import politics
 from map_logic.ai import ai_movement, ai_unit_eval, ai_tech_eval
 from map_logic.diplomacy import diplomacy_processor as dp, diplomacy_messages as messages
+from ui.information import ui_info_popup
 from ui.rendering import refresh_map
 from screens.game import map_input
 from map_logic.system32 import combat_rules
@@ -357,6 +359,34 @@ class MapSurfaceCacheTests(unittest.TestCase):
                         queries.get_relation_scores_from(viewpoint, list(data), data, id_to_province),
                         {nation: queries.get_relation_score(viewpoint, nation, data, id_to_province)
                          for nation in data})
+
+    def test_relations_map_and_opinion_breakdown_follow_compass_drift(self):
+        self.screen.map_mode = "RELATIONS"
+        self.screen.selected_province = self.province_of("B")
+        self.screen._presentation_cache_revision = 0
+        self.screen._relation_indicator_cache = None
+        self.screen.nation_data["A"].update({politics.VALUE_KEY: 10, politics.ECONOMIC_VALUE_KEY: -10})
+        queries.add_temporary_modifier("B", "A", "general", -30, self.screen.nation_data)
+        politics.set_drift(self.screen.nation_data, "B", 1)
+        politics.set_economic_drift(self.screen.nation_data, "B", -1)
+
+        self.refresh(refresh_map.refresh_relations_map)
+        self.assertEqual(self.screen._relations_scores["A"], -30)
+        ui_info_popup.prepare_relation_indicators(self.screen)
+
+        politics.tick(self.screen)
+        politics.tick(self.screen)
+        self.screen._presentation_cache_revision += 1
+        self.refresh(refresh_map.refresh_relations_map)
+        ui_info_popup.prepare_relation_indicators(self.screen)
+
+        self.assertEqual(self.screen._relations_scores["A"], -26)
+        _, (their_opinion, our_opinion) = self.screen._relation_indicator_cache
+        self.assertEqual(their_opinion[1], -26)
+        self.assertEqual(our_opinion[1], 4)
+        affinity_label = ui_info_popup.RELATION_FACTORS["political_affinity"]
+        self.assertIn((affinity_label, 4), their_opinion[2])
+        self.assertIn((affinity_label, 4), our_opinion[2])
 
     def show_relations(self):
         self.screen.map_mode = self.screen.base_layer = "RELATIONS"

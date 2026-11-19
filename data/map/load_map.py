@@ -336,9 +336,8 @@ def _load_nation_records(context, save_meta, disabled_tech_keys):
     # fully available even when their saved records contain no duplicated data.
     queries.merge_country_templates(world_state.nation_data)
 
-    # Relation scores are derived on demand by queries.get_relation_score from
-    # at_war_with / faction / master / temp_modifiers / claims, so there is no
-    # stored table to seed here.
+    # queries.get_relation_score derives current opinions from the world state,
+    # including the countries' political and economic positions.
     if queries.get_scenario_flag("disable_factions", c.DEFAULT_DISABLE_FACTIONS, world_state.scenario_settings):
         for c_name, c_data in world_state.nation_data.items():
             c_data["faction"] = ""

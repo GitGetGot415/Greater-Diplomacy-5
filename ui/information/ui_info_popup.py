@@ -37,6 +37,7 @@ RELATION_FACTORS = {
     "war": "At war",
     "faction": "Same faction",
     "shared_enemy": "Shared enemy",
+    "political_affinity": "Political affinity",
     "overlord": "Overlord's view of subject",
     "subject": "Subject's view of overlord",
 }

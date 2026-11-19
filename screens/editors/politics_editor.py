@@ -102,7 +102,7 @@ class Politics_Edit_Screen(EditorSliderScreen):
         # A scenario starts with both directions on Hold.
         politics.set_drift(nation_data, self.country_id, 0)
         politics.set_economic_drift(nation_data, self.country_id, 0)
-        self.map_screen.invalidate_map_presentation_cache()
+        self.map_screen.refresh_map_layers("relations")
         name = queries.get_country_display_name(self.country_id, nation_data)
         self.map_screen.show_feedback(
             f"{name} starts at {politics.label(self.value)} ({self.value:+d}), "
