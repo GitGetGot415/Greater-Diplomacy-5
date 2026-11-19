@@ -767,6 +767,12 @@ def health_defense_multiplier(unit, nation_data=None):
     return floor + (1.0 - floor) * frac
 
 
+def damage_after_defense(unit, attack_per_target, nation_data=None, defense_bonus=0):
+    """Apply health-scaled unit defense and a flat situational defense bonus."""
+    defense = unit.get("defense", 0) * health_defense_multiplier(unit, nation_data) + defense_bonus
+    return max(0, attack_per_target - defense)
+
+
 def effective_damage_multiplier(unit, nation_data=None, *, scale_health=True, health_floor=None):
     """Scale damage by health, politics, and conscription.
 
@@ -878,11 +884,8 @@ def projected_incoming_damage(battle, nation_data=None, defense_bonus_fn=None):
         for unit in targets:
             profile = battle.profiles.get(id(unit), unit)
             defense_bonus = defense_bonus_fn(profile) if defense_bonus_fn else 0
-            defense = (profile.get("defense", 0)
-                       * health_defense_multiplier(profile, nation_data)
-                       + defense_bonus)
-            incoming[id(unit)] = incoming.get(id(unit), 0.0) + max(
-                0.0, damage_per_unit - defense) * unit.get("max_health", 1) / max(1, profile.get("max_health", 1))
+            damage = damage_after_defense(profile, damage_per_unit, nation_data, defense_bonus)
+            incoming[id(unit)] = incoming.get(id(unit), 0.0) + damage * unit.get("max_health", 1) / max(1, profile.get("max_health", 1))
     return incoming
 
 
