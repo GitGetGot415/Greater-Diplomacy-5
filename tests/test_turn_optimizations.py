@@ -18,6 +18,7 @@ from map_logic.diplomacy import diplomacy_processor as dp, diplomacy_messages as
 from ui.information import ui_info_popup
 from ui.rendering import refresh_map
 from screens.game import map_input
+from screens.game.map import Map
 from map_logic.system32 import combat_rules
 from map_logic.territory import ownership
 from tests.stub_map_screen import StubMapScreen, map_double
@@ -397,14 +398,16 @@ class MapSurfaceCacheTests(unittest.TestCase):
     def province_of(self, owner):
         return next(p for p in self.screen.map_data.values() if p["owner"] == owner)
 
-    def test_the_tooltip_uses_the_selected_owners_cached_opinion(self):
+    def test_the_tooltip_uses_the_inspected_owners_cached_opinion_after_deselection(self):
         from ui.information import tooltip
 
         self.show_relations()
         self.screen.secondary_mode = "UNITS"
+        self.screen.unit_view_filter = "ALL"
         self.screen.small_font = mock.Mock()
         self.screen.small_font.render.side_effect = lambda *args: pygame.Surface((1, 1))
         map_input.set_inspected_province(self.screen, self.province_of("B"))
+        map_input.set_inspected_province(self.screen, None)
         self.screen.hovered_province = self.province_of("A")
 
         with (mock.patch.object(queries, "get_relation_score", side_effect=AssertionError("score recalculated")),
@@ -430,16 +433,51 @@ class MapSurfaceCacheTests(unittest.TestCase):
         with mock.patch.object(queries, "get_relation_scores_from", side_effect=AssertionError("recomputed")):
             map_input.set_inspected_province(self.screen, dict(foreign, id=3))
 
-    def test_own_land_water_unowned_land_and_clearing_restore_the_players_view(self):
+    def test_own_land_water_and_unowned_land_restore_the_players_view(self):
         self.show_relations()
         water = dict(self.province_of("B"), terrain="ocean")
         unowned = dict(self.province_of("B"), owner="Unclaimed")
-        for province in (self.province_of("A"), water, unowned, None):
+        for province in (self.province_of("A"), water, unowned):
             with self.subTest(province=province and province["terrain"]):
                 map_input.set_inspected_province(self.screen, self.province_of("B"))
+                map_input.set_inspected_province(self.screen, None)
                 map_input.set_inspected_province(self.screen, province)
                 self.assertEqual(self.screen._relations_viewpoint, "A")
                 self.assertEqual(self.screen._relations_scores["B"], -30)
+
+    def test_deselecting_preserves_the_view_and_refreshes_its_scores(self):
+        self.show_relations()
+        map_input.set_inspected_province(self.screen, self.province_of("B"))
+        foreign_view = self.screen.active_map
+        self.screen.mail_draft_text = ""
+        self.screen.elements = []
+        self.screen.show_feedback = mock.Mock()
+        with (mock.patch("screens.game.map_buttons.update_button_states"),
+              mock.patch.object(queries, "get_relation_scores_from", side_effect=AssertionError("recomputed"))):
+            Map.deselect_province(self.screen)
+        self.assertIsNone(self.screen.selected_province)
+        self.assertEqual(self.screen._relations_viewpoint, "B")
+        self.assertIs(self.screen.active_map, foreign_view)
+
+        self.screen.nation_data["B"]["temp_modifiers"]["A"]["general"] = 25
+        self.refresh(refresh_map.refresh_relations_map)
+        self.assertEqual(self.screen._relations_viewpoint, "B")
+        self.assertEqual(self.screen._relations_scores["A"], 25)
+
+    def test_leaving_relations_discards_the_deselected_view(self):
+        self.show_relations()
+        map_input.set_inspected_province(self.screen, self.province_of("B"))
+        map_input.set_inspected_province(self.screen, None)
+        self.refresh(refresh_map.refresh_political_map)
+        self.screen.terrain_map = self.screen.factions_map = self.screen.cores_map = self.screen.faction_territories_map = None
+        self.screen.update_country_centers = mock.Mock()
+        self.screen.show_feedback = mock.Mock()
+
+        Map.set_map_layer(self.screen, "POLITICAL")
+        self.assertIs(self.screen.active_map, self.screen.political_map)
+        Map.set_map_layer(self.screen, "RELATIONS")
+        self.assertEqual(self.screen._relations_viewpoint, "A")
+        self.assertEqual(self.screen._relations_scores["B"], -30)
 
     def test_refresh_uses_the_selected_provinces_current_owner(self):
         self.show_relations()

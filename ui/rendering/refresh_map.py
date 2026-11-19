@@ -387,6 +387,12 @@ def _selected_relations_viewpoint(map_screen):
         owner = province.get("owner")
         if owner in map_screen.nation_data and owner not in c.UNPLAYABLE_NATIONS and owner not in c.UNOWNED_LAND_OWNERS:
             return owner
+    if province is None and map_screen.map_mode == "RELATIONS" and not map_screen.selection_mode:
+        retained = map_screen._deselected_relations_view
+        if retained is not None:
+            viewer, viewpoint = retained
+            if viewer == map_screen.player_country and viewpoint in map_screen.nation_data:
+                return viewpoint
     return map_screen.player_country
 
 

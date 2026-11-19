@@ -44,7 +44,7 @@ RESEARCH_BREAKDOWN_LABELS = {
     "base": "Base research",
     "economy": "Economic system",
     "policies": "Domestic policies",
-    "funding": f"Research funding (split across {c.RESEARCH_SLOTS} slots)",
+    "funding": "Research funding",
 }
 
 TIMELINE_AXIS_Y = 180

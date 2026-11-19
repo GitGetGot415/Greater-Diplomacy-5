@@ -357,6 +357,7 @@ class Map(StateAccess, Screen):
         self._map_surface_cache = {}
         self._fog_surface_cache = None
         self._relations_viewpoint = None
+        self._deselected_relations_view = None
         self._relations_scores = {}
         self.visible_provinces = None
         self.mail_draft_text = ""
@@ -768,6 +769,8 @@ class Map(StateAccess, Screen):
 
     def set_map_layer(self, layer_name):
         """Unified map layer setter."""
+        if layer_name != "RELATIONS":
+            self._deselected_relations_view = None
         self.base_layer = layer_name
         self.map_mode = layer_name
         layer_map = {

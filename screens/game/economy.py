@@ -188,18 +188,13 @@ class Economy_Screen(Screen):
             self.map_screen.player_country, self.map_screen.map_data, self.map_screen.nation_data, context=self.map_screen)
         income, upkeep, breakdown = self.econ_cache
         diverted = -breakdown.get("materials", {}).get("research_funding", 0)
-        net_materials = income["materials"] - upkeep["materials"]
-        has_projects = bool(country.get("research_queue"))
-        if not has_projects:
-            diverted = queries.get_research_funding_budget(country, net_materials)
-        funding_rate = queries.get_research_funding_rate(country)
-        if not diverted and funding_rate and net_materials <= 0:
+        net_materials = income["materials"] + diverted - upkeep["materials"]
+        budget = queries.get_research_funding_budget(country, net_materials)
+        if not budget and queries.get_research_funding_rate(country) and net_materials <= 0:
             caption = "No surplus Materials income"
-        elif not diverted and funding_rate and has_projects:
-            caption = "No funding needed | Projects are projected to finish with regular research"
         else:
-            bonus = queries.get_funded_research_points(diverted)
-            caption = f"Materials diverted {diverted:,.2f}   |   Bonus research +{bonus:,.2f} pts/turn"
+            bonus = queries.get_funded_research_points(budget)
+            caption = f"Materials budget {budget:,.2f}   |   Bonus research +{bonus:,.2f} pts/turn"
         self.research_funding_caption = fonts.get("normal").render(caption, True, c.COLOR_GOLD_HIGHLIGHT)
         bonus = queries.get_conscription_damage_bonus(country)
         self.conscription_damage_caption = f"dmg modifier: +{bonus:.2%}"

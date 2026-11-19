@@ -81,7 +81,7 @@ class ResearchFundingTests(unittest.TestCase):
                     self.assertEqual(income["materials"] - upkeep["materials"], 90)
                     self.assertEqual(economy_breakdown["materials"]["research_funding"], -10)
                     self.assertEqual((spent, awards), (10, {"first": 5, "second": 5}))
-                    self.assertAlmostEqual(breakdown["funding"], sum(awards.values()) / c.RESEARCH_SLOTS)
+                    self.assertAlmostEqual(breakdown["funding"], sum(awards.values()))
 
                     days = queries.get_days_per_turn(game.scenario_settings)
                     asyncio.run(turn_processor.resolve_turn_logic(game))
@@ -95,7 +95,7 @@ class ResearchFundingTests(unittest.TestCase):
                     for entry in country["research_queue"]:
                         penalty = 0.5 ** max(0, tree[entry["tech_name"]]["years"][0] - date)
                         self.assertAlmostEqual(entry["points_remaining"], 1_000 - base * policy_multiplier * 1.5 * penalty - 5)
-                    self.assertAlmostEqual(sum(breakdown.values()), base * policy_multiplier + sum(awards.values()) / c.RESEARCH_SLOTS)
+                    self.assertAlmostEqual(sum(breakdown.values()), base * policy_multiplier + sum(awards.values()))
 
     def test_research_breakdown_is_per_slot_regardless_of_the_queue(self):
         game = BackendState()
@@ -105,9 +105,9 @@ class ResearchFundingTests(unittest.TestCase):
         game.nation_data["A"] = country
         with patch.object(queries, "calculate_all_economies", return_value={"A": economy(40, 20)}) as calculate:
             breakdown = queries.get_projected_research_breakdown(game, "A")
-            funding_per_slot = queries.get_funded_research_points(10) / c.RESEARCH_SLOTS
-            self.assertAlmostEqual(breakdown["funding"], funding_per_slot)
-            self.assertAlmostEqual(sum(breakdown.values()), base + funding_per_slot)
+            funding = queries.get_funded_research_points(10)
+            self.assertAlmostEqual(breakdown["funding"], funding)
+            self.assertAlmostEqual(sum(breakdown.values()), base + funding)
 
             country["research_queue"] = [project("almost_done", 1)]
             self.assertEqual(queries.get_projected_research_breakdown(game, "A"), breakdown)
@@ -177,6 +177,12 @@ class ResearchFundingTests(unittest.TestCase):
             self.assertEqual(screen.econ_cache[2]["materials"]["research_funding"], -25)
 
             country["research_queue"].clear()
+            with patch.object(queries, "get_funded_research_points", wraps=queries.get_funded_research_points) as preview:
+                screen.refresh_economy_preview()
+            preview.assert_called_once_with(25)
+            self.assertNotIn("research_funding", screen.econ_cache[2]["materials"])
+
+            country["research_queue"].append(project("fixture", 1))
             with patch.object(queries, "get_funded_research_points", wraps=queries.get_funded_research_points) as preview:
                 screen.refresh_economy_preview()
             preview.assert_called_once_with(25)

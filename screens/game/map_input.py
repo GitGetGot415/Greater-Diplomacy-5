@@ -92,6 +92,11 @@ def _select_tactical_unit_stack(map_screen, position):
 
 def set_inspected_province(map_screen, province):
     """Change the province inspection and update the active Relations layer."""
+    if getattr(map_screen, "map_mode", None) == "RELATIONS":
+        if province is not None:
+            map_screen._deselected_relations_view = None
+        elif map_screen.selected_province is not None:
+            map_screen._deselected_relations_view = (map_screen.player_country, map_screen._relations_viewpoint)
     map_screen.selected_province = province
     refresh_map.update_relations_view(map_screen)
 

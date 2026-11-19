@@ -864,7 +864,7 @@ def get_projected_research_funding(context, country_id, *, economy=None):
 
 
 def get_projected_research_breakdown(context, country_id):
-    """Return the country-wide research rate for one slot, with funding split across all slots."""
+    """Return the base rate for one slot plus the full funding bonus."""
     world = world_for(context)
     nation_data = world.nation_data
     country = nation_data[country_id]
@@ -876,7 +876,7 @@ def get_projected_research_breakdown(context, country_id):
         economy = queries.calculate_all_economies(world.map_data, nation_data, context=context).get(country_id)
         if economy:
             budget = get_research_funding_budget(country, get_net_materials_income(economy))
-            funding = get_funded_research_points(budget) / c.RESEARCH_SLOTS
+            funding = get_funded_research_points(budget)
 
     return {
         "base": base,
