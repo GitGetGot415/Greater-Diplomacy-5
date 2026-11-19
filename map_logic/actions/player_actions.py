@@ -266,18 +266,17 @@ class PlayerActions:
         if any(not isinstance(value, bool) for value in automation.values()):
             raise PlayerActionError("Invalid automation settings.")
         conscription = queries.get_conscription_rate(command)
-        if (isinstance(conscription, bool) or not isinstance(conscription, (int, float))
-                or not 0.0 <= float(conscription) <= 1.0):
+        if not queries.valid_slider_rate(conscription):
             raise PlayerActionError("Invalid manpower conversion setting.")
         max_conversion = max(0.0, float(queries.get_max_fuel_conversion(country)))
-        fuel_conversion = queries.get_fuel_conversion_rate(command, max_conversion=max_conversion)
-        if (isinstance(fuel_conversion, bool) or not isinstance(fuel_conversion, (int, float))
-                or not 0.0 <= float(fuel_conversion) <= max_conversion):
+        # Validate the submitted value itself; the shared getter would clamp an over-limit rate.
+        fuel_conversion = command.get("mat_to_fuel_slider", queries.get_fuel_conversion_rate(command, max_conversion=max_conversion))
+        if not queries.valid_slider_rate(fuel_conversion, max_conversion):
             raise PlayerActionError("Invalid material-to-fuel conversion setting.")
         research_funding = {}
         if "research_funding_slider" in command:
             rate = command["research_funding_slider"]
-            if not queries.valid_research_funding_rate(rate):
+            if not queries.valid_slider_rate(rate):
                 raise PlayerActionError("Invalid research funding setting.")
             research_funding["research_funding_slider"] = float(rate)
         custom_units = command.get("custom_production_units", [])

@@ -1,6 +1,5 @@
 import copy
 
-import data.constants as c
 from data.state_access import world_for, session_for
 from data import queries
 
@@ -18,7 +17,7 @@ def process_national_research(context, *, economies=None):
 
         normal = queries.get_normal_research_progress(world_state.nation_data, country_name, template, days_per_turn, current_exact_year)
         bonus = {}
-        if economies and country_name in economies and country_name not in c.UNPLAYABLE_NATIONS and country_name != "GLOBAL_EVENTS":
+        if economies and queries.has_turn_economy(country_name, economies):
             # The economy step already deducted these Materials with the rest of the income.
             spent = queries.get_research_funding_spent(economies[country_name]["breakdown"])
             bonus = queries.get_research_funding_awards(country_data, spent, normal, days_per_turn=days_per_turn)

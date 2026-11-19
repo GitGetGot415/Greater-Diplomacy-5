@@ -1,7 +1,8 @@
-"""Research funding spends surplus income and awards unmodified progress."""
+"""Research funding spends a share of gross income and awards unmodified progress."""
 
 import asyncio
 import json
+import math
 import unittest
 from unittest.mock import Mock, patch
 
@@ -20,34 +21,37 @@ def project(name, points):
     return {"tech_name": name, "points_remaining": points}
 
 
-def economy(income, upkeep):
+def economy(income, upkeep, funding_rate=0):
+    """Economy report fixture. Funding takes its share of gross income, as in the calculator."""
+    spent = queries.get_research_funding_cost(funding_rate, income)
     report = {key: dict.fromkeys(c.ECON_RESOURCE_KEYS, 0) for key in ("total_inc", "upkeep")}
-    report["total_inc"]["materials"] = income
+    report["total_inc"]["materials"] = income - spent
     report["upkeep"]["materials"] = upkeep
-    report["breakdown"] = {key: {} for key in c.ECON_RESOURCE_KEYS}
+    report["breakdown"] = queries.empty_income_breakdown()
+    report["breakdown"]["materials"]["research_funding"] = -spent
+    report["gross_materials"] = income
     return report
 
 
 def funded_economies(nation_data, reports):
-    """Run the economy calculator's own funding pass over fixture reports."""
-    return lambda *args, **kwargs: queries.apply_research_funding(
-        {name: economy(*report) for name, report in reports.items()}, nation_data)
+    """Rebuild fixture reports from each country's current funding rate on every call."""
+    return lambda *args, **kwargs: {name: economy(*report, queries.get_research_funding_rate(nation_data[name]))
+                                    for name, report in reports.items()}
 
 
 class ResearchFundingTests(unittest.TestCase):
-    def test_slider_sets_the_bonus_share_and_surplus_sets_the_cost(self):
+    def test_slider_sets_the_bonus_share_and_gross_income_sets_the_cost(self):
         for days in (5, 30):
             base = c.BASE_RESEARCH_POINTS_PER_DAY * days
             country = {"research_queue": [project("tech", base * 2)]}
             for rate, share in ((0, 0), (0.01, 0.01495), (0.25, 0.34375), (0.5, 0.625), (1, 1)):
                 country["research_funding_slider"] = rate
-                for surplus in (10_000, 1_000_000):
-                    with self.subTest(days=days, rate=rate, surplus=surplus):
-                        spent = queries.get_research_funding_cost(country, surplus)
+                for gross in (10_000, 1_000_000):
+                    with self.subTest(days=days, rate=rate, gross=gross):
+                        spent = queries.get_research_funding_cost(rate, gross)
                         awards = queries.get_research_funding_awards(country, spent, {"tech": 0}, days_per_turn=days)
-                        self.assertEqual(spent, int(surplus * rate))
+                        self.assertEqual(spent, int(gross * rate))
                         self.assertAlmostEqual(awards.get("tech", 0), base * share)
-                        self.assertEqual(queries.get_research_funding_cost({**country, "research_queue": []}, surplus), spent)
 
     def test_splitting_redistributes_unused_shares_and_caps_spending(self):
         days = 5
@@ -57,21 +61,43 @@ class ResearchFundingTests(unittest.TestCase):
             project("already_done", 10), project("near_done", 10 + near_done), project("far_off", 10 + base * 2),
         ]}
         normal = {"already_done": 10, "near_done": 10, "far_off": 10}
-        surplus = 20_000
-        awards = queries.get_research_funding_awards(country, surplus, normal, days_per_turn=days)
+        spent = 20_000
+        awards = queries.get_research_funding_awards(country, spent, normal, days_per_turn=days)
         self.assertEqual(awards, {"near_done": near_done, "far_off": base - near_done})
         # The slider always takes its full share. Points the queue cannot use are lost.
         country["research_queue"].pop()
-        self.assertEqual(queries.get_research_funding_cost(country, surplus), surplus)
-        self.assertEqual(queries.get_research_funding_awards(country, surplus, normal, days_per_turn=days), {"near_done": near_done})
-        for net_materials in (0, -1):
-            self.assertEqual(queries.get_research_funding_cost(country, net_materials), 0)
-            self.assertEqual(queries.get_research_funding_awards(country, net_materials, normal, days_per_turn=days), {})
+        self.assertEqual(queries.get_research_funding_awards(country, spent, normal, days_per_turn=days), {"near_done": near_done})
+        for gross in (0, -1):
+            self.assertEqual(queries.get_research_funding_cost(1, gross), 0)
+            self.assertEqual(queries.get_research_funding_awards(country, gross, normal, days_per_turn=days), {})
         finished = {**normal, "near_done": 10 + near_done}
-        self.assertEqual(queries.get_research_funding_awards(country, surplus, finished, days_per_turn=days), {})
+        self.assertEqual(queries.get_research_funding_awards(country, spent, finished, days_per_turn=days), {})
         country["research_queue"].clear()
-        self.assertEqual(queries.get_research_funding_cost(country, surplus), surplus)
-        self.assertEqual(queries.get_research_funding_awards(country, surplus, {}, days_per_turn=days), {})
+        self.assertEqual(queries.get_research_funding_awards(country, spent, {}, days_per_turn=days), {})
+
+    def test_calculator_takes_funding_and_fuel_conversion_from_the_same_gross_income(self):
+        game = BackendState()
+        conversion_rate = 0.2
+        refining = math.ceil(conversion_rate / c.FUEL_REFINING_CONVERSION_PER_LVL)
+        country = {"research": {"fuel_refining": refining}, "research_queue": []}
+        game.nation_data["A"] = country
+        game.map_data[1] = game.id_to_province[1] = {"id": 1, "json_key": "1", "terrain": "plains", "neighbors": [],
+                                                     "owner": "A", "cores": ["A"], "units": []}
+        unfunded = queries.calculate_all_economies(game.map_data, game.nation_data, context=game)["A"]
+        gross = unfunded["gross_materials"]
+        self.assertGreater(gross, 0)
+        country.update(research_funding_slider=0.5, mat_to_fuel_slider=conversion_rate)
+        funded = queries.calculate_all_economies(game.map_data, game.nation_data, context=game)["A"]
+        spent = queries.get_research_funding_cost(0.5, gross)
+        self.assertEqual(funded["gross_materials"], gross)
+        self.assertEqual(queries.get_research_funding_spent(funded["breakdown"]), spent)
+        self.assertEqual(sum(funded["breakdown"]["materials"].values()), funded["total_inc"]["materials"])
+        divisor = int(1 / c.FUEL_CONVERSION_RATIO)
+        self.assertEqual(funded["breakdown"]["materials"]["conversion"], -(int(gross * conversion_rate) // divisor * divisor))
+        # Funding is charged with nothing queued, and the queue does not change the charge.
+        country["research_queue"] = [project("fixture", 1)]
+        queued = queries.calculate_all_economies(game.map_data, game.nation_data, context=game)["A"]
+        self.assertEqual(queued["breakdown"], funded["breakdown"])
 
     def test_funding_preview_and_resolution_agree_after_upkeep_and_modifiers(self):
         tree = {"first": {"years": [1922]}, "second": {"years": [1920]}}
@@ -98,9 +124,9 @@ class ResearchFundingTests(unittest.TestCase):
                     income, upkeep, economy_breakdown = queries.get_economy_projections("A", game.map_data, game.nation_data, context=game)
                     awards = queries.get_projected_research_funding_awards(game, "A")
                     breakdown = queries.get_projected_research_breakdown(game, "A")
-                    self.assertEqual(income["materials"] - upkeep["materials"], 90)
-                    self.assertEqual(economy_breakdown["materials"]["research_funding"], -10)
-                    self.assertEqual(queries.get_research_funding_spent(economy_breakdown), 10)
+                    self.assertEqual(income["materials"] - upkeep["materials"], 88)
+                    self.assertEqual(economy_breakdown["materials"]["research_funding"], -12)
+                    self.assertEqual(queries.get_research_funding_spent(economy_breakdown), 12)
                     self.assertEqual(awards.keys(), tree.keys())
                     for bonus in awards.values():
                         self.assertAlmostEqual(bonus, bonus_per_project)
@@ -110,7 +136,7 @@ class ResearchFundingTests(unittest.TestCase):
                     date = queries.get_exact_year(game.time_manager)
                     base = unmodified_base * (0 if economic_value == c.POLITICS_MIN else 2)
                     policy_multiplier = politics.policy(policy_id)["effects"]["research"]
-                    self.assertEqual(country["materials"], 98)
+                    self.assertEqual(country["materials"], 96)
                     self.assertEqual(country["research_funding_slider"], 0.1)
                     self.assertAlmostEqual(breakdown["base"] + breakdown["economy"], base)
                     self.assertAlmostEqual(breakdown["policies"], base * (policy_multiplier - 1))
@@ -136,7 +162,7 @@ class ResearchFundingTests(unittest.TestCase):
             country["research_queue"] = [project("ongoing", base * 4), project("new_project", base * 5)]
             self.assertEqual(queries.get_projected_research_breakdown(game, "A"), breakdown)
 
-            calculate.side_effect = funded_economies(game.nation_data, {"A": (10, 20)})
+            calculate.side_effect = funded_economies(game.nation_data, {"A": (0, 20)})
             self.assertEqual(sum(queries.get_projected_research_breakdown(game, "A").values()), base)
 
     def test_save_and_selected_history_restore_the_country_rate(self):
@@ -154,12 +180,22 @@ class ResearchFundingTests(unittest.TestCase):
     def test_ai_funds_from_surplus_with_a_reserve_and_preserves_human_choices(self):
         country = {"materials": 10, "research_queue": [project(str(i), 300) for i in range(c.RESEARCH_SLOTS)]}
         game = map_double(player_country="A", nation_data={"A": country})
+        ai_cost = queries.get_research_funding_cost(c.AI_RESEARCH_FUNDING_RATE, 100)
         with patch.object(queries, "get_active_ai_nations", return_value=["A"]), \
                 patch.object(queries, "get_tech_tree", return_value={"fixture": {"max_lvl": 1}}), \
-                patch.object(queries, "calculate_all_economies", return_value={"A": economy(100, 10)}), \
+                patch.object(queries, "calculate_all_economies", return_value={"A": economy(100, 10)}) as calculate, \
                 patch.object(ai_research.ai_world, "for_screen", return_value=None):
             ai_research.process_ai_research(game)
             self.assertEqual(country["research_funding_slider"], c.AI_RESEARCH_FUNDING_RATE)
+            # Last turn's funding does not count against the surplus, so the rate holds steady.
+            country["materials"] = 1_000
+            calculate.return_value = {"A": economy(100, 100 - ai_cost - 1, c.AI_RESEARCH_FUNDING_RATE)}
+            ai_research.process_ai_research(game)
+            self.assertEqual(country["research_funding_slider"], c.AI_RESEARCH_FUNDING_RATE)
+            calculate.return_value = {"A": economy(100, 100 - ai_cost, c.AI_RESEARCH_FUNDING_RATE)}
+            ai_research.process_ai_research(game)
+            self.assertEqual(country["research_funding_slider"], 0)
+            calculate.return_value = {"A": economy(100, 10)}
             country["materials"] = 9
             ai_research.process_ai_research(game)
             self.assertEqual(country["research_funding_slider"], 0)
@@ -188,7 +224,7 @@ class ResearchFundingTests(unittest.TestCase):
             screen.handle_events([pygame.event.Event(kind, button=1, pos=track_pos)
                                   for kind in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP)])
             self.assertEqual(country["research_funding_slider"], 0.5)
-            self.assertEqual(screen.econ_cache[2]["materials"]["research_funding"], -50)
+            self.assertEqual(screen.econ_cache[2]["materials"]["research_funding"], -60)
             game.invalidate_map_presentation_cache.assert_called_once()
 
             screen.handle_events([
@@ -197,16 +233,16 @@ class ResearchFundingTests(unittest.TestCase):
                 pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=track_pos),
             ])
             self.assertEqual(country["research_funding_slider"], 0.25)
-            self.assertEqual(screen.econ_cache[2]["materials"]["research_funding"], -25)
+            self.assertEqual(screen.econ_cache[2]["materials"]["research_funding"], -30)
 
             # Funding is charged with nothing queued, like the other income sliders.
             country["research_queue"].clear()
             screen.set_research_funding(0.75)
-            self.assertEqual(screen.econ_cache[0]["materials"], 120 - 75)
-            self.assertEqual(screen.econ_cache[2]["materials"]["research_funding"], -75)
+            self.assertEqual(screen.econ_cache[0]["materials"], 120 - 90)
+            self.assertEqual(screen.econ_cache[2]["materials"]["research_funding"], -90)
             with patch.object(queries, "get_funded_research_points", wraps=queries.get_funded_research_points) as preview:
                 screen.refresh_economy_preview()
-            preview.assert_called_once_with(country, 75, days)
+            preview.assert_called_once_with(country, 90, days)
             screen.set_research_funding(0.25)
 
             game.tactical_mode = True

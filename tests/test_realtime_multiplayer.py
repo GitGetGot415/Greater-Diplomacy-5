@@ -1,5 +1,6 @@
 """Focused deterministic coverage for the real-time session state machine."""
 
+import math
 import threading
 import time
 import unittest
@@ -906,6 +907,8 @@ class RealtimeSessionTests(unittest.TestCase):
         map_ref = map_double(
             map_data={}, nation_data={"A": {
                 "conscription_slider": .6, "mat_to_fuel_slider": .2,
+                # Research the fuel conversion limit so the saved rate is in effect.
+                "research": {"fuel_refining": math.ceil(.2 / c.FUEL_REFINING_CONVERSION_PER_LVL)},
                 "claim_queue": [{"prov_id": 4, "turns_left": 5}],
                 "research_queue": [],
             }})

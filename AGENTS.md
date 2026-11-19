@@ -10,6 +10,14 @@ AI means artificial intelligence. UI means user interface.
 - Add only the UI text needed for the requested feature. Keep labels short and reuse existing wording where it fits. Add explanations, parentheticals, and new status messages only when requested or essential to understanding the result. Follow the stricter rules for help text, hints, and placeholders in [UI Appearance](#ui-appearance).
 - Before handoff, review the diff. For each changed calculation, new UI string, and other edit, identify the part of the request or necessary dependency it serves. Remove edits that have neither purpose.
 
+## Consistency With Existing Features
+
+- **Build every feature the way its closest existing sibling works.** Before writing code, find the most similar feature, such as another economy slider, breakdown entry, queue, or order. Match where it is calculated, when the turn applies it, and how it is stored and validated. Also match how it is displayed, rounded, and read by the AI and multiplayer. Ask before using a different pattern.
+- **Moving a feature onto the path its siblings use is a supporting edit, not an adjacent cleanup.** The scope rules above do not justify a narrow patch beside the shared path.
+- **A behavior that differs from its siblings is a defect to report, even when a test enforces it.** Tests describe current behavior, not intended behavior. Report the difference and propose the standard behavior. Do not preserve it by default.
+- **Never adjust a shared result after its owner calculates it.** When several systems read a value, such as income, costs, or research progress, its owner calculates every part of it. Callers read the result. They do not add their own corrections.
+  Example: research funding once charged Materials in the research step and patched the charge into the economy preview. The economy screen breakdown, the AI, and country summaries read `calculate_all_economies`, so they never saw the charge. Funding is now a breakdown entry in that calculator, like fuel conversion.
+
 ## Before Editing
 
 - **Never begin an edit when the user asks a question.** Answer the question and wait for an explicit instruction to make changes. A question about whether something can or should change does not authorize editing.
@@ -75,6 +83,7 @@ AI means artificial intelligence. UI means user interface.
 | --- | --- |
 | `data/constants.py` | Constants and tuning values shared across modules. |
 | `data/queries/` | Shared state queries, rule helpers, caches, and the save-dictionary builder. One module per topic. |
+| `calculate_all_economies` in `data/queries/economy.py` | Every recurring per-turn income and cost, each as an `INCOME_BREAKDOWN_ENTRIES` entry. `process_economy` applies the totals. Economy sliders, previews, the AI, and the economy screen read this result. |
 | `data/migrations/` | All conversion of older GD5 data: identifiers, conversion rules, load repairs, and the snapshot move reader. One file per concern. |
 | `data/game_state.py`, `data/session_state.py` | World data, participants, control permissions, and processing progress. |
 | `data/runtime_rules.py`, `data/world_nations.py` | World-specific active libraries, derived indexes, and explicit country-mapping context. |

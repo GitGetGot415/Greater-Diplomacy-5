@@ -7,11 +7,37 @@ from data.state_access import session_for, world_for
 from map_logic import politics
 from data.queries.content import get_category_setting
 from data.queries.geometry import is_water_province
-from data.queries.tech import (get_base_research_rates, get_exact_year, get_funded_research_points, get_normal_research_progress,
-                              get_research_funding_awards, get_research_funding_cost, get_research_funding_rate)
+from data.queries.tech import get_base_research_rates, get_exact_year, get_normal_research_progress, get_unmodified_research_points
 from data.queries.unit_info import (base_item_name_from_text, get_base_item_name, is_naval_unit,
                                    units_with_air_cargo)
 from data import queries
+
+
+# Every income breakdown entry in economy screen order:
+# (key, label for a gain, label for a cost, shown on the economy screen at zero).
+INCOME_BREAKDOWN_ENTRIES = (
+    ("base", "Base", "Base", True),
+    ("core", "Core", "Core", True),
+    ("non_core", "Non-Core", "Non-Core", True),
+    ("buildings", "Buildings", "Buildings", True),
+    ("resources", "Resources", "Resources", True),
+    ("conscription", "Unused Equipment Income", "Relaxed Conscription Cost", False),
+    ("conversion", "Conversion Income", "Conversion Cost", False),
+    ("policy", "Policy", "Policy", False),
+    ("siphon", "Siphoned to Master", "Siphoned to Master", False),
+    ("siphon_income", "Siphon Income", "Siphon Income", False),
+    ("research_funding", "Research Funding", "Research Funding", False),
+)
+
+
+def empty_income_breakdown():
+    """Return every breakdown entry at zero for each resource."""
+    return {res: dict.fromkeys((entry[0] for entry in INCOME_BREAKDOWN_ENTRIES), 0) for res in c.ECON_RESOURCE_KEYS}
+
+
+def has_turn_economy(name, economies):
+    """Whether the turn applies this entry's income. Unplayable entries never receive any."""
+    return name in economies and name not in c.UNPLAYABLE_NATIONS
 
 
 def get_unit_upkeep(stats):
@@ -35,12 +61,59 @@ def get_conscription_rate(country):
 
 
 def get_fuel_conversion_rate(country, *, max_conversion=None):
-    """Read a saved selection or start at the configured rate within the research limit."""
-    if "mat_to_fuel_slider" in country:
-        return country["mat_to_fuel_slider"]
+    """Read a saved selection or the configured rate, within the current research limit."""
     if max_conversion is None:
         max_conversion = queries.get_max_fuel_conversion(country)
-    return min(c.DEFAULT_FUEL_CONVERSION_RATE, max_conversion)
+    # A country that lost the research keeps its saved choice but cannot exceed the new limit.
+    return min(country.get("mat_to_fuel_slider", c.DEFAULT_FUEL_CONVERSION_RATE), max_conversion)
+
+
+def get_research_funding_rate(country):
+    rate = country.get("research_funding_slider", c.DEFAULT_RESEARCH_FUNDING_RATE)
+    return rate if valid_slider_rate(rate) else c.DEFAULT_RESEARCH_FUNDING_RATE
+
+
+def valid_slider_rate(value, maximum=1.0):
+    """Accept a numeric share of income for an economy slider, including both endpoints."""
+    return type(value) in (int, float) and 0 <= value <= maximum
+
+
+def get_research_funding_cost(rate, gross_materials):
+    """Materials a funding rate takes from gross Materials income, like fuel conversion."""
+    # Truncate like the other slider conversions in the economy breakdown.
+    return int(max(0, gross_materials) * rate)
+
+
+def get_funded_research_points(country, materials_spent, days_per_turn):
+    """Return the points that paid funding adds across the full queue."""
+    if materials_spent <= 0:
+        return 0
+    rate = get_research_funding_rate(country)
+    return get_unmodified_research_points(days_per_turn) * rate * (1.5 - 0.5 * rate)
+
+
+def get_research_funding_awards(country, materials_spent, normal_progress, *, days_per_turn):
+    """Return bonus points per project after normal progress. Unusable points are lost."""
+    bonus = get_funded_research_points(country, materials_spent, days_per_turn)
+    remaining = {}
+    for project in country.get("research_queue", []):
+        tech_name = project["tech_name"]
+        points = project["points_remaining"] - normal_progress[tech_name]
+        if points > 0:
+            remaining[tech_name] = points
+    if bonus <= 0 or not remaining:
+        return {}
+
+    # Projects close to completion use less than an equal share. Redistribute
+    # the spare points across the rest of the queue.
+    awards = {}
+    ordered = sorted(remaining.items(), key=lambda entry: entry[1])
+    for index, (tech_name, points) in enumerate(ordered):
+        projects_left = len(ordered) - index
+        award = min(points, bonus / projects_left)
+        awards[tech_name] = award
+        bonus -= award
+    return awards
 
 
 def get_industry(province):
@@ -620,13 +693,9 @@ def calculate_all_economies(map_data, nation_data, *, context=None):
             "fuel": c.BASE_YIELDS["fuel"] 
         }
         
-        breakdown = {
-            res: {"base": c.COUNTRY_BASE_YIELDS[res] + (bergius_bonus if res == "fuel" else 0), 
-                  "core": 0, "non_core": 0, "buildings": 0, "resources": 0, 
-                  "conversion": 0, "conscription": 0, "policy": 0,
-                  "siphon": 0, "siphon_income": 0, "research_funding": 0}
-            for res in c.ECON_RESOURCE_KEYS
-        }
+        breakdown = empty_income_breakdown()
+        for res in c.ECON_RESOURCE_KEYS:
+            breakdown[res]["base"] = c.COUNTRY_BASE_YIELDS[res] + (bergius_bonus if res == "fuel" else 0)
 
         core_manpower_multiplier = politics.axis_core_manpower_multiplier(politics.value(nation_data, name))
         econ_data[name] = {"dynamic_yields": dyn_yields, "breakdown": breakdown, "upkeep": {r: 0 for r in c.ECON_RESOURCE_KEYS}, "total_inc": {r: 0 for r in c.ECON_RESOURCE_KEYS}, "resource_mult": resource_refining_mult,
@@ -696,10 +765,10 @@ def calculate_all_economies(map_data, nation_data, *, context=None):
         
         # Conscription (1.0 = keep all, 0.0 = convert all)
         _process_conversion(data, "manpower", "materials", "conscription", 1.0 - get_conscription_rate(n_data), c.CONSCRIPTION_RATIO)
-        # Fuel Conversion
-        max_conversion = queries.get_max_fuel_conversion(n_data)
-        conversion = min(get_fuel_conversion_rate(n_data, max_conversion=max_conversion), max_conversion)
-        _process_conversion(data, "materials", "fuel", "conversion", conversion, c.FUEL_CONVERSION_RATIO)
+        # Fuel conversion and research funding take their shares of the same gross Materials income.
+        data["gross_materials"] = sum(data["breakdown"]["materials"].values())
+        _process_conversion(data, "materials", "fuel", "conversion", get_fuel_conversion_rate(n_data), c.FUEL_CONVERSION_RATIO)
+        data["breakdown"]["materials"]["research_funding"] = -get_research_funding_cost(get_research_funding_rate(n_data), data["gross_materials"])
 
         for res in c.ECON_RESOURCE_KEYS:
             produced_income = sum(data["breakdown"][res].values())
@@ -720,20 +789,8 @@ def calculate_all_economies(map_data, nation_data, *, context=None):
                 data["total_inc"][res] -= siphon_amt
                 econ_data[master]["total_inc"][res] += siphon_amt
                 data["breakdown"][res]["siphon"] = -siphon_amt
-                econ_data[master]["breakdown"][res]["siphon_income"] = econ_data[master]["breakdown"][res].get("siphon_income", 0) + siphon_amt
+                econ_data[master]["breakdown"][res]["siphon_income"] += siphon_amt
 
-    # Research funding takes its share of the surplus after upkeep and siphoning,
-    # so it runs once every master has received its puppets' income.
-    apply_research_funding(econ_data, nation_data)
-    return econ_data
-
-
-def apply_research_funding(econ_data, nation_data):
-    """Move each country's research funding out of its Materials income."""
-    for name, data in econ_data.items():
-        spent = get_research_funding_cost(nation_data.get(name, {}), get_net_materials_income(data))
-        data["total_inc"]["materials"] -= spent
-        data["breakdown"]["materials"]["research_funding"] = -spent
     return econ_data
 
 
@@ -816,7 +873,7 @@ def get_resource_hud_strings(context, include_net=False, target_nation=None):
             total_inc, total_upkeep, _ = cached
 
     def fmt_net(inc, exp):
-        net = int(inc - exp)
+        net = round(inc - exp)
         return f" (+{format_number(net)})" if net >= 0 else f" ({format_number(net)})"
 
     hud_strings = []
@@ -838,7 +895,7 @@ def get_economy_projections(target_nation, map_data, nation_data, *, context=Non
         return (
             {r: 0 for r in c.ECON_RESOURCE_KEYS},
             {r: 0 for r in c.ECON_RESOURCE_KEYS},
-            {r: {} for r in c.ECON_RESOURCE_KEYS}
+            empty_income_breakdown()
         )
         
     return p_econ["total_inc"], p_econ["upkeep"], p_econ["breakdown"]
@@ -851,8 +908,7 @@ def get_net_materials_income(economy):
 
 def get_research_funding_spent(breakdown):
     """Materials the economy breakdown sends to research funding this turn."""
-    # get_economy_projections returns empty breakdowns for a country with no economy.
-    return -breakdown["materials"].get("research_funding", 0)
+    return -breakdown["materials"]["research_funding"]
 
 
 def get_projected_research_funding_awards(context, country_id):

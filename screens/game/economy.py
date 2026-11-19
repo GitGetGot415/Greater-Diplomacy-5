@@ -40,9 +40,6 @@ CONSCRIPTION_DAMAGE_COLOR_STOPS = (
     (0.20, (255, 80, 80)),
 )
 
-# Zeroed income breakdown, used when there is nothing real to show yet.
-EMPTY_BREAKDOWN = {"core": 0, "non_core": 0, "buildings": 0, "resources": 0, "conversion": 0}
-
 # Expenses table controls and columns
 EXPENSES_TOGGLE_Y = 65
 EXPENSES_TOGGLE_WIDTH = 130
@@ -65,6 +62,21 @@ def conscription_damage_color(bonus):
             return tuple(round(start + (end - start) * blend)
                          for start, end in zip(low_color, high_color))
     return CONSCRIPTION_DAMAGE_COLOR_STOPS[-1][1]
+
+
+def format_amount(value, *, signed=False):
+    """Round every economy screen figure to the nearest whole number."""
+    return f"{round(value):+d}" if signed else str(round(value))
+
+
+def income_detail_text(breakdown):
+    """List one resource's income entries in the shared breakdown order."""
+    parts = []
+    for key, gain_label, cost_label, always_shown in queries.INCOME_BREAKDOWN_ENTRIES:
+        value = breakdown[key]
+        if always_shown or value != 0:
+            parts.append(f"{gain_label if value >= 0 else cost_label}: {format_amount(value, signed=True)}")
+    return "Details -> " + "  |  ".join(parts)
 
 
 def expense_table_columns(grouped):
@@ -157,26 +169,16 @@ class Economy_Screen(Screen):
         btn_expenses = Button(c.SCREEN_WIDTH - EXPENSES_BTN_OFFSET_X, c.BACK_BTN_TOPLEFT[1], "small", "orange", "Expenses", self.open_expenses_table, sound_kind=None)
         self.elements.append(btn_expenses)
         
-        # Conversion Slider positioned below the resource rows
+        # Sliders below the resource rows
         p_data = self.map_screen.nation_data[self.map_screen.player_country]
-        
-        # Fetch the max allowed conversion limit based on tech
-        max_allowed = queries.get_max_fuel_conversion(p_data)
-        
-        # Safely clamp the loaded slider value just in case they lost tech
-        slider_val = min(queries.get_fuel_conversion_rate(p_data, max_conversion=max_allowed), max_allowed)
-        p_data["mat_to_fuel_slider"] = slider_val
-        
-        conscript_val = queries.get_conscription_rate(p_data)
-        p_data["conscription_slider"] = conscript_val
-        
-        conscription = Slider(c.SCREEN_WIDTH // 2 - SLIDER_WIDTH // 2, CONSCRIPTION_SLIDER_Y, SLIDER_WIDTH, "Conscription (Keep Manpower %)", conscript_val, self.set_conscription, visual_max=1.0, allowed_max=1.0)
+        max_conversion = queries.get_max_fuel_conversion(p_data)
+        slider_x = c.SCREEN_WIDTH // 2 - SLIDER_WIDTH // 2
+        conscription = Slider(slider_x, CONSCRIPTION_SLIDER_Y, SLIDER_WIDTH, "Conscription (Keep Manpower %)", queries.get_conscription_rate(p_data), self.set_conscription, click_track=True)
         self.conscription_slider = conscription
-        conversion = Slider(c.SCREEN_WIDTH // 2 - SLIDER_WIDTH // 2, CONVERSION_SLIDER_Y, SLIDER_WIDTH, "Convert % Mats to Fuel", slider_val, self.set_conversion, visual_max=c.MAX_CONVERSION_SLIDER_VAL, allowed_max=max_allowed)
-        funding_rate = queries.get_research_funding_rate(p_data)
-        funding = Slider(c.SCREEN_WIDTH // 2 - SLIDER_WIDTH // 2, RESEARCH_FUNDING_SLIDER_Y, SLIDER_WIDTH, "Research Funding", funding_rate, self.set_research_funding, click_track=True)
-        funding.disabled = self.map_screen.tactical_mode
+        conversion = Slider(slider_x, CONVERSION_SLIDER_Y, SLIDER_WIDTH, "Convert % Mats to Fuel", queries.get_fuel_conversion_rate(p_data, max_conversion=max_conversion), self.set_conversion, visual_max=c.MAX_CONVERSION_SLIDER_VAL, allowed_max=max_conversion, click_track=True)
+        funding = Slider(slider_x, RESEARCH_FUNDING_SLIDER_Y, SLIDER_WIDTH, "Research Funding", queries.get_research_funding_rate(p_data), self.set_research_funding, click_track=True)
         for slider in (conscription, conversion, funding):
+            slider.disabled = self.map_screen.tactical_mode
             slider.click_guard = self.can_edit_realtime
         self.elements.extend((conscription, conversion, funding))
         self.refresh_economy_preview()
@@ -190,34 +192,31 @@ class Economy_Screen(Screen):
         days = queries.get_days_per_turn(self.map_screen.scenario_settings)
         bonus = queries.get_funded_research_points(country, spent, days)
         if not spent and queries.get_research_funding_rate(country):
-            caption = "No surplus Materials income"
+            caption = "No Materials income"
         else:
-            caption = f"Materials budget {spent:,}   |   Bonus research +{bonus:,.2f} pts/turn"
+            caption = f"Materials budget {format_amount(spent)}   |   Bonus research +{bonus:,.2f} pts/turn"
         self.research_funding_caption = fonts.get("normal").render(caption, True, c.COLOR_GOLD_HIGHLIGHT)
         bonus = queries.get_conscription_damage_bonus(country)
         self.conscription_damage_caption = f"dmg modifier: +{bonus:.2%}"
         self.conscription_damage_color = conscription_damage_color(bonus)
 
     def set_conscription(self, val):
-        if not self.map_screen or self.map_screen.tactical_mode: return
-        if not self.can_edit_realtime(): return
-        p_data = self.map_screen.nation_data[self.map_screen.player_country]
-        p_data["conscription_slider"] = val
-        self.refresh_economy_preview()
-        self.map_screen.invalidate_map_presentation_cache()
+        self.set_slider_rate("conscription_slider", val)
 
     def set_conversion(self, val):
-        if not self.map_screen or self.map_screen.tactical_mode: return
-        if not self.can_edit_realtime(): return
-        p_data = self.map_screen.nation_data[self.map_screen.player_country]
-        p_data["mat_to_fuel_slider"] = val
-        self.refresh_economy_preview()
+        if not self.map_screen: return
+        country = self.map_screen.nation_data[self.map_screen.player_country]
+        self.set_slider_rate("mat_to_fuel_slider", val, queries.get_max_fuel_conversion(country))
 
     def set_research_funding(self, val):
+        self.set_slider_rate("research_funding_slider", val)
+
+    def set_slider_rate(self, key, val, maximum=1.0):
+        """Store one economy slider through the shared validation and refresh path."""
         if not self.map_screen or self.map_screen.tactical_mode: return
-        if not self.can_edit_realtime() or not queries.valid_research_funding_rate(val): return
-        p_data = self.map_screen.nation_data[self.map_screen.player_country]
-        p_data["research_funding_slider"] = val
+        if not self.can_edit_realtime() or not queries.valid_slider_rate(val): return
+        # The slider computes its value in floating point and can land just past a research limit.
+        self.map_screen.nation_data[self.map_screen.player_country][key] = min(val, maximum)
         self.refresh_economy_preview()
         self.map_screen.invalidate_map_presentation_cache()
 
@@ -229,12 +228,7 @@ class Economy_Screen(Screen):
         
         ui_bars.draw_centered_title(surface, "National Economy", TITLE_Y)
 
-        econ_tuple = self.econ_cache
-        if len(econ_tuple) == 3:
-            total_inc, upkeep, breakdown = econ_tuple
-        else:
-            total_inc, upkeep = econ_tuple
-            breakdown = {k: EMPTY_BREAKDOWN.copy() for k in c.ECON_RESOURCE_KEYS}
+        total_inc, upkeep, breakdown = self.econ_cache
 
         font_large = fonts.get("heading1")
         font_med = fonts.get("heading2")
@@ -248,11 +242,8 @@ class Economy_Screen(Screen):
         ]
         
         for res_key, name, current, color in resources:
-            inc = total_inc.get(res_key, 0)
-            exp = upkeep.get(res_key, 0)
-            bd = breakdown.get(res_key, {})
-            net = inc - exp
-            net_str = f"+{int(net)}" if net >= 0 else str(int(net))
+            inc = total_inc[res_key]
+            exp = upkeep[res_key]
             
             # Row Background (Made taller to fit details)
             row_rect = pygame.Rect(c.SCREEN_WIDTH // 2 - ROW_WIDTH // 2, y_offset, ROW_WIDTH, ROW_HEIGHT)
@@ -261,32 +252,11 @@ class Economy_Screen(Screen):
                                          border_width=1, gradient_strength=style["gradient_strength"])
             
             # Current Resource Amount
-            surface.blit(font_large.render(f"{name}: {int(current)}", True, color), (row_rect.x + 20, row_rect.y + 15))
+            surface.blit(font_large.render(f"{name}: {format_amount(current)}", True, color), (row_rect.x + 20, row_rect.y + 15))
 
-            main_breakdown = f"Total Income: +{int(inc)}   |   Upkeep: -{int(exp)}   |   Net: {net_str}"
-            detail_breakdown = f"Details -> Base: +{int(bd.get('base',0))}  |  Core: +{int(bd.get('core',0))}  |  Non-Core: +{int(bd.get('non_core',0))}  |  Buildings: +{int(bd.get('buildings',0))}  |  Resources: +{int(bd.get('resources',0))}"
-            if bd.get('conscription', 0) != 0:
-                cons_val = int(bd.get('conscription', 0))
-                sign = "+" if cons_val > 0 else ""
-                label = "Unused Equipment Income" if cons_val > 0 else "Relaxed Conscription Cost"
-                detail_breakdown += f"  |  {label}: {sign}{cons_val}"
-            if bd.get('conversion', 0) != 0:
-                conv_val = int(bd.get('conversion', 0))
-                sign = "+" if conv_val > 0 else ""
-                label = "Conversion Income" if conv_val > 0 else "Conversion Cost"
-                detail_breakdown += f"  |  {label}: {sign}{conv_val}"
-
-            if bd.get('policy', 0) != 0:
-                policy_val = int(bd.get('policy', 0))
-                sign = "+" if policy_val > 0 else ""
-                detail_breakdown += f"  |  Policy: {sign}{policy_val}"
-                
-            if bd.get('siphon', 0) != 0:
-                detail_breakdown += f"  |  Siphoned to Master: {int(bd.get('siphon', 0))}"
-            if bd.get('siphon_income', 0) != 0:
-                detail_breakdown += f"  |  Siphon Income: +{int(bd.get('siphon_income', 0))}"
-            if bd.get('research_funding', 0) != 0:
-                detail_breakdown += f"  |  Research Funding: {int(bd.get('research_funding', 0))}"
+            main_breakdown = (f"Total Income: {format_amount(inc, signed=True)}   |   Upkeep: -{format_amount(exp)}   |   "
+                              f"Net: {format_amount(inc - exp, signed=True)}")
+            detail_breakdown = income_detail_text(breakdown[res_key])
 
             # Stats Breakdown (Main)
             surface.blit(font_med.render(main_breakdown, True, c.UI_TEXT_LIGHT), (row_rect.x + 350, row_rect.y + 18))
@@ -302,17 +272,17 @@ class Economy_Screen(Screen):
             self.conscription_slider.rect.centery)))
 
         # Draw dynamic conversion info below sliders.
-        man_lost = -breakdown.get("manpower", {}).get("conscription", 0)
-        mat_gained = breakdown.get("materials", {}).get("conscription", 0)
+        man_lost = -breakdown["manpower"]["conscription"]
+        mat_gained = breakdown["materials"]["conscription"]
         if man_lost > 0:
-            cons_txt = font_small.render(f"Converting {int(man_lost)} Manpower -> {int(mat_gained)} Materials", True, c.COLOR_GOLD_HIGHLIGHT)
+            cons_txt = font_small.render(f"Converting {format_amount(man_lost)} Manpower -> {format_amount(mat_gained)} Materials", True, c.COLOR_GOLD_HIGHLIGHT)
             surface.blit(cons_txt, (c.SCREEN_WIDTH // 2 - cons_txt.get_width() // 2,
                                    CONSCRIPTION_SLIDER_Y + SLIDER_CAPTION_OFFSET_Y))
 
-        mat_lost = -breakdown.get("materials", {}).get("conversion", 0)
-        fuel_gained = breakdown.get("fuel", {}).get("conversion", 0)
+        mat_lost = -breakdown["materials"]["conversion"]
+        fuel_gained = breakdown["fuel"]["conversion"]
         if mat_lost > 0:
-            conv_txt = font_small.render(f"Converting {int(mat_lost)} Materials -> {int(fuel_gained)} Fuel", True, c.COLOR_GOLD_HIGHLIGHT)
+            conv_txt = font_small.render(f"Converting {format_amount(mat_lost)} Materials -> {format_amount(fuel_gained)} Fuel", True, c.COLOR_GOLD_HIGHLIGHT)
             surface.blit(conv_txt, (c.SCREEN_WIDTH // 2 - conv_txt.get_width() // 2, CONVERSION_SLIDER_Y + SLIDER_CAPTION_OFFSET_Y))
         caption = self.research_funding_caption
         surface.blit(caption, (c.SCREEN_WIDTH // 2 - caption.get_width() // 2, RESEARCH_FUNDING_SLIDER_Y + SLIDER_CAPTION_OFFSET_Y))

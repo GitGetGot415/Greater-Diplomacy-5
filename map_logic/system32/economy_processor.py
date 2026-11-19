@@ -15,8 +15,7 @@ def process_economy(context, *, economies=None):
         economies = queries.calculate_all_economies(world_state.map_data, world_state.nation_data, context=context)
 
     for name, stats in world_state.nation_data.items():
-        # Explicitly skip the global events log 
-        if name == "GLOBAL_EVENTS" or name in c.UNPLAYABLE_NATIONS or name not in economies:
+        if not queries.has_turn_economy(name, economies):
             continue
 
         econ = economies[name]

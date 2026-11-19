@@ -30,7 +30,10 @@ def process_ai_research(context, *, countries=None):
         if countries is None and econ:
             # Preserve manually set budgets when a human automates queue selection.
             has_reserve = data.get("materials", 0) >= econ["upkeep"]["materials"]
-            has_surplus = queries.get_net_materials_income(econ) > 0
+            # Judge the AI rate against income before this turn's funding, so the
+            # current rate cannot switch funding off and back on every other turn.
+            unfunded = queries.get_net_materials_income(econ) + queries.get_research_funding_spent(econ["breakdown"])
+            has_surplus = unfunded - queries.get_research_funding_cost(c.AI_RESEARCH_FUNDING_RATE, econ["gross_materials"]) > 0
             data["research_funding_slider"] = c.AI_RESEARCH_FUNDING_RATE if has_reserve and has_surplus else c.DEFAULT_RESEARCH_FUNDING_RATE
 
         queue = data.setdefault("research_queue", [])

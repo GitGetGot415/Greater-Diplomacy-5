@@ -1,6 +1,7 @@
 """Country flag navigation, shared summary data, and inspection permissions."""
 
 import copy
+import math
 import unittest
 from unittest.mock import patch
 
@@ -33,8 +34,9 @@ def world():
     game.scenario_settings = {"fog_of_war": True}
     game.visible_provinces = {game.home_of("A")["id"], game.home_of("B")["id"]}
     for country, data in game.nation_data.items():
-        data.update(name=f"Display {country}", research={}, manpower=200,
-                    conscription_slider=0.25, mat_to_fuel_slider=0.1)
+        # Research the fuel conversion limit so the saved rate is in effect.
+        data.update(name=f"Display {country}", research={"fuel_refining": math.ceil(0.1 / c.FUEL_REFINING_CONVERSION_PER_LVL)},
+                    manpower=200, conscription_slider=0.25, mat_to_fuel_slider=0.1)
         game.home_of(country)["units"] = [unit(country)]
     for key, province in game.map_data.items():
         province["json_key"] = key

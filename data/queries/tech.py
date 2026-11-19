@@ -503,7 +503,8 @@ def get_research_multiplier(current_exact_year, target_year):
     return 1.0
 
 
-def _get_unmodified_research_points(days_per_turn):
+def get_unmodified_research_points(days_per_turn):
+    """Points per slot before the economic system, policies, and other modifiers."""
     return c.BASE_RESEARCH_POINTS_PER_DAY * days_per_turn
 
 
@@ -517,7 +518,7 @@ def get_base_research_rates(nation_data, country_id, days_per_turn):
     """Return per-slot points before modifiers, after the economic system, and after policy."""
     # Politics imports the query package for its other rules.
     from map_logic import politics
-    base = _get_unmodified_research_points(days_per_turn)
+    base = get_unmodified_research_points(days_per_turn)
     economic = base * politics.axis_research_multiplier(politics.economic_value(nation_data, country_id))
     modified = base * politics.research_multiplier(nation_data, country_id)
     return base, economic, modified
@@ -542,54 +543,6 @@ def get_normal_research_progress(nation_data, country_id, tech_tree, days_per_tu
         rate = get_project_research_rate(base_points, nation_data, country_id, tech_name, level + 1)
         progress[tech_name] = rate * get_research_multiplier(current_year, target_year)
     return progress
-
-
-def valid_research_funding_rate(value):
-    """Accept a numeric share of income, including both endpoints."""
-    return type(value) in (int, float) and 0 <= value <= 1
-
-
-def get_research_funding_rate(country):
-    rate = country.get("research_funding_slider", c.DEFAULT_RESEARCH_FUNDING_RATE)
-    return rate if valid_research_funding_rate(rate) else c.DEFAULT_RESEARCH_FUNDING_RATE
-
-
-def get_research_funding_cost(country, net_materials):
-    """Materials the slider takes from surplus income, whether or not anything is queued."""
-    # Truncate like the other slider conversions in the economy breakdown.
-    return int(max(0, net_materials) * get_research_funding_rate(country))
-
-
-def get_funded_research_points(country, materials_spent, days_per_turn):
-    """Return the points that paid funding adds across the full queue."""
-    if materials_spent <= 0:
-        return 0
-    rate = get_research_funding_rate(country)
-    return _get_unmodified_research_points(days_per_turn) * rate * (1.5 - 0.5 * rate)
-
-
-def get_research_funding_awards(country, materials_spent, normal_progress, *, days_per_turn):
-    """Return bonus points per project after normal progress. Unusable points are lost."""
-    bonus = get_funded_research_points(country, materials_spent, days_per_turn)
-    remaining = {}
-    for project in country.get("research_queue", []):
-        tech_name = project["tech_name"]
-        points = project["points_remaining"] - normal_progress[tech_name]
-        if points > 0:
-            remaining[tech_name] = points
-    if bonus <= 0 or not remaining:
-        return {}
-
-    # Projects close to completion use less than an equal share. Redistribute
-    # the spare points across the rest of the queue.
-    awards = {}
-    ordered = sorted(remaining.items(), key=lambda entry: entry[1])
-    for index, (tech_name, points) in enumerate(ordered):
-        projects_left = len(ordered) - index
-        award = min(points, bonus / projects_left)
-        awards[tech_name] = award
-        bonus -= award
-    return awards
 
 
 def has_free_research_slots(nation, nation_data):

@@ -213,10 +213,11 @@ class ConscriptionSliderTests(unittest.TestCase):
         game.realtime_session = SimpleNamespace(
             phase="TURN", players={"player": SimpleNamespace(submitted=True, eliminated=False)})
         slider = next(element for element in screen.elements if isinstance(element, Slider))
+        before = dict(game.nation_data["A"])
         slider.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=slider.handle_rect.center))
         screen.set_conscription(0.0)
         self.assertFalse(slider.dragging)
-        self.assertEqual(game.nation_data["A"]["conscription_slider"], 1.0)
+        self.assertEqual(game.nation_data["A"], before)
         game.invalidate_map_presentation_cache.assert_not_called()
 
 
