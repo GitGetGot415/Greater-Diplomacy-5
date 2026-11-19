@@ -116,11 +116,14 @@ class ConversionTurnsTests(unittest.TestCase):
         draft = next(u for u in client.id_to_province[self.base["id"]]["units"]
                      if u["unit_id"] == self.ship["unit_id"])
         draft["order"] = {"type": "CONVERT", "to": "Truck", "turns_left": 2}
+
+        def submitted_order(data):
+            return next(command["order"] for command in data["player_intents"]
+                        if command["type"] == "unit_order" and command["unit_id"] == self.ship["unit_id"])
+
         for change in (lambda data: data.update(tournament_turn=0),
-                       lambda data: next(u for p in data["provinces"].values() for u in p["units"]
-                           if u["unit_id"] == self.ship["unit_id"]).update(type=None),
-                       lambda data: next(u for p in data["provinces"].values() for u in p["units"]
-                           if u["unit_id"] == self.ship["unit_id"])["order"].update(to="invalid")):
+                       lambda data: submitted_order(data).update(type=None),
+                       lambda data: submitted_order(data).update(to="invalid")):
             before = deepcopy(self.game.map_data)
             self.assertEqual(self.fixture.import_client(client, change)["rejected"], 1)
             self.assertEqual(self.game.map_data, before)

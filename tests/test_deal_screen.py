@@ -52,8 +52,7 @@ class DealScreenTestCase(unittest.TestCase):
             data = self.map.nation_data[nation]
             data["at_war_with"] = []
             data["pending_diplomacy"] = {}
-            data["faction"] = ""
-            data["is_faction_leader"] = False
+            queries.set_country_faction(self.map.nation_data, nation, "")
             data["master"] = ""
             data.setdefault("war_durations", {})
         link_war(self.map.nation_data, self.player, self.enemy)
@@ -349,8 +348,7 @@ class AssemblyTests(DealScreenTestCase):
         self.assertNotIn(deal_mod.WHITE_PEACE, kinds)
 
     def test_a_trade_does_not_make_a_faction_member_leave(self):
-        self.map.nation_data[self.player]["faction"] = "Allies"
-        self.map.nation_data[self.player]["is_faction_leader"] = False
+        queries.set_country_faction(self.map.nation_data, self.player, "Allies")
 
         screen = self.screen(deal_mod.KIND_TRADE)
         screen.give_mats_str = "100"
@@ -359,8 +357,7 @@ class AssemblyTests(DealScreenTestCase):
         self.assertNotIn(deal_mod.FACTION_EXIT, kinds)
 
     def test_a_separate_peace_still_makes_a_faction_member_leave(self):
-        self.map.nation_data[self.player]["faction"] = "Allies"
-        self.map.nation_data[self.player]["is_faction_leader"] = False
+        queries.set_country_faction(self.map.nation_data, self.player, "Allies")
 
         kinds = [cl["type"] for cl in deal_mod.clauses(self.screen().build_deal())]
 

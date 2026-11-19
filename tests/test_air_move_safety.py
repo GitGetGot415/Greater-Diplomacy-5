@@ -5,7 +5,6 @@ from unittest.mock import Mock, patch
 
 from data import queries
 import data.constants as c
-from data.migrations import snapshot_moves
 from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError
 from map_logic.ai import ai_movement, ai_unit_eval
 from map_logic.system32 import air_processor, combat_rules, movement_processor
@@ -385,7 +384,7 @@ class AirMoveSafetyTests(unittest.TestCase):
         self.plane["order"] = {"type": "MOVE", "path": []}
         self.assertEqual(queries.queue_army_defense_orders(self.game, "A", army["id"]), 1)
 
-    def test_cancel_then_move_drafts_remain_valid_for_both_multiplayer_hosts(self):
+    def test_cancel_then_move_drafts_remain_valid_for_multiplayer(self):
         from screens.game.orders import Orders_Screen
         screen = Orders_Screen()
         screen.map_screen = self.game
@@ -404,12 +403,9 @@ class AirMoveSafetyTests(unittest.TestCase):
                 command = {"type": "unit_order", "province_id": self.base["id"],
                     "unit_index": 0, "unit_id": self.plane["unit_id"], "order": draft}
                 self.assertEqual(MapRealtimeDriver(self.game).validate_draft("A", [command])[0]["order"], draft)
-                _, drafts = snapshot_moves._validate_aircraft_orders(self.game, "A",
-                    {"aircraft_orders": [{"unit_id": self.plane["unit_id"], "order": draft}]}, {})
-                self.assertEqual(drafts[0][1], draft)
                 self.assertEqual(self.plane["order"], patrol)
 
-    def test_direct_retarget_drafts_are_valid_for_both_multiplayer_hosts(self):
+    def test_direct_retarget_drafts_are_valid_for_multiplayer(self):
         destination = tile(self.game, 4, 50, owner="B")
         self.assertTrue(self.move(self.enemy))
         original = deepcopy(self.plane["order"])
@@ -419,9 +415,6 @@ class AirMoveSafetyTests(unittest.TestCase):
         command = {"type": "unit_order", "province_id": self.base["id"],
             "unit_index": 0, "unit_id": self.plane["unit_id"], "order": draft}
         self.assertEqual(MapRealtimeDriver(self.game).validate_draft("A", [command])[0]["order"], draft)
-        _, drafts = snapshot_moves._validate_aircraft_orders(self.game, "A",
-            {"aircraft_orders": [{"unit_id": self.plane["unit_id"], "order": draft}]}, {})
-        self.assertEqual(drafts[0][1], draft)
         self.assertEqual(self.plane["order"], original)
 
     def test_unclaimed_destination_rejects_flight_and_missile_ground_movement(self):
@@ -450,15 +443,11 @@ class AirMoveSafetyTests(unittest.TestCase):
         self.assertFalse(self.move(self.enemy))
         self.assertEqual([unit["order"] for unit in (self.plane, distant)], before)
 
-    def test_both_multiplayer_hosts_validate_random_patrol_and_destination_rules(self):
+    def test_multiplayer_validates_random_patrol_and_destination_rules(self):
         def validate(order):
             command = {"type": "unit_order", "province_id": 1, "unit_index": 0,
                        "unit_id": self.plane["unit_id"], "order": order}
-            real = MapRealtimeDriver(self.game).validate_draft("A", [command])[0]["order"]
-            _, drafts = snapshot_moves._validate_aircraft_orders(self.game, "A",
-                {"aircraft_orders": [{"unit_id": self.plane["unit_id"], "order": order}]}, {})
-            self.assertEqual(real, drafts[0][1])
-            return real
+            return MapRealtimeDriver(self.game).validate_draft("A", [command])[0]["order"]
 
         self.assertEqual(validate({"type": "AIR_PATROL", "priority": "RANDOM"})["priority"], "RANDOM")
         wing(self.safe, "Infantry Type 1910", "B")
@@ -473,9 +462,6 @@ class AirMoveSafetyTests(unittest.TestCase):
                            "unit_id": self.plane["unit_id"], "order": order}
                 with self.assertRaises(RealtimeError):
                     MapRealtimeDriver(self.game).validate_draft("A", [command])
-                with self.assertRaises(ValueError):
-                    snapshot_moves._validate_aircraft_orders(self.game, "A",
-                        {"aircraft_orders": [{"unit_id": self.plane["unit_id"], "order": order}]}, {})
 
     def test_ai_relocates_before_striking_when_ground_units_can_reach_base(self):
         attacker = wing(self.enemy, "Infantry Type 1910", "B")

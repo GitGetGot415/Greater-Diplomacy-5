@@ -17,7 +17,7 @@ import data.constants as c
 
 from data.io import country_io
 from map_logic.territory.ownership import retire_landless_nation
-from map_logic.diplomacy import volunteers, faction_leadership
+from map_logic.diplomacy import volunteers, faction_leadership, faction_records
 
 
 # --- RECURSIVE PUPPET HELPERS ---
@@ -107,15 +107,15 @@ def assign_puppet(map_data, nation_data, master, puppet, puppet_type=c.PUPPET_TY
         m_data.setdefault("puppets", []).append(puppet)
 
     # Transfer leadership if puppet was a leader
-    if p_data.get("is_faction_leader", False):
-        fac = p_data.get("faction", "")
+    if queries.is_faction_leader(puppet, nation_data):
+        fac = queries.get_country_faction(puppet, nation_data)
         queries.set_faction_leadership(nation_data, puppet, False)
         if fac:
             queries.set_country_faction(nation_data, master, fac)
             queries.set_faction_leadership(nation_data, master, True)
 
     # Auto-pull puppet into master's faction
-    master_fac = m_data.get("faction", "")
+    master_fac = queries.get_country_faction(master, nation_data)
     if master_fac:
         pull_puppets_into_faction(master, master_fac, map_data, nation_data)
 
@@ -236,9 +236,10 @@ def _clear_country_relationships(nation_data, country):
                 for key, value in list(table.items()):
                     if key == country or _references_country(value, country):
                         del table[key]
-    for field in ("FACTION_WAR_MAPS", "WAR_PRE_MAPS"):
-        maps = nation_data.get(field, {})
-        maps.pop(country, None)
+    faction_records.set_pre_war_map(nation_data, country, None)
+    individual_maps = nation_data.get("WAR_PRE_MAPS", {})
+    individual_maps.pop(country, None)
+    for maps in (faction_records.pre_war_maps(nation_data), individual_maps):
         for borders in maps.values():
             # Older shared records can also contain ordinary country defaults.
             if not isinstance(borders, dict):

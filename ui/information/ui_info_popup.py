@@ -224,7 +224,7 @@ def draw_unit_info(map_screen, surface):
                                  (dip_rect.x + 10, y_offset))
                     y_offset += 20
 
-            faction_name = map_screen.nation_data.get(owner, {}).get("faction", "")
+            faction_name = queries.get_country_faction(owner, map_screen.nation_data)
 
             if not faction_name:
                 surface.blit(map_screen.small_font.render("No Faction", True, c.UI_TEXT_MUTED), (dip_rect.x + 10, y_offset))

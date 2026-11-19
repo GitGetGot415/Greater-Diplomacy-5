@@ -130,7 +130,7 @@ def get_country_summary(context, country_id):
                 country_id, world_state.map_data, copy.deepcopy(nation_data), context=context)
             economy = _country_economy_summary(country, income, expenses)
 
-    faction = country.get("faction", "")
+    faction = queries.get_country_faction(country_id, nation_data)
     policies = [{"name": politics.policy(policy_id)["name"], "status": state["status"],
                  "turns_remaining": state.get("turns_remaining", 0)}
                 for policy_id, state in politics.policy_states(nation_data, country_id).items()]

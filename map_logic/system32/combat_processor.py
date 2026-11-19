@@ -32,9 +32,7 @@ def apply_group_damage(total_atk, target_units, defense_bonus_fn=None, *, source
 
     for u in target_units:
         defense_bonus = defense_bonus_fn(u) if defense_bonus_fn else 0
-        defense = (u.get("defense", 0) * combat_rules.health_defense_multiplier(u, nation_data)
-                   + defense_bonus)
-        actual_dmg = max(0, damage_per_unit - defense)
+        actual_dmg = combat_rules.damage_after_defense(u, damage_per_unit, nation_data, defense_bonus)
 
         queries.apply_unit_health_loss(u, actual_dmg, sources=sources, tile=tile)
 

@@ -269,7 +269,7 @@ def is_nation_reachable(nation_a, target_nation, map_data, id_to_province, natio
     friendly_b = queries.get_all_friendly_nations(target_nation, nation_data)
     at_war_b = set(get_enemies(target_nation, nation_data))
 
-    target_faction = nation_data.get(target_nation, {}).get("faction", "")
+    target_faction = queries.get_country_faction(target_nation, nation_data)
     enemy_nations = {target_nation}
     if target_faction:
         enemy_nations.update(get_faction_members(target_faction, nation_data))

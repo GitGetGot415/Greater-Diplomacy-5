@@ -28,7 +28,8 @@ import unittest
 
 
 import data.constants as c
-from map_logic.system32 import combat_processor, combat_rules
+from data.game_state import WorldState
+from map_logic.system32 import combat_forecast, combat_processor, combat_rules
 
 from tests.combat_fixtures import damage_taken, StubBattleMap, unit
 
@@ -137,6 +138,26 @@ class TheFixturesFromTheRequestTests(unittest.TestCase):
 
 
 class WidthTests(unittest.TestCase):
+    def test_forecast_uses_the_scenarios_defense_floor(self):
+        screen = StubBattleMap()
+        screen.add_nation("A", at_war_with=["B"])
+        screen.add_nation("B", at_war_with=["A"])
+        world = WorldState(nation_data=screen.nation_data)
+        screen.nation_data = world.nation_data
+        floor = 0.9 if c.DEFENSE_AT_ZERO_HEALTH < 0.5 else 0.1
+        world.scenario_settings["defense_at_zero_health"] = floor
+        attacker = unit("A", attack=30, health=100)
+        defender = unit("B", attack=0, health=100, defense=20)
+        defender["health"] = 50
+        province = screen.add_province("p1", "A", units=[attacker, defender])
+
+        estimate = combat_forecast.simulate_combat([province["units"]], world.nation_data, province=province, max_turns=0)
+        combat_processor.process_combat(screen)
+
+        expected_health = 50 - (30 - 20 * (floor + (1 - floor) * 0.5))
+        self.assertAlmostEqual(defender["health"], expected_health)
+        self.assertAlmostEqual(estimate["sides"][0][1]["health"], expected_health)
+
     def test_meeting_engagement_uses_the_narrower_terrain_in_either_direction(self):
         for terrains in (("mountain", "plains"), ("plains", "mountain"),
                          ("plains", "plains"), ("hills", "hills")):

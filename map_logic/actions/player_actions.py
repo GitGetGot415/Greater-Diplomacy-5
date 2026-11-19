@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import copy
 import json
-from typing import Any
+from dataclasses import dataclass
+from typing import Any, Callable
 
 import data.constants as c
 from data.state_access import world_for, session_for
@@ -32,7 +33,6 @@ class PlayerActionError(ValueError):
 
 class PlayerActions:
     """Own domain validation and application for complete player drafts."""
-    _UNIT_MUTABLE_KEYS = {"order", "custom_name", "combat_stance", "lane_target"}
     _AUTOMATION_KEYS = {"construction", "movement", "research"}
     _APPEARANCE_KEYS = set(c.COUNTRY_APPEARANCE_FIELDS)
     _MAX_CLAIM_DRAFTS = 100
@@ -55,7 +55,6 @@ class PlayerActions:
                                          if transport_commands else (planning_view, []))
         except ValueError as exc:
             raise PlayerActionError(str(exc)) from exc
-        has_research_command = False
         seen = set()
         seen_units = set()
         seen_queues = set()
@@ -65,12 +64,9 @@ class PlayerActions:
             kind = command.get("type")
             if not isinstance(kind, str):
                 raise PlayerActionError("Invalid command type.")
-            # A draft is a complete projection of each mutable domain.  One
-            # command per domain prevents a client from smuggling a later
-            # conflicting value through the same update.
-            if kind in seen and kind in {"research_queue", "country_preferences", "claim_draft",
-                                        "country_appearance", "country_diplomacy", "puppet_draft",
-                                        "faction_rename", "ratification_response", "army_roster"}:
+            definition = _COUNTRY_COMMANDS.get(kind)
+            # A country draft specifies at most one complete choice per domain.
+            if definition and kind in seen:
                 raise PlayerActionError("Only one command is allowed for that game action.")
             if kind == "unit_order":
                 validated = self._validate_unit_order(country_id, command, context=transport_view)
@@ -88,27 +84,10 @@ class PlayerActions:
                     raise PlayerActionError("Only one projection is allowed per province queue.")
                 seen_queues.add(key)
                 canonical.append(entry)
-            elif kind == "research_queue":
-                if has_research_command:
-                    raise PlayerActionError("Only one research selection may be submitted per turn.")
-                canonical.append(self._validate_research_queue(country_id, command))
-                has_research_command = True
-            elif kind == "country_preferences":
-                canonical.append(self._validate_country_preferences(country_id, command))
-            elif kind == "claim_draft":
-                canonical.append(self._validate_claim_draft(country_id, command))
-            elif kind == "country_appearance":
-                canonical.append(self._validate_country_appearance(country_id, command))
-            elif kind == "country_diplomacy":
-                canonical.append(self._validate_country_diplomacy(country_id, command))
-            elif kind == "puppet_draft":
-                canonical.append(self._validate_puppet_draft(country_id, command))
-            elif kind == "faction_rename":
-                canonical.append(self._validate_faction_rename(country_id, command))
-            elif kind == "ratification_response":
-                canonical.append(self._validate_ratification_response(country_id, command))
-            elif kind == "army_roster":
-                canonical.append(self._validate_army_roster(country_id, command, context=transport_view))
+            elif definition:
+                validated = (definition.validate(self, country_id, command, context=transport_view)
+                             if definition.uses_transport_view else definition.validate(self, country_id, command))
+                canonical.append({"type": kind, **validated})
             elif kind == "volunteer_draft":
                 canonical.append(self._validate_volunteer_draft(country_id, command, context=transport_view))
             else:
@@ -117,6 +96,14 @@ class PlayerActions:
         self._validate_queue_budget(country_id, canonical)
         self._validate_volunteer_commands(country_id, canonical, context=planning_view)
         return canonical
+
+    def _collect_army_roster(self, country_id):
+        country_data = self.world.nation_data.get(country_id, {})
+        return {"armies": copy.deepcopy(country_data.get("armies", []))}
+
+    def _apply_army_roster(self, country_id, command):
+        country_data = self.world.nation_data[country_id]
+        country_data["armies"] = copy.deepcopy(command["armies"])
 
     def _validate_army_roster(self, country_id: str, command: dict[str, Any], *, context=None) -> dict[str, Any]:
         """Validate organization metadata without trusting client unit ownership."""
@@ -183,7 +170,7 @@ class PlayerActions:
                                                       self.world.map_data)
         except ValueError as exc:
             raise PlayerActionError(str(exc)) from exc
-        return {"type": "army_roster", "armies": armies}
+        return {"armies": armies}
 
     def _validate_volunteer_commands(self, country_id: str, commands: list[dict[str, Any]], *, context=None) -> None:
         """Keep a volunteer request and its reserved divisions inseparable."""
@@ -223,6 +210,38 @@ class PlayerActions:
         if any(isinstance(command, dict) and command.get("type") == "country_diplomacy" for command in commands):
             return volunteers.draft_context(self.context, country_id)
         return self.context
+
+    def _is_local_tournament_player(self, country_id):
+        return (self.session.multiplayer_mode and not self.session.realtime_multiplayer
+                and self.session.player_country == country_id)
+
+    def _collect_country_preferences(self, country_id):
+        country_data = self.world.nation_data.get(country_id, {})
+        return {"political_drift": country_data.get("political_drift", 0),
+                politics.ECONOMIC_DRIFT_KEY: politics.economic_drift(self.world.nation_data, country_id),
+                "automation": copy.deepcopy(country_data.get("automation", {})),
+                "conscription_slider": queries.get_conscription_rate(country_data),
+                "mat_to_fuel_slider": queries.get_fuel_conversion_rate(country_data),
+                "research_funding_slider": queries.get_research_funding_rate(country_data),
+                "custom_production_units": copy.deepcopy(country_data.get("custom_production_units", [])),
+                politics.POLICY_KEY: politics.policy_draft_projection(
+                    self.world.nation_data, country_id)}
+
+    def _apply_country_preferences(self, country_id, command):
+        country_data = self.world.nation_data[country_id]
+        country_data["political_drift"] = command["political_drift"]
+        if politics.ECONOMIC_DRIFT_KEY in command:
+            politics.set_economic_drift(self.world.nation_data, country_id, command[politics.ECONOMIC_DRIFT_KEY])
+        country_data["automation"] = copy.deepcopy(command["automation"])
+        country_data["conscription_slider"] = command["conscription_slider"]
+        country_data["mat_to_fuel_slider"] = command["mat_to_fuel_slider"]
+        if "research_funding_slider" in command:
+            country_data["research_funding_slider"] = command["research_funding_slider"]
+        country_data["custom_production_units"] = copy.deepcopy(command["custom_production_units"])
+        if command[politics.POLICY_KEY]:
+            country_data[politics.POLICY_KEY] = copy.deepcopy(command[politics.POLICY_KEY])
+        else:
+            country_data.pop(politics.POLICY_KEY, None)
 
     def _validate_country_preferences(self, country_id: str, command: dict[str, Any]) -> dict[str, Any]:
         """Validate politics, automation, economy, and custom unit choices."""
@@ -276,7 +295,7 @@ class PlayerActions:
                 self.world.nation_data, country_id, command.get(politics.POLICY_KEY, {}))
         except ValueError as exc:
             raise PlayerActionError(str(exc)) from exc
-        return {"type": "country_preferences", "political_drift": drift,
+        return {"political_drift": drift,
                 **economic_preference,
                 "automation": {key: bool(automation.get(key, False))
                                for key in self._AUTOMATION_KEYS},
@@ -285,6 +304,27 @@ class PlayerActions:
                 **research_funding,
                 "custom_production_units": list(custom_units),
                 politics.POLICY_KEY: policies}
+
+    def _collect_claim_draft(self, country_id):
+        # Send the selected provinces. The host keeps or starts the timers.
+        country_data = self.world.nation_data.get(country_id, {})
+        claim_queue = country_data.get("claim_queue", []) if isinstance(country_data, dict) else []
+        return {"province_ids": [entry.get("prov_id")
+                for entry in claim_queue if isinstance(entry, dict)
+                and isinstance(entry.get("prov_id"), int)
+                and not isinstance(entry.get("prov_id"), bool)],
+                "revoke_ids": [entry.get("prov_id") for entry in country_data.get("revoke_queue", [])
+                               if isinstance(entry, dict) and isinstance(entry.get("prov_id"), int)
+                               and not isinstance(entry.get("prov_id"), bool)],
+                "returns": [{"prov_id": entry.get("prov_id"), "recipient": entry.get("recipient")}
+                            for entry in country_data.get("return_queue", [])
+                            if isinstance(entry, dict)]}
+
+    def _apply_claim_draft(self, country_id, command):
+        country_data = self.world.nation_data[country_id]
+        country_data["claim_queue"] = copy.deepcopy(command["queue"])
+        country_data["revoke_queue"] = copy.deepcopy(command["revokes"])
+        country_data["return_queue"] = copy.deepcopy(command["returns"])
 
     def _validate_claim_draft(self, country_id: str, command: dict[str, Any]) -> dict[str, Any]:
         """Validate a player's desired claim queue without trusting timers.
@@ -372,13 +412,26 @@ class PlayerActions:
             returns.append({"prov_id": province_id, "recipient": recipient,
                             "turns_left": max(0, int(old.get("turns_left", 1))) if old else 1})
             returned_ids.add(province_id)
-        return {"type": "claim_draft", "queue": queue, "revokes": revokes,
+        return {"queue": queue, "revokes": revokes,
                 "returns": returns}
+
+    def _collect_country_appearance(self, country_id):
+        country_data = self.world.nation_data.get(country_id, {})
+        # Older partial country records can omit appearance entirely.
+        if "color" in country_data:
+            return {"appearance": queries.country_appearance_draft(country_data)}
+
+    def _apply_country_appearance(self, country_id, command):
+        self._apply_appearance(country_id, command["appearance"])
+
+    def _apply_appearance(self, country_id, appearance):
+        queries.apply_country_appearance(self.world.nation_data, country_id, appearance)
+        self.context.nation_colors[country_id] = tuple(self.world.nation_data[country_id]["color"])
 
     def _validate_country_appearance(self, country_id: str, command: dict[str, Any]) -> dict[str, Any]:
         """Allow identity changes without allowing a client to alter gameplay data."""
         self._country(country_id)
-        return {"type": "country_appearance", "appearance": self._canonical_appearance(command.get("appearance"))}
+        return {"appearance": self._canonical_appearance(command.get("appearance"))}
 
     def _canonical_appearance(self, appearance: Any) -> dict[str, Any]:
         """Use the same narrow identity schema for a player and their subject."""
@@ -401,6 +454,33 @@ class PlayerActions:
             raise PlayerActionError("Invalid country color.")
         canonical["color"] = list(color)
         return canonical
+
+    def _collect_puppet_draft(self, country_id):
+        country_data = self.world.nation_data.get(country_id, {})
+        controlled = country_data.get("puppets", []) if isinstance(country_data, dict) else []
+        siphons = {}
+        for puppet in controlled:
+            subject = self.world.nation_data.get(puppet, {})
+            if isinstance(subject, dict) and subject.get("puppet_type") == c.PUPPET_TYPE_INTEGRATED:
+                siphons[puppet] = copy.deepcopy(subject.get("siphon_rates", {}))
+        return {"puppet_order": list(controlled), "siphons": siphons,
+                "release_subjects": [{"core_nation": entry.get("core_nation"),
+                                      "keep_cores": bool(entry.get("keep_cores", False)),
+                                      "release_type": entry["release_type"]}
+                                     for entry in country_data.get("release_puppet_queue", [])
+                                     if isinstance(entry, dict)],
+                "appearances": copy.deepcopy(self.session.pending_subject_appearances)}
+
+    def _apply_puppet_draft(self, country_id, command):
+        country_data = self.world.nation_data[country_id]
+        country_data["puppets"] = list(command["puppet_order"])
+        country_data["release_puppet_queue"] = copy.deepcopy(command["release_subjects"])
+        for puppet, rates in command["siphons"].items():
+            self.world.nation_data[puppet]["siphon_rates"] = copy.deepcopy(rates)
+        for puppet, appearance in command["appearances"].items():
+            self._apply_appearance(puppet, appearance)
+            if self._is_local_tournament_player(country_id):
+                self.session.pending_subject_appearances[puppet] = copy.deepcopy(appearance)
 
     def _validate_puppet_draft(self, country_id: str, command: dict[str, Any]) -> dict[str, Any]:
         """Validate the controller-only subject controls from the Puppets UI."""
@@ -443,28 +523,55 @@ class PlayerActions:
                 country.get("release_puppet_queue", []))
         except ValueError as error:
             raise PlayerActionError(str(error)) from error
-        return {"type": "puppet_draft", "puppet_order": list(puppet_order),
+        return {"puppet_order": list(puppet_order),
                 "siphons": canonical_siphons, "release_subjects": canonical_releases,
                 "appearances": canonical_appearances}
 
+    def _collect_faction_rename(self, _country_id):
+        # Only a player edit may request a rename. A copy of the old faction
+        # name would reject a member's draft if the leader imported first.
+        return {"name": self.session.pending_faction_rename}
+
+    def _apply_faction_rename(self, country_id, command):
+        name = command.get("name")
+        if name:
+            if self._is_local_tournament_player(country_id):
+                rename_player_faction(self.context, name)
+            else:
+                current = queries.get_country_faction(country_id, self.world.nation_data)
+                faction_actions.rename_faction(self.world.nation_data, country_id, current, name)
+
     def _validate_faction_rename(self, country_id: str, command: dict[str, Any]) -> dict[str, Any]:
-        country = self._country(country_id)
+        self._country(country_id)
         name = command.get("name")
         if name is None:
-            return {"type": "faction_rename", "name": None}
+            return {"name": None}
         if not isinstance(name, str) or len(name.strip()) > 40:
             raise PlayerActionError("Invalid faction name.")
-        old_name = country.get("faction", "")
+        old_name = queries.get_country_faction(country_id, self.world.nation_data)
         if name.strip() == old_name:
-            return {"type": "faction_rename", "name": None}
-        if not country.get("is_faction_leader") or not old_name:
+            return {"name": None}
+        if not queries.is_faction_leader(country_id, self.world.nation_data) or not old_name:
             raise PlayerActionError("Only a faction leader may rename their faction.")
         # Validate against a copy: the helper owns the collision and membership
         # rules, while the real mutation waits for atomic turn processing.
         probe = copy.deepcopy(self.world.nation_data)
         if not faction_actions.rename_faction(probe, country_id, old_name, name.strip()):
             raise PlayerActionError("That faction name is unavailable.")
-        return {"type": "faction_rename", "name": name.strip()}
+        return {"name": name.strip()}
+
+    def _collect_ratification_response(self, country_id):
+        country_data = self.world.nation_data.get(country_id, {})
+        pending_ratification = country_data.get("pending_ratification", {})
+        return {"verdict": pending_ratification.get("verdict") if isinstance(pending_ratification, dict) else None,
+                "treaty_id": pending_ratification.get("treaty_id") if isinstance(pending_ratification, dict) else None}
+
+    def _apply_ratification_response(self, country_id, command):
+        country_data = self.world.nation_data[country_id]
+        pending = country_data.get("pending_ratification")
+        if isinstance(pending, dict):
+            lifecycle.answer_ratification(self.world.nation_data, country_id, command["verdict"],
+                                          treaty_id=command.get("treaty_id"))
 
     def _validate_ratification_response(self, country_id: str, command: dict[str, Any]) -> dict[str, Any]:
         verdict = command.get("verdict")
@@ -476,7 +583,17 @@ class PlayerActions:
         reference = command.get("treaty_id")
         if reference is not None and (not isinstance(pending, dict) or reference != pending.get("treaty_id")):
             raise PlayerActionError("That ratification refers to an expired treaty.")
-        return {"type": "ratification_response", "verdict": verdict, "treaty_id": reference}
+        return {"verdict": verdict, "treaty_id": reference}
+
+    def _apply_volunteer_draft(self, country_id, command):
+        country_data = self.world.nation_data[country_id]
+        pending = country_data.get("pending_diplomacy", {}).get(command["target"], {})
+        if not isinstance(pending, dict) or pending.get("action") != "SEND_VOLUNTEERS":
+            return
+        chosen = [self._unit_for_reference(ref) for ref in command["units"]]
+        _details, error = volunteers.create_offer(self.context, country_id, command["target"], chosen)
+        if error:
+            raise PlayerActionError(error)
 
     def _validate_volunteer_draft(self, country_id: str, command: dict[str, Any], *, context=None) -> dict[str, Any]:
         """Identify divisions by their authoritative province/index, never data."""
@@ -512,6 +629,30 @@ class PlayerActions:
             canonical.append(entry)
             seen.add(key)
         return {"type": "volunteer_draft", "target": target, "units": canonical}
+
+    def _collect_country_diplomacy(self, country_id):
+        # A proposal in transit belongs to the host. Only a queued forward can
+        # add an intent to a travelling proposal.
+        country_data = self.world.nation_data.get(country_id, {})
+        pending = country_data.get("pending_diplomacy", {})
+        if not isinstance(pending, dict):
+            pending = {}
+        responses = country_data.get("diplo_responses", {})
+        if not isinstance(responses, dict):
+            responses = {}
+        draft_lists = country_data.get("draft_lists", {})
+        if not isinstance(draft_lists, dict):
+            draft_lists = {}
+        return {"pending": {target: (copy.deepcopy(info) if info.get("turns", 0) <= 0
+                                      else diplomacy_messages.forward_intent(info)) for target, info in pending.items()
+                            if isinstance(target, str) and isinstance(info, dict)
+                            and (info.get("turns", 0) <= 0 or diplomacy_messages.has_queued_forward(info))},
+                "responses": copy.deepcopy(responses),
+                "draft_lists": copy.deepcopy(draft_lists)}
+
+    def _apply_country_diplomacy(self, country_id, command):
+        lifecycle.apply_draft(self.world.nation_data, country_id,
+                              command["pending"], command["responses"], command["draft_lists"])
 
     def _validate_country_diplomacy(self, country_id: str, command: dict[str, Any]) -> dict[str, Any]:
         """Validate only this country's unprocessed diplomatic draft.
@@ -622,7 +763,7 @@ class PlayerActions:
                         for message in messages)):
                 raise PlayerActionError("Invalid diplomatic message draft.")
             canonical_lists[target] = list(messages)
-        return {"type": "country_diplomacy", "pending": canonical_pending,
+        return {"pending": canonical_pending,
                 "responses": canonical_responses, "draft_lists": canonical_lists}
 
     def _province(self, province_id: Any):
@@ -630,6 +771,23 @@ class PlayerActions:
             return self.world.id_to_province[int(province_id)]
         except (KeyError, TypeError, ValueError) as exc:
             raise PlayerActionError("Unknown province in order.") from exc
+
+    def _unit_for_reference(self, ref):
+        province = self._province(ref["province_id"])
+        unit = (next(unit for unit in province["units"] if unit.get("unit_id") == ref["unit_id"])
+                if ref.get("unit_id") else province["units"][ref["unit_index"]])
+        return province, unit
+
+    def _apply_unit_order(self, country_id, command):
+        province, unit = self._unit_for_reference(command)
+        apply_action(self.context, country_id, province, unit,
+                     command["order"], authority="server", payment_settled=True)
+        for key in ("custom_name", "combat_stance", "lane_target"):
+            value = command.get(key)
+            if value is None:
+                unit.pop(key, None)
+            else:
+                unit[key] = value
 
     def _validate_unit_order(self, country_id: str, command: dict[str, Any], *, context=None) -> dict[str, Any]:
         context = self.context if context is None else context
@@ -680,6 +838,9 @@ class PlayerActions:
                 "custom_name": custom_name.strip() if isinstance(custom_name, str) and custom_name.strip() else None,
                 "combat_stance": stance, "lane_target": lane_target}
 
+    def _apply_province_queue(self, country_id, command):
+        apply_queue_change(self.context, country_id, command, payment_settled=True)
+
     def _validate_queue(self, country_id: str, command: dict[str, Any]) -> dict[str, Any]:
         province = self._province(command.get("province_id"))
         if province.get("owner") != country_id:
@@ -715,6 +876,18 @@ class PlayerActions:
         except ValueError as error:
             raise PlayerActionError(str(error)) from error
 
+    def _collect_research_queue(self, country_id):
+        # An empty selection means the player paused all ongoing projects.
+        country_data = self.world.nation_data.get(country_id, {})
+        research_queue = country_data.get("research_queue", []) if isinstance(country_data, dict) else []
+        tech_names = [project.get("tech_name") for project in research_queue
+                      if isinstance(project, dict) and isinstance(project.get("tech_name"), str)]
+        return {"tech_names": tech_names}
+
+    def _apply_research_queue(self, country_id, command):
+        country_data = self.world.nation_data[country_id]
+        apply_research_selection(country_data, command)
+
     def _validate_research_queue(self, country_id: str, command: dict[str, Any]) -> dict[str, Any]:
         """Replay a player's start/pause choices without trusting client points.
 
@@ -730,7 +903,7 @@ class PlayerActions:
                                                           queries.get_tech_tree(self.context), context=self.context)
         except ValueError as error:
             raise PlayerActionError(str(error)) from error
-        return {"type": "research_queue", **result}
+        return result
 
     def apply_drafts(self, drafts: dict[str, list[dict[str, Any]]]) -> None:
         # Validate every complete submission before any country's state changes.
@@ -750,87 +923,20 @@ class PlayerActions:
             queries.apply_air_transport_commands(self.context, country_id,
                 [command for command in commands if command["type"] == "air_transport"])
             for command in commands:
-                if command["type"] == "air_transport":
-                    continue
-                if command["type"] == "unit_order":
-                    province = self._province(command["province_id"])
-                    unit = (next(u for u in province["units"] if u.get("unit_id") == command["unit_id"])
-                            if command.get("unit_id") else province["units"][command["unit_index"]])
-                    apply_action(self.context, country_id, province, unit,
-                                 command["order"], authority="server", payment_settled=True)
-                    for key in ("custom_name", "combat_stance", "lane_target"):
-                        value = command.get(key)
-                        if value is None:
-                            unit.pop(key, None)
-                        else:
-                            unit[key] = value
-                elif command["type"] == "province_queue":
-                    apply_queue_change(self.context, country_id, command, payment_settled=True)
-                elif command["type"] == "research_queue":
-                    apply_research_selection(country_data, command)
-                elif command["type"] == "country_preferences":
-                    country_data["political_drift"] = command["political_drift"]
-                    if politics.ECONOMIC_DRIFT_KEY in command:
-                        politics.set_economic_drift(self.world.nation_data, country_id, command[politics.ECONOMIC_DRIFT_KEY])
-                    country_data["automation"] = copy.deepcopy(command["automation"])
-                    country_data["conscription_slider"] = command["conscription_slider"]
-                    country_data["mat_to_fuel_slider"] = command["mat_to_fuel_slider"]
-                    if "research_funding_slider" in command:
-                        country_data["research_funding_slider"] = command["research_funding_slider"]
-                    country_data["custom_production_units"] = copy.deepcopy(command["custom_production_units"])
-                    if command[politics.POLICY_KEY]:
-                        country_data[politics.POLICY_KEY] = copy.deepcopy(command[politics.POLICY_KEY])
-                    else:
-                        country_data.pop(politics.POLICY_KEY, None)
-                elif command["type"] == "army_roster":
-                    country_data["armies"] = copy.deepcopy(command["armies"])
-                elif command["type"] == "claim_draft":
-                    country_data["claim_queue"] = copy.deepcopy(command["queue"])
-                    country_data["revoke_queue"] = copy.deepcopy(command["revokes"])
-                    country_data["return_queue"] = copy.deepcopy(command["returns"])
-                elif command["type"] == "country_appearance":
-                    queries.apply_country_appearance(self.world.nation_data, country_id, command["appearance"])
-                    self.context.nation_colors[country_id] = tuple(country_data["color"])
-                elif command["type"] == "country_diplomacy":
-                    # A proposal already travelling belongs to the server and
-                    # cannot be cancelled or rewritten by a stale client view.
-                    lifecycle.apply_draft(self.world.nation_data, country_id,
-                                          command["pending"], command["responses"], command["draft_lists"])
-                elif command["type"] == "puppet_draft":
-                    country_data["puppets"] = list(command["puppet_order"])
-                    country_data["release_puppet_queue"] = copy.deepcopy(command["release_subjects"])
-                    for puppet, rates in command["siphons"].items():
-                        self.world.nation_data[puppet]["siphon_rates"] = copy.deepcopy(rates)
-                    for puppet, appearance in command["appearances"].items():
-                        subject = self.world.nation_data[puppet]
-                        queries.apply_country_appearance(self.world.nation_data, puppet, appearance)
-                        self.context.nation_colors[puppet] = tuple(subject["color"])
-                elif command["type"] == "faction_rename" and command.get("name"):
-                    faction_actions.rename_faction(self.world.nation_data, country_id,
-                                                   country_data.get("faction", ""), command["name"])
-                elif command["type"] == "ratification_response":
-                    pending = country_data.get("pending_ratification")
-                    if isinstance(pending, dict):
-                        lifecycle.answer_ratification(self.world.nation_data, country_id, command["verdict"],
-                                                      treaty_id=command.get("treaty_id"))
+                kind = command["type"]
+                if kind == "unit_order":
+                    self._apply_unit_order(country_id, command)
+                elif kind == "province_queue":
+                    self._apply_province_queue(country_id, command)
+                elif kind in _COUNTRY_COMMANDS:
+                    _COUNTRY_COMMANDS[kind].apply(self, country_id, command)
             # Volunteer reservations must be created after their diplomatic
             # request has been placed on the server map, just like the normal
             # player UI does in an offline game.
             for command in commands:
                 if command["type"] != "volunteer_draft":
                     continue
-                pending = country_data.get("pending_diplomacy", {}).get(command["target"], {})
-                if not isinstance(pending, dict) or pending.get("action") != "SEND_VOLUNTEERS":
-                    continue
-                chosen = []
-                for ref in command["units"]:
-                    province = self._province(ref["province_id"])
-                    unit = (next(unit for unit in province["units"] if unit.get("unit_id") == ref["unit_id"])
-                            if ref.get("unit_id") else province["units"][ref["unit_index"]])
-                    chosen.append((province, unit))
-                _details, error = volunteers.create_offer(self.context, country_id, command["target"], chosen)
-                if error:
-                    raise PlayerActionError(error)
+                self._apply_volunteer_draft(country_id, command)
 
     def _refresh_payments(self, country_id, commands):
         planning_view = self._planning_view(country_id, commands)
@@ -845,6 +951,43 @@ class PlayerActions:
             refreshed.append(command)
         self._validate_queue_budget(country_id, refreshed)
         return refreshed
+
+
+@dataclass(frozen=True)
+class _CountryCommand:
+    collect: Callable
+    validate: Callable
+    apply: Callable
+    uses_transport_view: bool = False
+
+
+# One complete draft per country domain. Keep collection order stable for exports
+# and fingerprints. Unit, production, transport, and volunteer orders have their
+# own per-target or per-province ordering and validation.
+_COUNTRY_COMMANDS = {
+    "army_roster": _CountryCommand(PlayerActions._collect_army_roster, PlayerActions._validate_army_roster, PlayerActions._apply_army_roster, uses_transport_view=True),
+    "research_queue": _CountryCommand(PlayerActions._collect_research_queue, PlayerActions._validate_research_queue, PlayerActions._apply_research_queue),
+    "country_preferences": _CountryCommand(PlayerActions._collect_country_preferences, PlayerActions._validate_country_preferences, PlayerActions._apply_country_preferences),
+    "claim_draft": _CountryCommand(PlayerActions._collect_claim_draft, PlayerActions._validate_claim_draft, PlayerActions._apply_claim_draft),
+    "country_appearance": _CountryCommand(PlayerActions._collect_country_appearance, PlayerActions._validate_country_appearance, PlayerActions._apply_country_appearance),
+    "country_diplomacy": _CountryCommand(PlayerActions._collect_country_diplomacy, PlayerActions._validate_country_diplomacy, PlayerActions._apply_country_diplomacy),
+    "puppet_draft": _CountryCommand(PlayerActions._collect_puppet_draft, PlayerActions._validate_puppet_draft, PlayerActions._apply_puppet_draft),
+    "faction_rename": _CountryCommand(PlayerActions._collect_faction_rename, PlayerActions._validate_faction_rename, PlayerActions._apply_faction_rename),
+    "ratification_response": _CountryCommand(PlayerActions._collect_ratification_response, PlayerActions._validate_ratification_response, PlayerActions._apply_ratification_response),
+}
+
+
+def rename_player_faction(context, new_name):
+    """Rename on the planning map and record the player's requested name."""
+    world = world_for(context)
+    session = session_for(context)
+    country = session.player_country
+    current = queries.get_country_faction(country, world.nation_data)
+    renamed = faction_actions.rename_faction(world.nation_data, country, current, new_name)
+    if renamed and (session.multiplayer_mode or session.realtime_multiplayer):
+        session.pending_faction_rename = queries.get_country_faction(country, world.nation_data)
+    return renamed
+
 
 def collect_map_commands(context, country_id: str) -> list[dict[str, Any]]:
     """Serialize supported local order controls into server commands.
@@ -878,81 +1021,11 @@ def collect_map_commands(context, country_id: str) -> list[dict[str, Any]]:
                                  "queue": queue_name,
                                  "items": copy.deepcopy(province.get(queue_name, []))})
     queries.normalize_armies(world_state.nation_data, world_state.map_data)
-    country_data = world_state.nation_data.get(country_id, {})
-    commands.append({"type": "army_roster",
-                     "armies": copy.deepcopy(country_data.get("armies", []))})
-    research_queue = country_data.get("research_queue", []) if isinstance(country_data, dict) else []
-    tech_names = [project.get("tech_name") for project in research_queue
-                  if isinstance(project, dict) and isinstance(project.get("tech_name"), str)]
-    # Include an empty selection too: pausing every project must be a real
-    # draft change rather than silently preserving the server's old queue.
-    commands.append({"type": "research_queue", "tech_names": tech_names})
-    commands.append({"type": "country_preferences",
-                     "political_drift": country_data.get("political_drift", 0),
-                     politics.ECONOMIC_DRIFT_KEY: politics.economic_drift(world_state.nation_data, country_id),
-                     "automation": copy.deepcopy(country_data.get("automation", {})),
-                     "conscription_slider": queries.get_conscription_rate(country_data),
-                     "mat_to_fuel_slider": queries.get_fuel_conversion_rate(country_data),
-                     "research_funding_slider": queries.get_research_funding_rate(country_data),
-                     "custom_production_units": copy.deepcopy(country_data.get("custom_production_units", [])),
-                     politics.POLICY_KEY: politics.policy_draft_projection(
-                         world_state.nation_data, country_id)})
-    # Claim timers are server state. A client only says which existing/new
-    # claims should remain queued; validation restores server timers and gives
-    # new claims the standard fabrication time.
-    claim_queue = country_data.get("claim_queue", []) if isinstance(country_data, dict) else []
-    commands.append({"type": "claim_draft", "province_ids": [entry.get("prov_id")
-                     for entry in claim_queue if isinstance(entry, dict)
-                     and isinstance(entry.get("prov_id"), int)
-                     and not isinstance(entry.get("prov_id"), bool)],
-                     "revoke_ids": [entry.get("prov_id") for entry in country_data.get("revoke_queue", [])
-                                    if isinstance(entry, dict) and isinstance(entry.get("prov_id"), int)
-                                    and not isinstance(entry.get("prov_id"), bool)],
-                     "returns": [{"prov_id": entry.get("prov_id"), "recipient": entry.get("recipient")}
-                                 for entry in country_data.get("return_queue", [])
-                                 if isinstance(entry, dict)]})
-    # Older partial country records can omit appearance entirely.
-    if "color" in country_data:
-        commands.append({"type": "country_appearance", "appearance": {
-            key: copy.deepcopy(country_data.get(key, "DEFAULT" if key.endswith("_data") else [] if key == "color" else ""))
-            for key in PlayerActions._APPEARANCE_KEYS}})
-    # Only unsent proposals are a local draft.  Messages already in transit
-    # are server-owned and are deliberately omitted so a stale client cannot
-    # cancel or alter them on its next ordinary sync.
-    pending = country_data.get("pending_diplomacy", {})
-    if not isinstance(pending, dict):
-        pending = {}
-    responses = country_data.get("diplo_responses", {})
-    if not isinstance(responses, dict):
-        responses = {}
-    draft_lists = country_data.get("draft_lists", {})
-    if not isinstance(draft_lists, dict):
-        draft_lists = {}
-    commands.append({"type": "country_diplomacy",
-                     "pending": {target: (copy.deepcopy(info) if info.get("turns", 0) <= 0
-                                           else diplomacy_messages.forward_intent(info)) for target, info in pending.items()
-                                 if isinstance(target, str) and isinstance(info, dict)
-                                 and (info.get("turns", 0) <= 0 or diplomacy_messages.has_queued_forward(info))},
-                     "responses": copy.deepcopy(responses),
-                     "draft_lists": copy.deepcopy(draft_lists)})
-    controlled = country_data.get("puppets", []) if isinstance(country_data, dict) else []
-    siphons = {}
-    for puppet in controlled:
-        subject = world_state.nation_data.get(puppet, {})
-        if isinstance(subject, dict) and subject.get("puppet_type") == c.PUPPET_TYPE_INTEGRATED:
-            siphons[puppet] = copy.deepcopy(subject.get("siphon_rates", {}))
-    commands.append({"type": "puppet_draft", "puppet_order": list(controlled), "siphons": siphons,
-                     "release_subjects": [{"core_nation": entry.get("core_nation"),
-                                           "keep_cores": bool(entry.get("keep_cores", False)),
-                                           "release_type": entry["release_type"]}
-                                          for entry in country_data.get("release_puppet_queue", [])
-                                          if isinstance(entry, dict)],
-                     "appearances": copy.deepcopy(context.realtime_pending_appearance_updates)})
-    commands.append({"type": "faction_rename", "name": country_data.get("faction", "")})
-    pending_ratification = country_data.get("pending_ratification", {})
-    commands.append({"type": "ratification_response",
-                     "verdict": pending_ratification.get("verdict") if isinstance(pending_ratification, dict) else None,
-                     "treaty_id": pending_ratification.get("treaty_id") if isinstance(pending_ratification, dict) else None})
+    service = PlayerActions(context)
+    for kind, definition in _COUNTRY_COMMANDS.items():
+        command = definition.collect(service, country_id)
+        if command is not None:
+            commands.append({"type": kind, **command})
     volunteer_drafts = context.realtime_volunteer_drafts
     if isinstance(volunteer_drafts, dict):
         volunteer_choices.update(volunteer_drafts)

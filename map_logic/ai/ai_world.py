@@ -570,8 +570,7 @@ class AIWorld:
 
             notable = set(ranked[:count])
             for name in living:
-                data = self.nation_data.get(name, {})
-                if data.get("is_faction_leader"):
+                if queries.is_faction_leader(name, self.nation_data):
                     notable.add(name)
                 for human in self.human_players:
                     if human in queries.get_enemies(name, self.nation_data):

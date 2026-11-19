@@ -21,7 +21,6 @@ from data.map import history_io
 from data.map.map_cache import remove_optional_layer_files
 from data.platform import sync_persisted_dir
 
-from data.migrations import snapshot_moves
 from map_logic import politics
 from map_logic.actions.player_actions import collect_map_commands, PlayerActions
 
@@ -584,19 +583,6 @@ def export_move_file(context, file_path, player_key):
     if hasattr(context, "time_manager"):
         player_data["tournament_turn"] = world_state.time_manager.total_turns
 
-    # Tournament edits use their own draft buffers. Fold them into the shared
-    # commands so the host applies faction and appearance changes together.
-    pending_renames = context.multiplayer_pending_faction_renames
-    pending_appearances = context.multiplayer_pending_appearance_updates
-    for command in commands:
-        if command["type"] == "faction_rename" and pending_renames:
-            command["name"] = pending_renames[-1]["new_name"]
-        elif command["type"] == "puppet_draft" and pending_appearances:
-            command["appearances"] = {
-                target: {**{key: copy.deepcopy(world_state.nation_data[target].get(key))
-                            for key in c.COUNTRY_APPEARANCE_FIELDS}, **appearance}
-                for target, appearance in pending_appearances.items()}
-
     payload = {
         "country_id": cid,
         "hash": hash_key(player_key),
@@ -632,24 +618,18 @@ def _move_context_error(context, player_data):
     return None
 
 
-def load_move_files(context, move_file_paths, keys_dict, *, accept_stat_mismatches=False,
-                    accept_older_versions=False, loaded_countries=()):
+def load_move_files(context, move_file_paths, keys_dict, *, accept_older_versions=False, loaded_countries=()):
     """
     Loads a list of .gd5move files and applies their orders to the host's map.
 
     Return counts and per-file rejection details. keys_dict maps country IDs to keys.
-    accept_stat_mismatches permits numeric differences only. All other checks still apply.
     accept_older_versions converts moves from older releases. They are then validated normally.
     A move whose stamp differs from the host's version, or has no stamp, needs this approval.
-    A rejection the host can override names its override: "stats" or "version".
     loaded_countries preserves batch duplicate checks during a host's review callbacks.
     """
     world_state = world_for(context)
     processed_move_cids = set(loaded_countries)
-    summary = {"loaded": 0, "rejected": 0, "legacy": 0, "converted": 0,
-               "faction_renames": 0, "appearance_updates": 0,
-               "puppet_siphon_updates": 0, "rejections": [], "overridden": 0,
-               "loaded_countries": []}
+    summary = {"loaded": 0, "rejected": 0, "converted": 0, "rejections": [], "loaded_countries": []}
 
     def reject(file_path, cid, reason, *, override=None):
         summary["rejected"] += 1
@@ -701,6 +681,9 @@ def load_move_files(context, move_file_paths, keys_dict, *, accept_stat_mismatch
         except ValueError as error:
             reject(file_path, cid, str(error))
             continue
+        if "player_intents" not in player_data:
+            reject(file_path, cid, "Snapshot-format moves are no longer supported. Export the move again with the current game.")
+            continue
         # The stamp only decides whether the host is asked. Conversion runs on every move.
         older_release = version != migrations.CURRENT_VERSION
         if older_release and not accept_older_versions:
@@ -715,8 +698,6 @@ def load_move_files(context, move_file_paths, keys_dict, *, accept_stat_mismatch
         except ValueError as error:
             reject(file_path, cid, str(error))
             continue
-        summary["converted"] += older_release
-
         context_error = _move_context_error(context, player_data)
         if context_error:
             reject(file_path, cid, f"The move {context_error}.")
@@ -724,40 +705,25 @@ def load_move_files(context, move_file_paths, keys_dict, *, accept_stat_mismatch
         if "factions" in player_data:
             reject(file_path, cid, "Players cannot replace faction records.")
             continue
-        has_intents = "player_intents" in player_data
-        structure_error = None if has_intents else snapshot_moves.structure_error(player_data)
-        if structure_error:
-            reject(file_path, cid, structure_error)
-            continue
         if cid in processed_move_cids:
             # A country gets one coherent submission per selected batch. Applying two
             # files in picker order previously made the last one silently win.
             reject(file_path, cid, "This country already has a loaded move in this import.")
             continue
-        if has_intents:
-            try:
-                commands = migrations.tournament_player_intents(player_data, world_state.map_data)
-                service = PlayerActions(context)
-                validated = service.validate_draft(cid, commands)
-            except ValueError as error:
-                reject(file_path, cid, str(error))
-                continue
-            service.apply_validated_drafts({cid: validated})
-        else:
-            try:
-                snapshot = snapshot_moves.prepare(context, cid, player_data)
-            except ValueError as error:
-                reject(file_path, cid, str(error))
-                continue
-            if snapshot.warnings and not accept_stat_mismatches:
-                reject(file_path, cid, "\n".join(snapshot.warnings), override="stats")
-                continue
-            snapshot_moves.apply(context, cid, player_data, snapshot, summary)
+        try:
+            commands = migrations.tournament_player_intents(player_data, world_state.map_data)
+            service = PlayerActions(context)
+            validated = service.validate_draft(cid, commands)
+        except ValueError as error:
+            reject(file_path, cid, str(error))
+            continue
+        service.apply_validated_drafts({cid: validated})
         processed_move_cids.add(cid)
 
         # Also mark this country as having submitted a move
         context.submitted_moves.add(cid)
         summary["loaded"] += 1
+        summary["converted"] += older_release
         summary["loaded_countries"].append(cid)
         
     if summary["loaded"] and hasattr(context, 'sync_units_to_data'):
@@ -765,9 +731,7 @@ def load_move_files(context, move_file_paths, keys_dict, *, accept_stat_mismatch
     if summary["loaded"] and any(
             isinstance(country, dict) and "armies" in country
             for country in world_state.nation_data.values()):
-        # A legacy move can replace the submitting country's units. Normalize
-        # against the final unit set to keep valid member IDs and drop malformed
-        # or foreign references.
+        # Normalize against the final unit set after air transport and volunteer edits.
         queries.normalize_armies(world_state.nation_data, world_state.map_data)
 
     return summary

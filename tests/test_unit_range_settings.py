@@ -11,7 +11,6 @@ import pygame
 
 from data import queries
 import data.constants as c
-from data.migrations import snapshot_moves
 from data.multiplayer.realtime.session import (
     MapRealtimeDriver,
     RealtimeConfig,
@@ -111,7 +110,7 @@ class UnitRangeRulesTests(unittest.TestCase):
             # While Range uses the map's defaults, the player's ranges are unused.
             self.assertFalse(queries.scenario_has_unit_stat_customizations(changed))
 
-    def test_air_range_changes_agree_in_ai_both_hosts_and_resolution(self):
+    def test_air_range_changes_agree_in_ai_multiplayer_and_resolution(self):
         game = world()
         base = tile(game, 1, 8)
         target = tile(game, 2, 88, owner="B")
@@ -121,23 +120,16 @@ class UnitRangeRulesTests(unittest.TestCase):
         command = {"type": "unit_order", "province_id": 1, "unit_index": 0,
                    "unit_id": unit["unit_id"], "order": order}
         driver = MapRealtimeDriver(game)
-        payload = {"aircraft_orders": [{"unit_id": unit["unit_id"], "order": order}]}
         with self.assertRaises(RealtimeError):
             driver.validate_draft("A", [command])
-        with self.assertRaises(ValueError):
-            snapshot_moves._validate_aircraft_orders(game, "A", payload, {})
         game.scenario_settings = {"unit_range_overrides": {"Fixture Wing": {"air_range_start": 100}}}
         queries.apply_unit_range_overrides(self.library, game.scenario_settings)
         canonical = queries.canonical_air_order(game, unit, base, order)
         self.assertIn(canonical, ai_movement.legal_air_candidates(game, unit, base))
         self.assertEqual(driver.validate_draft("A", [command])[0]["order"], canonical)
-        _live, drafts = snapshot_moves._validate_aircraft_orders(game, "A", payload, {})
-        self.assertEqual(drafts[0][1], canonical)
         for country in ("B",):
             with self.assertRaises(RealtimeError):
                 driver.validate_draft(country, [command])
-            with self.assertRaises(ValueError):
-                snapshot_moves._validate_aircraft_orders(game, country, payload, {})
         malformed = dict(command, order={"type": "AIR_ATTACK", "target_id": 999})
         with self.assertRaises(RealtimeError):
             driver.validate_draft("A", [malformed])

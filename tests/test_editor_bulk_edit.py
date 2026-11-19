@@ -223,7 +223,7 @@ class BulkEditTests(unittest.TestCase):
         queries.reset_editor_diplomacy(game)
         self.assertEqual(game.factions, {})
         self.assertEqual(game.faction_membership, {})
-        self.assertEqual(game.nation_data["FACTION_WAR_MAPS"], {})
+        self.assertNotIn("FACTION_WAR_MAPS", game.nation_data)
         self.assertNotIn("WAR_PRE_MAPS", game.nation_data)
         for country in ("A", "B"):
             data = game.nation_data[country]

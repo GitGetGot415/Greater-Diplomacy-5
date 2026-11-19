@@ -273,7 +273,7 @@ def handle_accept_req(context, target=None, custom_msg=None):
         if forbidden:
             context.show_feedback(f"Cannot accept: {forbidden}.")
             return
-        my_faction = context.nation_data[context.player_country].get("faction", "")
+        my_faction = queries.get_country_faction(context.player_country, context.nation_data)
 
         if action == "FACTION_INVITE":
             if my_faction:

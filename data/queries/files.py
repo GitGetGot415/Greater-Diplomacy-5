@@ -302,6 +302,12 @@ def canonical_research_selection(country_data, requested, tech_tree=None, *, con
             "research_progress": progress}
 
 
+def country_appearance_draft(country):
+    """Copy the fields a player can edit in a country or subject's appearance."""
+    defaults = {"color": [], "flag_data": "DEFAULT", "portrait_data": "DEFAULT"}
+    return {key: copy.deepcopy(country.get(key, defaults.get(key, ""))) for key in c.COUNTRY_APPEARANCE_FIELDS}
+
+
 def apply_country_appearance(nation_data, country_id, appearance):
     """Apply identity fields after the caller validates its mode and authority."""
     if country_id not in nation_data or not isinstance(appearance, dict):

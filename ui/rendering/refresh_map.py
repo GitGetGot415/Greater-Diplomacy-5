@@ -2,6 +2,7 @@ import pygame
 import numpy as np
 import data.constants as c
 from data import queries
+from map_logic.diplomacy import faction_records
 from ui.rendering import province_pixels
 
 FOG_OF_WAR_ALPHA = 160 # How dark unseen provinces get (0-255)
@@ -454,7 +455,7 @@ def refresh_factions_map(map_screen):
         
     def get_data(data):
         owner = data.get("owner", "Unclaimed")
-        fac = map_screen.nation_data.get(owner, {}).get("faction", "")
+        fac = queries.get_country_faction(owner, map_screen.nation_data)
         
         if owner in c.UNOWNED_LAND_OWNERS:
             color = UNOWNED_COLOR
@@ -476,9 +477,9 @@ def refresh_factions_map(map_screen):
 
 def refresh_faction_territories_map(map_screen):
     """Rebuilds the map showing pre-war faction borders, or current borders if at peace."""
-    player_fac = map_screen.nation_data.get(map_screen.player_country, {}).get("faction", "")
+    player_fac = queries.get_country_faction(map_screen.player_country, map_screen.nation_data)
     members = queries.get_faction_members(player_fac, map_screen.nation_data) if player_fac else []
-    pre_war_map = map_screen.nation_data.get("FACTION_WAR_MAPS", {}).get(player_fac, {})
+    pre_war_map = faction_records.pre_war_map(map_screen.nation_data, player_fac) or {}
     is_at_war = bool(pre_war_map)
     
     def get_data(data):

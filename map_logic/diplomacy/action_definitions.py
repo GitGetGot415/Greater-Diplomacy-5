@@ -109,7 +109,7 @@ def _check_faction_invite(context, sender, target, action_type, nation_data, sen
         return (False, leadership_error)
     if not queries.can_choose_own_faction(target, nation_data):
         return (False, "a puppet follows its master's faction")
-    if target_data.get('faction', ''):
+    if queries.get_country_faction(target, nation_data):
         return (False, 'the target is already in a faction')
     return True, ""
 
@@ -119,7 +119,7 @@ def _check_join_faction_req(context, sender, target, action_type, nation_data, s
         return (False, 'factions are disabled')
     if not queries.can_choose_own_faction(sender, nation_data):
         return (False, "a puppet follows its master's faction")
-    if sender_data.get('faction', ''):
+    if queries.get_country_faction(sender, nation_data):
         return (False, 'the sender is already in a faction')
     leadership_error = queries.faction_request_leadership_error(sender, target, action_type, nation_data)
     if leadership_error:
@@ -134,7 +134,7 @@ def _check_create_faction(context, sender, target, action_type, nation_data, sen
         return (False, 'factions are disabled')
     if not queries.can_choose_own_faction(sender, nation_data) or not queries.can_choose_own_faction(target, nation_data):
         return (False, 'puppets cannot found factions independently')
-    if sender_data.get('faction', '') or target_data.get('faction', ''):
+    if queries.get_country_faction(sender, nation_data) or queries.get_country_faction(target, nation_data):
         return (False, 'both founders must be outside factions')
     return True, ""
 
@@ -177,7 +177,7 @@ def _check_join_wars(context, sender, target, action_type, nation_data, sender_d
 
 def _check_leave_faction(context, sender, target, action_type, nation_data, sender_data, target_data):
     from data import queries
-    if not sender_data.get("faction"):
+    if not queries.get_country_faction(sender, nation_data):
         return False, "the sender is outside a faction"
     if not queries.can_choose_own_faction(sender, nation_data):
         return False, "a puppet follows its master's faction"

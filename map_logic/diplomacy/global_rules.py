@@ -106,7 +106,7 @@ def _with_subjects(nation, nation_data):
 
 
 def _faction_of(host, nation_data):
-    faction = nation_data.get(host, {}).get("faction", "")
+    faction = queries.get_country_faction(host, nation_data)
     return queries.get_faction_members(faction, nation_data) if faction else [host]
 
 

@@ -103,7 +103,7 @@ def simulate_combat(sides, nation_data, province=None, max_turns=100, grounded_s
         )
         for targets, total_attack in exchanges:
             combat_processor.apply_group_damage(
-                total_attack, targets, defense_bonus)
+                total_attack, targets, defense_bonus, nation_data=nation_data)
 
         for index, side in enumerate(simulated_sides):
             simulated_sides[index] = [

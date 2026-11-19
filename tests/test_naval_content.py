@@ -8,7 +8,6 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from data import constants as c, migrations, queries
-from data.migrations.snapshot_moves import _validate_production_projection
 from data.multiplayer.realtime.session import MapRealtimeDriver, RealtimeError
 from data.state_access import BackendState
 from map_logic.actions import production_actions, unit_actions
@@ -212,15 +211,13 @@ class NavalContentTests(unittest.TestCase):
             for resource in c.ECON_RESOURCE_KEYS:
                 self.assertEqual(self.country[resource], before[resource] - stats[f"cost_{resource}"])
 
-    def test_both_multiplayer_adapters_use_host_ship_costs_and_reject_invalid_production(self):
+    def test_multiplayer_uses_host_ship_costs_and_rejects_invalid_production(self):
         for name, tech in self.ships.items():
             self.country["research"] = {tech: queries.get_unit_research_requirement(name)[1]}
             intent = {"unit_type": name}
             command = {"type": "province_queue", "province_id": 1, "queue": "unit_queue", "items": [intent]}
-            expected = self.driver.validate_draft("A", [command])[0]["items"]
-            projection = {"home": {"unit_queue": [intent.copy()]}}
-            self.assertEqual(_validate_production_projection(self.context, "A", projection), ([], []))
-            self.assertEqual(projection["home"]["unit_queue"], expected)
+            expected = production_actions.prepare_production(self.context, "A", self.province, "unit_queue", intent).order
+            self.assertEqual(self.driver.validate_draft("A", [command])[0]["items"], [expected])
             for invalid in ("missing research", "inland", "foreign", "malformed"):
                 with self.subTest(ship=name, invalid=invalid):
                     country_before, province_before = copy.deepcopy(self.country), copy.deepcopy(self.province)
@@ -235,15 +232,6 @@ class NavalContentTests(unittest.TestCase):
                     unchanged = copy.deepcopy((self.country, self.province))
                     with self.assertRaises(RealtimeError):
                         self.driver.validate_draft("A", [command])
-                    projection = {"home": {"unit_queue": [intent.copy()]}}
-                    if invalid == "foreign":
-                        with self.assertRaises(ValueError):
-                            _validate_production_projection(self.context, "A", projection)
-                    else:
-                        # A snapshot move drops a refused order. The host reviews the warning.
-                        warnings, dropped = _validate_production_projection(self.context, "A", projection)
-                        self.assertEqual((len(warnings), dropped), (1, [intent]))
-                        self.assertEqual(projection["home"]["unit_queue"], [])
                     self.assertEqual((self.country, self.province), unchanged)
                     self.country.clear()
                     self.country.update(country_before)

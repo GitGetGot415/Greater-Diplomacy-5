@@ -1,6 +1,8 @@
 """Evaluate and perform scenario scripted events. The event editor reads its choices from this module."""
 
 from dataclasses import dataclass
+from functools import partial
+from typing import Callable
 import operator
 import random
 
@@ -141,55 +143,16 @@ def _negated(condition):
 
 
 # These conditions take a comma-separated list of country IDs. Every country must pass.
-TARGET_LIST_CONDITIONS = {
-    "At War With": _living(_nation_rule(lambda *args: queries.are_at_war(*args))),
-    "In Faction With": _living(_nation_rule(lambda *args: queries.are_in_same_faction(*args))),
-    "Not In Faction With": _living(_negated(_nation_rule(lambda *args: queries.are_in_same_faction(*args)))),
-    "Has Truce With": _living(_nation_rule(lambda *args: queries.has_active_truce(*args))),
-    "At Peace With": _living(_negated(_nation_rule(lambda *args: queries.are_at_war(*args)))),
-    "Country Exists": lambda run, _nation, target: target in run.active_nations,
-    "Country Doesn't Exist": lambda run, _nation, target: target not in run.active_nations,
-    "Occupying Claims Of": lambda run, nation, target: any(
-        _owner_of(run, province_id) == nation for province_id in _claims_of(run, target)),
-    "Occupying All Claims": _occupying_all_claims,
-    "Guaranteeing": _living(_is_guaranteeing),
-    "Not Guaranteeing": _living(_negated(_is_guaranteeing)),
-    "Has Military Attaché": _living(_has_attache_in),
-    "Doesn't Have Military Attaché": _living(_negated(_has_attache_in)),
-    "Has Military Access Through": _living(_has_access_through),
-    "Doesn't Have Military Access Through": _living(_negated(_has_access_through)),
-    "Grants Military Access To": _living(_grants_access_to),
-    "Doesn't Grant Military Access To": _living(_negated(_grants_access_to)),
-}
-
-# These conditions take one country ID. A blank value means the country that owns the event.
-SELF_OR_TARGET_CONDITIONS = {
-    "Is AI Controlled": lambda run, target: target not in run.human_players and target in run.active_nations,
-    "Is Player Controlled": lambda run, target: target in run.human_players and target in run.active_nations,
-    "Is At War": lambda run, target: len(queries.get_enemies(target, run.world.nation_data)) > 0,
-    "Is At Peace": lambda run, target: len(queries.get_enemies(target, run.world.nation_data)) == 0,
-    "Is In Faction": lambda run, target: run.world.nation_data.get(target, {}).get("faction", "") != "",
-    "Not In Faction": lambda run, target: (target in run.active_nations and
-                                           run.world.nation_data.get(target, {}).get("faction", "") == ""),
-    "Is Faction Leader": lambda run, target: bool(queries.is_faction_leader(target, run.world.nation_data)),
-}
-
-# These quantities always describe the country that owns the event.
-SELF_NUMERIC_CONDITIONS = {"Volunteer Divisions Sent": _volunteers_sent,
-                           "Volunteer Capacity Remaining": _volunteer_capacity}
-
-
-def _target_list_condition(condition_type):
-    rule = TARGET_LIST_CONDITIONS[condition_type]
-
+def _all_targets(rule):
+    """Require a matching result for every country in the list."""
     def evaluate(run, nation, condition):
         targets = [target.strip() for target in str(condition.get("value", "")).split(",") if target.strip()]
         return bool(targets) and all(rule(run, nation, target) for target in targets)
     return evaluate
 
 
-def _self_or_target_condition(condition_type):
-    rule = SELF_OR_TARGET_CONDITIONS[condition_type]
+def _target_or_self(rule):
+    """Use the event owner when the country field is blank."""
     return lambda run, nation, condition: rule(run, condition.get("value", "") or nation)
 
 
@@ -212,23 +175,51 @@ def _borders(run, nation, condition):
         nation, run.world.map_data, run.world.id_to_province)
 
 
+@dataclass(frozen=True)
+class Condition:
+    evaluate: Callable
+    field: str
+    help_text: str
+
+
 CONDITIONS = {
-    "Turn Number": _turn_number,
-    "Variable": _variable,
-    "Random (0.00 - 1.00)": _random_value,
-    "Received Action": _received_action,
-    "Occupying Core Of": _occupying_core_of,
-    "Occupying All Cores Of": lambda run, nation, condition: queries.is_occupying_all_cores(
-        nation, condition.get("value", ""), run.world.map_data),
-    "Occupying Tile": lambda run, nation, condition: queries.is_occupying_tiles(
-        nation, condition.get("value", ""), run.world.id_to_province),
-    "Bordering": _borders,
-    "Not Bordering": lambda run, nation, condition: not _borders(run, nation, condition),
-    "True": lambda _run, _nation, _condition: True,
-    "False": lambda _run, _nation, _condition: False,
-    **SELF_NUMERIC_CONDITIONS,
-    **{name: _target_list_condition(name) for name in TARGET_LIST_CONDITIONS},
-    **{name: _self_or_target_condition(name) for name in SELF_OR_TARGET_CONDITIONS},
+    'Turn Number': Condition(_turn_number, 'turn', 'Turn Number: Checks if the current game turn matches the specified value'),
+    'Variable': Condition(_variable, 'variable', 'Variable: Compares a selected global variable against a static value (supports math operators for numerical variables)'),
+    'At War With': Condition(_all_targets(_living(_nation_rule(queries.are_at_war))), 'countries', 'At War With: Checks if the nation is at war with the specified target(s) (comma-separated)'),
+    'Is At War': Condition(_target_or_self(lambda run, target: len(queries.get_enemies(target, run.world.nation_data)) > 0), 'country_or_self', 'Is At War: Checks if the target nation (or self if blank) is currently in any war'),
+    'In Faction With': Condition(_all_targets(_living(_nation_rule(queries.are_in_same_faction))), 'countries', 'In Faction With: Checks if the nation shares a faction with the target(s)'),
+    'Not In Faction With': Condition(_all_targets(_living(_negated(_nation_rule(queries.are_in_same_faction)))), 'countries', 'Not In Faction With: Checks if the nation does NOT share a faction with the target(s)'),
+    'Is In Faction': Condition(_target_or_self(lambda run, target: queries.get_country_faction(target, run.world.nation_data) != ""), 'country_or_self', 'Is In Faction: Checks if the target nation (or self if blank) is currently in any faction'),
+    'Not In Faction': Condition(_target_or_self(lambda run, target: (target in run.active_nations and queries.get_country_faction(target, run.world.nation_data) == "")), 'country_or_self', 'Not In Faction: Checks if the target nation (or self if blank) is currently outside every faction'),
+    'Is Faction Leader': Condition(_target_or_self(lambda run, target: bool(queries.is_faction_leader(target, run.world.nation_data))), 'country_or_self', 'Is Faction Leader: Checks if the target nation (or self if blank) is the leader of their faction'),
+    'Has Truce With': Condition(_all_targets(_living(_nation_rule(queries.has_active_truce))), 'countries', 'Has Truce With: Checks if the nation has an active truce with the specified target(s) (comma-separated)'),
+    'At Peace With': Condition(_all_targets(_living(_negated(_nation_rule(queries.are_at_war)))), 'countries', 'At Peace With: Checks if the nation is explicitly NOT at war with the target(s)'),
+    'Is At Peace': Condition(_target_or_self(lambda run, target: len(queries.get_enemies(target, run.world.nation_data)) == 0), 'country_or_self', 'Is At Peace: Checks if the target nation (or self if blank) is in ZERO wars'),
+    'Random (0.00 - 1.00)': Condition(_random_value, 'random', 'Random (0.00 - 1.00): Returns a random value between 0.0 and 1.0'),
+    'Received Action': Condition(_received_action, 'received_action', 'Received Action: Checks if a specific diplomatic action is pending from a specific sender'),
+    'Country Exists': Condition(_all_targets(lambda run, _nation, target: target in run.active_nations), 'countries', 'Country Exists: Checks if the target(s) currently hold territory on the map'),
+    "Country Doesn't Exist": Condition(_all_targets(lambda run, _nation, target: target not in run.active_nations), 'countries', "Country Doesn't Exist: Checks if the target(s) are completely wiped off the map"),
+    'Occupying Core Of': Condition(_occupying_core_of, 'country', 'Occupying Core Of: Checks if the nation occupies any core of the target'),
+    'Occupying All Cores Of': Condition(lambda run, nation, condition: queries.is_occupying_all_cores(nation, condition.get("value", ""), run.world.map_data), 'compare_countries', 'Occupying All Cores Of: Checks if the nation occupies EVERY core of the target'),
+    'Occupying Claims Of': Condition(_all_targets(lambda run, nation, target: any(_owner_of(run, province_id) == nation for province_id in _claims_of(run, target))), 'countries', 'Occupying Claims Of: Checks if the nation occupies any claim of the target'),
+    'Occupying All Claims': Condition(_all_targets(_occupying_all_claims), 'countries', 'Occupying All Claims: Checks if the nation occupies EVERY claim of the target'),
+    'Occupying Tile': Condition(lambda run, nation, condition: queries.is_occupying_tiles(nation, condition.get("value", ""), run.world.id_to_province), 'compare_tiles', 'Occupying Tile: Checks if the nation occupies specific province IDs (comma-separated)'),
+    'Is AI Controlled': Condition(_target_or_self(lambda run, target: target not in run.human_players and target in run.active_nations), 'country_or_self', 'Is AI Controlled: Checks if the target nation (or self if blank) is controlled by AI'),
+    'Is Player Controlled': Condition(_target_or_self(lambda run, target: target in run.human_players and target in run.active_nations), 'country_or_self', 'Is Player Controlled: Checks if the target nation (or self if blank) is controlled by a human'),
+    'Bordering': Condition(_borders, 'country', 'Bordering / Not Bordering: Checks physical adjacency to the target'),
+    'Not Bordering': Condition(lambda run, nation, condition: not _borders(run, nation, condition), 'country', ''),
+    'Guaranteeing': Condition(_all_targets(_living(_is_guaranteeing)), 'countries', 'Guaranteeing / Not Guaranteeing: Checks whether this country guarantees each target country'),
+    'Not Guaranteeing': Condition(_all_targets(_living(_negated(_is_guaranteeing))), 'countries', ''),
+    'Has Military Attaché': Condition(_all_targets(_living(_has_attache_in)), 'countries', "Has / Doesn't Have Military Attaché: Checks whether this country has an attaché at each target country"),
+    "Doesn't Have Military Attaché": Condition(_all_targets(_living(_negated(_has_attache_in))), 'countries', ''),
+    'Has Military Access Through': Condition(_all_targets(_living(_has_access_through)), 'countries', "Has / Doesn't Have Military Access Through: Checks whether this country can move through each target country's territory"),
+    "Doesn't Have Military Access Through": Condition(_all_targets(_living(_negated(_has_access_through))), 'countries', ''),
+    'Grants Military Access To': Condition(_all_targets(_living(_grants_access_to)), 'countries', "Grants / Doesn't Grant Military Access To: Checks whether each target country can move through this country's territory"),
+    "Doesn't Grant Military Access To": Condition(_all_targets(_living(_negated(_grants_access_to))), 'countries', ''),
+    'Volunteer Divisions Sent': Condition(_volunteers_sent, 'count', "Volunteer Divisions Sent: Compares this country's volunteer divisions currently reserved, travelling, or deployed"),
+    'Volunteer Capacity Remaining': Condition(_volunteer_capacity, 'count', 'Volunteer Capacity Remaining: Compares how many more volunteer divisions this country may currently send'),
+    'True': Condition(lambda _run, _nation, _condition: True, 'none', ''),
+    'False': Condition(lambda _run, _nation, _condition: False, 'none', ''),
 }
 
 
@@ -260,31 +251,14 @@ def _conditions_met(run, nation, conditions):
     """Evaluate every condition. Do not stop early: each Random condition must draw its number."""
     met = False
     for index, condition in enumerate(conditions):
-        evaluate = CONDITIONS.get(condition.get("type"))
-        result = evaluate(run, nation, condition) if evaluate else False
+        definition = CONDITIONS.get(condition.get("type"))
+        result = definition.evaluate(run, nation, condition) if definition else False
         met = result if index == 0 else _chain_condition_result(met, result, condition.get("chain", "AND"))
     return met
 
 
 # --- Actions ---------------------------------------------------------------------------------
 
-_EDIT_FIELDS = {"Edit Name": "name", "Edit Leader Name": "leader_name", "Edit Leader Title": "leader_title",
-                "Edit Flag": "flag_data", "Edit Portrait": "portrait_data"}
-_SCRIPTED_REQUEST_ACTIONS = {
-    "Declare War": "WAR_DECLARATION", "Join Faction": "JOIN_FACTION_REQ", "Create Faction": "CREATE_FACTION",
-    "Invite to Faction": "FACTION_INVITE", "Send Ceasefire": "CEASEFIRE", "Guarantee Independence": "GUARANTEE",
-    "Send Military Attaché": "SEND_MILITARY_ATTACHE", "Request Military Access": "REQ_MILITARY_ACCESS",
-}
-_SCRIPTED_RESPONSE_ACTIONS = {
-    "Accept Military Attaché": ("SEND_MILITARY_ATTACHE", diplomacy_messages.RESPONSE_ACCEPT),
-    "Reject Military Attaché": ("SEND_MILITARY_ATTACHE", diplomacy_messages.RESPONSE_REJECT),
-    "Accept Military Access": ("REQ_MILITARY_ACCESS", diplomacy_messages.RESPONSE_ACCEPT),
-    "Reject Military Access": ("REQ_MILITARY_ACCESS", diplomacy_messages.RESPONSE_REJECT),
-    "Accept Volunteer Divisions": ("SEND_VOLUNTEERS", diplomacy_messages.RESPONSE_ACCEPT),
-    "Reject Volunteer Divisions": ("SEND_VOLUNTEERS", diplomacy_messages.RESPONSE_REJECT),
-}
-_GENERIC_RESPONSE_VERDICTS = {"Accept Proposal": diplomacy_messages.RESPONSE_ACCEPT,
-                              "Reject Proposal": diplomacy_messages.RESPONSE_REJECT}
 _VARIABLE_MATH = {
     "Set": lambda _current, change: change,
     "Add": operator.add,
@@ -302,10 +276,10 @@ def _message_province_ids(act):
     return [int(part.strip()) for part in str(act.get("message", "")).split(",") if part.strip().isdigit()]
 
 
-def _edit_field(_run, _nation, data, _pending, act):
+def _edit_field(_run, _nation, data, _pending, act, *, field):
     value = act.get("message", "")
     if value:
-        data[_EDIT_FIELDS[act.get("type")]] = value
+        data[field] = value
 
 
 def _edit_color(run, nation, data, _pending, act):
@@ -409,11 +383,11 @@ def _answer_request(run, nation, target, act, expected_action, verdict):
                                         scripted=True)
 
 
-def _answer_proposal(run, nation, target, act):
+def _answer_proposal(run, nation, target, act, verdict):
     # Answering a proposal is its own channel, not a pending action.
     pending_action, pending_turns = queries.get_diplomatic_status(target, nation, run.world.nation_data)
     if pending_turns > 0 and pending_action in c.BILATERAL_ACTIONS:
-        _answer_request(run, nation, target, act, pending_action, _GENERIC_RESPONSE_VERDICTS[act.get("type")])
+        _answer_request(run, nation, target, act, pending_action, verdict)
 
 
 def _offer_volunteers(run, nation, pending, target, act):
@@ -475,70 +449,83 @@ def _send_request(run, nation, pending, target, act, action):
         pending[target]["message"] = generated or custom_message or "We have sent a diplomatic missive."
 
 
-def _diplomatic_action(run, nation, _data, pending, act):
-    """Perform a diplomatic action for each comma-separated target."""
-    action_type = act.get("type")
-    for target in _action_targets(act):
-        if target == "None":
-            continue
-        if action_type in _GENERIC_RESPONSE_VERDICTS:
-            _answer_proposal(run, nation, target, act)
-        elif action_type in _SCRIPTED_RESPONSE_ACTIONS:
-            # Specific answers make a scenario's intent visible at a glance, while
-            # the generic accept and reject actions remain for old scenarios and
-            # broad event logic. They can never answer the wrong offer.
-            _answer_request(run, nation, target, act, *_SCRIPTED_RESPONSE_ACTIONS[action_type])
-        elif action_type == "Offer Volunteer Divisions":
-            _offer_volunteers(run, nation, pending, target, act)
-        elif action_type == "Send Custom Message":
-            _send_request(run, nation, pending, target, act, f"MSG:{act.get('message', '')}")
-        elif action_type in _SCRIPTED_REQUEST_ACTIONS:
-            _send_request(run, nation, pending, target, act, _SCRIPTED_REQUEST_ACTIONS[action_type])
+@dataclass(frozen=True)
+class Action:
+    run: Callable
+    field: str
+    help_text: str = ""
+    response: tuple | None = None
+    edits_identity: bool = False
+
+
+def _for_each_target(handler):
+    def perform(run, nation, _data, pending, act):
+        for target in _action_targets(act):
+            if target != "None":
+                handler(run, nation, pending, target, act)
+    return perform
+
+
+def _request(action, *, field="message", help_text=""):
+    def send(run, nation, pending, target, act):
+        _send_request(run, nation, pending, target, act, action)
+    return Action(_for_each_target(send), field, help_text)
+
+
+def _response(action, verdict, *, help_text=""):
+    def answer(run, nation, _pending, target, act):
+        if action is None:
+            _answer_proposal(run, nation, target, act, verdict)
+        else:
+            _answer_request(run, nation, target, act, action, verdict)
+    field = "message" if action is None else "target"
+    return Action(_for_each_target(answer), field, help_text, (action, verdict))
+
+
+def _send_custom_message(run, nation, pending, target, act):
+    _send_request(run, nation, pending, target, act, f"MSG:{act.get('message', '')}")
+
+
+def _edit(key, field, *, help_text=""):
+    return Action(partial(_edit_field, field=key), field, help_text, edits_identity=True)
 
 
 ACTIONS = {
-    **{name: _edit_field for name in _EDIT_FIELDS},
-    "Edit Color": _edit_color,
-    "Queue Claims": _queue_claims,
-    "Revoke Claims": _revoke_claims,
-    "Revoke All Claims": _revoke_all_claims,
-    "Give Territory": _give_territory,
-    "Spawn Unit": _spawn_unit,
-    "Set Variable": _set_variable,
+    'Declare War': _request("WAR_DECLARATION", help_text='Declare War: Declares war on the target'),
+    'Join Faction': _request("JOIN_FACTION_REQ", help_text='Join Faction / Create Faction / Invite to Faction: Modifies faction alignments'),
+    'Create Faction': _request("CREATE_FACTION"),
+    'Invite to Faction': _request("FACTION_INVITE"),
+    'Accept Proposal': _response(None, diplomacy_messages.RESPONSE_ACCEPT, help_text='Accept / Reject Proposal: Responds to a pending diplomatic request'),
+    'Reject Proposal': _response(None, diplomacy_messages.RESPONSE_REJECT),
+    'Send Ceasefire': _request("CEASEFIRE", help_text='Send Ceasefire: Offers peace to the target'),
+    'Send Custom Message': Action(_for_each_target(_send_custom_message), "message", help_text='Send Custom Message: Sends a text message to the target'),
+    'Queue Claims': Action(_queue_claims, 'text', help_text='Queue Claims: Begins fabricating claims on the specified Province IDs (comma-separated)'),
+    'Revoke Claims': Action(_revoke_claims, 'text', help_text='Revoke Claims: Removes claims on the specified Province IDs (comma-separated)'),
+    'Revoke All Claims': Action(_revoke_all_claims, 'target', help_text='Revoke All Claims: Removes ALL claims held by the target nation'),
+    'Give Territory': Action(_give_territory, 'territory', help_text="Give Territory: Transfers the specified Province IDs (comma-separated) to the target nation. Check 'Must Control' if they must currently control the tiles to transfer them."),
+    'Spawn Unit': Action(_spawn_unit, 'unit', help_text="Spawn Unit: Spawns the specified unit type for the target nation on the specified Province IDs (comma-separated). Check 'Must Control' if they must currently control the tiles to spawn the unit on them."),
+    'Set Variable': Action(_set_variable, 'variable', help_text='Set Variable: Modifies a selected global variable by setting, adding, subtracting, multiplying, or dividing it by a static value.'),
+    'Guarantee Independence': _request("GUARANTEE", field="target", help_text="Guarantee Independence: Queues a unilateral guarantee of the selected country's independence."),
+    'Send Military Attaché': _request("SEND_MILITARY_ATTACHE", help_text='Send Military Attaché / Request Military Access: Sends the normal diplomatic request to the selected country.'),
+    'Request Military Access': _request("REQ_MILITARY_ACCESS"),
+    'Offer Volunteer Divisions': Action(_for_each_target(_offer_volunteers), "volunteers", help_text="Offer Volunteer Divisions: Sends the selected country the number of available land divisions entered in the message box (default: 1). Enable 'Use Available Capacity' to send fewer if the requested number exceeds the remaining cap. The host must accept the offer."),
+    'Accept Military Attaché': _response("SEND_MILITARY_ATTACHE", diplomacy_messages.RESPONSE_ACCEPT, help_text='Accept / Reject Military Attaché, Military Access, or Volunteer Divisions: Responds only to that matching pending request from the selected country.'),
+    'Reject Military Attaché': _response("SEND_MILITARY_ATTACHE", diplomacy_messages.RESPONSE_REJECT),
+    'Accept Military Access': _response("REQ_MILITARY_ACCESS", diplomacy_messages.RESPONSE_ACCEPT),
+    'Reject Military Access': _response("REQ_MILITARY_ACCESS", diplomacy_messages.RESPONSE_REJECT),
+    'Accept Volunteer Divisions': _response("SEND_VOLUNTEERS", diplomacy_messages.RESPONSE_ACCEPT),
+    'Reject Volunteer Divisions': _response("SEND_VOLUNTEERS", diplomacy_messages.RESPONSE_REJECT),
+    'Edit Name': _edit("name", 'text', help_text='Edit Name / Leader / Title: Changes cosmetic names for the event owner'),
+    'Edit Leader Name': _edit("leader_name", 'text'),
+    'Edit Leader Title': _edit("leader_title", 'text'),
+    'Edit Color': Action(_edit_color, 'color', help_text='Edit Color / Flag / Portrait: Modifies cosmetic visual aspects', edits_identity=True),
+    'Edit Flag': _edit("flag_data", 'flag'),
+    'Edit Portrait': _edit("portrait_data", 'portrait'),
 }
 
-# --- Editor choices --------------------------------------------------------------------------
-
-COND_TYPES = [
-    "Turn Number", "Variable", "At War With", "Is At War", "In Faction With",
-    "Not In Faction With", "Is In Faction", "Not In Faction", "Is Faction Leader", "Has Truce With",
-    "At Peace With", "Is At Peace", "Random (0.00 - 1.00)", "Received Action",
-    "Country Exists", "Country Doesn't Exist", "Occupying Core Of",
-    "Occupying All Cores Of", "Occupying Claims Of", "Occupying All Claims",
-    "Occupying Tile", "Is AI Controlled", "Is Player Controlled", "Bordering",
-    "Not Bordering", "Guaranteeing", "Not Guaranteeing", "Has Military Attaché",
-    "Doesn't Have Military Attaché", "Has Military Access Through",
-    "Doesn't Have Military Access Through", "Grants Military Access To",
-    "Doesn't Grant Military Access To", "Volunteer Divisions Sent",
-    "Volunteer Capacity Remaining", "True", "False",
-]
 CHAIN_OPS = ["AND", "OR", "XOR", "NOR", "NAND"]
 NUMERIC_OPS = ["==", "!=", ">", "<", ">=", "<=", "BETWEEN (INC)", "BETWEEN (EXC)"]
 TURN_OPS = ["==", ">", "<", ">=", "<=", "BETWEEN (INC)", "BETWEEN (EXC)"]
-TARGET_LIST_TYPES = list(TARGET_LIST_CONDITIONS)
-SELF_NUMERIC_CONDITION_TYPES = list(SELF_NUMERIC_CONDITIONS)
-SELF_OR_TARGET_TYPES = list(SELF_OR_TARGET_CONDITIONS)
-EDIT_ACTIONS = ["Edit Name", "Edit Leader Name", "Edit Leader Title",
-                "Edit Color", "Edit Flag", "Edit Portrait"]
-ACT_TYPES = ["Declare War", "Join Faction", "Create Faction", "Invite to Faction",
-             "Accept Proposal", "Reject Proposal", "Send Ceasefire", "Send Custom Message",
-             "Queue Claims", "Revoke Claims", "Revoke All Claims", "Give Territory",
-             "Spawn Unit", "Set Variable", "Guarantee Independence",
-             "Send Military Attaché", "Request Military Access",
-             "Offer Volunteer Divisions", "Accept Military Attaché",
-             "Reject Military Attaché", "Accept Military Access",
-             "Reject Military Access", "Accept Volunteer Divisions",
-             "Reject Volunteer Divisions"] + EDIT_ACTIONS
 VAR_MATH_OPS = list(_VARIABLE_MATH)
 
 
@@ -549,14 +536,14 @@ def _scripted_event_response(actions, sender_nation, request_action):
     response = None
     matched = False
     for action in actions:
-        action_type = action.get("type")
-        if action_type in _GENERIC_RESPONSE_VERDICTS:
-            expected_action = request_action
-            verdict = _GENERIC_RESPONSE_VERDICTS[action_type]
+        definition = ACTIONS.get(action.get("type"))
+        if definition is None or definition.response is None:
+            continue
+        expected_action, verdict = definition.response
+        if expected_action is None:
             if request_action not in c.BILATERAL_ACTIONS:
                 continue
-        else:
-            expected_action, verdict = _SCRIPTED_RESPONSE_ACTIONS.get(action_type, (None, None))
+            expected_action = request_action
         if expected_action != request_action:
             continue
         if sender_nation in _action_targets(action):
@@ -632,7 +619,9 @@ def process_scripted_events(context, preview_request=None):
             if met:
                 pending = data.setdefault("pending_diplomacy", {})
                 for act in event.get("actions", []):
-                    ACTIONS.get(act.get("type"), _diplomatic_action)(run, nation, data, pending, act)
+                    definition = ACTIONS.get(act.get("type"))
+                    if definition is not None:
+                        definition.run(run, nation, data, pending, act)
                 if event.get("fire_once", True) and index not in fired_events:
                     fired_events.append(index)
 

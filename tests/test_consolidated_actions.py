@@ -168,9 +168,13 @@ class FactionOwnerTests(unittest.TestCase):
         self.assertEqual(queries.get_country_faction_id(context, "B"), identity)
         self.assertEqual(record["members"], ["A", "B"])
         self.assertEqual(record["pre_war_borders"], {"1": "A", "2": "A"})
+        self.assertNotIn("FACTION_WAR_MAPS", context.nation_data)
+        self.assertEqual(queries.get_historical_owner(context.map_data[1], "Renamed Pact", context.nation_data), "A")
         snapshot = json.loads(json.dumps(queries.build_save_dict(context)))
+        self.assertEqual(snapshot["nation_data"]["FACTION_WAR_MAPS"], {"Renamed Pact": {"1": "A", "2": "A"}})
         # Canonical records take precedence over stale country projections.
         snapshot["nation_data"]["A"]["faction"] = "Stale"
+        snapshot["nation_data"]["FACTION_WAR_MAPS"]["Renamed Pact"]["1"] = "B"
         restored = BackendState()
         apply_authoritative_snapshot(restored, snapshot)
         self.assertEqual(restored.world.factions, context.world.factions)
@@ -184,12 +188,18 @@ class FactionOwnerTests(unittest.TestCase):
         self.assertEqual(faction_records.canonical_records(nations), faction_records.canonical_records(copy.deepcopy(nations)))
         context = BackendState(WorldState(nation_data=nations))
         faction_records.restore(context)
+        self.assertNotIn("FACTION_WAR_MAPS", context.nation_data)
         identity = queries.get_country_faction_id(context, "A")
         self.assertEqual(context.world.factions[identity]["pre_war_borders"], {"1": "A"})
         self.assertEqual(context.nation_data["WAR_PRE_MAPS"], {"A": {"2": "A"}})
         faction_actions.disband_faction(context.nation_data, "Pact")
         self.assertEqual(context.world.factions, {})
         self.assertEqual(context.nation_data["WAR_PRE_MAPS"], {"A": {"2": "A"}})
+
+    def test_reading_legacy_factions_can_initialize_during_country_iteration(self):
+        world = WorldState(nation_data={"A": {"faction": "Pact"}, "FACTION_WAR_MAPS": {"Pact": {"1": "A"}}})
+        self.assertEqual(queries.get_politically_active_nations({}, world.nation_data), {"A"})
+        self.assertEqual(faction_records.pre_war_map(world.nation_data, "Pact"), {"1": "A"})
 
     def test_projection_filters_unknown_private_faction_data(self):
         context = game()

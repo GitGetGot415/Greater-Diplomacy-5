@@ -36,6 +36,7 @@ Stdlib and `data` only, so the AI layers and the screens can both import it.
 
 import data.constants as c
 from data import queries
+from map_logic.diplomacy import faction_records
 
 from map_logic.diplomacy import reach as reach_mod
 
@@ -440,8 +441,8 @@ def prewar_index(nation_data):
     war_score re-exports both of these for its own callers.
     """
     merged = {}
-    for key in ("FACTION_WAR_MAPS", "WAR_PRE_MAPS"):
-        for snapshot in (nation_data.get(key) or {}).values():
+    for war_maps in (faction_records.pre_war_maps(nation_data), nation_data.get("WAR_PRE_MAPS") or {}):
+        for snapshot in war_maps.values():
             if isinstance(snapshot, dict):
                 merged.update(snapshot)
     return merged
@@ -911,7 +912,7 @@ def describe(deal, viewer=None, nation_data=None):
         elif kind == MILITARY_ACCESS:
             lines.append(f"{name(clause['grantor'])} grant passage to {name(clause['grantee'])}.")
         elif kind == FACTION_EXIT:
-            faction = (nation_data or {}).get(clause.get("nation"), {}).get("faction", "")
+            faction = queries.get_country_faction(clause.get("nation"), nation_data or {})
             lines.append(f"{name(clause['nation'])} leave {faction or 'their faction'}.")
         elif kind == WAR_EXIT:
             lines.append(f"{name(clause['nation'])} withdraw from the war "

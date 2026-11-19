@@ -130,14 +130,14 @@ SPECTATOR_ACTIONS = {
         "Forced Peace: {src} & {tgt}"),
     "JOIN_FACTION": SpectatorAction(
         lambda ms, src, living: sorted(
-            n for n, d in ms.nation_data.items()
-            if d.get("is_faction_leader") and n != src),
+            n for n in ms.nation_data
+            if queries.is_faction_leader(n, ms.nation_data) and n != src),
         lambda ms, src, tgt: faction_actions.finalize_faction_join(ms.map_data, ms.nation_data, tgt, src),
         "Forced Join: {src} joined {tgt}"),
     "INVITE_FACTION": SpectatorAction(
         lambda ms, src, living: sorted(
             n for n, d in ms.nation_data.items()
-            if d.get("is_playable") and not d.get("faction") and n != src),
+            if d.get("is_playable") and not queries.get_country_faction(n, ms.nation_data) and n != src),
         lambda ms, src, tgt: faction_actions.finalize_faction_join(ms.map_data, ms.nation_data, src, tgt),
         "Forced Invite: {tgt} joined {src}"),
 }

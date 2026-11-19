@@ -30,10 +30,9 @@ def rename_faction(nation_data, leader, old_name, new_name):
         return False
 
     new_name = new_name.strip()
-    leader_data = nation_data.get(leader, {})
     if (not old_name or not new_name or len(new_name) > c.FACTION_NAME_MAX_LENGTH or old_name == new_name
-            or leader_data.get("faction") != old_name
-            or not leader_data.get("is_faction_leader", False)):
+            or queries.get_country_faction(leader, nation_data) != old_name
+            or not queries.is_faction_leader(leader, nation_data)):
         return False
 
     # A rename must not be allowed to turn into an unannounced merger.  This
@@ -52,10 +51,10 @@ def rename_faction(nation_data, leader, old_name, new_name):
     else:
         for member in members:
             queries.set_country_faction(nation_data, member, new_name)
-
-    faction_war_maps = nation_data.get("FACTION_WAR_MAPS")
-    if isinstance(faction_war_maps, dict) and old_name in faction_war_maps:
-        faction_war_maps[new_name] = faction_war_maps.pop(old_name)
+        borders = faction_records.pre_war_map(nation_data, old_name)
+        if borders is not None:
+            faction_records.set_pre_war_map(nation_data, old_name, None)
+            faction_records.set_pre_war_map(nation_data, new_name, borders)
 
     return True
 
@@ -107,7 +106,7 @@ def leave_faction(nation_data, leaver):
     is only who resents whom afterwards, which stays with the two callers.
     """
 
-    fac = nation_data[leaver].get("faction", "")
+    fac = queries.get_country_faction(leaver, nation_data)
     if fac:
         _keep_own_pre_war_borders(nation_data, leaver, fac)
         queries.remove_member_from_pre_war_map(leaver, fac, nation_data)
@@ -136,7 +135,7 @@ def _keep_own_pre_war_borders(nation_data, leaver, fac):
     the manoeuvre that ends with somebody leaving a faction, would have its
     borders reconstructed from guesswork at the moment it mattered most.
     """
-    snapshot = (nation_data.get("FACTION_WAR_MAPS") or {}).get(fac)
+    snapshot = faction_records.pre_war_map(nation_data, fac)
     if not isinstance(snapshot, dict) or not queries.get_enemies(leaver, nation_data):
         return
 
@@ -175,7 +174,7 @@ def finalize_create_faction(map_data, nation_data, creator):
 
 def finalize_disband_faction(nation_data, leader):
 
-    fac = nation_data[leader].get("faction", "")
+    fac = queries.get_country_faction(leader, nation_data)
     if not fac:
         return
 
@@ -196,9 +195,7 @@ def disband_faction(nation_data, faction):
     if not members:
         return []
 
-    faction_war_maps = nation_data.get("FACTION_WAR_MAPS")
-    if isinstance(faction_war_maps, dict):
-        faction_war_maps.pop(faction, None)
+    faction_records.set_pre_war_map(nation_data, faction, None)
 
     for member in members:
         data = nation_data[member]
@@ -218,8 +215,7 @@ def disband_exhausted_factions(map_data, nation_data):
     normal defunct-nation cleanup can then remove their units and wars.
     """
     living_nations = queries.get_living_nations(map_data)
-    factions = sorted({data.get("faction", "") for data in nation_data.values()
-                       if isinstance(data, dict) and data.get("faction")})
+    factions = queries.get_faction_names(nation_data)
     dissolved = []
     for faction in factions:
         members = queries.get_faction_members(faction, nation_data)
@@ -241,10 +237,10 @@ def finalize_faction_join(map_data, nation_data, host, joiner):
     # Already in a faction (possibly a different one than `host`'s): joining
     # here would silently overwrite that membership without ever leaving the
     # old faction, so skip rather than corrupt the old faction's bookkeeping.
-    if nation_data[joiner].get("faction", ""):
+    if queries.get_country_faction(joiner, nation_data):
         return False
 
-    fac = nation_data[host].get("faction", "")
+    fac = queries.get_country_faction(host, nation_data)
     if not fac:
         return False
 
@@ -273,7 +269,7 @@ def finalize_faction_leave(nation_data, leaver):
         return
 
     # Read the roster before the membership is stripped.
-    members = queries.get_faction_members(nation_data[leaver].get("faction", ""), nation_data)
+    members = queries.get_faction_members(queries.get_country_faction(leaver, nation_data), nation_data)
 
     fac = leave_faction(nation_data, leaver)
 
@@ -303,14 +299,14 @@ def why_an_ai_may_not_leave(nation, nation_data):
     *together* is the move that made the save unreadable.
     """
     data = nation_data.get(nation, {})
-    fac = data.get("faction", "")
+    fac = queries.get_country_faction(nation, nation_data)
     if not fac:
         return "it is in no faction"
 
     if not queries.can_choose_own_faction(nation, nation_data):
         return "a puppet follows its master in and out"
 
-    if data.get("is_faction_leader"):
+    if queries.is_faction_leader(nation, nation_data):
         # There is a button for this and it is not this one: a leader that wants
         # out disbands the faction or kicks the members it is done with, both of
         # which leave a defined state behind. Walking out leaves the bloc
@@ -346,7 +342,7 @@ def join_faction_wars(map_data, nation_data, joiner, faction_member):
     settled one is left alone, and only for as long as the truce lasts.
     """
 
-    fac = nation_data[faction_member].get("faction", "")
+    fac = queries.get_country_faction(faction_member, nation_data)
     if fac and not queries.is_faction_at_war(fac, nation_data):
         queries.save_faction_pre_war_map(fac, map_data, nation_data)
 

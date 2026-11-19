@@ -488,7 +488,7 @@ class UnitEventPersistenceTests(unittest.TestCase):
         host.unit_event_log = {"turn": host.time_manager.total_turns, "events": [row("Leader")]}
         host.unit_event_read_turns = {}
         before = copy.deepcopy(host.unit_event_log)
-        forged = helper.player_data("Leader", host, unit_event_log={"turn": 4, "events": [row("Member")]},
+        forged = helper.player_data(host, unit_event_log={"turn": 4, "events": [row("Member")]},
                                     unit_event_read_turns={"Member": 4})
         with tempfile.TemporaryDirectory() as temporary:
             path = helper.write_move(temporary, "forged.gd5move", "Leader", forged)

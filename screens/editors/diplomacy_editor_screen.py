@@ -121,15 +121,15 @@ class Diplomacy_Editor_Screen(ScrollPanes, EditorOverlayScreen):
                          if n in self.others}
         self.access = {n for n in self.others
                        if cid in self.map_screen.nation_data.get(n, {}).get("military_access", [])}
-        self.is_leader = bool(data.get("is_faction_leader", False))
+        self.is_leader = queries.is_faction_leader(cid, self.map_screen.nation_data)
         self.master = data.get("master", "") or "None"
         self.puppet_type = data.get("puppet_type", "") or c.PUPPET_TYPE_AUTONOMOUS
 
-        faction = data.get("faction", "")
+        faction = queries.get_country_faction(cid, self.map_screen.nation_data)
         self.faction_field.text = faction
         self.faction_field.active = False
         self.members = {n for n in self.others
-                        if faction and self.map_screen.nation_data.get(n, {}).get("faction", "") == faction}
+                        if faction and queries.get_country_faction(n, self.map_screen.nation_data) == faction}
 
         for name in self.REGIONS:
             setattr(self, f"_scroll_{name}", 0)
@@ -183,8 +183,8 @@ class Diplomacy_Editor_Screen(ScrollPanes, EditorOverlayScreen):
 
         # 2. Faction membership.
         new_faction = self.faction_field.text.strip()
-        old_faction = data.get("faction", "")
-        if old_faction and new_faction and old_faction != new_faction and data.get("is_faction_leader"):
+        old_faction = queries.get_country_faction(target, nation_data)
+        if old_faction and new_faction and old_faction != new_faction and queries.is_faction_leader(target, nation_data):
             rename_faction(nation_data, target, old_faction, new_faction)
         queries.set_country_faction(nation_data, target, new_faction)
         queries.set_faction_leadership(nation_data, target, self.is_leader)
@@ -194,7 +194,7 @@ class Diplomacy_Editor_Screen(ScrollPanes, EditorOverlayScreen):
                 queries.set_country_faction(nation_data, name, new_faction)
                 if new_faction:
                     queries.set_faction_leadership(nation_data, name, False)
-            elif new_faction and nation_data[name].get("faction", "") == new_faction:
+            elif new_faction and queries.get_country_faction(name, nation_data) == new_faction:
                 queries.set_country_faction(nation_data, name, "")
                 queries.set_faction_leadership(nation_data, name, False)
 

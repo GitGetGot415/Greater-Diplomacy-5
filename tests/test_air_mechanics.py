@@ -13,7 +13,6 @@ import pygame
 from data import migrations, queries
 import data.constants as c
 from data.multiplayer.tournament import files as tournament_files
-from data.migrations import snapshot_moves
 from data.multiplayer.realtime.session import (
     MapRealtimeDriver,
     RealtimeError,
@@ -812,31 +811,23 @@ class AirIntegrationTests(unittest.TestCase):
         self.target["neighbors"] = [1]
         self.plane = wing(self.base)
 
-    def test_both_multiplayer_drafts_allow_large_stacks_and_share_scaled_resolution(self):
-        for mode in ("tournament", "realtime"):
-            with self.subTest(mode=mode):
-                self.base["units"] = []
-                self.target["units"] = []
-                aircraft = [wing(self.base) for _ in range(c.COMBAT_WIDTH * 2)]
-                for unit in aircraft:
-                    unit.update(attack=80, defense=0, health=100000, max_health=100000)
-                defender = wing(self.target, "Infantry Type 1910", "B")
-                defender.update(attack=0, defense=0, health=100000, max_health=100000)
-                order = {"type": "AIR_ATTACK", "target_id": 2}
-                if mode == "tournament":
-                    _live, drafts = snapshot_moves._validate_aircraft_orders(self.game, "A",
-                        {"aircraft_orders": [{"unit_id": unit["unit_id"], "order": order} for unit in aircraft]}, {})
-                    for unit, canonical, _name in drafts:
-                        unit["order"] = canonical
-                else:
-                    commands = MapRealtimeDriver(self.game).validate_draft("A", [
-                        {"type": "unit_order", "province_id": 1, "unit_index": index,
-                         "unit_id": unit["unit_id"], "order": order} for index, unit in enumerate(aircraft)])
-                    for unit, command in zip(aircraft, commands):
-                        unit["order"] = command["order"]
-                expected = sum(unit["attack"] for unit in aircraft) * queries.air_stack_attack_efficiency(len(aircraft))
-                air_processor.process_air_orders(self.game)
-                self.assertAlmostEqual(defender["max_health"] - defender["health"], expected)
+    def test_multiplayer_draft_allows_large_stacks_and_uses_scaled_resolution(self):
+        self.base["units"] = []
+        self.target["units"] = []
+        aircraft = [wing(self.base) for _ in range(c.COMBAT_WIDTH * 2)]
+        for unit in aircraft:
+            unit.update(attack=80, defense=0, health=100000, max_health=100000)
+        defender = wing(self.target, "Infantry Type 1910", "B")
+        defender.update(attack=0, defense=0, health=100000, max_health=100000)
+        order = {"type": "AIR_ATTACK", "target_id": 2}
+        commands = MapRealtimeDriver(self.game).validate_draft("A", [
+            {"type": "unit_order", "province_id": 1, "unit_index": index,
+             "unit_id": unit["unit_id"], "order": order} for index, unit in enumerate(aircraft)])
+        for unit, command in zip(aircraft, commands):
+            unit["order"] = command["order"]
+        expected = sum(unit["attack"] for unit in aircraft) * queries.air_stack_attack_efficiency(len(aircraft))
+        air_processor.process_air_orders(self.game)
+        self.assertAlmostEqual(defender["max_health"] - defender["health"], expected)
 
     def test_listed_strike_boundary_agrees_in_ai_networks_and_resolution(self):
         radius = queries.air_unit_stats(self.plane)["air_range_px"]
@@ -848,9 +839,6 @@ class AirIntegrationTests(unittest.TestCase):
         command = {"type": "unit_order", "province_id": self.base["id"], "unit_index": 0,
                    "unit_id": self.plane["unit_id"], "order": order}
         self.assertEqual(MapRealtimeDriver(self.game).validate_draft("A", [command])[0]["order"], canonical)
-        _live, drafts = snapshot_moves._validate_aircraft_orders(self.game, "A",
-            {"aircraft_orders": [{"unit_id": self.plane["unit_id"], "order": order}]}, {})
-        self.assertEqual(drafts[0][1], canonical)
         self.plane["order"] = canonical
         health = enemy["health"]
         air_processor.process_air_orders(self.game)
@@ -1023,8 +1011,9 @@ class AirIntegrationTests(unittest.TestCase):
             tournament_files.export_move_file(self.game, path, "player-key")
             with open(path) as f:
                 data = tournament_files.decrypt_dict(json.load(f)["data"], "player-key")
-            self.assertEqual(len(data["aircraft_orders"]), 1)
-            self.assertFalse(any(update.get("units") for update in data["provinces"].values()))
+            orders = [command for command in data["player_intents"] if command["type"] == "unit_order"]
+            self.assertEqual([order["unit_id"] for order in orders], [self.plane["unit_id"]])
+            self.assertNotIn("provinces", data)
             self.plane["order"] = {}
             health = self.plane["health"]
             with patch.object(tournament_files, "run_with_progress", synchronous_progress):
@@ -1040,28 +1029,6 @@ class AirIntegrationTests(unittest.TestCase):
             self.assertLess(defender["health"], defender["max_health"])
             self.assertIn(self.plane, self.base["units"])
             self.assertEqual(queries.get_fort_level(self.target), fort_level - 1)
-
-    def test_tournament_rejects_foreign_duplicate_malformed_and_out_of_range_orders(self):
-        enemy = wing(self.target, "Biplane Fighter I", "B")
-        remote = tile(self.game, 3, 2000, owner="B")
-        valid = {"unit_id": self.plane["unit_id"], "order": {"type": "AIR_ATTACK", "target_id": 2}}
-        bad = ([dict(valid, unit_id=enemy["unit_id"])], [valid, valid],
-               [dict(valid, order={"type": "AIR_ATTACK", "target_id": remote["id"]})],
-               [dict(valid, order={"type": ["AIR_ATTACK"]})])
-        for commands in bad:
-            with self.subTest(commands=commands), self.assertRaises(ValueError):
-                snapshot_moves._validate_aircraft_orders(self.game, "A", {"aircraft_orders": commands}, {})
-
-    def test_tournament_snapshot_cannot_change_aircraft_health_or_location(self):
-        # Every v46 and later move sends aircraft orders. Snapshot stats and positions are ignored.
-        submitted = dict(self.plane, health=1, attack=100000)
-        order = {"unit_id": self.plane["unit_id"], "order": {"type": "AIR_ATTACK", "target_id": 2}}
-        live, drafts = snapshot_moves._validate_aircraft_orders(self.game, "A", {"aircraft_orders": [order]},
-            {self.target["json_key"]: {"units": [submitted]}})
-        self.assertIn(self.plane["unit_id"], live)
-        self.assertIs(drafts[0][0], self.plane)
-        self.assertEqual(self.plane["health"], self.plane["max_health"])
-        self.assertEqual(drafts[0][1]["base_id"], self.base["id"])
 
     def test_tactical_ai_preserves_the_commanded_aircraft_order(self):
         self.game.tactical_mode = True
@@ -1162,7 +1129,7 @@ class AirGroundTransportTests(unittest.TestCase):
             self.assertEqual(battle.profiles[id(unit)]["health"], 0)
         self.assertEqual(left + right, before)
 
-    def test_air_conversion_and_both_network_validators_accept_only_convoys(self):
+    def test_air_conversion_and_multiplayer_validation_accept_only_convoys(self):
         for name, stats in queries.get_unit_library().items():
             if not stats.get("air_role"):
                 continue
@@ -1175,16 +1142,9 @@ class AirGroundTransportTests(unittest.TestCase):
                 command = {"type": "unit_order", "province_id": 1, "unit_index": 0,
                            "unit_id": unit["unit_id"], "order": order}
                 self.assertEqual(driver.validate_draft("A", [command])[0]["order"], order)
-                live, drafts = snapshot_moves._validate_aircraft_orders(self.game, "A",
-                    {"aircraft_orders": [{"unit_id": unit["unit_id"], "order": order}]}, {})
-                self.assertIn(unit["unit_id"], live)
-                self.assertEqual(drafts[0][1], order)
                 bad = dict(order, to="Truck")
                 with self.assertRaises(RealtimeError):
                     driver.validate_draft("A", [dict(command, order=bad)])
-                with self.assertRaises(ValueError):
-                    snapshot_moves._validate_aircraft_orders(self.game, "A",
-                        {"aircraft_orders": [{"unit_id": unit["unit_id"], "order": bad}]}, {})
                 with self.assertRaises(ValueError):
                     queries.load_transport(unit, "Truck")
                 self.assertFalse(queries.is_air_transport(unit))
@@ -1254,9 +1214,6 @@ class AirGroundTransportTests(unittest.TestCase):
                 command = {"type": "unit_order", "province_id": 1, "unit_index": 0,
                            "unit_id": unit["unit_id"], "order": unit["order"]}
                 self.assertEqual(MapRealtimeDriver(self.game).validate_draft("A", [command])[0]["order"], unit["order"])
-                _, drafts = snapshot_moves._validate_aircraft_orders(self.game, "A",
-                    {"aircraft_orders": [{"unit_id": unit["unit_id"], "order": unit["order"]}]}, {})
-                self.assertEqual(drafts[0][1], unit["order"])
                 self.assertFalse(queries.can_unit_move_step(unit, self.base, self.sea, self.game.nation_data))
                 with self.assertRaises(ValueError):
                     queries.canonical_air_order(self.game, unit, self.base,
@@ -1591,9 +1548,6 @@ class AirMissionSelectionTests(unittest.TestCase):
                 command = {"type": "unit_order", "province_id": 1, "unit_index": 0,
                            "unit_id": self.unit["unit_id"], "order": order}
                 self.assertEqual(MapRealtimeDriver(self.game).validate_draft("A", [command])[0]["order"], order)
-                _, drafts = snapshot_moves._validate_aircraft_orders(self.game, "A",
-                    {"aircraft_orders": [{"unit_id": self.unit["unit_id"], "order": order}]}, {})
-                self.assertEqual(drafts[0][1], order)
 
     def test_aircraft_cannot_upgrade_between_families_through_ui_networks_or_execution(self):
         self.base["buildings"] = ["Arms Factory Lvl 1"]
@@ -1610,9 +1564,6 @@ class AirMissionSelectionTests(unittest.TestCase):
         command = {"type": "unit_order", "province_id": 1, "unit_index": 0, "order": order}
         with self.assertRaises(RealtimeError):
             MapRealtimeDriver(self.game).validate_draft("A", [command])
-        with self.assertRaises(ValueError):
-            snapshot_moves._validate_aircraft_orders(self.game, "A",
-                {"aircraft_orders": [{"unit_id": self.unit["unit_id"], "order": order}]}, {})
         self.unit["order"] = dict(order, turns_left=1)
         movement_processor.process_upgrades(self.game)
         self.assertEqual(self.unit["type"], "Monoplane Fighter I")
@@ -1663,9 +1614,6 @@ class AirMissionSelectionTests(unittest.TestCase):
                 command = {"type": "unit_order", "province_id": 1, "unit_index": 0,
                            "unit_id": self.unit["unit_id"], "order": self.unit["order"]}
                 self.assertEqual(MapRealtimeDriver(self.game).validate_draft("A", [command])[0]["order"]["target_type"], target)
-                _, drafts = snapshot_moves._validate_aircraft_orders(self.game, "A",
-                    {"aircraft_orders": [{"unit_id": self.unit["unit_id"], "order": self.unit["order"]}]}, {})
-                self.assertEqual(drafts[0][1]["target_type"], target)
                 upgrade = dict(self.unit["order"])
                 # The AI repairs a wounded aircraft rather than upgrading it: an
                 # upgrade keeps the health percentage, so it would stay wounded.
@@ -1906,22 +1854,14 @@ class GroupAirMissionSelectionTests(unittest.TestCase):
             for unit, base in self.records[:2]]
         self.assertEqual([c["order"] for c in MapRealtimeDriver(self.game).validate_draft("A", commands)],
                          [c["order"] for c in commands])
-        tournament = [{"unit_id": c["unit_id"], "order": c["order"]} for c in commands]
-        _, drafts = snapshot_moves._validate_aircraft_orders(self.game, "A", {"aircraft_orders": tournament}, {})
-        self.assertEqual([d[1] for d in drafts], [c["order"] for c in commands])
         for bad in (dict(commands[1], order={"type": "AIR_PATROL", "priority": []}),
                     dict(commands[1], order={"type": "AIR_PATROL", "base_id": self.base["id"]}),
                     dict(commands[1], unit_id=self.v2["unit_id"], province_id=self.remote["id"], unit_index=1)):
             with self.subTest(command=bad):
                 with self.assertRaises(RealtimeError):
                     MapRealtimeDriver(self.game).validate_draft("A", [bad])
-                with self.assertRaises(ValueError):
-                    snapshot_moves._validate_aircraft_orders(self.game, "A",
-                        {"aircraft_orders": [{"unit_id": bad["unit_id"], "order": bad["order"]}]}, {})
         with self.assertRaises(RealtimeError):
             MapRealtimeDriver(self.game).validate_draft("B", commands)
-        with self.assertRaises(ValueError):
-            snapshot_moves._validate_aircraft_orders(self.game, "B", {"aircraft_orders": tournament}, {})
 
 
 @fast_tournament_crypto()
@@ -2078,7 +2018,7 @@ class AirAppSmokeTests(unittest.TestCase):
                 patch.object(queries, "air_unit_can_launch", side_effect=AssertionError("frame mission eligibility")):
             screen.draw(self.surface)
 
-    def test_move_click_strikes_once_and_checks_strike_range_on_both_hosts(self):
+    def test_move_click_strikes_once_and_checks_strike_range_in_multiplayer(self):
         loaded = runtime_map()
         loaded.selection_mode = False
         loaded.player_country = "A"
@@ -2107,15 +2047,9 @@ class AirAppSmokeTests(unittest.TestCase):
         command = {"type": "unit_order", "province_id": base["id"], "unit_index": 0,
                    "unit_id": fighter["unit_id"], "order": dict(fighter["order"])}
         self.assertEqual(MapRealtimeDriver(loaded).validate_draft("A", [command])[0]["order"], fighter["order"])
-        _, drafts = snapshot_moves._validate_aircraft_orders(loaded, "A", {"aircraft_orders": [
-            {"unit_id": fighter["unit_id"], "order": command["order"]}]}, {})
-        self.assertEqual(drafts[0][1], fighter["order"])
         invalid = dict(command, order={"type": "AIR_ATTACK", "target_id": outside["id"]})
         with self.assertRaises(RealtimeError):
             MapRealtimeDriver(loaded).validate_draft("A", [invalid])
-        with self.assertRaises(ValueError):
-            snapshot_moves._validate_aircraft_orders(loaded, "A", {"aircraft_orders": [
-                {"unit_id": fighter["unit_id"], "order": invalid["order"]}]}, {})
         screen.exit_screen.assert_not_called()
 
     def test_air_mission_popup_loads_valid_assets_and_applies_a_choice(self):

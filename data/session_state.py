@@ -62,11 +62,11 @@ class SessionState:
     multiplayer_player_enc_cache: dict = field(default_factory=dict)
     multiplayer_protected_countries: set = field(default_factory=set)
     multiplayer_pending_key_regen: set = field(default_factory=set)
-    multiplayer_pending_faction_renames: list = field(default_factory=list)
-    multiplayer_pending_appearance_updates: dict = field(default_factory=dict)
     submitted_moves: set = field(default_factory=set)
+    # Shared edits made on a local planning map are sent as explicit commands.
+    pending_faction_rename: str | None = None
+    pending_subject_appearances: dict = field(default_factory=dict)
     # Real-time client drafts that travel as server-validated commands.
-    realtime_pending_appearance_updates: dict = field(default_factory=dict)
     realtime_volunteer_drafts: dict = field(default_factory=dict)
     # Map editor undo and redo stacks.
     editor_history: list = field(default_factory=list)

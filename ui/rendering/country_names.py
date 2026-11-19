@@ -105,7 +105,7 @@ def draw_country_names(map_screen, surface):
                     map_screen.country_name_surfs[c_id] = (surf, shadow)
 
                     # Cache faction name
-                    fac = data.get("faction", "").upper()
+                    fac = queries.get_country_faction(c_id, map_screen.nation_data).upper()
                     if fac:
                         f_surf = name_font.render(fac, True, (255, 255, 255)).convert_alpha()
                         f_shadow = name_font.render(fac, True, (20, 20, 20)).convert_alpha()
@@ -137,7 +137,7 @@ def draw_country_names(map_screen, surface):
                 # Check which mode we are in to swap the lookup table
                 if map_screen.base_layer == "FACTIONS":
                     # If we are in Faction mode, skip countries without factions
-                    fac_name = map_screen.nation_data.get(country, {}).get("faction", "").upper()
+                    fac_name = queries.get_country_faction(country, map_screen.nation_data).upper()
                     if not fac_name:
                         continue
                     
@@ -186,7 +186,7 @@ def draw_country_names(map_screen, surface):
                             # Record that this text block has successfully been drawn
                             drawn_countries.add(country)
                             if map_screen.base_layer == "FACTIONS":
-                                fac_name = map_screen.nation_data.get(country, {}).get("faction", "").upper()
+                                fac_name = queries.get_country_faction(country, map_screen.nation_data).upper()
                                 drawn_factions.add(fac_name)
 
 def update_country_centers(map_screen):

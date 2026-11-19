@@ -48,7 +48,7 @@ BILATERAL = "BILATERAL"
 
 
 def _faction_of(nation, nation_data):
-    return nation_data.get(nation, {}).get("faction", "")
+    return queries.get_country_faction(nation, nation_data)
 
 
 def _bloc(nation, nation_data):

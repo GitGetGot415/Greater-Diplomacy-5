@@ -1,11 +1,12 @@
 import pygame
 from ui.navigation.screen import Screen
 import data.constants as c
+from map_logic.actions.player_actions import rename_player_faction
 from ui.bars import ui_bars
 from ui.widgets.flag_icons import draw_flag_centered
 from ui.widgets.ui_elements import Button, make_back_button
 from ui.rendering.font_manager import fonts
-from map_logic.diplomacy import faction_actions, faction_leadership
+from map_logic.diplomacy import faction_leadership
 from data import queries
 from ui import dialogs
 
@@ -48,7 +49,7 @@ class Faction_Screen(Screen):
 
         player_country = self.map_screen.player_country
         nation_data = self.map_screen.nation_data
-        my_faction = nation_data.get(player_country, {}).get("faction", "")
+        my_faction = queries.get_country_faction(player_country, nation_data)
 
         if not my_faction:
             return
@@ -121,7 +122,7 @@ class Faction_Screen(Screen):
             if nation_data.get(player, {}).get("master", ""):
                 btn.apply_state(enabled=False, text="Puppets Cannot Claim")
             elif not queries.get_faction_leader(
-                    nation_data.get(player, {}).get("faction", ""), nation_data):
+                    queries.get_country_faction(player, nation_data), nation_data):
                 btn.apply_state(enabled=False, text="Faction Needs A Leader")
             else:
                 btn.apply_state(enabled=False, text="Cannot Claim Leadership")
@@ -152,7 +153,7 @@ class Faction_Screen(Screen):
     def start_rename(self):
         """Opens the popup that asks for a new faction name."""
         player_country = self.map_screen.player_country
-        current_name = self.map_screen.nation_data.get(player_country, {}).get("faction", "")
+        current_name = queries.get_country_faction(player_country, self.map_screen.nation_data)
         dialogs.ask_string("Rename Faction", f"Enter a new name for {current_name}:", self.confirm_rename,
                            initial=current_name, allow_empty=False, max_length=c.FACTION_NAME_MAX_LENGTH)
 
@@ -163,20 +164,12 @@ class Faction_Screen(Screen):
             if not player_diplomacy_actions.can_edit_diplomacy(self.map_screen):
                 return
         player_country = self.map_screen.player_country
-        old_name = self.map_screen.nation_data.get(player_country, {}).get("faction", "")
+        old_name = queries.get_country_faction(player_country, self.map_screen.nation_data)
         new_name = new_name.strip()
 
         if new_name and old_name and new_name != old_name:
-            renamed = faction_actions.rename_faction(
-                self.map_screen.nation_data, player_country, old_name, new_name)
+            renamed = rename_player_faction(self.map_screen, new_name)
             if renamed:
-                # A tournament move otherwise carries only the renaming
-                # leader's nation record.  Keep an explicit, host-validated
-                # command so every member is renamed when the host imports it.
-                if self.map_screen.multiplayer_mode:
-                    self.map_screen.multiplayer_pending_faction_renames.append(
-                        {"old_name": old_name, "new_name": new_name})
-
                 self.map_screen.show_feedback(f"Faction renamed to {new_name}")
                 country_names.clear_country_name_cache(self.map_screen)
                 self.map_screen.refresh_diplomacy_maps()
@@ -194,7 +187,7 @@ class Faction_Screen(Screen):
 
         player_country = self.map_screen.player_country
         nation_data = self.map_screen.nation_data
-        my_faction = nation_data.get(player_country, {}).get("faction", "")
+        my_faction = queries.get_country_faction(player_country, nation_data)
 
         font_heading = fonts.get("heading1")
         font_normal = fonts.get("normal")

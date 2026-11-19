@@ -469,28 +469,10 @@ class Edit_Country_Screen(Screen):
             # Trigger full map re-renders so the new color shows up instantly!
             self.map_screen.refresh_map_layers("political", "cores")
 
-        # Tournament move files normally include only the controlling nation.
-        # An integrated puppet is deliberately edited through its controller's
-        # Subjects screen, so record this narrow appearance-only update for the
-        # host to validate and apply alongside the controller's move.
-        if (self.map_screen.multiplayer_mode
+        # Both multiplayer hosts validate this narrow appearance draft.
+        if ((self.map_screen.multiplayer_mode or self.map_screen.realtime_multiplayer)
                 and self.editing_country != self.map_screen.player_country):
-            self.map_screen.multiplayer_pending_appearance_updates[self.editing_country] = {
-                key: p_data.get(key)
-                for key in ("name", "adjective", "leader_name", "leader_title",
-                            "flag_data", "portrait_data", "color")
-            }
-
-        # Real-time clients have a separate authoritative map.  A controller
-        # may customise an integrated subject, but that change must travel as
-        # a narrow server-validated draft instead of remaining a local edit.
-        if (self.map_screen.realtime_multiplayer
-                and self.editing_country != self.map_screen.player_country):
-            self.map_screen.realtime_pending_appearance_updates[self.editing_country] = {
-                key: p_data.get(key)
-                for key in ("name", "adjective", "leader_name", "leader_title",
-                            "flag_data", "portrait_data", "color")
-            }
+            self.map_screen.pending_subject_appearances[self.editing_country] = queries.country_appearance_draft(p_data)
         
         self.map_screen.show_feedback("Country Data Saved!")
         self.force_exit_to_map()
