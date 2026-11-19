@@ -1,6 +1,7 @@
 """Technology and research queries, unit unlock lookups, and research-edit previews."""
 
 import copy
+import math
 import data.constants as c
 from data.state_access import world_for, session_for
 from data.queries.content import get_time_appropriate_research
@@ -501,6 +502,82 @@ def get_research_multiplier(current_exact_year, target_year):
     if years_ahead > 0:
         return 0.5 ** years_ahead
     return 1.0
+
+
+def get_base_research_points(nation_data, country_id, days_per_turn):
+    """Normal points per slot before project-specific modifiers."""
+    # Politics imports the query package for its other rules.
+    from map_logic import politics
+    return c.BASE_RESEARCH_POINTS_PER_DAY * days_per_turn * politics.research_multiplier(nation_data, country_id)
+
+
+def get_project_research_rate(base_points, nation_data, country_id, tech_name, level):
+    """An on-time project's normal rate, including completed faction research."""
+    return base_points * (1.0 + queries.get_faction_research_bonus(country_id, tech_name, level, nation_data))
+
+
+def get_normal_research_progress(nation_data, country_id, tech_tree, days_per_turn, current_year):
+    """Calculate each queued project's regular progress for the turn."""
+    country = nation_data[country_id]
+    levels = country.get("research", {})
+    base_points = get_base_research_points(nation_data, country_id, days_per_turn)
+    progress = {}
+    for project in country.get("research_queue", []):
+        tech_name = project["tech_name"]
+        level = levels.get(tech_name, 0)
+        years = tech_tree.get(tech_name, {}).get("years", [1850])
+        target_year = years[min(level, len(years) - 1)]
+        rate = get_project_research_rate(base_points, nation_data, country_id, tech_name, level + 1)
+        progress[tech_name] = rate * get_research_multiplier(current_year, target_year)
+    return progress
+
+
+def valid_research_funding_rate(value):
+    """Accept a numeric share of income, including both endpoints."""
+    return type(value) in (int, float) and 0 <= value <= 1
+
+
+def get_research_funding_rate(country):
+    rate = country.get("research_funding_slider", c.DEFAULT_RESEARCH_FUNDING_RATE)
+    return rate if valid_research_funding_rate(rate) else c.DEFAULT_RESEARCH_FUNDING_RATE
+
+
+def get_funded_research_points(materials):
+    """Use a logarithmic return so each additional research point costs more."""
+    return c.RESEARCH_FUNDING_POINT_SCALE * math.log1p(materials / c.RESEARCH_FUNDING_MATERIAL_SCALE) / math.log(2)
+
+
+def calculate_research_funding(country, net_materials, normal_progress):
+    """Return Materials spent and bonus points per project after normal progress."""
+    budget = max(0, net_materials) * get_research_funding_rate(country)
+    if budget <= 0:
+        return 0, {}
+    remaining = {}
+    for project in country.get("research_queue", []):
+        tech_name = project["tech_name"]
+        points = project["points_remaining"] - normal_progress[tech_name]
+        if points > 0:
+            remaining[tech_name] = points
+    if not remaining:
+        return 0, {}
+
+    bonus = get_funded_research_points(budget)
+    total_needed = sum(remaining.values())
+    if bonus >= total_needed:
+        # Invert the same curve to pay only for the points that can be used.
+        cost = c.RESEARCH_FUNDING_MATERIAL_SCALE * math.expm1(total_needed * math.log(2) / c.RESEARCH_FUNDING_POINT_SCALE)
+        return min(budget, cost), remaining
+
+    # Projects close to completion use less than an equal share. Redistribute
+    # the spare points across the rest of the queue.
+    awards = {}
+    ordered = sorted(remaining.items(), key=lambda entry: entry[1])
+    for index, (tech_name, points) in enumerate(ordered):
+        projects_left = len(ordered) - index
+        award = min(points, bonus / projects_left)
+        awards[tech_name] = award
+        bonus -= award
+    return budget, awards
 
 
 def has_free_research_slots(nation, nation_data):

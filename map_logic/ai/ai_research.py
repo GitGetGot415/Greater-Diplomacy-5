@@ -25,6 +25,13 @@ def process_ai_research(context, *, countries=None):
 
     for ai_name in ai_nations:
         data = world_state.nation_data[ai_name]
+        econ = all_econ.get(ai_name, {})
+
+        if countries is None and econ:
+            # Preserve manually set budgets when a human automates queue selection.
+            has_reserve = data.get("materials", 0) >= econ["upkeep"]["materials"]
+            has_surplus = queries.get_net_materials_income(econ) > 0
+            data["research_funding_slider"] = c.AI_RESEARCH_FUNDING_RATE if has_reserve and has_surplus else c.DEFAULT_RESEARCH_FUNDING_RATE
 
         queue = data.setdefault("research_queue", [])
         
@@ -74,7 +81,6 @@ def process_ai_research(context, *, countries=None):
         # being overrun researched recruitment buildings. The historical-pace
         # term survives, but as a multiplier on value rather than as the key.
         current_year = world_state.time_manager.year
-        econ = all_econ.get(ai_name, {})
         available_techs = _rank_for_nation(
             available_techs, ai_name, data, econ, world,
             unit_library, building_library, current_year, research_index=research_index)

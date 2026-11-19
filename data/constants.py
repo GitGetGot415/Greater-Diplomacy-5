@@ -431,6 +431,10 @@ END_YEAR = 2200
 
 BASE_RESEARCH_POINTS_PER_DAY = 10
 RESEARCH_SLOTS = 3 # Number of techs a nation can research simultaneously
+DEFAULT_RESEARCH_FUNDING_RATE = get_starting_value("country_defaults", "research_funding_slider")
+RESEARCH_FUNDING_MATERIAL_SCALE = 10
+RESEARCH_FUNDING_POINT_SCALE = 10
+AI_RESEARCH_FUNDING_RATE = 0.10
 
 # Faction partners that have already completed the exact tech level being
 # researched share their findings. Each partner makes research points 10% more

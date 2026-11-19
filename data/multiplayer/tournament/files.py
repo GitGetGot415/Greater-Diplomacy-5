@@ -154,6 +154,7 @@ def strip_sensitive_data_for_player(context, country_id):
             # Hide an AI government's private notebook
             country.pop("ai_notebook", None)
             country.pop(politics.ECONOMIC_DRIFT_KEY, None)
+            country.pop("research_funding_slider", None)
 
 
 def strip_sensitive_data_for_tournament_spectator(context):
@@ -189,6 +190,7 @@ def strip_sensitive_data_for_tournament_spectator(context):
         country["diplo_responses"] = {}
         country.pop("ai_notebook", None)
         country.pop(politics.ECONOMIC_DRIFT_KEY, None)
+        country.pop("research_funding_slider", None)
 
     for province in world_state.map_data.values():
         for unit in province.get("units", []):
@@ -233,6 +235,7 @@ def build_tournament_spectator_save(save_dict):
             country["diplo_responses"] = {}
             country.pop("ai_notebook", None)
             country.pop(politics.ECONOMIC_DRIFT_KEY, None)
+            country.pop("research_funding_slider", None)
 
     for province in spectator_save.get("provinces", {}).values():
         if not isinstance(province, dict):

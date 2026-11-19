@@ -85,6 +85,7 @@ UNIT_VIEW_ANIMATION_MS = 100
 
 class Map(StateAccess, Screen):
     _popup_presentation_revision = None
+    _resource_hud_economy_key = None
 
     # Network connection state. main.py and the multiplayer screens attach it
     # when a networked game starts. Every other game keeps these defaults.
@@ -157,6 +158,18 @@ class Map(StateAccess, Screen):
     def on_enter(self, app, previous):
         ui_info_popup.prepare_relation_indicators(self)
         refresh_map.update_relations_view(self)
+        self._resource_hud_economy_key = None
+        self._refresh_resource_hud_economy()
+
+    def _refresh_resource_hud_economy(self):
+        if self.is_editor or self.tactical_mode or self.player_country not in self.nation_data:
+            self.econ_cache = None
+            self._resource_hud_economy_key = None
+            return
+        key = (self.player_country, self.time_manager.total_turns, self._presentation_cache_revision)
+        if key != self._resource_hud_economy_key:
+            self.econ_cache = queries.get_economy_projections(self.player_country, self.map_data, self.nation_data, context=self)
+            self._resource_hud_economy_key = key
 
     def __init__(self, load_path=None, is_scenario=False, is_random=False, force_editor=False, random_settings=None, map_settings=None, num_players=1, history_turn=None, skip_initial_income=False):
         for _ in self._initialize_steps(
@@ -1714,6 +1727,9 @@ class Map(StateAccess, Screen):
                      not self.ai_is_thinking and \
                      not self.show_player_ready_screen and \
                      not self.selection_mode
+
+        if is_playing:
+            self._refresh_resource_hud_economy()
 
         if (is_playing and self._popup_presentation_revision
                 != self._presentation_cache_revision):

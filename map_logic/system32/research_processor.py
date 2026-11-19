@@ -1,52 +1,35 @@
 import copy
 
-from data.state_access import world_for, session_for
 import data.constants as c
+from data.state_access import world_for, session_for
 from data import queries
-from map_logic import politics
 
-def process_national_research(context):
-    # Load template to know costs (REPLACED WITH CACHE)
+
+def process_national_research(context, *, economies=None):
     world_state = world_for(context)
     session_state = session_for(context)
     template = queries.get_tech_tree(context)
-    
-    # Uses the new constant
     days_per_turn = queries.get_days_per_turn(world_state.scenario_settings)
-    base_points_per_turn = c.BASE_RESEARCH_POINTS_PER_DAY * days_per_turn
-
     current_exact_year = queries.get_exact_year(world_state.time_manager)
 
     for country_name, country_data in world_state.nation_data.items():
         queue = country_data.get("research_queue", [])
         if not queue: continue
 
+        normal = queries.get_normal_research_progress(world_state.nation_data, country_name, template, days_per_turn, current_exact_year)
+        bonus = {}
+        if economies and country_name in economies and country_name not in c.UNPLAYABLE_NATIONS and country_name != "GLOBAL_EVENTS":
+            surplus = min(country_data["materials"], queries.get_net_materials_income(economies[country_name]))
+            diverted, bonus = queries.calculate_research_funding(country_data, surplus, normal)
+            if diverted:
+                country_data["materials"] -= diverted
+
         # We iterate backwards through the queue so we can safely remove items
         for i in range(len(queue) - 1, -1, -1):
             project = queue[i]
             tech_key = project["tech_name"]
-            
-            # --- AHEAD OF TIME PENALTY LOGIC ---
-            # Figure out what level is currently being researched
-            current_level = country_data.get("research", {}).get(tech_key, 0)
-            tech_data = template.get(tech_key, {})
-            years_array = tech_data.get("years", [1850])
-            
-            # Cap the index to prevent out-of-bounds if a nation somehow researches past max_lvl
-            target_index = min(current_level, len(years_array) - 1)
-            target_year = years_array[target_index]
-            
-            multiplier = queries.get_research_multiplier(current_exact_year, target_year)
-            # Market economies research faster. A fully planned economy stalls
-            # progress even when it has a faction research bonus.
-            faction_bonus = queries.get_faction_research_bonus(
-                country_name, tech_key, current_level + 1, world_state.nation_data)
-            effective_points = (base_points_per_turn * multiplier
-                                * politics.research_multiplier(world_state.nation_data, country_name)
-                                * (1.0 + faction_bonus))
-            # -----------------------------------
-            
-            project["points_remaining"] -= effective_points
+            project["points_remaining"] -= normal[tech_key]
+            project["points_remaining"] -= bonus.get(tech_key, 0)
 
             if project["points_remaining"] <= 0:
                 country_data["research"][tech_key] = country_data["research"].get(tech_key, 0) + 1

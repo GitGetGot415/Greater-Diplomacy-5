@@ -29,6 +29,7 @@ ROW_HEIGHT = 100
 SLIDER_WIDTH = 400
 CONSCRIPTION_SLIDER_Y = 530
 CONVERSION_SLIDER_Y = CONSCRIPTION_SLIDER_Y + 70
+RESEARCH_FUNDING_SLIDER_Y = CONVERSION_SLIDER_Y + 70
 SLIDER_CAPTION_OFFSET_Y = 25
 SLIDER_SIDE_CAPTION_GAP = 20
 
@@ -172,9 +173,12 @@ class Economy_Screen(Screen):
         conscription = Slider(c.SCREEN_WIDTH // 2 - SLIDER_WIDTH // 2, CONSCRIPTION_SLIDER_Y, SLIDER_WIDTH, "Conscription (Keep Manpower %)", conscript_val, self.set_conscription, visual_max=1.0, allowed_max=1.0)
         self.conscription_slider = conscription
         conversion = Slider(c.SCREEN_WIDTH // 2 - SLIDER_WIDTH // 2, CONVERSION_SLIDER_Y, SLIDER_WIDTH, "Convert % Mats to Fuel", slider_val, self.set_conversion, visual_max=c.MAX_CONVERSION_SLIDER_VAL, allowed_max=max_allowed)
-        for slider in (conscription, conversion):
+        funding_rate = queries.get_research_funding_rate(p_data)
+        funding = Slider(c.SCREEN_WIDTH // 2 - SLIDER_WIDTH // 2, RESEARCH_FUNDING_SLIDER_Y, SLIDER_WIDTH, "Research Funding", funding_rate, self.set_research_funding, click_track=True)
+        funding.disabled = self.map_screen.tactical_mode
+        for slider in (conscription, conversion, funding):
             slider.click_guard = self.can_edit_realtime
-            self.elements.append(slider)
+        self.elements.extend((conscription, conversion, funding))
         self.refresh_economy_preview()
 
     def refresh_economy_preview(self):
@@ -182,6 +186,19 @@ class Economy_Screen(Screen):
         country = self.map_screen.nation_data[self.map_screen.player_country]
         self.econ_cache = queries.get_economy_projections(
             self.map_screen.player_country, self.map_screen.map_data, self.map_screen.nation_data, context=self.map_screen)
+        income, upkeep, breakdown = self.econ_cache
+        diverted = -breakdown.get("materials", {}).get("research_funding", 0)
+        if not diverted and queries.get_research_funding_rate(country):
+            if not country.get("research_queue"):
+                caption = "Funding paused | No active research projects"
+            elif income["materials"] <= upkeep["materials"]:
+                caption = "Funding paused | No surplus Materials income"
+            else:
+                caption = "No funding needed | Projects are projected to finish with regular research"
+        else:
+            bonus = queries.get_funded_research_points(diverted)
+            caption = f"Materials diverted {diverted:,.2f}   |   Bonus research +{bonus:,.2f} pts/turn"
+        self.research_funding_caption = fonts.get("normal").render(caption, True, c.COLOR_GOLD_HIGHLIGHT)
         bonus = queries.get_conscription_damage_bonus(country)
         self.conscription_damage_caption = f"dmg modifier: +{bonus:.2%}"
         self.conscription_damage_color = conscription_damage_color(bonus)
@@ -200,6 +217,14 @@ class Economy_Screen(Screen):
         p_data = self.map_screen.nation_data[self.map_screen.player_country]
         p_data["mat_to_fuel_slider"] = val
         self.refresh_economy_preview()
+
+    def set_research_funding(self, val):
+        if not self.map_screen or self.map_screen.tactical_mode: return
+        if not self.can_edit_realtime() or not queries.valid_research_funding_rate(val): return
+        p_data = self.map_screen.nation_data[self.map_screen.player_country]
+        p_data["research_funding_slider"] = val
+        self.refresh_economy_preview()
+        self.map_screen.invalidate_map_presentation_cache()
 
     def can_edit_realtime(self):
         return queries.require_realtime_turn_open(self.map_screen, "the economy")
@@ -292,6 +317,8 @@ class Economy_Screen(Screen):
         if mat_lost > 0:
             conv_txt = font_small.render(f"Converting {int(mat_lost)} Materials -> {int(fuel_gained)} Fuel", True, c.COLOR_GOLD_HIGHLIGHT)
             surface.blit(conv_txt, (c.SCREEN_WIDTH // 2 - conv_txt.get_width() // 2, CONVERSION_SLIDER_Y + SLIDER_CAPTION_OFFSET_Y))
+        caption = self.research_funding_caption
+        surface.blit(caption, (c.SCREEN_WIDTH // 2 - caption.get_width() // 2, RESEARCH_FUNDING_SLIDER_Y + SLIDER_CAPTION_OFFSET_Y))
 
     def open_expenses_table(self):
         if not self.map_screen: return

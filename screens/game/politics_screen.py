@@ -38,7 +38,7 @@ DRIFT_ROWS = (
 )
 AXIS_EFFECT_ROWS = (
     (("Army damage", politics.axis_damage_multiplier), ("Core manpower", politics.axis_core_manpower_multiplier)),
-    (("Factory output", politics.axis_factory_multiplier), ("Research speed", politics.axis_research_multiplier)),
+    (("Factory output", politics.axis_factory_multiplier), ("Base research", politics.axis_research_multiplier)),
 )
 
 POLICY_VIEWPORT_MARGIN_X = 20
@@ -298,7 +298,7 @@ class Politics_Screen(Screen):
             factory = politics.axis_factory_multiplier(economic)
             effects_y = DRIFT_ROW_TOP + DRIFT_ROW_GAP
             draw_line(f"Army damage x{damage:.2f}      Core manpower x{manpower:.2f}", effects_y)
-            draw_line(f"Factory output x{factory:.2f}      Research speed x{research:.2f}", effects_y + POSITION_LINE_GAP)
+            draw_line(f"Factory output x{factory:.2f}      Base research x{research:.2f}", effects_y + POSITION_LINE_GAP)
         else:
             for row, (heading, _labels) in enumerate(DRIFT_ROWS):
                 draw_line(heading, DRIFT_ROW_TOP + row * DRIFT_ROW_GAP)
@@ -308,7 +308,7 @@ class Politics_Screen(Screen):
             draw_line("Axis effects  |  Current → Next turn", EFFECTS_OFFSET_Y - POSITION_LINE_GAP, c.UI_TEXT_DIM)
             self._draw_axis_effects(details)
             if damage != politics.axis_damage_multiplier(political) or research != politics.axis_research_multiplier(economic):
-                draw_line(f"Current with policies  Damage ×{damage:.2f}  Research ×{research:.2f}",
+                draw_line(f"Current with policies  Damage ×{damage:.2f}  Base research ×{research:.2f}",
                           EFFECTS_OFFSET_Y + POSITION_LINE_GAP, c.UI_TEXT_DIM, center_x=COMPASS_CENTER_X, font="tiny")
         return details
 

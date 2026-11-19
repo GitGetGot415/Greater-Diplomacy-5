@@ -949,6 +949,33 @@ class RealtimeSessionTests(unittest.TestCase):
             {"conscription_slider": 0.25}))
         self.assertEqual(resolved_bonuses["B"], 0.0)
 
+    def test_research_funding_is_validated_applied_and_kept_private(self):
+        from data import queries
+
+        map_ref = map_double(map_data={}, player_country="A", nation_data={
+            "A": {"research_funding_slider": 0.25}, "B": {"research_funding_slider": 0.75}})
+        preferences = next(command for command in collect_map_commands(map_ref, "A")
+                           if command["type"] == "country_preferences")
+        map_ref.nation_data["A"]["research_funding_slider"] = 0.0
+        driver = MapRealtimeDriver(map_ref)
+        for invalid in (-0.01, 1.01, True, "0.25", None, float("nan"), float("inf"), 10 ** 400):
+            with self.subTest(invalid=invalid), self.assertRaises(RealtimeError):
+                driver.validate_draft("A", [{**preferences, "research_funding_slider": invalid}])
+        canonical = driver.validate_draft("A", [preferences])
+        self.assertEqual(map_ref.nation_data["A"]["research_funding_slider"], 0.0)
+
+        async def no_op(*_args, **_kwargs):
+            pass
+
+        with mock.patch("map_logic.system32.turn_processor.prepare_turn", new=no_op), \
+                mock.patch("map_logic.system32.turn_processor.resolve_turn_logic", new=no_op):
+            driver.process_turn({"A": canonical})
+
+        projected = queries.player_snapshot_projection(map_ref, queries.build_save_dict(map_ref), "A")
+        self.assertEqual(projected["nation_data"]["A"]["research_funding_slider"], 0.25)
+        self.assertEqual(map_ref.nation_data["B"]["research_funding_slider"], 0.75)
+        self.assertNotIn("research_funding_slider", projected["nation_data"]["B"])
+
     def test_wartime_trade_draft_is_validated_and_applied_by_server(self):
         game = map_double(map_data={}, id_to_province={}, nation_data={
             "A": {"at_war_with": ["B"]}, "B": {"at_war_with": ["A"]}})

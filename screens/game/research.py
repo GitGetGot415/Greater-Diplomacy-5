@@ -82,6 +82,7 @@ MODAL_ICON_BOX = RESEARCH_LAYOUT["modal_icon_box"]
 MODAL_TEXT_X = 200          # Left edge of every text column in the modal
 MODAL_COST_Y = 100
 MODAL_WARNING_Y = 130
+MODAL_FUNDING_Y = MODAL_WARNING_Y + 20
 MODAL_BODY_START_Y = 170
 MODAL_LINE_STEP_Y = 30
 MODAL_SUBHEAD_STEP_Y = 25
@@ -238,18 +239,25 @@ class ResearchDetailsScreen(ModalScreen):
         """Prepares the cost line and any warning about how long research will take."""
         map_screen = self.research.map_screen
         cost = self.node["cost"]
+        subject = self.research.subject
+        tech_key, level = self.node["tech_key"], self.node["level"]
         days_per_turn = queries.get_days_per_turn(map_screen.scenario_settings)
-        research_mult = politics.research_multiplier(map_screen.nation_data, self.research.subject)
-        faction_bonus = queries.get_faction_research_bonus(
-            self.research.subject, self.node["tech_key"], self.node["level"], map_screen.nation_data)
-        pts_per_turn = (c.BASE_RESEARCH_POINTS_PER_DAY * days_per_turn * research_mult
-                        * (1.0 + faction_bonus))
+        base_points = queries.get_base_research_points(map_screen.nation_data, subject, days_per_turn)
+        faction_bonus = queries.get_faction_research_bonus(subject, tech_key, level, map_screen.nation_data)
+        pts_per_turn = queries.get_project_research_rate(base_points, map_screen.nation_data, subject, tech_key, level)
 
-        # pts_per_turn is 0 at the planned end of the economic axis, which
-        # is a project that never finishes rather than one that takes a very
-        # large number of turns -- say so instead of printing the number.
+        self.funding_surface = None
+        if self.node["status"] == "RESEARCHING" and not self.research.editing_research_levels:
+            _, awards = queries.get_projected_research_funding(map_screen, subject)
+            bonus = awards.get(tech_key, 0)
+            if bonus:
+                self.funding_surface = fonts.get("normal").render(
+                    f"Next turn research funding +{bonus:,.2f} pts", True, c.COLOR_GOLD_HIGHLIGHT)
+
+        # This estimate covers normal research. The next turn's funding is
+        # shown separately because income and the queue can change each turn.
         base_time = (cost / pts_per_turn) if pts_per_turn > 0 else 0
-        time_txt = f"{max(1, int(base_time))} turns" if pts_per_turn > 0 else "halted"
+        time_txt = f"{max(1, int(base_time))} turns" if pts_per_turn > 0 else "normal research halted"
         sharing_text = (f"; faction sharing +{int(faction_bonus * 100)}%"
                         if faction_bonus else "")
         self.cost_surface = fonts.get("heading2").render(
@@ -272,7 +280,7 @@ class ResearchDetailsScreen(ModalScreen):
 
         warning = None
         if pts_per_turn <= 0:
-            warning = "Research is halted in a fully planned economy."
+            warning = "Normal research is halted in a fully planned economy."
         elif pts_accumulated < cost:
             warning = f"Estimated Actual Time: >{MAX_RESEARCH_TURN_SIMULATION} turns"
         elif actual_turns > base_time:
@@ -372,6 +380,8 @@ class ResearchDetailsScreen(ModalScreen):
                 surface.blit(self.warning_icon, (warn_x, panel_rect.y + MODAL_WARNING_Y + 2))
                 warn_x += self.warning_icon_size + 5
             surface.blit(self.warning_surface, (warn_x, panel_rect.y + MODAL_WARNING_Y))
+        if self.funding_surface:
+            surface.blit(self.funding_surface, (text_x, panel_rect.y + MODAL_FUNDING_Y))
 
         y_off = panel_rect.y + MODAL_BODY_START_Y # Shifted down to make room for the warning text
 
@@ -830,10 +840,8 @@ class Research_Screen(Screen):
                 self.editor_help_surfaces.append(rendered)
         else:
             days = queries.get_days_per_turn(self.map_screen.scenario_settings)
-            # The headline uses the same economic and policy modifiers as turn resolution.
-            multiplier = politics.research_multiplier(self.map_screen.nation_data, self.subject)
-            points = int(c.BASE_RESEARCH_POINTS_PER_DAY * days * multiplier)
-            self.header_output_surface = font.render(f"RESEARCH OUTPUT: {points} pts/turn", True, (0, 255, 255))
+            points = int(queries.get_base_research_points(self.map_screen.nation_data, self.subject, days))
+            self.header_output_surface = font.render(f"BASE RESEARCH: {points} pts/turn", True, (0, 255, 255))
 
     def draw_tech_nodes(self, res_levels, queue):
         unit_unlocks = queries.get_unit_unlock_index(self.map_screen)

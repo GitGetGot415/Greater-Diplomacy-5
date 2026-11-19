@@ -158,5 +158,8 @@
         "local_threads": 1,
         "reenable_mode": "OLLAMA",
         "ollama_url": "http://localhost:11434/api/chat"
+    },
+    "country_defaults": {
+        "research_funding_slider": 0.0
     }
 }

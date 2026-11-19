@@ -2,12 +2,13 @@
 
 import data.constants as c
 import json
-import pygame
 import random
 from data.state_access import session_for, world_for
 from map_logic import politics
 from data.queries.content import get_category_setting
 from data.queries.geometry import is_water_province
+from data.queries.tech import (calculate_research_funding, get_exact_year, get_normal_research_progress,
+                              get_research_funding_rate)
 from data.queries.unit_info import (base_item_name_from_text, get_base_item_name, is_naval_unit,
                                    units_with_air_cargo)
 from data import queries
@@ -780,14 +781,11 @@ def get_resource_hud_strings(context, include_net=False, target_nation=None):
     total_inc = {r: 0 for r in c.ECON_RESOURCE_KEYS}
     total_upkeep = {r: 0 for r in c.ECON_RESOURCE_KEYS}
 
-    if include_net:
-        if not hasattr(context, 'econ_cache_time') or pygame.time.get_ticks() - context.econ_cache_time > 1000 or getattr(context, 'econ_cache_target', None) != target_nation:
-            context.econ_cache = queries.get_economy_projections(target_nation, world_state.map_data, world_state.nation_data, context=context)
-            context.econ_cache_time = pygame.time.get_ticks()
-            context.econ_cache_target = target_nation
-
-        cached = context.econ_cache
-        if cached and len(cached) == 3:
+    # Only the planning map asks for net income. It prepares the projection
+    # when the economy or player changes, before drawing the resource HUD.
+    if include_net and target_nation == session_state.player_country:
+        cached = getattr(context, "econ_cache", None)
+        if cached:
             total_inc, total_upkeep, _ = cached
 
     def fmt_net(inc, exp):
@@ -816,5 +814,36 @@ def get_economy_projections(target_nation, map_data, nation_data, *, context=Non
             {r: {} for r in c.ECON_RESOURCE_KEYS}
         )
         
-    return p_econ.get("total_inc"), p_econ.get("upkeep"), p_econ.get("breakdown")
+    diverted, _ = get_projected_research_funding(context, target_nation, economy=p_econ)
+    if diverted:
+        income, breakdown = p_econ["total_inc"], p_econ["breakdown"]
+        return ({**income, "materials": income["materials"] - diverted}, p_econ["upkeep"],
+                {**breakdown, "materials": {**breakdown["materials"], "research_funding": -diverted}})
+    return p_econ["total_inc"], p_econ["upkeep"], p_econ["breakdown"]
+
+
+def get_net_materials_income(economy):
+    """Materials left after existing conversions, transfers, and upkeep."""
+    return economy["total_inc"]["materials"] - economy["upkeep"]["materials"]
+
+
+def get_projected_research_funding(context, country_id, *, economy=None):
+    """Estimate the next turn's research funding from the current planning state."""
+    world = world_for(context)
+    # Context-free economy callers and lightweight display fixtures lack a date.
+    time_manager = getattr(world, "time_manager", None)
+    if time_manager is None:
+        return 0, {}
+    country = world.nation_data[country_id]
+    if not country.get("research_queue") or not get_research_funding_rate(country):
+        return 0, {}
+    if economy is None:
+        economy = queries.calculate_all_economies(world.map_data, world.nation_data, context=context).get(country_id)
+    if not economy:
+        return 0, {}
+
+    days = queries.get_days_per_turn(world.scenario_settings)
+    next_year = get_exact_year(time_manager) + days / 360.0
+    normal = get_normal_research_progress(world.nation_data, country_id, queries.get_tech_tree(context), days, next_year)
+    return calculate_research_funding(country, get_net_materials_income(economy), normal)
 

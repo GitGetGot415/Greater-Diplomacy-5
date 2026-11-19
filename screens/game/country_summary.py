@@ -73,7 +73,7 @@ class CountrySummaryScreen(Screen):
                  f"Core province manpower: {politics['core_manpower_multiplier']:.2f}x",
                  f"Economic position: {politics['economic_label']} ({politics['economic_value']:+d})",
                  f"Factory output: {politics['factory_multiplier']:.2f}x",
-                 f"Research modifier: {politics['research_multiplier'] - 1.0:+.2%}"]
+                 f"Base research modifier: {politics['research_multiplier'] - 1.0:+.2%}"]
         if not politics["policies"]:
             lines.append("Policies: None")
         for policy in politics["policies"]:

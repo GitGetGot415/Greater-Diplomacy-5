@@ -6,19 +6,20 @@ from data import queries
 
 from data.io import country_io
 from map_logic.territory import ownership
-def process_economy(context):
+def process_economy(context, *, economies=None):
     """Calculates income, applies building yields, and deducts unit upkeep."""
     world_state = world_for(context)
     session_state = session_for(context)
 
-    all_econ = queries.calculate_all_economies(world_state.map_data, world_state.nation_data, context=context)
+    if economies is None:
+        economies = queries.calculate_all_economies(world_state.map_data, world_state.nation_data, context=context)
 
     for name, stats in world_state.nation_data.items():
         # Explicitly skip the global events log 
-        if name == "GLOBAL_EVENTS" or name in c.UNPLAYABLE_NATIONS or name not in all_econ:
+        if name == "GLOBAL_EVENTS" or name in c.UNPLAYABLE_NATIONS or name not in economies:
             continue
 
-        econ = all_econ[name]
+        econ = economies[name]
 
         # Safely .get() the resource so it initializes to 0 if missing
         stats["manpower"] = stats.get("manpower", 0) + econ["total_inc"]["manpower"] - econ["upkeep"]["manpower"]

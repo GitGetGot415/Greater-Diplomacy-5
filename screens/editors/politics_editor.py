@@ -127,7 +127,7 @@ class Politics_Edit_Screen(EditorSliderScreen):
         factory = politics.axis_factory_multiplier(self.economic_value)
         research = politics.axis_research_multiplier(self.economic_value)
         lines = (f"Army damage x{damage:.2f}      Core manpower x{manpower:.2f}",
-                 f"Factory output x{factory:.2f}      Research speed x{research:.2f}")
+                 f"Factory output x{factory:.2f}      Base research x{research:.2f}")
         for row, text in enumerate(lines):
             effects = small.render(text, True, c.UI_TEXT_DIM)
             self._preview.blit(effects, effects.get_rect(centerx=center_x, y=self.EFFECTS_Y + row * self.EFFECTS_LINE_GAP))

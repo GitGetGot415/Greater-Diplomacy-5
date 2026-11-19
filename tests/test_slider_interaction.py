@@ -63,6 +63,25 @@ class SliderInteractionTests(unittest.TestCase):
         self.assertFalse(self.slider.dragging)
         self.callback.assert_not_called()
 
+    def test_track_click_is_opt_in_and_obeys_guard_and_limit(self):
+        position = (self.slider.rect.right - 1, self.slider.rect.centery)
+        self.event(self.slider, pygame.MOUSEBUTTONDOWN, position)
+        self.callback.assert_not_called()
+
+        slider = ui_elements.Slider(30, 50, 200, "Value", 0.25, self.callback,
+                                     visual_max=2, allowed_max=1, click_track=True)
+        slider.click_guard = lambda: False
+        self.event(slider, pygame.MOUSEBUTTONDOWN, position)
+        self.assertFalse(slider.dragging)
+        self.callback.assert_not_called()
+
+        slider.click_guard = None
+        self.event(slider, pygame.MOUSEBUTTONDOWN, position)
+        self.assertEqual(slider.value, 1)
+        self.callback.assert_called_once_with(1)
+        self.event(slider, pygame.MOUSEBUTTONUP, position)
+        self.assertFalse(slider.dragging)
+
     def test_moving_controls_and_music_progress_reuse_cached_shading(self):
         scrubber = MusicScrubber(30, 110, 200, 15, self.callback)
         self.slider.draw(self.surface)

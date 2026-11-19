@@ -18,7 +18,7 @@ _FILE_TYPES = {
     "hildehrand_choice.json": dict,
 }
 PREFERENCE_FILES = tuple(_FILE_TYPES)
-_SECTION_TYPES = dict(_FILE_TYPES, random_setup=dict, ai_defaults=dict)
+_SECTION_TYPES = dict(_FILE_TYPES, random_setup=dict, ai_defaults=dict, country_defaults=dict)
 
 
 def read_starting_defaults(path=_DEFAULT_PATH):

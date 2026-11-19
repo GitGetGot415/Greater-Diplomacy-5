@@ -385,11 +385,10 @@ def damage_multiplier(nation_data, nation):
 
 
 def research_multiplier(nation_data, nation):
-    """What this nation multiplies its research points by, including policy.
+    """Normal research multiplier, including policy.
 
-    Zero at the fully planned end is deliberate and not a floor to guard
-    against: points_remaining simply stops falling, which is what "research is
-    frozen" has to look like.
+    Fully planned economies pause normal research. Funded research points
+    bypass this multiplier.
     """
     axis_multiplier = axis_research_multiplier(economic_value(nation_data, nation))
     return axis_multiplier * effect_multiplier(nation_data, nation, "research")

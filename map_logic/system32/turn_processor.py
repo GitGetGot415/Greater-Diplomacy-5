@@ -270,10 +270,11 @@ async def _resolve_turn_logic(context): # Renamed from resolve_turn
     await asyncio.sleep(0)
 
     print("[SYSTEM] Calculating Economy...")
-    economy_processor.process_economy(context)
+    economies = queries.calculate_all_economies(world_state.map_data, world_state.nation_data, context=context)
+    economy_processor.process_economy(context, economies=economies)
     await asyncio.sleep(0)
 
-    research_processor.process_national_research(context)
+    research_processor.process_national_research(context, economies=economies)
     await asyncio.sleep(0)
 
     if c.RECORD_HISTORY:

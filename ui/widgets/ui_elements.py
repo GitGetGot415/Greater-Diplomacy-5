@@ -713,7 +713,7 @@ def draw_slider(surface, rect, handle_rect, *, dragging=False, allowed_ratio=1.0
                      handle_rect, border)
 
 class Slider:
-    def __init__(self, x, y, width, text, initial_val, callback, visual_max=1.0, allowed_max=1.0):
+    def __init__(self, x, y, width, text, initial_val, callback, visual_max=1.0, allowed_max=1.0, *, click_track=False):
         self.rect = pygame.Rect(x, y, width, 20)
         self.visual_max = visual_max
         self.allowed_max = allowed_max
@@ -724,6 +724,7 @@ class Slider:
         self.handle_rect = pygame.Rect(x + (width * ratio) - 10, y - 5, 20, 30)
         self.text = text
         self.callback = callback
+        self.click_track = click_track
         self.dragging = False
         self.visible = True
         # A disabled slider is a locked track reading OFF that ignores input.
@@ -769,11 +770,16 @@ class Slider:
             self.dragging = False
             return
         
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.handle_rect.collidepoint(event.pos):
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            on_handle = self.handle_rect.collidepoint(event.pos)
+            if not (on_handle or self.click_track and self.rect.collidepoint(event.pos)):
+                return
             if self.click_guard is not None and not self.click_guard():
                 return
             self.dragging = True
             self.last_display_string = self.get_display_string()
+            if not on_handle:
+                self._set_from_pointer(event.pos[0])
 
         elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             self.dragging = False
@@ -784,28 +790,25 @@ class Slider:
                 # let the handle keep free-following the cursor forever.
                 self.dragging = False
                 return
-            raw_x = max(self.rect.left, min(event.pos[0], self.rect.right))
-            raw_ratio = (raw_x - self.rect.left) / self.rect.width
-            max_ratio = self.allowed_max / self.visual_max if self.visual_max > 0 else 1.0
-            
-            clamped_ratio = min(raw_ratio, max_ratio)
-            
-            self.handle_rect.centerx = self.rect.left + int(self.rect.width * clamped_ratio)
-            self.value = clamped_ratio * self.visual_max
-            
-            self.callback(self.value)
-            
-            current_display = self.get_display_string()
-            
-            # 1. Did the visual number actually change?
-            if current_display != self.last_display_string:
-                self.last_display_string = current_display 
-                
-                # 2. Has it been at least 100ms since the last click?
-                current_time = pygame.time.get_ticks()
-                if current_time - self.last_sound_tick > 50:
-                    sound_effects.play_ui_sound("slider")
-                    self.last_sound_tick = current_time # Reset the throttle
+            self._set_from_pointer(event.pos[0])
+
+    def _set_from_pointer(self, pointer_x):
+        clamped_x = max(self.rect.left, min(pointer_x, self.rect.right))
+        raw_ratio = (clamped_x - self.rect.left) / self.rect.width
+        max_ratio = self.allowed_max / self.visual_max if self.visual_max > 0 else 1.0
+        clamped_ratio = min(raw_ratio, max_ratio)
+
+        self.handle_rect.centerx = self.rect.left + int(self.rect.width * clamped_ratio)
+        self.value = clamped_ratio * self.visual_max
+        self.callback(self.value)
+
+        current_display = self.get_display_string()
+        if current_display != self.last_display_string:
+            self.last_display_string = current_display
+            current_time = pygame.time.get_ticks()
+            if current_time - self.last_sound_tick > 50:
+                sound_effects.play_ui_sound("slider")
+                self.last_sound_tick = current_time
 
 def _text_box_text_x(rect, inner, text_width, pad_x, active):
     """Left edge for text in a single-line box, keeping an active caret visible."""

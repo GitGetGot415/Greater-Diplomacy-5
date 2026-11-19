@@ -255,6 +255,12 @@ class PlayerActions:
         if (isinstance(fuel_conversion, bool) or not isinstance(fuel_conversion, (int, float))
                 or not 0.0 <= float(fuel_conversion) <= max_conversion):
             raise PlayerActionError("Invalid material-to-fuel conversion setting.")
+        research_funding = {}
+        if "research_funding_slider" in command:
+            rate = command["research_funding_slider"]
+            if not queries.valid_research_funding_rate(rate):
+                raise PlayerActionError("Invalid research funding setting.")
+            research_funding["research_funding_slider"] = float(rate)
         custom_units = command.get("custom_production_units", [])
         if (not isinstance(custom_units, list) or len(custom_units) > 100
                 or any(not isinstance(name, str) for name in custom_units)
@@ -276,6 +282,7 @@ class PlayerActions:
                                for key in self._AUTOMATION_KEYS},
                 "conscription_slider": float(conscription),
                 "mat_to_fuel_slider": float(fuel_conversion),
+                **research_funding,
                 "custom_production_units": list(custom_units),
                 politics.POLICY_KEY: policies}
 
@@ -768,6 +775,8 @@ class PlayerActions:
                     country_data["automation"] = copy.deepcopy(command["automation"])
                     country_data["conscription_slider"] = command["conscription_slider"]
                     country_data["mat_to_fuel_slider"] = command["mat_to_fuel_slider"]
+                    if "research_funding_slider" in command:
+                        country_data["research_funding_slider"] = command["research_funding_slider"]
                     country_data["custom_production_units"] = copy.deepcopy(command["custom_production_units"])
                     if command[politics.POLICY_KEY]:
                         country_data[politics.POLICY_KEY] = copy.deepcopy(command[politics.POLICY_KEY])
@@ -884,6 +893,7 @@ def collect_map_commands(context, country_id: str) -> list[dict[str, Any]]:
                      "automation": copy.deepcopy(country_data.get("automation", {})),
                      "conscription_slider": country_data.get("conscription_slider", 1.0),
                      "mat_to_fuel_slider": country_data.get("mat_to_fuel_slider", 0.0),
+                     "research_funding_slider": queries.get_research_funding_rate(country_data),
                      "custom_production_units": copy.deepcopy(country_data.get("custom_production_units", [])),
                      politics.POLICY_KEY: politics.policy_draft_projection(
                          world_state.nation_data, country_id)})
