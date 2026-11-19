@@ -123,7 +123,6 @@ def project(context):
         if isinstance(country, dict) and ("faction" in country or "is_faction_leader" in country):
             country["faction"] = ""
             country["is_faction_leader"] = False
-    world.nation_data.pop("FACTION_WAR_MAPS", None)
     world.faction_membership = {}
     for identity, record in records.items():
         for member in record["members"]:
@@ -178,4 +177,7 @@ def set_leadership(nation_data, country, is_leader):
 def restore(context, records=None):
     world = world_for(context)
     world.factions = canonical_records(dict(world.nation_data), records)
+    # Remove the legacy field at the input boundary. A query can initialize
+    # records while its caller is iterating the country mapping.
+    world.nation_data.pop("FACTION_WAR_MAPS", None)
     project(context)

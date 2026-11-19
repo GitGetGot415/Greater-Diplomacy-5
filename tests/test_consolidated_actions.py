@@ -188,12 +188,18 @@ class FactionOwnerTests(unittest.TestCase):
         self.assertEqual(faction_records.canonical_records(nations), faction_records.canonical_records(copy.deepcopy(nations)))
         context = BackendState(WorldState(nation_data=nations))
         faction_records.restore(context)
+        self.assertNotIn("FACTION_WAR_MAPS", context.nation_data)
         identity = queries.get_country_faction_id(context, "A")
         self.assertEqual(context.world.factions[identity]["pre_war_borders"], {"1": "A"})
         self.assertEqual(context.nation_data["WAR_PRE_MAPS"], {"A": {"2": "A"}})
         faction_actions.disband_faction(context.nation_data, "Pact")
         self.assertEqual(context.world.factions, {})
         self.assertEqual(context.nation_data["WAR_PRE_MAPS"], {"A": {"2": "A"}})
+
+    def test_reading_legacy_factions_can_initialize_during_country_iteration(self):
+        world = WorldState(nation_data={"A": {"faction": "Pact"}, "FACTION_WAR_MAPS": {"Pact": {"1": "A"}}})
+        self.assertEqual(queries.get_politically_active_nations({}, world.nation_data), {"A"})
+        self.assertEqual(faction_records.pre_war_map(world.nation_data, "Pact"), {"1": "A"})
 
     def test_projection_filters_unknown_private_faction_data(self):
         context = game()
