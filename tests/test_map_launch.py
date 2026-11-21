@@ -148,9 +148,14 @@ class ScreenHookTests(unittest.TestCase):
         screen = controller.states["MENU"]
         self.addCleanup(setattr, controller, "active_state", original)
         controller.active_state = screen
-        with mock.patch.object(screen, "prepare_map", return_value=False), \
-                mock.patch.object(screen, "next_state", "MAP", create=True):
+        # The loader reports a cancelled or failed map as an unsuccessful finish.
+        with mock.patch.object(screen, "prepare_map_steps", return_value=[]), \
+                mock.patch.object(screen, "next_state", "MAP", create=True), \
+                mock.patch.object(controller, "release_map"), \
+                mock.patch("ui.navigation.screen_runner.run_loading",
+                           side_effect=lambda _steps, _title, on_done: on_done(False)) as run_loading:
             controller.flip_state()
+        run_loading.assert_called_once()
         self.assertIs(controller.active_state, screen)
 
     def test_each_map_source_uses_its_own_launch_route(self):

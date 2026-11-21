@@ -8,7 +8,7 @@ import pygame
 
 from data import queries
 import data.constants as c
-from tests.stub_map_screen import bare_orders_screen, fill_state_defaults
+from tests.stub_map_screen import bare_orders_screen, fill_state_defaults, map_double
 from ui.camera import camera_handler
 from ui import sound_effects
 from ui.rendering import overlay_renderer
@@ -364,7 +364,7 @@ class OrdersSelectionRowsTests(unittest.TestCase):
             pygame.Rect(10, 10, 100, 40), Mock(), secondary_callback=callback)
         screen = bare_orders_screen()
         screen.battle_screen = None
-        screen.map_screen = object()
+        screen.map_screen = map_double()
         screen.elements = [row]
 
         with patch("screens.game.orders.army_panel.handle_event",

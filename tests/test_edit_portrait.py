@@ -280,9 +280,13 @@ class EditPortraitTests(unittest.TestCase):
 
     def test_gradient_enabled_default_and_saved_choice(self):
         from data import queries
+        from data.io import starting_defaults
         for default in (False, True):
+            # Missing saved values read starting_defaults.json.
+            defaults = starting_defaults.get_starting_default("hildehrand_choice.json")
+            defaults["gradient"] = default
             with self.subTest(default=default), \
-                    mock.patch.object(c, "HILDEHRAND_GRADIENT_DEFAULT_ENABLED", default):
+                    mock.patch.object(starting_defaults, "get_starting_default", return_value=defaults):
                 for saved, expected in (({}, default), ({"gradient": False}, False),
                                         ({"gradient": True}, True)):
                     with mock.patch.dict(queries._JSON_CACHE["hildehrand_choice"], {"data": saved}):

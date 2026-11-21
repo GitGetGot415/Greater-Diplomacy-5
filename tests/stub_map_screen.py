@@ -44,7 +44,7 @@ UI_STATE = {
     "_relations_hovered_province": None,
     "_viewport_scale_cache": None, "_hover_glow_scale_cache": None,
     "_badge_state_cache": None, "is_unit_selected": lambda _unit: False,
-    "map_mode": "POLITICAL",
+    "map_mode": "POLITICAL", "secondary_mode": "BLANK",
 }
 
 

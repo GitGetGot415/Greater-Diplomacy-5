@@ -286,8 +286,10 @@ def peace_verdict(world, nation, proposer, agreement, scenario_settings=None):
     margin = ai_tuning.AI_PEACE_MARGIN_BASE + ai_tuning.AI_PEACE_MARGIN_CAUTION * caution
 
     slack = (willingness + sweetener) - (demand + war_prize + margin)
+    # The sentence quotes the exact share, which the leverage bar also draws.
+    exact_share = war_score.between(_host(world), nation, proposer, world)["mine"]
     return _verdict(slack >= 0, slack,
-                    _peace_reason(slack, demand, war_prize, scores, occupied))
+                    _peace_reason(slack, demand, war_prize, exact_share, occupied))
 
 
 #: Slack reported for a refusal that no amount of sweetening fixes -- the war is
@@ -355,7 +357,7 @@ def _land_cap_breach(deal, nation, map_data, nation_data, net_demand):
     return worst
 
 
-def _peace_reason(slack, demand, war_prize, scores, occupied):
+def _peace_reason(slack, demand, war_prize, leverage_share, occupied):
     """One sentence naming whichever term is actually driving the answer.
 
     A template over VOICE_SELF / VOICE_OTHER -- see the note on Peace. Every
@@ -366,7 +368,7 @@ def _peace_reason(slack, demand, war_prize, scores, occupied):
             return "the fighting has gone on long enough"
         return f"{_pct(demand)} of {{our}} country is a price {{we}} can live with"
     if war_prize > demand + 0.05:
-        return (f"{{we}} are winning this war; {_pct(scores['mine'])} "
+        return (f"{{we}} are winning this war; {_pct(leverage_share)} "
                 f"of the leverage is {{ours}}")
     if demand > 0:
         return (f"you hold {_pct(occupied)} of {{our}} land and are asking for "

@@ -310,17 +310,30 @@ class UnitViewFilterTests(unittest.TestCase):
                 self.assertEqual(self.game.pending_selection, "A")
                 self.assertIs(self.game.selected_province, self.province)
 
-    def test_tactical_view_keeps_every_division_separate_at_all_zooms(self):
-        self.mission_units()
+    def test_tactical_play_draws_only_the_players_division_apart_at_all_zooms(self):
+        # The first patrol plane normally shares a stack with the second.
+        player = self.mission_units()[0]
         self.game.tactical_mode = True
-        self.game.player_unit = self.province["units"][-1]
-        for zoom in (0.2, 4):
-            self.game.camera.zoom = zoom
+        self.game.player_unit = player
+
+        def stacks(selection_mode):
+            self.game.selection_mode = selection_mode
             self.game.unit_stack_hitboxes = []
+            self.game._presentation_cache_revision += 1
             overlay_renderer.draw_unit_icon(self.game, pygame.Surface((400, 400)),
                                             200, 200, self.province)
-            self.assertEqual(len(self.game.unit_stack_hitboxes), len(self.province["units"]))
-            self.assertTrue(all(len(box["units"]) == 1 for box in self.game.unit_stack_hitboxes))
+            return [[unit["unit_id"] for unit in box["units"]]
+                    for box in self.game.unit_stack_hitboxes]
+
+        for zoom in (0.2, 4):
+            with self.subTest(zoom=zoom):
+                self.game.camera.zoom = zoom
+                # Before play starts, the unit picker keeps the normal stacks.
+                normal = stacks(True)
+                self.assertTrue(any(player["unit_id"] in ids and len(ids) > 1 for ids in normal))
+                expected = [[player["unit_id"]]] + [
+                    rest for rest in ([uid for uid in ids if uid != player["unit_id"]] for ids in normal) if rest]
+                self.assertCountEqual(stacks(False), expected)
 
     def preview_lines(self, visible=True):
         pygame.font.init()

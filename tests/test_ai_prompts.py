@@ -57,9 +57,11 @@ class SharedTailTests(unittest.TestCase):
                                  2 if "proposal" in hint else 1)
 
     def test_the_action_list_is_the_same_in_all_of_them(self):
-        line = ("Valid actions: 'WAR_DECLARATION', 'JOIN_WARS', 'LEAVE_FACTION', "
-                "'JOIN_FACTION_REQ', 'CEASEFIRE', 'CALL_TO_ARMS', 'CREATE_FACTION', "
-                "'KICK_FACTION_MEMBER', 'DISBAND_FACTION' or 'NONE'.")
+        # NONE leads the list: see the note on ai_prompts.REPLY_ACTIONS.
+        actions = ai_prompts.REPLY_ACTIONS
+        self.assertEqual(actions[0], "NONE")
+        line = ("Valid actions: " + ", ".join(f"'{action}'" for action in actions[:-1])
+                + f" or '{actions[-1]}'.")
         for name, text in self.prompts().items():
             with self.subTest(prompt=name):
                 self.assertIn(line, text)
@@ -89,7 +91,13 @@ class FallbackTableTests(unittest.TestCase):
                 # The defensive literal must not have drifted from the table.
                 # A key may now hold several interchangeable lines, so the
                 # question is whether the literal is still one of them.
-                self.assertIn(spec.fallback, ai_prompts.lines_for(spec.fallback_key))
+                lines = ai_prompts.lines_for(spec.fallback_key)
+                if any("{enemy}" in line for line in lines):
+                    # Lines that name the war's enemy fall back to the plain
+                    # literal when no enemy is named, so it must not need one.
+                    self.assertNotIn("{enemy}", spec.fallback)
+                else:
+                    self.assertIn(spec.fallback, lines)
 
     def test_every_canned_response_the_handler_names_exists(self):
         from map_logic.ai import ai_handler

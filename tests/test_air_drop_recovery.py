@@ -170,6 +170,7 @@ class AirDropRecoveryTests(unittest.TestCase):
         screen.province = target
         screen.player = "A"
         screen.refresh_ui = Mock()
+        self.game.invalidate_map_presentation_cache = Mock()
         before = deepcopy(self.cargo)
         screen.toggle_stance(self.cargo)
         screen.send_to_lane(self.cargo, None)

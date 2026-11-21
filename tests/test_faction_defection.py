@@ -18,6 +18,7 @@ import unittest
 
 import data.constants as c
 from map_logic.diplomacy import diplomacy_processor, faction_actions, faction_leadership
+from tests.stub_map_screen import map_double
 
 LONG_ENOUGH = c.AI_FACTION_MIN_TENURE + 5
 
@@ -32,10 +33,8 @@ def world(**nations):
     return {name.replace("_", " "): data for name, data in nations.items()}
 
 
-class Screen:
-    def __init__(self, nation_data):
-        self.nation_data = nation_data
-        self.map_data = {}
+def Screen(nation_data):
+    return map_double(nation_data=nation_data, map_data={})
 
 
 def blocked(nation_data, who):

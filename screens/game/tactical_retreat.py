@@ -58,10 +58,15 @@ class Tactical_Retreat_Screen(Screen):
         return True
 
     def update(self):
+        # The screen has no map until a tactical battle preview opens it.
+        if self.campaign is None:
+            return
         # The camera's zoom and pan run on this update, as on the map and Orders.
         self.map_screen.camera.update(self.map_screen, c.SCREEN_HEIGHT)
 
     def additional_events(self, event):
+        if self.campaign is None:
+            return
         map_ref = self.map_screen
         on_ui = any(isinstance(el, Button) and el.rect.collidepoint(getattr(event, "pos", (-1, -1)))
                     for el in self.elements)
@@ -76,6 +81,8 @@ class Tactical_Retreat_Screen(Screen):
                 self.retreat_to(province)
 
     def additional_draw(self, surface):
+        if self.campaign is None:
+            return
         map_ref = self.map_screen
         map_ref.draw_clean_map_background(surface)
         hovered = self._hovered_id(pygame.mouse.get_pos())

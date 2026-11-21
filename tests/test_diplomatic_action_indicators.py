@@ -1,10 +1,10 @@
 """Tests for bilateral-action response predictions in the map diplomacy menu."""
 
 import unittest
-from types import SimpleNamespace
 
 
 from screens.game.map_buttons import bilateral_response_indicator
+from tests.stub_map_screen import map_double
 
 
 def nation(**overrides):
@@ -18,7 +18,7 @@ def nation(**overrides):
 
 class BilateralResponseIndicatorTests(unittest.TestCase):
     def setUp(self):
-        self.screen = SimpleNamespace(
+        self.screen = map_double(
             player_country="Sender",
             active_players=["Sender"],
             nation_data={"Sender": nation(), "Target": nation()},

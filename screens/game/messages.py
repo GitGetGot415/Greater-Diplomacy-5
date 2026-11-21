@@ -185,6 +185,8 @@ class Messages_Screen(Screen):
         self.contact_sort = MSG_SORT_ORDERS[0]
         self.processed_messages = []
         self.compose_surface = None
+        # Placed by _prepare_composer. Empty until then, so no press can focus the compose bar.
+        self.input_rect = pygame.Rect(0, 0, 0, 0)
         self.compose_enabled = False
         # Set by tapping the compose bar. See _compose_has_focus.
         self.compose_focused = False

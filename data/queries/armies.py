@@ -34,8 +34,7 @@ def create_unit_dict(unit_type, owner, unit_library):
         "attack": combat["attack"],
         "defense": combat["defense"],
         "level": 0,
-        "order": {"type": "MOVE", "path": []},
-        "army_id": None
+        "order": {"type": "MOVE", "path": []}
     }
 
 
@@ -238,25 +237,6 @@ def normalize_armies(nation_data, map_data):
                               raw.get("custom_symbol")),
                           "defense_area": defense_area})
         country["armies"] = valid
-        unit_to_army = {uid: army["id"] for army in valid for uid in army["unit_ids"]}
-        _sync_unit_army_ids(map_data, country_id, unit_to_army)
-
-
-def _sync_unit_army_ids(map_data, country_id, unit_to_army_id):
-    """Update unit['army_id'] on owned map units matching the dictionary."""
-    if not map_data or not isinstance(map_data, dict):
-        return
-    for province in map_data.values():
-        if not isinstance(province, dict):
-            continue
-        for unit in units_with_air_cargo(province.get("units", [])):
-            if unit.get("owner") == country_id:
-                uid = unit.get("unit_id")
-                target_army = unit_to_army_id.get(uid)
-                if target_army:
-                    unit["army_id"] = target_army
-                else:
-                    unit.pop("army_id", None)
 
 
 def get_armies(country_id, nation_data, map_data):

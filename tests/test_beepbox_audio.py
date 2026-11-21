@@ -88,8 +88,9 @@ class BeepBoxAudioTests(unittest.TestCase):
             license_text = license_file.read()
         self.assertIn("MIT License", license_text)
         self.assertTrue(os.path.isfile(SYNTH_PATH))
-        tools = next(section for section in CREDITS_DATA if section["main_text"] == "Tools: ")
-        self.assertTrue(any(person.get("link_text") == "BeepBox" for person in tools["people"]))
+        # Section headings are display text, so any section may credit BeepBox.
+        self.assertTrue(any(person.get("link_text") == "BeepBox"
+                            for section in CREDITS_DATA for person in section["people"]))
 
     def test_embedded_v8_licenses_are_shipped(self):
         with open(os.path.join(ROOT, "assets", "mini_racer", "LICENSES.txt"),

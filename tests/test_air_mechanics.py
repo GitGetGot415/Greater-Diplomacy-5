@@ -1963,8 +1963,13 @@ class AirAppSmokeTests(unittest.TestCase):
                     self.assertAlmostEqual(new["health"] / new["max_health"], old["health"] / old["max_health"])
                 self.assertEqual([item["unit_type"] for item in loaded.id_to_province[1]["unit_queue"]], names)
                 self.assertEqual(loaded.nation_data["A"]["research"], research)
-                self.assertEqual(loaded.nation_data["A"]["research_progress"], country["research_progress"])
-                self.assertEqual(loaded.nation_data["A"]["research_queue"], country["research_queue"])
+                # Loading drops work on tracks that the saved levels complete (clamp_research_levels).
+                tree = queries.get_tech_tree()
+                done = {tech for tech, level in research.items() if level >= tree[tech]["max_lvl"]}
+                self.assertEqual(loaded.nation_data["A"]["research_progress"],
+                                 {tech: points for tech, points in country["research_progress"].items() if tech not in done})
+                self.assertEqual(loaded.nation_data["A"]["research_queue"],
+                                 [project for project in country["research_queue"] if project["tech_name"] not in done])
                 self.assertEqual(loaded.nation_data["A"]["custom_production_units"], names)
 
     def test_random_patrol_survives_save_load(self):

@@ -236,16 +236,6 @@ class ArmyQueryTests(unittest.TestCase):
         self.assertEqual(queries.army_color_for_unit(member, self.nations), (12, 90, 230))
         self.assertIsNone(queries.army_color_for_unit(ungrouped, self.nations))
 
-    def test_unit_army_id_synchronization_and_transfer_clearing(self):
-        queries.normalize_armies(self.nations, self.world)
-        first, second = self.first["units"]
-        army = queries.create_army("A", [first["unit_id"]], self.nations, self.world)
-        self.assertEqual(first.get("army_id"), army["id"])
-        self.assertIsNone(second.get("army_id"))
-
-        queries.set_unit_owner(first, "B")
-        self.assertIsNone(first.get("army_id"))
-
     def test_map_stack_groups_each_army_and_keeps_ungrouped_units_together(self):
         queries.normalize_armies(self.nations, self.world)
         first, second = self.first["units"]
@@ -770,7 +760,7 @@ class ArmyControlTests(unittest.TestCase):
 
         for selection_mode, show_names, expected_calls in ((True, True, 0), (True, False, 0), (False, False, 0), (False, True, 1)):
             with self.subTest(selection_mode=selection_mode, show_names=show_names):
-                map_screen = SimpleNamespace(show_country_names=show_names, tactical_mode=True, selection_mode=selection_mode, nation_data={})
+                map_screen = map_double(show_country_names=show_names, tactical_mode=True, selection_mode=selection_mode, nation_data={}, country_text_blobs=[], core_text_blobs=[], base_layer="POLITICAL")
                 with patch.object(country_names.fonts, "get") as get_font:
                     country_names.draw_country_names(map_screen, surface)
 
@@ -1249,6 +1239,7 @@ class UnassignedArmyPanelTests(unittest.TestCase):
         from screens.game.map import Map
         queries.create_army("A", [self.ids[0]], self.nations, self.world)
         self.map.select_map_units = Mock()
+        self.map.refresh_ui = Mock()
         self.map.focus_camera_on_army = Mock()
         self.map.change_state = Mock()
         with patch("ui.panels.sidebar_info.prepare_unit_roster"):
